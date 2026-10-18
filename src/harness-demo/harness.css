@@ -1,0 +1,200 @@
+.cad-harness-app {
+  --harness-canvas: #0d0f0f;
+  --harness-dot: #222625;
+  --harness-bundle: #a7aca9;
+  --harness-junction: #929995;
+  --harness-focus: #61d9b0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--aether-color-bg);
+  color: var(--aether-color-text);
+  font-family: var(--aether-font-family);
+}
+.cad-harness-app > .aui-shell {
+  flex: 1;
+  min-height: 0;
+}
+.cad-harness-subtitle {
+  color: var(--aether-color-text-dim);
+  font-size: 11px;
+}
+.cad-harness-workspace {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--aether-color-border);
+  border-radius: 8px;
+  background: var(--aether-color-bg-panel);
+}
+.cad-harness-viewbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--aether-color-border);
+  padding: 0 10px;
+  min-height: 38px;
+}
+.cad-harness-viewbar .aui-tabs {
+  flex: 1;
+}
+.cad-harness-stage {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  background: var(--harness-canvas);
+  overscroll-behavior: contain;
+}
+.cad-harness-sheets {
+  display: flex;
+  align-items: flex-start;
+  justify-content: safe center;
+  min-width: fit-content;
+  min-height: 100%;
+  padding: 24px;
+  gap: 24px;
+}
+.cad-harness-svg {
+  display: block;
+  flex: none;
+  overflow: visible;
+  touch-action: none;
+}
+.cad-harness-dot {
+  fill: var(--harness-dot);
+}
+.cad-harness-node {
+  cursor: grab;
+}
+.cad-harness-node:active {
+  cursor: grabbing;
+}
+.cad-harness-wire {
+  outline: none;
+  cursor: pointer;
+}
+.cad-harness-wire:focus-visible path:first-child {
+  stroke-width: 7;
+}
+.cad-harness-bundle {
+  fill: none;
+  stroke: var(--harness-bundle);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cad-harness-bundle[data-selected] {
+  stroke: var(--harness-focus);
+}
+.cad-harness-junction {
+  fill: var(--harness-junction);
+}
+.aui-harness-drawing .cad-harness-dimension {
+  font-size: 12px;
+}
+.cad-harness-mating {
+  fill: none;
+  stroke: var(--harness-junction);
+  stroke-width: 2;
+}
+.cad-harness-selection {
+  fill: none;
+  stroke: var(--harness-focus);
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+}
+.cad-harness-pending {
+  stroke: var(--harness-focus);
+}
+.cad-harness-inspector {
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+}
+.cad-harness-inspector h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.cad-harness-inspector h3 {
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.cad-harness-inspector p {
+  color: var(--aether-color-text-dim);
+  line-height: 1.6;
+  margin: 0;
+}
+.cad-harness-inspector > svg {
+  border-radius: 8px;
+  background: var(--harness-canvas);
+  width: 100%;
+}
+.cad-harness-inspector > small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--aether-color-text-dim);
+}
+.cad-harness-viewtools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--aether-color-border);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.cad-harness-viewtools > span:first-of-type {
+  flex: 1;
+}
+.cad-harness-viewtools button[aria-pressed="true"] {
+  color: var(--aether-color-accent);
+}
+.cad-harness-report {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+}
+.cad-harness-report-tools {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.cad-harness-report-tools > input {
+  flex: 1;
+}
+.cad-harness-report p {
+  font-size: 12px;
+  color: var(--aether-color-text-dim);
+}
+.cad-harness-color {
+  width: 26px;
+  height: 4px;
+  display: inline-block;
+  border-radius: 2px;
+}
+@media (max-width: 800px) {
+  .cad-harness-subtitle {
+    display: none;
+  }
+  .cad-harness-app .aui-document-bar strong {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+.cad-harness-waypoint {
+  fill: var(--harness-canvas);
+  stroke: var(--harness-focus);
+  stroke-width: 2;
+  cursor: move;
+}

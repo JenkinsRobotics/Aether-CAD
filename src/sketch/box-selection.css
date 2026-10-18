@@ -1,0 +1,2 @@
+.cad-sketch-selection-box { position: fixed; pointer-events: none; z-index: 900; border: 1px solid var(--aether-color-accent); background: color-mix(in srgb, var(--aether-color-accent) 12%, transparent); }
+.cad-sketch-selection-box[data-mode="crossing"] { border-style: dashed; border-color: var(--aether-color-ok); background: color-mix(in srgb, var(--aether-color-ok) 12%, transparent); }

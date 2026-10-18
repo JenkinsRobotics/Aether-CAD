@@ -1,0 +1,33 @@
+{
+  "release": "v0.1.0-alpha.1",
+  "packages": [
+    {
+      "path": "vendor/aether-assets-0.2.0-alpha.27.tgz",
+      "sha256": "4da03e06909bd6b4a8a3d6f5241995ae9e0fd959d0e71496f26798a7c5e989e0",
+      "asset": "4da03e06909b-aether-assets-0.2.0-alpha.27.tgz",
+      "bytes": 125176682,
+      "url": "https://github.com/JenkinsRobotics/Aether-CAD/releases/download/v0.1.0-alpha.1/4da03e06909b-aether-assets-0.2.0-alpha.27.tgz"
+    },
+    {
+      "path": "vendor/aether-session-0.2.0-alpha.151.tgz",
+      "sha256": "28147a7360c153f06f242533c616b53ba6b00b615e6206ff7b594b79eda01df3",
+      "asset": "28147a7360c1-aether-session-0.2.0-alpha.151.tgz",
+      "bytes": 35216,
+      "url": "https://github.com/JenkinsRobotics/Aether-CAD/releases/download/v0.1.0-alpha.1/28147a7360c1-aether-session-0.2.0-alpha.151.tgz"
+    },
+    {
+      "path": "vendor/aether-sketch-0.2.0-alpha.4.tgz",
+      "sha256": "415e31e86ec14315f010727510eaa8b0f980ce3a235c4f15722104542fd7f32e",
+      "asset": "415e31e86ec1-aether-sketch-0.2.0-alpha.4.tgz",
+      "bytes": 24384,
+      "url": "https://github.com/JenkinsRobotics/Aether-CAD/releases/download/v0.1.0-alpha.1/415e31e86ec1-aether-sketch-0.2.0-alpha.4.tgz"
+    },
+    {
+      "path": "vendor/aether-ui-0.2.0-alpha.145.tgz",
+      "sha256": "d95a543d1590117d6aadd82788b5576397497c6d04fdac3e68e3d88c93636055",
+      "asset": "d95a543d1590-aether-ui-0.2.0-alpha.145.tgz",
+      "bytes": 432914,
+      "url": "https://github.com/JenkinsRobotics/Aether-CAD/releases/download/v0.1.0-alpha.1/d95a543d1590-aether-ui-0.2.0-alpha.145.tgz"
+    }
+  ]
+}

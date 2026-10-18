@@ -1,0 +1,1334 @@
+{
+  "format": "aether-harness-demo",
+  "version": 1,
+  "name": "Twin-cylinder engine harness",
+  "connectors": [
+    {
+      "id": "inj1",
+      "title": "Injector 1",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        },
+        {
+          "id": "2",
+          "label": "INJ 1"
+        }
+      ],
+      "harness": [
+        340,
+        35
+      ],
+      "layout": [
+        130,
+        430
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-2",
+      "tables": {
+        "layout": [
+          -110,
+          -260
+        ]
+      }
+    },
+    {
+      "id": "inj2",
+      "title": "Injector 2",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        },
+        {
+          "id": "2",
+          "label": "INJ 2"
+        }
+      ],
+      "harness": [
+        340,
+        180
+      ],
+      "layout": [
+        570,
+        430
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-2",
+      "tables": {
+        "layout": [
+          -35,
+          -395
+        ]
+      }
+    },
+    {
+      "id": "coil1",
+      "title": "Coil 1",
+      "pins": [
+        {
+          "id": "A",
+          "label": "IGN 1"
+        },
+        {
+          "id": "B",
+          "label": "GND"
+        },
+        {
+          "id": "C",
+          "label": "BAT +"
+        }
+      ],
+      "harness": [
+        340,
+        325
+      ],
+      "layout": [
+        350,
+        430
+      ],
+      "tone": "green",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-3",
+      "tables": {
+        "layout": [
+          -220,
+          -395
+        ]
+      }
+    },
+    {
+      "id": "coil2",
+      "title": "Coil 2",
+      "pins": [
+        {
+          "id": "A",
+          "label": "IGN 2"
+        },
+        {
+          "id": "B",
+          "label": "GND"
+        },
+        {
+          "id": "C",
+          "label": "BAT +"
+        }
+      ],
+      "harness": [
+        340,
+        500
+      ],
+      "layout": [
+        790,
+        430
+      ],
+      "tone": "green",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-3",
+      "tables": {
+        "layout": [
+          -215,
+          -260
+        ]
+      }
+    },
+    {
+      "id": "bulk-e",
+      "title": "Bulk Head E",
+      "pins": [
+        {
+          "id": "1",
+          "label": "INJ 1"
+        },
+        {
+          "id": "2",
+          "label": "INJ 2"
+        },
+        {
+          "id": "3",
+          "label": "IGN 1"
+        },
+        {
+          "id": "4",
+          "label": "IGN 2"
+        },
+        {
+          "id": "5",
+          "label": "BAT +"
+        },
+        {
+          "id": "6",
+          "label": "BAT -"
+        }
+      ],
+      "harness": [
+        610,
+        775
+      ],
+      "layout": [
+        460,
+        760
+      ],
+      "tone": "orange",
+      "vertical": true,
+      "terminal": false,
+      "partID": "housing-6"
+    },
+    {
+      "id": "bulk-c",
+      "title": "Bulk Head C",
+      "pins": [
+        {
+          "id": "1",
+          "label": "INJ 1"
+        },
+        {
+          "id": "2",
+          "label": "INJ 2"
+        },
+        {
+          "id": "3",
+          "label": "IGN 1"
+        },
+        {
+          "id": "4",
+          "label": "IGN 2"
+        },
+        {
+          "id": "5",
+          "label": "BAT +"
+        },
+        {
+          "id": "6",
+          "label": "BAT -"
+        }
+      ],
+      "harness": [
+        610,
+        1040
+      ],
+      "layout": [
+        460,
+        890
+      ],
+      "tone": "orange",
+      "vertical": true,
+      "terminal": false,
+      "partID": "housing-6",
+      "tables": {
+        "layout": [
+          40,
+          138
+        ]
+      },
+      "portSide": "left"
+    },
+    {
+      "id": "ecu1",
+      "title": "ECU 1",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        },
+        {
+          "id": "2",
+          "label": "CAN H"
+        },
+        {
+          "id": "3",
+          "label": "CAN L"
+        }
+      ],
+      "harness": [
+        50,
+        1070
+      ],
+      "layout": [
+        225,
+        1235
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-3"
+    },
+    {
+      "id": "ecu2",
+      "title": "ECU 2",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        },
+        {
+          "id": "2",
+          "label": "INJ 1"
+        },
+        {
+          "id": "3",
+          "label": "INJ 2"
+        },
+        {
+          "id": "4",
+          "label": "IGN 1"
+        },
+        {
+          "id": "5",
+          "label": "IGN 2"
+        },
+        {
+          "id": "6",
+          "label": "GND"
+        }
+      ],
+      "harness": [
+        50,
+        1250
+      ],
+      "layout": [
+        225,
+        1040
+      ],
+      "tone": "blue",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-6"
+    },
+    {
+      "id": "dash",
+      "title": "Dashboard",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        },
+        {
+          "id": "2",
+          "label": "CAN H",
+          "side": "left"
+        },
+        {
+          "id": "3",
+          "label": "CAN L",
+          "side": "left"
+        },
+        {
+          "id": "4",
+          "label": "GND"
+        }
+      ],
+      "harness": [
+        340,
+        1070
+      ],
+      "layout": [
+        225,
+        1430
+      ],
+      "tone": "blue",
+      "vertical": false,
+      "terminal": false,
+      "partID": "housing-4"
+    },
+    {
+      "id": "gnd1",
+      "title": "GND",
+      "pins": [
+        {
+          "id": "1",
+          "label": "GND"
+        }
+      ],
+      "harness": [
+        50,
+        390
+      ],
+      "layout": [
+        142,
+        675
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": true
+    },
+    {
+      "id": "gnd2",
+      "title": "GND",
+      "pins": [
+        {
+          "id": "1",
+          "label": "GND"
+        }
+      ],
+      "harness": [
+        50,
+        565
+      ],
+      "layout": [
+        777,
+        675
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": true
+    },
+    {
+      "id": "gnd3",
+      "title": "GND",
+      "pins": [
+        {
+          "id": "1",
+          "label": "GND"
+        }
+      ],
+      "harness": [
+        50,
+        670
+      ],
+      "layout": [
+        460,
+        550
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": true
+    },
+    {
+      "id": "bat+",
+      "title": "BAT +",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT +"
+        }
+      ],
+      "harness": [
+        50,
+        1620
+      ],
+      "layout": [
+        405,
+        1675
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": true,
+      "tables": {
+        "layout": [
+          -385,
+          10
+        ]
+      }
+    },
+    {
+      "id": "bat-",
+      "title": "BAT -",
+      "pins": [
+        {
+          "id": "1",
+          "label": "BAT -"
+        }
+      ],
+      "harness": [
+        50,
+        1695
+      ],
+      "layout": [
+        555,
+        1675
+      ],
+      "tone": "neutral",
+      "vertical": false,
+      "terminal": true,
+      "tables": {
+        "layout": [
+          5,
+          10
+        ]
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "signal-inj1",
+      "from": {
+        "connector": "inj1",
+        "pin": "2"
+      },
+      "to": {
+        "connector": "bulk-e",
+        "pin": "1"
+      },
+      "color": "#f48629",
+      "gaugeAWG": 22,
+      "lengthMm": 1350,
+      "bends": [
+        [
+          658,
+          115
+        ]
+      ],
+      "partID": "wire-0"
+    },
+    {
+      "id": "signal-inj2",
+      "from": {
+        "connector": "inj2",
+        "pin": "2"
+      },
+      "to": {
+        "connector": "bulk-e",
+        "pin": "2"
+      },
+      "color": "#e9c638",
+      "gaugeAWG": 22,
+      "lengthMm": 1350,
+      "bends": [
+        [
+          690,
+          260
+        ]
+      ],
+      "partID": "wire-1"
+    },
+    {
+      "id": "signal-coil1",
+      "from": {
+        "connector": "coil1",
+        "pin": "A"
+      },
+      "to": {
+        "connector": "bulk-e",
+        "pin": "3"
+      },
+      "color": "#4dbd66",
+      "gaugeAWG": 22,
+      "lengthMm": 1350,
+      "bends": [
+        [
+          722,
+          373
+        ]
+      ],
+      "partID": "wire-2"
+    },
+    {
+      "id": "signal-coil2",
+      "from": {
+        "connector": "coil2",
+        "pin": "A"
+      },
+      "to": {
+        "connector": "bulk-e",
+        "pin": "4"
+      },
+      "color": "#369cde",
+      "gaugeAWG": 22,
+      "lengthMm": 1350,
+      "bends": [
+        [
+          754,
+          548
+        ]
+      ],
+      "partID": "wire-3"
+    },
+    {
+      "id": "ecu-signal-0",
+      "from": {
+        "connector": "ecu2",
+        "pin": "2"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "1"
+      },
+      "color": "#f48629",
+      "gaugeAWG": 22,
+      "lengthMm": 1200,
+      "bends": [
+        [
+          658,
+          1330
+        ]
+      ],
+      "partID": "wire-0"
+    },
+    {
+      "id": "ecu-signal-1",
+      "from": {
+        "connector": "ecu2",
+        "pin": "3"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "2"
+      },
+      "color": "#e9c638",
+      "gaugeAWG": 22,
+      "lengthMm": 1200,
+      "bends": [
+        [
+          690,
+          1362
+        ]
+      ],
+      "partID": "wire-1"
+    },
+    {
+      "id": "ecu-signal-2",
+      "from": {
+        "connector": "ecu2",
+        "pin": "4"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "3"
+      },
+      "color": "#4dbd66",
+      "gaugeAWG": 22,
+      "lengthMm": 1200,
+      "bends": [
+        [
+          722,
+          1394
+        ]
+      ],
+      "partID": "wire-2"
+    },
+    {
+      "id": "ecu-signal-3",
+      "from": {
+        "connector": "ecu2",
+        "pin": "5"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "4"
+      },
+      "color": "#369cde",
+      "gaugeAWG": 22,
+      "lengthMm": 1200,
+      "bends": [
+        [
+          754,
+          1426
+        ]
+      ],
+      "partID": "wire-3"
+    },
+    {
+      "id": "can-h",
+      "from": {
+        "connector": "ecu1",
+        "pin": "2"
+      },
+      "to": {
+        "connector": "dash",
+        "pin": "2"
+      },
+      "color": "#8d63e2",
+      "gaugeAWG": 22,
+      "lengthMm": 800,
+      "bends": [],
+      "partID": "wire-4"
+    },
+    {
+      "id": "can-l",
+      "from": {
+        "connector": "ecu1",
+        "pin": "3"
+      },
+      "to": {
+        "connector": "dash",
+        "pin": "3"
+      },
+      "color": "#aa8781",
+      "gaugeAWG": 22,
+      "lengthMm": 800,
+      "bends": [],
+      "partID": "wire-5"
+    },
+    {
+      "id": "ecu-power",
+      "from": {
+        "connector": "ecu2",
+        "pin": "1"
+      },
+      "to": {
+        "connector": "dash",
+        "pin": "1"
+      },
+      "color": "#ec5862",
+      "gaugeAWG": 22,
+      "lengthMm": 1920,
+      "bends": [
+        [
+          610,
+          1298
+        ],
+        [
+          610,
+          1118
+        ]
+      ],
+      "partID": "wire-6"
+    },
+    {
+      "id": "battery-power",
+      "from": {
+        "connector": "bat+",
+        "pin": "1"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "5"
+      },
+      "color": "#ec5862",
+      "gaugeAWG": 22,
+      "lengthMm": 1920,
+      "bends": [
+        [
+          786,
+          1638
+        ]
+      ],
+      "partID": "wire-6"
+    },
+    {
+      "id": "dash-power",
+      "from": {
+        "connector": "dash",
+        "pin": "1"
+      },
+      "to": {
+        "connector": "bat+",
+        "pin": "1"
+      },
+      "color": "#ec5862",
+      "gaugeAWG": 22,
+      "lengthMm": 1020,
+      "bends": [
+        [
+          610,
+          1118
+        ],
+        [
+          610,
+          1638
+        ]
+      ],
+      "partID": "wire-6"
+    },
+    {
+      "id": "ecu-ground",
+      "from": {
+        "connector": "ecu2",
+        "pin": "6"
+      },
+      "to": {
+        "connector": "bat-",
+        "pin": "1"
+      },
+      "color": "#8d9291",
+      "gaugeAWG": 22,
+      "lengthMm": 2120,
+      "bends": [
+        [
+          575,
+          1458
+        ],
+        [
+          575,
+          1713
+        ]
+      ],
+      "partID": "wire-7"
+    },
+    {
+      "id": "dash-ground",
+      "from": {
+        "connector": "dash",
+        "pin": "4"
+      },
+      "to": {
+        "connector": "bat-",
+        "pin": "1"
+      },
+      "color": "#8d9291",
+      "gaugeAWG": 22,
+      "lengthMm": 1806,
+      "bends": [
+        [
+          575,
+          1214
+        ],
+        [
+          575,
+          1713
+        ]
+      ],
+      "partID": "wire-7"
+    },
+    {
+      "id": "bulk-ground",
+      "from": {
+        "connector": "bat-",
+        "pin": "1"
+      },
+      "to": {
+        "connector": "bulk-c",
+        "pin": "6"
+      },
+      "color": "#8d9291",
+      "gaugeAWG": 22,
+      "lengthMm": 1920,
+      "bends": [
+        [
+          818,
+          1713
+        ]
+      ],
+      "partID": "wire-7"
+    }
+  ],
+  "branches": [
+    {
+      "id": "Injector 1 leg",
+      "points": [
+        [
+          130,
+          430
+        ],
+        [
+          130,
+          565
+        ],
+        [
+          240,
+          565
+        ]
+      ],
+      "lengthMm": 200,
+      "label": [
+        115,
+        493
+      ]
+    },
+    {
+      "id": "Coil 1 leg",
+      "points": [
+        [
+          350,
+          430
+        ],
+        [
+          350,
+          565
+        ],
+        [
+          240,
+          565
+        ]
+      ],
+      "lengthMm": 200,
+      "label": [
+        335,
+        493
+      ]
+    },
+    {
+      "id": "Left branch",
+      "points": [
+        [
+          240,
+          565
+        ],
+        [
+          240,
+          675
+        ]
+      ],
+      "lengthMm": 300,
+      "label": [
+        225,
+        627
+      ]
+    },
+    {
+      "id": "Injector 2 leg",
+      "points": [
+        [
+          570,
+          430
+        ],
+        [
+          570,
+          565
+        ],
+        [
+          680,
+          565
+        ]
+      ],
+      "lengthMm": 200,
+      "label": [
+        555,
+        493
+      ]
+    },
+    {
+      "id": "Coil 2 leg",
+      "points": [
+        [
+          790,
+          430
+        ],
+        [
+          790,
+          565
+        ],
+        [
+          680,
+          565
+        ]
+      ],
+      "lengthMm": 200,
+      "label": [
+        775,
+        493
+      ]
+    },
+    {
+      "id": "Right branch",
+      "points": [
+        [
+          680,
+          565
+        ],
+        [
+          680,
+          675
+        ]
+      ],
+      "lengthMm": 300,
+      "label": [
+        665,
+        627
+      ]
+    },
+    {
+      "id": "Left ground",
+      "points": [
+        [
+          142,
+          675
+        ],
+        [
+          240,
+          675
+        ]
+      ],
+      "lengthMm": 300,
+      "label": [
+        178,
+        662
+      ]
+    },
+    {
+      "id": "Left trunk",
+      "points": [
+        [
+          240,
+          675
+        ],
+        [
+          460,
+          675
+        ]
+      ],
+      "lengthMm": 700,
+      "label": [
+        346,
+        662
+      ]
+    },
+    {
+      "id": "Right trunk",
+      "points": [
+        [
+          460,
+          675
+        ],
+        [
+          680,
+          675
+        ]
+      ],
+      "lengthMm": 700,
+      "label": [
+        566,
+        662
+      ]
+    },
+    {
+      "id": "Right ground",
+      "points": [
+        [
+          680,
+          675
+        ],
+        [
+          777,
+          675
+        ]
+      ],
+      "lengthMm": 300,
+      "label": [
+        717,
+        662
+      ]
+    },
+    {
+      "id": "Signal",
+      "points": [
+        [
+          460,
+          550
+        ],
+        [
+          460,
+          675
+        ]
+      ],
+      "lengthMm": 150,
+      "label": [
+        445,
+        625
+      ]
+    },
+    {
+      "id": "Engine bulkhead",
+      "points": [
+        [
+          460,
+          675
+        ],
+        [
+          460,
+          760
+        ]
+      ],
+      "lengthMm": 150,
+      "label": [
+        445,
+        732
+      ]
+    },
+    {
+      "id": "Main trunk",
+      "points": [
+        [
+          460,
+          890
+        ],
+        [
+          460,
+          1150
+        ]
+      ],
+      "lengthMm": 500,
+      "label": [
+        445,
+        1024
+      ]
+    },
+    {
+      "id": "ECU 2 leg",
+      "points": [
+        [
+          225,
+          1040
+        ],
+        [
+          350,
+          1040
+        ],
+        [
+          350,
+          1150
+        ]
+      ],
+      "lengthMm": 100,
+      "label": [
+        281,
+        1025
+      ]
+    },
+    {
+      "id": "ECU 1 leg",
+      "points": [
+        [
+          225,
+          1235
+        ],
+        [
+          350,
+          1235
+        ],
+        [
+          350,
+          1150
+        ]
+      ],
+      "lengthMm": 100,
+      "label": [
+        278,
+        1220
+      ]
+    },
+    {
+      "id": "ECU branch",
+      "points": [
+        [
+          350,
+          1150
+        ],
+        [
+          460,
+          1150
+        ]
+      ],
+      "lengthMm": 600,
+      "label": [
+        391,
+        1135
+      ]
+    },
+    {
+      "id": "Dash trunk",
+      "points": [
+        [
+          460,
+          1150
+        ],
+        [
+          460,
+          1430
+        ]
+      ],
+      "lengthMm": 400,
+      "label": [
+        445,
+        1300
+      ]
+    },
+    {
+      "id": "Dashboard leg",
+      "points": [
+        [
+          225,
+          1430
+        ],
+        [
+          460,
+          1430
+        ]
+      ],
+      "lengthMm": 800,
+      "label": [
+        328,
+        1415
+      ]
+    },
+    {
+      "id": "Battery trunk",
+      "points": [
+        [
+          460,
+          1430
+        ],
+        [
+          460,
+          1600
+        ]
+      ],
+      "lengthMm": 1000,
+      "label": [
+        445,
+        1530
+      ]
+    },
+    {
+      "id": "Battery positive",
+      "points": [
+        [
+          460,
+          1600
+        ],
+        [
+          405,
+          1600
+        ],
+        [
+          405,
+          1675
+        ]
+      ],
+      "lengthMm": 20,
+      "label": [
+        390,
+        1645
+      ]
+    },
+    {
+      "id": "Battery negative",
+      "points": [
+        [
+          460,
+          1600
+        ],
+        [
+          555,
+          1600
+        ],
+        [
+          555,
+          1675
+        ]
+      ],
+      "lengthMm": 20,
+      "label": [
+        570,
+        1645
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "id": "housing-2",
+      "kind": "Connector",
+      "number": "AIO-H02",
+      "manufacturer": "Demo library",
+      "description": "2-position housing study",
+      "unitPrice": 0,
+      "cavities": 2
+    },
+    {
+      "id": "housing-3",
+      "kind": "Connector",
+      "number": "AIO-H03",
+      "manufacturer": "Demo library",
+      "description": "3-position housing study",
+      "unitPrice": 0,
+      "cavities": 3
+    },
+    {
+      "id": "housing-4",
+      "kind": "Connector",
+      "number": "AIO-H04",
+      "manufacturer": "Demo library",
+      "description": "4-position housing study",
+      "unitPrice": 0,
+      "cavities": 4
+    },
+    {
+      "id": "housing-6",
+      "kind": "Connector",
+      "number": "AIO-H06",
+      "manufacturer": "Demo library",
+      "description": "6-position housing study",
+      "unitPrice": 0,
+      "cavities": 6
+    },
+    {
+      "id": "wire-0",
+      "kind": "Wire",
+      "number": "AIO-W22-1",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-1",
+      "kind": "Wire",
+      "number": "AIO-W22-2",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-2",
+      "kind": "Wire",
+      "number": "AIO-W22-3",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-3",
+      "kind": "Wire",
+      "number": "AIO-W22-4",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-4",
+      "kind": "Wire",
+      "number": "AIO-W22-5",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-5",
+      "kind": "Wire",
+      "number": "AIO-W22-6",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-6",
+      "kind": "Wire",
+      "number": "AIO-W22-7",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    },
+    {
+      "id": "wire-7",
+      "kind": "Wire",
+      "number": "AIO-W22-8",
+      "manufacturer": "Demo library",
+      "description": "22 AWG conductor study",
+      "unitPrice": 0,
+      "gaugeAWG": 22
+    }
+  ],
+  "mates": [
+    {
+      "id": "bulkhead-mate",
+      "a": "bulk-e",
+      "b": "bulk-c"
+    }
+  ],
+  "notes": [],
+  "groups": []
+}

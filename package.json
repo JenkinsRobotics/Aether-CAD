@@ -1,0 +1,36 @@
+{
+  "name": "aether-cad",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:test-window": "vite --host 127.0.0.1 --port 5174 --strictPort --mode cad-test-window",
+    "build": "tsc -b && vite build && npm run build:automation",
+    "test": "vitest run",
+    "check": "tsc -b --pretty false",
+    "smoke:step": "node scripts/smoke-step.mjs",
+    "smoke:browser": "node scripts/e2e-import.mjs",
+    "build:automation": "node scripts/build-automation.mjs"
+  },
+  "dependencies": {
+    "@aether/assets": "file:vendor/aether-assets-0.2.0-alpha.27.tgz",
+    "@aether/core": "file:./aether-engine",
+    "@aether/session": "file:vendor/aether-session-0.2.0-alpha.151.tgz",
+    "@aether/sketch": "file:vendor/aether-sketch-0.2.0-alpha.4.tgz",
+    "@aether/ui": "file:vendor/aether-ui-0.2.0-alpha.145.tgz",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  }
+}

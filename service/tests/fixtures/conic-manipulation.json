@@ -1,0 +1,333 @@
+[
+  {
+    "name": "ellipse",
+    "volume": 171.238898038469,
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 20,
+      "documentId": "37bbe4b7-2509-4a26-8119-a9bbc1de73b2",
+      "name": "Handle ellipse",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "type": "profile",
+          "name": "Sketch 1",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  10,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "conic",
+                    "end": [
+                      0,
+                      10
+                    ],
+                    "control": [
+                      10,
+                      10
+                    ],
+                    "rho": 0.4142135623730951
+                  },
+                  {
+                    "type": "line",
+                    "end": [
+                      10,
+                      0
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "conic-rho-1",
+                "kind": "conic-rho",
+                "a": {
+                  "contour": 0,
+                  "kind": "curve",
+                  "index": 0
+                },
+                "value": 0.4142135623730951
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "type": "extrude",
+          "name": "Extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "parabola-snap",
+    "volume": 800,
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 20,
+      "documentId": "cd1c728c-9516-4549-84c5-c1c0221cd8f8",
+      "name": "Handle parabola-snap",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "type": "profile",
+          "name": "Sketch 1",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "conic",
+                    "end": [
+                      20,
+                      0
+                    ],
+                    "control": [
+                      10,
+                      20
+                    ],
+                    "rho": 0.5
+                  },
+                  {
+                    "type": "line",
+                    "end": [
+                      0,
+                      0
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "conic-rho-1",
+                "kind": "conic-rho",
+                "a": {
+                  "contour": 0,
+                  "kind": "curve",
+                  "index": 0
+                },
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "type": "extrude",
+          "name": "Extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "hyperbola",
+    "volume": 124.5278731932182,
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 20,
+      "documentId": "2f6f96ac-410e-4d35-86b1-95de3f341b46",
+      "name": "Handle hyperbola",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "type": "profile",
+          "name": "Sketch 1",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  10,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "conic",
+                    "end": [
+                      20,
+                      17.32050807568877
+                    ],
+                    "control": [
+                      10,
+                      5.773502691896258
+                    ],
+                    "rho": 0.5505102572168218
+                  },
+                  {
+                    "type": "line",
+                    "end": [
+                      10,
+                      0
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "conic-rho-1",
+                "kind": "conic-rho",
+                "a": {
+                  "contour": 0,
+                  "kind": "curve",
+                  "index": 0
+                },
+                "value": 0.5505102572168218
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "type": "extrude",
+          "name": "Extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "fixed-after-drag",
+    "volume": 171.238898038469,
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 20,
+      "documentId": "37bbe4b7-2509-4a26-8119-a9bbc1de73b2",
+      "name": "Handle ellipse",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "type": "profile",
+          "name": "Sketch 1",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  10,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "conic",
+                    "end": [
+                      0,
+                      10
+                    ],
+                    "control": [
+                      10,
+                      10
+                    ],
+                    "rho": 0.4142135623730951
+                  },
+                  {
+                    "type": "line",
+                    "end": [
+                      10,
+                      0
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "conic-rho-1",
+                "kind": "conic-rho",
+                "a": {
+                  "contour": 0,
+                  "kind": "curve",
+                  "index": 0
+                },
+                "value": 0.4142135623730951
+              },
+              {
+                "id": "883c215e-d13c-4d63-b441-fac6968363e5",
+                "kind": "fix",
+                "a": {
+                  "kind": "curve",
+                  "contour": 0,
+                  "index": 0,
+                  "parameter": 0.5
+                },
+                "fixedGeometry": {
+                  "type": "path",
+                  "start": [
+                    10,
+                    0
+                  ],
+                  "segments": [
+                    {
+                      "type": "conic",
+                      "end": [
+                        0,
+                        10
+                      ],
+                      "control": [
+                        10,
+                        10
+                      ],
+                      "rho": 0.4142135623730951
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "type": "extrude",
+          "name": "Extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    }
+  }
+]

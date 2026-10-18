@@ -1,0 +1,1077 @@
+{
+  "reviewed": "2026-10-13",
+  "source": "https://classcad.ch/docs/",
+  "scope": "Public method names and documentation links for coverage tracking. Not an implementation or compatibility claim.",
+  "domains": {
+    "part": [
+      {
+        "name": "boolean",
+        "url": "https://classcad.ch/docs/API/part/#booleanparam"
+      },
+      {
+        "name": "box",
+        "url": "https://classcad.ch/docs/API/part/#boxparam"
+      },
+      {
+        "name": "calculateMassProperties",
+        "url": "https://classcad.ch/docs/API/part/#calculatemasspropertiesparam"
+      },
+      {
+        "name": "chamfer",
+        "url": "https://classcad.ch/docs/API/part/#chamferparam"
+      },
+      {
+        "name": "circularPattern",
+        "url": "https://classcad.ch/docs/API/part/#circularpatternparam"
+      },
+      {
+        "name": "closeFeature",
+        "url": "https://classcad.ch/docs/API/part/#closefeatureparam"
+      },
+      {
+        "name": "compositeCurve",
+        "url": "https://classcad.ch/docs/API/part/#compositecurveparam"
+      },
+      {
+        "name": "cone",
+        "url": "https://classcad.ch/docs/API/part/#coneparam"
+      },
+      {
+        "name": "create",
+        "url": "https://classcad.ch/docs/API/part/#createparam"
+      },
+      {
+        "name": "createUncommitedObject",
+        "url": "https://classcad.ch/docs/API/part/#createuncommitedobjectparam"
+      },
+      {
+        "name": "cylinder",
+        "url": "https://classcad.ch/docs/API/part/#cylinderparam"
+      },
+      {
+        "name": "deleteExpression",
+        "url": "https://classcad.ch/docs/API/part/#deleteexpressionparam"
+      },
+      {
+        "name": "deleteFeature",
+        "url": "https://classcad.ch/docs/API/part/#deletefeatureparam"
+      },
+      {
+        "name": "entityDeletion",
+        "url": "https://classcad.ch/docs/API/part/#entitydeletionparam"
+      },
+      {
+        "name": "entityInjection",
+        "url": "https://classcad.ch/docs/API/part/#entityinjectionparam"
+      },
+      {
+        "name": "expression",
+        "url": "https://classcad.ch/docs/API/part/#expressionparam"
+      },
+      {
+        "name": "extrusion",
+        "url": "https://classcad.ch/docs/API/part/#extrusionparam"
+      },
+      {
+        "name": "fillet",
+        "url": "https://classcad.ch/docs/API/part/#filletparam"
+      },
+      {
+        "name": "getBrepGeometryByIndex",
+        "url": "https://classcad.ch/docs/API/part/#getbrepgeometrybyindexparam"
+      },
+      {
+        "name": "getBrepGeometryIndex",
+        "url": "https://classcad.ch/docs/API/part/#getbrepgeometryindexparam"
+      },
+      {
+        "name": "getExpression",
+        "url": "https://classcad.ch/docs/API/part/#getexpressionparam"
+      },
+      {
+        "name": "getFeature",
+        "url": "https://classcad.ch/docs/API/part/#getfeatureparam"
+      },
+      {
+        "name": "getGeometryIds",
+        "url": "https://classcad.ch/docs/API/part/#getgeometryidsparam"
+      },
+      {
+        "name": "getGeometryPositions",
+        "url": "https://classcad.ch/docs/API/part/#getgeometrypositionsparam"
+      },
+      {
+        "name": "getSketch",
+        "url": "https://classcad.ch/docs/API/part/#getsketchparam"
+      },
+      {
+        "name": "getSketchRegion",
+        "url": "https://classcad.ch/docs/API/part/#getsketchregionparam"
+      },
+      {
+        "name": "getWorkGeometry",
+        "url": "https://classcad.ch/docs/API/part/#getworkgeometryparam"
+      },
+      {
+        "name": "importFeature",
+        "url": "https://classcad.ch/docs/API/part/#importfeatureparam"
+      },
+      {
+        "name": "linearPattern",
+        "url": "https://classcad.ch/docs/API/part/#linearpatternparam"
+      },
+      {
+        "name": "linkWithExpression",
+        "url": "https://classcad.ch/docs/API/part/#linkwithexpressionparam"
+      },
+      {
+        "name": "mirror",
+        "url": "https://classcad.ch/docs/API/part/#mirrorparam"
+      },
+      {
+        "name": "openFeature",
+        "url": "https://classcad.ch/docs/API/part/#openfeatureparam"
+      },
+      {
+        "name": "operationMoveBefore",
+        "url": "https://classcad.ch/docs/API/part/#operationmovebeforeparam"
+      },
+      {
+        "name": "operationMoveToEnd",
+        "url": "https://classcad.ch/docs/API/part/#operationmovetoendparam"
+      },
+      {
+        "name": "renameExpression",
+        "url": "https://classcad.ch/docs/API/part/#renameexpressionparam"
+      },
+      {
+        "name": "revolve",
+        "url": "https://classcad.ch/docs/API/part/#revolveparam"
+      },
+      {
+        "name": "rotation",
+        "url": "https://classcad.ch/docs/API/part/#rotationparam"
+      },
+      {
+        "name": "setAppearance",
+        "url": "https://classcad.ch/docs/API/part/#setappearanceparam"
+      },
+      {
+        "name": "sketch",
+        "url": "https://classcad.ch/docs/API/part/#sketchparam"
+      },
+      {
+        "name": "slice",
+        "url": "https://classcad.ch/docs/API/part/#sliceparam"
+      },
+      {
+        "name": "sliceBySheet",
+        "url": "https://classcad.ch/docs/API/part/#slicebysheetparam"
+      },
+      {
+        "name": "sphere",
+        "url": "https://classcad.ch/docs/API/part/#sphereparam"
+      },
+      {
+        "name": "transformationByCSys",
+        "url": "https://classcad.ch/docs/API/part/#transformationbycsysparam"
+      },
+      {
+        "name": "translation",
+        "url": "https://classcad.ch/docs/API/part/#translationparam"
+      },
+      {
+        "name": "twist",
+        "url": "https://classcad.ch/docs/API/part/#twistparam"
+      },
+      {
+        "name": "unlinkExpression",
+        "url": "https://classcad.ch/docs/API/part/#unlinkexpressionparam"
+      },
+      {
+        "name": "updateBoolean",
+        "url": "https://classcad.ch/docs/API/part/#updatebooleanparam"
+      },
+      {
+        "name": "updateBox",
+        "url": "https://classcad.ch/docs/API/part/#updateboxparam"
+      },
+      {
+        "name": "updateChamfer",
+        "url": "https://classcad.ch/docs/API/part/#updatechamferparam"
+      },
+      {
+        "name": "updateCircularPattern",
+        "url": "https://classcad.ch/docs/API/part/#updatecircularpatternparam"
+      },
+      {
+        "name": "updateCompositeCurve",
+        "url": "https://classcad.ch/docs/API/part/#updatecompositecurveparam"
+      },
+      {
+        "name": "updateCone",
+        "url": "https://classcad.ch/docs/API/part/#updateconeparam"
+      },
+      {
+        "name": "updateCylinder",
+        "url": "https://classcad.ch/docs/API/part/#updatecylinderparam"
+      },
+      {
+        "name": "updateEntityDeletion",
+        "url": "https://classcad.ch/docs/API/part/#updateentitydeletionparam"
+      },
+      {
+        "name": "updateExpression",
+        "url": "https://classcad.ch/docs/API/part/#updateexpressionparam"
+      },
+      {
+        "name": "updateExtrusion",
+        "url": "https://classcad.ch/docs/API/part/#updateextrusionparam"
+      },
+      {
+        "name": "updateFillet",
+        "url": "https://classcad.ch/docs/API/part/#updatefilletparam"
+      },
+      {
+        "name": "updateImportFeature",
+        "url": "https://classcad.ch/docs/API/part/#updateimportfeatureparam"
+      },
+      {
+        "name": "updateLinearPattern",
+        "url": "https://classcad.ch/docs/API/part/#updatelinearpatternparam"
+      },
+      {
+        "name": "updateMirror",
+        "url": "https://classcad.ch/docs/API/part/#updatemirrorparam"
+      },
+      {
+        "name": "updateRevolve",
+        "url": "https://classcad.ch/docs/API/part/#updaterevolveparam"
+      },
+      {
+        "name": "updateRotation",
+        "url": "https://classcad.ch/docs/API/part/#updaterotationparam"
+      },
+      {
+        "name": "updateSlice",
+        "url": "https://classcad.ch/docs/API/part/#updatesliceparam"
+      },
+      {
+        "name": "updateSliceBySheet",
+        "url": "https://classcad.ch/docs/API/part/#updateslicebysheetparam"
+      },
+      {
+        "name": "updateSphere",
+        "url": "https://classcad.ch/docs/API/part/#updatesphereparam"
+      },
+      {
+        "name": "updateTransformationByCSys",
+        "url": "https://classcad.ch/docs/API/part/#updatetransformationbycsysparam"
+      },
+      {
+        "name": "updateTranslation",
+        "url": "https://classcad.ch/docs/API/part/#updatetranslationparam"
+      },
+      {
+        "name": "updateTwist",
+        "url": "https://classcad.ch/docs/API/part/#updatetwistparam"
+      },
+      {
+        "name": "updateWorkAxis",
+        "url": "https://classcad.ch/docs/API/part/#updateworkaxisparam"
+      },
+      {
+        "name": "updateWorkCSys",
+        "url": "https://classcad.ch/docs/API/part/#updateworkcsysparam"
+      },
+      {
+        "name": "updateWorkPlane",
+        "url": "https://classcad.ch/docs/API/part/#updateworkplaneparam"
+      },
+      {
+        "name": "updateWorkPoint",
+        "url": "https://classcad.ch/docs/API/part/#updateworkpointparam"
+      },
+      {
+        "name": "workAxis",
+        "url": "https://classcad.ch/docs/API/part/#workaxisparam"
+      },
+      {
+        "name": "workCSys",
+        "url": "https://classcad.ch/docs/API/part/#workcsysparam"
+      },
+      {
+        "name": "workPlane",
+        "url": "https://classcad.ch/docs/API/part/#workplaneparam"
+      },
+      {
+        "name": "workPoint",
+        "url": "https://classcad.ch/docs/API/part/#workpointparam"
+      }
+    ],
+    "assembly": [
+      {
+        "name": "assemblyTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#assemblytemplateparam"
+      },
+      {
+        "name": "calculateMassProperties",
+        "url": "https://classcad.ch/docs/API/assembly/#calculatemasspropertiesparam"
+      },
+      {
+        "name": "circularPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#circularpatternparam"
+      },
+      {
+        "name": "convertToTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#converttotemplateparam"
+      },
+      {
+        "name": "create",
+        "url": "https://classcad.ch/docs/API/assembly/#createparam"
+      },
+      {
+        "name": "createUncommitedObject",
+        "url": "https://classcad.ch/docs/API/assembly/#createuncommitedobjectparam"
+      },
+      {
+        "name": "cylindrical",
+        "url": "https://classcad.ch/docs/API/assembly/#cylindricalparam"
+      },
+      {
+        "name": "deleteConstraint",
+        "url": "https://classcad.ch/docs/API/assembly/#deleteconstraintparam"
+      },
+      {
+        "name": "deleteInstance",
+        "url": "https://classcad.ch/docs/API/assembly/#deleteinstanceparam"
+      },
+      {
+        "name": "deleteTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#deletetemplateparam"
+      },
+      {
+        "name": "exportNode",
+        "url": "https://classcad.ch/docs/API/assembly/#exportnodeparam"
+      },
+      {
+        "name": "fastened",
+        "url": "https://classcad.ch/docs/API/assembly/#fastenedparam"
+      },
+      {
+        "name": "fastenedOrigin",
+        "url": "https://classcad.ch/docs/API/assembly/#fastenedoriginparam"
+      },
+      {
+        "name": "finishMovingUnderConstraints",
+        "url": "https://classcad.ch/docs/API/assembly/#finishmovingunderconstraintsparam"
+      },
+      {
+        "name": "from",
+        "url": "https://classcad.ch/docs/API/assembly/#fromparam"
+      },
+      {
+        "name": "gear",
+        "url": "https://classcad.ch/docs/API/assembly/#gearparam"
+      },
+      {
+        "name": "getAssemblyTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#getassemblytemplateparam"
+      },
+      {
+        "name": "getCircularPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#getcircularpatternparam"
+      },
+      {
+        "name": "getCylindrical",
+        "url": "https://classcad.ch/docs/API/assembly/#getcylindricalparam"
+      },
+      {
+        "name": "getFastened",
+        "url": "https://classcad.ch/docs/API/assembly/#getfastenedparam"
+      },
+      {
+        "name": "getFastenedOrigin",
+        "url": "https://classcad.ch/docs/API/assembly/#getfastenedoriginparam"
+      },
+      {
+        "name": "getGear",
+        "url": "https://classcad.ch/docs/API/assembly/#getgearparam"
+      },
+      {
+        "name": "getGroup",
+        "url": "https://classcad.ch/docs/API/assembly/#getgroupparam"
+      },
+      {
+        "name": "getInstance",
+        "url": "https://classcad.ch/docs/API/assembly/#getinstanceparam"
+      },
+      {
+        "name": "getLinearPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#getlinearpatternparam"
+      },
+      {
+        "name": "getParallel",
+        "url": "https://classcad.ch/docs/API/assembly/#getparallelparam"
+      },
+      {
+        "name": "getPartTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#getparttemplateparam"
+      },
+      {
+        "name": "getPlanar",
+        "url": "https://classcad.ch/docs/API/assembly/#getplanarparam"
+      },
+      {
+        "name": "getProduct",
+        "url": "https://classcad.ch/docs/API/assembly/#getproductparam"
+      },
+      {
+        "name": "getRevolute",
+        "url": "https://classcad.ch/docs/API/assembly/#getrevoluteparam"
+      },
+      {
+        "name": "getSlider",
+        "url": "https://classcad.ch/docs/API/assembly/#getsliderparam"
+      },
+      {
+        "name": "getSpherical",
+        "url": "https://classcad.ch/docs/API/assembly/#getsphericalparam"
+      },
+      {
+        "name": "getWorkGeometry",
+        "url": "https://classcad.ch/docs/API/assembly/#getworkgeometryparam"
+      },
+      {
+        "name": "group",
+        "url": "https://classcad.ch/docs/API/assembly/#groupparam"
+      },
+      {
+        "name": "instance",
+        "url": "https://classcad.ch/docs/API/assembly/#instanceparam"
+      },
+      {
+        "name": "linearPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#linearpatternparam"
+      },
+      {
+        "name": "loadProduct",
+        "url": "https://classcad.ch/docs/API/assembly/#loadproductparam"
+      },
+      {
+        "name": "moveUnderConstraints",
+        "url": "https://classcad.ch/docs/API/assembly/#moveunderconstraintsparam"
+      },
+      {
+        "name": "parallel",
+        "url": "https://classcad.ch/docs/API/assembly/#parallelparam"
+      },
+      {
+        "name": "partTemplate",
+        "url": "https://classcad.ch/docs/API/assembly/#parttemplateparam"
+      },
+      {
+        "name": "planar",
+        "url": "https://classcad.ch/docs/API/assembly/#planarparam"
+      },
+      {
+        "name": "revolute",
+        "url": "https://classcad.ch/docs/API/assembly/#revoluteparam"
+      },
+      {
+        "name": "setCurrentInstance",
+        "url": "https://classcad.ch/docs/API/assembly/#setcurrentinstanceparam"
+      },
+      {
+        "name": "setCurrentProduct",
+        "url": "https://classcad.ch/docs/API/assembly/#setcurrentproductparam"
+      },
+      {
+        "name": "setIdent",
+        "url": "https://classcad.ch/docs/API/assembly/#setidentparam"
+      },
+      {
+        "name": "slider",
+        "url": "https://classcad.ch/docs/API/assembly/#sliderparam"
+      },
+      {
+        "name": "spherical",
+        "url": "https://classcad.ch/docs/API/assembly/#sphericalparam"
+      },
+      {
+        "name": "startMovingUnderConstraints",
+        "url": "https://classcad.ch/docs/API/assembly/#startmovingunderconstraintsparam"
+      },
+      {
+        "name": "transformInstance",
+        "url": "https://classcad.ch/docs/API/assembly/#transforminstanceparam"
+      },
+      {
+        "name": "transformInstanceTo",
+        "url": "https://classcad.ch/docs/API/assembly/#transforminstancetoparam"
+      },
+      {
+        "name": "update3DConstraintValue",
+        "url": "https://classcad.ch/docs/API/assembly/#update3dconstraintvalueparam"
+      },
+      {
+        "name": "updateCircularPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#updatecircularpatternparam"
+      },
+      {
+        "name": "updateCylindrical",
+        "url": "https://classcad.ch/docs/API/assembly/#updatecylindricalparam"
+      },
+      {
+        "name": "updateFastened",
+        "url": "https://classcad.ch/docs/API/assembly/#updatefastenedparam"
+      },
+      {
+        "name": "updateFastenedOrigin",
+        "url": "https://classcad.ch/docs/API/assembly/#updatefastenedoriginparam"
+      },
+      {
+        "name": "updateGear",
+        "url": "https://classcad.ch/docs/API/assembly/#updategearparam"
+      },
+      {
+        "name": "updateGroup",
+        "url": "https://classcad.ch/docs/API/assembly/#updategroupparam"
+      },
+      {
+        "name": "updateLinearPattern",
+        "url": "https://classcad.ch/docs/API/assembly/#updatelinearpatternparam"
+      },
+      {
+        "name": "updateParallel",
+        "url": "https://classcad.ch/docs/API/assembly/#updateparallelparam"
+      },
+      {
+        "name": "updatePlanar",
+        "url": "https://classcad.ch/docs/API/assembly/#updateplanarparam"
+      },
+      {
+        "name": "updateRevolute",
+        "url": "https://classcad.ch/docs/API/assembly/#updaterevoluteparam"
+      },
+      {
+        "name": "updateSlider",
+        "url": "https://classcad.ch/docs/API/assembly/#updatesliderparam"
+      },
+      {
+        "name": "updateSpherical",
+        "url": "https://classcad.ch/docs/API/assembly/#updatesphericalparam"
+      }
+    ],
+    "sketch": [
+      {
+        "name": "arcBy3Points",
+        "url": "https://classcad.ch/docs/API/sketch/#arcby3pointsparam"
+      },
+      {
+        "name": "arcByCenter",
+        "url": "https://classcad.ch/docs/API/sketch/#arcbycenterparam"
+      },
+      {
+        "name": "changeReferenceGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#changereferencegeometryparam"
+      },
+      {
+        "name": "circle",
+        "url": "https://classcad.ch/docs/API/sketch/#circleparam"
+      },
+      {
+        "name": "circularPattern",
+        "url": "https://classcad.ch/docs/API/sketch/#circularpatternparam"
+      },
+      {
+        "name": "constraint",
+        "url": "https://classcad.ch/docs/API/sketch/#constraintparam"
+      },
+      {
+        "name": "copyFrom",
+        "url": "https://classcad.ch/docs/API/sketch/#copyfromparam"
+      },
+      {
+        "name": "copyGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#copygeometryparam"
+      },
+      {
+        "name": "create",
+        "url": "https://classcad.ch/docs/API/sketch/#createparam"
+      },
+      {
+        "name": "deleteObject",
+        "url": "https://classcad.ch/docs/API/sketch/#deleteobjectparam"
+      },
+      {
+        "name": "deleteSketch",
+        "url": "https://classcad.ch/docs/API/sketch/#deletesketchparam"
+      },
+      {
+        "name": "dimension",
+        "url": "https://classcad.ch/docs/API/sketch/#dimensionparam"
+      },
+      {
+        "name": "fillet",
+        "url": "https://classcad.ch/docs/API/sketch/#filletparam"
+      },
+      {
+        "name": "generateAutoConstraints",
+        "url": "https://classcad.ch/docs/API/sketch/#generateautoconstraintsparam"
+      },
+      {
+        "name": "geometry",
+        "url": "https://classcad.ch/docs/API/sketch/#geometryparam"
+      },
+      {
+        "name": "getDiagnosticsInfo",
+        "url": "https://classcad.ch/docs/API/sketch/#getdiagnosticsinfoparam"
+      },
+      {
+        "name": "getGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#getgeometryparam"
+      },
+      {
+        "name": "getGlobalState",
+        "url": "https://classcad.ch/docs/API/sketch/#getglobalstateparam"
+      },
+      {
+        "name": "getObjectInfo",
+        "url": "https://classcad.ch/docs/API/sketch/#getobjectinfoparam"
+      },
+      {
+        "name": "getObjectsLists",
+        "url": "https://classcad.ch/docs/API/sketch/#getobjectslistsparam"
+      },
+      {
+        "name": "getPoints",
+        "url": "https://classcad.ch/docs/API/sketch/#getpointsparam"
+      },
+      {
+        "name": "getPositions",
+        "url": "https://classcad.ch/docs/API/sketch/#getpositionsparam"
+      },
+      {
+        "name": "getSketchRegion",
+        "url": "https://classcad.ch/docs/API/sketch/#getsketchregionparam"
+      },
+      {
+        "name": "getTopologyInfo",
+        "url": "https://classcad.ch/docs/API/sketch/#gettopologyinfoparam"
+      },
+      {
+        "name": "line",
+        "url": "https://classcad.ch/docs/API/sketch/#lineparam"
+      },
+      {
+        "name": "linearPattern",
+        "url": "https://classcad.ch/docs/API/sketch/#linearpatternparam"
+      },
+      {
+        "name": "loadFrom",
+        "url": "https://classcad.ch/docs/API/sketch/#loadfromparam"
+      },
+      {
+        "name": "mirrorPattern",
+        "url": "https://classcad.ch/docs/API/sketch/#mirrorpatternparam"
+      },
+      {
+        "name": "moveGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#movegeometryparam"
+      },
+      {
+        "name": "point",
+        "url": "https://classcad.ch/docs/API/sketch/#pointparam"
+      },
+      {
+        "name": "postTrim",
+        "url": "https://classcad.ch/docs/API/sketch/#posttrimparam"
+      },
+      {
+        "name": "preTrim",
+        "url": "https://classcad.ch/docs/API/sketch/#pretrimparam"
+      },
+      {
+        "name": "rectangle",
+        "url": "https://classcad.ch/docs/API/sketch/#rectangleparam"
+      },
+      {
+        "name": "referenceGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#referencegeometryparam"
+      },
+      {
+        "name": "rigidSet",
+        "url": "https://classcad.ch/docs/API/sketch/#rigidsetparam"
+      },
+      {
+        "name": "setReferences",
+        "url": "https://classcad.ch/docs/API/sketch/#setreferencesparam"
+      },
+      {
+        "name": "setWorkPlane",
+        "url": "https://classcad.ch/docs/API/sketch/#setworkplaneparam"
+      },
+      {
+        "name": "sketchRegion",
+        "url": "https://classcad.ch/docs/API/sketch/#sketchregionparam"
+      },
+      {
+        "name": "splitAllCurves",
+        "url": "https://classcad.ch/docs/API/sketch/#splitallcurvesparam"
+      },
+      {
+        "name": "splitCurve",
+        "url": "https://classcad.ch/docs/API/sketch/#splitcurveparam"
+      },
+      {
+        "name": "splitCurves",
+        "url": "https://classcad.ch/docs/API/sketch/#splitcurvesparam"
+      },
+      {
+        "name": "splitCurvesMergeBack",
+        "url": "https://classcad.ch/docs/API/sketch/#splitcurvesmergebackparam"
+      },
+      {
+        "name": "trim",
+        "url": "https://classcad.ch/docs/API/sketch/#trimparam"
+      },
+      {
+        "name": "trimCurves",
+        "url": "https://classcad.ch/docs/API/sketch/#trimcurvesparam"
+      },
+      {
+        "name": "undoFillet",
+        "url": "https://classcad.ch/docs/API/sketch/#undofilletparam"
+      },
+      {
+        "name": "unlinkReferenceGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#unlinkreferencegeometryparam"
+      },
+      {
+        "name": "updateDimension",
+        "url": "https://classcad.ch/docs/API/sketch/#updatedimensionparam"
+      },
+      {
+        "name": "updateDimensionPosition",
+        "url": "https://classcad.ch/docs/API/sketch/#updatedimensionpositionparam"
+      },
+      {
+        "name": "updateGeometry",
+        "url": "https://classcad.ch/docs/API/sketch/#updategeometryparam"
+      },
+      {
+        "name": "updateSketchRegion",
+        "url": "https://classcad.ch/docs/API/sketch/#updatesketchregionparam"
+      }
+    ],
+    "curve": [
+      {
+        "name": "advancedPolyline",
+        "url": "https://classcad.ch/docs/API/curve/#advancedpolylineparam"
+      },
+      {
+        "name": "arcBy3Points",
+        "url": "https://classcad.ch/docs/API/curve/#arcby3pointsparam"
+      },
+      {
+        "name": "arcByCenter",
+        "url": "https://classcad.ch/docs/API/curve/#arcbycenterparam"
+      },
+      {
+        "name": "arcByCenterRadAngle",
+        "url": "https://classcad.ch/docs/API/curve/#arcbycenterradangleparam"
+      },
+      {
+        "name": "bezierCurve",
+        "url": "https://classcad.ch/docs/API/curve/#beziercurveparam"
+      },
+      {
+        "name": "circle",
+        "url": "https://classcad.ch/docs/API/curve/#circleparam"
+      },
+      {
+        "name": "cleanShape",
+        "url": "https://classcad.ch/docs/API/curve/#cleanshapeparam"
+      },
+      {
+        "name": "deleteShape",
+        "url": "https://classcad.ch/docs/API/curve/#deleteshapeparam"
+      },
+      {
+        "name": "ellipse",
+        "url": "https://classcad.ch/docs/API/curve/#ellipseparam"
+      },
+      {
+        "name": "ellipticArc",
+        "url": "https://classcad.ch/docs/API/curve/#ellipticarcparam"
+      },
+      {
+        "name": "interpolationCurve",
+        "url": "https://classcad.ch/docs/API/curve/#interpolationcurveparam"
+      },
+      {
+        "name": "intersection2d",
+        "url": "https://classcad.ch/docs/API/curve/#intersection2dparam"
+      },
+      {
+        "name": "line",
+        "url": "https://classcad.ch/docs/API/curve/#lineparam"
+      },
+      {
+        "name": "polyline2d",
+        "url": "https://classcad.ch/docs/API/curve/#polyline2dparam"
+      },
+      {
+        "name": "rotateShape",
+        "url": "https://classcad.ch/docs/API/curve/#rotateshapeparam"
+      },
+      {
+        "name": "scaleShape",
+        "url": "https://classcad.ch/docs/API/curve/#scaleshapeparam"
+      },
+      {
+        "name": "shape",
+        "url": "https://classcad.ch/docs/API/curve/#shapeparam"
+      },
+      {
+        "name": "subtraction2d",
+        "url": "https://classcad.ch/docs/API/curve/#subtraction2dparam"
+      },
+      {
+        "name": "transformShape",
+        "url": "https://classcad.ch/docs/API/curve/#transformshapeparam"
+      },
+      {
+        "name": "translateShape",
+        "url": "https://classcad.ch/docs/API/curve/#translateshapeparam"
+      },
+      {
+        "name": "union2d",
+        "url": "https://classcad.ch/docs/API/curve/#union2dparam"
+      }
+    ],
+    "solid": [
+      {
+        "name": "box",
+        "url": "https://classcad.ch/docs/API/solid/#boxparam"
+      },
+      {
+        "name": "cone",
+        "url": "https://classcad.ch/docs/API/solid/#coneparam"
+      },
+      {
+        "name": "copy",
+        "url": "https://classcad.ch/docs/API/solid/#copyparam"
+      },
+      {
+        "name": "cylinder",
+        "url": "https://classcad.ch/docs/API/solid/#cylinderparam"
+      },
+      {
+        "name": "deleteSolid",
+        "url": "https://classcad.ch/docs/API/solid/#deletesolidparam"
+      },
+      {
+        "name": "extrusion",
+        "url": "https://classcad.ch/docs/API/solid/#extrusionparam"
+      },
+      {
+        "name": "fillet",
+        "url": "https://classcad.ch/docs/API/solid/#filletparam"
+      },
+      {
+        "name": "intersection",
+        "url": "https://classcad.ch/docs/API/solid/#intersectionparam"
+      },
+      {
+        "name": "merge",
+        "url": "https://classcad.ch/docs/API/solid/#mergeparam"
+      },
+      {
+        "name": "mirror",
+        "url": "https://classcad.ch/docs/API/solid/#mirrorparam"
+      },
+      {
+        "name": "offset",
+        "url": "https://classcad.ch/docs/API/solid/#offsetparam"
+      },
+      {
+        "name": "revolve",
+        "url": "https://classcad.ch/docs/API/solid/#revolveparam"
+      },
+      {
+        "name": "rotation",
+        "url": "https://classcad.ch/docs/API/solid/#rotationparam"
+      },
+      {
+        "name": "scale",
+        "url": "https://classcad.ch/docs/API/solid/#scaleparam"
+      },
+      {
+        "name": "section",
+        "url": "https://classcad.ch/docs/API/solid/#sectionparam"
+      },
+      {
+        "name": "slice",
+        "url": "https://classcad.ch/docs/API/solid/#sliceparam"
+      },
+      {
+        "name": "sphere",
+        "url": "https://classcad.ch/docs/API/solid/#sphereparam"
+      },
+      {
+        "name": "subtraction",
+        "url": "https://classcad.ch/docs/API/solid/#subtractionparam"
+      },
+      {
+        "name": "translation",
+        "url": "https://classcad.ch/docs/API/solid/#translationparam"
+      },
+      {
+        "name": "union",
+        "url": "https://classcad.ch/docs/API/solid/#unionparam"
+      },
+      {
+        "name": "useSolid",
+        "url": "https://classcad.ch/docs/API/solid/#usesolidparam"
+      }
+    ],
+    "drawing2d": [
+      {
+        "name": "centerView",
+        "url": "https://classcad.ch/docs/API/drawing2d/#centerviewparam"
+      },
+      {
+        "name": "deleteDimension",
+        "url": "https://classcad.ch/docs/API/drawing2d/#deletedimensionparam"
+      },
+      {
+        "name": "dimension",
+        "url": "https://classcad.ch/docs/API/drawing2d/#dimensionparam"
+      },
+      {
+        "name": "exportDXF",
+        "url": "https://classcad.ch/docs/API/drawing2d/#exportdxfparam"
+      },
+      {
+        "name": "exportSVG",
+        "url": "https://classcad.ch/docs/API/drawing2d/#exportsvgparam"
+      },
+      {
+        "name": "getBoundaryBoxFromView",
+        "url": "https://classcad.ch/docs/API/drawing2d/#getboundaryboxfromviewparam"
+      },
+      {
+        "name": "isDXFAvailable",
+        "url": "https://classcad.ch/docs/API/drawing2d/#isdxfavailable"
+      },
+      {
+        "name": "isSVGAvailable",
+        "url": "https://classcad.ch/docs/API/drawing2d/#issvgavailable"
+      },
+      {
+        "name": "placeView",
+        "url": "https://classcad.ch/docs/API/drawing2d/#placeviewparam"
+      },
+      {
+        "name": "updateDimensionPosition",
+        "url": "https://classcad.ch/docs/API/drawing2d/#updatedimensionpositionparam"
+      },
+      {
+        "name": "view",
+        "url": "https://classcad.ch/docs/API/drawing2d/#viewparam"
+      }
+    ],
+    "common": [
+      {
+        "name": "batch",
+        "url": "https://classcad.ch/docs/API/common/#batchparam"
+      },
+      {
+        "name": "clear",
+        "url": "https://classcad.ch/docs/API/common/#clearparam"
+      },
+      {
+        "name": "clearUserData",
+        "url": "https://classcad.ch/docs/API/common/#clearuserdataparam"
+      },
+      {
+        "name": "evaluateExpression",
+        "url": "https://classcad.ch/docs/API/common/#evaluateexpressionparam"
+      },
+      {
+        "name": "getAppVersion",
+        "url": "https://classcad.ch/docs/API/common/#getappversion"
+      },
+      {
+        "name": "getClassFileVersion",
+        "url": "https://classcad.ch/docs/API/common/#getclassfileversion"
+      },
+      {
+        "name": "getDatabaseSettings",
+        "url": "https://classcad.ch/docs/API/common/#getdatabasesettings"
+      },
+      {
+        "name": "getFacetingParameters",
+        "url": "https://classcad.ch/docs/API/common/#getfacetingparameters"
+      },
+      {
+        "name": "getUserData",
+        "url": "https://classcad.ch/docs/API/common/#getuserdataparam"
+      },
+      {
+        "name": "getUserDataKeys",
+        "url": "https://classcad.ch/docs/API/common/#getuserdatakeysparam"
+      },
+      {
+        "name": "load",
+        "url": "https://classcad.ch/docs/API/common/#loadparam"
+      },
+      {
+        "name": "recalc",
+        "url": "https://classcad.ch/docs/API/common/#recalc"
+      },
+      {
+        "name": "removeUserData",
+        "url": "https://classcad.ch/docs/API/common/#removeuserdataparam"
+      },
+      {
+        "name": "requestVisualisation",
+        "url": "https://classcad.ch/docs/API/common/#requestvisualisationparam"
+      },
+      {
+        "name": "save",
+        "url": "https://classcad.ch/docs/API/common/#saveparam"
+      },
+      {
+        "name": "setAppearance",
+        "url": "https://classcad.ch/docs/API/common/#setappearanceparam"
+      },
+      {
+        "name": "setDatabaseSettings",
+        "url": "https://classcad.ch/docs/API/common/#setdatabasesettingsparam"
+      },
+      {
+        "name": "setFacetingParameters",
+        "url": "https://classcad.ch/docs/API/common/#setfacetingparametersparam"
+      },
+      {
+        "name": "setObjectCoordSystem",
+        "url": "https://classcad.ch/docs/API/common/#setobjectcoordsystemparam"
+      },
+      {
+        "name": "setObjectName",
+        "url": "https://classcad.ch/docs/API/common/#setobjectnameparam"
+      },
+      {
+        "name": "setUserData",
+        "url": "https://classcad.ch/docs/API/common/#setuserdataparam"
+      },
+      {
+        "name": "transformObjectWithMatrix",
+        "url": "https://classcad.ch/docs/API/common/#transformobjectwithmatrixparam"
+      }
+    ]
+  }
+}

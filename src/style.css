@@ -1,0 +1,228 @@
+:root {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  color: var(--aether-color-text);
+  background: var(--aether-color-bg-app);
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+button, .button { font: inherit; }
+
+.shell { display: grid; grid-template-rows: 50px 72px 1fr 27px; width: 100%; height: 100%; background: var(--aether-color-bg-panel); }
+.topbar { display: grid; grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr); align-items: center; gap: 18px; padding: 0 14px; border-bottom: 1px solid var(--aether-color-border); background: var(--aether-color-bg-panel); }
+.identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.identity .logo { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 7px; background: linear-gradient(145deg, var(--aether-color-accent-icon), var(--aether-color-accent)); color: var(--aether-color-text-on-selected); font-weight: 800; }
+.identity div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.identity strong { font-size: 13px; }
+.identity small { font-size: 10px; color: var(--aether-color-text-dim); }
+.document-toolbar { display: flex; align-items: center; gap: 5px; }
+.header-command { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--aether-color-border); border-radius: 7px; background: var(--aether-color-bg-panel); color: var(--aether-color-text); cursor: pointer; }
+.header-command:hover:not(:disabled) { border-color: var(--aether-color-border); background: var(--aether-color-border); color: var(--aether-color-text-on-selected); }
+.header-command:disabled { opacity: .35; cursor: default; }
+.button { appearance: none; border: 1px solid var(--aether-color-border); border-radius: 8px; padding: 8px 11px; background: var(--aether-color-bg-panel); color: var(--aether-color-text); font-size: 12px; font-weight: 650; cursor: pointer; transition: var(--aether-motion-fast) var(--aether-motion-ease); }
+.button:hover:not(:disabled) { background: var(--aether-color-border); border-color: var(--aether-color-text-faint); }
+.button.primary, .button.active { background: var(--aether-color-accent-strong); border-color: var(--aether-color-accent-icon); color: var(--aether-color-text-on-selected); }
+.button:disabled { opacity: 0.35; cursor: default; }
+.backend { justify-self: end; display: flex; align-items: center; gap: 7px; color: var(--aether-color-text-dim); font-size: 11px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--aether-color-warn); }
+.status-dot.loading { animation: pulse 1s infinite; }
+.status-dot.ready { background: var(--aether-color-ok); }
+.status-dot.failed { background: var(--aether-color-error); }
+
+.workspace { display: grid; grid-template-columns: 42px 250px 1fr; min-height: 0; }
+.sidebar { min-height: 0; overflow: hidden; border-right: 1px solid var(--aether-color-border); background: var(--aether-color-bg-panel); }
+.browser-panel { display: none; height: 100%; overflow: auto; }
+.browser-panel.active { display: block; }
+.browser-title { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 11px 13px; border-bottom: 1px solid var(--aether-color-border); }
+.browser-title > div { display: flex; flex-direction: column; gap: 3px; }
+.browser-title strong { color: var(--aether-color-text); font-size: 12px; }
+.browser-title small { color: var(--aether-color-text-faint); font-size: 9px; }
+.browser-title > span { color: var(--aether-color-text-faint); font-size: 9px; }
+.browser-title button { border: 0; background: transparent; color: var(--aether-color-text-faint); cursor: pointer; }
+.part-authoring-panel { padding: 13px 12px 15px; border-bottom: 1px solid var(--aether-color-border); }
+.part-authoring-panel > .panel-heading { padding-inline: 4px; }
+.part-authoring-panel label { display: flex; flex-direction: column; gap: 5px; color: var(--aether-color-text-dim); font-size: 9px; font-weight: 650; }
+.part-authoring-panel input { width: 100%; border: 1px solid var(--aether-color-border); border-radius: 6px; padding: 7px 8px; outline: 0; background: var(--aether-color-bg-panel); color: var(--aether-color-text); font: inherit; font-size: 11px; }
+.part-authoring-panel input:focus { border-color: var(--aether-color-accent-icon); box-shadow: var(--aether-focus-halo); }
+.parameter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.author-button { width: 100%; margin-top: 9px; }
+.feature-help { display: flex; flex-direction: column; gap: 5px; margin: 11px; padding: 10px; border: 1px solid var(--aether-color-border); border-radius: 8px; background: var(--aether-color-bg-panel); }
+.feature-help b { color: var(--aether-color-text); font-size: 10px; }.feature-help span { color: var(--aether-color-text-faint); font-size: 9px; line-height: 1.45; }
+.panel-heading { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px 8px; color: var(--aether-color-text-dim); font-size: 10px; font-weight: 750; letter-spacing: .09em; }
+.section-heading { margin-top: 12px; border-top: 1px solid var(--aether-color-border); padding-top: 16px; }
+.viewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--aether-color-text); }
+.viewport-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.instructions { position: absolute; z-index: 3; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 3px; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--aether-color-border) 60%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--aether-color-bg-panel) 85%, transparent); color: var(--aether-color-border); box-shadow: 0 7px 22px color-mix(in srgb, var(--aether-color-shadow) 10%, transparent); backdrop-filter: blur(14px); pointer-events: none; }
+.instructions strong { font-size: 11px; }.instructions span { color: var(--aether-color-text-faint); font-size: 9px; }
+.mate-card { position: absolute; z-index: 5; top: 14px; right: 14px; width: 250px; border: 1px solid color-mix(in srgb, var(--aether-color-border) 70%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--aether-color-bg-panel) 93%, transparent); color: var(--aether-color-border); box-shadow: 0 15px 46px color-mix(in srgb, var(--aether-color-shadow) 18%, transparent); backdrop-filter: blur(18px); pointer-events: none; }
+.mate-title { display: flex; align-items: center; justify-content: space-between; padding: 11px 12px; border-bottom: 1px solid var(--aether-color-text); font-size: 12px; font-weight: 750; }
+.mate-title button { border: 0; background: none; color: var(--aether-color-text-faint); font-size: 19px; cursor: pointer; pointer-events: auto; }
+.mate-step { display: grid; grid-template-columns: 25px 1fr; gap: 9px; align-items: start; padding: 10px 12px 2px; }
+.single-step { display: grid; grid-template-columns: 25px 1fr; gap: 9px; align-items: start; padding: 11px 12px 3px; }
+.single-step div { display: flex; flex-direction: column; gap: 4px; }
+.single-step b { font-size: 10px; }
+.single-step div span { color: var(--aether-color-text-faint); font-size: 9px; line-height: 1.4; }
+.mate-step div { display: flex; flex-direction: column; gap: 3px; }
+.mate-step b { font-size: 10px; }.mate-step div span { color: var(--aether-color-text-faint); font-size: 9px; }
+.step-dot { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--aether-color-text); color: var(--aether-color-text-faint); font-size: 9px; font-weight: 800; }
+.step-dot.active { background: var(--aether-color-accent); color: var(--aether-color-text-on-selected); }
+.mate-card p { margin: 10px 12px 12px; padding-top: 9px; border-top: 1px solid var(--aether-color-text); color: var(--aether-color-text-faint); font-size: 9px; line-height: 1.4; }
+.hover-card { position: absolute; z-index: 4; bottom: 17px; left: 17px; display: flex; flex-direction: column; gap: 2px; min-width: 210px; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--aether-color-border) 60%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--aether-color-bg-panel) 90%, transparent); color: var(--aether-color-border); box-shadow: 0 8px 25px color-mix(in srgb, var(--aether-color-shadow) 12%, transparent); pointer-events: none; }
+.hover-card b { font-size: 10px; }.hover-card span { color: var(--aether-color-accent); font-size: 10px; }.hover-card small { color: var(--aether-color-text-faint); font-size: 8px; }
+.loading-card { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px; background: color-mix(in srgb, var(--aether-color-bg-panel) 72%, transparent); color: var(--aether-color-border); backdrop-filter: blur(6px); }
+.loading-card div { display: flex; flex-direction: column; gap: 4px; }.loading-card b { font-size: 12px; }.loading-card span { color: var(--aether-color-text-faint); font-size: 10px; }
+.selection-filter-hud { position: absolute; z-index: 6; right: 16px; bottom: 16px; display: grid; grid-template-columns: auto minmax(110px, 150px); align-items: center; gap: 5px 9px; min-width: 300px; padding: 7px 9px; border: 1px solid color-mix(in srgb, var(--aether-color-border) 70%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--aether-color-bg-panel) 90%, transparent); color: var(--aether-color-border); box-shadow: 0 8px 24px color-mix(in srgb, var(--aether-color-shadow) 14%, transparent); backdrop-filter: blur(14px); }
+.selection-filter-hud > span { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.selection-filter-hud > small { grid-column: 1 / -1; color: var(--aether-color-text-faint); font-size: 8px; text-align: center; }
+.cad-selection-box { position: absolute; z-index: 5; pointer-events: none; border: 1px solid var(--aether-color-accent-icon); background: color-mix(in srgb, var(--aether-color-accent) 14%, transparent); }
+.cad-selection-box.crossing { border-color: var(--aether-color-ok); border-style: dashed; background: color-mix(in srgb, var(--aether-color-ok) 14%, transparent); }
+.cad-selection-box span { position: absolute; top: -20px; left: -1px; padding: 2px 5px; border-radius: 4px 4px 0 0; background: var(--aether-color-accent); color: var(--aether-color-text-on-selected); font-size: 8px; font-weight: 800; }
+.cad-selection-box.crossing span { background: var(--aether-color-ok); }
+.mate-card:not(.hidden) ~ .view-cube { right: 278px; }
+.sketch-plane-card { position: absolute; z-index: 9; top: 20px; left: 50%; width: 320px; transform: translateX(-50%); border: 1px solid color-mix(in srgb, var(--aether-color-border) 70%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--aether-color-bg-panel) 96%, transparent); color: var(--aether-color-border); box-shadow: 0 18px 48px color-mix(in srgb, var(--aether-color-shadow) 18%, transparent); backdrop-filter: blur(16px); }
+.sketch-plane-card header { display: flex; align-items: center; justify-content: space-between; padding: 11px 13px; border-bottom: 1px solid var(--aether-color-text); }
+.sketch-plane-card header div { display: flex; flex-direction: column; gap: 2px; }
+.sketch-plane-card header b { font-size: 12px; }.sketch-plane-card header span { color: var(--aether-color-text-faint); font-size: 9px; }
+.sketch-plane-card header button { border: 0; background: transparent; color: var(--aether-color-text-faint); font-size: 18px; cursor: pointer; }
+.sketch-plane-card p { margin: 0; padding: 12px 13px 14px; color: var(--aether-color-text-faint); font-size: 10px; line-height: 1.5; }
+.sketch-editor { position: absolute; z-index: 12; inset: 0; overflow: hidden; background: var(--aether-color-text); color: var(--aether-color-border); }
+.sketch-canvas { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; touch-action: none; }
+.sketch-axis { vector-effect: non-scaling-stroke; stroke-width: 1; }
+.sketch-axis.x-axis { stroke: rgba(213,64,64,.42); }.sketch-axis.y-axis { stroke: rgba(39,151,81,.42); } /* literal-ok: axis convention / drawing paper */
+.sketch-origin { fill: var(--aether-color-text); stroke: var(--aether-color-bg-panel); stroke-width: 2; }
+.sketch-geometry rect { fill: color-mix(in srgb, var(--aether-color-accent) 5%, transparent); vector-effect: non-scaling-stroke; stroke-width: 2.2; }
+.sketch-geometry.under-defined rect { stroke: var(--aether-color-accent); }
+.sketch-geometry.fully-defined rect { stroke: var(--aether-color-bg-panel); }
+.sketch-geometry.construction rect { fill: none; stroke-dasharray: 8 6; }
+.construction-diagonal { stroke: color-mix(in srgb, var(--aether-color-border) 80%, transparent); stroke-width: 1; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; pointer-events: none; }
+.corner-handle { fill: var(--aether-color-text); stroke: var(--aether-color-accent); stroke-width: 2; cursor: nwse-resize; pointer-events: all; }
+.fully-defined .corner-handle { stroke: var(--aether-color-bg-panel); }
+.sketch-dimension line { stroke: var(--aether-color-text-faint); stroke-width: 1; marker-start: none; marker-end: none; }
+.sketch-dimension text { fill: var(--aether-color-border); font-size: 11px; text-anchor: middle; paint-order: stroke; stroke: var(--aether-color-text); stroke-width: 4px; stroke-linejoin: round; }
+.sketch-plane-label { fill: var(--aether-color-text-faint); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.sketch-mode-toolbar { position: absolute; z-index: 3; top: 12px; left: 50%; display: flex; align-items: stretch; gap: 2px; transform: translateX(-50%); padding: 5px; border: 1px solid color-mix(in srgb, var(--aether-color-border) 65%, transparent); border-radius: 11px; background: color-mix(in srgb, var(--aether-color-bg-panel) 94%, transparent); box-shadow: 0 9px 30px color-mix(in srgb, var(--aether-color-shadow) 12%, transparent); backdrop-filter: blur(15px); }
+.sketch-command { display: grid; grid-template-columns: 25px auto auto; align-items: center; gap: 5px; min-height: 35px; border: 0; border-radius: 7px; padding: 4px 7px; background: transparent; color: var(--aether-color-text-faint); cursor: pointer; }
+.sketch-command:hover { background: var(--aether-color-text); color: var(--aether-color-bg-panel); }.sketch-command.selected { background: var(--aether-color-text); color: var(--aether-color-accent-strong); }
+.sketch-command b { display: grid; place-items: center; font-size: 17px; }.sketch-command span { font-size: 9px; font-weight: 650; }
+.sketch-command kbd { min-width: 15px; border: 1px solid var(--aether-color-text); border-radius: 4px; padding: 1px 3px; background: var(--aether-color-text); color: var(--aether-color-text-faint); font: 8px ui-monospace, monospace; }
+.sketch-tool-divider { width: 1px; margin: 4px 3px; background: var(--aether-color-text); }
+.sketch-dialog { position: absolute; z-index: 4; top: 66px; left: 14px; width: 280px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--aether-color-border) 70%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--aether-color-bg-panel) 96%, transparent); box-shadow: 0 14px 42px color-mix(in srgb, var(--aether-color-shadow) 16%, transparent); backdrop-filter: blur(16px); }
+.sketch-dialog header { display: flex; align-items: center; justify-content: space-between; padding: 10px 11px; border-bottom: 1px solid var(--aether-color-text); }
+.sketch-dialog header > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.sketch-dialog header b { font-size: 12px; }.sketch-dialog header span { color: var(--aether-color-text-faint); font-size: 9px; }
+.sketch-dialog header > div:last-child { display: flex; gap: 5px; }
+.sketch-dialog header button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; color: var(--aether-color-text-on-selected); font-size: 16px; cursor: pointer; }
+.sketch-accept { background: var(--aether-color-ok); }.sketch-cancel { background: var(--aether-color-error); }
+.sketch-dialog section { padding: 11px; }
+.definition-state { display: grid; grid-template-columns: 10px 1fr; gap: 1px 7px; align-items: center; padding: 8px; border-radius: 8px; background: var(--aether-color-text); }
+.definition-state > span { grid-row: 1 / span 2; width: 8px; height: 8px; border-radius: 50%; }
+.definition-state.incomplete > span { background: var(--aether-color-accent); }.definition-state.complete > span { background: var(--aether-color-bg-panel); }
+.definition-state b { font-size: 10px; }.definition-state small { color: var(--aether-color-text-faint); font-size: 8px; }
+.sketch-dialog p { margin: 10px 1px; color: var(--aether-color-text-faint); font-size: 9px; line-height: 1.45; }
+.sketch-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.sketch-field-grid label { display: grid; grid-template-columns: 1fr auto; gap: 4px; color: var(--aether-color-text-faint); font-size: 9px; font-weight: 650; }
+.sketch-field-grid label span { color: var(--aether-color-text-dim); font-weight: 500; }
+.sketch-field-grid input { grid-column: 1 / -1; width: 100%; border: 1px solid var(--aether-color-text); border-radius: 6px; padding: 7px 8px; outline: 0; background: var(--aether-color-text); color: var(--aether-color-border); font: inherit; }
+.sketch-field-grid input:focus { border-color: var(--aether-color-accent); box-shadow: var(--aether-focus-halo); }
+.apply-dimensions { width: 100%; margin-top: 8px; border: 1px solid var(--aether-color-accent); border-radius: 7px; padding: 7px; background: var(--aether-color-text); color: var(--aether-color-accent-strong); font-size: 9px; font-weight: 700; cursor: pointer; }
+.constraint-list { display: flex; flex-direction: column; gap: 3px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--aether-color-text); }
+.constraint-list button { display: grid; grid-template-columns: 20px 1fr; align-items: center; gap: 5px; border: 0; border-radius: 6px; padding: 5px 6px; background: transparent; color: var(--aether-color-text-faint); text-align: left; font-size: 9px; cursor: pointer; }
+.constraint-list button:hover { background: var(--aether-color-text); }.constraint-list button.active { color: var(--aether-color-accent-strong); }
+.constraint-list button span { display: grid; place-items: center; width: 17px; height: 17px; border: 1px solid var(--aether-color-text); border-radius: 4px; background: var(--aether-color-text); font-size: 8px; font-weight: 800; }
+.constraint-list button.active span { border-color: var(--aether-color-accent-icon); background: var(--aether-color-text); }
+.viewport.sketching > .instructions, .viewport.sketching > .view-cube, .viewport.sketching > .selection-filter-hud, .viewport.sketching > .cad-selection-box, .viewport.sketching > .viewport-canvas { visibility: hidden; }
+.spinner { width: 22px; height: 22px; border: 3px solid var(--aether-color-text); border-top-color: var(--aether-color-accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.hidden { display: none !important; }
+
+.statusbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px; border-top: 1px solid var(--aether-color-border); background: var(--aether-color-bg-panel); color: var(--aether-color-text-dim); font-size: 9px; }
+#status-message[data-tone="error"] { color: var(--aether-color-error); }
+#status-message[data-tone="success"] { color: var(--aether-color-ok); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 50% { opacity: .3; } }
+
+@media (max-width: 960px) {
+  .topbar { grid-template-columns: 1fr auto; }
+  .backend { display: none; }
+  .identity small { display: none; }
+  .workspace { grid-template-columns: 38px 210px 1fr; }
+}
+
+/* Settings tray: Commands and Help pane content. */
+.cad-settings-steps { margin:0; padding-left:18px; font:12px system-ui; color:var(--aether-color-text); display:grid; gap:4px; }
+.cad-settings-command-group { display:grid; gap:6px; }
+
+/* Fusion-style ribbon sections: prominent tools with the full section list
+   in the label dropdown; contextual Finish Sketch. */
+/* Tools sit shoulder to shoulder. Each already carries its own padding, so a
+   gap on top of that reads as loose rather than grouped. */
+/* Condense the ribbon: the default button is sized for a sparse toolbar, and
+   a CAD ribbon carries forty of them. */
+/* A CAD ribbon carries forty tools; the widest name must not set the pitch.
+   The full label stays in the tooltip. */
+.cad-finish-sketch { border:0; border-radius:6px; padding:8px 14px; background:var(--aether-color-success,var(--aether-color-ok)); color:var(--aether-color-text-on-selected); font:600 12px system-ui; cursor:pointer; align-self:center; margin-top:14px; }
+.cad-finish-sketch:hover { filter:brightness(1.08); }
+
+/* Fusion-style workspace switcher: themed like the app, not a stray block. */
+
+/* Fusion ribbon polish (Jonathan): no boxed border — dividers only; section
+   labels match the header-tab type size; larger tool icons. */
+/* Keep the rounded floating card + shadow; remove only the outline. */
+
+/* Toolbar density (right-click the ribbon): compact hides labels, grows icons. */
+
+/* Environment panel (right rail): settings-card look inside the panel. */
+.cad-environment-panel { display: grid; gap: 12px; padding: 10px; overflow: auto; }
+.cad-environment-segment { display: inline-flex; border: 1px solid var(--aether-color-border); border-radius: 7px; overflow: hidden; }
+.cad-environment-segment button { border: 0; background: transparent; color: var(--aether-color-text); font: 12px system-ui; padding: 4px 10px; cursor: pointer; }
+.cad-environment-segment button + button { border-left: 1px solid var(--aether-color-border); }
+.cad-environment-segment button[aria-pressed="true"] { background: var(--aether-color-accent); color: var(--aether-color-text-on-selected); }
+
+/* Sketch tool strip: tool parameters live here (Onshape toolbar model),
+   never in the sketch feature window. */
+
+/* Buttons whose function moved into the feature-window header. */
+.cad-header-committed { display: none; }
+
+.cad-view-actions { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Viewport metrics overlay (Performance panel → detailed CAD metrics). */
+.cad-metrics-overlay { position: fixed; left: 300px; bottom: 44px; z-index: 30; display: grid; gap: 2px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--aether-color-border); background: color-mix(in srgb, var(--aether-color-bg-panel) 92%, transparent); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--aether-color-text); pointer-events: none; }
+.cad-metrics-overlay > div { display: grid; grid-template-columns: 70px 1fr; gap: 10px; }
+.cad-metrics-overlay span { color: var(--aether-color-text-faint); letter-spacing: .4px; }
+
+/* Feature tree header: the icon and title read as one group; only the count
+   sits right. space-between was spreading all three across the header. */
+.browser-title.cad-feature-tree-title { justify-content: flex-start; gap: 9px; }
+.browser-title.cad-feature-tree-title > :last-child { margin-left: auto; }
+
+/* Bodies: a pinned section below the feature history, like Onshape's Parts. */
+.cad-bodies-section { border-top: 1px solid var(--aether-color-border); background: var(--aether-color-bg-panel); max-height: 34%; overflow: auto; flex: none; }
+
+/* Reduced motion. The two indicators that never stop are exactly what the
+   setting is for; the rest of this sheet spends the theme's duration tokens,
+   which the generated token block already collapses. */
+@media (prefers-reduced-motion: reduce) {
+  .status-dot.loading { animation: none; opacity: 0.55; }
+  .spinner { animation: none; opacity: 0.55; }
+}
+
+/* Coarse pointer: the CAD chrome's own controls, which state their sizes in
+   pixels and so do not follow the shared tokens. */
+@media (pointer: coarse) {
+  .header-command,
+  .sketch-dialog header button,
+  .browser-title button,
+  .mate-title button,
+  .sketch-plane-card header button,
+  .apply-dimensions,
+  .constraint-list button,
+  .cad-environment-segment button { min-width: 44px; min-height: 44px; }
+  .sketch-command,
+  .button,
+  .cad-finish-sketch { min-height: 44px; }
+  /* Sketch chrome must not eat a tablet's canvas. */
+  .selection-filter-hud { min-width: min(300px, 46vw); }
+  .sketch-plane-card { width: min(320px, 46vw); }
+}

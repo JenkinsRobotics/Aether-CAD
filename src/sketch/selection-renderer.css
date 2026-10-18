@@ -1,0 +1,18 @@
+:root { --cad-sketch-selection: #ffad1f; }
+
+/* Selection must read differently from both blue free geometry and black
+   constrained geometry, including when the SVG lives in the CSS3D viewport. */
+svg.cad-sketch-canvas .sketch-selection > * {
+  fill: none;
+  stroke: var(--cad-sketch-selection);
+  stroke-width: 5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+svg.cad-sketch-canvas .sketch-selection[data-entity-kind="point"] > * {
+  fill: var(--cad-sketch-selection);
+  stroke-width: 2px;
+}
+
+svg.cad-sketch-canvas .sketch-selection[data-construction="true"]:not([data-entity-kind="point"]) > * { stroke-dasharray: 8 5; }

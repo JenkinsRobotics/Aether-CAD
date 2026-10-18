@@ -1,0 +1,360 @@
+{
+  "format": "aether-part",
+  "formatVersion": 3,
+  "documentId": "complex-regions",
+  "name": "Complex region acceptance",
+  "units": "millimeter",
+  "features": [
+    {
+      "id": "sketch",
+      "type": "profile",
+      "name": "23 separate contours",
+      "suppressed": false,
+      "plane": "XY",
+      "offsetMillimeters": 0,
+      "profile": {
+        "type": "drawing",
+        "contours": [
+          {
+            "type": "circle",
+            "id": "circle-0",
+            "center": [
+              0,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-1",
+            "center": [
+              12,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-2",
+            "center": [
+              24,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-3",
+            "center": [
+              36,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-4",
+            "center": [
+              48,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-5",
+            "center": [
+              60,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-6",
+            "center": [
+              72,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-7",
+            "center": [
+              84,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-8",
+            "center": [
+              96,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-9",
+            "center": [
+              108,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-10",
+            "center": [
+              120,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-11",
+            "center": [
+              132,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-12",
+            "center": [
+              144,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-13",
+            "center": [
+              156,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-14",
+            "center": [
+              168,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-15",
+            "center": [
+              180,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-16",
+            "center": [
+              192,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-17",
+            "center": [
+              204,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-18",
+            "center": [
+              216,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "circle",
+            "id": "circle-19",
+            "center": [
+              228,
+              0
+            ],
+            "radius": 4
+          },
+          {
+            "type": "path",
+            "id": "concave",
+            "start": [
+              0,
+              20
+            ],
+            "segments": [
+              {
+                "type": "line",
+                "end": [
+                  20,
+                  20
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  20,
+                  25
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  5,
+                  25
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  5,
+                  40
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  0,
+                  40
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  0,
+                  20
+                ]
+              }
+            ]
+          },
+          {
+            "type": "path",
+            "id": "arc",
+            "start": [
+              30,
+              20
+            ],
+            "segments": [
+              {
+                "type": "arc",
+                "middle": [
+                  40,
+                  30
+                ],
+                "end": [
+                  50,
+                  20
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  30,
+                  20
+                ]
+              }
+            ]
+          },
+          {
+            "type": "path",
+            "id": "bezier",
+            "start": [
+              60,
+              20
+            ],
+            "segments": [
+              {
+                "type": "bezier",
+                "controls": [
+                  [
+                    60,
+                    40
+                  ],
+                  [
+                    80,
+                    40
+                  ]
+                ],
+                "end": [
+                  80,
+                  20
+                ]
+              },
+              {
+                "type": "line",
+                "end": [
+                  60,
+                  20
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "pad-0",
+      "type": "extrude",
+      "name": "Extrude circle-19",
+      "suppressed": false,
+      "profileFeatureId": "sketch",
+      "profileContourId": "circle-19",
+      "distanceMillimeters": 10,
+      "operation": "new",
+      "bodyId": "complex-regions:body-1"
+    },
+    {
+      "id": "pad-1",
+      "type": "extrude",
+      "name": "Extrude concave",
+      "suppressed": false,
+      "profileFeatureId": "sketch",
+      "profileContourId": "concave",
+      "distanceMillimeters": 10,
+      "operation": "new",
+      "bodyId": "complex-regions:body-2"
+    },
+    {
+      "id": "pad-2",
+      "type": "extrude",
+      "name": "Extrude arc",
+      "suppressed": false,
+      "profileFeatureId": "sketch",
+      "profileContourId": "arc",
+      "distanceMillimeters": 10,
+      "operation": "new",
+      "bodyId": "complex-regions:body-3"
+    },
+    {
+      "id": "pad-3",
+      "type": "extrude",
+      "name": "Extrude bezier",
+      "suppressed": false,
+      "profileFeatureId": "sketch",
+      "profileContourId": "bezier",
+      "distanceMillimeters": 10,
+      "operation": "new",
+      "bodyId": "complex-regions:body-4"
+    }
+  ]
+}

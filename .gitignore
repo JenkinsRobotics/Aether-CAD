@@ -1,67 +1,21 @@
-# macOS
-.DS_Store
-._*
-.Spotlight-V100
-.Trashes
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Distribution / packaging
-build/
+node_modules/
 dist/
-*.egg-info/
-*.egg
-.eggs/
-pip-wheel-metadata/
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Pytest / coverage
+.venv/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+test-results/
+playwright-report/
+.env*
+.DS_Store
+dist-lib/
 .pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
+.ruff_cache/
+*.egg-info/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Notebooks
-.ipynb_checkpoints/
-
-# Models and weights (never commit — too large)
-*.gguf
-*.bin
-*.pt
-*.pth
-*.onnx
-*.safetensors
-
-# Local secrets
-.env
-.env.*
-!.env.example
-
-# Operator/instance state, if this repo ever runs standalone
-.jaeger_os/
-
-# Real (non-example) config generated from the .example templates —
-# keep the templates tracked, never the filled-in versions.
-pyproject.toml
+# Local verification, generated packages and preserved reference checkouts
+.verification/
+dist-library/
+build/
+*.egg-info/
+ REFERENCE CAD/

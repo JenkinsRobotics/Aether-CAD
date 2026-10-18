@@ -1,0 +1,49 @@
+{
+  "format": "aether-part",
+  "formatVersion": 3,
+  "documentId": "washer-regions-qa",
+  "name": "Washer region acceptance",
+  "units": "millimeter",
+  "features": [
+    {
+      "id": "s",
+      "type": "profile",
+      "name": "Ring and separate disk",
+      "plane": "XY",
+      "offsetMillimeters": 0,
+      "suppressed": false,
+      "profile": {
+        "type": "drawing",
+        "contours": [
+          {
+            "id": "outer",
+            "type": "circle",
+            "center": [
+              0,
+              0
+            ],
+            "radius": 10
+          },
+          {
+            "id": "inner",
+            "type": "circle",
+            "center": [
+              0,
+              0
+            ],
+            "radius": 5
+          },
+          {
+            "id": "disk",
+            "type": "circle",
+            "center": [
+              30,
+              0
+            ],
+            "radius": 3
+          }
+        ]
+      }
+    }
+  ]
+}

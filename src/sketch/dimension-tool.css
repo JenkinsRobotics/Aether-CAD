@@ -1,0 +1,31 @@
+.cad-sketch-dimension-entry {
+  position: fixed;
+  z-index: 1000;
+  width: 220px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--aether-color-border);
+  border-radius: 3px;
+  background: var(--aether-color-bg-panel);
+  color: var(--aether-color-text);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--aether-color-shadow) 24%, transparent);
+  font: inherit;
+}
+.cad-sketch-dimension-entry input { width: 0; min-width: 0; flex: 1; border: none; background: transparent; color: inherit; font: inherit; }
+.cad-sketch-dimension-entry button { width: 23px; height: 23px; padding: 0; border: none; border-radius: 3px; font-size: 18px; line-height: 1; cursor: pointer; }
+.cad-sketch-dimension-entry .dimension-entry-confirm { background: var(--aether-color-ok); color: var(--aether-color-bg-panel); }
+.cad-sketch-dimension-entry .dimension-entry-cancel { background: transparent; color: var(--aether-color-error); }
+.cad-sketch-dimension-entry .dimension-entry-unit { color: var(--aether-color-text-dim); font-size: 12px; }
+.cad-sketch-dimension-entry p { flex-basis: 100%; margin: 0; font-size: 12px; }
+.sketch-dimension-preview { opacity: .8; }
+
+svg.cad-sketch-canvas[data-dimension-tool] .sketch-selection { stroke: var(--aether-color-warn); }
+svg.cad-sketch-canvas .sketch-dimension-preview text { fill: var(--aether-color-text); }
+svg.cad-sketch-canvas .sketch-dimension-preview line, svg.cad-sketch-canvas .sketch-dimension-preview path { stroke: var(--aether-color-text); }
+
+svg.cad-sketch-canvas .sketch-dimension-preview * { pointer-events: none !important; }
+svg.cad-sketch-canvas .sketch-dimension-annotations .sketch-dimension line, svg.cad-sketch-canvas .sketch-dimension-annotations .sketch-dimension path { stroke: var(--aether-color-text); stroke-dasharray: none; }

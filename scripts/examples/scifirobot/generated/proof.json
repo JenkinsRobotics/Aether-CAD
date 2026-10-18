@@ -1,0 +1,403 @@
+{
+  "engine": "FreeCAD 1.1.3",
+  "solids": 39,
+  "features": 120,
+  "tips": [
+    {
+      "featureID": "shell-revolve",
+      "bodyID": "shell",
+      "volume_mm3": 609268656.0859113,
+      "faces": 3
+    },
+    {
+      "featureID": "lens-extrude-4",
+      "bodyID": "lens",
+      "volume_mm3": 416386690.30679125,
+      "faces": 3
+    },
+    {
+      "featureID": "lens-extrude-6",
+      "bodyID": "lens",
+      "volume_mm3": 565957916.5442013,
+      "faces": 5
+    },
+    {
+      "featureID": "bezel-extrude-8",
+      "bodyID": "bezel",
+      "volume_mm3": 212646552.73985913,
+      "faces": 3
+    },
+    {
+      "featureID": "bezel-cut-10",
+      "bodyID": "bezel",
+      "volume_mm3": 23909483.589226842,
+      "faces": 4
+    },
+    {
+      "featureID": "bezel-fillet",
+      "bodyID": "bezel",
+      "volume_mm3": 22914376.856530268,
+      "faces": 6
+    },
+    {
+      "featureID": "glass-revolve",
+      "bodyID": "glass",
+      "volume_mm3": 66495607.71879046,
+      "faces": 2
+    },
+    {
+      "featureID": "lens-trim-extrude-15",
+      "bodyID": "lens-trim",
+      "volume_mm3": 23775180.503285855,
+      "faces": 3
+    },
+    {
+      "featureID": "lens-trim-cut-17",
+      "bodyID": "lens-trim",
+      "volume_mm3": 2680830.967051048,
+      "faces": 4
+    },
+    {
+      "featureID": "optic-bolt-1-extrude-19",
+      "bodyID": "optic-bolt-1",
+      "volume_mm3": 107992.24746714914,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-2-extrude-21",
+      "bodyID": "optic-bolt-2",
+      "volume_mm3": 107992.24746714915,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-3-extrude-23",
+      "bodyID": "optic-bolt-3",
+      "volume_mm3": 107992.24746714917,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-4-extrude-25",
+      "bodyID": "optic-bolt-4",
+      "volume_mm3": 107992.24746714917,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-5-extrude-27",
+      "bodyID": "optic-bolt-5",
+      "volume_mm3": 107992.24746714914,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-6-extrude-29",
+      "bodyID": "optic-bolt-6",
+      "volume_mm3": 107992.24746714915,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-7-extrude-31",
+      "bodyID": "optic-bolt-7",
+      "volume_mm3": 107992.24746714917,
+      "faces": 3
+    },
+    {
+      "featureID": "optic-bolt-8-extrude-33",
+      "bodyID": "optic-bolt-8",
+      "volume_mm3": 107992.24746714915,
+      "faces": 3
+    },
+    {
+      "featureID": "hub-extrude-35",
+      "bodyID": "hub",
+      "volume_mm3": 358970942.9697842,
+      "faces": 3
+    },
+    {
+      "featureID": "hub-extrude-37",
+      "bodyID": "hub",
+      "volume_mm3": 533945087.4041215,
+      "faces": 5
+    },
+    {
+      "featureID": "hub-extrude-39",
+      "bodyID": "hub",
+      "volume_mm3": 582602074.4229205,
+      "faces": 7
+    },
+    {
+      "featureID": "hub-right-extrude-41",
+      "bodyID": "hub-right",
+      "volume_mm3": 358970942.9697843,
+      "faces": 3
+    },
+    {
+      "featureID": "hub-right-extrude-43",
+      "bodyID": "hub-right",
+      "volume_mm3": 533945087.4041217,
+      "faces": 5
+    },
+    {
+      "featureID": "hub-right-extrude-45",
+      "bodyID": "hub-right",
+      "volume_mm3": 582602074.4229207,
+      "faces": 7
+    },
+    {
+      "featureID": "vents-extrude-47",
+      "bodyID": "vents",
+      "volume_mm3": 16031547.311268715,
+      "faces": 3
+    },
+    {
+      "featureID": "vents-cut-49",
+      "bodyID": "vents",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "vents-chamfer",
+      "bodyID": "vents",
+      "volume_mm3": 8411551.498133602,
+      "faces": 6
+    },
+    {
+      "featureID": "tube-left-2-extrude-52",
+      "bodyID": "tube-left-2",
+      "volume_mm3": 16031547.311268715,
+      "faces": 3
+    },
+    {
+      "featureID": "tube-left-2-cut-54",
+      "bodyID": "tube-left-2",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "tube-left-2-chamfer",
+      "bodyID": "tube-left-2",
+      "volume_mm3": 8411551.498133602,
+      "faces": 6
+    },
+    {
+      "featureID": "tube-left-3-extrude-57",
+      "bodyID": "tube-left-3",
+      "volume_mm3": 16031547.311268715,
+      "faces": 3
+    },
+    {
+      "featureID": "tube-left-3-cut-59",
+      "bodyID": "tube-left-3",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "tube-left-3-chamfer",
+      "bodyID": "tube-left-3",
+      "volume_mm3": 8411551.498133602,
+      "faces": 6
+    },
+    {
+      "featureID": "tube-right-1-extrude-62",
+      "bodyID": "tube-right-1",
+      "volume_mm3": 16031547.311268713,
+      "faces": 3
+    },
+    {
+      "featureID": "tube-right-1-cut-64",
+      "bodyID": "tube-right-1",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "tube-right-1-chamfer",
+      "bodyID": "tube-right-1",
+      "volume_mm3": 8411551.498133602,
+      "faces": 6
+    },
+    {
+      "featureID": "tube-right-2-extrude-67",
+      "bodyID": "tube-right-2",
+      "volume_mm3": 16031547.311268715,
+      "faces": 3
+    },
+    {
+      "featureID": "tube-right-2-cut-69",
+      "bodyID": "tube-right-2",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "tube-right-2-chamfer",
+      "bodyID": "tube-right-2",
+      "volume_mm3": 8411551.498133602,
+      "faces": 6
+    },
+    {
+      "featureID": "tube-right-3-extrude-72",
+      "bodyID": "tube-right-3",
+      "volume_mm3": 16031547.311268715,
+      "faces": 3
+    },
+    {
+      "featureID": "tube-right-3-cut-74",
+      "bodyID": "tube-right-3",
+      "volume_mm3": 8423489.550217241,
+      "faces": 4
+    },
+    {
+      "featureID": "tube-right-3-chamfer",
+      "bodyID": "tube-right-3",
+      "volume_mm3": 8411551.4981336,
+      "faces": 6
+    },
+    {
+      "featureID": "sensor--630--960-extrude-77",
+      "bodyID": "sensor--630--960",
+      "volume_mm3": 7068583.470577037,
+      "faces": 3
+    },
+    {
+      "featureID": "sensor--630--960-fillet",
+      "bodyID": "sensor--630--960",
+      "volume_mm3": 6764247.400532716,
+      "faces": 4
+    },
+    {
+      "featureID": "sensor--630-960-extrude-80",
+      "bodyID": "sensor--630-960",
+      "volume_mm3": 7068583.470577037,
+      "faces": 3
+    },
+    {
+      "featureID": "sensor--630-960-fillet",
+      "bodyID": "sensor--630-960",
+      "volume_mm3": 6764247.400532717,
+      "faces": 4
+    },
+    {
+      "featureID": "sensor-630--960-extrude-83",
+      "bodyID": "sensor-630--960",
+      "volume_mm3": 7068583.470577037,
+      "faces": 3
+    },
+    {
+      "featureID": "sensor-630--960-fillet",
+      "bodyID": "sensor-630--960",
+      "volume_mm3": 6764247.400532716,
+      "faces": 4
+    },
+    {
+      "featureID": "sensor-630-960-extrude-86",
+      "bodyID": "sensor-630-960",
+      "volume_mm3": 7068583.470577037,
+      "faces": 3
+    },
+    {
+      "featureID": "sensor-630-960-fillet",
+      "bodyID": "sensor-630-960",
+      "volume_mm3": 6764247.400532717,
+      "faces": 4
+    },
+    {
+      "featureID": "seams-extrude-89",
+      "bodyID": "seams",
+      "volume_mm3": 102357059.62706962,
+      "faces": 3
+    },
+    {
+      "featureID": "seams-cut-91",
+      "bodyID": "seams",
+      "volume_mm3": 1429550.3210895509,
+      "faces": 4
+    },
+    {
+      "featureID": "grille-extrude-93",
+      "bodyID": "grille",
+      "volume_mm3": 12867963.509103794,
+      "faces": 3
+    },
+    {
+      "featureID": "grille-cut-95",
+      "bodyID": "grille",
+      "volume_mm3": 2660928.9775905535,
+      "faces": 4
+    },
+    {
+      "featureID": "grille-insert-extrude-97",
+      "bodyID": "grille-insert",
+      "volume_mm3": 5103517.265756619,
+      "faces": 3
+    },
+    {
+      "featureID": "grille-bar-0-extrude",
+      "bodyID": "grille-bar-0",
+      "volume_mm3": 187488.6663241274,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-1-extrude",
+      "bodyID": "grille-bar-1",
+      "volume_mm3": 278818.93766385375,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-2-extrude",
+      "bodyID": "grille-bar-2",
+      "volume_mm3": 328876.87665751146,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-3-extrude",
+      "bodyID": "grille-bar-3",
+      "volume_mm3": 355544.65261061094,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-4-extrude",
+      "bodyID": "grille-bar-4",
+      "volume_mm3": 364000.0,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-5-extrude",
+      "bodyID": "grille-bar-5",
+      "volume_mm3": 355544.65261061094,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-6-extrude",
+      "bodyID": "grille-bar-6",
+      "volume_mm3": 328876.87665751146,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-7-extrude",
+      "bodyID": "grille-bar-7",
+      "volume_mm3": 278818.93766385375,
+      "faces": 6
+    },
+    {
+      "featureID": "grille-bar-8-extrude",
+      "bodyID": "grille-bar-8",
+      "volume_mm3": 187488.6663241274,
+      "faces": 6
+    },
+    {
+      "featureID": "antenna-extrude-117",
+      "bodyID": "antenna",
+      "volume_mm3": 2116648.0503561236,
+      "faces": 3
+    },
+    {
+      "featureID": "antenna-cap-extrude-119",
+      "bodyID": "antenna-cap",
+      "volume_mm3": 1943860.4544086847,
+      "faces": 3
+    },
+    {
+      "featureID": "antenna-cap-fillet",
+      "bodyID": "antenna-cap",
+      "volume_mm3": 1801330.357160548,
+      "faces": 4
+    }
+  ]
+}

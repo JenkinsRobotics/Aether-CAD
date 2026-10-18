@@ -1,0 +1,30 @@
+{
+  "source": "/Users/jonathanjenkins/GITHUB/Aether Studio",
+  "sourceRevision": "cebdbec87576b24050f627008252be0e833c25be",
+  "filteredCommits": 13,
+  "paths": [
+    [
+      "Aether CAD/",
+      ""
+    ],
+    [
+      "core/engine/",
+      "aether-engine/"
+    ],
+    [
+      "LICENSE",
+      "LICENSE"
+    ]
+  ],
+  "note": "Filtered current-branch history; current uncommitted source snapshot is preserved in the migration commit. Drive retains Studio ancestry because it was developed there. All original branches/tags remain in the original repository.",
+  "githubCheckoutAdoption": {
+    "source": "/Users/jonathanjenkins/GITHUB/Temp Aether/aether-cad",
+    "source_head": "4fafa8b730de0d86d4ef6b67e34d13db81f27bcf",
+    "destination": "/Users/jonathanjenkins/GITHUB/Aether-CAD",
+    "destination_head": "6196372cd3f6e02b5c8627b30ec3a529959299bb",
+    "origin": "https://github.com/JenkinsRobotics/Aether-CAD.git",
+    "template_backup": "/Users/jonathanjenkins/GITHUB/Temp Aether/github-import-backup-2026-10-10/Aether-CAD",
+    "date": "2026-10-10",
+    "note": "Source snapshot imported without replacing the destination .git. Original local history stays in Temp Aether; initial GitHub history remains the destination parent."
+  }
+}

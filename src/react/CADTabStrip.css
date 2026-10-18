@@ -1,0 +1,29 @@
+.aui-document-tabbar [data-cad-tab-id] { display: inline-flex; }
+.aui-document-tabbar .aui-document-tab { touch-action: none; }
+.cad-tab-drag-preview {
+  position: fixed; z-index: 10000; pointer-events: none; padding: 8px 16px;
+  border: 1px solid var(--aether-color-accent); border-radius: 8px;
+  color: var(--aether-color-text); background: var(--aether-color-bg-shell);
+  box-shadow: 0 4px 16px #0003; font: 500 12px var(--aether-font-family);
+}
+
+.aui-document-tab-groups {display:flex;flex:1;min-width:0;overflow-x:auto;align-items:stretch;}
+.aui-document-tab-groups > .aui-document-tabs, .cad-tab-folder > .aui-document-tabs {flex:0 0 auto;}
+.cad-tab-folder {display:flex;align-items:stretch;border-left:1px solid var(--aether-color-border);margin-left:6px;}
+.cad-tab-folder-label {display:flex;align-items:center;gap:6px;border:0;background:var(--aether-color-bg-shell);color:var(--aether-color-text);padding:4px 10px;white-space:nowrap;font:inherit;cursor:pointer;}
+.cad-tab-folder-label svg {width:16px;height:16px;}
+.cad-tab-folders-editor {display:grid;gap:14px;min-width:min(440px,75vw);padding:8px;}
+.cad-tab-folders-editor p {margin:0;color:var(--aether-color-text-muted);}
+.cad-tab-folders-editor form,.cad-tab-folder-edit {display:flex;gap:10px;align-items:center;}
+.cad-tab-folder-edit > span,.cad-tab-folders-editor input {flex:1;min-width:0;}
+.cad-tab-folder-edit svg {width:18px;height:18px;}
+.cad-tab-folders-editor input,.cad-tab-folders-editor select {padding:7px 10px;border:1px solid var(--aether-color-border);border-radius:6px;background:var(--aether-color-bg-shell);color:var(--aether-color-text);font:inherit;}
+
+
+/* Document identity belongs to the tray. Keep status before artwork and name. */
+.aui-document-tray .aui-document-tab-status { order: -1; margin-left: 0; margin-right: 2px; }
+.cad-tab-document-controls { display: flex; align-items: center; flex: 0 0 auto; border-right: 1px solid var(--aether-color-border); }
+.cad-tab-document-controls .cad-document-menu { margin: 0; border: 0; min-width: 34px; }
+.cad-tab-document-controls .cad-link-feedback:empty { display: none; }
+.cad-tab-revision { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 5px; padding: 0 10px 0 4px; white-space: nowrap; color: var(--aether-color-text-muted); font-size: 11px; }
+.cad-tab-revision svg { width: 13px; height: 13px; }

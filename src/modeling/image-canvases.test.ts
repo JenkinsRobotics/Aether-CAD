@@ -1,0 +1,7 @@
+import {expect,it} from 'vitest';
+import {createEmptyPartDocument,parsePartDocument,serializePartDocument,validateImageCanvases,type ImageCanvas} from '@aether/core/document';
+import {PartUndoHistory} from './part-undo';
+const canvas:ImageCanvas={id:'image',name:'Reference',dataUrl:'data:image/png;base64,YQ==',plane:'XY',widthMillimeters:100,heightMillimeters:50,xMillimeters:1,yMillimeters:2,offsetMillimeters:3,rotationDegrees:45,opacity:.5,visible:true};
+it('embeds placement and bytes through serialization and undo/redo',()=>{const before=createEmptyPartDocument('Part'),after={...before,imageCanvases:[canvas]},history=new PartUndoHistory();history.record(before);history.record(after);expect(parsePartDocument(serializePartDocument(after)).imageCanvases).toEqual([canvas]);expect(history.candidate(-1)).toEqual(before);history.accept(-1);expect(history.candidate(1)).toEqual(after);});
+it('rejects external images, invalid dimensions and invalid face anchors',()=>{for(const patch of [{dataUrl:'https://example.com/image.png'},{widthMillimeters:0},{opacity:2},{rotationDegrees:NaN},{face:{bodyId:'body',normal:[0,0,0]}}])expect(()=>validateImageCanvases([{...canvas,...patch}])).toThrow();});
+it('preserves supported planar decal bindings',()=>{const decal={...canvas,face:{bodyId:'body',normal:[0,0,1] as [number,number,number],anchor:{centerMillimeters:[0,0,0] as [number,number,number],areaSquareMillimeters:42}}};expect(parsePartDocument(serializePartDocument({...createEmptyPartDocument('Part'),imageCanvases:[decal]})).imageCanvases).toEqual([decal]);});

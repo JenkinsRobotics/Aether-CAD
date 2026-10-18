@@ -1,0 +1,125 @@
+/* Feature windows follow the active theme: colour comes from the shared
+   --aether-* tokens, never from literals baked for one palette. */
+.feature-authoring button,
+.project-tabs button,
+.feature-dialog button {
+  background: var(--aether-color-bg-control);
+  color: var(--aether-color-text);
+  border: 1px solid var(--aether-color-border-control);
+  border-radius: 4px;
+  padding: 6px;
+  margin: 3px;
+  cursor: pointer;
+}
+.feature-edit-list {
+  display: grid;
+  margin-top: 10px;
+}
+.feature-authoring small {
+  display: block;
+  color: var(--aether-color-text-dim);
+}
+.feature-dialog {
+  width: min(460px, 90vw);
+  background: var(--aether-color-bg-panel);
+  color: var(--aether-color-text);
+  border: 1px solid var(--aether-color-border);
+  border-radius: 10px;
+  padding: 24px;
+}
+.feature-dialog::backdrop {
+  background: var(--aether-color-shadow);
+}
+.feature-dialog label {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0;
+}
+.feature-dialog input,
+.feature-dialog select {
+  background: var(--aether-color-bg-inset);
+  color: var(--aether-color-text);
+  border: 1px solid var(--aether-color-border-control);
+  padding: 9px;
+  border-radius: 4px;
+}
+.feature-dialog [role="alert"],
+.feature-authoring [role="alert"] {
+  color: var(--aether-color-danger);
+}
+/* Sits at the right end of the shared bottom tab bar (DocumentTabBar). */
+.project-tabs {
+  position: fixed;
+  bottom: var(--aether-size-statusbar, 23px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  max-width: 60vw;
+  box-sizing: border-box;
+  overflow-x: auto;
+  padding: 0 6px;
+  font-size: 12px;
+}
+.project-tabs button, .project-tabs select { padding: 2px 8px; white-space: nowrap; }
+.project-tabs a {
+  color: var(--aether-color-text);
+  padding: 7px;
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--aether-color-bg-control);
+  border-radius: 4px;
+}
+@media (max-width: 860px) {
+  .feature-authoring {
+    right: 8px;
+    width: 175px;
+  }
+  .project-tabs {
+    left: 0;
+  }
+}
+
+.feature-dialog {
+  max-height: 90vh;
+  overflow: auto;
+  width: min(620px, 92vw);
+}
+.profile-canvas {
+  margin: 15px 0;
+}
+.profile-canvas svg {
+  display: block;
+  width: 100%;
+  height: 310px;
+  background: var(--aether-color-bg-inset);
+  border: 1px solid var(--aether-color-border);
+  border-radius: 5px;
+  cursor: crosshair;
+}
+.profile-canvas p {
+  font-size: 12px;
+  color: var(--aether-color-text-dim);
+}
+.feature-edit-list input[type="range"] {
+  width: 100%;
+  accent-color: var(--aether-color-accent);
+}
+.feature-edit-list p {
+  line-height: 1.6;
+  color: var(--aether-color-text-soft);
+}
+
+
+
+.feature-command-error { position:absolute; left:16px; bottom:24px; z-index:15; color:var(--aether-color-text); background:var(--aether-color-bg-panel); padding:8px; }
+.feature-command-error:empty { display:none; }
+
+/* Project linking commands in the File manager's Document contents view. */
+.cad-project-commands { display: contents; }
+.cad-project-commands .project-tabs { position: static; height: auto; max-width: 100%; padding: 12px 16px; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.cad-project-commands .project-tabs button,
+.cad-project-commands .project-tabs select { padding: 0 6px; font-size: 11px; }
+.cad-project-commands .project-tabs a { padding: 0 4px; background: none; }

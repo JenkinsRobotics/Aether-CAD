@@ -1,0 +1,6 @@
+.cad-sketch-tool-window { --aether-feature-window-left: min(340px, calc(100% - 320px)); --aether-feature-window-right: auto; --aether-feature-window-top: 120px; pointer-events: auto; }
+.sketch-tool-fields { display: flex; flex-direction: column; gap: 8px; font: 12px var(--aether-font-family, system-ui); color: var(--aether-color-text); }
+.sketch-tool-fields label { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-block: 6px; }
+.sketch-tool-fields input:not([type="checkbox"]), .sketch-tool-fields select { min-width: 0; max-width: 100%; }
+.sketch-tool-status { position: absolute; bottom: 12px; left: 24px; right: 300px; pointer-events: none; color: var(--aether-color-text); font-size: 12px; }
+.sketch-tool-status:empty { display: none; }

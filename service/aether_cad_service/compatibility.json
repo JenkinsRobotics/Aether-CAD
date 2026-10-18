@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "product": "cad",
+  "platform_api": 1,
+  "service": {
+    "distribution": "aether-cad-service",
+    "version": "0.2.0a5"
+  },
+  "frontend": {
+    "name": "aether-cad",
+    "version": "0.1.0-alpha.1"
+  },
+  "shared_packages": {
+    "@aether/assets": {
+      "archive": "vendor/aether-assets-0.2.0-alpha.27.tgz",
+      "sha256": "4da03e06909bd6b4a8a3d6f5241995ae9e0fd959d0e71496f26798a7c5e989e0"
+    },
+    "@aether/session": {
+      "archive": "vendor/aether-session-0.2.0-alpha.151.tgz",
+      "sha256": "28147a7360c153f06f242533c616b53ba6b00b615e6206ff7b594b79eda01df3"
+    },
+    "@aether/sketch": {
+      "archive": "vendor/aether-sketch-0.2.0-alpha.4.tgz",
+      "sha256": "415e31e86ec14315f010727510eaa8b0f980ce3a235c4f15722104542fd7f32e"
+    },
+    "@aether/ui": {
+      "archive": "vendor/aether-ui-0.2.0-alpha.145.tgz",
+      "sha256": "d95a543d1590117d6aadd82788b5576397497c6d04fdac3e68e3d88c93636055"
+    }
+  }
+}

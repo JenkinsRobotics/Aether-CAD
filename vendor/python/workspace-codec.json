@@ -1,0 +1,11 @@
+{
+  "wheel": "aether_animation-0.1.0-18-py3-none-any.whl",
+  "sha256": "4dba03c9bc10d31daa61a1eeb5e6848fa2fc8173c15509d921f1e84e222cdc09",
+  "modules": [
+    "aether_animation/__init__.py",
+    "aether_animation/aether_workspace.py",
+    "aether_animation/aether_project.py",
+    "aether_animation/mates.py",
+    "aether_animation/relation_kinds.py"
+  ]
+}

@@ -1,0 +1,10 @@
+/* Compact relationship artwork is centered by its SVG viewBox, not font metrics. */
+svg.cad-sketch-canvas .sketch-constraint-mark { color: var(--aether-color-text); cursor: pointer; outline: none; }
+svg.cad-sketch-canvas .sketch-constraint-mark .constraint-symbol { fill: none; stroke: currentColor; pointer-events: none; overflow: visible; }
+svg.cad-sketch-canvas .sketch-constraint-mark .constraint-badge-box { fill: var(--aether-color-bg-panel); stroke: var(--aether-color-border); stroke-width: .6px; stroke-opacity: .5; vector-effect: non-scaling-stroke; pointer-events: all; }
+svg.cad-sketch-canvas .sketch-constraint-mark .constraint-leader { stroke: var(--aether-color-text-dim); stroke-width: .8px; vector-effect: non-scaling-stroke; pointer-events: none; }
+svg.cad-sketch-canvas .sketch-constraint-mark.relationship-nearby .constraint-badge-box { fill: var(--aether-color-bg-hover); stroke: var(--aether-color-accent); }
+svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active { color: var(--aether-color-shadow); }
+svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active .constraint-badge-box { fill: var(--aether-color-warn); stroke: var(--aether-color-warn); stroke-width: 1.5px; stroke-opacity: 1; }
+svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active .constraint-leader { stroke: var(--aether-color-warn); stroke-width: 1.5px; }
+svg.cad-sketch-canvas .sketch-relationship-highlight > * { fill: none; stroke: var(--aether-color-warn); stroke-width: 4px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }

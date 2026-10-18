@@ -1,0 +1,1 @@
+Independent 2 × 3 × 4 mm box fixtures generated with FreeCAD public Part.makeBox / Mesh.createBox and their exporters. Expected volume 24 mm³; mesh fixtures have 12 triangles. No customer source files.

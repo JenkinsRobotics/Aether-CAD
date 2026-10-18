@@ -1,0 +1,771 @@
+[
+  {
+    "name": "secondary-longer",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 19,
+      "documentId": "ellipse-secondary-longer",
+      "name": "secondary-longer",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "name": "Edited ellipse",
+          "type": "profile",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  20,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 30,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      -20,
+                      0
+                    ]
+                  },
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 30,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      20,
+                      0
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "path",
+                "construction": true,
+                "start": [
+                  0,
+                  0
+                ],
+                "segments": []
+              }
+            ],
+            "constraints": [
+              {
+                "id": "ellipse-1",
+                "kind": "ellipse-shape",
+                "a": {
+                  "kind": "contour",
+                  "contour": 0
+                }
+              },
+              {
+                "id": "ellipse-center-1",
+                "kind": "concentric",
+                "a": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "b": {
+                  "contour": 1,
+                  "kind": "point",
+                  "index": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "name": "Extrude",
+          "type": "extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    },
+    "piVolume": 3600,
+    "features": [
+      {
+        "id": "s#0",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            20,
+            0
+          ],
+          "segments": [
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 30,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                -20,
+                0
+              ],
+              "ellipse_frame": {
+                "center": [
+                  0,
+                  0
+                ],
+                "radiusX": 20,
+                "radiusY": 30,
+                "rotation": 0,
+                "startAngle": 0,
+                "sweep": 3.141592653589793
+              }
+            },
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 30,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                20,
+                0
+              ],
+              "ellipse_frame": {
+                "center": [
+                  0,
+                  0
+                ],
+                "radiusX": 20,
+                "radiusY": 30,
+                "rotation": 0,
+                "startAngle": 3.141592653589793,
+                "sweep": 3.141592653589793
+              }
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "e",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ellipse-secondary-longer:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "s#0",
+          "distance_mm": 6
+        }
+      }
+    ]
+  },
+  {
+    "name": "primary-negative",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 19,
+      "documentId": "ellipse-primary-negative",
+      "name": "primary-negative",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "name": "Edited ellipse",
+          "type": "profile",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  35,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "ellipse",
+                    "radiusX": 35,
+                    "radiusY": 10,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      -35,
+                      0
+                    ]
+                  },
+                  {
+                    "type": "ellipse",
+                    "radiusX": 35,
+                    "radiusY": 10,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      35,
+                      0
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "path",
+                "construction": true,
+                "start": [
+                  0,
+                  0
+                ],
+                "segments": []
+              }
+            ],
+            "constraints": [
+              {
+                "id": "ellipse-1",
+                "kind": "ellipse-shape",
+                "a": {
+                  "kind": "contour",
+                  "contour": 0
+                }
+              },
+              {
+                "id": "ellipse-center-1",
+                "kind": "concentric",
+                "a": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "b": {
+                  "contour": 1,
+                  "kind": "point",
+                  "index": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "name": "Extrude",
+          "type": "extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    },
+    "piVolume": 2100,
+    "features": [
+      {
+        "id": "s#0",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            35,
+            0
+          ],
+          "segments": [
+            {
+              "type": "ellipse",
+              "radiusX": 35,
+              "radiusY": 10,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                -35,
+                0
+              ],
+              "ellipse_frame": {
+                "center": [
+                  0,
+                  0
+                ],
+                "radiusX": 35,
+                "radiusY": 10,
+                "rotation": 0,
+                "startAngle": 0,
+                "sweep": 3.141592653589793
+              }
+            },
+            {
+              "type": "ellipse",
+              "radiusX": 35,
+              "radiusY": 10,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                35,
+                0
+              ],
+              "ellipse_frame": {
+                "center": [
+                  0,
+                  0
+                ],
+                "radiusX": 35,
+                "radiusY": 10,
+                "rotation": 0,
+                "startAngle": 3.141592653589793,
+                "sweep": 3.141592653589793
+              }
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "e",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ellipse-primary-negative:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "s#0",
+          "distance_mm": 6
+        }
+      }
+    ]
+  },
+  {
+    "name": "rotated-translated",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 19,
+      "documentId": "ellipse-rotated-translated",
+      "name": "rotated-translated",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "name": "Edited ellipse",
+          "type": "profile",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  31.14213562373095,
+                  43.14213562373095
+                ],
+                "segments": [
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 10,
+                    "rotationDegrees": 45,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      2.857864376269049,
+                      14.85786437626905
+                    ]
+                  },
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 10,
+                    "rotationDegrees": 45,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      31.14213562373095,
+                      43.14213562373095
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "path",
+                "construction": true,
+                "start": [
+                  16.999999999490008,
+                  28.999999999130015
+                ],
+                "segments": []
+              }
+            ],
+            "constraints": [
+              {
+                "id": "ellipse-1",
+                "kind": "ellipse-shape",
+                "a": {
+                  "kind": "contour",
+                  "contour": 0
+                }
+              },
+              {
+                "id": "ellipse-center-1",
+                "kind": "concentric",
+                "a": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "b": {
+                  "contour": 1,
+                  "kind": "point",
+                  "index": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "name": "Extrude",
+          "type": "extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    },
+    "piVolume": 1200,
+    "features": [
+      {
+        "id": "s#0",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            31.14213562373095,
+            43.14213562373095
+          ],
+          "segments": [
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 10,
+              "rotationDegrees": 45,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                2.857864376269049,
+                14.85786437626905
+              ],
+              "ellipse_frame": {
+                "center": [
+                  17,
+                  29
+                ],
+                "radiusX": 20,
+                "radiusY": 10,
+                "rotation": 0.7853981633974483,
+                "startAngle": 1.7763568394002506e-16,
+                "sweep": 3.141592653589793
+              }
+            },
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 10,
+              "rotationDegrees": 45,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                31.14213562373095,
+                43.14213562373095
+              ],
+              "ellipse_frame": {
+                "center": [
+                  17,
+                  29
+                ],
+                "radiusX": 20,
+                "radiusY": 10,
+                "rotation": 0.7853981633974483,
+                "startAngle": -3.141592653589793,
+                "sweep": 3.141592653589793
+              }
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "e",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ellipse-rotated-translated:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "s#0",
+          "distance_mm": 6
+        }
+      }
+    ]
+  },
+  {
+    "name": "sized-translated",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 19,
+      "documentId": "ellipse-sized-translated",
+      "name": "sized-translated",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "s",
+          "name": "Edited ellipse",
+          "type": "profile",
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "suppressed": false,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  32,
+                  8
+                ],
+                "segments": [
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 10,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      -8,
+                      8
+                    ]
+                  },
+                  {
+                    "type": "ellipse",
+                    "radiusX": 20,
+                    "radiusY": 10,
+                    "rotationDegrees": 0,
+                    "largeArc": false,
+                    "sweep": true,
+                    "end": [
+                      32,
+                      8
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "path",
+                "construction": true,
+                "start": [
+                  11.999999999640005,
+                  7.999999999760004
+                ],
+                "segments": []
+              },
+              {
+                "type": "path",
+                "construction": true,
+                "start": [
+                  31.999999999586006,
+                  7.9999999997600035
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      -8.000000000305997,
+                      7.999999999760006
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "ellipse-1",
+                "kind": "ellipse-shape",
+                "a": {
+                  "kind": "contour",
+                  "contour": 0
+                }
+              },
+              {
+                "id": "ellipse-center-1",
+                "kind": "concentric",
+                "a": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "b": {
+                  "contour": 1,
+                  "kind": "point",
+                  "index": 0
+                }
+              },
+              {
+                "id": "ellipse-axis-1",
+                "kind": "quadrant",
+                "a": {
+                  "kind": "point",
+                  "contour": 2,
+                  "index": 0
+                },
+                "b": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "quadrant": 0
+              },
+              {
+                "id": "ellipse-axis-2",
+                "kind": "quadrant",
+                "a": {
+                  "kind": "point",
+                  "contour": 2,
+                  "index": 1
+                },
+                "b": {
+                  "contour": 0,
+                  "kind": "ellipse",
+                  "index": 0
+                },
+                "quadrant": 2
+              },
+              {
+                "id": "ellipse-diameter-1",
+                "kind": "length",
+                "a": {
+                  "kind": "line",
+                  "contour": 2,
+                  "index": 0
+                },
+                "value": 40
+              }
+            ]
+          }
+        },
+        {
+          "id": "e",
+          "name": "Extrude",
+          "type": "extrude",
+          "profileFeatureId": "s",
+          "operation": "new",
+          "distanceMillimeters": 6,
+          "suppressed": false
+        }
+      ]
+    },
+    "piVolume": 1200,
+    "features": [
+      {
+        "id": "s#0",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            32,
+            8
+          ],
+          "segments": [
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 10,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                -8,
+                8
+              ],
+              "ellipse_frame": {
+                "center": [
+                  12,
+                  8
+                ],
+                "radiusX": 20,
+                "radiusY": 10,
+                "rotation": 0,
+                "startAngle": 0,
+                "sweep": 3.141592653589793
+              }
+            },
+            {
+              "type": "ellipse",
+              "radiusX": 20,
+              "radiusY": 10,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true,
+              "end": [
+                32,
+                8
+              ],
+              "ellipse_frame": {
+                "center": [
+                  12,
+                  8
+                ],
+                "radiusX": 20,
+                "radiusY": 10,
+                "rotation": 0,
+                "startAngle": 3.141592653589793,
+                "sweep": 3.141592653589793
+              }
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "e",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ellipse-sized-translated:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "s#0",
+          "distance_mm": 6
+        }
+      }
+    ]
+  }
+]

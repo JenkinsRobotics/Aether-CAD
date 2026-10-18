@@ -1,0 +1,9 @@
+svg.cad-sketch-canvas g.sketch-dimension.sketch-annotation-selected text,
+svg.cad-sketch-canvas g.sketch-constraint-mark.sketch-annotation-selected .constraint-badge-box {
+  fill: var(--cad-sketch-selection, #ffad1f);
+}
+svg.cad-sketch-canvas g.sketch-annotation-selected line,
+svg.cad-sketch-canvas g.sketch-annotation-selected path {
+  stroke: var(--cad-sketch-selection, #ffad1f);
+}
+svg.cad-sketch-canvas g.sketch-dimension.sketch-annotation-selected text { font-weight: 700; }

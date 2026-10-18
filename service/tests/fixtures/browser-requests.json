@@ -1,0 +1,157 @@
+{
+  "engine": {},
+  "mate-kinds": {},
+  "geometry": {
+    "features": [
+      {
+        "id": "s",
+        "kind": "sketch-rectangle",
+        "parameters": {
+          "width_mm": 10,
+          "height_mm": 20
+        }
+      },
+      {
+        "id": "p",
+        "kind": "pad",
+        "parameters": {
+          "profile": "s",
+          "distance_mm": 5,
+          "body_id": "plate",
+          "operation": "new"
+        }
+      }
+    ]
+  },
+  "analysis": {
+    "features": [
+      {
+        "id": "s",
+        "kind": "sketch-rectangle",
+        "parameters": {
+          "width_mm": 10,
+          "height_mm": 20
+        }
+      },
+      {
+        "id": "p",
+        "kind": "pad",
+        "parameters": {
+          "profile": "s",
+          "distance_mm": 5,
+          "body_id": "plate",
+          "operation": "new"
+        }
+      }
+    ],
+    "analysis": {
+      "kind": "section",
+      "plane": "XY",
+      "offset_mm": 2
+    }
+  },
+  "export": {
+    "features": [
+      {
+        "id": "s",
+        "kind": "sketch-rectangle",
+        "parameters": {
+          "width_mm": 10,
+          "height_mm": 20
+        }
+      },
+      {
+        "id": "p",
+        "kind": "pad",
+        "parameters": {
+          "profile": "s",
+          "distance_mm": 5,
+          "body_id": "plate",
+          "operation": "new"
+        }
+      }
+    ],
+    "format": "step",
+    "body_ids": [
+      "plate"
+    ]
+  },
+  "assembly": {
+    "request": "assembly",
+    "protocol": 1,
+    "parts": [
+      {
+        "id": "part",
+        "features": [
+          {
+            "id": "s",
+            "kind": "sketch-rectangle",
+            "parameters": {
+              "width_mm": 10,
+              "height_mm": 20
+            }
+          },
+          {
+            "id": "p",
+            "kind": "pad",
+            "parameters": {
+              "profile": "s",
+              "distance_mm": 5,
+              "body_id": "plate",
+              "operation": "new"
+            }
+          }
+        ]
+      }
+    ],
+    "instances": [
+      {
+        "id": "base",
+        "part": "part",
+        "placement_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "grounded": true
+      },
+      {
+        "id": "block",
+        "part": "part",
+        "placement_mm": [
+          120,
+          75,
+          33
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "grounded": false
+      }
+    ],
+    "joints": [
+      {
+        "id": "mate",
+        "kind": "fastened",
+        "a": {
+          "instance": "base",
+          "element": "Vertex1"
+        },
+        "b": {
+          "instance": "block",
+          "element": "Vertex1"
+        },
+        "parameters": {}
+      }
+    ]
+  }
+}

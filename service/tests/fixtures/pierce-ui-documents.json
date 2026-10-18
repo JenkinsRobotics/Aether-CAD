@@ -1,0 +1,2254 @@
+[
+  {
+    "name": "center",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "7a7bcbc6-0aa1-43d3-9ddc-54b07b4bdf1b",
+                    "endVertexId": "34057a47-25bf-43b6-bee1-b12d4cd768d1"
+                  }
+                ],
+                "id": "8cd0361c-f893-417b-a7ef-083026b40e9c",
+                "startVertexId": "8541ad53-f955-4d5c-b2d2-f8e9663a1aac"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  9.999999999700005,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "8cd0361c-f893-417b-a7ef-083026b40e9c",
+                  "sourceSegmentId": "7a7bcbc6-0aa1-43d3-9ddc-54b07b4bdf1b",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7a7bcbc6-0aa1-43d3-9ddc-54b07b4bdf1b",
+              "endVertexId": "34057a47-25bf-43b6-bee1-b12d4cd768d1"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7a7bcbc6-0aa1-43d3-9ddc-54b07b4bdf1b",
+              "endVertexId": "34057a47-25bf-43b6-bee1-b12d4cd768d1"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            9.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "canvas-undo-redo",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "2fe2be91-db33-4255-9d20-f2e2ad323d68",
+                    "endVertexId": "36362d7b-9c32-4240-b6a0-a54f7eca1aa1"
+                  }
+                ],
+                "id": "a11e0e76-43e0-41e1-887d-1d8c1644f1ca",
+                "startVertexId": "8f3c7a47-3a4e-4d99-8767-d538736ed919"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  9.999999999700005,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "a11e0e76-43e0-41e1-887d-1d8c1644f1ca",
+                  "sourceSegmentId": "2fe2be91-db33-4255-9d20-f2e2ad323d68",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "2fe2be91-db33-4255-9d20-f2e2ad323d68",
+              "endVertexId": "36362d7b-9c32-4240-b6a0-a54f7eca1aa1"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "2fe2be91-db33-4255-9d20-f2e2ad323d68",
+              "endVertexId": "36362d7b-9c32-4240-b6a0-a54f7eca1aa1"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            9.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "repeated-edge-and-center",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "a622fafc-13d3-4429-982d-f815be6314b3",
+                    "endVertexId": "6754b5f6-f519-4860-a996-ca1bad5e1567"
+                  }
+                ],
+                "id": "46458ee8-5c6b-4af4-8b64-343b86ae6806",
+                "startVertexId": "decf7132-7b1b-49e7-b9eb-ad8d4965ba60"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  7.000000000002041,
+                  -0.0000035003111273034453
+                ],
+                "radius": 3
+              },
+              {
+                "type": "circle",
+                "center": [
+                  9.999999999700005,
+                  2.9999603010631183e-10
+                ],
+                "radius": 2
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "46458ee8-5c6b-4af4-8b64-343b86ae6806",
+                  "sourceSegmentId": "a622fafc-13d3-4429-982d-f815be6314b3",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              },
+              {
+                "id": "pierce-2",
+                "kind": "pierce",
+                "a": {
+                  "contour": 1,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "46458ee8-5c6b-4af4-8b64-343b86ae6806",
+                  "sourceSegmentId": "a622fafc-13d3-4429-982d-f815be6314b3",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "a622fafc-13d3-4429-982d-f815be6314b3",
+              "endVertexId": "6754b5f6-f519-4860-a996-ca1bad5e1567"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "a622fafc-13d3-4429-982d-f815be6314b3",
+              "endVertexId": "6754b5f6-f519-4860-a996-ca1bad5e1567"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-2",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "a622fafc-13d3-4429-982d-f815be6314b3",
+              "endVertexId": "6754b5f6-f519-4860-a996-ca1bad5e1567"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target#0",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            7.000000000002041,
+            -0.0000035003111273034453
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "curve",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "target#1",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 2,
+          "center_mm": [
+            9.999999999700005,
+            2.9999603010631183e-10
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-2",
+              "source_sketch": "target#pierce-source#pierce-2",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "circle-branch",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  0,
+                  0
+                ],
+                "radius": 5,
+                "id": "fc7071db-2887-48f2-a3d8-874b0112c5a5"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  -4.999999999850003,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "fc7071db-2887-48f2-a3d8-874b0112c5a5",
+                  "branch": {
+                    "direction": 1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      1
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 5,
+          "center_mm": [
+            0,
+            0
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-circle",
+        "parameters": {
+          "center_mm": [
+            0,
+            0
+          ],
+          "radius_mm": 5,
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            -4.999999999850003,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                -5,
+                6.123233995736766e-16,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "repaired",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "replacement",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      40,
+                      5
+                    ],
+                    "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+                    "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+                  }
+                ],
+                "id": "ac1edb6c-cd0c-4808-9e37-1f893378113b",
+                "startVertexId": "658bb03c-7c3d-4eb3-ad0f-28b4ee34e87e"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  19.999999999700005,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "replacement",
+                  "sourceContourId": "ac1edb6c-cd0c-4808-9e37-1f893378113b",
+                  "sourceSegmentId": "167eb047-ad76-45ba-93f1-10f38bfab338",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "replacement",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                40,
+                5
+              ],
+              "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+              "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                40,
+                5
+              ],
+              "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+              "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            19.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                20,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "overlap-choice",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "other-source",
+          "name": "Other source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "7ff20100-c65b-45a4-88c5-1e8064156093",
+                    "endVertexId": "46fd5c1c-c41c-41f1-8f6d-e4376b7f55f8"
+                  }
+                ],
+                "id": "223dd733-fc5d-4974-9698-354c4e8d0621",
+                "startVertexId": "31468f49-3b91-468a-ab78-ec1bd117c862"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  9.999999999700005,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "other-source",
+                  "sourceContourId": "223dd733-fc5d-4974-9698-354c4e8d0621",
+                  "sourceSegmentId": "7ff20100-c65b-45a4-88c5-1e8064156093",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ]
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "other-source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7ff20100-c65b-45a4-88c5-1e8064156093",
+              "endVertexId": "46fd5c1c-c41c-41f1-8f6d-e4376b7f55f8"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7ff20100-c65b-45a4-88c5-1e8064156093",
+              "endVertexId": "46fd5c1c-c41c-41f1-8f6d-e4376b7f55f8"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            9.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "replace-branch",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  0,
+                  0
+                ],
+                "radius": 5,
+                "id": "e744decf-21e3-41cb-ab0b-cc7ba7bc15b9"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  -4.999999999700004,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "e744decf-21e3-41cb-ab0b-cc7ba7bc15b9",
+                  "branch": {
+                    "direction": 1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      1
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 5,
+          "center_mm": [
+            0,
+            0
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-circle",
+        "parameters": {
+          "center_mm": [
+            0,
+            0
+          ],
+          "radius_mm": 5,
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            -4.999999999700004,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                -5,
+                6.123233995736766e-16,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "inch-display",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "a8ce0f4f-b7e7-45fc-9b81-5690581b150b",
+                    "endVertexId": "26bf47a8-62a0-4cd0-8f9f-2d1d08b41b17"
+                  }
+                ],
+                "id": "355a171c-d0d6-475c-b1fd-b6176279062d",
+                "startVertexId": "97a555b8-c120-47cb-8850-c25744f17785"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "circle",
+                "center": [
+                  9.999999999700005,
+                  0
+                ],
+                "radius": 3
+              }
+            ],
+            "constraints": [
+              {
+                "id": "radius",
+                "kind": "radius",
+                "a": {
+                  "contour": 0,
+                  "kind": "circle"
+                },
+                "value": 3
+              },
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "355a171c-d0d6-475c-b1fd-b6176279062d",
+                  "sourceSegmentId": "a8ce0f4f-b7e7-45fc-9b81-5690581b150b",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "pad",
+          "name": "Extrude",
+          "type": "extrude",
+          "suppressed": false,
+          "profileFeatureId": "target",
+          "distanceMillimeters": 5,
+          "operation": "new"
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "a8ce0f4f-b7e7-45fc-9b81-5690581b150b",
+              "endVertexId": "26bf47a8-62a0-4cd0-8f9f-2d1d08b41b17"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "a8ce0f4f-b7e7-45fc-9b81-5690581b150b",
+              "endVertexId": "26bf47a8-62a0-4cd0-8f9f-2d1d08b41b17"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            9.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "pad",
+        "kind": "pad",
+        "parameters": {
+          "body_id": "ef70e4aa-d22a-4d02-a05e-dff289648cb7:body-1",
+          "operation": "new",
+          "end_type": "blind",
+          "starting_offset_mm": 0,
+          "end_offset_mm": 0,
+          "draft_angle_deg": 0,
+          "reversed": false,
+          "profile": "target",
+          "distance_mm": 5
+        }
+      }
+    ]
+  },
+  {
+    "name": "spline-control",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "b52b4df7-4eed-4c0a-bcf7-3fbd70334874",
+      "name": "Saved Pierce cubic-control",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "7ea2feda-5931-445f-83de-6a3ccab0a307",
+                    "endVertexId": "50477046-2ecb-4c8c-ac54-0aa724932f05"
+                  }
+                ],
+                "id": "1eab3e80-e395-4fcd-b2da-1bdac039caf3",
+                "startVertexId": "128a7703-1908-49ec-bbdd-66c55a0438cb"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  0
+                ],
+                "segments": [
+                  {
+                    "type": "bezier",
+                    "end": [
+                      8,
+                      0
+                    ],
+                    "controls": [
+                      [
+                        9.999999999760004,
+                        2.3999703723106506e-10
+                      ],
+                      [
+                        6,
+                        8
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ],
+            "constraints": [
+              {
+                "id": "pierce-1",
+                "kind": "pierce",
+                "a": {
+                  "contour": 0,
+                  "kind": "point",
+                  "index": 0,
+                  "control": 0
+                },
+                "source": {
+                  "kind": "sketch-curve",
+                  "sourceFeatureId": "source",
+                  "sourceContourId": "1eab3e80-e395-4fcd-b2da-1bdac039caf3",
+                  "sourceSegmentId": "7ea2feda-5931-445f-83de-6a3ccab0a307",
+                  "branch": {
+                    "direction": -1,
+                    "ordinal": 0,
+                    "counts": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7ea2feda-5931-445f-83de-6a3ccab0a307",
+              "endVertexId": "50477046-2ecb-4c8c-ac54-0aa724932f05"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "7ea2feda-5931-445f-83de-6a3ccab0a307",
+              "endVertexId": "50477046-2ecb-4c8c-ac54-0aa724932f05"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            0
+          ],
+          "segments": [
+            {
+              "type": "bezier",
+              "end": [
+                8,
+                0
+              ],
+              "controls": [
+                [
+                  9.999999999760004,
+                  2.3999703723106506e-10
+                ],
+                [
+                  6,
+                  8
+                ]
+              ]
+            }
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "control",
+                "geometry": 0,
+                "control": 0,
+                "scale": 1
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "mixed",
+    "document": {
+      "format": "aether-part",
+      "formatVersion": 21,
+      "documentId": "ef70e4aa-d22a-4d02-a05e-dff289648cb7",
+      "name": "Saved Pierce circle-center",
+      "units": "millimeter",
+      "features": [
+        {
+          "id": "source",
+          "name": "Source",
+          "type": "profile",
+          "suppressed": false,
+          "plane": "XY",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "drawing",
+            "contours": [
+              {
+                "type": "path",
+                "start": [
+                  0,
+                  -5
+                ],
+                "segments": [
+                  {
+                    "type": "line",
+                    "end": [
+                      20,
+                      5
+                    ],
+                    "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+                    "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+                  }
+                ],
+                "id": "ac1edb6c-cd0c-4808-9e37-1f893378113b",
+                "startVertexId": "658bb03c-7c3d-4eb3-ad0f-28b4ee34e87e"
+              }
+            ]
+          }
+        },
+        {
+          "id": "target",
+          "type": "profile",
+          "name": "Target",
+          "suppressed": false,
+          "plane": "XZ",
+          "offsetMillimeters": 0,
+          "profile": {
+            "type": "projection",
+            "sourceFeatureId": "source",
+            "authored": {
+              "type": "drawing",
+              "contours": [
+                {
+                  "type": "circle",
+                  "center": [
+                    9.999999999700005,
+                    0
+                  ],
+                  "radius": 3
+                }
+              ],
+              "constraints": [
+                {
+                  "id": "radius",
+                  "kind": "radius",
+                  "a": {
+                    "contour": 0,
+                    "kind": "circle"
+                  },
+                  "value": 3
+                },
+                {
+                  "id": "pierce-1",
+                  "kind": "pierce",
+                  "a": {
+                    "contour": 0,
+                    "kind": "point",
+                    "index": 0
+                  },
+                  "source": {
+                    "kind": "sketch-curve",
+                    "sourceFeatureId": "source",
+                    "sourceContourId": "ac1edb6c-cd0c-4808-9e37-1f893378113b",
+                    "sourceSegmentId": "167eb047-ad76-45ba-93f1-10f38bfab338",
+                    "branch": {
+                      "direction": -1,
+                      "ordinal": 0,
+                      "counts": [
+                        1,
+                        0,
+                        0
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "sketchPresentation": {
+        "target": {
+          "dimensionLabelPositionsMillimeters": {}
+        }
+      }
+    },
+    "features": [
+      {
+        "id": "source",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+              "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+            }
+          ],
+          "plane": "XY",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#pierce-source#pierce-1",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            -5
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                5
+              ],
+              "id": "167eb047-ad76-45ba-93f1-10f38bfab338",
+              "endVertexId": "eebb1672-4e71-457c-a745-4d4d38518ef2"
+            }
+          ],
+          "frame": {
+            "originMillimeters": [
+              0,
+              0,
+              0
+            ],
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "xDirection": [
+              1,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "id": "target#0",
+        "kind": "sketch-wire",
+        "parameters": {
+          "start_mm": [
+            0,
+            0
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                20,
+                0
+              ]
+            }
+          ],
+          "plane": "XZ",
+          "offset_mm": 0
+        }
+      },
+      {
+        "id": "target#1",
+        "kind": "sketch-circle",
+        "parameters": {
+          "radius_mm": 3,
+          "center_mm": [
+            9.999999999700005,
+            0
+          ],
+          "plane": "XZ",
+          "offset_mm": 0,
+          "pierce_checks": [
+            {
+              "id": "pierce-1",
+              "source_sketch": "target#pierce-source#pierce-1",
+              "world_point": [
+                10,
+                0,
+                0
+              ],
+              "target": {
+                "kind": "center",
+                "geometry": 0
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

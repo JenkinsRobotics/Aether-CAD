@@ -1,0 +1,25 @@
+/* Product composition. Shared Inspector owns rows, controls, typography and theme. */
+.cad-property-sheet { min-width: 0; }
+.cad-property-sheet .parameter-grid { display: block; padding: 0; }
+.cad-property-sheet .visualization-panel-scroll,
+.cad-property-sheet .inspect-panel-scroll { height: auto; overflow: visible; padding: 0; }
+.cad-property-sheet .visualization-fields { display: grid; gap: 0; padding: 0; }
+.cad-property-sheet .feature-help { margin: 8px 0 0; padding: 8px 0; }
+.cad-property-sheet .cad-view-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.cad-drawing-inspector.cad-drawing-property-sheet { display: block; overflow: auto; }
+
+/* Product layout only; the shared Inspector provides the visual language. */
+.aui-inspector .canonical-assembly-tree,
+.aui-inspector .canonical-bom-table { padding: 0; }
+.aui-inspector .canonical-assembly-constraints .aui-listbox { margin: 0; width: 100%; }
+.aui-inspector .assembly-workbench-tabs { padding: 0; }
+.aui-inspector .browser-title { padding: 0 0 8px; min-height: 36px; background: transparent; }
+.aui-inspector .inspect-capability-list { padding: 0; gap: 0; }
+.aui-inspector .inspect-capability { padding: 10px 0; border: 0; border-bottom: 1px solid var(--aether-color-border-subtle); border-radius: 0; background: transparent; }
+.aui-inspector .inspect-capability strong { font-size: 12px; }
+.aui-inspector .inspect-capability p { font-size: 11px; line-height: 1.5; }
+
+.cad-material-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.cad-material-fields:disabled { opacity: .55; }
+.cad-material-fields .aui-material-browser { min-width: 0; width: 100%; box-sizing: border-box; }

@@ -1,0 +1,18 @@
+/* Hide region shading throughout placement while retaining edges and handles. */
+svg.cad-sketch-canvas[data-selection-drag] .sketch-contour.closed,
+svg.cad-sketch-canvas[data-selection-drag] .sketch-region-fill,
+svg.cad-sketch-canvas[data-selection-drag] .sketch-region-selected {
+  fill: none !important;
+}
+svg.cad-sketch-canvas .sketch-drag-guides line {
+  stroke: var(--cad-sketch-guide);
+  stroke-width: 1px;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+svg.cad-sketch-canvas .sketch-drag-guides circle {
+  fill: none;
+  stroke: var(--cad-sketch-guide);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}

@@ -1,0 +1,853 @@
+{
+  "schema": 1,
+  "app": "cad",
+  "runtime": "python",
+  "entry": "runner.pyz",
+  "sha256": "d05721839aaaf0d9ee74184ccea37aad1ace58b977d086cfaa1284c76c7ae415",
+  "services": [
+    "/api/cad/geometry",
+    "/api/cad/export",
+    "/api/cad/analysis",
+    "/api/cad/assembly",
+    "/api/cad/assembly-compose",
+    "/api/cad/mate-kinds",
+    "/api/cad/engine",
+    "/api/cad/project-create",
+    "/api/cad/project-read",
+    "/api/cad/project-edit",
+    "/api/cad/settings-read",
+    "/api/cad/settings-edit"
+  ],
+  "commands": [
+    {
+      "id": "cad.revolve.preview",
+      "title": "Preview revolve extents",
+      "description": "Evaluate saved revolve direction and angles without saving. Angles are degrees; symmetric centers the primary angle and requires zero opposite angle. Total sweep cannot exceed 360 degrees.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "angle_deg": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 360
+          },
+          "second_angle_deg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          },
+          "symmetric": {
+            "type": "boolean"
+          },
+          "reversed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "angle_deg",
+          "second_angle_deg",
+          "symmetric",
+          "reversed"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.revolve.setextent",
+      "title": "Change revolve extents",
+      "description": "Change saved revolve angles/direction after native validation. Same extent limits as preview. Requires latest revision and creates recoverable history; open editors must reload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "angle_deg": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 360
+          },
+          "second_angle_deg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          },
+          "symmetric": {
+            "type": "boolean"
+          },
+          "reversed": {
+            "type": "boolean"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "angle_deg",
+          "second_angle_deg",
+          "symmetric",
+          "reversed",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.inspect",
+      "title": "Inspect CAD part",
+      "description": "Read saved part features, stable body identities and editable extrusion parameters. No unsaved editor state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "app",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.evaluate",
+      "title": "Evaluate CAD part",
+      "description": "Rebuild saved visible history in FreeCAD and return body volumes and topology counts. No pixel preview, export or save.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "app",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.topology",
+      "title": "Inspect CAD body faces",
+      "description": "Read a page of exact native face references and snap candidates for one saved body. Coordinates are millimeters. Bind references to the returned document revision; inspect again after edits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "body_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "body_id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.extrude.preview",
+      "title": "Preview extrusion depth",
+      "description": "Evaluate a proposed depth in millimeters through the full native history without saving. Blind/symmetric Extrude only; not a pixel image.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "depth_mm": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "depth_mm"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.extrude.setdepth",
+      "title": "Change extrusion depth",
+      "description": "Change a saved Blind/symmetric extrusion depth in millimeters after full native validation. Requires latest revision; creates recoverable file history. Open editors must reload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "depth_mm": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 1000000
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "depth_mm",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.extrude.previewoffset",
+      "title": "Preview extrusion end offset",
+      "description": "Preview a signed millimeter offset for Up-to-next, Up-to-face, Up-to-part or Up-to-vertex without saving. Positive stops short; negative extends beyond the stopping boundary. Uses current native geometry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "end_offset_mm": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "end_offset_mm"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.extrude.setoffset",
+      "title": "Change extrusion end offset",
+      "description": "Change a saved Up-to-next, Up-to-face, Up-to-part or Up-to-vertex extrusion offset after native validation. Positive stops short; negative extends beyond the stopping boundary. Requires latest revision and creates file history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "end_offset_mm": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "end_offset_mm",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.feature.suppress",
+      "title": "Suppress or restore CAD feature",
+      "description": "Use CAD's dependency-aware suppression or restoration, then validate the complete native result before saving. Creates file history; open editors must reload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "enum": [
+              "suppress",
+              "unsuppress"
+            ]
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "action",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.feature.move",
+      "title": "Reorder CAD feature",
+      "description": "Move a feature one history position (-1 up, 1 down). Dependency-invalid or native-invalid order is refused. Latest revision required; creates file history.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "direction": {
+            "type": "integer",
+            "enum": [
+              -1,
+              1
+            ]
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id",
+          "direction",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.docs",
+      "title": "Discover CAD program operations",
+      "description": "Discover the real saved-file program steps, schemas and an executable plate example. These steps reuse editor operations; no native geometry or document changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "app",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.runprogram",
+      "title": "Run CAD modeling program",
+      "description": "Run a version-1 JSON program of 1\u201316 existing editor commands. Native rebuild resolves references after each step; only the complete candidate saves as one revision. 64 KiB program, 512 features, 4 MiB document, bounded execution. Latest revision required; open editors must reload. Use cad.part.docs for supported steps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "program_json": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "program_json",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.part.verify",
+      "title": "Verify exact CAD properties",
+      "description": "Read exact solid volume, area, center, bounds and optional density-based mass/inertia. Uses saved history without editing. Refuses invalid geometry and reference meshes; no pixel preview.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "density_kg_m3": {
+            "type": "number",
+            "minimum": 1e-06,
+            "maximum": 1000000
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          }
+        },
+        "required": [
+          "app",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.assembly.inspect",
+      "title": "Inspect saved Assembly",
+      "description": "Read paged Part templates, instances, mates or assemblies from a saved binary CAD archive. Returns the editor recipe example. No native rebuild or save; positions use mm and XYZW quaternions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "assembly_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "parts",
+              "instances",
+              "mates",
+              "assemblies"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "app",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.assembly.preview",
+      "title": "Preview saved Assembly recipe",
+      "description": "Qualify an Assembly recipe using the editor translator and exact native solver without saving. Returns evaluated Part volumes and instance counts, not pixels. Preview does not reserve identities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "assembly_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "recipe_json": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "recipe_json"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.assembly.compose",
+      "title": "Compose saved Assembly",
+      "description": "Append the ordinary editor Assembly recipe as one guarded file revision after exact native Part rebuilds and solve. Recipe version 1 supports reusable Parts, instances, fastened/revolute/prismatic mates and linear/circular instance arrays. No nested assemblies. Open editors must reload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "assembly_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "recipe_json": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2097152
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "recipe_json",
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "writes": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "binary_commands": [
+    "cad.assembly.inspect",
+    "cad.assembly.preview",
+    "cad.assembly.compose"
+  ]
+}

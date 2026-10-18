@@ -1,0 +1,17 @@
+html, body, #root { margin: 0; min-height: 100%; }
+body { background: var(--aether-color-bg-shell, #252729); color: var(--aether-color-text, #e6e6e6); font: 13px/1.5 system-ui, sans-serif; }
+.cad-reference-gallery { padding: 20px; }
+.cad-reference-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.cad-reference-heading h1 { margin: 0; font-size: 20px; }
+.cad-reference-heading p { margin: 6px 0 16px; color: var(--aether-color-text-muted, #a9adb4); }
+.cad-reference-heading a { color: var(--aether-color-accent, #72a7ff); }
+.cad-reference-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
+.cad-reference-toolbar button, .cad-reference-toolbar input, .cad-feature-card > header button { font: inherit; color: inherit; background: var(--aether-color-bg-input, #303338); border: 1px solid var(--aether-color-border, #50545b); border-radius: 6px; padding: 6px 10px; }
+.cad-reference-toolbar button[aria-pressed="true"] { background: var(--aether-color-accent, #356af2); color: white; }
+.cad-reference-toolbar input { margin-left: auto; min-width: 180px; }
+.cad-feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); align-items: start; gap: 20px; }
+.cad-feature-card { min-width: 0; }
+.cad-feature-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.cad-feature-card h2 { font-size: 14px; margin: 0; }
+.cad-feature-preview { position: relative; min-width: 0; overflow-x: auto; padding: 2px; }
+.cad-feature-preview .aui-feature-window { position: relative; max-width: 100%; }

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "aether-cad-service"
+version = "0.2.0a5"
+requires-python = ">=3.11,<3.13"
+dependencies = ["aether-platform>=0.2.0a4", "aether_animation>=0.1.0"]
+[project.entry-points."aether.products"]
+cad = "aether_cad_service.service:CADService"
+[tool.setuptools]
+packages = ["aether_cad_service", "aether_freecad"]
+license-files = ["freecad-engine/ATTRIBUTION.md"]
+
+[tool.setuptools.package-dir]
+aether_cad_service = "service/aether_cad_service"
+aether_freecad = "freecad-engine/aether_freecad"
+
+[tool.pytest.ini_options]
+testpaths = ["service/tests"]
+
+[tool.setuptools.package-data]
+aether_cad_service = ["data/*.json", "compatibility.json", "automation-commands.json", "browser-services.json", "runtime/*.mjs", "runtime/*.pyz", "runtime/*.json", "AGENT_ACCESS.md"]

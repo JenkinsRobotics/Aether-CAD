@@ -1,0 +1,38 @@
+import {afterEach,expect,it,vi} from 'vitest';
+import * as THREE from 'three/webgpu';
+import type {ConnectorCandidate} from '../aether-core';
+import {MateViewport} from '../viewer';
+import {cadSelection} from '../cad-selection-store';
+import {createEmptyPartDocument} from '@aether/core/document';
+const frame=(z:number)=>({originMillimeters:[0,0,z] as [number,number,number],xDirection:[1,0,0] as [number,number,number],normal:[0,0,1] as [number,number,number]});
+afterEach(()=>{cadSelection.dispatch({type:'clear'});vi.unstubAllGlobals();});
+it('disposes a new preview and restores the saved plane frame after Cancel',()=>{
+ vi.stubGlobal('document',{createElement:()=>({getContext:()=>null})});
+ const viewer=Object.create(MateViewport.prototype);
+ viewer.constructionPlanes=new THREE.Group();viewer.referenceRoot=new THREE.Group();viewer.constructionPlaneKey='';
+ const doc=createEmptyPartDocument('Planes');doc.features.push({id:'saved',type:'plane',name:'Saved',plane:'XY',offsetMillimeters:15,suppressed:false});
+ viewer.setConstructionPlanes(doc);
+ viewer.setConstructionPlanePreview('saved',frame(35));
+ expect(viewer.constructionPlanes.children[0].position.z).toBe(35);
+ viewer.setConstructionPlanePreview('draft',frame(45));
+ expect(viewer.constructionPlanes.children).toHaveLength(2);
+ const dispose=vi.spyOn(viewer.constructionPlanes.children[1].children[0].geometry,'dispose');
+ viewer.clearConstructionPlanePreview(doc);
+ expect(dispose).toHaveBeenCalled();
+ expect(viewer.constructionPlanes.children).toHaveLength(1);
+ expect(viewer.constructionPlanes.children[0].position.z).toBe(15);
+ expect(viewer.constructionPlanes.children[0].visible).toBe(true);
+ viewer.clearConstructionPlanePreview(null);expect(viewer.constructionPlanes.children).toHaveLength(0);
+});
+it('reads editing geometry from the historical body and requires a straight edge axis',()=>{
+ const viewer=Object.create(MateViewport.prototype);
+ viewer.parts=new Map();viewer.historyEditing=true;
+ const edge:ConnectorCandidate={faceId:1,yAxis:[0,1,0],zAxis:[1,0,0],id:'edge',kind:'edge-midpoint',label:'Edge',origin:[1,2,3],xAxis:[0,0,1],measurements:{linearDirection:[1,0,0]}};
+ const vertex={id:'vertex',kind:'vertex',label:'Vertex',origin:[4,5,6]};
+ viewer.historyModel={parts:[{id:'body',topology:[{candidates:[edge,vertex]}]}]};
+ cadSelection.dispatch({type:'replace',items:[{id:'edge:body:edge',kind:'edge',partId:'body',label:'Edge'}]});
+ expect(viewer.selectedAxis()).toMatchObject({originMillimeters:[1,2,3],directionMillimeters:[1,0,0]});
+ edge.measurements={};expect(viewer.selectedAxis()).toBeNull();
+ cadSelection.dispatch({type:'replace',items:[{id:'vertex:body:vertex',kind:'vertex',partId:'body',label:'Vertex'}]});
+ expect(viewer.selectedPoints()[0].positionMillimeters).toEqual([4,5,6]);
+});

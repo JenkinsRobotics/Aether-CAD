@@ -1,0 +1,40 @@
+.aui-dialog:has(.cad-file-manager-window) { width: min(1160px, 94vw); max-width: 94vw; }
+.aui-dialog:has(.cad-file-manager-window) .aui-dialog-body { padding: 0; }
+.cad-file-manager-window { height: min(740px, 80vh); display: flex; flex-direction: column; min-height: 0; }
+.cad-file-manager-window-tabs { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--aether-color-border); }
+.cad-file-manager-window-tabs [aria-pressed=true] { color: var(--aether-color-accent); background: var(--aether-color-bg-inset); }
+.cad-file-manager-window iframe { flex: 1; width: 100%; min-height: 0; border: 0; }
+.cad-file-manager-window iframe[hidden] { display: none; }
+.cad-file-manager-window > :last-child:not(iframe) { overflow: auto; }
+.aui-dialog:has(.cad-managed-tabs) { width: min(660px, 94vw); }
+.cad-file-manager-window:has(.cad-managed-tabs) { height: min(560px, 72vh); }
+.cad-file-manager-window-tabs { align-items: center; flex-wrap: wrap; }
+.cad-file-manager-window-tabs > :first-child { flex: 1; min-width: 140px; }
+.cad-managed-tabs { flex: 1; min-height: 0; overflow: auto; padding: 10px; }
+.cad-managed-tabs ul { list-style: none; margin: 0; padding: 0; }
+.cad-managed-tab { display: flex; width: 100%; align-items: center; gap: 14px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--aether-color-text); text-align: left; padding: 14px; cursor: pointer; font: inherit; }
+.cad-managed-tab:hover { background: var(--aether-color-bg-control); }
+.cad-managed-tab[aria-current] { background: var(--aether-color-bg-selected); border-color: var(--aether-color-accent); }
+.cad-managed-tab strong,.cad-managed-tab small { display: block; }
+.cad-managed-tab small { margin-top: 5px; color: var(--aether-color-text-dim); }
+.cad-managed-tab-icon { display: grid; place-items: center; width: 40px; height: 40px; }
+.cad-managed-tab-icon > svg { width: 28px !important; height: 28px !important; }
+.cad-managed-tab-current { margin-left: auto; font-size: 11px; color: var(--aether-color-text-dim); }
+.cad-managed-tabs-empty { padding: 20px; color: var(--aether-color-text-dim); }
+.cad-managed-project-actions { margin-top: 20px; border-top: 1px solid var(--aether-color-border); padding: 12px; }
+.cad-managed-project-actions summary { cursor: pointer; color: var(--aether-color-text-dim); }
+.cad-file-manager-window-tabs { display: grid; grid-template-columns: minmax(100px, 1fr) 140px auto auto; }
+.cad-file-manager-window-tabs > :first-child { min-width: 0; }
+.cad-managed-tab { font-size: 13px; }
+.cad-managed-tab[aria-current] { background: color-mix(in srgb, var(--aether-color-accent) 12%, var(--aether-color-bg-panel)); }
+@media(max-width: 600px) { .cad-file-manager-window-tabs { grid-template-columns: 1fr 1fr; } }
+.cad-managed-design > summary { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: var(--aether-color-bg-control); border-radius: 8px; }
+.cad-managed-design > summary::before { content: '▸'; }
+.cad-managed-design[open] > summary::before { content: '▾'; }
+.cad-managed-design > summary svg { width: 28px; height: 28px; }
+.cad-managed-design summary strong,.cad-managed-design summary small { display: block; }
+.cad-managed-design summary small { margin-top: 4px; color: var(--aether-color-text-dim); }
+.cad-managed-design-children { margin: 8px 0 0 26px; padding-left: 12px; border-left: 1px solid var(--aether-color-border); }
+.cad-managed-tabs h3 { font-size: 12px; margin: 18px 10px 6px; }
+.cad-managed-tabs h4 { color: var(--aether-color-text-dim); font-weight: 500; font-size: 12px; margin: 12px 10px 4px; }
+.cad-managed-standalone { border-top: 1px solid var(--aether-color-border); margin-top: 18px; }

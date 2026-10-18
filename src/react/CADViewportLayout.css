@@ -1,0 +1,33 @@
+/* The renderer fills the shared canvas. Only viewport controls consume the
+   shell's measured safe area, keeping picking and camera aspect full-size. */
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] {
+  --cad-viewport-safe-top: max(16px, var(--aui-workspace-inset-top, 0px));
+  --cad-viewport-safe-right: max(16px, var(--aui-workspace-inset-right, 0px));
+  --cad-viewport-safe-bottom: max(16px, var(--aui-workspace-inset-bottom, 0px));
+  --cad-viewport-safe-left: max(16px, var(--aui-workspace-inset-left, 0px));
+}
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .view-cube {
+  top: var(--cad-viewport-safe-top);
+  right: var(--cad-viewport-safe-right);
+}
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .selection-filter-hud {
+  right: var(--cad-viewport-safe-right);
+  bottom: var(--cad-viewport-safe-bottom);
+}
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .mate-card {
+  top: var(--cad-viewport-safe-top);
+  right: var(--cad-viewport-safe-right);
+}
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .mate-card:not(.hidden) ~ .view-cube {
+  right: calc(var(--cad-viewport-safe-right) + 264px);
+}
+.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .sketch-plane-card {
+  top: var(--cad-viewport-safe-top);
+}
+
+/* The shell places the view cube and selection filter in the right column
+   (WorkspaceShell sideTop/sideBottom); there they flow, not float. */
+.cad-studio-workspace .aui-shell[data-content-presentation] :is(.aui-shell-side-accessory, .aui-shell-edge-accessory) :is(.view-cube, .selection-filter-hud) {
+  position: relative;
+  inset: auto;
+}

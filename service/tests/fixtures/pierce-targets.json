@@ -1,0 +1,1094 @@
+[
+  {
+    "name": "point",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "position": 1,
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        9.999999999700005,
+        0
+      ],
+      "segments": [
+        {
+          "type": "line",
+          "end": [
+            6,
+            0
+          ]
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            9.999999999700005,
+            0
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                6,
+                0
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "point",
+        "index": 0
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "f24820a8-2131-4abc-84fe-9b31a73d36c1",
+        "sourceSegmentId": "3c1526fe-de83-4df8-ace0-88d6b88143b8",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "circle-center",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "position": 3,
+    "wire": {
+      "kind": "circle",
+      "center_mm": [
+        9.999999999700005,
+        0
+      ],
+      "radius_mm": 7
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "circle",
+          "center": [
+            9.999999999700005,
+            0
+          ],
+          "radius": 7
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "point",
+        "index": 0
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "b6d8512a-3911-4f6d-8621-5ba2fb6f7b10",
+        "sourceSegmentId": "0a6cfebd-2daf-4a14-8d88-42c495346996",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "circle",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "circle",
+      "center_mm": [
+        1.4999999999602174,
+        -7.500666754452585e-7
+      ],
+      "radius_mm": 8.500000000017314
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "circle",
+          "center": [
+            1.4999999999602174,
+            -7.500666754452585e-7
+          ],
+          "radius": 8.500000000017314
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "circle"
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "c15b58e0-e028-4274-ad18-cb23204bb009",
+        "sourceSegmentId": "6883e5e9-41b3-4784-b8d0-f2b3023d41ae",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "line",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        2,
+        -4
+      ],
+      "segments": [
+        {
+          "type": "line",
+          "end": [
+            10,
+            0
+          ]
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            2,
+            -4
+          ],
+          "segments": [
+            {
+              "type": "line",
+              "end": [
+                10,
+                0
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 1,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "67305dcc-ad4c-40b2-9475-f4b4e4dc0245",
+        "sourceSegmentId": "8ead890e-2bf9-40ca-8da8-46b2910236e0",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "arc",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        0.11525602483849078,
+        0.048045773973751996
+      ],
+      "segments": [
+        {
+          "type": "arc",
+          "middle": [
+            4.00006245370483,
+            6.164533180419505
+          ],
+          "end": [
+            9.76186242395599,
+            -0.7335196991655678
+          ]
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            0.11525602483849078,
+            0.048045773973751996
+          ],
+          "segments": [
+            {
+              "type": "arc",
+              "middle": [
+                4.00006245370483,
+                6.164533180419505
+              ],
+              "end": [
+                9.76186242395599,
+                -0.7335196991655678
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 0.9595805370809171,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "9f20e437-82ab-4c73-8726-d3a52487a87c",
+        "sourceSegmentId": "d7aebd0c-51aa-49b6-971d-5470f7c2b053",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "ellipse",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        2,
+        -8.881784197001252e-16
+      ],
+      "segments": [
+        {
+          "type": "ellipse",
+          "end": [
+            10,
+            -8.881784197001252e-16
+          ],
+          "radiusX": 5,
+          "radiusY": 4,
+          "rotationDegrees": 0,
+          "largeArc": false,
+          "sweep": true,
+          "ellipse_frame": {
+            "center": [
+              6,
+              2.399999999999999
+            ],
+            "radiusX": 5,
+            "radiusY": 4,
+            "rotation": 0,
+            "startAngle": -2.498091544796509,
+            "sweep": 1.8545904360032248
+          }
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            2,
+            -8.881784197001252e-16
+          ],
+          "segments": [
+            {
+              "type": "ellipse",
+              "end": [
+                10,
+                -8.881784197001252e-16
+              ],
+              "radiusX": 5,
+              "radiusY": 4,
+              "rotationDegrees": 0,
+              "largeArc": false,
+              "sweep": true
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 1,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "026fecc7-7b6b-44f5-a590-970d2fe3ffd7",
+        "sourceSegmentId": "d685c4dd-393a-4e4b-95b8-139f5db216a6",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "cubic",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        0.009349689849742042,
+        -2.399245449526891
+      ],
+      "segments": [
+        {
+          "type": "bezier",
+          "end": [
+            10.727264294124742,
+            -0.17328214196814617
+          ],
+          "controls": [
+            [
+              2.033398375874628,
+              0.8195129663241644
+            ],
+            [
+              6.088682946685083,
+              0.9967667143427406
+            ]
+          ]
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            0.009349689849742042,
+            -2.399245449526891
+          ],
+          "segments": [
+            {
+              "type": "bezier",
+              "end": [
+                10.727264294124742,
+                -0.17328214196814617
+              ],
+              "controls": [
+                [
+                  2.033398375874628,
+                  0.8195129663241644
+                ],
+                [
+                  6.088682946685083,
+                  0.9967667143427406
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 0.947374605290583,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "dad04cd6-3c98-40d7-9e8c-c1403fd58aa6",
+        "sourceSegmentId": "d95dfd9e-e292-46f9-9f76-aaf177bce787",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "conic-0.25",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        6,
+        -2
+      ],
+      "segments": [
+        {
+          "type": "conic",
+          "end": [
+            14,
+            -2
+          ],
+          "control": [
+            10,
+            6
+          ],
+          "rho": 0.25
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            6,
+            -2
+          ],
+          "segments": [
+            {
+              "type": "conic",
+              "end": [
+                14,
+                -2
+              ],
+              "control": [
+                10,
+                6
+              ],
+              "rho": 0.25
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 0.5,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "dbecb5cf-0a40-43f7-a7de-503de3dcf694",
+        "sourceSegmentId": "f3b6a5a3-5456-4aa6-8f70-302de8d6e329",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "conic-0.5",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        6,
+        -4
+      ],
+      "segments": [
+        {
+          "type": "conic",
+          "end": [
+            14,
+            -4
+          ],
+          "control": [
+            10,
+            4
+          ],
+          "rho": 0.5
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            6,
+            -4
+          ],
+          "segments": [
+            {
+              "type": "conic",
+              "end": [
+                14,
+                -4
+              ],
+              "control": [
+                10,
+                4
+              ],
+              "rho": 0.5
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 0.5,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "41c7d7a6-ecfb-4989-a35f-7dbadf082c34",
+        "sourceSegmentId": "ce298754-a0be-4fda-af60-cd83957a388c",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "conic-0.75",
+    "sourceFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    "targetFrame": {
+      "originMillimeters": [
+        0,
+        0,
+        0
+      ],
+      "xDirection": [
+        1,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        -1,
+        0
+      ]
+    },
+    "expectedWorld": [
+      10,
+      0,
+      0
+    ],
+    "wire": {
+      "kind": "wire",
+      "start_mm": [
+        6,
+        -6
+      ],
+      "segments": [
+        {
+          "type": "conic",
+          "end": [
+            14,
+            -6
+          ],
+          "control": [
+            10,
+            2
+          ],
+          "rho": 0.75
+        }
+      ]
+    },
+    "drawing": {
+      "type": "drawing",
+      "contours": [
+        {
+          "type": "path",
+          "start": [
+            6,
+            -6
+          ],
+          "segments": [
+            {
+              "type": "conic",
+              "end": [
+                14,
+                -6
+              ],
+              "control": [
+                10,
+                2
+              ],
+              "rho": 0.75
+            }
+          ]
+        }
+      ]
+    },
+    "draft": {
+      "id": "pierce",
+      "kind": "pierce",
+      "a": {
+        "contour": 0,
+        "kind": "curve",
+        "index": 0,
+        "parameter": 0.5,
+        "sliding": true
+      },
+      "source": {
+        "kind": "sketch-curve",
+        "sourceFeatureId": "source",
+        "sourceContourId": "2fb1f1cb-710e-4fa6-b021-f4d3287235cc",
+        "sourceSegmentId": "64a05dbe-1798-4418-93e7-b5d5baf6ac1e",
+        "branch": {
+          "direction": -1,
+          "ordinal": 0,
+          "counts": [
+            1,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  }
+]
