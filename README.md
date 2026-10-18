@@ -14,7 +14,7 @@
 <p align="center">3D parametric parts, assemblies and production drawings.</p>
 
 <p align="center">
-  <img alt="Alpha 0.1" src="https://img.shields.io/badge/release-Alpha%200.1-d29922">
+  <a href="https://github.com/JenkinsRobotics/Aether-CAD/releases/tag/v0.1.0-alpha.1"><img alt="Alpha 0.1" src="https://img.shields.io/badge/release-v0.1.0--alpha.1-d29922"></a>
   <img alt="Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-58a6ff">
   <a href="https://jenkinsrobotics.github.io/Aether-CAD/"><img alt="Website" src="https://img.shields.io/badge/site-Aether--CAD-1f6feb"></a>
 </p>
@@ -35,6 +35,8 @@ Sketch a profile, add features and edit any step of the history. Aether CAD runs
 - ✅ **Editable history** — Roll back, suppress, reorder and edit any feature; live native previews with Cancel/Apply; undo/redo; strict rebuild errors you can recover from.
 - ✅ **Exact import and export** — Import STEP, IGES and BREP solids and STL/OBJ/PLY/OFF meshes (with closed-mesh-to-solid conversion). Export exact STEP and STL.
 - ✅ **Inspect and analyse** — Measurements, angular inspection, capped section views and native volume interference between bodies.
+- ✅ **Rendering presets** — Rendering and environment presets for presenting parts in the viewport.
+- ✅ **Model Studio interface** — The shared Aether interface: a transparent document header, floating resizable side cards, a separate tool tray, saved layouts and themes — the same in every app.
 
 ### In progress
 
