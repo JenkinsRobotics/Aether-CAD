@@ -13,7 +13,7 @@ import { openAxisWindow } from "./axis-window";
 import { openPointWindow } from "./point-window";
 import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
-import { featureEditor } from "./features";
+import { featureEditor, featureEditors } from "./features";
 import { layoutParameterRows, type FeatureEditor, type FeatureEditorContext } from "./features/shared";
 import { unitChoice } from "@aether/core/units";
 import { documentUnits } from "./document-preferences";
@@ -136,7 +136,7 @@ const presentFeatureWindow = (
     const win = openCompactFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
       className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
-      title: type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type,
+      title: type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "),
       onAccept: () => form.requestSubmit(),
       onDiscard: () => win.close(),
     });
@@ -189,7 +189,7 @@ const presentFeatureWindow = (
     const name = field(
       "Name",
       feature?.name ??
-        (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type[0].toUpperCase() + type.slice(1)) + " " + (doc.features.length + 1),
+        (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")) + " " + (doc.features.length + 1),
     );
     if (type === "extrude") { name.closest("label")?.remove(); name.hidden = true; form.append(name); }
     const before = existing
@@ -246,7 +246,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);
@@ -571,9 +571,14 @@ const presentFeatureWindow = (
     "draft",
     "pattern",
     "boolean",
-  ] as const) {
-    cadCommands.register(`feature-${type}`, () => show(type));
-    cadCommands.setEnabled(`feature-${type}`, true);
+    // Every dialog in src/features/ is a command too: a button whose type is not
+    // registered here reads "not connected" in the ribbon, which is how the surface
+    // tools (and pipe, coil, boss, rest, thread, bounding solid, remove body, split,
+    // delete face) shipped dead until r39.
+    ...featureEditors.map((editor) => editor.type),
+  ] as readonly string[]) {
+    cadCommands.register(`feature-${type}` as never, () => show(type as never));
+    cadCommands.setEnabled(`feature-${type}` as never, true);
   }
   return refresh;
 }

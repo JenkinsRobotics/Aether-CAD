@@ -1,3 +1,4 @@
+import { surfaceCreatorTypes } from "./surface";
 import { patternCopyIds } from "./pattern";
 import {transformReferences} from './part-transform';
 import {offsetFaceBodies} from './offset-face';
@@ -16,13 +17,14 @@ export function bodyIDForFeature(
   feature: PartFeature,
 ): string {
   if (
+    !(surfaceCreatorTypes as readonly string[]).includes(feature.type) && feature.type !== "surface-thicken" &&
     (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.bodyId
   )
     return feature.bodyId;
   const first = doc.features.find(
     (f) =>
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") && f.operation === "new",
+      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new",
   );
   return first?.id === feature.id
     ? `${doc.documentId}:body-1`
@@ -31,7 +33,7 @@ export function bodyIDForFeature(
 export function bodyIDsForFeature(doc: PartDocument, feature: PartFeature): string[] {
   if(feature.type==="transform"||feature.type==="split")return feature.copyBodyIds?feature.bodyIds.map(id=>feature.copyBodyIds![id]):[];
   if(feature.type==="pattern"&&feature.bodyIds)return patternCopyIds(feature);
-  return feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs
+  return (feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs)
     ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
 }
 /** Bodies created by this feature, separate from bodies modified in place. */
@@ -45,6 +47,8 @@ export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.type==="extrude" && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
   if (feature.type === "remove-body") return feature.bodyIds;
+  if (feature.type === "surface-stitch") return feature.bodyIds.slice(1);
+  if (feature.type === "surface-unstitch") return feature.bodyIds;
   return feature.type === "extrude" && feature.operation === "add" ? feature.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc: PartDocument): PartDocument {

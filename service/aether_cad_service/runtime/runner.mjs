@@ -315,74 +315,10 @@ function validatePattern(feature, earlier, missing) {
     if (feature.orientation !== void 0 && !["identical", "path"].includes(feature.orientation)) throw new Error("Pattern orientation must be identical or path.");
   } else throw new Error("Unknown pattern type.");
 }
-function validateProfileRegionSelection(selection) {
-  const value2 = selection.profileRegion;
-  if (value2 === void 0) return;
-  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key) => key !== "contourIds") || !Array.isArray(value2.contourIds) || value2.contourIds.length < 2 || value2.contourIds.length > 1e3 || value2.contourIds.some((id2) => typeof id2 !== "string" || !id2.trim() || id2.length > 128) || new Set(value2.contourIds).size !== value2.contourIds.length || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
-}
-function profileRegionIdentity(selection) {
-  return JSON.stringify(selection.profileRegion ? { contours: [...selection.profileRegion.contourIds].sort() } : selection.profileContourId ?? null);
-}
-function matchesProfileRegion(selection, candidate) {
-  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
-}
-function validateExtrusionScopeResolution(value2) {
-  const ids = (v) => Array.isArray(v) && v.length <= 4096 && v.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v).size === v.length;
-  if (!value2 || !ids(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
-  const used = /* @__PURE__ */ new Set();
-  for (const group of value2.groups) {
-    if (!group || !ids(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
-    group.sources.forEach((id2) => used.add(id2));
-  }
-}
-function scopeConsumedBodies(resolution) {
-  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
-}
 function validatePlanarFaceAnchor(anchor) {
   if (anchor === void 0) return;
   if (!anchor || !Array.isArray(anchor.centerMillimeters) || anchor.centerMillimeters.length !== 3 || !anchor.centerMillimeters.every(Number.isFinite) || !Number.isFinite(anchor.areaSquareMillimeters) || anchor.areaSquareMillimeters <= 0)
     throw Error("Invalid planar face anchor. Reselect the face.");
-}
-function validateExtrusionStartReference(ref, earlier, missing) {
-  const fail2 = () => {
-    throw Error("Starting entity needs an earlier parallel face or reference plane.");
-  };
-  if (!ref || !["face", "plane", "principal"].includes(ref.kind) || typeof ref.label !== "string" || !ref.label.trim() || ref.label.length > 512) return fail2();
-  if (ref.kind === "principal") {
-    if (!["XY", "XZ", "YZ"].includes(ref.plane)) fail2();
-    return;
-  }
-  if (typeof ref.sourceFeatureId !== "string" || !ref.sourceFeatureId.trim() || ref.sourceFeatureId.length > 128) return fail2();
-  const type = earlier.get(ref.sourceFeatureId);
-  if (!missing(ref.sourceFeatureId) && (!type || (ref.kind === "plane" ? type !== "plane" : ["profile", "sketch", "plane", "axis", "point", "thread"].includes(type)))) return fail2();
-  if (ref.kind === "face") {
-    validatePlanarFaceAnchor(ref.faceAnchor);
-    if (typeof ref.bodyId !== "string" || !ref.bodyId.trim() || ref.bodyId.length > 256 || !Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) fail2();
-  }
-}
-const current = 21;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-const partFormat = {
-  current,
-  readable
-};
-function validateImageCanvases(value2) {
-  if (value2 === void 0) return;
-  if (!Array.isArray(value2) || value2.length > 32) throw Error("A Part may contain at most 32 image canvases.");
-  const ids = /* @__PURE__ */ new Set();
-  for (const item of value2) {
-    if (!item || typeof item.id !== "string" || !item.id || ids.has(item.id) || typeof item.name !== "string" || !item.name.trim() || item.name.length > 255) throw Error("Invalid image canvas identity.");
-    ids.add(item.id);
-    if (item.face) {
-      const face = item.face, vec2 = (v) => Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n));
-      if (typeof face.bodyId !== "string" || !face.bodyId || !vec2(face.normal) || Math.abs(Math.hypot(...face.normal) - 1) > 1e-6) throw Error("Invalid decal face reference.");
-      if (face.anchor && (!vec2(face.anchor.centerMillimeters) || !Number.isFinite(face.anchor.areaSquareMillimeters) || face.anchor.areaSquareMillimeters <= 0)) throw Error("Invalid decal face anchor.");
-    }
-    if (typeof item.dataUrl !== "string" || item.dataUrl.length > 3 * 1024 * 1024 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(item.dataUrl)) throw Error("Canvas must contain an embedded PNG, JPEG or WebP image.");
-    if (!["XY", "XZ", "YZ"].includes(item.plane) || typeof item.visible !== "boolean") throw Error("Invalid canvas plane or visibility.");
-    for (const key of ["widthMillimeters", "heightMillimeters", "xMillimeters", "yMillimeters", "offsetMillimeters", "rotationDegrees", "opacity"]) if (typeof item[key] !== "number" || !Number.isFinite(item[key])) throw Error("Canvas dimensions must be finite.");
-    if (item.widthMillimeters <= 0 || item.heightMillimeters <= 0 || item.opacity < 0 || item.opacity > 1) throw Error("Canvas dimensions must be positive and opacity between 0 and 1.");
-  }
 }
 const curvedSurfaceTypes = ["cylinder", "cone", "sphere", "torus", "bspline", "bezier", "extrusion", "revolution"];
 function validateSolidFaceReference(ref, earlier, missing, label = "Face selection") {
@@ -432,11 +368,11 @@ function validateTransformVectorReference(ref, earlier, missing) {
   else validateExtrusionPointReference(ref, earlier, missing);
 }
 function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing = () => false) {
-  const ids = feature.bodyIds, t = feature.transform, copies = feature.copyBodyIds;
-  if (!Array.isArray(ids) || !ids.length || ids.length > 256 || !ids.every(id) || new Set(ids).size !== ids.length) throw Error("Choose distinct solid parts to transform (up to 256).");
+  const ids2 = feature.bodyIds, t = feature.transform, copies = feature.copyBodyIds;
+  if (!Array.isArray(ids2) || !ids2.length || ids2.length > 256 || !ids2.every(id) || new Set(ids2).size !== ids2.length) throw Error("Choose distinct solid parts to transform (up to 256).");
   if ("targetBodyId" in feature || "targetBodyIds" in feature) throw Error("Transform target parts are defined by bodyIds.");
   if (copies !== void 0) {
-    if (!copies || typeof copies !== "object" || Array.isArray(copies) || Object.keys(copies).length !== ids.length || ids.some((key) => !Object.hasOwn(copies, key) || !id(copies[key])) || new Set(Object.values(copies)).size !== ids.length || Object.values(copies).some((key) => ids.includes(key))) throw Error("Each copied part needs a distinct new output identity.");
+    if (!copies || typeof copies !== "object" || Array.isArray(copies) || Object.keys(copies).length !== ids2.length || ids2.some((key) => !Object.hasOwn(copies, key) || !id(copies[key])) || new Set(Object.values(copies)).size !== ids2.length || Object.values(copies).some((key) => ids2.includes(key))) throw Error("Each copied part needs a distinct new output identity.");
   }
   if (!t || typeof t !== "object" || Array.isArray(t)) throw Error("Choose a valid part transform.");
   for (const ref of transformReferences(t)) validateTransformVectorReference(ref, earlier, missing);
@@ -470,6 +406,146 @@ function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing
     if (t.combine !== void 0 && typeof t.combine !== "boolean") throw Error("Invalid mirror combine flag.");
     if (t.combine && copies) throw Error("A combined mirror joins the original; it makes no copies.");
   } else throw Error("Choose Translate, Rotate, Scale, Mirror, Align or Copy in place.");
+}
+const surfaceFeatureTypes = ["surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
+const surfaceCreatorTypes = ["surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
+const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
+const sketchRef = (id2, earlier, what) => {
+  if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
+};
+const ids = (list, what, exact) => {
+  if (!Array.isArray(list) || !list.length || list.some((id2) => typeof id2 !== "string") || exact !== void 0 && list.length !== exact) throw new Error(`${what} needs ${exact === 1 ? "one surface body" : "surface bodies"}.`);
+};
+function validateSurfaceFeature(feature, earlier, missing) {
+  switch (feature.type) {
+    case "surface-ruled":
+    case "surface-extend": {
+      ids(feature.bodyIds, feature.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
+      if (!Array.isArray(feature.edges) || !feature.edges.length) throw new Error(`${feature.type === "surface-ruled" ? "Ruled surface" : "Extend"} needs picked edges.`);
+      for (const edge of feature.edges) validateEdgeFinishEdge(edge, earlier, missing);
+      if (!finite$1(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
+      if (feature.type === "surface-ruled") {
+        if (!["normal", "tangent", "direction"].includes(feature.mode)) throw new Error("Ruled surface reaches square to the surface, along it, or in a direction.");
+        if (feature.mode === "direction" && !(Array.isArray(feature.direction) && feature.direction.length === 3 && feature.direction.every(Number.isFinite) && Math.hypot(...feature.direction) > 1e-9)) throw new Error("Ruled surface direction needs a nonzero vector.");
+      }
+      return;
+    }
+    case "surface-extrude":
+      sketchRef(feature.profileFeatureId, earlier, "Surface extrude");
+      if (!finite$1(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Surface extrude needs a positive distance.");
+      return;
+    case "surface-revolve":
+      sketchRef(feature.profileFeatureId, earlier, "Surface revolve");
+      if (!finite$1(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
+      if (!["X", "Y", "Z"].includes(feature.axis)) throw new Error("Surface revolve axis must be X, Y or Z.");
+      if (feature.axisReference) {
+        const a = feature.axisReference, missingId = missing;
+        if (a.kind === "vector") {
+          if (![a.origin, a.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a.direction) < 1e-9) throw new Error("Surface revolve axis needs a finite origin and a nonzero direction.");
+        } else if (a.kind === "feature") {
+          if (typeof a.featureId !== "string" || !missing(a.featureId) && earlier.get(a.featureId) !== "axis") throw new Error("Surface revolve axis must be an earlier axis feature.");
+        } else if (a.kind === "two-points") {
+          validateTransformVectorReference(a.from, earlier, missingId);
+          validateTransformVectorReference(a.to, earlier, missingId);
+        } else validateTransformVectorReference(a, earlier, missingId);
+      }
+      return;
+    case "surface-loft":
+      if (!Array.isArray(feature.sections) || feature.sections.length < 2) throw new Error("Surface loft needs at least two sections.");
+      for (const section of feature.sections) sketchRef(section.profileFeatureId, earlier, "Surface loft section");
+      return;
+    case "surface-patch":
+      sketchRef(feature.profileFeatureId, earlier, "Patch");
+      return;
+    case "surface-sweep":
+      sketchRef(feature.profileFeatureId, earlier, "Surface sweep profile");
+      sketchRef(feature.pathFeatureId, earlier, "Surface sweep path");
+      return;
+    case "surface-offset":
+      ids(feature.bodyIds, "Offset surface", 1);
+      if (!finite$1(feature.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
+      return;
+    case "surface-thicken":
+      ids(feature.bodyIds, "Thicken");
+      if (!finite$1(feature.thicknessMillimeters) || feature.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
+      if (!["new", "add", "cut"].includes(feature.operation)) throw new Error("Thicken makes a new body, adds or cuts.");
+      return;
+    case "surface-stitch":
+      ids(feature.bodyIds, "Stitch");
+      if (feature.bodyIds.length < 2) throw new Error("Stitch needs two or more surface bodies.");
+      if (feature.toleranceMillimeters !== void 0 && !(finite$1(feature.toleranceMillimeters) && feature.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
+      return;
+    case "surface-unstitch":
+      ids(feature.bodyIds, "Unstitch", 1);
+      return;
+    case "surface-reverse-normal":
+      ids(feature.bodyIds, "Reverse normal", 1);
+      return;
+  }
+}
+function validateProfileRegionSelection(selection) {
+  const value2 = selection.profileRegion;
+  if (value2 === void 0) return;
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key) => key !== "contourIds") || !Array.isArray(value2.contourIds) || value2.contourIds.length < 2 || value2.contourIds.length > 1e3 || value2.contourIds.some((id2) => typeof id2 !== "string" || !id2.trim() || id2.length > 128) || new Set(value2.contourIds).size !== value2.contourIds.length || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
+}
+function profileRegionIdentity(selection) {
+  return JSON.stringify(selection.profileRegion ? { contours: [...selection.profileRegion.contourIds].sort() } : selection.profileContourId ?? null);
+}
+function matchesProfileRegion(selection, candidate) {
+  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
+}
+function validateExtrusionScopeResolution(value2) {
+  const ids2 = (v) => Array.isArray(v) && v.length <= 4096 && v.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v).size === v.length;
+  if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
+  const used = /* @__PURE__ */ new Set();
+  for (const group of value2.groups) {
+    if (!group || !ids2(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
+    group.sources.forEach((id2) => used.add(id2));
+  }
+}
+function scopeConsumedBodies(resolution) {
+  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
+}
+function validateExtrusionStartReference(ref, earlier, missing) {
+  const fail2 = () => {
+    throw Error("Starting entity needs an earlier parallel face or reference plane.");
+  };
+  if (!ref || !["face", "plane", "principal"].includes(ref.kind) || typeof ref.label !== "string" || !ref.label.trim() || ref.label.length > 512) return fail2();
+  if (ref.kind === "principal") {
+    if (!["XY", "XZ", "YZ"].includes(ref.plane)) fail2();
+    return;
+  }
+  if (typeof ref.sourceFeatureId !== "string" || !ref.sourceFeatureId.trim() || ref.sourceFeatureId.length > 128) return fail2();
+  const type = earlier.get(ref.sourceFeatureId);
+  if (!missing(ref.sourceFeatureId) && (!type || (ref.kind === "plane" ? type !== "plane" : ["profile", "sketch", "plane", "axis", "point", "thread"].includes(type)))) return fail2();
+  if (ref.kind === "face") {
+    validatePlanarFaceAnchor(ref.faceAnchor);
+    if (typeof ref.bodyId !== "string" || !ref.bodyId.trim() || ref.bodyId.length > 256 || !Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) fail2();
+  }
+}
+const current = 21;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+const partFormat = {
+  current,
+  readable
+};
+function validateImageCanvases(value2) {
+  if (value2 === void 0) return;
+  if (!Array.isArray(value2) || value2.length > 32) throw Error("A Part may contain at most 32 image canvases.");
+  const ids2 = /* @__PURE__ */ new Set();
+  for (const item of value2) {
+    if (!item || typeof item.id !== "string" || !item.id || ids2.has(item.id) || typeof item.name !== "string" || !item.name.trim() || item.name.length > 255) throw Error("Invalid image canvas identity.");
+    ids2.add(item.id);
+    if (item.face) {
+      const face = item.face, vec2 = (v) => Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n));
+      if (typeof face.bodyId !== "string" || !face.bodyId || !vec2(face.normal) || Math.abs(Math.hypot(...face.normal) - 1) > 1e-6) throw Error("Invalid decal face reference.");
+      if (face.anchor && (!vec2(face.anchor.centerMillimeters) || !Number.isFinite(face.anchor.areaSquareMillimeters) || face.anchor.areaSquareMillimeters <= 0)) throw Error("Invalid decal face anchor.");
+    }
+    if (typeof item.dataUrl !== "string" || item.dataUrl.length > 3 * 1024 * 1024 || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(item.dataUrl)) throw Error("Canvas must contain an embedded PNG, JPEG or WebP image.");
+    if (!["XY", "XZ", "YZ"].includes(item.plane) || typeof item.visible !== "boolean") throw Error("Invalid canvas plane or visibility.");
+    for (const key of ["widthMillimeters", "heightMillimeters", "xMillimeters", "yMillimeters", "offsetMillimeters", "rotationDegrees", "opacity"]) if (typeof item[key] !== "number" || !Number.isFinite(item[key])) throw Error("Canvas dimensions must be finite.");
+    if (item.widthMillimeters <= 0 || item.heightMillimeters <= 0 || item.opacity < 0 || item.opacity > 1) throw Error("Canvas dimensions must be positive and opacity between 0 and 1.");
+  }
 }
 function offsetFaceBodies(feature) {
   return [...new Set(feature.faces.map((face) => face.bodyId))];
@@ -694,12 +770,12 @@ function validateTextItems(drawing) {
   if (drawing.textItems === void 0) return;
   if (!Array.isArray(drawing.textItems) || drawing.textItems.length > 100)
     throw Error("A sketch supports at most 100 retained text items.");
-  const ids = /* @__PURE__ */ new Set(), contours = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set(), contours = /* @__PURE__ */ new Set();
   let fontSize = 0;
   for (const item of drawing.textItems) {
-    if (!item || typeof item.id !== "string" || !item.id.trim() || item.id.length > 128 || ids.has(item.id))
+    if (!item || typeof item.id !== "string" || !item.id.trim() || item.id.length > 128 || ids2.has(item.id))
       throw Error("Text item identities must be unique nonempty strings.");
-    ids.add(item.id);
+    ids2.add(item.id);
     textPlacementTransform(item);
     normalizeSketchText(item.text);
     if (item.expression !== void 0) parseExpression(item.expression);
@@ -4000,11 +4076,11 @@ function translatedSeed(drawing, contacts) {
 function solveRelations(drawing, constraints, pointFor, options = {}) {
   const next = structuredClone(drawing), count = next.contours.length;
   const existing2 = next.constraints ?? [];
-  const ids = new Set(existing2.map((c) => c.id)), fixed = new Set(options.fixedContours);
+  const ids2 = new Set(existing2.map((c) => c.id)), fixed = new Set(options.fixedContours);
   const prepared = constraints.map((c) => {
-    if (!c || c.kind !== "pierce" || typeof c.id !== "string" || !c.id.trim() || ids.has(c.id))
+    if (!c || c.kind !== "pierce" || typeof c.id !== "string" || !c.id.trim() || ids2.has(c.id))
       throw Error("Pierce constraints need unique nonempty identities.");
-    ids.add(c.id);
+    ids2.add(c.id);
     validatePierceConstraint(c);
     const point2 = pointFor(c);
     const a = pierceTargetReference(drawing, c.a, point2);
@@ -4286,18 +4362,18 @@ function validateSketchDrawing(input) {
     if (!Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite))
       throw new Error("Sketch coordinates must be finite.");
   };
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   for (const c of d.contours) {
     if (c.sourceLayer !== void 0 && (typeof c.sourceLayer !== "string" || !c.sourceLayer.length || c.sourceLayer.length > 255))
       throw Error(
         "Source layer must be a nonempty name of at most 255 characters."
       );
     if (c.id !== void 0) {
-      if (typeof c.id !== "string" || !c.id.trim() || c.id.length > 128 || ids.has(c.id))
+      if (typeof c.id !== "string" || !c.id.trim() || c.id.length > 128 || ids2.has(c.id))
         throw Error(
           "Sketch contour identities must be unique nonempty strings."
         );
-      ids.add(c.id);
+      ids2.add(c.id);
     }
     if (c.construction !== void 0 && typeof c.construction !== "boolean")
       throw new Error("Construction flag must be boolean.");
@@ -4410,14 +4486,14 @@ function composeProjectedDrawing(projected, authored) {
     ...structuredClone(projected.contours),
     ...structuredClone(local2.contours)
   ];
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   for (const contour of contours) {
     if (contour.id === void 0) continue;
-    if (ids.has(contour.id))
+    if (ids2.has(contour.id))
       throw Error(
         `Mixed projection has duplicate contour identity: ${contour.id}.`
       );
-    ids.add(contour.id);
+    ids2.add(contour.id);
   }
   return { type: "drawing", contours };
 }
@@ -4898,8 +4974,8 @@ function pierceDependencies(drawing) {
 function localPierceValidation(drawing) {
   if (drawing.pierceContext !== void 0) throw Error("Resolved Pierce context must not be saved.");
   if (drawing.constraints?.some((c) => c.kind === "pierce")) {
-    const ids = drawing.constraints.map((c) => c.id);
-    if (ids.length > 512 || new Set(ids).size !== ids.length || ids.some((id2) => typeof id2 !== "string" || !id2.trim())) throw Error("Invalid or duplicate sketch constraint identities.");
+    const ids2 = drawing.constraints.map((c) => c.id);
+    if (ids2.length > 512 || new Set(ids2).size !== ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.trim())) throw Error("Invalid or duplicate sketch constraint identities.");
   }
   for (const c of drawing.constraints ?? []) {
     validatePierceConstraint(c);
@@ -4909,17 +4985,17 @@ function localPierceValidation(drawing) {
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature) {
-  if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.bodyId)
+  if (!surfaceCreatorTypes.includes(feature.type) && feature.type !== "surface-thicken" && (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.bodyId)
     return feature.bodyId;
   const first = doc.features.find(
-    (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") && f.operation === "new"
+    (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new"
   );
   return first?.id === feature.id ? `${doc.documentId}:body-1` : `${doc.documentId}:body-${feature.id}`;
 }
 function bodyIDsForFeature(doc, feature) {
   if (feature.type === "transform" || feature.type === "split") return feature.copyBodyIds ? feature.bodyIds.map((id2) => feature.copyBodyIds[id2]) : [];
   if (feature.type === "pattern" && feature.bodyIds) return patternCopyIds(feature);
-  return feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
+  return feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs || feature.type === "surface-unstitch" && feature.bodyOutputs ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
 }
 function createdBodyIDs(doc, feature) {
   return (feature.type === "transform" || feature.type === "split") && feature.copyBodyIds || feature.type === "pattern" && feature.bodyIds ? bodyIDsForFeature(doc, feature) : "operation" in feature && feature.operation === "new" ? bodyIDsForFeature(doc, feature) : [];
@@ -4929,6 +5005,8 @@ function consumedBodyIDs(feature) {
   if (feature.type === "extrude" && feature.scopeMode === "all") return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
   if (feature.type === "remove-body") return feature.bodyIds;
+  if (feature.type === "surface-stitch") return feature.bodyIds.slice(1);
+  if (feature.type === "surface-unstitch") return feature.bodyIds;
   return feature.type === "extrude" && feature.operation === "add" ? feature.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc) {
@@ -5588,6 +5666,7 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
   if (feature.type === "split") return validateSplit(feature, earlier, missingReference);
   if (feature.type === "pipe") return validatePipe(feature, earlier, missingReference);
   if (feature.type === "coil") return validateCoil(feature);
+  if (surfaceFeatureTypes.includes(feature.type)) return validateSurfaceFeature(feature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature, earlier, missingReference);
   if (feature.type === "rest") return validateRest(feature, earlier, missingReference);
   if (feature.type === "remove-body") return validateRemoveBody(feature);
@@ -5892,12 +5971,12 @@ function validateSketchFeature(sketch2) {
   if (typeof sketch2.profile.construction !== "boolean") {
     throw new Error("Sketch construction state is invalid.");
   }
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   for (const constraint of sketch2.constraints) {
-    if (!constraint.id || ids.has(constraint.id)) {
+    if (!constraint.id || ids2.has(constraint.id)) {
       throw new Error("Sketch constraint IDs must be unique.");
     }
-    ids.add(constraint.id);
+    ids2.add(constraint.id);
     if (!constraintOrder.includes(constraint.type)) {
       throw new Error(
         `Unsupported sketch constraint: ${String(constraint.type)}.`
@@ -5908,10 +5987,10 @@ function validateSketchFeature(sketch2) {
     }
   }
   for (const dimension of sketch2.dimensions) {
-    if (!dimension.id || ids.has(dimension.id)) {
+    if (!dimension.id || ids2.has(dimension.id)) {
       throw new Error("Sketch dimension IDs must be unique.");
     }
-    ids.add(dimension.id);
+    ids2.add(dimension.id);
     if (!dimensionOrder.includes(dimension.type)) {
       throw new Error(
         `Unsupported sketch dimension: ${String(dimension.type)}.`
@@ -6017,11 +6096,11 @@ function copyInternalConstraints(source, indices, firstContour, transform, prese
 }
 function moveInternalConstraints(source, indices, transform) {
   const adapted = copyInternalConstraints(source, indices, 0, transform, true);
-  const ids = new Set(adapted.map((c) => c.id));
+  const ids2 = new Set(adapted.map((c) => c.id));
   for (const constraint of adapted) {
     for (const ref of [constraint.a, constraint.b, constraint.axis]) if (ref) ref.contour = indices[ref.contour];
     const original = source.constraints.find((c) => c.id === constraint.id);
-    if (original.valueFrom !== void 0 && !ids.has(original.valueFrom)) {
+    if (original.valueFrom !== void 0 && !ids2.has(original.valueFrom)) {
       for (const key of ["valueFrom", "valueSign", "valueScale", "valueOffset"]) {
         if (original[key] === void 0) delete constraint[key];
         else Object.assign(constraint, { [key]: original[key] });
@@ -6198,16 +6277,16 @@ function validateTreeOrganization(value2) {
   if (!Array.isArray(organization.folders) || !organization.membership || typeof organization.membership !== "object") {
     throw new Error("Organization requires folders and membership.");
   }
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   for (const folder of organization.folders) {
     if (!folder || typeof folder.id !== "string" || !folder.id || typeof folder.name !== "string" || !folder.name.trim()) {
       throw new Error("Every folder requires an id and a name.");
     }
-    if (ids.has(folder.id)) throw new Error(`Duplicate folder id ${folder.id}.`);
-    ids.add(folder.id);
+    if (ids2.has(folder.id)) throw new Error(`Duplicate folder id ${folder.id}.`);
+    ids2.add(folder.id);
   }
   for (const folder of organization.folders) {
-    if (folder.parentID !== null && !ids.has(folder.parentID)) {
+    if (folder.parentID !== null && !ids2.has(folder.parentID)) {
       throw new Error(`Folder ${folder.id} references unknown parent ${folder.parentID}.`);
     }
   }
@@ -6218,11 +6297,12 @@ function validateTreeOrganization(value2) {
     if (last && last.parentID !== null) throw new Error(`Folder nesting cycle at ${folder.id}.`);
   }
   for (const [itemID, folderID] of Object.entries(complete.membership)) {
-    if (typeof folderID !== "string" || !ids.has(folderID)) {
+    if (typeof folderID !== "string" || !ids2.has(folderID)) {
       throw new Error(`Item ${itemID} references unknown folder ${String(folderID)}.`);
     }
   }
 }
+const isSurfaceBodyMaker = (feature) => surfaceCreatorTypes.includes(feature.type) || feature.type === "surface-thicken" && feature.operation === "new";
 const PART_DOCUMENT_FORMAT = "aether-part";
 const LEGACY_PART_DOCUMENT_FORMAT = "open-cad-part";
 const PART_DOCUMENT_VERSION = partFormat.current;
@@ -6287,19 +6367,19 @@ function validatePartDocument(value2) {
       if (!value22 || typeof value22.name !== "string" || !value22.name.trim() || typeof value22.visible !== "boolean")
         throw new Error("Bodies need a name and visibility state.");
   }
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   const allIds = new Set(document2.features.map((f) => f?.id));
   const missingReference = (id2) => typeof id2 === "string" && !!id2.trim() && !allIds.has(id2);
   const earlier = /* @__PURE__ */ new Map();
   const bodies = /* @__PURE__ */ new Set();
   document2.features.forEach((feature, index) => {
-    if (!feature || typeof feature !== "object" || typeof feature.id !== "string" || !feature.id || ids.has(feature.id))
+    if (!feature || typeof feature !== "object" || typeof feature.id !== "string" || !feature.id || ids2.has(feature.id))
       throw new Error("Feature IDs must be unique.");
     if (typeof feature.name !== "string" || !feature.name.trim())
       throw new Error(`Feature ${index + 1} needs a name.`);
     if (typeof feature.suppressed !== "boolean")
       throw new Error(`${feature.name} has an invalid suppressed state.`);
-    ids.add(feature.id);
+    ids2.add(feature.id);
     if ("profileRegion" in feature && feature.profileRegion !== void 0) {
       if (!["extrude", "revolve", "sweep"].includes(feature.type)) throw Error("This feature does not accept a connected sketch region.");
       validateProfileRegionSelection(feature);
@@ -6323,11 +6403,11 @@ function validatePartDocument(value2) {
         if (bodies.has(id2)) throw Error("Copy outputs need new body identities.");
         bodies.add(id2);
       }
-    } else if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
-      const id2 = feature.bodyId ?? (bodies.size === 0 ? `${document2.documentId}:body-1` : `${document2.documentId}:body-${feature.id}`);
+    } else if ((isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && "operation" in feature && feature.operation === "new") {
+      const id2 = ("bodyId" in feature ? feature.bodyId : void 0) ?? (bodies.size === 0 ? `${document2.documentId}:body-1` : `${document2.documentId}:body-${feature.id}`);
       if (typeof id2 !== "string" || !id2 || bodies.has(id2))
         throw new Error("Body IDs must be unique.");
-      const outputs = feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs ? feature.bodyOutputs : [id2];
+      const outputs = feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs || feature.type === "surface-unstitch" && feature.bodyOutputs ? feature.bodyOutputs : [id2];
       if (!Array.isArray(outputs) || !outputs.length) throw new Error("Extrusion needs output body identities.");
       for (const output of outputs) {
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");
@@ -6607,8 +6687,8 @@ function connectedSketchRegions(drawing) {
       issues.push({ contourIndices: indices, reason: "invalid-boundary" });
       return;
     }
-    const ids = order.map((index) => drawing.contours[index].id);
-    regions.push({ contourIndices: order, ...ids.every((value2) => !!value2) && new Set(ids).size === ids.length ? { contourIds: ids } : {}, contour });
+    const ids2 = order.map((index) => drawing.contours[index].id);
+    regions.push({ contourIndices: order, ...ids2.every((value2) => !!value2) && new Set(ids2).size === ids2.length ? { contourIds: ids2 } : {}, contour });
   });
   const isolated = regions.filter((region) => {
     const boundary = region.contour.segments.map((segment, i) => ({ start: i ? region.contour.segments[i - 1].end : region.contour.start, segment }));
@@ -6739,20 +6819,20 @@ function resolveExtrusionScopes(doc, scopes = {}) {
 }
 function resolveBodyOutputs(document2, outputs = {}) {
   const cutoff = rollbackPosition(document2);
-  const expected = new Set(document2.features.slice(0, cutoff).filter((f) => !f.suppressed && (f.type === "extrude" && f.operation === "new" && f.separateBodies || (f.type === "transform" || f.type === "split") && f.copyBodyIds || f.type === "pattern" && f.bodyIds)).map((f) => f.id));
+  const expected = new Set(document2.features.slice(0, cutoff).filter((f) => !f.suppressed && (f.type === "extrude" && f.operation === "new" && f.separateBodies || f.type === "surface-unstitch" || (f.type === "transform" || f.type === "split") && f.copyBodyIds || f.type === "pattern" && f.bodyIds)).map((f) => f.id));
   if (Object.keys(outputs).some((id2) => !expected.has(id2))) throw new Error("Rebuild returned an unknown body producer.");
   const next = { ...document2, features: document2.features.map((feature) => {
     if (!expected.has(feature.id)) return feature;
-    const ids = outputs[feature.id];
+    const ids2 = outputs[feature.id];
     if (feature.type === "transform" || feature.type === "split") {
       const expected2 = createdBodyIDs(document2, feature);
-      if (!Array.isArray(ids) || ids.length !== expected2.length || new Set(ids).size !== ids.length || ids.some((id2) => !expected2.includes(id2))) throw Error(`${feature.name}: rebuild changed the saved copy identities.`);
+      if (!Array.isArray(ids2) || ids2.length !== expected2.length || new Set(ids2).size !== ids2.length || ids2.some((id2) => !expected2.includes(id2))) throw Error(`${feature.name}: rebuild changed the saved copy identities.`);
       return feature;
     }
     const prefix = `${bodyIDForFeature(document2, feature)}:solid-`;
-    if (!Array.isArray(ids) || !ids.length || ids.some((id2) => typeof id2 !== "string" || !id2.startsWith(prefix)) || new Set(ids).size !== ids.length)
+    if (!Array.isArray(ids2) || !ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.startsWith(prefix)) || new Set(ids2).size !== ids2.length)
       throw new Error(`${feature.name}: rebuild did not return distinct output body identities.`);
-    return { ...feature, bodyOutputs: [...ids] };
+    return { ...feature, bodyOutputs: [...ids2] };
   }) };
   validatePartDocument(next);
   return next;
@@ -10297,6 +10377,64 @@ export type SolidFaceReference=FaceSource & (
 );
 
 export type SketchPlane = "XY" | "XZ" | "YZ";`,
+  "surface-extend": `export interface SurfaceExtendFeature {
+  id: string; type: "surface-extend"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+  distanceMillimeters: number;
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
+  "surface-extrude": 'export interface SurfaceExtrudeFeature {\n  id: string; type: "surface-extrude"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The sketch curves to extrude (open or closed chains); every curve when absent. */\n  contourIds?: string[];\n  distanceMillimeters: number;\n  reversed?: boolean;\n  symmetric?: boolean;\n}',
+  "surface-loft": 'export interface SurfaceLoftFeature {\n  id: string; type: "surface-loft"; name: string; suppressed: boolean; operation: "new";\n  sections: { profileFeatureId: string; contourId?: string }[];\n  ruled?: boolean;\n}',
+  "surface-offset": 'export interface SurfaceOffsetFeature {\n  id: string; type: "surface-offset"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  distanceMillimeters: number;\n}',
+  "surface-patch": 'export interface SurfacePatchFeature {\n  id: string; type: "surface-patch"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The closed curves to fill; every closed curve when absent. */\n  contourIds?: string[];\n}',
+  "surface-reverse-normal": 'export interface SurfaceReverseNormalFeature {\n  id: string; type: "surface-reverse-normal"; name: string; suppressed: boolean;\n  bodyIds: [string];\n}',
+  "surface-revolve": `export interface SurfaceRevolveFeature {
+  id: string; type: "surface-revolve"; name: string; suppressed: boolean; operation: "new";
+  profileFeatureId: string;
+  contourIds?: string[];
+  angleDegrees: number;
+  reversed?: boolean;
+  axis: "X" | "Y" | "Z";
+  axisReference?: SurfaceRevolveAxis;
+}
+
+export type SurfaceRevolveAxis = { kind: "vector"; origin: [number, number, number]; direction: [number, number, number] } | { kind: "feature"; featureId: string } | TransformVectorReference;
+
+export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};`,
+  "surface-ruled": `export interface SurfaceRuledFeature {
+  id: string; type: "surface-ruled"; name: string; suppressed: boolean; operation: "new";
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+  distanceMillimeters: number;
+  mode: "normal" | "tangent" | "direction";
+  direction?: [number, number, number];
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
+  "surface-stitch": 'export interface SurfaceStitchFeature {\n  id: string; type: "surface-stitch"; name: string; suppressed: boolean;\n  /** Sewn into the first; a solid when they close. */\n  bodyIds: string[];\n  toleranceMillimeters?: number;\n}',
+  "surface-sweep": 'export interface SurfaceSweepFeature {\n  id: string; type: "surface-sweep"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  contourIds?: string[];\n  pathFeatureId: string;\n  pathContourId?: string;\n}',
+  "surface-thicken": 'export interface SurfaceThickenFeature {\n  id: string; type: "surface-thicken"; name: string; suppressed: boolean;\n  bodyIds: string[];\n  thicknessMillimeters: number;\n  symmetric?: boolean;\n  operation: "new" | "add" | "cut";\n  targetBodyId?: string;\n}',
+  "surface-unstitch": 'export interface SurfaceUnstitchFeature {\n  id: string; type: "surface-unstitch"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  /** Published by the rebuild: one body per face. */\n  bodyOutputs?: string[];\n}',
   "sweep": `export interface SweepFeature {
   id: string;
   type: "sweep";
@@ -10522,12 +10660,12 @@ function parseProgram(encoded) {
   const program = JSON.parse(encoded);
   fields(program, ["version", "steps"]);
   if (program.version !== 1 || !Array.isArray(program.steps) || !program.steps.length || program.steps.length > 16) throw Error("Use version 1 with 1–16 steps.");
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   for (const step of program.steps) {
     fields(step, ["id", "tool", "arguments"]);
-    if (typeof step.id !== "string" || !/^[a-zA-Z][a-zA-Z0-9_-]{0,39}$/.test(step.id) || ids.has(step.id)) throw Error("Use unique step IDs of 1–40 letters, digits, underscores or hyphens, starting with a letter.");
+    if (typeof step.id !== "string" || !/^[a-zA-Z][a-zA-Z0-9_-]{0,39}$/.test(step.id) || ids2.has(step.id)) throw Error("Use unique step IDs of 1–40 letters, digits, underscores or hyphens, starting with a letter.");
     if (typeof step.tool !== "string" || !edits.has(step.tool) || !object(step.arguments)) throw Error("Choose an existing Part editing tool with an arguments object.");
-    ids.add(step.id);
+    ids2.add(step.id);
   }
   return program.steps;
 }
@@ -34730,7 +34868,7 @@ function facesOf(shape) {
   );
   const faces = [];
   const hashes = /* @__PURE__ */ new Set();
-  const ids = /* @__PURE__ */ new Set();
+  const ids2 = /* @__PURE__ */ new Set();
   try {
     for (; explorer.More(); explorer.Next()) {
       const current2 = explorer.Current();
@@ -34740,8 +34878,8 @@ function facesOf(shape) {
       const face = cast(oc.TopoDS.Face_1(current2));
       const key = signatureText(face);
       let id2 = faceSignature(key);
-      while (ids.has(id2)) id2++;
-      ids.add(id2);
+      while (ids2.has(id2)) id2++;
+      ids2.add(id2);
       faces.push({ face, id: id2, hash, key });
     }
   } finally {
@@ -35786,14 +35924,14 @@ function evaluatePartDocument(document2, options = {}) {
     if (operation2 === "new") {
       const id2 = bodyIDForFeature(document2, feature);
       if (feature.type === "extrude" && feature.separateBodies) {
-        const ids = solidsOf(tool2).map((solid, index) => {
+        const ids2 = solidsOf(tool2).map((solid, index) => {
           const solidId = `${id2}:solid-${solidKeys?.[index] ?? index + 1}`;
           if (bodies.has(solidId)) throw new Error("Duplicate output body identity.");
           bodies.set(solidId, own(solid));
           return solidId;
         });
-        bodyOutputs[feature.id] = ids;
-        currentBodyID = ids[ids.length - 1];
+        bodyOutputs[feature.id] = ids2;
+        currentBodyID = ids2[ids2.length - 1];
         return;
       }
       bodies.set(id2, own(tool2.clone()));
@@ -36024,9 +36162,9 @@ function evaluatePartDocument(document2, options = {}) {
               }
               for (const boundary of sketchFaceRegions(solved)) {
                 if (boundary.sourceContourIndices.length < 2) continue;
-                const ids = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
+                const ids2 = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
                 const region = own(contourDrawing(boundary.contour, feature.id));
-                regions.push({ key: `connected:${JSON.stringify([...ids].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary.sourceContourIds });
+                regions.push({ key: `connected:${JSON.stringify([...ids2].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary.sourceContourIds });
               }
               drawing = combined;
             } else if (profile.type === "circle") {
@@ -36269,7 +36407,7 @@ function evaluatePartDocument(document2, options = {}) {
               for (const i of offsets(count, feature.alignment)) if (i !== 0) placements.push((shape) => own(shape.clone().rotate(step * i * sign, origin, axis)));
             }
             if (partPattern) {
-              const ids = [];
+              const ids2 = [];
               for (const bodyId of feature.bodyIds) {
                 const shape = bodies.get(bodyId);
                 if (!shape) throw new Error("A part to pattern is unavailable.");
@@ -36277,11 +36415,11 @@ function evaluatePartDocument(document2, options = {}) {
                   const copyId = `${feature.copyBodyIds[bodyId]}:${index2 + 1}`;
                   if (bodies.has(copyId)) throw new Error("Duplicate output body identity.");
                   bodies.set(copyId, place(shape));
-                  ids.push(copyId);
+                  ids2.push(copyId);
                 });
               }
-              bodyOutputs[feature.id] = ids;
-              currentBodyID = ids[ids.length - 1] ?? currentBodyID;
+              bodyOutputs[feature.id] = ids2;
+              currentBodyID = ids2[ids2.length - 1] ?? currentBodyID;
               continue;
             }
             let body = target;
@@ -36545,14 +36683,14 @@ function evaluatePartDocument(document2, options = {}) {
               moved.push([id2, result]);
             }
             if (feature.copyBodyIds) {
-              const ids = feature.bodyIds.map((id2) => feature.copyBodyIds[id2]);
+              const ids2 = feature.bodyIds.map((id2) => feature.copyBodyIds[id2]);
               for (const [id2, result] of moved) {
                 const copyId = feature.copyBodyIds[id2];
                 if (bodies.has(copyId)) throw new Error("Duplicate output body identity.");
                 bodies.set(copyId, result);
               }
-              bodyOutputs[feature.id] = ids;
-              currentBodyID = ids[ids.length - 1];
+              bodyOutputs[feature.id] = ids2;
+              currentBodyID = ids2[ids2.length - 1];
             } else {
               for (const [id2, result] of moved) bodies.set(id2, result);
             }
@@ -37071,6 +37209,126 @@ function evaluatePartDocument(document2, options = {}) {
             }
             continue;
           }
+          const pickedEdgesOf = (body, bodyId, picks, what) => {
+            const anchors = [...vertexAnchorsOf(body).values()];
+            const edges = body.edges;
+            const midpoints = picks.map((pick) => {
+              if (pick.bodyId !== bodyId) throw new Error(`${pick.label} is on another body. Reselect edges on the chosen body.`);
+              if (pick.kind === "solid-edge") {
+                const vertex = (anchor) => {
+                  const matches = anchors.filter((a) => a.signature === anchor.signature);
+                  const found = matches.length === 1 ? matches[0] : matches.find((a) => a.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
+                  if (!found) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
+                  return [...found.positionMillimeters];
+                };
+                return scale(add$1(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
+              }
+              return pick.midpointMillimeters;
+            });
+            return midpoints.map((target, index2) => {
+              const pick = picks[index2];
+              const hit = edges.find((edge) => {
+                const m = edge.pointAt(0.5), d = Math.hypot(m.x - target[0], m.y - target[1], m.z - target[2]);
+                m.delete();
+                return d < 1e-3 && (pick.kind !== "curved-edge" || Math.abs(edge.length - pick.lengthMillimeters) <= Math.max(1e-3, pick.lengthMillimeters * 1e-6));
+              });
+              if (!hit) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
+              return own(hit);
+            });
+          };
+          const ruledStrips = (body, bodyId, picks, distance2, mode, direction, what) => {
+            const o = getOC();
+            return pickedEdgesOf(body, bodyId, picks, what).map((edge) => {
+              const m = edge.pointAt(0.5), mid = [m.x, m.y, m.z];
+              m.delete();
+              let reach;
+              if (mode === "direction") reach = scale(unit(direction), distance2);
+              else {
+                const face = new FaceFinder().containsPoint(mid).find(body)[0];
+                if (!face) throw new Error("The picked edge is not on a face of the body.");
+                const nv = face.normalAt(mid), n = unit([nv.x, nv.y, nv.z]);
+                nv.delete();
+                if (mode === "normal") reach = scale(n, distance2);
+                else {
+                  const tv = edge.tangentAt(0.5), t = unit([tv.x, tv.y, tv.z]);
+                  tv.delete();
+                  let side = unit(cross$1(n, t));
+                  const c = face.center, away = sub$1(mid, [c.x, c.y, c.z]);
+                  c.delete();
+                  if (dot$1(side, away) < 0) side = neg(side);
+                  reach = scale(side, distance2);
+                }
+              }
+              const first = own(assembleWire([edge])), second = own(first.clone().translate(reach[0], reach[1], reach[2]));
+              const maker = new o.BRepOffsetAPI_ThruSections(false, true, 1e-6);
+              maker.AddWire(first.wrapped);
+              maker.AddWire(second.wrapped);
+              maker.Build(new o.Message_ProgressRange_1());
+              return maker.Shape();
+            });
+          };
+          if (feature.type === "surface-extend") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("Extend needs an available surface body.");
+            const o = getOC();
+            const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+            sewing.Add(body.wrapped);
+            for (const strip of ruledStrips(body, id2, feature.edges, feature.distanceMillimeters, "tangent", void 0, "Extend")) sewing.Add(strip);
+            sewing.Perform(new o.Message_ProgressRange_1());
+            const sewn = cast(sewing.SewedShape());
+            if (!isShape3D(sewn)) throw new Error("Extend could not sew the strip onto the surface.");
+            bodies.set(id2, own(sewn));
+            currentBodyID = id2;
+            continue;
+          }
+          if (feature.type === "surface-stitch" || feature.type === "surface-unstitch" || feature.type === "surface-reverse-normal") {
+            const o = getOC();
+            const sheetOf = (raw) => {
+              const shape = cast(raw);
+              if (isShape3D(shape)) return own(shape);
+              const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+              builder.MakeShell(shell);
+              builder.Add(shell, raw);
+              return own(cast(shell));
+            };
+            const surfaceBody = (id2, what) => {
+              const body = bodies.get(id2);
+              if (!body) throw new Error(`${what} needs an available surface body.`);
+              return body;
+            };
+            if (feature.type === "surface-stitch") {
+              const sewing = new o.BRepBuilderAPI_Sewing(feature.toleranceMillimeters ?? 1e-3, true, true, true, false);
+              for (const id2 of feature.bodyIds) sewing.Add(surfaceBody(id2, "Stitch").wrapped);
+              sewing.Perform(new o.Message_ProgressRange_1());
+              let result = sheetOf(sewing.SewedShape());
+              if (result.wrapped.ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
+                const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid());
+                result = own(measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid);
+              }
+              const [first, ...rest] = feature.bodyIds;
+              for (const id2 of rest) bodies.delete(id2);
+              bodies.set(first, result);
+              currentBodyID = first;
+            } else if (feature.type === "surface-unstitch") {
+              const body = surfaceBody(feature.bodyIds[0], "Unstitch");
+              const prefix = bodyIDForFeature(document2, feature);
+              const ids2 = body.faces.map((face, index2) => {
+                const id2 = `${prefix}:solid-${index2 + 1}`;
+                if (bodies.has(id2)) throw new Error("Duplicate output body identity.");
+                bodies.set(id2, sheetOf(face.wrapped));
+                return id2;
+              });
+              if (!ids2.length) throw new Error("Unstitch found no faces.");
+              bodies.delete(feature.bodyIds[0]);
+              bodyOutputs[feature.id] = ids2;
+              currentBodyID = ids2[ids2.length - 1];
+            } else {
+              const body = surfaceBody(feature.bodyIds[0], "Reverse normal");
+              bodies.set(feature.bodyIds[0], own(cast(body.wrapped.Reversed())));
+              currentBodyID = feature.bodyIds[0];
+            }
+            continue;
+          }
           let tool22;
           if (feature.type === "mirror") {
             const source = tools.get(feature.sourceFeatureId);
@@ -37237,6 +37495,134 @@ function evaluatePartDocument(document2, options = {}) {
                 f.FS.unlink(name);
               }
             } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+          } else if (feature.type === "surface-ruled") {
+            const body = bodies.get(feature.bodyIds[0]);
+            if (!body) throw new Error("Ruled surface needs an available body.");
+            const o = getOC();
+            const strips = ruledStrips(body, feature.bodyIds[0], feature.edges, feature.distanceMillimeters, feature.mode, feature.direction, "Ruled surface");
+            let raw = strips[0];
+            if (strips.length > 1) {
+              const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+              for (const strip of strips) sewing.Add(strip);
+              sewing.Perform(new o.Message_ProgressRange_1());
+              raw = sewing.SewedShape();
+            }
+            const sheet = cast(raw);
+            if (!isShape3D(sheet) || !(measureArea(sheet) > 1e-9)) throw new Error("The ruled surface has no area. Check the edges and distance.");
+            tool22 = own(sheet);
+          } else if (feature.type === "surface-extrude" || feature.type === "surface-revolve" || feature.type === "surface-loft" || feature.type === "surface-patch" || feature.type === "surface-sweep" || feature.type === "surface-offset" || feature.type === "surface-thicken") {
+            const o = getOC();
+            const progress = () => new o.Message_ProgressRange_1();
+            const sheetOf = (raw) => {
+              const shape = cast(raw);
+              if (isShape3D(shape)) return own(shape);
+              const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+              builder.MakeShell(shell);
+              builder.Add(shell, raw);
+              return own(cast(shell));
+            };
+            const curveWires = (sketchId, contourIds, what, closedOnly = false) => {
+              const sketchProfile = profiles.get(sketchId);
+              if (!sketchProfile) throw new Error(`${what} needs an earlier sketch.`);
+              if (!sketchProfile.contours.length && sketchProfile.regions.length) return [sketchWire(sketchId, void 0, what, false)];
+              const chosen = sketchProfile.contours.filter((c) => (!contourIds || c.id !== void 0 && contourIds.includes(c.id)) && (!closedOnly || contourClosed(c)));
+              if (!chosen.length) throw new Error(`${what}: the sketch has no ${closedOnly ? "closed " : ""}curves to use.`);
+              return chosen.map((c) => sketchWire(sketchId, c.id, what, true));
+            };
+            const joined = (raws) => {
+              if (raws.length === 1) return sheetOf(raws[0]);
+              const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+              for (const raw of raws) sewing.Add(raw);
+              sewing.Perform(progress());
+              return sheetOf(sewing.SewedShape());
+            };
+            const sheetArea = (sheet) => {
+              const a = measureArea(sheet);
+              if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances.");
+              return sheet;
+            };
+            if (feature.type === "surface-extrude") {
+              const frame = sketchFrameOf(feature.profileFeatureId);
+              const d = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
+              const along = scale(unit(frame.normal), d);
+              const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface extrude");
+              tool22 = sheetArea(joined(wires.map((wire) => {
+                const start = feature.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
+                const vec2 = new o.gp_Vec_4(along[0], along[1], along[2]);
+                try {
+                  return new o.BRepPrimAPI_MakePrism_1(start.wrapped, vec2, false, true).Shape();
+                } finally {
+                  vec2.delete();
+                }
+              })));
+            } else if (feature.type === "surface-revolve") {
+              let axis = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin = [0, 0, 0];
+              if (feature.axisReference?.kind === "vector") {
+                origin = [...feature.axisReference.origin];
+                axis = unit(feature.axisReference.direction);
+              } else if (feature.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
+              else if (feature.axisReference) {
+                const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 });
+                origin = t.axisOriginMillimeters;
+                axis = t.axisDirection;
+              }
+              const angle2 = feature.angleDegrees * Math.PI / 180 * (feature.reversed ? -1 : 1);
+              const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface revolve");
+              const ax = new o.gp_Ax1_2(new o.gp_Pnt_3(origin[0], origin[1], origin[2]), new o.gp_Dir_4(axis[0], axis[1], axis[2]));
+              try {
+                tool22 = sheetArea(joined(wires.map((wire) => new o.BRepPrimAPI_MakeRevol_1(wire.wrapped, ax, angle2, false).Shape())));
+              } finally {
+                ax.delete();
+              }
+            } else if (feature.type === "surface-loft") {
+              const maker = new o.BRepOffsetAPI_ThruSections(false, Boolean(feature.ruled), 1e-6);
+              for (const section of feature.sections) maker.AddWire(sketchWire(section.profileFeatureId, section.contourId, "Surface loft section", true).wrapped);
+              maker.Build(progress());
+              tool22 = sheetArea(sheetOf(maker.Shape()));
+            } else if (feature.type === "surface-patch") {
+              const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Patch", true);
+              tool22 = sheetArea(joined(wires.map((wire) => own(makeFace(wire)).wrapped)));
+            } else if (feature.type === "surface-sweep") {
+              const spine = sketchWire(feature.pathFeatureId, feature.pathContourId, "Surface sweep path", true);
+              const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface sweep profile");
+              tool22 = sheetArea(joined(wires.map((wire) => genericSweep(wire, spine, { frenet: false, transitionMode: "transformed" }).wrapped)));
+            } else if (feature.type === "surface-offset") {
+              const body = bodies.get(feature.bodyIds[0]);
+              if (!body) throw new Error("Offset surface needs an available surface body.");
+              if (feature.distanceMillimeters === 0) tool22 = own(body.clone());
+              else {
+                const maker = new o.BRepOffsetAPI_MakeOffsetShape();
+                maker.PerformByJoin(body.wrapped, feature.distanceMillimeters, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
+                tool22 = sheetArea(sheetOf(maker.Shape()));
+              }
+            } else {
+              const pieces = feature.bodyIds.map((id2) => {
+                let sheet = bodies.get(id2);
+                if (!sheet) throw new Error("Thicken needs an available surface body.");
+                const t = feature.thicknessMillimeters;
+                if (feature.symmetric) {
+                  const back = new o.BRepOffsetAPI_MakeOffsetShape();
+                  back.PerformByJoin(sheet.wrapped, -t / 2, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
+                  sheet = sheetOf(back.Shape());
+                }
+                const maker = new o.BRepOffsetAPI_MakeThickSolid();
+                maker.MakeThickSolidBySimple(sheet.wrapped, t);
+                const made = cast(maker.Shape());
+                if (!isShape3D(made)) throw new Error("Thicken did not produce a solid.");
+                const solids = solidsOf(own(made)).map((piece) => {
+                  const fixer = new o.ShapeFix_Solid_2(piece.wrapped);
+                  fixer.Perform(progress());
+                  let solid2 = cast(fixer.Solid());
+                  if (measureVolume(solid2) < 0) solid2 = cast(solid2.wrapped.Reversed());
+                  return own(solid2);
+                });
+                if (!solids.length) throw new Error("Thicken did not produce a solid.");
+                const solid = solids.slice(1).reduce((all, piece) => own(all.fuse(piece)), solids[0]);
+                if (!(measureVolume(solid) > 1e-9)) throw new Error("Thicken produced no volume. Check the thickness.");
+                return solid;
+              });
+              tool22 = pieces.slice(1).reduce((all, piece) => own(all.fuse(piece)), pieces[0]);
+            }
           } else {
             const profile = profiles.get(feature.profileFeatureId);
             if (!profile) throw new Error("Sketch needs a closed profile before creating a solid.");
@@ -37891,9 +38277,9 @@ function evaluatePartDocument(document2, options = {}) {
               throw new Error("Feature did not produce a solid.");
             tool22 = result;
             if (feature.type === "extrude" && feature.targetBodyIds && feature.scopeMode !== "all") {
-              const ids = feature.targetBodyIds, operation2 = feature.operation;
-              if (!["add", "cut", "intersect"].includes(operation2) || !ids.length || ids.length > 256 || new Set(ids).size !== ids.length || feature.targetBodyId && feature.targetBodyId !== ids[0]) throw new Error("Choose distinct target parts for Add, Remove or Intersect.");
-              if (ids.some((id2) => !bodies.has(id2))) throw new Error("A selected target part is unavailable. Repair the extrusion scope.");
+              const ids2 = feature.targetBodyIds, operation2 = feature.operation;
+              if (!["add", "cut", "intersect"].includes(operation2) || !ids2.length || ids2.length > 256 || new Set(ids2).size !== ids2.length || feature.targetBodyId && feature.targetBodyId !== ids2[0]) throw new Error("Choose distinct target parts for Add, Remove or Intersect.");
+              if (ids2.some((id2) => !bodies.has(id2))) throw new Error("A selected target part is unavailable. Repair the extrusion scope.");
               const volumeOf = (shape) => {
                 try {
                   return isShape3D(shape) ? measureVolume(shape) : 0;
@@ -37902,17 +38288,17 @@ function evaluatePartDocument(document2, options = {}) {
                 }
               };
               if (operation2 === "add") {
-                let joined = own(bodies.get(ids[0]).fuse(tool22));
-                for (const id2 of ids.slice(1)) joined = own(joined.fuse(bodies.get(id2)));
+                let joined = own(bodies.get(ids2[0]).fuse(tool22));
+                for (const id2 of ids2.slice(1)) joined = own(joined.fuse(bodies.get(id2)));
                 const pieces = solidsOf(joined), one = pieces.length === 1;
                 pieces.forEach(release);
                 if (!one || volumeOf(joined) <= 1e-9) throw new Error("Add must join all selected parts into one solid. Adjust the depth or merge scope.");
-                bodies.set(ids[0], own(joined.simplify()));
-                for (const id2 of ids.slice(1)) bodies.delete(id2);
+                bodies.set(ids2[0], own(joined.simplify()));
+                for (const id2 of ids2.slice(1)) bodies.delete(id2);
               } else {
                 const pending = [];
                 let removed = 0;
-                ids.forEach((id2, index2) => {
+                ids2.forEach((id2, index2) => {
                   const target = bodies.get(id2);
                   const hit = volumeOf(target.intersect(tool22)) > 1e-9;
                   const shape = hit ? own(operation2 === "cut" ? target.cut(tool22) : target.intersect(tool22)) : target;
@@ -37926,7 +38312,7 @@ function evaluatePartDocument(document2, options = {}) {
                 for (const [id2, shape] of pending) bodies.set(id2, shape === bodies.get(id2) ? shape : own(shape.simplify()));
               }
               tools.set(feature.id, tool22);
-              currentBodyID = ids[0];
+              currentBodyID = ids2[0];
               continue;
             }
             if (feature.type === "extrude" && feature.scopeMode === "all") {
@@ -38399,9 +38785,9 @@ async function exportPart(document2, options) {
   evaluatePartDocument(document2, { withBodies: (bodies) => {
     shapes = new Map(bodies);
   } });
-  const ids = options.bodyIds ?? null;
-  if (ids !== null && (!ids.length || ids.some((id2) => !shapes.has(id2)))) throw new Error("An export body is unavailable.");
-  const selected = [...shapes].filter(([id2]) => ids === null || ids.includes(id2)).map(([, shape]) => shape);
+  const ids2 = options.bodyIds ?? null;
+  if (ids2 !== null && (!ids2.length || ids2.some((id2) => !shapes.has(id2)))) throw new Error("An export body is unavailable.");
+  const selected = [...shapes].filter(([id2]) => ids2 === null || ids2.includes(id2)).map(([, shape]) => shape);
   if (!selected.length) throw new Error("Import or create geometry before exporting.");
   const tolerance2 = options.toleranceMillimeters ?? 0.1;
   if (!Number.isFinite(tolerance2) || tolerance2 < 1e-3 || tolerance2 > 5) throw new Error("Mesh tolerance must be between 0.001 and 5 mm.");

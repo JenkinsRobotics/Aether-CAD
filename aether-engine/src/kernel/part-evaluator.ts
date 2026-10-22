@@ -1644,6 +1644,123 @@ export function evaluatePartDocument(
           }
           continue;
         }
+        // Surface bodies changed in place or re-published: Stitch sews several sheets into
+        // the first (a solid when they close), Unstitch publishes one body per face, Reverse
+        // turns a sheet over. Sheets are shells in the same body map as solids.
+        /** The edges a feature picked on a body: straight ones by their vertex anchors, any
+         *  edge by midpoint and length. A changed edge refuses rather than taking the nearest. */
+        const pickedEdgesOf = (body: Shape3D, bodyId: string, picks: import("../document/solid-edge-reference").EdgeFinishEdge[], what: string) => {
+          const anchors = [...vertexAnchorsOf(body).values()];
+          const edges = body.edges;
+          const midpoints = picks.map((pick): V3 => {
+            if (pick.bodyId !== bodyId) throw new Error(`${pick.label} is on another body. Reselect edges on the chosen body.`);
+            if (pick.kind === "solid-edge") {
+              const vertex = (anchor: typeof pick.anchor.start): V3 => {
+                const matches = anchors.filter((a) => a.signature === anchor.signature);
+                const found = matches.length === 1 ? matches[0] : matches.find((a) => a.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
+                if (!found) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
+                return [...found.positionMillimeters] as V3;
+              };
+              return scale(add(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
+            }
+            return pick.midpointMillimeters as V3;
+          });
+          return midpoints.map((target, index) => {
+            const pick = picks[index];
+            const hit = edges.find((edge) => {
+              const m = edge.pointAt(0.5), d = Math.hypot(m.x - target[0], m.y - target[1], m.z - target[2]); m.delete();
+              return d < 1e-3 && (pick.kind !== "curved-edge" || Math.abs(edge.length - pick.lengthMillimeters) <= Math.max(1e-3, pick.lengthMillimeters * 1e-6));
+            });
+            if (!hit) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
+            return own(hit);
+          });
+        };
+        /** Ruled strips: each picked edge lofted (ruled) to its own copy moved by the reach —
+         *  square to the surface at the edge, continuing the surface away from it, or a given direction. */
+        const ruledStrips = (body: Shape3D, bodyId: string, picks: import("../document/solid-edge-reference").EdgeFinishEdge[], distance: number, mode: "normal" | "tangent" | "direction", direction: V3 | undefined, what: string): any[] => {
+          const o = getOC() as any;
+          return pickedEdgesOf(body, bodyId, picks, what).map((edge) => {
+            const m = edge.pointAt(0.5), mid: V3 = [m.x, m.y, m.z]; m.delete();
+            let reach: V3;
+            if (mode === "direction") reach = scale(unit(direction!), distance);
+            else {
+              const face = new FaceFinder().containsPoint(mid).find(body)[0];
+              if (!face) throw new Error("The picked edge is not on a face of the body.");
+              const nv = face.normalAt(mid), n: V3 = unit([nv.x, nv.y, nv.z]); nv.delete();
+              if (mode === "normal") reach = scale(n, distance);
+              else {
+                const tv = edge.tangentAt(0.5), t: V3 = unit([tv.x, tv.y, tv.z]); tv.delete();
+                let side = unit(cross(n, t));
+                const c = face.center, away: V3 = sub(mid, [c.x, c.y, c.z]); c.delete();
+                if (dot(side, away) < 0) side = neg(side);
+                reach = scale(side, distance);
+              }
+            }
+            // replicad consumes the shape it translates, so the copy is made from a clone.
+            const first = own(assembleWire([edge])), second = own(first.clone().translate(reach[0], reach[1], reach[2]));
+            const maker = new o.BRepOffsetAPI_ThruSections(false, true, 1e-6);
+            maker.AddWire(first.wrapped); maker.AddWire(second.wrapped); maker.Build(new o.Message_ProgressRange_1());
+            return maker.Shape();
+          });
+        };
+        if (feature.type === "surface-extend") {
+          // Extend: tangent strips past the picked edges, sewn onto the sheet in place.
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Extend needs an available surface body.");
+          const o = getOC() as any;
+          const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+          sewing.Add(body.wrapped);
+          for (const strip of ruledStrips(body, id, feature.edges, feature.distanceMillimeters, "tangent", undefined, "Extend")) sewing.Add(strip);
+          sewing.Perform(new o.Message_ProgressRange_1());
+          const sewn = cast(sewing.SewedShape());
+          if (!isShape3D(sewn)) throw new Error("Extend could not sew the strip onto the surface.");
+          bodies.set(id, own(sewn)); currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "surface-stitch" || feature.type === "surface-unstitch" || feature.type === "surface-reverse-normal") {
+          const o = getOC() as any;
+          const sheetOf = (raw: any): Shape3D => {
+            const shape = cast(raw) as any;
+            if (isShape3D(shape)) return own(shape);
+            // A lone face becomes a one-face shell so every body is a 3D shape.
+            const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+            builder.MakeShell(shell); builder.Add(shell, raw);
+            return own(cast(shell) as Shape3D);
+          };
+          const surfaceBody = (id: string, what: string): Shape3D => {
+            const body = bodies.get(id);
+            if (!body) throw new Error(`${what} needs an available surface body.`);
+            return body;
+          };
+          if (feature.type === "surface-stitch") {
+            const sewing = new o.BRepBuilderAPI_Sewing(feature.toleranceMillimeters ?? 1e-3, true, true, true, false);
+            for (const id of feature.bodyIds) sewing.Add(surfaceBody(id, "Stitch").wrapped);
+            sewing.Perform(new o.Message_ProgressRange_1());
+            let result = sheetOf(sewing.SewedShape());
+            // A closed shell is a solid: give it volume and the right way out.
+            if ((result.wrapped as any).ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
+              const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid()) as Shape3D;
+              result = own(measureVolume(solid) < 0 ? (cast(solid.wrapped.Reversed()) as Shape3D) : solid);
+            }
+            const [first, ...rest] = feature.bodyIds;
+            for (const id of rest) bodies.delete(id);
+            bodies.set(first, result);
+            currentBodyID = first;
+          } else if (feature.type === "surface-unstitch") {
+            const body = surfaceBody(feature.bodyIds[0], "Unstitch");
+            const prefix = bodyIDForFeature(document, feature);
+            const ids = body.faces.map((face, index) => { const id = `${prefix}:solid-${index + 1}`; if (bodies.has(id)) throw new Error("Duplicate output body identity."); bodies.set(id, sheetOf(face.wrapped)); return id; });
+            if (!ids.length) throw new Error("Unstitch found no faces.");
+            bodies.delete(feature.bodyIds[0]);
+            bodyOutputs[feature.id] = ids;
+            currentBodyID = ids[ids.length - 1];
+          } else {
+            const body = surfaceBody(feature.bodyIds[0], "Reverse normal");
+            bodies.set(feature.bodyIds[0], own(cast(body.wrapped.Reversed()) as Shape3D));
+            currentBodyID = feature.bodyIds[0];
+          }
+          continue;
+        }
         let tool: Shape3D;
         if (feature.type === "mirror") {
           const source = tools.get(feature.sourceFeatureId);
@@ -1788,6 +1905,121 @@ export function evaluatePartDocument(
               tool = sewn(own(fromExtended(shape)));
             } finally { progress.delete(); reader.delete(); f.FS.unlink(name); }
           } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+        } else if (feature.type === "surface-ruled") {
+          const body = bodies.get(feature.bodyIds[0]);
+          if (!body) throw new Error("Ruled surface needs an available body.");
+          const o = getOC() as any;
+          const strips = ruledStrips(body, feature.bodyIds[0], feature.edges, feature.distanceMillimeters, feature.mode, feature.direction as V3 | undefined, "Ruled surface");
+          let raw = strips[0];
+          if (strips.length > 1) { const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false); for (const strip of strips) sewing.Add(strip); sewing.Perform(new o.Message_ProgressRange_1()); raw = sewing.SewedShape(); }
+          const sheet = cast(raw);
+          if (!isShape3D(sheet) || !(measureArea(sheet as never) > 1e-9)) throw new Error("The ruled surface has no area. Check the edges and distance.");
+          tool = own(sheet);
+        } else if (feature.type === "surface-extrude" || feature.type === "surface-revolve" || feature.type === "surface-loft" || feature.type === "surface-patch" || feature.type === "surface-sweep" || feature.type === "surface-offset" || feature.type === "surface-thicken") {
+          // Surface creators (SolidCraft's surface.*): sheets built from sketch curves,
+          // open or closed, with no caps; Thicken turns sheets into a solid.
+          const o = getOC() as any;
+          const progress = () => new o.Message_ProgressRange_1();
+          const sheetOf = (raw: any): Shape3D => {
+            const shape = cast(raw) as any;
+            if (isShape3D(shape)) return own(shape);
+            const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+            builder.MakeShell(shell); builder.Add(shell, raw);
+            return own(cast(shell) as Shape3D);
+          };
+          /** Every chosen curve of a sketch as a wire: open chains are allowed, and a closed one is its boundary. */
+          const curveWires = (sketchId: string, contourIds: string[] | undefined, what: string, closedOnly = false): Wire[] => {
+            const sketchProfile = profiles.get(sketchId);
+            if (!sketchProfile) throw new Error(`${what} needs an earlier sketch.`);
+            // A circle or polygon profile has one closed region and no authored contours.
+            if (!sketchProfile.contours.length && sketchProfile.regions.length) return [sketchWire(sketchId, undefined, what, false)];
+            const chosen = sketchProfile.contours.filter((c) => (!contourIds || (c.id !== undefined && contourIds.includes(c.id))) && (!closedOnly || contourClosed(c)));
+            if (!chosen.length) throw new Error(`${what}: the sketch has no ${closedOnly ? "closed " : ""}curves to use.`);
+            return chosen.map((c) => sketchWire(sketchId, c.id, what, true));
+          };
+          /** One shell from several raw shapes: sewn when they touch, a compound otherwise. */
+          const joined = (raws: any[]): Shape3D => {
+            if (raws.length === 1) return sheetOf(raws[0]);
+            const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+            for (const raw of raws) sewing.Add(raw);
+            sewing.Perform(progress());
+            return sheetOf(sewing.SewedShape());
+          };
+          const sheetArea = (sheet: Shape3D) => { const a = measureArea(sheet as never); if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances."); return sheet; };
+          if (feature.type === "surface-extrude") {
+            const frame = sketchFrameOf(feature.profileFeatureId);
+            const d = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
+            const along = scale(unit(frame.normal as V3), d);
+            const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface extrude");
+            tool = sheetArea(joined(wires.map((wire) => {
+              const start = feature.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
+              const vec = new o.gp_Vec_4(along[0], along[1], along[2]);
+              try { return new o.BRepPrimAPI_MakePrism_1(start.wrapped, vec, false, true).Shape(); } finally { vec.delete(); }
+            })));
+          } else if (feature.type === "surface-revolve") {
+            let axis: V3 = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
+            if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
+            else if (feature.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
+            else if (feature.axisReference) {
+              const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference as never, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
+              origin = t.axisOriginMillimeters; axis = t.axisDirection;
+            }
+            const angle = feature.angleDegrees * Math.PI / 180 * (feature.reversed ? -1 : 1);
+            const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface revolve");
+            const ax = new o.gp_Ax1_2(new o.gp_Pnt_3(origin[0], origin[1], origin[2]), new o.gp_Dir_4(axis[0], axis[1], axis[2]));
+            try { tool = sheetArea(joined(wires.map((wire) => new o.BRepPrimAPI_MakeRevol_1(wire.wrapped, ax, angle, false).Shape()))); } finally { ax.delete(); }
+          } else if (feature.type === "surface-loft") {
+            const maker = new o.BRepOffsetAPI_ThruSections(false, Boolean(feature.ruled), 1e-6);
+            for (const section of feature.sections) maker.AddWire(sketchWire(section.profileFeatureId, section.contourId, "Surface loft section", true).wrapped);
+            maker.Build(progress());
+            tool = sheetArea(sheetOf(maker.Shape()));
+          } else if (feature.type === "surface-patch") {
+            const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Patch", true);
+            tool = sheetArea(joined(wires.map((wire) => own(makeFace(wire)).wrapped)));
+          } else if (feature.type === "surface-sweep") {
+            const spine = sketchWire(feature.pathFeatureId, feature.pathContourId, "Surface sweep path", true);
+            const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface sweep profile");
+            tool = sheetArea(joined(wires.map((wire) => (genericSweep(wire, spine, { frenet: false, transitionMode: "transformed" }) as any).wrapped)));
+          } else if (feature.type === "surface-offset") {
+            const body = bodies.get(feature.bodyIds[0]);
+            if (!body) throw new Error("Offset surface needs an available surface body.");
+            if (feature.distanceMillimeters === 0) tool = own(body.clone());
+            else {
+              const maker = new o.BRepOffsetAPI_MakeOffsetShape();
+              maker.PerformByJoin(body.wrapped, feature.distanceMillimeters, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
+              tool = sheetArea(sheetOf(maker.Shape()));
+            }
+          } else {
+            // Thicken: each sheet offset into a solid (the simple offset: faces thickened
+            // along their own normals; sharp corners between faces are not joined), the
+            // solids fused, then new/add/cut like any tool.
+            const pieces = feature.bodyIds.map((id) => {
+              let sheet = bodies.get(id);
+              if (!sheet) throw new Error("Thicken needs an available surface body.");
+              const t = feature.thicknessMillimeters;
+              if (feature.symmetric) {
+                const back = new o.BRepOffsetAPI_MakeOffsetShape();
+                back.PerformByJoin(sheet.wrapped, -t / 2, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
+                sheet = sheetOf(back.Shape());
+              }
+              const maker = new o.BRepOffsetAPI_MakeThickSolid();
+              maker.MakeThickSolidBySimple(sheet.wrapped, t);
+              const made = cast(maker.Shape());
+              if (!isShape3D(made)) throw new Error("Thicken did not produce a solid.");
+              // Each solid fixed and turned the right way out, then fused into one.
+              const solids = solidsOf(own(made)).map((piece) => {
+                const fixer = new o.ShapeFix_Solid_2(piece.wrapped); fixer.Perform(progress());
+                let solid = cast(fixer.Solid()) as Shape3D;
+                if (measureVolume(solid) < 0) solid = cast(solid.wrapped.Reversed()) as Shape3D;
+                return own(solid);
+              });
+              if (!solids.length) throw new Error("Thicken did not produce a solid.");
+              const solid = solids.slice(1).reduce((all, piece) => own(all.fuse(piece)), solids[0]);
+              if (!(measureVolume(solid) > 1e-9)) throw new Error("Thicken produced no volume. Check the thickness.");
+              return solid;
+            });
+            tool = pieces.slice(1).reduce((all, piece) => own(all.fuse(piece)), pieces[0]);
+          }
         } else {
           const profile = profiles.get(feature.profileFeatureId);
           if (!profile) throw new Error("Sketch needs a closed profile before creating a solid.");

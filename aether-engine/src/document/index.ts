@@ -57,3 +57,4 @@ export {resolveAxisLine,validateAxisDefinition,type AxisDefinition,type Construc
 export {validateSolidEdgeReference,validateEdgeFinishEdge,type SolidEdgeReference,type SolidEdgeAnchor,type CurvedEdgeReference,type EdgeFinishEdge} from './solid-edge-reference';
 export * from "./sketch-regions";
 export { patternCopyIds } from "./pattern";
+export { surfaceFeatureTypes, surfaceCreatorTypes, validateSurfaceFeature, type SurfaceFeature, type SurfaceExtrudeFeature, type SurfaceRuledFeature, type SurfaceExtendFeature, type SurfaceRevolveFeature, type SurfaceLoftFeature, type SurfacePatchFeature, type SurfaceSweepFeature, type SurfaceOffsetFeature, type SurfaceThickenFeature, type SurfaceStitchFeature, type SurfaceUnstitchFeature, type SurfaceReverseNormalFeature } from "./surface";
