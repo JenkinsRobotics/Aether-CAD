@@ -66,6 +66,11 @@ function featureDetail(feature: PartFeature): string {
     return `${feature.operation}`;
   if (feature.type === "shell")
     return `${feature.thicknessMillimeters} mm`;
+  if (feature.type === "sheet-base") return `${feature.thicknessMillimeters} mm · R${feature.bendRadiusMillimeters} · K ${feature.kFactor}`;
+  if (feature.type === "sheet-flange") return `${feature.distanceMillimeters} mm · ${feature.angleDegrees}° · ${feature.edges.length} edges`;
+  if (feature.type === "sheet-hem") return `${feature.lengthMillimeters} mm · ${feature.edges.length} edges`;
+  if (feature.type === "sheet-unfold") return "flat pattern";
+  if (feature.type === "sheet-refold") return "folded";
   if (feature.type === "surface-boundary") return `${feature.edges.length} edges filled`;
   if (feature.type === "surface-blend") return `${feature.from.edges.length} + ${feature.to.edges.length} edges`;
   if (feature.type === "surface-untrim") return "holes removed";

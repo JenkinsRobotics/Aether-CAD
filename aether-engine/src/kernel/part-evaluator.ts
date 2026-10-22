@@ -3,6 +3,7 @@ import { sketchFaceRegions } from "../sketch/reference/connected-sketch-regions"
 import { matchesProfileRegion, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
 import { resolveProfileDrawing } from "../document/profile-projection";
 import { canonicalPlaneXDirection, flipSketchFrame, principalFrame, resolvePlaneFrame } from "../document/construction-planes";
+import { bendAllowanceMillimeters, type SheetMetalRule } from "../document/sheet-metal";
 import { constructionPlaneFrame } from "../document/solid-features";
 import { resolveAxisLine } from "../document/construction-axes";
 import { sketchRegionOrder } from "../sketch/regions/order";
@@ -1716,6 +1717,100 @@ export function evaluatePartDocument(
           }
           return own(assembleWire(order.map((i) => edges[i])));
         };
+        /** The sheet metal rule of a body: the base feature that made it carries it. */
+        const sheetRuleOf = (bodyId: string): { base: import("../document/sheet-metal").SheetBaseFeature; index: number } => {
+          const index = document.features.findIndex((f) => f.type === "sheet-base" && !f.suppressed && bodyIDForFeature(document, f) === bodyId);
+          if (index < 0) throw new Error("This body is not a sheet metal body. Start with a sheet metal base.");
+          return { base: document.features[index] as import("../document/sheet-metal").SheetBaseFeature, index };
+        };
+        /** A bend from an edge of a plate: the cross-section in the plane square to the edge
+         *  (u out of the plate, v along the big face's normal; the material fills v ∈ [-t, 0]),
+         *  extruded along the edge, fused into the body. `flat` lays the bend out instead:
+         *  a straight strip of leg + bend allowance. */
+        const bendFromEdges = (body: Shape3D, bodyId: string, picks: import("../document/solid-edge-reference").EdgeFinishEdge[], rule: SheetMetalRule, options: { leg: number; angleDegrees: number; innerRadius: number; inward?: boolean; flat?: boolean; what: string }): Shape3D => {
+          const t = rule.thicknessMillimeters, r = options.innerRadius, alpha = options.angleDegrees * Math.PI / 180;
+          let result = body;
+          for (const edge of pickedEdgesOf(body, bodyId, picks, options.what)) {
+            const m = edge.pointAt(0.5), mid: V3 = [m.x, m.y, m.z]; m.delete();
+            const s = edge.startPoint, a: V3 = [s.x, s.y, s.z]; s.delete();
+            const en = edge.endPoint, b: V3 = [en.x, en.y, en.z]; en.delete();
+            const length = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+            const tdir = unit(sub(b, a));
+            // The big face the edge belongs to: the largest planar face containing its midpoint.
+            const faces = new FaceFinder().containsPoint(mid).find(body).filter((f) => f.geomType === "PLANE");
+            if (!faces.length) throw new Error(`${options.what}: the picked edge is not on a flat face of the sheet.`);
+            const face = faces.reduce((big, f) => (measureArea(f) > measureArea(big) ? f : big));
+            const nv = face.normalAt(mid); let n: V3 = unit([nv.x, nv.y, nv.z]); nv.delete();
+            let o = unit(cross(n, tdir));
+            const c = face.center, away: V3 = sub(mid, [c.x, c.y, c.z]); c.delete();
+            if (dot(o, away) < 0) o = neg(o);
+            // Folding "inward" means toward the picked face: mirror the section about the sheet's middle.
+            const v = (y: number) => (options.inward ? -t - y : y);
+            const pen = draw([0, v(0)]);
+            if (options.flat) {
+              const reach = options.leg + bendAllowanceMillimeters(options.angleDegrees, r, rule);
+              pen.lineTo([reach, v(0)]); pen.lineTo([reach, v(-t)]); pen.lineTo([0, v(-t)]);
+            } else {
+              const C: [number, number] = [0, -(t + r)];
+              const at = (rho: number, theta: number): [number, number] => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
+              const d: [number, number] = [Math.cos(alpha), -Math.sin(alpha)];
+              const outerEnd = at(r + t, alpha), innerEnd = at(r, alpha), L = options.leg;
+              // The leg follows the bend's end tangent; a mirrored section mirrors its v component too.
+              const dv = options.inward ? -d[1] : d[1];
+              const lo: [number, number] = [outerEnd[0] + L * d[0], outerEnd[1] + L * dv], li: [number, number] = [innerEnd[0] + L * d[0], innerEnd[1] + L * dv];
+              pen.threePointsArcTo(outerEnd, at(r + t, alpha / 2));
+              pen.lineTo(lo); pen.lineTo(li); pen.lineTo(innerEnd);
+              pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
+            }
+            const section = own(pen.close());
+            // Plane: x = o (out of the plate); replicad's y = normal × x, so the normal is the
+            // edge direction reversed to make y the face normal, and the strip runs from b back to a.
+            const plane = own(new Plane([b[0], b[1], b[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+            const piece = own(section.sketchOnPlane(plane)).extrude(length);
+            if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options.what} could not be built on that edge.`);
+            const fused = result.fuse(own(piece));
+            if (!isShape3D(fused)) throw new Error(`${options.what} did not join the sheet.`);
+            result = own(fused);
+            face.delete();
+          }
+          return result;
+        };
+        if (feature.type === "sheet-flange" || feature.type === "sheet-hem") {
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("The sheet metal body is unavailable.");
+          const { base } = sheetRuleOf(id);
+          const bent = feature.type === "sheet-flange"
+            ? bendFromEdges(body, id, feature.edges, base, { leg: feature.distanceMillimeters, angleDegrees: feature.angleDegrees, innerRadius: feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Flange" })
+            : bendFromEdges(body, id, feature.edges, base, { leg: feature.lengthMillimeters, angleDegrees: 180, innerRadius: feature.gapMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Hem" });
+          bodies.set(id, bent); currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "sheet-unfold") {
+          // Unfold: the plate as the base made it, plus each bend laid flat (leg + bend
+          // allowance) from the edge it was bent from. Bends on bends are not laid out yet.
+          const id = feature.bodyIds[0];
+          const { base, index: baseIndex } = sheetRuleOf(id);
+          const plate = bodyAt(base.id, id);
+          if (!plate) throw new Error("The sheet metal base is unavailable.");
+          let flat: Shape3D = own(plate.clone());
+          for (const f of document.features.slice(baseIndex + 1, index)) {
+            if (f.suppressed || (f.type !== "sheet-flange" && f.type !== "sheet-hem") || f.bodyIds[0] !== id) continue;
+            flat = f.type === "sheet-flange"
+              ? bendFromEdges(flat, id, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" })
+              : bendFromEdges(flat, id, f.edges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
+          }
+          bodies.set(id, flat); currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "sheet-refold") {
+          const id = feature.bodyIds[0];
+          const unfoldIndex = document.features.slice(0, index).map((f, i) => ({ f, i })).reverse().find(({ f }) => f.type === "sheet-unfold" && !f.suppressed && f.bodyIds[0] === id)?.i;
+          if (unfoldIndex === undefined || unfoldIndex === 0) throw new Error("Refold needs an earlier Unfold of this body.");
+          const folded = cached[unfoldIndex - 1]?.bodies.get(id);
+          if (!folded) throw new Error("The folded sheet is unavailable.");
+          bodies.set(id, own(folded.clone())); currentBodyID = id;
+          continue;
+        }
         if (feature.type === "surface-untrim") {
           // Untrim: the face rebuilt from its outer boundary, so its holes close; the body's
           // other faces are sewn back around it.
@@ -1945,6 +2040,14 @@ export function evaluatePartDocument(
               tool = sewn(own(fromExtended(shape)));
             } finally { progress.delete(); reader.delete(); f.FS.unlink(name); }
           } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+        } else if (feature.type === "sheet-base") {
+          // The plate: the sketch region extruded by the rule's thickness along the sketch normal.
+          const frame = sketchFrameOf(feature.profileFeatureId);
+          const face = own(makeFace(sketchWire(feature.profileFeatureId, feature.profileContourId, "Sheet metal base", false)));
+          const along = scale(unit(frame.normal as V3), feature.thicknessMillimeters * (feature.reversed ? -1 : 1));
+          const sweep = new Vector(along);
+          try { tool = own(basicFaceExtrusion(face, sweep)); } finally { sweep.delete(); }
+          if (!(measureVolume(tool) > 1e-9)) throw new Error("Sheet metal base needs a closed sketch region.");
         } else if (feature.type === "surface-boundary") {
           const body = bodies.get(feature.bodyIds[0]);
           if (!body) throw new Error("Boundary surface needs an available body.");

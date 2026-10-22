@@ -17,14 +17,14 @@ export function bodyIDForFeature(
   feature: PartFeature,
 ): string {
   if (
-    !(surfaceCreatorTypes as readonly string[]).includes(feature.type) && feature.type !== "surface-thicken" &&
+    !(surfaceCreatorTypes as readonly string[]).includes(feature.type) && feature.type !== "surface-thicken" && feature.type !== "sheet-base" &&
     (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.bodyId
   )
     return feature.bodyId;
   const first = doc.features.find(
     (f) =>
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new",
+      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken" || f.type === "sheet-base") && "operation" in f && f.operation === "new",
   );
   return first?.id === feature.id
     ? `${doc.documentId}:body-1`
@@ -134,8 +134,8 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
     if ("sourceFeatureId" in f) refs.push(f.sourceFeatureId);
     if (f.type === "profile" && f.profile.type === "projection") refs.push(f.profile.sourceFeatureId);
     if (
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") &&
-      f.operation === "new"
+      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "bounding-solid" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
+      "operation" in f && f.operation === "new"
     ) {
       for (const id of bodyIDsForFeature(doc, f)) { lastBody = id; bodyProducers.set(id, f.id); }
     } else if (f.type==="extrude"&&f.scopeMode==="all") {

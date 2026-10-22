@@ -2,7 +2,7 @@ import { patternCopyIds } from "./pattern";
 import { surfaceCreatorTypes } from "./surface";
 /** Surface features that make a new body: every sheet creator, and Thicken making a new solid. */
 const isSurfaceBodyMaker = (feature: { type: string; operation?: string }): boolean =>
-  (surfaceCreatorTypes as readonly string[]).includes(feature.type) || (feature.type === "surface-thicken" && feature.operation === "new");
+  (surfaceCreatorTypes as readonly string[]).includes(feature.type) || (feature.type === "surface-thicken" && feature.operation === "new") || feature.type === "sheet-base";
 import { validateProfileRegionSelection, profileRegionIdentity } from '../sketch/reference/profile-region-reference';
 import {validateExtrusionScopeResolution,type ExtrusionScopeResolution} from './extrusion-scope';
 import {validateExtrusionStartReference,type ExtrusionStartReference} from './extrusion-start-reference';

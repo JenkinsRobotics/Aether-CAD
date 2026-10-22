@@ -14,6 +14,7 @@ import {boundingSolidEditor} from "./bounding-solid";
 import {threadEditor} from "./thread";
 import {coilEditor} from "./coil";
 import {surfaceEditors} from "./surface";
+import {sheetMetalEditors} from "./sheet-metal";
 import {removeBodyEditor} from "./remove-body";
 import {bossEditor} from "./boss";
 import {restEditor} from "./rest";
@@ -50,6 +51,7 @@ export const featureEditors: readonly FeatureEditor[] = [
   threadEditor,
   coilEditor,
   ...surfaceEditors,
+  ...sheetMetalEditors,
   removeBodyEditor,
   bossEditor,
   restEditor,
