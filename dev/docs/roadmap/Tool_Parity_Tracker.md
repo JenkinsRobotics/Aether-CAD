@@ -263,20 +263,20 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `timeline.dependents` | Feature Dependents | feature: id\|name → features deleted with it, and features that would fail without it | Show dependencies of … (context menu) | parity |  |
 | `timeline.edit` | Edit Feature | feature: id\|name, set: {fields to change, merged into the feature's definition as timeline.inspect returns it, \          e.g. {"extent": {"distance": "30"}} ( | Edit feature (dialog) | parity |  |
 | `timeline.export_script` | Export Command Script | path?: write the script to this file → script: {commands: [...]} that rebuilds the design (solidcraft-cli eval/run), \          steps, omitted: what the script  | Saved programs (automation) | partial | no one-click "script that rebuilds this design" export |
-| `timeline.group` | New Feature Folder | name?; features?: [id\|name]; parent?: folder id (features leave any other timeline folder) |  | gap | feature folders |
+| `timeline.group` | New Feature Folder | name?; features?: [id\|name]; parent?: folder id (features leave any other timeline folder) | Feature tree folders | parity-ish | the tree creates folders and moves features into them (`createFolder`, `assignItems`); no agent command yet |
 | `timeline.inspect` | Inspect Feature | feature: id\|name → type, definition (the fields timeline.edit's set changes, with their current values), \          inputs: [{label, param, expression, unit}]  | Properties panel / `cad.part.inspect` | parity |  |
 | `timeline.move_many` | Move Timeline Items | features?: [id\|name], groups?: [folder ids], group?: folder id, position: insertion slot; atomically changes folder membership and moves all selected contents  | Drag in the tree / `cad.feature.move` | partial | one feature at a time |
-| `timeline.move_to_group` | Move Features to Folder | features?: [id\|name], groups?: [ids], group?: id (omit or null to move to the timeline root) |  | gap |  |
+| `timeline.move_to_group` | Move Features to Folder | features?: [id\|name], groups?: [ids], group?: id (omit or null to move to the timeline root) | Feature tree folders | parity-ish | drag/move into a folder from the tree; no agent command yet |
 | `timeline.paste` | Paste Features | translate?: [x,y,z] (moves the copies' geometry); the copies go at the marker |  | gap |  |
 | `timeline.redefine` | Edit Feature | feature: id\|name, command: the feature's command id, params: its parameters (the feature is rebuilt in place) | Edit feature (dialog) | parity |  |
 | `timeline.rename` | Rename | feature: id\|name, name (references to it follow) | Rename (tree) | parity |  |
-| `timeline.rename_group` | Rename Feature Folder | group: id, name |  | gap |  |
+| `timeline.rename_group` | Rename Feature Folder | group: id, name | Feature tree folders | parity-ish | rename from the tree; no agent command yet |
 | `timeline.reorder` | Reorder Feature | feature: id\|name, position: its new index; refused when a feature that worked would fail | Drag in the tree / `cad.feature.move` | parity | refused when the history would break |
 | `timeline.reorder_many` | Reorder Features | features: [id\|name], position: insertion slot in the current history; selected features keep their relative order; refused when a feature that worked would fai |  | partial | one at a time |
 | `timeline.roll_to` | Roll History Marker | position: number of features to keep active, or "end" (omit = end) \| feature: id\|name (the marker goes right after it) | Rollback marker (tree) | parity |  |
 | `timeline.rollback` | Move Timeline Marker | position: number of features to keep active, or "end" (omit = end) | Rollback marker (tree) | parity |  |
 | `timeline.suppress` | Suppress Feature | feature: id\|name \| features: [id\|name] (one undo step), suppressed?: bool (default toggles: several features are all \          suppressed unless all of them | Suppress (tree) / `cad.feature.suppress` | parity |  |
-| `timeline.ungroup` | Remove Feature Folders | group: id \| groups: [ids] (features remain in the timeline) |  | gap |  |
+| `timeline.ungroup` | Remove Feature Folders | group: id \| groups: [ids] (features remain in the timeline) | Feature tree folders | parity-ish | delete a folder keeps its features (`deleteFolder`); no agent command yet |
 
 ## Parameters (14)
 
@@ -285,17 +285,17 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `expr.evaluate` | Evaluate Expression | expression, kind?: length\|angle\|unitless (or unit?: mm\|in\|deg…) → ok, value (mm/rad), display_value, references, error | Sketch variables | partial |  |
 | `parameters.add` | Add User Parameter | name, expression, unit?, comment?, favorite?: bool | Variables panel (sketch) | partial | document variables exist (`evaluateDocumentVariables`) and drive dimensions; no units, comments or favourites |
 | `parameters.change` | Change Parameters | name, expression (number or text), unit?: mm\|cm\|m\|in\|ft\|deg\|rad\|"" (new parameters default to their value's unit), comment?, \              favorite?: bo | Variables panel | partial | expressions over other variables; units are millimetres/degrees only |
-| `parameters.comment` | Comment Parameter | name, comment |  | gap |  |
-| `parameters.complete` | Complete Expression | prefix?: the text before the cursor → word, suggestions [{text, kind: parameter\|function\|unit\|constant, detail}] |  | gap | expression completion |
+| `parameters.comment` | Comment Parameter | name, comment | Variables panel comment | parity | done 2026-10-22 (r47): a comment per variable, saved with it |
+| `parameters.complete` | Complete Expression | prefix?: the text before the cursor → word, suggestions [{text, kind: parameter\|function\|unit\|constant, detail}] | `completeExpression` + panel hints | partial | done 2026-10-22 (r47): parameters, the ten functions, units and constants as a datalist on the expression field. Missing: cursor-aware replacement |
 | `parameters.delete` | Delete Parameter | name (refused while something uses it; the error lists the users) | Variables panel | partial | use check before delete to confirm |
-| `parameters.export` | Export Parameters | format?: csv\|json (default csv, or from the path), path?: write to a file → text |  | gap |  |
-| `parameters.favorite` | Favourite Parameter | name, favorite?: bool (default true) |  | gap |  |
-| `parameters.graph` | Parameter Graph | → nodes, edges [user, used] (users include Feature:<name>), cycles, errors |  | gap |  |
-| `parameters.import` | Import Parameters | text: CSV (header with name, expression, unit?, comment?) or JSON [{name, expression, unit?, comment?}] \| path; all or nothing |  | gap |  |
+| `parameters.export` | Export Parameters | format?: csv\|json (default csv, or from the path), path?: write to a file → text | Variables panel Export CSV | partial | done 2026-10-22 (r47): CSV (name, expression, kind, comment, favorite); JSON through the document tools. Missing: a chosen path |
+| `parameters.favorite` | Favourite Parameter | name, favorite?: bool (default true) | Variables panel star | parity | done 2026-10-22 (r47): favourite flag per variable, listed first |
+| `parameters.graph` | Parameter Graph | → nodes, edges [user, used] (users include Feature:<name>), cycles, errors | `variableGraph` (engine) | partial | done 2026-10-22 (r47): nodes, edges (features as Feature:<name>), cycles, unknown references. Missing: a view of it |
+| `parameters.import` | Import Parameters | text: CSV (header with name, expression, unit?, comment?) or JSON [{name, expression, unit?, comment?}] \| path; all or nothing | Variables panel Import CSV | partial | done 2026-10-22 (r47): CSV or JSON; existing names replaced. Missing: all-or-nothing choice |
 | `parameters.list` | List Parameters | favorites?: bool (only favourites), filter?: all\|user\|sketch\|feature\|favorites → parameters (name, expression, unit, value in its unit, \          source, f | Variables panel / `cad.part.inspect` | partial |  |
-| `parameters.move` | Move Parameter | name, before \| after: another user parameter; the user parameter is listed just before or after it |  | gap | ordering |
+| `parameters.move` | Move Parameter | name, before \| after: another user parameter; the user parameter is listed just before or after it | `moveVariable` (engine) | partial | done 2026-10-22 (r47) as a document operation. Missing: drag ordering in the panel |
 | `parameters.rename` | Rename Parameter | name, new_name (expressions, feature inputs and dimensions that use it follow) | Variables panel | partial | references follow when renamed in the panel |
-| `parameters.users` | Parameter Users | name → users (parameters, feature inputs, dimensions) and the features it drives |  | gap |  |
+| `parameters.users` | Parameter Users | name → users (parameters, feature inputs, dimensions) and the features it drives | `variableUsers` (engine) | partial | done 2026-10-22 (r47): variables and features whose expressions mention the variable; the panel shows the count. Missing: dimension-level detail |
 
 ## Assembly (67)
 

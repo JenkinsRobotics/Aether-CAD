@@ -902,3 +902,16 @@ solves each step in-process through the driven-value residuals of r45, plays the
 the viewport and exports a CSV of every step. Both sit on `src/startup/assembly-motion.ts`, pure
 over a solver job and tested there.
 
+### r47 (2026-10-22): parameters — comments, favourites, order, exchange, users, graph, completion
+
+Installed (the tools harness passed on its retry; the hole step flaked once more).
+
+Variables carry a comment and a favourite flag. `aether-engine/src/document/variable-tools.ts`
+answers who uses a variable (parameters and features whose expressions mention `#name`), builds
+the dependency graph with cycles and unknown references, reorders variables, exports and imports
+CSV or JSON, and completes an expression prefix with parameters, the expression language's ten
+functions, units and constants. The sketch variables panel shows the comment and star per row,
+the count of users, Export and Import CSV, and a completion datalist on each expression field.
+The timeline folder rows were stale: the feature tree has created, renamed and dissolved folders
+since the tree organization landed; they are marked parity-ish (no agent command).
+
