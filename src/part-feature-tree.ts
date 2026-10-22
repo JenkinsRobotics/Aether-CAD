@@ -66,6 +66,18 @@ function featureDetail(feature: PartFeature): string {
     return `${feature.operation}`;
   if (feature.type === "shell")
     return `${feature.thicknessMillimeters} mm`;
+  if (feature.type === "surface-ruled") return `${feature.distanceMillimeters} mm · ${feature.mode} · ${feature.edges.length} edges`;
+  if (feature.type === "surface-extend") return `${feature.distanceMillimeters} mm · ${feature.edges.length} edges`;
+  if (feature.type === "surface-extrude") return `${feature.distanceMillimeters} mm sheet`;
+  if (feature.type === "surface-revolve") return `${feature.angleDegrees}° sheet`;
+  if (feature.type === "surface-loft") return `${feature.sections.length} sections · sheet`;
+  if (feature.type === "surface-patch") return "planar patch";
+  if (feature.type === "surface-sweep") return "swept sheet";
+  if (feature.type === "surface-offset") return `${feature.distanceMillimeters} mm offset`;
+  if (feature.type === "surface-thicken") return `${feature.thicknessMillimeters} mm · ${feature.operation}`;
+  if (feature.type === "surface-stitch") return `${feature.bodyIds.length} sheets sewn`;
+  if (feature.type === "surface-unstitch") return "faces apart";
+  if (feature.type === "surface-reverse-normal") return "normal reversed";
   return `${feature.radiusMillimeters} mm`;
 }
 

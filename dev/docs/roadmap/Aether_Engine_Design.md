@@ -774,3 +774,35 @@ And a root `npm install` re-resolved the engine's `opencascade.js` from `^2.0.0-
 newer beta with a different file layout (no `dist/node.js`), which broke every full-build test; the
 engine now pins the exact build and the root lock names it, so installs stay on the proven wasm.
 
+### r38 (2026-10-22): surface modeling, first slice
+
+Installed (promoted with a failing tools harness; r39 corrected that).
+
+Sheets (zero-thickness surface bodies) are shells in the same body map, tree and body list as
+solids (`aether-engine/src/document/surface.ts`): Surface Extrude, Surface Revolve, Surface Loft,
+Patch, Surface Sweep and Offset Surface make one; Thicken turns sheets into a solid (new, add or
+cut); Stitch sews sheets into the first (a solid when they close); Unstitch publishes a body per
+face; Reverse Normal turns a sheet over. Built on OCCT calls proven in a spike against the single
+wasm (`BRepPrimAPI_MakePrism`/`MakeRevol` on wires, `BRepOffsetAPI_ThruSections`, `MakeFace`,
+`BRepBuilderAPI_Sewing`, `MakeOffsetShape`, `MakeThickSolid.MakeThickSolidBySimple`,
+`TopoDS_Builder` for a one-face shell). The spike also showed what this build will not do: a
+boolean between a shell and a solid returns nothing (so Trim, and later Untrim and Split Face,
+wait for `BRepAlgoAPI_Splitter`/`BRepFeat_SplitShape`, which the build lacks), and
+`MakeThickSolidByJoin` on a sheet with a sharp corner yields an open shell, so Thicken uses the
+simple offset and leaves such corners unjoined. The viewport's part material was already
+double-sided, so sheets draw from both sides. Tests: `surface-features.test.ts` (areas, bounds,
+a box sewn from walls and two patches reaching 1000 mm³).
+
+### r39 (2026-10-22): Ruled and Extend surfaces; every dialog's button connected
+
+Installed; the tools harness now creates a sheet and thickens it in the browser.
+
+Ruled Surface lofts each picked edge (ruled) to its own copy moved by the reach — square to the
+surface at the edge, continuing the surface away from it, or along a given direction — and sews
+the strips; Extend sews tangent strips past a sheet's picked boundary edges in place. The r38 tools
+harness caught a bug older than the surface work: feature commands were registered from a
+hardcoded list of types, so the ribbon buttons of every dialog added since (pipe, coil, boss, rest,
+thread, bounding solid, remove body, split, delete face, and the surface tools) read "Command is
+not connected" in the live app. Registration now covers every editor in `src/features/`. r38 had
+already been promoted because the chain did not gate the promote on the harness exit; it does now.
+

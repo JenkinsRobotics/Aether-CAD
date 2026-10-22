@@ -4,7 +4,7 @@ import { bodyIDForFeature, createdBodyIDs, rollbackPosition, validatePartDocumen
 export function resolveBodyOutputs(document: PartDocument, outputs: Record<string, string[]> = {}): PartDocument {
   const cutoff = rollbackPosition(document);
   const expected = new Set(document.features.slice(0, cutoff)
-    .filter(f => !f.suppressed && ((f.type === "extrude" && f.operation === "new" && f.separateBodies) || ((f.type === "transform" || f.type === "split") && f.copyBodyIds) || (f.type === "pattern" && f.bodyIds))).map(f => f.id));
+    .filter(f => !f.suppressed && ((f.type === "extrude" && f.operation === "new" && f.separateBodies) || f.type === "surface-unstitch" || ((f.type === "transform" || f.type === "split") && f.copyBodyIds) || (f.type === "pattern" && f.bodyIds))).map(f => f.id));
   if (Object.keys(outputs).some(id => !expected.has(id))) throw new Error("Rebuild returned an unknown body producer.");
   const next = { ...document, features: document.features.map(feature => {
     if (!expected.has(feature.id)) return feature;

@@ -17,6 +17,7 @@ import {validatePipe, type PipeFeature} from './pipe';
 import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid';
 import {validateThread, type ThreadFeature} from './thread';
 import {validateCoil, type CoilFeature} from './coil';
+import {validateSurfaceFeature, surfaceFeatureTypes, type SurfaceFeature} from './surface';
 import {validateRemoveBody, type RemoveBodyFeature} from './remove-body';
 import {validateBoss, validateRest, type BossFeature, type RestFeature} from './plastic';
 export type {FaceExtrudeFeature} from "./face-extrude";
@@ -159,7 +160,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -170,6 +171,7 @@ export function validateSolidFeature(
   if (feature.type === "split") return validateSplit(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "pipe") return validatePipe(feature,earlier,missingReference);
   if (feature.type === "coil") return validateCoil(feature);
+  if ((surfaceFeatureTypes as readonly string[]).includes(feature.type)) return validateSurfaceFeature(feature as SurfaceFeature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "rest") return validateRest(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "remove-body") return validateRemoveBody(feature);

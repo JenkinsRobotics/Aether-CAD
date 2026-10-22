@@ -85,7 +85,9 @@ describe("CADTraditionalRibbon", () => {
         expect(html, `${activeWorkspace}/${category}`).toContain(`aria-label="${category} tools"`);
       expect(html).toContain('data-tool-id="solid-plane"');
       expect(html).toContain('data-tool-id="solid-inspect"');
-      expect(html).not.toContain('data-tool-id="surface-extrude"');
+      // Surface tools are live on their own tab; Trim is still not built, so no tab offers it.
+      if (activeWorkspace === "surface") expect(html).toContain('data-tool-id="surface-extrude"');
+      expect(html).not.toContain('data-tool-id="surface-trim"');
     }
   });
 });

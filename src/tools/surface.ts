@@ -1,9 +1,8 @@
 /** Surface — Fusion's SURFACE tab. Open, zero-thickness geometry.
  *
- *  None of it is wired: the engine has no surface features, and the evaluator
- *  emits no surface features and `worker.py` builds none, so every tool here is
- *  greyed and says so. The tab exists because the taxonomy is the taxonomy —
- *  a Design workspace has a Surface tab — not because it works.
+ *  Sheets are shells in the same body list as solids (`aether-engine/src/document/surface.ts`).
+ *  Trim stays greyed: trimming needs shell-against-solid booleans the kernel build
+ *  does not perform.
  */
 import { surfaceProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
 
@@ -12,21 +11,21 @@ export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
   label: "Surface",
   groups: [
     { id: "surface-create", label: "Create", tools: [
-      tool("surface-extrude", "Extrude", "extrude", undefined, surfaceProducer),
-      tool("surface-revolve", "Revolve", "revolve", undefined, surfaceProducer),
-      tool("surface-sweep", "Sweep", "sweep", undefined, surfaceProducer),
-      tool("surface-loft", "Loft", "loft", undefined, surfaceProducer),
-      tool("surface-patch", "Patch", "face", undefined, surfaceProducer),
-      tool("surface-offset", "Offset", "offset", undefined, surfaceProducer),
-      tool("surface-ruled", "Ruled", "curve", undefined, surfaceProducer),
+      tool("surface-extrude", "Extrude", "extrude", "feature-surface-extrude"),
+      tool("surface-revolve", "Revolve", "revolve", "feature-surface-revolve"),
+      tool("surface-sweep", "Sweep", "sweep", "feature-surface-sweep"),
+      tool("surface-loft", "Loft", "loft", "feature-surface-loft"),
+      tool("surface-patch", "Patch", "face", "feature-surface-patch"),
+      tool("surface-offset", "Offset", "offset", "feature-surface-offset"),
+      tool("surface-ruled", "Ruled", "curve", "feature-surface-ruled"),
     ] },
     { id: "surface-modify", label: "Modify", tools: [
       tool("surface-trim", "Trim", "trim", undefined, surfaceProducer),
-      tool("surface-extend", "Extend", "push-pull", undefined, surfaceProducer),
-      tool("surface-stitch", "Stitch", "weld", undefined, surfaceProducer),
-      tool("surface-unstitch", "Unstitch", "split", undefined, surfaceProducer),
-      tool("surface-reverse-normal", "Reverse Normal", "normal", undefined, surfaceProducer),
-      tool("surface-thicken", "Thicken", "thicken", undefined, surfaceProducer),
+      tool("surface-extend", "Extend", "push-pull", "feature-surface-extend"),
+      tool("surface-stitch", "Stitch", "weld", "feature-surface-stitch"),
+      tool("surface-unstitch", "Unstitch", "split", "feature-surface-unstitch"),
+      tool("surface-reverse-normal", "Reverse Normal", "normal", "feature-surface-reverse-normal"),
+      tool("surface-thicken", "Thicken", "thicken", "feature-surface-thicken"),
     ] },
   ],
 };

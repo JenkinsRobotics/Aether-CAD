@@ -1,4 +1,8 @@
 import { patternCopyIds } from "./pattern";
+import { surfaceCreatorTypes } from "./surface";
+/** Surface features that make a new body: every sheet creator, and Thicken making a new solid. */
+const isSurfaceBodyMaker = (feature: { type: string; operation?: string }): boolean =>
+  (surfaceCreatorTypes as readonly string[]).includes(feature.type) || (feature.type === "surface-thicken" && feature.operation === "new");
 import { validateProfileRegionSelection, profileRegionIdentity } from '../sketch/reference/profile-region-reference';
 import {validateExtrusionScopeResolution,type ExtrusionScopeResolution} from './extrusion-scope';
 import {validateExtrusionStartReference,type ExtrusionStartReference} from './extrusion-start-reference';
@@ -395,17 +399,17 @@ export function validatePartDocument(
       const outputs=feature.copyBodyIds?Object.values(feature.copyBodyIds):[];
       for(const id of outputs){if(bodies.has(id))throw Error('Copy outputs need new body identities.');bodies.add(id);}
     } else if (
-      (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
-      feature.operation === "new"
+      (isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
+      "operation" in feature && feature.operation === "new"
     ) {
       const id =
-        feature.bodyId ??
+        ("bodyId" in feature ? feature.bodyId : undefined) ??
         (bodies.size === 0
           ? `${document.documentId}:body-1`
           : `${document.documentId}:body-${feature.id}`);
       if (typeof id !== "string" || !id || bodies.has(id))
         throw new Error("Body IDs must be unique.");
-      const outputs = feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs ? feature.bodyOutputs : [id];
+      const outputs = (feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs) ? feature.bodyOutputs : [id];
       if (!Array.isArray(outputs) || !outputs.length) throw new Error("Extrusion needs output body identities.");
       for (const output of outputs) {
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");

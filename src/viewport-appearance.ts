@@ -52,7 +52,7 @@ export const viewportMaterials = {
     color: 0x79a9c2,
     metalness: 0.05,
     roughness: 0.56,
-    side: THREE.DoubleSide,
+    side: THREE.DoubleSide, // sheets (surface bodies) are seen from both sides
   }),
   hoveredFace: new THREE.MeshStandardMaterial({
     color: 0x33d0ff,
