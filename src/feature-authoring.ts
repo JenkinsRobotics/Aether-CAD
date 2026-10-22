@@ -4,6 +4,7 @@ const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "
 import { mountConstructionCommands } from "./construction-commands";
 import { mountSheetMetalCommands } from "./sheet-metal-commands";
 import { mountConfigurationCommands } from "./configurations-window";
+import { mountTimelinePaste } from "./timeline-clipboard-commands";
 import { mountEditHistory, featurePreviewDocument } from "./modeling/edit-history";
 import { mountFeaturePreview } from "./modeling/feature-preview";
 import { openProjectionEditor } from "./sketch/projection-editor";
@@ -45,6 +46,7 @@ export function mountFeatureAuthoring(
   mountConstructionCommands(getDocument, apply);
   mountSheetMetalCommands(getDocument);
   mountConfigurationCommands(getDocument, apply);
+  mountTimelinePaste(getDocument, apply);
   const actions = document.createElement("div");
   const error = document.createElement("p");
   error.className = "feature-command-error";

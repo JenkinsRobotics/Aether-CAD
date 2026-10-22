@@ -7,6 +7,8 @@ export const manageWorkspace: CADRibbonWorkspaceDefinition = {
   groups: [
     { id: "manage-project", label: "Project", tools: [
       tool("manage-configurations", "Configurations", "properties", "show-configurations"),
+      tool("manage-copy-features", "Copy features", "copy", "timeline-copy-features"),
+      tool("manage-paste-features", "Paste features", "copy", "timeline-paste-features"),
       tool("manage-templates", "Templates", "document", undefined, projectProducer),
     ] },
     { id: "manage-system", label: "System", tools: [

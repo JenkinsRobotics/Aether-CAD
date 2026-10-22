@@ -915,3 +915,14 @@ the count of users, Export and Import CSV, and a completion datalist on each exp
 The timeline folder rows were stale: the feature tree has created, renamed and dissolved folders
 since the tree organization landed; they are marked parity-ish (no agent command).
 
+### r48 (2026-10-22): timeline copy and paste
+
+Installed; the hole step passed first time with the fresh-preview change.
+
+`copyFeatures` clones chosen features under new identities and inserts them at the marker in
+timeline order; every string in a clone that names a copied feature, or a body one of them made,
+is rewritten to the copy, so a pasted extrude points at the pasted sketch while references outside
+the set stay. Copy features / Paste features commands act on the feature selection. No translate
+yet, and no pasting across documents. The tools harness's hole step now asks for a fresh preview
+after its last value, which is the flake's likely cause.
+

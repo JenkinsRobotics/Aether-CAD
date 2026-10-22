@@ -35,6 +35,7 @@ import { solveAssemblyJob } from "@aether/core/kernel";
 import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
 import { explodedPlacements } from "./startup/assembly-motion";
 import { openMotionStudyWindow } from "./assembly-motion-window";
+import { mountTimelineCopy } from "./timeline-clipboard-commands";
 import {
   beginMateAuthoring,
   registerMateCommands,
@@ -1297,6 +1298,7 @@ async function toggleExplodedView(): Promise<void> {
     setStatus(`Exploded view: ${bodies.length} bodies pushed from the centre. Explode again to assemble.`, "success");
   } catch (error) { setStatus(`Exploded view: ${(error as Error).message}`, "error"); }
 }
+mountTimelineCopy(() => [...selectedFeatureIDs]);
 cadCommands.register("assembly-explode", () => { void toggleExplodedView(); });
 cadCommands.setEnabled("assembly-explode", true);
 cadCommands.register("assembly-motion-study", () => {
