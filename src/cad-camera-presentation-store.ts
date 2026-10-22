@@ -1,3 +1,4 @@
+import { modelStudioEnvironment } from '@aether/assets/themes/rendering/model-studio';
 import type { StandardCameraView } from "./camera-view";
 import type {
   ViewportOrientation,
@@ -27,7 +28,7 @@ type ActionHandler = (action: CADCameraPresentationAction) => void;
 
 const initialSnapshot: CADCameraPresentationSnapshot = Object.freeze({
   orientation: Object.freeze([0, 0, 0, 1]) as ViewportOrientation,
-  fieldOfViewDegrees: 42,
+  fieldOfViewDegrees: modelStudioEnvironment.camera.fieldOfViewDegrees,
   projection: "perspective",
   upAxis: "z",
 });

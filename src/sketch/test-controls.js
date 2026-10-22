@@ -30,7 +30,11 @@ export function clickSketchControl(label) {
   if (label === 'Undo' || label === 'Redo') {
     document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: label === 'Redo', bubbles: true, cancelable: true })); return;
   }
-  const accessibleName = label === 'Cancel' ? 'Cancel sketch' : label;
+  // The sketch window's own commit/discard (compact window: Apply / Cancel).
+  const windowAction = { 'Finish sketch': 'accept', 'Cancel': 'discard', 'Cancel sketch': 'discard' }[label];
+  const action = windowAction && document.querySelector(`.cad-sketch-window [data-feature-action="${windowAction}"]`);
+  if (action) { action.click(); return; }
+  const accessibleName = label;
   const find = () => [...document.querySelectorAll('button')].find(b => (b.textContent === label || b.getAttribute('aria-label') === accessibleName) && !b.closest('[hidden]'));
   let button = find();
   if (!button) {

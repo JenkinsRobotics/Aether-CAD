@@ -24,7 +24,7 @@ it('draws separate X/Y ground axes, changes to X/Z in Y-up, and keeps grid geome
   expect(x.geometry.instanceCount).toBe(1); expect(cross.geometry.instanceCount).toBe(1);
   const geometry = cross.geometry; grid.setUpAxis('y'); grid.apply(r);
   expect(cross.geometry).toBe(geometry); expect(cross.material.color.getHex()).toBe(0x0000ff);
-  grid.apply(resolveAppearance({...defaultCADAppearance, gridAxisColor:'#123456'}));
+  grid.apply(resolveAppearance({...defaultCADAppearance, gridAxisColor:'#123456',gridXAxisColor:undefined,gridYAxisColor:undefined,gridZAxisColor:undefined}));
   expect(x.material.color.getHex()).toBe(0x123456); expect(cross.material.color.getHex()).toBe(0x123456);
 });
 
@@ -34,7 +34,7 @@ it('positions key/fill/rim lights in modeling coordinates and clamps unsafe save
   expect(Math.hypot(...z)).toBeCloseTo(10); expect(z[2]).toBeCloseTo(5);
   expect(y).toEqual([z[0], z[2], -z[1]]);
   const a = normalizeCADAppearance({keyLightElevationDegrees:120,fillLightAzimuthDegrees:-720,rimLightAzimuthDegrees:Infinity});
-  expect(a.keyLightElevationDegrees).toBe(90); expect(a.fillLightAzimuthDegrees).toBe(-180); expect(a.rimLightAzimuthDegrees).toBeUndefined();
+  expect(a.keyLightElevationDegrees).toBe(90); expect(a.fillLightAzimuthDegrees).toBe(-180); expect(a.rimLightAzimuthDegrees).toBe(defaultCADAppearance.rimLightAzimuthDegrees);
 });
 
 it('keeps standard palette colors unchanged as exposure adjusts lights, and captures the transform in presets', () => {

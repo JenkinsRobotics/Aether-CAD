@@ -5,6 +5,7 @@ export const drawingConstraintKinds = [
   "horizontal",
   "vertical",
   "parallel",
+  "collinear",
   "perpendicular",
   "concentric",
   "equal",
@@ -54,7 +55,7 @@ export interface DrawingConstraint {
   id: string;
   kind: DrawingConstraintKind;
   /** Associative external curve/plane contact; no point snapshot is saved. */
-  source?: import('../../../../freecad-engine/browser/pierce-reference').SketchPierceReference;
+  source?: import('../reference/pierce-reference').SketchPierceReference;
   a: SketchEntityRef;
   b?: SketchEntityRef;
   /** Live symmetry line; participates in geometry reference remapping. */

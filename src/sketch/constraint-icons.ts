@@ -14,7 +14,9 @@ import curvature from "@aether/assets/icons/relationships/curvature.svg?raw";
 import pierce from "@aether/assets/icons/intersection.svg?raw";
 
 /** Shared vector artwork; no font metrics, engine semantics or copied paths. */
-export const constraintIcons = {coincident, pierce, concentric, parallel, tangent, horizontal, vertical, perpendicular, equal, midpoint, normal, symmetric, fix, curvature} as const;
+/** Collinear: two dashes on one line (no shared asset yet; drawn here in the relationship icon style). */
+const collinear = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="21" y2="12"/><line x1="2" y1="18" x2="22" y2="6" stroke-dasharray="2 3" opacity="0.5"/></svg>';
+export const constraintIcons = {coincident, pierce, concentric, parallel, collinear, tangent, horizontal, vertical, perpendicular, equal, midpoint, normal, symmetric, fix, curvature} as const;
 export type ConstraintIconName = keyof typeof constraintIcons;
 
 export function constraintIcon(name: ConstraintIconName, owner: Document): SVGSVGElement {

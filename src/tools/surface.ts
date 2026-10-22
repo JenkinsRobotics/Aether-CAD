@@ -1,6 +1,6 @@
 /** Surface — Fusion's SURFACE tab. Open, zero-thickness geometry.
  *
- *  None of it is wired: FreeCAD has a Surface workbench, but `freecad-translate`
+ *  None of it is wired: the engine has no surface features, and the evaluator
  *  emits no surface features and `worker.py` builds none, so every tool here is
  *  greyed and says so. The tab exists because the taxonomy is the taxonomy —
  *  a Design workspace has a Surface tab — not because it works.

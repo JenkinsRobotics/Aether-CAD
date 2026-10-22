@@ -125,6 +125,7 @@ it("leaves text-field clipboard behavior alone and discards an async read after 
   expect(event(input, "paste", payload()).e.defaultPrevented).toBe(false);
   let resolve;
   vi.stubGlobal("navigator", {
+    userAgent: "jsdom",
     clipboard: {
       readText: () =>
         new Promise((r) => {

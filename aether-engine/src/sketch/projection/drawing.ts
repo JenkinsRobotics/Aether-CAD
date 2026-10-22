@@ -1,5 +1,5 @@
 import { collapsedConicPoints, collapsedInterval } from "./collapsed-conic";
-import { projectConic } from '../../../../freecad-engine/browser/conic-geometry';
+import { projectConic } from '../reference/conic-geometry';
 import { solveDrawingConstraints } from "../drawing-constraints";
 import {
   validateSketchDrawing,

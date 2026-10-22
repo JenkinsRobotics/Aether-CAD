@@ -2,7 +2,6 @@ import { createRequire } from 'node:module';
 import { beforeAll, beforeEach, afterAll, afterEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { fitSketchSpline, constrainFitSpline } from '@aether/core/sketch';
-import { translateDocument } from '../freecad-translate';
 import { clickSketchControl as click, querySketchControl as q } from './test-controls';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, open, commands, doc, apply;
@@ -45,22 +44,6 @@ async function finishToExtrude() {
   await vi.waitFor(()=>expect(document.querySelector('[aria-label="Selected profiles"]')?.value).toBe('[{"featureId":"s","contourIndex":0}]'));
   return document.querySelector('.cad-feature-dialog');
 }
-it('fills and picks a spline closed by a separate line, then saves an exact joined Extrude', async () => {
-  const {svg,pointer}=sketch();
-  expect(svg.querySelectorAll('.derived-region')).toHaveLength(1);
-  pointer('pointerdown',60,40);pointer('pointerup',60,40);pointer('click',60,40);
-  expect(svg.querySelector('.derived-region').classList.contains('sketch-region-selected')).toBe(true);
-  const panel=await finishToExtrude();
-  expect(panel.querySelectorAll('.aui-feature-entity')).toHaveLength(1);
-  panel.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
-  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(2));
-  const reopened=parsePartDocument(serializePartDocument(doc));
-  expect(reopened.features[0].profile.contours).toHaveLength(2);
-  expect(reopened.features[0].profile.constraints.filter(c=>c.kind==='spline-shape')).toHaveLength(1);
-  expect(reopened.features[1].profileRegion.contourIds).toHaveLength(2);
-  expect(translateDocument(reopened).complete).toBe(true);
-  expect(translateDocument(reopened).features.map(f=>f.kind)).toEqual(['sketch-wire','sketch-wire','sketch-region','pad']);
-});
 it('automatically hands over the joined face without an interior click, and Cancel saves no feature IDs', async () => {
   sketch(); const panel=await finishToExtrude(), before=structuredClone(doc);
   panel.querySelector('[aria-label="Cancel"]').click();

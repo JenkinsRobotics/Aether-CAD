@@ -15,6 +15,8 @@ beforeAll(async () => {
   vi.stubGlobal('ResizeObserver',class { observe() {} disconnect() {} unobserve() {} });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
   Shell=(await import('./AetherCADShell')).AetherCADShell;
+  // These routing checks exercise History through the aux toolbar, an opt-in button (Settings › Layout).
+  (await import('../aux-toolbar-preferences')).setAuxToolbarItem('history', true);
 });
 beforeEach(async () => {
   cadPresentation.patch({partOpen:true,activePanel:'items',startScreen:'workspace',workspaceMode:'modeling',workspaceLayout:'docked',panelPlacements:{browser:'docked',inspector:'docked',bottom:'hidden'}});
@@ -30,16 +32,19 @@ beforeEach(async () => {
 });
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
-const railButton = label => [...container.querySelectorAll('.aui-tabbed-sidebar-tabs button')].find(b=>b.getAttribute('aria-label')===label);
+const railButton = label => [...container.querySelectorAll('.aui-tabbed-sidebar-tabs button, .aui-studio-aux-toolbar button')].find(b=>b.getAttribute('aria-label')===label);
 async function click(label){const button=railButton(label);expect(button).toBeTruthy();await act(async()=>button.click());}
 // Exiting shared panels remain painted briefly but are no longer presented or interactive.
 function isVisible(node) { return !!node && !node.closest('[hidden], [aria-hidden="true"], [inert]'); }
 it('retains the same camera navigation through sketch entry and exit', async()=>{
-  const cube=container.querySelector('#view-cube');
+  const cameraButton=container.querySelector('[aria-label="Camera view"]');
+  await act(async()=>cameraButton.click());
+  const cube=document.querySelector('#view-cube');
   expect(cube).toBeTruthy();
   for(const editing of [true,false,true,false]) {
     await act(async()=>window.dispatchEvent(new window.CustomEvent('aether-sketch-mode',{detail:editing})));
-    expect(container.querySelector('#view-cube')).toBe(cube);
+    expect(document.querySelector('#view-cube')).toBe(cube);
+    expect(container.querySelector('[aria-label="Camera view"]')).toBe(cameraButton);
     expect(isVisible(cube)).toBe(true);
   }
 });
@@ -59,7 +64,8 @@ it('keeps the pinned Feature tree beside History and Version control, which repl
 it('ribbon category changes preserve the chosen left view and right appearance is independent',async()=>{
   await click('History');
   for(const label of ['Solid','Surface','Manage','Output']) {
-    const tab=container.querySelector(`.aui-workspace-ribbon-tabs [aria-label="${label}"]`);
+    await act(async()=>container.querySelector('[aria-label^="Tool category:"]').click());
+    const tab=[...document.querySelectorAll('[role="menuitemradio"]')].find(button=>button.textContent===label);
     expect(tab).toBeTruthy();await act(async()=>tab.click());
     expect(isVisible(container.querySelector('[aria-label="Feature history sidebar"]'))).toBe(true);
     expect(cadPresentation.snapshot().activePanel).toBe('items');
@@ -151,59 +157,48 @@ it('shows under-defined badges in the Feature tree and updates each sketch indep
 it.each(['suite','classic'])('floating %s rails keep the feature tree alongside one auxiliary and one properties panel', async(theme)=>{
   if(theme==='classic') {
     await act(async()=>root.unmount());
-    localStorage.setItem('aether-cad-chrome-theme','classic');
+    localStorage.setItem('aether-cad.chrome.studio-v1','classic');
     const {createRoot}=await import('react-dom/client');root=createRoot(container);
     await act(async()=>root.render(<Shell/>));
-    localStorage.removeItem('aether-cad-chrome-theme');
+    localStorage.removeItem('aether-cad.chrome.studio-v1');
   }
   await act(async()=>cadPresentation.patch({workspaceLayout:'expanded'}));
-  const left=['Features and parts','Version control','Create version','Comments','Document notes','Reminders','AI advisor','Action items',...(theme==='suite'?['History']:[])];
+  // Studio zones: the aux toolbar holds only the chosen aux items (Settings › Layout);
+  // the feature tree is the standard left column and never one of its buttons.
+  const left=['Comments','AI advisor','Version control',...(theme==='suite'?['History']:[])];
   expect(container.querySelector('[aria-label="Left sidebar"] [aria-label="Part manager"]')).toBeNull();
-  const right=['Properties','Configurations','Assembly','Measure and inspect','Material properties','Rendering environment','Camera and display','Performance'];
+  for(const label of ['Features and parts','Document notes','Reminders','Create version']) expect(railButton(label)).toBeUndefined();
+  const right=['Properties','Configurations','Assembly','Inspect','Material properties','Rendering environment','Camera and display','Performance'];
   const active=labels=>labels.filter(label=>railButton(label)?.getAttribute('aria-pressed')==='true');
-  const visiblePanels=side=>[...container.querySelectorAll(`[aria-label="${side} sidebar"] .aui-shell-panel`)].filter(isVisible);
-  for(const label of left.slice(1).filter(label=>label!=="Create version")) {
+  const tree=()=>container.querySelector('[data-panel="items"]');
+  const visiblePanels=side=>[...container.querySelectorAll(`[aria-label="${side} sidebar"] .aui-shell-panel, .aui-studio-aux-sidebar .aui-shell-panel`)].filter(isVisible).filter(panel=>!panel.contains(tree()));
+  const itemTree=tree();
+  for(const label of left) {
     await click(label);
-    expect(active(left)).toEqual(['Features and parts',label]);
+    expect(active(left)).toEqual([label]);
     expect(active(right)).toEqual(['Properties']);
     expect(visiblePanels('Left')).toHaveLength(1);
+    expect(isVisible(tree())).toBe(true);
   }
-  await click('Create version');
-  expect(active(left)).toEqual(['Features and parts',left.at(-1)]);
-  const dialog=document.querySelector('[role="dialog"][aria-label^="Create version from"]');
-  expect(dialog).not.toBeNull();
-  await act(async()=>dialog.querySelector('[aria-label="Close"]').click());
   for(const label of right.slice(1)) {
     await click(label);
     expect(active(right)).toEqual([label]);
-    expect(active(left)).toEqual(['Features and parts',left.at(-1)]);
-    expect(visiblePanels('Right')).toHaveLength(1);
+    expect(active(left)).toEqual([left.at(-1)]);
+    expect(isVisible(tree())).toBe(true);
   }
   // Switching retains portal content rather than creating a second panel copy.
-  const itemTree=container.querySelector('[data-panel="items"]');
-  await click('Features and parts');
-  expect(container.querySelector('[data-panel="items"]')).toBe(itemTree);
-  expect(isVisible(itemTree)).toBe(false);
-  expect(active(left)).toEqual([left.at(-1)]);
-  await click('Features and parts');
-  expect(isVisible(itemTree)).toBe(true);
-  await click('Features and parts');
+  expect(tree()).toBe(itemTree);
   await click(left.at(-1));
   expect(active(left)).toEqual([]);
   expect(active(right)).toEqual(['Performance']);
+  expect(isVisible(tree())).toBe(true);
   await click('Comments');
-  // Combined cards close from their active tab; they have no float/close chrome.
+  // Aux cards close from the aux toolbar; they have no float/close chrome.
   expect(container.querySelector('[aria-label="Close Comments"]')).toBeNull();
   expect(container.querySelector('[aria-label="Float Comments"]')).toBeNull();
   await click('Comments');
   expect(active(left)).toEqual([]);
-  expect(active(right)).toEqual(['Performance']);
-  expect(visiblePanels('Left')).toHaveLength(0);
-  await click('Comments');
-  await click('Document notes');
-  expect(container.querySelector('[aria-label="Move Comments"]')).toBeNull();
-  expect(active(left)).toEqual(['Document notes']);
-  expect(active(right)).toEqual(['Performance']);
+  expect(isVisible(tree())).toBe(true);
 });
 
 /**
@@ -308,7 +303,7 @@ it('exposes the real shared appearance palette and drives body color', async () 
 });
 
 
-it('presents real parts with persistent controls and reopens appearance from their swatches', async () => {
+it('presents real parts with shared tree controls and opens appearance from their context menu', async () => {
   const actions = [];
   const unregister = cadWorkspace.registerActionHandler(action => actions.push(action));
   await act(async () => cadWorkspace.publish({...cadWorkspace.snapshot(),
@@ -321,28 +316,28 @@ it('presents real parts with persistent controls and reopens appearance from the
   }));
   const parts = container.querySelector('.cad-parts-panel');
   expect(parts.textContent).toContain('Parts (2)');
-  expect(parts.querySelectorAll('.aui-listbox-description')).toHaveLength(2);
-  expect(parts.textContent).toContain('Custom appearance');
+  expect(parts.querySelectorAll('.aui-listbox-description')).toHaveLength(0);
+  expect(parts.querySelector('.cad-part-appearance-swatch')).toBeNull();
+  expect(parts.querySelectorAll('[role=treeitem]')).toHaveLength(2);
   const visibility = parts.querySelector('[aria-label="Hide Mounting plate"]');
   expect(visibility).toBeTruthy();
   await act(async()=>visibility.click());
   expect(actions.at(-1)).toEqual({type:'item-action',id:'feature/body/plate',actionID:'body-visibility'});
   expect(actions.some(action=>action.type==='select-item')).toBe(false);
-  const row = parts.querySelector('[role="option"]');
+  const row = parts.querySelector('[role="treeitem"]');
   await act(async()=>row.dispatchEvent(new KeyboardEvent('keydown',{key:'F2',bubbles:true})));
   expect(actions.at(-1)).toEqual({type:'item-action',id:'feature/body/plate',actionID:'body-rename'});
-  const swatch = parts.querySelector('[aria-label="Preview appearance for Mounting plate"]');
-  await act(async()=>swatch.click());
+  const openAppearance = async () => {
+    await act(async()=>row.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:30,clientY:700})));
+    const appearance=[...document.querySelectorAll('[role="menuitem"]')].find(item=>item.textContent.includes('appearance'));
+    expect(appearance).toBeTruthy();await act(async()=>appearance.click());
+  };
+  await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
   await click('Material properties');
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(false);
-  await act(async()=>swatch.click());
+  await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
-  const {cadAppearance} = await import('../cad-appearance-store');
-  const original = cadAppearance.snapshot().bodyColor;
-  await act(async()=>cadAppearance.dispatch({type:'set-body-color',color:'#ff3045'}));
-  expect(parts.querySelector('.cad-part-appearance-swatch').style.backgroundColor).toBe('rgb(255, 48, 69)');
-  await act(async()=>cadAppearance.dispatch({type:'set-body-color',color:original}));
   unregister();
 });
 
@@ -360,6 +355,9 @@ it('adds pinnable support shortcuts and routes layout controls to real panels', 
   const header=container.querySelector('.aui-workspace-quick-controls');
   await act(async()=>header.querySelector('[aria-label="Comments"]').click());
   expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(true);
+  await act(async()=>header.querySelector('[aria-label="Comments"]').click());
+  expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
+  await act(async()=>header.querySelector('[aria-label="Comments"]').click());
   await act(async()=>header.querySelector('[aria-label="Reminders"]').click());
   expect(isVisible(container.querySelector('section[aria-label="Reminders"]'))).toBe(true);
   expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
@@ -371,7 +369,7 @@ it('adds pinnable support shortcuts and routes layout controls to real panels', 
   await act(async()=>document.querySelector('[aria-label="Close workspace layout"]').click());
 });
 
-it('formats inspector quantities and picked-point distances in document units',async()=>{
+it('formats inspector quantities in document units',async()=>{
   const {applyDocumentUnits,documentUnits}=await import('../document-preferences');
   const {cadSelection}=await import('../cad-selection-store');
   const original=documentUnits();
@@ -383,12 +381,11 @@ it('formats inspector quantities and picked-point distances in document units',a
       cadWorkspace.publish({...cadWorkspace.snapshot(),inspectorSections:[{id:'parameters',label:'Dimensions',properties:[{id:'width',label:'Width',value:'25.4 mm',quantity:{si:.0254,family:'length'}}]}]});
       cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'part',kind:'vertex',label:'A'},{id:'b',partId:'part',kind:'vertex',label:'B'}]});
     });
-    await click('Measure and inspect');
-    const measurements=container.querySelector('[aria-label="Selected point measurement"]');
-    expect(measurements.textContent).toContain('1.000 in');
-    expect(container.querySelector('[aria-label="Exact model inspection"]').textContent).toContain('1.000 in');
+    await click('Inspect');
+    const inspection=container.querySelector('[aria-label="Exact model inspection"]');
+    expect(inspection.textContent).toContain('1.000 in');
     await act(async()=>applyDocumentUnits({length:{unit:'mm',decimals:2}}));
-    expect(measurements.textContent).toContain('25.40 mm');
+    expect(inspection.textContent).toContain('25.40 mm');
   } finally {
     window.removeEventListener('aether-plane-geometry-request',respond);
     await act(async()=>{applyDocumentUnits(original);cadSelection.dispatch({type:'clear'});});
@@ -413,71 +410,6 @@ it('switches the camera projection through the viewer action and disables perspe
     await act(async()=>{projection.value='perspective';projection.dispatchEvent(new Event('change',{bubbles:true}));});
     expect(fov.disabled).toBe(false);
   } finally {release();await act(async()=>cadCameraPresentation.setProjection('perspective'));}
-});
-
-it('shows one exact vertex position and clears it when selection changes',async()=>{
-  const {applyDocumentUnits,documentUnits}=await import('../document-preferences');
-  const {cadSelection}=await import('../cad-selection-store');
-  const original=documentUnits();
-  const respond=()=>window.dispatchEvent(new window.CustomEvent('aether-plane-geometry',{detail:{points:cadSelection.snapshot().items.length?[{label:'Vertex A',positionMillimeters:[25.4,-50.8,0]}]:[]}}));
-  window.addEventListener('aether-plane-geometry-request',respond);
-  try {
-    await act(async()=>{
-      applyDocumentUnits({length:{unit:'in',decimals:3}});
-      cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'part',kind:'vertex',label:'A'}]});
-    });
-    await click('Measure and inspect');
-    const measurements=container.querySelector('[aria-label="Selected point measurement"]');
-    expect(measurements.textContent).toContain('X position');
-    expect(measurements.textContent).toContain('1.000 in');
-    expect(measurements.textContent).toContain('-2.000 in');
-    await act(async()=>cadSelection.dispatch({type:'clear'}));
-    expect(measurements.textContent).not.toContain('X position');
-  } finally {
-    window.removeEventListener('aether-plane-geometry-request',respond);
-    await act(async()=>{applyDocumentUnits(original);cadSelection.dispatch({type:'clear'});});
-  }
-});
-
-it('shows native circular-edge center spacing, radius and edge lengths in document units',async()=>{
- const {applyDocumentUnits,documentUnits}=await import('../document-preferences');
- const {cadSelection}=await import('../cad-selection-store');
- const original=documentUnits();
- const respond=()=>window.dispatchEvent(new window.CustomEvent('aether-plane-geometry',{detail:{points:[],measurements:[
-  {id:'a',kind:'edge',label:'Circle A',lengthMillimeters:50.8,radiusMillimeters:12.7,centerMillimeters:[0,0,0]},
-  {id:'b',kind:'edge',label:'Circle B',lengthMillimeters:50.8,radiusMillimeters:12.7,centerMillimeters:[25.4,0,0]},
- ]}}));
- window.addEventListener('aether-plane-geometry-request',respond);
- try {
-  await act(async()=>{applyDocumentUnits({length:{unit:'in',decimals:3}});cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'part',kind:'edge',label:'A'},{id:'b',partId:'part',kind:'edge',label:'B'}]});});
-  await click('Measure and inspect');
-  const grid=container.querySelector('[aria-label="Selected topology measurements"]');
-  expect(grid.textContent).toContain('Center-to-center');expect(grid.textContent).toContain('1.000 in');
-  expect(grid.textContent).toContain('Radius');expect(grid.textContent).toContain('0.500 in');
-  expect(grid.textContent).toContain('Edge length');expect(grid.textContent).toContain('2.000 in');
-  await act(async()=>cadSelection.dispatch({type:'clear'}));expect(grid.textContent).not.toContain('Center-to-center');
- }finally{window.removeEventListener('aether-plane-geometry-request',respond);await act(async()=>{applyDocumentUnits(original);cadSelection.dispatch({type:'clear'});});}
-});
-
-it('shows native angular inspection in document units and clears stale or unsupported geometry',async()=>{
- const {applyDocumentUnits,documentUnits}=await import('../document-preferences');
- const {cadSelection}=await import('../cad-selection-store');
- const original=documentUnits();
- let measurements=[{id:'a',label:'A',kind:'edge',linearDirection:[1,0,0]}, {id:'b',label:'B',kind:'edge',linearDirection:[1,1,0]}];
- const respond=()=>window.dispatchEvent(new window.CustomEvent('aether-plane-geometry',{detail:{points:[],measurements}}));
- window.addEventListener('aether-plane-geometry-request',respond);
- try {
-  await act(async()=>{applyDocumentUnits({angle:{unit:'deg',decimals:2}});cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'part',kind:'edge',label:'A'},{id:'b',partId:'part',kind:'edge',label:'B'}]});});
-  await click('Measure and inspect');
-  const grid=container.querySelector('[aria-label="Selected topology measurements"]');
-  expect(grid.textContent).toContain('Angle between straight edges');expect(grid.textContent).toContain('45.00 deg');
-  await act(async()=>applyDocumentUnits({angle:{unit:'rad',decimals:4}}));
-  expect(grid.textContent).toContain('0.7854 rad');
-  await act(async()=>{measurements=[{id:'a',label:'A',kind:'edge',linearDirection:[1,0,0]},{id:'b',label:'Arc',kind:'edge',radiusMillimeters:5}];window.dispatchEvent(new Event('aether-part-updated'));});
-  expect(grid.textContent).not.toContain('Angular measurement');
-  await act(async()=>{measurements=[];window.dispatchEvent(new Event('aether-part-updated'));});
-  expect(grid.textContent).not.toContain('Radius');
- }finally{window.removeEventListener('aether-plane-geometry-request',respond);await act(async()=>{applyDocumentUnits(original);cadSelection.dispatch({type:'clear'});});}
 });
 
 it('opens related rendering tools repeatedly without leaving the assembly workspace',async()=>{

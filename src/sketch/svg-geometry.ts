@@ -1,5 +1,5 @@
 import type { SketchPoint, SketchContour } from "@aether/core/sketch";
-import { conicDisplayPolyline } from '../../freecad-engine/browser/conic-geometry';
+import { conicDisplayPolyline } from '@aether/core/sketch/reference/conic-geometry';
 import { arcPath } from '@aether/sketch';
 export { arcPath } from '@aether/sketch';
 export function contourPath(c: Extract<SketchContour, { type: "path" }>) {

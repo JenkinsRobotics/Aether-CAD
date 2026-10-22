@@ -13,6 +13,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
+def refused(error):
+    """Refusals carry kind "invalid" and, at most, a short CAD-authored reason without paths."""
+    message = error.get("message", "")
+    return error.get("kind") == "invalid" and set(error) <= {"kind", "message"} and "/" not in message and len(message) <= 500
+
+
 
 def joined_part(height=10):
     drawing = {
@@ -90,7 +96,7 @@ def test_depth_edit_preserves_group_and_cancelled_failure_has_no_candidate_bytes
     failed = invoke(tmp_path, broken, "cad.extrude.setdepth", {"feature_id": "e", "depth_mm": 9})
     # The process boundary deliberately redacts document/native error text;
     # the feature translator separately verifies the actionable repair message.
-    assert failed["error"] == {"kind": "invalid"}
+    assert refused(failed["error"])
     assert "content" not in failed
     assert source["features"][1]["distanceMillimeters"] == 6
 

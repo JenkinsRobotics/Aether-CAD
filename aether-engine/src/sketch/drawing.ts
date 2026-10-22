@@ -1,5 +1,5 @@
 import { validateTextItems, type SketchTextItem } from "./text/records";
-import { validateConic } from '../../../freecad-engine/browser/conic-geometry';
+import { validateConic } from './reference/conic-geometry';
 import { validatePatternGroups } from "./pattern-groups";
 import {
   solveDrawingConstraints,
@@ -8,7 +8,7 @@ import {
 /** Persisted freeform sketch geometry. All coordinates are millimeters. */
 export type SketchPoint = [number, number];
 export type SketchSegment = { id?: string; endVertexId?: string } & (
-  | import('../../../freecad-engine/browser/conic-geometry').ConicSegment
+  | import('./reference/conic-geometry').ConicSegment
   | {
       type: "ellipse";
       end: SketchPoint;
@@ -41,6 +41,9 @@ export type SketchContour = { sourceLayer?: string } & (
       segments: SketchSegment[];
       hole?: boolean;
       construction?: boolean;
+      /** SolidCraft's infinite line: a one-line construction path drawn across the
+       *  whole view through its two points. The points stay the solver's entities. */
+      infinite?: boolean;
     }
 );
 export interface SketchDrawing {
@@ -50,7 +53,7 @@ export interface SketchDrawing {
   /** Resolved read-only editor context. Never persisted in a Part document. */
   projectionContext?: SketchContour[];
   /** Resolved read-only source contacts. Never persisted in a Part document. */
-  pierceContext?: import('../../../freecad-engine/browser/pierce-context').PierceContext;
+  pierceContext?: import('./reference/pierce-context').PierceContext;
   textItems?: SketchTextItem[];
   patternGroups?: Record<string, import("./pattern-groups").SketchPatternGroup>;
 }
@@ -102,6 +105,8 @@ export function validateSketchDrawing(input: SketchDrawing) {
     }
     if (c.construction !== undefined && typeof c.construction !== "boolean")
       throw new Error("Construction flag must be boolean.");
+    if (c.type === "path" && c.infinite !== undefined && (typeof c.infinite !== "boolean" || (c.infinite && (c.segments.length !== 1 || c.segments[0].type !== "line" || !c.construction))))
+      throw new Error("An infinite line is a single construction line.");
     if (c.type === "circle") {
       point(c.center);
       if (!Number.isFinite(c.radius) || c.radius <= 0)

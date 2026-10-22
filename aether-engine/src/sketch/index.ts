@@ -55,6 +55,10 @@ export { editSketchSelection } from "./operations/selection-edit";
 export * from "./arc-geometry";
 
 export * from "./operations/split";
+export * from "./operations/break";
+export * from "./operations/infinite";
+export * from "./operations/regular-polygon";
+export * from "./operations/chain";
 export * from "./operations/insert-spline-point";
 export * from "./operations/spline-handle";
 
@@ -217,3 +221,6 @@ export { copySketchContours } from "./operations/transform";
 export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines } from "./sample";
 
 export { contourNestingDepths } from "./regions/nesting";
+export { autoConstrainDrawing } from "./operations/auto-constrain";
+export { sketchDrawingToDXF } from "./export/dxf";
+export { looseEnds } from "./operations/loose-ends";

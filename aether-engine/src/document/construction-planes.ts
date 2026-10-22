@@ -34,6 +34,18 @@ export interface AxisReference {
   label?: string;
   originMillimeters: [number, number, number];
   directionMillimeters: [number, number, number];
+  /** The edge's length, when it is straight; lets a plane sit at a fraction along it. */
+  lengthMillimeters?: number;
+}
+
+/** A point on a curved face with the surface normal there, captured at pick time. */
+export interface SurfacePointReference {
+  kind: "surface-point";
+  partId: string;
+  faceId: number;
+  label?: string;
+  pointMillimeters: [number, number, number];
+  normalMillimeters: [number, number, number];
 }
 
 export type PlaneDefinition =
@@ -42,7 +54,15 @@ export type PlaneDefinition =
   /** Onshape "Three point": the plane through three non-collinear points. */
   | { method: "three-point"; points: [PointReference, PointReference, PointReference]; flip?: boolean }
   /** Onshape "Angle": through an edge, at an angle to a reference plane. */
-  | { method: "angle"; axis: AxisReference; reference: PlaneReference; angleDegrees: number; flip?: boolean };
+  | { method: "angle"; axis: AxisReference; reference: PlaneReference; angleDegrees: number; flip?: boolean }
+  /** SolidCraft "Perpendicular Plane": holds the edge and is square to the reference plane. */
+  | { method: "perpendicular"; axis: AxisReference; reference: PlaneReference; flip?: boolean }
+  /** SolidCraft "Plane Through Two Edges": the plane two straight edges share. */
+  | { method: "two-edges"; axes: [AxisReference, AxisReference]; flip?: boolean }
+  /** SolidCraft "Tangent Plane": touches a curved face at the picked point. */
+  | { method: "tangent"; surface: SurfacePointReference; flip?: boolean }
+  /** SolidCraft "Plane Along Path": square to a straight edge at a fraction along it. */
+  | { method: "along-path"; axis: AxisReference; t: number; flip?: boolean };
 
 export interface ConstructionPlaneFeature {
   id: string;
@@ -191,6 +211,37 @@ export function resolvePlaneFrame(
       xDirection: canonicalPlaneXDirection(unit),
     });
   }
+  const unitOf = (v: readonly number[], what: string): [number, number, number] => { const l = Math.hypot(v[0], v[1], v[2]); if (l < 1e-9) throw new Error(`${feature.name}: ${what} has no direction.`); return [v[0] / l, v[1] / l, v[2] / l]; };
+  const crossOf = (u: readonly number[], v: readonly number[]): [number, number, number] => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  if (definition.method === "perpendicular") {
+    const d = unitOf(definition.axis.directionMillimeters, "the edge"), base = frameOf(definition.reference);
+    const normal = crossOf(d, base.normal), length = Math.hypot(...normal);
+    if (length < 1e-9) throw new Error(`${feature.name}: the edge is square to the reference plane already; choose another plane.`);
+    const unit = normal.map((c) => c / length) as [number, number, number];
+    return maybeFlip({ originMillimeters: [...definition.axis.originMillimeters], normal: unit, xDirection: canonicalPlaneXDirection(unit) });
+  }
+  if (definition.method === "two-edges") {
+    const [a, b] = definition.axes, da = unitOf(a.directionMillimeters, "the first edge"), db = unitOf(b.directionMillimeters, "the second edge");
+    let normal = crossOf(da, db);
+    if (Math.hypot(...normal) < 1e-9) normal = crossOf(da, [b.originMillimeters[0] - a.originMillimeters[0], b.originMillimeters[1] - a.originMillimeters[1], b.originMillimeters[2] - a.originMillimeters[2]]);
+    const length = Math.hypot(...normal);
+    if (length < 1e-9) throw new Error(`${feature.name}: the two edges lie on one line and do not define a plane.`);
+    const unit = normal.map((c) => c / length) as [number, number, number];
+    const gap = (b.originMillimeters[0] - a.originMillimeters[0]) * unit[0] + (b.originMillimeters[1] - a.originMillimeters[1]) * unit[1] + (b.originMillimeters[2] - a.originMillimeters[2]) * unit[2];
+    if (Math.abs(gap) > 1e-6) throw new Error(`${feature.name}: the two edges are not in one plane.`);
+    return maybeFlip({ originMillimeters: [...a.originMillimeters], normal: unit, xDirection: canonicalPlaneXDirection(unit) });
+  }
+  if (definition.method === "tangent") {
+    const unit = unitOf(definition.surface.normalMillimeters, "the surface normal");
+    return maybeFlip({ originMillimeters: [...definition.surface.pointMillimeters], normal: unit, xDirection: canonicalPlaneXDirection(unit) });
+  }
+  if (definition.method === "along-path") {
+    const d = unitOf(definition.axis.directionMillimeters, "the path");
+    if (!Number.isFinite(definition.t) || definition.t < 0 || definition.t > 1) throw new Error(`${feature.name}: the path fraction must be between 0 and 1.`);
+    const length = definition.axis.lengthMillimeters ?? 0;
+    const o = definition.axis.originMillimeters, along = (definition.t - 0.5) * length;
+    return maybeFlip({ originMillimeters: [o[0] + d[0] * along, o[1] + d[1] * along, o[2] + d[2] * along], normal: d, xDirection: canonicalPlaneXDirection(d) });
+  }
   const [a, b] = definition.references.map(frameOf);
   const alignment =
     a.normal[0] * b.normal[0] + a.normal[1] * b.normal[1] + a.normal[2] * b.normal[2];
@@ -260,6 +311,20 @@ export function validatePlaneDefinition(
         throw new Error("A three point plane needs three picked points with positions.");
     return;
   }
+  const checkAxis = (axis: AxisReference | undefined, what: string) => {
+    if (axis?.kind !== "axis" || typeof axis.partId !== "string" || typeof axis.candidateId !== "string" || axis.originMillimeters?.length !== 3 || axis.directionMillimeters?.length !== 3 || !axis.originMillimeters.every(Number.isFinite) || !axis.directionMillimeters.every(Number.isFinite))
+      throw new Error(`${what} needs a picked edge with an origin and direction.`);
+    if (axis.lengthMillimeters !== undefined && !(Number.isFinite(axis.lengthMillimeters) && axis.lengthMillimeters > 0)) throw new Error(`${what} has an invalid edge length.`);
+  };
+  if (definition.method === "perpendicular") { checkAxis(definition.axis, "A perpendicular plane"); checkReference(definition.reference); return; }
+  if (definition.method === "two-edges") { if (!Array.isArray(definition.axes) || definition.axes.length !== 2) throw new Error("A plane through two edges needs exactly two edges."); definition.axes.forEach((axis) => checkAxis(axis, "A plane through two edges")); return; }
+  if (definition.method === "tangent") {
+    const sp = definition.surface;
+    if (sp?.kind !== "surface-point" || typeof sp.partId !== "string" || !Number.isInteger(sp.faceId) || sp.pointMillimeters?.length !== 3 || sp.normalMillimeters?.length !== 3 || !sp.pointMillimeters.every(Number.isFinite) || !sp.normalMillimeters.every(Number.isFinite) || !Math.hypot(...sp.normalMillimeters))
+      throw new Error("A tangent plane needs a picked point on a face with its normal.");
+    return;
+  }
+  if (definition.method === "along-path") { checkAxis(definition.axis, "A plane along a path"); if (definition.axis.lengthMillimeters === undefined) throw new Error("A plane along a path needs a straight edge with a length."); if (!Number.isFinite(definition.t) || definition.t < 0 || definition.t > 1) throw new Error("The path fraction must be between 0 and 1."); return; }
   if (definition.method === "angle") {
     const axis = definition.axis;
     if (
@@ -287,3 +352,19 @@ export function validatePlaneDefinition(
     definition.references.forEach(checkReference);
   } else throw new Error("Unknown plane definition method.");
 }
+
+/** A half turn about the frame's own x ("x": y and the normal reverse) or y
+ *  ("y": x and the normal reverse). The origin stays. */
+export function flipSketchFrame(frame: SketchFrame, flip: "x" | "y" | undefined): SketchFrame {
+  if (!flip) return frame;
+  const neg = (v: [number, number, number]): [number, number, number] => [-v[0], -v[1], -v[2]];
+  return { ...frame, normal: neg(frame.normal), xDirection: flip === "y" ? neg(frame.xDirection) : frame.xDirection };
+}
+
+/** The frame a sketch feature lies in as the UI knows it: its explicit frame
+ *  (a face or plane it was started on) or its principal plane and offset, then
+ *  its flip. The evaluator applies the same flip on top of a followed face. */
+export function profileFrame(feature: { plane: SketchPlane; offsetMillimeters?: number; frame?: SketchFrame; flip?: "x" | "y" }): SketchFrame {
+  return flipSketchFrame(feature.frame ?? principalFrame(feature.plane, feature.offsetMillimeters ?? 0), feature.flip);
+}
+

@@ -12,7 +12,7 @@ export function validateExtrusionStartReference(ref:ExtrusionStartReference,earl
  if(ref.kind==='principal'){if(!['XY','XZ','YZ'].includes(ref.plane))fail();return;}
  if(typeof ref.sourceFeatureId!=='string'||!ref.sourceFeatureId.trim()||ref.sourceFeatureId.length>128)return fail();
  const type=earlier.get(ref.sourceFeatureId);
- if(!missing(ref.sourceFeatureId)&&(!type||(ref.kind==='plane'?type!=='plane':['profile','sketch','plane'].includes(type))))return fail();
+ if(!missing(ref.sourceFeatureId)&&(!type||(ref.kind==='plane'?type!=='plane':['profile','sketch','plane','axis','point','thread'].includes(type))))return fail();
  if(ref.kind==='face'){
   validatePlanarFaceAnchor(ref.faceAnchor);
   if(typeof ref.bodyId!=='string'||!ref.bodyId.trim()||ref.bodyId.length>256||!Array.isArray(ref.normal)||ref.normal.length!==3||!ref.normal.every(Number.isFinite)||Math.abs(Math.hypot(...ref.normal)-1)>1e-6)fail();

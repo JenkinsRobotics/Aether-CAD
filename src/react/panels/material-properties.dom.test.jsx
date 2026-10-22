@@ -27,7 +27,7 @@ const click=text=>act(async()=>[...container.querySelectorAll('button,summary')]
 const select=(label,value)=>act(async()=>{const e=container.querySelector(`select[aria-label="${label}"]`);e.value=value;e.dispatchEvent(new Event('change',{bubbles:true}));});
 const type=(label,value)=>act(async()=>{const e=container.querySelector(`input[aria-label="${label}"]`);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,String(value));e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));});
 it('assigns a material only to the selected part, keeps edge styling, and synchronizes gloss with roughness',async()=>{
- await select('Render material','brass');expect(values.a).toMatchObject({color:'#c7a65b',metalness:.85,roughness:.24,edgeWidthPx:3});expect(values.b).toEqual({color:'#224466'});expect(appearance.snapshot().metalness).toBeUndefined();
+ await select('Render material','brass');expect(values.a).toMatchObject({color:'#c7a65b',metalness:.85,roughness:.24,edgeWidthPx:3});expect(values.b).toEqual({color:'#224466'});expect(appearance.snapshot().metalness).toBe((await import('../../cad-appearance-store')).defaultCADAppearance.metalness); // the global recipe is untouched
  await type('Object gloss',90);expect(values.a.roughness).toBeCloseTo(.1);expect(container.querySelector('[aria-label="Object roughness"]').value).toBe('10');
  await select('Object finish','matte');expect(values.a.roughness).toBe(.8);expect(values.a.metalness).toBe(.85);
  await type('Emission color picker','#aa2200');await type('Emission strength',2);expect(values.a).toMatchObject({emissiveColor:'#aa2200',emissiveIntensity:2});

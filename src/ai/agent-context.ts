@@ -10,6 +10,7 @@ export function cadAgentContextText(name:string, workspace:string, interaction:A
     assembly
       ? 'Use assembly_inspect to obtain current reusable Part IDs and a working recipe, then assembly_compose to build and solve it. Recipes append to this Assembly as one edit. Explain unsupported mate or feature requests accurately.'
       : 'Use aether_cad_docs for executable examples. Prefer aether_cad_run_program for a multi-step Part operation so the whole change is one undo step. Build with the native engine, then aether_cad_verify for exact measurements and aether_cad_preview for visible proof. Compare measurements to the requested dimensions; revise if they do not match.',
+    'For an existing-sketch edit, inspect the Part then call sketch_inspect with the original sketch ID. Use sketch_translate or sketch_dimension; do not replace the body or append a duplicate sketch. For centering a rectangle, calculate the midpoint of its local bounds and translate by the negative midpoint, preserving its dimensions and existing extrusion. Verify the rebuilt bounds, center and volume; check that the feature count and IDs are unchanged.',
     'The tools change the open document and use normal undo and autosave. If a tool fails, inspect the returned error and current state before trying a corrected operation. Do not claim success, saving, or verification without its evidence.',
     'Only the tools supplied for this turn are executable. Do not claim full feature, arbitrary-script, drawing, export, or offline support from another CAD product.',
   ].join('\n');

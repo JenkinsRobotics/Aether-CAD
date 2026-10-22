@@ -1,7 +1,7 @@
 import { ellipseLocusResiduals } from "./ellipse-locus";
-import { conicRhoResiduals } from '../../../../freecad-engine/browser/conic-constraints';
-import { splineEndTangentResiduals, validateSplineFreeEnds } from "../../../../freecad-engine/browser/spline-end-tangents";
-import { fixedGeometryResiduals } from "../../../../freecad-engine/browser/fixed-geometry";
+import { conicRhoResiduals } from '../reference/conic-constraints';
+import { splineEndTangentResiduals, validateSplineFreeEnds } from "../reference/spline-end-tangents";
+import { fixedGeometryResiduals } from "../reference/fixed-geometry";
 import { angularSpanDistance } from "../curves/angular-span";
 import { circleContinuityResiduals } from "./circle-continuity";
 import { patternSourceContour } from "./pattern-source";
@@ -29,8 +29,8 @@ import { curveContinuityResiduals } from "./curve-continuity";
 import type { SketchDrawing, SketchPoint } from "../drawing";
 import type { DrawingConstraint } from "./types";
 import { resolve } from "./entities";
-import { pierceResiduals } from '../../../../freecad-engine/browser/pierce-constraints';
-import { validatePierceConstraint } from '../../../../freecad-engine/browser/pierce-context';
+import { pierceResiduals } from '../reference/pierce-constraints';
+import { validatePierceConstraint } from '../reference/pierce-context';
 export function constraintResiduals(
   d: SketchDrawing,
   c: DrawingConstraint,
@@ -169,6 +169,12 @@ export function constraintResiduals(
       if (a.arc) return [p[0] - a.arc.midpoint[0], p[1] - a.arc.midpoint[1]];
       const l = line(a);
       return [p[0] - (l[0][0] + l[1][0]) / 2, p[1] - (l[0][1] + l[1][1]) / 2];
+    }
+    case "collinear": {
+      // Parallel, and b's start on a's line: two equations.
+      const la = line(a), lb = line(b), u = delta(la), v = delta(lb), w: SketchPoint = [lb[0][0] - la[0][0], lb[0][1] - la[0][1]];
+      const scale = Math.max(Math.hypot(...u), 1e-10);
+      return [(u[0] * v[1] - u[1] * v[0]) / Math.max(scale * Math.hypot(...v), 1e-10), (u[0] * w[1] - u[1] * w[0]) / scale];
     }
     case "parallel":
     case "perpendicular":

@@ -6,8 +6,8 @@ import { regenerateSketchTextExpressions } from "../sketch/text/regenerate-expre
 import { resolveProfileDrawing } from "./profile-projection";
 import type { ProfileFeature } from "./solid-features";
 import { insertFeature } from "./feature-history";
-import { withPierceContext } from '../../../freecad-engine/browser/pierce-context';
-import { regenerateUnavailableSketch } from '../../../freecad-engine/browser/regenerate-unavailable-sketch';
+import { withPierceContext } from '../sketch/reference/pierce-context';
+import { regenerateUnavailableSketch } from '../sketch/reference/regenerate-unavailable-sketch';
 import { featureReferenceErrors } from './feature-errors';
 
 /** Atomic document transaction, including suppressed and rolled-back sketches.

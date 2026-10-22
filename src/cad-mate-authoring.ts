@@ -1,6 +1,6 @@
 import type { DOFProjection, MateProjection } from "./cad-assembly-bridge";
 
-export type AssemblyMateTypeID = "fastened" | "revolute" | "prismatic";
+export type AssemblyMateTypeID = "fastened" | "revolute" | "prismatic" | "cylindrical" | "ball" | "planar" | "pin_slot" | "parallel";
 
 export interface AssemblyMateEndpointDraft {
   readonly instanceID: string;
@@ -40,7 +40,12 @@ export interface AssemblyMateDOFEditorDraft {
 export const assemblyMateTypeOptions: readonly { readonly value: AssemblyMateTypeID; readonly label: string }[] = Object.freeze([
   { value: "fastened", label: "Fastened" },
   { value: "revolute", label: "Revolute" },
-  { value: "prismatic", label: "Prismatic" },
+  { value: "prismatic", label: "Slider" },
+  { value: "cylindrical", label: "Cylindrical" },
+  { value: "ball", label: "Ball" },
+  { value: "planar", label: "Planar" },
+  { value: "pin_slot", label: "Pin slot" },
+  { value: "parallel", label: "Parallel" },
 ]);
 
 const emptyEndpoint: AssemblyMateEndpointDraft = Object.freeze({

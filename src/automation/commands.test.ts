@@ -9,7 +9,6 @@ describe('CAD saved command boundary', () => {
     expect(prepareCommand('cad.part.inspect',source,{}).result.features.map(f=>f.id)).toEqual(['sketch','pad']);
     const p=prepareCommand('cad.extrude.preview',source,{feature_id:'pad',depth_mm:8});
     expect(p.changed).toBe(false);expect(p.result).toMatchObject({preview:true});
-    expect(p.features?.at(-1)?.parameters.distance_mm).toBe(8);
     expect(source).toBe(saved());
   });
   it('changes only intended depth, validates persistence, and avoids no-op revisions',()=>{
@@ -44,7 +43,6 @@ it('maps a signed end offset without overwriting the independent starting offset
   const doc=part();Object.assign(doc.features.at(-1)!,{endType:'up-to-next',startingOffsetMillimeters:1});
   const prepared=prepareCommand('cad.extrude.setoffset',serializePartDocument(doc),{feature_id:'pad',end_offset_mm:-2});
   expect(parsePartDocument(prepared.candidate!).features.at(-1)).toMatchObject({endOffsetMillimeters:-2,startingOffsetMillimeters:1});
-  expect(prepared.features?.at(-1)?.parameters).toMatchObject({end_offset_mm:-2,starting_offset_mm:1});
 });
 
 it('requires and persists resolved frames for sketches attached to edited faces', () => {
@@ -75,7 +73,6 @@ it('previews and changes revolve extents with explicit units and no-op detection
   const args={feature_id:'rev',angle_deg:90,second_angle_deg:30,symmetric:false,reversed:true};
   const p=prepareCommand('cad.revolve.preview',source,args);
   expect(p.changed).toBe(false);expect(p.result).toMatchObject({preview:true});
-  expect(p.features?.at(-1)?.parameters).toMatchObject({angle_deg:90,second_angle_deg:30,reversed:true,symmetric:false});
   const saved=prepareCommand('cad.revolve.setextent',source,args);
   expect(saved.changed).toBe(true);
   expect(prepareCommand('cad.revolve.setextent',saved.candidate!,args).changed).toBe(false);

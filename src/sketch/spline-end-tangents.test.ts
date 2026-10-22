@@ -4,8 +4,8 @@ import {
   solveDrawingConstraints, sketchConstraintState, constraintResiduals, copySketchContours,
   type SketchDrawing, type SketchPoint,
 } from '@aether/core/sketch';
-import { enableSplineEndTangent, splineEndTangentShape, validateSplineFreeEnds } from '../../freecad-engine/browser/spline-end-tangents';
-import { fixedEntityConstraint } from '../../freecad-engine/browser/fixed-geometry';
+import { enableSplineEndTangent, splineEndTangentShape, validateSplineFreeEnds } from '@aether/core/sketch/reference/spline-end-tangents';
+import { fixedEntityConstraint } from '@aether/core/sketch/reference/fixed-geometry';
 import { createEmptyPartDocument, serializePartDocument, parsePartDocument } from '@aether/core/document';
 import { insertFitSplinePoint } from '../../aether-engine/src/sketch/operations/insert-fit-spline-point';
 import { segmentPoint } from '../../aether-engine/src/sketch/curves/parameterization';

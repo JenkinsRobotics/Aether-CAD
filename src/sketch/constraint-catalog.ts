@@ -22,6 +22,7 @@ export const sketchConstraintCatalog: readonly SketchConstraintEntry[] = [
   { kind: "pierce", label: "Pierce", icon: "pierce", shortcut: "shift g" },
   { kind: "concentric", label: "Concentric", icon: "concentric", shortcut: "shift o" },
   { kind: "parallel", label: "Parallel", icon: "parallel", shortcut: "b" },
+  { kind: "collinear", label: "Collinear", icon: "collinear", shortcut: "shift b" },
   { kind: "tangent", label: "Tangent", icon: "tangent", shortcut: "t" },
   { kind: "horizontal", label: "Horizontal", icon: "horizontal", shortcut: "h" },
   { kind: "vertical", label: "Vertical", icon: "vertical", shortcut: "v" },

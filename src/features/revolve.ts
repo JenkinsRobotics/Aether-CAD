@@ -1,5 +1,6 @@
 import { regionControls, layoutRegion, selectedRegion } from "./regions";
-import { sketchRegions } from "../freecad-translate";
+import { sketchRegions } from "@aether/core/document";
+import { transformEdgePicker } from "./transform-edge-picker";
 /** Revolve feature editor — window layout, controls, and serialization.
  *  Layout mirrors `core/ui/gallery/features/revolve.ts`: body/boolean tabs, a
  *  regions box, an axis box, then the Full-revolve toggle. */
@@ -40,7 +41,9 @@ export const revolveEditor: FeatureEditor = {
           (doc.features.some((f) => ["extrude", "revolve"].includes(f.type)) ? "add" : "new"),
         [...operationValues],
       ),
+      axisSource: field("Axis source", feature?.axisReference?.kind === "solid-edge" ? "edge" : "principal", ["principal", "edge"]),
       axis: field("Axis", feature?.axis ?? "Z", ["X", "Y", "Z"]),
+      axisEdge: field("Axis edge", JSON.stringify(feature?.axisReference?.kind === "solid-edge" ? feature.axisReference : "")),
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 360)),
       symmetric: field("Symmetric", String(feature?.symmetric ?? false), ["false", "true"]),
       reversed: field("Reverse direction", String(feature?.reversed ?? false), ["false", "true"]),
@@ -57,9 +60,14 @@ export const revolveEditor: FeatureEditor = {
 
     // The gallery shows the axis as its own entity box; this engine picks the
     // axis from a principal-axis list, so it is a row in the same position.
+    controls.axisSource.closest("label")?.remove(); controls.axisSource.setAttribute("form", form.id);
+    win.row("Axis from", controls.axisSource);
     controls.axis.closest("label")?.remove();
     controls.axis.setAttribute("form", form.id);
-    win.row("Revolve axis", controls.axis);
+    const axisRow = win.row("Revolve axis", controls.axis);
+    const edgePicker = transformEdgePicker(context, controls.axisEdge);
+    const syncAxis = () => { const edge = controls.axisSource.value === "edge"; axisRow.hidden = edge; edgePicker.setEnabled(edge); };
+    controls.axisSource.addEventListener("change", syncAxis); syncAxis();
 
     const full = document.createElement("input");
     full.type = "checkbox";
@@ -103,6 +111,7 @@ export const revolveEditor: FeatureEditor = {
       return "Enter positive revolve angles totaling at most 360 degrees.";
     const sketch = context.doc.features.find(feature => feature.id === controls.source.value);
     if (sketch && (!sketchRegions(sketch, false, context.doc.features).length || !controls.region.value)) return "Choose a closed sketch region.";
+    if (controls.axisSource.value === "edge" && !controls.axisEdge.value) return "Pick a straight edge as the revolve axis.";
     return requireSelections(controls, [
       { key: "source", noun: "a sketch region to revolve" },
       { key: "axis", noun: "a revolve axis" },
@@ -111,6 +120,7 @@ export const revolveEditor: FeatureEditor = {
 
   serialize(values, context) {
     return {
+      ...(values.axisSource === "edge" && values.axisEdge ? { axisReference: JSON.parse(values.axisEdge) } : {}),
       profileFeatureId: values.source,
       ...selectedRegion(values, context),
       operation: values.operation,

@@ -1,6 +1,6 @@
 import type { SketchDrawing } from "../drawing";
 import type { SketchEntityRef } from "../drawing-constraints";
-import { remapCirclePierceTargets } from '../../../../freecad-engine/browser/pierce-topology';
+import { remapCirclePierceTargets } from '../reference/pierce-topology';
 /** Reuse original circle relationships after replacing its contour with an arc path. */
 export function remapCircleReferences(
   source: SketchDrawing,

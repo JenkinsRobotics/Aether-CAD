@@ -36,7 +36,7 @@ test('renders the nine original feature windows, not link placeholders', () => {
   expect(sketch.querySelector<HTMLInputElement>('[aria-label="Disable imprinting"]')?.disabled).toBe(true);
   expect(sketch.textContent).not.toContain('Change sketch plane');
   act(()=>sketch.querySelector<HTMLButtonElement>('.aui-feature-entity button')!.click());
-  expect(sketch.querySelector<HTMLButtonElement>('.aui-feature-accept')?.disabled).toBe(true);
+  expect(sketch.querySelector<HTMLButtonElement>('[data-feature-action="accept"]')?.disabled).toBe(true);
 });
 test('search finds an interactive editor and reset restores its input state', () => {
   mount();

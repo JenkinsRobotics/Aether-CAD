@@ -2,7 +2,7 @@
  *
  *  Eleven near-identical registrations: six open a dialog, five act on the
  *  current selection through the controller. They were inline in `main.ts`,
- *  interleaved with the FreeCAD build command and the tool UI.
+ *  interleaved with the engine build command and the tool UI.
  */
 import { cadCommands, type CADCommandID } from "../cad-command-registry";
 import { cadPresentation, type CADStartDialog } from "../cad-presentation-store";

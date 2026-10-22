@@ -6,16 +6,18 @@ import { cadPresentation } from "../../cad-presentation-store";
 import { cadCommands } from "../../cad-command-registry";
 
 const views = ["isometric", "dimetric", "trimetric"] as const;
-const styles: readonly [CADDisplayStyle,string][] = [["shaded-edges","Shaded with edges"],["shaded","Shaded"],["hidden-line","Hidden line"],["wireframe","Wireframe"],["ghost","Translucent"]];
+const styles: readonly [CADDisplayStyle,string][] = [["shaded-edges","Shaded with edges"],["shaded","Shaded"],["hidden-line","Hidden line"],["wireframe","Wireframe"],["ghost","Translucent"],["zebra","Zebra analysis"],["draft-analysis","Draft analysis"]];
 const grounds: readonly [CADFloorMode,string][] = [["none","None"],["grid","Grid"],["floor","Floor"],["both","Grid and floor"]];
 
-export function cameraMenuItems(appearance: CADAppearanceSnapshot, sectionEnabled: boolean): MenuItem[] {
+export function cameraMenuItems(appearance: CADAppearanceSnapshot, sectionEnabled: boolean, projection: "perspective" | "orthographic" = "perspective"): MenuItem[] {
   return [
     {id:"home",label:"Home"},
     ...views.map(view=>({id:view,label:view[0].toUpperCase()+view.slice(1)})),
+    {id:"projection:perspective",label:"Perspective",kind:"radio",checked:projection==="perspective",separatorBefore:true},
+    {id:"projection:orthographic",label:"Orthographic",kind:"radio",checked:projection==="orthographic"},
     {id:"graphics",label:"Graphics preferences…",separatorBefore:true},
     {id:"zoom-to-fit",label:"Zoom to fit",separatorBefore:true},
-    {id:"display",label:styles.find(([id])=>id===appearance.displayStyle)![1],separatorBefore:true,
+    {id:"display",label:styles.find(([id])=>id===appearance.displayStyle)?.[1] ?? "Display",separatorBefore:true,
       children:styles.map(([id,label])=>({id:`display:${id}`,label,kind:"radio",checked:appearance.displayStyle===id}))},
     {id:"edges",label:"Edges visible",kind:"checkbox",checked:appearance.edgesVisible},
     {id:"ground",label:"Ground",children:grounds.map(([id,label])=>({id:`ground:${id}`,label,kind:"radio",checked:appearance.floorMode===id}))},
@@ -27,6 +29,7 @@ export function cameraMenuItems(appearance: CADAppearanceSnapshot, sectionEnable
 export function selectCameraMenuItem(id: string): void {
   const appearance=cadAppearance.snapshot();
   if(id==="home") {cadCameraPresentation.dispatch({type:"fit-isometric"});return;}
+  if(id==="projection:perspective" || id==="projection:orthographic") {cadCameraPresentation.dispatch({type:"set-projection",projection:id==="projection:perspective" ? "perspective" : "orthographic"});return;}
   const view=views.find(view=>view===id);
   if(view) {cadCameraPresentation.dispatch({type:"select-view",view});return;}
   if(id==="zoom-to-fit") {cadCameraPresentation.dispatch({type:"zoom-to-fit"});return;}
@@ -41,8 +44,9 @@ export function selectCameraMenuItem(id: string): void {
 }
 
 export function useCameraMenu() {
+  const camera=useSyncExternalStore(cadCameraPresentation.subscribe,cadCameraPresentation.snapshot,cadCameraPresentation.snapshot);
   const appearance=useSyncExternalStore(cadAppearance.subscribe,cadAppearance.snapshot,cadAppearance.snapshot);
   const commands=useSyncExternalStore(cadCommands.subscribe,cadCommands.snapshot,cadCommands.snapshot);
   const section=commands["part-section"];
-  return {items:cameraMenuItems(appearance,section.enabled && section.registered),onSelect:selectCameraMenuItem};
+  return {items:cameraMenuItems(appearance,section.enabled && section.registered,camera.projection),onSelect:selectCameraMenuItem};
 }

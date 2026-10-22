@@ -2,7 +2,7 @@ import { useCameraMenu } from "./camera-menu";
 /** Camera navigation and the viewport surface itself. */
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
+import { StudioCameraControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { bindViewportContextGesture } from "../../viewport/context-menu-gesture";
 import { cadViewportContext } from "../../viewport/context-menu";
@@ -17,10 +17,9 @@ export function ViewportCameraNavigation() {
     cadCameraPresentation.snapshot,
     cadCameraPresentation.snapshot,
   );
-  return (
-    <ViewportNavigationCube
+  return (<StudioCameraControl projection={camera.projection}><ViewportNavigationCube
       id="view-cube"
-      className="view-cube"
+      appearance="studio"
       orientation={camera.orientation}
       upAxis={camera.upAxis}
       homeMenuItems={menu.items}
@@ -40,7 +39,7 @@ export function ViewportCameraNavigation() {
       onRoll={(quarterTurns) =>
         cadCameraPresentation.dispatch({ type: "roll", quarterTurns })
       }
-    />
+    /></StudioCameraControl>
   );
 }
 

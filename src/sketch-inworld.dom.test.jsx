@@ -11,7 +11,7 @@ beforeAll(async()=>{
  open=(await import('./sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(()=>{document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Part');apply=vi.fn(async next=>{doc=next;});});
-afterEach(()=>{document.querySelector('.cad-sketch-workspace')?.querySelectorAll('button').forEach(b=>{if(b.getAttribute('aria-label')==='Cancel sketch')b.click();});});
+afterEach(()=>{document.querySelector('.cad-sketch-workspace')?.querySelectorAll('button').forEach(b=>{if(b.dataset.featureAction==='discard')b.click();});});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const svgClick=(x,y)=>{document.querySelector('[aria-label="2D sketch canvas"]').dispatchEvent(new dom.window.MouseEvent('click',{clientX:x,clientY:y}));};
 
@@ -87,7 +87,7 @@ it('opens a transient plane in a floating window; discard leaves history unchang
  expect(document.querySelector('dialog')).toBeNull();
  const win=document.querySelector('.cad-plane-window');
  expect(win).toBeTruthy();
- win.querySelector('[aria-label="Discard plane"]').click();
+ win.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
  await vi.waitFor(()=>expect(doc.features).toHaveLength(0));
  expect(document.querySelector('.cad-plane-window')).toBeNull();
  expect(apply).not.toHaveBeenCalled();

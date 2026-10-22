@@ -3,7 +3,7 @@ import {
   type DrawingConstraint, type DrawingConstraintKind, type SketchDrawing, type SketchEntityRef,
 } from '@aether/core/sketch';
 import { sketchConstraintCatalog } from './constraint-catalog';
-import { fixedEntityConstraint, fixedConstraintMatches } from '../../freecad-engine/browser/fixed-geometry';
+import { fixedEntityConstraint, fixedConstraintMatches } from '@aether/core/sketch/reference/fixed-geometry';
 
 export const supportsSelectedConstraint = (kind: string) => kind!=='pierce'&&sketchConstraintCatalog.some(c => c.kind === kind);
 
@@ -81,7 +81,7 @@ export function constrainSketchSelection(
   }
   // Repeating a command must not add the same equation again. Directional
   // midpoint/normal/curvature contacts retain their original ordering.
-  const reversible = ['coincident', 'horizontal', 'vertical', 'equal', 'parallel', 'perpendicular', 'concentric', 'tangent'].includes(kind);
+  const reversible = ['coincident', 'horizontal', 'vertical', 'equal', 'parallel', 'collinear', 'perpendicular', 'concentric', 'tangent'].includes(kind);
   const same = (a: DrawingConstraint, b: DrawingConstraint) =>
     a.kind === b.kind && refKey(a.axis) === refKey(b.axis) &&
     (a.tangentMode ?? 'external') === (b.tangentMode ?? 'external') &&

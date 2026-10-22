@@ -3,7 +3,6 @@ import {createRequire} from 'node:module';
 import {beforeAll,beforeEach,afterEach,afterAll,expect,it,vi} from 'vitest';
 import {parsePartDocument,serializePartDocument,resolveProfileDrawing} from '@aether/core/document';
 import {segmentPoint} from '../../aether-engine/src/sketch/curves/parameterization';
-import {translateDocument} from '../freecad-translate';
 import cases from '../../service/tests/fixtures/pierce-documents.json';
 import {clickSketchControl as click,querySketchControl as q} from './test-controls';
 const {JSDOM}=createRequire(import.meta.url)('jsdom');
@@ -21,14 +20,14 @@ beforeEach(()=>{
  target().profile.contours[0].center=[0,0];target().profile.constraints.find(c=>c.kind==='pierce').a={kind:'circle',contour:0};
  apply=vi.fn(async next=>{doc=next;});
 });
-afterEach(()=>q('[aria-label="Cancel sketch"]')?.click());
+afterEach(()=>q('.cad-sketch-window [data-feature-action="discard"]')?.click());
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();if(process.env.AETHER_PIERCE_TOPOLOGY_UI_FIXTURES)fs.writeFileSync(process.env.AETHER_PIERCE_TOPOLOGY_UI_FIXTURES,JSON.stringify(captures,null,2)+'\n');});
 const target=()=>doc.features.find(f=>f.id==='target');
 const tool=name=>window.dispatchEvent(new CustomEvent('aether-sketch-tool',{detail:name}));
 function point(x,y){q('[aria-label="X (mm)"]').value=String(x);q('[aria-label="Y (mm)"]').value=String(y);click('Place point');}
 function pick(x,y){const svg=document.querySelector('[aria-label="2D sketch canvas"]');svg.createSVGPoint=()=>({x:0,y:0,matrixTransform(){return{x:this.x,y:this.y};}});svg.getScreenCTM=()=>({a:1,b:0,inverse:()=>({})});svg.dispatchEvent(new dom.window.MouseEvent('click',{clientX:x,clientY:-y,bubbles:true}));}
 const marked=()=>document.querySelectorAll('[data-constraint-mark="pierce"]').length;
-async function finish(name){click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());doc=parsePartDocument(serializePartDocument(doc));if(name){const result=translateDocument(doc);expect(result.complete).toBe(true);captures.push({name,document:structuredClone(doc),features:result.features});}}
+async function finish(name){click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());doc=parsePartDocument(serializePartDocument(doc));if(name){captures.push({name,document:structuredClone(doc)});}}
 it('splits a constrained circle through the real controls and preserves the actual lower-arc contact on reopen',async()=>{
  open(()=>doc,apply,target());tool('split');point(3,0);point(-3,0);expect(marked()).toBe(1);
  click('Undo');expect(document.querySelector('circle.sketch-contour')).toBeTruthy();click('Redo');

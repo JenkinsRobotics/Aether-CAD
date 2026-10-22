@@ -39,7 +39,7 @@ it('only a successful rebuild commits, and readonly/open dialogs are respected',
 });
 
 it('exposes all five exact primitives to agents with explicit, kind-specific dimensions',()=>{
-  expect(cadAgentTools).toHaveLength(16);
+  expect(cadAgentTools).toHaveLength(25); // 19 + feature_types/schema/add/update/delete/move
   const source=createEmptyPartDocument('Primitives');
   for(const args of [
     {kind:'box',width_mm:12,length_mm:18,height_mm:7},

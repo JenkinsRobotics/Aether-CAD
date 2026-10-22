@@ -1,7 +1,8 @@
-import { matchesProfileRegion, type ProfileRegionSelection } from '../../freecad-engine/browser/profile-region-reference';
-import {sketchRegions} from '../freecad-translate';
+import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/sketch/reference/profile-region-reference';
+import { sketchRegions } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
 import {bodyAndOperationTabs, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {extrusionPointPicker, serializeExtrusionPoint} from './extrude-point-picker';
 
 type Section = {profileFeatureId: string; contourIndex: number} & ProfileRegionSelection;
 const sectionsOf = (controls: Controls): Section[] => JSON.parse(controls.sections.value);
@@ -24,11 +25,13 @@ export const loftEditor: FeatureEditor = {
       sections:context.field('Sections',JSON.stringify(sections)),
       operation:context.field('Operation',context.feature?.operation ?? 'new',['new','add','cut']),
       ruled:context.field('Surface',context.feature?.ruled ? 'ruled' : 'smooth',['smooth','ruled']),
+      endPoint:context.field('Apex',context.feature?.endPoint&&context.feature.endPoint.kind!=='point'?JSON.stringify(context.feature.endPoint):''),
     };
   },
   layout(context, controls) {
     const {win,form} = context;
     bodyAndOperationTabs(win,form,controls.operation,['new','add','cut']);
+    const apex=extrusionPointPicker(context,controls.endPoint,'Apex (optional)','The loft runs to this point after its last section. A changed or ambiguous vertex requires reselection.');apex.setEnabled(true);
     controls.sections.closest('label')?.remove();
     controls.sections.hidden = true;
     controls.sections.setAttribute('form',form.id);
@@ -102,6 +105,7 @@ export const loftEditor: FeatureEditor = {
     render(0);
   },
   validate(controls,context) {
+    if (JSON.parse(controls.sections.value).length === 1 && controls.endPoint.value) return null;
     const sections=sectionsOf(controls);
     if (sections.length<2) return 'Add at least two closed sketch sections in loft order.';
     if (sections.some(section=>{const region=regionFor(context,section); return !region || region.closed===false;})) return 'A loft section is unavailable. Remove it and choose a closed sketch region.';
@@ -110,7 +114,7 @@ export const loftEditor: FeatureEditor = {
   },
   serialize(values,context) {
     const sections: Section[]=JSON.parse(values.sections);
-    return {operation:values.operation,ruled:values.ruled==='ruled',sections:stampProfileSelections(context, sections.map(section=>{
+    return {operation:values.operation,ruled:values.ruled==='ruled',...(values.endPoint?{endPoint:serializeExtrusionPoint(values.endPoint,context)}:{}),sections:stampProfileSelections(context, sections.map(section=>{
       const profile=context.doc.features.find(f=>f.id===section.profileFeatureId);
       const region=regionFor(context,section);
       if (!profile || !region) throw Error('A selected loft section is no longer available.');

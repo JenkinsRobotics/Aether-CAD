@@ -1,9 +1,9 @@
 import { expect, it, vi } from 'vitest';
-import { Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three/webgpu';
+import { LineSegments, Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three/webgpu';
 import { defaultCADAppearance } from '../cad-appearance-store';
 import { tintPlane, updatePlaneVisual } from '../plane-visual';
 import { resolveAppearance } from './appearance-themes';
-import { EnvironmentGrid, gridSegments } from './environment-grid';
+import { EnvironmentGrid, gridSegments, subdivideGridLines } from './environment-grid';
 import { gradientBackground } from './environment-background';
 import { styledLines } from './styled-lines';
 
@@ -57,4 +57,21 @@ it('renders exact gradient endpoints with a bounded texture', () => {
   expect(texture.image.width).toBe(1); expect(texture.image.height).toBe(256);
   expect(Array.from(bytes.slice(0,4))).toEqual([0xab,0xcd,0xef,255]);
   expect(Array.from(bytes.slice(-4))).toEqual([0x12,0x34,0x56,255]);
+});
+
+it('renders the standard grid with native depth-tested lines and retains custom wide lines', () => {
+  const grid=new EnvironmentGrid();grid.apply(resolveAppearance(defaultCADAppearance));
+  expect(grid.children.slice(0,4).every(line=>!line.visible)).toBe(true);
+  const reference=grid.children[4];expect(reference.visible).toBe(true);
+  expect(reference.children.every(line=>line instanceof LineSegments && line.material.depthTest && line.material.toneMapped)).toBe(true);
+  grid.apply(resolveAppearance({...defaultCADAppearance,gridMinorWidthPx:3}));
+  expect(reference.visible).toBe(false);expect(grid.children[0].visible).toBe(true);
+});
+
+it('subdivides camera-crossing lines without changing endpoints, cells or axes', () => {
+  const pieces=subdivideGridLines([-50,0,0,50,0,0],10);
+  expect(pieces).toHaveLength(60);expect(pieces.slice(0,3)).toEqual([-50,0,0]);expect(pieces.slice(-3)).toEqual([50,0,0]);
+  for(let i=0;i<pieces.length;i+=6){expect(pieces.slice(i+1,i+3)).toEqual([0,0]);expect(pieces[i+3]-pieces[i]).toBeCloseTo(10);}
+  expect(subdivideGridLines([],10)).toEqual([]);
+  expect(subdivideGridLines([-100000,0,0,100000,0,0],.1)).toHaveLength(128*6);
 });

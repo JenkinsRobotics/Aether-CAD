@@ -1,0 +1,536 @@
+# Tool parity tracker: every SolidCraft command against ours (2026-10-21)
+
+Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
+
+Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+ 2
+
+## Sketch (105)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `sketch.arc.center_point` | Center Point Arc | center, start, end (counter-clockwise from start) \| center, start, sweep: signed degrees | Center point arc | parity |  |
+| `sketch.arc.tangent` | Tangent Arc | start: end point of a line or arc ("l1.end"), end: [x,y]; curve?: the curve to be tangent to (default: the one ending at start) | Tangent arc | parity |  |
+| `sketch.arc.three_point` | 3-Point Arc | start, end, through | Arc | parity |  |
+| `sketch.auto_constrain` | AutoConstrain | tolerance?: mm (default 0.01), angle_tolerance?: deg (default 1), dimensions?: bool (default true): infer constraints, then dimension until fully constrained | AutoConstrain | parity | done 2026-10-21: horizontal/vertical within 2°, coincident endpoints within 0.05 mm, never twice |
+| `sketch.auto_constrain_from_datum` | AutoConstrain from datum | datum: point ref (default origin); like AutoConstrain with positions measured from the datum |  | gap |  |
+| `sketch.auto_project` | Auto-Project Edges on Reference | value?: bool (default toggles): project a face's edges when a sketch is created on it | Project face edges on start (sketch window) | parity | done 2026-10-21: the face's in-plane edges as construction geometry |
+| `sketch.blend_curve` | Blend Curve | a, b: end points of two curves ("l1.end", "a2.start"), continuity?: g1\|g2\|g3\|g4 (default g1: a tangent spline; g2…g4 match the reference curves' curvature, c |  | gap |  |
+| `sketch.break` | Break | curve: id, at: [x,y] (split at intersections) \| points: [[x,y]…] (1…1000 positions projected onto the curve; duplicates are merged) | Split / Break | parity | done 2026-10-21 (r36): Break splits the clicked curve at every crossing with another curve in one go (circles included); Split still cuts at a picked point |
+| `sketch.break_link` | Break Link | link?: link id (j1) \| entities?: [curve or point ids]: linked geometry becomes normal sketch geometry |  | gap |  |
+| `sketch.centerline` | Centerline | curves: [line ids], value?: bool (default toggles): centerline line type (not in profiles; an axis) | Construction line | parity | a construction line (dash-dot style not distinguished) |
+| `sketch.chain` | Chain | curve: id: the curves joined to it end to end (what a double-click selects) | Chain (`sketch-chain`) | parity | done 2026-10-21 (r36): selects every edge joined end to end to the selected one, along and across paths |
+| `sketch.chamfer.distance_angle` | Distance and Angle Chamfer | point \| a, b: a corner of two lines; distance: along a, angle: deg from a | Chamfer (Distance and angle mode) | parity |  |
+| `sketch.chamfer.equal_distance` | Equal Distance Chamfer | point \| a, b: a corner of two lines; distance | Chamfer | parity |  |
+| `sketch.chamfer.two_distance` | Two Distance Chamfer | point \| a, b: a corner of two lines; distance: along a, distance2: along b | Chamfer (Two distances mode) | parity | the sketch chamfer panel has equal, two-distance and distance-angle modes |
+| `sketch.circle.center` | Center Diameter Circle | center: [x,y] or point ref, radius \| diameter: number | Circle | parity |  |
+| `sketch.circle.three_point` | 3-Point Circle | p0, p1, p2 | 3 point circle | parity |  |
+| `sketch.circle.three_tangent` | 3-Tangent Circle | curves: [three lines/circles/arcs], near: [x,y] (which of the solutions) | 3 tangent circle | parity | done 2026-10-21: three tangent relations, solved |
+| `sketch.circle.two_point` | 2-Point Circle | p0, p1: diameter ends | 2 point circle | parity | done 2026-10-21 |
+| `sketch.circle.two_tangent` | 2-Tangent Circle | curves: [two lines/circles/arcs], radius \| diameter: expr, near: [x,y] (which of the solutions) | 2 tangent circle | parity | done 2026-10-21: tangent relations to both picked curves plus the radius, solved into place |
+| `sketch.conic` | Conic Curve | start, end, apex: [x,y] or point refs; rho?: 0…1 (default 0.5: parabola) | Conic | parity |  |
+| `sketch.constrainer` | Sketch Constrainer | entities: [one or two sketch entity ids]: applies the constraint the geometry nearly has (horizontal/vertical, parallel, perpendicular, collinear, coincident, c | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.constraint.coincident` | Coincident | a, b: points, a point and a curve or sketch axis (x / y: the sketch's own axes, unless a curve has that id; an axis becomes a linked construction line on it, re | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.collinear` | Collinear | a, b: lines or sketch axes (x / y: the sketch's own axes, unless a curve has that id; an axis becomes a linked construction line on it, reported in created) | Collinear (Constraint editor) | parity | done 2026-10-21: parallel plus point-on-line in the solver |
+| `sketch.constraint.concentric` | Concentric | a, b: circles/arcs | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.curvature` | Curvature | a, b: two curves sharing an end point (curvature continuous, G2) | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.equal` | Equal | a, b: lines or circles/arcs | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.fix` | Fix/UnFix | entity: point or curve \| entities: [points and curves]; fixed?: bool (default: fix them all unless all are fixed, then unfix) | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.horizontal_vertical` | Horizontal/Vertical | line: id \| points: [a, b]; mode?: horizontal\|vertical | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.midpoint` | MidPoint | point, line | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.parallel` | Parallel | a, b: lines or sketch axes (x / y: the sketch's own axes, unless a curve has that id; an axis becomes a linked construction line on it, reported in created) | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.perpendicular` | Perpendicular | a, b: lines or sketch axes (x / y: the sketch's own axes, unless a curve has that id; an axis becomes a linked construction line on it, reported in created) | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.polygon` | Polygon | lines: [line ids] of a closed chain: equal sides with every corner on one circle (a regular polygon) | Polygon (`sketch-polygon-constraint`) | parity | done 2026-10-21 (r36): the lines of one closed chain get equal sides and every corner coincident with one construction circle through the first three corners |
+| `sketch.constraint.symmetry` | Symmetry | a, b: two points or two curves (lines mirror their ends, circles/arcs their centres); line: symmetry line id, or x / y for the sketch's own axes (a curve with t | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.constraint.tangent` | Tangent | a, b: curves or sketch axes (x / y: the sketch's own axes, unless a curve has that id; an axis becomes a linked construction line on it, reported in created) | Constraint editor | parity | same constraint in our solver (plus pierce and normal) |
+| `sketch.construction` | Normal/Construction | curves: [ids], value?: bool (default: construction unless all of them already are) | Construction | parity |  |
+| `sketch.copy` | Copy Sketch Entities | entities?: [curve or point ids] (default: the selected sketch geometry); the constraints and dimensions among them come along | Clipboard | parity |  |
+| `sketch.create` | Create Sketch | plane: XY\|XZ\|YZ \| construction plane name or id \| {origin, x_dir, y_dir} \| {face: [world x,y,z], body?: exact world body, index?: face index, path?: comple | Sketch | partial | done 2026-10-21: plane sources, offset, Use fixed plane fallback, Project face edges on start, flip (r36: `flip: "x"|"y"`, a half turn about the sketch's own axis; the normal and default extrude direction reverse; the window's "Flip sketch plane" box). Missing: an explicit `{origin, x_dir, y_dir}` frame for agents |
+| `sketch.cut` | Cut Sketch Entities | entities?: [curve or point ids] (default: the selected sketch geometry): copies them as sketch.copy does, then deletes them (one undo step) | Clipboard | parity |  |
+| `sketch.delete` | Delete Sketch Entities | entities: [curve, point or constraint ids] | Delete | parity |  |
+| `sketch.dimension` | Sketch Dimension | entities: [refs], type?: auto\|distance\|horizontal\|vertical\|length\|radius\|diameter\|angle, value?: number or expression (default: current; a bare number is | Dimension | parity |  |
+| `sketch.dimension_text` | Move Dimension Text | dimension: constraint id or parameter name; at: [x,y] text centre (sketch coordinates) \| reset: true (default place) | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.drag` | Drag Sketch Geometry | entity: point or curve, from: [x,y] where it was grabbed, to: [x,y], live?: bool: a point moves toward `to` within the design constraints; when exact cursor pla | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.drag_end` | End Sketch Drag | constraint?: {command: a sketch.constraint.* id, params}: ends a drag made of `sketch.drag` `live: true` frames: adds the constraint it let go on (not kept if i | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.draw.dimensioned` | Draw Dimensioned Sketch Geometry | command: sketch creation command, params: object, dimensions: object of role to numeric or expression value; creates geometry and all driving dimensions atomica | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.edit` | Edit Sketch | sketch: id or name | Edit sketch (tree) | parity |  |
+| `sketch.edit_text` | Edit Text | link: the text's link id (or entity: one of its curves), text?, at?, height?, angle?: deg (numbers or expressions as in sketch.text; a number replaces an expres | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.ellipse` | Ellipse | center, major: end of the major axis [x,y], minor: a point the ellipse passes through on the minor side [x,y] \| minor_radius | Ellipse | parity |  |
+| `sketch.export_dxf` | Save As DXF | sketch?: id\|name (default active); path?: file to write (else the DXF text is returned) | Save as DXF | parity | done 2026-10-21: lines, circles, arcs exact; other curves as polylines; construction on its own layer |
+| `sketch.extend` | Extend | curve: id, at: [x,y] near the end to extend (to the nearest curve) | Extend | parity |  |
+| `sketch.fillet` | Fillet | point: corner shared by two curves ("l1.end") \| points: [corners] (all rounded alike: one radius, the rest equal) \| a, b: two lines or arcs meeting at a corne | Fillet | parity |  |
+| `sketch.finish` | Finish Sketch |  | Apply | parity |  |
+| `sketch.finish_auto_constrain` | Finish with AutoConstrain | like AutoConstrain, then Finish Sketch | Finish with AutoConstrain (`sketch-finish-auto-constrain`) | parity | done 2026-10-21 (r37): one button runs AutoConstrain then Finish |
+| `sketch.fit_curves_to_section` | Fit Curves to Mesh Section | body: name (a mesh or solid body): its section with the sketch plane, fitted with lines and arcs, as normal (unlinked) geometry |  | gap |  |
+| `sketch.glyphs` | Constraint Glyphs | sketch?: id\|name: every constraint with where to draw its glyph (sketch coordinates) | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.include_3d` | Include 3D Geometry | refs: like Project (edges, vertices, sketch curves and points); curves out of the sketch plane are flattened onto it | Project › Include 3D edges | partial | done 2026-10-21 for edges lying in the sketch plane; edges off the plane are not projected yet |
+| `sketch.infinite` | Infinite Line | curves: [line ids], value?: bool (default toggles): infinite line type (#1359): construction geometry drawn across the whole view through the line's two points; | Infinite line (`sketch-infinite`) | parity | done 2026-10-21 (r36): toggles selected single lines to infinite construction lines drawn across the whole view through their two points |
+| `sketch.insert_dxf` | Insert DXF | path \| text: ASCII DXF (blocks expanded); at?: [x,y] offset, scale?, tolerance?: mm within which ends join (default 0.0001); plane?: (when no sketch is active, | DXF | parity |  |
+| `sketch.insert_svg` | Insert SVG | path \| text: SVG; at?: [x,y] offset, scale?, tolerance?: mm within which ends join (default 0.0001); plane?: (when no sketch is active, a new sketch on it; def | Vector tools (SVG import) | parity | the Vector panel imports SVG geometry into the sketch |
+| `sketch.inspect` | Inspect Sketch | sketch?: id\|name (default active) | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.intersect` | Intersect | refs: [{body}, {face: [x,y,z], body?}, {edge: [x,y,z], body?}, {sketch, curve}]: section curves (or points) with the sketch plane, linked | Project › Intersect | parity | done 2026-10-21: the part's section curves at the sketch plane (lines, circles, arcs exact) |
+| `sketch.intersection_curve` | Intersection Curve | a, b: {body} \| {face: [x,y,z], body?}: where they meet, as linked 3D curves |  | gap |  |
+| `sketch.isoparametric_curve` | Isoparametric Curve | face: [x,y,z] point on the face (the curve passes through it), body?, direction?: u\|v\|[x,y,z] (default u): linked 3D curve |  | gap |  |
+| `sketch.line` | Line | points: [[x,y] \| "l1.end" \| {at, ref}…] (x and y each a number or an expression over the design's parameters, "W / 2": such a point is fixed where it comes to | Line | parity |  |
+| `sketch.line.midpoint` | Midpoint Line | mid: [x,y] or point ref, end: [x,y]; construction? | Midpoint line | parity |  |
+| `sketch.line3d` | 3D Line | points: [[x,y,z]…] world points (2 or more): one 3D line per segment, joined end to end (needs 3D Sketch on) |  | gap |  |
+| `sketch.loose_ends` | Loose Ends | sketch?: id\|name (default active): the ends of profile curves (not construction, projected or text) that can make a profile fail. open: [{point, curve, at}] en | Loose ends | parity | done 2026-10-21: selects open path ends nothing touches or ties |
+| `sketch.loose_ends.tie` | Tie Loose Ends | sketch?: id\|name (default active); points?: [point ids] (default: every untied end): ties each untied end to what it touches, coincident with another curve's e | AutoConstrain | parity | ties ends within tolerance with coincident relations |
+| `sketch.mirror` | Mirror | entities: [curve/point ids], line: mirror line id (symmetry constraints are added) | Mirror | parity |  |
+| `sketch.move` | Move/Copy Sketch Entities | entities: [ids], translate?: [dx,dy], angle?: deg, center?: [x,y], copy?: bool; picking a text outline or linked point transforms its whole text source once, an | Transform | parity |  |
+| `sketch.move3d` | Move 3D Point | wire: drawn 3D curve or point id, index?: fit point (default 0), to: [x,y,z] \| by: [dx,dy,dz]; points joined to it move too |  | gap |  |
+| `sketch.move_point` | Drag Sketch Point | point: ref, to: [x,y] | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.offset` | Offset | curves: [ids], distance: number in mm or length expression (creates an editable dimension; positive = left of the chain, or toward `side`), side?: [x,y], chain? | Offset | parity |  |
+| `sketch.offset.break` | Break Offset Association | curve: derived offset curve id (retains geometry and makes its points editable) | Delete the offset relation | parity | selecting the offset relation and deleting it freezes the offset geometry |
+| `sketch.options` | Sketch Palette Options | sketch?: id\|name (default active); any of show_profile, show_points, show_dimensions, show_constraints, show_projected, show_construction, grid, snap, slice, s | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.paste` | Paste Sketch Entities | at?: [x, y] (sketch point the copy's centre goes to) \| translate?: [x, y]; without either, offset from the original in its own sketch and at the same coordinat | Clipboard | parity |  |
+| `sketch.pattern.circular` | Circular Pattern | entities: [ids], center: [x,y] or point ref, count: 2…500, angle?: total deg (default 360); alignment?: left\|center\|right (default right); reversed?: bool (de | Circular pattern | parity |  |
+| `sketch.pattern.rectangular` | Rectangular Pattern | entities: [ids], count, spacing; count2?, spacing2?; direction?, direction2?: sketch line ids (live references); dir?, dir2?: [x,y] vectors (defaults: sketch x, | Pattern | parity |  |
+| `sketch.point` | Point | point: [x,y] (each a number or an expression over the design's parameters: the point is then fixed where it comes to and follows them), id? | Point | parity |  |
+| `sketch.point3d` | 3D Point | point: [x,y,z] world point (needs 3D Sketch on) |  | gap |  |
+| `sketch.polygon.circumscribed` | Circumscribed Polygon | center, radius (to edge midpoints), sides, angle?: deg | Circumscribed polygon | parity |  |
+| `sketch.polygon.edge` | Edge Polygon | p0, p1: one edge, sides | Edge polygon | parity | done 2026-10-21 |
+| `sketch.polygon.inscribed` | Inscribed Polygon | center, radius (to vertices), sides, angle?: deg | Polygon | parity |  |
+| `sketch.project` | Project |  | Project | partial | projects other sketches' geometry; model edges and faces onto the plane still missing (in-plane edges via Include 3D edges) |
+| `sketch.project_to_surface` | Project To Surface | curves: [{sketch, curve}…] (curves of other sketches), face: [x,y,z] point on the target face, body?: projected along the active sketch's normal onto the face,  |  | gap |  |
+| `sketch.rectangle.center` | Center Rectangle | center, corner. Returns sides {bottom, right, top, left} (line ids) and corners {bottom_left, bottom_right, top_right, top_left} (point ids) | Center point rectangle | parity |  |
+| `sketch.rectangle.rounded` | Rounded Rectangle | p0, p1: opposite corners [x,y]; radius: expr (the corner radius, less than half the shorter side); construction?. A 2-point rectangle whose four corners are fil | Rounded rectangle | parity | done 2026-10-21 (corner radius input) |
+| `sketch.rectangle.three_point` | 3-Point Rectangle | p0, p1: first edge; p2: point on the opposite edge | Aligned rectangle | parity |  |
+| `sketch.rectangle.two_point` | 2-Point Rectangle | p0, p1: opposite corners [x,y]; construction?. Returns sides {bottom, right, top, left} (line ids) and corners {bottom_left, bottom_right, top_right, top_left}  | Rectangle | parity |  |
+| `sketch.redefine` | Redefine Sketch Plane | sketch: id or name; plane: as sketch.create; author_path?: exact owner occurrence ids; explicitly rebinds or freezes the plane while preserving geometry and dim | Change sketch plane (ribbon, Edit group; also the plane chip ×) | parity | done 2026-10-21: keeps the drawing, returns to plane choosing |
+| `sketch.scale` | Sketch Scale | entities: [curve/point ids], base: [x,y] or point ref, factor: number | Transform (Scale field) | parity | the sketch Transform tool scales about a centre |
+| `sketch.slot.arc_center` | Center Point Arc Slot | center, start: centre arc start, end: direction of the centre arc end (counter-clockwise), width | Center point arc slot (`center-arc-slot`) | parity | done 2026-10-21 (r36): centre, start, end direction (counter-clockwise; clockwise option), width from the slot width box |
+| `sketch.slot.arc_three_point` | Three Point Arc Slot | start, through, end: points on the centre arc, width | Three point arc slot (`three-point-arc-slot`) | parity | done 2026-10-21 (r36): start, through, end on the centre arc; the through point picks the way round |
+| `sketch.slot.center_point` | Center Point Slot | center: slot centre, end: one arc centre, width | Center point slot | parity | done 2026-10-21 |
+| `sketch.slot.center_to_center` | Center to Center Slot | p0, p1: arc centres, width | Center to center slot | parity | done 2026-10-21 (slot width input); the earlier Slot tool offsets existing centerlines |
+| `sketch.slot.overall` | Overall Slot | p0, p1: overall ends, width | Overall slot | parity | done 2026-10-21 |
+| `sketch.snap` | Snap Inference | at: [x,y], from?: [x,y] (previous click), radius?: mm (snap distance, default 1): what a click there would snap to and infer | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.solve` | Solve Sketch | reports the solver status and degrees of freedom | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.spline.control_point` | Control Point Spline | points: control points (2…500), cubic | Spline (cubic Bézier) | partial | Bézier segments, not a control-point B-spline |
+| `sketch.spline.control_point_5` | Control Point Spline (Degree 5) | points: control points (2…500), degree 5 |  | gap |  |
+| `sketch.spline.fit_point` | Fit Point Spline | points: [[x,y] or point refs…] (2…500): the spline passes through them, periodic?: boolean (default false); periodic cubic fit closes smoothly through at least  | Fit-point spline | parity |  |
+| `sketch.spline3d` | 3D Spline | points: [[x,y,z]…] world fit points (2 or more): a smooth 3D curve through them (needs 3D Sketch on) |  | gap |  |
+| `sketch.spun_profile` | Spun Profile | body: name, axis: a line of the active sketch (curve id) \| X\|Y\|Z: the body's outline revolved about the axis, in the sketch plane |  | gap |  |
+| `sketch.text` | Text | text: string (\\n breaks lines), at: baseline start [x,y], height?: capital height mm (default 5), angle?: deg; at's x and y, height and angle each take a numbe | Text | parity |  |
+| `sketch.toggle_driven` | Toggle Driven Dimension | constraint: dimension id, driven?: bool (default toggles); a driving dimension gets a parameter with its current value | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
+| `sketch.trim` | Trim | curve: id, at: [x,y] (the piece to remove: between the nearest intersections around it) | Trim | parity |  |
+
+## Solid (37)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `body.rename` | Rename Body | body: its name, name: the new name (features that use the body follow) | Rename part (parts list / context menu, `bodyProperties`) | parity | names persist in the document |
+| `face.delete` | Delete Face | faces: [[x,y,z] points on the faces, or face names from model.faces]; body?; heal?: bool (default true: the neighbouring planes close the gap, as when a rounded | Delete (`delete-face`) | parity | **done 2026-10-21**: picked faces removed and healed (OCCT defeaturing, full build) |
+| `solid.align` | Align | bodies: [names]; from: [x,y,z] \| {snap: vertex\|edge_mid\|face_center\|circle_center, at: [x,y,z]} \| from_face: [x,y,z]; to: (the same) \| to_face: [x,y,z] (f | Transform › Align | parity | done 2026-10-21: a face or point brought onto a face or point; faces turn to meet (or the same way with flip) |
+| `solid.boundary_fill` | Boundary Fill | tools: [bodies]; cells: [[x,y,z] a point inside each cell to fill (a cell: inside some tools, outside the rest)]; operation?: new\|join\|cut\|intersect; remove_ |  | gap |  |
+| `solid.bounding_solid` | Bounding Solid | bodies?: [names] (default: all); margin?: expr; name?, body_name? | Bounding Solid (`bounding-solid`) | parity | done 2026-10-21: margin; all parts or a chosen list |
+| `solid.box` | Box | length, width, height: expr; corner?: [x,y,z] \| center?: [x,y,z] (numbers in mm or length expressions; default: the origin); operation?, targets?: [body], name | Box (`create-box`) | parity |  |
+| `solid.chamfer` | Chamfer | edges: [[x,y,z] \| {body, index}]; distance: expr; distance2?: expr (along the second face) \| angle?: expr (from the first face); flip?: bool (which face is fi | Chamfer (`chamfer`) | parity | done 2026-10-21: picked edges, second distance, angle, reference face, tangent chains |
+| `solid.coil` | Coil | diameter; two of revolutions (or turns), height, pitch; section_size; section?: circular\|square; section_position?: inside\|center\|outside; \          base?:  | Coil (`coil`) | parity | done 2026-10-21: radius, pitch, turns, wire diameter, axis, hand, centre; new/add/cut |
+| `solid.combine` | Combine | target: body; tools: [body]; operation?: join\|cut\|intersect; keep_tools?: bool; new_component?: bool (the result goes into a new component; component_name?) | Boolean (`boolean`) | parity |  |
+| `solid.cylinder` | Cylinder | radius \| diameter, height: expr; base?: [x,y,z] (centre of the bottom: numbers in mm or length expressions; default: the origin); axis?: X\|Y\|Z\|[x,y,z] (defa | Cylinder (`create-cylinder`) | parity |  |
+| `solid.draft` | Draft | faces: [[x,y,z] points, or face names from model.faces]; angle: expr; neutral: XY\|XZ\|YZ\|plane name\|{origin, normal}; pull?: [x,y,z] (default: neutral plane  | Draft (`draft`) | parity | done 2026-10-21: picked faces, neutral plane or picked face, pull direction |
+| `solid.emboss` | Emboss | sketch, profiles?; depth; mode?: emboss\|deboss; targets?; face?: world point [x,y,z] selecting a planar or complete exterior cylindrical wall (inferred when ex | Extrude add/cut from a sketch on the face | partial | planar faces: a sketch on the face extruded add (emboss) or cut (deboss) by the depth; wrapping onto a cylindrical wall is missing |
+| `solid.extrude` | Extrude | distance: expr (or through_all: true); taper?: angle expr; sketch?: id\|name (default: active or last sketch); profiles?: all \| [index] \| [{curves: [ids]}] (t | Extrude (`extrude`) | ours+ | ends to face/vertex, start offset, two sides, thin, scope |
+| `solid.fillet` | Fillet | edges: [[x,y,z] point on edge \| {body, index}]; radius: expr; body?; type?: constant\|curvature (alias g2: curvature-continuous quintic between planar faces al | Fillet (`fillet`) | partial | done 2026-10-21: picked edges, per-edge and variable radius, tangent chains (OCCT propagates along smooth loops; the flag makes it explicit). Missing: G2/curvature, chord, spline profile |
+| `solid.hole` | Hole | position: [x,y,z] on a face (numbers, or length expressions the hole follows) \| sketch + points: [sketch point ids] (one hole each, perpendicular to the sketch | Hole (`hole`) | partial | done 2026-10-21: face-point or sketch (one or every circle) placement, reverse, drill direction. Missing: hole standards/threads |
+| `solid.loft` | Loft | sections: [{sketch, profiles?} \| {sketch, point: id} (an apex)] (2…50, in order; matching hole counts, no holes at an apex); rails?: [{sketch, curves: [ids in  | Loft (`loft`) | partial | **done 2026-10-21**: an apex point as the last (or first) section. Missing: guide rails, rail fit |
+| `solid.mirror` | Mirror | features: [names] \| bodies: [names] (combine?: join with the original); plane: XY\|XZ\|YZ\|construction plane name or id\|{origin, normal}\|{origin, x_dir, y_d | Mirror (`mirror`) / Transform › Mirror | parity | done 2026-10-21: features about a plane or picked face; parts via Transform › Mirror, with Join with the original (SolidCraft's combine) |
+| `solid.move` | Move/Copy | bodies: [names]; translate?: [x,y,z] (exprs or numbers); axis?: [x,y,z]; angle?: expr; copy?: bool (default false: keeps the original bodies and transforms a ne | Move/Copy/Rotate (`transform`) | parity |  |
+| `solid.offset_face` | Offset Face | faces: [[x,y,z] points on planar faces, or face names from model.faces]; distance: expr (positive: outward); body? | Move faces (`offset-face`) | ours+ | free transform of faces too |
+| `solid.pattern.circular` | Circular Pattern | features: [names] \| bodies: [names] \| components: [names]; axis: X\|Y\|Z \| {origin, dir}; count; angle? (default 360 deg; partial arcs include both ends); al | Pattern polar (`pattern`) | partial | done 2026-10-21: axis as line, edge or axis feature, alignment, features or parts. Missing: components (assembly) |
+| `solid.pattern.path` | Pattern on Path | features: [names] \| bodies: [names]; path_sketch: sketch; path: [curve ids in order]; count; spacing (between instances) \| distance (first to last); orientati | Pattern on path (`pattern`, type path) | parity | done 2026-10-21: spacing or overall distance, identical or path orientation, features or parts |
+| `solid.pattern.rectangular` | Rectangular Pattern | features: [names] \| bodies: [names] \| components: [names]; dir1: [x,y,z]; count1; spacing1; dir2?, count2?, spacing2?; alignment?, alignment2?: left\|center\| | Pattern linear (`pattern`) | parity | done 2026-10-21: any direction, second direction, alignment, features or whole parts (copies are new parts) |
+| `solid.pipe` | Pipe | path_sketch: sketch; path: [curve ids in order]; diameter: expr; wall?: expr (hollow); operation?, targets?, name?, body_name? | Pipe (`pipe`) | parity | **done 2026-10-21**: diameter, optional wall, new/add/cut along a sketch curve |
+| `solid.press_pull` | Press Pull | face: [x,y,z] and distance: expr (positive adds material, negative cuts), or edges: [[x,y,z]…] and distance (a fillet) | Push/Pull (`face-extrude`) | parity | faces; the edges form is Fillet with picked edges (same function, separate tool) |
+| `solid.remove` | Remove | bodies: [names] (removed from here on in the timeline) | Remove part (`remove-body`) | parity | done 2026-10-21: parts leave the history from here on |
+| `solid.replace_face` | Replace Face | faces: [[x,y,z] points on planar faces, or face names from model.faces]; target: plane (XY\|XZ\|YZ\|construction plane\|{origin, normal}) \| target_face: [x,y,z | Replace (`offset-face` with `replaceWith`) | parity | done 2026-10-21: planar faces onto a parallel plane, plane feature or target face |
+| `solid.revolve` | Revolve | axis: sketch line id \| x \| y (sketch axes) \| X\|Y\|Z (world); angle?: expr (default 360 deg); angle2?: expr (Two Sides: the other side's angle); direction?:  | Revolve (`revolve`) | partial | **done 2026-10-21**: axis as a picked straight edge, a sketch line, an axis feature or a given line (`axisReference`); the dialog offers the edge pick (axis feature pick in the dialog still to add). Missing: to-object extent, a planar face as the profile |
+| `solid.rib` | Rib | sketch, curves: [open curve ids, in order]; thickness (across the sketch plane, or across the curves when normal); depth? (default: to the next face); flip?: bo | Extrude › Thin, end Up to next | parity | covered: an open sketch curve extruded as a thin wall to the next face (SolidCraft's rib); a dedicated Rib button is UI sugar still to add |
+| `solid.scale` | Scale | bodies: [names]; factor: expr \| factors: [x, y, z] exprs; origin?: [x,y,z] | Scale (`transform`) | parity | non-uniform via extended kernel |
+| `solid.shell` | Shell | faces: [[x,y,z] points on the faces to remove, or face names from model.faces]; thickness: expr; direction?: inside\|outside\|both; tangent_chain?: bool (also o | Shell (`shell`) | parity | done 2026-10-21: picked faces, inside/outside/both, faces joined smoothly to the picked ones (one hop) |
+| `solid.sphere` | Sphere | radius \| diameter: expr; center?: [x,y,z] (numbers in mm or length expressions; default: the origin); operation?, targets?: [body], name?, body_name? | Sphere (`create-sphere`) | parity |  |
+| `solid.split_body` | Split Body | body: name; plane: XY\|XZ\|YZ\|plane name\|{origin, normal} — or tool: {body, point} (a face of a body, its surface extended) — or sketch: id, line: curve id (a | Split (`split`) | parity | done 2026-10-21: principal plane + offset, plane feature, picked face, or a sketch line (plane along the sketch normal); keep both or one side |
+| `solid.split_face` | Split Face | faces: [[x,y,z] points on the faces to split, or face names from model.faces]; body?; and the splitting tool: plane: XY\|XZ\|YZ\|plane name\|{origin, normal} —  |  | gap |  |
+| `solid.sweep` | Sweep | sketch: profile sketch; profiles?; path_sketch: sketch; path: [curve ids in order]; orientation?: perpendicular (default: square to the path, turning with it) \ | Sweep (`sweep`) | partial | **done 2026-10-21**: orientation (square to the path / as drawn / fixed up direction), end scale (linear law), one guide rail (auxiliary spine). Missing: twist, a second rail |
+| `solid.thread` | Thread | face: [x,y,z] on a cylindrical face; designation?: ISO metric ("M8", "M8x1"; default: the size that fits); length?: expr (default: the whole face); modeled?: bo | Thread (`thread`) | partial | **done 2026-10-21** cosmetic: designation on a cylindrical face, listed in the tree. Missing: modelled thread, the size that fits by default |
+| `solid.torus` | Torus | major, minor: expr (radii); center?: [x,y,z] (numbers in mm or length expressions; default: the origin); operation?, targets?: [body], name?, body_name? | Torus (`create-torus`) | parity | ours also has Cone |
+| `solid.web` | Web | sketch, curves: [open curve ids] (one wall each); thickness; depth? (default: to the next face); flip?: bool; direction?: in_plane\|normal | Extrude › Thin, end Up to next | parity | covered as Rib: each open curve a wall |
+
+## Construction (19)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `construct.axis.edge` | Axis Through Edge | edge: ref (a straight edge or sketch line); name? | Axis Through Edge (`axis`, method edge) | parity | **done 2026-10-21**; revolve and pattern take `{kind:"feature"}` axis references |
+| `construct.axis.normal_to_face` | Axis Perpendicular To Face | face: ref; point: ref (the axis goes through it, square to the face); name? | Axis Normal to Plane (`axis`, normal-to-plane: plane or planar face + point) | parity | **done 2026-10-21**; revolve and pattern take `{kind:"feature"}` axis references |
+| `construct.axis.through_cylinder` | Axis Through Cylinder/Cone/Torus | face: ref (a cylinder, cone or torus face, or a circular edge); name? | Axis Through Cylinder (`axis`, edge method with a circular edge) | parity | done 2026-10-21: a rim pick gives the circle's centre and normal; cone and torus rims the same |
+| `construct.axis.two_planes` | Axis Through Two Planes | a, b: plane or planar face refs; name? | Axis Through Two Planes (`axis`, two-planes) | parity | **done 2026-10-21**; revolve and pattern take `{kind:"feature"}` axis references |
+| `construct.axis.two_points` | Axis Through Two Points | a, b: point refs (vertices, sketch points, points); name? | Axis Through Two Points (`axis`, two-points) | parity | **done 2026-10-21**; revolve and pattern take `{kind:"feature"}` axis references |
+| `construct.plane.along_path` | Plane Along Path | path: edge or sketch curve ref; t: expr, 0…1 along it (default 0.5); name? The plane is square to the path there | Plane Along Path | partial | done 2026-10-21 for straight edges (fraction 0–1 along the edge); curved paths need the tangent at t |
+| `construct.plane.at_angle` | Plane at Angle | base: XY\|XZ\|YZ\|plane name; axis: X\|Y\|Z\|{origin, dir}; angle: expr; name? | Plane at Angle | parity |  |
+| `construct.plane.midplane` | Midplane | a, b: plane or planar face refs (halfway between; bisecting when they meet at an angle); name? | Midplane | parity |  |
+| `construct.plane.offset` | Offset Plane | base: XY\|XZ\|YZ\|plane name, or a planar face {face: [x,y,z], body?, index?, path?}; offset: expr; name? | Offset Plane (`plane`) | parity |  |
+| `construct.plane.perpendicular` | Perpendicular Plane | plane: plane or planar face ref; line: straight edge, sketch line or axis ref; name? The plane holds the line and is square to the plane | Perpendicular Plane | parity | done 2026-10-21: holds a picked straight edge, square to a plane or planar face |
+| `construct.plane.tangent` | Tangent Plane | face: ref (cylinder, cone, sphere or torus); at?: [x,y,z] where it touches (default: the face pick); name? | Tangent Plane | parity | done 2026-10-21: the clicked point on a curved face and the surface normal there (captured at pick time) |
+| `construct.plane.three_points` | Plane Through Three Points | a, b, c: point refs; name? | Plane Through Three Points | parity |  |
+| `construct.plane.two_edges` | Plane Through Two Edges | a, b: straight edge or line refs in one plane; name? | Plane Through Two Edges | parity | done 2026-10-21: two coplanar straight edges (refuses skew edges) |
+| `construct.point.along_path` | Point Along Path | path: edge or sketch curve ref; t: expr, 0…1 along it (default 0.5); name? | Point Along Path (`point`) | partial | done 2026-10-21 for straight edges |
+| `construct.point.center` | Point At Center Of Circle/Sphere/Torus | of: ref (circular edge, sketch circle or arc, sphere or torus face); name? | Point At Center Of Circle (`point`) | partial | done 2026-10-21 for circular edges; sphere/torus face centres not yet |
+| `construct.point.edge_plane` | Point At Edge And Plane | edge: edge or line ref; plane: plane or planar face ref; name? | Point At Edge And Plane (`point`) | parity | done 2026-10-21 |
+| `construct.point.three_planes` | Point Through Three Planes | a, b, c: plane or planar face refs; name? | Point Through Three Planes (`point`) | parity | done 2026-10-21 |
+| `construct.point.two_edges` | Point Through Two Edges | a, b: edge or line refs (where they meet, or come closest); name? | Point Through Two Edges (`point`) | parity | done 2026-10-21 (closest points; midpoint when they miss) |
+| `construct.point.vertex` | Point At Vertex | point: ref (vertex, sketch point, point); name? | Point At Vertex (`point`) | parity | done 2026-10-21 |
+
+## Surface (18)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `surface.blend` | Blend Surface | from, to: {body, edges: [[x,y,z]]} (points on the edges of one chain of each body: two picks on the same edge is that one edge, more chain up); continuity?: [g0 | Surface tab: all placeholders | gap |  |
+| `surface.boundary` | Boundary Surface | Either a loop of one sketch's curves — sketch?: id\|name (default: the sketch being edited); curves: [2 to 4 sketch curve ids in loop order] (each one ends wher | Surface tab: all placeholders | gap |  |
+| `surface.extend` | Extend | body: surface name; edges: [[x,y,z]] (points on boundary edges to push out); distance: expr (unless up_to); mode?: natural (the surface itself continued: exact  | Surface tab: all placeholders | gap |  |
+| `surface.extrude` | Surface Extrude | sketch?: id\|name; curves?: [curve ids] (open or closed chains of curves meeting end to end) and/or profiles? (their boundaries; the default when no curves are  | Surface tab: all placeholders | gap |  |
+| `surface.fair` | Fair Surface | body: surface name; faces?: [[x,y,z]] points on the faces to fair (default: every face); strength?: number (0..1 of the full fairing step, default 1); iteration | Surface tab: all placeholders | gap |  |
+| `surface.loft` | Surface Loft | sections: [{sketch, curves?: [curve ids], profiles?} \| {body, edges: [[x,y,z]]}] (2…50 in order; each one chain: a profile without holes, or curves meeting end | Surface tab: all placeholders | gap |  |
+| `surface.match` | Match Surface | body: surface name (the body whose face is rebuilt); faces?: [[x,y,z]] (points on that face, default: the body's first); target: body name (the body the seam mu | Surface tab: all placeholders | gap |  |
+| `surface.offset` | Offset Surface | faces: [[x,y,z]] (points on the faces); body?; distance: expr (signed, along the faces' normals; 0 copies the faces); chain?: bool (each pick's whole smooth cha | Surface tab: all placeholders | gap |  |
+| `surface.patch` | Patch | sketch?: id\|name and profiles? (planar patches of sketch regions) \| edges: [[x,y,z]] (points on a closed loop of a body's edges: one face on them, planar when | Surface tab: all placeholders | gap |  |
+| `surface.reverse_normal` | Reverse Normal | body (a surface); faces?: [[x,y,z]] (points on the faces to turn over; default: all of them) | Surface tab: all placeholders | gap |  |
+| `surface.revolve` | Surface Revolve | sketch?: id\|name; curves?: [curve ids] and/or profiles? (as surface.extrude); axis: sketch line id\|x\|y\|X\|Y\|Z\|{origin, dir}; angle?: expr (default 360 deg | Surface tab: all placeholders | gap |  |
+| `surface.ruled` | Ruled Surface | body; edges: [[x,y,z]] (points on a chain of its edges, open or closed); distance: expr (how far the strip reaches); mode?: normal\|tangent\|angle\|direction (d | Surface tab: all placeholders | gap |  |
+| `surface.stitch` | Stitch | bodies: [names] (surfaces sewn into the first; a solid when they close); tolerance?: expr (default: tight) | Surface tab: all placeholders | gap |  |
+| `surface.sweep` | Surface Sweep | sketch?: id\|name; curves?: [curve ids] and/or profiles? (as surface.extrude); path_sketch: sketch; path: [curve ids in order] (a path with corners, or 3D curve | Surface tab: all placeholders | gap |  |
+| `surface.thicken` | Thicken | bodies: [surface names]; thickness: expr (negative: against the normal); symmetric?: bool; operation?: new\|join\|cut\|intersect; targets? | Surface tab: all placeholders | gap |  |
+| `surface.trim` | Trim | body: surface name; plane: XY\|XZ\|YZ\|plane name\|{origin, normal} or tool: {body, point} (a face, its surface extended) or curves: {sketch, curves?: [curve id | Surface tab: all placeholders | gap |  |
+| `surface.unstitch` | Unstitch | body; faces?: [[x,y,z]] (points on the faces to take out, each its own surface body; the rest stay together under the body's name; default: every face its own s | Surface tab: all placeholders | gap |  |
+| `surface.untrim` | Untrim | face: {body, point}; holes?: all\|[[x,y,z]] (points on the inner loops to remove; default: all); outer?: bool (restore the outer boundary to the surface's natur | Surface tab: all placeholders | gap |  |
+
+## Sheet metal (12)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `sheet.convert` | Convert to Sheet Metal | body; face: [x,y,z] on its large flat face (a plate of even thickness; recesses in one face up to half the thickness deep, \              such as an engraved la | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.export_bend_table` | Export Bend Table | body?, format?: csv\|json (default csv), path? → bend table in mm and degrees, including rule and flat centre-line coordinates; a bend that cut-outs split has a | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.export_dxf` | Export Flat Pattern as DXF | body?, path?, curves?: exact\|arcs (default exact: an ellipse as ELLIPSE, splines, text outlines and other Béziers as SPLINE; arcs: tangent arcs and lines withi | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.flange` | Flange | base: sketch + profiles? (rule?, flip?) \| contour: sketch + curves (open chain of lines) + distance (rule?, flip?, reverse?) \| \          edge: edges: [[x,y,z | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.flat_pattern` | Create Flat Pattern | body? → flat size, outline loops and cut-outs (flat coordinates, as point lists), cutout_shapes (the same cut-outs exactly, in the same order: {circle: {center, | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.fold` | Fold | line: sketch + curve (a sketch line on the sheet's base face; followed when the sketch changes) or points: [[x,y,z], [x,y,z]]; \          angle? (default 90 deg | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.hem` | Hem | edges: [[x,y,z] on sheet edges]; length (to the outer face); gap? (inner radius, default: rule); flip?; body? | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.manage_rules` | Sheet Metal Rules | name (new or existing); thickness?, k_factor?, bend_radius?, relief_width?, relief_depth?, corner_relief?, hem_gap?, gap? (expressions; `Thickness` is the rule' | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.perforate` | Perforate | diameter, pitch: expr; margin?: expr (clear of edges, cut-outs and bends; default: the diameter); pattern?: staggered (60°, default) \| square; body? - a perfor | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.refold` | Refold | body? (default: the last unfolded sheet) | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.rules` | List Sheet Metal Rules | → rules with their expressions and values, and the active one | Sheet Metal tab: all placeholders | gap |  |
+| `sheet.unfold` | Unfold | body? (default: the last sheet body) — all bends | Sheet Metal tab: all placeholders | gap |  |
+
+## Plastic (7)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `plastic.assign_rule` | Assign Plastic Rule | bodies: [names]; rule: name (empty: no rule) — plastic features on these bodies take its draft and clearance as defaults | Plastic tab: placeholders | gap |  |
+| `plastic.boss` | Boss | position: [x,y,z] on a face; direction? (default: out of the face); diameter, height; hole_diameter?, hole_depth? (default: to the face); \          draft? (ang | Boss (`boss`) | partial | done 2026-10-21: post on a face point, height, draft, bore. Missing: root fillet, ribs, rule defaults |
+| `plastic.lip` | Lip | face: [x,y,z] on the rim face of a shelled body; width, height; type?: lip\|groove; gap? (groove clearance); side?: inside\|outside (which rim edge); body? | Plastic tab: placeholders | gap |  |
+| `plastic.manage_rules` | Manage Plastic Rules | name (library or new rule; a new one starts from `from`, default ABS (1.5mm)); from?; material?; thickness?, nominal_radius?, clearance?, knife_edge?, \         | Plastic tab: placeholders | gap |  |
+| `plastic.rest` | Rest | position: [x,y,z] on a face (the rest's centre); direction? (default: out of the face); width (round: the diameter); length? (a rectangle, along `along`); along | Rest (`rest`) | partial | done 2026-10-21: round or rectangular pad on a face point, draft. Missing: rule defaults |
+| `plastic.rules` | List Plastic Rules | → rules with their expressions and values, the active rule and the rules assigned to bodies | Plastic tab: placeholders | gap |  |
+| `plastic.snap_fit` | Snap Fit | position: [x,y,z] on a face; direction? (default: out of the face); hook: [x,y,z] (the catch's direction); length, thickness, width, catch_depth, catch_length;  | Plastic tab: placeholders | gap |  |
+
+## Inspect (15)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `inspect.accessibility` | Accessibility Analysis | direction?: [x,y,z] the tool comes from (default Z, from above); clear?: true turns the analysis off |  | gap |  |
+| `inspect.center_of_mass` | Center of Mass | bodies?: [names] (default all): the centre of mass (uniform density) of each and of all together | Physical properties | parity | mass, volume, centre of mass per body |
+| `inspect.clearance` | Clearance | bodies?: [names] (default: every solid body, in world placement, but those in `against`); against?: [names] (only pairs with one body in `bodies` and the other  |  | gap |  |
+| `inspect.compare` | Compare Bodies | a, b: body names (default: the two selected bodies, or the design's only two), in world placement; tolerance?: mm (0.001 to 10, default 0.01): \      surfaces c |  | gap | our engine oracle compares documents, not bodies in the app |
+| `inspect.continuity` | Continuity Analysis | body?: name (default: the visible bodies); edges?: [x,y,z] points or {"index": i} (default: every edge of the body; \              a pick must match one body);  |  | gap |  |
+| `inspect.curvature_comb` | Curvature Comb Analysis | curves?: [sketch curve ids] (sketch?: id\|name, default active) \| edges?: [[x,y,z] points on body edges] \| faces?: [[x,y,z] points on faces] with count?: isop |  | gap |  |
+| `inspect.curvature_map` | Curvature Map Analysis | radius?: mm shown red (default: a tenth of the model's size); clear?: true turns the analysis off |  | gap |  |
+| `inspect.draft` | Draft Analysis | pull?: [x,y,z] direction (default Z); angle?: degrees (default 1); clear?: true turns the analysis off | View › Draft analysis | partial | done 2026-10-21: green pulls out, red undercut, yellow within 1° of the +Z pull; the pull direction and angle are fixed for now |
+| `inspect.environment_map` | Environment Map Analysis | clear?: true turns the analysis off | View › Material (reflection)  | partial | display, not an analysis mode |
+| `inspect.interference` | Interference | bodies?: [names] (default: all, in world placement); budget_s?: seconds (default 240, at most 86400: pairs not finished by then are listed in unchecked as "not  | Interference Analysis | parity |  |
+| `inspect.isocurve` | Isocurve Analysis | faces: [[x,y,z]…] points on faces; count?: curves each way (default 8): the faces' isoparametric curves |  | gap |  |
+| `inspect.measure` | Measure | bodies?: [names] (default all); or items: [1-2 selections] → length/area/volume; diameter, radius, circumference or arc_length/angle_deg of circles, arcs and cy | Measure | parity | distance, centre distance, angle, lengths/areas/volumes of picks |
+| `inspect.minimum_radius` | Minimum Radius Analysis | curves?: [sketch curve ids] (sketch?) \| edges?: [[x,y,z]…] \| faces?: [[x,y,z]…] (default: every face of every body); the smallest radius of curvature of each  |  | gap |  |
+| `inspect.section` | Section Analysis | plane: XY\|XZ\|YZ \| construction plane name or id \| {origin, normal}; offset?: expr along the plane's normal (XY: +Z, XZ: +Y, YZ: +X); \          at?: expr, t | Section View | parity | plane + offset, live clip |
+| `inspect.zebra` | Zebra Analysis | stripes?: number across the view (default 12); clear?: true turns the analysis off | View › Zebra analysis | parity | done 2026-10-21: stripes follow the reflected view direction (shader overlay); fixed stripe count |
+
+## Timeline (21)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `timeline.add` | Add Recorded Feature | feature: a feature as the design file and timeline.inspect hold it ({type, name?, id?, …}; the name is kept even when another \          feature has it, the id  | Automation `cad.part.runprogram` / saved programs | partial | agents add features through programs, not a single recorded-feature command |
+| `timeline.compute_all` | Compute All |  | Rebuild (every edit rebuilds the history) | parity |  |
+| `timeline.copy` | Copy Features | features: [ids or names] (in timeline order on paste) |  | gap | copy/paste of features between places |
+| `timeline.delete` | Delete | feature: id\|name \| features: [id\|name] (one undo step; a sketch takes its dependent features with it) → deleted: [ids]; failing?: [{feature, error}] (later f | Delete feature (tree, context menu) | parity | dependents go with it |
+| `timeline.dependents` | Feature Dependents | feature: id\|name → features deleted with it, and features that would fail without it | Show dependencies of … (context menu) | parity |  |
+| `timeline.edit` | Edit Feature | feature: id\|name, set: {fields to change, merged into the feature's definition as timeline.inspect returns it, \          e.g. {"extent": {"distance": "30"}} ( | Edit feature (dialog) | parity |  |
+| `timeline.export_script` | Export Command Script | path?: write the script to this file → script: {commands: [...]} that rebuilds the design (solidcraft-cli eval/run), \          steps, omitted: what the script  | Saved programs (automation) | partial | no one-click "script that rebuilds this design" export |
+| `timeline.group` | New Feature Folder | name?; features?: [id\|name]; parent?: folder id (features leave any other timeline folder) |  | gap | feature folders |
+| `timeline.inspect` | Inspect Feature | feature: id\|name → type, definition (the fields timeline.edit's set changes, with their current values), \          inputs: [{label, param, expression, unit}]  | Properties panel / `cad.part.inspect` | parity |  |
+| `timeline.move_many` | Move Timeline Items | features?: [id\|name], groups?: [folder ids], group?: folder id, position: insertion slot; atomically changes folder membership and moves all selected contents  | Drag in the tree / `cad.feature.move` | partial | one feature at a time |
+| `timeline.move_to_group` | Move Features to Folder | features?: [id\|name], groups?: [ids], group?: id (omit or null to move to the timeline root) |  | gap |  |
+| `timeline.paste` | Paste Features | translate?: [x,y,z] (moves the copies' geometry); the copies go at the marker |  | gap |  |
+| `timeline.redefine` | Edit Feature | feature: id\|name, command: the feature's command id, params: its parameters (the feature is rebuilt in place) | Edit feature (dialog) | parity |  |
+| `timeline.rename` | Rename | feature: id\|name, name (references to it follow) | Rename (tree) | parity |  |
+| `timeline.rename_group` | Rename Feature Folder | group: id, name |  | gap |  |
+| `timeline.reorder` | Reorder Feature | feature: id\|name, position: its new index; refused when a feature that worked would fail | Drag in the tree / `cad.feature.move` | parity | refused when the history would break |
+| `timeline.reorder_many` | Reorder Features | features: [id\|name], position: insertion slot in the current history; selected features keep their relative order; refused when a feature that worked would fai |  | partial | one at a time |
+| `timeline.roll_to` | Roll History Marker | position: number of features to keep active, or "end" (omit = end) \| feature: id\|name (the marker goes right after it) | Rollback marker (tree) | parity |  |
+| `timeline.rollback` | Move Timeline Marker | position: number of features to keep active, or "end" (omit = end) | Rollback marker (tree) | parity |  |
+| `timeline.suppress` | Suppress Feature | feature: id\|name \| features: [id\|name] (one undo step), suppressed?: bool (default toggles: several features are all \          suppressed unless all of them | Suppress (tree) / `cad.feature.suppress` | parity |  |
+| `timeline.ungroup` | Remove Feature Folders | group: id \| groups: [ids] (features remain in the timeline) |  | gap |  |
+
+## Parameters (14)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `expr.evaluate` | Evaluate Expression | expression, kind?: length\|angle\|unitless (or unit?: mm\|in\|deg…) → ok, value (mm/rad), display_value, references, error | Sketch variables | partial |  |
+| `parameters.add` | Add User Parameter | name, expression, unit?, comment?, favorite?: bool | Variables panel (sketch) | partial | document variables exist (`evaluateDocumentVariables`) and drive dimensions; no units, comments or favourites |
+| `parameters.change` | Change Parameters | name, expression (number or text), unit?: mm\|cm\|m\|in\|ft\|deg\|rad\|"" (new parameters default to their value's unit), comment?, \              favorite?: bo | Variables panel | partial | expressions over other variables; units are millimetres/degrees only |
+| `parameters.comment` | Comment Parameter | name, comment |  | gap |  |
+| `parameters.complete` | Complete Expression | prefix?: the text before the cursor → word, suggestions [{text, kind: parameter\|function\|unit\|constant, detail}] |  | gap | expression completion |
+| `parameters.delete` | Delete Parameter | name (refused while something uses it; the error lists the users) | Variables panel | partial | use check before delete to confirm |
+| `parameters.export` | Export Parameters | format?: csv\|json (default csv, or from the path), path?: write to a file → text |  | gap |  |
+| `parameters.favorite` | Favourite Parameter | name, favorite?: bool (default true) |  | gap |  |
+| `parameters.graph` | Parameter Graph | → nodes, edges [user, used] (users include Feature:<name>), cycles, errors |  | gap |  |
+| `parameters.import` | Import Parameters | text: CSV (header with name, expression, unit?, comment?) or JSON [{name, expression, unit?, comment?}] \| path; all or nothing |  | gap |  |
+| `parameters.list` | List Parameters | favorites?: bool (only favourites), filter?: all\|user\|sketch\|feature\|favorites → parameters (name, expression, unit, value in its unit, \          source, f | Variables panel / `cad.part.inspect` | partial |  |
+| `parameters.move` | Move Parameter | name, before \| after: another user parameter; the user parameter is listed just before or after it |  | gap | ordering |
+| `parameters.rename` | Rename Parameter | name, new_name (expressions, feature inputs and dimensions that use it follow) | Variables panel | partial | references follow when renamed in the panel |
+| `parameters.users` | Parameter Users | name → users (parameters, feature inputs, dimensions) and the features it drives |  | gap |  |
+
+## Assembly (67)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `assembly.bom` | Bill of Materials | component?: id or name (default the design); levels?: flat (default: every part at any depth, counted through its \          subassemblies) \| top (the componen | BOM panel | parity |  |
+| `component.activate` | Activate Component | component: id or name (0 or "root" for the design); occurrence?, path?: exact placement used to author shared geometry |  | gap | no active-component editing context |
+| `component.break_link` | Break Link | component: id or name of a linked component — keeps its bodies as they are and forgets the design file | Studio versions | partial | links are Studio documents; break = copy |
+| `component.capture_position` | Capture Position | keeps pending occurrence moves |  | gap |  |
+| `component.create` | New Component | name?, parent?: component id or name (default: the active one); parent_path?: exact parent placement; activate?: bool (default true) | Assembly workspace (new component) | parity |  |
+| `component.delete` | Delete Component | component: deletes it, its subcomponents, occurrences and features | Remove component | parity |  |
+| `component.from_bodies` | Create Components from Bodies | bodies: [names] → one new component per body, named after it |  | gap | make a component from part bodies |
+| `component.insert_design` | Insert Design | path: a .solidcraft design → a new component linked to it, holding its solid bodies as placed in that design; \          name? (default: the design's name); par | Insert (part document) | parity |  |
+| `component.links` | List Links | → linked components: component, name, path, file (resolved), found | Studio Drive | partial |  |
+| `component.list` | List Components | compact?: bool (counts of bodies, features, sketches and construction planes instead of their names; occurrences leave out \          identity transforms; child | Parts list / `cad.assembly.inspect` | parity |  |
+| `component.metadata` | Part Properties | component: id or name (0 or "root": the design's own properties) → component, name, part_number, description, revision, \          metadata (as saved, other too | Properties panel | partial | read |
+| `component.metadata.set` | Change Part Properties | component: id or name (not the root: use document.metadata.set); part_number?, description?, revision?: text (empty or null \          removes); values?: {key:  |  | gap |  |
+| `component.move_bodies` | Move Bodies to Component | bodies: [names], component |  | gap |  |
+| `component.move_sketches` | Move Sketches to Component | sketches: [ids or names], component |  | gap |  |
+| `component.paste_new` | Paste New | component: independently copy its nested definition graph and history, materials and styles; occurrence?, path?: selected source placement; translate?: [x,y,z]. |  | gap |  |
+| `component.properties` | Component Physical Properties | component?: id or name (default active); descendants?: bool (default true). Measures the first placement, or all placements for root, including pending moves; m | Properties panel | partial |  |
+| `component.relink` | Relink Source | component: id or name of a linked component; path: a saved .solidcraft design — replaces the source and linked bodies for all its occurrences, preserving identi | Studio Drive | partial |  |
+| `component.rename` | Rename Component | component, name | Rename (parts list) | parity |  |
+| `component.revert_position` | Revert Position | occurrences?: [ids] (default all); drops selected pending occurrence moves |  | gap |  |
+| `component.unlock` | Unlock Contents | component: removes the rigid joints that hold its contents together (an imported assembly's rigid group), so its parts \          move and take joints one by on |  | gap |  |
+| `component.update_links` | Update Links | component?: id or name (default: every linked component) — reads the linked designs again and replaces their bodies where they changed | Studio Drive | partial |  |
+| `contact.check` | Check Contact | → pairs in contact sets that pass through each other now |  | gap |  |
+| `contact.create` | New Contact Set | occurrences: [ids or names] (two or more); name? |  | gap |  |
+| `contact.disable_all` | Disable Contact | contact off |  | gap |  |
+| `contact.edit` | Edit Contact Set | set: id\|name; occurrences?; name?; suppressed?: bool; delete?: bool |  | gap |  |
+| `contact.enable_all` | Enable All Contact | every occurrence takes part in contact (one set of all) |  | gap |  |
+| `contact.enable_sets` | Enable Contact Sets | enabled?: bool (default true) — driving joints and motion studies stop where bodies in one contact set would pass through each other |  | gap |  |
+| `contact.list` | List Contact Sets | → sets, enabled, all |  | gap |  |
+| `explode.create` | Exploded View | name?; scale? (automatic: each occurrence pushed away from the assembly's centre by scale × its offset, default 1); \          moves?: [{occurrence, translate:  | Explode (placeholder) | gap |  |
+| `explode.delete` | Delete Exploded View | view |  | gap |  |
+| `explode.list` | List Exploded Views |  |  | gap |  |
+| `explode.show` | Show Exploded View | view: id\|name (or none: back to the assembled placement) — shown only; the design keeps its placements |  | gap |  |
+| `joint.as_built` | As-Built Joint | type, a: occurrence, b: occurrence (stay where they are); at?: joint origin (default: b's origin) — the joint's frame; one on a or b is kept on its face or hole |  | gap |  |
+| `joint.cam` | Cam | a: the cam's joint (revolute); b: the follower's joint, a slider (a translating follower) or a revolute (an oscillating one),          b driven by a; profile: { |  | gap |  |
+| `joint.create` | Joint | type: rigid\|revolute\|slider\|cylindrical\|pin_slot\|planar\|ball, or a relation: parallel\|perpendicular\|angle\|point_on_plane\|point_on_line\|line_on_plane  | Mates: fastened, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle | parity | fastened, revolute, slider, cylindrical, ball, planar, pin slot and parallel mates author, store and solve (2026-10-21, r36); distance, perpendicular and angle solve but the workspace has no record for them (greyed with the reason); width and tangent need surface geometry |
+| `joint.delete` | Delete Joint | joint: id\|name (or origin: name, link: index) | Delete mate | parity |  |
+| `joint.drive` | Drive Joints | joint: id\|name; value \| values: [angles in deg or expressions, distances] (values not given keep theirs; a value driven drops the expression joint.create gave |  | gap |  |
+| `joint.edit` | Edit Joint | joint; type?, flip?, offset?, angle? (a number, or an expression the joint then follows), suppressed?, name? | Edit mate | parity |  |
+| `joint.gear` | Gear | a, b: joints that turn (revolute), b driven by a; ra, rb: the gears' pitch radii (or tooth counts): mm, an expression, or \          {circle: [x,y,z], occurrenc | Gears (placeholder) | gap |  |
+| `joint.limits` | Joint Limits | joint; index?: value index (default 0); min?, max? (omit both to clear) | Mate DOF limits | parity |  |
+| `joint.list` | List Joints | → joints (type, occurrences, values, limits; expressions: {offset?, angle?, values?} when they were typed as expressions), origins, links, degrees of freedom, c | Mates panel / `cad.assembly.inspect` | parity |  |
+| `joint.motion_link` | Motion Link | a, b: joints; ratio (b = ratio · a + offset): b's units per a's (mm per deg for an angle driving a distance); offset?: in b's units (deg for an angle, mm for a  |  | gap |  |
+| `joint.origin` | Joint Origin | name?, occurrence?: id\|name (default: from the pick, or the named face's component), face: [x,y,z] \| "<name>" (centre of a planar face) \| circle: [x,y,z] \|  | Connectors | partial | mate connectors on faces/edges/vertices |
+| `joint.rack_pinion` | Rack and Pinion | a, b: a joint that turns (revolute: the pinion) and one that slides (slider: the rack), in either order, b driven by a; \          radius: the pinion's pitch ra |  | gap |  |
+| `joint.reach` | Reach Point | occurrence: id\|name; point: [x,y,z] (where its point goes, world); at?: [x,y,z] (its point, in the world where it is now; default: the centre of          its b |  | gap |  |
+| `joint.rigid_group` | Rigid Group | occurrences: [ids or names] (move together, as they are) |  | gap |  |
+| `joint.screw` | Screw | joint: a cylindrical joint (its turn drives its travel) \| a, b: a joint that turns and one that slides, b driven by a; pitch: \          travel per turn (mm or |  | gap |  |
+| `joint.solve` | Solve Joints | re-place the occurrences from the joints → conflicts, errors, dof | `cad.assembly.compose` / solve on edit | parity |  |
+| `joint.sweep` | Sweep Joint |  |  | gap |  |
+| `motion.delete` | Delete Motion Study | study |  | gap |  |
+| `motion.export` | Export Motion Study | study; samples? (default steps + 1); path? (.json or .csv) → occurrence positions per step (the design is not changed) |  | gap |  |
+| `motion.export_animation` | Export Motion Animation | study: id\|name, or joint: id\|name with from and to (degrees for angles, mm for distances, or expressions) and index?;          path: a .gif file, or a folder  | aether_animation (separate app) | partial |  |
+| `motion.interference` | Motion Interference |  |  | gap |  |
+| `motion.list` | List Motion Studies |  |  | gap |  |
+| `motion.play` | Play Motion Study | study: id\|name; step (0…steps) — sets the joints to the study's values there (contact sets stop them); quiet?: bool \          (positions of only the occurrenc | Mate DOF value preview | partial | one joint at a time |
+| `motion.plot` | Plot Motion Study |  |  | gap |  |
+| `motion.study` | Motion Study | name?; study? (edit an existing one); steps? (timeline length, default 100); keys: [{joint, index?, points: [[step, value], …]}] \          (values: degrees for |  | gap |  |
+| `motion.trace` | Motion Trace |  |  | gap |  |
+| `motion.trace.keep` | Keep Motion Trace |  |  | gap |  |
+| `occurrence.copy` | Paste (Instance) | component (or occurrence): what to place again; path?: validates selected occurrence; parent?: component (default: the same parent); translate?: [x,y,z]. Copies | Instance | partial |  |
+| `occurrence.ground` | Ground | occurrence; grounded?: bool (default toggles) | Fixed component | parity |  |
+| `occurrence.move` | Move Occurrence | occurrence; path?: exact placement; space?: local\|world (default local); translate?: [x,y,z]; axis?: [x,y,z], angle?: radians or "30 deg", origin?: [x,y,z]; ma | Transform / drag | parity |  |
+| `occurrence.properties` | Occurrence Physical Properties | occurrence: id or name; path?: [occurrence ids] (required if nested under multiple instances); descendants?: bool (default true). Physical properties of this pl | Properties panel | partial |  |
+| `parts.fastener` | Insert Fastener | the Insert Part dialog's command (same as parts.insert): family, size, length?, at?\|point?+direction?, name? | Smart Fastener (placeholder) | gap |  |
+| `parts.insert` | Insert Part | family (socket_head_cap_screw \| hex_bolt \| hex_nut \| washer \| set_screw \| dowel_pin \| bearing); size ("M6", or "608" for bearings); \          length? (mm | Insert | parity |  |
+| `parts.library` | Standard Parts | family? → families (name, standard, sizes, lengths) and, with family, each size's dimensions (mm) |  | gap |  |
+| `parts.resize` | Change Part Size | component: id\|name of an inserted part; size?; length? — rebuilds it (joints keep it seated) |  | gap |  |
+
+## Mesh (1)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `mesh.convert` | Convert Mesh | body?: mesh body name (default: the selected mesh body); tolerance?: length expression (default 0.05 mm): reconstruct a closed constant-section mechanical mesh  | Mesh tab: placeholders | gap |  |
+
+## Selection (3)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `select.clear` | Clear Selection |  | Selection filters | parity |  |
+| `select.set` | Select | items: [{type: body\|edge\|face\|feature\|sketch_curve\|sketch_point\|profile, …}], add?: bool | Selection filters | parity |  |
+| `selection.delete` | Delete | items?: [selection items]; components?, occurrences?, canvases?: [ids or names]; dry_run?: bool → deleted, would_fail, skipped (one undo step) | Selection filters | parity |  |
+
+## Editing (4)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `edit.checkpoint` | Checkpoint | → {checkpoint: id}: remember the design, active sketch and undo history (restore with edit.restore_checkpoint) | Undo/redo | parity |  |
+| `edit.redo` | Redo |  | Undo/redo | parity |  |
+| `edit.restore_checkpoint` | Restore Checkpoint | checkpoint: id; forget?: bool (true = drop it without going back). Goes back to it, undo history included | Undo/redo | parity |  |
+| `edit.undo` | Undo |  | Undo/redo | parity |  |
+
+## View (8)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `view.ambient_occlusion` | Ambient Occlusion | enabled: bool → enabled; apply soft contact shading in the GPU viewport | View tab | parity |  |
+| `view.apply` | Restore Named View | view?: front\|back\|top\|bottom\|left\|right\|iso\|home (frames the model) \| a named view's name; or camera?: {target: [x,y,z], yaw, pitch, distance, fov?} (ra | View tab | parity |  |
+| `view.delete` | Delete Named View | view: name | View tab | parity |  |
+| `view.graphics_preset` | Graphics Preset | preset: performance\|quality → preset, enabled, display_quality, supersampling, supersampling_adaptive; Quality: AO, Fine, adaptive 2x SSAA; Performance: no AO, | View tab | parity |  |
+| `view.list` | List Named Views |  | View tab | parity |  |
+| `view.navigate` | Navigate View | camera: Camera; direction?: [x,y,z] in the camera's up-axis frame; or action: left\|right\|up\|down\|clockwise\|counterclockwise\|home\|fit, degrees?: 0..180 (h | View tab | parity |  |
+| `view.rename` | Rename Named View | view: name, name | View tab | parity |  |
+| `view.save` | New Named View | name?; camera: {target: [x,y,z], yaw, pitch, distance, fov?} (replaces a view of the same name) | View tab | parity |  |
+
+## Appearance (3)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `appearance.assign` | Appearance | bodies?: [names]; faces?: [[x,y,z] on faces] (body?: which body, default the nearest); components?: [names or ids, or occurrence names]; \              appearan | Appearance panel | parity |  |
+| `appearance.library` | Appearance Library | → the built-in appearances (name, colour, opacity) | Appearance panel | parity |  |
+| `appearance.list` | List Appearances | body?: name → assigned appearances; with body, its resolved look and its faces' (face index, look) | Appearance panel | parity |  |
+
+## Material (7)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `material.assign` | Physical Material | bodies: [names]; material: name (Steel, Aluminum, ABS Plastic, …, or one made with material.create; `material.list`) | Material panel | verify |  |
+| `material.create` | New Physical Material | name (not a built-in material's); density_g_cm3: (0, 1000]; appearance?: library name (appearance.library) \| color?: "#rrggbb" or [r, g, b] (0–255), opacity? ( | Material panel | verify |  |
+| `material.delete` | Delete Physical Material | material: a material defined in this design; replace?: material for the bodies and configuration cells that use it (without it, a material in use is refused) | Material panel | verify |  |
+| `material.edit` | Edit Physical Material | material: a material defined in this design; name? (bodies and configuration cells follow); density_g_cm3?; appearance? \| color?, opacity?, pbr? (as material.c | Material panel | verify |  |
+| `material.list` | List Materials | → the built-in materials, then the design's own (user: true, with their look) | Material panel | verify |  |
+| `material.properties.directional` | Directional Elastic Modulus | card: schema_version 1 engineering material card; direction: three finite nonzero-vector components in the card's material-local axes. Returns normalized direct | Material panel | verify |  |
+| `material.properties.validate` | Validate Physical Material Data | card: schema_version 1 engineering material card in SI units. Returns numerical consistency, derived isotropic moduli, missing conditions and sources needing re | Material panel | verify |  |
+
+## Configurations (8)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `config.activate` | Activate Configuration | row: name — sets its parameter values and suppressions | Configurations (placeholder) | gap |  |
+| `config.column` | Configuration Column | param? \| feature? \| material? \| appearance? (target name); delete?: bool | Configurations (placeholder) | gap |  |
+| `config.configure` | Configure | params?: [parameter names]; features?: [feature names]; materials?: [body names]; appearances?: [body names] (columns to add; with no rows yet, a "Default" row  | Configurations (placeholder) | gap |  |
+| `config.preview` | Preview Configuration | row: name — validates a rebuild without changing the design or history | Configurations (placeholder) | gap |  |
+| `config.row` | Configuration Row | name; from? (row to copy; default current values); values?: {column key: expression, suppression, material name, appearance name or Look object}; rename?; delet | Configurations (placeholder) | gap |  |
+| `config.rule` | Configuration Rule | rule?: {id,name,enabled,condition,effect}; id? + delete?; id? + index? (ordered move) | Configurations (placeholder) | gap |  |
+| `config.rules` | Configuration Rules | ordered typed rules, rows and active state | Configurations (placeholder) | gap |  |
+| `config.table` | Display Configuration Table | → columns (param:<name> or suppress:<feature>), rows, the active row and whether the design still matches it | Configurations (placeholder) | gap |  |
+
+## Model query (3)
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `model.edges` | List Edges | body: name | cad.part.inspect / topology | partial |  |
+| `model.faces` | List Faces | body: name → per face: index, name (what face.delete, sheet.convert `face`, solid.shell … take in place of a point), exact, area, centroid (not always on the fa | cad.part.inspect / topology | partial |  |
+| `model.threads` | List Threads |  | cad.part.inspect / topology | partial |  |
+
+## File (Studio) (20)
+
+_n/a for CAD: Studio owns files, Drive and versions._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `doc.open` | Open | path: .solidcraft design, or a .step/.stp/.igs/.fcstd/.3dm/.3mf/.stl/.obj/.glb/.gltf file (STEP, IGES, FreeCAD, Rhino, 3MF, STL, OBJ or glTF; opens as a new des |  | n/a |  |
+| `doc.recover` | Recover Design | id (from doc.recovery_list); dir?; discard?: bool (delete the entry once open) — opens it with its file path, unsaved |  | n/a |  |
+| `doc.recovery_discard` | Discard Recovered Design | id, or all: true; dir? |  | n/a |  |
+| `doc.recovery_list` | Recoverable Designs | dir? (default: the recovery folder) → designs autosaved by apps that crashed or closed with unsaved changes |  | n/a |  |
+| `document.inspect` | Inspect Design | measure?: bool (include body measurements) |  | n/a |  |
+| `document.metadata` | Design Properties | → metadata: the design's metadata object as saved (other tools' keys too); properties: project, part_number, revision, \          author, organization, descript |  | n/a |  |
+| `document.metadata.remove` | Remove Design Property | key, or keys: [keys] (any key, also one another tool wrote) → metadata, removed: [keys that were there] |  | n/a |  |
+| `document.metadata.set` | Change Design Properties | key and value, or values: {key: value, …} (all or nothing, one undo step). SolidCraft's keys: project, part_number, \          revision, author, organization, d |  | n/a |  |
+| `document.units` | Change Design Units | units: mm\|cm\|m\|in\|ft (display and unit-less parameters; values keep their meaning) |  | n/a |  |
+| `file.export` | Export | path; format?: stl\|stla\|obj\|step\|3mf\|3mf-tagged\|urdf\|json (default from extension; 3mf-tagged: 3MF whose triangles carry their B-rep face, at full precis |  | n/a |  |
+| `file.insert_mesh` | Insert Mesh | path: .3mf, .stl, .obj, .glb or .gltf file (its meshes join the design as mesh bodies in a new component named after the file → component, component_name, occur |  | n/a |  |
+| `file.insert_step` | Insert STEP | path: STEP, IGES, FreeCAD .FCStd or Rhino .3dm file (its bodies join the design as an Import base feature in a new component named after the file, placed in the |  | n/a |  |
+| `file.new` | New Design | name? |  | n/a |  |
+| `file.save` | Save | path? (default: current file); format?: container\|json (default: json for .json, otherwise container); compression?: fast\|compact (default: fast); cache?: boo |  | n/a |  |
+| `file.save_as` | Save As | path; format?: container\|json (default: json for .json, otherwise container); compression?: fast\|compact (default: fast); cache?: bool (the evaluated model, s |  | n/a |  |
+| `file.save_mesh` | Save As Mesh | path; format?: stl\|3mf\|3mf-tagged (default from the extension, else stl; 3mf-tagged: docs/formats/3mf-face-tags.md); bodies?: [names] (default: all); ascii?:  |  | n/a |  |
+| `file.slicers` | Installed Slicers | → the slicers found on this machine: [{id, name, icon?}]; pass an id or name as file.save_mesh's `slicer` |  | n/a |  |
+| `library.apply` | Apply Local Library Entry | path, entry: qualified ID, revision: exact content SHA-256; targets?: {bodies?, faces?: [{body,point}], components?}; name?: physical material name on import. C |  | n/a |  |
+| `library.export` | Export Design Library | path: .json; id? (default user.local), name?, provenance?, overwrite? false. Copies assigned looks and design-local physical definitions; never changes the desi |  | n/a |  |
+| `library.inspect` | Inspect Local Library | path: scalar library JSON; returns validated catalog and exact entry revisions, without changing the design |  | n/a |  |
+
+## Render (10)
+
+_n/a for CAD: our View › Scene and Material tabs; a ray-traced render job is not planned._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `render.backends` | Render Backends | No parameters. Returns {schema_version: 1, default_backend: builtin, backends: [{id, label, availability, executors: [{id, availability, profiles, limits, scrat |  | n/a |  |
+| `render.cancel` | Cancel Render | job: {session, serial, generation}. Requests cooperative cancellation; completed jobs remain completed. Late cancelled frames cannot be published. |  | n/a |  |
+| `render.export` | Export Render Image | job: {session, serial, generation}, path: PNG destination, overwrite?: false. Exports a retained completed image atomically; an existing destination is preserve |  | n/a |  |
+| `render.preflight` | Check Render Request | setup?: saved name OR settings?: full RenderSetup; transparent_background?: false; replace?: false. Validates the installed image host and bounded captured prod |  | n/a |  |
+| `render.scene` | Inspect Render Scene | No parameters. Authoritative product-scene metadata, without modelling overlays or mesh payloads. Explicitly settles stale geometry; does not render an image. S |  | n/a |  |
+| `render.settings.apply` | Apply Render Camera | name: saved setup. Applies its existing Camera snapshot including roll/up as view state, without modifying the document or starting a render. |  | n/a |  |
+| `render.settings.get` | Render Settings | name?: saved setup. Without name returns {setups, defaults}; with name returns {name, setup}. Does not evaluate the model or apply a camera. See docs/render-set |  | n/a |  |
+| `render.settings.set` | Save Render Settings | name: setup name, set: object of fields to replace (backend, mode, camera, width, height, format, exposure_ev, environment_rotation, environment_intensity, back |  | n/a |  |
+| `render.start` | Render Image | Same request as render.preflight. Captures an immutable product scene and queues a bounded image job. Returns its session-scoped job identity, captured scene_ge |  | n/a |  |
+| `render.status` | Render Progress | job: {session, serial, generation}. Non-blocking progress, error and completed frame metadata; no image bytes and no rendering in this call. |  | n/a |  |
+
+## Browser (6)
+
+_n/a for CAD: our item tree._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `browser.group` | New Group | folder: bodies\|sketches\|construction; component?: id (default 0); name?; items?: [keys] (they leave other groups) |  | n/a |  |
+| `browser.move` | Move Browser Items | folder, component?, items: [keys]; group?: id (into it; omit to take them out of groups); before?: key (position in the group) |  | n/a |  |
+| `browser.order` | Order Browser Items | folder, component?, order: [keys] (the folder's items in display order) |  | n/a |  |
+| `browser.rename_group` | Rename Group | group: id, name |  | n/a |  |
+| `browser.ungroup` | Ungroup | group: id (its items go back to the folder) |  | n/a |  |
+| `browser.visibility` | Show/Hide | visible: bool; items?: [sketch id or name \| body name \| construction name \| joint name \| O\|X\|Y\|Z\|XY\|XZ\|YZ]; \          or joints?: [joint id or name]  |  | n/a |  |
+
+## Canvas (5)
+
+_n/a for CAD: viewport interaction._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `canvas.calibrate` | Calibrate Canvas | canvas: id or name; a, b: two points on the canvas plane [x,y]; distance: their true distance (mm): scales the image about a |  | n/a |  |
+| `canvas.decal` | Decal | path \| data; face: [x,y,z] on a planar face (the image is centred there); width?: mm; angle?: deg; opacity?: (default 1) |  | n/a |  |
+| `canvas.delete` | Delete Canvas | canvas: id or name |  | n/a |  |
+| `canvas.edit` | Edit Canvas | canvas: id or name; center?, width?, angle?: deg, opacity?, flip?, visible?, name? |  | n/a |  |
+| `canvas.insert` | Canvas | path \| data (base64 PNG or JPEG); plane?: XY\|XZ\|YZ\|{face: [x,y,z]}\|… (default XY); center?: [x,y] on the plane, or at?: [x,y,z]; width?: mm (default 100);  |  | n/a |  |
+
+## Diagnostics (4)
+
+_n/a for CAD: not a modelling tool._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `diagnostics.crash_report` | Crash Report | id: report id. The whole report: message, location, backtrace, app version and commit, system, the command that \          crashed and the recent ones, notes, a |  | n/a |  |
+| `diagnostics.crash_reports` | Crash Reports | limit?: number (default 20). Lists this computer's crash reports, newest first: {dir, reports: [{id, kind, time, message, \          command, count, version, pa |  | n/a |  |
+| `diagnostics.crash_reports.clear` | Delete Crash Reports | id?: one report (default: all). Returns {deleted} |  | n/a |  |
+| `diagnostics.crash_test` | Crash Test | mode: panic \| kernel \| abort. Checks that crash reports work: panic = an internal error in this command (caught; \          the design is unchanged), kernel = |  | n/a |  |
+
+## Engine (1)
+
+_n/a for CAD: not a modelling tool._
+
+| SolidCraft | Title | Their contract | Ours | Status | Missing / note |
+|---|---|---|---|---|---|
+| `engine.commands` | List Commands |  |  | n/a |  |
+

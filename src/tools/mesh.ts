@@ -1,6 +1,6 @@
 /** Mesh — Fusion's MESH tab. Triangle geometry, not B-rep.
  *
- *  Entirely greyed: Aether has no mesh body type. FreeCAD's Mesh workbench
+ *  Entirely greyed: Aether has no editable mesh body type. A mesh workbench
  *  could back most of this, but nothing carries a mesh across the JSON
  *  boundary yet, so there is no producer to call.
  */

@@ -1,4 +1,5 @@
 import {cadSelection} from '../cad-selection-store';
+import { SectionLayer } from './section-layer';
 import {expect,it,vi} from 'vitest';
 import * as THREE from 'three/webgpu';
 import {FeaturePreviewLayer} from '../modeling/feature-preview-layer';
@@ -11,7 +12,7 @@ import {resolvePartDisplay} from './part-display';
 function fixture() {
   const viewer=Object.create(MateViewport.prototype);
   viewer.featurePreview=new FeaturePreviewLayer();viewer.historyPreview=new FeaturePreviewLayer();
-  viewer.modelRoot=new THREE.Group();viewer.parts=new Map();viewer.partDisplay=new Map();viewer.isolation=null;
+  viewer.modelRoot=new THREE.Group();viewer.section=new SectionLayer(viewer.modelRoot,new THREE.Group());viewer.parts=new Map();viewer.partDisplay=new Map();viewer.isolation=null;
   viewer.callbacks={onStateChanged:vi.fn(),onStatus:vi.fn()};
   viewer.renderer={domElement:{getBoundingClientRect:()=>({left:0,top:0,width:600,height:600})}};
   viewer.camera=new THREE.PerspectiveCamera(45,1,.1,1000);viewer.camera.position.set(0,0,10);viewer.camera.lookAt(0,0,0);viewer.camera.updateMatrixWorld();
@@ -98,4 +99,20 @@ it('allows anchored source-edge picks through preview only for an active edge pi
   delete (candidate as any).measurements.linearDirection;expect(v.selectedTransformEdge('doc')).toBeNull();
   v.setSourceEdgePicking(false);expect(v.selectionHit({clientX:300,clientY:300})).toBeNull();
  }finally{cadSelection.dispatch({type:'clear'});cadSelection.dispatch({type:'set-filter',filter:old});}
+});
+it('never picks material a section view has cut away, unless the body is excluded from it',()=>{
+ const v=fixture() as any;
+ for(const [id,part] of v.parts)v.section.adopt(id,part.group,part.surface.geometry);
+ v.modelRoot.updateMatrixWorld(true);
+ const top={label:'Top',originMillimeters:[0,0,0],normal:[0,0,1]} as const;
+ // The section at z = 0 removes everything above it: the near body (z 1.5–2.5).
+ v.setSection({plane:top,offsetMillimeters:0,mode:'exclude',items:[]},false);
+ expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['far']);
+ // Cut through the near body at z = 2: its section face is what the click lands on.
+ v.setSection({plane:top,offsetMillimeters:2,mode:'exclude',items:[]},false);
+ expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
+ v.setSection({plane:top,offsetMillimeters:0,mode:'exclude',items:[{id:'near',label:'near'}]},false);
+ expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
+ v.setSection(null,false);
+ expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
 });

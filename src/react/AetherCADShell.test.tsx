@@ -66,7 +66,6 @@ describe("AetherCADShell", () => {
       "parts-list",
       "history-list",
       "viewport",
-      "view-cube",
     ]) {
       expect(html).toContain(`id="${id}"`);
     }
@@ -86,19 +85,19 @@ describe("AetherCADShell", () => {
     expect(html).toContain('aria-label="Settings"');
   });
 
-  it("defaults to full-suite ribbon with left history and version controls", () => {
+  it("defaults to the standard floating workspace with left history and version controls", () => {
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).toContain("chrome-suite toolbar-traditional");
-    expect(html).toContain("aui-workspace-ribbon");
-    expect(html).toContain('aria-label="Workspace: Design"');
+    expect(html).toContain("aui-studio-workspace");
+    expect(html).toContain('aria-label="CAD workspace"');
     expect(html).toContain('aria-label="Features and parts"');
     expect(html).toContain('aria-label="Version control"');
     expect(html).toContain('aria-label="History"');
     expect(html).toContain('aria-label="Appearance System"');
-    expect(html).toContain('aria-label="Workspace: Design"');
+    expect(html).toContain('aria-label="CAD workspace"');
     expect(html).toContain('aria-label="Comments"');
     expect(html).toContain('aria-label="Document notes"');
-    expect(html).toContain('aria-label="Action items"');
+    expect(html).toContain('aria-label="Tasks"');
     expect(html).not.toContain('aria-label="Rebuild workbench"');
   });
 
@@ -107,11 +106,11 @@ describe("AetherCADShell", () => {
     try {
       const html = renderToStaticMarkup(<AetherCADShell />);
       expect(html).toContain("chrome-classic toolbar-traditional");
-      expect(html).toContain('aria-label="Workspace: Design"');
-      expect(html).toContain("aui-workspace-ribbon");
+      expect(html).toContain('aria-label="CAD workspace"');
+      expect(html).toContain("aui-studio-workspace");
       expect(html).toContain('aria-label="Version control"');
       expect(html).toContain('aria-label="Comments"');
-      expect(html).toContain('aria-label="Rebuild workbench"');
+      expect(html).toContain('aria-label="Features and parts"');
       cadPresentation.patch({toolbarMode: "floating"});
       expect(renderToStaticMarkup(<AetherCADShell />)).toContain("chrome-classic toolbar-floating");
     } finally { vi.unstubAllGlobals(); }
@@ -185,7 +184,7 @@ describe("AetherCADShell", () => {
     // it replaced CAD's own `.browser-filter` search field.
     expect(html).toContain('class="aui-collection-filter"');
     expect(html).toContain('data-aether-window-drag-region="true"');
-    expect(html).toContain('aria-label="Workspace: Design"');
+    expect(html).toContain('aria-label="CAD workspace"');
     expect(html).toContain('class="aui-tree"');
     expect(html).toContain('class="aui-listbox"');
     expect(html).not.toContain('id="reference-list"');
@@ -308,8 +307,8 @@ describe("AetherCADShell", () => {
     expect(html).toContain("Physical properties");
     expect(html).toContain("Section view");
     expect(html).not.toContain("Curvature");
-    expect(html).toContain("Selected edge and face measurements");
-    expect(html).toContain("center-to-center spacing");
+    // Measuring picked entities is the Measure tool's floating window, not this panel.
+    expect(html).not.toContain("Selected edge and face measurements");
     expect(html).toContain("Check interference");
     expect(html.match(/disabled=""/g)?.length).toBeGreaterThanOrEqual(4);
   });
@@ -477,7 +476,9 @@ describe("AetherCADShell", () => {
     expect(draft).toContain('id="assembly-mate-type"');
     expect(draft).toContain('<option value="fastened" selected="">Fastened</option>');
     expect(draft).toContain('<option value="revolute">Revolute</option>');
-    expect(draft).toContain('<option value="prismatic">Prismatic</option>');
+    expect(draft).toContain('<option value="prismatic">Slider</option>');
+    for (const kind of ["cylindrical", "ball", "planar", "pin_slot", "parallel"])
+      expect(draft).toContain(`<option value="${kind}">`);
     expect(draft).toContain('id="assembly-mate-endpoint-a"');
     expect(draft).toContain('id="assembly-mate-endpoint-b"');
     expect(draft).toContain("Bracket:1 · Mount connector");

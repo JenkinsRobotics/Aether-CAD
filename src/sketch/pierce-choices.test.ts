@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
 import {createEmptyPartDocument,type PartDocument,type ProfileFeature} from '@aether/core/document';
 import type {SketchDrawing} from '@aether/core/sketch';
-import {sketchPierceChoices} from '../../freecad-engine/browser/pierce-choices';
-import {stageSketchPierce} from '../../freecad-engine/browser/pierce-authoring';
-import {preparePierceDraft} from '../../freecad-engine/browser/pierce-draft';
+import {sketchPierceChoices} from '@aether/core/sketch/reference/pierce-choices';
+import {stageSketchPierce} from '@aether/core/sketch/reference/pierce-authoring';
+import {preparePierceDraft} from '@aether/core/sketch/reference/pierce-draft';
 
 function setup():PartDocument {
  const document=createEmptyPartDocument('Pierce choices');document.features=[

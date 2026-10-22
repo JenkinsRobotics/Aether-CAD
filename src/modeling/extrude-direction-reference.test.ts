@@ -1,7 +1,6 @@
 import {expect,it} from 'vitest';
 import {createEmptyPartDocument,parsePartDocument,serializePartDocument,featureDependencies,moveFeature,setFeatureSuppressed,type PartDocument} from '@aether/core/document';
 import {sketchDirectionLines,resolveSketchDirection,directionLineVector} from './extrude-direction-reference';
-import {translateDocument} from '../freecad-translate';
 
 function model():PartDocument {return {...createEmptyPartDocument('Line'),features:[
  {id:'guide',name:'Guide',type:'profile',plane:'XZ',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{id:'path',type:'path',construction:true,start:[0,0],segments:[{id:'line',type:'line',end:[3,4]}]}]}},
@@ -9,21 +8,6 @@ function model():PartDocument {return {...createEmptyPartDocument('Line'),featur
  {id:'e',name:'Extrude',type:'extrude',profileFeatureId:'s',distanceMillimeters:10,operation:'new',bodyId:'solid',suppressed:false,directionReference:{kind:'sketch-line',sourceFeatureId:'guide',contourId:'path',segmentId:'line'}},
 ]};}
 const ref={kind:'sketch-line' as const,sourceFeatureId:'guide',contourId:'path',segmentId:'line'};
-it('resolves a construction line with stable IDs and translates the current local direction',()=>{
- const doc=model(),before=JSON.stringify(doc),line=resolveSketchDirection(doc,ref,'e');
- expect(directionLineVector(line)).toEqual([.6,0,.8]);
- const translation=translateDocument(parsePartDocument(serializePartDocument(doc)));
- expect(translation.untranslated).toEqual([]);
- expect(translation.features.at(-1)?.parameters).toMatchObject({region_mode:true,direction_reference:{kind:'sketch-line',local_vector:[3,4],frame:{normal:[0,-1,0]}}});
- expect(translation.features.at(-1)?.parameters).not.toHaveProperty('direction_vector');expect(JSON.stringify(doc)).toBe(before);
-});
-it('follows upstream line edits and reordering without choosing a different entity',()=>{
- const doc=model(),guide=doc.features[0] as any,path=guide.profile.contours[0];
- path.segments[0].end=[4,3];
- guide.profile.contours.unshift({id:'other',type:'path',start:[20,20],segments:[{id:'other-line',type:'line',end:[21,20]}],construction:true});
- expect(directionLineVector(resolveSketchDirection(doc,ref,'e'))).toEqual([.8,0,.6]);
- expect(translateDocument(doc).features.at(-1)?.parameters.direction_reference).toMatchObject({local_vector:[4,3]});
-});
 it.each(['missing','curve','suppressed','later'])('refuses a %s direction without falling back to the sketch normal',kind=>{
  const doc=model(),guide=doc.features[0] as any;
  if(kind==='missing')guide.profile.contours[0].segments[0].id='replacement';
@@ -31,7 +15,6 @@ it.each(['missing','curve','suppressed','later'])('refuses a %s direction withou
  if(kind==='suppressed')guide.suppressed=true;
  if(kind==='later')doc.features.push(doc.features.shift()!);
  expect(()=>resolveSketchDirection(doc,ref,'e')).toThrow(/unavailable/);
- const translation=translateDocument(doc);expect(translation.features.find(f=>f.id==='e')).toBeUndefined();expect(translation.untranslated.some(f=>f.id==='e')).toBe(true);
 });
 it('tracks dependencies through suppression and prevents moving before the direction sketch',()=>{
  const doc=model();expect(featureDependencies(doc).get('e')).toContain('guide');

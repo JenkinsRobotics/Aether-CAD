@@ -20,7 +20,7 @@ beforeEach(() => {
   apply = vi.fn(async next => { doc = next; });
   open(() => doc, apply, doc.features[0]);
 });
-afterEach(() => { q('[aria-label="Cancel sketch"]')?.click(); });
+afterEach(() => { q('.cad-sketch-window [data-feature-action="discard"]')?.click(); });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const command = name => window.dispatchEvent(new CustomEvent('aether-sketch-constraint', { detail: name }));
 const toolName = () => document.querySelector('[aria-label="2D sketch canvas"]').dataset.constraintTool;
@@ -52,7 +52,7 @@ it('constrains three canvas-selected circles with one undo, preserves selection 
   open(() => doc, apply, doc.features[0]); expectRadii([9,9,9]);
 });
 it('rejects incompatible driven circles without changing geometry or saved history', async () => {
-  q('[aria-label="Cancel sketch"]').click();
+  q('.cad-sketch-window [data-feature-action="discard"]').click();
   doc.features[0].profile.constraints.push({ id: 'other-radius', kind: 'radius', a: { contour: 1, kind: 'circle' }, value: 6 });
   const before = structuredClone(doc.features[0].profile);
   open(() => doc, apply, doc.features[0]);
@@ -93,7 +93,7 @@ it('uses an incomplete preselection as the first pick and lets blank space reset
 });
 
 it('retains the first pick after a conflicting second pick and accepts a different target', async () => {
-  q('[aria-label="Cancel sketch"]').click();
+  q('.cad-sketch-window [data-feature-action="discard"]').click();
   doc.features[0].profile.constraints.push({ id: 'other-radius', kind: 'radius', a: { contour: 1, kind: 'circle' }, value: 6 });
   open(() => doc, apply, doc.features[0]);
   command('equal'); pick(4,0); pick(36,0); expectRadii([4,6,8]);

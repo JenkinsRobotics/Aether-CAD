@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 from aether_cad_service.automation import COMMANDS, execute
 from aether_cad_service.service import CADService
-from aether_freecad import locate_freecad
 
 ROOT = Path(__file__).resolve().parents[1] / "aether_cad_service"
 RUNTIME = ROOT / "runtime"
@@ -97,7 +96,6 @@ def invoke(tmp_path, command, content, arguments, *, freecad=None):
             "-S",
             str(RUNTIME / "runner.pyz"),
             shutil.which("node"),
-            freecad or locate_freecad(),
         ],
         input=json.dumps(
             {"command": command, "content": content, "arguments": arguments}
@@ -127,7 +125,8 @@ def test_bundle_is_self_contained_and_catalog_matches_legacy():
     )
     with zipfile.ZipFile(RUNTIME / "runner.pyz") as archive:
         assert "ATTRIBUTION.md" in archive.namelist()
-        assert "aether_freecad/worker.py" in archive.namelist()
+        assert "aether_cad_service/runtime/replicad_single.wasm" in archive.namelist()
+        assert not any(name.startswith("aether_freecad/") for name in archive.namelist())
         for name in ["__main__.py", "aether_cad_service/automation_runtime.py"]:
             assert b"core.host" not in archive.read(name)
 
@@ -213,10 +212,5 @@ def test_noop_and_invalid_geometry_preserve_document(tmp_path):
     )
 
 
-def test_unavailable_native_engine_is_not_reported_as_invalid_geometry(tmp_path):
-    # Ordinary Python cannot import FreeCAD. This deterministically exercises
-    # failure of the operator-supplied native dependency without a fake result.
-    result = invoke(
-        tmp_path, "cad.part.evaluate", source("plain"), {}, freecad=sys.executable
-    )
-    assert result == {"error": {"kind": "unavailable"}}
+# Geometry builds in the Node runner with the Aether engine: no separately installed native
+# engine exists whose absence could be mistaken for invalid geometry.

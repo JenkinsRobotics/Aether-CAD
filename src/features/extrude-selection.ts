@@ -1,5 +1,5 @@
-import { matchesProfileRegion } from '../../freecad-engine/browser/profile-region-reference';
-import { sketchRegions } from "../freecad-translate";
+import { matchesProfileRegion } from '@aether/core/sketch/reference/profile-region-reference';
+import { sketchRegions } from "@aether/core/document";
 import { takePickedSketchRegion } from "../sketch-region-selection";
 import { cadWorkspace } from "../cad-workspace-store";
 import { stampProfileSelections } from "./regions";

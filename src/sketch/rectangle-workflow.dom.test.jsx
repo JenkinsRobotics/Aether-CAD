@@ -20,7 +20,7 @@ beforeEach(() => {
   apply = vi.fn(async next => { doc = next; });
   open(() => doc, apply); click('Top (XY)');
 });
-afterEach(() => { q('[aria-label="Cancel sketch"]')?.click(); });
+afterEach(() => { q('.cad-sketch-window [data-feature-action="discard"]')?.click(); });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const tool = name => window.dispatchEvent(new CustomEvent('aether-sketch-tool', { detail: name }));
 const point = (x, y) => { q('[aria-label="X (mm)"]').value = x; q('[aria-label="Y (mm)"]').value = y; click('Place point'); };

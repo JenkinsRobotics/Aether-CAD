@@ -1,5 +1,5 @@
 import type {SketchDrawing} from '@aether/core/sketch';
-import {ellipseHandles} from '../../freecad-engine/browser/ellipse-manipulation';
+import {ellipseHandles} from '@aether/core/sketch/reference/ellipse-manipulation';
 export function renderEllipseManipulators(svg:SVGSVGElement,drawing:SketchDrawing,width:number) {
   const offset=width*24/Math.max(svg.getBoundingClientRect().width,800);
   svg.dataset.ellipseHandleOffset=String(offset);

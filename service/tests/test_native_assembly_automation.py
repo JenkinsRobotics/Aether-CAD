@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 from aether_animation.aether_project import edit_project, new_project
 from aether_cad_service.project_runtime import decode
-from aether_freecad import locate_freecad
 
 ROOT = Path(__file__).resolve().parents[2]
 NATIVE = pytest.mark.skipif(
@@ -40,7 +39,6 @@ def invoke(
             "-S",
             str(ROOT / "service/aether_cad_service/runtime/runner.pyz"),
             shutil.which("node"),
-            locate_freecad() if native else "/usr/bin/false",
         ],
         input=json.dumps(
             {
@@ -190,13 +188,7 @@ def test_invalid_archive_and_oversized_recipe_are_refused(tmp_path):
     assert "error" in result and "content" not in result
 
 
-def test_unavailable_engine_is_distinct_from_invalid_geometry(tmp_path):
-    content = source()
-    recipe = invoke(tmp_path, "cad.assembly.inspect", content)["result"]["example"]
-    result = invoke(
-        tmp_path, "cad.assembly.compose", content, {"recipe_json": json.dumps(recipe)}
-    )
-    assert result == {"error": {"kind": "unavailable"}}
+# The assembly solver runs in the Node runner (Aether engine); no separate native engine can be absent.
 
 
 def test_empty_project_part_gets_a_buildable_example(tmp_path):

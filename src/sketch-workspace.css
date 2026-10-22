@@ -72,6 +72,7 @@ svg.cad-sketch-canvas .sketch-preview-dimension { fill:var(--aether-color-text,#
 .sketch-constraints h3 { font-size:13px; }
 
 svg.cad-sketch-canvas .sketch-contour.construction { stroke-dasharray: 8 5; fill: none; opacity: .7; }
+svg.cad-sketch-canvas .sketch-contour.infinite-extension { opacity: .35; pointer-events: none; }
 svg.cad-sketch-canvas .sketch-fillet-handle, svg.cad-sketch-canvas .sketch-offset-handle, svg.cad-sketch-canvas .sketch-slot-handle { fill:var(--aether-color-accent,#399cff); stroke:var(--aether-color-text,#edf6ff); stroke-width:2px; vector-effect:non-scaling-stroke; cursor:ns-resize; pointer-events:all; }
 
 

@@ -3,7 +3,7 @@
   "app": "cad",
   "runtime": "python",
   "entry": "runner.pyz",
-  "sha256": "d05721839aaaf0d9ee74184ccea37aad1ace58b977d086cfaa1284c76c7ae415",
+  "sha256": "7d7372d3f9d41d64a5e22c4a7a0bfc8df92d988e68f6951d4f39d35924e6ae1e",
   "services": [
     "/api/cad/geometry",
     "/api/cad/export",
@@ -184,7 +184,7 @@
     {
       "id": "cad.part.evaluate",
       "title": "Evaluate CAD part",
-      "description": "Rebuild saved visible history in FreeCAD and return body volumes and topology counts. No pixel preview, export or save.",
+      "description": "Rebuild saved visible history with the Aether engine and return body volumes and topology counts. No pixel preview, export or save.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -798,7 +798,7 @@
     {
       "id": "cad.assembly.compose",
       "title": "Compose saved Assembly",
-      "description": "Append the ordinary editor Assembly recipe as one guarded file revision after exact native Part rebuilds and solve. Recipe version 1 supports reusable Parts, instances, fastened/revolute/prismatic mates and linear/circular instance arrays. No nested assemblies. Open editors must reload.",
+      "description": "Append the ordinary editor Assembly recipe as one guarded file revision after exact native Part rebuilds and solve. Recipe version 1 supports reusable Parts, instances, fastened/revolute/prismatic/cylindrical/ball/planar/pin_slot/parallel mates and linear/circular instance arrays. No nested assemblies. Open editors must reload.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -841,6 +841,56 @@
         "readOnlyHint": false,
         "destructiveHint": true,
         "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "id": "cad.sketch.inspect",
+      "title": "Inspect existing CAD sketch",
+      "description": "Inspect saved sketch coordinates, constraints, dimensions and dependents before editing it with cad.part.runprogram. Paginated; local millimeters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "app": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "enum": [
+              "cad"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          }
+        },
+        "required": [
+          "app",
+          "id",
+          "feature_id"
+        ],
+        "additionalProperties": false
+      },
+      "writes": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
         "openWorldHint": false
       }
     }

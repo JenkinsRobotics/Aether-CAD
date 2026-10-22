@@ -1,6 +1,6 @@
 import type { PartDocument } from './part-document';
 import { featureDependencies, rollbackPosition } from './feature-history';
-import { pierceReferenceFailure } from '../../../freecad-engine/browser/pierce-availability';
+import { pierceReferenceFailure } from '../sketch/reference/pierce-availability';
 import { resolveProfileDrawing } from './profile-projection';
 import type { SketchDrawing } from '../sketch/drawing';
 

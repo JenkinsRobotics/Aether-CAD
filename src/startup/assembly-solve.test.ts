@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { describeSolve, solveAssemblyWithFreeCAD } from "./assembly-solve";
+import { describeSolve, solveAssemblyProjection } from "./assembly-solve";
 import { createRectanglePartDocument, serializePartDocument, parsePartDocument } from "../aether-core";
 
 const document = () => createRectanglePartDocument("Bracket", {
@@ -41,7 +41,7 @@ const deps = (over: Record<string, unknown> = {}) => ({
 
 describe("solving the open assembly with FreeCAD", () => {
   it("places each body where the solver put it, not where it started", () => {
-    return solveAssemblyWithFreeCAD(projection(), deps()).then((result) => {
+    return solveAssemblyProjection(projection(), deps()).then((result) => {
       expect(result.bodies).toHaveLength(2);
       // i2 started at 120mm and the solver moved it to 40mm. Taking the rest
       // transform instead would render it at 120 and look like it had solved.
@@ -50,14 +50,14 @@ describe("solving the open assembly with FreeCAD", () => {
   });
 
   it("names each body by its instance so two of the same part are telling apart", async () => {
-    const result = await solveAssemblyWithFreeCAD(projection(), deps());
+    const result = await solveAssemblyProjection(projection(), deps());
     expect(result.bodies.map((b) => b.data.id)).toEqual(["assembly:i1:b1", "assembly:i2:b1"]);
     expect(result.bodies[0].data.name).toBe("Base · Body 1");
   });
 
   it("builds the part once per instance, through the same evaluator a Part uses", async () => {
     const dependencies = deps();
-    await solveAssemblyWithFreeCAD(projection(), dependencies);
+    await solveAssemblyProjection(projection(), dependencies);
     expect(dependencies.evaluate).toHaveBeenCalledTimes(2);
     expect(dependencies.solve).toHaveBeenCalledTimes(1);
   });
@@ -70,7 +70,7 @@ describe("solving the open assembly with FreeCAD", () => {
         diagnostics: [],
       })),
     });
-    await expect(solveAssemblyWithFreeCAD(projection(), dependencies)).rejects.toThrow(/incomplete/);
+    await expect(solveAssemblyProjection(projection(), dependencies)).rejects.toThrow(/incomplete/);
     expect(dependencies.evaluate).not.toHaveBeenCalled();
   });
 
@@ -83,7 +83,7 @@ describe("solving the open assembly with FreeCAD", () => {
     if (kind === "non-finite") result.instances[1].placement_mm[0] = NaN;
     if (kind === "rotation") result.instances[1].rotation = [0, 0, 0, 0];
     dependencies.solve.mockResolvedValue(result);
-    await expect(solveAssemblyWithFreeCAD(projection(), dependencies)).rejects.toThrow();
+    await expect(solveAssemblyProjection(projection(), dependencies)).rejects.toThrow();
     expect(dependencies.evaluate).not.toHaveBeenCalled();
   });
 
@@ -93,20 +93,20 @@ describe("solving the open assembly with FreeCAD", () => {
     const incomplete = projection({instances: [...source.instances, {
       id: "nested", definition_kind: "assembly", definition_id: "a1", name: "Gearbox", suppressed: false,
     }]});
-    await expect(solveAssemblyWithFreeCAD(incomplete, dependencies)).rejects.toThrow(/Gearbox.*sub-assemblies/);
+    await expect(solveAssemblyProjection(incomplete, dependencies)).rejects.toThrow(/Gearbox.*sub-assemblies/);
     expect(dependencies.solve).not.toHaveBeenCalled();
     expect(dependencies.evaluate).not.toHaveBeenCalled();
   });
 
   it("refuses an assembly with nothing to place, rather than solving nothing", async () => {
     await expect(
-      solveAssemblyWithFreeCAD(projection({ instances: [] }), deps()),
+      solveAssemblyProjection(projection({ instances: [] }), deps()),
     ).rejects.toThrow(/no part instance/);
   });
 
   it("skips a hidden or suppressed instance", async () => {
     const hidden = projection() as never as Record<string, never>;
-    const result = await solveAssemblyWithFreeCAD({
+    const result = await solveAssemblyProjection({
       ...hidden,
       instances: (hidden.instances as unknown as Record<string, unknown>[]).map((i) =>
         i.id === "i2" ? { ...i, visible: false } : i),

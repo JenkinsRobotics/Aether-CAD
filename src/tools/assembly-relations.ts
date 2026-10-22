@@ -1,6 +1,6 @@
 /** Relations — the Assembly workspace's driven-motion tab.
  *
- *  Onshape's RELATIONS: one mate's motion driving another's. FreeCAD's solver
+ *  Onshape's RELATIONS: one mate's motion driving another's. The assembly solver
  *  has gear, rack-and-pinion, screw and belt joints; Aether's Assembly slice
  *  cannot author them yet, so they are greyed against that.
  */

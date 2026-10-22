@@ -1,14 +1,15 @@
 import { expect, it } from 'vitest';
 import { createEmptyPartDocument, serializePartDocument, parsePartDocument, bodyIDForFeature } from '@aether/core/document';
-import { executeProgram, plateProgram } from '../ai/program';
+import { executeProgram, plateProgram, programToolNames } from '../ai/program';
 import { beginSavedProgram, prepareSavedProgramStep, acceptSavedProgramStep, savedProgramDocs } from './saved-program';
 import { cadAgentTools } from './live-commands';
 
 it('uses the same program steps and schemas as the editor, exposing only executable steps',()=>{
-  const all=[...savedProgramDocs({}).tools,...savedProgramDocs({offset:5}).tools];
-  expect(all).toHaveLength(8);
+  const all=[];for(let offset:number|null=0;offset!==null;){const page=savedProgramDocs({offset});all.push(...page.tools);offset=page.next_offset;}
+  // Every editing step, including the canonical feature operations, runs on saved files through the same program path.
+  expect(all.map(t=>t.name).sort()).toEqual([...programToolNames].sort());
   for(const t of all)expect(t).toEqual(cadAgentTools.find(x=>x.name===t.name));
-  expect(savedProgramDocs({query:'undo'}).tools).toEqual([]);
+  expect(savedProgramDocs({query:'undo'}).tools.map(t=>t.name)).not.toContain('aether_cad_undo');
   expect(savedProgramDocs({query:'cone'}).tools.map(t=>t.name)).toContain('aether_cad_solid_primitive');
 });
 
@@ -18,7 +19,7 @@ it('preserves source and passes qualified identities from saved steps to the nex
   const outline=prepareSavedProgramStep(source,steps[0],{});
   const accepted=acceptSavedProgramStep({content:outline.candidate,pending:outline.pending,body_outputs:{}});
   const pad=prepareSavedProgramStep(accepted.content,steps[1],{outline:accepted.reference});
-  expect(pad.features.at(-1)?.parameters.profile).toBe(accepted.reference.feature_id);
+  expect(parsePartDocument(pad.candidate).features.at(-1)).toMatchObject({profileFeatureId:accepted.reference.feature_id});
   const doc=parsePartDocument(pad.candidate);
   const bodyID=`${bodyIDForFeature(doc,doc.features.at(-1)!)}:solid-1`;
   const resolved=acceptSavedProgramStep({content:pad.candidate,pending:pad.pending,body_outputs:{[pad.pending.featureID]:[bodyID]}});

@@ -43,14 +43,9 @@ files = {
     "aether_cad_service/automation_runtime.py": service / "automation_runtime.py",
     "aether_cad_service/program_runtime.py": service / "program_runtime.py",
     "aether_cad_service/runtime/runner.mjs": runtime / "runner.mjs",
-    "ATTRIBUTION.md": root / "freecad-engine/ATTRIBUTION.md",
+    "aether_cad_service/runtime/replicad_single.wasm": runtime / "replicad_single.wasm",
+    "ATTRIBUTION.md": root / "aether-engine/ATTRIBUTION.md",
 }
-files.update(
-    {
-        str(path.relative_to(root / "freecad-engine")): path
-        for path in (root / "freecad-engine/aether_freecad").rglob("*.py")
-    }
-)
 # Only the canonical, dependency-free document codec is included from the
 # versioned Animation distribution. No sibling source or installed site packages.
 lock = json.loads((root / "vendor/python/workspace-codec.json").read_text())

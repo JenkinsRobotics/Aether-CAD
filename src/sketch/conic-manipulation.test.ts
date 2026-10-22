@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import type { SketchDrawing, SketchEntityRef } from '@aether/core/sketch';
-import { conicDragTarget, conicHandles, setConicCurvature } from '../../freecad-engine/browser/conic-manipulation';
-import { createSketchConic } from '../../freecad-engine/browser/conic-authoring';
-import { fixedEntityConstraint } from '../../freecad-engine/browser/fixed-geometry';
+import { conicDragTarget, conicHandles, setConicCurvature } from '@aether/core/sketch/reference/conic-manipulation';
+import { createSketchConic } from '@aether/core/sketch/reference/conic-authoring';
+import { fixedEntityConstraint } from '@aether/core/sketch/reference/fixed-geometry';
 import { sketchEntitiesInBox } from './box-selection';
 
 const ref: SketchEntityRef = { contour: 0, kind: 'curve', index: 0, parameter: .5 };

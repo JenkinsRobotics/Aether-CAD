@@ -1,7 +1,12 @@
 import type { PartDocument } from "@aether/core/document";
 import type { ImportedModelData } from "../domain";
 
-type PreviewService = { evaluate(document: PartDocument): Promise<ImportedModelData>; show(model: ImportedModelData | null): void };
+type PreviewService = {
+  evaluate(document: PartDocument): Promise<ImportedModelData>;
+  show(model: ImportedModelData | null): void;
+  /** Builds the complete document in the background so Apply finds it ready. */
+  warm?(document: PartDocument): Promise<unknown>;
+};
 let service: PreviewService | null = null;
 let closePrevious: (() => void) | undefined;
 export function configureFeaturePreview(value: PreviewService | null) { service = value; }
@@ -32,47 +37,61 @@ export class PreviewQueue<T, R> {
   }
 }
 
-export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocument, onError?: (message: string | null) => void) {
+export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocument, onError?: (message: string | null) => void, complete?: () => PartDocument, notice?: (message: string | null) => void) {
   if (!service) return { update() {}, close() {}, pause() {} };
+  // A preview shows the history up to the edited feature; once it is on screen
+  // and the user has paused, the rest of the document is built ahead so Apply
+  // is a cache hit instead of a rebuild.
+  let warmTimer: ReturnType<typeof setTimeout> | undefined;
+  const warm = () => {
+    clearTimeout(warmTimer); warmTimer = undefined;
+    if (!service?.warm || !complete) return;
+    warmTimer = setTimeout(() => { warmTimer = undefined; try { void service!.warm!(complete()).catch(() => {}); } catch { /* the draft is invalid: nothing to warm */ } }, 250);
+  };
   window.dispatchEvent(new Event("aether-feature-preview-start"));
   closePrevious?.();
   const backend = service;
+  // Progress and result notes go to the window's floating notice (never
+  // reflowing the form); a host without one gets a status line in the body.
   const status = document.createElement("p");
   status.className = "cad-feature-preview-status"; status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite"); status.style.fontSize = "0.8rem"; status.style.margin = "8px 0";
   status.hidden = true;
-  status.setAttribute("aria-live", "polite"); status.style.fontSize = "0.8rem"; status.style.margin = "8px 0"; root.prepend(status);
+  if (!notice) root.prepend(status);
+  const show = (message: string | null) => { status.textContent = message ?? ""; status.hidden = !message; notice?.(message); };
   const queue = new PreviewQueue(backend.evaluate, (model, error) => {
     backend.show(model);
     root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{model,pending:false}}));
+    if (model && !closed) warm();
     if (model) {
-      status.hidden = false;
-      status.textContent = model.featurePreviewUnavailable
+      show(model.featurePreviewUnavailable
         ? "Showing result only. Blue/red material previews require the updated CAD engine."
-        : model.featurePreview ? [model.featurePreview.added.length ? "Blue: added material" : "", model.featurePreview.removed.length ? "Red: removed material" : ""].filter(Boolean).join(" · ") : "";
+        : model.featurePreview ? [model.featurePreview.added.length ? "Blue: added material" : "", model.featurePreview.removed.length ? "Red: removed material" : ""].filter(Boolean).join(" · ") || null : null);
       onError?.(null);
     }
-    else if (error) { status.hidden = false; status.textContent = "Preview unavailable. Adjust the feature to continue."; onError?.(error); }
-    else { status.textContent = ""; status.hidden = true; }
+    else if (error) { show("Preview unavailable. Adjust the feature to continue."); onError?.(error); }
+    else show(null);
   });
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let latest: PartDocument | null = null;
-  const close = () => { if (closed) return; closed = true; clearTimeout(timer); queue.close(); observer.disconnect(); window.removeEventListener("aether-part-updated", close); };
+  const close = () => { if (closed) return; closed = true; clearTimeout(timer); clearTimeout(warmTimer); queue.close(); observer.disconnect(); window.removeEventListener("aether-part-updated", close); };
   const update = () => {
     if (closed) return;
+    clearTimeout(warmTimer); warmTimer = undefined;
     queue.invalidate(false);
     root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{pending:true}}));
     try {
-      latest = candidate(); status.hidden = false; if(status.textContent !== "Updating preview…") status.textContent = "Updating preview…";
+      latest = candidate(); if(status.textContent !== "Updating preview…") show("Updating preview…");
       if (timer === undefined) timer = setTimeout(() => {
         timer = undefined;
         if (latest) queue.request(latest);
       }, 100);
-    } catch (error) { clearTimeout(timer); timer = undefined; latest = null; queue.invalidate(); status.hidden = false; status.textContent = error instanceof Error ? error.message : String(error); }
+    } catch (error) { clearTimeout(timer); timer = undefined; latest = null; queue.invalidate(); show(error instanceof Error ? error.message : String(error)); }
   };
   const observer = new window.MutationObserver(() => { if (!root.isConnected) close(); });
   observer.observe(document.body, { childList: true, subtree: true });
   closePrevious = close;
   window.addEventListener("aether-part-updated", close);
-  return { update, close, pause: () => { clearTimeout(timer); timer = undefined; latest = null; queue.invalidate(); } };
+  return { update, close, pause: () => { clearTimeout(timer); timer = undefined; clearTimeout(warmTimer); warmTimer = undefined; latest = null; queue.invalidate(); } };
 }

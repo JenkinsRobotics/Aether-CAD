@@ -104,7 +104,7 @@ describe("CAD tool catalog", () => {
       .find(({ id }) => id === "assembly-fixed")?.action).toBe("assembly-mate-fastened");
     expect(assemblyTools()
       .find(({ id }) => id === "assembly-revolute")?.action).toBe("assembly-mate-revolute");
-    // The two Onshape mates FreeCAD has no joint for stay greyed, with a
+    // The two Onshape mates the solver has no joint for stay greyed, with a
     // reason, rather than being offered and refused after authoring.
     expect(assemblyTools()
       .find(({ id }) => id === "assembly-tangent")?.action).toBeUndefined();

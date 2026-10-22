@@ -1,12 +1,12 @@
 import { validateDimensionExpression } from "./dimension-expressions";
-import { conicCoordinates } from '../../../../freecad-engine/browser/conic-constraints';
+import { conicCoordinates } from '../reference/conic-constraints';
 import { textSimilarityCoordinates } from "./text-coordinates";
 import { ellipseLocusCoordinates } from "./ellipse-locus-coordinates";
 import { contactParameterCoordinates } from "./contact-parameters";
 import { dimensionDriver } from "./dimension-links";
 import type { SketchDrawing, SketchPoint } from "../drawing";
 import { constraintResiduals } from "./residuals";
-import { solveSavedPierceConstraints } from '../../../../freecad-engine/browser/pierce-constraints';
+import { solveSavedPierceConstraints } from '../reference/pierce-constraints';
 /** SPIKE (2026-09-12): see solver/planegcs-spike.ts. Delete with the spike. */
 type SolverComparisonHost = {
   __aetherSolverComparison?: (

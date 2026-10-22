@@ -1,0 +1,1252 @@
+[
+ {
+  "name": "fastened-stack",
+  "fullyConstrained": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "top",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0.0,
+     0.0,
+     0.17364817766693033,
+     0.984807753012208
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "fastened",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "top",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "fastened-turned-connector",
+  "fullyConstrained": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "top",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "fastened",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "top",
+     "placement_mm": [
+      5,
+      0,
+      0
+     ],
+     "rotation": [
+      0.0,
+      0.0,
+      0.7071067811865475,
+      0.7071067811865476
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "fastened-chain",
+  "fullyConstrained": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "a",
+    "part": "plate",
+    "placement_mm": [
+     30,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   },
+   {
+    "id": "b",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     40,
+     0
+    ],
+    "rotation": [
+     0.3826834323650898,
+     0.0,
+     0.0,
+     0.9238795325112867
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m1",
+    "kind": "fastened",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "a",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   },
+   {
+    "id": "m2",
+    "kind": "fastened",
+    "a": {
+     "instance": "a",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "b",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "revolute-hinge",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     30,
+     0,
+     50
+    ],
+    "rotation": [
+     0.25881904510252074,
+     0.0,
+     0.0,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "revolute",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "ball",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     30,
+     0,
+     50
+    ],
+    "rotation": [
+     0.25881904510252074,
+     0.0,
+     0.0,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "ball",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "cylindrical",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "rod",
+    "part": "plate",
+    "placement_mm": [
+     30,
+     12,
+     50
+    ],
+    "rotation": [
+     0.0,
+     0.0,
+     0.25881904510252074,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "cylindrical",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0.0,
+      0.7071067811865475,
+      0.0,
+      0.7071067811865476
+     ]
+    },
+    "b": {
+     "instance": "rod",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0.0,
+      0.7071067811865475,
+      0.0,
+      0.7071067811865476
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "prismatic",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "slide",
+    "part": "plate",
+    "placement_mm": [
+     30,
+     12,
+     50
+    ],
+    "rotation": [
+     0.0,
+     0.0,
+     0.25881904510252074,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "prismatic",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0.0,
+      0.7071067811865475,
+      0.0,
+      0.7071067811865476
+     ]
+    },
+    "b": {
+     "instance": "slide",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0.0,
+      0.7071067811865475,
+      0.0,
+      0.7071067811865476
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "distance-15",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     40
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "distance",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "parameters": {
+     "distance_mm": 15
+    }
+   }
+  ]
+ },
+ {
+  "name": "parallel",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     40,
+     0,
+     0
+    ],
+    "rotation": [
+     0.25881904510252074,
+     0.0,
+     0.0,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "parallel",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "perpendicular",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     40,
+     0,
+     0
+    ],
+    "rotation": [
+     0.25881904510252074,
+     0.0,
+     0.0,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "perpendicular",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "angle-45",
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "arm",
+    "part": "plate",
+    "placement_mm": [
+     40,
+     0,
+     0
+    ],
+    "rotation": [
+     0.25881904510252074,
+     0.0,
+     0.0,
+     0.9659258262890683
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "angle",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "arm",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "parameters": {
+     "angle_deg": 45
+    }
+   }
+  ]
+ },
+ {
+  "name": "nothing-grounded",
+  "fullyConstrained": true,
+  "instances": [
+   {
+    "id": "one",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   },
+   {
+    "id": "two",
+    "part": "plate",
+    "placement_mm": [
+     50,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "m",
+    "kind": "fastened",
+    "a": {
+     "instance": "one",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "two",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "name": "coupled-gears",
+  "expectRefusal": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "wheel",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "h",
+    "kind": "revolute",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "wheel",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "kind": "gears",
+    "a": {
+     "instance": "base"
+    },
+    "b": {
+     "instance": "wheel"
+    },
+    "parameters": {
+     "ratio": 2
+    }
+   }
+  ]
+ },
+ {
+  "name": "coupled-belt",
+  "expectRefusal": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "wheel",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "h",
+    "kind": "revolute",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "wheel",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "kind": "belt",
+    "a": {
+     "instance": "base"
+    },
+    "b": {
+     "instance": "wheel"
+    },
+    "parameters": {
+     "ratio": 2
+    }
+   }
+  ]
+ },
+ {
+  "name": "coupled-screw",
+  "expectRefusal": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "wheel",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "h",
+    "kind": "revolute",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "wheel",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "kind": "screw",
+    "a": {
+     "instance": "base"
+    },
+    "b": {
+     "instance": "wheel"
+    },
+    "parameters": {
+     "ratio": 2
+    }
+   }
+  ]
+ },
+ {
+  "name": "coupled-rack-pinion",
+  "expectRefusal": true,
+  "instances": [
+   {
+    "id": "base",
+    "part": "plate",
+    "placement_mm": [
+     0,
+     0,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": true
+   },
+   {
+    "id": "wheel",
+    "part": "plate",
+    "placement_mm": [
+     10,
+     5,
+     0
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "grounded": false
+   }
+  ],
+  "joints": [
+   {
+    "id": "h",
+    "kind": "revolute",
+    "a": {
+     "instance": "base",
+     "placement_mm": [
+      0,
+      0,
+      20
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    },
+    "b": {
+     "instance": "wheel",
+     "placement_mm": [
+      0,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0,
+      1
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "kind": "rack-pinion",
+    "a": {
+     "instance": "base"
+    },
+    "b": {
+     "instance": "wheel"
+    },
+    "parameters": {
+     "ratio": 2
+    }
+   }
+  ]
+ }
+]

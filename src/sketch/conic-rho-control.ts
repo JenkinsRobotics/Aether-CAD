@@ -1,7 +1,7 @@
 import { evaluateDocumentVariables, type DocumentVariable } from '@aether/core/document';
 import { resolveDimensionExpression, type SketchPoint } from '@aether/core/sketch';
-import type { ConicRhoInput } from '../../freecad-engine/browser/conic-authoring';
-import { conicPlacement } from '../../freecad-engine/browser/conic-authoring';
+import type { ConicRhoInput } from '@aether/core/sketch/reference/conic-authoring';
+import { conicPlacement } from '@aether/core/sketch/reference/conic-authoring';
 
 /** The existing Aether tool field doubles as automatic post-control entry.
  * A displayed pointer value is transient until Enter or a fourth canvas click. */

@@ -183,6 +183,7 @@ export function CADTraditionalRibbon({
 
   /** The button runs whichever variant the family currently means. */
   const runTool = (id: string) => {
+    if (id.startsWith('command:')) { const command = id.slice('command:'.length); if (isCADCommandID(command) && commands[command].enabled) cadCommands.execute(command); return; }
     if (id === 'feature-library-open') { setDensity('standard'); setFusionTab('feature-library'); return; }
     if (id.startsWith('feature:')) {
       const tool = cadFeatureToolById(id.slice('feature:'.length));
@@ -209,6 +210,10 @@ export function CADTraditionalRibbon({
   // presentation store's own word for the same thing ("modeling" is Design).
   const WORKSPACE_IDS: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
   const selectWorkspaceMode = (id: string) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); };
+
+  // The Studio tool bar's suggested commands, right of its Command field.
+  const commandShortcuts = ([["part-undo", "Undo", "amber"], ["part-redo", "Redo", "blue"], ["fit-view", "Frame", "green"]] as const)
+    .map(([command, label, tone]) => ({ id: `command:${command}`, label, tone, disabled: !commands[command].enabled }));
 
   // Compact mode is a single context-aware strip, independent of the last tab.
   // The compact tray retains category navigation and each category's commands.
@@ -244,7 +249,7 @@ export function CADTraditionalRibbon({
           tabs={ribbonTabs} compactGroups={compactGroupsFor(ribbonTabs, active.id)} activeTabID={active.id} onTabSelect={setFusionTab}
           onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
           density={density} onDensityChange={chooseDensity}
-          moreLabel="Tool bar options" />
+          moreLabel="Tool bar options" commandShortcuts={commandShortcuts} withClassicRibbon />
       </section>
     );
   }
@@ -269,7 +274,7 @@ export function CADTraditionalRibbon({
         tabs={ribbonTabs} compactGroups={compactGroupsFor(ribbonTabs, workspace.id)} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
         onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
         density={density} onDensityChange={chooseDensity}
-        moreLabel="Tool bar options" />
+        moreLabel="Tool bar options" commandShortcuts={commandShortcuts} withClassicRibbon />
     </section>
   );
 }

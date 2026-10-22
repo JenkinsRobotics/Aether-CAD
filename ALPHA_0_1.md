@@ -38,7 +38,7 @@ server. Product APIs must be provided for connected operations.
 
 ## Current limits
 
-The FreeCAD adapter remains the default modeling engine; the browser engine remains parked. Sketch reference recovery after upstream edge replacement, several spline/face-edit workflows and full sketch parity remain in progress. Native previews require the matched worker and codec; a static web preview does not supply the CAD service. Rendering and environment presets are included; engineering simulation and manufacturing integrations are not complete.
+The Aether engine (OpenCASCADE in the browser) is the only modeling engine; the FreeCAD reference was deleted on 2026-10-20 after feature-by-feature proof. Sketch reference recovery after upstream edge replacement, several spline/face-edit workflows and full sketch parity remain in progress. Native previews require the matched worker and codec; a static web preview does not supply the CAD service. Rendering and environment presets are included; engineering simulation and manufacturing integrations are not complete.
 
 Third-party components and artwork retain their individual licenses and
 attributions. This release does not change those terms.

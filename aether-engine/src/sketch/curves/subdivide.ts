@@ -1,5 +1,5 @@
 import type { SketchPoint, SketchSegment } from "../drawing";
-import { splitConic } from '../../../../freecad-engine/browser/conic-geometry';
+import { splitConic } from '../reference/conic-geometry';
 import { ellipseFrame, segmentPoint } from "./parameterization";
 const lerp = (a: SketchPoint, b: SketchPoint, t: number): SketchPoint => [
   a[0] + t * (b[0] - a[0]),

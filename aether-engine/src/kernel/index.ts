@@ -5,6 +5,11 @@ export {
   type HiddenLineOptions,
   type ViewPolyline,
 } from "./hidden-line";
-export { evaluatePartDocument } from "./part-evaluator";
+export { evaluatePartDocument, FeatureFailure, UnsupportedFeature } from "./part-evaluator";
+export { measureDistance } from "./measure";
 export { buildPartGeometry } from "./part-geometry";
-export { OCCTWorkerClient } from "./worker-client";
+export { OCCTWorkerClient, EngineError } from "./worker-client";
+export { solveAssemblyJob, solvableMateKinds, jointResiduals } from "./assembly-solver";
+export { analyzePart } from "./analysis";
+export { exportPart } from "./export";
+export { sketchSectionContours } from "./sketch-section";

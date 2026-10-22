@@ -97,6 +97,8 @@ export function CADViewPanel({ active }: { active: boolean }) {
                   { value: "wireframe", label: "Wireframe" },
                   { value: "hidden-line", label: "Hidden line" },
                   { value: "ghost", label: "Translucent" },
+                  { value: "zebra", label: "Zebra analysis" },
+                  { value: "draft-analysis", label: "Draft analysis" },
                 ]}
                 onChange={(event) =>
                   cadAppearance.dispatch({

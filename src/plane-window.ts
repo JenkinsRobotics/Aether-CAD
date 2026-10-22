@@ -1,3 +1,4 @@
+import { openCompactFeatureWindow } from "@aether/ui";
 import { mountEditHistory } from "./modeling/edit-history";
 import { createEmptyPartDocument, insertFeature, resolvePlaneFrame, rollbackPosition } from "@aether/core/document";
 import type { SketchFrame } from "@aether/core/sketch";
@@ -8,8 +9,8 @@ import type {
   PlaneReference,
   PointReference,
   AxisReference,
+  SurfacePointReference,
 } from "@aether/core/document";
-import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
 import { cadSelection } from "./cad-selection-store";
 
@@ -88,7 +89,7 @@ export async function openPlaneWindow(
       ? [initial.reference]
       : initial.method === "mid"
         ? [...initial.references]
-        : initial.method === "angle"
+        : initial.method === "angle" || initial.method === "perpendicular"
           ? [initial.reference]
           : []
     : [];
@@ -98,7 +99,11 @@ export async function openPlaneWindow(
   let points: PointReference[] =
     !created && initial.method === "three-point" ? [...initial.points] : [];
   let axis: AxisReference | null =
-    !created && initial.method === "angle" ? initial.axis : null;
+    !created && (initial.method === "angle" || initial.method === "perpendicular" || initial.method === "along-path") ? initial.axis : null;
+  /** The two edges of a plane through two edges. */
+  let axes: AxisReference[] = !created && initial.method === "two-edges" ? [...initial.axes] : [];
+  /** The picked surface point of a tangent plane. */
+  let surface: SurfacePointReference | null = !created && initial.method === "tangent" ? initial.surface : null;
 
   /** The definition these controls currently describe, or null when the plane
    *  is not yet complete. One builder feeds the live preview AND the commit, so
@@ -112,6 +117,23 @@ export async function openPlaneWindow(
       const angleDegrees = Number(angleInput.value);
       if (!axis || references.length !== 1 || !Number.isFinite(angleDegrees)) return null;
       return { method: "angle", axis, reference: references[0], angleDegrees, ...(flip ? { flip } : {}) };
+    }
+    if (methodPicker.value() === "Perpendicular") {
+      if (!axis || references.length !== 1) return null;
+      return { method: "perpendicular", axis, reference: references[0], ...(flip ? { flip } : {}) };
+    }
+    if (methodPicker.value() === "Two edges") {
+      if (axes.length !== 2) return null;
+      return { method: "two-edges", axes: [axes[0], axes[1]], ...(flip ? { flip } : {}) };
+    }
+    if (methodPicker.value() === "Tangent") {
+      if (!surface) return null;
+      return { method: "tangent", surface, ...(flip ? { flip } : {}) };
+    }
+    if (methodPicker.value() === "Along path") {
+      const t = Number(pathInput.value);
+      if (!axis || axis.lengthMillimeters === undefined || !Number.isFinite(t)) return null;
+      return { method: "along-path", axis, t, ...(flip ? { flip } : {}) };
     }
     if (methodPicker.value() === "Offset") {
       if (references.length !== 1) return null;
@@ -134,6 +156,20 @@ export async function openPlaneWindow(
       if (references.length !== 1)
         return `Angle needs exactly 1 reference plane — ${references.length} selected.`;
       if (!Number.isFinite(Number(angleInput.value))) return "Enter a finite angle in degrees.";
+      return null;
+    }
+    if (methodPicker.value() === "Perpendicular") {
+      if (!axis) return "Perpendicular needs a straight edge to hold.";
+      if (references.length !== 1) return `Perpendicular needs exactly 1 reference plane — ${references.length} selected.`;
+      return null;
+    }
+    if (methodPicker.value() === "Two edges") return axes.length === 2 ? null : `Two edges needs exactly 2 straight edges — ${axes.length} selected.`;
+    if (methodPicker.value() === "Tangent") return surface ? null : "Tangent needs a click on a curved face where the plane should touch.";
+    if (methodPicker.value() === "Along path") {
+      if (!axis) return "Along path needs a straight edge.";
+      if (axis.lengthMillimeters === undefined) return "Along path needs a straight edge with a length.";
+      const t = Number(pathInput.value);
+      if (!Number.isFinite(t) || t < 0 || t > 1) return "Enter a fraction between 0 and 1 along the edge.";
       return null;
     }
     const need = methodPicker.value() === "Offset" ? 1 : 2;
@@ -163,12 +199,10 @@ export async function openPlaneWindow(
     window.dispatchEvent(new CustomEvent("aether-sketch-plane-selection", { detail: false }));
     win.close();
   };
-  const win = openFeatureWindow({
+  const win = openCompactFeatureWindow({
     viewport,
-    className: "cad-plane-window",
+    className: "cad-plane-window", icon: "plane",
     title: feature.name,
-    acceptLabel: "Apply plane",
-    discardLabel: created ? "Discard plane" : "Close plane window",
     onAccept: async () => {
       if (closed || busy) return;
       const doc = currentDocument();
@@ -229,7 +263,11 @@ export async function openPlaneWindow(
           },
         })),
       );
-    if (method === "Angle")
+    if (method === "Two edges")
+      return entities.render(axes.map((a, index) => ({ label: a.label ?? `Edge ${index + 1}`, onRemove: () => { axes = axes.filter((_, at) => at !== index); cadSelection.dispatch({ type: "clear" }); syncMethod(); renderEntities(); validate(); } })));
+    if (method === "Tangent")
+      return entities.render(surface ? [{ label: surface.label ?? "Surface point", onRemove: () => { surface = null; cadSelection.dispatch({ type: "clear" }); renderEntities(); validate(); } }] : []);
+    if (method === "Angle" || method === "Perpendicular" || method === "Along path")
       return entities.render([
         ...(axis
           ? [{ label: axis.label ?? "Edge", onRemove: () => { axis = null; cadSelection.dispatch({ type: "clear" }); syncMethod(); renderEntities(); validate(); } }]
@@ -255,13 +293,14 @@ export async function openPlaneWindow(
     );
   };
 
-  const methodPicker = win.picker(["Offset", "Mid plane", "Three point", "Angle"], {
+  const METHOD_LABELS = { offset: "Offset", mid: "Mid plane", "three-point": "Three point", angle: "Angle", perpendicular: "Perpendicular", "two-edges": "Two edges", tangent: "Tangent", "along-path": "Along path" } as const;
+  const methodPicker = win.picker(Object.values(METHOD_LABELS), {
     ariaLabel: "Plane method",
-    value: ({ offset: "Offset", mid: "Mid plane", "three-point": "Three point", angle: "Angle" } as const)[existing ? initial.method : initialMethod],
+    value: METHOD_LABELS[existing ? initial.method : initialMethod],
     onChange: () => {
       syncMethod();
       renderEntities();
-      if (methodPicker.value() === "Three point" || methodPicker.value() === "Angle") requestGeometry();
+      if (["Three point", "Angle", "Perpendicular", "Two edges", "Tangent", "Along path"].includes(methodPicker.value())) requestGeometry();
     },
   });
   win.body.append(methodPicker.element);
@@ -293,6 +332,13 @@ export async function openPlaneWindow(
   angleUnit.textContent = "deg";
   const angleRow = win.row("Angle", angleInput, angleUnit);
   angleInput.addEventListener("input", () => validate());
+
+  const pathInput = document.createElement("input");
+  pathInput.type = "text";
+  pathInput.value = String(initial.method === "along-path" ? initial.t : 0.5);
+  pathInput.setAttribute("aria-label", "Fraction along the edge");
+  const pathRow = win.row("Along the edge (0–1)", pathInput);
+  pathInput.addEventListener("input", () => validate());
 
   const flipInput = document.createElement("input");
   flipInput.type = "checkbox";
@@ -358,7 +404,12 @@ export async function openPlaneWindow(
     const method = methodPicker.value();
     offsetRow.hidden = method !== "Offset";
     angleRow.hidden = method !== "Angle";
-    const filter = method === "Three point" ? "vertex" : method === "Angle" && !axis ? "edge" : "face";
+    pathRow.hidden = method !== "Along path";
+    const filter = method === "Three point" ? "vertex"
+      : method === "Two edges" ? "edge"
+      : method === "Along path" ? "edge"
+      : (method === "Angle" || method === "Perpendicular") && !axis ? "edge"
+      : "face";
     if (cadSelection.snapshot().filter !== filter) cadSelection.dispatch({ type: "set-filter", filter });
     // Each method collects only what it uses, so a leftover pick from another
     // method can never satisfy it.
@@ -371,7 +422,7 @@ export async function openPlaneWindow(
     const caption = entities.element.querySelector(".aui-feature-entities-caption");
     if (caption)
       caption.textContent =
-        method === "Three point" ? "Points" : method === "Angle" ? "Edge and reference plane" : "Entities";
+        method === "Three point" ? "Points" : method === "Angle" || method === "Perpendicular" ? "Edge and reference plane" : method === "Two edges" ? "Edges" : method === "Tangent" ? "Surface point" : method === "Along path" ? "Edge" : "Entities";
   }
 
   // Entities come from clicking planes in the viewport or Items tree.
@@ -423,7 +474,7 @@ export async function openPlaneWindow(
       for (const point of selected) {
         if (!points.some(p => p.partId === point.partId && p.candidateId === point.candidateId)) points.push(point);
       }
-    } else if (methodPicker.value() === "Angle" && detail?.axis) {
+    } else if ((methodPicker.value() === "Angle" || methodPicker.value() === "Perpendicular" || methodPicker.value() === "Along path") && detail?.axis) {
       axis = {
             kind: "axis" as const,
             partId: detail.axis.partId,
@@ -431,8 +482,14 @@ export async function openPlaneWindow(
             label: detail.axis.label,
             originMillimeters: detail.axis.originMillimeters,
             directionMillimeters: detail.axis.directionMillimeters,
+            ...(detail.axis.lengthMillimeters !== undefined ? { lengthMillimeters: detail.axis.lengthMillimeters } : {}),
           };
-      if (cadSelection.snapshot().filter === "edge") cadSelection.dispatch({ type: "set-filter", filter: "face" });
+      if (methodPicker.value() !== "Along path" && cadSelection.snapshot().filter === "edge") cadSelection.dispatch({ type: "set-filter", filter: "face" });
+    } else if (methodPicker.value() === "Two edges" && detail?.axis) {
+      const picked: AxisReference = { kind: "axis", partId: detail.axis.partId, candidateId: detail.axis.candidateId, label: detail.axis.label, originMillimeters: detail.axis.originMillimeters, directionMillimeters: detail.axis.directionMillimeters, ...(detail.axis.lengthMillimeters !== undefined ? { lengthMillimeters: detail.axis.lengthMillimeters } : {}) };
+      if (axes.length < 2 && !axes.some((a) => a.partId === picked.partId && a.candidateId === picked.candidateId)) axes.push(picked);
+    } else if (methodPicker.value() === "Tangent" && detail?.surface) {
+      surface = { kind: "surface-point", partId: detail.surface.partId, faceId: detail.surface.faceId, label: detail.surface.label, pointMillimeters: detail.surface.pointMillimeters, normalMillimeters: detail.surface.normalMillimeters };
     }
     renderEntities();
     validate();
@@ -444,7 +501,7 @@ export async function openPlaneWindow(
     window.dispatchEvent(new CustomEvent("aether-plane-geometry-request"));
   const unsubscribeSelection = cadSelection.subscribe(() => {
     const method = methodPicker.value();
-    if (method === "Three point" || method === "Angle") requestGeometry();
+    if (["Three point", "Angle", "Perpendicular", "Two edges", "Tangent", "Along path"].includes(method)) requestGeometry();
   });
   window.addEventListener("aether-plane-geometry", onGeometry);
   window.addEventListener("aether-sketch-plane", onPrincipalPick);
@@ -453,6 +510,6 @@ export async function openPlaneWindow(
   window.dispatchEvent(new CustomEvent("aether-sketch-plane-selection", { detail: true }));
   syncMethod();
   renderEntities();
-  if (created && (initialMethod === "angle" || initialMethod === "three-point")) requestGeometry();
+  if (created && initialMethod !== "offset" && initialMethod !== "mid") requestGeometry();
 
 }

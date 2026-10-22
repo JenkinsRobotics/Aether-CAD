@@ -1,23 +1,24 @@
+import { openCompactFeatureWindow } from "@aether/ui";
 import {unitChoice, parseQuantity} from "@aether/core/units";
 import {documentUnits} from "../document-preferences";
 import {renderPhysicalProperties} from "./properties";
-import { openFeatureWindow } from "@aether/ui";
 import { availableBodies, type PartDocument } from "@aether/core/document";
-import { translateDocument } from "../freecad-translate";
-import { toPartGeometry, requireFeatureCapabilities } from "../freecad-geometry";
 import type { ImportedModelData } from "../domain";
+import { onEngine } from "../engine/evaluate-part";
+import { analyzeOnAether, measureOnAether } from "../engine/aether/evaluator";
+import type { MeasureReference } from "../measure/measure-reference";
 
 let closeActive: (() => void) | undefined;
 type Kind = "section" | "interference" | "properties";
-export async function analyzePart(doc: PartDocument, analysis: { kind: Kind; plane?: string; offset_mm?: number; reverse?: boolean; density_kg_m3?: number }, signal?: AbortSignal) {
-  const translation = translateDocument(doc);
-  if (!translation.complete) throw Error(translation.untranslated.map(f => `${f.name}: ${f.reason}`).join("\n"));
-  await requireFeatureCapabilities(translation.features);
-  const response = await fetch("/api/cad/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, signal, body: JSON.stringify({ features: translation.features, analysis }) });
-  const result = await response.json();
-  if (!response.ok || result.status !== "ok") throw Error(result.error || result.message || "Analysis failed.");
-  return result;
+/** The engine answers with measurements and, for sections and interference, meshes to show. */
+type AnalysisAnswer = { status: "ok"; measurements: Record<string, unknown>[]; parts?: ImportedModelData["parts"] };
+export async function analyzePart(doc: PartDocument, analysis: { kind: Kind | "distance"; plane?: string; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; entities?: readonly object[] }, signal?: AbortSignal) {
+  void signal;
+  if (analysis.kind === "distance") return onEngine<AnalysisAnswer>({ aether: async () => measureOnAether(doc, (analysis.entities ?? []) as MeasureReference[]) as unknown as AnalysisAnswer });
+  const { kind, plane, offset_mm, reverse, density_kg_m3 } = analysis;
+  return onEngine<AnalysisAnswer>({ aether: () => analyzeOnAether(doc, { kind, plane: plane as "XY" | "XZ" | "YZ" | undefined, offset_mm, reverse, density_kg_m3 }) });
 }
+
 
 export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (model: ImportedModelData | null) => void) {
   if (document.querySelector(".cad-feature-dialog")) throw Error("Finish or cancel the feature editor before analysis.");
@@ -31,7 +32,7 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
   let closed = false, revision = 0;
   let controller: AbortController | undefined;
   const close = () => { if (closed) return; closed = true; window.removeEventListener("aether-feature-preview-start", close); revision++; controller?.abort(); show(null); window.removeEventListener("aether-part-updated", close); win.close(); };
-  const win = openFeatureWindow({ className: "cad-analysis-dialog", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : "Interference", acceptLabel: "Close analysis", discardLabel: "Close", onAccept: close, onDiscard: close });
+  const win = openCompactFeatureWindow({ className: "cad-analysis-dialog", icon: "inspect", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : "Interference", acceptLabel: "Done", onAccept: close, onDiscard: close });
   closeActive = close;
   const status = document.createElement("p"); status.className = "cad-analysis-status"; status.setAttribute("role", "status");
   const plane = document.createElement("select"); plane.setAttribute("aria-label", "Section plane");
@@ -56,10 +57,10 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
       if (closed || ticket !== revision) return;
       if (kind === "properties") {
         status.textContent = densityValue === undefined ? "Exact geometry. Enter density to calculate mass and inertia." : "Uniform density applied to each body. Inertia is about each center of mass, in world axes.";
-        measurements.append(renderPhysicalProperties(result.measurements,names,units));
+        measurements.append(renderPhysicalProperties(result.measurements as unknown as Parameters<typeof renderPhysicalProperties>[0],names,units));
         return;
       }
-      const parts = result.bodies.map(toPartGeometry);
+      const parts = result.parts ?? [];
       show({ sourceName: snapshot.name, parts, parseMilliseconds: 0 });
       status.textContent = kind === "section"
         ? `Capped section · ${parts.length} bodies remain. Close to restore the complete model.`
@@ -69,7 +70,7 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
         const header = table.createTHead().insertRow();
         for (const label of ["Body", "Body", `Volume (${lengthUnit.unit}³)`]) { const cell = document.createElement("th"); cell.textContent = label; cell.style.textAlign = "left"; header.append(cell); }
         const body = table.createTBody();
-        for (const item of result.measurements) {
+        for (const item of result.measurements as { first_body_id: string; second_body_id: string; volume_mm3: number }[]) {
           const row = body.insertRow();
           for (const text of [names.get(item.first_body_id) ?? item.first_body_id, names.get(item.second_body_id) ?? item.second_body_id, (item.volume_mm3/(lengthUnit.factor*1000)**3).toFixed(lengthUnit.decimals)]) row.insertCell().textContent = text;
         }

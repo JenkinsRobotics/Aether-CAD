@@ -1,3 +1,6 @@
+import { CADShareDocument } from "./CADShareDocument";
+import { CADDocumentControls } from "./CADDocumentControls";
+import { CADStudioWorkspaceControls, CADStudioViewTools } from "./CADStudioControls";
 import { cadFeaturePalette } from './cad-feature-tray';
 import { sketchContextCommands } from '../sketch/context-commands';
 import type { CADToolContext } from '../tools/availability';
@@ -25,11 +28,14 @@ import { CADViewPanel } from "./CADViewPanel";
 import { CADMetricsOverlay, CADPerformancePanel } from "./CADPerformancePanel";
 import type { CADDocumentType } from "../cad-toolbar-layouts";
 import { CADVersionsPanel } from "./CADVersionsPanel";
+import { auxToolbarItems, subscribeAuxToolbarItems } from "../aux-toolbar-preferences";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   AetherIcon,
+  IconButton,
   CommandPalette,
+  DocumentCreateDialog,
   StudioDocumentBar as DocumentBar,
   StudioModeButton,
   WorkspaceWindowMenu,
@@ -38,10 +44,9 @@ import {
   type WorkspacePanelState,
   type WorkspacePanel,
   type CommandPaletteCommand,
-  ToolIcon,
 } from "@aether/ui";
 import { CadIcon } from "./CadIcon";
-import { DrawingWorkspaceRoute, SelectionFilterHud, StartCenter, ViewportCameraNavigation, ViewportSurface } from "./chrome";
+import { DrawingWorkspaceRoute, StartCenter, ViewportCameraNavigation, ViewportSurface } from "./chrome";
 import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog } from "./dialogs";
 import {
   ActionItemsPanel,
@@ -65,7 +70,7 @@ import {
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 
 
-import { CADTraditionalRibbon, CADWorkspaceSwitcher } from "./CADTraditionalRibbon";
+import { CADTraditionalRibbon } from "./CADTraditionalRibbon";
 import type { CADRibbonWorkspaceID, CADToolActionID } from "../cad-tool-catalog";
 import {
   cadPresentation,
@@ -78,7 +83,7 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "new-part", label: "New Part", category: "File", keywords: ["create workspace"], shortcut: "⌘N", recent: true, icon: <AetherIcon name="plus" /> },
   { id: "open-part", label: "Open Part", category: "File", keywords: ["load cadpart"], shortcut: "⌘O", icon: <AetherIcon name="open-external" /> },
   { id: "save-part", label: "Save Part", category: "File", keywords: ["write cadpart"], shortcut: "⌘S", recent: true, icon: <AetherIcon name="import" /> },
-  { id: "commit-part", label: "Commit", category: "File", keywords: ["checkpoint version name message"], recent: true, icon: <AetherIcon name="circle-filled" /> },
+  { id: "commit-part", label: "Create version", category: "File", keywords: ["commit checkpoint version name message"], recent: true, icon: <AetherIcon name="circle-filled" /> },
   { id: "insert-step", label: "Import CAD", category: "Insert", keywords: ["import step stp iges brep stl obj ply off mesh geometry"], icon: <AetherIcon name="export" /> },
   { id: "sketch", label: "Create Sketch", category: "Create", keywords: ["plane profile"], shortcut: "R", icon: <AetherIcon name="sketch" /> },
   { id: "rebuild-part", label: "Rebuild Part", category: "Create", keywords: ["evaluate extrude"], icon: <AetherIcon name="revolute" /> },
@@ -109,6 +114,8 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "display-wireframe", label: "Wireframe", category: "Display", keywords: ["mesh lines"], icon: <AetherIcon name="keyframe" /> },
   { id: "display-hidden-line", label: "Hidden Line", category: "Display", keywords: ["technical outline"], icon: "▱" },
   { id: "display-ghost", label: "Ghost", category: "Display", keywords: ["transparent xray"], icon: "◌" },
+  { id: "display-zebra", label: "Zebra analysis", category: "Display", keywords: ["stripes continuity surface"], icon: "▤" },
+  { id: "display-draft-analysis", label: "Draft analysis", category: "Display", keywords: ["mould pull angle"], icon: "◭" },
   { id: "lighting-studio", label: "Studio Lighting", category: "Scene", keywords: ["environment balanced"], recent: true, icon: "☼" },
   { id: "lighting-softbox", label: "Softbox Lighting", category: "Scene", keywords: ["environment soft"], icon: <AetherIcon name="contrast" /> },
   { id: "lighting-daylight", label: "Daylight", category: "Scene", keywords: ["environment sun"], icon: "☀" },
@@ -160,6 +167,8 @@ export function buildCADCommandPaletteCommands(
 
 
 // Shell chrome lives in ./chrome; the Assembly dialogs in ./dialogs.
+const OPEN_PANELS_KEY = "aether-cad.open-panels.v1";
+
 export function AetherCADShell() {
   const applications = useStudioApplications();
   const presentation = useSyncExternalStore(
@@ -179,11 +188,11 @@ export function AetherCADShell() {
     { id:'zoom-fit', label:'Fit view', heading:'View', separatorBefore:true, disabled:!commands['fit-view']?.enabled, run:() => { cadCommands.execute('fit-view'); } },
   ]);
   const [chromeTheme, setChromeTheme] = useState<"suite" | "classic">(() => {
-    try { return localStorage.getItem("aether-cad-chrome-theme") === "classic" ? "classic" : "suite"; } catch { return "suite"; }
+    try { return localStorage.getItem("aether-cad.chrome.studio-v1") === "classic" ? "classic" : "suite"; } catch { return "suite"; }
   });
   const chooseChromeTheme = (theme: "suite" | "classic") => {
     setChromeTheme(theme);
-    try { localStorage.setItem("aether-cad-chrome-theme", theme); } catch { /* Session-only preference. */ }
+    try { localStorage.setItem("aether-cad.chrome.studio-v1", theme); } catch { /* Session-only preference. */ }
   };
   const suite = chromeTheme === "suite";
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -192,6 +201,7 @@ export function AetherCADShell() {
   const [vectorInsert,setVectorInsert] = useState<'svg'|'dxf'|null>(null);
   const [mcMasterOpen,setMcMasterOpen] = useState(false);
   const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [layoutAnchor, setLayoutAnchor] = useState<HTMLElement | null>(null);
   const [ribbonWorkspace, setRibbonWorkspace] = useState<CADRibbonWorkspaceID>("solid");
   const [sketchEditing, setSketchEditing] = useState(false);
@@ -309,7 +319,13 @@ export function AetherCADShell() {
 
   };
 
-  const [panelPositions, setPanelPositions] = useState<WorkspacePanelState>({});
+  const [showFileTray, setShowFileTray] = useState(true);
+  // Per tab: the panel you work in (e.g. Version control) stays open when a
+  // restore, merge, branch switch or refresh reloads the editor.
+  const [panelPositions, setPanelPositions] = useState<WorkspacePanelState>(() => {
+    try { const saved: unknown = JSON.parse(sessionStorage.getItem(OPEN_PANELS_KEY) ?? "{}"); return saved && typeof saved === "object" && !Array.isArray(saved) ? saved as WorkspacePanelState : {}; } catch { return {}; }
+  });
+  useEffect(() => { try { sessionStorage.setItem(OPEN_PANELS_KEY, JSON.stringify(panelPositions)); } catch { /* layout convenience only */ } }, [panelPositions]);
   const previousHistoryCollapsed = useRef(presentation.bottomPanelCollapsed);
   useEffect(() => {
     if (suite && previousHistoryCollapsed.current !== presentation.bottomPanelCollapsed) {
@@ -322,7 +338,27 @@ export function AetherCADShell() {
   // Version control, Create version, Comments, Document notes, Reminders,
   // AI advisor and Action items. File management lives beside the bottom tabs. History is the suite
   // theme's only route to the rollback bar, so it keeps a seat before the end.
-  const documentConnection = useDocumentConnection({app:"cad",name:presentation.documentName,flush:async()=>{const {flushAutosaveNow}=await import("../host-library");await flushAutosaveNow();},saveCopy:async()=>{const {copyHostedSnapshot}=await import("../host-library");await copyHostedSnapshot();}});
+  const auxItems = useSyncExternalStore(subscribeAuxToolbarItems, auxToolbarItems, auxToolbarItems);
+  const hostedConnection = useDocumentConnection({app:"cad",name:presentation.documentName,flush:async()=>{const {flushAutosaveNow}=await import("../host-library");await flushAutosaveNow();},saveCopy:async()=>{const {copyHostedSnapshot}=await import("../host-library");await copyHostedSnapshot();}});
+  // Version snapshots use the same renderer as Drive's CAD file icons, so a
+  // version's picture and the file's thumbnail always agree.
+  // "Create version" from any entry point (document menu, command palette) uses
+  // the same dialog and validated operation as Version control.
+  const [creatingVersion, setCreatingVersion] = useState(false);
+  useEffect(() => {
+    const open = () => setCreatingVersion(true);
+    window.addEventListener("aether-create-version", open);
+    return () => window.removeEventListener("aether-create-version", open);
+  }, []);
+  const documentConnection = useMemo(() => hostedConnection && ({
+    ...hostedConnection,
+    previewRevision: async (revision: number) => {
+      const saved = await hostedConnection.call<{ data_base64: string }>("read_revision", { revision });
+      const bytes = Uint8Array.from(atob(saved.data_base64), char => char.charCodeAt(0));
+      const { previewDocument } = await import("../preview-document");
+      return previewDocument(new TextDecoder().decode(bytes));
+    },
+  }), [hostedConnection]);
   const hasDeviceReminders=(()=>{try{return typeof location!=="undefined"&&Array.isArray(JSON.parse(localStorage.getItem(`aether-cad.reminders.${new URLSearchParams(location.search).get('document')??'draft'}`)??'null'));}catch{return false;}})();
   const leftPanels: WorkspacePanel[] = standardWorkspacePanels([
     { id: "browser", title: "Features and parts", icon: <AetherIcon name="features-parts" />, chromeless: true, content: <ItemsPanel active onShowAppearance={() => requestCADPropertyPanel("visualization")} /> },
@@ -331,19 +367,31 @@ export function AetherCADShell() {
     { id: "comments", title: "Comments", icon: <AetherIcon name="comment" />, content: <CommentsPanel /> },
     { id: "notes", title: "Document notes", icon: <AetherIcon name="notes" />, content: <DocumentNotesPanel /> },
     { id: "reminders", title: "Reminders", icon: <AetherIcon name="stopwatch" />, content: <RemindersPanel /> },
-    { id: "advisor", title: "AI advisor", icon: <AetherIcon name="advisor" />, content: <AdvisorPanel /> },
+    { id: "advisor", title: "AI advisor", icon: <AetherIcon name="advisor" />, content: <AdvisorPanel connection={documentConnection} /> },
     { id: "tasks", title: "Action items", icon: <AetherIcon name="tasks" />, content: <ActionItemsPanel /> },
     ...(hasDeviceReminders?[{id:'device-reminders',title:'Device reminders',icon:<AetherIcon name="stopwatch"/>,content:<RemindersPanel/>}]:[]),
     ...(suite ? [{ id: "history", title: "History", icon: <CadIcon name="history" />, content: <WorkbenchBottomPanel presentation={presentation} sidebar /> }] : []),
-  ], { features: "browser" }, documentConnection).filter(panel => panel.id !== "part-manager");
+  ], { features: "browser" }, documentConnection).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
+  const advisor = leftPanels.find(panel=>panel.id === "advisor");
+  if (advisor) advisor.icon = <AetherIcon name="brain"/>;
+  leftPanels.push({id:"files",title:"Part list",icon:<AetherIcon name="folder"/>,content:null,toggle:{pressed:showFileTray,onToggle:()=>setShowFileTray(value=>!value)}});
+  // The aux toolbar controls the auxiliary card and the part list (Model Studio
+  // demo); the tree is the standard column. Users choose its buttons in Settings › Layout.
+  // Only the Settings-chosen aux items have buttons; other aux panels (Create version,
+  // notes, reminders, history) still open from their own commands and headers.
+  for (const panel of leftPanels) if (panel.id !== "browser" && panel.id !== "feature-tree") panel.inToolbar = auxItems.includes(panel.id as never);
+  if (auxItems.includes("feature-tree")) leftPanels.push({id:"feature-tree",title:"Feature tree",icon:<AetherIcon name="list-tree"/>,content:null,
+    toggle:{pressed:presentation.panelPlacements.browser !== "hidden",onToggle:()=>cadPresentation.dispatch({type:"set-panel-placement",panel:"browser",placement:presentation.panelPlacements.browser === "hidden" ? "docked" : "hidden"})}});
+  const studioRailOrder = ["comments","advisor","versions","files","feature-tree","browser","create-version","notes","reminders","tasks","device-reminders","history"];
+  leftPanels.sort((a,b)=>studioRailOrder.indexOf(a.id)-studioRailOrder.indexOf(b.id));
   const rightPanels: WorkspacePanel[] = [
-    { id: "inspector", title: "Properties", icon: <ToolIcon name="properties" />, content: <InspectorPanel placement={presentation.panelPlacements.inspector} /> },
+    { id: "inspector", title: "Properties", icon: <AetherIcon name="sliders" />, content: <InspectorPanel placement={presentation.panelPlacements.inspector} /> },
     { id: "parameters", title: "Configurations", icon: <AetherIcon name="columns" />, content: <ConfigurationsPanel /> },
-    { id: "mates", title: "Assembly", icon: <ToolIcon name="assembly" />, content: <MatesPanel active /> },
-    { id: "inspect", title: "Measure and inspect", icon: <ToolIcon name="measure" />, content: <InspectPanel active /> },
+    { id: "mates", title: "Assembly", icon: <AetherIcon name="cube" />, content: <MatesPanel active /> },
+    { id: "inspect", title: "Inspect", icon: <AetherIcon name="info" />, content: <InspectPanel active /> },
     { id: "visualization", title: "Material properties", icon: <AetherIcon name="appearance-system" />, separatorBefore: true, content: <PartAppearancePanel /> },
-    { id: "rendering", title: "Rendering environment", icon: <ToolIcon name="light" />, content: <VisualizationPanel active /> },
-    { id: "view", title: "Camera and display", icon: <ToolIcon name="view-top" />, content: <CADViewPanel active /> },
+    { id: "rendering", title: "Rendering environment", icon: <AetherIcon name="lighting" />, content: <VisualizationPanel active /> },
+    { id: "view", title: "Camera and display", icon: <AetherIcon name="cube-transparent" />, content: <CADViewPanel active /> },
     { id: "performance", title: "Performance", icon: <AetherIcon name="gauge" />, content: <CADPerformancePanel active /> },
   ];
 
@@ -356,7 +404,7 @@ export function AetherCADShell() {
   // same-side exclusivity (Comments/Notes/Tasks and View/Performance did).
   // Features and parts is pinned (Onshape): it keeps its column while the
   // rail's other panels open beside it, so it is outside this exclusivity.
-  const leftPanelIDs = leftPanels.map(panel => panel.id).filter(id => id !== "browser");
+  const leftPanelIDs = leftPanels.map(panel => panel.id).filter(id => id !== "browser" && id !== "files" && id !== "feature-tree");
   const rightPanelIDs = rightPanels.map(panel => panel.id);
   const openLeftPanel = (id: string) => {
     const next = { ...studioPanelState };
@@ -392,6 +440,8 @@ export function AetherCADShell() {
 
   return (
     <main className={`shell shapr-shell studio-shell aui-studio-app chrome-${chromeTheme} toolbar-${suite ? "traditional" : presentation.toolbarMode}`}>
+      {shareOpen && <CADShareDocument onClose={()=>setShareOpen(false)}/>}
+      {creatingVersion && documentConnection && <DocumentCreateDialog connection={documentConnection} mode="version" onClose={() => setCreatingVersion(false)}/>}
       {pluginsOpen && <CADPluginsWindow onClose={() => setPluginsOpen(false)}/>}
       <CADWorkspaceLayoutPopover anchor={layoutAnchor} onClose={() => setLayoutAnchor(null)}
         toolbarMode={presentation.toolbarMode}
@@ -406,7 +456,10 @@ export function AetherCADShell() {
       <DocumentBar
         className="cad-document-bar"
         documentName={presentation.documentName}
-        application={{ apps: applications, id: "cad", name: "Aether CAD", onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
+        onSearch={() => setCommandPaletteOpen(true)}
+        defaultHeaderPins={["theme","notifications","comments","apps","share"]}
+        documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
+        application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
           onHome: event => { if (!window.location.pathname.startsWith("/cad/")) { event.preventDefault(); cadPresentation.dispatch({type: "show-start-screen", screen: "home"}); } } }}
         leading={
           <>
@@ -419,6 +472,7 @@ export function AetherCADShell() {
         }
         viewControls={
             <div className="aui-studio-chrome-group">
+              <IconButton label="Notifications" disabled title="Notifications require a connected Aether Studio account."><AetherIcon name="bell"/></IconButton>
               <StudioModeButton
                 preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
                 onChange={(preset) => cadPresentation.dispatch({ type: "select-layout", layout: preset === "floating" ? "expanded" : preset })}
@@ -435,7 +489,7 @@ export function AetherCADShell() {
               <WorkspaceWindowMenu />
               <button className="aui-menu-trigger" aria-label="Plugins" title="Plugins" onClick={() => setPluginsOpen(true)}><CADPluginsIcon/></button>
               <button className="aui-menu-trigger" aria-label="Workspace layout" title="Workspace layout" aria-haspopup="dialog" aria-expanded={!!layoutAnchor} onClick={event=>setLayoutAnchor(layoutAnchor ? null : event.currentTarget)}><AetherIcon name="layout"/></button>
-              <button className="aui-menu-trigger" aria-label="Comments" title="Comments" onClick={()=>openLeftPanel('comments')}><AetherIcon name="comment"/></button>
+              <button className="aui-menu-trigger" aria-label="Comments" title="Comments" aria-pressed={!!studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden'} onClick={()=>studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden' ? updateStudioPanels({...studioPanelState,comments:{...studioPanelState.comments,placement:'hidden'}}) : openLeftPanel('comments')}><AetherIcon name="comment"/></button>
               <button className="aui-menu-trigger" aria-label="Reminders" title="Reminders" onClick={()=>openLeftPanel('reminders')}><AetherIcon name="stopwatch"/></button>
             </div>
         }
@@ -450,13 +504,13 @@ export function AetherCADShell() {
         inert={presentation.startScreen !== "workspace"}
       >
         <WorkspaceShell
-          workspaceControls={<CADWorkspaceSwitcher documentType={documentType} onAction={runRibbonAction} />}
+          workspaceControls={<CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} />}
           contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
           preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
           preservePanelContent
           toolbarSpan="center"
           pinnedPanels={["browser"]}
-          sideBottom={{ right: sketchEditing ? null : <SelectionFilterHud /> }}
+          sideBottom={{ right: sketchEditing ? null : <CADStudioViewTools /> }}
           style={{ height: "100%" }}
           panelState={studioPanelState}
           onPanelStateChange={updateStudioPanels}
@@ -471,7 +525,7 @@ export function AetherCADShell() {
           />}
           leftPanels={leftPanels}
           rightPanels={rightPanels}
-          bottom={<>{suite ? null : <WorkbenchBottomPanel presentation={presentation} />}<CADDocumentTabs connection={documentConnection} /></>}
+          bottom={<>{suite ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} /></div></>}
         >
           <div className="cad-studio-viewport" aria-hidden={presentation.workspaceMode === "drawing"} inert={presentation.workspaceMode === "drawing"}>
             <ViewportSurface presentation={presentation} />

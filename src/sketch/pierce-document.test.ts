@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
 import {createEmptyPartDocument,serializePartDocument,parsePartDocument,resolveProfileDrawing,featureDependencies,featureReferenceErrors,removeFeature,setFeatureSuppressed,moveFeature,updatePartDocumentVariables,type PartDocument,type ProfileFeature} from '@aether/core/document';
 import {solveDrawingConstraints,sketchConstraintState,type SketchDrawing} from '@aether/core/sketch';
-import {addSketchPierce} from '../../freecad-engine/browser/pierce-authoring';
-import {withPierceContext} from '../../freecad-engine/browser/pierce-context';
-import {sketchRegions,translateDocument} from '../freecad-translate';
+import {addSketchPierce} from '@aether/core/sketch/reference/pierce-authoring';
+import {withPierceContext} from '@aether/core/sketch/reference/pierce-context';
+
 function setup():PartDocument {
  const document=createEmptyPartDocument('Pierce');document.features=[
   {id:'source',name:'Source',type:'profile',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{type:'path',start:[0,-5],segments:[{type:'line',end:[20,5]}]}]}},
@@ -79,26 +79,7 @@ it('updates expressions in suppressed sketches without losing their external rel
  expect(resolveProfileDrawing(restored.features,'target').contours[0]).toMatchObject({radius:expect.closeTo(5,7)});
  expect(serializePartDocument(changed)).not.toContain('pierceContext');
 });
-it('uses current resolved contours for region selection and native building',()=>{
- const doc=attach(),source=drawing(doc,'source').contours[0];if(source.type!=='path')throw Error();source.segments[0].end=[40,5];
- const feature=doc.features[1];expect(()=>sketchRegions(feature)).toThrow(/document/);
- const regions=sketchRegions(feature,false,doc.features);expect(regions).toHaveLength(1);
- const translation=translateDocument(doc);expect(translation.complete).toBe(true);
- const native=translation.features.find(f=>f.parameters.pierce_checks)!;
- expect(native.parameters.center_mm).toEqual([expect.closeTo(20,7),expect.closeTo(0,7)]);
- expect(native.parameters.pierce_checks).toMatchObject([{source_sketch:'target#pierce-source#pierce-1',world_point:[20,0,0]}]);
-});
 it.each(['reference','valueOffset','valueScale','splineFreeEnds','patternGroup'])('rejects unrelated %s semantics on Pierce',key=>{
  const doc=attach();Object.assign(drawing(doc).constraints![1],{[key]:key==='reference'?true:key==='splineFreeEnds'?['start']:1});
  expect(()=>serializePartDocument(doc)).toThrow(/Pierce constrains/);
-});
-it('resolves a dependent source sketch before a second Pierce without persisting context',()=>{
- let doc=attach();doc.features.push({id:'third',name:'Third',type:'profile',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{type:'circle',center:[0,0],radius:1}]}});
- doc=addSketchPierce(doc,'third',{contour:0,kind:'point',index:0},'target',0,undefined,0);
- const initial=resolveProfileDrawing(doc.features,'third').contours[0];if(initial.type!=='circle')throw Error();
- expect(initial.center[0]).toBeCloseTo(13,7);
- const source=drawing(doc,'source').contours[0];if(source.type!=='path')throw Error();source.segments[0].end=[40,5];
- const saved=parsePartDocument(serializePartDocument(doc)),resolved=resolveProfileDrawing(saved.features,'third').contours[0];
- expect(resolved).toMatchObject({center:[expect.closeTo(23,7),expect.closeTo(0,7)]});
- expect(translateDocument(saved).complete).toBe(true);
 });

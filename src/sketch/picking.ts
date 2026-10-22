@@ -1,5 +1,5 @@
 import { sketchNodeLabel } from "./point-roles";
-import { sketchFaceRegions } from '../../freecad-engine/browser/connected-sketch-regions';
+import { sketchFaceRegions } from '@aether/core/sketch/reference/connected-sketch-regions';
 import { pointInPolygon, polygonArea, distanceToSegment } from '@aether/sketch';
 import {
   pickCurve,

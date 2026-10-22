@@ -19,7 +19,7 @@
   <a href="https://jenkinsrobotics.github.io/Aether-CAD/"><img alt="Website" src="https://img.shields.io/badge/site-Aether--CAD-1f6feb"></a>
 </p>
 
-Sketch a profile, add features and edit any step of the history. Aether CAD runs a native FreeCAD/OpenCASCADE kernel behind its own feature model, so every part rebuilds exactly — and every action is available to you, your team and your AI. An open alternative to SolidWorks, Onshape and Shapr3D.
+Sketch a profile, add features and edit any step of the history. Aether CAD runs its own OpenCASCADE engine in the browser behind its own feature model, so every part rebuilds exactly — and every action is available to you, your team and your AI. An open alternative to SolidWorks, Onshape and Shapr3D.
 
 > **Alpha 0.1 — early access.** Aether CAD is alpha software: features are incomplete,
 > file formats may change between alphas, and it is not yet qualified for production
@@ -161,25 +161,24 @@ The platform serves these builds using `aether-platform/projects.json`.
 The existing product README is retained as `README.pre-split.md` where present.
 Some older paths in historical documentation refer to the former monorepo.
 
-The FreeCAD adapter remains the default engine (`freecad-engine/`); the parked
-TypeScript/WASM engine stays product-owned in `aether-engine/`. Before running
-engine tests, run `npm ci` inside `aether-engine/`. Native tests additionally need
-FreeCAD and `AETHER_PYTHON` set to a Python 3.11 interpreter.
+The Aether engine (`aether-engine/`: OpenCASCADE as WebAssembly with a TypeScript modeling
+layer) is the product's only engine; it runs in a worker in the browser and in-process under
+Node for the agent runner and tests. Before running engine tests, run `npm ci` inside
+`aether-engine/`. The FreeCAD reference it was proven against was deleted on 2026-10-20
+(see `AGENTS.md`; archive in `../AetherStudio/migration/archive/freecad-reference-20261020/`).
 
 ## Installed service release check
 
-`aether-cad-service` 0.2.0a5 includes the product-owned `aether_freecad`
-adapter, subprocess worker and FreeCAD attribution. It no longer adds a
-source-checkout directory to Python's import path. FreeCAD itself remains an
-external, replaceable installation; set `AETHER_FREECAD_CMD` when it is not
-found automatically. The existing Animation workspace-protocol dependency is
-still explicit and is not removed by this packaging fix.
+`aether-cad-service` 0.2.0a5 packages the Node runner (`runtime/runner.mjs`) with its
+OpenCASCADE kernel (`runtime/replicad_single.wasm`) and attribution, plus the Python archive
+that orchestrates agent commands, programs and project containers. The host needs Node and
+Python; no FreeCAD. The existing Animation workspace-protocol dependency is still explicit.
 
 Run from this repository using the platform development environment:
 
 ```sh
-AETHER_TEST_FREECAD=1 ../AetherStudio/.venv/bin/python -m pytest service/tests -q
-../AetherStudio/.venv/bin/python -m pytest freecad-engine/tests --require-freecad -q
+node scripts/build-automation.mjs
+PYTHONPATH=service:../AetherStudio AETHER_TEST_FREECAD=1 ../AetherStudio/.venv/bin/python -m pytest service/tests -q
 ```
 
 The service release test builds and extracts a wheel, imports it in an isolated

@@ -1,11 +1,11 @@
 /** Mates — the Assembly workspace's joint tab.
  *
  *  Onshape's MATES, its Connect group in Onshape's order. A mate is offered
- *  only when both halves exist: FreeCAD's Assembly solver has the joint, and
+ *  only when both halves exist: the assembly solver has the joint, and
  *  Aether's Assembly slice can author it. The rest are greyed and say which
  *  half is missing — see `dev/docs/roadmap/Mates_Engine_Decision.md`.
  */
-import { authoringProducer, mateProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
+import {authoringProducer, mateProducer, tool, type CADRibbonWorkspaceDefinition} from "./shared";
 
 export const assemblyMatesWorkspace: CADRibbonWorkspaceDefinition = {
   id: "assembly-mates",
@@ -13,15 +13,17 @@ export const assemblyMatesWorkspace: CADRibbonWorkspaceDefinition = {
   groups: [
     { id: "mates-connect", label: "Connect", tools: [
       tool("assembly-fixed", "Fastened", "link", "assembly-mate-fastened"),
-      tool("assembly-parallel", "Parallel", "parallel", undefined, authoringProducer),
+      tool("assembly-parallel", "Parallel", "parallel", "assembly-mate-parallel"),
       tool("assembly-slider", "Slider", "slider", "assembly-mate-prismatic"),
       tool("assembly-revolute", "Revolute", "hinge", "assembly-mate-revolute"),
-      tool("assembly-concentric", "Cylindrical", "cylindrical", undefined, authoringProducer),
-      // Onshape mates FreeCAD's solver has no joint for. Greyed, with the
-      // reason, rather than offered and refused after authoring.
-      tool("assembly-path", "Pin Slot", "slot", undefined, mateProducer),
-      tool("assembly-coincident", "Planar", "plane", undefined, mateProducer),
-      tool("assembly-mate-ball", "Ball", "ball", undefined, authoringProducer),
+      tool("assembly-concentric", "Cylindrical", "cylindrical", "assembly-mate-cylindrical"),
+      tool("assembly-path", "Pin Slot", "slot", "assembly-mate-pin_slot"),
+      tool("assembly-coincident", "Planar", "plane", "assembly-mate-planar"),
+      tool("assembly-mate-ball", "Ball", "ball", "assembly-mate-ball"),
+      // Width and tangent need surface geometry the solver has no joint for;
+      // perpendicular, distance and angle the solver handles but the
+      // workspace cannot store. Greyed with the reason, rather than offered
+      // and refused after authoring.
       tool("assembly-width", "Width", "symmetric", undefined, mateProducer),
       tool("assembly-tangent", "Tangent", "tangent", undefined, mateProducer),
       tool("assembly-perpendicular", "Perpendicular", "perpendicular", undefined, authoringProducer),

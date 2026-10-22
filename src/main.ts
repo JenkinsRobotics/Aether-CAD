@@ -1,3 +1,6 @@
+import { toggleMeasureWindow } from "./measure/MeasureWindow";
+import { openSectionView, turnOffSectionView } from "./section/SectionViewWindow";
+import { sectionView } from "./section/section-view-store";
 import { cadObjectAppearance } from './cad-object-appearance';
 import {configureImageFacePicker} from "./modeling/cad-import-service";
 import { configureDocumentNavigation } from "./document-navigation";
@@ -24,12 +27,12 @@ import { contextualDrawingTools } from "./sketch/tangent-arc-tool";
 import { directModificationTools,modificationTools } from "./sketch/tool-instructions";
 import { constructionPlaneFrame } from "@aether/core/document";
 import { sketchProfilePolylines, sketchVariantTools } from "@aether/core/sketch";
-import { principalFrame, rollbackPosition } from "@aether/core/document";
+import { profileFrame, rollbackPosition } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
-import { solveAssembly } from "./freecad-assembly";
-import { describeSolve, solveAssemblyWithFreeCAD } from "./startup/assembly-solve";
+import { solveAssemblyJob } from "@aether/core/kernel";
+import { describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
 import {
   beginMateAuthoring,
   registerMateCommands,
@@ -50,10 +53,9 @@ import {
   type PartDocument,
   type SketchPlane,
 } from "./aether-core";
-import { describeGeometryEngine } from "./freecad-geometry";
 import { createHostAetherCoreClient } from "./host-aether-core-client";
 import { savePartDocument, serializePartDocument } from "./part-file";
-import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave, flushAutosaveNow, commitHosted } from "./host-library";
+import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave } from "./host-library";
 import {
   sketchPlaneForReference,
   parseReferenceVisibility,
@@ -125,10 +127,15 @@ function persistReferenceVisibility(): void {
     // Storage is an optional presentation convenience, never a CAD dependency.
   }
 }
-const presentationPreferenceKey = "aether-cad.presentation.v1";
+// The new layout has its own preferences; keep legacy settings available for rollback.
+const presentationPreferenceKey = "aether-cad.presentation.studio-v2";
 
 try {
-  const preferences = parseCADPresentationPreferences(localStorage.getItem(presentationPreferenceKey));
+  const saved = parseCADPresentationPreferences(localStorage.getItem(presentationPreferenceKey));
+  // v1 layouts could hide the feature tree through the old aux-toolbar toggle, which
+  // no longer exists; carry them over with the tree back in its standard column.
+  const legacy = saved ? null : parseCADPresentationPreferences(localStorage.getItem("aether-cad.presentation.studio-v1"));
+  const preferences = saved ?? (legacy && { ...legacy, panelPlacements: { ...legacy.panelPlacements, browser: "docked" as const } });
   if (preferences) cadPresentation.patch(preferences);
 } catch {
   // The standalone app can run with storage disabled; session state still works.
@@ -212,18 +219,25 @@ function syncAssemblyCommands(): void {
   cadCommands.setActive("assembly-toggle-mate-suppressed", Boolean(mateEnabled && mate?.suppressed));
 }
 
-// Aether CAD's default geometry engine is headless FreeCAD, reached through the
-// host (see Aether CAD/freecad-engine). This builds a part with it and shows
-// the result in the same viewport the browser engine draws into — the two paths
-// produce the same PartGeometryData, so the renderer is engine-agnostic.
-for (const kind of ["section", "interference", "properties"] as const) cadCommands.register(`part-${kind}`, () => {
+// One section tool: the live Section view (display only, like Onshape's).
+cadCommands.register("section-view", () => openSectionView());
+cadCommands.register("part-section", () => openSectionView());
+const applySection = () => viewer.setSection(sectionView.snapshot(), sectionView.editing());
+sectionView.subscribe(applySection);
+window.addEventListener("aether-part-updated", applySection);
+window.addEventListener("cad-document-navigation", () => turnOffSectionView());
+window.addEventListener("aether-section-face", event => (event as CustomEvent).detail.respond(viewer.selectedSketchFrame()));
+window.addEventListener("aether-section-handle", event => { const {view, respond} = (event as CustomEvent).detail; respond(viewer.projectSectionHandle(view)); });
+for (const kind of ["interference", "properties"] as const) cadCommands.register(`part-${kind}`, () => {
   try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model)); }
   catch (error) { setStatus(error instanceof Error ? error.message : String(error), "error"); }
 });
 
-cadCommands.register("freecad-build", () => {
+cadCommands.register("measure", () => toggleMeasureWindow(() => activePartDocument));
+
+cadCommands.register("engine-build", () => {
   if (!activePartDocument) {
-    setStatus("Open a Part before building with FreeCAD.", "error");
+    setStatus("Open a Part before rebuilding it.", "error");
     return;
   }
   // Use the same recovery/replacement path as edits; never append geometry
@@ -248,7 +262,7 @@ registerAssemblyCommands({
 registerMateCommands({
   beginMate: (kind) => beginMateAuthoring(kind),
   solve: () => {
-    void solveOpenAssemblyWithFreeCAD();
+    void solveOpenAssembly();
   },
 });
 void syncMateAvailability();
@@ -311,9 +325,7 @@ function updateLists(notifyDocumentChange = true): void {
           .filter((feature) => (feature.type === "sketch" || feature.type === "profile") && !feature.suppressed)
           .map((feature) => ({
             id: feature.id,
-            frame:
-              ("frame" in feature && feature.frame) ||
-              principalFrame(("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", "offsetMillimeters" in feature ? feature.offsetMillimeters : 0),
+            frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
             polylines: "profile" in feature ? sketchProfilePolylines(feature.profile) : [],
           }))
       : [],
@@ -456,6 +468,8 @@ cadAppearance.registerApplyHandler((appearance) => {
     wireframe: "display-wireframe",
     "hidden-line": "display-hidden-line",
     ghost: "display-ghost",
+    zebra: "display-zebra",
+    "draft-analysis": "display-draft-analysis",
   } as const;
   Object.entries(displayCommands).forEach(([style, command]) => {
     cadCommands.setActive(command, appearance.displayStyle === style);
@@ -556,7 +570,9 @@ function toggleReferenceVisibility(id: ReferenceGeometryId): void {
 
 function selectReference(id: ReferenceGeometryId): void {
   const plane = sketchPlaneForReference(id);
-  if (plane && document.querySelector(".cad-sketch-workspace.choosing-plane")) {
+  // A principal plane picked while a sketch is choosing its plane, or while a
+  // construction-plane window is open, is that pick — not a visibility toggle.
+  if (plane && document.querySelector(".cad-sketch-workspace.choosing-plane, .cad-plane-window")) {
     window.dispatchEvent(new CustomEvent("aether-sketch-plane", { detail: plane }));
     return;
   }
@@ -906,14 +922,10 @@ configureEditHistory({
   changed: () => updateLists(false),
   error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
 });
-configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model) });
+configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), warm: doc => worker.evaluatePart(doc) });
 worker.ready
   .then(async () => {
-    // Say which engine is actually doing the work. This read "OCCT ready"
-    // regardless, which stopped being true when FreeCAD became the default —
-    // the host knows, and `/api/cad/engine` is how it says so.
-    const engine = await describeGeometryEngine().catch(() => null);
-    const label = engine?.ok ? engine.engine : "geometry engine unavailable";
+    const label = "Aether engine (OpenCASCADE)";
     cadPresentation.patch({
       backendLabel: `${viewer.backendLabel} · ${label}`,
       backendState: "ready",
@@ -929,7 +941,7 @@ configureImageFacePicker(()=>viewer.selectedImageFace(activePartDocument?.docume
 configureCADImport({
   commitPresentation:doc=>{if(!activePartDocument){activePartDocument={...doc,imageCanvases:[]};updateLists();}activePartDocument=doc;if(hostedCAD)markHostedDirty();updateLists();setStatus('Image presentation updated.','success');},
   current:()=>activePartDocument,
-  available:()=>hostedPartEditable() && activeWorkspaceKind==='part' && !document.querySelector('[aria-label="Finish sketch"],.cad-feature-dialog,.cad-plane-window'),
+  available:()=>hostedPartEditable() && activeWorkspaceKind==='part' && !document.querySelector('.cad-sketch-window,.cad-feature-dialog,.cad-plane-window'),
   evaluate:doc=>worker.evaluatePart(doc),
   commit:(doc,model,message)=>{showEvaluatedPart(doc,model,new Map(),message??'Imported CAD geometry.');viewer.frameAll();updateLists();},
 });
@@ -977,7 +989,7 @@ function showEvaluatedPart(document:PartDocument,result:ImportedModelData,failur
     updatePartEditor(document);
     if (shouldFrame && result.parts.length) viewer.frameAll();
     setStatus(
-      failures.size ? `${failures.size} feature${failures.size === 1 ? "" : "s"} could not be rebuilt. ${[...failures.values()][0]}` : `${successMessage} FreeCAD rebuilt ${rollbackPosition(document)} history entries in ${result.parseMilliseconds.toFixed(1)} ms.`,
+      failures.size ? `${failures.size} feature${failures.size === 1 ? "" : "s"} could not be rebuilt. ${[...failures.values()][0]}` : `${successMessage} Rebuilt ${rollbackPosition(document)} history entries in ${result.parseMilliseconds.toFixed(1)} ms${result.replayedFeatures !== undefined ? ` (${result.replayedFeatures} replayed)` : ""}.`,
       failures.size ? "error" : "success",
     );
 }
@@ -986,13 +998,12 @@ async function evaluateAndShowPart(
   document: PartDocument,
   successMessage: string,
   propagateError = false,
+  // Opening and importing block the workspace while they run; a feature edit does
+  // not — the current model stays in view and the status tray shows the rebuild.
+  options: { overlay?: boolean } = {},
 ): Promise<void> {
-  cadPresentation.patch({
-    loading: {
-      label: "Rebuilding exact feature history",
-      detail: document.name,
-    },
-  });
+  if (options.overlay ?? true) cadPresentation.patch({ loading: { label: "Rebuilding exact feature history", detail: document.name } });
+  else setStatus(`Rebuilding ${document.name}…`);
   try {
     validatePartDocument(document);
     const shouldFrame = activePartDocument?.documentId !== document.documentId || !viewer.getPartRows().some(row => row.sourceDocumentId === document.documentId);
@@ -1003,7 +1014,7 @@ async function evaluateAndShowPart(
     if (propagateError) throw error;
     setStatus(error instanceof Error ? error.message : String(error), "error");
   } finally {
-    cadPresentation.patch({ loading: null });
+    if (options.overlay ?? true) cadPresentation.patch({ loading: null });
     updateLists();
   }
 }
@@ -1106,18 +1117,9 @@ cadCommands.register("save-part", async () => {
     setStatus(error instanceof Error ? error.message : String(error), "error");
   }
 });
-cadCommands.register("commit-part", async () => {
-  if (!activePartDocument || !hostedCAD) return;
-  try {
-    await flushAutosaveNow();
-    const name = prompt("Commit name", `${activePartDocument.name} — ${new Date().toLocaleDateString()}`);
-    if (!name?.trim()) return;
-    const message = prompt("Commit message (optional)", "") ?? "";
-    await commitHosted(name.trim(), message.trim());
-    setStatus(`Committed "${name.trim()}"; the checkpoint is listed in Version control.`, "success");
-  } catch (error) {
-    setStatus(error instanceof Error ? error.message : String(error), "error");
-  }
+cadCommands.register("commit-part", () => {
+  // The shell shows the shared Create version dialog (same as Version control).
+  if (activePartDocument && hostedCAD) window.dispatchEvent(new Event("aether-create-version"));
 });
 
 function toggleTool(tool: AuthoringTool): void {
@@ -1242,13 +1244,13 @@ async function renderCanonicalAssembly():Promise<void>{
  }catch(e){setStatus('Assembly geometry: '+(e as Error).message,'error');}
 }
 
-/** Solve the open assembly with FreeCAD and show the result.
+/** Solve the open assembly with the engine and show the result.
  *
  *  The canonical render above places each instance at the transform the
- *  projection carries. This solves the same parts and mates with FreeCAD's
- *  Assembly workbench and places them at its answer instead.
+ *  projection carries. This solves the same parts and mates with the engine's
+ *  solver and places them at its answer instead.
  */
-async function solveOpenAssemblyWithFreeCAD(): Promise<void> {
+async function solveOpenAssembly(): Promise<void> {
   const projection = assemblyController.geometryProjection;
   if (!projection) {
     setStatus("Open an assembly before solving it.", "error");
@@ -1257,8 +1259,9 @@ async function solveOpenAssemblyWithFreeCAD(): Promise<void> {
   const serial = ++assemblyRenderSerial;
   setStatus("Solving the assembly…");
   try {
-    const result = await solveAssemblyWithFreeCAD(projection, {
-      solve: solveAssembly,
+    const result = await solveAssemblyProjection(projection, {
+      // Coupled mates (gears, belt, screw, rack and pinion) are refused by the solver.
+      solve: async (job) => solveAssemblyJob(job),
       evaluate: (document) => worker.evaluatePart(document),
       parseDocument: (source) => parsePartDocument(source),
     });
@@ -1285,15 +1288,20 @@ configureViewportContext({
   },
   status: message => setStatus(message, "error"),
 });
-const partUndo = installPartUndo(()=>activePartDocument, async doc=>{
+const partUndo: ReturnType<typeof installPartUndo> = installPartUndo(()=>activePartDocument, async doc=>{
  const withoutImages=(value:PartDocument)=>{const {imageCanvases,...rest}=value;return JSON.stringify(rest);};
  if(activePartDocument&&withoutImages(activePartDocument)===withoutImages(doc)){
   activePartDocument=doc;if(hostedCAD)markHostedDirty();updateLists();setStatus('Image history restored.','success');return;
  }
 
- await evaluateAndShowPart(doc,"Document history restored.");
+ await evaluateAndShowPart(doc,"Document history restored.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
-});
+}, () => { cadCommands.setEnabled("part-undo", partUndo?.canStep(-1) ?? false); cadCommands.setEnabled("part-redo", partUndo?.canStep(1) ?? false); });
+// Part undo/redo as commands: the same history as ⌘Z / ⌘⇧Z.
+cadCommands.register("part-undo", () => void partUndo.step(-1));
+cadCommands.register("part-redo", () => void partUndo.step(1));
+cadCommands.setEnabled("part-undo", false);
+cadCommands.setEnabled("part-redo", false);
 configureCADAgentWorkspace({
   current:()=>activePartDocument,
   contextKey:()=>`${documentSession()?.id??'local'}:${activePartDocument?.documentId??'no-part'}:${location.search}`,
@@ -1307,7 +1315,7 @@ configureCADAgentWorkspace({
 });
 
 mountFeatureAuthoring(()=>activePartDocument,async doc=>{
- await evaluateAndShowPart(doc,"Feature history updated.");
+ await evaluateAndShowPart(doc,"Feature history updated.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
 });
 
@@ -1316,7 +1324,7 @@ mountFeatureAuthoring(()=>activePartDocument,async doc=>{
 // exact topology geometry so a feature can store the reference.
 window.addEventListener("aether-plane-geometry-request", () => {
   window.dispatchEvent(new CustomEvent("aether-plane-geometry", {
-    detail: { points: viewer.selectedPoints(), axis: viewer.selectedAxis(), measurements: viewer.selectedTopologyMeasurements() },
+    detail: { points: viewer.selectedPoints(), axis: viewer.selectedAxis(), surface: viewer.selectedSurfacePoint(), measurements: viewer.selectedTopologyMeasurements() },
   }));
 });
 
@@ -1331,8 +1339,15 @@ window.addEventListener('aether-transform-edge-request',event=>{
   const sourceFeatureId=picked&&activePartDocument?sourceFeatureForBody(activePartDocument,picked.bodyId,(event as CustomEvent).detail?.beforeFeatureId):undefined;
   window.dispatchEvent(new CustomEvent('aether-transform-edge',{detail:picked&&sourceFeatureId?{reference:{kind:'solid-edge',sourceFeatureId,...picked}}:{error:'Select one straight edge on an earlier solid part. Curved edges and mesh edges cannot define this transform.'}}));
 });
+window.addEventListener('aether-finish-edges-request',event=>{
+  const doc=activePartDocument;
+  const picked=doc?viewer.selectedFinishEdges(doc.documentId):null;
+  const edges=picked?.map(edge=>{const sourceFeatureId=sourceFeatureForBody(doc!,edge.bodyId,(event as CustomEvent).detail?.beforeFeatureId);return sourceFeatureId?{...edge,sourceFeatureId}:null;});
+  window.dispatchEvent(new CustomEvent('aether-finish-edges',{detail:edges?.length&&edges.every(e=>e!==null)?{edges}:{error:'Select edges on an earlier solid part in this document.'}}));
+});
 window.addEventListener('aether-source-edge-picking',event=>viewer.setSourceEdgePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-vertex-picking',event=>viewer.setSourceVertexPicking((event as CustomEvent).detail===true));
+window.addEventListener('aether-measure-picking',event=>viewer.setMeasurePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-body-picking',event=>viewer.setSourceBodyPicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-face-picking',event=>viewer.setSourceFacePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-offset-faces-request',event=>{
@@ -1358,12 +1373,12 @@ window.addEventListener("aether-sketch-face-request", (event) => {
   // but a plane feature stores the reference so the tree can name it.
   const face = viewer.selectedFaceIdentity();
   const anchor=viewer.selectedFaceAnchor();
-  if(frame && anchor===null){window.dispatchEvent(new CustomEvent('aether-sketch-face',{detail:{error:'This face cannot be distinguished from the other planar faces. Rebuild or choose a different face.'}}));return;}
+  if(frame && anchor===null){window.dispatchEvent(new CustomEvent('aether-sketch-face',{detail:{error:'This face cannot be distinguished from the other planar faces. Rebuild or choose a different face, or use its plane as a fixed plane.',fixedFrame:frame,label:face?.label}}));return;}
   const beforeFeatureId=(event as CustomEvent).detail?.beforeFeatureId ?? (draftSketch?.existing ? draftSketch.id : undefined);
   const support = frame && face && activePartDocument ? supportForFace(activePartDocument, face.partId, frame, face.label, beforeFeatureId,anchor??undefined) : undefined;
-  window.dispatchEvent(new CustomEvent("aether-sketch-face", {detail: frame && support ? {frame, ...face, support} : {error: frame ? "Select a face on an earlier body in this Part's history." : "Select a flat face first. Curved surfaces cannot support a planar sketch."}}));
+  window.dispatchEvent(new CustomEvent("aether-sketch-face", {detail: frame && support ? {frame, ...face, support} : {error: frame ? "Select a face on an earlier body in this Part's history, or use its plane as a fixed plane." : "Select a flat face first. Curved surfaces cannot support a planar sketch.", ...(frame ? {fixedFrame: frame, label: face?.label} : {})}}));
 });
-for (const tool of ["select", "line", "arc", "circle", "rectangle", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
+for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "two-tangent-circle", "three-tangent-circle", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
   cadCommands.register(`sketch-${tool}`, () => { window.dispatchEvent(new CustomEvent("aether-sketch-tool", {detail:tool})); });
   cadCommands.setEnabled(`sketch-${tool}`, false);
 }

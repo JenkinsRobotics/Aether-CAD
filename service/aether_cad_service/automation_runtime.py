@@ -49,20 +49,41 @@ def worker(request, *, node=None):
     return response
 
 
+class Built:
+    """A build answered by the Aether engine in the Node runner, in the shape the FreeCAD service used."""
+
+    def __init__(self, answer):
+        self.status = answer.get("status", "error")
+        self.engine = answer.get("engine", "Aether")
+        self.message = answer.get("message", "")
+        self.build_seconds = answer.get("build_seconds", 0.0)
+        self.diagnostics = answer.get("diagnostics", [])
+        self.body_outputs = answer.get("body_outputs", {})
+        self.scope_resolutions = answer.get("scope_resolutions", {})
+        self.sketch_frames = answer.get("sketch_frames", {})
+        self.bodies = [Body(b) for b in answer.get("bodies", [])]
+
+
+class Body:
+    def __init__(self, data):
+        self.id = data["id"]
+        self.volume_mm3 = data["volume_mm3"]
+        self.face_count = data["face_count"]
+        self.edge_count = data["edge_count"]
+        self.bbox_mm = data.get("bbox_mm")
+        self.topology = data.get("topology", [])
+
+
 def execute(service, command_id, content, arguments, *, node=None):
     if len(content) > 4 * 1024 * 1024:
         raise CommandError(
             413, "This part exceeds the 4 MiB automation document limit."
         )
     if command_id.startswith("cad.assembly."):
-        from aether_freecad import FreeCADUnavailable
-
         from .assembly_automation import execute as assembly_execute
 
         try:
             return assembly_execute(service, command_id, content, arguments, node=node)
-        except FreeCADUnavailable:
-            raise CommandError(503, "The native Assembly engine is unavailable.") from None
         except (ValueError, KeyError, TypeError, zipfile.BadZipFile):
             raise CommandError(
                 400, "The Assembly archive or recipe is invalid. No changes were saved."
@@ -79,13 +100,13 @@ def execute(service, command_id, content, arguments, *, node=None):
         {"command": command_id, "content": text, "arguments": arguments}, node=node
     )
     result = prepared["result"]
-    if "features" not in prepared:
+    if not prepared.get("build"):
         return {"result": result}
     if command_id == "cad.part.verify":
         from .program_runtime import verify
 
-        return {"result": verify(service, prepared, arguments)}
-    built = build_candidate(service, prepared["features"])
+        return {"result": verify(service, prepared, arguments, node=node)}
+    built = build_candidate(service, prepared["candidate"], node=node)
     result.update(build_summary(built))
     if command_id == "cad.part.topology":
         body = next((b for b in built.bodies if b.id == arguments.get("body_id")), None)
@@ -119,24 +140,9 @@ def execute(service, command_id, content, arguments, *, node=None):
     return response
 
 
-def native_job(features):
-    import aether_freecad as adapter
-
-    return adapter.BuildJob(
-        features=[
-            adapter.Feature(f["id"], f["kind"], f.get("parameters", {}))
-            for f in features
-        ]
-    )
-
-
-def build_candidate(service, features):
-    import aether_freecad as adapter
-
-    try:
-        built = service.geometry_engine().build(native_job(features))
-    except adapter.FreeCADUnavailable as error:
-        raise CommandError(503, str(error)) from None
+def build_candidate(service, candidate, *, node=None):
+    """The candidate document rebuilt by the Aether engine (the Node runner's build phase)."""
+    built = Built(worker({"phase": "build", "content": candidate}, node=node))
     if built.status != "ok" or built.diagnostics:
         details = "; ".join(
             str(d.get("message", "Invalid feature")) for d in built.diagnostics
@@ -160,6 +166,7 @@ def build_summary(built):
                 "volume_mm3": b.volume_mm3,
                 "face_count": b.face_count,
                 "edge_count": b.edge_count,
+                "bbox_mm": b.bbox_mm,
             }
             for b in built.bodies
         ],

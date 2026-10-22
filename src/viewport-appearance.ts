@@ -8,6 +8,8 @@ export interface CADDisplayStylePolicy {
   edgesVisible: boolean;
   edgeOpacity: number;
   masksSurfaceWithBackground: boolean;
+  /** An analysis overlay drawn on the surfaces: zebra stripes (surface continuity) or draft-angle colouring. */
+  analysis?: "zebra" | "draft";
 }
 
 export function cadDisplayStylePolicy(
@@ -23,6 +25,10 @@ export function cadDisplayStylePolicy(
       return { surfaceWireframe: true, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: false, edgeOpacity: 0, masksSurfaceWithBackground: false };
     case "hidden-line":
       return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: true, edgeOpacity: 1, masksSurfaceWithBackground: true };
+    case "zebra":
+      return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: false, edgeOpacity: 0, masksSurfaceWithBackground: false, analysis: "zebra" };
+    case "draft-analysis":
+      return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: edgesEnabled, edgeOpacity: 0.55, masksSurfaceWithBackground: false, analysis: "draft" };
     case "ghost":
       return { surfaceWireframe: false, surfaceOpacity: 0.22, surfaceDepthWrite: false, edgesVisible: edgesEnabled, edgeOpacity: 0.42, masksSurfaceWithBackground: false };
   }

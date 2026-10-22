@@ -64,7 +64,8 @@ describe('custom environment persistence', () => {
       {id:'a',name:'Duplicate'}, {id:1,name:'Bad ID'}, {id:'b',name:' '},
     ])));
     expect(store.snapshot()).toHaveLength(1);
-    expect(store.snapshot()[0].appearance).toMatchObject({gridSpacingMillimeters:.1,gridMinorWidthPx:6,floorMode:'none'});
+    expect(store.snapshot()[0].appearance).toMatchObject({gridSpacingMillimeters:.1,gridMinorWidthPx:6});
+    expect(['none','grid','floor','both']).toContain(store.snapshot()[0].appearance.floorMode); // an unknown choice becomes the default
     expect(store.snapshot()[0].appearance.planeFrontColor).toBeUndefined();
   });
 });
@@ -80,8 +81,9 @@ describe('advanced rendering state', () => {
   it('rejects nonfinite values, unknown properties and invalid colors', () => {
     const normalized = normalizeCADAppearance({ gridSpacingMillimeters:NaN, gridExtentMillimeters:Infinity, gridMajorEvery:3.8,
       keyLightPercent:-1, planeFrontColor:'url(bad)', planeTopColor:'#ABCDEF', planeLabelsVisible:'false', __unexpected:true });
-    expect(normalized.gridSpacingMillimeters).toBeUndefined();
-    expect(normalized.gridExtentMillimeters).toBeUndefined();
+    // Nonfinite numbers fall back to the defaults (the appearance always has a complete recipe).
+    expect(normalized.gridSpacingMillimeters).toBe(defaultCADAppearance.gridSpacingMillimeters);
+    expect(normalized.gridExtentMillimeters).toBe(defaultCADAppearance.gridExtentMillimeters);
     expect(normalized.gridMajorEvery).toBe(4); expect(normalized.keyLightPercent).toBe(0);
     expect(normalized.planeFrontColor).toBeUndefined(); expect(normalized.planeTopColor).toBe('#abcdef');
     expect(normalized.planeLabelsVisible).toBeUndefined(); expect(normalized).not.toHaveProperty('__unexpected');

@@ -1,5 +1,5 @@
 import type { SketchDrawing } from '@aether/core/sketch';
-import { conicHandles } from '../../freecad-engine/browser/conic-manipulation';
+import { conicHandles } from '@aether/core/sketch/reference/conic-manipulation';
 
 export function renderConicManipulators(svg: SVGSVGElement, drawing: SketchDrawing) {
   const ns = 'http://www.w3.org/2000/svg';

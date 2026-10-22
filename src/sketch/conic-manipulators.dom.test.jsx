@@ -1,8 +1,8 @@
 import { createRequire } from 'node:module';
 import { beforeAll, afterAll, afterEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
-import { createSketchConic } from '../../freecad-engine/browser/conic-authoring';
-import { fixedEntityConstraint } from '../../freecad-engine/browser/fixed-geometry';
+import { createSketchConic } from '@aether/core/sketch/reference/conic-authoring';
+import { fixedEntityConstraint } from '@aether/core/sketch/reference/fixed-geometry';
 import { pickSketchEditEntity } from './edit-picking';
 import { clickSketchControl as click, querySketchControl as q } from './test-controls';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');

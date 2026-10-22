@@ -7,6 +7,15 @@ import {patternEditor} from "./pattern";
 import {draftEditor} from "./draft";
 import {loftEditor} from "./loft";
 import {holeEditor} from "./hole";
+import {splitEditor} from "./split";
+import {deleteFaceEditor} from "./delete-face";
+import {pipeEditor} from "./pipe";
+import {boundingSolidEditor} from "./bounding-solid";
+import {threadEditor} from "./thread";
+import {coilEditor} from "./coil";
+import {removeBodyEditor} from "./remove-body";
+import {bossEditor} from "./boss";
+import {restEditor} from "./rest";
 import { importSTEPEditor } from "./import-step";
 /** The feature editor registry. Adding a feature is one file plus one line
  *  here — not an edit to three parallel if/else chains, which is what this
@@ -33,6 +42,15 @@ export const featureEditors: readonly FeatureEditor[] = [
   chamferEditor,
   shellEditor,
   holeEditor,
+  splitEditor,
+  deleteFaceEditor,
+  pipeEditor,
+  boundingSolidEditor,
+  threadEditor,
+  coilEditor,
+  removeBodyEditor,
+  bossEditor,
+  restEditor,
   loftEditor,
   draftEditor,
   patternEditor,

@@ -1,5 +1,5 @@
 import type { TopAbs_ShapeEnum } from "replicad-opencascadejs";
-import { cast, getOC, type AnyShape, type Edge, type Face } from "replicad";
+import { cast, getOC, measureArea, measureLength, type AnyShape, type Edge, type Face } from "replicad";
 import {
   connectorAxes,
   deleteAfterPointTuple,
@@ -10,6 +10,7 @@ import {
 import type {
   ConnectorCandidate,
   FaceTopologyData,
+  TopologyMeasurements,
   Vec3,
 } from "../contracts/index";
 import {
@@ -66,18 +67,33 @@ function curveCandidates(
 ): ConnectorCandidate[] {
   const oc = getOC();
   const candidates: ConnectorCandidate[] = [];
+  // What Measure shows for the edge: length, and a circle's radius and centre
+  // or a straight edge's direction. Shared by every candidate on the edge.
+  const measurements: TopologyMeasurements = {};
+  try { measurements.lengthMillimeters = measureLength(edge); } catch { /* unmeasurable curve */ }
   const adaptor = new oc.BRepAdaptor_Curve_2(edge.wrapped);
   try {
+    if (adaptor.GetType() === oc.GeomAbs_CurveType.GeomAbs_Line) {
+      try {
+        const direction = deleteAfterVectorTuple(edge.tangentAt(0.5));
+        const length = Math.hypot(...direction) || 1;
+        measurements.linearDirection = [direction[0] / length, direction[1] / length, direction[2] / length];
+      } catch { /* keep the length only */ }
+    }
     if (adaptor.GetType() === oc.GeomAbs_CurveType.GeomAbs_Circle) {
       const circle = adaptor.Circle();
       const axis = circle.Axis();
       const position = circle.Position();
       try {
+        measurements.radiusMillimeters = circle.Radius();
+        measurements.centerMillimeters = deleteAfterPointTuple(circle.Location());
+        { const d = axis.Direction(); measurements.axisDirection = [d.X(), d.Y(), d.Z()]; d.delete(); }
         candidates.push({
           id: `face-${faceId}-circle-${edgeIndex}`,
           faceId,
           kind: "circle-center",
           label: `Circular edge ${edgeIndex + 1} center`,
+          measurements,
           origin: deleteAfterPointTuple(circle.Location()),
           ...connectorAxes(
             deleteAfterPointTuple(axis.Direction()),
@@ -124,6 +140,7 @@ function curveCandidates(
     faceId,
     kind: "edge-midpoint",
     label: `Edge ${edgeIndex + 1} midpoint`,
+    measurements,
     origin: deleteAfterVectorTuple(edge.pointAt(0.5)),
     ...frameAtEdge(edge, 0.5, faceFrame),
   });
@@ -190,18 +207,23 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
   }
 
   const candidates: ConnectorCandidate[] = [];
-  let surfaceType = face.geomType;
+  // replicad spells cylinders in French; the product's references say CYLINDER.
+  let surfaceType = face.geomType === "CYLINDRE" ? "CYLINDER" : face.geomType;
   let faceFrame = connectorAxes([0, 0, 1], [1, 0, 0]);
+  const measurements: TopologyMeasurements = { centerMillimeters: center };
+  try { measurements.areaSquareMillimeters = measureArea(face); } catch { /* unmeasurable surface */ }
 
   try {
     const type = adaptor.GetType();
     if (type === oc.GeomAbs_SurfaceType.GeomAbs_Plane) {
       surfaceType = "PLANE";
+      // The outward normal (the surface's own axis ignores the face orientation).
+      try { measurements.planarNormal = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]])); } catch { /* keep the frame below */ }
       const plane = adaptor.Plane();
       const position = plane.Position();
       try {
         faceFrame = connectorAxes(
-          deleteAfterPointTuple(position.Direction()),
+          measurements.planarNormal ?? deleteAfterPointTuple(position.Direction()),
           deleteAfterPointTuple(position.XDirection()),
         );
       } finally {
@@ -210,8 +232,9 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
       }
     } else if (type === oc.GeomAbs_SurfaceType.GeomAbs_Cylinder) {
       // Replicad intentionally keeps OCCT's historical French spelling.
-      surfaceType = "CYLINDRE";
+      surfaceType = "CYLINDER";
       const cylinder = adaptor.Cylinder();
+      measurements.radiusMillimeters = cylinder.Radius();
       const axis = cylinder.Axis();
       const position = cylinder.Position();
       try {
@@ -348,40 +371,94 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
     }
   });
 
-  return { id: faceId, surfaceType, candidates };
+  return { id: faceId, surfaceType, measurements, candidates };
 }
 
-export function extractExactTopology(shape: AnyShape): FaceTopologyData[] {
+/** A face id from what the face is, not where it sits in memory: the same
+ *  face gets the same id on every rebuild, so references and selections
+ *  survive an edit that leaves it unchanged. Ids are unique within a shape. */
+function signatureText(face: Face): string {
+  let text = face.geomType;
+  // One surface-properties pass gives both the centre and the area (two passes
+  // were most of the cost of listing a body's faces).
+  const oc = getOC();
+  const properties = new oc.GProp_GProps_1();
+  try {
+    oc.BRepGProp.SurfaceProperties_1(face.wrapped, properties, false, false);
+    const centre = properties.CentreOfMass();
+    text += "|" + [centre.X(), centre.Y(), centre.Z()].map((v) => v.toFixed(3)).join(",") + "|" + properties.Mass().toFixed(3);
+    centre.delete();
+  } catch { /* keep the type */ } finally { properties.delete(); }
+  return text;
+}
+function faceSignature(text: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619) >>> 0;
+  return (hash % 0x3ffffffe) + 1;
+}
+/** Topology of faces seen before, by their geometric signature: a face that an
+ *  edit left unchanged (most faces of a part, through booleans) is measured
+ *  once per session, not once per rebuild. Same geometry, same measurements. */
+const topologyCache = new Map<string, FaceTopologyData>();
+const TOPOLOGY_CACHE_LIMIT = 20000;
+
+/** Every face of a shape with its stable id, in the kernel's face order. The
+ *  caller deletes the faces. */
+export function facesOf(shape: AnyShape): { face: Face; id: number; hash: number; key?: string }[] {
   const oc = getOC();
   const explorer = new oc.TopExp_Explorer_2(
     shape.wrapped,
     oc.TopAbs_ShapeEnum.TopAbs_FACE as TopAbs_ShapeEnum,
     oc.TopAbs_ShapeEnum.TopAbs_SHAPE as TopAbs_ShapeEnum,
   );
-  const topology: FaceTopologyData[] = [];
+  const faces: { face: Face; id: number; hash: number; key?: string }[] = [];
   const hashes = new Set<number>();
+  const ids = new Set<number>();
   try {
-    while (explorer.More()) {
+    for (; explorer.More(); explorer.Next()) {
       const current = explorer.Current();
       const hash = current.HashCode(2_147_483_647);
-      if (!hashes.has(hash)) {
-        hashes.add(hash);
-        const face = cast(oc.TopoDS.Face_1(current)) as Face;
-        try {
-          try {
-            topology.push(extractFaceTopology(face, hash));
-          } catch {
-            topology.push({ id: hash, surfaceType: "UNAVAILABLE", candidates: [] });
-          }
-        } finally {
-          face.delete();
-        }
-      }
-      explorer.Next();
+      if (hashes.has(hash)) continue;
+      hashes.add(hash);
+      const face = cast(oc.TopoDS.Face_1(current)) as Face;
+      const key = signatureText(face);
+      let id = faceSignature(key);
+      while (ids.has(id)) id++;
+      ids.add(id);
+      faces.push({ face, id, hash, key });
     }
   } finally {
     explorer.delete();
   }
+  return faces;
+}
+
+/** The topology of faces listed by `facesOf`; the faces are deleted. */
+export function topologyOf(faces: { face: Face; id: number; key?: string }[]): FaceTopologyData[] {
+  const topology: FaceTopologyData[] = [];
+  for (const { face, id, key } of faces) {
+    try {
+      const cached = key !== undefined ? topologyCache.get(key) : undefined;
+      if (cached) { topology.push({ ...cached, id }); continue; }
+      let data: FaceTopologyData;
+      try {
+        data = extractFaceTopology(face, id);
+      } catch {
+        data = { id, surfaceType: "UNAVAILABLE", candidates: [] };
+      }
+      topology.push(data);
+      if (key !== undefined && data.surfaceType !== "UNAVAILABLE") {
+        if (topologyCache.size >= TOPOLOGY_CACHE_LIMIT) topologyCache.delete(topologyCache.keys().next().value as string);
+        topologyCache.set(key, data);
+      }
+    } finally {
+      face.delete();
+    }
+  }
   return topology;
+}
+
+export function extractExactTopology(shape: AnyShape): FaceTopologyData[] {
+  return topologyOf(facesOf(shape));
 }
 

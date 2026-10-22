@@ -1,7 +1,7 @@
 /** Sheet Metal — folded plate with bend rules.
  *
  *  Onshape's sheet metal toolbar, in its order. Entirely greyed: this needs
- *  FreeCAD's SheetMetal add-on, which the engine neither ships nor translates,
+ *  sheet-metal features the engine does not have,
  *  and a sheet metal body carries bend rules and a flat pattern that Aether's
  *  document has no room for yet. Named now so the gap is a review item rather
  *  than a mystery, and so the tab is not an empty promise.

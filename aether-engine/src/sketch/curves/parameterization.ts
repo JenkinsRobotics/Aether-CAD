@@ -1,5 +1,5 @@
 import type { SketchPoint, SketchSegment } from "../drawing";
-import { conicPoint } from '../../../../freecad-engine/browser/conic-geometry';
+import { conicPoint } from '../reference/conic-geometry';
 import { sketchArcGeometry } from "../arc-geometry";
 export interface EllipseFrame {
   center: SketchPoint;

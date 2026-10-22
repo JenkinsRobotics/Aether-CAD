@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 import { afterEach, expect, it, vi } from 'vitest';
 import { OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
-import { createCADCameraControls } from './camera-controls';
+import { cadCameraMotion, createCADCameraControls } from './camera-controls';
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 let dom, controls;
@@ -20,18 +20,21 @@ function setup(up = [0,0,1], position = [0,-100,0], orthographic = false) {
     Object.defineProperty(e,'pointerId',{value:1}); Object.defineProperty(e,'pointerType',{value:'mouse'});
     element.dispatchEvent(e); controls.update();
   };
-  const drag = (dx,dy,button=2) => { event('pointerdown',400,300,button); for(let i=1;i<=40;i++)event('pointermove',400+dx*i/40,300+dy*i/40,button);event('pointerup',400+dx,300+dy,button); };
-  return {camera,element,change,event,drag};
+  const release = (x,y,button) => { const e=new dom.window.MouseEvent('pointerup',{clientX:x,clientY:y,button,bubbles:true});Object.defineProperty(e,'pointerId',{value:1});Object.defineProperty(e,'pointerType',{value:'mouse'});element.dispatchEvent(e); };
+  const glide = (dx,dy,button=2) => { event('pointerdown',400,300,button); for(let i=1;i<=40;i++)event('pointermove',400+dx*i/40,300+dy*i/40,button); release(400+dx,300+dy,button); };
+  // Geometry checks settle the release glide before measuring the exact pose.
+  const drag = (dx,dy,button=2) => { glide(dx,dy,button); controls.stopMotion(); controls.update(); };
+  return {camera,element,change,event,drag,glide};
 }
 it.each([[0,0,1],[0,1,0]])('tilts through both poles and completes 360 degrees with workspace up %j', (x,y,z)=>{
   const up=[x,y,z], t=setup(up, z ? [0,-100,0] : [0,0,100]);
   const start=t.camera.position.clone(), initialUp=t.camera.up.clone(), distance=start.length();
-  t.drag(0,200); // quarter turn: reaches a pole
+  t.drag(0,150); // quarter turn (2π per viewport height): reaches a pole
   const pole=t.camera.position.clone();
   expect(Math.abs(pole.clone().normalize().dot(new Vector3(...up)))).toBeCloseTo(1,8);
-  t.drag(0,200); // must pass the pole rather than stop there
+  t.drag(0,150); // must pass the pole rather than stop there
   expect(t.camera.position.distanceTo(start.clone().negate())).toBeLessThan(1e-7);
-  t.drag(0,400);
+  t.drag(0,300);
   expect(t.camera.position.distanceTo(start)).toBeLessThan(1e-7);
   expect(t.camera.up.distanceTo(initialUp)).toBeLessThan(1e-7);
   expect(t.camera.position.length()).toBeCloseTo(distance,8);
@@ -39,7 +42,7 @@ it.each([[0,0,1],[0,1,0]])('tilts through both poles and completes 360 degrees w
 });
 it('starts exactly at Top, rotates past it, and normal-view reset stays still after updates',()=>{
   const t=setup([0,1,0],[0,0,100]);
-  t.drag(0,200); expect(Math.abs(t.camera.position.z)).toBeLessThan(1e-7);
+  t.drag(0,150); expect(Math.abs(t.camera.position.z)).toBeLessThan(1e-7);
   controls.target.set(0,0,0);t.camera.position.set(0,0,100);t.camera.up.set(0,1,0);controls.update();
   const p=t.camera.position.clone(), q=t.camera.quaternion.clone();
   for(let i=0;i<120;i++)controls.update();
@@ -76,4 +79,31 @@ it('orthographic controls rotate, pan and zoom without losing the target',()=>{
   t.element.dispatchEvent(new dom.window.WheelEvent('wheel',{deltaY:-100,bubbles:true,cancelable:true}));controls.update();
   expect(t.camera.zoom).toBeGreaterThan(1);
   expect(t.camera.position.distanceTo(controls.target)).toBeCloseTo(distance,8);
+});
+
+it('matches the Model Studio reference speeds: 2π per height, cursor-locked pan, 5% per wheel step',()=>{
+  const t=setup();
+  const start=t.camera.position.clone().normalize();
+  t.drag(100,0); // 100 of 600px → 60°
+  expect(t.camera.position.clone().normalize().angleTo(start)).toBeCloseTo(Math.PI/3,6);
+  const distance=t.camera.position.distanceTo(controls.target), target=controls.target.clone();
+  t.glide(0,60,1); for(let i=0;i<400;i++)controls.update(); // pan settles fully
+  const visibleHeight=2*distance*Math.tan(t.camera.fov*Math.PI/360);
+  expect(controls.target.distanceTo(target)).toBeCloseTo(visibleHeight*60/600,4);
+  const before=t.camera.position.distanceTo(controls.target);
+  t.element.dispatchEvent(new dom.window.WheelEvent('wheel',{deltaY:100,bubbles:true,cancelable:true}));
+  for(let i=0;i<400;i++)controls.update();
+  expect(t.camera.position.distanceTo(controls.target)/before).toBeCloseTo(1/0.95,3);
+  expect(cadCameraMotion.damping).toBeGreaterThan(0);
+});
+
+it('glides after release like the reference, and an app-placed view stops the glide exactly',()=>{
+  const t=setup();
+  t.glide(80,0);
+  const released=t.camera.position.clone();
+  controls.update();
+  expect(t.camera.position.distanceTo(released)).toBeGreaterThan(1e-6); // still gliding
+  controls.target.set(0,0,0);t.camera.position.set(0,-100,0);t.camera.up.set(0,0,1);
+  for(let i=0;i<60;i++)controls.update();
+  expect(t.camera.position.distanceTo(new Vector3(0,-100,0))).toBe(0);
 });

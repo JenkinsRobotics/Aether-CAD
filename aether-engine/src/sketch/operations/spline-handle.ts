@@ -2,7 +2,7 @@ import { validateSketchDrawing, type SketchDrawing } from "../drawing";
 import type { SketchEntityRef } from "../solver/types";
 import { sketchEntityPoint } from "../solver/entities";
 import { assertConstraintsSatisfied } from "./preserve-constraints";
-import { enableSplineEndTangent } from "../../../../freecad-engine/browser/spline-end-tangents";
+import { enableSplineEndTangent } from "../reference/spline-end-tangents";
 
 /** Expose the existing cubic endpoint/control vector as a construction line.
  * Coincidence relations keep dimensions and edits attached to canonical controls. */

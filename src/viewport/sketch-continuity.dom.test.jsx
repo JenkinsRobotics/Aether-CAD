@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { defaultCADAppearance } from '../cad-appearance-store';
+import { StageRig } from './stage-rig';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, MateViewport;
 beforeAll(async()=>{
@@ -16,20 +17,22 @@ afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 it.each(['none','grid','floor','both'])('preserves %s and camera/model context through sketch plane changes',mode=>{
   const viewer=Object.create(MateViewport.prototype);
   viewer.appearance={...defaultCADAppearance,floorMode:mode};
-  viewer.grid=new THREE.Group();viewer.floor=new THREE.Group();
+  // The stage (Render layer) owns grid/floor; use its real floor-mode logic without GPU objects.
+  viewer.stage=Object.create(StageRig.prototype);viewer.stage.grid=new THREE.Group();viewer.stage.floor=new THREE.Group();
+  const applyFloor=()=>viewer.stage.setFloorMode(viewer.appearance.floorMode);
   viewer.modelRoot=new THREE.Group();viewer.referenceRoot=new THREE.Group();
   const shown=new THREE.Group(),hidden=new THREE.Group();hidden.visible=false;
   viewer.modelRoot.add(shown,hidden);
   const reference=new THREE.Group();viewer.referenceRoot.add(reference);
   viewer.scene=new THREE.Scene();viewer.scene.background=new THREE.Color('#324556');
-  viewer.scene.add(viewer.grid,viewer.floor,viewer.modelRoot,viewer.referenceRoot);
+  viewer.scene.add(viewer.stage.grid,viewer.stage.floor,viewer.modelRoot,viewer.referenceRoot);
   viewer.cssScene=new THREE.Scene();viewer.cssRenderer={};viewer.sketchSurface=null;
   viewer.renderer={domElement:document.createElement('canvas')};
   viewer.camera=new THREE.PerspectiveCamera();viewer.camera.position.set(180,-220,140);
   viewer.camera.up.set(0,0,1);viewer.camera.lookAt(0,0,0);
   viewer.controls={target:new THREE.Vector3(10,20,30),update:vi.fn()};
-  viewer.applyFloorVisibility();
-  const state=()=>({grid:viewer.grid.visible,floor:viewer.floor.visible,
+  applyFloor();
+  const state=()=>({grid:viewer.stage.grid.visible,floor:viewer.stage.floor.visible,
     shown:shown.visible,hidden:hidden.visible,reference:reference.visible,
     background:viewer.scene.background.getHexString(),position:viewer.camera.position.toArray(),
     rotation:viewer.camera.quaternion.toArray(),target:viewer.controls.target.toArray()});
@@ -44,10 +47,10 @@ it.each(['none','grid','floor','both'])('preserves %s and camera/model context t
     expect(viewer.sketchSurface.origin.toArray()).toEqual(frame.originMillimeters);
     expect(viewer.cssScene.children).toHaveLength(1);
     // Appearance edits while sketching must obey the selected floor mode too.
-    viewer.applyFloorVisibility();expect(state()).toEqual(original);
+    applyFloor();expect(state()).toEqual(original);
   }
   // A user change during sketching must survive finishing/canceling.
-  viewer.appearance.floorMode=mode==='both'?'none':'both';viewer.applyFloorVisibility();
+  viewer.appearance.floorMode=mode==='both'?'none':'both';applyFloor();
   const changed=state();viewer.endSketchSurface();
   expect(state()).toEqual(changed);expect(viewer.cssScene.children).toHaveLength(0);
 });

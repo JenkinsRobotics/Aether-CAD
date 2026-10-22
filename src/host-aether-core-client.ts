@@ -1,12 +1,12 @@
 import type { ImportedModelData } from "./domain";
 import type { PartDocument } from "./part-document";
-import { OCCTWorkerClient } from "@aether/core/kernel";
+import { aetherKernel } from "./engine/aether/kernel";
 import type { AetherCoreClient } from "./aether-core";
-import { evaluateNativePart } from "./native-part-evaluator";
+import { evaluatePart } from "./engine/evaluate-part";
 
-/** One FreeCAD request/response adapter for normal and explicit rebuilds. */
+/** The in-app evaluation adapter for normal and explicit rebuilds. */
 export class HostAetherCoreClient implements AetherCoreClient {
-  private embedded = new OCCTWorkerClient();
+  private embedded = aetherKernel();
   readonly ready = this.embedded.ready;
 
   async importSTEP(file: File): Promise<ImportedModelData> {
@@ -14,7 +14,7 @@ export class HostAetherCoreClient implements AetherCoreClient {
   }
 
   evaluatePart(document: PartDocument, options: { preview?: boolean } = {}): Promise<ImportedModelData> {
-    return evaluateNativePart(document, options);
+    return evaluatePart(document, options);
   }
 }
 

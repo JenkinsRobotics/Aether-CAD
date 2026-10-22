@@ -76,19 +76,21 @@ export interface CADRibbonWorkspaceDefinition {
   groups: readonly CADToolGroupDefinition[];
 }
 
-// A greyed tool is one the geometry engine cannot build yet. FreeCAD itself
+// A greyed tool is one the Aether engine cannot build yet. The engine
 // has most of these; what is missing is the translation in
-// `freecad-translate.ts` and the builder in the engine's `worker.py`. Naming
+// the engine's evaluator (`aether-engine/src/kernel/part-evaluator.ts`). Naming
 // that is the difference between "broken" and "not wired up yet".
-export const solidProducer = "FreeCAD can build this, but Aether does not translate it to the engine yet.";
-// FreeCAD's Assembly solver has thirteen joint types; these two Onshape mates
+export const solidProducer = "The Aether engine does not build this feature yet.";
+// The assembly solver has nine joint kinds; these two Onshape mates
 // are not among them, so they stay greyed rather than failing after the user
 // has authored the whole mate.
-// FreeCAD's solver handles these, but a mate is still committed through the
-// workspace's Assembly v1 slice, which takes fastened, revolute and prismatic.
+// The solver would handle these, but a mate is still committed through the
+// workspace's Assembly slice, which stores the eight kinematic kinds (fastened,
+// revolute, prismatic, cylindrical, ball, planar, pin slot, parallel) and has
+// no record for a distance, angle or perpendicular mate yet.
 // Both halves have to be there before a button may be offered.
-export const authoringProducer = "FreeCAD solves this mate, but Assembly v1 cannot author it yet.";
-export const mateProducer = "FreeCAD's assembly solver has no joint for this mate yet.";
+export const authoringProducer = "The solver handles this mate, but Assembly v1 cannot author it yet.";
+export const mateProducer = "The assembly solver has no joint for this mate yet.";
 export const assemblyProducer = "Requires a canonical Core Assembly mutation or mate solver command that is not connected yet.";
 export const analysisProducer = "Requires an exact Core analysis contract and result producer.";
 export const exportProducer = "Requires a canonical Core export producer for this format.";
@@ -96,11 +98,11 @@ export const projectProducer = "Requires persistent workspace metadata that is n
 // The four Design tabs Aether names but cannot build. Each says which half is
 // missing — a translation, a body type, an add-on, or the feature itself —
 // so a greyed button is a review item, not a mystery.
-export const surfaceProducer = "FreeCAD has a Surface workbench, but Aether translates no surface feature to the engine yet.";
+export const surfaceProducer = "The Aether engine has no surface features yet.";
 export const meshProducer = "Aether has no mesh body type; nothing carries a mesh across the engine boundary yet.";
-export const sheetMetalProducer = "Needs FreeCAD's SheetMetal add-on, which the engine does not ship or translate.";
+export const sheetMetalProducer = "The Aether engine has no sheet-metal features yet.";
 export const framingProducer = "Framing needs a standard profile library and a member solver that trims and joins at the joints; Aether has neither.";
-export const plasticProducer = "FreeCAD has no plastic-part workbench; this needs an Aether Kernel feature that is not built.";
+export const plasticProducer = "Plastic-part features need an Aether engine feature that is not built yet.";
 
 export const tool = (
   id: string,

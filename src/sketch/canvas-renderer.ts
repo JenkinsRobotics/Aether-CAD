@@ -1,7 +1,7 @@
 import { sketchPointRole } from "./point-roles";
 import { renderConicManipulators } from './conic-manipulators';
 import { renderEllipseManipulators } from './ellipse-manipulators';
-import { sketchFaceRegions } from '../../freecad-engine/browser/connected-sketch-regions';
+import { sketchFaceRegions } from '@aether/core/sketch/reference/connected-sketch-regions';
 import { updateSketchEnvironment } from "./environment-appearance";
 import { renderGeometryConstraintColors } from "./geometry-constraint-colors";
 import {
@@ -106,7 +106,19 @@ export function renderSketchCanvas(
         r: 0.001,
         ...attrs,
       });
-    else el("path", { d: contourPath(c), ...attrs });
+    else {
+      // An infinite line: the segment itself stays pickable; its extension across
+      // the whole view is decoration through the same two points.
+      if (c.type === "path" && c.infinite && c.segments.length === 1 && c.segments[0].type === "line") {
+        const [ax, ay] = c.start, [bx, by] = c.segments[0].end, dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy);
+        if (len > 1e-9) {
+          const reach = 2 * Math.hypot(bounds.width, bounds.height) + Math.hypot(ax - bounds.x, ay + bounds.y);
+          const ux = dx / len, uy = dy / len;
+          el("path", { d: `M ${ax - ux * reach} ${-(ay - uy * reach)} L ${bx + ux * reach} ${-(by + uy * reach)}`, class: "sketch-contour construction infinite-extension", "pointer-events": "none" });
+        }
+      }
+      el("path", { d: contourPath(c), ...attrs });
+    }
   });
   for (const [contour, c] of drawing.contours.entries()) {
     const points =

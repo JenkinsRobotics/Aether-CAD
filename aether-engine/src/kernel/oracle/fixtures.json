@@ -1,0 +1,10015 @@
+[
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-plate",
+  "name": "plate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       25.0
+      ],
+      [
+       -40.0,
+       25.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-plate-hole",
+  "name": "plate-hole",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       25.0
+      ],
+      [
+       -40.0,
+       25.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      15,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 12,
+    "operation": "cut",
+    "suppressed": false,
+    "reversed": false,
+    "endType": "through-all"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-plate-hole-blind",
+  "name": "plate-hole-blind",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       -25.0
+      ],
+      [
+       40.0,
+       25.0
+      ],
+      [
+       -40.0,
+       25.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      15,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 5,
+    "operation": "cut",
+    "suppressed": false,
+    "reversed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-two-boxes-separate",
+  "name": "two-boxes-separate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "Sketch A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -60,
+       -20
+      ],
+      [
+       -5,
+       -20
+      ],
+      [
+       -5,
+       20
+      ],
+      [
+       -60,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "Extrude A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 30,
+    "operation": "new",
+    "suppressed": false,
+    "separateBodies": true
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "Sketch B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       5,
+       -20
+      ],
+      [
+       60,
+       -20
+      ],
+      [
+       60,
+       20
+      ],
+      [
+       5,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "Extrude B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 30,
+    "operation": "new",
+    "suppressed": false,
+    "separateBodies": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-symmetric",
+  "name": "symmetric",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-reversed",
+  "name": "reversed",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "reversed": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-intersect",
+  "name": "intersect",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "profile",
+    "name": "Post",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 10,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "k",
+    "type": "extrude",
+    "name": "Keep",
+    "profileFeatureId": "p",
+    "distanceMillimeters": 50,
+    "operation": "intersect",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-add",
+  "name": "add",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 10,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "p",
+    "distanceMillimeters": 15,
+    "operation": "add",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-xz-plane",
+  "name": "xz-plane",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XZ",
+    "offsetMillimeters": 5,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -15.0,
+       -10.0
+      ],
+      [
+       15.0,
+       -10.0
+      ],
+      [
+       15.0,
+       10.0
+      ],
+      [
+       -15.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 8,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-yz-plane",
+  "name": "yz-plane",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "YZ",
+    "offsetMillimeters": -3,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -15.0,
+       -10.0
+      ],
+      [
+       15.0,
+       -10.0
+      ],
+      [
+       15.0,
+       10.0
+      ],
+      [
+       -15.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 8,
+    "operation": "new",
+    "suppressed": false,
+    "reversed": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-arc-profile",
+  "name": "arc-profile",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "start": [
+        0,
+        0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          40,
+          0
+         ]
+        },
+        {
+         "type": "arc",
+         "middle": [
+          50,
+          10
+         ],
+         "end": [
+          40,
+          20
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          0,
+          20
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-full",
+  "name": "revolve-full",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       8
+      ],
+      [
+       10,
+       8
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s",
+    "axis": "Z",
+    "angleDegrees": 360,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-partial",
+  "name": "revolve-partial",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       8
+      ],
+      [
+       10,
+       8
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s",
+    "axis": "Z",
+    "angleDegrees": 90,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-fillet-all",
+  "name": "fillet-all",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "f",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 2,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-fillet-plane",
+  "name": "fillet-plane",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "f",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 2,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 10
+    },
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-chamfer-plane",
+  "name": "chamfer-plane",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "chamfer",
+    "name": "Chamfer",
+    "radiusMillimeters": 3,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 0
+    },
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-mirror-add",
+  "name": "mirror-add",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       5,
+       -10
+      ],
+      [
+       25,
+       -10
+      ],
+      [
+       25,
+       10
+      ],
+      [
+       5,
+       10
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "m",
+    "type": "mirror",
+    "name": "Mirror",
+    "sourceFeatureId": "e",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "operation": "add",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-mirror-cut",
+  "name": "mirror-cut",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 4,
+     "centerMillimeters": [
+      15,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 10,
+    "operation": "cut",
+    "suppressed": false
+   },
+   {
+    "id": "m",
+    "type": "mirror",
+    "name": "Mirror",
+    "sourceFeatureId": "c",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "operation": "cut",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-sketch-on-face",
+  "name": "sketch-on-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "f",
+    "type": "profile",
+    "name": "On face",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 6,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    },
+    "support": {
+     "sourceFeatureId": "e",
+     "bodyId": "oracle-sketch-on-face:body-1",
+     "normal": [
+      0,
+      0,
+      1
+     ],
+     "xDirection": [
+      1,
+      0,
+      0
+     ],
+     "label": "Face of Extrude"
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "f",
+    "distanceMillimeters": 8,
+    "operation": "add",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-reversed",
+  "name": "revolve-reversed",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       8
+      ],
+      [
+       10,
+       8
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s",
+    "axis": "Z",
+    "operation": "new",
+    "suppressed": false,
+    "angleDegrees": 90,
+    "reversed": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-symmetric",
+  "name": "revolve-symmetric",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       8
+      ],
+      [
+       10,
+       8
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s",
+    "axis": "Z",
+    "operation": "new",
+    "suppressed": false,
+    "angleDegrees": 90,
+    "symmetric": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-two-angles",
+  "name": "revolve-two-angles",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       0
+      ],
+      [
+       30,
+       0
+      ],
+      [
+       30,
+       8
+      ],
+      [
+       10,
+       8
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s",
+    "axis": "Z",
+    "operation": "new",
+    "suppressed": false,
+    "angleDegrees": 60,
+    "secondAngleDegrees": 30
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-boolean-union",
+  "name": "boolean-union",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "Sketch A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30,
+       -20
+      ],
+      [
+       10,
+       -20
+      ],
+      [
+       10,
+       20
+      ],
+      [
+       -30,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 15,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "Sketch B",
+    "plane": "XY",
+    "offsetMillimeters": 5,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10,
+       -10
+      ],
+      [
+       30,
+       -10
+      ],
+      [
+       30,
+       10
+      ],
+      [
+       -10,
+       10
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 15,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "u",
+    "type": "boolean",
+    "name": "Union",
+    "operation": "union",
+    "targetBodyId": "oracle-boolean-union:body-1",
+    "toolBodyIds": [
+     "oracle-boolean-union:body-b"
+    ],
+    "keepTools": false,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-boolean-cut-keep",
+  "name": "boolean-cut-keep",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "Sketch A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30,
+       -20
+      ],
+      [
+       10,
+       -20
+      ],
+      [
+       10,
+       20
+      ],
+      [
+       -30,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 15,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "Sketch B",
+    "plane": "XY",
+    "offsetMillimeters": 5,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10,
+       -10
+      ],
+      [
+       30,
+       -10
+      ],
+      [
+       30,
+       10
+      ],
+      [
+       -10,
+       10
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 15,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "boolean",
+    "name": "Cut",
+    "operation": "cut",
+    "targetBodyId": "oracle-boolean-cut-keep:body-1",
+    "toolBodyIds": [
+     "oracle-boolean-cut-keep:body-b"
+    ],
+    "keepTools": true,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-shell-closed",
+  "name": "shell-closed",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "thicknessMillimeters": 2,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-shell-open-top",
+  "name": "shell-open-top",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "thicknessMillimeters": 2,
+    "removedFaces": [
+     {
+      "plane": "XY",
+      "offsetMillimeters": 20
+     }
+    ],
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-pattern-linear-holes",
+  "name": "pattern-linear-holes",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -50.0,
+       -15.0
+      ],
+      [
+       50.0,
+       -15.0
+      ],
+      [
+       50.0,
+       15.0
+      ],
+      [
+       -50.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 8,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 8,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 3,
+     "centerMillimeters": [
+      -40,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 8,
+    "operation": "cut",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "pattern",
+    "name": "Pattern",
+    "sourceFeatureId": "c",
+    "suppressed": false,
+    "patternType": "linear",
+    "axis": "X",
+    "count": 5,
+    "spacingMillimeters": 20,
+    "reversed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-pattern-linear-reversed-bosses",
+  "name": "pattern-linear-reversed-bosses",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -50.0,
+       -15.0
+      ],
+      [
+       50.0,
+       -15.0
+      ],
+      [
+       50.0,
+       15.0
+      ],
+      [
+       -50.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 8,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 8,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 3,
+     "centerMillimeters": [
+      40,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 5,
+    "operation": "add",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "pattern",
+    "name": "Pattern",
+    "sourceFeatureId": "c",
+    "suppressed": false,
+    "patternType": "linear",
+    "axis": "X",
+    "count": 4,
+    "spacingMillimeters": 15,
+    "reversed": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-pattern-polar-full",
+  "name": "pattern-polar-full",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Disc",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 30,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 6,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 3,
+     "centerMillimeters": [
+      20,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 6,
+    "operation": "cut",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "pattern",
+    "name": "Pattern",
+    "sourceFeatureId": "c",
+    "suppressed": false,
+    "patternType": "polar",
+    "axis": "Z",
+    "count": 6,
+    "angleDegrees": 360,
+    "reversed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-pattern-polar-partial",
+  "name": "pattern-polar-partial",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Disc",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 30,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 6,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 3,
+     "centerMillimeters": [
+      20,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 6,
+    "operation": "cut",
+    "suppressed": false
+   },
+   {
+    "id": "p",
+    "type": "pattern",
+    "name": "Pattern",
+    "sourceFeatureId": "c",
+    "suppressed": false,
+    "patternType": "polar",
+    "axis": "Z",
+    "count": 4,
+    "angleDegrees": 90,
+    "reversed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-scope-cut-two-bodies",
+  "name": "scope-cut-two-bodies",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "Sketch A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30,
+       -20
+      ],
+      [
+       -2,
+       -20
+      ],
+      [
+       -2,
+       20
+      ],
+      [
+       -30,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "Sketch B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       2,
+       -20
+      ],
+      [
+       30,
+       -20
+      ],
+      [
+       30,
+       20
+      ],
+      [
+       2,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 6,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 10,
+    "operation": "cut",
+    "suppressed": false,
+    "scopeMode": "all",
+    "endType": "through-all"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-scope-add-touching",
+  "name": "scope-add-touching",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "Sketch A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30,
+       -20
+      ],
+      [
+       -2,
+       -20
+      ],
+      [
+       -2,
+       20
+      ],
+      [
+       -30,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "Sketch B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       2,
+       -20
+      ],
+      [
+       30,
+       -20
+      ],
+      [
+       30,
+       20
+      ],
+      [
+       2,
+       20
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "bridge",
+    "type": "profile",
+    "name": "Bridge",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10,
+       -5
+      ],
+      [
+       10,
+       -5
+      ],
+      [
+       10,
+       5
+      ],
+      [
+       -10,
+       5
+      ]
+     ]
+    }
+   },
+   {
+    "id": "j",
+    "type": "extrude",
+    "name": "Join",
+    "profileFeatureId": "bridge",
+    "distanceMillimeters": 4,
+    "operation": "add",
+    "suppressed": false,
+    "scopeMode": "all"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-shell-closed-with-hole",
+  "name": "shell-closed-with-hole",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Hole",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 6,
+     "centerMillimeters": [
+      10,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 12,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all"
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "thicknessMillimeters": 1.5,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-hole-plain-blind",
+  "name": "hole-plain-blind",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Centre",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 1,
+     "centerMillimeters": [
+      8,
+      3
+     ]
+    }
+   },
+   {
+    "id": "h",
+    "type": "hole",
+    "name": "Hole",
+    "profileFeatureId": "c",
+    "suppressed": false,
+    "diameterMillimeters": 4,
+    "depthMillimeters": 8,
+    "depthType": "blind",
+    "cutType": "plain"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-hole-through",
+  "name": "hole-through",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Centre",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 1,
+     "centerMillimeters": [
+      8,
+      3
+     ]
+    }
+   },
+   {
+    "id": "h",
+    "type": "hole",
+    "name": "Hole",
+    "profileFeatureId": "c",
+    "suppressed": false,
+    "diameterMillimeters": 4,
+    "depthMillimeters": 8,
+    "depthType": "through-all",
+    "cutType": "plain"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-hole-counterbore",
+  "name": "hole-counterbore",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Centre",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 1,
+     "centerMillimeters": [
+      8,
+      3
+     ]
+    }
+   },
+   {
+    "id": "h",
+    "type": "hole",
+    "name": "Hole",
+    "profileFeatureId": "c",
+    "suppressed": false,
+    "diameterMillimeters": 4,
+    "depthMillimeters": 8,
+    "depthType": "blind",
+    "cutType": "counterbore",
+    "counterDiameterMillimeters": 8,
+    "counterDepthMillimeters": 3
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-hole-countersink",
+  "name": "hole-countersink",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Centre",
+    "plane": "XY",
+    "offsetMillimeters": 12,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 1,
+     "centerMillimeters": [
+      8,
+      3
+     ]
+    }
+   },
+   {
+    "id": "h",
+    "type": "hole",
+    "name": "Hole",
+    "profileFeatureId": "c",
+    "suppressed": false,
+    "diameterMillimeters": 4,
+    "depthMillimeters": 8,
+    "depthType": "blind",
+    "cutType": "countersink",
+    "counterDiameterMillimeters": 8,
+    "countersinkAngleDegrees": 90
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-hole-reversed-from-bottom",
+  "name": "hole-reversed-from-bottom",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       -15.0
+      ],
+      [
+       20.0,
+       15.0
+      ],
+      [
+       -20.0,
+       15.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Centre",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 1,
+     "centerMillimeters": [
+      8,
+      3
+     ]
+    }
+   },
+   {
+    "id": "h",
+    "type": "hole",
+    "name": "Hole",
+    "profileFeatureId": "c",
+    "suppressed": false,
+    "diameterMillimeters": 4,
+    "depthMillimeters": 8,
+    "depthType": "blind",
+    "cutType": "plain",
+    "reversed": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-translate",
+  "name": "transform-translate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 5,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Transform",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-translate:body-1"
+    ],
+    "transform": {
+     "kind": "translate",
+     "translationMillimeters": [
+      5,
+      -3,
+      2
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-rotate",
+  "name": "transform-rotate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 5,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Transform",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-rotate:body-1"
+    ],
+    "transform": {
+     "kind": "rotate",
+     "axisOriginMillimeters": [
+      0,
+      0,
+      0
+     ],
+     "axisDirection": [
+      0,
+      0,
+      1
+     ],
+     "angleDegrees": 30
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-scale",
+  "name": "transform-scale",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 5,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Transform",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-scale:body-1"
+    ],
+    "transform": {
+     "kind": "scale",
+     "centerMillimeters": [
+      0,
+      0,
+      0
+     ],
+     "scaleFactors": [
+      2,
+      2,
+      2
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-copy",
+  "name": "transform-copy",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 5,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Transform",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-copy:body-1"
+    ],
+    "transform": {
+     "kind": "translate",
+     "translationMillimeters": [
+      30,
+      0,
+      0
+     ]
+    },
+    "copyBodyIds": {
+     "oracle-transform-copy:body-1": "oracle-transform-copy:body-1:copy-1"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-add",
+  "name": "revolve-add",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Disc",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 30,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Disc",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       6
+      ],
+      [
+       20,
+       6
+      ],
+      [
+       20,
+       12
+      ],
+      [
+       10,
+       12
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s2",
+    "axis": "Z",
+    "angleDegrees": 360,
+    "operation": "add",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-cut",
+  "name": "revolve-cut",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Disc",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 30,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Disc",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       2
+      ],
+      [
+       20,
+       2
+      ],
+      [
+       20,
+       7
+      ],
+      [
+       10,
+       7
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s2",
+    "axis": "Z",
+    "angleDegrees": 360,
+    "operation": "cut",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-revolve-cut-partial",
+  "name": "revolve-cut-partial",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Disc",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 30,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Disc",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 6,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Section",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       2
+      ],
+      [
+       20,
+       2
+      ],
+      [
+       20,
+       7
+      ],
+      [
+       10,
+       7
+      ]
+     ]
+    }
+   },
+   {
+    "id": "r",
+    "type": "revolve",
+    "name": "Revolve",
+    "profileFeatureId": "s2",
+    "axis": "Z",
+    "angleDegrees": 120,
+    "operation": "cut",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-add-boss",
+  "name": "extrude-add-boss",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "s2",
+    "distanceMillimeters": 8,
+    "operation": "add",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-intersect-post",
+  "name": "extrude-intersect-post",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Post",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 15,
+     "centerMillimeters": [
+      5,
+      0
+     ]
+    }
+   },
+   {
+    "id": "i",
+    "type": "extrude",
+    "name": "Keep",
+    "profileFeatureId": "s2",
+    "distanceMillimeters": 30,
+    "operation": "intersect",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-start-offset",
+  "name": "extrude-start-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "startingOffsetMillimeters": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-two-sided",
+  "name": "extrude-two-sided",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "secondDistanceMillimeters": 8
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-second-end",
+  "name": "extrude-second-end",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 4,
+    "operation": "cut",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-second-end:body-1",
+    "secondEnd": {
+     "endType": "through-all",
+     "distanceMillimeters": 1
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-symmetric-through-all",
+  "name": "extrude-symmetric-through-all",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-symmetric-through-all:body-1",
+    "endType": "symmetric-through-all"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-direction-vector",
+  "name": "extrude-direction-vector",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "directionVector": [
+     0.6,
+     0,
+     0.8
+    ]
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-vertex",
+  "name": "extrude-up-to-vertex",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ref",
+    "type": "profile",
+    "name": "Reference",
+    "plane": "XY",
+    "offsetMillimeters": 35,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0,
+        0
+       ],
+       "radius": 3
+      }
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-vertex:body-1",
+    "endType": "up-to-vertex",
+    "endPointReference": {
+     "kind": "sketch-point",
+     "sourceFeatureId": "ref",
+     "contourId": "c",
+     "point": "center",
+     "label": "Reference centre"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-vertex-offset",
+  "name": "extrude-up-to-vertex-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ref",
+    "type": "profile",
+    "name": "Reference",
+    "plane": "XY",
+    "offsetMillimeters": 35,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0,
+        0
+       ],
+       "radius": 3
+      }
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-vertex-offset:body-1",
+    "endType": "up-to-vertex",
+    "endPointReference": {
+     "kind": "sketch-point",
+     "sourceFeatureId": "ref",
+     "contourId": "c",
+     "point": "center",
+     "label": "Reference centre"
+    },
+    "endOffsetMillimeters": 2
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-face",
+  "name": "extrude-up-to-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "bs",
+    "type": "profile",
+    "name": "Block",
+    "plane": "XY",
+    "offsetMillimeters": 30,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "blk",
+    "type": "extrude",
+    "name": "Block",
+    "profileFeatureId": "bs",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-face:body-1",
+    "endType": "up-to-face",
+    "endReference": {
+     "sourceFeatureId": "blk",
+     "bodyId": "oracle-extrude-up-to-face:body-blk",
+     "normal": [
+      0,
+      0,
+      -1
+     ],
+     "label": "Block bottom"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-face-tilted",
+  "name": "extrude-up-to-face-tilted",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ws",
+    "type": "profile",
+    "name": "Wedge",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       35.0
+      ],
+      [
+       30.0,
+       25.0
+      ],
+      [
+       30.0,
+       50.0
+      ],
+      [
+       -30.0,
+       50.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "wedge",
+    "type": "extrude",
+    "name": "Wedge",
+    "profileFeatureId": "ws",
+    "distanceMillimeters": 40,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-face-tilted:body-1",
+    "endType": "up-to-face",
+    "endReference": {
+     "sourceFeatureId": "wedge",
+     "bodyId": "oracle-extrude-up-to-face-tilted:body-wedge",
+     "normal": [
+      -0.164398987305,
+      0,
+      -0.986393923832
+     ],
+     "label": "Wedge underside"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-next",
+  "name": "extrude-up-to-next",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": -15,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "up-to-next"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-next-offset",
+  "name": "extrude-up-to-next-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": -15,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      10,
+      5
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "up-to-next",
+    "endOffsetMillimeters": 3
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-next-stepped",
+  "name": "extrude-up-to-next-stepped",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": -5,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       0.0,
+       -20.0
+      ],
+      [
+       0.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 15,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       0.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       0.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sc",
+    "type": "profile",
+    "name": "C",
+    "plane": "XY",
+    "offsetMillimeters": -10,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "C",
+    "profileFeatureId": "sc",
+    "distanceMillimeters": 1,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "up-to-next"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-part",
+  "name": "extrude-up-to-part",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "cs",
+    "type": "profile",
+    "name": "Cylinder",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      0,
+      40
+     ]
+    }
+   },
+   {
+    "id": "cyl",
+    "type": "extrude",
+    "name": "Cylinder",
+    "profileFeatureId": "cs",
+    "distanceMillimeters": 80,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       5.0
+      ],
+      [
+       -5.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-part:body-1",
+    "endType": "up-to-part",
+    "endPartId": "oracle-extrude-up-to-part:body-cyl"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-part-offset",
+  "name": "extrude-up-to-part-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "cs",
+    "type": "profile",
+    "name": "Cylinder",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      0,
+      40
+     ]
+    }
+   },
+   {
+    "id": "cyl",
+    "type": "extrude",
+    "name": "Cylinder",
+    "profileFeatureId": "cs",
+    "distanceMillimeters": 80,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       5.0
+      ],
+      [
+       -5.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-part-offset:body-1",
+    "endType": "up-to-part",
+    "endPartId": "oracle-extrude-up-to-part-offset:body-cyl",
+    "endOffsetMillimeters": 2
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft",
+  "name": "extrude-draft",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "draftAngleDegrees": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft-negative",
+  "name": "extrude-draft-negative",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "draftAngleDegrees": -5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft-hole",
+  "name": "extrude-draft-hole",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "outer",
+       "start": [
+        -30.0,
+        -20.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "outer-s0",
+         "end": [
+          30.0,
+          -20.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "outer-s1",
+         "end": [
+          30.0,
+          20.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "outer-s2",
+         "end": [
+          -30.0,
+          20.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "outer-close",
+         "end": [
+          -30.0,
+          -20.0
+         ]
+        }
+       ]
+      },
+      {
+       "type": "circle",
+       "id": "hole",
+       "center": [
+        5,
+        0
+       ],
+       "radius": 6
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "outer",
+    "draftAngleDegrees": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft-symmetric",
+  "name": "extrude-draft-symmetric",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric",
+    "draftAngleDegrees": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft-offset",
+  "name": "extrude-draft-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "startingOffsetMillimeters": 5,
+    "draftAngleDegrees": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-draft-second-end",
+  "name": "extrude-draft-second-end",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false,
+    "draftAngleDegrees": 5,
+    "secondEnd": {
+     "endType": "blind",
+     "distanceMillimeters": 8,
+     "draftAngleDegrees": 10
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-direction-line",
+  "name": "extrude-direction-line",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "g",
+    "type": "profile",
+    "name": "Guide",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "guide",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "guide-s0",
+         "end": [
+          6.0,
+          8.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "directionReference": {
+     "kind": "sketch-line",
+     "sourceFeatureId": "g",
+     "contourId": "guide",
+     "segmentId": "guide-s0"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-thin-closed",
+  "name": "extrude-thin-closed",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "rect",
+       "start": [
+        -10.0,
+        -5.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "rect-s0",
+         "end": [
+          10.0,
+          -5.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "rect-s1",
+         "end": [
+          10.0,
+          5.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "rect-s2",
+         "end": [
+          -10.0,
+          5.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "rect-close",
+         "end": [
+          -10.0,
+          -5.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "rect",
+    "thin": {
+     "thickness1Millimeters": 2,
+     "thickness2Millimeters": 1
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-thin-open",
+  "name": "extrude-thin-open",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "l",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "l-s0",
+         "end": [
+          30.0,
+          0.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "l-s1",
+         "end": [
+          30.0,
+          20.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "l",
+    "thin": {
+     "thickness1Millimeters": 2,
+     "thickness2Millimeters": 0
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-thin-open-arc",
+  "name": "extrude-thin-open-arc",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "arc",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "segments": [
+        {
+         "type": "arc",
+         "id": "arc-s0",
+         "middle": [
+          10.0,
+          10.0
+         ],
+         "end": [
+          20.0,
+          0.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "arc",
+    "thin": {
+     "thickness1Millimeters": 1.5,
+     "thickness2Millimeters": 1.5
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-thin-midplane",
+  "name": "extrude-thin-midplane",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0,
+        0
+       ],
+       "radius": 10
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "c",
+    "thin": {
+     "thickness1Millimeters": 1,
+     "thickness2Millimeters": 1,
+     "midplane": true,
+     "midplaneThicknessMillimeters": 3
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-thin-flipped",
+  "name": "extrude-thin-flipped",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "l",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "l-s0",
+         "end": [
+          30.0,
+          0.0
+         ]
+        },
+        {
+         "type": "line",
+         "id": "l-s1",
+         "end": [
+          30.0,
+          20.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false,
+    "profileContourId": "l",
+    "thin": {
+     "thickness1Millimeters": 2,
+     "thickness2Millimeters": 0.5,
+     "flipped": true
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-tools-shell-after-revolve-cut",
+  "name": "tools-shell-after-revolve-cut",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s1",
+    "type": "profile",
+    "name": "Sketch 1",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       -15
+      ],
+      [
+       50,
+       -15
+      ],
+      [
+       50,
+       15
+      ],
+      [
+       10,
+       15
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e1",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Sketch 2",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        30,
+        6
+       ],
+       "radius": 4
+      }
+     ]
+    }
+   },
+   {
+    "id": "cut",
+    "type": "extrude",
+    "name": "Remove",
+    "profileFeatureId": "s2",
+    "profileContourId": "c",
+    "distanceMillimeters": 5,
+    "operation": "cut",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-shell-after-revolve-cut:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "add",
+    "type": "extrude",
+    "name": "Add",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 6,
+    "operation": "add",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-shell-after-revolve-cut:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "inter",
+    "type": "extrude",
+    "name": "Intersect",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 40,
+    "operation": "intersect",
+    "targetBodyId": "oracle-tools-shell-after-revolve-cut:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "rnew",
+    "type": "revolve",
+    "name": "Revolve new",
+    "profileFeatureId": "s1",
+    "axis": "Y",
+    "angleDegrees": 90,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "rcut",
+    "type": "revolve",
+    "name": "Revolve cut",
+    "profileFeatureId": "s2",
+    "profileContourId": "c",
+    "axis": "X",
+    "angleDegrees": 360,
+    "operation": "cut",
+    "targetBodyId": "oracle-tools-shell-after-revolve-cut:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "targetBodyId": "oracle-tools-shell-after-revolve-cut:body-1",
+    "thicknessMillimeters": 1.5,
+    "suppressed": false
+   }
+  ],
+  "note": "FreeCAD's PartDesign::Thickness refuses this shell (toroidal groove); OCCT's offset through the engine builds it."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-face-extrude-push",
+  "name": "face-extrude-push",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "fe",
+    "type": "face-extrude",
+    "name": "Push",
+    "suppressed": false,
+    "sourceFeatureId": "e",
+    "targetBodyId": "oracle-face-extrude-push:body-1",
+    "normal": [
+     0,
+     0,
+     1
+    ],
+    "faceLabel": "Top",
+    "distanceMillimeters": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-face-extrude-pull",
+  "name": "face-extrude-pull",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "fe",
+    "type": "face-extrude",
+    "name": "Pull",
+    "suppressed": false,
+    "sourceFeatureId": "e",
+    "targetBodyId": "oracle-face-extrude-pull:body-1",
+    "normal": [
+     0,
+     0,
+     1
+    ],
+    "faceLabel": "Top",
+    "distanceMillimeters": -5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-draft-feature",
+  "name": "draft-feature",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "d",
+    "type": "draft",
+    "name": "Draft",
+    "suppressed": false,
+    "facePlane": {
+     "plane": "YZ",
+     "offsetMillimeters": 30
+    },
+    "neutralPlane": {
+     "plane": "XY",
+     "offsetMillimeters": 0
+    },
+    "angleDegrees": 10,
+    "reversed": false,
+    "targetBodyId": "oracle-draft-feature:body-1"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-draft-feature-reversed",
+  "name": "draft-feature-reversed",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "d",
+    "type": "draft",
+    "name": "Draft",
+    "suppressed": false,
+    "facePlane": {
+     "plane": "YZ",
+     "offsetMillimeters": 30
+    },
+    "neutralPlane": {
+     "plane": "XY",
+     "offsetMillimeters": 0
+    },
+    "angleDegrees": 10,
+    "reversed": true,
+    "targetBodyId": "oracle-draft-feature-reversed:body-1"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-loft-smooth",
+  "name": "loft-smooth",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "a",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 10
+      }
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 30,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 5
+      }
+     ]
+    }
+   },
+   {
+    "id": "l",
+    "type": "loft",
+    "name": "Loft",
+    "suppressed": false,
+    "sections": [
+     {
+      "profileFeatureId": "a",
+      "profileContourId": "c"
+     },
+     {
+      "profileFeatureId": "b",
+      "profileContourId": "c"
+     }
+    ],
+    "operation": "new",
+    "ruled": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-loft-ruled",
+  "name": "loft-ruled",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "a",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       -10.0
+      ],
+      [
+       10.0,
+       10.0
+      ],
+      [
+       -10.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 25,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 8
+      }
+     ]
+    }
+   },
+   {
+    "id": "l",
+    "type": "loft",
+    "name": "Loft",
+    "suppressed": false,
+    "sections": [
+     {
+      "profileFeatureId": "a"
+     },
+     {
+      "profileFeatureId": "b",
+      "profileContourId": "c"
+     }
+    ],
+    "operation": "new",
+    "ruled": true
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-loft-cut",
+  "name": "loft-cut",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "a",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        5.0,
+        0.0
+       ],
+       "radius": 6
+      }
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        5.0,
+        0.0
+       ],
+       "radius": 3
+      }
+     ]
+    }
+   },
+   {
+    "id": "l",
+    "type": "loft",
+    "name": "Loft cut",
+    "suppressed": false,
+    "sections": [
+     {
+      "profileFeatureId": "a",
+      "profileContourId": "c"
+     },
+     {
+      "profileFeatureId": "b",
+      "profileContourId": "c"
+     }
+    ],
+    "operation": "cut",
+    "ruled": false,
+    "targetBodyId": "oracle-loft-cut:body-1"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-sweep-line",
+  "name": "sweep-line",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "p",
+    "type": "profile",
+    "name": "Path",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "path",
+       "start": [
+        0,
+        0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "id": "seg",
+         "end": [
+          40,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Profile",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 3
+      }
+     ]
+    }
+   },
+   {
+    "id": "sw",
+    "type": "sweep",
+    "name": "Sweep",
+    "suppressed": false,
+    "profileFeatureId": "c",
+    "profileContourId": "c",
+    "pathFeatureId": "p",
+    "pathContourId": "path",
+    "operation": "new"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-sweep-arc",
+  "name": "sweep-arc",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "p",
+    "type": "profile",
+    "name": "Path",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "path",
+       "start": [
+        0,
+        0
+       ],
+       "segments": [
+        {
+         "type": "arc",
+         "id": "seg",
+         "middle": [
+          20,
+          20
+         ],
+         "end": [
+          40,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "Profile",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 3
+      }
+     ]
+    }
+   },
+   {
+    "id": "sw",
+    "type": "sweep",
+    "name": "Sweep",
+    "suppressed": false,
+    "profileFeatureId": "c",
+    "profileContourId": "c",
+    "pathFeatureId": "p",
+    "pathContourId": "path",
+    "operation": "new"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-shell-open-by-reference",
+  "name": "shell-open-by-reference",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "suppressed": false,
+    "targetBodyId": "oracle-shell-open-by-reference:body-1",
+    "thicknessMillimeters": 2,
+    "removedFaces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-shell-open-by-reference:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ]
+   }
+  ],
+  "freecadDiffers": "FreeCAD's worker builds a closed shell for a face named by reference (its PartDesign::Thickness keeps the referenced face); the engine opens it as asked.",
+  "expectVolume_mm3": 11712
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-translate-reference",
+  "name": "transform-translate-reference",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ref",
+    "type": "profile",
+    "name": "Reference",
+    "plane": "XY",
+    "offsetMillimeters": 40,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "a",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 2
+      },
+      {
+       "type": "circle",
+       "id": "b",
+       "center": [
+        10.0,
+        0.0
+       ],
+       "radius": 2
+      }
+     ]
+    }
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Move",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-translate-reference:body-1"
+    ],
+    "transform": {
+     "kind": "translate-reference",
+     "reference": {
+      "kind": "two-points",
+      "from": {
+       "kind": "sketch-point",
+       "sourceFeatureId": "ref",
+       "contourId": "a",
+       "point": "center",
+       "label": "Reference a"
+      },
+      "to": {
+       "kind": "sketch-point",
+       "sourceFeatureId": "ref",
+       "contourId": "b",
+       "point": "center",
+       "label": "Reference b"
+      }
+     },
+     "distanceMillimeters": 25
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-rotate-reference",
+  "name": "transform-rotate-reference",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ref",
+    "type": "profile",
+    "name": "Reference",
+    "plane": "XY",
+    "offsetMillimeters": 40,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "a",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 2
+      },
+      {
+       "type": "circle",
+       "id": "b",
+       "center": [
+        10.0,
+        0.0
+       ],
+       "radius": 2
+      }
+     ]
+    }
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Turn",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-rotate-reference:body-1"
+    ],
+    "transform": {
+     "kind": "rotate-reference",
+     "reference": {
+      "kind": "two-points",
+      "from": {
+       "kind": "sketch-point",
+       "sourceFeatureId": "ref",
+       "contourId": "a",
+       "point": "center",
+       "label": "Reference a"
+      },
+      "to": {
+       "kind": "sketch-point",
+       "sourceFeatureId": "ref",
+       "contourId": "b",
+       "point": "center",
+       "label": "Reference b"
+      }
+     },
+     "angleDegrees": 90
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-scale-reference",
+  "name": "transform-scale-reference",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "ref",
+    "type": "profile",
+    "name": "Reference",
+    "plane": "XY",
+    "offsetMillimeters": 40,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "a",
+       "center": [
+        0.0,
+        0.0
+       ],
+       "radius": 2
+      },
+      {
+       "type": "circle",
+       "id": "b",
+       "center": [
+        10.0,
+        0.0
+       ],
+       "radius": 2
+      }
+     ]
+    }
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Grow",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-scale-reference:body-1"
+    ],
+    "transform": {
+     "kind": "scale-reference",
+     "centerReference": {
+      "kind": "sketch-point",
+      "sourceFeatureId": "ref",
+      "contourId": "b",
+      "point": "center",
+      "label": "Reference b"
+     },
+     "scaleFactors": [
+      2,
+      2,
+      2
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-tools-shell-plain",
+  "name": "tools-shell-plain",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s1",
+    "type": "profile",
+    "name": "Sketch 1",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       -15
+      ],
+      [
+       50,
+       -15
+      ],
+      [
+       50,
+       15
+      ],
+      [
+       10,
+       15
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e1",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Sketch 2",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        30,
+        6
+       ],
+       "radius": 4
+      }
+     ]
+    }
+   },
+   {
+    "id": "cut",
+    "type": "extrude",
+    "name": "Remove",
+    "profileFeatureId": "s2",
+    "profileContourId": "c",
+    "distanceMillimeters": 5,
+    "operation": "cut",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-shell-plain:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "add",
+    "type": "extrude",
+    "name": "Add",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 6,
+    "operation": "add",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-shell-plain:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "inter",
+    "type": "extrude",
+    "name": "Intersect",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 40,
+    "operation": "intersect",
+    "targetBodyId": "oracle-tools-shell-plain:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "rnew",
+    "type": "revolve",
+    "name": "Revolve new",
+    "profileFeatureId": "s1",
+    "axis": "Y",
+    "angleDegrees": 90,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "targetBodyId": "oracle-tools-shell-plain:body-1",
+    "thicknessMillimeters": 1.5,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-tools-fillet-after-shell",
+  "name": "tools-fillet-after-shell",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s1",
+    "type": "profile",
+    "name": "Sketch 1",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       -15
+      ],
+      [
+       50,
+       -15
+      ],
+      [
+       50,
+       15
+      ],
+      [
+       10,
+       15
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e1",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Sketch 2",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        30,
+        6
+       ],
+       "radius": 4
+      }
+     ]
+    }
+   },
+   {
+    "id": "cut",
+    "type": "extrude",
+    "name": "Remove",
+    "profileFeatureId": "s2",
+    "profileContourId": "c",
+    "distanceMillimeters": 5,
+    "operation": "cut",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-fillet-after-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "add",
+    "type": "extrude",
+    "name": "Add",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 6,
+    "operation": "add",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-fillet-after-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "inter",
+    "type": "extrude",
+    "name": "Intersect",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 40,
+    "operation": "intersect",
+    "targetBodyId": "oracle-tools-fillet-after-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "rnew",
+    "type": "revolve",
+    "name": "Revolve new",
+    "profileFeatureId": "s1",
+    "axis": "Y",
+    "angleDegrees": 90,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "targetBodyId": "oracle-tools-fillet-after-shell:body-1",
+    "thicknessMillimeters": 1.5,
+    "suppressed": false
+   },
+   {
+    "id": "fil",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 1,
+    "targetBodyId": "oracle-tools-fillet-after-shell:body-1",
+    "suppressed": false
+   }
+  ],
+  "expectFailure": "Fillet did not produce a valid solid",
+  "note": "FreeCAD refuses it too ('fillet did not produce a valid solid'): 1 mm fillets on every edge of a 1.5 mm shell with a pocket."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-tools-fillet-then-shell",
+  "name": "tools-fillet-then-shell",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s1",
+    "type": "profile",
+    "name": "Sketch 1",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       10,
+       -15
+      ],
+      [
+       50,
+       -15
+      ],
+      [
+       50,
+       15
+      ],
+      [
+       10,
+       15
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e1",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 12,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "s2",
+    "type": "profile",
+    "name": "Sketch 2",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "circle",
+       "id": "c",
+       "center": [
+        30,
+        6
+       ],
+       "radius": 4
+      }
+     ]
+    }
+   },
+   {
+    "id": "cut",
+    "type": "extrude",
+    "name": "Remove",
+    "profileFeatureId": "s2",
+    "profileContourId": "c",
+    "distanceMillimeters": 5,
+    "operation": "cut",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-fillet-then-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "add",
+    "type": "extrude",
+    "name": "Add",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 6,
+    "operation": "add",
+    "reversed": true,
+    "targetBodyId": "oracle-tools-fillet-then-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "inter",
+    "type": "extrude",
+    "name": "Intersect",
+    "profileFeatureId": "s1",
+    "distanceMillimeters": 40,
+    "operation": "intersect",
+    "targetBodyId": "oracle-tools-fillet-then-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "rnew",
+    "type": "revolve",
+    "name": "Revolve new",
+    "profileFeatureId": "s1",
+    "axis": "Y",
+    "angleDegrees": 90,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "fil",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 2,
+    "targetBodyId": "oracle-tools-fillet-then-shell:body-1",
+    "suppressed": false
+   },
+   {
+    "id": "sh",
+    "type": "shell",
+    "name": "Shell",
+    "targetBodyId": "oracle-tools-fillet-then-shell:body-1",
+    "thicknessMillimeters": 1.5,
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-targets-cut-two",
+  "name": "targets-cut-two",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       2.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       2.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sc",
+    "type": "profile",
+    "name": "C",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Cut",
+    "profileFeatureId": "sc",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all",
+    "targetBodyId": "oracle-targets-cut-two:body-1",
+    "targetBodyIds": [
+     "oracle-targets-cut-two:body-1",
+     "oracle-targets-cut-two:body-b"
+    ]
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-targets-add-bridge",
+  "name": "targets-add-bridge",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       2.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       2.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sc",
+    "type": "profile",
+    "name": "C",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       -5.0
+      ],
+      [
+       10.0,
+       5.0
+      ],
+      [
+       -10.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Bridge",
+    "profileFeatureId": "sc",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-targets-add-bridge:body-1",
+    "targetBodyIds": [
+     "oracle-targets-add-bridge:body-1",
+     "oracle-targets-add-bridge:body-b"
+    ]
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-targets-intersect-two",
+  "name": "targets-intersect-two",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "sa",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       -20.0
+      ],
+      [
+       -2.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "a",
+    "type": "extrude",
+    "name": "A",
+    "profileFeatureId": "sa",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sb",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       2.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       2.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "extrude",
+    "name": "B",
+    "profileFeatureId": "sb",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "sc",
+    "type": "profile",
+    "name": "C",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -20.0,
+       -10.0
+      ],
+      [
+       20.0,
+       -10.0
+      ],
+      [
+       20.0,
+       10.0
+      ],
+      [
+       -20.0,
+       10.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Keep",
+    "profileFeatureId": "sc",
+    "distanceMillimeters": 15,
+    "operation": "intersect",
+    "suppressed": false,
+    "targetBodyId": "oracle-targets-intersect-two:body-1",
+    "targetBodyIds": [
+     "oracle-targets-intersect-two:body-1",
+     "oracle-targets-intersect-two:body-b"
+    ]
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-cylinder",
+  "name": "extrude-up-to-cylinder",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "cs",
+    "type": "profile",
+    "name": "Cylinder",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      0,
+      40
+     ]
+    }
+   },
+   {
+    "id": "cyl",
+    "type": "extrude",
+    "name": "Cylinder",
+    "profileFeatureId": "cs",
+    "distanceMillimeters": 80,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       5.0
+      ],
+      [
+       -5.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-cylinder:body-1",
+    "endType": "up-to-face",
+    "endReference": {
+     "sourceFeatureId": "cyl",
+     "bodyId": "oracle-extrude-up-to-cylinder:body-cyl",
+     "surfaceType": "cylinder",
+     "label": "Round bar"
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-cylinder-offset",
+  "name": "extrude-up-to-cylinder-offset",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "cs",
+    "type": "profile",
+    "name": "Cylinder",
+    "plane": "YZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 8,
+     "centerMillimeters": [
+      0,
+      40
+     ]
+    }
+   },
+   {
+    "id": "cyl",
+    "type": "extrude",
+    "name": "Cylinder",
+    "profileFeatureId": "cs",
+    "distanceMillimeters": 80,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       -5.0
+      ],
+      [
+       5.0,
+       5.0
+      ],
+      [
+       -5.0,
+       5.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-cylinder-offset:body-1",
+    "endType": "up-to-face",
+    "endReference": {
+     "sourceFeatureId": "cyl",
+     "bodyId": "oracle-extrude-up-to-cylinder-offset:body-cyl",
+     "surfaceType": "cylinder",
+     "label": "Round bar"
+    },
+    "endOffsetMillimeters": 2
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-face-out",
+  "name": "offset-face-out",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-face-out:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ],
+    "distanceMillimeters": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-face-in",
+  "name": "offset-face-in",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-face-in:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ],
+    "distanceMillimeters": -5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-face-two",
+  "name": "offset-face-two",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-face-two:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     },
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-face-two:body-1",
+      "normal": [
+       1,
+       0,
+       0
+      ],
+      "label": "Right"
+     }
+    ],
+    "distanceMillimeters": 4
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-face-slanted",
+  "name": "offset-face-slanted",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "ws",
+    "type": "profile",
+    "name": "Wedge",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       0.0
+      ],
+      [
+       30.0,
+       0.0
+      ],
+      [
+       30.0,
+       25.0
+      ],
+      [
+       -30.0,
+       35.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "w",
+    "type": "extrude",
+    "name": "Wedge",
+    "profileFeatureId": "ws",
+    "distanceMillimeters": 40,
+    "operation": "new",
+    "suppressed": false,
+    "endType": "symmetric"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "w",
+      "bodyId": "oracle-offset-face-slanted:body-1",
+      "normal": [
+       0.164398987305,
+       0,
+       0.986393923832
+      ],
+      "label": "Slant"
+     }
+    ],
+    "distanceMillimeters": 3
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-move-face-translate",
+  "name": "move-face-translate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Move",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-move-face-translate:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ],
+    "transform": {
+     "kind": "translate",
+     "translationMillimeters": [
+      0,
+      0,
+      4
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-move-face-rotate",
+  "name": "move-face-rotate",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Tilt",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-move-face-rotate:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ],
+    "transform": {
+     "kind": "rotate",
+     "axisOriginMillimeters": [
+      30,
+      0,
+      20
+     ],
+     "axisDirection": [
+      0,
+      1,
+      0
+     ],
+     "angleDegrees": 10
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-import-obj-solid",
+  "name": "import-obj-solid",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "m",
+    "type": "import-cad",
+    "name": "Cube.obj",
+    "suppressed": false,
+    "operation": "new",
+    "bodyId": "oracle-import-obj-solid:body-m",
+    "sourceName": "Cube.obj",
+    "dataBase64": "diAwIDAgMAp2IDEgMCAwCnYgMSAxIDAKdiAwIDEgMAp2IDAgMCAxCnYgMSAwIDEKdiAxIDEgMQp2IDAgMSAxCmYgMSA0IDMgMgpmIDUgNiA3IDgKZiAxIDIgNiA1CmYgMiAzIDcgNgpmIDMgNCA4IDcKZiA0IDEgNSA4Cg==",
+    "format": "obj",
+    "meshMode": "solid",
+    "meshUnits": "cm"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-import-off-solid",
+  "name": "import-off-solid",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "m",
+    "type": "import-cad",
+    "name": "Cube.off",
+    "suppressed": false,
+    "operation": "new",
+    "bodyId": "oracle-import-off-solid:body-m",
+    "sourceName": "Cube.off",
+    "dataBase64": "T0ZGCjggNiAwCjAgMCAwCjEgMCAwCjEgMSAwCjAgMSAwCjAgMCAxCjEgMCAxCjEgMSAxCjAgMSAxCjQgMCAzIDIgMQo0IDQgNSA2IDcKNCAwIDEgNSA0CjQgMSAyIDYgNQo0IDIgMyA3IDYKNCAzIDAgNCA3Cg==",
+    "format": "off",
+    "meshMode": "solid",
+    "meshUnits": "cm"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-import-ply-solid",
+  "name": "import-ply-solid",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "m",
+    "type": "import-cad",
+    "name": "Cube.ply",
+    "suppressed": false,
+    "operation": "new",
+    "bodyId": "oracle-import-ply-solid:body-m",
+    "sourceName": "Cube.ply",
+    "dataBase64": "cGx5CmZvcm1hdCBhc2NpaSAxLjAKZWxlbWVudCB2ZXJ0ZXggOApwcm9wZXJ0eSBmbG9hdCB4CnByb3BlcnR5IGZsb2F0IHkKcHJvcGVydHkgZmxvYXQgegplbGVtZW50IGZhY2UgNgpwcm9wZXJ0eSBsaXN0IHVjaGFyIGludCB2ZXJ0ZXhfaW5kaWNlcwplbmRfaGVhZGVyCjAgMCAwCjEgMCAwCjEgMSAwCjAgMSAwCjAgMCAxCjEgMCAxCjEgMSAxCjAgMSAxCjQgMCAzIDIgMQo0IDQgNSA2IDcKNCAwIDEgNSA0CjQgMSAyIDYgNQo0IDIgMyA3IDYKNCAzIDAgNCA3Cg==",
+    "format": "ply",
+    "meshMode": "solid",
+    "meshUnits": "cm"
+   }
+  ],
+  "note": "FreeCAD's Mesh module rejects this ASCII PLY with quad faces (reports no triangles); the engine reads it."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-transform-scale-xyz",
+  "name": "transform-scale-xyz",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "t",
+    "type": "transform",
+    "name": "Stretch",
+    "suppressed": false,
+    "bodyIds": [
+     "oracle-transform-scale-xyz:body-1"
+    ],
+    "transform": {
+     "kind": "scale",
+     "centerMillimeters": [
+      0,
+      0,
+      0
+     ],
+     "scaleFactors": [
+      2,
+      1,
+      0.5
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-extrude-up-to-cone",
+  "name": "extrude-up-to-cone",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "cs",
+    "type": "profile",
+    "name": "Cone",
+    "plane": "XZ",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       0.0,
+       30.0
+      ],
+      [
+       20.0,
+       30.0
+      ],
+      [
+       0.0,
+       60.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "cone",
+    "type": "revolve",
+    "name": "Cone",
+    "profileFeatureId": "cs",
+    "axis": "Z",
+    "angleDegrees": 360,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Boss",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       6,
+       -5
+      ],
+      [
+       16,
+       -5
+      ],
+      [
+       16,
+       5
+      ],
+      [
+       6,
+       5
+      ]
+     ]
+    }
+   },
+   {
+    "id": "boss",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 1,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-extrude-up-to-cone:body-1",
+    "endType": "up-to-face",
+    "endReference": {
+     "sourceFeatureId": "cone",
+     "bodyId": "oracle-extrude-up-to-cone:body-cone",
+     "surfaceType": "cone",
+     "label": "Cone"
+    }
+   }
+  ],
+  "note": "The boss column stays off the cone's axis: a column through the apex leaves the two nappes' material joined at a point, which FreeCAD cannot terminate either. FreeCAD keeps the cone's seam across the boss's end face (12 faces); after the STEP hand-back the engine has one conical end face (11).",
+  "faceCountTolerance": 1
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-import-iges-solid",
+  "name": "import-iges-solid",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "m",
+    "type": "import-cad",
+    "name": "Cube.igs",
+    "suppressed": false,
+    "operation": "new",
+    "bodyId": "oracle-import-iges-solid:body-m",
+    "sourceName": "Cube.igs",
+    "dataBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgUzAwMDAwMDEKLCwzMUhPcGVuIENBU0NBREUgSUdFUyBwcm9jZXNzb3IgNy42LDEzSEZpbGVuYW1lLmlnZXMsICAgICAgICAgICAgICAgICAgRzAwMDAwMDEKMTZIT3BlbiBDQVNDQURFIDcuNiwzMUhPcGVuIENBU0NBREUgSUdFUyBwcm9jZXNzb3IgNy42LDMyLDMwOCwxNSwzMDgsMTUsRzAwMDAwMDIKLDEuLDIsMkhNTSwxLDAuMDEsMTVIMjAyNjEwMjAuMTg0ODA3LDFFLTA3LDEwLiwsLDExLDAsICAgICAgICAgICAgICAgICAgRzAwMDAwMDMKMTVIMjAyNjEwMjAuMTg0ODA3LDsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgRzAwMDAwMDQKICAgICA0MDIgICAgICAgMSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDAwMDAwRDAwMDAwMDEKICAgICA0MDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMDIKICAgICAxNDQgICAgICAgMiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwMDMKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMDQKICAgICAxMDggICAgICAgMyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMDUKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMDYKICAgICAxNDIgICAgICAgNCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwMDcKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMDgKICAgICAxMDIgICAgICAgNSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMDkKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMTAKICAgICAxMTAgICAgICAgNiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMTEKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMTIKICAgICAxMTAgICAgICAgNyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMTMKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMTQKICAgICAxMTAgICAgICAgOCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMTUKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMTYKICAgICAxMTAgICAgICAgOSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMTcKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMTgKICAgICAxNDQgICAgICAxMCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwMTkKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMjAKICAgICAxMDggICAgICAxMSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMjEKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMjIKICAgICAxNDIgICAgICAxMiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwMjMKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMjQKICAgICAxMDIgICAgICAxMyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMjUKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMjYKICAgICAxMTAgICAgICAxNCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMjcKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMjgKICAgICAxMTAgICAgICAxNSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMjkKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMzAKICAgICAxMTAgICAgICAxNiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMzEKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMzIKICAgICAxMTAgICAgICAxNyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMzMKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMzQKICAgICAxNDQgICAgICAxOCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwMzUKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMzYKICAgICAxMDggICAgICAxOSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwMzcKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwMzgKICAgICAxNDIgICAgICAyMCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwMzkKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNDAKICAgICAxMDIgICAgICAyMSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNDEKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNDIKICAgICAxMTAgICAgICAyMiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNDMKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNDQKICAgICAxMTAgICAgICAyMyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNDUKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNDYKICAgICAxMTAgICAgICAyNCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNDcKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNDgKICAgICAxMTAgICAgICAyNSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNDkKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNTAKICAgICAxNDQgICAgICAyNiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwNTEKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNTIKICAgICAxMDggICAgICAyNyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNTMKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNTQKICAgICAxNDIgICAgICAyOCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwNTUKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNTYKICAgICAxMDIgICAgICAyOSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNTcKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNTgKICAgICAxMTAgICAgICAzMCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNTkKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNjAKICAgICAxMTAgICAgICAzMSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNjEKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNjIKICAgICAxMTAgICAgICAzMiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNjMKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNjQKICAgICAxMTAgICAgICAzMyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNjUKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNjYKICAgICAxNDQgICAgICAzNCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwNjcKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNjgKICAgICAxMDggICAgICAzNSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNjkKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNzAKICAgICAxNDIgICAgICAzNiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwNzEKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNzIKICAgICAxMDIgICAgICAzNyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNzMKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNzQKICAgICAxMTAgICAgICAzOCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNzUKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNzYKICAgICAxMTAgICAgICAzOSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNzcKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwNzgKICAgICAxMTAgICAgICA0MCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwNzkKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwODAKICAgICAxMTAgICAgICA0MSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwODEKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwODIKICAgICAxNDQgICAgICA0MiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDIwMDAwRDAwMDAwODMKICAgICAxNDQgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwODQKICAgICAxMDggICAgICA0MyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwODUKICAgICAxMDggICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwODYKICAgICAxNDIgICAgICA0NCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwNTAwRDAwMDAwODcKICAgICAxNDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwODgKICAgICAxMDIgICAgICA0NSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwODkKICAgICAxMDIgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwOTAKICAgICAxMTAgICAgICA0NiAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwOTEKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwOTIKICAgICAxMTAgICAgICA0NyAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwOTMKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwOTQKICAgICAxMTAgICAgICA0OCAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwOTUKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwOTYKICAgICAxMTAgICAgICA0OSAgICAgICAwICAgICAgIDAgICAgICAgMCAgICAgICAwICAgICAgIDAgICAgICAgMDAwMDEwMDAwRDAwMDAwOTcKICAgICAxMTAgICAgICAgMCAgICAgICAwICAgICAgIDEgICAgICAgMCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwRDAwMDAwOTgKNDAyLDYsMywxOSwzNSw1MSw2Nyw4MzsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAxUDAwMDAwMDEKMTQ0LDUsMSwwLDc7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAzUDAwMDAwMDIKMTA4LC0wLiwtMS4sLTAuLDUuLDAsLTUuLC01LiwwLiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDA1UDAwMDAwMDMKMTQyLDAsNSwwLDksMjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDA3UDAwMDAwMDQKMTAyLDQsMTEsMTMsMTUsMTc7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDA5UDAwMDAwMDUKMTEwLDUuLC01LiwxMC4sLTUuLC01LiwxMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDExUDAwMDAwMDYKMTEwLC01LiwtNS4sMTAuLC01LiwtNS4sMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDEzUDAwMDAwMDcKMTEwLC01LiwtNS4sMC4sNS4sLTUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDE1UDAwMDAwMDgKMTEwLDUuLC01LiwwLiw1LiwtNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDE3UDAwMDAwMDkKMTQ0LDIxLDEsMCwyMzsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDE5UDAwMDAwMTAKMTA4LDEuLC0wLiwtMC4sNS4sMCw1LiwtNS4sMC4sMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDIxUDAwMDAwMTEKMTQyLDAsMjEsMCwyNSwyOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDIzUDAwMDAwMTIKMTAyLDQsMjcsMjksMzEsMzM7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDI1UDAwMDAwMTMKMTEwLDUuLDUuLDEwLiw1LiwtNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDI3UDAwMDAwMTQKMTEwLDUuLC01LiwxMC4sNS4sLTUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDI5UDAwMDAwMTUKMTEwLDUuLC01LiwwLiw1Liw1LiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDMxUDAwMDAwMTYKMTEwLDUuLDUuLDAuLDUuLDUuLDEwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDMzUDAwMDAwMTcKMTQ0LDM3LDEsMCwzOTsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDM1UDAwMDAwMTgKMTA4LC0wLiwxLiwtMC4sNS4sMCw1Liw1LiwwLiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDM3UDAwMDAwMTkKMTQyLDAsMzcsMCw0MSwyOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDM5UDAwMDAwMjAKMTAyLDQsNDMsNDUsNDcsNDk7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDQxUDAwMDAwMjEKMTEwLC01Liw1LiwxMC4sNS4sNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDQzUDAwMDAwMjIKMTEwLDUuLDUuLDEwLiw1Liw1LiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDQ1UDAwMDAwMjMKMTEwLDUuLDUuLDAuLC01Liw1LiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDQ3UDAwMDAwMjQKMTEwLC01Liw1LiwwLiwtNS4sNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDQ5UDAwMDAwMjUKMTQ0LDUzLDEsMCw1NTsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDUxUDAwMDAwMjYKMTA4LC0xLiwtMC4sMC4sNS4sMCwtNS4sNS4sMC4sMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDUzUDAwMDAwMjcKMTQyLDAsNTMsMCw1NywyOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDU1UDAwMDAwMjgKMTAyLDQsNTksNjEsNjMsNjU7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDU3UDAwMDAwMjkKMTEwLC01LiwtNS4sMTAuLC01Liw1LiwxMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDU5UDAwMDAwMzAKMTEwLC01Liw1LiwxMC4sLTUuLDUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDYxUDAwMDAwMzEKMTEwLC01Liw1LiwwLiwtNS4sLTUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDYzUDAwMDAwMzIKMTEwLC01LiwtNS4sMC4sLTUuLC01LiwxMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDY1UDAwMDAwMzMKMTQ0LDY5LDEsMCw3MTsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDY3UDAwMDAwMzQKMTA4LC0wLiwtMC4sLTEuLC0wLiwwLDAuLDAuLDAuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDY5UDAwMDAwMzUKMTQyLDAsNjksMCw3MywyOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDcxUDAwMDAwMzYKMTAyLDQsNzUsNzcsNzksODE7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDczUDAwMDAwMzcKMTEwLC01LiwtNS4sMC4sLTUuLDUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDc1UDAwMDAwMzgKMTEwLC01Liw1LiwwLiw1Liw1LiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDc3UDAwMDAwMzkKMTEwLDUuLDUuLDAuLDUuLC01LiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDc5UDAwMDAwNDAKMTEwLDUuLC01LiwwLiwtNS4sLTUuLDAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDgxUDAwMDAwNDEKMTQ0LDg1LDEsMCw4NzsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDgzUDAwMDAwNDIKMTA4LDAuLDAuLDEuLDEwLiwwLDAuLDAuLDEwLiwwLjsgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDg1UDAwMDAwNDMKMTQyLDAsODUsMCw4OSwyOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDg3UDAwMDAwNDQKMTAyLDQsOTEsOTMsOTUsOTc7ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDg5UDAwMDAwNDUKMTEwLC01LiwtNS4sMTAuLDUuLC01LiwxMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDkxUDAwMDAwNDYKMTEwLDUuLC01LiwxMC4sNS4sNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDkzUDAwMDAwNDcKMTEwLDUuLDUuLDEwLiwtNS4sNS4sMTAuOyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDk1UDAwMDAwNDgKMTEwLC01Liw1LiwxMC4sLTUuLC01LiwxMC47ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDk3UDAwMDAwNDkKUyAgICAgIDFHICAgICAgNEQgICAgIDk4UCAgICAgNDkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVDAwMDAwMDEK",
+    "format": "iges"
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-hole-face",
+  "name": "offset-hole-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      5,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Hole",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all",
+    "targetBodyId": "oracle-offset-hole-face:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Shrink hole",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-offset-hole-face:body-1",
+      "surfaceType": "cylinder",
+      "label": "Round face"
+     }
+    ],
+    "distanceMillimeters": 1
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-hole-face-out",
+  "name": "offset-hole-face-out",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      5,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Hole",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all",
+    "targetBodyId": "oracle-offset-hole-face-out:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Widen hole",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-offset-hole-face-out:body-1",
+      "surfaceType": "cylinder",
+      "label": "Round face"
+     }
+    ],
+    "distanceMillimeters": -1
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-move-hole-face",
+  "name": "move-hole-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      5,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Hole",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all",
+    "targetBodyId": "oracle-move-hole-face:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Move hole",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-move-hole-face:body-1",
+      "surfaceType": "cylinder",
+      "label": "Round face"
+     }
+    ],
+    "transform": {
+     "kind": "translate",
+     "translationMillimeters": [
+      4,
+      0,
+      0
+     ]
+    }
+   }
+  ],
+  "note": "FreeCAD's worker refuses moving a curved face ('Translate and Rotate currently require planar faces'); the engine slides the hole."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-boss-face",
+  "name": "offset-boss-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-boss-face:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Fatten boss",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "bs",
+      "bodyId": "oracle-offset-boss-face:body-1",
+      "surfaceType": "cylinder",
+      "label": "Round face"
+     }
+    ],
+    "distanceMillimeters": 2
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-top-with-hole",
+  "name": "offset-top-with-hole",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "h",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      5,
+      0
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "extrude",
+    "name": "Hole",
+    "profileFeatureId": "h",
+    "distanceMillimeters": 1,
+    "operation": "cut",
+    "suppressed": false,
+    "endType": "through-all",
+    "targetBodyId": "oracle-offset-top-with-hole:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Raise top",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-offset-top-with-hole:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top"
+     }
+    ],
+    "distanceMillimeters": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-top-with-boss",
+  "name": "offset-top-with-boss",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-top-with-boss:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Raise top",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "bs",
+      "bodyId": "oracle-offset-top-with-boss:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        20
+       ],
+       "areaSquareMillimeters": 2321.460183660255
+      }
+     }
+    ],
+    "distanceMillimeters": 5
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-boss-top",
+  "name": "offset-boss-top",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-boss-top:body-1"
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Taller boss",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "bs",
+      "bodyId": "oracle-offset-boss-top:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        30
+       ],
+       "areaSquareMillimeters": 78.53981633974483
+      }
+     }
+    ],
+    "distanceMillimeters": 4
+   }
+  ],
+  "faceCountTolerance": 1,
+  "note": "Same volume as FreeCAD; the glued fuse that joins the new segment to the boss leaves the coaxial cylinder faces split (9 faces to FreeCAD's 8) and the stock unifier does not merge them.",
+  "edgeCountTolerance": 3
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-top-beside-fillet",
+  "name": "offset-top-beside-fillet",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-top-beside-fillet:body-1"
+   },
+   {
+    "id": "f",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 2,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 20
+    },
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Raise top beside the fillet",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "f",
+      "bodyId": "oracle-offset-top-beside-fillet:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        20
+       ],
+       "areaSquareMillimeters": 1862.0619599741
+      }
+     }
+    ],
+    "distanceMillimeters": 3
+   }
+  ],
+  "expectFailure": "cannot be extended to meet the moved face",
+  "note": "The plate top's neighbours are tangent fillets whose cylinders never rise above it: nothing bounds the raised face. FreeCAD: Null shape."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-boss-top-chamfered",
+  "name": "offset-boss-top-chamfered",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-boss-top-chamfered:body-1"
+   },
+   {
+    "id": "c",
+    "type": "chamfer",
+    "name": "Chamfer",
+    "radiusMillimeters": 3,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 30
+    },
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Taller chamfered boss",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-offset-boss-top-chamfered:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Boss top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        30
+       ],
+       "areaSquareMillimeters": 12.566370614359
+      }
+     }
+    ],
+    "distanceMillimeters": 4
+   }
+  ],
+  "expectFailure": "cannot be extended to meet the moved face",
+  "note": "Raising the chamfered boss top past the chamfer cone's apex leaves the cone nothing to meet. FreeCAD: Null shape."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-fillet-face",
+  "name": "offset-fillet-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-fillet-face:body-1"
+   },
+   {
+    "id": "f",
+    "type": "fillet",
+    "name": "Fillet",
+    "radiusMillimeters": 2,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 20
+    },
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset the fillet",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "f",
+      "bodyId": "oracle-offset-fillet-face:body-1",
+      "surfaceType": "torus",
+      "label": "Fillet face",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        20.666010683
+       ],
+       "areaSquareMillimeters": 113.041720386533
+      }
+     }
+    ],
+    "distanceMillimeters": 1
+   }
+  ],
+  "expectFailure": "cannot be extended to meet the moved face",
+  "note": "A fillet tube shrunk by 1 mm no longer touches the plate or the boss it blends. FreeCAD: Null shape."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-chamfer-face",
+  "name": "offset-chamfer-face",
+  "units": "millimeter",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "polygon",
+     "pointsMillimeters": [
+      [
+       -30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       -20.0
+      ],
+      [
+       30.0,
+       20.0
+      ],
+      [
+       -30.0,
+       20.0
+      ]
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "Circle",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "circle",
+     "radiusMillimeters": 5,
+     "centerMillimeters": [
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "bs",
+    "type": "extrude",
+    "name": "Boss",
+    "profileFeatureId": "b",
+    "distanceMillimeters": 10,
+    "operation": "add",
+    "suppressed": false,
+    "targetBodyId": "oracle-offset-chamfer-face:body-1"
+   },
+   {
+    "id": "c",
+    "type": "chamfer",
+    "name": "Chamfer",
+    "radiusMillimeters": 3,
+    "edgePlane": {
+     "plane": "XY",
+     "offsetMillimeters": 30
+    },
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Offset the chamfer",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "c",
+      "bodyId": "oracle-offset-chamfer-face:body-1",
+      "surfaceType": "cone",
+      "label": "Chamfer face",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        28.285714286
+       ],
+       "areaSquareMillimeters": 93.300541701326
+      }
+     }
+    ],
+    "distanceMillimeters": 1
+   }
+  ],
+  "faceCountTolerance": 2,
+  "edgeCountTolerance": 7,
+  "note": "Same volume as FreeCAD (48750.073 mm\u00b3); the fuzzy booleans that join the moved cone leave two faces split that FreeCAD's offset merges."
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-top-of-loft",
+  "name": "offset-top-of-loft",
+  "units": "millimeter",
+  "fullBuild": true,
+  "note": "The lofted sides are B-spline surfaces: the full build trims the removed slab, which the body itself bounds. FreeCAD's per-face offset fails this loft with BOP check errors (GeomAbs_C0, InvalidCurveOnSurface).",
+  "features": [
+   {
+    "id": "a",
+    "type": "profile",
+    "name": "A",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "r",
+       "start": [
+        -20.0,
+        -15.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          20.0,
+          -15.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          20.0,
+          15.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -20.0,
+          15.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -20.0,
+          -15.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "b",
+    "type": "profile",
+    "name": "B",
+    "plane": "XY",
+    "offsetMillimeters": 10,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "r",
+       "start": [
+        -15.0,
+        -18.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          15.0,
+          -18.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          15.0,
+          18.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -15.0,
+          18.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -15.0,
+          -18.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "c",
+    "type": "profile",
+    "name": "C",
+    "plane": "XY",
+    "offsetMillimeters": 20,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "r",
+       "start": [
+        -12.0,
+        -9.0
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          12.0,
+          -9.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          12.0,
+          9.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -12.0,
+          9.0
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -12.0,
+          -9.0
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "l",
+    "type": "loft",
+    "name": "Loft",
+    "suppressed": false,
+    "sections": [
+     {
+      "profileFeatureId": "a",
+      "profileContourId": "r"
+     },
+     {
+      "profileFeatureId": "b",
+      "profileContourId": "r"
+     },
+     {
+      "profileFeatureId": "c",
+      "profileContourId": "r"
+     }
+    ],
+    "operation": "new",
+    "ruled": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Lower the top",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "l",
+      "bodyId": "oracle-offset-top-of-loft:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0,
+        0,
+        20
+       ],
+       "areaSquareMillimeters": 432
+      }
+     }
+    ],
+    "distanceMillimeters": -3
+   }
+  ],
+  "freecadDiffers": true,
+  "expectVolume_mm3": 18219.7885
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-top-beside-extrusion",
+  "name": "offset-top-beside-extrusion",
+  "units": "millimeter",
+  "fullBuild": true,
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -30,
+        -20
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          30,
+          -20
+         ]
+        },
+        {
+         "type": "bezier",
+         "end": [
+          30,
+          20
+         ],
+         "controls": [
+          [
+           45,
+           -8
+          ],
+          [
+           15,
+           8
+          ]
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          20
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          -20
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Raise top beside the curved wall",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-top-beside-extrusion:body-1",
+      "normal": [
+       0,
+       0,
+       1
+      ],
+      "label": "Top",
+      "faceAnchor": {
+       "centerMillimeters": [
+        0.080357143,
+        -0.507142857,
+        20
+       ],
+       "areaSquareMillimeters": 2400
+      }
+     }
+    ],
+    "distanceMillimeters": 3
+   }
+  ],
+  "note": "The bezier wall is a surface of linear extrusion: extended past the top as a B-spline, it bounds the raised face (3 \u00d7 2400 mm\u00b3 added). FreeCAD's per-face offset fails it with BOP check errors.",
+  "freecadDiffers": true,
+  "expectVolume_mm3": 55200.0022
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-offset-extrusion-face",
+  "name": "offset-extrusion-face",
+  "units": "millimeter",
+  "fullBuild": true,
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -30,
+        -20
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          30,
+          -20
+         ]
+        },
+        {
+         "type": "bezier",
+         "end": [
+          30,
+          20
+         ],
+         "controls": [
+          [
+           45,
+           -8
+          ],
+          [
+           15,
+           8
+          ]
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          20
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          -20
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Push the curved wall out",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-offset-extrusion-face:body-1",
+      "surfaceType": "extrusion",
+      "label": "Curved wall",
+      "faceAnchor": {
+       "centerMillimeters": [
+        30,
+        0,
+        10
+       ],
+       "areaSquareMillimeters": 892.747178301753
+      }
+     }
+    ],
+    "distanceMillimeters": 2
+   }
+  ],
+  "note": "The curved wall itself pushed out 2 mm through the full build's offset surface, bounded by the top, bottom and end walls. FreeCAD's per-face offset fails it with BOP check errors. The offset surface is approximated as a B-spline before extension, so the volume is reproducible to 1e-4.",
+  "freecadDiffers": true,
+  "expectVolume_mm3": 49787.8418,
+  "volumeTolerance": 0.0001
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-conic-ellipse",
+  "name": "conic-ellipse",
+  "units": "millimeter",
+  "note": "A closed profile with an exact rho conic top (rho 0.3), extruded; FreeCAD builds the same rational quadratic.",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -20,
+        -10
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          20,
+          -10
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          20,
+          0
+         ]
+        },
+        {
+         "type": "conic",
+         "end": [
+          -20,
+          0
+         ],
+         "control": [
+          0,
+          15
+         ],
+         "rho": 0.3
+        },
+        {
+         "type": "line",
+         "end": [
+          -20,
+          -10
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-conic-parabola",
+  "name": "conic-parabola",
+  "units": "millimeter",
+  "note": "A closed profile with an exact rho conic top (rho 0.5), extruded; FreeCAD builds the same rational quadratic.",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -20,
+        -10
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          20,
+          -10
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          20,
+          0
+         ]
+        },
+        {
+         "type": "conic",
+         "end": [
+          -20,
+          0
+         ],
+         "control": [
+          0,
+          15
+         ],
+         "rho": 0.5
+        },
+        {
+         "type": "line",
+         "end": [
+          -20,
+          -10
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-conic-hyperbola",
+  "name": "conic-hyperbola",
+  "units": "millimeter",
+  "note": "A closed profile with an exact rho conic top (rho 0.7), extruded; FreeCAD builds the same rational quadratic.",
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -20,
+        -10
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          20,
+          -10
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          20,
+          0
+         ]
+        },
+        {
+         "type": "conic",
+         "end": [
+          -20,
+          0
+         ],
+         "control": [
+          0,
+          15
+         ],
+         "rho": 0.7
+        },
+        {
+         "type": "line",
+         "end": [
+          -20,
+          -10
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 10,
+    "operation": "new",
+    "suppressed": false
+   }
+  ]
+ },
+ {
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "oracle-move-extrusion-face",
+  "name": "move-extrusion-face",
+  "units": "millimeter",
+  "fullBuild": true,
+  "features": [
+   {
+    "id": "s",
+    "type": "profile",
+    "name": "Sketch",
+    "plane": "XY",
+    "offsetMillimeters": 0,
+    "suppressed": false,
+    "profile": {
+     "type": "drawing",
+     "contours": [
+      {
+       "type": "path",
+       "id": "p",
+       "start": [
+        -30,
+        -20
+       ],
+       "segments": [
+        {
+         "type": "line",
+         "end": [
+          30,
+          -20
+         ]
+        },
+        {
+         "type": "bezier",
+         "end": [
+          30,
+          20
+         ],
+         "controls": [
+          [
+           45,
+           -8
+          ],
+          [
+           15,
+           8
+          ]
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          20
+         ]
+        },
+        {
+         "type": "line",
+         "end": [
+          -30,
+          -20
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "e",
+    "type": "extrude",
+    "name": "Extrude",
+    "profileFeatureId": "s",
+    "distanceMillimeters": 20,
+    "operation": "new",
+    "suppressed": false
+   },
+   {
+    "id": "o",
+    "type": "offset-face",
+    "name": "Move the curved wall",
+    "suppressed": false,
+    "faces": [
+     {
+      "sourceFeatureId": "e",
+      "bodyId": "oracle-move-extrusion-face:body-1",
+      "surfaceType": "extrusion",
+      "label": "Curved wall",
+      "faceAnchor": {
+       "centerMillimeters": [
+        30,
+        0,
+        10
+       ],
+       "areaSquareMillimeters": 892.747178301753
+      }
+     }
+    ],
+    "transform": {
+     "kind": "translate",
+     "translationMillimeters": [
+      2,
+      0,
+      0
+     ]
+    }
+   }
+  ],
+  "note": "The curved wall itself moved 2 mm along +x: the extended surface patch, translated, bounds the moved region (bounds x to 36.37, 6 faces). FreeCAD's per-face offset fails this family with BOP check errors; the extended patch is a B-spline approximation, so the volume is reproducible to 1e-4.",
+  "freecadDiffers": true,
+  "expectVolume_mm3": 49600.0333,
+  "volumeTolerance": 0.0001
+ }
+]

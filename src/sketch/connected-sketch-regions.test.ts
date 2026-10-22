@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectedSketchRegions, resolveConnectedSketchRegion } from '../../freecad-engine/browser/connected-sketch-regions';
+import { connectedSketchRegions, resolveConnectedSketchRegion } from '@aether/core/sketch/reference/connected-sketch-regions';
 import { segmentPoint } from '../../aether-engine/src/sketch/curves/parameterization';
 import { fitSketchSpline, constrainFitSpline, type SketchDrawing, type SketchPoint, type SketchSegment } from '@aether/core/sketch';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';

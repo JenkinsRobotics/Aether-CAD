@@ -11,7 +11,6 @@ from .automation_runtime import (
     CommandError,
     build_candidate,
     build_summary,
-    native_job,
     worker,
 )
 
@@ -41,7 +40,7 @@ def execute_program(service, source, arguments, *, node=None):
                 },
                 node=node,
             )
-            built = build_candidate(service, prepared["features"])
+            built = build_candidate(service, prepared["candidate"], node=node)
             accepted = worker(
                 {
                     "phase": "program_accept",
@@ -84,7 +83,7 @@ def execute_program(service, source, arguments, *, node=None):
     return {"result": result}
 
 
-def verify(service, prepared, arguments):
+def verify(service, prepared, arguments, *, node=None):
     offset = arguments.get("offset", 0)
     density = arguments.get("density_kg_m3")
     if type(offset) is not int or not 0 <= offset <= 512:
@@ -98,14 +97,10 @@ def verify(service, prepared, arguments):
     options = {"kind": "properties"}
     if density is not None:
         options["density_kg_m3"] = density
-    import aether_freecad as adapter
-
-    try:
-        analyzed = service.geometry_engine().analyze(
-            native_job(prepared["features"]), options
-        )
-    except adapter.FreeCADUnavailable as error:
-        raise CommandError(503, str(error)) from None
+    analyzed = worker(
+        {"phase": "analyze", "content": prepared["candidate"], "options": options},
+        node=node,
+    )
     if analyzed.get("status") != "ok" or analyzed.get("diagnostics"):
         raise CommandError(
             400, "Exact native verification failed. No changes were saved."

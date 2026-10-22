@@ -8,6 +8,7 @@
  *  Ported from the native PreviewAppearance (RealityKitViewport): background,
  *  minor/major grid colours, and the CAD Light intensity boost.
  */
+import { modelStudioEnvironment as studioLook } from '@aether/assets/themes/rendering/model-studio';
 import { modelStudioLighting } from '../model-studio-environment';
 import type { CADAppearanceSnapshot } from "../cad-appearance-store";
 import type { ViewportThemeOverride } from "./suite-viewport-theme";
@@ -56,6 +57,33 @@ const LIGHTING = {
   "dark-room": { hemisphere: 0.72, key: 2.35, fill: 0.3, rim: 1.25, sky: 0x627d96, ground: 0x111820, keyColor: 0xdce9ff, fillColor: 0x607da5, rimColor: 0x62b6ff },
 } as const;
 
+/** The stage around the model — floor, grid fade, tone mapping — resolved from
+ *  a shared rendering theme's data (`@aether/assets/themes/rendering/*`), exactly
+ *  as the reference demo applies it. A new theme is a new data file plus one
+ *  STAGES entry; the viewport only applies `ResolvedAppearance.stage`. */
+export interface StageTheme {
+  /** Floor fade in grid cells from the camera, like the demo's scene fog. */
+  fog: { nearCells: number; farCells: number } | null;
+  /** "shadow": transparent shadow catcher over the grid; "solid": a lit floor plane. */
+  floor: "shadow" | "solid";
+  /** Size grid cells and fade to the framed model, as the demo's stage does. */
+  gridFitsModel: boolean;
+  toneMapped: boolean;
+}
+type RenderingTheme = typeof studioLook;
+export function stageFromRenderingTheme(look: RenderingTheme): StageTheme {
+  return {
+    fog: { nearCells: look.fog.nearMeters / look.grid.spacingMeters, farCells: look.fog.farMeters / look.grid.spacingMeters },
+    floor: look.shadow ? "shadow" : "solid", gridFitsModel: true, toneMapped: Boolean(look.toneMapping),
+  };
+}
+const PLAIN_STAGE: StageTheme = Object.freeze({ fog: null, floor: "solid", gridFitsModel: false, toneMapped: false });
+const STAGES: Readonly<Record<string, StageTheme>> = { "model-studio": stageFromRenderingTheme(studioLook) };
+/** The named environment theme wins; a custom look keeps its lighting preset's stage. */
+export function stageFor(appearance: Pick<CADAppearanceSnapshot, "environmentTheme" | "lightingPreset">): StageTheme {
+  return STAGES[appearance.environmentTheme] ?? STAGES[appearance.lightingPreset] ?? PLAIN_STAGE;
+}
+
 export interface ResolvedAppearance {
   background: number;
   edgeColor: number;
@@ -68,7 +96,8 @@ export interface ResolvedAppearance {
   gridOpacity: number;
   sketchStroke: number;
   planeTheme: PlaneTheme;
-  grid: { spacing: number; extent: number; majorEvery: number; minorWidth: number; majorWidth: number; axisWidth: number; majorOpacity: number; axisOpacity: number; axisColor: number; xColor: number; yColor: number; zColor: number };
+  stage: StageTheme;
+  grid: { fade?: { near: number; far: number }; toneMapped: boolean; spacing: number; extent: number; majorEvery: number; minorWidth: number; majorWidth: number; axisWidth: number; majorOpacity: number; axisOpacity: number; axisColor: number; xColor: number; yColor: number; zColor: number };
   colorTransform: "standard" | "filmic";
   backgroundMode: "solid" | "gradient";
   backgroundBottom: number;
@@ -108,6 +137,7 @@ export function resolveAppearance(
   const profile = LIGHTING[appearance.lightingPreset];
   const lightScale = appearance.environmentPercent / 100 * (appearance.colorTransform === "standard" ? appearance.exposure ?? 1 : 1);
   const theme = viewportTheme ?? {};
+  const stage = stageFor(appearance);
   const color = (value: string | undefined, fallback: number) => /^#[0-9a-f]{6}$/i.test(value ?? "") ? parseInt(value!.slice(1),16) : fallback;
   const finite = (value: number | undefined, fallback: number) => Number.isFinite(value) ? value! : fallback;
   const opacity = (value: number | undefined, fallback: number) => finite(value, fallback * 100) / 100;
@@ -117,9 +147,13 @@ export function resolveAppearance(
     style: { fillOpacity: appearance.background === "cad-light" ? 0.10 : 0.055, borderOpacity: appearance.background === "cad-light" ? 0.85 : 0.55,
       labelColor: appearance.background === "cad-light" ? "#23445c" : "#a9cfff" },
   };
+  // A manual colour outranks the suite theme, which outranks the render environment.
   const background = color(appearance.backgroundColor, theme.background ?? environment.background);
   return {
-    grid: { spacing: finite(appearance.gridSpacingMillimeters, 25), extent: finite(appearance.gridExtentMillimeters, 1600),
+    stage,
+    grid: { toneMapped: stage.toneMapped,
+      fade: stage.fog ? { near: stage.fog.nearCells * finite(appearance.gridSpacingMillimeters, 25), far: stage.fog.farCells * finite(appearance.gridSpacingMillimeters, 25) } : undefined,
+      spacing: finite(appearance.gridSpacingMillimeters, 25), extent: finite(appearance.gridExtentMillimeters, 1600),
       majorEvery: finite(appearance.gridMajorEvery, 5), minorWidth: finite(appearance.gridMinorWidthPx, 1), majorWidth: finite(appearance.gridMajorWidthPx, 1.5), axisWidth: finite(appearance.gridAxisWidthPx, 2),
       majorOpacity: opacity(appearance.gridMajorOpacityPercent, Math.min(1, gridOpacity * 1.8)), axisOpacity: opacity(appearance.gridAxisOpacityPercent, 0.85),
       axisColor: color(appearance.gridAxisColor, theme.gridMajor ?? environment.gridMajor),
@@ -135,7 +169,7 @@ export function resolveAppearance(
     floorColor: color(appearance.floorColor, background), floorOpacity: opacity(appearance.floorOpacityPercent, 1), floorRoughness: finite(appearance.floorRoughness, 0.9),
     exposure: finite(appearance.exposure, 1),
     emissiveColor: color(appearance.emissiveColor, 0), emissiveIntensity: finite(appearance.emissiveIntensity, 0),
-    background: color(appearance.backgroundColor, theme.background ?? environment.background),
+    background,
     edgeColor: color(appearance.edgeColor,0x14242d),
     edgeOpacity: Number.isFinite(appearance.edgeOpacityPercent) ? Math.min(100,Math.max(0,appearance.edgeOpacityPercent!))/100 : appearance.displayStyle === "ghost" ? 0.42 : 0.55,
     bodyColor: /^#[0-9a-f]{6}$/i.test(appearance.bodyColor ?? "")

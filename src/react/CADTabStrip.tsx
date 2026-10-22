@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AetherIcon, DocumentTabs, Menu, MenuButton, type MenuItem, type DocumentElementTab } from '@aether/ui';
+import { AetherIcon, DocumentTabBar, DocumentTabs, Menu, MenuButton, type MenuItem, type DocumentElementTab } from '@aether/ui';
 import './CADTabStrip.css';
 import {assignTabFolder, type TabFolder} from '../cad-tab-session';
 
-/** Product lifecycle actions around the existing shared DocumentTabs widget. */
+/** CAD lifecycle gestures around the same DocumentTabBar used by Model Studio. */
 export function CADTabStrip({tabs, placement, label, saveStatus, onAdd, onReorder, onDetach, onManage, folders=[],onFoldersChange,onOrganize,tabActions,onTabAction,leading,revisionForTab}: {
   leading?:ReactNode; revisionForTab?:(id:string)=>{label:string;title:string};
   tabActions?:(id:string)=>readonly MenuItem[]; onTabAction?:(id:string,action:string)=>void;
@@ -18,7 +18,7 @@ export function CADTabStrip({tabs, placement, label, saveStatus, onAdd, onReorde
   const current = tabs.find(tab=>tab.current);
   const saveTone = !saveStatus ? undefined : ['Saved', 'Downloaded'].includes(saveStatus)
     ? 'saved' : ['Saving…', 'Saved in this tab'].includes(saveStatus) ? 'pending' : 'error';
-  const tabAt = (element: Element|null) => element?.closest('.aui-document-tab')?.querySelector<HTMLElement>('[data-cad-tab-id]')?.dataset.cadTabId;
+  const tabAt = (element: Element|null) => element?.closest<HTMLElement>('[data-document-tab-id]')?.dataset.documentTabId;
   const [context,setContext]=useState<{id:string;x:number;y:number}|null>(null);
   useEffect(()=>{if(context&&!tabs.some(tab=>tab.id===context.id))setContext(null);},[tabs,context]);
   const itemsFor=(id:string):MenuItem[]=>{
@@ -53,11 +53,14 @@ export function CADTabStrip({tabs, placement, label, saveStatus, onAdd, onReorde
     gesture.current=null;setGhost(null);
     setContext({id,x:x??bounds.left,y:y??bounds.top});return true;
   };
-  const renderTabs=(items:DocumentElementTab[]) => items.length ? <DocumentTabs tabs={items.map(tab=>({id:tab.id,label:tab.label,status:tab.current?saveStatus:undefined,statusTitle:tab.current?saveStatus:undefined,icon:<span data-cad-tab-id={tab.id}>{tab.icon}</span>}))}
-    activeID={current?.id??''} ariaLabel={label} onReorder={onReorder}
-    onSelect={id=>{const tab=tabs.find(tab=>tab.id===id);if(!tab?.current)tab?.onSelect?.();}}
-    renderTabActions={tab=><>{revisionForTab&&<span className="cad-tab-revision" title={revisionForTab(tab.id).title} aria-label={revisionForTab(tab.id).title}><AetherIcon name="branch"/>{revisionForTab(tab.id).label}</span>}{tabMenu(tab.id)}</>}/> : null;
-  return <div className="aui-document-tabbar aui-document-tray" data-placement={placement} data-save-tone={saveTone}
+  const presented = tabs.map(tab => ({...tab,
+    // Closing remains in the per-document menu, alongside the other CAD actions.
+    onClose: undefined,
+    detail:[tab.detail ?? 'CAD document',revisionForTab?.(tab.id).label].filter(Boolean).join(' · '),
+    status:tab.current?saveStatus:undefined,
+    icon:tab.icon,
+  }));
+  return <div className="cad-document-tray" data-save-tone={saveTone}
     onContextMenu={event=>{if(event.target instanceof Element&&openContext(event.target,event.clientX,event.clientY)){event.preventDefault();event.stopPropagation();}}}
     onDragStart={event=>event.preventDefault()}
     onPointerDown={event=>{
@@ -96,27 +99,22 @@ export function CADTabStrip({tabs, placement, label, saveStatus, onAdd, onReorde
       const target=tabs[index+(event.key==='ArrowLeft'?-1:1)];
       if(id && target){event.preventDefault();event.stopPropagation();onReorder(id,target.id);}
     }}>
-    {placement === 'bottom' && <div className="aui-document-tray-heading">{label === 'Project tabs' ? 'Elements' : 'Open files'}</div>}
-    <div className="aui-tab-add-group">
-      <button type="button" className="aui-document-tabbar-add aui-menu-trigger" aria-label="Create new design" title="Create new design" onClick={onAdd}><AetherIcon name="plus"/></button>
-      <MenuButton className="aui-tab-add-menu" label="Add options" placement="top-start" anchorTo="group"
-        items={[{id:'create',label:'Create new design…'}, ...(onManage ? [{id:'manage',label:'Manage and import files…'}] : [])]}
-        onSelect={id=>{if(id==='create')onAdd();else if(id==='manage')onManage?.();}}>
-        <AetherIcon name="chevron" style={{transform:'rotate(90deg)'}}/>
-      </MenuButton>
-    </div>
-    <div className="aui-document-tab-groups">
-      {renderTabs(tabs.filter(tab=>!folders.some(folder=>folder.tabs.includes(tab.id))))}
-      {folders.map(folder=><div className="cad-tab-folder" data-tab-folder={folder.id} key={folder.id}>
-        <button className="cad-tab-folder-label" aria-expanded={!folder.collapsed} title={`${folder.name} — click to ${folder.collapsed?'expand':'collapse'}`} onClick={()=>onFoldersChange?.(folders.map(item=>item.id===folder.id?{...item,collapsed:!item.collapsed}:item))}><AetherIcon name="folder"/>{folder.name||'Untitled folder'} <small>{tabs.filter(tab=>folder.tabs.includes(tab.id)).length}</small></button>
-        {renderTabs(tabs.filter(tab=>folder.tabs.includes(tab.id)&&(!folder.collapsed||tab.current)))}
-      </div>)}
-    </div>
-    <div className="aui-document-tray-actions">
-    {leading&&<div className="cad-tab-document-controls">{leading}</div>}
-    {onManage && <button type="button" className="aui-document-tabbar-add aui-menu-trigger" aria-label="Part manager" title="Manage and import files" onClick={onManage}><AetherIcon name="part-manager"/></button>}
-    {onOrganize&&<button className="aui-document-tabbar-add aui-menu-trigger" aria-label="Organize tabs" title="Organize tabs into folders" onClick={onOrganize}><AetherIcon name="folder"/></button>}
-    </div>
+    <DocumentTabBar variant="studio" placement={placement} ariaLabel={label} tabs={presented}
+      addLabel="Create or open a design" addItems={[{id:'create',label:'Create new design…'}, ...(onManage?[{id:'manage',label:'Manage and import files…'}]:[])]}
+      onAdd={id=>{if(id==='create')onAdd();else if(id==='manage')onManage?.();}}
+      renderTabActions={tab=>tabMenu(tab.id)}
+      renderTabs={folders.length ? props => <div className="aui-document-tab-groups">
+        <DocumentTabs {...props} tabs={props.tabs.filter(tab=>!folders.some(folder=>folder.tabs.includes(tab.id)))}/>
+        {folders.map(folder=><div className="cad-tab-folder" data-tab-folder={folder.id} key={folder.id}>
+          <button className="cad-tab-folder-label" aria-expanded={!folder.collapsed} title={`${folder.name} — click to ${folder.collapsed?'expand':'collapse'}`} onClick={()=>onFoldersChange?.(folders.map(item=>item.id===folder.id?{...item,collapsed:!item.collapsed}:item))}><AetherIcon name="folder"/>{folder.name||'Untitled folder'} <small>{tabs.filter(tab=>folder.tabs.includes(tab.id)).length}</small></button>
+          <DocumentTabs {...props} tabs={props.tabs.filter(tab=>folder.tabs.includes(tab.id)&&(!folder.collapsed||tab.id===current?.id))}/>
+        </div>)}
+      </div> : undefined}
+      trailing={<>
+        {onOrganize&&<button aria-label="Organize tabs" title="Folder manager" onClick={onOrganize}><AetherIcon name="folder"/></button>}
+        {onManage&&<button aria-label="Manage files" title="Manage and import files" onClick={onManage}><AetherIcon name="part-manager"/></button>}
+        {leading}
+      </>}/>
     <Menu open={Boolean(context)} anchor={context} applicationCommands={false} ariaLabel={`Tab options for ${tabs.find(tab=>tab.id===context?.id)?.label??''}`}
       items={context?itemsFor(context.id):[]} onSelect={action=>{if(context)choose(context.id,action);}} onClose={()=>setContext(null)}/>
     {ghost && <div className="cad-tab-drag-preview" style={{left:ghost.x+12,top:ghost.y-36}}>{ghost.label}</div>}

@@ -29,6 +29,8 @@ export const viewWorkspace: CADRibbonWorkspaceDefinition = {
       tool("view-wireframe", "Wireframe", "wireframe", "display-wireframe"),
       tool("view-hidden-line", "Hidden Line", "wireframe", "display-hidden-line"),
       tool("view-ghost", "Ghost", "eye", "display-ghost"),
+      tool("view-zebra", "Zebra analysis", "eye", "display-zebra"),
+      tool("view-draft-analysis", "Draft analysis", "eye", "display-draft-analysis"),
     ] },
     { id: "view-scene", icon: "light", label: "Scene", tools: [
       tool("view-studio", "Studio", "light", "lighting-studio"),

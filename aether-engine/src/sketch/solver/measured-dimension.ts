@@ -1,5 +1,5 @@
 import { lineLineMeasurement } from "./line-line-measurement";
-import { referencedConic } from '../../../../freecad-engine/browser/conic-constraints';
+import { referencedConic } from '../reference/conic-constraints';
 import type { SketchDrawing } from "../drawing";
 import type { DrawingConstraint } from "./types";
 import { resolve } from "./entities";

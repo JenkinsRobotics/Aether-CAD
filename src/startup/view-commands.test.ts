@@ -23,7 +23,7 @@ describe("registering the view commands", () => {
   it("covers every camera view, display style, lighting and ground mode", () => {
     // Counted rather than listed, so adding one without registering it fails.
     expect(viewCommandIDs.filter((id) => id.startsWith("view-"))).toHaveLength(7);
-    expect(viewCommandIDs.filter((id) => id.startsWith("display-"))).toHaveLength(5);
+    expect(viewCommandIDs.filter((id) => id.startsWith("display-"))).toHaveLength(7);
     expect(viewCommandIDs.filter((id) => id.startsWith("lighting-"))).toHaveLength(4);
     expect(viewCommandIDs.filter((id) => id.startsWith("background-"))).toHaveLength(4);
     expect(viewCommandIDs.filter((id) => id.startsWith("finish-"))).toHaveLength(3);

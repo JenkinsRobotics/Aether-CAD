@@ -1,4 +1,5 @@
 import {
+  breakSketchCurveAtIntersections,
   insertSketchSplinePoint,
   ExtensionNeedsEndpoint,
   extendSketchCurve,
@@ -44,6 +45,7 @@ export function directModification(
   tolerance: number,
 ): DirectResult {
   if (tool === "insert-spline-point") return {drawing: insertSketchSplinePoint(drawing, point, tolerance), pending: []};
+  if (tool === "break") return {drawing: breakSketchCurveAtIntersections(drawing, point, tolerance), pending: []};
   if (tool === "trim") {
     const next = trimSketchCurve(drawing, point, tolerance);
     const retained = new Set(next.constraints?.map((c) => c.id));

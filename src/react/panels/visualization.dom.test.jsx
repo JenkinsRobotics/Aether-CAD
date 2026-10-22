@@ -79,7 +79,7 @@ it('edits only selected objects, preserves untouched properties and resets their
     await click('Defaults'); await select('Appearance target','selection');
     await click('Appearance');await type('Object roughness',23);await click('Model edges'); await type('Object edge thickness',3.5);
     expect(values.a).toEqual({color:'#aa0000',roughness:.23,edgeWidthPx:3.5}); expect(values.b).toEqual({color:'#00aa00'});
-    expect(appearance.snapshot().roughness).toBeUndefined();
+    expect(appearance.snapshot().roughness).toBe((await import('../../cad-appearance-store')).defaultCADAppearance.roughness); // the global recipe is untouched
     await act(async()=>cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'a',kind:'body',label:'Plate'},{id:'b',partId:'b',kind:'body',label:'Pin'}]}));
     await click('Appearance');await type('Appearance opacity',70);
     expect(values.a.opacity).toBe(.7);expect(values.b).toEqual({color:'#00aa00',opacity:.7});

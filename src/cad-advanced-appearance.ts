@@ -1,6 +1,6 @@
 /** Renderer-only controls, in millimeters or CSS pixels as named. */
 export const advancedNumberRanges = {
-  gridSpacingMillimeters: [0.1, 10000], gridExtentMillimeters: [10, 100000], gridMajorEvery: [2, 20],
+  gridSpacingMillimeters: [0.1, 10000], gridExtentMillimeters: [10, 100000], gridMajorEvery: [0, 20],
   gridMinorOpacityPercent: [0, 100], gridMajorOpacityPercent: [0, 100], gridAxisOpacityPercent: [0, 100],
   gridMinorWidthPx: [0.5, 6], gridMajorWidthPx: [0.5, 8], gridAxisWidthPx: [0.5, 8],
   planeFillOpacityPercent: [0, 100], planeBorderOpacityPercent: [0, 100], planeLabelOpacityPercent: [0, 100],

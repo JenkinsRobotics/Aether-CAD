@@ -1,6 +1,6 @@
 import { refreshDimensionLabelUnits } from "./dimension-label-units";
-import { referencedConic } from '../../freecad-engine/browser/conic-constraints';
-import { conicPoint } from '../../freecad-engine/browser/conic-geometry';
+import { referencedConic } from '@aether/core/sketch/reference/conic-constraints';
+import { conicPoint } from '@aether/core/sketch/reference/conic-geometry';
 import { referencedContour } from '../../aether-engine/src/sketch/solver/projected-context';
 import { resolveSegmentReference } from '../../aether-engine/src/sketch/solver/segment-reference';
 import {

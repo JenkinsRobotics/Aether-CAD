@@ -1,5 +1,6 @@
+import { openCompactFeatureWindow } from "@aether/ui";
 import { isRectanglePlacement, squareCorner } from "./sketch/rectangle-placement";
-import { sketchRegions } from "./freecad-translate";
+import { sketchRegions } from "@aether/core/document";
 import { mountVectorPanel } from "./sketch/vector-panel";
 import { mountAnnotationSelection } from "./sketch/annotation-selection";
 import { mountSketchCoordinates } from "./sketch/coordinate-controls";
@@ -11,11 +12,12 @@ import { bindSketchBoxSelection } from "./sketch/box-selection";
 import { mountDimensionTool } from "./sketch/dimension-tool";
 import { mountEditHistory } from "./modeling/edit-history";
 import { errorsForDocument } from "./modeling/feature-errors";
+import { aetherKernel } from "./engine/aether/kernel";
 import { mountSketchWindowFields } from "./sketch/window-fields";
 import { addFeatureViewControls } from "./features/view-controls";
 import { addSketchNormalControl } from "./modeling/sketch-normal-control";
 import { pickSketchRegion } from "./sketch/picking";
-import { sketchFaceRegions } from '../freecad-engine/browser/connected-sketch-regions';
+import { sketchFaceRegions } from '@aether/core/sketch/reference/connected-sketch-regions';
 import { shortcuts } from "./shortcuts";
 import { setPickedSketchRegion } from "./sketch-region-selection";
 import { mountSketchClipboard } from "./sketch/clipboard";
@@ -39,7 +41,6 @@ import { bindEndpointDragGesture } from "./sketch/endpoint-drag-gesture";
 import { arcChordStart, arcChordPoints } from "./sketch/arc-chord-tool";
 import { placeTangentArc } from "./sketch/tangent-arc-tool";
 import { renderSketchSelection } from "./sketch/selection-renderer";
-import { openFeatureWindow } from "@aether/ui";
 import { cadCommands, isCADCommandID } from "./cad-command-registry";
 import type { SketchEntityRef } from "@aether/core/sketch";
 import { bindTrimGesture } from "./sketch/trim-gesture";
@@ -58,11 +59,12 @@ import {
 import { instructions } from "./sketch/tool-instructions";
 
 import { renderSketchPreview } from "./sketch/preview";
-import { constructionPlaneFrame } from "@aether/core/document";
+import { constructionPlaneFrame, flipSketchFrame, rollbackPosition } from "@aether/core/document";
 import { snapSketchPoint } from "./sketch-snapping";
-import { solveDrawingConstraints, type SketchContour } from "@aether/core/sketch";
-import { preparePierceDraft,type PierceIssue } from '../freecad-engine/browser/pierce-draft';
-import { stageSketchPierce } from '../freecad-engine/browser/pierce-authoring';
+import { solveDrawingConstraints, setSketchRadius, type SketchContour } from "@aether/core/sketch";
+import { constrainSketchSelection } from "./sketch/constraint-selection";
+import { preparePierceDraft,type PierceIssue } from '@aether/core/sketch/reference/pierce-draft';
+import { stageSketchPierce } from '@aether/core/sketch/reference/pierce-authoring';
 import { mountPierceTool } from './sketch/pierce-tool';
 import {
   sketchConstraintState,
@@ -119,12 +121,10 @@ export function openSketchWorkspace(
   // of the gallery is that products pull these, never re-build them.
   let commitSketch = () => {};
   let discardSketch = () => {};
-  const win = openFeatureWindow({
+  const win = openCompactFeatureWindow({
     viewport,
-    className: "cad-sketch-window",
+    className: "cad-sketch-window", icon: "sketch",
     title: featureName,
-    acceptLabel: "Finish sketch",
-    discardLabel: "Cancel sketch",
     onAccept: () => commitSketch(),
     onDiscard: () => discardSketch(),
   });
@@ -144,7 +144,7 @@ export function openSketchWorkspace(
     message.textContent = text;
     win.setError(text || null);
     // A rejected edit leaves the valid draft intact; Finish validates again.
-    win.panel.querySelector<HTMLButtonElement>(".aui-feature-accept")!.disabled = !started || busy || !!supportIssue || pierceIssues.length>0;
+    win.accept.disabled = !started || busy || !!supportIssue || pierceIssues.length>0;
   };
   const constraintStatus = document.createElement("p");
   constraintStatus.className = "sketch-constraint-state";
@@ -159,6 +159,9 @@ export function openSketchWorkspace(
   const supportReferenceError = support && existing ? featureReferenceErrors({...source,features:source.features.map(f=>f.id===featureID?{...existing,profile:{type:'drawing' as const,contours:[]}}:f)}).get(featureID) : undefined;
   let supportIssue = existingError && /sketch support/i.test(existingError) ? existingError : supportReferenceError??null;
   let offsetMillimeters = existing?.offsetMillimeters ?? 0;
+  let flip: "x" | "y" | undefined = existing?.flip;
+  /** Re-sends the sketch surface to the viewer (after a flip). Set by start(). */
+  let announceSurface: (() => void) | undefined;
   let backgroundContext: SketchContour[] | undefined;
   let started = false,
     // Placing the plane must not arm a drawing tool — the first viewport click
@@ -213,7 +216,7 @@ export function openSketchWorkspace(
   const checkpoint = () => { recentSizing.clear(); history.checkpoint({ drawing, activePath, dimensionPositions, variables,sourceProfiles }); };
   const draftDocument=():PartDocument=>{
     const doc=structuredClone(workingSource()),saved=structuredClone(drawing);delete saved.pierceContext;delete saved.projectionContext;
-    const feature:ProfileFeature={...existing,id:featureID,name:featureName,type:'profile',plane,frame,offsetMillimeters,support,suppressed:false,profile:projected?.save(saved)??saved};
+    const feature:ProfileFeature={...existing,id:featureID,name:featureName,type:'profile',plane,frame,offsetMillimeters,flip,support,suppressed:false,profile:projected?.save(saved)??saved};
     const index=doc.features.findIndex(f=>f.id===featureID);if(index<0)doc.features.splice(doc.rollbackIndex??doc.features.length,0,feature);else doc.features[index]=feature;
     doc.variables=structuredClone(variables);return doc;
   };
@@ -302,7 +305,7 @@ export function openSketchWorkspace(
   let renderSketchPlaneChip: ((label: string) => void) | undefined;
   const resolvePierceOnPlane = (input:SketchDrawing,p:typeof plane,f?:SketchFrame,allowRepair=true):SketchDrawing => {
     if(!input.constraints?.some(c=>c.kind==='pierce')){pierceIssues=[];return input;}
-    const draft = {id:featureID,name:featureName,type:'profile' as const,plane:p,frame:f,offsetMillimeters,suppressed:false,profile:input};
+    const draft = {id:featureID,name:featureName,type:'profile' as const,plane:p,frame:f,offsetMillimeters,flip,suppressed:false,profile:input};
     const doc=workingSource(),features=[...doc.features],index=features.findIndex(feature=>feature.id===featureID);
     if(index<0)features.splice(doc.rollbackIndex??features.length,0,draft);else features[index]=draft;
     const prepared=preparePierceDraft(features,featureID,input);
@@ -341,14 +344,17 @@ export function openSketchWorkspace(
     );
     announceDraft(true);
     setActiveTool("select");
+    // Auto-project (SolidCraft's project_edges): a new sketch on a face starts with the
+    // face's edges as construction geometry when asked.
+    if (projectFaceEdges && support && !existing && !drawing.contours.length) queueMicrotask(() => { const was = construction; construction = true; void includeModelGeometry("edges").finally(() => { construction = was; }); });
     window.addEventListener("keydown", globalKey);
     win.panel.removeAttribute("data-feature-state");
     fitBoundsToContent();
-    window.dispatchEvent(
+    announceSurface = () => window.dispatchEvent(
       new CustomEvent("aether-sketch-surface", {
         detail: {
           svg,
-          frame:
+          frame: flipSketchFrame(
             f ??
             constructionPlaneFrame({
               id: "",
@@ -357,7 +363,7 @@ export function openSketchWorkspace(
               plane: p,
               offsetMillimeters,
               suppressed: false,
-            }),
+            }), flip),
           bounds,
           connect: (bridge: SurfaceBridge) => {
             surface = bridge;
@@ -366,6 +372,7 @@ export function openSketchWorkspace(
         },
       }),
     );
+    announceSurface();
     render();
   };
   const face = (event: Event) => {
@@ -379,10 +386,17 @@ export function openSketchWorkspace(
       offsetMillimeters = 0;
       start(datum?.type === "plane" ? datum.plane : "XY", detail.frame, support?.label ?? detail.label ?? datum?.name ?? "Selected face");
     }
-    else
-      message.textContent =
-        detail?.error ?? "Select a flat face in the model first.";
+    else {
+      message.textContent = detail?.error ?? "Select a flat face in the model first.";
+      // SolidCraft's "Use fixed plane": the face's plane without following it.
+      fixedPlaneOffer.hidden = !detail?.fixedFrame;
+      if (detail?.fixedFrame) fixedPlaneOffer.onclick = () => { fixedPlaneOffer.hidden = true; support = undefined; supportIssue = null; offsetMillimeters = 0; start("XY", detail.fixedFrame, `Fixed plane${detail.label ? ` (${detail.label})` : ""}`); };
+    }
   };
+  const fixedPlaneOffer = document.createElement("button");
+  fixedPlaneOffer.type = "button"; fixedPlaneOffer.className = "aui-button"; fixedPlaneOffer.textContent = "Use fixed plane"; fixedPlaneOffer.hidden = true;
+  fixedPlaneOffer.setAttribute("aria-label", "Use the picked face's plane as a fixed sketch plane");
+  message.after(fixedPlaneOffer);
   window.addEventListener("aether-sketch-face", face);
   const reference = (event: Event) => {
     if (!started) {support=undefined;supportIssue=null;offsetMillimeters=0;start((event as CustomEvent).detail);}
@@ -395,7 +409,10 @@ export function openSketchWorkspace(
     activeTool = name;
     if (isCADCommandID(next)) cadCommands.setActive(next, true);
   };
+  const tangentPicks: { ref: SketchEntityRef; at: SketchPoint }[] = [];
+  let changeSketchPlane: (() => void) | undefined;
   const chooseTool = (name: string, preserveSelection = false) => {
+    tangentPicks.length = 0;
     const retainedEntities = preserveSelection ? [...selectedEntities] : [];
     const retainedEntity = preserveSelection ? selectedEntity : null;
     constraints.tool.cancel();
@@ -423,9 +440,28 @@ export function openSketchWorkspace(
     if (name !== "select" && name !== "dimension" && name !== "fit-spline") toolWindow.show("coordinates");
     else toolWindow.close();
   };
+  /** Intersect / Include 3D geometry (SolidCraft): the part's section curves at this
+   *  sketch's plane, or its edges lying in it, inserted as sketch geometry. */
+  const includeModelGeometry = async (kind: "section" | "edges") => {
+    if (busy) return;
+    const doc = workingSource();
+    const planeFrame = flipSketchFrame(frame ?? constructionPlaneFrame({ id: "", name: "", type: "plane", plane, offsetMillimeters, suppressed: false }), flip);
+    const index = doc.features.findIndex((f) => f.id === featureID);
+    const before = { ...doc, features: doc.features.slice(0, index < 0 ? rollbackPosition(doc) : index), rollbackIndex: undefined };
+    try {
+      message.textContent = kind === "section" ? "Intersecting the part with the sketch plane…" : "Collecting the part's edges in the sketch plane…";
+      const contours = await aetherKernel().sketchSection(before, planeFrame, kind);
+      if (!contours.length) { message.textContent = kind === "section" ? "The sketch plane does not cut the part." : "No part edges lie in the sketch plane."; return; }
+      checkpoint();
+      for (const contour of contours) drawing.contours.push({ ...contour, ...(construction ? { construction: true } : {}) });
+      activePath = -1; pending = []; render();
+      message.textContent = `${contours.length} ${kind === "section" ? "section curves" : "edges"} added to the sketch.`;
+    } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+  };
   const toolEvent = (event: Event) => {
     if (started) {
       const name = (event as CustomEvent).detail;
+      if (name === "intersect" || name === "include-edges") { void includeModelGeometry(name === "intersect" ? "section" : "edges"); return; }
       if (name === activeTool && name !== "select") {
         chooseTool("select");
         return;
@@ -501,6 +537,8 @@ export function openSketchWorkspace(
   const { ellipseRadius, arcDirection } = coordinates;
   selectionActions = mountSketchSelectionActions({
     enabled: () => started && !busy,
+    select: refs => { selectedEntities = [...refs]; selectedEntity = refs.at(-1) ?? null; selectedRegion = null; setPickedSketchRegion(null); renderSelection(); },
+    changePlane: () => changeSketchPlane?.(),
     drawing: () => drawing,
     selectedConstraints: () => annotationSelection?.selected() ?? [],
     selected: () => selectedEntities.length ? selectedEntities : selectedEntity ? [selectedEntity] : selectedRegion !== null ? (sketchFaceRegions(drawing).find(region => region.contourIndex === selectedRegion)?.sourceContourIndices ?? []).map(contour => ({ contour, kind: 'contour' as const })) : [],
@@ -632,7 +670,7 @@ export function openSketchWorkspace(
           );
         busy = true;
         planeControls.setBusy(true);
-        win.panel.querySelector<HTMLButtonElement>(".aui-feature-accept")!.disabled = true;
+        win.accept.disabled = true;
         const savedDrawing = structuredClone(drawing);
         delete savedDrawing.projectionContext;
         delete savedDrawing.pierceContext;
@@ -645,11 +683,12 @@ export function openSketchWorkspace(
           offsetMillimeters,
           profile: projected?.save(drawing) ?? savedDrawing,
           ...(frame ? { frame } : {}),
+          ...(flip ? { flip } : {}),
           ...(support ? { support } : {}),
         };
-        const draftSnapshot = JSON.stringify({drawing,variables,dimensionPositions,plane,frame,support,offsetMillimeters,sourceProfiles});
+        const draftSnapshot = JSON.stringify({drawing,variables,dimensionPositions,plane,frame,support,offsetMillimeters,flip,sourceProfiles});
         const next = await updatePartDocumentVariables(workingSource(), variables, feature);
-        if (draftSnapshot !== JSON.stringify({drawing,variables,dimensionPositions,plane,frame,support,offsetMillimeters,sourceProfiles}) || variablePanel.pending() || clipboard.pending()) throw Error("The sketch changed while preparing it. Review and finish again.");
+        if (draftSnapshot !== JSON.stringify({drawing,variables,dimensionPositions,plane,frame,support,offsetMillimeters,flip,sourceProfiles}) || variablePanel.pending() || clipboard.pending()) throw Error("The sketch changed while preparing it. Review and finish again.");
         if (getDocument() !== source) throw Error("The document changed while preparing the sketch. Cancel and reopen.");
         next.sketchPresentation = {...source.sketchPresentation, [feature.id]: {dimensionLabelPositionsMillimeters: Object.fromEntries(Object.entries(dimensionPositions).filter(([id])=>drawing.constraints?.some(c=>c.id===id)))}};
         const curves = sketchRegions(feature, true, next.features);
@@ -669,17 +708,18 @@ export function openSketchWorkspace(
       } finally {
         busy = false;
         planeControls.setBusy(false);
-        win.panel.querySelector<HTMLButtonElement>(".aui-feature-accept")!.disabled = !started || !!supportIssue || pierceIssues.length>0;
+        win.accept.disabled = !started || !!supportIssue || pierceIssues.length>0;
       }
   };
   commitSketch = () => { void finish(); };
   discardSketch = () => { if (!busy) cleanup(); };
-  const planeControls = mountSketchWindowFields(win, { changePlane: () => {
+  let projectFaceEdges = false;
+  const planeControls = mountSketchWindowFields(win, { onProjectEdgesChange: (checked) => { projectFaceEdges = checked; }, flipped: !!flip, onFlipChange: (checked) => { if (busy) return; flip = checked ? "x" : undefined; announceSurface?.(); render(); }, changePlane: (changeSketchPlane = () => {
     if(busy)return;
     if(projected){fail('Change the projection plane in the projected sketch editor.');return;}
     if(clipboard.pending()||variablePanel.pending()){fail('Apply or cancel pending paste and variable edits before changing the sketch plane.');return;}
     chooseTool('select');
-    support=undefined;supportIssue=null;frame=undefined;offsetMillimeters=0;started=false;
+    support=undefined;supportIssue=null;frame=undefined;offsetMillimeters=0;flip=undefined;started=false;
     setPickedSketchRegion(null);
     cadSelection.dispatch({type:'clear'});
     win.panel.setAttribute('data-feature-state','invalid');
@@ -687,7 +727,7 @@ export function openSketchWorkspace(
     if(surface){surface=null;window.dispatchEvent(new CustomEvent('aether-sketch-surface-end'));}
     root.classList.remove('in-world');
     setChoosingPlane(true);announceDraft(false);render();
-  },
+  }),
     onConstraintsChange: checked => { showConstraints = checked; render(); },
     onExpressionsChange: checked => { svg.dataset.showExpressions = String(checked); render(); },
     onErrorsChange: checked => { showErrors = checked; render(); },
@@ -726,6 +766,8 @@ export function openSketchWorkspace(
       bounds,
       snapLabel,
       sides: coordinates.sides(),
+      cornerRadiusMillimeters: coordinates.cornerRadius(),
+      slotWidthMillimeters: coordinates.slotWidth(),
       clockwise: arcDirection.clockwise(),
       secondaryRadiusMillimeters: ellipseRadius.value(),
       rememberedRadiusMillimeters: ellipseRadius.remembered(),
@@ -777,7 +819,7 @@ export function openSketchWorkspace(
     variablePanel.sync();
     textPanel.sync();
     vectorPanel.sync();
-    win.panel.querySelector<HTMLButtonElement>(".aui-feature-accept")!.disabled = !started || busy || !!supportIssue || pierceIssues.length>0;
+    win.accept.disabled = !started || busy || !!supportIssue || pierceIssues.length>0;
     historyActions.refresh();
     toolWindow.refresh();
     svg.style.visibility = started ? "visible" : "hidden";
@@ -880,6 +922,30 @@ export function openSketchWorkspace(
       }
       return;
     }
+    if (tool === "two-tangent-circle" || tool === "three-tangent-circle") {
+      // Tangent circles (SolidCraft's 2-/3-tangent circle): pick the curves, place a
+      // circle near them and let the solver settle it against tangent relations (and
+      // the radius for the two-curve form).
+      const picked = pickSelectableSketchEntity(drawing, p);
+      if (!picked || picked.d > bounds.width / 60 || picked.ref.kind === "point") { message.textContent = "Click a curve the circle should touch."; return; }
+      const needed = tool === "two-tangent-circle" ? 2 : 3;
+      if (!tangentPicks.some((entry) => JSON.stringify(entry.ref) === JSON.stringify(picked.ref))) tangentPicks.push({ ref: picked.ref, at: p });
+      if (tangentPicks.length < needed) { message.textContent = `${tangentPicks.length} of ${needed} curves picked.`; return; }
+      try {
+        checkpoint();
+        const radius = Math.max(coordinates.cornerRadius(), 1e-3);
+        const center: SketchPoint = [tangentPicks.reduce((s, e) => s + e.at[0], 0) / needed, tangentPicks.reduce((s, e) => s + e.at[1], 0) / needed];
+        let next = structuredClone(drawing);
+        next.contours.push({ type: "circle", center, radius, ...(construction ? { construction: true } : {}) });
+        const circleRef = { contour: next.contours.length - 1, kind: "circle" as const };
+        for (const entry of tangentPicks) next = constrainSketchSelection(next, "tangent", [circleRef, entry.ref]).drawing;
+        if (needed === 2) next = setSketchRadius(next, circleRef, radius);
+        drawing = solveDrawingConstraints(next);
+        message.textContent = needed === 2 ? `Circle of radius ${radius} mm tangent to both curves.` : "Circle tangent to all three curves.";
+      } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+      tangentPicks.length = 0; pending = []; activePath = -1; render();
+      return;
+    }
     if (tool === "sketch-project-geometry") {
       const picked = pickSelectableSketchEntity(drawing, p);
       if (picked && picked.d < bounds.width / 60 && picked.ref.projectedContourId !== undefined) {
@@ -949,6 +1015,8 @@ export function openSketchWorkspace(
           tool,
           square,
           sides: coordinates.sides(),
+          cornerRadiusMillimeters: coordinates.cornerRadius(),
+          slotWidthMillimeters: coordinates.slotWidth(),
           inferQuadrants: geometrySnap,
           inferSemicircles: geometrySnap,
           clockwise: arcDirection.clockwise(),
