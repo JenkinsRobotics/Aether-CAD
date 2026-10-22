@@ -877,3 +877,17 @@ tolerance. Two display styles beside zebra and draft: a curvature map (the scree
 the world normal, blue through green to red) and accessibility for a +Z tool (reachable faces
 green, undercuts red, walls yellow). Both are TSL node graphs like the earlier overlays.
 
+### r45 (2026-10-22): driven mate values and DOF relations in the solver
+
+Installed.
+
+The in-process assembly solver now holds a mate's driven degree-of-freedom values (the workspace's
+DOF Value: a rotation in degrees about, or a travel in millimetres along, one axis of the mate's
+first frame) and couples mates through the workspace's relations — gear (rotation to rotation),
+rack and pinion and screw (rotation to travel), linear (travel to travel): driven = ratio · driver
++ offset, reversed negating the ratio. The job builder carries the values and relations across
+with the unit change (radians and metres to degrees and millimetres); the Gears, Rack and Pinion
+and Screw buttons open the Relation dialog. Values and relations are residuals beside the mate
+residuals, so the acceptance check covers them. A rotation driven to exactly 180° sits on the
+angle wrap and may not converge.
+

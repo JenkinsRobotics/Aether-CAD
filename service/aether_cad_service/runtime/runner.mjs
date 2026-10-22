@@ -9703,6 +9703,7 @@ const cross$3 = (a, b) => [
   a[2] * b[0] - a[0] * b[2],
   a[0] * b[1] - a[1] * b[0]
 ];
+const dofAxis = (name) => name.endsWith("_x") ? "x" : name.endsWith("_y") ? "y" : "z";
 function connectorPlacement(frame) {
   const origin = [
     frame.origin_m[0] * METRES_TO_MM,
@@ -9794,10 +9795,36 @@ function assemblyJobFor(projection) {
         note(mate.id, mate.name, "it mates an instance that is not in the assembly");
       return [];
     }
-    return [{ id: mate.id, kind: mate.type_id, a, b }];
+    const dofs = (mate.dofs ?? []).filter((dof) => dof.state === "driven" && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
+      name: dof.name,
+      kind: dof.kind,
+      axis: dofAxis(dof.name),
+      value: dof.kind === "rotation" ? dof.value_rad * 180 / Math.PI : dof.value_m * METRES_TO_MM
+    }));
+    return [{ id: mate.id, kind: mate.type_id, a, b, ...dofs.length ? { parameters: { dofs } } : {} }];
+  });
+  const dofOwner = /* @__PURE__ */ new Map();
+  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind });
+  const solvedJoints = new Set(joints.map((joint) => joint.id));
+  const relations = (projection.relations ?? []).flatMap((relation) => {
+    if (relation.suppressed) return [];
+    const driver = dofOwner.get(relation.driver_dof_id), driven = dofOwner.get(relation.driven_dof_id);
+    if (!driver || !driven || !solvedJoints.has(driver.joint) || !solvedJoints.has(driven.joint)) {
+      note(relation.id, relation.kind, "it couples a mate that is not solved");
+      return [];
+    }
+    const kind = relation.kind;
+    if (!["gear", "rack_pinion", "screw", "linear"].includes(kind)) {
+      note(relation.id, relation.kind, `relation kind '${relation.kind}' is not solved`);
+      return [];
+    }
+    const unit2 = (k) => k === "rotation" ? 180 / Math.PI : METRES_TO_MM;
+    const ratio = relation.ratio * unit2(driven.kind) / unit2(driver.kind);
+    const offset2 = driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM;
+    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset: offset2, reversed: relation.reversed }];
   });
   return {
-    job: { parts, instances, joints },
+    job: { parts, instances, joints, ...relations.length ? { relations } : {} },
     untranslated,
     complete: untranslated.length === 0
   };
@@ -38928,7 +38955,30 @@ function frameOf(pose, end) {
   return { o: add(pose.p, rotate(pose.q, local2)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
 }
 const ORIENTATION_SCALE = 100;
+const DOF_TEMPLATES = {
+  revolute: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  prismatic: [{ name: "translation", kind: "translation", axis: "z", value: 0 }],
+  cylindrical: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }, { name: "translation", kind: "translation", axis: "z", value: 0 }],
+  planar: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  pin_slot: [{ name: "translation", kind: "translation", axis: "x", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  parallel: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "translation_z", kind: "translation", axis: "z", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  ball: [{ name: "rotation_x", kind: "rotation", axis: "x", value: 0 }, { name: "rotation_y", kind: "rotation", axis: "y", value: 0 }, { name: "rotation_z", kind: "rotation", axis: "z", value: 0 }]
+};
+const templateDof = (kind, name) => DOF_TEMPLATES[kind]?.find((d) => d.name === name);
 const solvableMateKinds = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
+function dofValue(kind, axis, a, b) {
+  if (kind === "translation") return dot(sub(b.o, a.o), a[axis]);
+  const companion = axis === "z" ? "x" : axis === "x" ? "y" : "z";
+  const u = a[companion], v = b[companion], n = a[axis];
+  return Math.atan2(dot(cross(u, v), n), dot(u, v)) * 180 / Math.PI;
+}
+function valueResiduals(a, b, parameters = {}) {
+  const values = parameters.dofs ?? [];
+  return values.map((dof) => {
+    const current2 = dofValue(dof.kind, dof.axis, a, b);
+    return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * ((current2 - dof.value + 540) % 360 - 180);
+  });
+}
 function jointResiduals(kind, a, b, parameters = {}) {
   const d = sub(b.o, a.o), S = ORIENTATION_SCALE;
   const coincide = () => [d[0], d[1], d[2]];
@@ -39019,9 +39069,36 @@ function solveAssemblyJob(job) {
     joints.push(joint);
   }
   const free = [...poses.keys()].filter((id2) => !grounded.has(id2));
-  const residuals = (current2) => joints.flatMap((joint) => jointResiduals(joint.kind, frameOf(current2.get(joint.a.instance), joint.a), frameOf(current2.get(joint.b.instance), joint.b), joint.parameters));
+  const byId = new Map(joints.map((joint) => [joint.id, joint]));
+  const relations = [];
+  for (const relation of job.relations ?? []) {
+    const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
+    if (!driver || !driven) {
+      diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" });
+      continue;
+    }
+    relations.push(relation);
+  }
+  const dofOf = (joint, name) => (joint.parameters?.dofs ?? []).find((d) => d.name === name) ?? templateDof(joint.kind, name);
+  const relationResiduals = (current2) => relations.flatMap((relation) => {
+    const driverJoint = byId.get(relation.driver.joint), drivenJoint = byId.get(relation.driven.joint);
+    const d1 = dofOf(driverJoint, relation.driver.dof), d2 = dofOf(drivenJoint, relation.driven.dof);
+    if (!d1 || !d2) return [];
+    const x = dofValue(d1.kind, d1.axis, frameOf(current2.get(driverJoint.a.instance), driverJoint.a), frameOf(current2.get(driverJoint.b.instance), driverJoint.b));
+    const y = dofValue(d2.kind, d2.axis, frameOf(current2.get(drivenJoint.a.instance), drivenJoint.a), frameOf(current2.get(drivenJoint.b.instance), drivenJoint.b));
+    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
+    const gap = d2.kind === "translation" ? y - target : (y - target + 540) % 360 - 180;
+    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * gap];
+  });
+  const residuals = (current2) => [
+    ...joints.flatMap((joint) => {
+      const fa = frameOf(current2.get(joint.a.instance), joint.a), fb = frameOf(current2.get(joint.b.instance), joint.b);
+      return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
+    }),
+    ...relationResiduals(current2)
+  ];
   const errorsBefore = diagnostics.filter((d) => d.severity === "error");
-  if (!errorsBefore.length && free.length && joints.length) {
+  if (!errorsBefore.length && free.length && (joints.length || relations.length)) {
     let lambda = 1e-3;
     let r = residuals(poses), cost = r.reduce((s, v) => s + v * v, 0);
     for (let iteration = 0; iteration < 200 && cost > 1e-18; iteration++) {
@@ -39079,7 +39156,8 @@ function solveAssemblyJob(job) {
   }
   if (!errorsBefore.length) {
     for (const joint of joints) {
-      const values = jointResiduals(joint.kind, frameOf(poses.get(joint.a.instance), joint.a), frameOf(poses.get(joint.b.instance), joint.b), joint.parameters);
+      const fa = frameOf(poses.get(joint.a.instance), joint.a), fb = frameOf(poses.get(joint.b.instance), joint.b);
+      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
       const worst = Math.max(0, ...values.map(Math.abs));
       if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: joint.id, severity: "error", message: `Mate is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting mates or connector references.` });
     }
