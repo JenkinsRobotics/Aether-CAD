@@ -12,9 +12,9 @@ export const assemblyRelationsWorkspace: CADRibbonWorkspaceDefinition = {
   groups: [
     { id: "relations-create", label: "Relations", tools: [
       tool("assembly-relation-create", "Relation", "settings", "assembly-create-relation"),
-      tool("assembly-gear", "Gears", "gears", undefined, authoringProducer),
-      tool("assembly-mate-rack-pinion", "Rack and Pinion", "rack-pinion", undefined, authoringProducer),
-      tool("assembly-mate-screw", "Screw", "thread", undefined, authoringProducer),
+      tool("assembly-gear", "Gears", "gears", "assembly-create-relation"),
+      tool("assembly-mate-rack-pinion", "Rack and Pinion", "rack-pinion", "assembly-create-relation"),
+      tool("assembly-mate-screw", "Screw", "thread", "assembly-create-relation"),
       tool("assembly-mate-belt", "Belt", "belt", undefined, authoringProducer),
     ] },
   ],

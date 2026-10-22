@@ -44,6 +44,9 @@ export interface AssemblyJobTranslation {
   complete: boolean;
 }
 
+/** The axis a workspace DOF name implies: `translation_x` → x; plain `rotation`/`translation` → z. */
+const dofAxis = (name: string): "x" | "y" | "z" => (name.endsWith("_x") ? "x" : name.endsWith("_y") ? "y" : "z");
+
 /** A connector frame as a placement the engine can use directly. */
 function connectorPlacement(frame: ConnectorFrameProjection): {
   placement_mm: [number, number, number];
@@ -154,11 +157,33 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
         note(mate.id, mate.name, "it mates an instance that is not in the assembly");
       return [];
     }
-    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, a, b }];
+    // Driven degrees of freedom travel with the mate: the solver holds them at their
+    // value (degrees, millimetres), on the axis the workspace's DOF name implies.
+    const dofs = (mate.dofs ?? []).filter((dof) => dof.state === "driven" && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
+      name: dof.name, kind: dof.kind, axis: dofAxis(dof.name),
+      value: dof.kind === "rotation" ? (dof.value_rad as number) * 180 / Math.PI : (dof.value_m as number) * METRES_TO_MM,
+    }));
+    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, a, b, ...(dofs.length ? { parameters: { dofs } } : {}) }];
+  });
+  // Relations couple two mates' DOFs: the projection names DOF ids; the solver wants the mate and the DOF's name.
+  const dofOwner = new Map<string, { joint: string; dof: string; kind: "rotation" | "translation" }>();
+  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind });
+  const solvedJoints = new Set(joints.map((joint) => joint.id));
+  const relations = (projection.relations ?? []).flatMap((relation) => {
+    if (relation.suppressed) return [];
+    const driver = dofOwner.get(relation.driver_dof_id), driven = dofOwner.get(relation.driven_dof_id);
+    if (!driver || !driven || !solvedJoints.has(driver.joint) || !solvedJoints.has(driven.joint)) { note(relation.id, relation.kind, "it couples a mate that is not solved"); return []; }
+    const kind = relation.kind as "gear" | "rack_pinion" | "screw" | "linear";
+    if (!["gear", "rack_pinion", "screw", "linear"].includes(kind)) { note(relation.id, relation.kind, `relation kind '${relation.kind}' is not solved`); return []; }
+    // The workspace's ratio is in its own units (radians, metres); ours are degrees and millimetres.
+    const unit = (k: "rotation" | "translation") => (k === "rotation" ? 180 / Math.PI : METRES_TO_MM);
+    const ratio = relation.ratio * unit(driven.kind) / unit(driver.kind);
+    const offset = driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM;
+    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset, reversed: relation.reversed }];
   });
 
   return {
-    job: { parts, instances, joints },
+    job: { parts, instances, joints, ...(relations.length ? { relations } : {}) },
     untranslated,
     complete: untranslated.length === 0,
   };

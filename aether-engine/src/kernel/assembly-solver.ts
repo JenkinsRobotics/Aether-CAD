@@ -5,7 +5,7 @@
  *  one and says so, every mate is checked after the solve as FreeCAD's
  *  acceptance did (`assembly_residuals.py`), and a partial solve publishes no
  *  placements. */
-import type { AssemblyDiagnostic, AssemblyJobInput, AssemblyJoint, AssemblyJointEnd, AssemblyMateKind, AssemblySolution } from "../contracts/assembly";
+import type { AssemblyDiagnostic, AssemblyJobInput, AssemblyJoint, AssemblyJointEnd, AssemblyJointValue, AssemblyMateKind, AssemblyRelation, AssemblySolution } from "../contracts/assembly";
 
 type V3 = [number, number, number];
 type Q = [number, number, number, number];
@@ -45,11 +45,37 @@ function frameOf(pose: Pose, end: AssemblyJointEnd): Frame {
  *  per radian puts them on the scale of the position residuals. */
 const ORIENTATION_SCALE = 100;
 
+/** The degrees of freedom each kind has, named as the workspace names them, so a relation
+ *  can couple a mate that holds no value of its own. */
+const DOF_TEMPLATES: Record<string, AssemblyJointValue[]> = {
+  revolute: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  prismatic: [{ name: "translation", kind: "translation", axis: "z", value: 0 }],
+  cylindrical: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }, { name: "translation", kind: "translation", axis: "z", value: 0 }],
+  planar: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  pin_slot: [{ name: "translation", kind: "translation", axis: "x", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  parallel: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "translation_z", kind: "translation", axis: "z", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  ball: [{ name: "rotation_x", kind: "rotation", axis: "x", value: 0 }, { name: "rotation_y", kind: "rotation", axis: "y", value: 0 }, { name: "rotation_z", kind: "rotation", axis: "z", value: 0 }],
+};
+const templateDof = (kind: AssemblyMateKind, name: string) => DOF_TEMPLATES[kind]?.find((d) => d.name === name);
+
 /** The mates the in-process solver can solve: joints the frames define alone.
  *  Rack and pinion, screw, gears and belt couple other joints' motion. */
 export const solvableMateKinds: readonly AssemblyMateKind[] = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
 
 /** The residual vector of one mate between two world frames (zero when satisfied). */
+/** A degree of freedom's current value between two frames: the travel of b's origin along
+ *  a's axis (mm), or the turn from a's to b's companion axis about it (degrees, signed). */
+export function dofValue(kind: "rotation" | "translation", axis: "x" | "y" | "z", a: Frame, b: Frame): number {
+  if (kind === "translation") return dot(sub(b.o, a.o), a[axis]);
+  const companion = axis === "z" ? "x" : axis === "x" ? "y" : "z";
+  const u = a[companion], v = b[companion], n = a[axis];
+  return Math.atan2(dot(cross(u, v), n), dot(u, v)) * 180 / Math.PI;
+}
+/** Residuals holding a mate's driven values (`parameters.dofs`), on the mate residuals' scale. */
+export function valueResiduals(a: Frame, b: Frame, parameters: Record<string, unknown> = {}): number[] {
+  const values = (parameters.dofs as AssemblyJointValue[] | undefined) ?? [];
+  return values.map((dof) => { const current = dofValue(dof.kind, dof.axis, a, b); return dof.kind === "translation" ? current - dof.value : ORIENTATION_SCALE * Math.PI / 180 * (((current - dof.value + 540) % 360) - 180); });
+}
 export function jointResiduals(kind: AssemblyMateKind, a: Frame, b: Frame, parameters: Record<string, unknown> = {}): number[] {
   const d = sub(b.o, a.o), S = ORIENTATION_SCALE;
   const coincide = () => [d[0], d[1], d[2]];
@@ -115,10 +141,30 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
     joints.push(joint);
   }
   const free = [...poses.keys()].filter((id) => !grounded.has(id));
-  const residuals = (current: Map<string, Pose>): number[] =>
-    joints.flatMap((joint) => jointResiduals(joint.kind, frameOf(current.get(joint.a.instance)!, joint.a), frameOf(current.get(joint.b.instance)!, joint.b), joint.parameters));
+  const byId = new Map(joints.map((joint) => [joint.id, joint]));
+  const relations: AssemblyRelation[] = [];
+  for (const relation of job.relations ?? []) {
+    const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
+    if (!driver || !driven) { diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" }); continue; }
+    relations.push(relation);
+  }
+  const dofOf = (joint: AssemblyJoint, name: string): AssemblyJointValue | undefined => ((joint.parameters?.dofs as AssemblyJointValue[] | undefined) ?? []).find((d) => d.name === name) ?? templateDof(joint.kind, name);
+  const relationResiduals = (current: Map<string, Pose>): number[] => relations.flatMap((relation) => {
+    const driverJoint = byId.get(relation.driver.joint)!, drivenJoint = byId.get(relation.driven.joint)!;
+    const d1 = dofOf(driverJoint, relation.driver.dof), d2 = dofOf(drivenJoint, relation.driven.dof);
+    if (!d1 || !d2) return [];
+    const x = dofValue(d1.kind, d1.axis, frameOf(current.get(driverJoint.a.instance)!, driverJoint.a), frameOf(current.get(driverJoint.b.instance)!, driverJoint.b));
+    const y = dofValue(d2.kind, d2.axis, frameOf(current.get(drivenJoint.a.instance)!, drivenJoint.a), frameOf(current.get(drivenJoint.b.instance)!, drivenJoint.b));
+    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
+    const gap = d2.kind === "translation" ? y - target : ((y - target + 540) % 360) - 180;
+    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * gap];
+  });
+  const residuals = (current: Map<string, Pose>): number[] => [
+    ...joints.flatMap((joint) => { const fa = frameOf(current.get(joint.a.instance)!, joint.a), fb = frameOf(current.get(joint.b.instance)!, joint.b); return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)]; }),
+    ...relationResiduals(current),
+  ];
   const errorsBefore = diagnostics.filter((d) => d.severity === "error");
-  if (!errorsBefore.length && free.length && joints.length) {
+  if (!errorsBefore.length && free.length && (joints.length || relations.length)) {
     // Levenberg–Marquardt on the free poses: each step is six numbers per
     // instance (a translation and a rotation vector applied to the current pose).
     let lambda = 1e-3;
@@ -164,7 +210,8 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
   // Acceptance, as FreeCAD's residual check: every mate must hold after the solve.
   if (!errorsBefore.length) {
     for (const joint of joints) {
-      const values = jointResiduals(joint.kind, frameOf(poses.get(joint.a.instance)!, joint.a), frameOf(poses.get(joint.b.instance)!, joint.b), joint.parameters);
+      const fa = frameOf(poses.get(joint.a.instance)!, joint.a), fb = frameOf(poses.get(joint.b.instance)!, joint.b);
+      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
       const worst = Math.max(0, ...values.map(Math.abs));
       if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: joint.id, severity: "error", message: `Mate is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting mates or connector references.` });
     }
