@@ -3,7 +3,7 @@
   "app": "cad",
   "runtime": "python",
   "entry": "runner.pyz",
-  "sha256": "b8ab8c5100b786b3326bb7c18e64c55b7f86a962c9a7abeb8f5e295e17a8adc7",
+  "sha256": "5c2e238ae75145c08e12797e16b67b81df1f7a46fba143eda4a3a5d5c8d309d8",
   "services": [
     "/api/cad/geometry",
     "/api/cad/export",

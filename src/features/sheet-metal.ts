@@ -1,5 +1,6 @@
 import { defaultSheetMetalRule, type EdgeFinishEdge } from "@aether/core/document";
 import { mountPickedReferences } from "./picked-references";
+import { sketchDirectionLines } from "../modeling/extrude-direction-reference";
 import { entityChips, requireSelections, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 import { bodiesControls, bodiesLayout, bodiesValid } from "./surface";
 
@@ -71,6 +72,31 @@ export const sheetHemEditor: FeatureEditor = {
   },
   serialize(values) { return { bodyIds: JSON.parse(values.bodies), edges: JSON.parse(values.edges), lengthMillimeters: Number(values.length), ...(values.gap?.trim() ? { gapMillimeters: Number(values.gap) } : {}), ...(values.direction === "toward the face" ? { inward: true } : {}) }; },
 };
+export const sheetFoldEditor: FeatureEditor = {
+  type: "sheet-fold",
+  controls(context: FeatureEditorContext) {
+    const { field, feature } = context;
+    // The fold line is a straight sketch line, offered the way Extrude offers direction lines.
+    const lines = sketchDirectionLines(context.doc, feature?.id);
+    const key = (line: (typeof lines)[number]) => JSON.stringify([line.sourceFeatureId, line.contourId, line.segmentId]);
+    const ref = feature?.line;
+    const selected = lines.find((line) => ref && line.sourceFeatureId === ref.sourceFeatureId && line.contourId === ref.contourId && line.segmentId === ref.segmentId);
+    const lineField = field("Fold line", selected ? key(selected) : "", ["", ...lines.map(key)]);
+    for (const option of (lineField as HTMLSelectElement).options) option.textContent = lines.find((line) => key(line) === option.value)?.label ?? "Choose a sketch line on the sheet";
+    return { ...bodiesControls(context), line: lineField, angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 90)), direction: field("Fold", feature?.inward ? "toward the face" : "away from the face", ["away from the face", "toward the face"]), side: field("Moving side", feature?.otherSide ? "right of the line" : "left of the line", ["left of the line", "right of the line"]), radius: field("Bend radius (mm, blank = rule)", feature?.bendRadiusMillimeters === undefined ? "" : String(feature.bendRadiusMillimeters)) };
+  },
+  layout(context, controls) { bodiesLayout(context, controls, "Sheet metal body", true); },
+  validate(controls) {
+    if (!controls.line.value) return "Choose the sketch line to fold along.";
+    const a = Number(controls.angle.value); if (!(a > 0 && a <= 180)) return "Angle must be between 0 and 180 degrees.";
+    if (controls.radius.value.trim() && !(Number(controls.radius.value) > 0)) return "Bend radius must be positive.";
+    return bodiesValid(controls, "sheet metal body", 1);
+  },
+  serialize(values) {
+    const [sourceFeatureId, contourId, segmentId] = JSON.parse(values.line) as [string, string, string];
+    return { bodyIds: JSON.parse(values.bodies), line: { kind: "sketch-line", sourceFeatureId, contourId, segmentId }, angleDegrees: Number(values.angle), ...(values.direction === "toward the face" ? { inward: true } : {}), ...(values.side === "right of the line" ? { otherSide: true } : {}), ...(values.radius?.trim() ? { bendRadiusMillimeters: Number(values.radius) } : {}) };
+  },
+};
 export const sheetUnfoldEditor = bodyOnly("sheet-unfold", "Sheet metal body to unfold");
 export const sheetRefoldEditor = bodyOnly("sheet-refold", "Unfolded body to refold");
-export const sheetMetalEditors: FeatureEditor[] = [sheetBaseEditor, sheetFlangeEditor, sheetHemEditor, sheetUnfoldEditor, sheetRefoldEditor];
+export const sheetMetalEditors: FeatureEditor[] = [sheetBaseEditor, sheetFlangeEditor, sheetHemEditor, sheetFoldEditor, sheetUnfoldEditor, sheetRefoldEditor];

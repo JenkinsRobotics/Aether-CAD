@@ -840,3 +840,15 @@ folds along a sketch line, bends on bends in the flat pattern, a named rule libr
 the bend table. Lesson from the tests: replicad's `Plane(origin, xDir, normal)` has y = normal × x,
 so a section whose y must be the face normal takes the edge direction reversed as its normal.
 
+### r42 (2026-10-22): Fold along a sketch line
+
+Installed.
+
+Fold splits the sheet with three slabs along the line's normal: the fixed side, a strip one bend
+allowance wide, and the moving side. The strip is replaced by the bend sector over its span along
+the line; the moving side slides back by the strip's width and turns about the bend's axis. A fold
+leaves the flat pattern as the plate, so Unfold ignores it. Known limit: a cut-out crossing the
+strip is not carried into the bend. The bend section's plane now takes `o × n` as its normal so
+its y axis is the face normal whichever way the edge or line runs (the flange code had relied on
+the pick's orientation).
+

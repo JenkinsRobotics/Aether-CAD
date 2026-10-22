@@ -17,7 +17,7 @@ export const sheetMetalWorkspace: CADRibbonWorkspaceDefinition = {
       tool("sheet-flange", "Flange", "draft", "feature-sheet-flange"),
       tool("sheet-hem", "Hem", "offset", "feature-sheet-hem"),
       tool("sheet-tab", "Tab", "rectangle", undefined, sheetMetalProducer),
-      tool("sheet-bend", "Bend", "hinge", undefined, sheetMetalProducer),
+      tool("sheet-bend", "Fold", "hinge", "feature-sheet-fold"),
       tool("sheet-jog", "Jog", "curve", undefined, sheetMetalProducer),
       tool("sheet-form", "Form", "emboss", undefined, sheetMetalProducer),
       tool("sheet-loft", "Sheet metal loft", "loft", undefined, sheetMetalProducer),

@@ -1763,9 +1763,11 @@ export function evaluatePartDocument(
               pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
             }
             const section = own(pen.close());
-            // Plane: x = o (out of the plate); replicad's y = normal × x, so the normal is the
-            // edge direction reversed to make y the face normal, and the strip runs from b back to a.
-            const plane = own(new Plane([b[0], b[1], b[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+            // Plane: x = o (out of the plate); replicad's y = normal × x, so normal = o × n makes
+            // y the face normal. That normal is ± the edge direction: the strip starts at whichever
+            // end lets the extrusion run along it.
+            const zdir = unit(cross(o, n)), from = dot(zdir, tdir) > 0 ? a : b;
+            const plane = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
             const piece = own(section.sketchOnPlane(plane)).extrude(length);
             if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options.what} could not be built on that edge.`);
             const fused = result.fuse(own(piece));
@@ -1783,6 +1785,66 @@ export function evaluatePartDocument(
             ? bendFromEdges(body, id, feature.edges, base, { leg: feature.distanceMillimeters, angleDegrees: feature.angleDegrees, innerRadius: feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Flange" })
             : bendFromEdges(body, id, feature.edges, base, { leg: feature.lengthMillimeters, angleDegrees: 180, innerRadius: feature.gapMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Hem" });
           bodies.set(id, bent); currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "sheet-fold") {
+          // Fold along a sketch line: the plate is split into the fixed side, a strip one
+          // bend allowance wide that becomes the bend, and the moving side, which is slid
+          // back to the line and turned about the bend's axis. A cut-out crossing the strip
+          // is not carried into the bend (the bend is a plain sector over the strip's span).
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("The sheet metal body is unavailable.");
+          const { base } = sheetRuleOf(id);
+          const t = base.thicknessMillimeters, r = feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, alpha = feature.angleDegrees * Math.PI / 180;
+          const ba = bendAllowanceMillimeters(feature.angleDegrees, r, base);
+          const [p, q] = sketchLine(feature.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
+          const tdir = unit(sub(q, p));
+          // The big face the line lies in: the largest planar face whose plane contains it.
+          const faces = body.faces.filter((f) => f.geomType === "PLANE");
+          const onFace = faces.filter((f) => { const c = f.center, nv = f.normalAt(c); const n: V3 = [nv.x, nv.y, nv.z]; const dPlane = Math.abs(dot(n, sub(p, [c.x, c.y, c.z]))); c.delete(); nv.delete(); return dPlane < 1e-4; });
+          if (!onFace.length) throw new Error("The fold line must lie on a flat face of the sheet.");
+          const face = onFace.reduce((big, f) => (measureArea(f) > measureArea(big) ? f : big));
+          const nv = face.normalAt(face.center); let n: V3 = unit([nv.x, nv.y, nv.z]); nv.delete();
+          // The line lies on the face at v = 0 with the material below it (v ∈ [-t, 0]); a line on
+          // the bottom face flips the frame so the bend sector is drawn the same way.
+          let o = unit(cross(n, tdir));
+          if (feature.otherSide) o = neg(o);
+          const bounds = body.boundingBox.bounds, span = 4 * Math.hypot(bounds[1][0] - bounds[0][0], bounds[1][1] - bounds[0][1], bounds[1][2] - bounds[0][2]);
+          const slab = (from: number, to: number): Shape3D => {
+            // The region from ·o = from to ·o = to, as a box across the whole part.
+            const d = own(draw([from, -span]).lineTo([to, -span]).lineTo([to, span]).lineTo([from, span]).close());
+            const plane = own(new Plane([p[0], p[1], p[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+            const piece = own(d.sketchOnPlane(plane)).extrude(span * 2) as Shape3D;
+            return own(piece.translate(tdir[0] * span, tdir[1] * span, tdir[2] * span));
+          };
+          const fixed = own(body.intersect(slab(-span, 0))) as Shape3D, strip = own(body.intersect(slab(0, ba))) as Shape3D, moving = own(body.intersect(slab(ba, span))) as Shape3D;
+          if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
+          // The bend: an annular sector over the strip's extent along the line.
+          const sb = strip.boundingBox.bounds;
+          const along = (pt: V3) => dot(sub(pt, p), tdir);
+          const corners: V3[] = [];
+          for (const x of [sb[0][0], sb[1][0]]) for (const y of [sb[0][1], sb[1][1]]) for (const z of [sb[0][2], sb[1][2]]) corners.push([x, y, z]);
+          const s0 = Math.min(...corners.map(along)), s1 = Math.max(...corners.map(along));
+          const v = (y: number) => (feature.inward ? -t - y : y);
+          const C: [number, number] = [0, -(t + r)];
+          const at = (rho: number, theta: number): [number, number] => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
+          const pen = draw([0, v(0)]);
+          pen.threePointsArcTo(at(r + t, alpha), at(r + t, alpha / 2)); pen.lineTo(at(r, alpha)); pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
+          const section = own(pen.close());
+          // As for a flange: normal = o × n so the section's y is the face normal; it runs ± along the line.
+          const zdir = unit(cross(o, n));
+          const start = add(p, scale(tdir, dot(zdir, tdir) > 0 ? s0 : s1));
+          const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
+          const bend = own(own(section.sketchOnPlane(sectionPlane)).extrude(s1 - s0)) as Shape3D;
+          // The moving side slides back by the strip's width, then turns about the bend axis
+          // (through the arc's centre, along the line) by the fold angle, the way the arc turns.
+          const axisOrigin = add(p, scale(n, feature.inward ? r : -(t + r)));
+          const sign = feature.inward ? 1 : -1;
+          const turned = own(own(moving.translate(-o[0] * ba, -o[1] * ba, -o[2] * ba)).rotate(sign * feature.angleDegrees, axisOrigin, tdir));
+          const result = own(own(fixed.fuse(bend)).fuse(turned));
+          if (!isShape3D(result)) throw new Error("Fold did not join the sheet.");
+          face.delete();
+          bodies.set(id, result); currentBodyID = id;
           continue;
         }
         if (feature.type === "sheet-unfold") {

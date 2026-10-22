@@ -1,4 +1,5 @@
 import { validateEdgeFinishEdge, type EdgeFinishEdge } from "./solid-edge-reference";
+import type { SketchLineDirectionReference } from "./part-document";
 
 /** Sheet metal (SolidCraft's `sheet.*`): a plate of a rule's thickness, flanges and
  *  hems bent from its edges by the rule's radius, unfolded with the rule's K factor.
@@ -41,10 +42,22 @@ export interface SheetHemFeature {
   gapMillimeters?: number;
   inward?: boolean;
 }
+/** Fold: the plate bent along a sketch line on its base face. The side the line's
+ *  direction points left of (its normal side) moves unless `otherSide`; the strip of
+ *  bend allowance past the line becomes the bend, the rest rotates about it. */
+export interface SheetFoldFeature {
+  id: string; type: "sheet-fold"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  line: SketchLineDirectionReference;
+  angleDegrees: number;
+  bendRadiusMillimeters?: number;
+  inward?: boolean;
+  otherSide?: boolean;
+}
 export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }
 export interface SheetRefoldFeature { id: string; type: "sheet-refold"; name: string; suppressed: boolean; bodyIds: [string] }
-export type SheetMetalFeature = SheetBaseFeature | SheetFlangeFeature | SheetHemFeature | SheetUnfoldFeature | SheetRefoldFeature;
-export const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-unfold", "sheet-refold"] as const;
+export type SheetMetalFeature = SheetBaseFeature | SheetFlangeFeature | SheetHemFeature | SheetFoldFeature | SheetUnfoldFeature | SheetRefoldFeature;
+export const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold"] as const;
 export const defaultSheetMetalRule: SheetMetalRule = { thicknessMillimeters: 1.5, bendRadiusMillimeters: 1.5, kFactor: 0.44 };
 
 /** The unfolded length a bend of this angle takes: the arc at the neutral axis. */
@@ -79,6 +92,12 @@ export function validateSheetMetalFeature(feature: SheetMetalFeature, earlier: R
       oneBody(feature.bodyIds, "Hem"); pickedEdges(feature.edges, "Hem", earlier, missingId);
       if (!finite(feature.lengthMillimeters) || feature.lengthMillimeters <= 0) throw new Error("Hem needs a positive length.");
       if (feature.gapMillimeters !== undefined && !(finite(feature.gapMillimeters) && feature.gapMillimeters > 0)) throw new Error("Hem gap must be positive.");
+      return;
+    case "sheet-fold":
+      oneBody(feature.bodyIds, "Fold");
+      if (!feature.line || feature.line.kind !== "sketch-line" || typeof feature.line.sourceFeatureId !== "string" || (!missing(feature.line.sourceFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.line.sourceFeatureId) ?? ""))) throw new Error("Fold needs a sketch line on the sheet.");
+      if (!finite(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 180) throw new Error("Fold angle must be between 0 and 180 degrees.");
+      if (feature.bendRadiusMillimeters !== undefined && !(finite(feature.bendRadiusMillimeters) && feature.bendRadiusMillimeters > 0)) throw new Error("Fold bend radius must be positive.");
       return;
     case "sheet-unfold": oneBody(feature.bodyIds, "Unfold"); return;
     case "sheet-refold": oneBody(feature.bodyIds, "Refold"); return;
