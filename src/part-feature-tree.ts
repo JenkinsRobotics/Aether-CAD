@@ -66,6 +66,9 @@ function featureDetail(feature: PartFeature): string {
     return `${feature.operation}`;
   if (feature.type === "shell")
     return `${feature.thicknessMillimeters} mm`;
+  if (feature.type === "surface-boundary") return `${feature.edges.length} edges filled`;
+  if (feature.type === "surface-blend") return `${feature.from.edges.length} + ${feature.to.edges.length} edges`;
+  if (feature.type === "surface-untrim") return "holes removed";
   if (feature.type === "surface-ruled") return `${feature.distanceMillimeters} mm · ${feature.mode} · ${feature.edges.length} edges`;
   if (feature.type === "surface-extend") return `${feature.distanceMillimeters} mm · ${feature.edges.length} edges`;
   if (feature.type === "surface-extrude") return `${feature.distanceMillimeters} mm sheet`;

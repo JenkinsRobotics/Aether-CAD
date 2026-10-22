@@ -18,6 +18,8 @@ export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
       tool("surface-patch", "Patch", "face", "feature-surface-patch"),
       tool("surface-offset", "Offset", "offset", "feature-surface-offset"),
       tool("surface-ruled", "Ruled", "curve", "feature-surface-ruled"),
+      tool("surface-boundary", "Boundary", "face", "feature-surface-boundary"),
+      tool("surface-blend", "Blend", "loft", "feature-surface-blend"),
     ] },
     { id: "surface-modify", label: "Modify", tools: [
       tool("surface-trim", "Trim", "trim", undefined, surfaceProducer),
@@ -25,6 +27,7 @@ export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
       tool("surface-stitch", "Stitch", "weld", "feature-surface-stitch"),
       tool("surface-unstitch", "Unstitch", "split", "feature-surface-unstitch"),
       tool("surface-reverse-normal", "Reverse Normal", "normal", "feature-surface-reverse-normal"),
+      tool("surface-untrim", "Untrim", "face", "feature-surface-untrim"),
       tool("surface-thicken", "Thicken", "thicken", "feature-surface-thicken"),
     ] },
   ],

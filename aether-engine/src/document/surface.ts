@@ -1,5 +1,6 @@
 import { validateTransformVectorReference, type TransformVectorReference } from "./part-transform";
 import { validateEdgeFinishEdge, type EdgeFinishEdge } from "./solid-edge-reference";
+import { validateSolidFaceReference, type SolidFaceReference } from "./solid-face-reference";
 
 /** The same axis choices Revolve offers: a given line, an axis feature, or a picked line, edge or two points. */
 export type SurfaceRevolveAxis = { kind: "vector"; origin: [number, number, number]; direction: [number, number, number] } | { kind: "feature"; featureId: string } | TransformVectorReference;
@@ -94,13 +95,31 @@ export interface SurfaceExtendFeature {
   edges: EdgeFinishEdge[];
   distanceMillimeters: number;
 }
-export type SurfaceFeature = SurfaceRuledFeature | SurfaceExtendFeature
+/** Boundary Surface: one face filled across a loop of picked body edges (2 to 4, meeting end to end). */
+export interface SurfaceBoundaryFeature {
+  id: string; type: "surface-boundary"; name: string; suppressed: boolean; operation: "new";
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+}
+/** Blend Surface: a face between two edge chains (position continuity), each chain on one body. */
+export interface SurfaceBlendFeature {
+  id: string; type: "surface-blend"; name: string; suppressed: boolean; operation: "new";
+  from: { bodyId: string; edges: EdgeFinishEdge[] };
+  to: { bodyId: string; edges: EdgeFinishEdge[] };
+}
+/** Untrim: a picked face rebuilt from its outer boundary alone, its holes gone, in place. */
+export interface SurfaceUntrimFeature {
+  id: string; type: "surface-untrim"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  face: SolidFaceReference;
+}
+export type SurfaceFeature = SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
   | SurfaceExtrudeFeature | SurfaceRevolveFeature | SurfaceLoftFeature | SurfacePatchFeature | SurfaceSweepFeature
   | SurfaceOffsetFeature | SurfaceThickenFeature | SurfaceStitchFeature | SurfaceUnstitchFeature | SurfaceReverseNormalFeature;
 
-export const surfaceFeatureTypes = ["surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
+export const surfaceFeatureTypes = ["surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
 /** The surface features that make a new sheet (or, for Thicken with "new", a solid). */
-export const surfaceCreatorTypes = ["surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
+export const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id: unknown, earlier: ReadonlyMap<string, string>, what: string) => {
@@ -111,6 +130,21 @@ const ids = (list: unknown, what: string, exact?: number) => {
 };
 export function validateSurfaceFeature(feature: SurfaceFeature, earlier: ReadonlyMap<string, string>, missing: (id: unknown) => boolean): void {
   switch (feature.type) {
+    case "surface-boundary":
+      ids(feature.bodyIds, "Boundary surface", 1);
+      if (!Array.isArray(feature.edges) || feature.edges.length < 2 || feature.edges.length > 4) throw new Error("Boundary surface needs two to four picked edges meeting end to end.");
+      for (const edge of feature.edges) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
+      return;
+    case "surface-blend":
+      for (const side of [feature.from, feature.to]) {
+        if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
+        for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
+      }
+      return;
+    case "surface-untrim":
+      ids(feature.bodyIds, "Untrim", 1);
+      validateSolidFaceReference(feature.face, earlier, missing as (id: string) => boolean);
+      return;
     case "surface-ruled":
     case "surface-extend": {
       ids(feature.bodyIds, feature.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
