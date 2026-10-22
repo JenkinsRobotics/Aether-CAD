@@ -409,7 +409,7 @@ function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing
 }
 const surfaceFeatureTypes = ["surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
 const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
-const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
+const finite$2 = (v) => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id2, earlier, what) => {
   if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
 };
@@ -438,7 +438,7 @@ function validateSurfaceFeature(feature, earlier, missing) {
       ids(feature.bodyIds, feature.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
       if (!Array.isArray(feature.edges) || !feature.edges.length) throw new Error(`${feature.type === "surface-ruled" ? "Ruled surface" : "Extend"} needs picked edges.`);
       for (const edge of feature.edges) validateEdgeFinishEdge(edge, earlier, missing);
-      if (!finite$1(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
+      if (!finite$2(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
       if (feature.type === "surface-ruled") {
         if (!["normal", "tangent", "direction"].includes(feature.mode)) throw new Error("Ruled surface reaches square to the surface, along it, or in a direction.");
         if (feature.mode === "direction" && !(Array.isArray(feature.direction) && feature.direction.length === 3 && feature.direction.every(Number.isFinite) && Math.hypot(...feature.direction) > 1e-9)) throw new Error("Ruled surface direction needs a nonzero vector.");
@@ -447,11 +447,11 @@ function validateSurfaceFeature(feature, earlier, missing) {
     }
     case "surface-extrude":
       sketchRef(feature.profileFeatureId, earlier, "Surface extrude");
-      if (!finite$1(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Surface extrude needs a positive distance.");
+      if (!finite$2(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Surface extrude needs a positive distance.");
       return;
     case "surface-revolve":
       sketchRef(feature.profileFeatureId, earlier, "Surface revolve");
-      if (!finite$1(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
+      if (!finite$2(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
       if (!["X", "Y", "Z"].includes(feature.axis)) throw new Error("Surface revolve axis must be X, Y or Z.");
       if (feature.axisReference) {
         const a = feature.axisReference, missingId = missing;
@@ -478,17 +478,17 @@ function validateSurfaceFeature(feature, earlier, missing) {
       return;
     case "surface-offset":
       ids(feature.bodyIds, "Offset surface", 1);
-      if (!finite$1(feature.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
+      if (!finite$2(feature.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
       return;
     case "surface-thicken":
       ids(feature.bodyIds, "Thicken");
-      if (!finite$1(feature.thicknessMillimeters) || feature.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
+      if (!finite$2(feature.thicknessMillimeters) || feature.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
       if (!["new", "add", "cut"].includes(feature.operation)) throw new Error("Thicken makes a new body, adds or cuts.");
       return;
     case "surface-stitch":
       ids(feature.bodyIds, "Stitch");
       if (feature.bodyIds.length < 2) throw new Error("Stitch needs two or more surface bodies.");
-      if (feature.toleranceMillimeters !== void 0 && !(finite$1(feature.toleranceMillimeters) && feature.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
+      if (feature.toleranceMillimeters !== void 0 && !(finite$2(feature.toleranceMillimeters) && feature.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
       return;
     case "surface-unstitch":
       ids(feature.bodyIds, "Unstitch", 1);
@@ -5000,10 +5000,10 @@ function localPierceValidation(drawing) {
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature) {
-  if (!surfaceCreatorTypes.includes(feature.type) && feature.type !== "surface-thicken" && (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.bodyId)
+  if (!surfaceCreatorTypes.includes(feature.type) && feature.type !== "surface-thicken" && feature.type !== "sheet-base" && (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.bodyId)
     return feature.bodyId;
   const first = doc.features.find(
-    (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new"
+    (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken" || f.type === "sheet-base") && "operation" in f && f.operation === "new"
   );
   return first?.id === feature.id ? `${doc.documentId}:body-1` : `${doc.documentId}:body-${feature.id}`;
 }
@@ -5117,7 +5117,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
     if ("pathFeatureId" in f) refs.push(f.pathFeatureId);
     if ("sourceFeatureId" in f) refs.push(f.sourceFeatureId);
     if (f.type === "profile" && f.profile.type === "projection") refs.push(f.profile.sourceFeatureId);
-    if ((f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") && f.operation === "new") {
+    if ((f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "bounding-solid" || f.type === "sheet-base" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new") {
       for (const id2 of bodyIDsForFeature(doc, f)) {
         lastBody = id2;
         bodyProducers.set(id2, f.id);
@@ -5566,6 +5566,49 @@ function validateCoil(feature) {
   if (feature.axis !== void 0 && !["X", "Y", "Z"].includes(feature.axis)) throw Error("Coil axis must be X, Y or Z.");
   if (!["new", "add", "cut"].includes(feature.operation)) throw Error("Invalid coil operation.");
 }
+const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-unfold", "sheet-refold"];
+const bendAllowanceMillimeters = (angleDegrees, innerRadius, rule) => angleDegrees * Math.PI / 180 * (innerRadius + rule.kFactor * rule.thicknessMillimeters);
+const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
+function validateSheetMetalRule(rule, what) {
+  if (!finite$1(rule.thicknessMillimeters) || rule.thicknessMillimeters <= 0) throw new Error(`${what} needs a positive thickness.`);
+  if (!finite$1(rule.bendRadiusMillimeters) || rule.bendRadiusMillimeters <= 0) throw new Error(`${what} needs a positive bend radius.`);
+  if (!finite$1(rule.kFactor) || rule.kFactor <= 0 || rule.kFactor > 1) throw new Error(`${what} needs a K factor between 0 and 1.`);
+}
+const oneBody = (ids2, what) => {
+  if (!Array.isArray(ids2) || ids2.length !== 1 || typeof ids2[0] !== "string") throw new Error(`${what} needs one sheet metal body.`);
+};
+const pickedEdges = (edges, what, earlier, missing) => {
+  if (!Array.isArray(edges) || !edges.length) throw new Error(`${what} needs picked edges.`);
+  for (const edge of edges) validateEdgeFinishEdge(edge, earlier, missing);
+};
+function validateSheetMetalFeature(feature, earlier, missing) {
+  const missingId = missing;
+  switch (feature.type) {
+    case "sheet-base":
+      if (typeof feature.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) ?? "")) throw new Error("Sheet metal base needs an earlier sketch.");
+      validateSheetMetalRule(feature, "Sheet metal base");
+      return;
+    case "sheet-flange":
+      oneBody(feature.bodyIds, "Flange");
+      pickedEdges(feature.edges, "Flange", earlier, missingId);
+      if (!finite$1(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Flange needs a positive length.");
+      if (!finite$1(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 180) throw new Error("Flange angle must be between 0 and 180 degrees.");
+      if (feature.bendRadiusMillimeters !== void 0 && !(finite$1(feature.bendRadiusMillimeters) && feature.bendRadiusMillimeters > 0)) throw new Error("Flange bend radius must be positive.");
+      return;
+    case "sheet-hem":
+      oneBody(feature.bodyIds, "Hem");
+      pickedEdges(feature.edges, "Hem", earlier, missingId);
+      if (!finite$1(feature.lengthMillimeters) || feature.lengthMillimeters <= 0) throw new Error("Hem needs a positive length.");
+      if (feature.gapMillimeters !== void 0 && !(finite$1(feature.gapMillimeters) && feature.gapMillimeters > 0)) throw new Error("Hem gap must be positive.");
+      return;
+    case "sheet-unfold":
+      oneBody(feature.bodyIds, "Unfold");
+      return;
+    case "sheet-refold":
+      oneBody(feature.bodyIds, "Refold");
+      return;
+  }
+}
 function validateRemoveBody(feature) {
   if (!Array.isArray(feature.bodyIds) || !feature.bodyIds.length || !feature.bodyIds.every((id2) => typeof id2 === "string" && id2.trim())) throw Error("Choose the parts to remove.");
 }
@@ -5682,6 +5725,7 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
   if (feature.type === "pipe") return validatePipe(feature, earlier, missingReference);
   if (feature.type === "coil") return validateCoil(feature);
   if (surfaceFeatureTypes.includes(feature.type)) return validateSurfaceFeature(feature, earlier, missingReference);
+  if (sheetMetalFeatureTypes.includes(feature.type)) return validateSheetMetalFeature(feature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature, earlier, missingReference);
   if (feature.type === "rest") return validateRest(feature, earlier, missingReference);
   if (feature.type === "remove-body") return validateRemoveBody(feature);
@@ -6317,7 +6361,7 @@ function validateTreeOrganization(value2) {
     }
   }
 }
-const isSurfaceBodyMaker = (feature) => surfaceCreatorTypes.includes(feature.type) || feature.type === "surface-thicken" && feature.operation === "new";
+const isSurfaceBodyMaker = (feature) => surfaceCreatorTypes.includes(feature.type) || feature.type === "surface-thicken" && feature.operation === "new" || feature.type === "sheet-base";
 const PART_DOCUMENT_FORMAT = "aether-part";
 const LEGACY_PART_DOCUMENT_FORMAT = "open-cad-part";
 const PART_DOCUMENT_VERSION = partFormat.current;
@@ -10370,6 +10414,52 @@ export interface SketchLineDirectionReference {
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
 }`,
+  "sheet-base": 'export interface SheetBaseFeature extends SheetMetalRule {\n  id: string; type: "sheet-base"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  profileContourId?: string;\n  /** Build the plate behind the sketch instead of in front of it. */\n  reversed?: boolean;\n}\n\nexport interface SheetMetalRule {\n  thicknessMillimeters: number;\n  bendRadiusMillimeters: number;\n  kFactor: number;\n}',
+  "sheet-flange": `export interface SheetFlangeFeature {
+  id: string; type: "sheet-flange"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+  /** The straight leg past the bend. */
+  distanceMillimeters: number;
+  angleDegrees: number;
+  /** Fold toward the picked face instead of away from it. */
+  inward?: boolean;
+  /** Inner bend radius; the rule's when absent. */
+  bendRadiusMillimeters?: number;
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
+  "sheet-hem": `export interface SheetHemFeature {
+  id: string; type: "sheet-hem"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+  lengthMillimeters: number;
+  /** Inner radius of the hem; the rule's bend radius when absent. */
+  gapMillimeters?: number;
+  inward?: boolean;
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
+  "sheet-refold": 'export interface SheetRefoldFeature { id: string; type: "sheet-refold"; name: string; suppressed: boolean; bodyIds: [string] }',
+  "sheet-unfold": 'export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }',
   "shell": 'export interface ShellFeature {\n  id: string;\n  type: "shell";\n  name: string;\n  targetBodyId?: string;\n  thicknessMillimeters: number;\n  /** Faces left open. Prefer a face reference (the face of an earlier solid by\n   *  outward normal or surface type), which survives upstream dimension edits;\n   *  the plane/offset form matches a fixed coordinate and is kept for older files. */\n  removedFaces?: ShellOpenFace[];\n  /** Which side of the original surface the wall takes; default inside. */\n  direction?: "inside" | "outside" | "both";\n  /** Also open every face tangent-continuous with a picked one. */\n  tangentChain?: boolean;\n  suppressed: boolean;\n}\n\nexport type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";',
   "sketch": 'export interface SketchFeature {\n  id: string;\n  type: "sketch";\n  name: string;\n  plane: SketchPlane;\n  profile: RectangleProfile;\n  constraints: SketchConstraint[];\n  dimensions: SketchDimension[];\n  suppressed: boolean;\n}\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";\n\nexport interface RectangleProfile {\n  type: "center-rectangle";\n  widthMillimeters: number;\n  heightMillimeters: number;\n  centerXMillimeters: number;\n  centerYMillimeters: number;\n  construction: boolean;\n}\n\nexport interface SketchConstraint {\n  id: string;\n  type: SketchConstraintType;\n  target: "center-rectangle";\n}\n\nexport interface SketchDimension {\n  id: string;\n  type: SketchDimensionType;\n  target: "center-rectangle";\n  valueMillimeters: number;\n}\n\nexport type SketchConstraintType =\n  | "horizontal"\n  | "vertical"\n  | "coincident-origin";\n\nexport type SketchDimensionType = "width" | "height";',
   "split": `export interface SplitFeature {
@@ -37369,6 +37459,97 @@ function evaluatePartDocument(document2, options = {}) {
             }
             return own(assembleWire(order.map((i) => edges[i])));
           };
+          const sheetRuleOf = (bodyId) => {
+            const index2 = document2.features.findIndex((f) => f.type === "sheet-base" && !f.suppressed && bodyIDForFeature(document2, f) === bodyId);
+            if (index2 < 0) throw new Error("This body is not a sheet metal body. Start with a sheet metal base.");
+            return { base: document2.features[index2], index: index2 };
+          };
+          const bendFromEdges = (body, bodyId, picks, rule, options2) => {
+            const t = rule.thicknessMillimeters, r = options2.innerRadius, alpha = options2.angleDegrees * Math.PI / 180;
+            let result = body;
+            for (const edge of pickedEdgesOf(body, bodyId, picks, options2.what)) {
+              const m = edge.pointAt(0.5), mid = [m.x, m.y, m.z];
+              m.delete();
+              const s = edge.startPoint, a = [s.x, s.y, s.z];
+              s.delete();
+              const en = edge.endPoint, b = [en.x, en.y, en.z];
+              en.delete();
+              const length = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+              const tdir = unit(sub$1(b, a));
+              const faces = new FaceFinder().containsPoint(mid).find(body).filter((f) => f.geomType === "PLANE");
+              if (!faces.length) throw new Error(`${options2.what}: the picked edge is not on a flat face of the sheet.`);
+              const face = faces.reduce((big, f) => measureArea(f) > measureArea(big) ? f : big);
+              const nv = face.normalAt(mid);
+              let n = unit([nv.x, nv.y, nv.z]);
+              nv.delete();
+              let o = unit(cross$1(n, tdir));
+              const c = face.center, away = sub$1(mid, [c.x, c.y, c.z]);
+              c.delete();
+              if (dot$1(o, away) < 0) o = neg(o);
+              const v = (y) => options2.inward ? -t - y : y;
+              const pen = draw([0, v(0)]);
+              if (options2.flat) {
+                const reach = options2.leg + bendAllowanceMillimeters(options2.angleDegrees, r, rule);
+                pen.lineTo([reach, v(0)]);
+                pen.lineTo([reach, v(-t)]);
+                pen.lineTo([0, v(-t)]);
+              } else {
+                const C = [0, -(t + r)];
+                const at = (rho, theta) => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
+                const d = [Math.cos(alpha), -Math.sin(alpha)];
+                const outerEnd = at(r + t, alpha), innerEnd = at(r, alpha), L = options2.leg;
+                const dv = options2.inward ? -d[1] : d[1];
+                const lo = [outerEnd[0] + L * d[0], outerEnd[1] + L * dv], li = [innerEnd[0] + L * d[0], innerEnd[1] + L * dv];
+                pen.threePointsArcTo(outerEnd, at(r + t, alpha / 2));
+                pen.lineTo(lo);
+                pen.lineTo(li);
+                pen.lineTo(innerEnd);
+                pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
+              }
+              const section = own(pen.close());
+              const plane2 = own(new Plane([b[0], b[1], b[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+              const piece = own(section.sketchOnPlane(plane2)).extrude(length);
+              if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
+              const fused = result.fuse(own(piece));
+              if (!isShape3D(fused)) throw new Error(`${options2.what} did not join the sheet.`);
+              result = own(fused);
+              face.delete();
+            }
+            return result;
+          };
+          if (feature.type === "sheet-flange" || feature.type === "sheet-hem") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("The sheet metal body is unavailable.");
+            const { base } = sheetRuleOf(id2);
+            const bent = feature.type === "sheet-flange" ? bendFromEdges(body, id2, feature.edges, base, { leg: feature.distanceMillimeters, angleDegrees: feature.angleDegrees, innerRadius: feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Flange" }) : bendFromEdges(body, id2, feature.edges, base, { leg: feature.lengthMillimeters, angleDegrees: 180, innerRadius: feature.gapMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Hem" });
+            bodies.set(id2, bent);
+            currentBodyID = id2;
+            continue;
+          }
+          if (feature.type === "sheet-unfold") {
+            const id2 = feature.bodyIds[0];
+            const { base, index: baseIndex } = sheetRuleOf(id2);
+            const plate = bodyAt(base.id, id2);
+            if (!plate) throw new Error("The sheet metal base is unavailable.");
+            let flat = own(plate.clone());
+            for (const f of document2.features.slice(baseIndex + 1, index)) {
+              if (f.suppressed || f.type !== "sheet-flange" && f.type !== "sheet-hem" || f.bodyIds[0] !== id2) continue;
+              flat = f.type === "sheet-flange" ? bendFromEdges(flat, id2, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, f.edges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
+            }
+            bodies.set(id2, flat);
+            currentBodyID = id2;
+            continue;
+          }
+          if (feature.type === "sheet-refold") {
+            const id2 = feature.bodyIds[0];
+            const unfoldIndex = document2.features.slice(0, index).map((f, i) => ({ f, i })).reverse().find(({ f }) => f.type === "sheet-unfold" && !f.suppressed && f.bodyIds[0] === id2)?.i;
+            if (unfoldIndex === void 0 || unfoldIndex === 0) throw new Error("Refold needs an earlier Unfold of this body.");
+            const folded = cached[unfoldIndex - 1]?.bodies.get(id2);
+            if (!folded) throw new Error("The folded sheet is unavailable.");
+            bodies.set(id2, own(folded.clone()));
+            currentBodyID = id2;
+            continue;
+          }
           if (feature.type === "surface-untrim") {
             const id2 = feature.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("Untrim needs an available body.");
@@ -37637,6 +37818,17 @@ function evaluatePartDocument(document2, options = {}) {
                 f.FS.unlink(name);
               }
             } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+          } else if (feature.type === "sheet-base") {
+            const frame = sketchFrameOf(feature.profileFeatureId);
+            const face = own(makeFace(sketchWire(feature.profileFeatureId, feature.profileContourId, "Sheet metal base", false)));
+            const along = scale(unit(frame.normal), feature.thicknessMillimeters * (feature.reversed ? -1 : 1));
+            const sweep = new Vector(along);
+            try {
+              tool22 = own(basicFaceExtrusion(face, sweep));
+            } finally {
+              sweep.delete();
+            }
+            if (!(measureVolume(tool22) > 1e-9)) throw new Error("Sheet metal base needs a closed sketch region.");
           } else if (feature.type === "surface-boundary") {
             const body = bodies.get(feature.bodyIds[0]);
             if (!body) throw new Error("Boundary surface needs an available body.");

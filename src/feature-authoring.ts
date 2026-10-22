@@ -2,6 +2,7 @@ import { openCompactFeatureWindow } from "@aether/ui";
 /** Feature types whose tool artwork has another name. */
 const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "offset-face": "offset", "import-cad": "import", profile: "sketch" };
 import { mountConstructionCommands } from "./construction-commands";
+import { mountSheetMetalCommands } from "./sheet-metal-commands";
 import { mountEditHistory, featurePreviewDocument } from "./modeling/edit-history";
 import { mountFeaturePreview } from "./modeling/feature-preview";
 import { openProjectionEditor } from "./sketch/projection-editor";
@@ -41,6 +42,7 @@ export function mountFeatureAuthoring(
   apply: (doc: PartDocument) => Promise<void>,
 ) {
   mountConstructionCommands(getDocument, apply);
+  mountSheetMetalCommands(getDocument);
   const actions = document.createElement("div");
   const error = document.createElement("p");
   error.className = "feature-command-error";
@@ -246,7 +248,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest","sheet-base","sheet-flange","sheet-hem","sheet-unfold","sheet-refold","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);

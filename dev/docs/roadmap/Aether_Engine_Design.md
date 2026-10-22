@@ -820,3 +820,23 @@ Boundary, no chosen-holes-only Untrim. Fair and Match stay gaps (no fairing in t
 needs the continuity machinery). Picked-edge resolution is now one helper (`pickedEdgesOf`) shared
 by Ruled, Extend, Boundary and Blend.
 
+### r41 (2026-10-22): sheet metal, first slice
+
+Installed; the harness makes a sheet metal plate and runs the flat pattern export. The browser also
+caught that new-body surface and sheet features were missing from the dependency graph's list of
+body producers (so the sheet base read as a modifier of a missing body); every feature with
+`operation: "new"` is a producer now, pinned by `new-body-producers.test.ts`.
+
+The rule (thickness, inner bend radius, K factor) lives on the sheet metal base, a plate extruded
+from a sketch by the thickness. Flange and Hem bend from picked edges of a flat face: the bend's
+cross-section (an annular sector of inner radius r and outer r + t, then the straight leg) is drawn
+in the plane square to the edge and extruded along it, fused into the body; a hem is the same bend
+at 180° with the gap as inner radius. Unfold rebuilds the body from the base plate plus each bend
+laid flat as a strip of leg + bend allowance (angle · (r + K · t)); Refold restores the folded body
+from the cached step before the unfold. Flat pattern DXF sections the sheet at mid-thickness in the
+base's sketch plane and writes the outline with the sketch DXF writer. Tests pin the volumes
+(plate + annular sector × edge length + leg) and extents. Not built: contour/base flanges, reliefs,
+folds along a sketch line, bends on bends in the flat pattern, a named rule library, perforate,
+the bend table. Lesson from the tests: replicad's `Plane(origin, xDir, normal)` has y = normal × x,
+so a section whose y must be the face normal takes the edge direction reversed as its normal.
+

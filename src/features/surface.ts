@@ -8,14 +8,14 @@ import { bodyAndOperationTabs, entityChips, requireSelections, type Controls, ty
 
 /** A multi-pick of existing bodies, the way Bounding Solid lists parts: a hidden
  *  JSON field holds the ids, an entities box shows them, a select adds one. */
-function bodiesControls({ field, feature, doc }: FeatureEditorContext, key = "bodyIds"): Controls {
+export function bodiesControls({ field, feature, doc }: FeatureEditorContext, key = "bodyIds"): Controls {
   const end = feature ? doc.features.findIndex((f) => f.id === feature.id) : doc.rollbackIndex ?? doc.features.length;
   const choices = availableBodies({ ...doc, features: doc.features.slice(0, end), rollbackIndex: undefined });
   const pick = field("Body", choices[0]?.id ?? "", choices.map((b) => b.id));
   Array.from(pick.children).forEach((o, i) => (o.textContent = choices[i].name));
   return { pick, bodies: field("Chosen bodies", JSON.stringify(feature?.[key] ?? [])) };
 }
-function bodiesLayout({ win, form }: FeatureEditorContext, controls: Controls, caption: string, single = false): void {
+export function bodiesLayout({ win, form }: FeatureEditorContext, controls: Controls, caption: string, single = false): void {
   controls.bodies.closest("label")?.remove(); controls.bodies.hidden = true; controls.bodies.setAttribute("form", form.id); form.append(controls.bodies);
   const box = win.entitiesBox(caption); win.body.prepend(box.element);
   const names = new Map(Array.from(controls.pick.children).map((o) => [(o as HTMLOptionElement).value, o.textContent ?? ""]));
@@ -28,7 +28,7 @@ function bodiesLayout({ win, form }: FeatureEditorContext, controls: Controls, c
   box.element.append(add);
   render();
 }
-const bodiesValid = (controls: Controls, noun: string, exactly?: number): string | null => {
+export const bodiesValid = (controls: Controls, noun: string, exactly?: number): string | null => {
   const ids: string[] = JSON.parse(controls.bodies.value);
   if (exactly !== undefined ? ids.length !== exactly : !ids.length) return `Choose ${exactly === 1 ? "one" : "at least one"} ${noun}.`;
   return null;

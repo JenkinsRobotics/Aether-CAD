@@ -100,7 +100,7 @@ export const projectProducer = "Requires persistent workspace metadata that is n
 // so a greyed button is a review item, not a mystery.
 export const surfaceProducer = "The Aether engine does not build this surface tool yet.";
 export const meshProducer = "Aether has no mesh body type; nothing carries a mesh across the engine boundary yet.";
-export const sheetMetalProducer = "The Aether engine has no sheet-metal features yet.";
+export const sheetMetalProducer = "The Aether engine does not build this sheet metal tool yet.";
 export const framingProducer = "Framing needs a standard profile library and a member solver that trims and joins at the joints; Aether has neither.";
 export const plasticProducer = "Plastic-part features need an Aether engine feature that is not built yet.";
 
