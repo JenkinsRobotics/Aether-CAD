@@ -852,3 +852,17 @@ strip is not carried into the bend. The bend section's plane now takes `o × n` 
 its y axis is the face normal whichever way the edge or line runs (the flange code had relied on
 the pick's orientation).
 
+### r43 (2026-10-22): Configurations
+
+Installed. The first harness run failed at the hole step ("Cut removes no material" in the dialog's
+preview) and passed unchanged on the rerun: the hole dialog's preview can lag the harness's value
+changes, a timing flake to watch rather than a regression.
+
+A configuration table on the part document (`aether-engine/src/document/configurations.ts`):
+columns are variables (their expressions) or features (suppressed or not), rows are named value
+sets taken from the current design; activating a row writes its values back (suppression through
+`setFeatureSuppressed`, so dependents follow) and the table records the active row and whether the
+design still matches it. The Manage tab's Configurations button opens a compact window over the
+table; edits are a draft committed with Apply. Not built: material and appearance columns,
+preview-without-applying, and configuration rules.
+
