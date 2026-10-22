@@ -429,14 +429,14 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 
 | SolidCraft | Title | Their contract | Ours | Status | Missing / note |
 |---|---|---|---|---|---|
-| `config.activate` | Activate Configuration | row: name — sets its parameter values and suppressions | Configurations (placeholder) | gap |  |
-| `config.column` | Configuration Column | param? \| feature? \| material? \| appearance? (target name); delete?: bool | Configurations (placeholder) | gap |  |
-| `config.configure` | Configure | params?: [parameter names]; features?: [feature names]; materials?: [body names]; appearances?: [body names] (columns to add; with no rows yet, a "Default" row  | Configurations (placeholder) | gap |  |
-| `config.preview` | Preview Configuration | row: name — validates a rebuild without changing the design or history | Configurations (placeholder) | gap |  |
-| `config.row` | Configuration Row | name; from? (row to copy; default current values); values?: {column key: expression, suppression, material name, appearance name or Look object}; rename?; delet | Configurations (placeholder) | gap |  |
-| `config.rule` | Configuration Rule | rule?: {id,name,enabled,condition,effect}; id? + delete?; id? + index? (ordered move) | Configurations (placeholder) | gap |  |
-| `config.rules` | Configuration Rules | ordered typed rules, rows and active state | Configurations (placeholder) | gap |  |
-| `config.table` | Display Configuration Table | → columns (param:<name> or suppress:<feature>), rows, the active row and whether the design still matches it | Configurations (placeholder) | gap |  |
+| `config.activate` | Activate Configuration | row: name — sets its parameter values and suppressions | Configurations window | parity | done 2026-10-22 (r43): writes the row's expressions and suppressions into the design |
+| `config.column` | Configuration Column | param? \| feature? \| material? \| appearance? (target name); delete?: bool | Configurations window | partial | done 2026-10-22 (r43): add or remove variable and suppression columns. Missing: material/appearance |
+| `config.configure` | Configure | params?: [parameter names]; features?: [feature names]; materials?: [body names]; appearances?: [body names] (columns to add; with no rows yet, a "Default" row  | Configurations window | partial | done 2026-10-22 (r43) for variables and feature suppressions. Missing: material and appearance columns |
+| `config.preview` | Preview Configuration | row: name — validates a rebuild without changing the design or history | Configurations (placeholder) | gap | activation is undoable; a dry-run rebuild is not offered yet |
+| `config.row` | Configuration Row | name; from? (row to copy; default current values); values?: {column key: expression, suppression, material name, appearance name or Look object}; rename?; delet | Configurations window | parity | done 2026-10-22 (r43): a row from the current values, values edited per cell |
+| `config.rule` | Configuration Rule | rule?: {id,name,enabled,condition,effect}; id? + delete?; id? + index? (ordered move) | Configurations (placeholder) | gap | no rules |
+| `config.rules` | Configuration Rules | ordered typed rules, rows and active state | Configurations (placeholder) | gap | no rules |
+| `config.table` | Display Configuration Table | → columns (param:<name> or suppress:<feature>), rows, the active row and whether the design still matches it | Configurations window | parity | done 2026-10-22 (r43): columns (variables, feature suppressions), rows, the active row and whether the design still matches |
 
 ## Model query (3)
 

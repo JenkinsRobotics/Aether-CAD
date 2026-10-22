@@ -137,6 +137,8 @@ export interface PartDocument {
   bodyProperties?: Record<string, { name: string; visible: boolean; description?: string; category?: string }>;
   /** Feature tree folders/grouping; organization only — never evaluation order. */
   organization?: TreeOrganization;
+  /** Configurations: named rows of variable values and feature suppressions. */
+  configurations?: import("./configurations").ConfigurationTable;
 }
 
 export interface RectanglePartParameters {
