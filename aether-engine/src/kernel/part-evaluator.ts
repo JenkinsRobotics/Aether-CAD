@@ -21,6 +21,7 @@ import {
   loft,
   makeCircle,
   makeFace,
+  makeNonPlanarFace,
   makeLine,
   makeSphere,
   makePolygon,
@@ -1703,6 +1704,45 @@ export function evaluatePartDocument(
             return maker.Shape();
           });
         };
+        /** Picked edges joined end to end into one wire, whatever order they were picked in. */
+        const chainWire = (edges: ReturnType<typeof pickedEdgesOf>, what: string): Wire => {
+          const ends = edges.map((edge) => { const a = edge.startPoint, b = edge.endPoint; const pts: [V3, V3] = [[a.x, a.y, a.z], [b.x, b.y, b.z]]; a.delete(); b.delete(); return pts; });
+          const near = (p: V3, q: V3) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) < 1e-3;
+          const order = [0]; let tail = ends[0][1]; const left = new Set(edges.map((_, i) => i).slice(1));
+          while (left.size) {
+            const next = [...left].find((i) => near(ends[i][0], tail) || near(ends[i][1], tail));
+            if (next === undefined) throw new Error(`${what}: the picked edges do not meet end to end.`);
+            left.delete(next); order.push(next); tail = near(ends[next][0], tail) ? ends[next][1] : ends[next][0];
+          }
+          return own(assembleWire(order.map((i) => edges[i])));
+        };
+        if (feature.type === "surface-untrim") {
+          // Untrim: the face rebuilt from its outer boundary, so its holes close; the body's
+          // other faces are sewn back around it.
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Untrim needs an available body.");
+          const o = getOC() as any;
+          // A one-face sheet (an unstitched face) is its own face whichever way it points.
+          const faces = body.faces;
+          const picked = faces.length === 1 ? faces[0] : faceByReference(body, feature.face, "Face to untrim");
+          const pc = picked.center, centre: V3 = [pc.x, pc.y, pc.z]; pc.delete();
+          const outer = cast(o.BRepTools.OuterWire(picked.wrapped)) as Wire;
+          let rebuilt: Face;
+          try { rebuilt = own(makeFace(outer)); }
+          catch { const surface = o.BRep_Tool.Surface_2(picked.wrapped); rebuilt = own(cast(new o.BRepBuilderAPI_MakeFace_21(surface, outer.wrapped, true).Face()) as Face); }
+          const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+          for (const face of body.faces) { const c = face.center; const keep = Math.hypot(c.x - centre[0], c.y - centre[1], c.z - centre[2]) > 1e-6; c.delete(); if (keep) sewing.Add(face.wrapped); }
+          sewing.Add(rebuilt.wrapped);
+          sewing.Perform(new o.Message_ProgressRange_1());
+          let result = cast(sewing.SewedShape()) as any;
+          if (!isShape3D(result)) { const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, result.wrapped); result = cast(shell); }
+          if ((result.wrapped as any).ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
+            const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid()) as Shape3D;
+            result = measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid;
+          }
+          bodies.set(id, own(result as Shape3D)); currentBodyID = id;
+          continue;
+        }
         if (feature.type === "surface-extend") {
           // Extend: tangent strips past the picked edges, sewn onto the sheet in place.
           const id = feature.bodyIds[0], body = bodies.get(id);
@@ -1905,6 +1945,37 @@ export function evaluatePartDocument(
               tool = sewn(own(fromExtended(shape)));
             } finally { progress.delete(); reader.delete(); f.FS.unlink(name); }
           } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+        } else if (feature.type === "surface-boundary") {
+          const body = bodies.get(feature.bodyIds[0]);
+          if (!body) throw new Error("Boundary surface needs an available body.");
+          const o = getOC() as any;
+          const loop = chainWire(pickedEdgesOf(body, feature.bodyIds[0], feature.edges, "Boundary surface"), "Boundary surface");
+          if (!o.BRep_Tool.IsClosed_1(loop.wrapped)) throw new Error("Boundary surface needs edges that close a loop.");
+          const face = own(makeNonPlanarFace(loop));
+          const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, face.wrapped);
+          const sheet = cast(shell) as Shape3D;
+          if (!(measureArea(sheet as never) > 1e-9)) throw new Error("The boundary surface has no area.");
+          tool = own(sheet);
+        } else if (feature.type === "surface-blend") {
+          // Blend (position continuity): one face filled across chain A, a line to chain B's
+          // end, chain B back, and a line to A's start — B taken the way round that keeps the lines apart.
+          const bodyA = bodies.get(feature.from.bodyId), bodyB = bodies.get(feature.to.bodyId);
+          if (!bodyA || !bodyB) throw new Error("Blend surface needs two available bodies.");
+          const o = getOC() as any;
+          const a = chainWire(pickedEdgesOf(bodyA, feature.from.bodyId, feature.from.edges, "Blend surface"), "Blend surface");
+          const b = chainWire(pickedEdgesOf(bodyB, feature.to.bodyId, feature.to.edges, "Blend surface"), "Blend surface");
+          const pt = (v: { x: number; y: number; z: number; delete(): void }): V3 => { const p: V3 = [v.x, v.y, v.z]; v.delete(); return p; };
+          const a0 = pt(a.startPoint), a1 = pt(a.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
+          const dist = (p: V3, q: V3) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+          const straight = dist(a1, b1) + dist(a0, b0) <= dist(a1, b0) + dist(a0, b1);
+          const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
+          const back = straight ? own(cast(b.wrapped.Reversed()) as Wire) : b;
+          const loop = own(assembleWire([a, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
+          const face = own(makeNonPlanarFace(loop));
+          const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, face.wrapped);
+          const sheet = cast(shell) as Shape3D;
+          if (!(measureArea(sheet as never) > 1e-9)) throw new Error("The blend surface has no area.");
+          tool = own(sheet);
         } else if (feature.type === "surface-ruled") {
           const body = bodies.get(feature.bodyIds[0]);
           if (!body) throw new Error("Ruled surface needs an available body.");

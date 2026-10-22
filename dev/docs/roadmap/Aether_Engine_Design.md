@@ -806,3 +806,17 @@ thread, bounding solid, remove body, split, delete face, and the surface tools) 
 not connected" in the live app. Registration now covers every editor in `src/features/`. r38 had
 already been promoted because the chain did not gate the promote on the harness exit; it does now.
 
+### r40 (2026-10-22): Boundary, Blend and Untrim surfaces
+
+Installed.
+
+Boundary fills one face across a loop of two to four picked body edges (replicad's
+`makeNonPlanarFace`, OCCT `BRepOffsetAPI_MakeFilling`, position continuity); Blend fills one face
+between two picked edge chains, closing the loop with two straight lines on the side that keeps
+them apart; Untrim rebuilds a picked face from its outer wire (`BRepTools.OuterWire`) so its
+holes close, and sews the body's other faces back around it (a one-face sheet is its own
+target). The tracker marks all three partial: no tangency continuity, no sketch-curve loops for
+Boundary, no chosen-holes-only Untrim. Fair and Match stay gaps (no fairing in the build; Match
+needs the continuity machinery). Picked-edge resolution is now one helper (`pickedEdgesOf`) shared
+by Ruled, Extend, Boundary and Blend.
+

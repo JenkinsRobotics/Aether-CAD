@@ -407,8 +407,8 @@ function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing
     if (t.combine && copies) throw Error("A combined mirror joins the original; it makes no copies.");
   } else throw Error("Choose Translate, Rotate, Scale, Mirror, Align or Copy in place.");
 }
-const surfaceFeatureTypes = ["surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
-const surfaceCreatorTypes = ["surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
+const surfaceFeatureTypes = ["surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
+const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
 const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id2, earlier, what) => {
   if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
@@ -418,6 +418,21 @@ const ids = (list, what, exact) => {
 };
 function validateSurfaceFeature(feature, earlier, missing) {
   switch (feature.type) {
+    case "surface-boundary":
+      ids(feature.bodyIds, "Boundary surface", 1);
+      if (!Array.isArray(feature.edges) || feature.edges.length < 2 || feature.edges.length > 4) throw new Error("Boundary surface needs two to four picked edges meeting end to end.");
+      for (const edge of feature.edges) validateEdgeFinishEdge(edge, earlier, missing);
+      return;
+    case "surface-blend":
+      for (const side of [feature.from, feature.to]) {
+        if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
+        for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing);
+      }
+      return;
+    case "surface-untrim":
+      ids(feature.bodyIds, "Untrim", 1);
+      validateSolidFaceReference(feature.face, earlier, missing);
+      return;
     case "surface-ruled":
     case "surface-extend": {
       ids(feature.bodyIds, feature.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
@@ -10377,6 +10392,38 @@ export type SolidFaceReference=FaceSource & (
 );
 
 export type SketchPlane = "XY" | "XZ" | "YZ";`,
+  "surface-blend": `export interface SurfaceBlendFeature {
+  id: string; type: "surface-blend"; name: string; suppressed: boolean; operation: "new";
+  from: { bodyId: string; edges: EdgeFinishEdge[] };
+  to: { bodyId: string; edges: EdgeFinishEdge[] };
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
+  "surface-boundary": `export interface SurfaceBoundaryFeature {
+  id: string; type: "surface-boundary"; name: string; suppressed: boolean; operation: "new";
+  bodyIds: [string];
+  edges: EdgeFinishEdge[];
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}`,
   "surface-extend": `export interface SurfaceExtendFeature {
   id: string; type: "surface-extend"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -10435,6 +10482,7 @@ export interface CurvedEdgeReference {
   "surface-sweep": 'export interface SurfaceSweepFeature {\n  id: string; type: "surface-sweep"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  contourIds?: string[];\n  pathFeatureId: string;\n  pathContourId?: string;\n}',
   "surface-thicken": 'export interface SurfaceThickenFeature {\n  id: string; type: "surface-thicken"; name: string; suppressed: boolean;\n  bodyIds: string[];\n  thicknessMillimeters: number;\n  symmetric?: boolean;\n  operation: "new" | "add" | "cut";\n  targetBodyId?: string;\n}',
   "surface-unstitch": 'export interface SurfaceUnstitchFeature {\n  id: string; type: "surface-unstitch"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  /** Published by the rebuild: one body per face. */\n  bodyOutputs?: string[];\n}',
+  "surface-untrim": 'export interface SurfaceUntrimFeature {\n  id: string; type: "surface-untrim"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  face: SolidFaceReference;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "sweep": `export interface SweepFeature {
   id: string;
   type: "sweep";
@@ -19768,6 +19816,39 @@ const makeNewFaceWithinFace = (originFace, wire) => {
   const face = faceBuilder.Face();
   gc();
   return new Face(face);
+};
+const makeNonPlanarFace = (wire) => {
+  const oc = getOC();
+  const [r, gc] = localGC();
+  const faceBuilder = r(
+    new oc.BRepOffsetAPI_MakeFilling(
+      3,
+      15,
+      2,
+      false,
+      1e-5,
+      1e-4,
+      0.01,
+      0.1,
+      8,
+      9
+    )
+  );
+  wire.edges.forEach((edge) => {
+    faceBuilder.Add_1(
+      r(edge).wrapped,
+      oc.GeomAbs_Shape.GeomAbs_C0,
+      true
+    );
+  });
+  const progress = r(new oc.Message_ProgressRange_1());
+  faceBuilder.Build(progress);
+  const newFace = cast(faceBuilder.Shape());
+  gc();
+  if (!(newFace instanceof Face)) {
+    throw new Error("Failed to create a face");
+  }
+  return newFace;
 };
 const makeCylinder = (radius, height, location = [0, 0, 0], direction = [0, 0, 1]) => {
   const oc = getOC();
@@ -37267,6 +37348,67 @@ function evaluatePartDocument(document2, options = {}) {
               return maker.Shape();
             });
           };
+          const chainWire = (edges, what) => {
+            const ends = edges.map((edge) => {
+              const a = edge.startPoint, b = edge.endPoint;
+              const pts = [[a.x, a.y, a.z], [b.x, b.y, b.z]];
+              a.delete();
+              b.delete();
+              return pts;
+            });
+            const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) < 1e-3;
+            const order = [0];
+            let tail = ends[0][1];
+            const left = new Set(edges.map((_, i) => i).slice(1));
+            while (left.size) {
+              const next = [...left].find((i) => near(ends[i][0], tail) || near(ends[i][1], tail));
+              if (next === void 0) throw new Error(`${what}: the picked edges do not meet end to end.`);
+              left.delete(next);
+              order.push(next);
+              tail = near(ends[next][0], tail) ? ends[next][1] : ends[next][0];
+            }
+            return own(assembleWire(order.map((i) => edges[i])));
+          };
+          if (feature.type === "surface-untrim") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("Untrim needs an available body.");
+            const o = getOC();
+            const faces = body.faces;
+            const picked = faces.length === 1 ? faces[0] : faceByReference(body, feature.face, "Face to untrim");
+            const pc = picked.center, centre = [pc.x, pc.y, pc.z];
+            pc.delete();
+            const outer = cast(o.BRepTools.OuterWire(picked.wrapped));
+            let rebuilt;
+            try {
+              rebuilt = own(makeFace(outer));
+            } catch {
+              const surface = o.BRep_Tool.Surface_2(picked.wrapped);
+              rebuilt = own(cast(new o.BRepBuilderAPI_MakeFace_21(surface, outer.wrapped, true).Face()));
+            }
+            const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
+            for (const face of body.faces) {
+              const c = face.center;
+              const keep = Math.hypot(c.x - centre[0], c.y - centre[1], c.z - centre[2]) > 1e-6;
+              c.delete();
+              if (keep) sewing.Add(face.wrapped);
+            }
+            sewing.Add(rebuilt.wrapped);
+            sewing.Perform(new o.Message_ProgressRange_1());
+            let result = cast(sewing.SewedShape());
+            if (!isShape3D(result)) {
+              const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+              builder.MakeShell(shell);
+              builder.Add(shell, result.wrapped);
+              result = cast(shell);
+            }
+            if (result.wrapped.ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
+              const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid());
+              result = measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid;
+            }
+            bodies.set(id2, own(result));
+            currentBodyID = id2;
+            continue;
+          }
           if (feature.type === "surface-extend") {
             const id2 = feature.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("Extend needs an available surface body.");
@@ -37495,6 +37637,43 @@ function evaluatePartDocument(document2, options = {}) {
                 f.FS.unlink(name);
               }
             } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
+          } else if (feature.type === "surface-boundary") {
+            const body = bodies.get(feature.bodyIds[0]);
+            if (!body) throw new Error("Boundary surface needs an available body.");
+            const o = getOC();
+            const loop = chainWire(pickedEdgesOf(body, feature.bodyIds[0], feature.edges, "Boundary surface"), "Boundary surface");
+            if (!o.BRep_Tool.IsClosed_1(loop.wrapped)) throw new Error("Boundary surface needs edges that close a loop.");
+            const face = own(makeNonPlanarFace(loop));
+            const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+            builder.MakeShell(shell);
+            builder.Add(shell, face.wrapped);
+            const sheet = cast(shell);
+            if (!(measureArea(sheet) > 1e-9)) throw new Error("The boundary surface has no area.");
+            tool22 = own(sheet);
+          } else if (feature.type === "surface-blend") {
+            const bodyA = bodies.get(feature.from.bodyId), bodyB = bodies.get(feature.to.bodyId);
+            if (!bodyA || !bodyB) throw new Error("Blend surface needs two available bodies.");
+            const o = getOC();
+            const a = chainWire(pickedEdgesOf(bodyA, feature.from.bodyId, feature.from.edges, "Blend surface"), "Blend surface");
+            const b = chainWire(pickedEdgesOf(bodyB, feature.to.bodyId, feature.to.edges, "Blend surface"), "Blend surface");
+            const pt = (v) => {
+              const p = [v.x, v.y, v.z];
+              v.delete();
+              return p;
+            };
+            const a0 = pt(a.startPoint), a1 = pt(a.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
+            const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+            const straight = dist(a1, b1) + dist(a0, b0) <= dist(a1, b0) + dist(a0, b1);
+            const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
+            const back = straight ? own(cast(b.wrapped.Reversed())) : b;
+            const loop = own(assembleWire([a, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
+            const face = own(makeNonPlanarFace(loop));
+            const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+            builder.MakeShell(shell);
+            builder.Add(shell, face.wrapped);
+            const sheet = cast(shell);
+            if (!(measureArea(sheet) > 1e-9)) throw new Error("The blend surface has no area.");
+            tool22 = own(sheet);
           } else if (feature.type === "surface-ruled") {
             const body = bodies.get(feature.bodyIds[0]);
             if (!body) throw new Error("Ruled surface needs an available body.");

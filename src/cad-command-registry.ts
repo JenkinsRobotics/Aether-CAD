@@ -46,7 +46,7 @@ export type CADCommandID =
   | "feature-pattern"
   | "feature-draft"
   | "feature-loft"
-  | "feature-import-step" | "feature-import-cad" | "feature-surface-ruled" | "feature-surface-extend" | "feature-surface-extrude" | "feature-surface-revolve" | "feature-surface-loft" | "feature-surface-patch" | "feature-surface-sweep" | "feature-surface-offset" | "feature-surface-thicken" | "feature-surface-stitch" | "feature-surface-unstitch" | "feature-surface-reverse-normal"
+  | "feature-import-step" | "feature-import-cad" | "feature-surface-boundary" | "feature-surface-blend" | "feature-surface-untrim" | "feature-surface-ruled" | "feature-surface-extend" | "feature-surface-extrude" | "feature-surface-revolve" | "feature-surface-loft" | "feature-surface-patch" | "feature-surface-sweep" | "feature-surface-offset" | "feature-surface-thicken" | "feature-surface-stitch" | "feature-surface-unstitch" | "feature-surface-reverse-normal"
   | "feature-hole" | "feature-split" | "feature-delete-face" | "feature-pipe" | "feature-bounding-solid" | "feature-thread" | "feature-coil" | "feature-remove-body" | "feature-boss" | "feature-rest"
   | "part-section"
   | "part-properties"
@@ -189,7 +189,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-offset-face",
   "feature-face-extrude",
   "feature-shell",
-  "feature-import-step", "feature-import-cad", "feature-surface-ruled", "feature-surface-extend", "feature-surface-extrude", "feature-surface-revolve", "feature-surface-loft", "feature-surface-patch", "feature-surface-sweep", "feature-surface-offset", "feature-surface-thicken", "feature-surface-stitch", "feature-surface-unstitch", "feature-surface-reverse-normal",
+  "feature-import-step", "feature-import-cad", "feature-surface-boundary", "feature-surface-blend", "feature-surface-untrim", "feature-surface-ruled", "feature-surface-extend", "feature-surface-extrude", "feature-surface-revolve", "feature-surface-loft", "feature-surface-patch", "feature-surface-sweep", "feature-surface-offset", "feature-surface-thicken", "feature-surface-stitch", "feature-surface-unstitch", "feature-surface-reverse-normal",
   "feature-hole", "feature-split", "feature-delete-face", "feature-pipe", "feature-bounding-solid", "feature-thread", "feature-coil", "feature-remove-body", "feature-boss", "feature-rest",
   "feature-loft",
   "feature-draft",

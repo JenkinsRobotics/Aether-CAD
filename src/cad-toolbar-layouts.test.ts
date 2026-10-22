@@ -271,7 +271,7 @@ it("preserves all six design categories while omitting unimplemented commands", 
   for(const section of tab.sections) for(const tool of toolbarMenuToolsFor(section.menu)) expect(tool.action).toBeTruthy();
  }
  expect(toolbarToolById('mesh-close-holes')).toBeUndefined();
- expect(toolbarWorkspaceFor('part','surface').groups[0].tools.map(tool=>tool.action)).toEqual(['feature-surface-extrude','feature-surface-revolve','feature-surface-sweep','feature-surface-loft','feature-surface-patch','feature-surface-offset','feature-surface-ruled']);
+ expect(toolbarWorkspaceFor('part','surface').groups[0].tools.map(tool=>tool.action)).toEqual(['feature-surface-extrude','feature-surface-revolve','feature-surface-sweep','feature-surface-loft','feature-surface-patch','feature-surface-offset','feature-surface-ruled','feature-surface-boundary','feature-surface-blend']);
  const framing=toolbarWorkspaceFor('part','framing');
  expect(framing.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
  expect(framing.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('show-inspect');

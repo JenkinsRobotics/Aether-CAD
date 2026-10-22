@@ -108,3 +108,38 @@ it("rules strips from a sheet's edges and extends a sheet past an edge", () => {
   expect(extended.area).toBeCloseTo(150, 6); expect(extended.bounds).toEqual([0, -5, 0, 10, 10, 0]);
 });
 
+it("fills a boundary over picked edges, blends two chains, and untrims a holed face", () => {
+  const walls: PartFeature = { id: "w", type: "surface-extrude", name: "Walls", suppressed: false, operation: "new", profileFeatureId: "q", distanceMillimeters: 10 };
+  const edge = (bodyId: string, mid: [number, number, number], label = "edge") => ({ kind: "curved-edge" as const, sourceFeatureId: "w", bodyId, label, midpointMillimeters: mid, lengthMillimeters: 10 });
+  const doc = withFeatures(square("q"), walls);
+  const wid = bodyIDForFeature(doc, walls);
+  const top: PartFeature = { id: "b", type: "surface-boundary", name: "Top", suppressed: false, operation: "new", bodyIds: [wid], edges: [edge(wid, [5, 0, 10]), edge(wid, [10, 5, 10]), edge(wid, [5, 10, 10]), edge(wid, [0, 5, 10])] };
+  doc.features.push(top);
+  const lid = measure(doc)[bodyIDForFeature(doc, top)];
+  // A filled B-spline face reports a padded bounding box; its area and height are exact.
+  expect(lid.area).toBeCloseTo(100, 3); expect(lid.bounds[2]).toBeCloseTo(10, 3); expect(lid.bounds[5]).toBeCloseTo(10, 3);
+  const blendDoc = withFeatures(square("q"), walls);
+  const wb = bodyIDForFeature(blendDoc, walls);
+  const blend: PartFeature = { id: "bl", type: "surface-blend", name: "Blend", suppressed: false, operation: "new", from: { bodyId: wb, edges: [edge(wb, [5, 0, 0])] }, to: { bodyId: wb, edges: [edge(wb, [5, 0, 10])] } };
+  blendDoc.features.push(blend);
+  const web = measure(blendDoc)[bodyIDForFeature(blendDoc, blend)];
+  expect(web.area).toBeCloseTo(100, 3); expect(web.bounds[1]).toBeCloseTo(0, 3); expect(web.bounds[4]).toBeCloseTo(0, 3);
+  // A 10 × 10 × 5 block with a Ø4 hole through it; its top face taken apart and untrimmed.
+  const block: PartFeature = { id: "e", type: "extrude", name: "Block", profileFeatureId: "q", distanceMillimeters: 5, operation: "new", suppressed: false };
+  // The hole's circle sits inside the block and cuts upward through its top.
+  const hole: PartFeature = { id: "c", type: "profile", name: "c", plane: "XY", offsetMillimeters: 2.5, suppressed: false, profile: { type: "circle", radiusMillimeters: 2, centerMillimeters: [5, 5] } };
+  const cut: PartFeature = { id: "cut", type: "extrude", name: "Cut", profileFeatureId: "c", distanceMillimeters: 5, operation: "cut", suppressed: false };
+  const holed = withFeatures(square("q"), block, hole, cut);
+  const bid = bodyIDForFeature(holed, block);
+  const unstitch: PartFeature = { id: "u", type: "surface-unstitch", name: "Apart", suppressed: false, operation: "new", bodyIds: [bid] };
+  holed.features.push(unstitch);
+  const apart = evaluatePartDocument(holed);
+  // The holed top is the one face short of the full 100 mm² by the hole's area.
+  holed.features[4] = { ...unstitch, bodyOutputs: apart.bodyOutputs!.u };
+  const areas = measure(holed);
+  const topId = apart.bodyOutputs!.u.find((id) => Math.abs(areas[id].area - (100 - Math.PI * 4)) < 1e-3)!;
+  expect(topId).toBeTruthy();
+  holed.features.push({ id: "un", type: "surface-untrim", name: "Untrim", suppressed: false, bodyIds: [topId], face: { kind: undefined, sourceFeatureId: "u", bodyId: topId, label: "Top", normal: [0, 0, 1] } as never });
+  expect(measure(holed)[topId].area).toBeCloseTo(100, 3);
+});
+

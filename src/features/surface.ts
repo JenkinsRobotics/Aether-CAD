@@ -1,5 +1,5 @@
-import { availableBodies, type EdgeFinishEdge } from "@aether/core/document";
-import { mountPickedReferences } from "./picked-references";
+import { availableBodies, type EdgeFinishEdge, type SolidFaceReference } from "@aether/core/document";
+import { faceIdentity, mountPickedReferences } from "./picked-references";
 import { bodyAndOperationTabs, entityChips, requireSelections, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
 /** Surface dialogs (SolidCraft's surface.*): sheets from sketch curves, and the
@@ -163,4 +163,47 @@ export const surfaceExtendEditor: FeatureEditor = {
   validate(controls) { return !(Number(controls.distance.value) > 0) ? "Enter a positive distance." : bodiesValid(controls, "surface body", 1) ?? edgesValid(controls); },
   serialize(values) { return { bodyIds: JSON.parse(values.bodies), edges: JSON.parse(values.edges), distanceMillimeters: Number(values.distance) }; },
 };
-export const surfaceEditors: FeatureEditor[] = [surfaceRuledEditor, surfaceExtendEditor, surfaceExtrudeEditor, surfaceRevolveEditor, surfaceLoftEditor, surfacePatchEditor, surfaceSweepEditor, surfaceOffsetEditor, surfaceThickenEditor, surfaceStitchEditor, surfaceUnstitchEditor, surfaceReverseNormalEditor];
+export const surfaceBoundaryEditor: FeatureEditor = {
+  type: "surface-boundary",
+  controls(context: FeatureEditorContext) { return { ...bodiesControls(context), edges: context.field("Picked edges", JSON.stringify(context.feature?.edges ?? [])) }; },
+  layout(context, controls) {
+    bodiesLayout(context, controls, "Body with the edges", true);
+    mountPickedReferences<EdgeFinishEdge>(context, controls.edges, { title: "Edges of the loop (2 to 4)", kind: "edge", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity: edgeIdentity, note: "Pick edges that meet end to end around the opening to fill." });
+  },
+  validate(controls) { const n = (JSON.parse(controls.edges.value || "[]") as unknown[]).length; return bodiesValid(controls, "body", 1) ?? (n < 2 || n > 4 ? "Pick two to four edges." : null); },
+  serialize(values) { return { operation: "new", bodyIds: JSON.parse(values.bodies), edges: JSON.parse(values.edges) }; },
+};
+export const surfaceBlendEditor: FeatureEditor = {
+  type: "surface-blend",
+  controls(context: FeatureEditorContext) {
+    const { field, feature } = context;
+    const bodies = bodiesControls(context);
+    return { pick: bodies.pick, bodies: bodies.bodies, fromEdges: field("From edges", JSON.stringify(feature?.from?.edges ?? [])), toEdges: field("To edges", JSON.stringify(feature?.to?.edges ?? [])) };
+  },
+  layout(context, controls) {
+    controls.bodies.closest("label")?.remove(); controls.bodies.hidden = true; controls.pick.closest("label")?.remove(); controls.pick.hidden = true;
+    mountPickedReferences<EdgeFinishEdge>(context, controls.toEdges, { title: "To edges", kind: "edge", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity: edgeIdentity, note: "The chain the blend ends on." });
+    mountPickedReferences<EdgeFinishEdge>(context, controls.fromEdges, { title: "From edges", kind: "edge", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity: edgeIdentity, note: "The chain the blend starts from; each chain's body is read from its picks." });
+  },
+  validate(controls) {
+    const from = JSON.parse(controls.fromEdges.value || "[]") as EdgeFinishEdge[], to = JSON.parse(controls.toEdges.value || "[]") as EdgeFinishEdge[];
+    if (!from.length || !to.length) return "Pick edges for both chains.";
+    if (new Set(from.map((e) => e.bodyId)).size !== 1 || new Set(to.map((e) => e.bodyId)).size !== 1) return "Each chain's edges must be on one body.";
+    return null;
+  },
+  serialize(values) {
+    const from = JSON.parse(values.fromEdges) as EdgeFinishEdge[], to = JSON.parse(values.toEdges) as EdgeFinishEdge[];
+    return { operation: "new", from: { bodyId: from[0].bodyId, edges: from }, to: { bodyId: to[0].bodyId, edges: to } };
+  },
+};
+export const surfaceUntrimEditor: FeatureEditor = {
+  type: "surface-untrim",
+  controls(context: FeatureEditorContext) { return { ...bodiesControls(context), face: context.field("Face", JSON.stringify(context.feature?.face ? [context.feature.face] : [])) }; },
+  layout(context, controls) {
+    bodiesLayout(context, controls, "Surface body", true);
+    const faces = mountPickedReferences<SolidFaceReference>(context, controls.face, { title: "Face to untrim", kind: "face", requestEvent: "aether-offset-faces-request", replyEvent: "aether-offset-faces", replyKey: "faces", identity: faceIdentity, note: "The face is rebuilt from its outer boundary; its holes close.", onChange: (picked) => { if (picked.length > 1) faces.update([picked[picked.length - 1]]); } });
+  },
+  validate(controls) { return bodiesValid(controls, "surface body", 1) ?? ((JSON.parse(controls.face.value || "[]") as unknown[]).length === 1 ? null : "Pick the face to untrim."); },
+  serialize(values) { return { bodyIds: JSON.parse(values.bodies), face: JSON.parse(values.face)[0] }; },
+};
+export const surfaceEditors: FeatureEditor[] = [surfaceBoundaryEditor, surfaceBlendEditor, surfaceUntrimEditor, surfaceRuledEditor, surfaceExtendEditor, surfaceExtrudeEditor, surfaceRevolveEditor, surfaceLoftEditor, surfacePatchEditor, surfaceSweepEditor, surfaceOffsetEditor, surfaceThickenEditor, surfaceStitchEditor, surfaceUnstitchEditor, surfaceReverseNormalEditor];
