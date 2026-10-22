@@ -22,6 +22,8 @@ export function InspectPanel({ active }: { active: boolean }) {
           <CommandButton disabled={!presentation.partOpen} command="part-properties">Physical properties</CommandButton>
           <CommandButton disabled={!presentation.partOpen} command="part-section">Section view</CommandButton>
           <CommandButton disabled={!presentation.partOpen} command="part-interference">Check interference</CommandButton>
+          <CommandButton disabled={!presentation.partOpen} command="part-clearance">Clearance</CommandButton>
+          <CommandButton disabled={!presentation.partOpen} command="part-compare">Compare bodies</CommandButton>
           <p className="cad-form-note">These tools use the existing part-analysis service. Measurement readouts do not modify geometry; edit a sketch dimension or assembly mate to change spacing.</p>
         </InspectorSection>
       </div>

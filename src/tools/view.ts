@@ -31,6 +31,8 @@ export const viewWorkspace: CADRibbonWorkspaceDefinition = {
       tool("view-ghost", "Ghost", "eye", "display-ghost"),
       tool("view-zebra", "Zebra analysis", "eye", "display-zebra"),
       tool("view-draft-analysis", "Draft analysis", "eye", "display-draft-analysis"),
+      tool("view-curvature-map", "Curvature map", "eye", "display-curvature-map"),
+      tool("view-accessibility", "Accessibility", "eye", "display-accessibility"),
     ] },
     { id: "view-scene", icon: "light", label: "Scene", tools: [
       tool("view-studio", "Studio", "light", "lighting-studio"),

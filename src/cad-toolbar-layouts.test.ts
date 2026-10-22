@@ -251,7 +251,7 @@ it("shows one Construction icon and retains the complete construction menu", () 
 it("exposes Inspect and Section while retaining the other inspection actions", () => {
   const section = fusionTabsFor("part").find(tab => tab.id === "solid")!.sections.find(section => section.label === "Inspect")!;
   expect(section.visible).toEqual(["solid-inspect", "solid-section"]);
-  expect(section.menu).toEqual(["solid-inspect", "solid-section", "solid-interference", "solid-properties"]);
+  expect(section.menu).toEqual(["solid-inspect", "solid-section", "solid-interference", "solid-clearance", "solid-compare", "solid-properties"]);
   expect(toolbarToolById("solid-inspect")?.action).toBe("show-inspect");
 });
 

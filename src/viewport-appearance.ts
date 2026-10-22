@@ -9,7 +9,7 @@ export interface CADDisplayStylePolicy {
   edgeOpacity: number;
   masksSurfaceWithBackground: boolean;
   /** An analysis overlay drawn on the surfaces: zebra stripes (surface continuity) or draft-angle colouring. */
-  analysis?: "zebra" | "draft";
+  analysis?: "zebra" | "draft" | "curvature" | "accessibility";
 }
 
 export function cadDisplayStylePolicy(
@@ -29,6 +29,10 @@ export function cadDisplayStylePolicy(
       return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: false, edgeOpacity: 0, masksSurfaceWithBackground: false, analysis: "zebra" };
     case "draft-analysis":
       return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: edgesEnabled, edgeOpacity: 0.55, masksSurfaceWithBackground: false, analysis: "draft" };
+    case "curvature-map":
+      return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: edgesEnabled, edgeOpacity: 0.55, masksSurfaceWithBackground: false, analysis: "curvature" };
+    case "accessibility":
+      return { surfaceWireframe: false, surfaceOpacity: 1, surfaceDepthWrite: true, edgesVisible: edgesEnabled, edgeOpacity: 0.55, masksSurfaceWithBackground: false, analysis: "accessibility" };
     case "ghost":
       return { surfaceWireframe: false, surfaceOpacity: 0.22, surfaceDepthWrite: false, edgesVisible: edgesEnabled, edgeOpacity: 0.42, masksSurfaceWithBackground: false };
   }

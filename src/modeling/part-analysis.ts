@@ -9,7 +9,7 @@ import { analyzeOnAether, measureOnAether } from "../engine/aether/evaluator";
 import type { MeasureReference } from "../measure/measure-reference";
 
 let closeActive: (() => void) | undefined;
-type Kind = "section" | "interference" | "properties";
+type Kind = "section" | "interference" | "properties" | "clearance" | "compare";
 /** The engine answers with measurements and, for sections and interference, meshes to show. */
 type AnalysisAnswer = { status: "ok"; measurements: Record<string, unknown>[]; parts?: ImportedModelData["parts"] };
 export async function analyzePart(doc: PartDocument, analysis: { kind: Kind | "distance"; plane?: string; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; entities?: readonly object[] }, signal?: AbortSignal) {
@@ -32,7 +32,7 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
   let closed = false, revision = 0;
   let controller: AbortController | undefined;
   const close = () => { if (closed) return; closed = true; window.removeEventListener("aether-feature-preview-start", close); revision++; controller?.abort(); show(null); window.removeEventListener("aether-part-updated", close); win.close(); };
-  const win = openCompactFeatureWindow({ className: "cad-analysis-dialog", icon: "inspect", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : "Interference", acceptLabel: "Done", onAccept: close, onDiscard: close });
+  const win = openCompactFeatureWindow({ className: "cad-analysis-dialog", icon: "inspect", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "clearance" ? "Clearance" : kind === "compare" ? "Compare bodies" : kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : "Interference", acceptLabel: "Done", onAccept: close, onDiscard: close });
   closeActive = close;
   const status = document.createElement("p"); status.className = "cad-analysis-status"; status.setAttribute("role", "status");
   const plane = document.createElement("select"); plane.setAttribute("aria-label", "Section plane");
@@ -64,7 +64,23 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
       show({ sourceName: snapshot.name, parts, parseMilliseconds: 0 });
       status.textContent = kind === "section"
         ? `Capped section · ${parts.length} bodies remain. Close to restore the complete model.`
+        : kind === "clearance" ? `${result.measurements.length} body pairs measured. Zero means they touch or overlap.`
+        : kind === "compare" ? ((result.measurements[0] as { identical?: boolean } | undefined)?.identical ? "The two bodies are the same solid. Nothing differs." : "The bodies differ. What is only in one or the other is shown in the viewport.")
         : result.measurements.length ? `${result.measurements.length} interfering body pairs. Overlap geometry is shown in the viewport.` : "No solid-volume interference. Touching faces are not an overlap.";
+      const cubic = (v: number) => (v / (lengthUnit.factor * 1000) ** 3).toFixed(lengthUnit.decimals);
+      const tableOf = (labels: string[], rows: string[][]) => {
+        const table = document.createElement("table"); table.style.width = "100%";
+        const header = table.createTHead().insertRow();
+        for (const label of labels) { const cell = document.createElement("th"); cell.textContent = label; cell.style.textAlign = "left"; header.append(cell); }
+        const body = table.createTBody();
+        for (const values of rows) { const row = body.insertRow(); for (const text of values) row.insertCell().textContent = text; }
+        return table;
+      };
+      if (kind === "clearance") measurements.append(tableOf(["Body", "Body", `Distance (${lengthUnit.unit})`], (result.measurements as { first_body_id: string; second_body_id: string; distance_mm: number; overlapping: boolean }[]).map((m) => [names.get(m.first_body_id) ?? m.first_body_id, names.get(m.second_body_id) ?? m.second_body_id, m.overlapping ? "0 (overlap)" : (m.distance_mm / (lengthUnit.factor * 1000)).toFixed(lengthUnit.decimals)])));
+      if (kind === "compare" && result.measurements.length) {
+        const m = result.measurements[0] as { first_body_id: string; second_body_id: string; only_in_first_mm3: number; only_in_second_mm3: number; common_mm3: number };
+        measurements.append(tableOf(["", `Volume (${lengthUnit.unit}³)`], [[`Only in ${names.get(m.first_body_id) ?? m.first_body_id}`, cubic(m.only_in_first_mm3)], [`Only in ${names.get(m.second_body_id) ?? m.second_body_id}`, cubic(m.only_in_second_mm3)], ["Shared", cubic(m.common_mm3)]]));
+      }
       if (kind === "interference" && result.measurements.length) {
         const table = document.createElement("table"); table.style.width = "100%";
         const header = table.createTHead().insertRow();

@@ -306,7 +306,10 @@ describe("AetherCADShell", () => {
     expect(html).toContain("Measure");
     expect(html).toContain("Physical properties");
     expect(html).toContain("Section view");
-    expect(html).not.toContain("Curvature");
+    // Curvature comb is not built; the curvature map display style is a palette entry, not an Inspect analysis.
+    expect(html).not.toContain("Curvature comb");
+    expect(html).toContain("Clearance");
+    expect(html).toContain("Compare bodies");
     // Measuring picked entities is the Measure tool's floating window, not this panel.
     expect(html).not.toContain("Selected edge and face measurements");
     expect(html).toContain("Check interference");

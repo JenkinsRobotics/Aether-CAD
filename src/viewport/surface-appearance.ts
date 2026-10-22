@@ -1,6 +1,6 @@
 /** Apply the resolved visual material while preserving selection colors and hidden-line masks. */
 import type { MeshStandardMaterial } from "three";
-import { color, float, fract, materialColor, mix, normalWorld, reflectVector, select, step } from "three/tsl";
+import { color, float, fract, fwidth, materialColor, mix, normalWorld, reflectVector, select, smoothstep, step } from "three/tsl";
 import type { CADDisplayStylePolicy } from "../viewport-appearance";
 import type { ResolvedAppearance } from "./appearance-themes";
 
@@ -17,7 +17,20 @@ function installAnalysis(material: MeshStandardMaterial, analysis: CADDisplaySty
   const node = material as unknown as { colorNode: unknown };
   if (next === "none") node.colorNode = null;
   else if (next === "zebra") node.colorNode = mix(materialColor.mul(0.35), color(0xf2f2f2), step(0.5, fract(reflectVector.y.mul(6.0))));
-  else {
+  else if (next === "curvature") {
+    // Curvature map (inspect.curvature_map): how fast the normal turns across the screen,
+    // blue where flat through green to red where it turns fastest (tight radii).
+    const bend = fwidth(normalWorld).length();
+    const ramp = smoothstep(float(0.0), float(0.25), bend);
+    const tint = mix(mix(color(0x3b6fd6), color(0x40cc59), smoothstep(float(0.0), float(0.5), ramp)), color(0xe64040), smoothstep(float(0.5), float(1.0), ramp));
+    node.colorNode = mix(materialColor, tint, 0.8);
+  } else if (next === "accessibility") {
+    // Accessibility (inspect.accessibility): a tool coming down +Z reaches faces that look
+    // up (green) and cannot reach faces that look down (red); vertical walls stay neutral.
+    const lean = normalWorld.z, t = float(0.05);
+    const tint = select(lean.greaterThan(t), color(0x40cc59), select(lean.lessThan(t.negate()), color(0xe64040), color(0xf2d933)));
+    node.colorNode = mix(materialColor, tint, 0.75);
+  } else {
     const lean = normalWorld.z, t = float(Math.sin(Math.PI / 180));
     const tint = select(lean.greaterThan(t), color(0x40cc59), select(lean.lessThan(t.negate()), color(0xe64040), color(0xf2d933)));
     node.colorNode = mix(materialColor, tint, 0.75);

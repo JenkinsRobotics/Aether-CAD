@@ -6,7 +6,7 @@ import { cadPresentation } from "../../cad-presentation-store";
 import { cadCommands } from "../../cad-command-registry";
 
 const views = ["isometric", "dimetric", "trimetric"] as const;
-const styles: readonly [CADDisplayStyle,string][] = [["shaded-edges","Shaded with edges"],["shaded","Shaded"],["hidden-line","Hidden line"],["wireframe","Wireframe"],["ghost","Translucent"],["zebra","Zebra analysis"],["draft-analysis","Draft analysis"]];
+const styles: readonly [CADDisplayStyle,string][] = [["shaded-edges","Shaded with edges"],["shaded","Shaded"],["hidden-line","Hidden line"],["wireframe","Wireframe"],["ghost","Translucent"],["zebra","Zebra analysis"],["draft-analysis","Draft analysis"],["curvature-map","Curvature map"],["accessibility","Accessibility"]];
 const grounds: readonly [CADFloorMode,string][] = [["none","None"],["grid","Grid"],["floor","Floor"],["both","Grid and floor"]];
 
 export function cameraMenuItems(appearance: CADAppearanceSnapshot, sectionEnabled: boolean, projection: "perspective" | "orthographic" = "perspective"): MenuItem[] {

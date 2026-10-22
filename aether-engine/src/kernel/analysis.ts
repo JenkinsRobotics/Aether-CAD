@@ -1,7 +1,7 @@
 /** Exact analyses of an evaluated document (FreeCAD's rules from
  *  `aether_freecad/analysis.py` and `properties.py`): physical properties,
  *  capped sections and pairwise interference. Nothing is persisted. */
-import { getOC, isShape3D, makeBaseBox, measureArea, measureVolume, type Shape3D } from "replicad";
+import { getOC, isShape3D, makeBaseBox, measureArea, measureDistanceBetween, measureVolume, type Shape3D } from "replicad";
 import { evaluatePartDocument, release, solidsOf } from "./part-evaluator";
 import { buildPartGeometry } from "./part-geometry";
 import type { PartDocument } from "../document/index";
@@ -113,6 +113,29 @@ export function analyzePart(document: PartDocument, options: AnalysisOptions): A
       measurements.push({ first_body_id: items[i][0], second_body_id: items[j][0], volume_mm3: volume });
       render(overlap, `${items[i][0]}|${items[j][0]}`);
     }
-  } else throw new Error("Choose section, interference, properties or distance analysis.");
+  } else if (options.kind === "clearance") {
+    // Clearance (inspect.clearance): the shortest distance between each pair of bodies;
+    // zero when they touch or overlap.
+    const chosen = options.bodyIds?.length ? [...shapes].filter(([id]) => options.bodyIds!.includes(id)) : [...shapes];
+    if (chosen.length < 2) throw new Error("Clearance needs at least two bodies.");
+    for (let i = 0; i < chosen.length; i++) for (let j = i + 1; j < chosen.length; j++) {
+      const overlap = chosen[i][1].intersect(chosen[j][1]);
+      let overlapping = false;
+      try { overlapping = isShape3D(overlap) && measureVolume(overlap) > 1e-7; } catch { overlapping = false; }
+      release(overlap);
+      measurements.push({ first_body_id: chosen[i][0], second_body_id: chosen[j][0], distance_mm: overlapping ? 0 : measureDistanceBetween(chosen[i][1], chosen[j][1]), overlapping });
+    }
+  } else if (options.kind === "compare") {
+    // Compare (inspect.compare): what is only in A, only in B, and shared, by volume; the
+    // bodies are the same when neither difference exceeds the tolerance.
+    const chosen = options.bodyIds?.length === 2 ? options.bodyIds.map((id) => [id, shapes.get(id)] as const) : [...shapes].slice(0, 2);
+    if (chosen.length < 2 || chosen.some(([, shape]) => !shape)) throw new Error("Compare needs two bodies.");
+    const [[aId, aShape], [bId, bShape]] = chosen as [readonly [string, Shape3D], readonly [string, Shape3D]];
+    const tolerance = options.tolerance_mm3 ?? 1e-6;
+    const piece = (shape: Shape3D | import("replicad").AnyShape, key: string) => { if (!isShape3D(shape)) { release(shape); return 0; } let v = 0; try { v = measureVolume(shape); } catch { v = 0; } if (v > tolerance) render(shape, key); else release(shape); return v; };
+    const onlyA = piece(aShape.cut(bShape), `${aId}-only`), onlyB = piece(bShape.cut(aShape), `${bId}-only`);
+    const common = aShape.intersect(bShape); let shared = 0; try { shared = isShape3D(common) ? measureVolume(common) : 0; } catch { shared = 0; } release(common);
+    measurements.push({ first_body_id: aId, second_body_id: bId, only_in_first_mm3: onlyA, only_in_second_mm3: onlyB, common_mm3: shared, identical: onlyA <= tolerance && onlyB <= tolerance });
+  } else throw new Error("Choose section, interference, clearance, compare, properties or distance analysis.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }

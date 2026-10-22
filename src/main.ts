@@ -228,7 +228,7 @@ window.addEventListener("aether-part-updated", applySection);
 window.addEventListener("cad-document-navigation", () => turnOffSectionView());
 window.addEventListener("aether-section-face", event => (event as CustomEvent).detail.respond(viewer.selectedSketchFrame()));
 window.addEventListener("aether-section-handle", event => { const {view, respond} = (event as CustomEvent).detail; respond(viewer.projectSectionHandle(view)); });
-for (const kind of ["interference", "properties"] as const) cadCommands.register(`part-${kind}`, () => {
+for (const kind of ["interference", "properties", "clearance", "compare"] as const) cadCommands.register(`part-${kind}`, () => {
   try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model)); }
   catch (error) { setStatus(error instanceof Error ? error.message : String(error), "error"); }
 });
@@ -470,6 +470,8 @@ cadAppearance.registerApplyHandler((appearance) => {
     ghost: "display-ghost",
     zebra: "display-zebra",
     "draft-analysis": "display-draft-analysis",
+    "curvature-map": "display-curvature-map",
+    "accessibility": "display-accessibility",
   } as const;
   Object.entries(displayCommands).forEach(([style, command]) => {
     cadCommands.setActive(command, appearance.displayStyle === style);

@@ -307,6 +307,8 @@ export function CADSettingsWindow({
                   { value: "ghost", label: "Ghost" },
                   { value: "zebra", label: "Zebra analysis" },
                   { value: "draft-analysis", label: "Draft analysis" },
+                  { value: "curvature-map", label: "Curvature map" },
+                  { value: "accessibility", label: "Accessibility" },
                 ],
                 (style) =>
                   cadAppearance.dispatch({ type: "set-display-style", style: style as CADDisplayStyle }),
