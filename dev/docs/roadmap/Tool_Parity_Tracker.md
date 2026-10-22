@@ -329,10 +329,10 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `contact.enable_all` | Enable All Contact | every occurrence takes part in contact (one set of all) |  | gap |  |
 | `contact.enable_sets` | Enable Contact Sets | enabled?: bool (default true) — driving joints and motion studies stop where bodies in one contact set would pass through each other |  | gap |  |
 | `contact.list` | List Contact Sets | → sets, enabled, all |  | gap |  |
-| `explode.create` | Exploded View | name?; scale? (automatic: each occurrence pushed away from the assembly's centre by scale × its offset, default 1); \          moves?: [{occurrence, translate:  | Explode (placeholder) | gap |  |
-| `explode.delete` | Delete Exploded View | view |  | gap |  |
-| `explode.list` | List Exploded Views |  |  | gap |  |
-| `explode.show` | Show Exploded View | view: id\|name (or none: back to the assembled placement) — shown only; the design keeps its placements |  | gap |  |
+| `explode.create` | Exploded View | name?; scale? (automatic: each occurrence pushed away from the assembly's centre by scale × its offset, default 1); \          moves?: [{occurrence, translate:  | Explode (`assembly-explode`) | partial | done 2026-10-22 (r46): every instance pushed from the assembly centre by its offset (scale 1), shown only. Missing: named views, a chosen scale, manual offsets |
+| `explode.delete` | Delete Exploded View | view |  | n/a | no named exploded views yet |
+| `explode.list` | List Exploded Views |  |  | n/a | no named exploded views yet |
+| `explode.show` | Show Exploded View | view: id\|name (or none: back to the assembled placement) — shown only; the design keeps its placements | Explode (`assembly-explode`) | partial | done 2026-10-22 (r46): toggles between exploded and assembled |
 | `joint.as_built` | As-Built Joint | type, a: occurrence, b: occurrence (stay where they are); at?: joint origin (default: b's origin) — the joint's frame; one on a or b is kept on its face or hole |  | gap |  |
 | `joint.cam` | Cam | a: the cam's joint (revolute); b: the follower's joint, a slider (a translating follower) or a revolute (an oscillating one),          b driven by a; profile: { |  | gap |  |
 | `joint.create` | Joint | type: rigid\|revolute\|slider\|cylindrical\|pin_slot\|planar\|ball, or a relation: parallel\|perpendicular\|angle\|point_on_plane\|point_on_line\|line_on_plane  | Mates: fastened, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle | parity | fastened, revolute, slider, cylindrical, ball, planar, pin slot and parallel mates author, store and solve (2026-10-21, r36); distance, perpendicular and angle solve but the workspace has no record for them (greyed with the reason); width and tangent need surface geometry |
@@ -350,14 +350,14 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `joint.screw` | Screw | joint: a cylindrical joint (its turn drives its travel) \| a, b: a joint that turns and one that slides, b driven by a; pitch: \          travel per turn (mm or | Relation dialog (screw) | parity | done 2026-10-22 (r45): a rotation drives a travel by the pitch; the ribbon's Screw opens the Relation dialog |
 | `joint.solve` | Solve Joints | re-place the occurrences from the joints → conflicts, errors, dof | `cad.assembly.compose` / solve on edit | parity |  |
 | `joint.sweep` | Sweep Joint |  |  | gap |  |
-| `motion.delete` | Delete Motion Study | study |  | gap |  |
-| `motion.export` | Export Motion Study | study; samples? (default steps + 1); path? (.json or .csv) → occurrence positions per step (the design is not changed) |  | gap |  |
+| `motion.delete` | Delete Motion Study | study |  | n/a | studies are not saved yet |
+| `motion.export` | Export Motion Study | study; samples? (default steps + 1); path? (.json or .csv) → occurrence positions per step (the design is not changed) | Motion study window | partial | done 2026-10-22 (r46): CSV of every step (driven value, each instance's position and quaternion). Missing: JSON, a chosen sample count |
 | `motion.export_animation` | Export Motion Animation | study: id\|name, or joint: id\|name with from and to (degrees for angles, mm for distances, or expressions) and index?;          path: a .gif file, or a folder  | aether_animation (separate app) | partial |  |
 | `motion.interference` | Motion Interference |  |  | gap |  |
-| `motion.list` | List Motion Studies |  |  | gap |  |
+| `motion.list` | List Motion Studies |  |  | n/a | studies are not saved yet |
 | `motion.play` | Play Motion Study | study: id\|name; step (0…steps) — sets the joints to the study's values there (contact sets stop them); quiet?: bool \          (positions of only the occurrenc | Mate DOF value preview | partial | one joint at a time |
 | `motion.plot` | Plot Motion Study |  |  | gap |  |
-| `motion.study` | Motion Study | name?; study? (edit an existing one); steps? (timeline length, default 100); keys: [{joint, index?, points: [[step, value], …]}] \          (values: degrees for |  | gap |  |
+| `motion.study` | Motion Study | name?; study? (edit an existing one); steps? (timeline length, default 100); keys: [{joint, index?, points: [[step, value], …]}] \          (values: degrees for | Motion study window (`assembly-motion-study`) | partial | done 2026-10-22 (r46): one mate DOF from a start to an end value over N steps, each step solved in-process and played. Missing: several keys, saved studies, expressions |
 | `motion.trace` | Motion Trace |  |  | gap |  |
 | `motion.trace.keep` | Keep Motion Trace |  |  | gap |  |
 | `occurrence.copy` | Paste (Instance) | component (or occurrence): what to place again; path?: validates selected occurrence; parent?: component (default: the same parent); translate?: [x,y,z]. Copies | Instance | partial |  |

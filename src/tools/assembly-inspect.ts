@@ -3,7 +3,7 @@
  *  Onshape's INSPECT. Mostly greyed: measurement and interference need an
  *  exact analysis contract and a result producer, neither of which exists.
  */
-import { analysisProducer, assemblyProducer, projectProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
+import { analysisProducer, projectProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
 
 export const assemblyInspectWorkspace: CADRibbonWorkspaceDefinition = {
   id: "assembly-inspect",
@@ -12,7 +12,7 @@ export const assemblyInspectWorkspace: CADRibbonWorkspaceDefinition = {
     { id: "inspect-review", label: "Review", tools: [
       tool("assembly-properties", "Properties", "properties", "show-mates"),
       tool("assembly-section", "Section", "split", undefined, analysisProducer),
-      tool("assembly-explode", "Explode", "move", undefined, assemblyProducer),
+      tool("assembly-explode", "Explode", "move", "assembly-explode"),
       tool("assembly-material", "Material", "material", undefined, projectProducer),
     ] },
     { id: "inspect-measure", label: "Measure", tools: [
