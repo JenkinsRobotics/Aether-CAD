@@ -15,7 +15,7 @@ export interface FaceExtrudeFeature {
 export function validateFaceExtrude(feature: FaceExtrudeFeature, earlier: Map<string,string>, missingReference: (id:unknown)=>boolean): void {
   validatePlanarFaceAnchor(feature.faceAnchor);
   if (typeof feature.sourceFeatureId !== 'string' || !feature.sourceFeatureId.trim() || (!earlier.has(feature.sourceFeatureId) && !missingReference(feature.sourceFeatureId))) throw Error('Push/Pull needs an earlier source feature.');
-  if (['profile','sketch','plane'].includes(earlier.get(feature.sourceFeatureId) ?? '')) throw Error('Push/Pull source must be a solid feature.');
+  if (['profile','sketch','plane','axis','point','thread'].includes(earlier.get(feature.sourceFeatureId) ?? '')) throw Error('Push/Pull source must be a solid feature.');
   if (typeof feature.targetBodyId !== 'string' || !feature.targetBodyId.trim()) throw Error('Push/Pull needs a target body.');
   if (!Array.isArray(feature.normal) || feature.normal.length !== 3 || !feature.normal.every(Number.isFinite) || Math.abs(Math.hypot(...feature.normal)-1)>1e-6) throw Error('Push/Pull needs a valid planar face normal.');
   if (typeof feature.faceLabel !== 'string' || !feature.faceLabel.trim()) throw Error('Push/Pull needs a face label.');

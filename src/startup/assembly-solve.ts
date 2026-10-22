@@ -1,15 +1,15 @@
-/** Solve the open assembly with FreeCAD and hand back bodies to render.
+/** Solve the open assembly with the engine and hand back bodies to render.
  *
  *  The existing path takes each instance's `solved_world_transform` from the
  *  projection — aether_animation's answer. This takes the same parts and mates,
- *  solves them with FreeCAD's Assembly workbench instead, and places the
+ *  solves them with the engine's assembly solver instead, and places the
  *  bodies at what that solver returned.
  *
  *  Everything it needs is injected, so the whole thing is testable without a
  *  host, an engine, or a document open.
  */
 import { assemblyJobFor } from "../assembly-job";
-import type { AssemblyJob, AssemblySolution } from "../freecad-assembly";
+import type { AssemblyJob, AssemblySolution } from "../assembly-types";
 import type { AssemblyProjectionV1 } from "../cad-assembly-bridge";
 import type { ImportedModelData } from "../domain";
 import type { PartDocument } from "../aether-core";
@@ -33,7 +33,7 @@ export interface AssemblySolveDependencies {
   parseDocument(source: string): PartDocument;
 }
 
-export async function solveAssemblyWithFreeCAD(
+export async function solveAssemblyProjection(
   projection: AssemblyProjectionV1,
   deps: AssemblySolveDependencies,
 ): Promise<AssemblySolveResult> {

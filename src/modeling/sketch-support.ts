@@ -1,4 +1,4 @@
-import { bodyIDsForFeature, consumedBodyIDs, rollbackPosition, validatePartDocument, type PartDocument, type PlanarSketchSupport, type PlanarFaceAnchor } from "@aether/core/document";
+import { bodyIDsForFeature, consumedBodyIDs, patternCopyIds, rollbackPosition, validatePartDocument, type PartDocument, type PlanarSketchSupport, type PlanarFaceAnchor } from "@aether/core/document";
 import type { SketchFrame } from "@aether/core/sketch";
 
 export function supportForFace(doc: PartDocument, bodyId: string, frame: SketchFrame, label: string, beforeFeatureId?: string, faceAnchor?:PlanarFaceAnchor): PlanarSketchSupport | undefined {
@@ -36,7 +36,8 @@ export function sourceFeatureForBody(doc:PartDocument,bodyId:string,beforeFeatur
   const index = beforeFeatureId ? doc.features.findIndex(f => f.id === beforeFeatureId) : -1;
   for (const feature of doc.features.slice(0, index < 0 ? rollbackPosition(doc) : Math.min(index, rollbackPosition(doc)))) {
     if (feature.suppressed) continue;
-    if(feature.type==='transform'){
+    if(feature.type==='pattern'&&feature.bodyIds){if(patternCopyIds(feature).includes(bodyId))sourceFeatureId=feature.id;continue;}
+    if(feature.type==='transform'||feature.type==='split'){
       const outputs=feature.copyBodyIds?feature.bodyIds.map(id=>feature.copyBodyIds![id]):feature.bodyIds;
       if(outputs.includes(bodyId))sourceFeatureId=feature.id;
       if(feature.copyBodyIds)lastBody=outputs.at(-1);
@@ -54,7 +55,7 @@ export function sourceFeatureForBody(doc:PartDocument,bodyId:string,beforeFeatur
     if ("operation" in feature && feature.operation === "new") {
       const ids = bodyIDsForFeature(doc, feature); lastBody = ids.at(-1);
       if (ids.includes(bodyId)) sourceFeatureId = feature.id;
-    } else if (!["profile", "sketch", "plane"].includes(feature.type)) {
+    } else if (!["profile", "sketch", "plane", "axis", "point", "thread"].includes(feature.type)) {
       const target = "targetBodyId" in feature && feature.targetBodyId ? feature.targetBodyId : lastBody;
       if (target === bodyId || (feature.type === "extrude" && feature.targetBodyIds?.includes(bodyId))) sourceFeatureId = feature.id;
     }

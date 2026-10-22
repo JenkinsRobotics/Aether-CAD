@@ -13,12 +13,12 @@ from pathlib import Path
 
 
 def main():
-    if len(sys.argv) != 3:
-        raise ValueError("Operator Node and FreeCAD paths required")
-    node, freecad = sys.argv[1:]
-    if not all(
-        Path(path).is_absolute() and Path(path).is_file() for path in (node, freecad)
-    ):
+    # The host passes the operator's Node (and, from older installations, a
+    # FreeCAD path that is no longer used: geometry builds in the Node runner).
+    if len(sys.argv) not in (2, 3):
+        raise ValueError("Operator Node path required")
+    node = sys.argv[1]
+    if not (Path(node).is_absolute() and Path(node).is_file()):
         raise ValueError("Invalid installed runtime")
     raw = sys.stdin.buffer.read(16 * 1024 * 1024 + 1)
     if len(raw) > 16 * 1024 * 1024:
@@ -36,19 +36,11 @@ def main():
                     raise ValueError("Invalid bundle")
             bundle.extractall(root)
         sys.path.insert(0, str(root))
-        from aether_freecad import FreeCADEngine
-
         from aether_cad_service.automation_runtime import execute
 
         class Service:
             def __init__(self):
-                self.engine = None
                 self.node = node
-
-            def geometry_engine(self):
-                if self.engine is None:
-                    self.engine = FreeCADEngine(command=freecad, timeout_seconds=25)
-                return self.engine
 
         service = Service()
         try:
@@ -76,11 +68,6 @@ def main():
                 result = browser_execute(
                     service, request["service"], request["arguments"]
                 )
-                if request["service"] == "/api/cad/engine":
-                    # Local executable paths/logs are operator-only details.
-                    result.pop("command", None)
-                    if not result.get("ok"):
-                        result["error"] = "The CAD geometry engine is unavailable."
                 result = {"result": result}
             else:
                 catalog = json.loads((root / "automation-commands.json").read_text())
@@ -114,8 +101,25 @@ def main():
                 raise ValueError("Result exceeds limit")
             sys.stdout.write(encoded)
         finally:
-            if service.engine:
-                service.engine.close()
+            pass
+
+
+def public_reason(error):
+    """A CAD-authored rejection reason people and agents can act on, or None.
+
+    Only 4xx CommandErrors carry product messages (e.g. "Extrude distance must be
+    greater than zero"); anything path-like, multi-line or overlong is dropped so
+    paths, native logs and document data still never leave the process."""
+    import re
+
+    message = getattr(error, "message", None)
+    status = getattr(error, "status", 500)
+    if not isinstance(message, str) or not 400 <= status < 500:
+        return None
+    message = " ".join(message.split())
+    if not message or len(message) > 500 or re.search(r"(^|[\s'\"(])(/|[A-Za-z]:\\|~/)|\.(py|mjs|js|so|dylib)\b|Traceback", message):
+        return None
+    return message
 
 
 if __name__ == "__main__":
@@ -127,18 +131,12 @@ if __name__ == "__main__":
             isinstance(error, (OSError, ImportError))
             or getattr(error, "status", 400) >= 500
         )
-        sys.stdout.write(
-            json.dumps(
-                {
-                    "error": {
-                        "kind": "unavailable"
-                        if unavailable
-                        else (
-                            "too_large"
-                            if getattr(error, "status", 0) == 413
-                            else "invalid"
-                        )
-                    }
-                }
-            )
-        )
+        failure = {
+            "kind": "unavailable"
+            if unavailable
+            else ("too_large" if getattr(error, "status", 0) == 413 else "invalid")
+        }
+        reason = None if unavailable else public_reason(error)
+        if reason:
+            failure["message"] = reason
+        sys.stdout.write(json.dumps({"error": failure}))

@@ -1,7 +1,7 @@
+import { onEngine } from "../engine/evaluate-part";
+import { exportOnAether } from "../engine/aether/evaluator";
 import { availableBodies, type PartDocument } from "@aether/core/document";
-import { translateDocument } from "../freecad-translate";
 import { cadPresentation } from "../cad-presentation-store";
-import { requireFeatureCapabilities } from "../freecad-geometry";
 
 let currentDocument: () => PartDocument | null = () => null;
 let requestedBody: string | undefined;
@@ -18,19 +18,10 @@ export function configurePartExport(getDocument: () => PartDocument | null) { cu
 export function exportBodyChoices() { const doc = currentDocument(); return doc ? availableBodies(doc) : []; }
 
 export async function createPartExport(document: PartDocument, format: "step" | "stl", bodyId?: string, toleranceMillimeters = 0.1) {
-  const translation = translateDocument(document);
-  if (!translation.complete) throw new Error(translation.untranslated.map(f => `${f.name}: ${f.reason}`).join("\n"));
-  await requireFeatureCapabilities(translation.features);
-  const response = await fetch("/api/cad/export", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(75000),
-    body: JSON.stringify({ features: translation.features, format, body_ids: bodyId ? [bodyId] : null, tolerance_mm: toleranceMillimeters }),
+  const type = format === "step" ? "model/step" : "model/stl";
+  return onEngine<Blob>({
+    aether: async () => new Blob([(await exportOnAether(document, { format, bodyIds: bodyId ? [bodyId] : null, toleranceMillimeters })).bytes], { type }),
   });
-  const result = await response.json();
-  if (!response.ok || result.status !== "ok") throw new Error(result.error || result.diagnostics?.map((d: { message: string }) => d.message).join("\n") || result.message || "Export failed.");
-  if (result.format !== format || typeof result.data_base64 !== "string") throw new Error("The engine returned an invalid export.");
-  const bytes = Uint8Array.from(atob(result.data_base64), c => c.charCodeAt(0));
-  return new Blob([bytes], { type: format === "step" ? "model/step" : "model/stl" });
 }
 
 export async function downloadPartExport(format: "step" | "stl", bodyId?: string, toleranceMillimeters = 0.1) {

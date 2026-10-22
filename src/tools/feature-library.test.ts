@@ -44,6 +44,7 @@ it('keeps all sixteen referenced assembly features discoverable without promisin
     'assembly-ground','assembly-fixed','assembly-revolute','assembly-slider','assembly-concentric','assembly-coincident',
     'assembly-parallel','assembly-mate-ball','assembly-gear','assembly-group','assembly-linear-pattern','assembly-circular-pattern'])
     expect(tools.some(tool => tool.id === id), id).toBe(true);
-  expect(cadFeatureToolById('assembly-concentric')?.action).toBeUndefined();
+  expect(cadFeatureToolById('assembly-concentric')?.action).toBe('assembly-mate-cylindrical');
+  expect(cadFeatureToolById('assembly-width')?.action).toBeUndefined();
   expect(cadFeatureToolById('solid-cone')?.action).toBe('create-cone');
 });

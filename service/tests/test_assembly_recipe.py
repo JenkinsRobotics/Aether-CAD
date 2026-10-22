@@ -94,7 +94,7 @@ def test_linear_array_count_includes_source_and_keeps_grounding():
     lambda r: r.update(patterns=[{"key": "row", "source": "base", "kind": "linear", "count": 513, "step_mm": [10, 0, 0]}]),
     lambda r: r.update(patterns=[{"key": "row", "source": "base", "kind": "linear", "count": 2, "step_mm": [0, 0, 0]}]),
     lambda r: r.update(patterns=[{"key": "ring", "source": "base", "kind": "circular", "count": 5, "axis_xyz": [0, 0, 1], "center_mm": [0, 0, 0], "step_degrees": 90}]),
-    lambda r: r.update(mates=[{"key": "joint", "kind": "ball", "a": {"instance": "base"}, "b": {"instance": "base"}}]),
+    lambda r: r.update(mates=[{"key": "joint", "kind": "width", "a": {"instance": "base"}, "b": {"instance": "base"}}]),
 ])
 def test_invalid_recipes_never_mutate_source(change):
     spec = recipe()

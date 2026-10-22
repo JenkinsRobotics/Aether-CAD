@@ -47,7 +47,7 @@ it('D from toolbar focus dimensions a line visibly, supports undo/redo and persi
   pick(10, 0); pick(10, -10); expect(panel().querySelector('input').value).toBe('20');
   submit('30'); expect(panel()).toBeNull(); expect(apply).not.toHaveBeenCalled();
   button('Undo').click(); button('Redo').click();
-  button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   doc = parsePartDocument(serializePartDocument(doc));
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'length', value: 30 }]);
   const c = doc.features[0].profile.contours[0]; expect(Math.hypot(c.segments[0].end[0] - c.start[0], c.segments[0].end[1] - c.start[1])).toBeCloseTo(30);
@@ -56,14 +56,14 @@ it('D from toolbar focus dimensions a line visibly, supports undo/redo and persi
 it('D on the reparented 3D surface creates a circle diameter and edits it without a duplicate constraint', async () => {
   start(true); key(svg); pick(45, 20); pick(50, 30); expect(panel().querySelector('input').value).toBe('10'); submit('16');
   key(svg); pick(48, 20); pick(52, 30); submit('12');
-  button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.contours[1].radius).toBeCloseTo(6);
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'diameter', value: 12 }]);
   expect(doc.features[0].profile.constraints).toHaveLength(1);
 });
 it('picks two points and creates a driving distance', async () => {
   start(); key(); pick(0, 0); expect(panel()).toBeNull(); pick(20, 0); pick(30, -10); submit('25');
-  button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'distance', value: 25, a: { kind: 'point' }, b: { kind: 'point' } }]);
 });
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
@@ -86,7 +86,7 @@ it('infers an angle from two lines and keeps the tool active for the next dimens
   expect(panel().querySelector('.dimension-entry-unit').textContent).toBe('deg'); submit('60');
   expect(svg.dataset.dimensionTool).toBe('active'); expect(panel()).toBeNull();
   pick(45,20); pick(50,30); submit('14');
-  button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints.map(c=>c.kind)).toEqual(['angle','diameter']);
 });
 it('previews horizontal and vertical measurements by label position without committing until confirmation', async () => {
@@ -97,7 +97,7 @@ it('previews horizontal and vertical measurements by label position without comm
   svg.dispatchEvent(new dom.window.MouseEvent('pointermove', {clientX:10,clientY:-25,bubbles:true}));
   expect(svg.querySelector('.sketch-dimension-preview [data-dimension-axis]').getAttribute('data-dimension-axis')).toBe('x');
   expect(doc.features[0].profile.constraints).toEqual([]);
-  pick(10,25); submit('30'); button('Finish sketch').click(); await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
+  pick(10,25); submit('30'); document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints).toMatchObject([{kind:'horizontal-distance',value:30}]);
 });
 it('box-selects multiple sketch edges and passes their selection to the unified dimension command', async () => {
@@ -107,13 +107,13 @@ it('box-selects multiple sketch edges and passes their selection to the unified 
   pointer('pointerdown',-5,10);pointer('pointermove',25,-5);pointer('pointerup',25,-5);pick(25,-5);
   expect(svg.querySelectorAll('.sketch-selection')).toHaveLength(2);
   key();pick(30,2);expect(panel().querySelector('input').value).toBe('5');submit('8');
-  button('Finish sketch').click();await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click();await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints).toMatchObject([{kind:'distance',value:8}]);
 });
 it('infers a radius from an arc without selecting a dimension type', async () => {
   doc.features[0].profile.contours = [{ type:'path', start:[-5,0], segments:[{type:'arc',middle:[0,5],end:[5,0]}] }];
   start(); key(); pick(0,5); pick(10,10);
   expect(panel().querySelector('input').value).toBe('5'); submit('8');
-  button('Finish sketch').click(); await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints).toMatchObject([{kind:'radius',value:8,a:{kind:'arc'}}]);
 });

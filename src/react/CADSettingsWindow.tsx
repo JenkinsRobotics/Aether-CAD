@@ -25,6 +25,7 @@ import type {
 } from "../cad-appearance-store";
 import { cadPresentation, type CADToolbarMode } from "../cad-presentation-store";
 import { documentUnits, subscribeDocumentUnits } from "../document-preferences";
+import { AUX_TOOLBAR_ITEMS, auxToolbarItems, setAuxToolbarItem, subscribeAuxToolbarItems } from "../aux-toolbar-preferences";
 import { unitChoice } from "@aether/core/units";
 
 const SECTIONS: SettingsSection[] = [
@@ -235,6 +236,9 @@ export function CADSettingsWindow({
                 { ariaLabel: "Window chrome" },
               )}
             </SettingsRow>
+            <SettingsRow label="Aux toolbar" caption="Buttons on the bottom-left toolbar. It opens the aux sidebar and the part list; the feature tree stays in the left column unless you add its toggle.">
+              <AuxToolbarChoices />
+            </SettingsRow>
             <SettingsRow label="Panels">
               <Button onClick={() => cadPresentation.dispatch({ type: "reset-panel-placements" })}>
                 Reset panel placements
@@ -286,7 +290,9 @@ export function CADSettingsWindow({
           </SettingsCard>
         </>
       ) : pane === "renderer" ? (
-        <Inspector><CADPerformancePanel active /></Inspector>
+        <>
+          <Inspector><CADPerformancePanel active /></Inspector>
+        </>
       ) : pane === "appearance" ? (
         <>
           <SettingsCard icon={<AetherIcon name="palette" />} title="Viewport appearance">
@@ -299,6 +305,8 @@ export function CADSettingsWindow({
                   { value: "wireframe", label: "Wireframe" },
                   { value: "hidden-line", label: "Hidden line" },
                   { value: "ghost", label: "Ghost" },
+                  { value: "zebra", label: "Zebra analysis" },
+                  { value: "draft-analysis", label: "Draft analysis" },
                 ],
                 (style) =>
                   cadAppearance.dispatch({ type: "set-display-style", style: style as CADDisplayStyle }),
@@ -581,4 +589,13 @@ export function CADSettingsWindow({
       )}
     </SettingsWindow>
   );
+}
+
+function AuxToolbarChoices() {
+  const shown = useSyncExternalStore(subscribeAuxToolbarItems, auxToolbarItems, auxToolbarItems);
+  return <span className="cad-aux-toolbar-choices" role="group" aria-label="Aux toolbar buttons">
+    {AUX_TOOLBAR_ITEMS.map(item => <label key={item.id}>
+      <input type="checkbox" checked={shown.includes(item.id)} onChange={event => setAuxToolbarItem(item.id, event.currentTarget.checked)} /> {item.label}
+    </label>)}
+  </span>;
 }

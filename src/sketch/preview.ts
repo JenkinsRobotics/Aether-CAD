@@ -2,8 +2,8 @@ import { renderSnapFeedback } from "./snap-feedback";
 import { isDirectModificationTool } from "./tool-instructions";
 import { directModification } from "./direct-modification";
 import { previewTangentArc } from "./tangent-arc-tool";
-import { conicPlacement, type ConicRhoInput } from '../../freecad-engine/browser/conic-authoring';
-import { conicKind } from '../../freecad-engine/browser/conic-geometry';
+import { conicPlacement, type ConicRhoInput } from '@aether/core/sketch/reference/conic-authoring';
+import { conicKind } from '@aether/core/sketch/reference/conic-geometry';
 
 import {
   pickCurve,
@@ -32,6 +32,8 @@ export interface PreviewState {
   clockwise?: boolean;
   secondaryRadiusMillimeters?: number;
   rememberedRadiusMillimeters?: number;
+  cornerRadiusMillimeters?: number;
+  slotWidthMillimeters?: number;
   conicRho?: () => ConicRhoInput | undefined;
   effectivePoint: (point: SketchPoint) => SketchPoint;
 }
@@ -239,6 +241,8 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
             clockwise: state.clockwise,
             secondaryRadiusMillimeters: state.secondaryRadiusMillimeters,
             rememberedRadiusMillimeters: state.rememberedRadiusMillimeters,
+            cornerRadiusMillimeters: state.cornerRadiusMillimeters,
+            slotWidthMillimeters: state.slotWidthMillimeters,
           },
         );
         if (contour.type === "circle") {

@@ -4,7 +4,7 @@ import type { ProfileFeature } from "./solid-features";
 import { projectSketchDrawing } from "../sketch/projection/drawing";
 import { solveDrawingConstraints } from "../sketch/drawing-constraints";
 import type { SketchDrawing, SketchFrame } from "../sketch/drawing";
-import { withPierceContext } from '../../../freecad-engine/browser/pierce-context';
+import { withPierceContext } from '../sketch/reference/pierce-context';
 /** Matches the evaluator's named Replicad planes. Explicit frames already
  * contain their world origin, so the legacy offset is not applied twice. */
 export function profileSketchFrame(feature: ProfileFeature): SketchFrame {

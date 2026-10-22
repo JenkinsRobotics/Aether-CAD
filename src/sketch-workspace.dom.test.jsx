@@ -15,7 +15,7 @@ beforeAll(async()=>{
  open=(await import('./sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(()=>{document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Wheel');apply=vi.fn(async next=>{doc=next;});});
-afterEach(()=>{querySketchControl('.cad-sketch-workspace')?.querySelectorAll('button').forEach(b=>{if(b.getAttribute('aria-label')==='Cancel sketch')b.click();});});
+afterEach(()=>{querySketchControl('.cad-sketch-workspace')?.querySelectorAll('button').forEach(b=>{if(b.dataset.featureAction==='discard')b.click();});});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const click = clickSketchControl;
 const tool=name=>window.dispatchEvent(new CustomEvent('aether-sketch-tool',{detail:name}));
@@ -156,7 +156,7 @@ it('Plane command opens real offset controls and saves a construction feature',a
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XY'}));
  expect(win.querySelector('.aui-feature-entity').textContent).toContain('Top plane');
  win.querySelector('[aria-label="Offset distance"]').value='25';
- win.querySelector('[aria-label="Apply plane"]').click();
+ win.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  const saved=parsePartDocument(serializePartDocument(doc));
  expect(saved.features[0]).toMatchObject({type:'plane',plane:'XY',offsetMillimeters:25,definition:{method:'offset',distanceMillimeters:25}});

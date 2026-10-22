@@ -1,6 +1,7 @@
 import {faceTransformControls,layoutFaceTransforms,validateFaceTransform,serializeFaceTransform} from './face-transform-controls';
 import type {SolidFaceReference} from '@aether/core/document';
 import {cadSelection} from '../cad-selection-store';
+import {faceIdentity,mountPickedReferences} from './picked-references';
 import {referencePickerLifecycle} from './reference-picker-lifecycle';
 import {mountNativeExtrusionHandles} from './extrude-native-handles';
 import type {FeatureEditor} from './shared';
@@ -9,7 +10,8 @@ const identity=(face:SolidFaceReference)=>JSON.stringify([face.sourceFeatureId,f
 export const offsetFaceEditor:FeatureEditor={
  type:'offset-face',
  controls(context) {
-  return {faces:context.field('Offset face references',JSON.stringify(context.feature?.faces??[])),...faceTransformControls(context)};
+  const rw=context.feature?.replaceWith;
+  return {faces:context.field('Offset face references',JSON.stringify(context.feature?.faces??[])),replaceMode:context.field('Replace with plane',rw?'yes':'no',['no','yes']),replaceSource:context.field('Plane source',rw?.kind??'principal',['principal','feature','face']),replaceFace:context.field('Target face',JSON.stringify(rw?.kind==='face'?[rw]:[])),replacePlane:context.field('Replace plane',rw?.kind==='principal'?rw.plane:'XY',['XY','XZ','YZ']),replaceOffset:context.field('Replace plane offset (mm)',String(rw?.kind==='principal'?rw.offsetMillimeters:0)),replaceFeature:context.reference('Replace plane feature',['plane'],rw?.kind==='feature'?rw.featureId:undefined),...faceTransformControls(context)};
  },
  layout(context,controls){
   const {win,form,feature,lengthUnitLabel}=context;
@@ -40,11 +42,19 @@ export const offsetFaceEditor:FeatureEditor={
   mountNativeExtrusionHandles(win.panel,{...controls,distance:controls.offsetDistance},lengthUnitLabel,{signed:true,label:'Drag face offset'});
   const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-offset-faces',receive);lifecycle.dispose();});
   observer.observe(document.body,{childList:true,subtree:true});render();lifecycle.setActive(true);layoutFaceTransforms(context,controls);
+  const rowOf=(key:string)=>controls[key].closest<HTMLElement>('.aui-feature-row')??controls[key].parentElement;
+  const targetFace=mountPickedReferences<SolidFaceReference>(context,controls.replaceFace,{title:'Target face (replace)',kind:'face',requestEvent:'aether-offset-faces-request',replyEvent:'aether-offset-faces',replyKey:'faces',identity:faceIdentity,note:'Optional: a parallel planar face the picked faces move onto.',onChange:picked=>{if(picked.length>1)targetFace.update([picked[picked.length-1]]);else if(picked.length){controls.replaceMode.value='yes';controls.replaceSource.value='face';controls.replaceMode.dispatchEvent(new Event('change'));}}});
+  const syncReplace=()=>{const on=controls.replaceMode.value==='yes',src=controls.replaceSource.value;for(const [key,show] of [['replaceSource',on],['replacePlane',on&&src==='principal'],['replaceOffset',on&&src==='principal'],['replaceFeature',on&&src==='feature']] as const){const el=rowOf(key);if(el)el.hidden=!show;}};
+  controls.replaceMode.addEventListener('change',syncReplace);controls.replaceSource.addEventListener('change',syncReplace);syncReplace();
   if(!feature&&selected.length&&selected.every(item=>item.kind==='face'))queueMicrotask(request);
  },
  validate(controls){
   if(!JSON.parse(controls.faces.value).length)return 'Select one or more faces to offset.';
+  if(controls.replaceMode.value==='yes'){if(controls.replaceSource.value==='feature'&&!controls.replaceFeature.value)return 'Choose the plane feature to replace the faces with.';if(controls.replaceSource.value==='face'&&!JSON.parse(controls.replaceFace.value).length)return 'Pick the target face.';return null;}
   return validateFaceTransform(controls);
  },
- serialize(values,context){return {faces:JSON.parse(values.faces),...serializeFaceTransform(values,context)};},
+ serialize(values,context){
+  const faces=(JSON.parse(values.faces) as Array<Record<string,unknown>>).map(f=>{delete f.centerMillimeters;return f;});
+  if(values.replaceMode==='yes')return {faces,replaceWith:values.replaceSource==='face'?{kind:'face',...(()=>{const f=JSON.parse(values.replaceFace)[0];delete f.centerMillimeters;return f;})()}:values.replaceSource==='feature'?{kind:'feature',featureId:values.replaceFeature}:{kind:'principal',plane:values.replacePlane,offsetMillimeters:Number(values.replaceOffset)}};
+  return {faces,...serializeFaceTransform(values,context)};},
 };

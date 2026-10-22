@@ -39,7 +39,7 @@ it('deletes selected geometry from the world surface with undo/redo and keeps De
   expect(svg.querySelector('circle.sketch-contour')).not.toBeNull();
   key('z', document.body, { metaKey: true }); expect(svg.querySelectorAll('.sketch-contour')).toHaveLength(2);
   key('z', document.body, { metaKey: true, shiftKey: true }); expect(svg.querySelectorAll('.sketch-contour')).toHaveLength(1);
-  button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(parsePartDocument(serializePartDocument(doc)).features[0].profile.contours).toMatchObject([{ type: 'circle' }]);
 });
 it('Q toggles new construction lines and the ribbon command converts selected geometry', async () => {
@@ -50,6 +50,6 @@ it('Q toggles new construction lines and the ribbon command converts selected ge
   key('Escape'); pick(45, 20); cadCommands.execute('sketch-construction');
   expect(svg.querySelectorAll('.sketch-contour.construction')).toHaveLength(2);
   button('Undo').click(); expect(svg.querySelectorAll('.sketch-contour.construction')).toHaveLength(1);
-  button('Redo').click(); button('Finish sketch').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  button('Redo').click(); document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(parsePartDocument(serializePartDocument(doc)).features[0].profile.contours.filter(c => c.construction)).toHaveLength(2);
 });

@@ -1,5 +1,5 @@
 import type { SketchPoint } from "../drawing";
-import { conicPoint, conicDerivative, conicSecondDerivative } from '../../../../freecad-engine/browser/conic-geometry';
+import { conicPoint, conicDerivative, conicSecondDerivative } from '../reference/conic-geometry';
 import type { Curve } from "./pairs";
 import { ellipseFrame, ellipsePoint, segmentPoint } from "./parameterization";
 import { sketchArcGeometry } from "../arc-geometry";

@@ -1,14 +1,7 @@
-"""CAD-owned host adapter; FreeCAD remains behind its existing JSON boundary."""
+"""CAD-owned host adapter for the legacy Python host; geometry builds in the Node runner."""
 
 from core.host.compatibility import packaged_contract
 from core.host.state import Problem
-
-
-def freecad_engine_module():
-    """Load the product-owned adapter installed with this service."""
-    import aether_freecad
-
-    return aether_freecad
 
 
 class CADService:
@@ -27,22 +20,9 @@ class CADService:
     def __init__(self):
         self.engines = {}
 
-    def geometry_engine(self):
-        """The CAD geometry engine, started on first use.
-
-        FreeCAD is the default engine (Jonathan, 2026-09-12). It lives behind
-        `Aether CAD/freecad-engine`'s JSON boundary, so nothing here imports
-        FreeCAD and the engine can be replaced centrally.
-
-        ponytail: one worker, created on demand and reused. The worker is
-        stateless per job, so a pool can replace this without callers changing
-        when request volume justifies it.
-        """
-        engine = self.engines.get("cad-geometry")
-        if engine is None:
-            engine = freecad_engine_module().FreeCADEngine()
-            self.engines["cad-geometry"] = engine
-        return engine
+    # Geometry (builds, solves, exports) runs in the Node runner with the Aether engine;
+    # `engines` stays for hosts that close engine processes on shutdown.
+    node = None
 
     def api(self, host, user, path, data):
         from .automation_runtime import CommandError

@@ -1,0 +1,2604 @@
+{
+ "plate": [
+  {
+   "id": "oracle-plate:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -40,
+     -25,
+     0
+    ],
+    [
+     40,
+     25,
+     12
+    ]
+   ]
+  }
+ ],
+ "plate-hole": [
+  {
+   "id": "oracle-plate-hole:body-1",
+   "volume_mm3": 45587.25684204303,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -40,
+     -25,
+     0
+    ],
+    [
+     40,
+     25,
+     12
+    ]
+   ]
+  }
+ ],
+ "plate-hole-blind": [
+  {
+   "id": "oracle-plate-hole-blind:body-1",
+   "volume_mm3": 46994.69035085126,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -40,
+     -25,
+     0
+    ],
+    [
+     40,
+     25,
+     12
+    ]
+   ]
+  }
+ ],
+ "two-boxes-separate": [
+  {
+   "id": "oracle-two-boxes-separate:body-1:solid-54e6c68d6bd7137d2b0e3f6b",
+   "volume_mm3": 66000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -60,
+     -20,
+     0
+    ],
+    [
+     -5,
+     20,
+     30
+    ]
+   ]
+  },
+  {
+   "id": "oracle-two-boxes-separate:body-b:solid-872fd3992a58eae898e68d74",
+   "volume_mm3": 66000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     5,
+     -20,
+     0
+    ],
+    [
+     60,
+     20,
+     30
+    ]
+   ]
+  }
+ ],
+ "symmetric": [
+  {
+   "id": "oracle-symmetric:body-1",
+   "volume_mm3": 3999.999999999999,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -10,
+     -5
+    ],
+    [
+     10,
+     10,
+     5
+    ]
+   ]
+  }
+ ],
+ "reversed": [
+  {
+   "id": "oracle-reversed:body-1",
+   "volume_mm3": 3999.999999999999,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -10,
+     -10
+    ],
+    [
+     10,
+     10,
+     0
+    ]
+   ]
+  }
+ ],
+ "intersect": [
+  {
+   "id": "oracle-intersect:body-1",
+   "volume_mm3": 6283.185307179586,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -9.981033325195312,
+     -9.995257377624512,
+     0
+    ],
+    [
+     10,
+     9.995257377624512,
+     20
+    ]
+   ]
+  }
+ ],
+ "add": [
+  {
+   "id": "oracle-add:body-1",
+   "volume_mm3": 52712.38898038469,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     35
+    ]
+   ]
+  }
+ ],
+ "xz-plane": [
+  {
+   "id": "oracle-xz-plane:body-1",
+   "volume_mm3": 4800,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -15,
+     -13,
+     -10
+    ],
+    [
+     15,
+     -5,
+     10
+    ]
+   ]
+  }
+ ],
+ "yz-plane": [
+  {
+   "id": "oracle-yz-plane:body-1",
+   "volume_mm3": 4800.000000000004,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -11,
+     -15,
+     -10
+    ],
+    [
+     -3,
+     15,
+     10
+    ]
+   ]
+  }
+ ],
+ "arc-profile": [
+  {
+   "id": "oracle-arc-profile:body-1",
+   "volume_mm3": 9570.796326794896,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     50,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "revolve-full": [
+  {
+   "id": "oracle-revolve-full:body-1",
+   "volume_mm3": 20106.192982974677,
+   "face_count": 4,
+   "edge_count": 6,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     -4.112307265953475e-15
+    ],
+    [
+     30,
+     29.98776626586914,
+     8
+    ]
+   ]
+  }
+ ],
+ "revolve-partial": [
+  {
+   "id": "oracle-revolve-partial:body-1",
+   "volume_mm3": 5026.54824574367,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     1.1102230246251565e-15,
+     0,
+     -4.116112561469015e-15
+    ],
+    [
+     30,
+     30,
+     8
+    ]
+   ]
+  }
+ ],
+ "fillet-all": [
+  {
+   "id": "oracle-fillet-all:body-1",
+   "volume_mm3": 11736.023523414717,
+   "face_count": 26,
+   "edge_count": 56,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     10
+    ]
+   ]
+  }
+ ],
+ "fillet-plane": [
+  {
+   "id": "oracle-fillet-plane:body-1",
+   "volume_mm3": 11882.890822193005,
+   "face_count": 10,
+   "edge_count": 20,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     10
+    ]
+   ]
+  }
+ ],
+ "chamfer-plane": [
+  {
+   "id": "oracle-chamfer-plane:body-1",
+   "volume_mm3": 11405.999999999998,
+   "face_count": 10,
+   "edge_count": 20,
+   "bbox": [
+    [
+     -20,
+     -15,
+     4.440892098500626e-16
+    ],
+    [
+     20,
+     15,
+     10
+    ]
+   ]
+  }
+ ],
+ "mirror-add": [
+  {
+   "id": "oracle-mirror-add:body-1",
+   "volume_mm3": 4800,
+   "face_count": 12,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -25,
+     -10,
+     -5.551115123125783e-15
+    ],
+    [
+     25,
+     10,
+     6
+    ]
+   ]
+  }
+ ],
+ "sketch-on-face": [
+  {
+   "id": "oracle-sketch-on-face:body-1",
+   "volume_mm3": 29704.77868423386,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "revolve-reversed": [
+  {
+   "id": "oracle-revolve-reversed:body-1",
+   "volume_mm3": 5026.54824574367,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     1.1102230246251565e-15,
+     -30,
+     0
+    ],
+    [
+     30,
+     2.6645352591003757e-15,
+     8
+    ]
+   ]
+  }
+ ],
+ "revolve-symmetric": [
+  {
+   "id": "oracle-revolve-symmetric:body-1",
+   "volume_mm3": 5026.548245743669,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     7.071067810058594,
+     -21.21320343017578,
+     -3.734746988396081e-15
+    ],
+    [
+     30,
+     21.21320343017578,
+     8
+    ]
+   ]
+  }
+ ],
+ "revolve-two-angles": [
+  {
+   "id": "oracle-revolve-two-angles:body-1",
+   "volume_mm3": 5026.54824574367,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     5,
+     -15,
+     -4.505156064692336e-15
+    ],
+    [
+     29.979021072387695,
+     25.980762481689453,
+     8
+    ]
+   ]
+  }
+ ],
+ "boolean-union": [
+  {
+   "id": "oracle-boolean-union:body-1",
+   "volume_mm3": 31999.999999999996,
+   "face_count": 12,
+   "edge_count": 30,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "boolean-cut-keep": [
+  {
+   "id": "oracle-boolean-cut-keep:body-1",
+   "volume_mm3": 20000,
+   "face_count": 10,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     10,
+     20,
+     15
+    ]
+   ]
+  },
+  {
+   "id": "oracle-boolean-cut-keep:body-b",
+   "volume_mm3": 12000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -10,
+     5
+    ],
+    [
+     30,
+     10,
+     20
+    ]
+   ]
+  }
+ ],
+ "shell-closed": [
+  {
+   "id": "oracle-shell-closed:body-1",
+   "volume_mm3": 9024,
+   "face_count": 12,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     20
+    ]
+   ]
+  }
+ ],
+ "shell-open-top": [
+  {
+   "id": "oracle-shell-open-top:body-1",
+   "volume_mm3": 7152,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     20
+    ]
+   ]
+  }
+ ],
+ "pattern-linear-holes": [
+  {
+   "id": "oracle-pattern-linear-holes:body-1",
+   "volume_mm3": 22869.02664470767,
+   "face_count": 11,
+   "edge_count": 27,
+   "bbox": [
+    [
+     -50,
+     -15,
+     0
+    ],
+    [
+     50,
+     15,
+     8
+    ]
+   ]
+  }
+ ],
+ "pattern-linear-reversed-bosses": [
+  {
+   "id": "oracle-pattern-linear-reversed-bosses:body-1",
+   "volume_mm3": 24565.486677646153,
+   "face_count": 14,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -50,
+     -15,
+     0
+    ],
+    [
+     50,
+     15,
+     13
+    ]
+   ]
+  }
+ ],
+ "pattern-polar-full": [
+  {
+   "id": "oracle-pattern-polar-full:body-1",
+   "volume_mm3": 15946.724309621794,
+   "face_count": 9,
+   "edge_count": 21,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     -1.2832647618482768e-15
+    ],
+    [
+     30,
+     29.98776626586914,
+     6
+    ]
+   ]
+  }
+ ],
+ "pattern-polar-partial": [
+  {
+   "id": "oracle-pattern-polar-partial:body-1",
+   "volume_mm3": 16286.016316209489,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     -1.2832647618482768e-15
+    ],
+    [
+     30,
+     29.98776626586914,
+     6
+    ]
+   ]
+  }
+ ],
+ "scope-cut-two-bodies": [
+  {
+   "id": "oracle-scope-cut-two-bodies:body-1",
+   "volume_mm3": 10869.991694747168,
+   "face_count": 8,
+   "edge_count": 18,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     -2,
+     20,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "oracle-scope-cut-two-bodies:body-b",
+   "volume_mm3": 10869.991694747168,
+   "face_count": 8,
+   "edge_count": 20,
+   "bbox": [
+    [
+     2,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "scope-add-touching": [
+  {
+   "id": "oracle-scope-add-touching:body-1",
+   "volume_mm3": 23200,
+   "face_count": 18,
+   "edge_count": 44,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     14
+    ]
+   ]
+  }
+ ],
+ "shell-closed-with-hole": [
+  {
+   "id": "oracle-shell-closed-with-hole:body-1",
+   "volume_mm3": 5642.263254529042,
+   "face_count": 14,
+   "edge_count": 30,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "hole-plain-blind": [
+  {
+   "id": "oracle-hole-plain-blind:body-1",
+   "volume_mm3": 14299.469035085125,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "hole-through": [
+  {
+   "id": "oracle-hole-through:body-1",
+   "volume_mm3": 14249.203552627689,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "hole-counterbore": [
+  {
+   "id": "oracle-hole-counterbore:body-1",
+   "volume_mm3": 14186.371699555893,
+   "face_count": 10,
+   "edge_count": 18,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "hole-countersink": [
+  {
+   "id": "oracle-hole-countersink:body-1",
+   "volume_mm3": 14265.958713446835,
+   "face_count": 9,
+   "edge_count": 17,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "hole-reversed-from-bottom": [
+  {
+   "id": "oracle-hole-reversed-from-bottom:body-1",
+   "volume_mm3": 14299.469035085125,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -20,
+     -15,
+     0
+    ],
+    [
+     20,
+     15,
+     12
+    ]
+   ]
+  }
+ ],
+ "transform-translate": [
+  {
+   "id": "oracle-transform-translate:body-1",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -5,
+     -8,
+     2
+    ],
+    [
+     15,
+     2,
+     7
+    ]
+   ]
+  }
+ ],
+ "transform-rotate": [
+  {
+   "id": "oracle-transform-rotate:body-1",
+   "volume_mm3": 999.9999999999999,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -11.16025447845459,
+     -9.330126762390137,
+     0
+    ],
+    [
+     11.16025447845459,
+     9.330126762390137,
+     5
+    ]
+   ]
+  }
+ ],
+ "transform-scale": [
+  {
+   "id": "oracle-transform-scale:body-1",
+   "volume_mm3": 7999.999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -20,
+     -10,
+     0
+    ],
+    [
+     20,
+     10,
+     10
+    ]
+   ]
+  }
+ ],
+ "transform-copy": [
+  {
+   "id": "oracle-transform-copy:body-1",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -5,
+     0
+    ],
+    [
+     10,
+     5,
+     5
+    ]
+   ]
+  },
+  {
+   "id": "oracle-transform-copy:body-1:copy-1",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     20,
+     -5,
+     0
+    ],
+    [
+     40,
+     5,
+     5
+    ]
+   ]
+  }
+ ],
+ "revolve-add": [
+  {
+   "id": "oracle-revolve-add:body-1",
+   "volume_mm3": 22619.46710584651,
+   "face_count": 7,
+   "edge_count": 9,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     0
+    ],
+    [
+     30,
+     29.98776626586914,
+     12
+    ]
+   ]
+  }
+ ],
+ "revolve-cut": [
+  {
+   "id": "oracle-revolve-cut:body-1",
+   "volume_mm3": 13194.68914507713,
+   "face_count": 7,
+   "edge_count": 9,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     0
+    ],
+    [
+     30,
+     29.98776626586914,
+     6
+    ]
+   ]
+  }
+ ],
+ "revolve-cut-partial": [
+  {
+   "id": "oracle-revolve-cut-partial:body-1",
+   "volume_mm3": 15707.963267948966,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -29.951072692871094,
+     -29.98776626586914,
+     0
+    ],
+    [
+     30,
+     29.98776626586914,
+     6
+    ]
+   ]
+  }
+ ],
+ "extrude-add-boss": [
+  {
+   "id": "oracle-extrude-add-boss:body-1",
+   "volume_mm3": 27199.999999999993,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     18
+    ]
+   ]
+  }
+ ],
+ "extrude-intersect-post": [
+  {
+   "id": "oracle-extrude-intersect-post:body-1",
+   "volume_mm3": 7068.583470577035,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -9.971549987792969,
+     -14.99288558959961,
+     0
+    ],
+    [
+     20,
+     14.99288558959961,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-start-offset": [
+  {
+   "id": "oracle-extrude-start-offset:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     5
+    ],
+    [
+     30,
+     20,
+     25
+    ]
+   ]
+  }
+ ],
+ "extrude-two-sided": [
+  {
+   "id": "oracle-extrude-two-sided:body-1",
+   "volume_mm3": 67200,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -8
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "extrude-second-end": [
+  {
+   "id": "oracle-extrude-second-end:body-1",
+   "volume_mm3": 46900.44251888369,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20.000001907348633
+    ]
+   ]
+  }
+ ],
+ "extrude-symmetric-through-all": [
+  {
+   "id": "oracle-extrude-symmetric-through-all:body-1",
+   "volume_mm3": 46429.20356848535,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -9.999999974752427e-07
+    ],
+    [
+     30,
+     20,
+     20.000001907348633
+    ]
+   ]
+  }
+ ],
+ "extrude-direction-vector": [
+  {
+   "id": "oracle-extrude-direction-vector:body-1",
+   "volume_mm3": 3199.999999999999,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -10,
+     0
+    ],
+    [
+     16,
+     10,
+     8
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-vertex": [
+  {
+   "id": "oracle-extrude-up-to-vertex:body-1",
+   "volume_mm3": 49178.09724509617,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     35
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-vertex-offset": [
+  {
+   "id": "oracle-extrude-up-to-vertex-offset:body-1",
+   "volume_mm3": 49021.01761241668,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     33
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-face": [
+  {
+   "id": "oracle-extrude-up-to-face:body-1",
+   "volume_mm3": 48785.39816339745,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-face:body-blk",
+   "volume_mm3": 3999.999999999999,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -10,
+     -10,
+     30
+    ],
+    [
+     10,
+     10,
+     40
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-face-tilted": [
+  {
+   "id": "oracle-extrude-up-to-face-tilted:body-1",
+   "volume_mm3": 48785.398163642894,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30.832529067993164
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-face-tilted:body-wedge",
+   "volume_mm3": 48000.00000000004,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     25
+    ],
+    [
+     30,
+     20,
+     50
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-next": [
+  {
+   "id": "oracle-extrude-up-to-next:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-next:body-boss",
+   "volume_mm3": 1178.0972450961724,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     5.009483337402344,
+     0.0023714015260338783,
+     -15
+    ],
+    [
+     15,
+     9.997628211975098,
+     0
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-next-offset": [
+  {
+   "id": "oracle-extrude-up-to-next-offset:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-next-offset:body-boss",
+   "volume_mm3": 942.4777960769379,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     5.009483337402344,
+     0.0023714015260338783,
+     -15
+    ],
+    [
+     15,
+     9.997628211975098,
+     -3
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-next-stepped": [
+  {
+   "id": "oracle-extrude-up-to-next-stepped:body-1",
+   "volume_mm3": 18000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -5
+    ],
+    [
+     0,
+     20,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-next-stepped:body-b",
+   "volume_mm3": 24000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     0,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-next-stepped:body-c",
+   "volume_mm3": 2999.999999999999,
+   "face_count": 8,
+   "edge_count": 18,
+   "bbox": [
+    [
+     -10,
+     -10,
+     -10
+    ],
+    [
+     10,
+     10,
+     0
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-part": [
+  {
+   "id": "oracle-extrude-up-to-part:body-1",
+   "volume_mm3": 49255.665919000385,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     33.755001068115234
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-part:body-cyl",
+   "volume_mm3": 16084.954386379739,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -40,
+     -7.984826564788818,
+     32.0037956237793
+    ],
+    [
+     40,
+     8,
+     47.9962043762207
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-part-offset": [
+  {
+   "id": "oracle-extrude-up-to-part-offset:body-1",
+   "volume_mm3": 49055.66591900038,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     31.755001068115234
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-part-offset:body-cyl",
+   "volume_mm3": 16084.954386379739,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -40,
+     -7.984826564788818,
+     32.0037956237793
+    ],
+    [
+     40,
+     8,
+     47.9962043762207
+    ]
+   ]
+  }
+ ],
+ "extrude-draft": [
+  {
+   "id": "oracle-extrude-draft:body-1",
+   "volume_mm3": 44582.09896558226,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -8.655038241581604e-17
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "extrude-draft-negative": [
+  {
+   "id": "oracle-extrude-draft-negative:body-1",
+   "volume_mm3": 51581.192047656186,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -31.749773025512695,
+     -21.749773025512695,
+     -9.221903130130724e-17
+    ],
+    [
+     31.749773025512695,
+     21.749773025512695,
+     20
+    ]
+   ]
+  }
+ ],
+ "extrude-draft-hole": [
+  {
+   "id": "oracle-extrude-draft-hole:body-1",
+   "volume_mm3": 44582.09896558226,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -8.655038241581604e-17
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "extrude-draft-symmetric": [
+  {
+   "id": "oracle-extrude-draft-symmetric:body-1",
+   "volume_mm3": 46270.638106136335,
+   "face_count": 10,
+   "edge_count": 20,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -10
+    ],
+    [
+     30,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-draft-offset": [
+  {
+   "id": "oracle-extrude-draft-offset:body-1",
+   "volume_mm3": 42908.86835751931,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -29.562557220458984,
+     -19.562557220458984,
+     5
+    ],
+    [
+     29.562557220458984,
+     19.562557220458984,
+     25
+    ]
+   ]
+  }
+ ],
+ "extrude-draft-second-end": [
+  {
+   "id": "oracle-extrude-draft-second-end:body-1",
+   "volume_mm3": 62674.831217731284,
+   "face_count": 10,
+   "edge_count": 20,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -8
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "extrude-direction-line": [
+  {
+   "id": "oracle-extrude-direction-line:body-1",
+   "volume_mm3": 628.3185307179588,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -4.990516662597656,
+     -4.997628688812256,
+     0
+    ],
+    [
+     11,
+     4.997628688812256,
+     8
+    ]
+   ]
+  }
+ ],
+ "extrude-thin-closed": [
+  {
+   "id": "oracle-extrude-thin-closed:body-1",
+   "volume_mm3": 1920,
+   "face_count": 10,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -12,
+     -7,
+     0
+    ],
+    [
+     12,
+     7,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-thin-open": [
+  {
+   "id": "oracle-extrude-thin-open:body-1",
+   "volume_mm3": 1039.9999999999998,
+   "face_count": 8,
+   "edge_count": 18,
+   "bbox": [
+    [
+     0,
+     -2,
+     0
+    ],
+    [
+     32,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-thin-open-arc": [
+  {
+   "id": "oracle-extrude-thin-open-arc:body-1",
+   "volume_mm3": 942.4777960769381,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -1.5,
+     0,
+     0
+    ],
+    [
+     21.5,
+     11.5,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-thin-midplane": [
+  {
+   "id": "oracle-extrude-thin-midplane:body-1",
+   "volume_mm3": 1884.9555921538754,
+   "face_count": 4,
+   "edge_count": 6,
+   "bbox": [
+    [
+     -11.478188514709473,
+     -11.494545936584473,
+     0
+    ],
+    [
+     11.5,
+     11.494545936584473,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-thin-flipped": [
+  {
+   "id": "oracle-extrude-thin-flipped:body-1",
+   "volume_mm3": 1212.5000000000005,
+   "face_count": 8,
+   "edge_count": 18,
+   "bbox": [
+    [
+     0,
+     -0.5,
+     0
+    ],
+    [
+     30.5,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "face-extrude-push": [
+  {
+   "id": "oracle-face-extrude-push:body-1",
+   "volume_mm3": 60000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     25
+    ]
+   ]
+  }
+ ],
+ "face-extrude-pull": [
+  {
+   "id": "oracle-face-extrude-pull:body-1",
+   "volume_mm3": 36000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     15
+    ]
+   ]
+  }
+ ],
+ "draft-feature": [
+  {
+   "id": "oracle-draft-feature:body-1",
+   "volume_mm3": 46589.38415433228,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -3.5603018234584786e-16
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "draft-feature-reversed": [
+  {
+   "id": "oracle-draft-feature-reversed:body-1",
+   "volume_mm3": 49410.61584566772,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     33.52653884887695,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "loft-smooth": [
+  {
+   "id": "oracle-loft-smooth:body-1",
+   "volume_mm3": 5497.787143782138,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -9.981033325195312,
+     -9.995257377624512,
+     0
+    ],
+    [
+     10,
+     9.995257377624512,
+     30
+    ]
+   ]
+  }
+ ],
+ "loft-ruled": [
+  {
+   "id": "oracle-loft-ruled:body-1",
+   "volume_mm3": 7409.692924686407,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -10,
+     -10,
+     0
+    ],
+    [
+     10,
+     10,
+     25
+    ]
+   ]
+  }
+ ],
+ "loft-cut": [
+  {
+   "id": "oracle-loft-cut:body-1",
+   "volume_mm3": 46680.53108549229,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "sweep-line": [
+  {
+   "id": "oracle-sweep-line:body-1",
+   "volume_mm3": 1130.9733552923256,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -7.443682130032245e-16,
+     -2.994309902191162,
+     -2.998577117919922
+    ],
+    [
+     40,
+     3,
+     2.998577117919922
+    ]
+   ]
+  }
+ ],
+ "sweep-arc": [
+  {
+   "id": "oracle-sweep-arc:body-1",
+   "volume_mm3": 1776.5287921960842,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -2.994309902191162,
+     -3.383287289954499e-16,
+     -2.998577117919922
+    ],
+    [
+     42.99430847167969,
+     22.99431037902832,
+     2.998577117919922
+    ]
+   ]
+  }
+ ],
+ "shell-open-by-reference": [
+  {
+   "id": "oracle-shell-open-by-reference:body-1",
+   "volume_mm3": 15744,
+   "face_count": 12,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "transform-translate-reference": [
+  {
+   "id": "oracle-transform-translate-reference:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -5,
+     -20,
+     0
+    ],
+    [
+     55,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "transform-rotate-reference": [
+  {
+   "id": "oracle-transform-rotate-reference:body-1",
+   "volume_mm3": 48000.00000000001,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     20,
+     20
+    ],
+    [
+     30,
+     40,
+     60
+    ]
+   ]
+  }
+ ],
+ "transform-scale-reference": [
+  {
+   "id": "oracle-transform-scale-reference:body-1",
+   "volume_mm3": 384000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -70,
+     -40,
+     -40
+    ],
+    [
+     50,
+     40,
+     0
+    ]
+   ]
+  }
+ ],
+ "tools-shell-plain": [
+  {
+   "id": "oracle-tools-shell-plain:body-1",
+   "volume_mm3": 5617.168736873268,
+   "face_count": 17,
+   "edge_count": 32,
+   "bbox": [
+    [
+     10,
+     -15,
+     0
+    ],
+    [
+     50,
+     15,
+     12
+    ]
+   ]
+  },
+  {
+   "id": "oracle-tools-shell-plain:body-rnew",
+   "volume_mm3": 56548.667764616286,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -2.220446049250313e-15,
+     -15,
+     -50
+    ],
+    [
+     50,
+     15,
+     0
+    ]
+   ]
+  }
+ ],
+ "tools-fillet-then-shell": [
+  {
+   "id": "oracle-tools-fillet-then-shell:body-1",
+   "volume_mm3": 5296.631995957218,
+   "face_count": 60,
+   "edge_count": 126,
+   "bbox": [
+    [
+     10,
+     -15,
+     0
+    ],
+    [
+     50,
+     15,
+     12
+    ]
+   ]
+  },
+  {
+   "id": "oracle-tools-fillet-then-shell:body-rnew",
+   "volume_mm3": 56548.667764616286,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -2.220446049250313e-15,
+     -15,
+     -50
+    ],
+    [
+     50,
+     15,
+     0
+    ]
+   ]
+  }
+ ],
+ "targets-cut-two": [
+  {
+   "id": "oracle-targets-cut-two:body-1",
+   "volume_mm3": 10399.999999999996,
+   "face_count": 10,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     -2,
+     20,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "oracle-targets-cut-two:body-b",
+   "volume_mm3": 20799.999999999996,
+   "face_count": 10,
+   "edge_count": 24,
+   "bbox": [
+    [
+     2,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "targets-add-bridge": [
+  {
+   "id": "oracle-targets-add-bridge:body-1",
+   "volume_mm3": 33999.99999999999,
+   "face_count": 14,
+   "edge_count": 36,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "targets-intersect-two": [
+  {
+   "id": "oracle-targets-intersect-two:body-1",
+   "volume_mm3": 3600,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -20,
+     -10,
+     0
+    ],
+    [
+     -2,
+     10,
+     10
+    ]
+   ]
+  },
+  {
+   "id": "oracle-targets-intersect-two:body-b",
+   "volume_mm3": 5400,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     2,
+     -10,
+     0
+    ],
+    [
+     20,
+     10,
+     15
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-cylinder": [
+  {
+   "id": "oracle-extrude-up-to-cylinder:body-1",
+   "volume_mm3": 49255.665919000385,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     33.755001068115234
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-cylinder:body-cyl",
+   "volume_mm3": 16084.954386379739,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -40,
+     -7.984826564788818,
+     32.0037956237793
+    ],
+    [
+     40,
+     8,
+     47.9962043762207
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-cylinder-offset": [
+  {
+   "id": "oracle-extrude-up-to-cylinder-offset:body-1",
+   "volume_mm3": 49055.66591900038,
+   "face_count": 11,
+   "edge_count": 24,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     31.755001068115234
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-cylinder-offset:body-cyl",
+   "volume_mm3": 16084.954386379739,
+   "face_count": 3,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -40,
+     -7.984826564788818,
+     32.0037956237793
+    ],
+    [
+     40,
+     8,
+     47.9962043762207
+    ]
+   ]
+  }
+ ],
+ "offset-face-out": [
+  {
+   "id": "oracle-offset-face-out:body-1",
+   "volume_mm3": 60000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     25
+    ]
+   ]
+  }
+ ],
+ "offset-face-in": [
+  {
+   "id": "oracle-offset-face-in:body-1",
+   "volume_mm3": 36000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     15
+    ]
+   ]
+  }
+ ],
+ "offset-face-two": [
+  {
+   "id": "oracle-offset-face-two:body-1",
+   "volume_mm3": 61440,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     34,
+     20,
+     24
+    ]
+   ]
+  }
+ ],
+ "offset-face-slanted": [
+  {
+   "id": "oracle-offset-face-slanted:body-1",
+   "volume_mm3": 79299.31503635792,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     -5.259072858205992e-31
+    ],
+    [
+     30,
+     20,
+     38.0413818359375
+    ]
+   ]
+  }
+ ],
+ "move-face-translate": [
+  {
+   "id": "oracle-move-face-translate:body-1",
+   "volume_mm3": 57600,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     24
+    ]
+   ]
+  }
+ ],
+ "move-face-rotate": [
+  {
+   "id": "oracle-move-face-rotate:body-1",
+   "volume_mm3": 60695.542611009456,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30.579618453979492
+    ]
+   ]
+  }
+ ],
+ "import-obj-solid": [
+  {
+   "id": "oracle-import-obj-solid:body-m",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     10,
+     10,
+     10
+    ]
+   ]
+  }
+ ],
+ "import-off-solid": [
+  {
+   "id": "oracle-import-off-solid:body-m",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     0,
+     0,
+     0
+    ],
+    [
+     10,
+     10,
+     10
+    ]
+   ]
+  }
+ ],
+ "transform-scale-xyz": [
+  {
+   "id": "oracle-transform-scale-xyz:body-1",
+   "volume_mm3": 48000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -60,
+     -20,
+     0
+    ],
+    [
+     60,
+     20,
+     10
+    ]
+   ]
+  }
+ ],
+ "extrude-up-to-cone": [
+  {
+   "id": "oracle-extrude-up-to-cone:body-1",
+   "volume_mm3": 50291.17033591255,
+   "face_count": 12,
+   "edge_count": 27,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     51
+    ]
+   ]
+  },
+  {
+   "id": "oracle-extrude-up-to-cone:body-cone",
+   "volume_mm3": 12566.370614359163,
+   "face_count": 2,
+   "edge_count": 3,
+   "bbox": [
+    [
+     -19.962066650390625,
+     -19.990514755249023,
+     30
+    ],
+    [
+     20,
+     19.990514755249023,
+     60
+    ]
+   ]
+  }
+ ],
+ "import-iges-solid": [
+  {
+   "id": "oracle-import-iges-solid:body-m",
+   "volume_mm3": 999.9999999999998,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -5,
+     -5,
+     0
+    ],
+    [
+     5,
+     5,
+     10
+    ]
+   ]
+  }
+ ],
+ "offset-hole-face": [
+  {
+   "id": "oracle-offset-hole-face:body-1",
+   "volume_mm3": 46994.69035085127,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "offset-hole-face-out": [
+  {
+   "id": "oracle-offset-hole-face-out:body-1",
+   "volume_mm3": 45738.05328941535,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     20
+    ]
+   ]
+  }
+ ],
+ "offset-boss-face": [
+  {
+   "id": "oracle-offset-boss-face:body-1",
+   "volume_mm3": 49539.380400259,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30
+    ]
+   ]
+  }
+ ],
+ "offset-top-with-hole": [
+  {
+   "id": "oracle-offset-top-with-hole:body-1",
+   "volume_mm3": 58036.504591506375,
+   "face_count": 7,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     25
+    ]
+   ]
+  }
+ ],
+ "offset-top-with-boss": [
+  {
+   "id": "oracle-offset-top-with-boss:body-1",
+   "volume_mm3": 60392.69908169872,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30
+    ]
+   ]
+  }
+ ],
+ "offset-boss-top": [
+  {
+   "id": "oracle-offset-boss-top:body-1",
+   "volume_mm3": 49099.55742875642,
+   "face_count": 8,
+   "edge_count": 15,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     34
+    ]
+   ]
+  }
+ ],
+ "offset-chamfer-face": [
+  {
+   "id": "oracle-offset-chamfer-face:body-1",
+   "volume_mm3": 48750.07307699641,
+   "face_count": 9,
+   "edge_count": 17,
+   "bbox": [
+    [
+     -30,
+     -20,
+     0
+    ],
+    [
+     30,
+     20,
+     30
+    ]
+   ]
+  }
+ ],
+ "conic-ellipse": [
+  {
+   "id": "oracle-conic-ellipse:body-1",
+   "volume_mm3": 5291.13640759012,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -20,
+     -10,
+     0
+    ],
+    [
+     20,
+     4.5,
+     10
+    ]
+   ]
+  }
+ ],
+ "conic-parabola": [
+  {
+   "id": "oracle-conic-parabola:body-1",
+   "volume_mm3": 6000,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -20,
+     -10,
+     0
+    ],
+    [
+     20,
+     7.5,
+     10
+    ]
+   ]
+  }
+ ],
+ "conic-hyperbola": [
+  {
+   "id": "oracle-conic-hyperbola:body-1",
+   "volume_mm3": 6561.0764385763905,
+   "face_count": 6,
+   "edge_count": 12,
+   "bbox": [
+    [
+     -20,
+     -10,
+     0
+    ],
+    [
+     20,
+     10.5,
+     10
+    ]
+   ]
+  }
+ ]
+}

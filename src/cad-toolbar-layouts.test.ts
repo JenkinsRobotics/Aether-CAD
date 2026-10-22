@@ -141,26 +141,27 @@ describe("the Assembly tab", () => {
   });
 
   it("offers exactly the mates that can be both authored and solved", () => {
-    // FreeCAD solves thirteen kinds, but a mate is committed through the
-    // workspace's Assembly v1 slice, which takes three. A button needs both
-    // halves, or it fails only after the user has authored the whole mate.
+    // The solver handles eleven kinds, but a mate is committed through the
+    // workspace's Assembly slice, which stores the eight kinematic kinds. A
+    // button needs both halves, or it fails only after the user has authored
+    // the whole mate.
     const enabled = assemblyTools()
       .filter((tool) => tool.action?.startsWith("assembly-mate-"))
       .map((tool) => tool.label);
-    expect(enabled.sort()).toEqual(["Fastened", "Revolute", "Slider"]);
+    expect(enabled.sort()).toEqual(["Ball", "Cylindrical", "Fastened", "Parallel", "Pin Slot", "Planar", "Revolute", "Slider"]);
   });
 
   it("greys the rest, and says which of the two reasons applies", () => {
     const tools = assemblyTools();
     // Solvable but not yet authorable.
-    for (const mate of ["Cylindrical", "Ball", "Distance", "Angle", "Gears", "Belt"]) {
+    for (const mate of ["Distance", "Angle", "Perpendicular"]) {
       const tool = tools.find((entry) => entry.label === mate);
       expect(tool, `${mate} should be listed`).toBeTruthy();
       expect(tool!.action).toBeUndefined();
       expect(tool!.unavailableReason).toMatch(/cannot author it yet/);
     }
-    // Not solvable at all: FreeCAD has no joint for these.
-    for (const mate of ["Planar", "Pin Slot", "Tangent", "Width"]) {
+    // Not solvable at all: the solver has no joint for these.
+    for (const mate of ["Tangent", "Width"]) {
       const tool = tools.find((entry) => entry.label === mate);
       expect(tool!.action).toBeUndefined();
       expect(tool!.unavailableReason).toMatch(/no joint for this mate/);
@@ -233,17 +234,17 @@ it("starts Solid with Create and Modify without manual build commands", () => {
   const solid = toolbarWorkspaceFor("part", "solid");
   expect(solid.groups.slice(0, 2).map(group => group.label)).toEqual(["Create", "Modify"]);
   expect(solid.groups[0].tools.map(tool => tool.id)).toContain("solid-extrude");
-  expect(solid.groups[1].tools.map(tool => tool.id)).toContain("solid-cut");
+  expect(solid.groups[1].tools.map(tool => tool.id)).not.toContain("solid-cut");
   const actions = solid.groups.flatMap(group => group.tools.map(tool => tool.action));
   expect(actions).not.toContain("rebuild-part");
-  expect(actions).not.toContain("freecad-build");
+  expect(actions).not.toContain("engine-build");
 });
 
 
 it("shows one Construction icon and retains the complete construction menu", () => {
   const section = fusionTabsFor("part").find(tab => tab.id === "solid")!.sections.find(section => section.label === "Construct")!;
   expect(section.visible).toEqual(["solid-plane"]);
-  expect(section.menu).toEqual(["solid-plane", "solid-plane-angle", "solid-plane-mid", "solid-plane-three-point"]);
+  expect(section.menu).toEqual(["solid-plane", "solid-plane-angle", "solid-plane-mid", "solid-plane-three-point", "solid-plane-perpendicular", "solid-plane-two-edges", "solid-plane-tangent", "solid-plane-along-path", "solid-axis-edge", "solid-axis-two-points", "solid-axis-normal", "solid-axis-two-planes", "solid-axis-cylinder", "solid-point-vertex", "solid-point-two-edges", "solid-point-three-planes", "solid-point-center", "solid-point-edge-plane", "solid-point-along-path"]);
 });
 
 

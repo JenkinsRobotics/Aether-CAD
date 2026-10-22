@@ -38,7 +38,7 @@ export function itemTreePresentation(nodes: readonly TreeNode[]): TreeNode[] {
       ...(node.badge === "Fastened" ? [{ id: "fastened", label: "Fastened", icon: <AetherIcon name="fastened" /> }] : []),
       ...(node.badge === "Free" ? [{ id: "free", label: "Free to move", icon: <AetherIcon name="mouse" /> }] : []),
     ],
-    icon: node.id.startsWith("document/") || node.id === "reference-folder" ? <AetherIcon name="collection-folder" /> : node.icon === "◇" ? <AetherIcon name="cube" /> : svgStatusArtwork(node.icon, node.id.startsWith("feature/") ? node.id.split("/")[1] : undefined) ?? (node.id.startsWith("feature/body/") ? <AetherIcon name="cube" /> : undefined),
+    icon: node.id === "reference-folder" ? <AetherIcon name="planes-axes" /> : node.id.startsWith("document/") ? <AetherIcon name="collection-folder" /> : node.icon === "◇" ? <AetherIcon name="cube" /> : svgStatusArtwork(node.icon, node.id.startsWith("feature/") ? node.id.split("/")[1] : undefined) ?? (node.id.startsWith("feature/body/") ? <AetherIcon name="cube" /> : undefined),
     actions: node.actions?.map((action) => ({ ...action,
       state: action.id === "body-visibility" || action.id === "toggle-visibility",
       pinned: action.pinned || (action.id === "suppress-feature" && node.badge === "Suppressed"),

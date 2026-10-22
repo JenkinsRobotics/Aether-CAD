@@ -13,6 +13,12 @@ from test_native_connected_profile import ROOT, bodies, invoke
 
 CASES = json.loads((Path(__file__).parent / "fixtures/pierce-documents.json").read_text())
 
+def refused(error):
+    """Refusals carry kind "invalid" and, at most, a short CAD-authored reason without paths."""
+    message = error.get("message", "")
+    return error.get("kind") == "invalid" and set(error) <= {"kind", "message"} and "/" not in message and len(message) <= 500
+
+
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c["name"])
 def test_saved_pierce_reopens_through_packaged_native_worker(tmp_path, case):
@@ -51,7 +57,7 @@ def test_failed_source_returns_no_saved_candidate(tmp_path, change):
     else:
         document["features"][0]["profile"]["contours"][0]["segments"][0]["end"] = [40, -1]
     result = invoke(tmp_path, document, "cad.extrude.setdepth", {"feature_id": "pad", "depth_mm": 8})
-    assert result["error"] == {"kind": "invalid"}
+    assert refused(result["error"])
     assert "content" not in result
 
 

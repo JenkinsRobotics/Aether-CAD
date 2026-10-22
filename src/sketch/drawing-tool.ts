@@ -1,6 +1,6 @@
 import { isRectanglePlacement, squareCorner, constrainPlacedSquare } from "./rectangle-placement";
 import { placeTangentArc } from "./tangent-arc-tool";
-import { conicPlacement, createSketchConic, type ConicRhoInput } from '../../freecad-engine/browser/conic-authoring';
+import { conicPlacement, createSketchConic, type ConicRhoInput } from '@aether/core/sketch/reference/conic-authoring';
 import {
   inferSketchSemicircle,
   contourClosed,
@@ -38,6 +38,8 @@ interface Settings {
   clockwise?: boolean;
   secondaryRadiusMillimeters?: number;
   rememberedRadiusMillimeters?: number;
+  cornerRadiusMillimeters?: number;
+  slotWidthMillimeters?: number;
   construction: boolean;
   closeTolerance: number;
 }
@@ -114,6 +116,8 @@ export function placeDrawingPoint(
         clockwise: settings.clockwise,
         secondaryRadiusMillimeters: settings.secondaryRadiusMillimeters,
         rememberedRadiusMillimeters: settings.rememberedRadiusMillimeters,
+        cornerRadiusMillimeters: settings.cornerRadiusMillimeters,
+        slotWidthMillimeters: settings.slotWidthMillimeters,
       },
     );
     if (construction) contour.construction = true;

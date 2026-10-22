@@ -9,6 +9,12 @@ from test_native_connected_profile import bodies, invoke
 
 CASES = json.loads((Path(__file__).parent / 'fixtures/pierce-ui-documents.json').read_text())
 
+def refused(error):
+    """Refusals carry kind "invalid" and, at most, a short CAD-authored reason without paths."""
+    message = error.get("message", "")
+    return error.get("kind") == "invalid" and set(error) <= {"kind", "message"} and "/" not in message and len(message) <= 500
+
+
 
 @pytest.mark.parametrize('case', CASES, ids=lambda c: c['name'])
 def test_interactively_authored_pierce_file_rebuilds(tmp_path, case):
@@ -39,5 +45,5 @@ def test_interactive_source_loss_cannot_produce_a_silent_saved_candidate(tmp_pat
     document = copy.deepcopy(next(c['document'] for c in CASES if c['name'] == 'center'))
     document['features'].pop(0)
     response = invoke(tmp_path, document, 'cad.extrude.setdepth', {'feature_id': 'pad', 'depth_mm': 8})
-    assert response['error'] == {'kind': 'invalid'}
+    assert refused(response["error"])
     assert 'content' not in response

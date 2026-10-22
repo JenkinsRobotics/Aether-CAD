@@ -1,7 +1,7 @@
 import type { SketchDrawing } from "../drawing";
 import type { DrawingConstraint } from "./types";
 import { constraintResiduals } from "./residuals";
-import { fixedGeometryDiagnosticResiduals } from "../../../../freecad-engine/browser/fixed-geometry";
+import { fixedGeometryDiagnosticResiduals } from "../reference/fixed-geometry";
 
 /** Mobility rank uses equalities. A quadrant's finite-span bound restricts
  * the direction of motion at an endpoint, but does not fix that endpoint.

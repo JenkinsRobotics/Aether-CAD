@@ -5,9 +5,11 @@ import type { ImportedModelData } from '../domain';
 import { resolveBodyOutputs } from '../modeling/body-outputs';
 import { resolveSketchFrames } from '../modeling/sketch-support';
 import { cadAgentTools, inspectPart, preparePartEdit, validateLiveArguments } from './live-commands';
+import { inspectSketch } from './sketch-edit';
 import { inspectFeatureReferences } from './feature-inspection';
 import { discoverCAD } from '../ai/knowledge';
 import { executeProgram } from '../ai/program';
+import { readFeatureCatalog } from '../operations/feature-operations';
 
 export interface CADAgentWorkspace {
   current:()=>PartDocument|null;
@@ -29,9 +31,11 @@ export class CADAgentEditor {
     if(contextKey!==w.contextKey())throw Error('The active Part changed.');
     validateLiveArguments(call.name,call.arguments);
     if(call.name==='aether_cad_docs')return discoverCAD(cadAgentTools,call.arguments,'part');
+    if(call.name==='aether_cad_feature_types'||call.name==='aether_cad_feature_schema')return readFeatureCatalog(call.name,call.arguments);
     const source=w.current();
     if(!source)throw Error('Create or open a Part first.');
     if(call.name==='aether_cad_inspect')return {...inspectPart(source,call.arguments),writable:w.writable(),can_undo:!!w.history.candidate(-1),can_redo:!!w.history.candidate(1)};
+    if(call.name==='aether_cad_sketch_inspect')return inspectSketch(source,call.arguments);
     if(call.name==='aether_cad_feature_references')return inspectFeatureReferences(source,call.arguments);
     if(this.busy)throw Error('Another agent edit is rebuilding.');
     if(!w.available())throw Error('Finish or cancel the open sketch/feature and return to Modeling first.');

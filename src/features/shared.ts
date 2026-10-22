@@ -25,7 +25,7 @@ export interface FeatureEditorContext {
   /** The feature being edited, or undefined when adding. */
   feature: any;
   initialOperation?: "cut";
-  initialTransform?: "translate"|"rotate"|"scale"|"copy";
+  initialTransform?: "translate"|"rotate"|"scale"|"copy"|"mirror"|"align";
   doc: PartDocument;
   lengthUnitLabel: string;
   angleUnitLabel: string;

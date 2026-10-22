@@ -75,6 +75,7 @@ export function createWheelExample(documentId = "wheel-example"): PartDocument {
       profileFeatureId: "bore",
       distanceMillimeters: 22,
       operation: "cut",
+      reversed: true,
       suppressed: false,
     },
     {
@@ -97,6 +98,7 @@ export function createWheelExample(documentId = "wheel-example"): PartDocument {
       profileFeatureId: "hole",
       distanceMillimeters: 22,
       operation: "cut",
+      reversed: true,
       suppressed: false,
     },
     {

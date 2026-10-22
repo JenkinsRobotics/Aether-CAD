@@ -9,8 +9,8 @@ import {
 import { commitDragSnap, dragAnchor, snapDraggedPoint, type DragSnap } from "./drag-snapping";
 import { showDragFeedback } from "./drag-feedback";
 import {pickSketchEditEntity} from './edit-picking';
-import {dragSketchEllipse,fullSketchEllipse,type EllipseHandle} from '../../freecad-engine/browser/ellipse-manipulation';
-import { conicDragTarget, setConicCurvature } from '../../freecad-engine/browser/conic-manipulation';
+import {dragSketchEllipse,fullSketchEllipse,type EllipseHandle} from '@aether/core/sketch/reference/ellipse-manipulation';
+import { conicDragTarget, setConicCurvature } from '@aether/core/sketch/reference/conic-manipulation';
 interface Options {
   svg: SVGSVGElement;
   enabled: () => boolean;

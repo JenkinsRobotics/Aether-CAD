@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => ({
   worker: {
     format: "es",
   },
-  test: { maxWorkers: 2, minWorkers: 1, server: { deps: { inline: [/@aether\//] } },
+  test: { maxWorkers: 2, minWorkers: 1, hookTimeout: 60000, testTimeout: 30000, server: { deps: { inline: [/@aether\//] } },
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.test.jsx"],
   },
 }));

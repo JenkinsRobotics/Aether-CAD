@@ -104,7 +104,7 @@ export function mountSketchVariables(
       commit(drawing, variables);
       sync();
       status.textContent =
-        "Variables applied to this draft. Finish sketch saves all affected sketches; Cancel discards these changes.";
+        "Variables applied to this draft. Apply saves all affected sketches; Cancel discards these changes.";
     } catch (error) {
       if (!disposed && request === generation)
         status.textContent = (error as Error).message;

@@ -22,7 +22,10 @@ export const modelStudioEnvironment: Partial<CADAppearanceSnapshot> = {
   gridMinorColor: look.grid.minor, gridMajorColor: look.grid.major,
   gridXAxisColor: look.grid.x, gridYAxisColor: look.grid.y, gridZAxisColor: look.grid.z,
   gridOpacityPercent: 100, gridMinorOpacityPercent: 100, gridMajorOpacityPercent: 100, gridAxisOpacityPercent: 100,
-  gridSpacingMillimeters: look.grid.spacingMeters * 1000, gridExtentMillimeters: look.grid.extentMeters * 1000,
+  // The stage grid is a visual guide, independent of CAD sketch snapping.
+  // 25 mm cells retain the demo's 40-cell stage around ordinary CAD parts.
+  gridSpacingMillimeters: look.grid.spacingMeters * 25, gridExtentMillimeters: look.grid.extentMeters * 25,
+  gridMajorEvery: 0, gridMinorWidthPx: 1, gridMajorWidthPx: 1, gridAxisWidthPx: 1,
   bodyColor: look.surface.color, roughness: look.surface.roughness, metalness: look.surface.metalness,
   displayStyle: 'shaded', edgesVisible: false, bodyOpacityPercent: 100,
   studioReflections: true, reflectionIntensityPercent: look.reflections.intensity * 100, reflectionRotationDegrees: 0,

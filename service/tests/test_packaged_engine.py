@@ -31,7 +31,7 @@ def installed(tmp_path_factory):
     target = root / "installed"
     with zipfile.ZipFile(next(root.glob("*.whl"))) as wheel:
         assert any(name.endswith("/ATTRIBUTION.md") for name in wheel.namelist())
-        assert "aether_freecad/worker.py" in wheel.namelist()
+        assert not any(name.startswith("aether_freecad/") for name in wheel.namelist())
         assert "aether_cad_service/runtime/runner.mjs" in wheel.namelist()
         assert "aether_cad_service/AGENT_ACCESS.md" in wheel.namelist()
         wheel.extractall(target)
@@ -50,8 +50,7 @@ from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import aether_cad_service.service as service
 assert service.CADService.compatibility["product"] == "cad"
-adapter = service.freecad_engine_module()
-for module in (service, adapter):
+for module in (service,):
     assert Path(module.__file__).is_relative_to(sys.argv[1]), module.__file__
 """
             + code,
@@ -66,48 +65,16 @@ for module in (service, adapter):
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_wheel_contains_replaceable_adapter_and_worker(installed):
+def test_wheel_contains_the_node_runner_and_its_kernel(installed):
+    # The installed wheel builds geometry through the Node runner (Aether engine); the
+    # round trip is covered by test_native_program (programs) and test_native_automation.
     run_installed(
         installed,
         """
-from aether_freecad.engine import WORKER
-assert WORKER.is_file()
-assert WORKER.is_relative_to(sys.argv[1])
-assert adapter.PROTOCOL_VERSION
-""",
-    )
-
-
-@pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1",
-    reason="Set AETHER_TEST_FREECAD=1 for the required native release gate",
-)
-def test_installed_native_rebuild_recovery_and_step_round_trip(installed):
-    run_installed(
-        installed,
-        """
-import math
-from aether_freecad import BuildJob, Feature
-with adapter.FreeCADEngine() as engine:
-    def job(depth):
-        return BuildJob(features=[
-            Feature('s', 'sketch-rectangle', {'width_mm': 40, 'height_mm': 20}),
-            Feature('p', 'pad', {'profile': 's', 'distance_mm': depth}),
-        ])
-    for depth in (10, 20):
-        result = engine.build(job(depth))
-        assert not result.diagnostics, result.diagnostics
-        assert math.isclose(result.bodies[0].volume_mm3, 800 * depth)
-    bad = engine.build(BuildJob(features=[Feature('p', 'pad', {'profile': 'missing', 'distance_mm': 10})]))
-    assert bad.diagnostics
-    exported = engine.export(job(20), {'format': 'step'})
-    assert exported['status'] == 'ok', exported
-    imported = engine.build(BuildJob(features=[Feature('import', 'import-step', {
-        'data_base64': exported['data_base64'], 'body_id': 'saved', 'operation': 'new',
-    })]))
-    assert not imported.diagnostics, imported.diagnostics
-    assert math.isclose(imported.bodies[0].volume_mm3, 16000)
-    assert imported.bodies[0].id == 'saved'
+runtime = Path(service.__file__).with_name("runtime")
+assert (runtime / "runner.mjs").is_file()
+assert (runtime / "replicad_single.wasm").stat().st_size > 1_000_000
+assert (runtime / "runner.pyz").is_file()
 """,
     )
 

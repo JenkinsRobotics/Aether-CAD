@@ -10,7 +10,7 @@ beforeAll(async()=>{
  openPlane=(await import('./plane-window')).openPlaneWindow;
 });
 beforeEach(()=>{document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Part');apply=vi.fn(async next=>{doc=next;});});
-afterEach(()=>{document.querySelector('.cad-plane-window [aria-label="Discard plane"]')?.click();document.querySelector('.cad-plane-window [aria-label="Close plane window"]')?.click();});
+afterEach(()=>{document.querySelector('.cad-plane-window .cad-plane-window [data-feature-action="discard"]')?.click();document.querySelector('.cad-plane-window .cad-plane-window [data-feature-action="discard"]')?.click();});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 
 it('authors a mid plane from viewport/tree picked references and commits on Enter',async()=>{
@@ -37,8 +37,8 @@ it('starts empty and validates the reference count against the chosen method',as
  await openPlane(()=>doc,apply);
  expect(doc.features).toHaveLength(0);
  const win=document.querySelector('.cad-plane-window');
- const accept=win.querySelector('[aria-label="Apply plane"]');
- const status=()=>win.querySelector('.aui-feature-error')?.textContent ?? '';
+ const accept=win.querySelector('.cad-plane-window [data-feature-action="accept"]');
+ const status=()=>document.querySelector('.aui-feature-error')?.textContent ?? '';
  const pickMethod=name=>{
   win.querySelector('[aria-label="Plane method"]').click();
   [...win.querySelectorAll('.aui-feature-picker-menu button')].find(b=>b.textContent===name).click();
@@ -95,7 +95,7 @@ it('previews the plane live as references and offset change',async()=>{
   expect(previews.at(-1).frame).toBeNull();
 
   // Closing the window clears the preview too.
-  win.querySelector('[aria-label="Discard plane"]').click();
+  win.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
   await vi.waitFor(()=>expect(previews.at(-1).frame).toBeNull());
  }finally{window.removeEventListener('aether-plane-preview',onPreview);}
 });
@@ -127,7 +127,7 @@ it('reports the referenced planes so the viewport can highlight them',async()=>{
   expect(highlights.at(-1)).toEqual([{kind:'feature',featureId:'base'}]);
 
   // Closing releases every highlight.
-  win.querySelector('[aria-label="Discard plane"]').click();
+  win.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
   await vi.waitFor(()=>expect(highlights.at(-1)).toEqual([]));
  }finally{window.removeEventListener('aether-plane-highlight',onHighlight);}
 });
@@ -142,7 +142,7 @@ for (const definition of [
  const win=document.querySelector('.cad-plane-window');
  expect(win.querySelector('[aria-label="Plane method"]').textContent).toContain(definition.method==='angle'?'Angle':'Three point');
  if(definition.method==='angle')expect(win.querySelector('[aria-label="Plane angle"]').value).toBe('27');
- win.querySelector('[aria-label="Apply plane"]').click();
+ win.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  expect(doc.features[0].definition).toEqual(definition);
 });
@@ -151,8 +151,8 @@ for(const [method,label] of [['mid','Mid plane'],['angle','Angle'],['three-point
  await openPlane(()=>doc,apply,undefined,method);
  const win=document.querySelector('.cad-plane-window');
  expect(win.querySelector('[aria-label="Plane method"]').textContent).toContain(label);
- expect(win.querySelector('[aria-label="Apply plane"]').disabled).toBe(true);
- win.querySelector('[aria-label="Discard plane"]').click();
+ expect(win.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(true);
+ win.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
  await vi.waitFor(()=>expect(document.querySelector('.cad-plane-window')).toBeNull());
  expect(doc.features).toHaveLength(0);
 });
@@ -161,8 +161,8 @@ it('opens in a blank workspace and Cancel does not create a Part or undo entry',
  doc=null;
  await openPlane(()=>doc,apply);
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XY'}));
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(false);
- document.querySelector('[aria-label="Discard plane"]').click();
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(false);
+ document.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
  expect(apply).not.toHaveBeenCalled();expect(doc).toBeNull();
 });
 
@@ -170,7 +170,7 @@ it('creates a plane on Apply in a blank workspace, with one history change',asyn
  doc=null;
  await openPlane(()=>doc,apply);
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XY'}));
- document.querySelector('[aria-label="Apply plane"]').click();
+ document.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  expect(doc.features).toHaveLength(1);
  expect(doc.features[0].definition).toMatchObject({method:'offset',distanceMillimeters:10});
@@ -180,7 +180,7 @@ it('rejects nonparallel Midplane references, including Enter submission',async()
  await openPlane(()=>doc,apply,undefined,'mid');
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XY'}));
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XZ'}));
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(true);
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(true);
  expect(document.querySelector('.aui-feature-error').textContent).toContain('parallel');
  document.querySelector('.cad-plane-window').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
  await Promise.resolve();expect(apply).not.toHaveBeenCalled();expect(doc.features).toHaveLength(0);
@@ -191,10 +191,10 @@ it('collects three individual vertex clicks, rejects collinearity, then permits 
  const pick=(id,position)=>window.dispatchEvent(new CustomEvent('aether-plane-geometry',{detail:{points:[{partId:'p',candidateId:id,positionMillimeters:position}]}}));
  pick('a',[0,0,0]);pick('b',[10,0,0]);pick('c',[20,0,0]);
  expect(document.querySelector('.aui-feature-error').textContent).toContain('non-collinear');
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(true);
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(true);
  document.querySelector('[aria-label="Remove Point 3"]').click();pick('d',[0,10,0]);
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(false);
- document.querySelector('[aria-label="Apply plane"]').click();
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(false);
+ document.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  expect(doc.features[0].definition.points.map(p=>p.candidateId)).toEqual(['a','b','d']);
 });
@@ -206,11 +206,11 @@ it('retains the angle edge when its reference plane is selected and rejects a no
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XY'}));
  window.dispatchEvent(new CustomEvent('aether-plane-geometry',{detail:{axis:null,points:[]}}));
  expect(document.querySelector('.aui-feature-error').textContent).toContain('parallel');
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(true);
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(true);
  document.querySelector('[aria-label="Remove Top plane"]').click();
  window.dispatchEvent(new CustomEvent('aether-sketch-plane',{detail:'XZ'}));
- expect(document.querySelector('[aria-label="Apply plane"]').disabled).toBe(false);
- document.querySelector('[aria-label="Apply plane"]').click();
+ expect(document.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(false);
+ document.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
  await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  expect(doc.features[0].definition.axis.directionMillimeters).toEqual([0,0,1]);
 });
@@ -223,7 +223,7 @@ it('Cancel tells the viewport to restore a saved plane without changing it',asyn
   await openPlane(()=>doc,apply,feature);
   const offset=document.querySelector('[aria-label="Offset distance"]');offset.value='35';offset.dispatchEvent(new Event('input'));
   expect(frames.at(-1).frame.originMillimeters).toEqual([0,0,35]);
-  document.querySelector('[aria-label="Close plane window"]').click();
+  document.querySelector('.cad-plane-window [data-feature-action="discard"]').click();
   expect(frames.at(-1)).toMatchObject({featureId:'saved',frame:null,finished:true});
   expect(apply).not.toHaveBeenCalled();expect(doc.features[0].offsetMillimeters).toBe(15);
  } finally {window.removeEventListener('aether-plane-preview',listen);}

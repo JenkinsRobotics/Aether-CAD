@@ -19,13 +19,23 @@ export class PartUndoHistory {
   accept(direction: -1 | 1) { if (this.candidate(direction)) this.index += direction; }
 }
 
-export function installPartUndo(getDocument: () => PartDocument | null, apply: (doc: PartDocument) => Promise<void>) {
+export function installPartUndo(getDocument: () => PartDocument | null, apply: (doc: PartDocument) => Promise<void>, changed: () => void = () => {}) {
   const history = new PartUndoHistory();
   let restoring = false;
   window.addEventListener("aether-part-updated", () => {
     const document = getDocument();
     if (document && !restoring) history.record(document);
+    changed();
   });
+  /** One undo (-1) or redo (1) — the keyboard, tool bar and command palette all run this. */
+  const step = async (direction: -1 | 1): Promise<boolean> => {
+    const previous = restoring ? null : history.candidate(direction);
+    if (!previous || previous.documentId !== getDocument()?.documentId) return false;
+    restoring = true;
+    try { await apply(previous); history.accept(direction); return true; }
+    catch { return false; /* The normal apply path reports the failure; keep the history cursor. */ }
+    finally { restoring = false; changed(); }
+  };
   window.addEventListener("keydown", async event => {
     if (event.defaultPrevented || !(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "z") return;
     const target = event.target instanceof HTMLElement ? event.target : null;
@@ -34,12 +44,12 @@ export function installPartUndo(getDocument: () => PartDocument | null, apply: (
     const direction = event.shiftKey ? 1 : -1;
     const previous = history.candidate(direction);
     if (!previous || previous.documentId !== getDocument()?.documentId) return;
-    event.preventDefault(); restoring = true;
-    try { await apply(previous); history.accept(direction); }
-    catch { /* The normal apply path reports the failure; keep the history cursor. */ }
-    finally { restoring = false; }
+    event.preventDefault();
+    await step(direction);
   });
   return {
+    step,
+    canStep: (direction: -1 | 1) => !restoring && history.candidate(direction)?.documentId === getDocument()?.documentId && getDocument() !== null,
     candidate: (direction: -1 | 1) => restoring ? null : history.candidate(direction),
     /** Native evaluation happens before this synchronous commit. */
     commit: (direction: -1 | 1, expected: PartDocument, applyEvaluated: () => void) => {

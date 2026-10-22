@@ -1,8 +1,9 @@
+import { patternCopyIds } from "./pattern";
 import {transformReferences} from './part-transform';
 import {offsetFaceBodies} from './offset-face';
 import {scopeConsumedBodies} from './extrusion-scope';
 import { featureReferenceErrors } from "./feature-errors";
-import { pierceDependencies } from '../../../freecad-engine/browser/pierce-context';
+import { pierceDependencies } from '../sketch/reference/pierce-context';
 import {
   validatePartDocument,
   type PartDocument,
@@ -15,7 +16,7 @@ export function bodyIDForFeature(
   feature: PartFeature,
 ): string {
   if (
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.bodyId
   )
     return feature.bodyId;
@@ -28,13 +29,14 @@ export function bodyIDForFeature(
     : `${doc.documentId}:body-${feature.id}`;
 }
 export function bodyIDsForFeature(doc: PartDocument, feature: PartFeature): string[] {
-  if(feature.type==="transform")return feature.copyBodyIds?feature.bodyIds.map(id=>feature.copyBodyIds![id]):[];
+  if(feature.type==="transform"||feature.type==="split")return feature.copyBodyIds?feature.bodyIds.map(id=>feature.copyBodyIds![id]):[];
+  if(feature.type==="pattern"&&feature.bodyIds)return patternCopyIds(feature);
   return feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs
     ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
 }
 /** Bodies created by this feature, separate from bodies modified in place. */
 export function createdBodyIDs(doc:PartDocument,feature:PartFeature):string[] {
- return feature.type==='transform'&&feature.copyBodyIds ? bodyIDsForFeature(doc,feature) :
+ return ((feature.type==='transform'||feature.type==='split')&&feature.copyBodyIds)||(feature.type==='pattern'&&feature.bodyIds) ? bodyIDsForFeature(doc,feature) :
   'operation' in feature&&feature.operation==='new' ? bodyIDsForFeature(doc,feature) : [];
 }
 /** Current output identities absorbed by a feature; original producers persist. */
@@ -42,6 +44,7 @@ export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.suppressed) return [];
   if (feature.type==="extrude" && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
+  if (feature.type === "remove-body") return feature.bodyIds;
   return feature.type === "extrude" && feature.operation === "add" ? feature.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc: PartDocument): PartDocument {
@@ -54,19 +57,19 @@ function stableBodies(doc: PartDocument): PartDocument {
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
         return feature;
       }
-      if(feature.type==="transform"){
+      if(feature.type==="transform"||feature.type==="split"){
         if(!feature.suppressed&&feature.copyBodyIds)targetBody=bodyIDsForFeature(doc,feature).at(-1);
         return feature;
       }
       if (feature.type === "offset-face") return feature;
       if (consumedBodyIDs(feature).length && "targetBodyId" in feature) targetBody = feature.targetBodyId;
-      if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
+      if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature).at(-1);
         return { ...feature, bodyId: bodyIDForFeature(doc, feature) };
       }
       // Pin legacy implicit targets before removing/reordering their producer.
       // Otherwise the same operation could silently switch to another body.
-      if (!["profile", "sketch", "plane"].includes(feature.type) && targetBody)
+      if (!["profile", "sketch", "plane", "axis", "point", "thread"].includes(feature.type) && targetBody)
         return { ...feature, targetBodyId: ("targetBodyId" in feature && feature.targetBodyId) || targetBody };
       return feature;
     }),
@@ -88,8 +91,9 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       };
       visit(f.definition);
     }
-    if(f.type==='transform'){
-      refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));
+    if(f.type==='transform'||f.type==='split'){
+      if(f.type==='transform')refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));
+      else if(f.plane.kind==='feature')refs.push(f.plane.featureId);else if(f.plane.kind==='face')refs.push(f.plane.sourceFeatureId);
       refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
       if(!f.suppressed||includeSuppressedModifiers){
         for(const id of f.copyBodyIds?bodyIDsForFeature(doc,f):f.bodyIds)bodyProducers.set(id,f.id);
@@ -97,7 +101,14 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       }
       result.set(f.id,[...new Set(refs)]);continue;
     }
-    if (f.type === "offset-face") {refs.push(...f.faces.map(face=>face.sourceFeatureId));if(f.transform)refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));}
+    if (f.type === "delete-face") refs.push(...f.faces.map(face=>face.sourceFeatureId));
+    if (f.type === "pipe") refs.push(f.pathFeatureId);
+    if (f.type === "pattern" && f.bodyIds) { refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`)); if(!f.suppressed||includeSuppressedModifiers) for(const id of patternCopyIds(f)) bodyProducers.set(id,f.id); }
+    if (f.type === "remove-body") refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
+    if (f.type === "thread") refs.push(f.face.sourceFeatureId);
+    if (f.type === "boss" || f.type === "rest") refs.push(f.face.sourceFeatureId);
+    if (f.type === "bounding-solid" && f.bodyIds) refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
+    if (f.type === "offset-face") {refs.push(...f.faces.map(face=>face.sourceFeatureId));if(f.replaceWith?.kind==="feature")refs.push(f.replaceWith.featureId);else if(f.replaceWith?.kind==="face")refs.push(f.replaceWith.sourceFeatureId);if(f.transform)refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));}
     if (f.type === "profile" && f.support) refs.push(f.support.sourceFeatureId);
     if(f.type==='profile') {
       const drawing=f.profile.type==='drawing'?f.profile:f.profile.type==='projection'?f.profile.authored:undefined;
@@ -109,7 +120,8 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
     if (f.type === "extrude") for(const end of [f,f.secondEnd]) if(end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
     if (f.type === "boolean") refs.push(...f.toolBodyIds.map(id => bodyProducers.get(id) ?? `body:${id}`));
     if (f.type === "loft") refs.push(...f.sections.map(section => section.profileFeatureId));
-    if ("profileFeatureId" in f) refs.push(f.profileFeatureId);
+    if ("profileFeatureId" in f && f.profileFeatureId) refs.push(f.profileFeatureId);
+    if (f.type === "hole" && f.placement) refs.push(f.placement.face.sourceFeatureId);
     if (f.type === "extrude" && f.endType === "up-to-face" && f.endReference) refs.push(f.endReference.sourceFeatureId);
     if (f.type === "extrude" && f.secondEnd?.endType === "up-to-face" && f.secondEnd.endReference) refs.push(f.secondEnd.endReference.sourceFeatureId);
     if (f.type === "extrude" && (f.endType === "up-to-next" || f.secondEnd?.endType === "up-to-next")) refs.push(...bodyProducers.values());
@@ -129,7 +141,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       // checked against actual native availability during evaluation.
       if(!f.suppressed||includeSuppressedModifiers)for(const id of bodyProducers.keys())bodyProducers.set(id,f.id);
       if(!f.suppressed)lastBody=f.scopeResolution?.groups.at(-1)?.bodyId??lastBody;
-    } else if (!["sketch", "profile", "plane"].includes(f.type)) {
+    } else if (!["sketch", "profile", "plane", "axis", "point", "thread"].includes(f.type)) {
       const body =
         "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
       const targets = f.type === "offset-face" ? offsetFaceBodies(f) : f.type === "extrude" && f.targetBodyIds ? f.targetBodyIds : [body];
@@ -189,7 +201,7 @@ export function insertFeature(
   const next = stableBodies(doc),
     index = rollbackPosition(doc);
   if (
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.operation === "new"
   )
     feature = {

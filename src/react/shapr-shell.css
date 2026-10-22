@@ -774,14 +774,25 @@
 .cad-version-row-actions button svg { width: 11px; height: 11px; }
 @media (pointer: coarse) { .cad-version-row-actions { opacity: 1; } }
 
-/* Feature windows dock at the top-LEFT of the viewport, the way Onshape puts
-   them beside the feature tree. The right side is taken by the ViewCube and the
-   tool rail, and the top by the ribbon; the left edge is the only place a
-   300px panel does not cover something. The header stays drag-to-move. */
+/* Legacy docked layouts have an unobstructed viewport edge. */
 .shapr-shell {
   --aether-feature-window-top: 116px;
   --aether-feature-window-right: auto;
   --aether-feature-window-left: 16px;
+}
+
+/* The Studio viewport extends behind its floating tree and auxiliary cards.
+   Use the shared measured clearance for every CAD feature/sketch editor.
+   At narrow widths the editor can overlap a card, but must stay reachable. */
+.shapr-shell .aui-shell[data-design="studio"] .aui-feature-window {
+  --aether-feature-window-left: clamp(12px, var(--aui-workspace-inset-left, 12px), calc(100% - 324px));
+  --aether-feature-window-right: auto;
+  --aether-feature-window-top: max(116px, var(--aui-workspace-inset-top, 0px));
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - var(--aether-feature-window-top) - max(16px, var(--aui-studio-tools-clearance, 0px)));
+}
+.shapr-shell .aui-shell[data-design="studio"] .aui-shell-center:has(.aui-feature-window) {
+  isolation: auto;
 }
 
 /* Items panel owns its layout: the feature list scrolls inside its own area
@@ -894,3 +905,36 @@
 .cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .cad-studio-camera-navigation > .view-cube { position: absolute; inset: 0 auto auto 0; }
 .cad-studio-workspace .aui-shell[data-design="studio"] .selection-filter-hud { min-width: 0; width: var(--aui-sidebar-expanded-width, 216px); max-width: 100%; box-sizing: border-box; }
 .cad-studio-workspace .aui-shell[data-design="studio"] .selection-filter-hud > small { white-space: normal; }
+
+/* Model Studio uses its small camera launcher; the complete navigation cube
+   and all camera actions remain available in the shared popover. */
+.cad-studio-camera-navigation { top:calc(var(--aui-studio-header-height,56px) + 82px); width:40px; height:60px; display:flex; flex-direction:column; align-items:center; gap:5px; }
+.cad-studio-camera-button { width:40px; height:40px; flex:none; border:0; border-radius:50%; background:#292e30; color:#c2d0d6; display:grid; place-items:center; }
+.cad-studio-camera-button svg { width:24px; height:24px; }
+.cad-studio-camera-label { font-size:8px; color:#657277; text-transform:capitalize; }
+.cad-studio-workspace-controls { display:flex; align-items:center; gap:6px; }
+.cad-studio-control-divider { height:24px; width:1px; background:var(--aether-color-border); margin:0 4px; }
+.cad-studio-workspace-controls .aui-workspace-switcher { height:30px; padding:0 9px; border:1px solid var(--aether-color-border); border-radius:8px; background:var(--aether-color-bg-app); font:12px var(--aether-font-family); }
+.cad-studio-view-tools { width:216px; max-width:100%; }
+.cad-studio-view-tools > .aui-floating-toolbar { width:100%; }
+.cad-studio-view-tools .aui-floating-toolbar-strip { padding:0; gap:0; border-radius:9px; }
+.cad-studio-view-tools .aui-floating-toolbar-group { flex:1; gap:0; align-items:stretch; }
+.cad-studio-view-tools .aui-floating-toolbar-group > .aui-icon-button { --aui-icon-button-size:40px; flex:1 1 0; width:0; min-width:0; }
+.shapr-shell .viewport canvas { filter:none; }
+
+.cad-studio-workspace-controls > .aui-icon-button:is([data-active="true"],[aria-pressed="true"]) { color:var(--aether-color-accent); background:transparent; }
+.cad-studio-view-tools .aui-floating-toolbar-strip { min-height:42px; }
+
+.cad-studio-view-tools .aui-floating-toolbar[data-variant="document"] .aui-floating-toolbar-strip { height:42px; min-height:42px; padding:0; gap:0; border-radius:9px; }
+.cad-studio-workspace-controls .aui-workspace-switcher { min-width:82px; }
+
+.cad-document-bar .cad-link-feedback:empty { display:none; }
+
+.aui-studio-app .aui-document-tray-actions .cad-document-menu { width:36px; height:36px; padding:8px; border:0; background:transparent; }
+.aui-studio-app .aui-document-tray-actions .cad-document-menu > svg { width:20px; height:20px; }
+
+.cad-document-tray-slot { display:contents; }
+.cad-document-tray-slot[hidden] { display:none; }
+
+/* Match the shared Model Studio AI card inset inside the auxiliary tray. */
+.cad-rail-panel--agent { margin:2px -2px; width:calc(100% + 4px); height:calc(100% - 4px); }

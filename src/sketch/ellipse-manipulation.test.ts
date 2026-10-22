@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {addSketchEllipseAxis,addSketchEllipseCenter,constrainSketchEllipse,sketchVariantContour,setSketchEllipseDiameter,type SketchDrawing} from '@aether/core/sketch';
-import {fixedEntityConstraint} from '../../freecad-engine/browser/fixed-geometry';
-import {dragSketchEllipse,ellipseHandles,fullSketchEllipse} from '../../freecad-engine/browser/ellipse-manipulation';
+import {fixedEntityConstraint} from '@aether/core/sketch/reference/fixed-geometry';
+import {dragSketchEllipse,ellipseHandles,fullSketchEllipse} from '@aether/core/sketch/reference/ellipse-manipulation';
 
 export function ellipseFixture():SketchDrawing {
   return addSketchEllipseCenter(constrainSketchEllipse({type:'drawing',contours:[sketchVariantContour('ellipse',[[0,0],[20,0],[0,10]])]},0),{contour:0,kind:'ellipse',index:0});

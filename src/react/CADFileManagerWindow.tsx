@@ -43,7 +43,7 @@ export function CADFileManagerWindow({connection,tabs,project,standaloneTabs,onC
     };
     window.addEventListener('message',open);return()=>window.removeEventListener('message',open);
   },[connection,onClose]);
-  return <Dialog open title={page==='document' ? (project ? "Project tabs" : "Open tabs") : "Open a file"} onClose={onClose}>
+  return <Dialog open title={page==="document" ? "Manage files" : "Open a file"} onClose={onClose}>
     <div className="cad-file-manager-window">
       <div className="cad-file-manager-window-tabs">
         {page==='files' ? <Button onClick={()=>setPage('document')}>Back to tabs</Button> : <>

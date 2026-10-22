@@ -1,5 +1,5 @@
 import type { SketchEntityRef, DrawingConstraint } from "../solver/types";
-import { conicSubspanParameter } from '../../../../freecad-engine/browser/conic-geometry';
+import { conicSubspanParameter } from '../reference/conic-geometry';
 export function splitPreservesContact(
   c: DrawingConstraint,
   ref: SketchEntityRef,

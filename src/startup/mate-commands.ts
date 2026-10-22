@@ -1,8 +1,8 @@
 /** One command per mate kind, plus the solve.
  *
- *  FreeCAD's Assembly workbench solves thirteen joint types, so the ribbon
- *  offers thirteen buttons rather than one generic "Mate" that then asks which
- *  kind — picking the mate you want is the gesture, the way Onshape does it.
+ *  The ribbon offers one button per mate kind rather than one generic "Mate"
+ *  that then asks which kind — picking the mate you want is the gesture, the
+ *  way Onshape does it.
  *
  *  Which kinds are live is asked of the engine, never assumed: a button the
  *  solver would refuse is the bug that shipped Shell and Sweep, and here it
@@ -10,7 +10,8 @@
  */
 import { cadCommands, type CADCommandID } from "../cad-command-registry";
 import { cadPresentation } from "../cad-presentation-store";
-import { assemblyMateKinds, type AssemblyMateKind } from "../freecad-assembly";
+import type { AssemblyMateKind } from "../assembly-types";
+import { solvableMateKinds } from "@aether/core/kernel";
 import { assemblyMateTypeOptions } from "../cad-mate-authoring";
 
 /** Every kind Aether names, with the label the ribbon shows. Order is the
@@ -25,6 +26,8 @@ export const MATE_KINDS: readonly (readonly [AssemblyMateKind, string])[] = [
   ["parallel", "Parallel"],
   ["perpendicular", "Perpendicular"],
   ["angle", "Angle"],
+  ["planar", "Planar"],
+  ["pin_slot", "Pin Slot"],
   ["rack-pinion", "Rack and Pinion"],
   ["screw", "Screw"],
   ["gears", "Gears"],
@@ -49,9 +52,9 @@ export function registerMateCommands(host: MateCommandHost): void {
 
 /** Enable a mate only when it can be authored *and* solved.
  *
- *  Two capabilities, and both are needed. FreeCAD's solver handles thirteen
- *  kinds, but a mate is still committed through the workspace's `add_mate`,
- *  which accepts the three of Assembly v1. Enabling a kind the solver knows
+ *  Two capabilities, and both are needed. The solver handles eleven kinds, but a
+ *  mate is still committed through the workspace's `add_mate`,
+ *  which accepts the eight kinematic kinds. Enabling a kind the solver knows
  *  but the workspace refuses would fail only after the user had authored the
  *  whole mate — the Shell and Sweep mistake, later and more expensive.
  *
@@ -59,12 +62,8 @@ export function registerMateCommands(host: MateCommandHost): void {
  *  worse than a button that is plainly unavailable.
  */
 export async function syncMateAvailability(): Promise<readonly AssemblyMateKind[]> {
-  let solvable: readonly AssemblyMateKind[] = [];
-  try {
-    solvable = await assemblyMateKinds();
-  } catch {
-    solvable = [];
-  }
+  // The engine solves eleven mate kinds in-process; coupled kinds are refused by design.
+  const solvable: readonly AssemblyMateKind[] = solvableMateKinds as readonly AssemblyMateKind[];
   const authorable = new Set(assemblyMateTypeOptions.map((option) => option.value));
   const usable = new Set(solvable.filter((kind) => authorable.has(kind as never)));
   for (const [kind] of MATE_KINDS)

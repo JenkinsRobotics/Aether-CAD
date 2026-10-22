@@ -1,6 +1,6 @@
 import { validateSketchDrawing, type SketchDrawing } from "../drawing";
 import { splineShapeResiduals } from "../solver/spline-shape";
-import { splineEndTangentResiduals } from "../../../../freecad-engine/browser/spline-end-tangents";
+import { splineEndTangentResiduals } from "../reference/spline-end-tangents";
 /** Retain interpolation intent using the native contour's existing vertices. */
 export function constrainFitSpline(
   source: SketchDrawing,

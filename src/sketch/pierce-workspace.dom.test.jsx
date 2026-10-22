@@ -15,10 +15,10 @@ beforeEach(()=>{
  doc=structuredClone(cases.find(c=>c.name==='circle-center').document);
  apply=vi.fn(async next=>{doc=next;});
 });
-afterEach(()=>{querySketchControl('[aria-label="Cancel sketch"]')?.click();});
+afterEach(()=>{querySketchControl('.cad-sketch-window [data-feature-action="discard"]')?.click();});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const target=()=>doc.features.find(f=>f.id==='target');
-const finish=()=>querySketchControl('[aria-label="Finish sketch"]');
+const finish=()=>querySketchControl('.cad-sketch-window [data-feature-action="accept"]');
 const changePlane=()=>querySketchControl('button[title="Change sketch plane"]').click();
 
 it('opens the resolved saved relationship and finishes through the standard editor without storing context',async()=>{

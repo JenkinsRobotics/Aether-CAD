@@ -1,18 +1,11 @@
 import { expect, it } from 'vitest';
 import { constrainFitSpline, constrainSketchEllipse, fitSketchSpline, copySketchContours, dragSketchEntity, editDrawingDimension, moveSketchContours, removeDrawingConstraint, sketchConstraintState, solveDrawingConstraints, validateSketchDrawing, type SketchDrawing, type SketchEntityRef } from '@aether/core/sketch';
-import { parsePartDocument, serializePartDocument, createEmptyPartDocument } from '@aether/core/document';
-import { fixedEntityConstraint, fixedGeometryResiduals, blockedSketchGeometry } from '../../freecad-engine/browser/fixed-geometry';
+import { fixedEntityConstraint, fixedGeometryResiduals, blockedSketchGeometry } from '@aether/core/sketch/reference/fixed-geometry';
 import { constrainSketchSelection } from './constraint-selection';
-import { translateDocument } from '../freecad-translate';
 
 const circle = (): SketchDrawing => ({ type: 'drawing', contours: [{ type: 'circle', center: [2,3], radius: 6 }] });
 const ref: SketchEntityRef = { contour: 0, kind: 'circle' };
 function fix(d: SketchDrawing, a: SketchEntityRef = ref) { return constrainSketchSelection(d, 'fix', [a]).drawing; }
-function part(d: SketchDrawing) {
-  const document = createEmptyPartDocument('Fixed sketch');
-  document.features.push({ id: 's', type: 'profile', name: 'Sketch 1', plane: 'XY', offsetMillimeters: 0, suppressed: false, profile: d });
-  return document;
-}
 
 it('locks circle position and radius without hidden dimensions; preserves legacy center-only Fix', () => {
   const source = circle(), before = structuredClone(source), drawing = fix(source);
@@ -85,18 +78,6 @@ it('does not add redundant locks for nodes included with their parent curves', (
     { contour: 0, kind: 'curve', index: 0, parameter: 0.3 }, { contour: 0, kind: 'curve', index: 0, parameter: 0.8 },
   ]).added).toBe(1);
 });
-it('round trips through the part file and emits native Block indices', () => {
-  const saved = parsePartDocument(serializePartDocument(part(fix(circle()))));
-  expect(translateDocument(saved).features[0]).toMatchObject({ kind: 'sketch-circle', parameters: { blocked_geometry: [0], radius_mm: 6 } });
-  const profile = saved.features[0]; if (profile.type !== 'profile' || profile.profile.type !== 'drawing') throw Error();
-  expect(sketchConstraintState(profile.profile).degreesOfFreedom).toBe(0);
-});
-it('uses solved wires for blocked polygon edges instead of adding redundant native coincidences', () => {
-  const drawing: SketchDrawing = { type: 'drawing', contours: [{ type: 'path', start: [0,0], segments: [[10,0],[10,10],[0,10],[0,0]].map(end => ({ type: 'line', end: end as [number,number] })) }] };
-  const locked = fix(drawing, { contour: 0, kind: 'contour' });
-  expect(sketchConstraintState(locked)).toMatchObject({ state: 'fully-constrained', redundantEquations: 0 });
-  expect(translateDocument(part(locked)).features[0]).toMatchObject({ kind: 'sketch-wire', parameters: { blocked_geometry: [0,1,2,3] } });
-});
 it('fixes a whole fit spline from any picked span while retaining interpolation without false redundant equations', () => {
   const source = constrainFitSpline({ type: 'drawing', contours: [fitSketchSpline([[0,0],[10,12],[20,4],[30,15]])] }, 0);
   const locked = fix(source, { contour: 0, kind: 'curve', index: 1, parameter: 0.3 });
@@ -113,12 +94,6 @@ it('fixes both halves of a full ellipse from one curve pick without false redund
   const locked = fix(source, { contour: 0, kind: 'curve', index: 1, parameter: 0.3 });
   expect(blockedSketchGeometry(locked, 0)).toEqual([0,1]);
   expect(sketchConstraintState(locked)).toMatchObject({ state: 'fully-constrained', redundantEquations: 0 });
-});
-it('translates exact elliptical segments with their saved frame and native block indices', () => {
-  const drawing: SketchDrawing = { type: 'drawing', contours: [paths[3]] };
-  const translation = translateDocument(part(fix(drawing, { contour: 0, kind: 'contour' })));
-  expect(translation.complete).toBe(true);
-  expect(translation.features[0]).toMatchObject({ kind: 'sketch-wire', parameters: { blocked_geometry: [0], segments: [{ type: 'ellipse', ellipse_frame: { radiusX: 8, radiusY: 5, rotation: 20*Math.PI/180 } }] } });
 });
 it('refuses malformed targets and mixed legacy/new Fix fields before solving', () => {
   const d = fix(circle());

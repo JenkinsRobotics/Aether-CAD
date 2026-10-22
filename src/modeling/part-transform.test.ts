@@ -1,6 +1,5 @@
 import {expect,it} from 'vitest';
 import {createRectanglePartDocument,insertFeature,availableBodies,bodyIDForFeature,serializePartDocument,parsePartDocument,featureDependencies,featureReferenceErrors,removeFeature,setFeatureSuppressed,type TransformFeature} from '@aether/core/document';
-import {translateDocument} from '../freecad-translate';
 import {sourceFeatureForBody} from './sketch-support';
 import {resolveBodyOutputs} from './body-outputs';
 function fixture(copy=true){
@@ -16,7 +15,6 @@ it.each([false,true])('persists transforms and copies with correct body identiti
  expect(sourceFeatureForBody(next,bodyId)).toBe(copy?producer.id:'transform');
  if(copy)expect(sourceFeatureForBody(next,'copy')).toBe('transform');
  expect(featureDependencies(next).get('transform')).toContain(producer.id);
- expect(translateDocument(next).features.at(-1)).toEqual({id:'transform',kind:'transform',parameters:{body_ids:[bodyId],transform:feature.transform,...(copy?{copy_body_ids:feature.copyBodyIds}:{})}});
  expect(availableBodies(setFeatureSuppressed(next,'transform',true)).map(b=>b.id)).toEqual([bodyId]);
  expect(featureReferenceErrors(removeFeature(next,producer.id)).has('transform')).toBe(true);
 });

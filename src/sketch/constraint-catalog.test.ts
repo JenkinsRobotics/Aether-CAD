@@ -10,7 +10,8 @@ import {
 describe("sketch constraint catalog", () => {
   it("matches Onshape's Constrain menu, in order", () => {
     expect(sketchConstraintCatalog.map((entry) => entry.label)).toEqual([
-      "Coincident", "Pierce", "Concentric", "Parallel", "Tangent", "Horizontal", "Vertical",
+      "Coincident", "Pierce", "Concentric", "Parallel",
+      "Collinear", "Tangent", "Horizontal", "Vertical",
       "Perpendicular", "Equal", "Midpoint", "Normal", "Symmetric", "Fix", "Curvature",
     ]);
   });

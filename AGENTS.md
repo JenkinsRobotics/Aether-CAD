@@ -44,3 +44,67 @@ Read `SOURCE_HISTORY.json` for preserved ancestry. The GitHub origin is configur
 Original architecture contracts are preserved in the original Aether Studio
 checkout. Web frontends remain React/TypeScript. Native desktop packaging is
 planned; this extraction does not add Tauri or replace engines with Rust.
+
+## Engine decision — Jonathan, 2026-10-20
+
+Aether CAD adopts the SolidCraft engine (https://github.com/tangency-labs/solidcraft, MIT OR
+Apache-2.0; the snapshot in `solidcraft-main/` is 0.16.2) as its parametric geometry engine,
+replacing FreeCAD as the default. The engine runs in-process — in the browser as WebAssembly, on
+the desktop, and headless — driven by its command registry (`sketch.create`, `solid.extrude`,
+`timeline.edit`, 401 commands), the same commands its UI, CLI and MCP agents use. Measured on
+this machine (`engine-solidcraft/spike/`): a sketch + extrude builds in 12 ms in wasm (3 ms
+native) and a parametric edit in 1 ms, against ~800 ms per FreeCAD request over the host.
+
+What stays ours: the Aether UI shell and widgets, Studio (PDM, Drive, versions, comments),
+the agent protocol. What changes: `engine-solidcraft/` wraps the engine for our app; the FreeCAD
+worker and `/api/cad/*` geometry services are retired as features move over, one tool at a time
+(plan: `dev/docs/roadmap/SolidCraft_Engine_Adoption.md`). SolidCraft's egui UI is not used.
+Keep its NOTICE and THIRD-PARTY-LICENSES with every build (`engine-solidcraft/ATTRIBUTION.md`).
+This supersedes the FreeCAD-default and "no Rust engine" lines above.
+
+## Engine decision, revised — Jonathan, 2026-10-20 (later the same day)
+
+The product's parametric engine is the **Aether engine**: OpenCASCADE running in-process
+(OpenCascade.js in a web worker in the browser, the same wasm in the desktop shell and
+headless) with our own modeling layer in TypeScript (`aether-engine/src/kernel`, evolving the
+parked `@aether/core`). Rationale: the server must never compute geometry per user (it serves
+200+ seats), latency must be the lowest reachable, and the kernel must be production grade
+today — OCCT, not SolidCraft's young truck kernel. The SolidCraft bridge from the morning
+decision is **not** a product path: it and the FreeCAD worker remain selectable only as
+benchmark references (Settings → Renderer → Modeling engine) until the three-way benchmark
+shows ours is best and each feature is proven equivalent, then they are deleted. FreeCAD's
+Python feature modules are the specification for the TypeScript ports; SolidCraft's structure
+(command registry, stable naming, replay timeline, oracle tests) is taken as practice, not code.
+No Python in the product. TypeScript and Rust each where they are strongest (Rust: server,
+desktop shell, hot numeric routines if profiling shows one; TypeScript: modeling layer,
+document, sketch solver, UI). Design: `dev/docs/roadmap/Aether_Engine_Design.md`.
+
+## Releases — 2026-10-20
+
+A CAD generation changes only the `cad` frontend; every other app (ui/gallery, drive, map, …)
+is carried over unchanged from the current installation marker. A newer shared `ui` is built
+fresh from core/ui at stage time and said so in the ledger, never copied from an older generation.
+
+## SolidCraft reference deleted — 2026-10-20 (evening)
+
+The three-way benchmark (r18) put the Aether engine ahead of SolidCraft and FreeCAD on every
+measurement, previews included. The SolidCraft bridge (`engine-solidcraft/`, `src/engine/solidcraft/`,
+`public/engine/solidcraft/`, the `solidcraft-main/` snapshot) is removed; its sources are archived at
+`../AetherStudio/migration/archive/solidcraft-bridge-20261020.tar.gz` (build output excluded). The
+engine selector offers Automatic, Aether and FreeCAD. FreeCAD remains the reference until every
+feature is proven; see `dev/docs/roadmap/Aether_Engine_Design.md` for what it still carries.
+
+## FreeCAD reference deleted — 2026-10-20 (night)
+
+Every feature class the FreeCAD worker served is proven on the Aether engine (oracle: 124
+fixtures against 113 captured FreeCAD answers; assemblies: 16; the CAD service suite and both UI
+harnesses run on it), so the reference is gone: `freecad-engine/` (the Python adapter and the
+browser bridge), `src/freecad-translate.ts`, `src/freecad-geometry.ts`, `src/freecad-assembly.ts`,
+`src/native-part-evaluator.ts`, the Settings → Modeling engine selector, and the FreeCAD-contract
+tests. Archive: `../AetherStudio/migration/archive/freecad-reference-20261020/`. The CAD product
+worker (`service/aether_cad_service`) builds with the Aether engine in its Node runner; the host's
+`/api/cad/geometry`, `export` and `analysis` routes answer 410 and the host needs no FreeCAD path.
+No Python computes geometry anywhere in the product; the Python archive that remains orchestrates
+agent commands and project containers (the shared workspace codec) only. The engine is the Aether
+engine, full stop; the benchmark tables in `dev/docs/roadmap/Aether_Engine_Design.md` record why.
+

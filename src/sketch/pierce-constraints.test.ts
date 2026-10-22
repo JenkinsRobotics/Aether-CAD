@@ -3,8 +3,8 @@ import { createEmptyPartDocument, type ProfileFeature } from '@aether/core/docum
 import type { SketchDrawing, SketchEntityRef } from '@aether/core/sketch';
 import { constraintResiduals } from '../../aether-engine/src/sketch/solver/residuals';
 import { segmentPoint } from '../../aether-engine/src/sketch/curves/parameterization';
-import { referenceSketchPierce } from '../../freecad-engine/browser/pierce-reference';
-import { solvePierceConstraintDrafts, type PierceConstraintDraft } from '../../freecad-engine/browser/pierce-constraints';
+import { referenceSketchPierce } from '@aether/core/sketch/reference/pierce-reference';
+import { solvePierceConstraintDrafts, type PierceConstraintDraft } from '@aether/core/sketch/reference/pierce-constraints';
 
 function setup(drawing: SketchDrawing) {
   const document = createEmptyPartDocument('Pierce solve');

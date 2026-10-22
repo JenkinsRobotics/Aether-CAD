@@ -1,4 +1,8 @@
-import { LiveEditorAccess } from "@aether/session/LiveEditorAccess";
+import { cadSelection } from '../../cad-selection-store';
+import { studioAgentService } from '@aether/session/agent';
+import { studioAgentAccessService } from '@aether/session/agent-access';
+import { withReviewAgent } from "@aether/session/review-agent";
+import { useLiveEditorAccess } from "@aether/session/LiveEditorAccess";
 import { navigateDocument } from "../../document-navigation";
 /**
  * The left rail's remaining panels (Jonathan, 2026-10-02): Create version,
@@ -6,7 +10,7 @@ import { navigateDocument } from "../../document-navigation";
  * the host's version action, the document's bodies, the agent API — rather
  * than drawn as a mock. Reminders persist on this device only, and say so.
  */
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AetherIcon, Button, IconButton, WorkspaceAgent } from "@aether/ui";
 import { DocumentFileManager, type DocumentConnection, type FileManagerItem } from "@aether/ui";
 import type { AssistantMessage } from "@aether/ui/concept-widgets";
@@ -106,32 +110,22 @@ export function RemindersPanel() {
 
 // ---- AI advisor -------------------------------------------------------------
 
-/** The host's agent API, reached the way Studio reaches it. */
-const agentService = {
-  async call<T>(action: string, data: Record<string, unknown> = {}): Promise<T> {
-    const response = await fetch(`/api/agent/${action}`, {
-      method: "POST", credentials: "same-origin", keepalive: action === "cancel",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error?.message ?? body.error ?? "The advisor is unavailable.");
-    return body as T;
-  },
-};
-
-export function AdvisorPanel() {
+export function AdvisorPanel({connection}: {connection?:DocumentConnection}) {
+  const currentConnection=useRef(connection); currentConnection.current=connection;
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const selection=useSyncExternalStore(cadSelection.subscribe,cadSelection.snapshot,cadSelection.snapshot);
+  const selectionLabel=selection.items.length===1?selection.items[0].label:selection.items.length?`${selection.items.length} selected`:null;
   const agentContext = useSyncExternalStore(subscribeCADAgent,cadAgentContext,cadAgentContext);
   const presentation = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
   // What the advisor is told about the document, so its answers are about this
   // part rather than parts in general.
-  const interaction=cadAgentInteraction(agentContext);
-  const context=cadAgentContextText(presentation.documentName,presentation.workspaceMode,interaction);
+  const productInteraction=cadAgentInteraction(agentContext);
+  const interaction=withReviewAgent(productInteraction,()=>currentConnection.current??null);
+  const sharing=useLiveEditorAccess({app:'cad',documentID:documentID(),interaction:productInteraction});
+  const context=cadAgentContextText(presentation.documentName,presentation.workspaceMode,interaction)+`\nCurrent selection: ${JSON.stringify(selection.items.map(({id,kind,partId,label})=>({id,kind,partId,label})))}`;
   return (
-    <section className="cad-rail-panel cad-rail-panel--fill" aria-label="AI advisor">
-      <LiveEditorAccess app="cad" documentID={documentID()} interaction={interaction}/>
-      <WorkspaceAgent service={agentService} app="cad" interaction={interaction} contextText={context} detail="Aether CAD AI" messages={messages} onMessages={setMessages}
-        notice="Ask the agent to build, check or revise this model. Connect your provider through Plugins to begin." />
+    <section className="cad-rail-panel cad-rail-panel--fill cad-rail-panel--agent" aria-label="AI advisor">
+      <WorkspaceAgent service={studioAgentService} access={studioAgentAccessService} sharing={sharing} app="cad" interaction={interaction} contextText={context} detail={selectionLabel??presentation.documentName} messages={messages} onMessages={setMessages} />
     </section>
   );
 }

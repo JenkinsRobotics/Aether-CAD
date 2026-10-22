@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
 import type { ProfileFeature } from '@aether/core/document';
-import { referenceSketchPierce, resolveSketchPierce } from '../../freecad-engine/browser/pierce-reference';
+import { referenceSketchPierce, resolveSketchPierce } from '@aether/core/sketch/reference/pierce-reference';
 
 const profile=(id:string,plane:'XY'|'XZ'):ProfileFeature=>({id,type:'profile',name:id,plane,offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[]}});
 function setup() {

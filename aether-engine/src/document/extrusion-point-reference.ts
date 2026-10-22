@@ -25,7 +25,7 @@ export function validateExtrusionPointReference(ref: ExtrusionPointReference | u
       throw Error('Invalid stopping sketch point reference.');
   } else if(ref.kind==='solid-vertex'){
     const a=ref.anchor;
-    if(!id(ref.bodyId,256)||['profile','sketch','plane'].includes(earlier.get(ref.sourceFeatureId)??'')||!a||
+    if(!id(ref.bodyId,256)||['profile','sketch','plane','axis','point','thread'].includes(earlier.get(ref.sourceFeatureId)??'')||!a||
       !Array.isArray(a.positionMillimeters)||a.positionMillimeters.length!==3||!a.positionMillimeters.every(Number.isFinite)||
       !id(a.signature,16384)||!id(a.incidence,16384)||typeof a.shapeFingerprint!=='string'||!/^[a-f0-9]{64}$/.test(a.shapeFingerprint))
       throw Error('Invalid stopping solid vertex anchor.');

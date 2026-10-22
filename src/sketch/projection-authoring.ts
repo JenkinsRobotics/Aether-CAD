@@ -7,7 +7,7 @@ import {
 } from "@aether/core/document";
 import { type SketchDrawing, type SketchContour } from "@aether/core/sketch";
 import { contourPath } from "./svg-geometry";
-import { preparePierceDraft } from '../../freecad-engine/browser/pierce-draft';
+import { preparePierceDraft } from '@aether/core/sketch/reference/pierce-draft';
 
 /** Editing owns only the authored drawing; derived geometry is resolved for
  * context and never copied into the user's saved contour list. */

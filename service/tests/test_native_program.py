@@ -104,13 +104,13 @@ def test_docs_work_without_launching_a_geometry_engine(tmp_path):
     result = invoke(
         tmp_path, "cad.part.docs", empty(), {}, freecad=Path("/usr/bin/false")
     )
-    assert "content" not in result and result["result"]["total"] == 8
+    assert "content" not in result and result["result"]["total"] == 14
     assert len(result["result"]["tools"]) == 5
     assert result["result"]["execute_with"] == "cad.part.runprogram"
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1" or not FREECAD.exists(),
+    os.environ.get("AETHER_TEST_FREECAD") != "1",
     reason="Native qualification required",
 )
 def test_program_builds_and_verifies_referenced_bore_then_reopens(tmp_path):
@@ -163,7 +163,7 @@ def test_program_builds_and_verifies_referenced_bore_then_reopens(tmp_path):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1" or not FREECAD.exists(),
+    os.environ.get("AETHER_TEST_FREECAD") != "1",
     reason="Native qualification required",
 )
 def test_failed_later_step_returns_no_partial_document(tmp_path):
@@ -198,3 +198,51 @@ def test_verify_parameters_refused_without_geometry(tmp_path, arguments):
         tmp_path, "cad.part.verify", empty(), arguments, freecad=Path("/usr/bin/false")
     )
     assert "error" in result and "content" not in result
+
+@pytest.mark.skipif(os.environ.get('AETHER_TEST_FREECAD') != '1' or not FREECAD.exists(), reason='Native qualification required')
+def test_existing_drawing_center_keeps_feature_ids_and_rebuilds_exact_solid(tmp_path):
+    source = json.loads(empty())
+    source['formatVersion'] = 21
+    source['features'] = [
+        {'id':'sketch','name':'Sketch 1','type':'profile','plane':'XY','offsetMillimeters':0,'suppressed':False,
+         'profile':{'type':'drawing','contours':[{'id':'outline','type':'path','start':[10,20],
+          'segments':[{'id':'a','type':'line','end':[50,20]},{'id':'b','type':'line','end':[50,40]},
+                      {'id':'c','type':'line','end':[10,40]},{'id':'d','type':'line','end':[10,20]}]}],
+          'constraints':[{'id':'horizontal','kind':'horizontal','a':{'contour':0,'kind':'line','index':0}}]}},
+        {'id':'extrude','name':'Extrude 1','type':'extrude','profileFeatureId':'sketch','distanceMillimeters':5,
+         'endType':'blind','operation':'new','separateBodies':True,'suppressed':False}]
+    encoded=json.dumps(source)
+    inspected=invoke(tmp_path,'cad.sketch.inspect',encoded,{'feature_id':'sketch'})
+    assert 'error' not in inspected, inspected
+    assert inspected['result']['profile']['contours'][0]['start']==[10,20]
+    move={'version':1,'steps':[{'id':'center','tool':'aether_cad_sketch_translate','arguments':{'feature_id':'sketch','dx_mm':-30,'dy_mm':-30}}]}
+    result=invoke(tmp_path,'cad.part.runprogram',encoded,{'program_json':json.dumps(move)})
+    assert 'error' not in result, result
+    saved=json.loads(result['content']);assert [f['id'] for f in saved['features']]==['sketch','extrude']
+    assert saved['features'][0]['profile']['contours'][0]['start']==[-20,-10]
+    assert saved['features'][1]['profileFeatureId']=='sketch'
+    proof=invoke(tmp_path,'cad.part.verify',result['content'],{})
+    measure=proof['result']['measurements'][0]
+    assert measure['volume_mm3']==pytest.approx(4000)
+    assert measure['center_mm']==pytest.approx([0,0,2.5])
+    assert measure['bounds_mm']==pytest.approx([40,20,5])
+    reopened=invoke(tmp_path,'cad.part.evaluate',result['content'],{})
+    assert reopened['result']['evaluated_bodies'][0]['volume_mm3']==pytest.approx(4000)
+
+@pytest.mark.skipif(os.environ.get('AETHER_TEST_FREECAD') != '1' or not FREECAD.exists(), reason='Native qualification required')
+def test_existing_rectangle_driving_dimension_keeps_origin_and_rebuilds(tmp_path):
+    source=json.loads(empty());source['formatVersion']=21
+    source['features']=[
+        {'id':'sketch','name':'Sketch 1','type':'sketch','plane':'XY','suppressed':False,
+         'profile':{'type':'center-rectangle','widthMillimeters':40,'heightMillimeters':20,'centerXMillimeters':0,'centerYMillimeters':0,'construction':False},
+         'constraints':[{'id':kind,'type':kind,'target':'center-rectangle'} for kind in ['horizontal','vertical','coincident-origin']],
+         'dimensions':[{'id':'width','type':'width','target':'center-rectangle','valueMillimeters':40},{'id':'height','type':'height','target':'center-rectangle','valueMillimeters':20}]},
+        {'id':'extrude','name':'Extrude 1','type':'extrude','profileFeatureId':'sketch','distanceMillimeters':5,'endType':'blind','operation':'new','separateBodies':True,'suppressed':False}]
+    steps={'version':1,'steps':[{'id':'resize','tool':'aether_cad_sketch_dimension','arguments':{'feature_id':'sketch','dimension_id':'width','value':60}}]}
+    result=invoke(tmp_path,'cad.part.runprogram',json.dumps(source),{'program_json':json.dumps(steps)})
+    assert 'error' not in result,result
+    proof=invoke(tmp_path,'cad.part.verify',result['content'],{})['result']['measurements'][0]
+    assert proof['volume_mm3']==pytest.approx(6000)
+    assert proof['center_mm']==pytest.approx([0,0,2.5])
+    assert proof['bounds_mm']==pytest.approx([60,20,5])
+    saved=json.loads(result['content']);assert saved['features'][0]['constraints']==source['features'][0]['constraints']

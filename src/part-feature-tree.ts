@@ -17,7 +17,16 @@ export interface PartTreeItem {
 
 function featureDetail(feature: PartFeature): string {
   if (feature.type === "transform") return `${feature.transform.kind} · ${feature.bodyIds.length} parts${feature.copyBodyIds ? " · copies" : ""}`;
-  if (feature.type === "offset-face") return `${feature.distanceMillimeters} mm · ${feature.faces.length} faces`;
+  if (feature.type === "boss") return `Ø${feature.diameterMillimeters} × ${feature.heightMillimeters} mm${feature.holeDiameterMillimeters ? ` · Ø${feature.holeDiameterMillimeters} hole` : ""}`;
+  if (feature.type === "rest") return `${feature.widthMillimeters}${feature.lengthMillimeters ? ` × ${feature.lengthMillimeters}` : " Ø"} × ${feature.heightMillimeters} mm`;
+  if (feature.type === "coil") return `R${feature.radiusMillimeters} · pitch ${feature.pitchMillimeters} · ${feature.turns} turns`;
+  if (feature.type === "remove-body") return `${feature.bodyIds.length} parts removed`;
+  if (feature.type === "pipe") return `Ø${feature.diameterMillimeters} mm${feature.wallMillimeters ? ` · ${feature.wallMillimeters} mm wall` : ""}`;
+  if (feature.type === "bounding-solid") return `${feature.marginMillimeters} mm margin`;
+  if (feature.type === "thread") return `${feature.designation} cosmetic`;
+  if (feature.type === "split") return `keep ${feature.keep} · ${feature.plane.kind === "principal" ? feature.plane.plane : feature.plane.kind}`;
+  if (feature.type === "delete-face") return `${feature.faces.length} faces removed`;
+  if (feature.type === "offset-face") return feature.replaceWith ? `replace ${feature.faces.length} faces` : `${feature.distanceMillimeters} mm · ${feature.faces.length} faces`;
   if (feature.type === "face-extrude") return `${feature.distanceMillimeters} mm · ${feature.faceLabel}`;
   if (feature.type === "boolean") return `${feature.operation} · ${feature.toolBodyIds.length} tools${feature.keepTools ? " · keep tools" : ""}`;
   if (feature.type === "pattern") return `${feature.patternType} · ${feature.count} occurrences · ${feature.axis}`;
@@ -39,6 +48,8 @@ function featureDetail(feature: PartFeature): string {
     return `${extent} · ${operation}${feature.targetBodyIds ? ` · ${feature.targetBodyIds.length} parts` : ""}`;
   }
   if(feature.type === "plane") return `${feature.plane} · ${feature.offsetMillimeters} mm offset`;
+  if(feature.type === "point") return ({ vertex: "at vertex", "two-edges": "through two edges", "three-planes": "through three planes", center: "at centre", "edge-plane": "at edge and plane", "along-path": "along path" } as Record<string,string>)[feature.definition.method] ?? "point";
+  if(feature.type === "axis") return ({ edge: "through edge", "two-points": "through two points", "normal-to-plane": "normal to plane", "two-planes": "through two planes" } as Record<string,string>)[feature.definition.method] ?? "axis";
   if (feature.type === "profile") {
     if (feature.profile.type === "drawing") {
       const { state } = sketchConstraintState(feature.profile);

@@ -13,7 +13,7 @@ export function validateSolidFaceReference(ref:SolidFaceReference|undefined,
   if(!ref||typeof ref!=='object'||Array.isArray(ref))throw Error(`${label} needs an earlier solid face reference.`);
   const id=(value:unknown,max=256)=>typeof value==='string'&&!!value.trim()&&value.length<=max;
   if(!id(ref.sourceFeatureId)||(!earlier.has(ref.sourceFeatureId)&&!missing(ref.sourceFeatureId))||
-      ['profile','sketch','plane'].includes(earlier.get(ref.sourceFeatureId)??'')||!id(ref.bodyId)||!id(ref.label,512))
+      ['profile','sketch','plane','axis','point','thread'].includes(earlier.get(ref.sourceFeatureId)??'')||!id(ref.bodyId)||!id(ref.label,512))
     throw Error(`${label} needs an earlier solid face reference.`);
   validatePlanarFaceAnchor(ref.faceAnchor);
   if(ref.surfaceType!==undefined){

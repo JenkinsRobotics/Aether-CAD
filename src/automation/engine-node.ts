@@ -1,0 +1,55 @@
+/** The Aether engine in the headless runner: the same evaluator the editor runs
+ *  in its worker, loaded from the wasm beside the bundle. One process per
+ *  request (the host owns the deadline), so the kernel loads once per run. */
+import { readFileSync } from 'node:fs';
+import { initNodeKernel, solidMeasures } from '@aether/core/kernel/node';
+import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds } from '@aether/core/kernel';
+import { parsePartDocument } from '@aether/core/document';
+import type { AnalysisOptions, ExportOptions } from '@aether/core/contracts';
+import type { AssemblyJobInput } from '@aether/core/contracts';
+
+let ready: Promise<void> | undefined;
+export function ensureEngine(): Promise<void> {
+  if (!ready) ready = initNodeKernel(readFileSync(new URL('./replicad_single.wasm', import.meta.url)));
+  return ready;
+}
+
+const diagnostic = (error: unknown) => {
+  if (error instanceof FeatureFailure) return { feature_id: error.featureId, message: error.message.replace(new RegExp(`^${error.featureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}: `), ''), severity: 'error' as const };
+  if (error instanceof UnsupportedFeature) return { feature_id: error.featureId, message: `The headless engine does not support ${error.message}.`, severity: 'error' as const };
+  return { feature_id: 'part', message: error instanceof Error ? error.message : String(error), severity: 'error' as const };
+};
+
+/** The build answer the host's orchestration expects: outputs, frames, scopes and each body's exact measures and topology. */
+export async function buildPhase(content: string, options: { rollback?: number } = {}) {
+  await ensureEngine();
+  const started = performance.now();
+  const document = parsePartDocument(content);
+  if (typeof options.rollback === 'number') document.rollbackIndex = options.rollback;
+  const bodies: { id: string; geometry_kind: string; volume_mm3: number; face_count: number; edge_count: number; bbox_mm: number[][]; topology: unknown[] }[] = [];
+  try {
+    const model = evaluatePartDocument(document, { withBodies: (shapes) => {
+      for (const [id, shape] of shapes) bodies.push({ id, geometry_kind: 'solid', ...solidMeasures(shape), bbox_mm: shape.boundingBox.bounds.map((b) => [...b]), topology: [] });
+    } });
+    for (const part of model.parts) { const body = bodies.find((b) => b.id === part.id); if (body) body.topology = part.topology ?? []; }
+    return { status: 'ok', engine: 'Aether', message: '', build_seconds: (performance.now() - started) / 1000, body_outputs: model.bodyOutputs ?? {}, scope_resolutions: model.scopeResolutions ?? {}, sketch_frames: model.sketchFrames ?? {}, diagnostics: [], bodies };
+  } catch (error) {
+    return { status: 'error', engine: 'Aether', message: 'Some features did not build.', build_seconds: (performance.now() - started) / 1000, body_outputs: {}, scope_resolutions: {}, sketch_frames: {}, diagnostics: [diagnostic(error)], bodies: [] };
+  }
+}
+
+export async function analyzePhase(content: string, options: AnalysisOptions) {
+  await ensureEngine();
+  try { const result = analyzePart(parsePartDocument(content), options); return { status: 'ok', engine: 'Aether', kind: result.kind, measurements: result.measurements, diagnostics: [] }; }
+  catch (error) { return { status: 'error', engine: 'Aether', measurements: [], diagnostics: [diagnostic(error)] }; }
+}
+
+export async function exportPhase(content: string, options: ExportOptions) {
+  await ensureEngine();
+  try { const result = await exportPart(parsePartDocument(content), options); return { status: 'ok', engine: 'Aether', format: options.format, data_base64: Buffer.from(result.bytes).toString('base64'), diagnostics: [] }; }
+  catch (error) { return { status: 'error', engine: 'Aether', format: options.format, diagnostics: [diagnostic(error)] }; }
+}
+
+export function assemblyPhase(job: AssemblyJobInput) { return solveAssemblyJob(job); }
+
+export const engineDescription = () => ({ ok: true, engine: 'Aether', kernel: 'OpenCASCADE (OpenCascade.js, in-process)', mate_kinds: [...solvableMateKinds] });

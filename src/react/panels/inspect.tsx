@@ -1,10 +1,9 @@
-import {SelectedTopologyMeasurement} from "./selected-topology-measurement";
 import {useSyncExternalStore} from "react";
 import {cadPresentation} from "../../cad-presentation-store";
-import { SelectedPointMeasurement } from "./selected-point-measurement";
 import { InspectorSection } from "@aether/ui";
 import "../CADInspector.css";
-/** Inspect — read-only measurements of the current selection. */
+/** Inspect — the exact model summary and solid analysis. Measuring picked
+ *  entities is the Measure tool (bottom-right toolbar). */
 import { CommandButton, ReadOnlyPropertyGrid } from "./shared";
 
 export function InspectPanel({ active }: { active: boolean }) {
@@ -12,8 +11,6 @@ export function InspectPanel({ active }: { active: boolean }) {
   return (
     <section className="cad-property-sheet" hidden={!active} data-panel="inspect">
       <div className="inspect-panel-scroll">
-        <SelectedPointMeasurement />
-        <SelectedTopologyMeasurement />
         <InspectorSection title="Exact model summary">
           <ReadOnlyPropertyGrid
             ariaLabel="Exact model inspection"

@@ -4,6 +4,8 @@ import type { AgentTool } from '@aether/ui/AgentServices';
 import { prepareCommand } from './commands';
 import { appendSolidPrimitive, defaultPrimitiveDimensions, primitiveFields, type SolidPrimitive } from '../modeling/solid-primitives';
 import { partAITools } from '../ai/catalog';
+import { editSketch } from './sketch-edit';
+import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatureOperation } from '../operations/feature-operations';
 
 const number={type:'number'},string={type:'string'},boolean={type:'boolean'};
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=[]):AgentTool=>({name:'aether_cad_'+name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
@@ -11,9 +13,14 @@ const plane={name:string,plane:{type:'string',enum:['XY','XZ','YZ']},offset_mm:n
 const operation={name:string,profile_id:string,operation:{type:'string',enum:['new','add','cut']},target_body_id:string};
 export const cadAgentTools:AgentTool[]=[
   ...partAITools,
+  ...featureReadTools,
+  ...featureEditTools,
   tool('inspect','Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.',{offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}}),
   tool('feature_references','Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.',{feature_id:string,direction:{type:'string',enum:['inputs','dependents']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}},['feature_id']),
   tool('solid_primitive','Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.',{kind:{type:'string',enum:Object.keys(primitiveFields)},width_mm:number,length_mm:number,height_mm:number,radius_mm:number,tube_radius_mm:number},['kind']),
+  tool('sketch_inspect','Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and dependents before editing. Page contours and constraints with offset/limit. Does not change the document.',{feature_id:string,offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:25}},['feature_id']),
+  tool('sketch_translate','Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.',{feature_id:string,dx_mm:number,dy_mm:number},['feature_id','dx_mm','dy_mm']),
+  tool('sketch_dimension','Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.',{feature_id:string,dimension_id:string,value:number},['feature_id','dimension_id','value']),
   tool('sketch_rectangle','Add an editable rectangular sketch profile on XY, XZ or YZ. x_mm/y_mm are local sketch coordinates; offset_mm moves its plane along its normal.',{...plane,x_mm:number,y_mm:number,width_mm:number,height_mm:number},['plane','x_mm','y_mm','width_mm','height_mm']),
   tool('sketch_circle','Add an editable circular sketch profile; returns its feature ID.',{...plane,center_x_mm:number,center_y_mm:number,radius_mm:number},['plane','center_x_mm','center_y_mm','radius_mm']),
   tool('sketch_polygon','Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Native CAD validates the profile.',{...plane,points_mm:{type:'array',minItems:3,maxItems:128,items:{type:'array',items:number,minItems:2,maxItems:2}}},['plane','points_mm']),
@@ -52,6 +59,8 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
   validateLiveArguments(name,args);validatePartDocument(doc);
   if(rollbackPosition(doc)!==doc.features.length)throw Error('Move the rollback bar to the end before agent editing.');
   if(doc.features.length>=512)throw Error('Agent editing supports at most 512 features.');
+  if(name==='aether_cad_sketch_translate'||name==='aether_cad_sketch_dimension')return editSketch(doc,name,args);
+  if(featureEditToolNames.includes(name))return prepareFeatureOperation(doc,name,args);
   if(name==='aether_cad_solid_primitive') {
     if(typeof args.kind!=='string'||!Object.hasOwn(primitiveFields,args.kind))throw Error('Choose box, cylinder, cone, sphere or torus.');
     if(doc.features.length>510)throw Error('A primitive requires room for two features within the 512-feature limit.');

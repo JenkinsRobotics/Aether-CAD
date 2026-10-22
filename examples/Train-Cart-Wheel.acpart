@@ -2,7 +2,7 @@
   "format": "aether-part",
   "formatVersion": 3,
   "documentId": "wheel-example",
-  "name": "Train cart wheel — test dimensions",
+  "name": "Train cart wheel \u2014 test dimensions",
   "units": "millimeter",
   "features": [
     {
@@ -142,7 +142,8 @@
       "profileFeatureId": "bore",
       "distanceMillimeters": 22,
       "operation": "cut",
-      "suppressed": false
+      "suppressed": false,
+      "reversed": true
     },
     {
       "id": "hole",
@@ -167,7 +168,8 @@
       "profileFeatureId": "hole",
       "distanceMillimeters": 22,
       "operation": "cut",
-      "suppressed": false
+      "suppressed": false,
+      "reversed": true
     },
     {
       "id": "mirror-x",

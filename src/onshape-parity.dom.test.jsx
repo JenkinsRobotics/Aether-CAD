@@ -44,7 +44,7 @@ beforeEach(() => {
     doc = next;
   });
 });
-afterEach(() => document.querySelector('.cad-plane-window [aria-label="Discard plane"]')?.click());
+afterEach(() => document.querySelector('.cad-plane-window .cad-plane-window [data-feature-action="discard"]')?.click());
 
 describe("Sketch feature", () => {
   it("allows display options to be enabled before the sketch has content", () => {
@@ -156,8 +156,8 @@ describe("Plane feature", () => {
 
   it("refuses to commit until the method's reference count is satisfied", async () => {
     const panel = await open();
-    const accept = panel.querySelector('[aria-label="Apply plane"]');
-    const error = () => panel.querySelector(".aui-feature-error")?.textContent ?? "";
+    const accept = panel.querySelector('.cad-plane-window [data-feature-action="accept"]');
+    const error = () => document.querySelector(".aui-feature-error")?.textContent ?? "";
 
     expect(accept.disabled).toBe(true);
     expect(error()).toContain("exactly 1 reference plane");
@@ -195,13 +195,13 @@ describe("Plane feature", () => {
     }
   });
 
-  it("offers Offset, Mid plane, Three point and Angle", async () => {
+  it("offers every plane method, Offset first", async () => {
     const panel = await open();
     panel.querySelector('[aria-label="Plane method"]').click();
     const methods = [...panel.querySelectorAll(".aui-feature-picker-menu button")].map(
       (b) => b.textContent,
     );
-    expect(methods).toEqual(["Offset", "Mid plane", "Three point", "Angle"]);
+    expect(methods).toEqual(["Offset", "Mid plane", "Three point", "Angle", "Perpendicular", "Two edges", "Tangent", "Along path"]);
     // Still absent vs Onshape: Curve point and Tangent, both of which need
     // curve/surface picking that the selection layer does not produce yet.
   });
@@ -212,9 +212,9 @@ describe("Plane feature", () => {
     [...panel.querySelectorAll(".aui-feature-picker-menu button")]
       .find((b) => b.textContent === "Three point")
       .click();
-    const accept = panel.querySelector('[aria-label="Apply plane"]');
+    const accept = panel.querySelector('.cad-plane-window [data-feature-action="accept"]');
     expect(accept.disabled).toBe(true);
-    expect(panel.querySelector(".aui-feature-error").textContent).toContain("exactly 3 points");
+    expect(document.querySelector(".aui-feature-error").textContent).toContain("exactly 3 points");
 
     const point = (id, positionMillimeters, label) => ({
       partId: "part-1", candidateId: id, label, positionMillimeters,
@@ -247,8 +247,8 @@ describe("Plane feature", () => {
     [...panel.querySelectorAll(".aui-feature-picker-menu button")]
       .find((b) => b.textContent === "Angle")
       .click();
-    const accept = panel.querySelector('[aria-label="Apply plane"]');
-    const error = () => panel.querySelector(".aui-feature-error")?.textContent ?? "";
+    const accept = panel.querySelector('.cad-plane-window [data-feature-action="accept"]');
+    const error = () => document.querySelector(".aui-feature-error")?.textContent ?? "";
     expect(error()).toContain("edge to rotate about");
 
     window.dispatchEvent(
@@ -300,10 +300,10 @@ describe("Plane feature", () => {
     expect([...panel.querySelectorAll(".aui-feature-entity")].map((e) => e.textContent)).toEqual([
       "Bracket · Face 7×",
     ]);
-    expect(panel.querySelector('[aria-label="Apply plane"]').disabled).toBe(false);
+    expect(panel.querySelector('.cad-plane-window [data-feature-action="accept"]').disabled).toBe(false);
 
     panel.querySelector('[aria-label="Offset distance"]').value = "5";
-    panel.querySelector('[aria-label="Apply plane"]').click();
+    panel.querySelector('.cad-plane-window [data-feature-action="accept"]').click();
     await vi.waitFor(() => expect(apply).toHaveBeenCalled());
     const saved = doc.features.at(-1);
     expect(saved.definition).toMatchObject({
@@ -399,7 +399,7 @@ describe("Inferred constraints", () => {
     expect(preview.querySelector(".sketch-inference-glyph")).toBeTruthy();
 
     clickAt(60, -21);
-    document.querySelector('[aria-label="Finish sketch"]').click();
+    document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click();
     await vi.waitFor(() => expect(apply).toHaveBeenCalled());
 
     // The committed sketch really carries the constraint, not just a hint.

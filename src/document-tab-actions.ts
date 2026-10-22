@@ -15,7 +15,7 @@ export interface CADTabTarget {
   revision?: number;
   linked?: boolean;
 }
-export type CADTabAction = 'delete'|'open-browser'|'rename'|'properties'|'code'|'duplicate'|'clipboard'|'thumbnail'|'move-document';
+export type CADTabAction = 'delete'|'open-browser'|'rename'|'properties'|'code'|'duplicate'|'clipboard';
 export function tabActionItems(target:CADTabTarget):MenuItem[] {
   const saved=target.documentId ? undefined : 'Save this document to the server first.';
   const readonly=target.revision ? 'Historical revisions are read-only.' : undefined;
@@ -30,8 +30,6 @@ export function tabActionItems(target:CADTabTarget):MenuItem[] {
     item('code','Show code',assemblyCode),
     item('duplicate','Duplicate',saved??(target.itemId ? readonly??(target.kind==='assembly'?'Assembly tab duplication is not supported yet.':undefined) : undefined),true),
     item('clipboard','Copy to clipboard',assemblyCode),
-    item('thumbnail','Select as document thumbnail','Custom document thumbnails are not supported by the document library yet.',true),
-    item('move-document','Move to document…','Moving tabs between documents needs dependency-preserving transfer support; it is not available yet.'),
   ];
 }
 export function tabURL(target:CADTabTarget):string {

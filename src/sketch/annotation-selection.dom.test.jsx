@@ -23,7 +23,7 @@ beforeEach(() => {
   }, { once: true });
   open(() => doc, apply, doc.features[0]); svg = document.querySelector('.cad-sketch-canvas');
 });
-afterEach(() => document.querySelector('[aria-label="Cancel sketch"]')?.click());
+afterEach(() => document.querySelector('.cad-sketch-window [data-feature-action="discard"]')?.click());
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const click = (node, options = {}) => node.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, ...options }));
 const key = (key, options = {}) => document.body.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options }));
@@ -37,7 +37,7 @@ it('selects a dimension without editing geometry; Delete and undo preserve the c
   expect(svg.querySelector('[data-mark-for="fixed"]')).not.toBeNull();
   key('z', { ctrlKey: true }); expect(svg.querySelector('.sketch-dimension')).not.toBeNull();
   key('z', { ctrlKey: true, shiftKey: true });
-  document.querySelector('[aria-label="Finish sketch"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   const drawing = parsePartDocument(serializePartDocument(doc)).features[0].profile;
   expect(drawing.contours).toMatchObject([{ type: 'circle', radius: 5 }]); expect(drawing.constraints.map(c => c.id)).toEqual(['fixed']);
 });

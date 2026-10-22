@@ -1,7 +1,6 @@
 import {resolveExtrusionScopes} from '../modeling/extrusion-scope-resolution';
 /** Saved CAD commands reuse the editor document contracts and native translator. */
 import { parsePartDocument, serializePartDocument, setFeatureSuppressed, moveFeature, availableBodies, rollbackPosition, validatePartDocument, type PartDocument } from '@aether/core/document';
-import { translateDocument } from '../freecad-translate';
 import { resolveBodyOutputs } from '../modeling/body-outputs';
 import { resolveSketchFrames } from '../modeling/sketch-support';
 import type { SketchFrame } from '@aether/core/sketch';
@@ -64,11 +63,10 @@ export function prepareCommand(command: string, content: string, args: Arguments
     }
   }
   validatePartDocument(next);
-  const translation = translateDocument(next);
-  if (!translation.complete) throw Error('The native engine cannot evaluate the complete part: ' + translation.untranslated.map(f => `${f.name}: ${f.reason}`).join('; ').slice(0, 1500));
   const candidate = serializePartDocument(next);
+  // `build`: the host asks the engine to rebuild the candidate before answering or saving.
   return { result: { ...describe(next), preview: command.startsWith('cad.extrude.preview') || command === 'cad.revolve.preview', pixel_preview: false },
-    features: translation.features,
+    build: true,
     candidate, changed: writes.has(command) && candidate !== serializePartDocument(doc) };
 }
 export function finalizeCandidate(content: string, outputs: Record<string,string[]>, frames: Record<string, SketchFrame> = {},scopes:Record<string,import("@aether/core/document").ExtrusionScopeResolution>={}) {

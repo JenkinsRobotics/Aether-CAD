@@ -20,10 +20,7 @@
 .cad-tab-folders-editor input,.cad-tab-folders-editor select {padding:7px 10px;border:1px solid var(--aether-color-border);border-radius:6px;background:var(--aether-color-bg-shell);color:var(--aether-color-text);font:inherit;}
 
 
-/* Document identity belongs to the tray. Keep status before artwork and name. */
-.aui-document-tray .aui-document-tab-status { order: -1; margin-left: 0; margin-right: 2px; }
-.cad-tab-document-controls { display: flex; align-items: center; flex: 0 0 auto; border-right: 1px solid var(--aether-color-border); }
-.cad-tab-document-controls .cad-document-menu { margin: 0; border: 0; min-width: 34px; }
-.cad-tab-document-controls .cad-link-feedback:empty { display: none; }
-.cad-tab-revision { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 5px; padding: 0 10px 0 4px; white-space: nowrap; color: var(--aether-color-text-muted); font-size: 11px; }
-.cad-tab-revision svg { width: 13px; height: 13px; }
+/* The shared tray owns sizing, truncation, status and the action separator. */
+.cad-document-tray { min-width:0; }
+.cad-document-tray .cad-document-menu { margin:0; border:0; width:36px; min-width:36px; height:36px; padding:8px; background:transparent; }
+.cad-document-tray .cad-link-feedback:empty { display:none; }

@@ -1,7 +1,7 @@
 import * as THREE from "three/webgpu";
-import { principalFrame, resolveProfileDrawing, rollbackPosition, type PartDocument } from "@aether/core/document";
+import { profileFrame, resolveProfileDrawing, rollbackPosition, type PartDocument } from "@aether/core/document";
 import { sketchContourPolyline } from "@aether/core/sketch";
-import { sketchRegions } from "../freecad-translate";
+import { sketchRegions } from "@aether/core/document";
 
 /** Filled world-space sketch regions, selectable while a feature asks for one. */
 export class RegionPicker {
@@ -50,7 +50,7 @@ export class RegionPicker {
     for (const feature of this.document.features.slice(0, rollbackPosition(this.document))) {
       if (feature.suppressed || !["profile", "sketch"].includes(feature.type) || (this.sourceId && feature.id !== this.sourceId) || (this.allowedSourceIds && !this.allowedSourceIds.includes(feature.id))) continue;
       if (!("plane" in feature)) continue;
-      const frame = "frame" in feature && feature.frame ? feature.frame : principalFrame(feature.plane, "offsetMillimeters" in feature ? feature.offsetMillimeters : 0);
+      const frame = profileFrame({ plane: feature.plane as import("@aether/core/sketch").SketchPlane, offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined });
       const origin = new THREE.Vector3(...frame.originMillimeters);
       const x = new THREE.Vector3(...frame.xDirection), normal = new THREE.Vector3(...frame.normal);
       const y = new THREE.Vector3().crossVectors(normal, x);

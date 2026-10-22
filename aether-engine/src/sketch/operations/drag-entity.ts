@@ -11,7 +11,7 @@ import {
   type DrawingConstraint,
 } from "../drawing-constraints";
 import { translateRetainedTextForDrag } from "../text/drag";
-import { prepareSplineEndDrag } from "../../../../freecad-engine/browser/spline-end-tangents";
+import { prepareSplineEndDrag } from "../reference/spline-end-tangents";
 /** Solve a pointer move with temporary point targets; no drag constraints are persisted. */
 export function dragSketchEntity(
   source: SketchDrawing,

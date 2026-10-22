@@ -150,6 +150,8 @@ it.each(
         profileFeatureId: "text",
         distanceMillimeters: 5,
         operation,
+        // A cut goes behind the sketch unless reversed; this plate sits in front of it.
+        ...(operation === "cut" ? { reversed: true } : {}),
         suppressed: false,
       },
     );

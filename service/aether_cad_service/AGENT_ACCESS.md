@@ -84,7 +84,7 @@ or offline qualification is implied. Studio history retains previous archives.
 - `cad.part.inspect`: saved feature identities, parameters and body identities.
 - `cad.part.evaluate`: native rebuild, volumes (mm³) and topology counts.
 - `cad.part.docs`: paged executable program-step schemas and a working plate
-  example. Optional `query` and `offset`; discovery does not launch FreeCAD.
+  example. Optional `query` and `offset`; discovery does not start the engine.
 - `cad.part.runprogram`: one version-1 JSON program in `program_json`, using
   ordinary editor operations. Native evaluation resolves feature/body references
   between steps. The complete candidate saves once, or nothing saves.
@@ -118,7 +118,7 @@ MCP tool names replace periods with underscores, for example
 
 ## Safety and limitations
 
-Changes reuse the editor's document parser, history operations and FreeCAD
+Changes reuse the editor's document parser, history operations and the Aether engine
 translator. The complete visible native history must rebuild without diagnostics
 before saving; resolved body identities and attached-sketch frames are persisted
 through the same editor helpers. Invalid edits and stale revisions do not save.
@@ -157,9 +157,9 @@ The Part program/proof and Assembly commands were promoted together on
 `npm run build` builds the web app and the fixed Node.js automation bundle into
 `service/aether_cad_service/runtime/runner.mjs`. Build before producing the
 Python wheel. The wheel includes that bundle, this guide, the compatibility
-manifest and the replaceable FreeCAD adapter/worker with attribution.
+manifest, the Node runner with its OpenCASCADE kernel and attribution.
 Node.js must be available to the server; native commands additionally need the
-supported FreeCAD installation. Missing dependencies return an availability
+the operator's Node. Missing dependencies return an availability
 error, never a fallback geometry save. Runtime preparation/finalization is
 bounded to 15 seconds; native jobs retain the adapter's own timeout.
 
@@ -169,19 +169,19 @@ bounded to 15 seconds; native jobs retain the adapter's own timeout.
 The seventeen installed commands run on native Studio through the packaged
 `runtime/runner.pyz` and hashed `runtime/native-worker.json`. Build them with
 `npm run build:automation`; both ship in the service wheel. The zipapp includes
-CAD's prepare/finalize JavaScript and replaceable FreeCAD boundary with its
+CAD's prepare/build/finalize JavaScript (the Aether engine in Node) with its
 attribution, and runs without Python Studio or Python site packages. Configure
-absolute Node, Python and FreeCAD executable paths in the Studio operator product
-configuration. The engine remains FreeCAD; this is a host integration migration.
+absolute Node and Python executable paths in the Studio operator product
+configuration. The engine is the Aether engine (OpenCASCADE in Node); FreeCAD is no longer required.
 
 Rust owns current user/app/file authority, guarded saves, history and atomic
 operation receipts. CLI and MCP exact retries share those receipts, including
 validated no-ops that do not add a revision. The worker receives saved content
 only; it never reads the Studio document database or accepts executable paths
-from an agent request. Workers have a 35s overall deadline and 25s FreeCAD exchange
+from an agent request. Workers have a 35s overall deadline and a 15s Node runner exchange
 limit, isolated temporary directories, bounded I/O and Unix process-group cleanup.
 Total native memory and abrupt-host-death cleanup remain unqualified. Python3.11+
-and a supported FreeCAD must be installed; no browser/native editing fallback is
+and Node must be installed; no browser/native editing fallback is
 inferred. In-app agents use the separate live-editor adapter and its published scope.
 
 Assembly archives use a trusted manifest `binary_commands` declaration. The updated

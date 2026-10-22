@@ -1,5 +1,5 @@
 import type { SketchEntityRef } from "../solver/types";
-import { conicSubspanParameter } from '../../../../freecad-engine/browser/conic-geometry';
+import { conicSubspanParameter } from '../reference/conic-geometry';
 export interface RetainedContactInterval {
   contour: number;
   index: number;

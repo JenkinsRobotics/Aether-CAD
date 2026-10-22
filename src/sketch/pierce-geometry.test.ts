@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { SketchFrame, SketchPoint } from '@aether/core/sketch';
-import { pierceBranch, pierceCurvePlane, resolvePierceBranch, type PierceCurve } from '../../freecad-engine/browser/pierce-geometry';
+import { pierceBranch, pierceCurvePlane, resolvePierceBranch, type PierceCurve } from '@aether/core/sketch/reference/pierce-geometry';
 
 const xy:SketchFrame={originMillimeters:[0,0,0],xDirection:[1,0,0],normal:[0,0,1]};
 const xz:SketchFrame={originMillimeters:[0,0,0],xDirection:[1,0,0],normal:[0,-1,0]};

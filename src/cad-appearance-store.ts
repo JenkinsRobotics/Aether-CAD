@@ -4,7 +4,7 @@ import { advancedValue, cleanAdvancedAppearance, validColor, type CADAdvancedApp
 /* The native RealityKitViewport PreviewAppearance themes, ported exactly. */
 export type CADBackgroundPreset = "midnight" | "graphite" | "cad-light" | "blueprint" | "onshape";
 export type CADMaterialFinish = "matte" | "satin" | "gloss";
-export type CADDisplayStyle = "shaded" | "shaded-edges" | "wireframe" | "hidden-line" | "ghost";
+export type CADDisplayStyle = "shaded" | "shaded-edges" | "wireframe" | "hidden-line" | "ghost" | "zebra" | "draft-analysis";
 export type CADLightingPreset = "studio" | "softbox" | "daylight" | "dark-room" | "model-studio";
 export type CADFloorMode = "none" | "grid" | "floor" | "both";
 
@@ -56,8 +56,7 @@ export type CADAppearanceAction =
   | { type: "apply-environment-theme"; theme: CADBuiltinEnvironment }
   | { type: "reset" };
 
-export const defaultCADAppearance: CADAppearanceSnapshot = Object.freeze({
-  // Onshape is the shipped default environment (Jonathan, 2026-09-11).
+const baseCADAppearance: CADAppearanceSnapshot = Object.freeze({
   environmentTheme: "onshape" as CADEnvironmentTheme,
   gridOpacityPercent: 100,
   background: "onshape",
@@ -70,6 +69,11 @@ export const defaultCADAppearance: CADAppearanceSnapshot = Object.freeze({
   bodyColor: "#79a9c2",
   bodyOpacityPercent: 100,
   environmentPercent: 100,
+});
+
+/** Approved default; legacy presets start from their neutral base. */
+export const defaultCADAppearance: CADAppearanceSnapshot = Object.freeze({
+  ...baseCADAppearance, ...modelStudioEnvironment,
 });
 
 /** The Aether environment bundle (the previous default look). */
@@ -93,11 +97,11 @@ function reduceAppearance(
   // Named environment bundles; any manual change marks the theme "custom".
   if (action.type === "apply-environment-theme") {
     const theme = action.theme;
-    if (theme === "model-studio") return { ...defaultCADAppearance, ...modelStudioEnvironment };
-    if (theme === "aether") return { ...defaultCADAppearance, ...aetherEnvironmentBundle, bodyColor: "#79a9c2" };
-    if (theme === "onshape") return { ...defaultCADAppearance, ...modelingEnvironmentStyles.onshape };
-    if (theme === "fusion360" || theme === "blender") return { ...defaultCADAppearance, ...modelingEnvironmentStyles[theme], environmentTheme: theme };
-    return { ...defaultCADAppearance, environmentTheme: theme,
+    if (theme === "model-studio") return { ...baseCADAppearance, ...modelStudioEnvironment };
+    if (theme === "aether") return { ...baseCADAppearance, ...aetherEnvironmentBundle, bodyColor: "#79a9c2" };
+    if (theme === "onshape") return { ...baseCADAppearance, ...modelingEnvironmentStyles.onshape };
+    if (theme === "fusion360" || theme === "blender") return { ...baseCADAppearance, ...modelingEnvironmentStyles[theme], environmentTheme: theme };
+    return { ...baseCADAppearance, environmentTheme: theme,
       background: theme === "high-contrast" ? "cad-light" : theme,
       lightingPreset: "studio", floorMode: "grid", contactShadowsVisible: false,
       ...(theme === "high-contrast" ? { gridMinorOpacityPercent: 65, gridMajorOpacityPercent: 90, gridAxisOpacityPercent: 100,
@@ -169,11 +173,12 @@ export function reduceCADAppearance(current: CADAppearanceSnapshot, action: CADA
 /** Treat browser settings/preset JSON as untrusted input, not an object spread. */
 export function normalizeCADAppearance(input: unknown): CADAppearanceSnapshot {
   const v = input && typeof input === "object" ? input as Record<string, unknown> : {};
-  const out = { ...defaultCADAppearance, ...cleanAdvancedAppearance(v) };
+  const defaults = v.environmentTheme && v.environmentTheme !== "model-studio" ? baseCADAppearance : defaultCADAppearance;
+  const out = { ...defaults, ...cleanAdvancedAppearance(v) };
   const enums = {
     background: ["midnight", "graphite", "cad-light", "blueprint", "onshape"],
     environmentTheme: ["aether", "onshape", "custom", "cad-light", "graphite", "midnight", "blueprint", "high-contrast", "fusion360", "blender", "model-studio"],
-    displayStyle: ["shaded", "shaded-edges", "wireframe", "hidden-line", "ghost"],
+    displayStyle: ["shaded", "shaded-edges", "wireframe", "hidden-line", "ghost", "zebra", "draft-analysis"],
     lightingPreset: ["studio", "softbox", "daylight", "dark-room", "model-studio"], floorMode: ["none", "grid", "floor", "both"], materialFinish: ["matte", "satin", "gloss"],
   };
   const target = out as unknown as Record<string, unknown>;
@@ -184,6 +189,12 @@ export function normalizeCADAppearance(input: unknown): CADAppearanceSnapshot {
     const value = v[key]; if (typeof value === "number" && Number.isFinite(value)) target[key] = Number(Math.min(max, Math.max(0, value)).toFixed(6));
   }
   if (typeof v.activePresetId === "string" && v.activePresetId.length <= 100) out.activePresetId = v.activePresetId;
+  // Upgrade only the exact, uncustomized first Model Studio grid recipe.
+  if (v.environmentTheme === "model-studio" && v.gridSpacingMillimeters === 1000 && v.gridExtentMillimeters === 40000
+    && v.gridMajorEvery === undefined && v.gridMinorWidthPx === undefined && v.gridAxisWidthPx === undefined) {
+    out.gridSpacingMillimeters = modelStudioEnvironment.gridSpacingMillimeters;
+    out.gridExtentMillimeters = modelStudioEnvironment.gridExtentMillimeters;
+  }
   return out;
 }
 
@@ -224,7 +235,9 @@ export class CADAppearanceStore {
 /* Viewport rendering appearance is an Aether CAD app setting (CAD owns the
  * WebGPU/OCCT viewport) — persisted per device, distinct from the universal
  * suite themes in core/assets/themes. */
-const CAD_APPEARANCE_KEY = "aether-cad-appearance";
+// v2: the Model Studio stage theme is adopted once on every device (Jonathan,
+// 2026-10-18); later choices persist as before.
+const CAD_APPEARANCE_KEY = "aether-cad.appearance.studio-v2";
 function restoreCADAppearance(): CADAppearanceSnapshot {
   try {
     const raw = localStorage.getItem(CAD_APPEARANCE_KEY);

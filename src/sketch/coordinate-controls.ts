@@ -39,11 +39,13 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
   const conicRho = mountConicRhoControl(parent, o.changed, () => o.variables?.(), o.confirmConic);
   const sides = numeric("Polygon sides", "6");
   sides.min = "3"; sides.max = "100"; sides.step = "1"; sides.oninput = o.changed;
+  const cornerRadius = numeric("Radius (mm)", "2"); cornerRadius.min = "0"; cornerRadius.oninput = o.changed;
+  const slotWidth = numeric("Point slot width (mm)", "6"); slotWidth.min = "0"; slotWidth.oninput = o.changed;
   for (const [label, change] of [["Snap to geometry", o.geometrySnap], ["Snap to grid", o.gridSnap]] as const) {
     const row = document.createElement("label"), input = document.createElement("input");
     input.type = "checkbox"; input.checked = true; input.setAttribute("aria-label", label);
     input.onchange = () => change(input.checked); row.append(input, label); parent.append(row);
   }
-  return { point, sides: () => Number(sides.value), ellipseRadius, arcDirection, conicRho,
-    update: (tool: string) => { sides.parentElement!.hidden = !tool.endsWith("polygon"); conicRho.update(tool); } };
+  return { point, sides: () => Number(sides.value), cornerRadius: () => Number(cornerRadius.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
+    update: (tool: string) => { sides.parentElement!.hidden = !tool.endsWith("polygon"); cornerRadius.parentElement!.hidden = tool !== "rounded-rectangle" && tool !== "two-tangent-circle"; slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
 }

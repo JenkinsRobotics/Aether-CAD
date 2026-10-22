@@ -1,6 +1,6 @@
 import type { SketchDrawing, SketchPoint, SketchEntityRef } from '@aether/core/sketch';
-import { ellipseHandles, type EllipseHandle } from '../../freecad-engine/browser/ellipse-manipulation';
-import { conicHandles, type ConicHandle } from '../../freecad-engine/browser/conic-manipulation';
+import { ellipseHandles, type EllipseHandle } from '@aether/core/sketch/reference/ellipse-manipulation';
+import { conicHandles, type ConicHandle } from '@aether/core/sketch/reference/conic-manipulation';
 import { pickSelectableSketchEntity } from './projected-picking';
 
 /** Edit-only handles must not create false constraint or snapping entities. */

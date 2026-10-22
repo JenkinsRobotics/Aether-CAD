@@ -3,9 +3,9 @@ import { sketchEntities,type SketchDrawing,type SketchEntityRef,type SketchPoint
 import { unitChoice } from '@aether/core/units';
 import { documentUnits,subscribeDocumentUnits } from '../document-preferences';
 import { sketchNodeLabel } from './point-roles';
-import { sketchPierceChoices,type PierceChoice } from '../../freecad-engine/browser/pierce-choices';
-import { pierceTargetReference } from '../../freecad-engine/browser/pierce-constraints';
-import { pierceBranch } from '../../freecad-engine/browser/pierce-geometry';
+import { sketchPierceChoices,type PierceChoice } from '@aether/core/sketch/reference/pierce-choices';
+import { pierceTargetReference } from '@aether/core/sketch/reference/pierce-constraints';
+import { pierceBranch } from '@aether/core/sketch/reference/pierce-geometry';
 import './pierce-tool.css';
 
 /** Document-aware external constraint picker, hosted by the common sketch tool

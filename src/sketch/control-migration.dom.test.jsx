@@ -14,15 +14,15 @@ beforeEach(() => {
   doc = createEmptyPartDocument('Migration'); apply = vi.fn(async next => { doc = next; });
   open(() => doc, apply);
 });
-afterEach(() => document.querySelector('[aria-label="Cancel sketch"]')?.click());
+afterEach(() => document.querySelector('.cad-sketch-window [data-feature-action="discard"]')?.click());
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const plane = () => window.dispatchEvent(new CustomEvent('aether-sketch-plane', { detail: 'XY' }));
 it('has one real finish/cancel pair, no test-only plane buttons or offscreen controls', async () => {
   expect(document.querySelector('.cad-header-committed')).toBeNull();
   expect([...document.querySelectorAll('button')].some(b => b.textContent === 'Top (XY)')).toBe(false);
-  expect(document.querySelectorAll('[aria-label="Finish sketch"]')).toHaveLength(1);
-  expect(document.querySelector('[aria-label="Finish sketch"]').disabled).toBe(true);
-  plane(); document.querySelector('[aria-label="Finish sketch"]').click();
+  expect(document.querySelectorAll('.cad-sketch-window [data-feature-action="accept"]')).toHaveLength(1);
+  expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);
+  plane(); document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click();
   await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(document.querySelector('.cad-sketch-workspace')).toBeNull();
 });
@@ -35,7 +35,7 @@ it('routes the ribbon to a single visible editor and releases its commands on ca
   expect(document.querySelectorAll('.cad-sketch-tool-window')).toHaveLength(1);
   expect(document.querySelector('[aria-label="Constraint"]')).toBeTruthy();
   expect([...document.querySelectorAll('button')].find(b => b.textContent === 'Add variable')).toBeUndefined();
-  document.querySelector('[aria-label="Cancel sketch"]').click();
+  document.querySelector('.cad-sketch-window [data-feature-action="discard"]').click();
   expect(cadCommands.execute('sketch-constraints')).toBe(false);
   expect(cadCommands.execute('sketch-undo')).toBe(false);
 });
@@ -51,7 +51,7 @@ it('creates geometry through visible coordinate controls and uses direct undo/re
   expect([...document.querySelectorAll('button')].find(b => b.textContent === 'Undo')).toBeUndefined();
   cadCommands.execute('sketch-undo'); expect(document.querySelectorAll('.sketch-contour')).toHaveLength(0);
   cadCommands.execute('sketch-redo'); expect(document.querySelectorAll('.sketch-contour')).toHaveLength(1);
-  document.querySelector('[aria-label="Finish sketch"]').click();
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click();
   await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.contours[0].segments[0].end).toEqual([0,20]);
 });

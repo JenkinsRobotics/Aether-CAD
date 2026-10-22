@@ -139,3 +139,22 @@ it('an angled plane must contain its straight rotation axis',()=>{
  expect(frame.normal[1]).toBeCloseTo(-Math.SQRT1_2);
  expect(frame.normal[2]).toBeCloseTo(Math.SQRT1_2);
 });
+
+it("resolves perpendicular, two-edge, tangent and along-path planes", async () => {
+  const { resolvePlaneFrame, validatePlaneDefinition } = await import("./construction-planes");
+  const edgeX = { kind: "axis" as const, partId: "p", candidateId: "e1", originMillimeters: [5, 0, 0] as [number, number, number], directionMillimeters: [1, 0, 0] as [number, number, number], lengthMillimeters: 10 };
+  const edgeY = { kind: "axis" as const, partId: "p", candidateId: "e2", originMillimeters: [0, 5, 0] as [number, number, number], directionMillimeters: [0, 1, 0] as [number, number, number], lengthMillimeters: 10 };
+  const base = { id: "pl", name: "Plane", type: "plane" as const, plane: "XY" as const, offsetMillimeters: 0, suppressed: false };
+  const perpendicular = resolvePlaneFrame({ ...base, definition: { method: "perpendicular", axis: edgeX, reference: { kind: "principal", plane: "XY" } } });
+  expect(perpendicular.normal.map(Math.abs)).toEqual([0, 1, 0]);
+  expect(perpendicular.originMillimeters).toEqual([5, 0, 0]);
+  const twoEdges = resolvePlaneFrame({ ...base, definition: { method: "two-edges", axes: [edgeX, edgeY] } });
+  expect(twoEdges.normal.map(Math.abs)).toEqual([0, 0, 1]);
+  expect(() => resolvePlaneFrame({ ...base, definition: { method: "two-edges", axes: [edgeX, { ...edgeY, originMillimeters: [0, 5, 3] }] } })).toThrow(/one plane/);
+  const tangent = resolvePlaneFrame({ ...base, definition: { method: "tangent", surface: { kind: "surface-point", partId: "p", faceId: 3, pointMillimeters: [1, 2, 3], normalMillimeters: [0, 0, 2] } } });
+  expect(tangent.normal).toEqual([0, 0, 1]); expect(tangent.originMillimeters).toEqual([1, 2, 3]);
+  const along = resolvePlaneFrame({ ...base, definition: { method: "along-path", axis: edgeX, t: 0.25 } });
+  expect(along.originMillimeters).toEqual([2.5, 0, 0]); expect(along.normal).toEqual([1, 0, 0]);
+  expect(() => validatePlaneDefinition({ ...base, definition: { method: "along-path", axis: { ...edgeX, lengthMillimeters: undefined }, t: 0.5 } }, new Set())).toThrow(/length/);
+});
+

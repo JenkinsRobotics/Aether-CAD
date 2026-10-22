@@ -6,8 +6,7 @@ import { MateViewport } from "../viewer";
 import { defaultCADAppearance, type CADDisplayStyle, type CADAppearanceSnapshot } from "../cad-appearance-store";
 import { cadViewportMetrics } from "../cad-viewport-metrics-store";
 import { cadSelection } from "../cad-selection-store";
-import { describeGeometryEngine } from "../freecad-geometry";
-import { evaluateNativePart } from "../native-part-evaluator";
+import { evaluatePart } from "../engine/evaluate-part";
 import { savePartDocument } from "../part-file";
 import { CADTestController } from "./controller";
 import { testWindowConnectionError } from "./connection";
@@ -16,7 +15,7 @@ import "@aether/ui/tokens.css";
 import "@aether/ui/widgets.css";
 import "./test-window.css";
 
-const controller = new CADTestController(evaluateNativePart);
+const controller = new CADTestController((document) => evaluatePart(document));
 // The product viewport lives for this dedicated document. The gallery embeds
 // the document in an iframe, so removing it also tears down its GPU and events.
 let viewport: MateViewport | undefined;
@@ -56,7 +55,7 @@ function TestWindow() {
   const engineReady = useRef(false);
   const localRuntime = import.meta.env.MODE === "cad-test-window";
   const describeError = (error: string) => testWindowConnectionError(error, localRuntime);
-  const refreshEngine = () => { void describeGeometryEngine().then(result => { engineReady.current = result.ok; setEngine(result.ok ? `${result.engine}${localRuntime ? " · local" : ""}` : result.error); }).catch(error => setEngine(describeError(String(error)))); };
+  const refreshEngine = () => { engineReady.current = true; setEngine(`Aether engine (OpenCASCADE)${localRuntime ? " · local" : ""}`); };
   const busy = state.playing || state.checking;
 
   useEffect(() => {

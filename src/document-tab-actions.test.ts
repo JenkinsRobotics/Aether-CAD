@@ -10,8 +10,9 @@ const meta=():Metadata=>({id:'file-b',name:'Design.acad',revision:7,writable:tru
 beforeEach(()=>{vi.resetAllMocks();vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>meta()})));});
 it('lists the reference commands and gives truthful availability for drafts, history and unsupported storage',()=>{
  const items=tabActionItems(target);
- expect(items.map(i=>i.label)).toEqual(['Delete','Open in new browser tab','Rename','Properties…','Show code','Duplicate','Copy to clipboard','Select as document thumbnail','Move to document…']);
- expect(items.filter(i=>i.disabled).map(i=>i.id)).toEqual(['thumbnail','move-document']);
+ expect(items.map(i=>i.label)).toEqual(['Delete','Open in new browser tab','Rename','Properties…','Show code','Duplicate','Copy to clipboard']);
+ // Actions that cannot run are not listed.
+ expect(items.filter(i=>i.disabled)).toEqual([]);
  expect(items.filter(i=>i.disabled).every(i=>Boolean(i.disabledReason))).toBe(true);
  const historical=tabActionItems({...target,revision:4});expect(historical.find(i=>i.id==='delete')?.disabled).toBe(true);
  expect(historical.find(i=>i.id==='code')?.disabled).toBe(false);

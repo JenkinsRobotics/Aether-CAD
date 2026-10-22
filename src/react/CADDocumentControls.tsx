@@ -22,6 +22,7 @@ export function CADDocumentControls({
   partOpen,
   compact = false,
   menuOnly = false,
+  workspaceOnly = false,
 }: {
   name: string;
   partOpen: boolean;
@@ -29,6 +30,7 @@ export function CADDocumentControls({
   compact?: boolean;
   /** Document tray supplies its own identity and revision inside the active tab. */
   menuOnly?: boolean;
+  workspaceOnly?: boolean;
 }) {
   const [message, setMessage] = useState("");
   const [fallbackLink, setFallbackLink] = useState("");
@@ -85,7 +87,7 @@ export function CADDocumentControls({
               (!partOpen && !assembly) ||
               new URL(address).searchParams.has("revision"),
           },
-          { id: "commit", label: "Commit…", disabled: !partOpen || Boolean(assembly) },
+          { id: "commit", label: "Create version…", disabled: !partOpen || Boolean(assembly) },
           { id: "recover", label: "Recover…" },
           { id: "open", label: "Open Part…" },
           { id: "import", label: "Import CAD…" },
@@ -151,8 +153,13 @@ export function CADDocumentControls({
   );
   return (
     <>
-      {renderDocumentMenu(false)}
-      {!menuOnly && <div className={`cad-document-header-group${compact ? " cad-document-header-group--bounded" : ""}`}>
+      {workspaceOnly && <div className="aui-studio-document-state">
+        <MenuButton label={`Workspace version: ${workspaceName}`} items={[{id:'current',label:workspaceName,kind:'radio',checked:true},{id:'properties',label:'Workspace properties…',separatorBefore:true}]} onSelect={id=>{if(id==='properties')setSettingsAction('properties');}}>{workspaceName}<AetherIcon name="chevron-down"/></MenuButton>
+        <IconButton label="Share document link" size="medium" disabled={!link} title={link?'Copy document link':'Save to Aether Studio to obtain a shareable document link.'} onClick={()=>void copyLink()}><AetherIcon name="link"/></IconButton>
+        <span className="aui-studio-connection"><AetherIcon name="cloud"/>{link?'Studio document':'Local file'}</span>
+      </div>}
+      {!workspaceOnly && renderDocumentMenu(false)}
+      {!workspaceOnly && !menuOnly && <div className={`cad-document-header-group${compact ? " cad-document-header-group--bounded" : ""}`}>
       {compact && renderDocumentMenu(true)}
       {!compact && <div className="cad-document-identity">
         <strong id="document-name" title={name}>
@@ -171,7 +178,7 @@ export function CADDocumentControls({
         <span className="cad-header-revision-name">{revision}</span>
       </span>
       </div>}
-      {!compact && !menuOnly && <IconButton
+      {!workspaceOnly && !compact && !menuOnly && <IconButton
         label="Copy document link"
         disabled={!link}
         title={

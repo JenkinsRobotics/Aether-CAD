@@ -34,6 +34,8 @@ const DISPLAY_STYLES: readonly (readonly [CADCommandID, CADDisplayStyle])[] = [
   ["display-shaded", "shaded"], ["display-shaded-edges", "shaded-edges"],
   ["display-wireframe", "wireframe"], ["display-hidden-line", "hidden-line"],
   ["display-ghost", "ghost"],
+  ["display-zebra", "zebra"],
+  ["display-draft-analysis", "draft-analysis"],
 ];
 
 const LIGHTING: readonly (readonly [CADCommandID, CADLightingPreset])[] = [

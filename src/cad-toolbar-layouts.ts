@@ -142,7 +142,7 @@ export function toolbarMenuToolsFor(ids: readonly string[]): CADToolDefinition[]
  *  The Part ribbon used to be a second, hand-written taxonomy (Solid, Surface,
  *  Mesh, Sheet Metal, Plastic) that re-listed tool ids. It drifted: it named 69
  *  of 205 tools, duplicated some across tabs, left out every View command, and
- *  did not include the FreeCAD Build button at all.
+ *  did not include the engine Build button at all.
  */
 function fusionTabFor(
   workspace: CADRibbonWorkspaceDefinition,
@@ -175,8 +175,8 @@ export function sketchContextTab(): CADToolbarTab {
   // Reuse the solid commands: authoring finishes the sketch before opening
   // the feature editor and carries its selected region into that editor.
   return {...tab,sections:[{
-    id:'sketch-context-solid',label:'Solid',visible:['solid-extrude','solid-cut'],
-    menu:['solid-extrude','solid-revolve','solid-sweep','solid-loft','solid-cut'],
+    id:'sketch-context-solid',label:'Solid',visible:['solid-extrude','solid-revolve'],
+    menu:['solid-extrude','solid-revolve','solid-sweep','solid-loft'],
   },...tab.sections]};
 }
 

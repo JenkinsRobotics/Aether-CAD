@@ -4,7 +4,7 @@ import {
   conicBounds, conicDerivative, conicKind, conicPoint, conicRhoAtPoint,
   conicSecondDerivative, reverseConic, splitConic, trimConic, validateConic,
   type ConicSegment,
-} from '../../freecad-engine/browser/conic-geometry';
+} from '@aether/core/sketch/reference/conic-geometry';
 
 const start: SketchPoint = [0, 0];
 const segment = (rho = .5): ConicSegment => ({ type: 'conic', control: [10, 20], end: [20, 0], rho });

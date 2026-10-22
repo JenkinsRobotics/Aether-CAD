@@ -1,0 +1,5 @@
+/* Measure: the standard compact window, sized to its content like Onshape's. */
+.cad-measure-window.aui-feature-window--compact { width:264px; }
+.cad-measure-window .aui-feature-row > span:first-child { flex:0 0 92px; }
+.cad-measure-window .aui-feature-row > .aui-feature-picker { flex:1; min-width:0; }
+.cad-measure-results:empty { display:none; }

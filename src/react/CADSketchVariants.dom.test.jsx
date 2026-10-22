@@ -57,7 +57,7 @@ it('chooses a variant from the dropdown and retains it as the primary tool',asyn
 it('shows distinct rectangle variant artwork inside the dropdown',async()=>{
  const {CADTraditionalRibbon}=await import('./CADTraditionalRibbon');const {createRoot}=await import('react-dom/client');const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
  await act(async()=>root.render(<CADTraditionalRibbon activeWorkspace="sketch" sketchEditing documentName="Sketch" partOpen onSelectWorkspace={()=>{}} onAction={()=>{}} onUseFloatingTools={()=>{}}/>));
- await act(async()=>host.querySelector('[aria-label="Rectangle variants"]').click());const options=[...document.querySelectorAll('[role="menuitemradio"]')];expect(options).toHaveLength(3);const art=options.map(o=>o.querySelector('.aui-menu-icon svg')?.innerHTML);expect(art.every(Boolean)).toBe(true);expect(new Set(art).size).toBe(3);
+ await act(async()=>host.querySelector('[aria-label="Rectangle variants"]').click());const options=[...document.querySelectorAll('[role="menuitemradio"]')];expect(options).toHaveLength(4);const art=options.map(o=>o.querySelector('.aui-menu-icon svg')?.innerHTML);expect(art.every(Boolean)).toBe(true);expect(new Set(art).size).toBe(3);
  await act(async()=>root.unmount());host.remove();
 });
 it('dispatches the illustrated tangent arc choice from the arc dropdown',async()=>{

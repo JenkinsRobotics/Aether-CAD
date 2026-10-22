@@ -1,9 +1,54 @@
 # Aether CAD architecture
 
-The [engine evolution roadmap](dev/docs/roadmap/CAD_Engine_Evolution.md) defines
-the staged FreeCAD replacement, direct-OCCT/SMLib comparison, reference identity,
-backend controls and numerical/performance gates. It is a plan; FreeCAD remains
-the current default until replacement qualification passes.
+The [engine design](dev/docs/roadmap/Aether_Engine_Design.md) records the Aether engine
+(OpenCASCADE in-process with a TypeScript modeling layer), its proof against the former
+FreeCAD reference, the benchmarks, and the deletion of that reference on 2026-10-20. The
+older [engine evolution roadmap](dev/docs/roadmap/CAD_Engine_Evolution.md) is history.
+
+## Target layering and the one-pipeline standard — 2026-10-19 (Jonathan)
+
+Aether CAD is organised in layers with one-way dependencies. Fix problems in
+the lowest layer that owns them instead of patching a higher one.
+
+| Layer | Owns | Lives in | Must not |
+| --- | --- | --- | --- |
+| **Core** | Part document format, feature records, history (insert/move/remove/suppress), validation, units | `aether-engine/src/document`, `@aether/core/document` | import Three.js, DOM, React or an engine |
+| **Engine** | Exact geometry and rebuilds (the Aether engine: OpenCASCADE wasm, TypeScript modeling layer) | `aether-engine/src/kernel`, `src/engine/` | own document meaning |
+| **Operations** | Every document change as one self-describing operation: schema (explicit mm/deg), candidate builder, guards | `src/operations/`, `src/automation/`, `src/modeling/` | render, or bypass Core validation |
+| **Render** | Scene, stage/theme application, camera controls, depth range, picking, overlays, frame loop | `src/viewport/` (+ `src/viewer.ts` while it is split) | change the document |
+| **Theme** | Data-only looks: UI tokens (`@aether/ui`), rendering themes (`@aether/assets/themes/rendering/*`), resolved once in `viewport/appearance-themes.ts` | assets + resolver | contain renderer code or theme-name checks elsewhere |
+| **UI** | React panels, tools, feature windows | `src/react/`, `src/tools/`, `src/features/` | contain CAD math |
+| **Shell** | Startup and wiring | `src/main.ts`, `src/startup/` | contain logic |
+
+**One pipeline for people, agents and the CLI** (reference: ClassCAD/Buerli/
+classcad.ai — independently implemented). A change is a canonical Core record,
+built by an operation, validated by Core, rebuilt exactly by the Engine, checked
+against the current revision, and committed as one undo step. The toolbar's
+feature editors, the live AI advisor, `run_program`, and saved-file CLI/MCP
+programs all end in that path. Concurrency is revision-guarded: a candidate built
+against a changed document is refused, never merged silently.
+
+Agent loop, mirroring classcad.ai: **describe** (`aether_cad_docs`,
+`feature_types`, `feature_schema` — declarations generated from the Core source
+by `scripts/generate-feature-schemas.mjs`, freshness-tested) → **execute**
+(`feature_add/update/delete/move` for all 20 feature types, plus the guided
+sketch/primitive tools, composed transactionally by `run_program`) → **verify**
+(`verify` exact mass properties, `preview` viewport image) → **commit/undo**.
+
+Done 2026-10-19: canonical feature operations (`src/operations/`); stage/theme
+resolution (`StageTheme` registry) and `viewport/stage-rig.ts` extracted from the
+viewer; per-frame depth range; demo-matched camera controls.
+
+Next, in order (each slice keeps tests green; coordinate claims with other lanes):
+1. Render: extract picking/selection, overlays and the frame loop from `viewer.ts`;
+   render on demand (draw only when camera, scene or animation changes).
+2. Core: reject references to missing bodies/features in `validatePartDocument`
+   (today the Engine rebuild catches them later).
+3. Operations: route feature-window commits through the same operation entry
+   point the agents use, and add semantic edge/face selection inputs for fillet,
+   chamfer and shell.
+4. UI/Shell: move top-level `src/*.ts` modules into their layer folders; reduce
+   `main.ts` to wiring.
 
 ## Product modules — 2026-10-13
 
@@ -12,7 +57,7 @@ describe internal responsibility, not separate products, servers or repositories
 
 | Namespace | Current implementation | Responsibility |
 | --- | --- | --- |
-| `AetherCAD.Engine` | `freecad-engine/`, product runtime adapters | Exact geometry, native constraints and feature rebuilds. The older `aether-engine/` kernel remains parked; no new geometry features go there. |
+| `AetherCAD.Engine` | `aether-engine/`, product runtime adapters | Exact geometry, native constraints and feature rebuilds, in the browser worker, in-process under Node and in the agent runner. No other engine go there. |
 | `AetherCAD.Commands` | `src/modeling/`, `src/automation/live-commands.ts`, `service/aether_cad_service/` | Validated document operations, explicit units, candidate validation and atomic commit boundaries. |
 | `AetherCAD.UI` | `src/react/`, `src/tools/`, `src/viewport/`, `src/viewer.ts` | Editor, feature discovery, dialogs and rendering. |
 | `AetherCAD.AI` | `src/ai/` | Executable-tool discovery, authored examples, bounded multi-step Part programs and numerical/visual verification. Calls ordinary product operations; owns no geometry model. |
@@ -24,14 +69,14 @@ a separate qualification target, not a consequence of the module names.
 
 The [ClassCAD AI architecture](https://classcad.ai/) informs the discovery,
 execution, proof and adapter separation. Aether independently implements it over
-its existing commands and FreeCAD. Part programs are bounded declarative JSON,
+its existing commands and the Aether engine. Part programs are bounded declarative JSON,
 not arbitrary JavaScript. Their steps compose a candidate, exact rebuild checks
 it, and one successful commit enters ordinary undo history. Assembly recipes
 use the same candidate/qualification pattern for canonical container archives.
 Current viewport snapshots are visual feedback, not deterministic multi-angle
 renders, drawing exports, section/diff tools or engineering certification.
 
-The historical layer description below predates the FreeCAD-default decision;
+The historical layer description below predates the engine decisions of 2026-10-20;
 the ownership and engine policy above take precedence.
 
 Aether CAD is a local-first web CAD foundation. It combines editable Part

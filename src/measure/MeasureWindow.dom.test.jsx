@@ -1,0 +1,100 @@
+import { createRequire } from 'node:module';
+import { act } from 'react';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+const require = createRequire(import.meta.url);
+const { JSDOM } = require('jsdom');
+const analyzePart = vi.fn();
+vi.mock('../modeling/part-analysis', () => ({ analyzePart: (...args) => analyzePart(...args) }));
+let dom, toggleMeasureWindow, measureWindowOpen, cadSelection, applyDocumentUnits, geometry, picking;
+const part = { name: 'Plate' };
+beforeAll(async () => {
+  dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/cad/', pretendToBeVisual: true });
+  for (const key of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'localStorage']) vi.stubGlobal(key, dom.window[key]);
+  vi.stubGlobal('getComputedStyle', dom.window.getComputedStyle.bind(dom.window));
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  ({ toggleMeasureWindow, measureWindowOpen } = await import('./MeasureWindow'));
+  ({ cadSelection } = await import('../cad-selection-store'));
+  ({ applyDocumentUnits } = await import('../document-preferences'));
+  window.addEventListener('aether-plane-geometry-request', () => window.dispatchEvent(new CustomEvent('aether-plane-geometry', { detail: geometry })));
+  window.addEventListener('aether-measure-picking', event => { picking = event.detail; });
+});
+afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
+beforeEach(async () => {
+  document.body.innerHTML = '<div class="cad-studio-viewport"></div>';
+  geometry = { points: [], measurements: [] }; analyzePart.mockReset();
+  await act(async () => { applyDocumentUnits({ length: { unit: 'in', decimals: 3 }, angle: { unit: 'deg', decimals: 2 } }); toggleMeasureWindow(() => part); });
+});
+afterEach(async () => { await act(async () => { if (measureWindowOpen()) toggleMeasureWindow(() => part); cadSelection.dispatch({ type: 'clear' }); }); });
+const select = items => act(async () => cadSelection.dispatch({ type: 'replace', items }));
+const results = () => document.querySelector('[aria-label="Measurements"]').textContent;
+const choose = async (label, option) => {
+  await act(async () => document.querySelector(`[aria-label="${label}"]`).click());
+  await act(async () => [...document.querySelectorAll('[role="option"]')].find(item => item.textContent === option).click());
+};
+
+it('opens the standard compact window (icon, Cancel and Done), condensed until something is measured', async () => {
+  const win = document.querySelector('.cad-measure-window');
+  expect(win.querySelector('.aui-float-panel-title').textContent).toBe('Measure');
+  expect([...win.querySelectorAll('.aui-feature-commit-actions button')].map(button => button.textContent)).toEqual(['Cancel', 'Done']);
+  expect(win.querySelector('.aui-feature-header-icon svg')).toBeTruthy();
+  // No results area and no hint text until something is measured.
+  expect(win.querySelector('[aria-label="Measurements"]')).toBeNull();
+  expect(win.querySelector('.cad-measure-results').childElementCount).toBe(0);
+  expect(win.querySelector('[aria-label="Select entities to measure"]')).toBeTruthy();
+  expect(picking).toBe(true);
+  await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
+  expect(win.textContent).toContain('Face 1 of Plate');
+  // Removing it from the window deselects it in the model.
+  await act(async () => win.querySelector('[aria-label="Remove Face 1 of Plate"]').click());
+  expect(cadSelection.snapshot().items).toEqual([]);
+  await act(async () => [...win.querySelectorAll('.aui-feature-commit-actions button')].find(b => b.textContent === 'Done').click());
+  expect(document.querySelector('.cad-measure-window')).toBeNull();
+  expect(picking).toBe(false);
+  // Cancel closes too, and drops what was picked.
+  await act(async () => toggleMeasureWindow(() => part));
+  await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
+  await act(async () => [...document.querySelectorAll('.cad-measure-window .aui-feature-commit-actions button')].find(b => b.textContent === 'Cancel').click());
+  expect(document.querySelector('.cad-measure-window')).toBeNull();
+  expect(cadSelection.snapshot().items).toEqual([]);
+});
+
+it('measures exact minimum distance through the engine with the selected entity references', async () => {
+  analyzePart.mockResolvedValue({ measurements: [{ distance_mm: 15, points: [[10, 0, 0], [25, 0, 0]] }] });
+  await select([{ id: 'face:a:7', kind: 'face', partId: 'a', label: 'Face A', faceId: 7 }, { id: 'edge:b:face--3-edge-2', kind: 'edge', partId: 'b', label: 'Edge B' }]);
+  expect(analyzePart).toHaveBeenCalledWith(part, { kind: 'distance', entities: [{ body_id: 'a', face_id: 7 }, { body_id: 'b', face_id: -3, edge_index: 2 }] }, expect.anything());
+  expect(results()).toContain('Minimum distance');
+  expect(results()).toContain('0.591 in');
+  await choose('Length unit', 'Millimeter');
+  expect(results()).toContain('15.000 mm');
+});
+
+it('shows center spacing, radius and length of circular edges, and filters by measure type', async () => {
+  geometry = { points: [], measurements: [
+    { id: 'a', kind: 'edge', label: 'Circle A', lengthMillimeters: 50.8, radiusMillimeters: 12.7, centerMillimeters: [0, 0, 0] },
+    { id: 'b', kind: 'edge', label: 'Circle B', lengthMillimeters: 50.8, radiusMillimeters: 12.7, centerMillimeters: [25.4, 0, 0] }] };
+  await select([{ id: 'a', partId: 'part', kind: 'edge', label: 'A' }, { id: 'b', partId: 'part', kind: 'edge', label: 'B' }]);
+  expect(results()).toContain('Center distance'); expect(results()).toContain('1.000 in');
+  expect(results()).toContain('Radius'); expect(results()).toContain('0.500 in');
+  expect(results()).toContain('Length'); expect(results()).toContain('2.000 in');
+  await choose('Measure type', 'Center');
+  expect(results()).toContain('Center distance'); expect(results()).not.toContain('Radius');
+});
+
+it('shows vertex positions and their spacing', async () => {
+  geometry = { points: [{ partId: 'p', candidateId: 'v1', positionMillimeters: [25.4, -50.8, 0] }, { partId: 'p', candidateId: 'v2', positionMillimeters: [50.8, -50.8, 0] }], measurements: [] };
+  await select([{ id: 'vertex:p:v1', partId: 'p', kind: 'vertex', label: 'Vertex 1' }]);
+  expect(results()).toContain('1.000 in'); expect(results()).toContain('-2.000 in');
+  await select([{ id: 'vertex:p:v1', partId: 'p', kind: 'vertex', label: 'Vertex 1' }, { id: 'vertex:p:v2', partId: 'p', kind: 'vertex', label: 'Vertex 2' }]);
+  expect(results()).toContain('Center distance'); expect(results()).toContain('ΔX');
+});
+
+it('shows the angle between straight edges in the chosen unit and drops it when the geometry changes', async () => {
+  geometry = { points: [], measurements: [{ id: 'a', label: 'A', kind: 'edge', linearDirection: [1, 0, 0] }, { id: 'b', label: 'B', kind: 'edge', linearDirection: [1, 1, 0] }] };
+  await select([{ id: 'a', partId: 'part', kind: 'edge', label: 'A' }, { id: 'b', partId: 'part', kind: 'edge', label: 'B' }]);
+  expect(results()).toContain('Angle between straight edges'); expect(results()).toContain('45.00 deg');
+  await choose('Angle unit', 'Radian');
+  expect(results()).toContain('0.79 rad');
+  geometry = { points: [], measurements: [{ id: 'a', label: 'A', kind: 'edge', linearDirection: [1, 0, 0] }, { id: 'b', label: 'Arc', kind: 'edge', radiusMillimeters: 5 }] };
+  await act(async () => window.dispatchEvent(new Event('aether-part-updated')));
+  expect(results()).not.toContain('Angle between');
+});

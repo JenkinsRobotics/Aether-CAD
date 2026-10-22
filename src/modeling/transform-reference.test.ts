@@ -1,6 +1,5 @@
 import {expect,it} from 'vitest';
-import {createRectanglePartDocument,insertFeature,bodyIDForFeature,serializePartDocument,parsePartDocument,featureDependencies,moveFeature,setFeatureSuppressed,type PartTransform,type PartDocument} from '@aether/core/document';
-import {translateDocument} from '../freecad-translate';
+import {createRectanglePartDocument,insertFeature,bodyIDForFeature,serializePartDocument,parsePartDocument,featureDependencies,moveFeature,setFeatureSuppressed,type PartTransform,type PartDocument,featureReferenceErrors} from '@aether/core/document';
 const line={kind:'sketch-line' as const,sourceFeatureId:'guide',contourId:'path',segmentId:'line'};
 const point=(vertexId:string)=>({kind:'sketch-point' as const,sourceFeatureId:'guide',contourId:'path',point:'vertex' as const,vertexId,label:vertexId});
 function model(transform:PartTransform):PartDocument {
@@ -20,22 +19,11 @@ it.each<PartTransform>([
  expect(featureDependencies(doc).get('transform')).toContain('guide');
  expect(()=>moveFeature(doc,'guide',1)).toThrow();
  expect(setFeatureSuppressed(doc,'guide',true).features.at(-1)?.suppressed).toBe(true);
- const translated=translateDocument(restored);expect(translated.untranslated).toEqual([]);
- const native:any=translated.features.at(-1)?.parameters.transform;
- if(transform.kind==='scale-reference')expect(native.centerReference).toMatchObject({local_point:[4,6],frame:{normal:[0,-1,0]}});
- else expect(native.reference).toMatchObject({kind:'two-points',from:{local_point:[1,2]},to:{local_point:[4,6]}});
  expect(JSON.stringify(transform)).not.toContain('local_point');
-});
-it('follows changed and reordered line geometry and refuses a replaced segment',()=>{
- const doc=model({kind:'translate-reference',reference:line});const guide:any=doc.features.find(f=>f.id==='guide');
- guide.profile.contours[0].segments[0].end=[8,10];guide.profile.contours.unshift({id:'other',type:'circle',center:[99,99],radius:1});
- expect((translateDocument(doc).features.at(-1)?.parameters.transform as any).reference.to.local_point).toEqual([8,10]);
- guide.profile.contours[1].segments[0].id='replacement';
- const result=translateDocument(doc);expect(result.features.some(f=>f.id==='transform')).toBe(false);expect(result.untranslated.some(f=>f.id==='transform')).toBe(true);
 });
 it.each(['missing','later','wrong-type','zero-id','bad-distance','bad-scale','bad-axis'])('handles %s references without silently reverting to numeric transform',kind=>{
  const doc=model({kind:'translate-reference',reference:line});const f:any=doc.features.at(-1);
- if(kind==='missing'){doc.features=doc.features.filter(f=>f.id!=='guide');expect(parsePartDocument(serializePartDocument(doc))).toEqual(doc);expect(translateDocument(doc).untranslated.some(f=>f.id==='transform')).toBe(true);return;}
+ if(kind==='missing'){doc.features=doc.features.filter(f=>f.id!=='guide');expect(parsePartDocument(serializePartDocument(doc))).toEqual(doc);expect(featureReferenceErrors(doc).has('transform')).toBe(true);return;}
  if(kind==='later')doc.features.push(doc.features.splice(2,1)[0]);
  if(kind==='wrong-type')f.transform.reference.sourceFeatureId=doc.features[1].id;
  if(kind==='zero-id')f.transform.reference.segmentId='';

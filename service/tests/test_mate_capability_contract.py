@@ -68,9 +68,10 @@ def test_both_lists_are_real_mate_types():
 
 
 def test_the_engine_knows_more_mates_than_the_cad_slice_exposes():
-    """Assembly v1 is deliberately three of the ten. Stated here so that
-    narrowing reads as a decision rather than something going missing."""
-    assert workspace_supported() == {"fastened", "revolute", "prismatic"}
+    """The workspace stores the eight kinematic kinds; width and tangent need
+    surface geometry it does not hold. Stated here so that narrowing reads as
+    a decision rather than something going missing."""
+    assert workspace_supported() == {"fastened", "revolute", "prismatic", "cylindrical", "ball", "planar", "pin_slot", "parallel"}
     assert len({joint.value for joint in JointType}) == 10
 
 
@@ -79,11 +80,11 @@ def ribbon_enabled() -> set[str]:
     for path in RIBBON:
         assert path.is_file(), f"the Assembly ribbon moved again: {path} is gone"
     source = "\n".join(path.read_text() for path in RIBBON)
-    return set(re.findall(r'tool\([^)]*"assembly-mate-([a-z-]+)"\)', source))
+    return set(re.findall(r'tool\([^)]*"assembly-mate-([a-z_-]+)"\)', source))
 
 
 def test_the_ribbon_offers_no_mate_the_workspace_cannot_author():
-    """FreeCAD solves thirteen kinds; the workspace authors three.
+    """The solver handles eleven kinds; the workspace stores eight.
 
     A button needs both halves. Offering a solvable-but-unauthorable mate
     fails only after the user has built the whole thing — the Shell and Sweep

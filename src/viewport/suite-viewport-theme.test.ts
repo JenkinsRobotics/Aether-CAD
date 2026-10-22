@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readViewportThemeOverride } from "./suite-viewport-theme";
 import { resolveAppearance } from "./appearance-themes";
-import { defaultCADAppearance } from "../cad-appearance-store";
+import { defaultCADAppearance as defaults } from "../cad-appearance-store";
+
+// A manual colour outranks the theme (appearance-themes.test), so the theme is tested on an
+// appearance that sets none.
+const defaultCADAppearance = { ...defaults, backgroundColor: undefined, sketchStrokeColor: undefined, gridMajorColor: undefined, gridMinorColor: undefined };
 
 describe("suite viewport theme", () => {
   it("stands aside when no viewport theme is chosen", () => {

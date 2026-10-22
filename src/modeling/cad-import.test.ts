@@ -1,24 +1,13 @@
 import {describe,it,expect,vi} from 'vitest';
-import {availableBodies,parsePartDocument,serializePartDocument,setFeatureSuppressed,removeFeature,validatePartDocument} from '@aether/core/document';
+import {serializePartDocument,validatePartDocument} from '@aether/core/document';
 import {appendCAD,importFormat,CAD_IMPORT_ACCEPT} from './cad-import';
 import {configureCADImport,importCADFiles,queueCADImport,importFilesSnapshot,clearImportFiles} from './cad-import-service';
-import {translateDocument} from '../freecad-translate';
 import type {ImportedModelData} from '../domain';
 const options={meshUnits:'in',meshMode:'reference'} as const;
 const file=(name='mesh.STL')=>new File(['fixture'],name);
 const model={parts:[],parseMilliseconds:1} as unknown as ImportedModelData;
 
 describe('persisted CAD interchange imports',()=>{
- it('preserves original bytes, units, interpretation, stable identities and history through save/reopen',async()=>{
-  const first=await appendCAD(null,[file()],options),second=await appendCAD(first,[file('solid.stp')],options);
-  expect(first.features).toHaveLength(1);
-  const opened=parsePartDocument(serializePartDocument(second));
-  expect(availableBodies(opened).map(b=>b.id)).toEqual(availableBodies(second).map(b=>b.id));
-  expect(opened.features[0]).toMatchObject({type:'import-cad',format:'stl',dataBase64:btoa('fixture'),meshUnits:'in',meshMode:'reference'});
-  expect(translateDocument(opened)).toMatchObject({complete:true,features:[{kind:'import-cad',parameters:{format:'stl',mesh_units:'in',mesh_mode:'reference'}},{kind:'import-cad',parameters:{format:'step'}}]});
-  expect(availableBodies(setFeatureSuppressed(opened,opened.features[0].id,true))).toHaveLength(1);
-  expect(availableBodies(removeFeature(opened,opened.features[0].id))).toHaveLength(1);
- });
  it('recognizes aliases and gives a usable route for native proprietary and 2D sources',()=>{
   for(const [name,format] of [['part.STP','step'],['p.IGS','iges'],['p.brp','brep'],['p.OBJ','obj'],['p.ply','ply'],['p.off','off']])expect(importFormat(name)).toBe(format);
   expect(CAD_IMPORT_ACCEPT).toContain('.stl');

@@ -1,15 +1,14 @@
 import fs from 'node:fs';
 import {afterAll,expect,it} from 'vitest';
-import {createEmptyPartDocument,parsePartDocument,serializePartDocument,resolveProfileDrawing,type PartDocument,type ProfileFeature} from '@aether/core/document';
+import {createEmptyPartDocument,featureReferenceErrors,parsePartDocument,serializePartDocument,resolveProfileDrawing,type PartDocument,type ProfileFeature} from '@aether/core/document';
 import {splitSketchSegment,splitSketchCircle,trimSketchCurve,solveDrawingConstraints,type SketchDrawing,type SketchSegment,type SketchPoint} from '@aether/core/sketch';
 import {segmentPoint} from '../../aether-engine/src/sketch/curves/parameterization';
 import {constraintResiduals} from '../../aether-engine/src/sketch/solver/residuals';
-import {addSketchPierce} from '../../freecad-engine/browser/pierce-authoring';
-import {translateDocument} from '../freecad-translate';
+import {addSketchPierce} from '@aether/core/sketch/reference/pierce-authoring';
 
-const captures:{name:string;document:PartDocument;features:ReturnType<typeof translateDocument>['features']}[]=[];
+const captures:{name:string;document:PartDocument}[]=[];
 afterAll(()=>{if(process.env.AETHER_PIERCE_TOPOLOGY_FIXTURES)fs.writeFileSync(process.env.AETHER_PIERCE_TOPOLOGY_FIXTURES,JSON.stringify(captures,null,2)+'\n');});
-function capture(name:string,document:PartDocument){const result=translateDocument(document);expect(result.complete).toBe(true);captures.push({name,document,features:result.features});}
+function capture(name:string,document:PartDocument){expect(featureReferenceErrors(document).size).toBe(0);captures.push({name,document});}
 
 const segments:SketchSegment[]=[
  {type:'line',end:[4,0]},

@@ -2,7 +2,7 @@
  *
  *  Onshape's framing list, in its order. Entirely greyed: framing needs a
  *  standard profile library and a member solver that trims, miters and gussets
- *  at the joints, and Aether has neither. FreeCAD's own structural work lives
+ *  at the joints, and Aether has neither. Comparable structural work elsewhere lives
  *  in the BIM workbench, which this engine does not load.
  */
 import { framingProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";

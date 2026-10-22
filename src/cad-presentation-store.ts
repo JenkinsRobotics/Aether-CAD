@@ -217,6 +217,6 @@ export class CADPresentationStore {
 export const cadPresentation = new CADPresentationStore();
 
 /** Open a property tool without changing the current modeling/assembly workspace. */
-export function requestCADPropertyPanel(panel: "visualization" | "rendering" | "view"): void {
+export function requestCADPropertyPanel(panel: "visualization" | "rendering" | "view" | "inspect"): void {
   cadPresentation.patch({activePanel:panel,propertyPanelRequest:(cadPresentation.snapshot().propertyPanelRequest??0)+1});
 }

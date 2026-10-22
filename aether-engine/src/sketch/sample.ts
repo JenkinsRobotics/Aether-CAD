@@ -1,5 +1,5 @@
 import { sketchArcGeometry } from "./arc-geometry";
-import { conicDisplayPolyline } from '../../../freecad-engine/browser/conic-geometry';
+import { conicDisplayPolyline } from './reference/conic-geometry';
 import type { SketchContour, SketchDrawing, SketchPoint } from "./drawing";
 
 /** Samples sketch geometry into mm polylines for renderer-neutral display

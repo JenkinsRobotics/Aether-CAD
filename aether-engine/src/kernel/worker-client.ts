@@ -1,13 +1,24 @@
 import type {
+  AnalysisOptions,
+  AnalysisResult,
+  DistanceMeasurement,
+  ExportOptions,
+  ExportResult,
   ImportedModelData,
+  MeasureEntity,
   WorkerRequest,
   WorkerResponse,
 } from "../contracts/index";
 import type { PartDocument } from "../document/index";
 
 interface PendingRequest {
-  resolve: (model: ImportedModelData) => void;
+  resolve: (result: never) => void;
   reject: (error: Error) => void;
+}
+
+/** A worker failure that names the feature; `unsupported` means another engine may build it. */
+export class EngineError extends Error {
+  constructor(message: string, readonly featureId?: string, readonly featureName?: string, readonly unsupported = false) { super(message); this.name = "EngineError"; }
 }
 
 export class OCCTWorkerClient {
@@ -39,13 +50,13 @@ export class OCCTWorkerClient {
         const pending = this.pending.get(response.requestId ?? -1);
         if (!pending) return;
         this.pending.delete(response.requestId ?? -1);
-        pending.reject(new Error(response.message));
+        pending.reject(new EngineError(response.message, response.featureId, response.featureName, response.unsupported));
         return;
       }
       const pending = this.pending.get(response.requestId);
       if (!pending) return;
       this.pending.delete(response.requestId);
-      pending.resolve(response.model);
+      pending.resolve((response.type === "distance-measured" ? response.measurement : response.type === "sketch-sectioned" ? response.contours : "result" in response ? response.result : response.model) as never);
     };
     this.worker.onerror = (event) => {
       const error = new Error(event.message || "OCCT worker failed");
@@ -72,19 +83,38 @@ export class OCCTWorkerClient {
     return promise;
   }
 
-  async evaluatePart(document: PartDocument): Promise<ImportedModelData> {
-    await this.ready;
+  private send<T>(request: WorkerRequest extends infer R ? R extends unknown ? Omit<R, "requestId"> : never : never): Promise<T> {
     const requestId = this.nextRequestId++;
-    const promise = new Promise<ImportedModelData>((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+    const promise = new Promise<T>((resolve, reject) => {
+      this.pending.set(requestId, { resolve: resolve as (result: never) => void, reject });
     });
-    const request: WorkerRequest = {
-      type: "evaluate-part",
-      requestId,
-      document,
-    };
-    this.worker.postMessage(request);
+    this.worker.postMessage({ ...request, requestId } as WorkerRequest);
     return promise;
+  }
+
+  async evaluatePart(document: PartDocument, options: { preview?: boolean } = {}): Promise<ImportedModelData> {
+    await this.ready;
+    return this.send<ImportedModelData>({ type: "evaluate-part", document, options });
+  }
+
+  async measureDistance(document: PartDocument, entities: MeasureEntity[]): Promise<DistanceMeasurement> {
+    await this.ready;
+    return this.send<DistanceMeasurement>({ type: "measure-distance", document, entities });
+  }
+
+  async analyzePart(document: PartDocument, options: AnalysisOptions): Promise<AnalysisResult> {
+    await this.ready;
+    return this.send<AnalysisResult>({ type: "analyze-part", document, options });
+  }
+
+  async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges"): Promise<import("../sketch/drawing").SketchContour[]> {
+    await this.ready;
+    return this.send<import("../sketch/drawing").SketchContour[]>({ type: "sketch-section", document, frame, kind });
+  }
+
+  async exportPart(document: PartDocument, options: ExportOptions): Promise<ExportResult> {
+    await this.ready;
+    return this.send<ExportResult>({ type: "export-part", document, options });
   }
 
   dispose(): void {

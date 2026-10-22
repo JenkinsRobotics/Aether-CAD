@@ -1,5 +1,5 @@
 import type { SketchPoint, SketchSegment } from "../drawing";
-import { lineConicIntersections } from '../../../../freecad-engine/browser/conic-intersections';
+import { lineConicIntersections } from '../reference/conic-intersections';
 import { sketchArcGeometry } from "../arc-geometry";
 import { ellipseFrame } from "./parameterization";
 const cross = (a: SketchPoint, b: SketchPoint) => a[0] * b[1] - a[1] * b[0];

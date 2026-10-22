@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React, {act} from 'react';
 import {createRoot} from 'react-dom/client';
-import {afterEach,expect,test,vi} from 'vitest';
+import {afterEach,beforeEach,expect,test,vi} from 'vitest';
 import {CADTabStrip} from './CADTabStrip';
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
 let root, host;
+beforeEach(()=>{vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockImplementation(function(){return {width:this.classList.contains('aui-document-tabbar-actions')?120:1200,height:50,top:100,bottom:150,left:0,right:1200};});});
 afterEach(async()=>{if(root)await act(()=>root.unmount());host?.remove();vi.restoreAllMocks();});
 async function mount() {
  host=document.createElement('div');document.body.append(host);root=createRoot(host);
@@ -38,7 +39,7 @@ test('folder collapse keeps the active tab reachable',async()=>{
  host=document.createElement('div');document.body.append(host);root=createRoot(host);
  const change=vi.fn();
  await act(()=>root.render(<CADTabStrip tabs={[{id:'a',label:'Part A',current:true},{id:'b',label:'Part B'}]} folders={[{id:'g',name:'Hardware',tabs:['a','b'],collapsed:true}]} onFoldersChange={change} placement="bottom" label="Files" onAdd={()=>{}} onReorder={()=>{}} onDetach={()=>{}}/>));
- expect([...host.querySelectorAll('[role="tab"]')].map(t=>t.textContent)).toEqual(['Part A']);
+ expect([...host.querySelectorAll('[role="tab"]')].map(t=>t.querySelector('.aui-document-tab-label').textContent)).toEqual(['Part A']);
  const folder=host.querySelector('.cad-tab-folder-label');
  await act(()=>folder.click());expect(change.mock.calls[0][0][0].collapsed).toBe(false);
 });
@@ -61,8 +62,8 @@ test('tab chevrons open actions without selecting and plus keeps a separate menu
  expect(select).not.toHaveBeenCalled();
  const menuItem=label=>[...document.querySelectorAll('[role="menuitem"]')].find(item=>item.textContent.includes(label));
  await act(()=>menuItem('Close tab').click());expect(close).toHaveBeenCalledOnce();
- await act(()=>button('Create new design').click());expect(add).toHaveBeenCalledOnce();
- await act(()=>button('Add options').click());
+ await act(()=>button('Create or open a design').click());await act(()=>menuItem('Create new design').click());expect(add).toHaveBeenCalledOnce();
+ await act(()=>button('Create or open a design').click());
  await act(()=>menuItem('Manage and import files').click());expect(manage).toHaveBeenCalledOnce();
 });
 

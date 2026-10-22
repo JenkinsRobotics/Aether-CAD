@@ -1,5 +1,5 @@
 import { cubicOverlap } from "./cubic-overlap";
-import { conicCurveIntersections } from '../../../../freecad-engine/browser/conic-intersections';
+import { conicCurveIntersections } from '../reference/conic-intersections';
 import type { SketchPoint, SketchSegment } from "../drawing";
 import {
   ellipseFrame,

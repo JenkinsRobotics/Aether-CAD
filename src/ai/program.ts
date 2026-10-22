@@ -1,7 +1,7 @@
 import { availableBodies, type PartDocument } from '@aether/core/document';
 import { preparePartEdit } from '../automation/live-commands';
 
-export const programToolNames = ['solid_primitive','sketch_rectangle','sketch_circle','sketch_polygon','extrude','revolve','extrude_depth','suppress'].map(name=>`aether_cad_${name}`);
+export const programToolNames = ['sketch_translate','sketch_dimension','solid_primitive','sketch_rectangle','sketch_circle','sketch_polygon','extrude','revolve','extrude_depth','suppress','feature_add','feature_update','feature_delete','feature_move'].map(name=>`aether_cad_${name}`);
 const edits = new Set(programToolNames);
 export type Reference = {feature_id:string;body_id?:string};
 export type ProgramStep = {id:string;tool:string;arguments:Record<string,unknown>};

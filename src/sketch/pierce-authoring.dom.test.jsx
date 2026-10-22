@@ -6,7 +6,6 @@ import cases from '../../service/tests/fixtures/pierce-documents.json';
 import {clickSketchControl as click,querySketchControl as q} from './test-controls';
 import {cadCommands} from '../cad-command-registry';
 import {applyDocumentUnits} from '../document-preferences';
-import {translateDocument} from '../freecad-translate';
 const {JSDOM}=createRequire(import.meta.url)('jsdom');
 let dom,open,doc,apply,disposeCommand;const captures=[];
 const command=()=>window.dispatchEvent(new CustomEvent('aether-sketch-constraint',{detail:'pierce'}));
@@ -25,7 +24,7 @@ beforeEach(()=>{
  const d=doc.features[1].profile;d.constraints=d.constraints.filter(c=>c.kind!=='pierce');d.contours[0].center=[0,0];
  apply=vi.fn(async next=>{doc=next;});cadCommands.setEnabled('sketch-constraint-pierce',true);
 });
-afterEach(()=>{q('[aria-label="Cancel sketch"]')?.click();});
+afterEach(()=>{q('.cad-sketch-window [data-feature-action="discard"]')?.click();});
 afterAll(()=>{disposeCommand();dom.window.close();vi.unstubAllGlobals();if(process.env.AETHER_PIERCE_UI_FIXTURES)fs.writeFileSync(process.env.AETHER_PIERCE_UI_FIXTURES,JSON.stringify(captures,null,2)+'\n');});
 const target=()=>doc.features.find(f=>f.id==='target');
 const field=name=>document.querySelector(`[aria-label="${name}"]`);
@@ -34,7 +33,7 @@ const selectTarget=predicate=>{const f=field('Pierce target'),option=[...f.optio
 const center=()=>selectTarget(r=>r.kind==='point'&&r.index===0&&r.control===undefined);
 const key=(key,extra={})=>field('2D sketch canvas').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...extra}));
 const pick=(x,y)=>{const svg=field('2D sketch canvas');svg.createSVGPoint=()=>({x:0,y:0,matrixTransform(){return{x:this.x,y:this.y};}});svg.getScreenCTM=()=>({a:1,b:0,inverse:()=>({})});svg.dispatchEvent(new dom.window.MouseEvent('click',{clientX:x,clientY:-y,bubbles:true}));};
-async function finish(name){click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());doc=parsePartDocument(serializePartDocument(doc));if(name){const translated=translateDocument(doc);expect(translated.complete).toBe(true);captures.push({name,document:structuredClone(doc),features:translated.features});}}
+async function finish(name){click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledOnce());doc=parsePartDocument(serializePartDocument(doc));if(name){captures.push({name,document:structuredClone(doc)});}}
 const marked=()=>document.querySelectorAll('[data-constraint-mark="pierce"]').length;
 
 it('creates from Shift+G and explicit fields, stages source IDs and saves through the shared editor',async()=>{
@@ -86,18 +85,18 @@ it('lets the user choose either exact circle-source intersection, with units and
 });
 it('opens a broken source for repair, replaces it under the same constraint identity and undoes repair',async()=>{
  doc=structuredClone(cases.find(c=>c.name==='circle-center').document);doc.features[0].id='replacement';doc.features[0].profile.contours[0].segments[0].end=[40,5];
- const before=structuredClone(target().profile.constraints[1]);open(()=>doc,apply,target());expect(field('Finish sketch').disabled).toBe(true);
+ const before=structuredClone(target().profile.constraints[1]);open(()=>doc,apply,target());expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);
  cadCommands.execute('sketch-constraints');document.querySelector('[data-constraint-kind="pierce"] button').click();
- change('Pierce source curve',field('Pierce source curve').options[1].value);click('Apply Pierce');expect(field('Finish sketch').disabled).toBe(false);
- click('Undo');expect(field('Finish sketch').disabled).toBe(true);click('Redo');expect(field('Finish sketch').disabled).toBe(false);
+ change('Pierce source curve',field('Pierce source curve').options[1].value);click('Apply Pierce');expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(false);
+ click('Undo');expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);click('Redo');expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(false);
  await finish('repaired');expect(target().profile.constraints[1].id).toBe(before.id);expect(target().profile.constraints[1].source.sourceFeatureId).toBe('replacement');
 });
 it('removes broken sources individually without silently dropping the remaining relationship',async()=>{
  doc=structuredClone(cases.find(c=>c.name==='circle-center').document);doc.features.shift();const relation=structuredClone(target().profile.constraints[1]);relation.id='missing-two';relation.source.sourceFeatureId='other-missing';target().profile.constraints.push(relation);
  open(()=>doc,apply,target());cadCommands.execute('sketch-constraints');
  const remove=()=>[...document.querySelector('[data-constraint-kind="pierce"]').querySelectorAll('button')].find(b=>b.textContent==='Remove').click();
- remove();expect(field('Finish sketch').disabled).toBe(true);expect(document.querySelectorAll('[data-constraint-kind="pierce"]')).toHaveLength(1);
- remove();expect(field('Finish sketch').disabled).toBe(false);await finish();expect(target().profile.constraints.map(c=>c.kind)).toEqual(['radius']);
+ remove();expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);expect(document.querySelectorAll('[data-constraint-kind="pierce"]')).toHaveLength(1);
+ remove();expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(false);await finish();expect(target().profile.constraints.map(c=>c.kind)).toEqual(['radius']);
 });
 it('does not add a redundant transaction when selecting the same target and source twice',async()=>{
  open(()=>doc,apply,target());command();center();click('Apply Pierce');center();click('Apply Pierce');
@@ -155,8 +154,8 @@ it('repairs a missing Pierce source without forcing reattachment of an independe
  doc.features.splice(1,0,
   {id:'base',name:'Base sketch',type:'profile',plane:'XZ',offsetMillimeters:0,suppressed:false,profile:{type:'circle',centerMillimeters:[0,0],radiusMillimeters:50}},
   {id:'support-pad',name:'Base',type:'extrude',profileFeatureId:'base',bodyId:'support-body',suppressed:false,operation:'new',distanceMillimeters:5});
- const support=structuredClone(sketch.support);open(()=>doc,apply,sketch);expect(field('Finish sketch').disabled).toBe(true);
+ const support=structuredClone(sketch.support);open(()=>doc,apply,sketch);expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);
  cadCommands.execute('sketch-constraints');document.querySelector('[data-constraint-kind="pierce"] button').click();
  change('Pierce source curve',field('Pierce source curve').options[1].value);click('Apply Pierce');
- expect(field('Finish sketch').disabled).toBe(false);await finish();expect(target().support).toEqual(support);
+ expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(false);await finish();expect(target().support).toEqual(support);
 });

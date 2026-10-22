@@ -1,3 +1,6 @@
+import { openCompactFeatureWindow } from "@aether/ui";
+/** Feature types whose tool artwork has another name. */
+const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "offset-face": "offset", "import-cad": "import", profile: "sketch" };
 import { mountConstructionCommands } from "./construction-commands";
 import { mountEditHistory, featurePreviewDocument } from "./modeling/edit-history";
 import { mountFeaturePreview } from "./modeling/feature-preview";
@@ -6,6 +9,8 @@ import { assignItems, canNestFolder, createFolder, deleteFolder, emptyTreeOrgani
 import { rectangleSketchRevision } from "@aether/core/sketch";
 import { openSketchWorkspace } from "./sketch-workspace";
 import { openPlaneWindow } from "./plane-window";
+import { openAxisWindow } from "./axis-window";
+import { openPointWindow } from "./point-window";
 import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
 import { featureEditor } from "./features";
@@ -78,7 +83,7 @@ const presentFeatureWindow = (
 };
 
   let finishingSketch = false;
-  const show = (type: string, existing?: PartFeature, initialOperation?: "cut", initialTransform?: "translate"|"rotate"|"scale"|"copy") => {
+  const show = (type: string, existing?: PartFeature, initialOperation?: "cut", initialTransform?: "translate"|"rotate"|"scale"|"copy"|"mirror"|"align") => {
     // Reaching for a solid feature while the sketch editor is open means the
     // sketch is done: commit it and let the feature open on the result,
     // rather than leaving both windows up over each other.
@@ -104,6 +109,14 @@ const presentFeatureWindow = (
       void openPlaneWindow(getDocument, apply, existing?.type === "plane" ? existing : undefined);
       return;
     }
+    if (type === "axis") {
+      void openAxisWindow(getDocument, apply, existing?.type === "axis" ? existing : undefined);
+      return;
+    }
+    if (type === "point") {
+      void openPointWindow(getDocument, apply, existing?.type === "point" ? existing : undefined);
+      return;
+    }
     if (type === "profile") {
       if(existing?.type === "profile" && existing.profile.type === "projection") {
         try { openProjectionEditor(getDocument,apply,existing); } catch(e){error.textContent=(e as Error).message;}
@@ -120,12 +133,10 @@ const presentFeatureWindow = (
     const doc = structuredClone(source);
     const feature = existing as any;
     const form = document.createElement("form");
-    const win = openFeatureWindow({
+    const win = openCompactFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
-      className: "cad-feature-dialog",
+      className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
       title: type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type,
-      acceptLabel: "Apply and rebuild",
-      discardLabel: "Cancel",
       onAccept: () => form.requestSubmit(),
       onDiscard: () => win.close(),
     });
@@ -235,7 +246,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);
@@ -295,7 +306,7 @@ const presentFeatureWindow = (
 
     };
     mountEditHistory(win.panel, source, existing?.id);
-    const preview = mountFeaturePreview(win.body, () => featurePreviewDocument(candidateDocument(), existing?.id), message => win.setError(message));
+    const preview = mountFeaturePreview(win.body, () => featurePreviewDocument(candidateDocument(), existing?.id), message => win.setError(message), () => candidateDocument(), message => win.setNotice?.(message));
     for (const control of [...Object.values(controls), name]) {
       control.addEventListener("input", preview.update);
       control.addEventListener("change", preview.update);
@@ -308,9 +319,12 @@ const presentFeatureWindow = (
       try {
         const candidate = candidateDocument();
         preview.pause();
-        await apply(candidate);
-        refresh();
+        // Apply is only enabled for a valid, previewed feature: commit it and close
+        // at once, like Onshape; the rebuild reports through the status tray and
+        // the feature tree's error markers if it cannot be completed.
         win.close();
+        refresh();
+        await apply(candidate);
       } catch (e) {
         alert.textContent = (e as Error).message;
       } finally {
@@ -537,8 +551,8 @@ const presentFeatureWindow = (
       });
     }
   });
-  for(const mode of ['translate','rotate','scale','copy'] as const)cadCommands.register(`transform-${mode}`,()=>show('transform',undefined,undefined,mode));
-  cadCommands.register("feature-cut", () => show("extrude", undefined, "cut"));
+  for(const mode of ['translate','rotate','scale','copy','mirror','align'] as const)cadCommands.register(`transform-${mode}`,()=>show('transform',undefined,undefined,mode));
+  // Removing material is Extrude's "cut" operation, not a feature of its own (Onshape).
   for (const type of [
     "plane",
     "profile",

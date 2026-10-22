@@ -1,4 +1,5 @@
-import { openFeatureWindow, type FeatureWindow } from "@aether/ui";
+import { openCompactFeatureWindow } from "@aether/ui";
+import type { FeatureWindow } from "@aether/ui";
 import { cadCommands, type CADCommandID } from "../cad-command-registry";
 import "./tool-window.css";
 
@@ -29,9 +30,8 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
     if (!section) return;
     active = id;
     refresh();
-    window = openFeatureWindow({
-      viewport: root, className: "cad-sketch-tool-window", title: section.title,
-      acceptLabel: "Close tool editor", discardLabel: "Close tool editor",
+    window = openCompactFeatureWindow({
+      viewport: root, className: "cad-sketch-tool-window", title: section.title, icon: "sketch", acceptLabel: "Done",
       onAccept: () => { select(); close(); }, onDiscard: () => { select(); close(); },
     });
     const picker = document.createElement("select");

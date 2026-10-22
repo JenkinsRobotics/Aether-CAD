@@ -1,4 +1,5 @@
-import { validateProfileRegionSelection, profileRegionIdentity } from '../../../freecad-engine/browser/profile-region-reference';
+import { patternCopyIds } from "./pattern";
+import { validateProfileRegionSelection, profileRegionIdentity } from '../sketch/reference/profile-region-reference';
 import {validateExtrusionScopeResolution,type ExtrusionScopeResolution} from './extrusion-scope';
 import {validateExtrusionStartReference,type ExtrusionStartReference} from './extrusion-start-reference';
 import {validateExtrusionPointReference,type ExtrusionPointReference} from "./extrusion-point-reference";
@@ -70,8 +71,8 @@ export interface ExtrudeFeature {
    *  so editing or reordering coordinates cannot retarget the link. */
   profileContourId?: string;
   profileContourIds?: string[];
-  profileRegion?: import('../../../freecad-engine/browser/profile-region-reference').ProfileRegionReference;
-  profileSelections?: ({ profileFeatureId: string } & import('../../../freecad-engine/browser/profile-region-reference').ProfileRegionSelection)[];
+  profileRegion?: import('../sketch/reference/profile-region-reference').ProfileRegionReference;
+  profileSelections?: ({ profileFeatureId: string } & import('../sketch/reference/profile-region-reference').ProfileRegionSelection)[];
   regionMode?: "faces";
   /** New extrusions expose each disconnected solid as an independent body. */
   separateBodies?: boolean;
@@ -378,7 +379,7 @@ export function validatePartDocument(
     ids.add(feature.id);
     if ('profileRegion' in feature && feature.profileRegion !== undefined) {
       if (!['extrude', 'revolve', 'sweep'].includes(feature.type)) throw Error('This feature does not accept a connected sketch region.');
-      validateProfileRegionSelection(feature as import('../../../freecad-engine/browser/profile-region-reference').ProfileRegionSelection);
+      validateProfileRegionSelection(feature as import('../sketch/reference/profile-region-reference').ProfileRegionSelection);
     }
     if (feature.type === 'extrude') {
       if (feature.profileRegion && (feature.thin || feature.profileContourIds)) throw Error('A connected region cannot also reference individual extrusion curves.');
@@ -388,11 +389,13 @@ export function validatePartDocument(
         if (feature.thin && selection.profileRegion) throw Error('Thin extrusion references individual curves, not connected faces.');
       }
     }
-    if(feature.type==='transform'){
+    if(feature.type==='pattern'&&feature.bodyIds){
+      for(const id of patternCopyIds(feature)){if(bodies.has(id))throw Error('Pattern copies need new body identities.');bodies.add(id);}
+    } else if(feature.type==='transform'||feature.type==='split'){
       const outputs=feature.copyBodyIds?Object.values(feature.copyBodyIds):[];
       for(const id of outputs){if(bodies.has(id))throw Error('Copy outputs need new body identities.');bodies.add(id);}
     } else if (
-      (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "import-step" || feature.type === "import-cad") &&
+      (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
       feature.operation === "new"
     ) {
       const id =
@@ -408,7 +411,7 @@ export function validatePartDocument(
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");
         bodies.add(output);
       }
-    } else if (!["profile", "sketch", "plane"].includes(feature.type)) {
+    } else if (!["profile", "sketch", "plane", "axis", "point", "thread"].includes(feature.type)) {
       if (!bodies.size && feature.type!=="offset-face" && !("targetBodyId" in feature && feature.targetBodyId))
         throw new Error(
           `${feature.name} needs an earlier body-producing feature.`,

@@ -117,7 +117,7 @@ def test_inspect_and_edit_permission_before_worker(host):
                 if c["id"].startswith("cad.")
             ]
         )
-        == 10
+        == 11  # the catalog's read-only commands plus edits (cad.sketch.inspect joined on 2026-10-18)
     )
     with pytest.raises(Problem) as error:
         command(

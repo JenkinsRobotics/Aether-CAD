@@ -1,9 +1,9 @@
 import { identifySketchContour, resolveProfileDrawing } from "../aether-core";
 import { takePickedSketchRegion } from "../sketch-region-selection";
-import { sketchRegions } from "../freecad-translate";
+import { sketchRegions } from "@aether/core/document";
 import type { Controls, FeatureEditorContext } from "./shared";
 import { validatePartDocument } from '@aether/core/document';
-import { matchesProfileRegion, type ProfileRegionSelection } from '../../freecad-engine/browser/profile-region-reference';
+import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/sketch/reference/profile-region-reference';
 /** The row each region picker lives in once the window has laid it out.
  *  `presentFeatureWindow` removes the original <label>, so the row cannot be
  *  found by walking up from the control afterwards. */

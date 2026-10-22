@@ -7,6 +7,7 @@ export const instructions: Record<string, string> = {
   "insert-spline-point":
     "Click inside a cubic spline span to insert a smooth editable point without changing its shape.",
   split: "Click inside a curve to split it; choose two positions for a circle.",
+  break: "Click a curve to break it at every crossing with another curve.",
   trim: "Click a curve portion or drag across curves to trim between boundaries.",
   extend:
     "Click near a free line, arc, or ellipse end to extend to a boundary, or click a new endpoint when no boundary exists.",
@@ -20,6 +21,16 @@ export const instructions: Record<string, string> = {
   "aligned-rectangle":
     "Click the first edge endpoints, then set the perpendicular width.",
   "three-point-circle": "Click three points on the circumference.",
+  "two-point-circle": "Click the two ends of a diameter.",
+  "two-tangent-circle": "Set the radius; click two curves the circle should touch.",
+  "three-tangent-circle": "Click three curves the circle should touch.",
+  "rounded-rectangle": "Set the corner radius; click two opposite corners.",
+  "edge-polygon": "Set the side count; click the two ends of one edge (the polygon grows to its left).",
+  "center-slot": "Set the slot width; click the two arc centres.",
+  "overall-slot": "Set the slot width; click the two overall ends.",
+  "center-point-slot": "Set the slot width; click the slot centre, then one arc centre.",
+  "center-arc-slot": "Set the slot width; click the centre arc's centre, its start, then its end direction.",
+  "three-point-arc-slot": "Set the slot width; click three points on the centre arc: start, through, end.",
   "center-arc":
     "Click the center, start, then end direction. Choose clockwise or counterclockwise.",
   "inscribed-polygon": "Set the side count; click the center, then a vertex.",
@@ -49,6 +60,7 @@ export const directModificationTools = [
   "trim",
   "extend",
   "split",
+  "break",
   "insert-spline-point",
 ] as const;
 export type DirectModificationTool = (typeof directModificationTools)[number];

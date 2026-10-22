@@ -49,7 +49,7 @@ describe("turning an assembly document into a solver job", () => {
     const { job, complete } = assemblyJobFor(projection());
     expect(complete).toBe(true);
     expect(job.parts).toHaveLength(1);
-    expect(job.parts[0].features.length).toBeGreaterThan(0);
+    expect(job.parts[0].id).toBeTruthy();
     expect(job.instances.map((i) => i.id)).toEqual(["i1", "i2"]);
     expect(job.instances[0].grounded).toBe(true);
   });

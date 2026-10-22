@@ -470,21 +470,20 @@ def test_packaged_edge_transform_project_follows_upstream_and_refuses_replaced_e
     from aether_animation.aether_workspace import AetherWorkspace
     from test_native_automation import invoke as automate
 
-    features = [
-        {'id': 's', 'kind': 'sketch-rectangle', 'parameters': {'width_mm': 10, 'height_mm': 20}},
-        {'id': 'e', 'kind': 'pad', 'parameters': {'profile': 's', 'distance_mm': 5, 'operation': 'new', 'body_id': 'body'}}]
-    built = invoke(tmp_path, 'geometry', {'features': features})['result']
-    edge = next(c for f in built['bodies'][0]['topology'] for c in f['candidates']
-                if c.get('edgeAnchor') and all(p['positionMillimeters'][:2] == [10, 20] for p in c['edgeAnchor'].values()))
-    reference = {'kind': 'solid-edge', 'sourceFeatureId': 'e', 'bodyId': 'body', 'anchor': edge['edgeAnchor'], 'label': 'Vertical edge'}
     source = part(PART_DOCUMENT_VERSION)
     source['features'] = [
         {'id': 's', 'name': 'Rectangle', 'type': 'profile', 'plane': 'XY', 'offsetMillimeters': 0, 'suppressed': False,
          'profile': {'type': 'polygon', 'pointsMillimeters': [[0, 0], [10, 0], [10, 20], [0, 20]]}},
         {'id': 'e', 'name': 'Block', 'type': 'extrude', 'profileFeatureId': 's', 'distanceMillimeters': 5,
-         'operation': 'new', 'bodyId': 'body', 'suppressed': False},
+         'operation': 'new', 'bodyId': 'body', 'suppressed': False}]
+    # The exact edge reference comes from the worker's own topology page of the saved block.
+    built = automate(tmp_path, 'cad.part.topology', json.dumps(source), {'body_id': 'body'})['result']
+    edge = next(c for f in built['faces'] for c in f['candidates']
+                if c.get('edgeAnchor') and all(p['positionMillimeters'][:2] == [10, 20] for p in c['edgeAnchor'].values()))
+    reference = {'kind': 'solid-edge', 'sourceFeatureId': 'e', 'bodyId': 'body', 'anchor': edge['edgeAnchor'], 'label': 'Vertical edge'}
+    source['features'].append(
         {'id': 't', 'name': 'Move by edge', 'type': 'transform', 'suppressed': False, 'bodyIds': ['body'],
-         'transform': {'kind': 'translate-reference', 'reference': reference}}]
+         'transform': {'kind': 'translate-reference', 'reference': reference}})
     original = created(tmp_path)
     part_id = original['project']['parts'][0]['id']
     project = invoke(tmp_path, 'project-edit', {**original, 'operation': 'save_part', 'part_id': part_id, 'document': source})['result']

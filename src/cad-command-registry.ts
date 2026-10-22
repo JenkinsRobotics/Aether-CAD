@@ -17,7 +17,7 @@ export type CADCommandID =
   | "sketch-undo"
   | "sketch-redo"
   | "sketch-finish-spline" | "sketch-remove-spline-point"
-  | "sketch-unfix"
+  | "sketch-unfix" | "sketch-infinite" | "sketch-polygon-constraint" | "sketch-chain" | "sketch-finish-auto-constrain" | "sketch-auto-constrain" | "sketch-export-dxf" | "sketch-intersect" | "sketch-include-edges" | "sketch-two-tangent-circle" | "sketch-three-tangent-circle" | "sketch-change-plane" | "sketch-loose-ends"
   | "sketch-coordinates"
   | "sketch-constraints"
   | "sketch-variables"
@@ -26,10 +26,11 @@ export type CADCommandID =
   | "sketch-select" | "sketch-line" | "sketch-arc" | "sketch-circle" | "sketch-rectangle"
   | "construction-plane-angle"
   | "construction-plane-mid"
-  | "construction-plane-three-point"
+  | "construction-plane-three-point" | "construction-plane-perpendicular" | "construction-plane-two-edges" | "construction-plane-tangent" | "construction-plane-along-path"
+  | "construction-axis-edge" | "construction-axis-two-points" | "construction-axis-normal-to-plane" | "construction-axis-two-planes"
+  | "construction-point-vertex" | "construction-point-two-edges" | "construction-point-three-planes" | "construction-point-center" | "construction-point-edge-plane" | "construction-point-along-path"
   | "feature-plane"
   | "feature-profile"
-  | "feature-cut"
   | "feature-extrude"
   | "feature-revolve"
   | "feature-mirror"
@@ -37,7 +38,7 @@ export type CADCommandID =
   | "feature-chamfer"
   | "feature-sweep"
   | "feature-transform"
-  | "transform-translate" | "transform-rotate" | "transform-scale" | "transform-copy"
+  | "transform-translate" | "transform-rotate" | "transform-scale" | "transform-copy" | "transform-mirror" | "transform-align"
   | "feature-offset-face"
   | "feature-face-extrude"
   | "feature-shell"
@@ -45,11 +46,15 @@ export type CADCommandID =
   | "feature-pattern"
   | "feature-draft"
   | "feature-loft"
-  | "feature-hole"
+  | "feature-hole" | "feature-split" | "feature-delete-face" | "feature-pipe" | "feature-bounding-solid" | "feature-thread" | "feature-coil" | "feature-remove-body" | "feature-boss" | "feature-rest"
   | "part-section"
   | "part-properties"
   | "part-interference"
-  | "freecad-build"
+  | "measure"
+  | "part-undo"
+  | "part-redo"
+  | "section-view"
+  | "engine-build"
 
   | "new-part"
   | "open-part"
@@ -78,6 +83,8 @@ export type CADCommandID =
   | "assembly-mate-parallel"
   | "assembly-mate-perpendicular"
   | "assembly-mate-angle"
+  | "assembly-mate-planar"
+  | "assembly-mate-pin_slot"
   | "assembly-mate-rack-pinion"
   | "assembly-mate-screw"
   | "assembly-mate-gears"
@@ -99,7 +106,7 @@ export type CADCommandID =
   | "display-shaded-edges"
   | "display-wireframe"
   | "display-hidden-line"
-  | "display-ghost"
+  | "display-ghost" | "display-zebra" | "display-draft-analysis"
   | "lighting-studio"
   | "lighting-softbox"
   | "lighting-daylight"
@@ -160,27 +167,28 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "sketch-undo",
   "sketch-redo",
   "sketch-finish-spline", "sketch-remove-spline-point",
-  "sketch-unfix",
+  "sketch-unfix", "sketch-infinite", "sketch-polygon-constraint", "sketch-chain", "sketch-finish-auto-constrain", "sketch-auto-constrain", "sketch-export-dxf", "sketch-intersect", "sketch-include-edges", "sketch-two-tangent-circle", "sketch-three-tangent-circle", "sketch-change-plane", "sketch-loose-ends",
   "sketch-coordinates",
   "sketch-constraints",
   "sketch-variables",
   "sketch-clipboard",
   "sketch-construction", "sketch-delete",
   "sketch-select", "sketch-line", "sketch-arc", "sketch-circle", "sketch-rectangle",
-  "construction-plane-angle", "construction-plane-mid", "construction-plane-three-point",
+  "construction-plane-angle", "construction-plane-mid", "construction-plane-three-point", "construction-plane-perpendicular", "construction-plane-two-edges", "construction-plane-tangent", "construction-plane-along-path",
+  "construction-axis-edge", "construction-axis-two-points", "construction-axis-normal-to-plane", "construction-axis-two-planes",
+  "construction-point-vertex", "construction-point-two-edges", "construction-point-three-planes", "construction-point-center", "construction-point-edge-plane", "construction-point-along-path",
   "feature-plane", "feature-profile",
-  "feature-cut",
   "feature-extrude",
   "feature-revolve",
   "feature-mirror",
   "feature-fillet",
   "feature-chamfer",
   "feature-sweep",
-  "feature-transform", "transform-translate", "transform-rotate", "transform-scale", "transform-copy",
+  "feature-transform", "transform-translate", "transform-rotate", "transform-scale", "transform-copy", "transform-mirror", "transform-align",
   "feature-offset-face",
   "feature-face-extrude",
   "feature-shell",
-  "feature-hole",
+  "feature-hole", "feature-split", "feature-delete-face", "feature-pipe", "feature-bounding-solid", "feature-thread", "feature-coil", "feature-remove-body", "feature-boss", "feature-rest",
   "feature-loft",
   "feature-draft",
   "feature-boolean",
@@ -188,7 +196,11 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "part-section",
   "part-properties",
   "part-interference",
-  "freecad-build",
+  "measure",
+  "part-undo",
+  "part-redo",
+  "section-view",
+  "engine-build",
   "new-part",
   "open-part",
   "save-part",
@@ -215,7 +227,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-mate-distance",
   "assembly-mate-parallel",
   "assembly-mate-perpendicular",
-  "assembly-mate-angle",
+  "assembly-mate-angle", "assembly-mate-planar", "assembly-mate-pin_slot",
   "assembly-mate-rack-pinion",
   "assembly-mate-screw",
   "assembly-mate-gears",
@@ -237,7 +249,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "display-shaded-edges",
   "display-wireframe",
   "display-hidden-line",
-  "display-ghost",
+  "display-ghost", "display-zebra", "display-draft-analysis",
   "lighting-studio",
   "lighting-softbox",
   "lighting-daylight",

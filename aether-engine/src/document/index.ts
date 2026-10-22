@@ -1,4 +1,4 @@
-export { resolvePlaneFrame, principalFrame, canonicalPlaneXDirection, validatePlaneDefinition, type PlaneDefinition, type PlaneReference, type PointReference, type AxisReference } from "./construction-planes";
+export { resolvePlaneFrame, principalFrame, flipSketchFrame, profileFrame, canonicalPlaneXDirection, validatePlaneDefinition, type PlaneDefinition, type PlaneReference, type PointReference, type AxisReference, type SurfacePointReference } from "./construction-planes";
 export * from "./part-document";
 export * from "./planar-face-anchor";
 // Solid feature types + construction-plane frames are engine truth every feature
@@ -43,4 +43,17 @@ export {offsetFaceBodies,type OffsetFaceFeature,type FaceTransform} from './offs
 export {validateTransform,transformReferences,type PartTransform,type NumericPartTransform,type TransformVectorReference,type TransformFeature} from './part-transform';
 export {createdBodyIDs} from './feature-history';
 
-export {validateSolidEdgeReference,type SolidEdgeReference,type SolidEdgeAnchor} from './solid-edge-reference';
+export {validateMirrorPlane,type MirrorPlaneReference} from './mirror-plane';
+export {validateSplit,type SplitFeature} from './split';
+export {validateDeleteFace,type DeleteFaceFeature} from './delete-face';
+export {validatePipe,type PipeFeature} from './pipe';
+export {validateBoundingSolid,type BoundingSolidFeature} from './bounding-solid';
+export {validateThread,type ThreadFeature} from './thread';
+export {validateCoil,type CoilFeature} from './coil';
+export {validateRemoveBody,type RemoveBodyFeature} from './remove-body';
+export {validateBoss,validateRest,type BossFeature,type RestFeature} from './plastic';
+export {resolvePointPosition,validatePointDefinition,type PointDefinition,type ConstructionPointFeature} from './construction-points';
+export {resolveAxisLine,validateAxisDefinition,type AxisDefinition,type ConstructionAxisFeature,type AxisLine} from './construction-axes';
+export {validateSolidEdgeReference,validateEdgeFinishEdge,type SolidEdgeReference,type SolidEdgeAnchor,type CurvedEdgeReference,type EdgeFinishEdge} from './solid-edge-reference';
+export * from "./sketch-regions";
+export { patternCopyIds } from "./pattern";

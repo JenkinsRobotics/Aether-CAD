@@ -87,8 +87,8 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
       const index=event.key==="ArrowUp"?workspace.rollbackIndex-1:event.key==="ArrowDown"?workspace.rollbackIndex+1:event.key==="Home"?0:event.key==="End"?count:null;
       if(index!==null){event.preventDefault();event.stopPropagation();cadWorkspace.dispatch({type:"rollback-to",index:Math.max(0,Math.min(count,index))});}
     }}>
-      <TreePanelSplit primaryLabel="Features" secondaryLabel="Parts" storageKey="aether-cad.feature-parts-split" primary={<TreePanel
-          ariaLabel="CAD features" title={`Features (${cadHistoryCount(workspace.itemNodes)})`} headerControls={[controls[0], controls[3]]}
+      <TreePanelSplit primaryLabel="Features" secondaryLabel="Parts" defaultRatio={0.77} storageKey="aether-cad.studio-feature-parts-split" primary={<TreePanel
+          ariaLabel="CAD features" title={`Features (${cadHistoryCount(workspace.itemNodes)})`} headerControls={[controls[0]]}
           onCategoryChange={setCategory} filterLabel="Filter Features" filterInputID="items-filter" filterInputRef={filterRef} onFilterChange={setFilter}
           filterOptions={[
             { id: "body", label: "Bodies", icon: <AetherIcon name="cube" /> },

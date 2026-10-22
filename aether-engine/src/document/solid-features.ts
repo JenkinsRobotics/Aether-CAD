@@ -1,4 +1,4 @@
-import {validateTransform,type TransformFeature} from './part-transform';
+import {validateTransform,validateTransformVectorReference,type TransformFeature,type TransformVectorReference} from './part-transform';
 export type {TransformFeature} from './part-transform';
 import {validateOffsetFace,type OffsetFaceFeature} from './offset-face';
 export type {OffsetFaceFeature} from './offset-face';
@@ -6,6 +6,19 @@ import {validateImportCAD, type ImportCADFeature} from "./import-cad";
 export {cadImportExtensions,isMeshImportFormat,type CADImportFormat,type MeshImportUnits,type ImportCADFeature} from "./import-cad";
 import {validateFaceExtrude, type FaceExtrudeFeature} from "./face-extrude";
 import {validatePlanarFaceAnchor, type PlanarFaceAnchor} from './planar-face-anchor';
+import {validateSolidFaceReference, type SolidFaceReference} from './solid-face-reference';
+import {validateEdgeFinishEdge, type EdgeFinishEdge} from './solid-edge-reference';
+import {validateMirrorPlane, type MirrorPlaneReference} from './mirror-plane';
+import {validateAxisDefinition, type ConstructionAxisFeature} from './construction-axes';
+import {validatePointDefinition, type ConstructionPointFeature} from './construction-points';
+import {validateSplit, type SplitFeature} from './split';
+import {validateDeleteFace, type DeleteFaceFeature} from './delete-face';
+import {validatePipe, type PipeFeature} from './pipe';
+import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid';
+import {validateThread, type ThreadFeature} from './thread';
+import {validateCoil, type CoilFeature} from './coil';
+import {validateRemoveBody, type RemoveBodyFeature} from './remove-body';
+import {validateBoss, validateRest, type BossFeature, type RestFeature} from './plastic';
 export type {FaceExtrudeFeature} from "./face-extrude";
 import {validateBoolean, type BooleanFeature} from "./boolean";
 export type {BooleanFeature} from "./boolean";
@@ -21,7 +34,7 @@ import { validateImportSTEP, type ImportSTEPFeature } from "./import-step";
 export type { ImportSTEPFeature } from "./import-step";
 export interface PlaneFeature {id:string;name:string;type:"plane";plane:SketchPlane;offsetMillimeters:number;suppressed:boolean;definition?:PlaneDefinition;}
 import { validateSketchDrawing, type SketchDrawing, type SketchFrame } from "../sketch/drawing";
-import { localPierceValidation } from '../../../freecad-engine/browser/pierce-context';
+import { localPierceValidation } from '../sketch/reference/pierce-context';
 import type { SketchPlane } from "../sketch/index";
 import { resolvePlaneFrame, validatePlaneDefinition, type PlaneDefinition } from "./construction-planes";
 export function constructionPlaneFrame(plane:PlaneFeature,earlier:readonly {id:string;type:string}[]=[]):SketchFrame {
@@ -44,6 +57,10 @@ export interface ProfileFeature {
   suppressed: boolean;
   frame?: SketchFrame;
   support?: PlanarSketchSupport;
+  /** A half turn of the sketch plane about its own x or y axis (SolidCraft's
+   *  `flip`): the normal reverses, so does the default extrude direction, and
+   *  the sketch's other in-plane axis points the other way. */
+  flip?: "x" | "y";
   profile:
     | SketchDrawing
     | { type: "projection"; sourceFeatureId: string; sourceContourId?: string; authored?: SketchDrawing }
@@ -60,8 +77,10 @@ export interface RevolveFeature {
   name: string;
   profileFeatureId: string;
   profileContourId?: string;
-  profileRegion?: import('../../../freecad-engine/browser/profile-region-reference').ProfileRegionReference;
+  profileRegion?: import('../sketch/reference/profile-region-reference').ProfileRegionReference;
   axis: "X" | "Y" | "Z";
+  /** Replaces `axis` (through the origin) when present: a line, a picked straight edge, or a sketch line. */
+  axisReference?: {kind:'vector';origin:[number,number,number];direction:[number,number,number]} | {kind:'feature';featureId:string} | TransformVectorReference;
   angleDegrees: number;
   symmetric?: boolean;
   reversed?: boolean;
@@ -78,6 +97,8 @@ export interface MirrorFeature {
   sourceFeatureId: string;
   plane: SketchPlane;
   offsetMillimeters: number;
+  /** A plane feature or picked face as the mirror plane; when present it replaces plane + offset. */
+  mirrorPlane?: MirrorPlaneReference;
   operation: "add" | "cut";
   targetBodyId?: string;
   suppressed: boolean;
@@ -88,17 +109,33 @@ export type EdgeFinishFeature = {
   radiusMillimeters: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
   suppressed: boolean;
-} & ({ type: "fillet" } | { type: "chamfer" });
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number }
+  | { type: "chamfer";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+);
 export interface SweepFeature {
   id: string;
   type: "sweep";
   name: string;
   profileFeatureId: string;
   profileContourId?: string;
-  profileRegion?: import('../../../freecad-engine/browser/profile-region-reference').ProfileRegionReference;
+  profileRegion?: import('../sketch/reference/profile-region-reference').ProfileRegionReference;
   pathFeatureId: string;
   pathContourId?: string;
+  /** How the profile turns along the path: square to it (default), kept as drawn, or square to it with a fixed up direction. */
+  orientation?: "perpendicular" | "parallel" | { kind: "direction"; direction: [number, number, number] };
+  /** The profile's scale at the end of the path, linear along it (1 = unchanged). */
+  endScale?: number;
+  /** A guide rail: a curve of another sketch the profile's edge follows. */
+  rail?: { pathFeatureId: string; pathContourId?: string };
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
@@ -110,10 +147,19 @@ export interface ShellFeature {
   name: string;
   targetBodyId?: string;
   thicknessMillimeters: number;
-  removedFaces?: { plane: SketchPlane; offsetMillimeters: number }[];
+  /** Faces left open. Prefer a face reference (the face of an earlier solid by
+   *  outward normal or surface type), which survives upstream dimension edits;
+   *  the plane/offset form matches a fixed coordinate and is kept for older files. */
+  removedFaces?: ShellOpenFace[];
+  /** Which side of the original surface the wall takes; default inside. */
+  direction?: "inside" | "outside" | "both";
+  /** Also open every face tangent-continuous with a picked one. */
+  tangentChain?: boolean;
   suppressed: boolean;
 }
-export type SolidFeature = TransformFeature |
+export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
+export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
+export type SolidFeature = TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -121,11 +167,20 @@ export function validateSolidFeature(
   missingReference: (id: unknown) => boolean = () => false,
 ): void {
   if (feature.type === "transform") return validateTransform(feature,earlier,missingReference);
+  if (feature.type === "split") return validateSplit(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "pipe") return validatePipe(feature,earlier,missingReference);
+  if (feature.type === "coil") return validateCoil(feature);
+  if (feature.type === "boss") return validateBoss(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "rest") return validateRest(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "remove-body") return validateRemoveBody(feature);
+  if (feature.type === "bounding-solid") return validateBoundingSolid(feature);
+  if (feature.type === "thread") return validateThread(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "delete-face") return validateDeleteFace(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "offset-face") return validateOffsetFace(feature, earlier, missingReference);
   if (feature.type === "face-extrude") return validateFaceExtrude(feature, earlier, missingReference);
   if (feature.type === "boolean") return validateBoolean(feature);
   if (feature.type === "pattern") { validatePattern(feature, earlier, missingReference); return; }
-  if (feature.type === "draft") { validateDraft(feature); return; }
+  if (feature.type === "draft") { validateDraft(feature, earlier, missingReference); return; }
   if (feature.type === "loft") { validateLoft(feature, earlier, missingReference); return; }
   if (feature.type === "hole") { validateHole(feature, earlier, missingReference); return; }
   if (feature.type === "import-cad") { validateImportCAD(feature); return; }
@@ -134,6 +189,8 @@ export function validateSolidFeature(
     if (!Number.isFinite(value) || value <= 0)
       throw new Error(`${label} must be positive.`);
   };
+  if(feature.type==="point"){validatePointDefinition(feature,new Set([...earlier].filter(([,type])=>type==="plane").map(([id])=>id)),missingReference);return;}
+  if(feature.type==="axis"){validateAxisDefinition(feature,new Set([...earlier].filter(([,type])=>type==="plane").map(([id])=>id)),missingReference);return;}
   if(feature.type==="plane"){if(!["XY","XZ","YZ"].includes(feature.plane)||!Number.isFinite(feature.offsetMillimeters))throw new Error("Invalid construction plane.");validatePlaneDefinition(feature,new Set([...earlier].filter(([,type])=>type==="plane").map(([id])=>id)), missingReference);return;}
   if (feature.type === "profile") {
     if (
@@ -193,6 +250,13 @@ export function validateSolidFeature(
       if (Math.abs(area) < 1e-8) throw new Error("Profile has zero area.");
     } else throw new Error("Unsupported sketch profile.");
   } else if (feature.type === "revolve") {
+    if (feature.axisReference !== undefined) {
+      const a = feature.axisReference;
+      if (a.kind === "vector") { if (![a.origin, a.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a.direction) < 1e-9) throw new Error("Revolve axis needs a finite origin and a nonzero direction."); }
+      else if (a.kind === "feature") { if (typeof a.featureId !== "string" || (!missingReference(a.featureId) && earlier.get(a.featureId) !== "axis")) throw new Error("Revolve axis must be an earlier axis feature."); }
+      else if (a.kind === "two-points") { validateTransformVectorReference(a.from, earlier, missingReference); validateTransformVectorReference(a.to, earlier, missingReference); }
+      else validateTransformVectorReference(a, earlier, missingReference);
+    }
     if (
       !missingReference(feature.profileFeatureId) && !["profile", "sketch"].includes(
         earlier.get(feature.profileFeatureId) || "",
@@ -213,6 +277,11 @@ export function validateSolidFeature(
     )
       throw new Error("Invalid revolve settings.");
   } else if (feature.type === "sweep") {
+    if (feature.orientation !== undefined && feature.orientation !== "perpendicular" && feature.orientation !== "parallel" &&
+      !(typeof feature.orientation === "object" && feature.orientation.kind === "direction" && Array.isArray(feature.orientation.direction) && feature.orientation.direction.length === 3 && feature.orientation.direction.every(Number.isFinite) && Math.hypot(...feature.orientation.direction) > 1e-9))
+      throw new Error("Sweep orientation must be perpendicular, parallel, or a nonzero direction.");
+    if (feature.endScale !== undefined && !(Number.isFinite(feature.endScale) && feature.endScale >= 0.01 && feature.endScale <= 100)) throw new Error("Sweep end scale must be between 0.01 and 100.");
+    if (feature.rail !== undefined && (typeof feature.rail.pathFeatureId !== "string" || (!missingReference(feature.rail.pathFeatureId) && !["sketch", "profile"].includes(earlier.get(feature.rail.pathFeatureId) ?? "")))) throw new Error("Sweep rail must be a curve of an earlier sketch.");
     if (!missingReference(feature.profileFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) || ""))
       throw new Error("Sweep must reference an earlier sketch profile.");
     if (!missingReference(feature.pathFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.pathFeatureId) || ""))
@@ -221,9 +290,12 @@ export function validateSolidFeature(
       throw new Error("Invalid sweep settings.");
   } else if (feature.type === "shell") {
     positive(feature.thicknessMillimeters, "Shell thickness");
+    if (feature.direction !== undefined && !["inside", "outside", "both"].includes(feature.direction)) throw new Error("Shell direction must be inside, outside or both.");
+    if (feature.tangentChain !== undefined && typeof feature.tangentChain !== "boolean") throw new Error("Invalid shell tangent chain flag.");
     if (feature.removedFaces) {
       for (const face of feature.removedFaces) {
-        if (!["XY", "XZ", "YZ"].includes(face.plane) || !Number.isFinite(face.offsetMillimeters))
+        if (face && typeof face === "object" && isShellFaceReference(face)) validateSolidFaceReference(face, earlier, missingReference, "Shell open face");
+        else if (!face || !["XY", "XZ", "YZ"].includes(face.plane) || !Number.isFinite(face.offsetMillimeters))
           throw new Error("Invalid shell removed face plane.");
       }
     }
@@ -240,6 +312,7 @@ export function validateSolidFeature(
       !["add", "cut"].includes(feature.operation)
     )
       throw new Error("Invalid mirror settings.");
+    if (feature.mirrorPlane !== undefined) validateMirrorPlane(feature.mirrorPlane, earlier, missingReference);
   } else if (feature.type === "fillet" || feature.type === "chamfer") {
     positive(feature.radiusMillimeters, "Edge finish size");
     if (
@@ -248,5 +321,18 @@ export function validateSolidFeature(
         !Number.isFinite(feature.edgePlane.offsetMillimeters))
     )
       throw new Error("Invalid edge selection plane.");
+    if (feature.tangentChain !== undefined && (typeof feature.tangentChain !== "boolean" || (feature.tangentChain && !feature.edges))) throw new Error("A tangent chain needs picked edges.");
+    if (feature.edges !== undefined) {
+      if (!Array.isArray(feature.edges) || !feature.edges.length) throw new Error("Select at least one edge to finish.");
+      for (const edge of feature.edges) validateEdgeFinishEdge(edge, earlier, missingReference);
+    }
+    if (feature.type === "fillet") {
+      if (feature.endRadiusMillimeters !== undefined) positive(feature.endRadiusMillimeters, "Fillet end size");
+    } else {
+      if (feature.secondDistanceMillimeters !== undefined) positive(feature.secondDistanceMillimeters, "Chamfer second distance");
+      if (feature.angleDegrees !== undefined && !(feature.angleDegrees > 0 && feature.angleDegrees < 90)) throw new Error("Chamfer angle must be between 0 and 90 degrees.");
+      if (feature.secondDistanceMillimeters !== undefined && feature.angleDegrees !== undefined) throw new Error("Give a chamfer a second distance or an angle, not both.");
+      if (feature.referenceFace !== undefined) validateSolidFaceReference(feature.referenceFace, earlier, missingReference, "Chamfer reference face");
+    }
   } else throw new Error("Unsupported solid feature.");
 }

@@ -1,6 +1,11 @@
 import {validateSolidEdgeReference,type SolidEdgeReference} from './solid-edge-reference';
 import {validateExtrusionPointReference,type ExtrusionPointReference} from './extrusion-point-reference';
 import type {SketchLineDirectionReference} from './part-document';
+import {validateMirrorPlane,type MirrorPlaneReference} from './mirror-plane';
+import {validateSolidFaceReference,type SolidFaceReference} from './solid-face-reference';
+
+/** What Align brings together: a planar face (its centre and normal) or a point. */
+export type AlignTarget=({kind:'face'}&SolidFaceReference)|({kind:'point'}&{point:ExtrusionPointReference});
 type Vector3=[number,number,number];
 export type NumericPartTransform=
  | {kind:'translate';translationMillimeters:Vector3}
@@ -11,7 +16,10 @@ export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeRefer
 export type PartTransform=NumericPartTransform
  | {kind:'translate-reference';reference:TransformVectorReference;distanceMillimeters?:number;reversed?:boolean}
  | {kind:'rotate-reference';reference:TransformVectorReference;angleDegrees:number}
- | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3};
+ | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3}
+ | {kind:'mirror';plane:MirrorPlaneReference;/** Join the image with the original instead of making a new part. */combine?:boolean}
+ /** Align (SolidCraft's solid.align): move the parts so `from` meets `to`; faces turn to face each other (flip: the same way). */
+ | {kind:'align';from:AlignTarget;to:AlignTarget;flip?:boolean};
 export function transformReferences(t:PartTransform):Array<SketchLineDirectionReference|ExtrusionPointReference|SolidEdgeReference> {
  if(t.kind==='scale-reference')return[t.centerReference];
  if(t.kind==='translate-reference'||t.kind==='rotate-reference')return t.reference?.kind==='two-points'?[t.reference.from,t.reference.to]:[t.reference];
@@ -26,6 +34,13 @@ export interface TransformFeature {
 }
 const id=(value:unknown):value is string=>typeof value==='string'&&!!value.trim()&&value.length<=256;
 const vector=(value:unknown):value is Vector3=>Array.isArray(value)&&value.length===3&&value.every(Number.isFinite);
+/** A line reference: a sketch line, a straight solid edge, or two ordered points. */
+export function validateTransformVectorReference(ref:SketchLineDirectionReference|ExtrusionPointReference|SolidEdgeReference,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean) {
+  if(ref?.kind==='sketch-line'){
+   if(![ref.sourceFeatureId,ref.contourId,ref.segmentId].every(v=>id(v)&&v.length<=128)||(!missing(ref.sourceFeatureId)&&earlier.get(ref.sourceFeatureId)!=='profile'))throw Error('Transform needs a straight line in an earlier sketch.');
+  }else if(ref?.kind==='solid-edge')validateSolidEdgeReference(ref,earlier,missing);
+  else validateExtrusionPointReference(ref as ExtrusionPointReference,earlier,missing);
+}
 export function validateTransform(feature:TransformFeature,earlier:ReadonlyMap<string,string>=new Map(),missing:(id:string)=>boolean=()=>false) {
  const ids=feature.bodyIds,t=feature.transform,copies=feature.copyBodyIds;
  if(!Array.isArray(ids)||!ids.length||ids.length>256||!ids.every(id)||new Set(ids).size!==ids.length)throw Error('Choose distinct solid parts to transform (up to 256).');
@@ -34,12 +49,7 @@ export function validateTransform(feature:TransformFeature,earlier:ReadonlyMap<s
   if(!copies||typeof copies!=='object'||Array.isArray(copies)||Object.keys(copies).length!==ids.length||ids.some(key=>!Object.hasOwn(copies,key)||!id(copies[key]))||new Set(Object.values(copies)).size!==ids.length||Object.values(copies).some(key=>ids.includes(key)))throw Error('Each copied part needs a distinct new output identity.');
  }
  if(!t||typeof t!=='object'||Array.isArray(t))throw Error('Choose a valid part transform.');
- for(const ref of transformReferences(t)){
-  if(ref?.kind==='sketch-line'){
-   if(![ref.sourceFeatureId,ref.contourId,ref.segmentId].every(v=>id(v)&&v.length<=128)||(!missing(ref.sourceFeatureId)&&earlier.get(ref.sourceFeatureId)!=='profile'))throw Error('Transform needs a straight line in an earlier sketch.');
-  }else if(ref?.kind==='solid-edge')validateSolidEdgeReference(ref,earlier,missing);
-  else validateExtrusionPointReference(ref as ExtrusionPointReference,earlier,missing);
- }
+ for(const ref of transformReferences(t))validateTransformVectorReference(ref,earlier,missing);
  if(t.kind==='translate-reference'){
   if(t.distanceMillimeters!==undefined&&!Number.isFinite(t.distanceMillimeters))throw Error('Translation distance must be finite.');
   if(t.reversed!==undefined&&typeof t.reversed!=='boolean')throw Error('Invalid transform direction.');
@@ -55,5 +65,17 @@ export function validateTransform(feature:TransformFeature,earlier:ReadonlyMap<s
   if(!vector(t.centerMillimeters)||!vector(t.scaleFactors)||t.scaleFactors.some(v=>v<=0)||!Number.isFinite(t.scaleFactors.reduce((a,b)=>a*b,1))||t.scaleFactors.reduce((a,b)=>a*b,1)<=0)throw Error('Scale needs a finite center and positive factors within the supported numeric range.');
  }else if(t.kind==='copy'){
   if(!copies)throw Error('Copy in place needs new body identities.');
- }else throw Error('Choose Translate, Rotate, Scale or Copy in place.');
+ }else if(t.kind==='align'){
+  for(const target of [t.from,t.to]){
+   if(!target||typeof target!=='object')throw Error('Align needs a from and a to reference.');
+   if(target.kind==='face'){validateSolidFaceReference(target,earlier,missing,'Align face');if(target.surfaceType)throw Error('Align faces must be planar.');}
+   else if(target.kind==='point')validateExtrusionPointReference(target.point,earlier,missing);
+   else throw Error('Align references are faces or points.');
+  }
+  if(t.flip!==undefined&&typeof t.flip!=='boolean')throw Error('Invalid align flip.');
+ }else if(t.kind==='mirror'){
+  validateMirrorPlane(t.plane,earlier,missing);
+  if(t.combine!==undefined&&typeof t.combine!=='boolean')throw Error('Invalid mirror combine flag.');
+  if(t.combine&&copies)throw Error('A combined mirror joins the original; it makes no copies.');
+ }else throw Error('Choose Translate, Rotate, Scale, Mirror, Align or Copy in place.');
 }

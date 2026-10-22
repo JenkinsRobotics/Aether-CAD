@@ -96,7 +96,7 @@ def execute(service, command, content, arguments, *, node=None):
         result["limits"] = [
             "Saved document only; open editors must reload external edits.",
             "Preview does not save or reserve identities. Apply requires the saved file revision.",
-            "Ordinary recipe mates: fastened, revolute, prismatic. No nested assemblies.",
+            "Ordinary recipe mates: fastened, revolute, prismatic, cylindrical, ball, planar, pin_slot, parallel. No nested assemblies.",
             "Arrays create independent instances, not associative patterns.",
         ]
         return {"result": result}

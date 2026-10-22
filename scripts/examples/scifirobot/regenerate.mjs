@@ -7,8 +7,11 @@ import { execFileSync } from 'node:child_process';
 const here=dirname(fileURLToPath(import.meta.url));
 const scratch=mkdtempSync(join(tmpdir(),'aether-scifirobot-'));
 try {
-  const bundle=join(scratch,'author.mjs');
-  await build({entryPoints:[join(here,'author.ts')],bundle:true,platform:'node',format:'esm',outfile:bundle});
-  execFileSync(process.execPath,[bundle,join(here,'generated')],{stdio:'inherit'});
-  execFileSync(process.env.AETHER_BUILD_PYTHON || 'python3',[join(here,'export.py'),...(process.argv[2]?[process.argv[2]]:[])],{stdio:'inherit'});
+  const banner="import { createRequire as __createRequire } from 'node:module'; import { fileURLToPath as __fileURLToPath } from 'node:url'; import { dirname as __dirname_of } from 'node:path'; const require = __createRequire(import.meta.url); const __filename = __fileURLToPath(import.meta.url); const __dirname = __dirname_of(__filename);";
+  for (const [name,args] of [['author',[join(here,'generated')]],['export',process.argv[2]?[process.argv[2]]:[]]]) {
+    const bundle=join(scratch,name+'.mjs');
+    // The engine's Emscripten glue is CommonJS; the bundle is an ES module, hence the banner.
+    await build({entryPoints:[join(here,name+'.ts')],bundle:true,platform:'node',format:'esm',outfile:bundle,banner:{js:banner},loader:{'.wasm':'file'}});
+    execFileSync(process.execPath,[bundle,...args],{stdio:'inherit',env:{...process.env,AETHER_SCIFIROBOT_DIR:here}});
+  }
 } finally { rmSync(scratch,{recursive:true,force:true}); }

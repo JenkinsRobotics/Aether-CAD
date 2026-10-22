@@ -7,9 +7,9 @@ let dom,open,doc,apply;
 const frame=z=>({originMillimeters:[2.5,10,z],normal:[0,0,1],xDirection:[1,0,0]});
 const support=z=>({sourceFeatureId:'base',bodyId:'body',normal:[0,0,1],xDirection:[1,0,0],label:'Face of Base',faceAnchor:{centerMillimeters:[2.5,10,z],areaSquareMillimeters:100}});
 const drawing={type:'drawing',contours:[{id:'bore',type:'circle',center:[0,0],radius:1}],constraints:[{id:'size',kind:'radius',a:{kind:'circle',contour:0},value:1},{id:'center',kind:'fix',a:{kind:'point',contour:0,index:0},point:[0,0]}]};
-const click=label=>(document.querySelector(`[aria-label="${label}"]`)??[...document.querySelectorAll('button')].find(b=>b.textContent===label))?.click();
+const click=label=>(label==='Finish sketch'?document.querySelector('.cad-sketch-window [data-feature-action="accept"]'):document.querySelector(`[aria-label="${label}"]`)??[...document.querySelectorAll('button')].find(b=>b.textContent===label))?.click();
 const changePlane=()=>document.querySelector('.aui-feature-entity button').click();
-const finish=()=>document.querySelector('[aria-label="Finish sketch"]');
+const finish=()=>document.querySelector('.cad-sketch-window [data-feature-action="accept"]');
 const face=z=>window.dispatchEvent(new CustomEvent('aether-sketch-face',{detail:{frame:frame(z),support:support(z)}}));
 beforeAll(async()=>{
  dom=new JSDOM('<html><body></body></html>',{url:'http://localhost/cad/'});

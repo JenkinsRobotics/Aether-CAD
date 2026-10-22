@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { ToolIcon, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
+import { AetherIcon, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
 import { NewDesignDialog } from "@aether/ui/new-design";
 import { CAD_DESIGN_KINDS, DESIGN_UNIT_OPTIONS } from "@aether/session/library/design-kinds";
 import { createNativeFile } from "@aether/session/library/create-native-file";
@@ -25,8 +25,8 @@ const readOpenFiles = (): OpenFile[] => {
   try { const value = JSON.parse(tabStorage().getItem(OPEN_FILES_KEY) ?? "[]"); return Array.isArray(value) ? value : []; } catch { return []; }
 };
 const writeOpenFiles = (files: OpenFile[]) => { try { tabStorage().setItem(OPEN_FILES_KEY, JSON.stringify(files)); } catch { /* device preference only */ } };
-const partIcon = <ToolIcon name="part" data-design-kind="part" style={{width:18,height:18}} />;
-const assemblyIcon = <ToolIcon name="assembly" data-design-kind="assembly" style={{width:18,height:18}} />;
+const partIcon = <AetherIcon name="cube" data-design-kind="part" />;
+const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
 
 /**
  * The bottom tab bar. Inside a Project document it is Onshape's element bar:

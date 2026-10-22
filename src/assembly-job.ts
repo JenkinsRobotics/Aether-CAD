@@ -1,4 +1,4 @@
-/** Turn the open assembly document into a job FreeCAD's solver can run.
+/** Turn the open assembly document into a job the assembly solver can run.
  *
  *  The projection speaks metres and connector frames; the engine speaks
  *  millimetres and joint coordinate systems. This is where those meet — a
@@ -7,14 +7,13 @@
  */
 import { Quaternion } from "three";
 import { connectorMatrix } from "./math";
-import { translateDocument } from "./freecad-translate";
 import type {
   AssemblyJob,
   AssemblyJoint,
   AssemblyJointEnd,
   AssemblyMateKind,
   AssemblyPartDefinition,
-} from "./freecad-assembly";
+} from "./assembly-types";
 import type {
   AssemblyProjectionV1,
   ConnectorFrameProjection,
@@ -82,15 +81,11 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
       note(definition.id, definition.name, "the part carries no feature document");
       continue;
     }
-    const translated = translateDocument(document);
-    if (!translated.features.length) {
-      note(definition.id, definition.name, "the part translated to no geometry");
+    if (!document.features.length) {
+      note(definition.id, definition.name, "the part has no features");
       continue;
     }
-    if (!translated.complete)
-      note(definition.id, definition.name,
-        `part is incomplete: ${translated.untranslated[0]?.reason ?? "unknown"}`);
-    parts.push({ id: definition.id, features: translated.features });
+    parts.push({ id: definition.id });
     buildable.add(definition.id);
   }
 

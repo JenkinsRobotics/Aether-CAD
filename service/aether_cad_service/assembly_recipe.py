@@ -162,8 +162,8 @@ def prepare(workspace, assembly_id, recipe):
 
     for item in entries(recipe, "mates", 511):
         obj(item, ("key", "kind", "a", "b"), ("key", "kind", "a", "b"))
-        if item["kind"] not in ("fastened", "revolute", "prismatic"):
-            raise ValueError("Saved recipes currently support fastened, revolute and prismatic mates")
+        if item["kind"] not in ("fastened", "revolute", "prismatic", "cylindrical", "ball", "planar", "pin_slot", "parallel"):
+            raise ValueError("Saved recipes support the eight kinematic mates: fastened, revolute, prismatic, cylindrical, ball, planar, pin_slot and parallel")
         before = set(draft.mates)
         draft._add_mate({"mate": {"name": label(item["key"]), "type_id": item["kind"],
                                   "endpoint_a": endpoint(item["a"]), "endpoint_b": endpoint(item["b"])}})

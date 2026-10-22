@@ -6,7 +6,7 @@ import { inferDimension } from './dimension-inference';
 import { renderDimensionAnnotations } from './dimension-annotations';
 import { refreshDimensionLabelUnits } from './dimension-label-units';
 import './dimension-tool.css';
-import { referencedConic } from '../../freecad-engine/browser/conic-constraints';
+import { referencedConic } from '@aether/core/sketch/reference/conic-constraints';
 
 type Options = {
   svg: SVGSVGElement;

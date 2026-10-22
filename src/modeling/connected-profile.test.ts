@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createEmptyPartDocument, insertFeature, parsePartDocument, serializePartDocument, validatePartDocument, type PartDocument, type PartFeature } from '@aether/core/document';
-import { solveDrawingConstraints, type SketchDrawing } from '@aether/core/sketch';
-import { sketchRegions, translateDocument } from '../freecad-translate';
+import { createEmptyPartDocument, insertFeature, validatePartDocument, type PartDocument } from '@aether/core/document';
+import { type SketchDrawing } from '@aether/core/sketch';
+import { sketchRegions } from '@aether/core/document';
 import { stampProfileSelections } from '../features/regions';
 import type { FeatureEditorContext } from '../features/shared';
 import { pickSketchRegion } from '../sketch/picking';
@@ -35,7 +35,7 @@ const profile = (doc: PartDocument) => {
   const f = doc.features[0]; if (f.type !== 'profile' || f.profile.type !== 'drawing') throw Error(); return f;
 };
 
-describe('connected region selection, persistence and feature translation', () => {
+describe('connected region selection and persistence', () => {
   it('offers one filled face and four individual curves, with one shared interior pick', () => {
     const doc = sourceDocument();
     expect(sketchRegions(doc.features[0])).toMatchObject([{ contourIndex: 0, sourceContourIndices: [0, 1, 2, 3] }]);
@@ -61,66 +61,6 @@ describe('connected region selection, persistence and feature translation', () =
   it('rolls back malformed generated identities without changing any source', () => {
     const doc = sourceDocument(), before = structuredClone(doc), random = vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000000');
     try { expect(() => selected(doc)).toThrow(); expect(doc).toEqual(before); } finally { random.mockRestore(); }
-  });
-  it('writes Part19, reopens the same group and translates linked original native wires', () => {
-    const doc = extruded(), saved = serializePartDocument(doc), reopened = parsePartDocument(saved);
-    expect(JSON.parse(saved).formatVersion).toBe(21); expect(reopened).toEqual(doc);
-    const translated = translateDocument(reopened);
-    expect(translated.complete).toBe(true); expect(translated.features.map(f => f.kind)).toEqual(['sketch-wire', 'sketch-wire', 'sketch-wire', 'sketch-wire', 'sketch-region', 'pad']);
-    expect(translated.features[4].parameters.profiles).toEqual(translated.features.slice(0, 4).map(f => f.id));
-    expect(translated.features[5].parameters.profile).toBe(translated.features[4].id);
-  });
-  it('keeps the referenced face and output key after source reorder', () => {
-    const doc = extruded(), before = translateDocument(doc).features.at(-1)!.parameters;
-    const drawing = profile(doc).profile as SketchDrawing;
-    drawing.contours.reverse();
-    for (const c of drawing.constraints ?? []) for (const ref of [c.a, c.b]) if (ref) ref.contour = 3 - ref.contour;
-    const rebuilt = translateDocument(parsePartDocument(serializePartDocument(doc)));
-    expect(rebuilt.complete).toBe(true);
-    expect(Object.values(rebuilt.features.at(-1)!.parameters.profile_keys as object)).toEqual(Object.values(before.profile_keys as object));
-  });
-  it('retains the connected face when a driving width changes through the canonical solver', () => {
-    const doc = extruded(), sketch = profile(doc), drawing = structuredClone(sketch.profile) as SketchDrawing;
-    const identities = [...(doc.features.at(-1) as any).profileRegion.contourIds];
-    drawing.constraints!.find(c => c.id === 'width')!.value = 32;
-    sketch.profile = solveDrawingConstraints(drawing);
-    const rebuilt = translateDocument(parsePartDocument(serializePartDocument(doc)));
-    expect(rebuilt.complete).toBe(true);
-    const bottom = rebuilt.features[0].parameters.segments as {end: number[]}[];
-    expect(bottom[0].end[0]).toBeCloseTo(32, 6);
-    expect((doc.features.at(-1) as any).profileRegion.contourIds).toEqual(identities);
-  });
-  it.each(['missing', 'open', 'branch'] as const)('keeps a %s group as a repairable feature failure without selecting another loop', change => {
-    const doc = extruded(), drawing = profile(doc).profile as SketchDrawing;
-    drawing.constraints = [];
-    if (change === 'missing') drawing.contours[1].id = 'replacement';
-    if (change === 'open' && drawing.contours[1].type === 'path') drawing.contours[1].start = [21, 0];
-    if (change === 'branch') drawing.contours.push({type:'path',start:[0,0],segments:[{type:'line',end:[-3,0]}]});
-    const rebuilt = translateDocument(parsePartDocument(serializePartDocument(doc)));
-    expect(rebuilt.complete).toBe(false); expect(rebuilt.untranslated).toContainEqual(expect.objectContaining({id:'e',reason:expect.stringMatching(/same closed region/)}));
-    expect(rebuilt.features.some(f => f.kind === 'pad')).toBe(false);
-  });
-  it.each(['revolve', 'sweep', 'loft'] as const)('translates a persisted joined profile in %s', kind => {
-    const { doc, reference } = selected();
-    let feature: PartFeature;
-    if (kind === 'revolve') feature = {id:'solid',type:kind,name:kind,suppressed:false,...reference,operation:'new',axis:'X',angleDegrees:90};
-    else if (kind === 'sweep') {
-      doc.features.push({id:'path',type:'profile',name:'Path',plane:'XZ',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{id:'spine',type:'path',start:[0,0],segments:[{type:'line',end:[0,20]}]}]}});
-      feature = {id:'solid',type:kind,name:kind,suppressed:false,...reference,operation:'new',pathFeatureId:'path',pathContourId:'spine'};
-    } else {
-      const top = structuredClone(doc.features[0]); top.id = 'top'; if (top.type === 'profile') top.offsetMillimeters = 20; doc.features.push(top);
-      feature = {id:'solid',type:kind,name:kind,suppressed:false,operation:'new',ruled:false,sections:[reference,{...reference,profileFeatureId:'top'}]};
-    }
-    const result = translateDocument(parsePartDocument(serializePartDocument(insertFeature(doc, feature))));
-    expect(result.complete).toBe(true); expect(result.features.at(-1)!.kind).toBe(kind);
-  });
-  it('keeps Thin selection on one raw curve even when that curve bounds a joined face', () => {
-    const doc = sourceDocument(), context = {doc} as FeatureEditorContext;
-    const [selection] = stampProfileSelections(context, [{featureId:'s',contourIndex:0}], true);
-    expect(selection.profileRegion).toBeUndefined(); expect(selection.profileContourId).toBeTruthy();
-    const part = insertFeature(doc, {id:'wall',type:'extrude',name:'Wall',suppressed:false,...selection,profileSelections:[selection],operation:'new',distanceMillimeters:6,regionMode:'faces',thin:{thickness1Millimeters:1,thickness2Millimeters:0}});
-    const job = translateDocument(part); expect(job.complete).toBe(true);
-    expect(job.features.at(-1)!.parameters.profile).toBe('s#0');
   });
   it.each([{contourIds:['a']},{contourIds:['a','a']},{contourIds:['a',7]},{contourIds:['a','b'],unknown:true}])('rejects malformed saved group %j', invalid => {
     const doc = extruded(); (doc.features.at(-1) as any).profileRegion = invalid;

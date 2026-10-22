@@ -4,7 +4,7 @@ import {
   type SketchPoint,
 } from "../drawing";
 import { sketchArcGeometry } from "../arc-geometry";
-import { conicCoordinates } from '../../../../freecad-engine/browser/conic-constraints';
+import { conicCoordinates } from '../reference/conic-constraints';
 export interface DiagnosticCoordinate {
   get: () => number;
   set: (v: number) => void;
