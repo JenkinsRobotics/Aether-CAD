@@ -9,6 +9,9 @@ export interface DocumentVariable {
   name: string;
   kind: "number" | "length" | "angle" | "string";
   expression: string;
+  /** SolidCraft's parameters.comment / parameters.favorite: notes and a pinned list. */
+  comment?: string;
+  favorite?: boolean;
 }
 /** Expressions are the saved truth. Resolved SI quantities are ephemeral. */
 export function evaluateDocumentVariables(
@@ -30,7 +33,9 @@ export function evaluateDocumentVariables(
       );
     if (
       !["number", "length", "angle", "string"].includes(variable.kind) ||
-      typeof variable.expression !== "string"
+      typeof variable.expression !== "string" ||
+      (variable.comment !== undefined && (typeof variable.comment !== "string" || variable.comment.length > 1024)) ||
+      (variable.favorite !== undefined && typeof variable.favorite !== "boolean")
     )
       throw Error(`Invalid definition for #${variable.name}.`);
     definitions.set(variable.name, variable);

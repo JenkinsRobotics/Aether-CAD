@@ -5305,7 +5305,7 @@ function evaluateDocumentVariables(value2) {
       throw Error(
         "Variable names must be unique identifiers of at most 64 characters."
       );
-    if (!["number", "length", "angle", "string"].includes(variable.kind) || typeof variable.expression !== "string")
+    if (!["number", "length", "angle", "string"].includes(variable.kind) || typeof variable.expression !== "string" || variable.comment !== void 0 && (typeof variable.comment !== "string" || variable.comment.length > 1024) || variable.favorite !== void 0 && typeof variable.favorite !== "boolean")
       throw Error(`Invalid definition for #${variable.name}.`);
     definitions.set(variable.name, variable);
   }
