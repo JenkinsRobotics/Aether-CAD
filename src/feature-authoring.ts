@@ -248,7 +248,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest","sheet-base","sheet-flange","sheet-hem","sheet-unfold","sheet-refold","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","remove-body","boss","rest","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);

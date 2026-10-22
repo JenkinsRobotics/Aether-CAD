@@ -5566,7 +5566,7 @@ function validateCoil(feature) {
   if (feature.axis !== void 0 && !["X", "Y", "Z"].includes(feature.axis)) throw Error("Coil axis must be X, Y or Z.");
   if (!["new", "add", "cut"].includes(feature.operation)) throw Error("Invalid coil operation.");
 }
-const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-unfold", "sheet-refold"];
+const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold"];
 const bendAllowanceMillimeters = (angleDegrees, innerRadius, rule) => angleDegrees * Math.PI / 180 * (innerRadius + rule.kFactor * rule.thicknessMillimeters);
 const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
 function validateSheetMetalRule(rule, what) {
@@ -5600,6 +5600,12 @@ function validateSheetMetalFeature(feature, earlier, missing) {
       pickedEdges(feature.edges, "Hem", earlier, missingId);
       if (!finite$1(feature.lengthMillimeters) || feature.lengthMillimeters <= 0) throw new Error("Hem needs a positive length.");
       if (feature.gapMillimeters !== void 0 && !(finite$1(feature.gapMillimeters) && feature.gapMillimeters > 0)) throw new Error("Hem gap must be positive.");
+      return;
+    case "sheet-fold":
+      oneBody(feature.bodyIds, "Fold");
+      if (!feature.line || feature.line.kind !== "sketch-line" || typeof feature.line.sourceFeatureId !== "string" || !missing(feature.line.sourceFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.line.sourceFeatureId) ?? "")) throw new Error("Fold needs a sketch line on the sheet.");
+      if (!finite$1(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 180) throw new Error("Fold angle must be between 0 and 180 degrees.");
+      if (feature.bendRadiusMillimeters !== void 0 && !(finite$1(feature.bendRadiusMillimeters) && feature.bendRadiusMillimeters > 0)) throw new Error("Fold bend radius must be positive.");
       return;
     case "sheet-unfold":
       oneBody(feature.bodyIds, "Unfold");
@@ -10438,6 +10444,7 @@ export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }`,
+  "sheet-fold": 'export interface SheetFoldFeature {\n  id: string; type: "sheet-fold"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  line: SketchLineDirectionReference;\n  angleDegrees: number;\n  bendRadiusMillimeters?: number;\n  inward?: boolean;\n  otherSide?: boolean;\n}\n\nexport interface SketchLineDirectionReference {\n  kind: "sketch-line";\n  sourceFeatureId: string;\n  contourId: string;\n  segmentId: string;\n}',
   "sheet-hem": `export interface SheetHemFeature {
   id: string; type: "sheet-hem"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -37507,7 +37514,8 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
               const section = own(pen.close());
-              const plane2 = own(new Plane([b[0], b[1], b[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+              const zdir = unit(cross$1(o, n)), from = dot$1(zdir, tdir) > 0 ? a : b;
+              const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
               const piece = own(section.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
               const fused = result.fuse(own(piece));
@@ -37523,6 +37531,66 @@ function evaluatePartDocument(document2, options = {}) {
             const { base } = sheetRuleOf(id2);
             const bent = feature.type === "sheet-flange" ? bendFromEdges(body, id2, feature.edges, base, { leg: feature.distanceMillimeters, angleDegrees: feature.angleDegrees, innerRadius: feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Flange" }) : bendFromEdges(body, id2, feature.edges, base, { leg: feature.lengthMillimeters, angleDegrees: 180, innerRadius: feature.gapMillimeters ?? base.bendRadiusMillimeters, inward: feature.inward, what: "Hem" });
             bodies.set(id2, bent);
+            currentBodyID = id2;
+            continue;
+          }
+          if (feature.type === "sheet-fold") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("The sheet metal body is unavailable.");
+            const { base } = sheetRuleOf(id2);
+            const t = base.thicknessMillimeters, r = feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, alpha = feature.angleDegrees * Math.PI / 180;
+            const ba = bendAllowanceMillimeters(feature.angleDegrees, r, base);
+            const [p, q] = sketchLine(feature.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
+            const tdir = unit(sub$1(q, p));
+            const faces = body.faces.filter((f) => f.geomType === "PLANE");
+            const onFace = faces.filter((f) => {
+              const c = f.center, nv2 = f.normalAt(c);
+              const n2 = [nv2.x, nv2.y, nv2.z];
+              const dPlane = Math.abs(dot$1(n2, sub$1(p, [c.x, c.y, c.z])));
+              c.delete();
+              nv2.delete();
+              return dPlane < 1e-4;
+            });
+            if (!onFace.length) throw new Error("The fold line must lie on a flat face of the sheet.");
+            const face = onFace.reduce((big, f) => measureArea(f) > measureArea(big) ? f : big);
+            const nv = face.normalAt(face.center);
+            let n = unit([nv.x, nv.y, nv.z]);
+            nv.delete();
+            let o = unit(cross$1(n, tdir));
+            if (feature.otherSide) o = neg(o);
+            const bounds = body.boundingBox.bounds, span = 4 * Math.hypot(bounds[1][0] - bounds[0][0], bounds[1][1] - bounds[0][1], bounds[1][2] - bounds[0][2]);
+            const slab = (from, to) => {
+              const d = own(draw([from, -span]).lineTo([to, -span]).lineTo([to, span]).lineTo([from, span]).close());
+              const plane2 = own(new Plane([p[0], p[1], p[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+              const piece = own(d.sketchOnPlane(plane2)).extrude(span * 2);
+              return own(piece.translate(tdir[0] * span, tdir[1] * span, tdir[2] * span));
+            };
+            const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
+            if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
+            const sb = strip.boundingBox.bounds;
+            const along = (pt) => dot$1(sub$1(pt, p), tdir);
+            const corners2 = [];
+            for (const x of [sb[0][0], sb[1][0]]) for (const y of [sb[0][1], sb[1][1]]) for (const z of [sb[0][2], sb[1][2]]) corners2.push([x, y, z]);
+            const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
+            const v = (y) => feature.inward ? -t - y : y;
+            const C = [0, -(t + r)];
+            const at = (rho, theta) => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
+            const pen = draw([0, v(0)]);
+            pen.threePointsArcTo(at(r + t, alpha), at(r + t, alpha / 2));
+            pen.lineTo(at(r, alpha));
+            pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
+            const section = own(pen.close());
+            const zdir = unit(cross$1(o, n));
+            const start = add$1(p, scale(tdir, dot$1(zdir, tdir) > 0 ? s0 : s1));
+            const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
+            const bend = own(own(section.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
+            const axisOrigin = add$1(p, scale(n, feature.inward ? r : -(t + r)));
+            const sign = feature.inward ? 1 : -1;
+            const turned = own(own(moving.translate(-o[0] * ba, -o[1] * ba, -o[2] * ba)).rotate(sign * feature.angleDegrees, axisOrigin, tdir));
+            const result = own(own(fixed.fuse(bend)).fuse(turned));
+            if (!isShape3D(result)) throw new Error("Fold did not join the sheet.");
+            face.delete();
+            bodies.set(id2, result);
             currentBodyID = id2;
             continue;
           }
