@@ -866,3 +866,14 @@ design still matches it. The Manage tab's Configurations button opens a compact 
 table; edits are a draft committed with Apply. Not built: material and appearance columns,
 preview-without-applying, and configuration rules.
 
+### r44 (2026-10-22): Inspect — clearance, compare, curvature map, accessibility
+
+Installed.
+
+Two engine analyses beside interference: Clearance measures each body pair's shortest distance
+(`measureDistanceBetween`, zero when they overlap) and Compare splits two bodies into only-in-A,
+only-in-B and shared volumes, showing the differences and calling the bodies identical within a
+tolerance. Two display styles beside zebra and draft: a curvature map (the screen-space turn of
+the world normal, blue through green to red) and accessibility for a +Z tool (reachable faces
+green, undercuts red, walls yellow). Both are TSL node graphs like the earlier overlays.
+

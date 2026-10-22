@@ -51,7 +51,7 @@ export type CADCommandID =
   | "feature-hole" | "feature-split" | "feature-delete-face" | "feature-pipe" | "feature-bounding-solid" | "feature-thread" | "feature-coil" | "feature-remove-body" | "feature-boss" | "feature-rest"
   | "part-section"
   | "part-properties"
-  | "part-interference"
+  | "part-interference" | "part-clearance" | "part-compare"
   | "measure"
   | "part-undo"
   | "part-redo"
@@ -108,7 +108,7 @@ export type CADCommandID =
   | "display-shaded-edges"
   | "display-wireframe"
   | "display-hidden-line"
-  | "display-ghost" | "display-zebra" | "display-draft-analysis"
+  | "display-ghost" | "display-zebra" | "display-draft-analysis" | "display-curvature-map" | "display-accessibility"
   | "lighting-studio"
   | "lighting-softbox"
   | "lighting-daylight"
@@ -199,7 +199,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-pattern",
   "part-section",
   "part-properties",
-  "part-interference",
+  "part-interference", "part-clearance", "part-compare",
   "measure",
   "part-undo",
   "part-redo",
@@ -253,7 +253,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "display-shaded-edges",
   "display-wireframe",
   "display-hidden-line",
-  "display-ghost", "display-zebra", "display-draft-analysis",
+  "display-ghost", "display-zebra", "display-draft-analysis", "display-curvature-map", "display-accessibility",
   "lighting-studio",
   "lighting-softbox",
   "lighting-daylight",

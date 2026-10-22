@@ -116,6 +116,8 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "display-ghost", label: "Ghost", category: "Display", keywords: ["transparent xray"], icon: "◌" },
   { id: "display-zebra", label: "Zebra analysis", category: "Display", keywords: ["stripes continuity surface"], icon: "▤" },
   { id: "display-draft-analysis", label: "Draft analysis", category: "Display", keywords: ["mould pull angle"], icon: "◭" },
+  { id: "display-curvature-map", label: "Curvature map", category: "Display", keywords: ["inspect radius surface"], icon: "◭" },
+  { id: "display-accessibility", label: "Accessibility", category: "Display", keywords: ["inspect tool reach undercut"], icon: "◭" },
   { id: "lighting-studio", label: "Studio Lighting", category: "Scene", keywords: ["environment balanced"], recent: true, icon: "☼" },
   { id: "lighting-softbox", label: "Softbox Lighting", category: "Scene", keywords: ["environment soft"], icon: <AetherIcon name="contrast" /> },
   { id: "lighting-daylight", label: "Daylight", category: "Scene", keywords: ["environment sun"], icon: "☀" },

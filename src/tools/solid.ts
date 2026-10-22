@@ -51,6 +51,8 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-inspect", "Measure", "measure", "show-inspect"),
       tool("solid-section", "Section View", "split", "part-section"),
       tool("solid-interference", "Interference Analysis", "split", "part-interference"),
+      tool("solid-clearance", "Clearance", "measure", "part-clearance"),
+      tool("solid-compare", "Compare Bodies", "measure", "part-compare"),
       tool("solid-properties", "Physical properties", "measure", "part-properties"),
     ] },
     { id: "solid-reference", label: "Construction", singleTool: true, tools: [

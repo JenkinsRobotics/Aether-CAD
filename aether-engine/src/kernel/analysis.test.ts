@@ -101,3 +101,26 @@ it("imports meshes: STL as a mesh reference the viewer draws, OBJ as a faceted s
   const open = btoa("v 0 0 0\nv 1 0 0\nv 1 1 0\nf 1 2 3\n");
   expect(() => evaluatePartDocument({ ...solid, features: [{ ...solid.features[0], dataBase64: open }] } as PartDocument)).toThrow(/closed mesh/);
 });
+
+it("clearance reports each pair's shortest distance (zero when they overlap) and compare splits two bodies into only-A, only-B and shared", () => {
+  const two = withSecond();
+  const clearance = analyzePart(two, { kind: "clearance" });
+  expect(clearance.measurements).toHaveLength(1);
+  expect(clearance.measurements[0]).toMatchObject({ distance_mm: 0, overlapping: true });
+  const compare = analyzePart(two, { kind: "compare" });
+  const [m] = compare.measurements as { only_in_first_mm3: number; only_in_second_mm3: number; common_mm3: number; identical: boolean }[];
+  expect(m.common_mm3).toBeCloseTo(4000, 3);
+  expect(m.only_in_first_mm3 + m.common_mm3).toBeCloseTo(48000, 3);
+  expect(m.only_in_second_mm3 + m.common_mm3).toBeCloseTo(8000, 3);
+  expect(m.identical).toBe(false);
+  expect(compare.bodies.length).toBe(2); // the two difference pieces are shown
+  // A body compared with itself is identical.
+  const same = analyzePart(plate(), { kind: "compare", bodyIds: ["doc:body-1", "doc:body-1"] });
+  expect((same.measurements[0] as { identical: boolean }).identical).toBe(true);
+  // Two apart bodies have a positive clearance.
+  const apart: PartDocument = { ...plate(), features: [...plate().features,
+    { id: "s3", type: "profile", name: "Far", plane: "XY", offsetMillimeters: 30, suppressed: false, profile: { type: "polygon", pointsMillimeters: [[-5, -5], [5, -5], [5, 5], [-5, 5]] } },
+    { id: "e3", type: "extrude", name: "Far block", profileFeatureId: "s3", distanceMillimeters: 5, operation: "new", suppressed: false }] } as PartDocument;
+  expect((analyzePart(apart, { kind: "clearance" }).measurements[0] as { distance_mm: number }).distance_mm).toBeCloseTo(10, 3);
+});
+

@@ -4,7 +4,7 @@ import { advancedValue, cleanAdvancedAppearance, validColor, type CADAdvancedApp
 /* The native RealityKitViewport PreviewAppearance themes, ported exactly. */
 export type CADBackgroundPreset = "midnight" | "graphite" | "cad-light" | "blueprint" | "onshape";
 export type CADMaterialFinish = "matte" | "satin" | "gloss";
-export type CADDisplayStyle = "shaded" | "shaded-edges" | "wireframe" | "hidden-line" | "ghost" | "zebra" | "draft-analysis";
+export type CADDisplayStyle = "shaded" | "shaded-edges" | "wireframe" | "hidden-line" | "ghost" | "zebra" | "draft-analysis" | "curvature-map" | "accessibility";
 export type CADLightingPreset = "studio" | "softbox" | "daylight" | "dark-room" | "model-studio";
 export type CADFloorMode = "none" | "grid" | "floor" | "both";
 
@@ -178,7 +178,7 @@ export function normalizeCADAppearance(input: unknown): CADAppearanceSnapshot {
   const enums = {
     background: ["midnight", "graphite", "cad-light", "blueprint", "onshape"],
     environmentTheme: ["aether", "onshape", "custom", "cad-light", "graphite", "midnight", "blueprint", "high-contrast", "fusion360", "blender", "model-studio"],
-    displayStyle: ["shaded", "shaded-edges", "wireframe", "hidden-line", "ghost", "zebra", "draft-analysis"],
+    displayStyle: ["shaded", "shaded-edges", "wireframe", "hidden-line", "ghost", "zebra", "draft-analysis", "curvature-map", "accessibility"],
     lightingPreset: ["studio", "softbox", "daylight", "dark-room", "model-studio"], floorMode: ["none", "grid", "floor", "both"], materialFinish: ["matte", "satin", "gloss"],
   };
   const target = out as unknown as Record<string, unknown>;

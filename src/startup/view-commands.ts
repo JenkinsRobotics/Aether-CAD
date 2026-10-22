@@ -36,6 +36,8 @@ const DISPLAY_STYLES: readonly (readonly [CADCommandID, CADDisplayStyle])[] = [
   ["display-ghost", "ghost"],
   ["display-zebra", "zebra"],
   ["display-draft-analysis", "draft-analysis"],
+  ["display-curvature-map", "curvature-map"],
+  ["display-accessibility", "accessibility"],
 ];
 
 const LIGHTING: readonly (readonly [CADCommandID, CADLightingPreset])[] = [

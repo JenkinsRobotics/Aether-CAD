@@ -120,7 +120,7 @@ export interface AppliedMate {
 }
 
 /** Exact analyses and file output, in the shape the FreeCAD services answered with. */
-export interface AnalysisOptions { kind: "properties" | "section" | "interference"; plane?: "XY" | "XZ" | "YZ"; offset_mm?: number; reverse?: boolean; density_kg_m3?: number }
+export interface AnalysisOptions { kind: "properties" | "section" | "interference" | "clearance" | "compare"; plane?: "XY" | "XZ" | "YZ"; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; /** compare: the two bodies (default: the first two); clearance: the bodies to check (default: all). */ bodyIds?: string[]; /** compare: a difference smaller than this (mm³) counts as none. */ tolerance_mm3?: number }
 export interface AnalysisResult { status: "ok"; kind: AnalysisOptions["kind"]; bodies: PartGeometryData[]; measurements: Record<string, unknown>[] }
 export interface ExportOptions { format: "step" | "stl"; bodyIds?: string[] | null; toleranceMillimeters?: number }
 export interface ExportResult { format: "step" | "stl"; units: "mm"; body_count: number; bytes: ArrayBuffer }

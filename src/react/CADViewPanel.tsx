@@ -99,6 +99,8 @@ export function CADViewPanel({ active }: { active: boolean }) {
                   { value: "ghost", label: "Translucent" },
                   { value: "zebra", label: "Zebra analysis" },
                   { value: "draft-analysis", label: "Draft analysis" },
+                  { value: "curvature-map", label: "Curvature map" },
+                  { value: "accessibility", label: "Accessibility" },
                 ]}
                 onChange={(event) =>
                   cadAppearance.dispatch({

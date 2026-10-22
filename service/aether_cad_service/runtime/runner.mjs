@@ -39215,7 +39215,51 @@ function analyzePart(document2, options) {
       measurements.push({ first_body_id: items[i][0], second_body_id: items[j][0], volume_mm3: volume });
       render(overlap, `${items[i][0]}|${items[j][0]}`);
     }
-  } else throw new Error("Choose section, interference, properties or distance analysis.");
+  } else if (options.kind === "clearance") {
+    const chosen = options.bodyIds?.length ? [...shapes].filter(([id2]) => options.bodyIds.includes(id2)) : [...shapes];
+    if (chosen.length < 2) throw new Error("Clearance needs at least two bodies.");
+    for (let i = 0; i < chosen.length; i++) for (let j = i + 1; j < chosen.length; j++) {
+      const overlap = chosen[i][1].intersect(chosen[j][1]);
+      let overlapping = false;
+      try {
+        overlapping = isShape3D(overlap) && measureVolume(overlap) > 1e-7;
+      } catch {
+        overlapping = false;
+      }
+      release(overlap);
+      measurements.push({ first_body_id: chosen[i][0], second_body_id: chosen[j][0], distance_mm: overlapping ? 0 : measureDistanceBetween(chosen[i][1], chosen[j][1]), overlapping });
+    }
+  } else if (options.kind === "compare") {
+    const chosen = options.bodyIds?.length === 2 ? options.bodyIds.map((id2) => [id2, shapes.get(id2)]) : [...shapes].slice(0, 2);
+    if (chosen.length < 2 || chosen.some(([, shape]) => !shape)) throw new Error("Compare needs two bodies.");
+    const [[aId, aShape], [bId, bShape]] = chosen;
+    const tolerance2 = options.tolerance_mm3 ?? 1e-6;
+    const piece = (shape, key) => {
+      if (!isShape3D(shape)) {
+        release(shape);
+        return 0;
+      }
+      let v = 0;
+      try {
+        v = measureVolume(shape);
+      } catch {
+        v = 0;
+      }
+      if (v > tolerance2) render(shape, key);
+      else release(shape);
+      return v;
+    };
+    const onlyA = piece(aShape.cut(bShape), `${aId}-only`), onlyB = piece(bShape.cut(aShape), `${bId}-only`);
+    const common = aShape.intersect(bShape);
+    let shared = 0;
+    try {
+      shared = isShape3D(common) ? measureVolume(common) : 0;
+    } catch {
+      shared = 0;
+    }
+    release(common);
+    measurements.push({ first_body_id: aId, second_body_id: bId, only_in_first_mm3: onlyA, only_in_second_mm3: onlyB, common_mm3: shared, identical: onlyA <= tolerance2 && onlyB <= tolerance2 });
+  } else throw new Error("Choose section, interference, clearance, compare, properties or distance analysis.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }
 async function exportPart(document2, options) {
