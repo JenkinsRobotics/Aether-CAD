@@ -62,3 +62,4 @@ export { sheetMetalFeatureTypes, defaultSheetMetalRule, bendAllowanceMillimeters
 export { addConfigurationColumn, removeConfigurationColumn, addConfigurationRow, removeConfigurationRow, setConfigurationValue, applyConfigurationRow, configurationMatches, configurationColumnKey, currentConfigurationValue, validateConfigurations, type ConfigurationColumn, type ConfigurationRow, type ConfigurationTable } from "./configurations";
 
 export { variableUsers, variableGraph, setVariableComment, setVariableFavorite, moveVariable, exportVariables, importVariables, completeExpression, referencedVariables, expressionFunctions, expressionUnits, type VariableUsers, type VariableGraph, type CompletionSuggestion } from "./variable-tools";
+export { copyFeatures, pastePosition } from "./timeline-clipboard";

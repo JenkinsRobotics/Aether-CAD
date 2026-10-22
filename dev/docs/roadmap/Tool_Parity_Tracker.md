@@ -258,7 +258,7 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 |---|---|---|---|---|---|
 | `timeline.add` | Add Recorded Feature | feature: a feature as the design file and timeline.inspect hold it ({type, name?, id?, …}; the name is kept even when another \          feature has it, the id  | Automation `cad.part.runprogram` / saved programs | partial | agents add features through programs, not a single recorded-feature command |
 | `timeline.compute_all` | Compute All |  | Rebuild (every edit rebuilds the history) | parity |  |
-| `timeline.copy` | Copy Features | features: [ids or names] (in timeline order on paste) |  | gap | copy/paste of features between places |
+| `timeline.copy` | Copy Features | features: [ids or names] (in timeline order on paste) | Copy features (`timeline-copy-features`) | partial | done 2026-10-22 (r48): the selected features are held as a clipboard of ids. Missing: across documents |
 | `timeline.delete` | Delete | feature: id\|name \| features: [id\|name] (one undo step; a sketch takes its dependent features with it) → deleted: [ids]; failing?: [{feature, error}] (later f | Delete feature (tree, context menu) | parity | dependents go with it |
 | `timeline.dependents` | Feature Dependents | feature: id\|name → features deleted with it, and features that would fail without it | Show dependencies of … (context menu) | parity |  |
 | `timeline.edit` | Edit Feature | feature: id\|name, set: {fields to change, merged into the feature's definition as timeline.inspect returns it, \          e.g. {"extent": {"distance": "30"}} ( | Edit feature (dialog) | parity |  |
@@ -267,7 +267,7 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `timeline.inspect` | Inspect Feature | feature: id\|name → type, definition (the fields timeline.edit's set changes, with their current values), \          inputs: [{label, param, expression, unit}]  | Properties panel / `cad.part.inspect` | parity |  |
 | `timeline.move_many` | Move Timeline Items | features?: [id\|name], groups?: [folder ids], group?: folder id, position: insertion slot; atomically changes folder membership and moves all selected contents  | Drag in the tree / `cad.feature.move` | partial | one feature at a time |
 | `timeline.move_to_group` | Move Features to Folder | features?: [id\|name], groups?: [ids], group?: id (omit or null to move to the timeline root) | Feature tree folders | parity-ish | drag/move into a folder from the tree; no agent command yet |
-| `timeline.paste` | Paste Features | translate?: [x,y,z] (moves the copies' geometry); the copies go at the marker |  | gap |  |
+| `timeline.paste` | Paste Features | translate?: [x,y,z] (moves the copies' geometry); the copies go at the marker | Paste features (`timeline-paste-features`) | partial | done 2026-10-22 (r48): copies pasted at the marker, references following the copied set, names suffixed "copy". Missing: translate, pasting into another document |
 | `timeline.redefine` | Edit Feature | feature: id\|name, command: the feature's command id, params: its parameters (the feature is rebuilt in place) | Edit feature (dialog) | parity |  |
 | `timeline.rename` | Rename | feature: id\|name, name (references to it follow) | Rename (tree) | parity |  |
 | `timeline.rename_group` | Rename Feature Folder | group: id, name | Feature tree folders | parity-ish | rename from the tree; no agent command yet |
