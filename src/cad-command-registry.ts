@@ -73,7 +73,7 @@ export type CADCommandID =
   | "assembly-create-mate"
   | "assembly-set-mate-dof-value"
   | "assembly-edit-mate-dof-limits"
-  | "assembly-create-relation"
+  | "assembly-create-relation" | "assembly-explode" | "assembly-motion-study"
   | "assembly-toggle-mate-suppressed"
   | "assembly-remove-mate"
   | "assembly-mate-fastened"
@@ -220,7 +220,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-create-mate",
   "assembly-set-mate-dof-value",
   "assembly-edit-mate-dof-limits",
-  "assembly-create-relation",
+  "assembly-create-relation", "assembly-explode", "assembly-motion-study",
   "assembly-toggle-mate-suppressed",
   "assembly-remove-mate",
   "assembly-mate-fastened",

@@ -891,3 +891,14 @@ and Screw buttons open the Relation dialog. Values and relations are residuals b
 residuals, so the acceptance check covers them. A rotation driven to exactly 180° sits on the
 angle wrap and may not converge.
 
+### r46 (2026-10-22): exploded view and motion study
+
+Installed.
+
+Explode solves the assembly and shows every instance pushed away from the centre of the placements
+by its own offset; Explode again reassembles (display only, the design keeps its placements). The
+motion study window drives one mate degree of freedom from a start to an end value over N steps,
+solves each step in-process through the driven-value residuals of r45, plays the placements in
+the viewport and exports a CSV of every step. Both sit on `src/startup/assembly-motion.ts`, pure
+over a solver job and tested there.
+

@@ -56,32 +56,7 @@ export async function solveAssemblyProjection(
     || Math.abs(Math.hypot(...instance.rotation) - 1) > 1e-6))
     throw new Error("The assembly solver returned an invalid placement. The previous geometry is unchanged.");
 
-  const bodies: SolvedBody[] = [];
-  for (const instance of projection.instances) {
-    if (instance.suppressed || !instance.visible) continue;
-    const placement = placements.get(instance.id);
-    if (!placement) continue;
-    const definition = projection.part_definitions.find(
-      (part) => part.id === instance.definition_id,
-    );
-    if (!definition?.feature_document) continue;
-    const document = deps.parseDocument(JSON.stringify(definition.feature_document));
-    const model = await deps.evaluate(document);
-    for (const body of model.parts) {
-      // A body the part hides stays hidden when the part is placed.
-      if (document.bodyProperties?.[body.id]?.visible === false) continue;
-      bodies.push({
-        data: {
-          ...body,
-          id: `assembly:${instance.id}:${body.id}`,
-          name: `${instance.name} · ${body.name}`,
-        },
-        // The solver already answers in millimetres, unlike the projection.
-        positionMillimeters: placement.placement_mm,
-        quaternion: placement.rotation,
-      });
-    }
-  }
+  const bodies = await bodiesForPlacements(projection, solution.instances, deps);
   return { bodies, solution, untranslated };
 }
 
@@ -99,3 +74,25 @@ export function describeSolve(result: AssemblySolveResult): string {
   if (untranslated.length) parts.push(`· ${untranslated.length} not sent`);
   return parts.join(" ") + ".";
 }
+
+/** The visible bodies of every placed instance at the given placements (millimetres, quaternions). */
+export async function bodiesForPlacements(projection: AssemblyProjectionV1, instances: AssemblySolution["instances"], deps: Pick<AssemblySolveDependencies, "evaluate" | "parseDocument">): Promise<SolvedBody[]> {
+  const placements = new Map(instances.map((i) => [i.id, i]));
+  const bodies: SolvedBody[] = [];
+  for (const instance of projection.instances) {
+    if (instance.suppressed || !instance.visible) continue;
+    const placement = placements.get(instance.id);
+    if (!placement) continue;
+    const definition = projection.part_definitions.find((part) => part.id === instance.definition_id);
+    if (!definition?.feature_document) continue;
+    const document = deps.parseDocument(JSON.stringify(definition.feature_document));
+    const model = await deps.evaluate(document);
+    for (const body of model.parts) {
+      // A body the part hides stays hidden when the part is placed.
+      if (document.bodyProperties?.[body.id]?.visible === false) continue;
+      bodies.push({ data: { ...body, id: `assembly:${instance.id}:${body.id}`, name: `${instance.name} · ${body.name}` }, positionMillimeters: placement.placement_mm, quaternion: placement.rotation });
+    }
+  }
+  return bodies;
+}
+

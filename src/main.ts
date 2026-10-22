@@ -32,7 +32,9 @@ import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
 import { solveAssemblyJob } from "@aether/core/kernel";
-import { describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
+import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
+import { explodedPlacements } from "./startup/assembly-motion";
+import { openMotionStudyWindow } from "./assembly-motion-window";
 import {
   beginMateAuthoring,
   registerMateCommands,
@@ -1277,6 +1279,32 @@ async function solveOpenAssembly(): Promise<void> {
     setStatus(`Assembly solve: ${(error as Error).message}`, "error");
   }
 }
+
+/** Exploded view (SolidCraft's explode.*): the solved assembly with every instance pushed
+ *  away from the centre; the design's placements are untouched. Shown or hidden, no state. */
+let exploded = false;
+async function toggleExplodedView(): Promise<void> {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before exploding it.", "error"); return; }
+  if (exploded) { exploded = false; await solveOpenAssembly(); return; }
+  const serial = ++assemblyRenderSerial;
+  setStatus("Solving the assembly for the exploded view…");
+  try {
+    const result = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) });
+    if (serial !== assemblyRenderSerial) return;
+    const bodies = await bodiesForPlacements(projection, explodedPlacements(result.solution.instances, 1), { evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) });
+    viewer.replaceAssemblyBodies(bodies); viewer.frameAll(); exploded = true;
+    setStatus(`Exploded view: ${bodies.length} bodies pushed from the centre. Explode again to assemble.`, "success");
+  } catch (error) { setStatus(`Exploded view: ${(error as Error).message}`, "error"); }
+}
+cadCommands.register("assembly-explode", () => { void toggleExplodedView(); });
+cadCommands.setEnabled("assembly-explode", true);
+cadCommands.register("assembly-motion-study", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before running a motion study.", "error"); return; }
+  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"));
+});
+cadCommands.setEnabled("assembly-motion-study", true);
 
 configurePartExport(() => activePartDocument);
 cadObjectAppearance.attach(viewer);
