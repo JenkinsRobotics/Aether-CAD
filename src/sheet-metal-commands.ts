@@ -1,4 +1,4 @@
-import { profileFrame, rollbackPosition, type PartDocument } from "@aether/core/document";
+import { bendTableCSV, bodyIDForFeature, profileFrame, rollbackPosition, sheetBendTable, type PartDocument } from "@aether/core/document";
 import { sketchDrawingToDXF } from "@aether/core/sketch";
 import { cadCommands } from "./cad-command-registry";
 import { aetherKernel } from "./engine/aether/kernel";
@@ -27,5 +27,18 @@ export function mountSheetMetalCommands(getDocument: () => PartDocument | null) 
     }).catch((error: unknown) => report(error instanceof Error ? error.message : String(error), "error"));
   });
   cadCommands.setEnabled("sheet-export-flat-dxf", true);
-  return release;
+  // Bend table (SolidCraft's sheet.export_bend_table): every bend of the last sheet body, as CSV.
+  const releaseTable = cadCommands.register("sheet-export-bend-table", () => {
+    const doc = getDocument();
+    const features = doc?.features.slice(0, rollbackPosition(doc)) ?? [];
+    const base = [...features].reverse().find((f) => f.type === "sheet-base" && !f.suppressed);
+    if (!doc || !base || base.type !== "sheet-base") { report("Start with a sheet metal base to export a bend table.", "error"); return; }
+    const rows = sheetBendTable({ features }, bodyIDForFeature(doc, base), base);
+    if (!rows.length) { report("This sheet has no bends yet.", "error"); return; }
+    const url = URL.createObjectURL(new Blob([bendTableCSV(rows)], { type: "text/csv" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${doc.name || "sheet"}-bends.csv`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    report(`Bend table saved: ${rows.length} bend${rows.length === 1 ? "" : "s"}.`);
+  });
+  cadCommands.setEnabled("sheet-export-bend-table", true);
+  return () => { release(); releaseTable(); };
 }

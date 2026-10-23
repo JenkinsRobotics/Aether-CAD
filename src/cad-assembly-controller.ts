@@ -2,6 +2,7 @@ import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-c
 import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
 import { appendDocument, availableBodies, parsePartDocument, splitDocument, type PartDocument } from "./aether-core";
 import type { PartDefinitionProjection } from "./cad-assembly-bridge";
+import { standardPartDocument, standardPartFromProperties, standardPartLabel, standardPartProperties, standardPartVolume, type StandardPartRequest } from "@aether/core/document";
 import { asBuiltConnectorFrames, asBuiltJointDraftIssues, type AsBuiltJointDraft, type Placement, type WorldFrame } from "./cad-joint-authoring";
 import {
   AssemblyBridgeClient,
@@ -836,6 +837,35 @@ export class CADAssemblyController {
       await this.mutate("update_instance", { assembly_id: canonical.assembly.assembly_id, instance: { ...rest, rest_transform: { position_m: instance.rest_transform.position_m.map((v, i) => v + delta[i]), rotation_quaternion_xyzw: [...instance.rest_transform.rotation_quaternion_xyzw] } } });
       this.onStatus(`${instance.name} moved to reach the point.`, "success");
     } catch (error) { this.onStatus(`Reach point failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  /** parts.insert / parts.fastener: a standard part as a new definition and one occurrence. */
+  async insertStandardPart(request: StandardPartRequest, positionMillimeters: readonly [number, number, number]): Promise<void> {
+    try {
+      const document = standardPartDocument(request), label = standardPartLabel(request);
+      const count = this.canonical?.assembly.instances.filter((i) => i.name.startsWith(`${label}:`)).length ?? 0;
+      await this.addDefinitionWithInstance(
+        { name: label, part_number: label, mass_kg: standardPartVolume(request) * 7850e-9, source: { kind: "authored", label }, custom_properties: standardPartProperties(request), feature_document: document },
+        { name: `${label}:${count + 1}`, rest_transform: { position_m: positionMillimeters.map((v) => v / 1000), rotation_quaternion_xyzw: [0, 0, 0, 1] } },
+      );
+      this.onStatus(`Inserted ${label}.`, "success");
+    } catch (error) { this.onStatus(`Standard part failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+  /** parts.resize: regenerate the selected standard part at a new size; its occurrences and mates stay. */
+  async resizeSelectedStandardPart(request: StandardPartRequest): Promise<void> {
+    const instance = this.requireEditableSelectedInstance();
+    const definition = this.definitionOf(instance);
+    const current = standardPartFromProperties(definition.custom_properties);
+    if (!current) throw new Error(`${definition.name} is not a standard part.`);
+    if (current.family !== request.family) throw new Error("Resize keeps the family; insert a different part instead.");
+    try {
+      const label = standardPartLabel(request);
+      await this.replaceDefinition(definition, {
+        name: label, part_number: label, mass_kg: standardPartVolume(request) * 7850e-9, feature_document: standardPartDocument(request),
+        custom_properties: [...definition.custom_properties.filter((p) => !p.key.startsWith("standard_part_")), ...standardPartProperties(request)],
+      });
+      this.onStatus(`Resized to ${label}.`, "success");
+    } catch (error) { this.onStatus(`Resize failed: ${messageFor(error)}`, "error"); throw error; }
   }
 
   async removeContactSet(id: string): Promise<void> {

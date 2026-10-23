@@ -1055,3 +1055,42 @@ analysis overlay and keepable as CSV), an inline plot of the driven value or an 
 coordinate, and an interference mode that checks every pair at each step whatever the contact
 flag says. Not built: a group entity to unlock (`component.unlock`), picking the reach `at`
 point in the viewport, keeping a trace as sketch geometry, cam and sweep joints.
+
+### r56 (2026-10-23): configuration rules and preview
+
+Installed.
+
+Configuration rules (SolidCraft's `config.rule`, `config.rules`, `config.preview`) live on the
+configuration table (`document/config-rules.ts`), ported from SolidCraft's `config_rules.rs`: an
+ordered list of rules, each with a condition tree (always, all, any, not, a variable compared to
+an expression, a feature's suppression) and one effect (drive a variable, drive a suppression,
+keep a variable in a range, allow only listed values). Activating a row writes its values and
+then runs the rules in order; drives apply as they match and re-evaluate the variables,
+restrictions are checked last and refuse the row with the rule's name. A bare number compared to
+a length or angle is read in millimetres or degrees. Targets must be configuration columns, as in
+SolidCraft. Preview runs the same thing on a copy and reports the changes and matched rules, or
+the refusal. The Configurations window authors rules with one comparison (or always); nested
+trees are for agents and files. Not built: reordering rules in the window and a per-rule unit.
+
+### r57 (2026-10-23): perforate, bend table, standard parts
+
+Installed.
+
+Perforate (SolidCraft's `sheet.perforate`) is a sheet-metal feature: on the picked planar face it
+lays a square or 60° staggered grid centred on the face, keeps the centres that are inside the
+outer boundary, outside every cut-out and at least margin + radius from all of them (the
+boundaries are sampled into polygons in the face's plane), and cuts the hole cylinders through
+the sheet's thickness as one compound. Unfold re-cuts the holes whose axis lies on the base
+plate, since the plate is the only face that keeps its place when flat; holes on flanges are not
+laid out yet. The bend table (`sheet.export_bend_table`) is a pure read of the history: every
+flange, hem and fold of the body with its angle, inner radius, thickness, K factor, bend
+allowance, bend deduction (2·(R+T)·tan(θ/2) − BA, none at 180°), leg and direction, as CSV.
+
+Standard parts (`parts.library`, `parts.insert`/`parts.fastener`, `parts.resize`) are tables of
+seven ISO families in `document/standard-parts.ts`; each size generates an ordinary part document
+(profiles and extrusions on +Z), so the engine builds it like any part and its volume matches the
+analytic one (test). Inserting adds a definition carrying the document, a part number, steel mass
+and `standard_part_*` custom properties, plus one occurrence at a typed position; Change Part
+Size regenerates the definition in place, so occurrences and mates stay. Threads are not
+modelled. Gotcha recorded: a cut extrusion goes into the material (−Z from its sketch plane),
+so a bore is drawn on the face it starts from.

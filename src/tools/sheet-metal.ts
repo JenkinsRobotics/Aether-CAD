@@ -26,6 +26,8 @@ export const sheetMetalWorkspace: CADRibbonWorkspaceDefinition = {
       tool("sheet-unfold", "Unfold", "sheet", "feature-sheet-unfold"),
       tool("sheet-refold", "Refold", "hinge", "feature-sheet-refold"),
       tool("sheet-flat-dxf", "Flat pattern DXF", "export", "sheet-export-flat-dxf"),
+      tool("sheet-bend-table", "Bend table", "export", "sheet-export-bend-table"),
+      tool("sheet-perforate", "Perforate", "pattern", "feature-sheet-perforate"),
       tool("sheet-make-joint", "Make joint", "weld", undefined, sheetMetalProducer),
       tool("sheet-corner", "Corner", "chamfer", undefined, sheetMetalProducer),
       tool("sheet-bend-relief", "Bend relief", "trim", undefined, sheetMetalProducer),

@@ -7,7 +7,7 @@ import { setFeatureSuppressed } from "./feature-history";
  *  table remembers which row is active and whether the design still matches it. */
 export type ConfigurationColumn = { kind: "param"; name: string } | { kind: "suppress"; featureId: string };
 export interface ConfigurationRow { name: string; values: Record<string, string | boolean> }
-export interface ConfigurationTable { columns: ConfigurationColumn[]; rows: ConfigurationRow[]; activeRow?: string }
+export interface ConfigurationTable { columns: ConfigurationColumn[]; rows: ConfigurationRow[]; activeRow?: string; /** Ordered rules run after a row is activated (config-rules.ts). */ rules?: import("./config-rules").ConfigRule[] }
 
 export const configurationColumnKey = (column: ConfigurationColumn) => column.kind === "param" ? `param:${column.name}` : `suppress:${column.featureId}`;
 

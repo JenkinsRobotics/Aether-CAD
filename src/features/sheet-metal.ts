@@ -1,5 +1,6 @@
 import { defaultSheetMetalRule, type EdgeFinishEdge } from "@aether/core/document";
-import { mountPickedReferences } from "./picked-references";
+import type { SolidFaceReference } from "@aether/core/document";
+import { faceIdentity, mountPickedReferences } from "./picked-references";
 import { sketchDirectionLines } from "../modeling/extrude-direction-reference";
 import { entityChips, requireSelections, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 import { bodiesControls, bodiesLayout, bodiesValid } from "./surface";
@@ -99,4 +100,35 @@ export const sheetFoldEditor: FeatureEditor = {
 };
 export const sheetUnfoldEditor = bodyOnly("sheet-unfold", "Sheet metal body to unfold");
 export const sheetRefoldEditor = bodyOnly("sheet-refold", "Unfolded body to refold");
-export const sheetMetalEditors: FeatureEditor[] = [sheetBaseEditor, sheetFlangeEditor, sheetHemEditor, sheetFoldEditor, sheetUnfoldEditor, sheetRefoldEditor];
+/** Perforate: a grid of round holes through a picked planar face, clear of edges and cut-outs. */
+export const sheetPerforateEditor: FeatureEditor = {
+  type: "sheet-perforate",
+  controls(context: FeatureEditorContext) {
+    const { field, feature } = context;
+    return { ...bodiesControls(context), face: field("Face", JSON.stringify(feature?.face ? [feature.face] : [])),
+      diameter: field("Hole diameter (mm)", String(feature?.diameterMillimeters ?? 4)), pitch: field("Pitch (mm)", String(feature?.pitchMillimeters ?? 8)),
+      margin: field("Margin (mm, blank = diameter)", feature?.marginMillimeters === undefined ? "" : String(feature.marginMillimeters)),
+      pattern: field("Pattern", feature?.pattern ?? "staggered", ["staggered", "square"]) };
+  },
+  layout(context, controls) {
+    bodiesLayout(context, controls, "Sheet metal body", true);
+    const faces = mountPickedReferences<SolidFaceReference>(context, controls.face, { title: "Face to perforate", kind: "face", requestEvent: "aether-offset-faces-request", replyEvent: "aether-offset-faces", replyKey: "faces", identity: faceIdentity,
+      note: "Pick a planar face of the sheet. Holes keep the margin from its edges and cut-outs; staggered rows sit at 60°.",
+      onChange: (picked) => { if (picked.length > 1) faces.update([picked[picked.length - 1]]); } });
+  },
+  validate(controls) {
+    const face = JSON.parse(controls.face.value || "[]")[0] as SolidFaceReference | undefined;
+    if (!face) return "Pick the face to perforate.";
+    if (face.surfaceType) return "The face must be planar.";
+    const d = Number(controls.diameter.value), p = Number(controls.pitch.value);
+    if (!(d > 0)) return "Enter a positive hole diameter.";
+    if (!(p > d)) return "The pitch must be larger than the hole diameter.";
+    if (controls.margin.value.trim() && !(Number(controls.margin.value) >= 0)) return "The margin must be zero or more.";
+    return bodiesValid(controls, "sheet metal body", 1);
+  },
+  serialize(values) {
+    const face = JSON.parse(values.face)[0] as SolidFaceReference & { centerMillimeters?: unknown }; delete face.centerMillimeters;
+    return { bodyIds: JSON.parse(values.bodies), face, diameterMillimeters: Number(values.diameter), pitchMillimeters: Number(values.pitch), ...(values.margin?.trim() ? { marginMillimeters: Number(values.margin) } : {}), pattern: values.pattern };
+  },
+};
+export const sheetMetalEditors: FeatureEditor[] = [sheetBaseEditor, sheetFlangeEditor, sheetHemEditor, sheetFoldEditor, sheetUnfoldEditor, sheetRefoldEditor, sheetPerforateEditor];

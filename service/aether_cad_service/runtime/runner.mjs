@@ -5595,7 +5595,7 @@ function validateCurve3D(feature) {
     if (Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-6) throw new Error("Consecutive 3D sketch points must be distinct.");
   }
 }
-const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold"];
+const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"];
 const bendAllowanceMillimeters = (angleDegrees, innerRadius, rule) => angleDegrees * Math.PI / 180 * (innerRadius + rule.kFactor * rule.thicknessMillimeters);
 const finite$1 = (v) => typeof v === "number" && Number.isFinite(v);
 function validateSheetMetalRule(rule, what) {
@@ -5642,7 +5642,19 @@ function validateSheetMetalFeature(feature, earlier, missing) {
     case "sheet-refold":
       oneBody(feature.bodyIds, "Refold");
       return;
+    case "sheet-perforate":
+      validateSheetPerforate(feature);
+      return;
   }
+}
+function validateSheetPerforate(feature) {
+  oneBody(feature.bodyIds, "Perforate");
+  if (!feature.face || typeof feature.face.sourceFeatureId !== "string") throw new Error("Perforate needs a picked face.");
+  if (feature.face.surfaceType) throw new Error("Perforate goes on a planar face.");
+  if (!finite$1(feature.diameterMillimeters) || feature.diameterMillimeters <= 0) throw new Error("Perforate needs a positive hole diameter.");
+  if (!finite$1(feature.pitchMillimeters) || feature.pitchMillimeters <= feature.diameterMillimeters) throw new Error("The pitch must be larger than the hole diameter.");
+  if (feature.marginMillimeters !== void 0 && !(finite$1(feature.marginMillimeters) && feature.marginMillimeters >= 0)) throw new Error("The margin must be zero or more.");
+  if (feature.pattern !== void 0 && feature.pattern !== "staggered" && feature.pattern !== "square") throw new Error("Perforate pattern is staggered or square.");
 }
 function validateRemoveBody(feature) {
   if (!Array.isArray(feature.bodyIds) || !feature.bodyIds.length || !feature.bodyIds.every((id2) => typeof id2 === "string" && id2.trim())) throw Error("Choose the parts to remove.");
@@ -6673,6 +6685,49 @@ function migratePartDocument(value2) {
     features
   };
 }
+const metric = ["M3", "M4", "M5", "M6", "M8", "M10", "M12"];
+const zip$1 = (keys, rows) => Object.fromEntries(metric.map((m, i) => [m, Object.fromEntries(keys.map((k, j) => [k, rows[i][j]]))]));
+Object.freeze({
+  socket_head_cap_screw: {
+    name: "Socket head cap screw",
+    standard: "ISO 4762",
+    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100],
+    sizes: zip$1(["d", "dk", "k", "s", "t"], [[3, 5.5, 3, 2.5, 1.3], [4, 7, 4, 3, 2], [5, 8.5, 5, 4, 2.5], [6, 10, 6, 5, 3], [8, 13, 8, 6, 4], [10, 16, 10, 8, 5], [12, 18, 12, 10, 6]])
+  },
+  hex_bolt: {
+    name: "Hex head bolt",
+    standard: "ISO 4017",
+    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100],
+    sizes: zip$1(["d", "s", "k"], [[3, 5.5, 2], [4, 7, 2.8], [5, 8, 3.5], [6, 10, 4], [8, 13, 5.3], [10, 16, 6.4], [12, 18, 7.5]])
+  },
+  hex_nut: {
+    name: "Hex nut",
+    standard: "ISO 4032",
+    sizes: zip$1(["d", "s", "m"], [[3, 5.5, 2.4], [4, 7, 3.2], [5, 8, 4.7], [6, 10, 5.2], [8, 13, 6.8], [10, 16, 8.4], [12, 18, 10.8]])
+  },
+  washer: {
+    name: "Plain washer",
+    standard: "ISO 7089",
+    sizes: zip$1(["d1", "d2", "h"], [[3.2, 7, 0.5], [4.3, 9, 0.8], [5.3, 10, 1], [6.4, 12, 1.6], [8.4, 16, 1.6], [10.5, 20, 2], [13, 24, 2.5]])
+  },
+  set_screw: {
+    name: "Hex socket set screw, flat point",
+    standard: "ISO 4026",
+    lengths: [3, 4, 5, 6, 8, 10, 12, 16, 20, 25],
+    sizes: zip$1(["d", "s", "t"], [[3, 1.5, 1.2], [4, 2, 1.5], [5, 2.5, 2], [6, 3, 2], [8, 4, 3], [10, 5, 4], [12, 6, 4.8]])
+  },
+  dowel_pin: {
+    name: "Dowel pin",
+    standard: "ISO 8734",
+    lengths: [6, 8, 10, 12, 16, 20, 24, 30, 40, 50],
+    sizes: Object.fromEntries([3, 4, 5, 6, 8, 10, 12].map((d) => [`${d}`, { d }]))
+  },
+  bearing: {
+    name: "Deep groove ball bearing",
+    standard: "ISO 15",
+    sizes: { "623": { d: 3, D: 10, B: 4 }, "625": { d: 5, D: 16, B: 5 }, "608": { d: 8, D: 22, B: 7 }, "6000": { d: 10, D: 26, B: 8 }, "6001": { d: 12, D: 28, B: 8 }, "6200": { d: 10, D: 30, B: 9 }, "6201": { d: 12, D: 32, B: 10 }, "6202": { d: 15, D: 35, B: 11 }, "6203": { d: 17, D: 40, B: 12 } }
+  }
+});
 similarityTransform([0, 0], [0, 0], 0);
 const tolerance = 1e-7;
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -10542,6 +10597,23 @@ export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }`,
+  "sheet-perforate": `export interface SheetPerforateFeature {
+  id: string; type: "sheet-perforate"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  face: import("./solid-face-reference").SolidFaceReference;
+  diameterMillimeters: number;
+  /** Centre-to-centre distance between neighbouring holes. */
+  pitchMillimeters: number;
+  /** Clearance from edges and cut-outs to the hole's rim; default: the diameter. */
+  marginMillimeters?: number;
+  pattern?: "staggered" | "square";
+}
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "sheet-refold": 'export interface SheetRefoldFeature { id: string; type: "sheet-refold"; name: string; suppressed: boolean; bodyIds: [string] }',
   "sheet-unfold": 'export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }',
   "shell": 'export interface ShellFeature {\n  id: string;\n  type: "shell";\n  name: string;\n  targetBodyId?: string;\n  thicknessMillimeters: number;\n  /** Faces left open. Prefer a face reference (the face of an earlier solid by\n   *  outward normal or surface type), which survives upstream dimension edits;\n   *  the plane/offset form matches a fixed coordinate and is kept for older files. */\n  removedFaces?: ShellOpenFace[];\n  /** Which side of the original surface the wall takes; default inside. */\n  direction?: "inside" | "outside" | "both";\n  /** Also open every face tangent-continuous with a picked one. */\n  tangentChain?: boolean;\n  suppressed: boolean;\n}\n\nexport type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";',
@@ -37863,13 +37935,91 @@ function evaluatePartDocument(document2, options = {}) {
             currentBodyID = id2;
             continue;
           }
+          const perforations = (body, f, thickness) => {
+            const face = faceByReference(body, f.face, "Perforate face");
+            const c = [...deleteAfterVectorTuple(face.center)], n = unit$1([...deleteAfterVectorTuple(face.normalAt([c[0], c[1], c[2]]))]);
+            const x = unit$1(canonicalPlaneXDirection(n)), y = unit$1(cross$2(n, x));
+            const to2 = (p2) => [dot$2(sub$2(p2, c), x), dot$2(sub$2(p2, c), y)];
+            const polygon = (w) => {
+              const pts = [];
+              for (const edge of w.edges) {
+                own(edge);
+                for (let i = 0; i < 24; i++) {
+                  const v = edge.pointAt(i / 24);
+                  pts.push(to2([v.x, v.y, v.z]));
+                  v.delete();
+                }
+              }
+              return pts;
+            };
+            const outer = polygon(own(face.clone().outerWire())), holes = face.clone().innerWires().map((w) => polygon(own(w)));
+            const inside2 = (poly, [px, py]) => {
+              let hit = false;
+              for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const [xi, yi] = poly[i], [xj, yj] = poly[j];
+                if (yi > py !== yj > py && px < (xj - xi) * (py - yi) / (yj - yi) + xi) hit = !hit;
+              }
+              return hit;
+            };
+            const distance2 = (poly, [px, py]) => {
+              let best = Infinity;
+              for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0;
+                best = Math.min(best, Math.hypot(px - ax - t * dx, py - ay - t * dy));
+              }
+              return best;
+            };
+            const r = f.diameterMillimeters / 2, clear = (f.marginMillimeters ?? f.diameterMillimeters) + r, p = f.pitchMillimeters;
+            const xs = outer.map((q) => q[0]), ys = outer.map((q) => q[1]);
+            const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+            const rowStep = f.pattern === "square" ? p : p * Math.sqrt(3) / 2;
+            const cols = Math.floor((x1 - x0 - 2 * clear) / p), rows = Math.floor((y1 - y0 - 2 * clear) / rowStep);
+            const startX = (x0 + x1) / 2 - cols * p / 2, startY = (y0 + y1) / 2 - rows * rowStep / 2;
+            const points = [];
+            for (let j = 0; j <= rows; j++) for (let i = -1; i <= cols + 1; i++) {
+              const q = [startX + i * p + (f.pattern !== "square" && j % 2 ? p / 2 : 0), startY + j * rowStep];
+              if (!inside2(outer, q) || holes.some((h) => inside2(h, q)) || distance2(outer, q) < clear - 1e-9 || holes.some((h) => distance2(h, q) < clear - 1e-9)) continue;
+              points.push(add$2(add$2(c, scale(x, q[0])), scale(y, q[1])));
+              if (points.length > 5e3) throw new Error("Perforate would make more than 5000 holes. Increase the pitch.");
+            }
+            if (!points.length) throw new Error("No hole fits inside the margin. Reduce the margin, the diameter or the pitch.");
+            const depth = thickness + 0.02;
+            return { points, tools: points.map((q) => own(makeCylinder(r, depth, add$2(q, scale(n, 0.01)), [-n[0], -n[1], -n[2]]))) };
+          };
+          if (feature.type === "sheet-perforate") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("The sheet metal body is unavailable.");
+            const { base } = sheetRuleOf(id2);
+            const { tools: holes } = perforations(body, feature, base.thicknessMillimeters);
+            const before = measureVolume(body);
+            const cut = body.cut(own(makeCompound(holes)));
+            if (!isShape3D(cut) || measureVolume(cut) >= before - 1e-9) throw new Error("Perforate removed nothing. Check that the face belongs to the sheet.");
+            bodies.set(id2, own(cut));
+            currentBodyID = id2;
+            continue;
+          }
           if (feature.type === "sheet-unfold") {
             const id2 = feature.bodyIds[0];
             const { base, index: baseIndex } = sheetRuleOf(id2);
             const plate = bodyAt(base.id, id2);
             if (!plate) throw new Error("The sheet metal base is unavailable.");
             let flat = own(plate.clone());
-            for (const f of document2.features.slice(baseIndex + 1, index)) {
+            for (let k = baseIndex + 1; k < index; k++) {
+              const f = document2.features[k];
+              if (f.type === "sheet-perforate" && !f.suppressed && f.bodyIds[0] === id2) {
+                const before = bodyAt(document2.features[k - 1].id, id2);
+                if (!before) continue;
+                const { tools: tools2, points } = perforations(before, f, base.thicknessMillimeters);
+                const onPlate = tools2.filter((_, i) => {
+                  const v = own(makeVertex(points[i]));
+                  return measureDistanceBetween(plate, v) < 1e-6;
+                });
+                if (onPlate.length) {
+                  const cut = flat.cut(own(makeCompound(onPlate)));
+                  if (isShape3D(cut)) flat = own(cut);
+                }
+                continue;
+              }
               if (f.suppressed || f.type !== "sheet-flange" && f.type !== "sheet-hem" || f.bodyIds[0] !== id2) continue;
               flat = f.type === "sheet-flange" ? bendFromEdges(flat, id2, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, f.edges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
             }

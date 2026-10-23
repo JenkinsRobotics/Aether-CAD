@@ -16,7 +16,7 @@ export type CADToolbarMode = "traditional" | "floating";
 export type CADPanelID = "browser" | "inspector" | "bottom";
 export type CADPanelPlacement = "docked" | "floating" | "hidden";
 export type CADPanelPlacements = Readonly<Record<CADPanelID, CADPanelPlacement>>;
-export type CADStartDialog = "new-workspace" | "insert-component" | "add-connector" | "create-mate" | "set-mate-dof-value" | "edit-mate-dof-limits" | "create-relation" | "create-contact-set" | "part-properties" | "bodies-to-component" | "as-built-joint" | "reach-point" | "import" | "export" | "preferences" | "graphics-preferences" | "help" | null;
+export type CADStartDialog = "new-workspace" | "insert-component" | "add-connector" | "create-mate" | "set-mate-dof-value" | "edit-mate-dof-limits" | "create-relation" | "create-contact-set" | "part-properties" | "bodies-to-component" | "as-built-joint" | "reach-point" | "insert-standard-part" | "resize-standard-part" | "import" | "export" | "preferences" | "graphics-preferences" | "help" | null;
 
 export type CADMatePreviewPresentation =
   | { readonly state: "loading"; readonly message: string }
@@ -107,6 +107,7 @@ export type CADPresentationAction =
   | { type: "move-bodies-to-component"; draft: import("./cad-component-authoring").BodiesToComponentDraft }
   | { type: "create-assembly-as-built-joint"; draft: import("./cad-joint-authoring").AsBuiltJointDraft }
   | { type: "reach-assembly-point"; draft: import("./react/dialogs/reach-point").ReachPointDraft }
+  | { type: "insert-standard-part"; draft: import("./react/dialogs/standard-part").StandardPartDraft }
   | { type: "clear-assembly-mate-preview" }
   | { type: "open-assembly-workspace" }
   | { type: "save-assembly-workspace" }

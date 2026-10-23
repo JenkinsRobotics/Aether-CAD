@@ -100,6 +100,8 @@ export type CADCommandID =
   | "part-continuity" | "part-curvature-comb" | "part-isocurve" | "part-minimum-radius"
   | "feature-lip" | "feature-snap-fit" | "show-plastic-rules"
   | "assembly-as-built-joint" | "assembly-rigid-group" | "assembly-reach-point"
+  | "feature-sheet-perforate" | "sheet-export-bend-table"
+  | "assembly-insert-standard-part" | "assembly-resize-standard-part"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -250,6 +252,8 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "part-continuity", "part-curvature-comb", "part-isocurve", "part-minimum-radius",
   "feature-lip", "feature-snap-fit", "show-plastic-rules",
   "assembly-as-built-joint", "assembly-rigid-group", "assembly-reach-point",
+  "feature-sheet-perforate", "sheet-export-bend-table",
+  "assembly-insert-standard-part", "assembly-resize-standard-part",
   "fit-view",
   "clear-mates",
   "view-top",

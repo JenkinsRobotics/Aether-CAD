@@ -14,6 +14,8 @@ export * from "./file-types";
 export * from "./feature-history";
 export * from "./component-split";
 export { validateCurve3D, curve3dPolylines, moveCurve3DPoint, type Curve3DFeature } from "./curve3d";
+export { STANDARD_PARTS, standardPartLibrary, standardPartDocument, standardPartIssues, standardPartLabel, standardPartVolume, standardPartProperties, standardPartFromProperties, type StandardPartFamily, type StandardPartRequest } from "./standard-parts";
+export { validateConfigRules, applyConfigRules, activateConfiguration, previewConfiguration, setConfigRule, removeConfigRule, type ConfigRule, type RuleCondition, type RuleEffect, type RuleOperator, type RuleTrace } from "./config-rules";
 export { PLASTIC_RULE_LIBRARY, validatePlasticRules, plasticRuleFor, setPlasticRule, removePlasticRule, setActivePlasticRule, assignPlasticRule, type PlasticRule, type PlasticRulesTable } from "./plastic-rules";
 
 export { resolveProfileDrawing, profileSketchFrame } from "./profile-projection";
@@ -61,6 +63,7 @@ export {validateSolidEdgeReference,validateEdgeFinishEdge,type SolidEdgeReferenc
 export * from "./sketch-regions";
 export { patternCopyIds } from "./pattern";
 export { surfaceFeatureTypes, surfaceCreatorTypes, validateSurfaceFeature, type SurfaceFeature, type SurfaceExtrudeFeature, type SurfaceRuledFeature, type SurfaceExtendFeature, type SurfaceBoundaryFeature, type SurfaceBlendFeature, type SurfaceUntrimFeature, type SurfaceRevolveFeature, type SurfaceLoftFeature, type SurfacePatchFeature, type SurfaceSweepFeature, type SurfaceOffsetFeature, type SurfaceThickenFeature, type SurfaceStitchFeature, type SurfaceUnstitchFeature, type SurfaceReverseNormalFeature } from "./surface";
+export { sheetBendTable, bendTableCSV, type BendTableRow, type SheetPerforateFeature } from "./sheet-metal";
 export { sheetMetalFeatureTypes, defaultSheetMetalRule, bendAllowanceMillimeters, validateSheetMetalFeature, validateSheetMetalRule, type SheetMetalRule, type SheetMetalFeature, type SheetBaseFeature, type SheetFlangeFeature, type SheetHemFeature, type SheetFoldFeature, type SheetUnfoldFeature, type SheetRefoldFeature } from "./sheet-metal";
 export { addConfigurationColumn, removeConfigurationColumn, addConfigurationRow, removeConfigurationRow, setConfigurationValue, applyConfigurationRow, configurationMatches, configurationColumnKey, currentConfigurationValue, validateConfigurations, type ConfigurationColumn, type ConfigurationRow, type ConfigurationTable } from "./configurations";
 
