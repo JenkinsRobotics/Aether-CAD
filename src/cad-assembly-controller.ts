@@ -1,3 +1,7 @@
+import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-contact-authoring";
+import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
+import { appendDocument, availableBodies, parsePartDocument, splitDocument, type PartDocument } from "./aether-core";
+import type { PartDefinitionProjection } from "./cad-assembly-bridge";
 import {
   AssemblyBridgeClient,
   AssemblyBridgeError,
@@ -631,6 +635,152 @@ export class CADAssemblyController {
       { mate: assemblyMateDOFLimitsPayload(mate, draft) },
       `${dof.name} limits are now ${draft.limitsEnabled ? "enabled" : "unbounded"}.`,
     );
+  }
+
+  get canEditContacts(): boolean {
+    return Boolean(this.canonical?.assembly.capabilities.can_edit_contacts) && (this.canonical?.assembly.instances.filter((i) => !i.suppressed).length ?? 0) >= 2;
+  }
+  get contactsEnabled(): boolean { return Boolean(this.canonical?.assembly.contacts_enabled); }
+
+  async addContactSet(draft: AssemblyContactSetDraft): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical || !this.canEditContacts) throw new Error("The current Assembly cannot hold contact sets.");
+    try {
+      await this.mutate("add_contact_set", { assembly_id: canonical.assembly.assembly_id, contact_set: assemblyContactSetPayload(draft) });
+    } catch (error) { this.onStatus(`Contact set creation failed: ${messageFor(error)}`, "error"); throw error; }
+    this.onStatus(`Contact set added with ${new Set(draft.instanceIDs).size} occurrences.`, "success");
+  }
+  // ---- Components beyond insertion (SolidCraft's component.*) ----------------
+
+  private definitionOf(instance: AssemblyInstanceProjection): PartDefinitionProjection {
+    const definition = this.canonical?.assembly.part_definitions.find(({ id }) => id === instance.definition_id);
+    if (!definition) throw new Error(`The part of ${instance.name} is not in the workspace.`);
+    return definition;
+  }
+  private documentOf(definition: PartDefinitionProjection): PartDocument {
+    if (!definition.feature_document) throw new Error(`${definition.name} carries no feature document to split.`);
+    return parsePartDocument(JSON.stringify(definition.feature_document));
+  }
+  /** update_part_definition replaces the whole definition, so send it whole. */
+  private async replaceDefinition(definition: PartDefinitionProjection, patch: Partial<PartDefinitionProjection>): Promise<void> {
+    const assemblyID = this.canonical?.assembly.assembly_id;
+    if (!assemblyID) throw new Error("No canonical Assembly workspace is open.");
+    await this.mutate("update_part_definition", { assembly_id: assemblyID, part_definition: { ...definition, ...patch } });
+  }
+  /** Add a definition and one occurrence of it; roll the definition back if the occurrence fails. */
+  private async addDefinitionWithInstance(definition: Record<string, unknown>, instance: Record<string, unknown>): Promise<string> {
+    const assemblyID = this.canonical?.assembly.assembly_id;
+    if (!assemblyID || !this.canEditInstances) throw new Error("The current Assembly workspace does not permit component insertion.");
+    const before = new Set(this.canonical?.assembly.part_definitions.map(({ id }) => id) ?? []);
+    await this.mutate("add_part_definition", { assembly_id: assemblyID, part_definition: definition });
+    const added = (this.canonical?.assembly.part_definitions ?? []).map(({ id }) => id).filter((id) => !before.has(id));
+    if (added.length !== 1) throw new Error("Core did not return exactly one new Part definition ID.");
+    try {
+      await this.mutate("add_instance", { assembly_id: assemblyID, instance: { parent_assembly_id: assemblyID, definition_kind: "part", definition_id: added[0], grounded: false, ...instance } });
+    } catch (error) {
+      await this.mutate("remove_part_definition", { assembly_id: assemblyID, part_definition_id: added[0] }).catch(() => undefined);
+      throw error;
+    }
+    return added[0];
+  }
+
+  /** component.metadata.set: part number, description and custom properties of the selected occurrence's part. */
+  async updatePartProperties(draft: PartPropertiesDraft): Promise<void> {
+    const issues = partPropertiesDraftIssues(draft);
+    if (issues.length) throw new Error(issues.join(" "));
+    const instance = this.requireEditableSelectedInstance();
+    const definition = this.definitionOf(instance);
+    try {
+      await this.replaceDefinition(definition, {
+        part_number: draft.partNumber.trim() || null,
+        description: draft.description.trim() || null,
+        custom_properties: parseCustomProperties(draft.properties),
+      });
+      this.onStatus(`Updated the properties of ${definition.name}.`, "success");
+    } catch (error) { this.onStatus(`Part properties failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  /** component.paste_new: an independent copy of the selected occurrence's part, placed on top of it. */
+  async copySelectedInstanceIndependent(): Promise<void> {
+    const instance = this.requireEditableSelectedInstance();
+    const definition = this.definitionOf(instance);
+    try {
+      const { id: _id, ...rest } = definition;
+      await this.addDefinitionWithInstance(
+        { ...structuredClone(rest), name: `${definition.name} copy` },
+        { name: `${instance.name} copy`, rest_transform: structuredClone(instance.rest_transform) },
+      );
+      this.onStatus(`Made ${instance.name} copy independent: its own part, edits no longer shared.`, "success");
+    } catch (error) { this.onStatus(`Make independent failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  /** Another occurrence of the selected part: the same definition, placed on top of the original. */
+  async addLinkedCopyOfSelectedInstance(): Promise<void> {
+    const instance = this.requireEditableSelectedInstance();
+    const assemblyID = this.canonical?.assembly.assembly_id;
+    if (!assemblyID) throw new Error("No canonical Assembly workspace is open.");
+    const count = this.canonical?.assembly.instances.filter(({ definition_id }) => definition_id === instance.definition_id).length ?? 1;
+    try {
+      await this.mutate("add_instance", { assembly_id: assemblyID, instance: {
+        parent_assembly_id: assemblyID, definition_kind: "part", definition_id: instance.definition_id,
+        name: `${instance.name.replace(/:\d+$/, "")}:${count + 1}`, rest_transform: structuredClone(instance.rest_transform), grounded: false,
+      } });
+      this.onStatus(`Added another occurrence of ${this.definitionOf(instance).name}.`, "success");
+    } catch (error) { this.onStatus(`Linked copy failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  /** component.from_bodies / move_bodies / move_sketches. A new target makes one component
+   *  per body (sketches go with the first); an existing target receives them all. Every
+   *  occurrence of the source part loses the moved bodies: parts are shared definitions. */
+  async moveBodiesToComponent(draft: BodiesToComponentDraft): Promise<void> {
+    const issues = bodiesToComponentDraftIssues(draft);
+    if (issues.length) throw new Error(issues.join(" "));
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    const source = canonical.assembly.instances.find(({ id }) => id === draft.sourceInstanceID);
+    if (!source) throw new Error("The source occurrence is gone.");
+    const sourceDefinition = this.definitionOf(source);
+    let remaining = this.documentOf(sourceDefinition);
+    const bodyNames = new Map(availableBodies(remaining).map((b) => [b.id, b.name]));
+    try {
+      if (draft.target === "new") {
+        const picks: { bodyIds: string[]; sketchIds: string[]; name: string }[] = draft.bodyIDs.map((id, index) => ({
+          bodyIds: [id], sketchIds: index === 0 ? [...draft.sketchIDs] : [], name: draft.name.trim() || bodyNames.get(id) || `Body ${index + 1}`,
+        }));
+        if (!picks.length) picks.push({ bodyIds: [], sketchIds: [...draft.sketchIDs], name: draft.name.trim() || "Sketches" });
+        for (const pick of picks) {
+          const split = splitDocument(remaining, pick, pick.name);
+          remaining = split.remaining;
+          await this.addDefinitionWithInstance(
+            { name: pick.name, part_number: null, mass_kg: null, source: { kind: "authored", label: `${sourceDefinition.name} › ${pick.name}` }, custom_properties: [], feature_document: split.extracted },
+            { name: `${pick.name}:1`, rest_transform: structuredClone(source.rest_transform) },
+          );
+        }
+        await this.replaceDefinition(sourceDefinition, { feature_document: remaining });
+        this.onStatus(`Made ${picks.length} component${picks.length === 1 ? "" : "s"} from ${source.name}.`, "success");
+      } else {
+        const target = canonical.assembly.instances.find(({ id }) => id === draft.target);
+        if (!target) throw new Error("The target occurrence is gone.");
+        const targetDefinition = this.definitionOf(target);
+        const split = splitDocument(remaining, { bodyIds: draft.bodyIDs, sketchIds: draft.sketchIDs }, targetDefinition.name);
+        await this.replaceDefinition(targetDefinition, { feature_document: appendDocument(this.documentOf(targetDefinition), split.extracted) });
+        await this.replaceDefinition(sourceDefinition, { feature_document: split.remaining });
+        this.onStatus(`Moved ${draft.bodyIDs.length} bod${draft.bodyIDs.length === 1 ? "y" : "ies"} and ${draft.sketchIDs.length} sketch${draft.sketchIDs.length === 1 ? "" : "es"} from ${source.name} to ${target.name}.`, "success");
+      }
+    } catch (error) { this.onStatus(`Bodies to component failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  async removeContactSet(id: string): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    await this.mutate("remove_contact_set", { assembly_id: canonical.assembly.assembly_id, contact_set_id: id });
+    this.onStatus("Contact set removed.", "success");
+  }
+  async setContactsEnabled(enabled: boolean): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    await this.mutate("set_contacts_enabled", { assembly_id: canonical.assembly.assembly_id, enabled });
+    this.onStatus(enabled ? "Contacts on: driven joints and motion studies stop where contact sets would pass through each other." : "Contacts off.", "success");
   }
 
   async addRelation(draft: AssemblyRelationDraft): Promise<void> {

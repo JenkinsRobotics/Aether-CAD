@@ -3,6 +3,8 @@ import type { AssemblyProjectionV1 } from "./cad-assembly-bridge";
 import { assemblyJobFor } from "./assembly-job";
 import { motionFrames, motionFramesCSV, type MotionFrame, type MotionKey } from "./startup/assembly-motion";
 import { bodiesForPlacements, type AssemblySolveDependencies, type SolvedBody } from "./startup/assembly-solve";
+import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
+import { aetherKernel } from "./engine/aether/kernel";
 
 /** Motion study (SolidCraft's motion.study / motion.export): one mate DOF driven from a
  *  start to an end value over a number of steps, every step solved in-process, played in
@@ -38,6 +40,13 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
     win.setError(null); win.setNotice("Solving every step…"); run.disabled = true;
     try {
       frames = await motionFrames(job, [key], n, deps.solve);
+      // Contacts on: the study stops at the first step where a contact set's bodies pass through each other.
+      if (liveContactSets(projection).length) {
+        for (let i = 0; i < frames.length; i++) {
+          const overlaps = await checkAssemblyContacts(projection, frames[i].placements, { parseDocument: deps.parseDocument, checkContacts: (input) => aetherKernel().checkContacts(input) });
+          if (overlaps.length) { frames = frames.slice(0, Math.max(1, i)); win.setNotice(`Stopped at step ${frames.length - 1}: ${describeOverlaps(overlaps)}`); break; }
+        }
+      }
       const ticket = ++playing;
       for (const frame of frames) {
         if (ticket !== playing) return;

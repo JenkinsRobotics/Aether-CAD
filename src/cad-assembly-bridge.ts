@@ -33,6 +33,7 @@ export interface AssemblyCapabilities {
   readonly can_edit_connectors: boolean;
   readonly supported_mate_type_ids: readonly string[];
   readonly can_edit_relations: boolean;
+  readonly can_edit_contacts?: boolean;
   readonly can_solve_tree: boolean;
   readonly can_solve_loops: boolean;
   readonly can_edit_nested_assemblies: boolean;
@@ -145,6 +146,14 @@ export interface RelationProjection {
   readonly suppressed: boolean;
 }
 
+/** Occurrences that must not pass through each other while joints are driven. */
+export interface ContactSetProjection {
+  readonly id: StableID;
+  readonly name: string;
+  readonly instance_ids: readonly StableID[];
+  readonly suppressed: boolean;
+}
+
 export interface ConfigurationProjection {
   readonly id: StableID;
   readonly name: string;
@@ -176,6 +185,9 @@ export interface AssemblyProjectionV1 {
   readonly mates: readonly MateProjection[];
   readonly relations: readonly RelationProjection[];
   readonly configurations: readonly ConfigurationProjection[];
+  /** Absent from hosts that predate contact sets. */
+  readonly contact_sets?: readonly ContactSetProjection[];
+  readonly contacts_enabled?: boolean;
   readonly issues: readonly DiagnosticProjection[];
 }
 
@@ -437,6 +449,16 @@ function validateRelations(value: unknown, path: string): void {
   });
 }
 
+function validateContactSets(value: unknown, path: string): void {
+  array(value, path).forEach((entry, index) => {
+    const itemPath = `${path}[${index}]`;
+    const item = record(entry, itemPath);
+    string(item.id, `${itemPath}.id`); string(item.name, `${itemPath}.name`);
+    stringArray(item.instance_ids, `${itemPath}.instance_ids`);
+    boolean(item.suppressed, `${itemPath}.suppressed`);
+  });
+}
+
 function validateConfigurations(value: unknown, path: string): void {
   array(value, path).forEach((entry, index) => {
     const itemPath = `${path}[${index}]`;
@@ -479,6 +501,8 @@ export function decodeAssemblyProjection(value: unknown): AssemblyProjectionV1 {
   validateMates(root.mates, `${path}.mates`);
   validateRelations(root.relations, `${path}.relations`);
   validateConfigurations(root.configurations, `${path}.configurations`);
+  if (root.contact_sets !== undefined) validateContactSets(root.contact_sets, `${path}.contact_sets`);
+  if (root.contacts_enabled !== undefined) boolean(root.contacts_enabled, `${path}.contacts_enabled`);
   validateDiagnostics(root.issues, `${path}.issues`);
   return root as unknown as AssemblyProjectionV1;
 }
@@ -646,7 +670,11 @@ export type AssemblyMutationMethod =
   | "add_relation"
   | "update_relation"
   | "remove_relation"
-  | "set_dof_value";
+  | "set_dof_value"
+  | "add_contact_set"
+  | "update_contact_set"
+  | "remove_contact_set"
+  | "set_contacts_enabled";
 
 export interface AssemblyBridgeClientOptions {
   readonly baseURL: string;

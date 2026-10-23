@@ -21,13 +21,13 @@ export const sweepEditor: FeatureEditor = {
     return {
       profile,
       region: regionControls(context, profile),
-      path: reference("Sweep Path", ["sketch", "profile"], feature?.pathFeatureId),
+      path: reference("Sweep Path", ["sketch", "profile", "curve3d"], feature?.pathFeatureId),
       orientation: field("Orientation", typeof feature?.orientation === "object" ? "direction" : feature?.orientation ?? "perpendicular", ["perpendicular", "parallel", "direction"]),
       upX: field("Up direction X", String(typeof feature?.orientation === "object" ? feature.orientation.direction[0] : 0)),
       upY: field("Up direction Y", String(typeof feature?.orientation === "object" ? feature.orientation.direction[1] : 0)),
       upZ: field("Up direction Z", String(typeof feature?.orientation === "object" ? feature.orientation.direction[2] : 1)),
       endScale: field("End scale", String(feature?.endScale ?? 1)),
-      rail: reference("Guide rail", ["sketch", "profile"], feature?.rail?.pathFeatureId),
+      rail: reference("Guide rail", ["sketch", "profile", "curve3d"], feature?.rail?.pathFeatureId),
       operation: field(
         "Operation",
         feature?.operation ??

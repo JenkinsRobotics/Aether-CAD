@@ -8,3 +8,6 @@ export { AssemblyConnectorDialog } from "./connector";
 export { AssemblyMateDialog } from "./mate";
 export { AssemblyMateDOFDialog } from "./mate-dof";
 export { AssemblyRelationDialog } from "./relation";
+export { AssemblyContactSetDialog } from "./contact-set";
+export { PartPropertiesDialog } from "./part-properties";
+export { BodiesToComponentDialog } from "./bodies-to-component";

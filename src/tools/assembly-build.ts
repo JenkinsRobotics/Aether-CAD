@@ -20,10 +20,11 @@ export const assemblyBuildWorkspace: CADRibbonWorkspaceDefinition = {
       tool("assembly-json", "From JSON", "assembly", "assembly-from-json"),
       tool("assembly-template", "Define Part", "part", "assembly-part-template"),
       tool("assembly-fastener", "Smart Fastener", "thread", undefined, assemblyProducer),
-      tool("assembly-linked", "Linked Copy", "link", undefined, assemblyProducer),
+      tool("assembly-linked", "Linked Copy", "link", "assembly-linked-copy"),
       tool("assembly-variant", "Variant", "copy", undefined, assemblyProducer),
       tool("assembly-replace", "Replace", "replace-face", undefined, assemblyProducer),
-      tool("assembly-independent", "Make Independent", "part", undefined, assemblyProducer),
+      tool("assembly-independent", "Make Independent", "part", "assembly-make-independent"),
+      tool("assembly-from-bodies", "Bodies to Component", "part", "assembly-bodies-to-component"),
     ] },
     { id: "build-modify", label: "Modify", tools: [
       tool("assembly-array-linear", "Linear array", "pattern", "assembly-linear-array"),
@@ -40,6 +41,7 @@ export const assemblyBuildWorkspace: CADRibbonWorkspaceDefinition = {
       tool("assembly-ground", "Ground", "ground", "assembly-toggle-grounded"),
       tool("assembly-suppress", "Suppress", "suppressed", "assembly-toggle-suppressed"),
       tool("assembly-remove", "Remove", "remove", "assembly-remove-instance"),
+      tool("assembly-part-props", "Part Properties", "settings", "assembly-part-properties"),
     ] },
   ],
 };

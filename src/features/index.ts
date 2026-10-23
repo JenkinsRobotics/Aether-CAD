@@ -28,6 +28,7 @@ import { mirrorEditor } from "./mirror";
 import { chamferEditor, filletEditor } from "./edge-finish";
 import { sweepEditor } from "./sweep";
 import { shellEditor } from "./shell";
+import { curve3dEditor } from "./curve3d";
 import type { FeatureEditor } from "./shared";
 
 export const featureEditors: readonly FeatureEditor[] = [
@@ -59,6 +60,7 @@ export const featureEditors: readonly FeatureEditor[] = [
   draftEditor,
   patternEditor,
   booleanEditor,
+  curve3dEditor,
 ];
 
 export function featureEditor(type: string): FeatureEditor | undefined {

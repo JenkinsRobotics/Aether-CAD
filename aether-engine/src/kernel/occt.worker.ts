@@ -11,6 +11,7 @@ import { evaluatePartDocument, FeatureFailure, UnsupportedFeature } from "./part
 import { sketchSectionContours } from "./sketch-section";
 import { measureDistance } from "./measure";
 import { analyzePart } from "./analysis";
+import { checkContacts } from "./contacts";
 import { loadExtendedKernel, needsExtendedKernel } from "./extended-kernel";
 import ocFullJS from "opencascade.js/dist/opencascade.full.js";
 import fullWasmUrl from "opencascade.js/dist/opencascade.full.wasm?url";
@@ -109,6 +110,13 @@ async function evaluateWithFullBuildFallback(document: PartDocument, options: { 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
   try {
+    if (request.type === "check-contacts") {
+      for (const part of request.input.parts) await prepareFor(part.document);
+      const result = checkContacts(request.input);
+      const response: WorkerResponse = { type: "contacts-checked", requestId: request.requestId, result };
+      self.postMessage(response);
+      return;
+    }
     if (request.type === "analyze-part") {
       await prepareFor(request.document);
       const result = analyzePart(request.document, request.options);

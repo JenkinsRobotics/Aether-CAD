@@ -9,6 +9,8 @@ const host = () => ({
   removeSelectedInstance: vi.fn(async () => {}),
   toggleSelectedMateSuppressed: vi.fn(async () => {}),
   removeSelectedMate: vi.fn(async () => {}),
+  copySelectedInstanceIndependent: vi.fn(async () => {}),
+  addLinkedCopyOfSelectedInstance: vi.fn(async () => {}),
   resetMatePreview: vi.fn(),
 });
 

@@ -27,13 +27,15 @@ import { contextualDrawingTools } from "./sketch/tangent-arc-tool";
 import { directModificationTools,modificationTools } from "./sketch/tool-instructions";
 import { constructionPlaneFrame } from "@aether/core/document";
 import { sketchProfilePolylines, sketchVariantTools } from "@aether/core/sketch";
-import { profileFrame, rollbackPosition } from "@aether/core/document";
+import { profileFrame, rollbackPosition, curve3dPolylines } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
 import { solveAssemblyJob } from "@aether/core/kernel";
 import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
 import { explodedPlacements } from "./startup/assembly-motion";
+import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
+import { aetherKernel } from "./engine/aether/kernel";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountTimelineCopy } from "./timeline-clipboard-commands";
 import {
@@ -66,7 +68,7 @@ import {
 } from "./reference-geometry";
 import { SketchEditor } from "./sketch-editor";
 import { MateViewport, type AuthoringTool } from "./viewer";
-import { cadCommands } from "./cad-command-registry";
+import { type CADCommandID, cadCommands } from "./cad-command-registry";
 import { buildCADWorkspaceProjection } from "./cad-workspace-projection";
 import { cadWorkspace } from "./cad-workspace-store";
 import {
@@ -78,6 +80,7 @@ import {
 } from "./cad-presentation-store";
 import { cadAppearance } from "./cad-appearance-store";
 import { cadSelection } from "./cad-selection-store";
+import { measureReference, type MeasureReference } from "./measure/measure-reference";
 import { CADAssemblyController } from "./cad-assembly-controller";
 import { cadAssemblyWorkspace } from "./cad-assembly-workspace-store";
 import { readWorkspaceUpAxis, saveWorkspaceUpAxis } from "./viewport/workspace-orientation";
@@ -212,6 +215,7 @@ function syncAssemblyCommands(): void {
   cadCommands.setEnabled("assembly-set-mate-dof-value", assemblyController.canEditSelectedMateDOF);
   cadCommands.setEnabled("assembly-edit-mate-dof-limits", assemblyController.canEditSelectedMateDOF);
   cadCommands.setEnabled("assembly-create-relation", assemblyController.canAddRelation);
+  cadCommands.setEnabled("assembly-create-contact-set", assemblyController.canEditContacts);
   cadCommands.setEnabled("assembly-toggle-grounded", enabled);
   cadCommands.setEnabled("assembly-toggle-suppressed", enabled);
   cadCommands.setEnabled("assembly-remove-instance", enabled);
@@ -231,8 +235,8 @@ window.addEventListener("aether-part-updated", applySection);
 window.addEventListener("cad-document-navigation", () => turnOffSectionView());
 window.addEventListener("aether-section-face", event => (event as CustomEvent).detail.respond(viewer.selectedSketchFrame()));
 window.addEventListener("aether-section-handle", event => { const {view, respond} = (event as CustomEvent).detail; respond(viewer.projectSectionHandle(view)); });
-for (const kind of ["interference", "properties", "clearance", "compare"] as const) cadCommands.register(`part-${kind}`, () => {
-  try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model)); }
+for (const kind of ["interference", "properties", "clearance", "compare", "continuity", "curvature_comb", "isocurve", "minimum_radius"] as const) cadCommands.register(`part-${kind.replace("_", "-")}` as CADCommandID, () => {
+  try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model), curves => viewer.setAnalysisCurves(curves), () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null)); }
   catch (error) { setStatus(error instanceof Error ? error.message : String(error), "error"); }
 });
 
@@ -253,6 +257,8 @@ registerAssemblyCommands({
   toggleSelectedInstanceGrounded: () => assemblyController.toggleSelectedInstanceGrounded(),
   toggleSelectedInstanceSuppressed: () => assemblyController.toggleSelectedInstanceSuppressed(),
   removeSelectedInstance: () => assemblyController.removeSelectedInstance(),
+  copySelectedInstanceIndependent: () => assemblyController.copySelectedInstanceIndependent(),
+  addLinkedCopyOfSelectedInstance: () => assemblyController.addLinkedCopyOfSelectedInstance(),
   toggleSelectedMateSuppressed: () => assemblyController.toggleSelectedMateSuppressed(),
   removeSelectedMate: () => assemblyController.removeSelectedMate(),
   resetMatePreview: () => {
@@ -331,6 +337,13 @@ function updateLists(notifyDocumentChange = true): void {
             frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
             polylines: "profile" in feature ? sketchProfilePolylines(feature.profile) : [],
           }))
+      : [],
+  );
+  // 3D sketches are world polylines already.
+  viewer.setSpaceCurves(
+    visibleDocument
+      ? visibleDocument.features.slice(0, rollbackPosition(visibleDocument)).filter((feature) => feature.type === "curve3d" && !feature.suppressed)
+          .map((feature) => ({ id: feature.id, polylines: feature.type === "curve3d" ? curve3dPolylines(feature) : [] }))
       : [],
   );
   if (notifyDocumentChange) window.dispatchEvent(new Event("aether-part-updated"));
@@ -797,6 +810,24 @@ cadPresentation.registerActionHandler((action) => {
   if (action.type === "update-assembly-mate-dof-limits") {
     void assemblyController.updateSelectedMateDOFLimits(action.draft)
       .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "create-assembly-contact-set") {
+    void assemblyController.addContactSet(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "update-part-properties") {
+    void assemblyController.updatePartProperties(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "move-bodies-to-component") {
+    void assemblyController.moveBodiesToComponent(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
       .catch(() => undefined);
     return;
   }
@@ -1303,6 +1334,19 @@ async function toggleExplodedView(): Promise<void> {
   } catch (error) { setStatus(`Exploded view: ${(error as Error).message}`, "error"); }
 }
 mountTimelineCopy(() => [...selectedFeatureIDs]);
+cadCommands.register("assembly-check-contacts", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before checking contacts.", "error"); return; }
+  if (!liveContactSets(projection).length) { setStatus("Contacts are off. Turn them on, or add a contact set, then check.", "error"); return; }
+  setStatus("Checking contacts…");
+  void solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) })
+    .then((result) => checkAssemblyContacts(projection, result.solution.instances, { parseDocument: (source) => parsePartDocument(source), checkContacts: (input) => aetherKernel().checkContacts(input) }))
+    .then((overlaps) => setStatus(describeOverlaps(overlaps), overlaps.length ? "error" : "success"))
+    .catch((error: unknown) => setStatus(`Contact check: ${(error as Error).message}`, "error"));
+});
+cadCommands.setEnabled("assembly-check-contacts", true);
+cadCommands.register("assembly-toggle-contacts", () => { void assemblyController.setContactsEnabled(!assemblyController.contactsEnabled).catch(() => undefined); });
+cadCommands.setEnabled("assembly-toggle-contacts", true);
 cadCommands.register("assembly-explode", () => { void toggleExplodedView(); });
 cadCommands.setEnabled("assembly-explode", true);
 cadCommands.register("assembly-motion-study", () => {

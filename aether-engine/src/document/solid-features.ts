@@ -17,6 +17,8 @@ import {validatePipe, type PipeFeature} from './pipe';
 import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid';
 import {validateThread, type ThreadFeature} from './thread';
 import {validateCoil, type CoilFeature} from './coil';
+import {validateCurve3D, type Curve3DFeature} from './curve3d';
+export type {Curve3DFeature} from './curve3d';
 import {validateSurfaceFeature, surfaceFeatureTypes, type SurfaceFeature} from './surface';
 import {validateSheetMetalFeature, sheetMetalFeatureTypes, type SheetMetalFeature} from './sheet-metal';
 import {validateRemoveBody, type RemoveBodyFeature} from './remove-body';
@@ -161,7 +163,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = Curve3DFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -172,6 +174,7 @@ export function validateSolidFeature(
   if (feature.type === "split") return validateSplit(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "pipe") return validatePipe(feature,earlier,missingReference);
   if (feature.type === "coil") return validateCoil(feature);
+  if (feature.type === "curve3d") return validateCurve3D(feature);
   if ((surfaceFeatureTypes as readonly string[]).includes(feature.type)) return validateSurfaceFeature(feature as SurfaceFeature, earlier, missingReference);
   if ((sheetMetalFeatureTypes as readonly string[]).includes(feature.type)) return validateSheetMetalFeature(feature as SheetMetalFeature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature,earlier,missingReference as (id:string)=>boolean);
@@ -285,11 +288,11 @@ export function validateSolidFeature(
       !(typeof feature.orientation === "object" && feature.orientation.kind === "direction" && Array.isArray(feature.orientation.direction) && feature.orientation.direction.length === 3 && feature.orientation.direction.every(Number.isFinite) && Math.hypot(...feature.orientation.direction) > 1e-9))
       throw new Error("Sweep orientation must be perpendicular, parallel, or a nonzero direction.");
     if (feature.endScale !== undefined && !(Number.isFinite(feature.endScale) && feature.endScale >= 0.01 && feature.endScale <= 100)) throw new Error("Sweep end scale must be between 0.01 and 100.");
-    if (feature.rail !== undefined && (typeof feature.rail.pathFeatureId !== "string" || (!missingReference(feature.rail.pathFeatureId) && !["sketch", "profile"].includes(earlier.get(feature.rail.pathFeatureId) ?? "")))) throw new Error("Sweep rail must be a curve of an earlier sketch.");
+    if (feature.rail !== undefined && (typeof feature.rail.pathFeatureId !== "string" || (!missingReference(feature.rail.pathFeatureId) && !["sketch", "profile", "curve3d"].includes(earlier.get(feature.rail.pathFeatureId) ?? "")))) throw new Error("Sweep rail must be a curve of an earlier sketch.");
     if (!missingReference(feature.profileFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) || ""))
       throw new Error("Sweep must reference an earlier sketch profile.");
-    if (!missingReference(feature.pathFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.pathFeatureId) || ""))
-      throw new Error("Sweep must reference an earlier sketch path.");
+    if (!missingReference(feature.pathFeatureId) && !["profile", "sketch", "curve3d"].includes(earlier.get(feature.pathFeatureId) || ""))
+      throw new Error("Sweep must reference an earlier sketch path or 3D sketch.");
     if (!["new", "add", "cut"].includes(feature.operation))
       throw new Error("Invalid sweep settings.");
   } else if (feature.type === "shell") {

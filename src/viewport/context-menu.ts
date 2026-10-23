@@ -42,7 +42,7 @@ export function bodyContextFeatures(doc: PartDocument, bodyId: string): { featur
   const last = new Map<string, PartFeature>();
   let implicitBody: string | undefined;
   for (const f of doc.features.slice(0, rollbackPosition(doc))) {
-    if (f.suppressed || ['sketch', 'profile', 'plane', 'axis', 'point', 'thread'].includes(f.type)) continue;
+    if (f.suppressed || ['sketch', 'profile', 'plane', 'axis', 'point', 'thread', 'curve3d'].includes(f.type)) continue;
     if(f.type==='pattern'&&f.bodyIds){for(const id of createdBodyIDs(doc,f))last.set(id,f);continue;}
     if(f.type==='transform'||f.type==='split'){
       const outputs=f.copyBodyIds?createdBodyIDs(doc,f):f.bodyIds;

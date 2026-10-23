@@ -7,7 +7,7 @@ export const pipeEditor: FeatureEditor = {
   type: "pipe",
   controls({ field, reference, feature, doc }: FeatureEditorContext) {
     return {
-      path: reference("Pipe path", ["sketch", "profile"], feature?.pathFeatureId),
+      path: reference("Pipe path", ["sketch", "profile", "curve3d"], feature?.pathFeatureId),
       diameter: field("Diameter (mm)", String(feature?.diameterMillimeters ?? 10)),
       wall: field("Wall (mm, blank = solid)", feature?.wallMillimeters === undefined ? "" : String(feature.wallMillimeters)),
       operation: field("Operation", feature?.operation ?? (doc.features.some((f) => ["extrude", "revolve", "sweep", "pipe"].includes(f.type)) ? "add" : "new"), [...operationValues]),

@@ -76,7 +76,7 @@ export function validatePattern(feature:PatternFeature,earlier:Map<string,string
     }
     if (!Number.isFinite(feature.angleDegrees) || feature.angleDegrees<=0 || feature.angleDegrees>360) throw new Error('Pattern angle must be greater than 0 and at most 360 degrees.');
   } else if (feature.patternType === 'path') {
-    if(typeof feature.pathFeatureId!=='string'||(!missing(feature.pathFeatureId)&&!['sketch','profile'].includes(earlier.get(feature.pathFeatureId)??'')))throw new Error('Pattern on path needs a curve of an earlier sketch.');
+    if(typeof feature.pathFeatureId!=='string'||(!missing(feature.pathFeatureId)&&!['sketch','profile','curve3d'].includes(earlier.get(feature.pathFeatureId)??'')))throw new Error('Pattern on path needs a curve of an earlier sketch.');
     if((feature.spacingMillimeters===undefined)===(feature.distanceMillimeters===undefined))throw new Error('Pattern on path takes a spacing or an overall distance, not both.');
     if(feature.spacingMillimeters!==undefined&&!(feature.spacingMillimeters>0))throw new Error('Pattern spacing must be positive.');
     if(feature.distanceMillimeters!==undefined&&!(feature.distanceMillimeters>0))throw new Error('Pattern distance must be positive.');

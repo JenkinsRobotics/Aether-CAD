@@ -1263,6 +1263,41 @@ export class MateViewport {
     this.renderSketchCurves(this.lastSketchCurves.filter((sketch) => sketch.id !== this.editingSketchID));
   }
   private sketchCurveGroup = new THREE.Group();
+  private spaceCurveGroup = new THREE.Group();
+  private spaceCurveKey = "";
+  private analysisCurveGroup = new THREE.Group();
+  /** Analysis overlays (continuity, combs, isocurves): coloured world polylines, replaced whole. */
+  setAnalysisCurves(curves: readonly { color: string; polylines: readonly (readonly [number, number, number])[][] }[]): void {
+    for (const child of [...this.analysisCurveGroup.children]) {
+      child.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (object.material as THREE.Material).dispose(); } });
+      this.analysisCurveGroup.remove(child);
+    }
+    if (!this.analysisCurveGroup.parent) this.referenceRoot.add(this.analysisCurveGroup);
+    for (const curve of curves) for (const polyline of curve.polylines) {
+      if (polyline.length < 2) continue;
+      const segments: number[] = [];
+      for (let i = 1; i < polyline.length; i++) segments.push(...polyline[i - 1], ...polyline[i]);
+      this.analysisCurveGroup.add(styledLines(segments, new THREE.Color(curve.color).getHex(), 2.4));
+    }
+  }
+  /** 3D sketches: world polylines (mm), drawn like finished sketches. */
+  setSpaceCurves(curves: readonly { id: string; polylines: readonly (readonly [number, number, number])[][] }[]): void {
+    const key = JSON.stringify(curves);
+    if (key === this.spaceCurveKey) return;
+    this.spaceCurveKey = key;
+    for (const child of [...this.spaceCurveGroup.children]) {
+      child.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (object.material as THREE.Material).dispose(); } });
+      this.spaceCurveGroup.remove(child);
+    }
+    if (!this.spaceCurveGroup.parent) this.referenceRoot.add(this.spaceCurveGroup);
+    const resolved = this.appearance ? resolveAppearance(this.appearance, readViewportThemeOverride()) : null;
+    for (const curve of curves) for (const polyline of curve.polylines) {
+      if (polyline.length < 2) continue;
+      const segments: number[] = [];
+      for (let i = 1; i < polyline.length; i++) segments.push(...polyline[i - 1], ...polyline[i]);
+      this.spaceCurveGroup.add(styledLines(segments, resolved?.sketchStroke ?? 0xd7e6f5, resolved?.sketchLineWidth ?? 2.1));
+    }
+  }
   /** Finished sketches drawn as world-anchored polylines (mm, y-up in-plane). */
   setSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[] }[]): void {
     this.lastSketchCurves = sketches;
