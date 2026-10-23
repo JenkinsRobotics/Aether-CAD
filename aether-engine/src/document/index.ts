@@ -14,6 +14,7 @@ export * from "./file-types";
 export * from "./feature-history";
 export * from "./component-split";
 export { validateCurve3D, curve3dPolylines, moveCurve3DPoint, type Curve3DFeature } from "./curve3d";
+export { PLASTIC_RULE_LIBRARY, validatePlasticRules, plasticRuleFor, setPlasticRule, removePlasticRule, setActivePlasticRule, assignPlasticRule, type PlasticRule, type PlasticRulesTable } from "./plastic-rules";
 
 export { resolveProfileDrawing, profileSketchFrame } from "./profile-projection";
 export { projectSketchDrawing } from "../sketch/projection/drawing";

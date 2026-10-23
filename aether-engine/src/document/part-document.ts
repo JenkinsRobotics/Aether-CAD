@@ -14,6 +14,7 @@ import {validateExtrusionFaceReference,type ExtrusionFaceReference} from './extr
 import { validateDocumentTextExpressions } from "./text-expressions";
 import { resolveProfileDrawing } from "./profile-projection";
 import {evaluateDocumentVariables,type DocumentVariable} from "./variables";
+import {validatePlasticRules} from "./plastic-rules";
 import { validateSketchPresentation } from "./sketch-presentation";
 import { validateSolidFeature, type SolidFeature } from "./solid-features";
 export * from "./solid-features";
@@ -139,6 +140,8 @@ export interface PartDocument {
   organization?: TreeOrganization;
   /** Configurations: named rows of variable values and feature suppressions. */
   configurations?: import("./configurations").ConfigurationTable;
+  /** Plastic rules: moulding defaults (wall, draft, radius, clearance) by body. */
+  plasticRules?: import("./plastic-rules").PlasticRulesTable;
 }
 
 export interface RectanglePartParameters {
@@ -332,6 +335,7 @@ export function validatePartDocument(
   validateSketchPresentation(document.sketchPresentation);
   validateImageCanvases(document.imageCanvases);
   validateTreeOrganization(document.organization);
+  validatePlasticRules(document.plasticRules);
   if (!document.documentId || typeof document.documentId !== "string") {
     throw new Error("Part documentId is required.");
   }

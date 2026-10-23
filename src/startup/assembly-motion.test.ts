@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { solveAssemblyJob } from "@aether/core/kernel";
-import { explodedPlacements, jobAtStep, keyValueAt, motionFrames, motionFramesCSV } from "./assembly-motion";
+import { explodedPlacements, jobAtStep, keyValueAt, motionFrames, motionFramesCSV, motionPlotSVG, motionSeries, motionTrace, motionTraceCSV } from "./assembly-motion";
 import type { AssemblyJob } from "../assembly-types";
 
 const job: AssemblyJob = { parts: [{ id: "p" }], instances: [{ id: "g", part: "p", grounded: true }, { id: "a", part: "p", placement_mm: [10, 0, 0] }], joints: [{ id: "hinge", kind: "revolute", a: { instance: "g" }, b: { instance: "a" } }] };
@@ -25,4 +25,18 @@ it("explodes placements away from their centre by the scale", () => {
   const out = explodedPlacements([{ id: "a", placement_mm: [0, 0, 0], rotation: [0, 0, 0, 1] }, { id: "b", placement_mm: [10, 0, 0], rotation: [0, 0, 0, 1] }], 1);
   expect(out.map((p) => p.placement_mm[0])).toEqual([-5, 15]);
   expect(explodedPlacements([], 2)).toEqual([]);
+});
+
+it("traces an occurrence, plots a series and keeps the trace as CSV", async () => {
+  const key = { joint: "hinge", dof: "rotation", kind: "rotation" as const, axis: "z" as const, points: [[0, 0], [2, 90]] as [number, number][] };
+  const frames = await motionFrames(job, [key], 2, (j) => solveAssemblyJob(j));
+  const trace = motionTrace(frames, "a");
+  expect(trace).toHaveLength(3);
+  // The hinge pulls a onto the grounded origin and turns it there, so the traced origin is a point, not an arc.
+  expect(trace.every((p) => p.every(Number.isFinite))).toBe(true); expect(Math.hypot(...trace[2])).toBeLessThan(1e-6);
+  expect(motionSeries(frames, "hinge:rotation").map(([, v]) => v)).toEqual([0, 45, 90]);
+  expect(motionSeries(frames, "a.x").map(([s]) => s)).toEqual([0, 1, 2]);
+  expect(motionPlotSVG(motionSeries(frames, "a.x"), "a.x")).toContain("<polyline");
+  expect(motionTraceCSV(trace).split("\n")[0]).toBe("x_mm,y_mm,z_mm");
+  expect(motionTrace(frames, "nobody")).toEqual([]);
 });

@@ -2,7 +2,7 @@
 
 Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
 
-Totals (398 commands): parity 191, partial 86, n/a 53, gap 38, parity-ish 21, verify 7, ours+ 2
+Totals (398 commands): parity 198, partial 87, n/a 53, gap 26, parity-ish 25, verify 7, ours+ 2
 
 ## Sketch (105)
 
@@ -224,13 +224,13 @@ Totals (398 commands): parity 191, partial 86, n/a 53, gap 38, parity-ish 21, ve
 
 | SolidCraft | Title | Their contract | Ours | Status | Missing / note |
 |---|---|---|---|---|---|
-| `plastic.assign_rule` | Assign Plastic Rule | bodies: [names]; rule: name (empty: no rule) — plastic features on these bodies take its draft and clearance as defaults | Plastic tab: placeholders | gap |  |
+| `plastic.assign_rule` | Assign Plastic Rule | bodies: [names]; rule: name (empty: no rule) — plastic features on these bodies take its draft and clearance as defaults | Plastic › Plastic Rules (Body rule) | parity | per-body assignment; Boss, Rest, Lip and Snap Fit take defaults from the body's rule, else the active one |
 | `plastic.boss` | Boss | position: [x,y,z] on a face; direction? (default: out of the face); diameter, height; hole_diameter?, hole_depth? (default: to the face); \          draft? (ang | Boss (`boss`) | partial | done 2026-10-21: post on a face point, height, draft, bore. Missing: root fillet, ribs, rule defaults |
-| `plastic.lip` | Lip | face: [x,y,z] on the rim face of a shelled body; width, height; type?: lip\|groove; gap? (groove clearance); side?: inside\|outside (which rim edge); body? | Plastic tab: placeholders | gap |  |
-| `plastic.manage_rules` | Manage Plastic Rules | name (library or new rule; a new one starts from `from`, default ABS (1.5mm)); from?; material?; thickness?, nominal_radius?, clearance?, knife_edge?, \         | Plastic tab: placeholders | gap |  |
+| `plastic.lip` | Lip | face: [x,y,z] on the rim face of a shelled body; width, height; type?: lip\|groove; gap? (groove clearance); side?: inside\|outside (which rim edge); body? | Plastic › Lip / Groove | parity | done 2026-10-23 (r54): a band along the inner or outer edge of a picked rim face, raised (lip) or sunk (groove, widened by the gap); defaults from the plastic rule |
+| `plastic.manage_rules` | Manage Plastic Rules | name (library or new rule; a new one starts from `from`, default ABS (1.5mm)); from?; material?; thickness?, nominal_radius?, clearance?, knife_edge?, \         | Plastic › Plastic Rules | parity | add from the library (ABS 1.5 mm, PC 2 mm, Nylon 1.8 mm), edit wall, draft, radius, clearance, material; remove; make active |
 | `plastic.rest` | Rest | position: [x,y,z] on a face (the rest's centre); direction? (default: out of the face); width (round: the diameter); length? (a rectangle, along `along`); along | Rest (`rest`) | partial | done 2026-10-21: round or rectangular pad on a face point, draft. Missing: rule defaults |
-| `plastic.rules` | List Plastic Rules | → rules with their expressions and values, the active rule and the rules assigned to bodies | Plastic tab: placeholders | gap |  |
-| `plastic.snap_fit` | Snap Fit | position: [x,y,z] on a face; direction? (default: out of the face); hook: [x,y,z] (the catch's direction); length, thickness, width, catch_depth, catch_length;  | Plastic tab: placeholders | gap |  |
+| `plastic.rules` | List Plastic Rules | → rules with their expressions and values, the active rule and the rules assigned to bodies | Plastic › Plastic Rules | parity | the document carries a rule table: rules, the active rule, body assignments |
+| `plastic.snap_fit` | Snap Fit | position: [x,y,z] on a face; direction? (default: out of the face); hook: [x,y,z] (the catch's direction); length, thickness, width, catch_depth, catch_length;  | Plastic › Snap Fit | parity | arm out of a face at a point with a hook direction across it: length, thickness, width, catch depth and length; handles on length and catch |
 
 ## Inspect (15)
 
@@ -333,7 +333,7 @@ Totals (398 commands): parity 191, partial 86, n/a 53, gap 38, parity-ish 21, ve
 | `explode.delete` | Delete Exploded View | view |  | n/a | no named exploded views yet |
 | `explode.list` | List Exploded Views |  |  | n/a | no named exploded views yet |
 | `explode.show` | Show Exploded View | view: id\|name (or none: back to the assembled placement) — shown only; the design keeps its placements | Explode (`assembly-explode`) | partial | done 2026-10-22 (r46): toggles between exploded and assembled |
-| `joint.as_built` | As-Built Joint | type, a: occurrence, b: occurrence (stay where they are); at?: joint origin (default: b's origin) — the joint's frame; one on a or b is kept on its face or hole |  | gap |  |
+| `joint.as_built` | As-Built Joint | type, a: occurrence, b: occurrence (stay where they are); at?: joint origin (default: b's origin) — the joint's frame; one on a or b is kept on its face or hole | Mates › As-Built Joint | parity | done 2026-10-23 (r55): any of the eight mate kinds between two occurrences where they stand; a connector carrying the joint frame is added to each part. The frame sits at B's origin along B's axis (agents may pass at/axis) |
 | `joint.cam` | Cam | a: the cam's joint (revolute); b: the follower's joint, a slider (a translating follower) or a revolute (an oscillating one),          b driven by a; profile: { |  | gap |  |
 | `joint.create` | Joint | type: rigid\|revolute\|slider\|cylindrical\|pin_slot\|planar\|ball, or a relation: parallel\|perpendicular\|angle\|point_on_plane\|point_on_line\|line_on_plane  | Mates: fastened, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle | parity | fastened, revolute, slider, cylindrical, ball, planar, pin slot and parallel mates author, store and solve (2026-10-21, r36); distance, perpendicular and angle solve but the workspace has no record for them (greyed with the reason); width and tangent need surface geometry |
 | `joint.delete` | Delete Joint | joint: id\|name (or origin: name, link: index) | Delete mate | parity |  |
@@ -345,21 +345,21 @@ Totals (398 commands): parity 191, partial 86, n/a 53, gap 38, parity-ish 21, ve
 | `joint.motion_link` | Motion Link | a, b: joints; ratio (b = ratio · a + offset): b's units per a's (mm per deg for an angle driving a distance); offset?: in b's units (deg for an angle, mm for a  | Relation dialog (linear) | partial | done 2026-10-22 (r45) for two travels (linear) and the rotation pairs above. Missing: a rotation driven by a travel |
 | `joint.origin` | Joint Origin | name?, occurrence?: id\|name (default: from the pick, or the named face's component), face: [x,y,z] \| "<name>" (centre of a planar face) \| circle: [x,y,z] \|  | Connectors | partial | mate connectors on faces/edges/vertices |
 | `joint.rack_pinion` | Rack and Pinion | a, b: a joint that turns (revolute: the pinion) and one that slides (slider: the rack), in either order, b driven by a; \          radius: the pinion's pitch ra | Relation dialog (rack and pinion) | parity | done 2026-10-22 (r45): a rotation drives a travel, ratio in travel per degree |
-| `joint.reach` | Reach Point | occurrence: id\|name; point: [x,y,z] (where its point goes, world); at?: [x,y,z] (its point, in the world where it is now; default: the centre of          its b |  | gap |  |
-| `joint.rigid_group` | Rigid Group | occurrences: [ids or names] (move together, as they are) |  | gap |  |
+| `joint.reach` | Reach Point | occurrence: id\|name; point: [x,y,z] (where its point goes, world); at?: [x,y,z] (its point, in the world where it is now; default: the centre of          its b | Mates › Reach Point | parity-ish | the selected occurrence's origin moves to a typed world point; the `at` point is not picked in the UI |
+| `joint.rigid_group` | Rigid Group | occurrences: [ids or names] (move together, as they are) | Mates › Rigid Group | parity-ish | the selected occurrences are fastened as built to the first; no group entity to unlock later |
 | `joint.screw` | Screw | joint: a cylindrical joint (its turn drives its travel) \| a, b: a joint that turns and one that slides, b driven by a; pitch: \          travel per turn (mm or | Relation dialog (screw) | parity | done 2026-10-22 (r45): a rotation drives a travel by the pitch; the ribbon's Screw opens the Relation dialog |
 | `joint.solve` | Solve Joints | re-place the occurrences from the joints → conflicts, errors, dof | `cad.assembly.compose` / solve on edit | parity |  |
 | `joint.sweep` | Sweep Joint |  |  | gap |  |
 | `motion.delete` | Delete Motion Study | study |  | n/a | studies are not saved yet |
 | `motion.export` | Export Motion Study | study; samples? (default steps + 1); path? (.json or .csv) → occurrence positions per step (the design is not changed) | Motion study window | partial | done 2026-10-22 (r46): CSV of every step (driven value, each instance's position and quaternion). Missing: JSON, a chosen sample count |
 | `motion.export_animation` | Export Motion Animation | study: id\|name, or joint: id\|name with from and to (degrees for angles, mm for distances, or expressions) and index?;          path: a .gif file, or a folder  | aether_animation (separate app) | partial |  |
-| `motion.interference` | Motion Interference |  |  | gap |  |
+| `motion.interference` | Motion Interference |  | Motion study › Interference | parity-ish | every pair of occurrences checked at each step (contact sets ignored); the study stops and reports the first overlap |
 | `motion.list` | List Motion Studies |  |  | n/a | studies are not saved yet |
 | `motion.play` | Play Motion Study | study: id\|name; step (0…steps) — sets the joints to the study's values there (contact sets stop them); quiet?: bool \          (positions of only the occurrenc | Mate DOF value preview | partial | one joint at a time |
-| `motion.plot` | Plot Motion Study |  |  | gap |  |
+| `motion.plot` | Plot Motion Study |  | Motion study › Plot | parity-ish | an inline line plot of the driven DOF or an occurrence coordinate over steps; one series at a time |
 | `motion.study` | Motion Study | name?; study? (edit an existing one); steps? (timeline length, default 100); keys: [{joint, index?, points: [[step, value], …]}] \          (values: degrees for | Motion study window (`assembly-motion-study`) | partial | done 2026-10-22 (r46): one mate DOF from a start to an end value over N steps, each step solved in-process and played. Missing: several keys, saved studies, expressions |
-| `motion.trace` | Motion Trace |  |  | gap |  |
-| `motion.trace.keep` | Keep Motion Trace |  |  | gap |  |
+| `motion.trace` | Motion Trace |  | Motion study › Trace | parity | the traced occurrence's origin path over the study, drawn in the viewport |
+| `motion.trace.keep` | Keep Motion Trace |  | Motion study › Keep trace (CSV) | partial | kept as a CSV of points, not as sketch geometry in a part |
 | `occurrence.copy` | Paste (Instance) | component (or occurrence): what to place again; path?: validates selected occurrence; parent?: component (default: the same parent); translate?: [x,y,z]. Copies | Instance | partial |  |
 | `occurrence.ground` | Ground | occurrence; grounded?: bool (default toggles) | Fixed component | parity |  |
 | `occurrence.move` | Move Occurrence | occurrence; path?: exact placement; space?: local\|world (default local); translate?: [x,y,z]; axis?: [x,y,z], angle?: radians or "30 deg", origin?: [x,y,z]; ma | Transform / drag | parity |  |

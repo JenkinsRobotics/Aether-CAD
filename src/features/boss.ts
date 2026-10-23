@@ -1,11 +1,12 @@
 import type { SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
+import { plasticRuleFor } from "@aether/core/document";
 import type { FeatureEditor, FeatureEditorContext } from "./shared";
 
 /** Plastic Boss: raised out of a picked planar face at a point. */
 export const bossEditor: FeatureEditor = {
   type: "boss",
-  controls({ field, feature }: FeatureEditorContext) {
+  controls({ field, feature, doc }: FeatureEditorContext) {
     return {
       face: field("Boss face", JSON.stringify(feature?.face ? [feature.face] : [])),
       pointX: field("Point X (mm)", String(feature?.pointMillimeters?.[0] ?? 0)), pointY: field("Point Y (mm)", String(feature?.pointMillimeters?.[1] ?? 0)), pointZ: field("Point Z (mm)", String(feature?.pointMillimeters?.[2] ?? 0)),
@@ -13,7 +14,7 @@ export const bossEditor: FeatureEditor = {
       height: field("Height (mm)", String(feature?.heightMillimeters ?? 8)),
       holeDiameter: field("Hole diameter (mm, blank = none)", feature?.holeDiameterMillimeters === undefined ? "" : String(feature.holeDiameterMillimeters)),
       holeDepth: field("Hole depth (mm)", feature?.holeDepthMillimeters === undefined ? "" : String(feature.holeDepthMillimeters)),
-      draft: field("Draft (degrees)", String(feature?.draftDegrees ?? 0)),
+      draft: field("Draft (degrees)", String(feature?.draftDegrees ?? plasticRuleFor(doc)?.draftDegrees ?? 0)),
     };
   },
   layout(context, controls) {

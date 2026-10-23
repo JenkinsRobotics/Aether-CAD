@@ -62,3 +62,31 @@ export function explodedPlacements(instances: AssemblySolution["instances"], sca
   const centre = instances.reduce((c, i) => [c[0] + i.placement_mm[0] / instances.length, c[1] + i.placement_mm[1] / instances.length, c[2] + i.placement_mm[2] / instances.length], [0, 0, 0]);
   return instances.map((i) => ({ ...i, placement_mm: [i.placement_mm[0] + scale * (i.placement_mm[0] - centre[0]), i.placement_mm[1] + scale * (i.placement_mm[1] - centre[1]), i.placement_mm[2] + scale * (i.placement_mm[2] - centre[2])] as [number, number, number] }));
 }
+
+/** motion.trace: the path of an occurrence's origin through the frames, in mm. */
+export function motionTrace(frames: MotionFrame[], instanceId: string): [number, number, number][] {
+  return frames.flatMap((frame) => { const p = frame.placements.find((i) => i.id === instanceId); return p ? [[...p.placement_mm] as [number, number, number]] : []; });
+}
+/** motion.plot: one value per step. A key "joint:dof" reads the driven value; "instance.x|y|z" a position in mm. */
+export function motionSeries(frames: MotionFrame[], key: string): [number, number][] {
+  const axis = /^(.*)\.([xyz])$/.exec(key);
+  return frames.map((frame) => {
+    if (axis) { const p = frame.placements.find((i) => i.id === axis[1]); return [frame.step, p ? p.placement_mm["xyz".indexOf(axis[2])] : NaN]; }
+    return [frame.step, frame.values[key] ?? NaN];
+  });
+}
+/** An inline SVG line plot of a series (no axes library: a polyline and two labels). */
+export function motionPlotSVG(series: [number, number][], label: string, width = 320, height = 120): string {
+  const finite = series.filter(([, v]) => Number.isFinite(v));
+  if (finite.length < 2) return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><text x="8" y="20" font-size="11">${label}: nothing to plot</text></svg>`;
+  const xs = finite.map(([s]) => s), ys = finite.map(([, v]) => v);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const px = (s: number) => 36 + (x1 === x0 ? 0 : (s - x0) / (x1 - x0)) * (width - 44);
+  const py = (v: number) => height - 18 - (y1 === y0 ? 0.5 : (v - y0) / (y1 - y0)) * (height - 30);
+  const points = finite.map(([s, v]) => `${px(s).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" role="img" aria-label="${label}">` +
+    `<polyline fill="none" stroke="currentColor" stroke-width="1.5" points="${points}"/>` +
+    `<text x="4" y="14" font-size="10">${y1.toFixed(2)}</text><text x="4" y="${height - 20}" font-size="10">${y0.toFixed(2)}</text>` +
+    `<text x="36" y="${height - 4}" font-size="10">step ${x0}</text><text x="${width - 60}" y="${height - 4}" font-size="10">step ${x1}</text></svg>`;
+}
+export const motionTraceCSV = (trace: [number, number, number][]) => ["x_mm,y_mm,z_mm", ...trace.map((p) => p.map((v) => v.toFixed(4)).join(","))].join("\n");

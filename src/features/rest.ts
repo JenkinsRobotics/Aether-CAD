@@ -1,18 +1,19 @@
 import type { SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
+import { plasticRuleFor } from "@aether/core/document";
 import type { FeatureEditor, FeatureEditorContext } from "./shared";
 
 /** Plastic Rest: raised out of a picked planar face at a point. */
 export const restEditor: FeatureEditor = {
   type: "rest",
-  controls({ field, feature }: FeatureEditorContext) {
+  controls({ field, feature, doc }: FeatureEditorContext) {
     return {
       face: field("Rest face", JSON.stringify(feature?.face ? [feature.face] : [])),
       pointX: field("Point X (mm)", String(feature?.pointMillimeters?.[0] ?? 0)), pointY: field("Point Y (mm)", String(feature?.pointMillimeters?.[1] ?? 0)), pointZ: field("Point Z (mm)", String(feature?.pointMillimeters?.[2] ?? 0)),
       width: field("Width / diameter (mm)", String(feature?.widthMillimeters ?? 8)),
       length: field("Length (mm, blank = round)", feature?.lengthMillimeters === undefined ? "" : String(feature.lengthMillimeters)),
       height: field("Height (mm)", String(feature?.heightMillimeters ?? 2)),
-      draft: field("Draft (degrees)", String(feature?.draftDegrees ?? 0)),
+      draft: field("Draft (degrees)", String(feature?.draftDegrees ?? plasticRuleFor(doc)?.draftDegrees ?? 0)),
     };
   },
   layout(context, controls) {

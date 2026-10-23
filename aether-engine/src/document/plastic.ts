@@ -42,3 +42,39 @@ export function validateRest(feature:RestFeature,earlier:ReadonlyMap<string,stri
   if(feature.lengthMillimeters!==undefined&&!pos(feature.lengthMillimeters))throw Error('Rest length must be positive.');
   if(feature.alongMillimeters!==undefined&&!(Array.isArray(feature.alongMillimeters)&&feature.alongMillimeters.length===3&&feature.alongMillimeters.every(Number.isFinite)&&Math.hypot(...feature.alongMillimeters)>1e-9))throw Error('Rest direction must be a nonzero vector.');
 }
+
+/** Lip / groove (SolidCraft's plastic.lip): a band along the inside or outside edge of a
+ *  shelled body's rim face, raised (lip) or sunk (groove, widened by the clearance gap). */
+export interface LipFeature {
+  id:string;type:'lip';name:string;suppressed:boolean;
+  targetBodyId:string;
+  face:SolidFaceReference;
+  shape:'lip'|'groove';
+  side:'inside'|'outside';
+  widthMillimeters:number;heightMillimeters:number;
+  /** Groove clearance added to the width; default: none. */
+  gapMillimeters?:number;
+}
+/** Snap fit (plastic.snap_fit): a cantilever hook out of a face at a point. */
+export interface SnapFitFeature extends OnFace {
+  id:string;type:'snap-fit';name:string;suppressed:boolean;
+  /** Which way the catch faces, across the face. */
+  hookDirectionMillimeters:[number,number,number];
+  lengthMillimeters:number;thicknessMillimeters:number;widthMillimeters:number;
+  catchDepthMillimeters:number;catchLengthMillimeters:number;
+}
+export function validateLip(feature:LipFeature,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean) {
+  if(typeof feature.targetBodyId!=='string')throw Error('Lip needs a target part.');
+  validateSolidFaceReference(feature.face,earlier,missing,'Lip face');
+  if(feature.face.surfaceType)throw Error('A lip goes on a planar rim face.');
+  if(!['lip','groove'].includes(feature.shape)||!['inside','outside'].includes(feature.side))throw Error('Lip needs a shape (lip or groove) and a side.');
+  if(!pos(feature.widthMillimeters)||!pos(feature.heightMillimeters))throw Error('Lip width and height must be positive.');
+  if(feature.gapMillimeters!==undefined&&!(Number.isFinite(feature.gapMillimeters)&&feature.gapMillimeters>=0))throw Error('Groove gap must be zero or more.');
+}
+export function validateSnapFit(feature:SnapFitFeature,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean) {
+  validateOnFace(feature,earlier,missing,'Snap fit');
+  const h=feature.hookDirectionMillimeters;
+  if(!Array.isArray(h)||h.length!==3||!h.every(Number.isFinite)||Math.hypot(...h)<1e-9)throw Error('Snap fit needs a hook direction.');
+  if(![feature.lengthMillimeters,feature.thicknessMillimeters,feature.widthMillimeters,feature.catchDepthMillimeters,feature.catchLengthMillimeters].every(pos))throw Error('Snap fit sizes must be positive.');
+  if(feature.catchLengthMillimeters>=feature.lengthMillimeters)throw Error('The catch must be shorter than the arm.');
+}

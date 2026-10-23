@@ -2,6 +2,7 @@ import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-c
 import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
 import { appendDocument, availableBodies, parsePartDocument, splitDocument, type PartDocument } from "./aether-core";
 import type { PartDefinitionProjection } from "./cad-assembly-bridge";
+import { asBuiltConnectorFrames, asBuiltJointDraftIssues, type AsBuiltJointDraft, type Placement, type WorldFrame } from "./cad-joint-authoring";
 import {
   AssemblyBridgeClient,
   AssemblyBridgeError,
@@ -768,6 +769,73 @@ export class CADAssemblyController {
         this.onStatus(`Moved ${draft.bodyIDs.length} bod${draft.bodyIDs.length === 1 ? "y" : "ies"} and ${draft.sketchIDs.length} sketch${draft.sketchIDs.length === 1 ? "" : "es"} from ${source.name} to ${target.name}.`, "success");
       }
     } catch (error) { this.onStatus(`Bodies to component failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
+  // ---- As-built joints and rigid groups (SolidCraft's joint.as_built / rigid_group) ----
+
+  private placementOf(instance: AssemblyInstanceProjection): Placement {
+    const t = instance.solved_world_transform ?? instance.rest_transform;
+    return { position_m: t.position_m, rotation_quaternion_xyzw: t.rotation_quaternion_xyzw };
+  }
+  private async addConnectorFrame(instance: AssemblyInstanceProjection, frame: WorldFrame, name: string): Promise<string> {
+    const assemblyID = this.canonical?.assembly.assembly_id;
+    if (!assemblyID) throw new Error("No canonical Assembly workspace is open.");
+    const before = new Set(this.canonical?.assembly.connector_definitions.map(({ id }) => id) ?? []);
+    await this.mutate("add_connector", { assembly_id: assemblyID, connector: {
+      part_definition_id: instance.definition_id, name,
+      frame_part_local: { origin_m: [...frame.origin_m], primary_axis_xyz: [...frame.primary_axis_xyz], secondary_axis_xyz: [...frame.secondary_axis_xyz] },
+      provenance: { kind: "manual", stable_feature_id: null, label: "as-built" },
+    } });
+    const added = (this.canonical?.assembly.connector_definitions ?? []).map(({ id }) => id).filter((id) => !before.has(id));
+    if (added.length !== 1) throw new Error("Core did not return exactly one new connector ID.");
+    return added[0];
+  }
+  /** joint.as_built: a mate between two occurrences where they stand, with connectors made to fit. */
+  async addAsBuiltJoint(draft: AsBuiltJointDraft): Promise<void> {
+    const issues = asBuiltJointDraftIssues(draft);
+    if (issues.length) throw new Error(issues.join(" "));
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    const a = canonical.assembly.instances.find(({ id }) => id === draft.aInstanceID), b = canonical.assembly.instances.find(({ id }) => id === draft.bInstanceID);
+    if (!a || !b) throw new Error("An occurrence of the joint is gone.");
+    const name = draft.name.trim() || `${draft.typeID} ${a.name} · ${b.name}`;
+    try {
+      const frames = asBuiltConnectorFrames(this.placementOf(a), this.placementOf(b), draft.at, draft.axis);
+      const connectorA = await this.addConnectorFrame(a, frames.a, `${name} · A`);
+      const connectorB = await this.addConnectorFrame(b, frames.b, `${name} · B`);
+      await this.mutate("add_mate", { assembly_id: canonical.assembly.assembly_id, mate: {
+        name, type_id: draft.typeID,
+        endpoint_a: { instance_id: a.id, connector_definition_id: connectorA },
+        endpoint_b: { instance_id: b.id, connector_definition_id: connectorB },
+        dofs: [], controls: [],
+      } });
+      this.onStatus(`As-built ${draft.typeID} joint between ${a.name} and ${b.name}.`, "success");
+    } catch (error) { this.onStatus(`As-built joint failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+  /** joint.rigid_group: the selected occurrences move together as they are (fastened to the first). */
+  async addRigidGroupFromSelection(): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    const ids = [...this.store.snapshot().selectedEntityIDs].filter((id) => canonical.assembly.instances.some((i) => i.id === id));
+    if (ids.length < 2) { this.onStatus("Select two or more occurrences for a rigid group.", "error"); throw new Error("Select two or more occurrences."); }
+    for (const other of ids.slice(1)) await this.addAsBuiltJoint({ name: `Rigid group · ${other}`, typeID: "fastened", aInstanceID: ids[0], bInstanceID: other });
+    this.onStatus(`Rigid group of ${ids.length} occurrences.`, "success");
+  }
+
+  /** joint.reach: translate an occurrence so its origin (or `at`) lands on a world point. */
+  async reachPoint(draft: { instanceID: string; pointMillimeters: readonly [number, number, number]; atMillimeters?: readonly [number, number, number] }): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    const instance = canonical.assembly.instances.find(({ id }) => id === draft.instanceID);
+    if (!instance) throw new Error("The occurrence is gone.");
+    if (!this.canEditInstances) throw new Error("The current Assembly workspace does not permit moving occurrences.");
+    const at = draft.atMillimeters ? draft.atMillimeters.map((v) => v / 1000) : instance.rest_transform.position_m;
+    const delta = draft.pointMillimeters.map((v, i) => v / 1000 - at[i]);
+    const { solved_world_transform: _solved, source_status: _status, ...rest } = instance;
+    try {
+      await this.mutate("update_instance", { assembly_id: canonical.assembly.assembly_id, instance: { ...rest, rest_transform: { position_m: instance.rest_transform.position_m.map((v, i) => v + delta[i]), rotation_quaternion_xyzw: [...instance.rest_transform.rotation_quaternion_xyzw] } } });
+      this.onStatus(`${instance.name} moved to reach the point.`, "success");
+    } catch (error) { this.onStatus(`Reach point failed: ${messageFor(error)}`, "error"); throw error; }
   }
 
   async removeContactSet(id: string): Promise<void> {

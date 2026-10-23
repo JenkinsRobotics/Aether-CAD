@@ -16,6 +16,8 @@ export interface AssemblyCommandHost {
   copySelectedInstanceIndependent(): Promise<unknown>;
   /** Another occurrence of the selected part. */
   addLinkedCopyOfSelectedInstance(): Promise<unknown>;
+  /** joint.rigid_group over the selected occurrences. */
+  addRigidGroupFromSelection(): Promise<unknown>;
   toggleSelectedMateSuppressed(): Promise<unknown>;
   removeSelectedMate(): Promise<unknown>;
   /** Invalidate any standing mate preview before a new mate is authored. */
@@ -31,6 +33,8 @@ const DIALOGS: readonly (readonly [CADCommandID, CADStartDialog])[] = [
   ["assembly-create-contact-set", "create-contact-set"],
   ["assembly-part-properties", "part-properties"],
   ["assembly-bodies-to-component", "bodies-to-component"],
+  ["assembly-as-built-joint", "as-built-joint"],
+  ["assembly-reach-point", "reach-point"],
 ];
 
 export function registerAssemblyCommands(host: AssemblyCommandHost): void {
@@ -55,6 +59,7 @@ export function registerAssemblyCommands(host: AssemblyCommandHost): void {
   act("assembly-remove-instance", () => host.removeSelectedInstance());
   act("assembly-make-independent", () => host.copySelectedInstanceIndependent());
   act("assembly-linked-copy", () => host.addLinkedCopyOfSelectedInstance());
+  act("assembly-rigid-group", () => host.addRigidGroupFromSelection());
   act("assembly-toggle-mate-suppressed", () => host.toggleSelectedMateSuppressed());
   act("assembly-remove-mate", () => host.removeSelectedMate());
 }
@@ -68,6 +73,7 @@ export const assemblyCommandIDs: readonly CADCommandID[] = [
   "assembly-remove-instance",
   "assembly-make-independent",
   "assembly-linked-copy",
+  "assembly-rigid-group",
   "assembly-toggle-mate-suppressed",
   "assembly-remove-mate",
 ];

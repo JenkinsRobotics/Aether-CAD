@@ -98,6 +98,8 @@ export type CADCommandID =
   | "assembly-make-independent" | "assembly-linked-copy" | "assembly-part-properties" | "assembly-bodies-to-component"
   | "feature-curve3d"
   | "part-continuity" | "part-curvature-comb" | "part-isocurve" | "part-minimum-radius"
+  | "feature-lip" | "feature-snap-fit" | "show-plastic-rules"
+  | "assembly-as-built-joint" | "assembly-rigid-group" | "assembly-reach-point"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -246,6 +248,8 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-make-independent", "assembly-linked-copy", "assembly-part-properties", "assembly-bodies-to-component",
   "feature-curve3d",
   "part-continuity", "part-curvature-comb", "part-isocurve", "part-minimum-radius",
+  "feature-lip", "feature-snap-fit", "show-plastic-rules",
+  "assembly-as-built-joint", "assembly-rigid-group", "assembly-reach-point",
   "fit-view",
   "clear-mates",
   "view-top",
