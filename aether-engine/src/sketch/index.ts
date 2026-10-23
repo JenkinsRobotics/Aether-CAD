@@ -221,6 +221,6 @@ export { copySketchContours } from "./operations/transform";
 export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines } from "./sample";
 
 export { contourNestingDepths } from "./regions/nesting";
-export { autoConstrainDrawing } from "./operations/auto-constrain";
+export { autoConstrainDrawing, autoConstrainFromDatum } from "./operations/auto-constrain";
 export { sketchDrawingToDXF } from "./export/dxf";
 export { looseEnds } from "./operations/loose-ends";

@@ -19,6 +19,7 @@ export const sketchWorkspace: CADRibbonWorkspaceDefinition = {
         tool("sketch-unfix", "Unfix selected geometry", "ground", "sketch-unfix"),
         tool("sketch-change-plane", "Change sketch plane", "plane", "sketch-change-plane"),
         tool("sketch-auto-constrain", "AutoConstrain", "parallel", "sketch-auto-constrain"),
+        tool("sketch-auto-constrain-datum", "AutoConstrain from datum", "parallel", "sketch-auto-constrain-datum"),
         tool("sketch-finish-auto-constrain", "Finish with AutoConstrain", "check", "sketch-finish-auto-constrain"),
         tool("sketch-loose-ends", "Loose ends", "parallel", "sketch-loose-ends"),
         tool("sketch-infinite", "Infinite line", "line", "sketch-infinite"),

@@ -868,6 +868,21 @@ export class CADAssemblyController {
     } catch (error) { this.onStatus(`Resize failed: ${messageFor(error)}`, "error"); throw error; }
   }
 
+  /** component.unlock: remove the fastened mates that hold the selected occurrences to each
+   *  other (a rigid group, or an imported assembly's fixed joints), so they move one by one. */
+  async unlockSelection(): Promise<void> {
+    const canonical = this.canonical;
+    if (!canonical) throw new Error("No canonical Assembly workspace is open.");
+    const ids = new Set([...this.store.snapshot().selectedEntityIDs].filter((id) => canonical.assembly.instances.some((i) => i.id === id)));
+    if (ids.size < 2) { this.onStatus("Select the occurrences to unlock (two or more).", "error"); throw new Error("Select two or more occurrences."); }
+    const locks = canonical.assembly.mates.filter((m) => m.type_id === "fastened" && ids.has(m.endpoint_a.instance_id) && ids.has(m.endpoint_b.instance_id));
+    if (!locks.length) { this.onStatus("Nothing holds these occurrences together.", "error"); return; }
+    try {
+      for (const mate of locks) await this.mutate("remove_mate", { assembly_id: canonical.assembly.assembly_id, mate_id: mate.id });
+      this.onStatus(`Unlocked ${ids.size} occurrences: ${locks.length} fastened mate${locks.length === 1 ? "" : "s"} removed.`, "success");
+    } catch (error) { this.onStatus(`Unlock failed: ${messageFor(error)}`, "error"); throw error; }
+  }
+
   async removeContactSet(id: string): Promise<void> {
     const canonical = this.canonical;
     if (!canonical) throw new Error("No canonical Assembly workspace is open.");

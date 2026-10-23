@@ -105,6 +105,7 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "assembly-part-properties", label: "Part Properties", category: "Assembly", keywords: ["part number description metadata"], icon: <AetherIcon name="settings" /> },
   { id: "assembly-bodies-to-component", label: "Bodies to Component", category: "Assembly", keywords: ["from bodies move sketches"], icon: <AetherIcon name="part" /> },
   { id: "assembly-as-built-joint", label: "As-Built Joint", category: "Assembly", keywords: ["joint where they are"], icon: <AetherIcon name="link" /> },
+  { id: "assembly-unlock", label: "Unlock Contents", category: "Assembly", keywords: ["unlock rigid group fastened"], icon: <AetherIcon name="link" /> },
   { id: "assembly-rigid-group", label: "Rigid Group", category: "Assembly", keywords: ["move together fastened"], icon: <AetherIcon name="link" /> },
   { id: "assembly-insert-standard-part", label: "Insert Standard Part", category: "Assembly", keywords: ["fastener bolt screw nut washer bearing dowel"], icon: <AetherIcon name="plus" /> },
   { id: "assembly-resize-standard-part", label: "Change Part Size", category: "Assembly", keywords: ["resize fastener standard part"], icon: <AetherIcon name="sliders" /> },

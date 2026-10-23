@@ -1094,3 +1094,21 @@ and `standard_part_*` custom properties, plus one occurrence at a typed position
 Size regenerates the definition in place, so occurrences and mates stay. Threads are not
 modelled. Gotcha recorded: a cut extrusion goes into the material (−Z from its sketch plane),
 so a bore is drawn on the face it starts from.
+
+### r58 (2026-10-23): AutoConstrain from datum, Unlock
+
+Installed.
+
+AutoConstrain from datum (SolidCraft's `sketch.auto_constrain_from_datum`) runs AutoConstrain,
+then positions every path vertex from a datum point with horizontal and vertical distances. The
+solver's axis distances need two points, so without a selected point the command adds a fixed
+construction point at the sketch origin. To avoid redundant dimensions, x and y coordinates are
+grouped by union-find over the relations that tie them (a horizontal line's ends share y, a
+vertical line's share x, coincident points and fixed points share both) and each group is
+dimensioned once: a rectangle gets four positions, not eight. Circles and arc midpoints are left
+to the user. Unlock (`component.unlock`) removes the fastened mates between the selected
+occurrences, which is what a rigid group made.
+
+Also in r58: 3D Sketch moved to the end of Solid › Create. The shared submenu opens under its row
+with no height limit, and the extra row pushed Cone off the bottom of the window in the
+frontend browser suite; a clamp or upward flip belongs in @aether/ui.

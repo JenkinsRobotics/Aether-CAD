@@ -102,6 +102,7 @@ export type CADCommandID =
   | "assembly-as-built-joint" | "assembly-rigid-group" | "assembly-reach-point"
   | "feature-sheet-perforate" | "sheet-export-bend-table"
   | "assembly-insert-standard-part" | "assembly-resize-standard-part"
+  | "sketch-auto-constrain-datum" | "assembly-unlock"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -254,6 +255,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-as-built-joint", "assembly-rigid-group", "assembly-reach-point",
   "feature-sheet-perforate", "sheet-export-bend-table",
   "assembly-insert-standard-part", "assembly-resize-standard-part",
+  "sketch-auto-constrain-datum", "assembly-unlock",
   "fit-view",
   "clear-mates",
   "view-top",
