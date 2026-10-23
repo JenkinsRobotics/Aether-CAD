@@ -2,7 +2,7 @@
 
 Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
 
-Totals (398 commands): parity 204, partial 88, n/a 53, gap 18, parity-ish 26, verify 7, ours+ 2
+Totals (398 commands): parity 206, partial 88, n/a 53, gap 16, parity-ish 26, verify 7, ours+ 2
 
 ## Sketch (105)
 
@@ -12,7 +12,7 @@ Totals (398 commands): parity 204, partial 88, n/a 53, gap 18, parity-ish 26, ve
 | `sketch.arc.tangent` | Tangent Arc | start: end point of a line or arc ("l1.end"), end: [x,y]; curve?: the curve to be tangent to (default: the one ending at start) | Tangent arc | parity |  |
 | `sketch.arc.three_point` | 3-Point Arc | start, end, through | Arc | parity |  |
 | `sketch.auto_constrain` | AutoConstrain | tolerance?: mm (default 0.01), angle_tolerance?: deg (default 1), dimensions?: bool (default true): infer constraints, then dimension until fully constrained | AutoConstrain | parity | done 2026-10-21: horizontal/vertical within 2°, coincident endpoints within 0.05 mm, never twice |
-| `sketch.auto_constrain_from_datum` | AutoConstrain from datum | datum: point ref (default origin); like AutoConstrain with positions measured from the datum |  | gap |  |
+| `sketch.auto_constrain_from_datum` | AutoConstrain from datum | datum: point ref (default origin); like AutoConstrain with positions measured from the datum | Sketch › Edit › AutoConstrain from datum | parity | done 2026-10-23 (r58): AutoConstrain, then each path vertex positioned from the selected point (else a fixed point at the origin) by horizontal and vertical distances; coordinates already tied by horizontal, vertical or coincident relations are dimensioned once. Circles and arc midpoints are left free |
 | `sketch.auto_project` | Auto-Project Edges on Reference | value?: bool (default toggles): project a face's edges when a sketch is created on it | Project face edges on start (sketch window) | parity | done 2026-10-21: the face's in-plane edges as construction geometry |
 | `sketch.blend_curve` | Blend Curve | a, b: end points of two curves ("l1.end", "a2.start"), continuity?: g1\|g2\|g3\|g4 (default g1: a tangent spline; g2…g4 match the reference curves' curvature, c |  | gap |  |
 | `sketch.break` | Break | curve: id, at: [x,y] (split at intersections) \| points: [[x,y]…] (1…1000 positions projected onto the curve; duplicates are merged) | Split / Break | parity | done 2026-10-21 (r36): Break splits the clicked curve at every crossing with another curve in one go (circles included); Split still cuts at a picked point |
@@ -320,7 +320,7 @@ Totals (398 commands): parity 204, partial 88, n/a 53, gap 18, parity-ish 26, ve
 | `component.relink` | Relink Source | component: id or name of a linked component; path: a saved .solidcraft design — replaces the source and linked bodies for all its occurrences, preserving identi | Studio Drive | partial |  |
 | `component.rename` | Rename Component | component, name | Rename (parts list) | parity |  |
 | `component.revert_position` | Revert Position | occurrences?: [ids] (default all); drops selected pending occurrence moves | Undo insertion | n/a | nothing pending to revert; recipe undo restores the previous archive |
-| `component.unlock` | Unlock Contents | component: removes the rigid joints that hold its contents together (an imported assembly's rigid group), so its parts \          move and take joints one by on |  | gap |  |
+| `component.unlock` | Unlock Contents | component: removes the rigid joints that hold its contents together (an imported assembly's rigid group), so its parts \          move and take joints one by on | Mates › Unlock | parity | removes the fastened mates holding the selected occurrences to each other (a rigid group, or fixed joints), so they move one by one |
 | `component.update_links` | Update Links | component?: id or name (default: every linked component) — reads the linked designs again and replaces their bodies where they changed | Studio Drive | partial |  |
 | `contact.check` | Check Contact | → pairs in contact sets that pass through each other now | Check contacts (`assembly-check-contacts`) | parity | done 2026-10-23 (r51): the pairs in contact sets that pass through each other at the current solve, with the overlap volume |
 | `contact.create` | New Contact Set | occurrences: [ids or names] (two or more); name? | Contact set dialog (`assembly-create-contact-set`) | parity | done 2026-10-23 (r51): two or more occurrences, named; stored by the Assembly workspace |

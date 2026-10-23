@@ -260,6 +260,7 @@ registerAssemblyCommands({
   copySelectedInstanceIndependent: () => assemblyController.copySelectedInstanceIndependent(),
   addLinkedCopyOfSelectedInstance: () => assemblyController.addLinkedCopyOfSelectedInstance(),
   addRigidGroupFromSelection: () => assemblyController.addRigidGroupFromSelection(),
+  unlockSelection: () => assemblyController.unlockSelection(),
   toggleSelectedMateSuppressed: () => assemblyController.toggleSelectedMateSuppressed(),
   removeSelectedMate: () => assemblyController.removeSelectedMate(),
   resetMatePreview: () => {

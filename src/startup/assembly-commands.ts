@@ -18,6 +18,8 @@ export interface AssemblyCommandHost {
   addLinkedCopyOfSelectedInstance(): Promise<unknown>;
   /** joint.rigid_group over the selected occurrences. */
   addRigidGroupFromSelection(): Promise<unknown>;
+  /** component.unlock over the selected occurrences. */
+  unlockSelection(): Promise<unknown>;
   toggleSelectedMateSuppressed(): Promise<unknown>;
   removeSelectedMate(): Promise<unknown>;
   /** Invalidate any standing mate preview before a new mate is authored. */
@@ -62,6 +64,7 @@ export function registerAssemblyCommands(host: AssemblyCommandHost): void {
   act("assembly-make-independent", () => host.copySelectedInstanceIndependent());
   act("assembly-linked-copy", () => host.addLinkedCopyOfSelectedInstance());
   act("assembly-rigid-group", () => host.addRigidGroupFromSelection());
+  act("assembly-unlock", () => host.unlockSelection());
   act("assembly-toggle-mate-suppressed", () => host.toggleSelectedMateSuppressed());
   act("assembly-remove-mate", () => host.removeSelectedMate());
 }
@@ -76,6 +79,7 @@ export const assemblyCommandIDs: readonly CADCommandID[] = [
   "assembly-make-independent",
   "assembly-linked-copy",
   "assembly-rigid-group",
+  "assembly-unlock",
   "assembly-toggle-mate-suppressed",
   "assembly-remove-mate",
 ];
