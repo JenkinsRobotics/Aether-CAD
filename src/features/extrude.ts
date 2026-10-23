@@ -17,6 +17,7 @@ import { bodyAndOperationTabs, rowIn, unitSuffix, type Controls, type FeatureEdi
 const operationValues = ["new", "add", "cut", "intersect"] as const;
 export const extrudeEditor: FeatureEditor = {
   type: "extrude",
+  handles: false,
   controls(context: FeatureEditorContext): Controls {
     const { field, reference, feature, doc } = context;
     const source = reference("Sketch", ["sketch", "profile"], feature?.profileFeatureId);

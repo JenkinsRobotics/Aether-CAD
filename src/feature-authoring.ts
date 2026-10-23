@@ -5,6 +5,7 @@ import { mountConstructionCommands } from "./construction-commands";
 import { mountSheetMetalCommands } from "./sheet-metal-commands";
 import { mountConfigurationCommands } from "./configurations-window";
 import { mountTimelinePaste } from "./timeline-clipboard-commands";
+import { mountPreviewHandles } from "./features/preview-handles";
 import { mountEditHistory, featurePreviewDocument } from "./modeling/edit-history";
 import { mountFeaturePreview } from "./modeling/feature-preview";
 import { openProjectionEditor } from "./sketch/projection-editor";
@@ -312,6 +313,9 @@ const presentFeatureWindow = (
 
     };
     mountEditHistory(win.panel, source, existing?.id);
+    // Every feature's draggable parameters get a viewport handle from the preview's
+    // published manipulators; editors that mount their own (extrude, push/pull, transform) opt out.
+    if (editor && editor.handles !== false) mountPreviewHandles(win.panel, controls, { length: lengthUnit.unit, angle: angleUnit.unit }, editor.handles ?? {});
     const preview = mountFeaturePreview(win.body, () => featurePreviewDocument(candidateDocument(), existing?.id), message => win.setError(message), () => candidateDocument(), message => win.setNotice?.(message));
     for (const control of [...Object.values(controls), name]) {
       control.addEventListener("input", preview.update);

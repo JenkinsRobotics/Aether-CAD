@@ -926,3 +926,29 @@ the set stay. Copy features / Paste features commands act on the feature selecti
 yet, and no pasting across documents. The tools harness's hole step now asks for a fresh preview
 after its last value, which is the flake's likely cause.
 
+### r49 (2026-10-22): manipulators for every feature, instant previews
+
+Installed; the tools harness sees the fillet manipulator in the viewport while the dialog is open.
+
+Jonathan's direction: dragging and pulling in the viewport, with a live preview, for every feature
+that has a length, angle or size, not only the few that had it. Three pieces:
+
+- **The engine publishes handles with each preview.** `PreviewHandle` (`contracts/geometry.ts`):
+  a parameter name, linear or angular, an origin and a direction. Each feature branch publishes
+  its own as it runs: extrude's axes (the contract the dialog already dragged, never produced by
+  this engine until now), revolve's angle ring on the axis level with the profile, fillet and
+  chamfer size on the first finished edge pulling into the part, shell thickness, hole depth and
+  diameter, coil pitch and radius, pipe diameter, surface extrude/offset/thicken/ruled/extend
+  distances, surface revolve angle, sheet base thickness, flange length and angle, hem length, fold
+  angle, bounding-solid margin. The previewed feature always re-evaluates so its handles are there
+  before the first edit.
+- **One generic mount** (`src/features/preview-handles.ts`): every dialog gets a viewport handle per
+  published parameter that matches one of its controls (editors may map names or opt out when they
+  mount their own, as Extrude and Transform do). Linear handles reuse the extrusion handle (axis
+  projection through the viewer); angular ones are a new ring built on the transform gizmo's
+  rotate math. Dragging writes the control, so preview, validation and commit keep one owner.
+- **No debounce while dragging.** The preview queue coalesced edits behind a 100 ms timer; a handle
+  drag sets a body flag and the queue takes every frame (stale requests are dropped, one engine
+  run at a time). Engine-side preview cost measured on a plate with a boss: extrude edits 2–9 ms,
+  a fillet 68 ms; the overlay mesh is three times coarser than the committed one.
+

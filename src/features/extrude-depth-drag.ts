@@ -105,15 +105,17 @@ export function mountExtrusionHandle(panel: HTMLElement, controls: Record<string
   };
   const cancel=(restore:boolean)=>{
     if(!drag)return;
-    const previous=drag;drag=undefined;
+    const previous=drag;drag=undefined;delete document.body.dataset.cadHandleDrag;
     if(restore){distance.value=previous.value;reversed.value=previous.reverse;reversed.dispatchEvent(new Event('change'));distance.dispatchEvent(new Event('input'));}
     if(handle.hasPointerCapture(previous.id))handle.releasePointerCapture(previous.id);
+    distance.dispatchEvent(new Event('change'));
   };
   handle.addEventListener('pointerdown',event=>{
     if(event.button!==0||!projection||options.ready?.()===false)return;
     const axis=projection.depthAt(event.clientX,event.clientY);if(axis===null)return;
     event.preventDefault();event.stopPropagation();handle.focus();
     drag={id:event.pointerId,start:Number(distance.value)*factor*direction(),axis,projection,value:distance.value,reverse:reversed.value};
+    document.body.dataset.cadHandleDrag='1'; // the preview skips its debounce while a handle drags
     handle.setPointerCapture(event.pointerId);
   });
   handle.addEventListener('pointermove',event=>{

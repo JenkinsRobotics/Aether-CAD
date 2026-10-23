@@ -4,6 +4,7 @@ import { matchesProfileRegion, type ProfileRegionSelection } from "../sketch/ref
 import { resolveProfileDrawing } from "../document/profile-projection";
 import { canonicalPlaneXDirection, flipSketchFrame, principalFrame, resolvePlaneFrame } from "../document/construction-planes";
 import { bendAllowanceMillimeters, type SheetMetalRule } from "../document/sheet-metal";
+import type { ExtrusionPreviewAxis, PreviewHandle } from "../contracts/geometry";
 import { constructionPlaneFrame } from "../document/solid-features";
 import { resolveAxisLine } from "../document/construction-axes";
 import { sketchRegionOrder } from "../sketch/regions/order";
@@ -449,6 +450,11 @@ export function evaluatePartDocument(
   const history = document.features.slice(0, rollbackPosition(document));
   const last = history[history.length - 1];
   const previewId = options.preview && last && !last.suppressed && !["sketch", "profile", "plane", "axis", "point", "thread"].includes(last.type) ? last.id : undefined;
+  // Manipulators the previewed feature publishes as its branch runs: one per draggable
+  // parameter, placed on the geometry it changes. Extrude also keeps its axes contract.
+  const previewHandles: PreviewHandle[] = [], previewAxes: ExtrusionPreviewAxis[] = [];
+  const publish = (feature: { id: string }, handle: PreviewHandle) => { if (feature.id === previewId) previewHandles.push(handle); };
+  const perpendicular = (d: V3): V3 => { const seed: V3 = Math.abs(d[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]; const c = cross(d, seed); const l = norm(c) || 1; return [c[0] / l, c[1] / l, c[2] / l]; };
   // Replay only from the first feature whose inputs changed: every step's state
   // is kept (shapes included) until a later evaluation diverges there.
   const keys: string[] = [];
@@ -458,6 +464,8 @@ export function evaluatePartDocument(
   if (steps.size > MAX_CACHED_DOCUMENTS) { const oldest = steps.keys().next().value!; dropSteps(steps.get(oldest)!, 0); steps.delete(oldest); }
   let reuse = 0;
   while (reuse < cached.length && reuse < keys.length && cached[reuse].key === keys[reuse]) reuse++;
+  // The previewed feature always runs, so its manipulators are published even when nothing changed yet.
+  if (previewId !== undefined) { const at = history.findIndex((f) => f.id === previewId); if (at >= 0 && reuse > at) reuse = at; }
   // Steps past a rollback bar stay cached; only a changed feature discards what follows it.
   if (reuse < cached.length && reuse < keys.length) dropSteps(cached, reuse);
   const resume = cached[reuse - 1];
@@ -574,6 +582,14 @@ export function evaluatePartDocument(
           // The built plane first: it already carries a followed face, an explicit frame and the flip.
           return typeof sketchProfile.plane === "string" ? (sketchFrames[sourceId] ?? principalFrame(sketchProfile.plane, sketchProfile.offset))
             : { originMillimeters: [sketchProfile.plane.origin.x, sketchProfile.plane.origin.y, sketchProfile.plane.origin.z], normal: [sketchProfile.plane.zDir.x, sketchProfile.plane.zDir.y, sketchProfile.plane.zDir.z], xDirection: [sketchProfile.plane.xDir.x, sketchProfile.plane.xDir.y, sketchProfile.plane.xDir.z] };
+        };
+        /** Where a sketch's region sits in the world: the centre of its drawing's box on its plane. */
+        const sketchCentroid = (sourceId: string): V3 => {
+          const frame = sketchFrameOf(sourceId), p = profiles.get(sourceId);
+          const box = p?.drawing ? (p.drawing as unknown as { boundingBox?: { center?: [number, number] } }).boundingBox : undefined;
+          const [cx, cy] = box?.center ?? [0, 0];
+          const x = unit(frame.xDirection as V3), n = unit(frame.normal as V3), y = cross(n, x);
+          return [0, 1, 2].map((i) => frame.originMillimeters[i] + x[i] * cx + y[i] * cy) as V3;
         };
         const sketchContour = (sourceId: string, contourId: string, unavailable: string) => {
           const source = history.find((f) => f.id === sourceId);
@@ -815,6 +831,16 @@ export function evaluatePartDocument(
             } finally { edges.forEach((edge) => edge.delete()); }
           });
           const chainPoints = pickedPoints && feature.tangentChain ? tangentChainMidpoints(body, pickedPoints) : pickedPoints;
+          if (feature.id === previewId) {
+            // The size handle sits on the first finished edge and pulls into the part.
+            const seed = chainPoints?.[0] ?? (() => { const edges = body.edges; const m = edges[0]?.pointAt(0.5); const p: V3 | undefined = m ? [m.x, m.y, m.z] : undefined; m?.delete(); edges.forEach((edge) => edge.delete()); return p; })();
+            if (seed) {
+              const faces = new FaceFinder().containsPoint(seed).find(body);
+              const inward = faces.reduce<V3>((sum, f) => { const nv = f.normalAt(seed); const r: V3 = [sum[0] - nv.x, sum[1] - nv.y, sum[2] - nv.z]; nv.delete(); return r; }, [0, 0, 0]);
+              faces.forEach((f) => f.delete());
+              publish(feature, { parameter: "radius", kind: "linear", originMillimeters: seed, direction: norm(inward) > 1e-9 ? unit(inward) : [0, 0, -1], label: feature.type === "fillet" ? "Fillet radius" : "Chamfer size" });
+            }
+          }
           const filter = chainPoints ? (edges: EdgeFinder) => edges.either(chainPoints.map((p) => (f: EdgeFinder) => f.containsPoint(p)))
             : edgePlane ? (edges: EdgeFinder) => edges.inPlane(edgePlane) : undefined;
           const near = (p: V3, q: { x: number; y: number; z: number }) => Math.hypot(p[0] - q.x, p[1] - q.y, p[2] - q.z) < 1e-3;
@@ -1038,6 +1064,10 @@ export function evaluatePartDocument(
           for (const start of starts) {
             const direction: V3 = feature.direction ? (() => { const d = unit(feature.direction); return dot(d, start.n) < 0 ? unit([-d[0], -d[1], -d[2]]) : d; })() : feature.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
             const center = start.center;
+            if (start === starts[0]) {
+              publish(feature, { parameter: "depth", kind: "linear", originMillimeters: center, direction, label: "Hole depth" });
+              publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: [0, 1, 2].map((i) => center[i] + start.x[i] * feature.diameterMillimeters / 2) as V3, direction: start.x, scale: 2, label: "Hole diameter" });
+            }
             const length = feature.depthType === "through-all" ? throughAllDistance([body], center, direction) : depth;
             // Exact primitives at the start: cylinders along the drill direction, and a
             // revolved frustum for the countersink cone.
@@ -1233,6 +1263,7 @@ export function evaluatePartDocument(
           if (!body || !id) throw new Error("Shell requires a solid.");
           const thickness = feature.thicknessMillimeters;
           if (!(thickness > 0)) throw new Error("Shell thickness must be positive.");
+          if (feature.id === previewId) { const f0 = body.faces[0]; if (f0) { const c = f0.center, nv = f0.normalAt(c); publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit([-nv.x, -nv.y, -nv.z]), label: "Shell thickness" }); c.delete(); nv.delete(); f0.delete(); } }
           const before = measureVolume(body);
           let result: Shape3D;
           if (!feature.removedFaces?.length) {
@@ -1699,6 +1730,7 @@ export function evaluatePartDocument(
               }
             }
             // replicad consumes the shape it translates, so the copy is made from a clone.
+            if (feature.id === previewId && !previewHandles.some((h) => h.parameter === "distance")) publish(feature, { parameter: "distance", kind: "linear", originMillimeters: mid, direction: unit(reach), label: "Reach" });
             const first = own(assembleWire([edge])), second = own(first.clone().translate(reach[0], reach[1], reach[2]));
             const maker = new o.BRepOffsetAPI_ThruSections(false, true, 1e-6);
             maker.AddWire(first.wrapped); maker.AddWire(second.wrapped); maker.Build(new o.Message_ProgressRange_1());
@@ -1744,6 +1776,10 @@ export function evaluatePartDocument(
             let o = unit(cross(n, tdir));
             const c = face.center, away: V3 = sub(mid, [c.x, c.y, c.z]); c.delete();
             if (dot(o, away) < 0) o = neg(o);
+            if (feature.id === previewId && !previewHandles.length) {
+              publish(feature, { parameter: feature.type === "sheet-hem" ? "length" : "distance", kind: "linear", originMillimeters: mid, direction: o, label: feature.type === "sheet-hem" ? "Hem length" : "Flange length" });
+              if (feature.type === "sheet-flange") publish(feature, { parameter: "angle", kind: "angular", originMillimeters: mid, direction: tdir, label: "Flange angle" });
+            }
             // Folding "inward" means toward the picked face: mirror the section about the sheet's middle.
             const v = (y: number) => (options.inward ? -t - y : y);
             const pen = draw([0, v(0)]);
@@ -1799,6 +1835,7 @@ export function evaluatePartDocument(
           const ba = bendAllowanceMillimeters(feature.angleDegrees, r, base);
           const [p, q] = sketchLine(feature.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
           const tdir = unit(sub(q, p));
+          publish(feature, { parameter: "angle", kind: "angular", originMillimeters: scale(add(p, q), 0.5), direction: tdir, label: "Fold angle" });
           // The big face the line lies in: the largest planar face whose plane contains it.
           const faces = body.faces.filter((f) => f.geomType === "PLANE");
           const onFace = faces.filter((f) => { const c = f.center, nv = f.normalAt(c); const n: V3 = [nv.x, nv.y, nv.z]; const dPlane = Math.abs(dot(n, sub(p, [c.x, c.y, c.z]))); c.delete(); nv.delete(); return dPlane < 1e-4; });
@@ -2023,6 +2060,8 @@ export function evaluatePartDocument(
           // Coil: a round wire swept along a helix (Frenet frame keeps the section square to it).
           const center: V3 = feature.centerMillimeters ? [...feature.centerMillimeters] as V3 : [0, 0, 0];
           const dir: V3 = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1];
+          publish(feature, { parameter: "pitch", kind: "linear", originMillimeters: [0, 1, 2].map((i) => center[i] + dir[i] * feature.pitchMillimeters) as V3, direction: dir, label: "Coil pitch" });
+          publish(feature, { parameter: "radius", kind: "linear", originMillimeters: [0, 1, 2].map((i) => center[i] + perpendicular(dir)[i] * feature.radiusMillimeters) as V3, direction: perpendicular(dir), label: "Coil radius" });
           const helix = own(makeHelix(feature.pitchMillimeters, feature.pitchMillimeters * feature.turns, feature.radiusMillimeters, center, dir, Boolean(feature.leftHand)));
           const first = helix.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit([...deleteAfterVectorTuple(first.tangentAt(0))] as V3);
           helix.edges.forEach((edge) => edge.delete());
@@ -2039,6 +2078,7 @@ export function evaluatePartDocument(
           if (pathId === undefined) throw new Error("Pipe path sketch has several curves — choose which one to use.");
           const spine = sketchWire(feature.pathFeatureId, pathId, "Pipe path", true);
           const first = spine.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit([...deleteAfterVectorTuple(first.tangentAt(0))] as V3);
+          publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: [0, 1, 2].map((i) => start[i] + perpendicular(tangent)[i] * feature.diameterMillimeters / 2) as V3, direction: perpendicular(tangent), scale: 2, label: "Pipe diameter" });
           const sweepCircle = (radius: number): Shape3D => {
             const circle = own(assembleWire([own(makeCircle(radius, [start[0], start[1], start[2]], tangent))]));
             const swept = genericSweep(circle, spine, { frenet: false, transitionMode: "transformed" });
@@ -2057,6 +2097,7 @@ export function evaluatePartDocument(
           const min: V3 = [Infinity, Infinity, Infinity], max: V3 = [-Infinity, -Infinity, -Infinity];
           for (const shape of shapes) { const b = shape.boundingBox.bounds; for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i], b[0][i]); max[i] = Math.max(max[i], b[1][i]); } }
           const m = feature.marginMillimeters;
+          publish(feature, { parameter: "margin", kind: "linear", originMillimeters: [max[0] + m, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2], direction: [1, 0, 0], label: "Margin" });
           tool = own(makeBaseBox(max[0] - min[0] + 2 * m, max[1] - min[1] + 2 * m, max[2] - min[2] + 2 * m).translate(min[0] - m, min[1] - m, min[2] - m));
         } else if (feature.type === "import-step" || feature.type === "import-cad") {
           // Saved sources become bodies as FreeCAD's base features did: STEP as is,
@@ -2105,6 +2146,7 @@ export function evaluatePartDocument(
         } else if (feature.type === "sheet-base") {
           // The plate: the sketch region extruded by the rule's thickness along the sketch normal.
           const frame = sketchFrameOf(feature.profileFeatureId);
+          publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: sketchCentroid(feature.profileFeatureId), direction: scale(unit(frame.normal as V3), feature.reversed ? -1 : 1), label: "Sheet thickness" });
           const face = own(makeFace(sketchWire(feature.profileFeatureId, feature.profileContourId, "Sheet metal base", false)));
           const along = scale(unit(frame.normal as V3), feature.thicknessMillimeters * (feature.reversed ? -1 : 1));
           const sweep = new Vector(along);
@@ -2185,6 +2227,7 @@ export function evaluatePartDocument(
           if (feature.type === "surface-extrude") {
             const frame = sketchFrameOf(feature.profileFeatureId);
             const d = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
+            publish(feature, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature.profileFeatureId), direction: scale(unit(frame.normal as V3), feature.reversed ? -1 : 1), scale: feature.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
             const along = scale(unit(frame.normal as V3), d);
             const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface extrude");
             tool = sheetArea(joined(wires.map((wire) => {
@@ -2200,6 +2243,7 @@ export function evaluatePartDocument(
               const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference as never, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
               origin = t.axisOriginMillimeters; axis = t.axisDirection;
             }
+            if (feature.id === previewId) { const c = sketchCentroid(feature.profileFeatureId), t = dot(sub(c, origin), axis); publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add(origin, scale(axis, t)), direction: axis, label: "Revolve angle" }); }
             const angle = feature.angleDegrees * Math.PI / 180 * (feature.reversed ? -1 : 1);
             const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface revolve");
             const ax = new o.gp_Ax1_2(new o.gp_Pnt_3(origin[0], origin[1], origin[2]), new o.gp_Dir_4(axis[0], axis[1], axis[2]));
@@ -2219,6 +2263,7 @@ export function evaluatePartDocument(
           } else if (feature.type === "surface-offset") {
             const body = bodies.get(feature.bodyIds[0]);
             if (!body) throw new Error("Offset surface needs an available surface body.");
+            if (feature.id === previewId) { const f0 = body.faces[0]; if (f0) { const c = f0.center, nv = f0.normalAt(c); publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit([nv.x, nv.y, nv.z]), label: "Offset distance" }); c.delete(); nv.delete(); f0.delete(); } }
             if (feature.distanceMillimeters === 0) tool = own(body.clone());
             else {
               const maker = new o.BRepOffsetAPI_MakeOffsetShape();
@@ -2232,6 +2277,7 @@ export function evaluatePartDocument(
             const pieces = feature.bodyIds.map((id) => {
               let sheet = bodies.get(id);
               if (!sheet) throw new Error("Thicken needs an available surface body.");
+              if (feature.id === previewId && id === feature.bodyIds[0]) { const f0 = sheet.faces[0]; if (f0) { const c = f0.center, nv = f0.normalAt(c); publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit([nv.x, nv.y, nv.z]), label: "Thickness" }); c.delete(); nv.delete(); f0.delete(); } }
               const t = feature.thicknessMillimeters;
               if (feature.symmetric) {
                 const back = new o.BRepOffsetAPI_MakeOffsetShape();
@@ -2813,6 +2859,7 @@ export function evaluatePartDocument(
               const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
               origin = t.axisOriginMillimeters; axis = t.axisDirection;
             }
+            if (feature.id === previewId) { const c = sketchCentroid(feature.profileFeatureId), t = dot(sub(c, origin), axis); publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add(origin, scale(axis, t)), direction: axis, label: "Revolve angle" }); }
             const angle = feature.angleDegrees, second = feature.secondAngleDegrees ?? 0;
             if (!(angle > 0) || second < 0 || angle + second > 360) throw new Error("Revolve angles must be finite, positive and total at most 360 degrees.");
             if (feature.symmetric && second) throw new Error("Symmetric revolve cannot also have a second angle.");
@@ -2830,6 +2877,14 @@ export function evaluatePartDocument(
             }
             return isShape3D(shape) ? own(shape).simplify() : shape;
           };
+          if (feature.type === "extrude" && feature.id === previewId) {
+            // The extrude handles the dialog already drags: the primary extent along the sketch
+            // normal from the profile's centre, and the opposite end when there is one.
+            const frame = sketchFrameOf(feature.profileFeatureId), n = unit(frame.normal as V3), c = sketchCentroid(feature.profileFeatureId);
+            const symmetric = feature.endType === "symmetric" || feature.endType === "symmetric-through-all";
+            previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c, direction: n, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature.reversed) });
+            if (feature.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c, direction: [-n[0], -n[1], -n[2]], scale: 1, reversed: Boolean(feature.reversed) });
+          }
           const result = own(feature.type === "extrude" ? (feature.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen)) : revolve());
           if (!isShape3D(result))
             throw new Error("Feature did not produce a solid.");
@@ -2971,13 +3026,14 @@ export function evaluatePartDocument(
       const target = ("targetBodyId" in last && last.targetBodyId) || currentBodyID || previewId;
       const removes = last.operation === "cut";
       const part = geometry(tool, `preview:${removes ? "removed" : "added"}:${target}`, target, 0, true);
-      featurePreview = { featureId: previewId, base: previewBase, added: removes ? [] : [part], removed: removes ? [part] : [] };
+      featurePreview = { featureId: previewId, base: previewBase, added: removes ? [] : [part], removed: removes ? [part] : [], ...(previewAxes.length ? { extrusionAxes: previewAxes } : {}) };
     }
     options.withBodies?.(bodies);
     const names = availableBodies(document);
     return {
       sourceName: document.name + ".acpart",
       ...(Object.keys(bodyOutputs).length ? { bodyOutputs } : {}),
+      ...(previewId && previewHandles.length ? { previewHandles, previewFeatureId: previewId } : {}),
       ...(Object.keys(sketchFrames).length ? { sketchFrames } : {}),
       ...(Object.keys(scopeResolutions).length ? { scopeResolutions } : {}),
       ...(featurePreview ? { featurePreview } : {}),

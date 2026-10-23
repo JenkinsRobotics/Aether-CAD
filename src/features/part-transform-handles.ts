@@ -37,7 +37,7 @@ export function mountTransformHandles(panel:HTMLElement,c:Controls,lengthUnit:st
  };
  const finish=(restore:boolean)=>{
   if(!drag)return;
-  const previous=drag;drag=undefined;
+  const previous=drag;drag=undefined;delete document.body.dataset.cadHandleDrag;
   if(restore){c[previous.key].value=previous.original;c[previous.key].dispatchEvent(new Event('input'));}
   const button=buttons.get(previous.key)!;if(button.hasPointerCapture(previous.id))button.releasePointerCapture(previous.id);
   c[previous.key].dispatchEvent(new Event('change'));
@@ -57,7 +57,7 @@ export function mountTransformHandles(panel:HTMLElement,c:Controls,lengthUnit:st
    if(event.button!==0||!ready||drag)return;
    const projection=projections.find(p=>p.key===key);if(!projection)return;
    const value=projection.valueAt(event.clientX,event.clientY);if(value===null||!Number.isFinite(read(key)))return;
-   event.preventDefault();event.stopPropagation();button.focus();drag={id:event.pointerId,key,projection,previous:value,value:read(key),original:c[key].value};button.setPointerCapture(event.pointerId);
+   event.preventDefault();event.stopPropagation();button.focus();drag={id:event.pointerId,key,projection,previous:value,value:read(key),original:c[key].value};document.body.dataset.cadHandleDrag='1';button.setPointerCapture(event.pointerId);
   });
   button.addEventListener('pointermove',event=>{
    if(!drag||drag.key!==key||event.pointerId!==drag.id)return;

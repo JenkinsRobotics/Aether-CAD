@@ -1342,6 +1342,13 @@ export class MateViewport {
     } };
   }
 
+  /** A ring handle for an angle about an axis, through the transform gizmo's rotate math. */
+  projectAngleHandle(origin:readonly number[],axis:readonly number[],angleDegrees:number) {
+    if(origin.length!==3||axis.length!==3||![...origin,...axis,angleDegrees].every(Number.isFinite))return null;
+    const handles=projectTransformGizmo(this.camera,this.renderer.domElement.getBoundingClientRect(),{frame:{centerMillimeters:[origin[0],origin[1],origin[2]],radiusMillimeters:1},transform:{kind:'rotate',axisOriginMillimeters:[origin[0],origin[1],origin[2]],axisDirection:[axis[0],axis[1],axis[2]],angleDegrees},uniform:false});
+    const ring=handles.find(h=>h.key==='angle');
+    return ring?{x:ring.x,y:ring.y,points:ring.points,valueAt:ring.valueAt}:null;
+  }
   projectTransformHandles(request:TransformGizmoRequest) {
     return projectTransformGizmo(this.camera,this.renderer.domElement.getBoundingClientRect(),request);
   }
