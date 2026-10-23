@@ -90,6 +90,8 @@ export interface PreviewHandle {
   direction: [number, number, number];
   /** Linear: control value per millimetre dragged (0.5 for a symmetric extent). */
   scale?: number;
+  /** Linear: the control may go negative (a push as well as a pull). */
+  signed?: boolean;
   label?: string;
 }
 export interface TransformPreviewFrame {
