@@ -83,7 +83,11 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
     root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{pending:true}}));
     try {
       latest = candidate(); if(status.textContent !== "Updating preview…") show("Updating preview…");
-      if (timer === undefined) timer = setTimeout(() => {
+      // Typing coalesces for 100 ms; a handle drag wants every frame (the queue
+      // drops stale requests, so the engine never runs more than one at a time).
+      const dragging = document.body.dataset.cadHandleDrag === "1";
+      if (dragging) { clearTimeout(timer); timer = undefined; if (latest) queue.request(latest); }
+      else if (timer === undefined) timer = setTimeout(() => {
         timer = undefined;
         if (latest) queue.request(latest);
       }, 100);

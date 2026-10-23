@@ -419,6 +419,10 @@ window.addEventListener('aether-native-extrusion-handle',event=>{
   const request=(event as CustomEvent).detail;
   request.respond(viewer.projectEvaluatedExtrusionHandle(request.origin,request.direction,request.depth));
 });
+window.addEventListener('aether-native-angle-handle',event=>{
+  const request=(event as CustomEvent).detail;
+  request.respond(viewer.projectAngleHandle(request.origin,request.axis,request.angle));
+});
 window.addEventListener('aether-transform-handles',event=>{
   const request=(event as CustomEvent).detail;
   request.respond(viewer.projectTransformHandles(request));

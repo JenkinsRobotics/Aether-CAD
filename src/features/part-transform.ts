@@ -10,6 +10,7 @@ import {layoutParameterRows,type FeatureEditor} from './shared';
 const vector=(values:Record<string,string>,prefix:string):[number,number,number]=>[Number(values[prefix+'X']),Number(values[prefix+'Y']),Number(values[prefix+'Z'])];
 export const transformEditor:FeatureEditor={
  type:'transform',
+  handles: false,
  controls(context){
   const {field,feature,doc,initialTransform}=context;
   const end=feature?doc.features.findIndex(f=>f.id===feature.id):doc.rollbackIndex??doc.features.length;

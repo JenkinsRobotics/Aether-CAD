@@ -34,6 +34,9 @@ export interface FeatureEditorContext {
 export interface FeatureEditor {
   /** Feature `type` as stored in the document. */
   type: string;
+  /** Viewport manipulators: `false` when the editor mounts its own; otherwise an optional
+   *  map from a published handle parameter to the control key that holds it. */
+  handles?: false | Record<string, string>;
   /** Build the form controls this feature needs. */
   controls(context: FeatureEditorContext): Controls;
   /** Lay the controls out in the window, gallery-exact. Optional: features

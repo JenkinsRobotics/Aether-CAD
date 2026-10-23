@@ -80,6 +80,18 @@ export interface ExtrusionPreviewAxis {
   reversed: boolean;
 }
 
+/** A manipulator the preview offers for one numeric parameter of the previewed feature
+ *  (every feature with a length, angle or size the viewport can drag): a linear handle
+ *  slides along `direction` from `originMillimeters`; an angular one turns about it. */
+export interface PreviewHandle {
+  parameter: string;
+  kind: "linear" | "angular";
+  originMillimeters: [number, number, number];
+  direction: [number, number, number];
+  /** Linear: control value per millimetre dragged (0.5 for a symmetric extent). */
+  scale?: number;
+  label?: string;
+}
 export interface TransformPreviewFrame {
   centerMillimeters: [number, number, number];
   radiusMillimeters: number;
@@ -91,6 +103,9 @@ export interface ImportedModelData {
   /** Transient exact feature changes, never selectable/persisted bodies. */
   featurePreviewUnavailable?: boolean;
   featurePreview?: { base: PartGeometryData[]; added: PartGeometryData[]; removed: PartGeometryData[]; featureId?: string; extrusionAxes?: ExtrusionPreviewAxis[]; transformFrame?: TransformPreviewFrame };
+  /** Manipulators for the previewed feature's parameters (see PreviewHandle). */
+  previewHandles?: PreviewHandle[];
+  previewFeatureId?: string;
   bodyOutputs?: Record<string, string[]>;
   scopeResolutions?: Record<string, import("../document/extrusion-scope").ExtrusionScopeResolution>;
   sketchFrames?: Record<string, import("../sketch/drawing").SketchFrame>;
