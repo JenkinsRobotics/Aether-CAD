@@ -12,6 +12,10 @@ export interface AssemblyCommandHost {
   toggleSelectedInstanceGrounded(): Promise<unknown>;
   toggleSelectedInstanceSuppressed(): Promise<unknown>;
   removeSelectedInstance(): Promise<unknown>;
+  /** paste_new: an independent copy of the selected occurrence and its part. */
+  copySelectedInstanceIndependent(): Promise<unknown>;
+  /** Another occurrence of the selected part. */
+  addLinkedCopyOfSelectedInstance(): Promise<unknown>;
   toggleSelectedMateSuppressed(): Promise<unknown>;
   removeSelectedMate(): Promise<unknown>;
   /** Invalidate any standing mate preview before a new mate is authored. */
@@ -24,6 +28,9 @@ const DIALOGS: readonly (readonly [CADCommandID, CADStartDialog])[] = [
   ["assembly-set-mate-dof-value", "set-mate-dof-value"],
   ["assembly-edit-mate-dof-limits", "edit-mate-dof-limits"],
   ["assembly-create-relation", "create-relation"],
+  ["assembly-create-contact-set", "create-contact-set"],
+  ["assembly-part-properties", "part-properties"],
+  ["assembly-bodies-to-component", "bodies-to-component"],
 ];
 
 export function registerAssemblyCommands(host: AssemblyCommandHost): void {
@@ -46,6 +53,8 @@ export function registerAssemblyCommands(host: AssemblyCommandHost): void {
   act("assembly-toggle-grounded", () => host.toggleSelectedInstanceGrounded());
   act("assembly-toggle-suppressed", () => host.toggleSelectedInstanceSuppressed());
   act("assembly-remove-instance", () => host.removeSelectedInstance());
+  act("assembly-make-independent", () => host.copySelectedInstanceIndependent());
+  act("assembly-linked-copy", () => host.addLinkedCopyOfSelectedInstance());
   act("assembly-toggle-mate-suppressed", () => host.toggleSelectedMateSuppressed());
   act("assembly-remove-mate", () => host.removeSelectedMate());
 }
@@ -57,6 +66,8 @@ export const assemblyCommandIDs: readonly CADCommandID[] = [
   "assembly-toggle-grounded",
   "assembly-toggle-suppressed",
   "assembly-remove-instance",
+  "assembly-make-independent",
+  "assembly-linked-copy",
   "assembly-toggle-mate-suppressed",
   "assembly-remove-mate",
 ];

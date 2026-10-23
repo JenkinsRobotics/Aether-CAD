@@ -4,6 +4,7 @@
 import { getOC, isShape3D, makeBaseBox, measureArea, measureDistanceBetween, measureVolume, type Shape3D } from "replicad";
 import { evaluatePartDocument, release, solidsOf } from "./part-evaluator";
 import { buildPartGeometry } from "./part-geometry";
+import { analyzeCurves } from "./curve-analysis";
 import type { PartDocument } from "../document/index";
 import type { AnalysisOptions, AnalysisResult, PartGeometryData } from "../contracts/index";
 
@@ -136,6 +137,9 @@ export function analyzePart(document: PartDocument, options: AnalysisOptions): A
     const onlyA = piece(aShape.cut(bShape), `${aId}-only`), onlyB = piece(bShape.cut(aShape), `${bId}-only`);
     const common = aShape.intersect(bShape); let shared = 0; try { shared = isShape3D(common) ? measureVolume(common) : 0; } catch { shared = 0; } release(common);
     measurements.push({ first_body_id: aId, second_body_id: bId, only_in_first_mm3: onlyA, only_in_second_mm3: onlyB, common_mm3: shared, identical: onlyA <= tolerance && onlyB <= tolerance });
-  } else throw new Error("Choose section, interference, clearance, compare, properties or distance analysis.");
+  } else if (options.kind === "continuity" || options.kind === "curvature_comb" || options.kind === "isocurve" || options.kind === "minimum_radius") {
+    const result = analyzeCurves(shapes, { kind: options.kind, entities: options.entities, count: options.count, scale: options.scale, radius_mm: options.radius_mm });
+    return { status: "ok", kind: options.kind, bodies, measurements: result.measurements, curves: result.curves };
+  } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }

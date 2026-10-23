@@ -962,3 +962,61 @@ handle: draft angle (its axis lies in the neutral plane and needs a chosen edge)
 plane offset (the plane window has its own preview path) and sketch dimensions (the sketch
 canvas drags them already).
 
+### r51 (2026-10-23): contact sets
+
+Installed.
+
+Contact sets live in the Assembly workspace (Aether-Animation `aether_workspace.py`: `contact_sets`
+with occurrences, name and suppression, a `contacts_enabled` flag, four mutations, projected and
+persisted beside relations; older files load with none). CAD authors them from a dialog on the
+Relations tab, toggles contacts on and off, and checks them: the engine's `checkContacts` places
+each instance's bodies at the solved placements and intersects every pair inside a set, reporting
+the overlap volumes. With contacts on, a motion study stops at the first step where a set's bodies
+pass through each other; with contacts on and no sets, every occurrence is one set. Not built: a
+panel listing sets, editing an existing set from CAD, and stopping a single driven-value solve.
+
+### r52 (2026-10-23): components beyond insertion
+
+Installed.
+
+Part Properties (SolidCraft's `component.metadata.set`) edits part number, description and
+custom properties of the selected occurrence's part through `update_part_definition`, sent
+whole because the workspace replaces the definition. Make Independent (`paste_new`) copies the
+definition with its feature document and places a new occurrence on the original; Linked Copy
+adds another occurrence of the same definition. Bodies to Component (`from_bodies`,
+`move_bodies`, `move_sketches`) is one dialog over a pure engine helper
+(`document/component-split.ts`): a body's chain is its producer plus every later feature that
+modifies or consumes it; the moved set is that chain's dependency closure; what the remaining
+bodies still need stays, so a sketch two bodies share is copied rather than stolen. A new target
+makes one component per body (named after the body, sketches go with the first); an existing
+target has the features appended with their ids kept. Limits recorded honestly: parts are shared
+definitions, so every occurrence of the source part loses the moved bodies; there is no
+translate on paste; activate, capture_position and revert_position are n/a here (no in-context
+editing, moves commit at once).
+
+### r53 (2026-10-23): 3D sketch and curve analyses
+
+Installed.
+
+A `curve3d` feature (SolidCraft's `sketch.line3d`, `spline3d`, `point3d`, moved with `move3d`)
+holds typed world points as straight segments end to end, one smooth curve through them, or a
+lone point. It makes no body: the feature history treats it like a sketch or plane, the viewport
+draws it as world polylines next to the finished sketches (a spline is drawn as a Catmull-Rom
+through the same points, close to the engine's interpolating B-spline), and sweep, pipe and
+pattern-on-path accept it as a path, built in the evaluator as `makeLine` edges or a tight
+`makeBSplineApproximation` assembled into a wire. Typed coordinates are the whole authoring
+surface for now: no in-viewport 3D drawing, no handle on a point, and a 3D point is not yet a
+reference other features can pick.
+
+Curve analyses (SolidCraft's `inspect.continuity`, `curvature_comb`, `isocurve`,
+`minimum_radius`) are four more analysis kinds in `kernel/curve-analysis.ts`. The wasm build has
+no LProp classes, so the derivatives come from `BRepAdaptor_Curve.D2` and
+`BRepAdaptor_Surface.D2` and the arithmetic is ours: curvature |t × t″|/|t|³ along an edge,
+principal curvatures from the fundamental forms on a 16×16 sample of each face, and across an
+edge the normal curvature of both faces in the direction perpendicular to the edge inside the
+shared tangent plane, which is what separates G1 from G2 (normals within half a degree, then
+curvatures within 0.001/mm). Results are measurements plus coloured world polylines that the
+viewport draws in an analysis overlay; the analysis window takes the current selection of faces
+and edges, or everything. Known limits: isocurves and the face sample follow the untrimmed
+surface's parameter box, so a face with holes shows curves across them; sketch curves are not
+analysed yet; the comb has no face (isoparametric) mode.

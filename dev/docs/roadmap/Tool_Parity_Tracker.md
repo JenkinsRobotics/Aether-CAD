@@ -2,7 +2,7 @@
 
 Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
 
-Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+ 2
+Totals (398 commands): parity 191, partial 86, n/a 53, gap 38, parity-ish 21, verify 7, ours+ 2
 
 ## Sketch (105)
 
@@ -72,12 +72,12 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `sketch.isoparametric_curve` | Isoparametric Curve | face: [x,y,z] point on the face (the curve passes through it), body?, direction?: u\|v\|[x,y,z] (default u): linked 3D curve |  | gap |  |
 | `sketch.line` | Line | points: [[x,y] \| "l1.end" \| {at, ref}…] (x and y each a number or an expression over the design's parameters, "W / 2": such a point is fixed where it comes to | Line | parity |  |
 | `sketch.line.midpoint` | Midpoint Line | mid: [x,y] or point ref, end: [x,y]; construction? | Midpoint line | parity |  |
-| `sketch.line3d` | 3D Line | points: [[x,y,z]…] world points (2 or more): one 3D line per segment, joined end to end (needs 3D Sketch on) |  | gap |  |
+| `sketch.line3d` | 3D Line | points: [[x,y,z]…] world points (2 or more): one 3D line per segment, joined end to end (needs 3D Sketch on) | Solid › 3D Sketch (lines) | parity-ish | done 2026-10-23 (r53): a 3D sketch feature of typed world points, drawn in the viewport, a path for sweep, pipe and pattern. Points are typed, not drawn in the viewport |
 | `sketch.loose_ends` | Loose Ends | sketch?: id\|name (default active): the ends of profile curves (not construction, projected or text) that can make a profile fail. open: [{point, curve, at}] en | Loose ends | parity | done 2026-10-21: selects open path ends nothing touches or ties |
 | `sketch.loose_ends.tie` | Tie Loose Ends | sketch?: id\|name (default active); points?: [point ids] (default: every untied end): ties each untied end to what it touches, coincident with another curve's e | AutoConstrain | parity | ties ends within tolerance with coincident relations |
 | `sketch.mirror` | Mirror | entities: [curve/point ids], line: mirror line id (symmetry constraints are added) | Mirror | parity |  |
 | `sketch.move` | Move/Copy Sketch Entities | entities: [ids], translate?: [dx,dy], angle?: deg, center?: [x,y], copy?: bool; picking a text outline or linked point transforms its whole text source once, an | Transform | parity |  |
-| `sketch.move3d` | Move 3D Point | wire: drawn 3D curve or point id, index?: fit point (default 0), to: [x,y,z] \| by: [dx,dy,dz]; points joined to it move too |  | gap |  |
+| `sketch.move3d` | Move 3D Point | wire: drawn 3D curve or point id, index?: fit point (default 0), to: [x,y,z] \| by: [dx,dy,dz]; points joined to it move too | Solid › 3D Sketch (edit points) | parity-ish | edit the point list; `moveCurve3DPoint` moves one point to or by for agents; no handle drag yet |
 | `sketch.move_point` | Drag Sketch Point | point: ref, to: [x,y] | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
 | `sketch.offset` | Offset | curves: [ids], distance: number in mm or length expression (creates an editable dimension; positive = left of the chain, or toward `side`), side?: [x,y], chain? | Offset | parity |  |
 | `sketch.offset.break` | Break Offset Association | curve: derived offset curve id (retains geometry and makes its points editable) | Delete the offset relation | parity | selecting the offset relation and deleting it freezes the offset geometry |
@@ -86,7 +86,7 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `sketch.pattern.circular` | Circular Pattern | entities: [ids], center: [x,y] or point ref, count: 2…500, angle?: total deg (default 360); alignment?: left\|center\|right (default right); reversed?: bool (de | Circular pattern | parity |  |
 | `sketch.pattern.rectangular` | Rectangular Pattern | entities: [ids], count, spacing; count2?, spacing2?; direction?, direction2?: sketch line ids (live references); dir?, dir2?: [x,y] vectors (defaults: sketch x, | Pattern | parity |  |
 | `sketch.point` | Point | point: [x,y] (each a number or an expression over the design's parameters: the point is then fixed where it comes to and follows them), id? | Point | parity |  |
-| `sketch.point3d` | 3D Point | point: [x,y,z] world point (needs 3D Sketch on) |  | gap |  |
+| `sketch.point3d` | 3D Point | point: [x,y,z] world point (needs 3D Sketch on) | Solid › 3D Sketch (point) | parity-ish | a lone world point drawn as a cross; not yet a reference other features pick |
 | `sketch.polygon.circumscribed` | Circumscribed Polygon | center, radius (to edge midpoints), sides, angle?: deg | Circumscribed polygon | parity |  |
 | `sketch.polygon.edge` | Edge Polygon | p0, p1: one edge, sides | Edge polygon | parity | done 2026-10-21 |
 | `sketch.polygon.inscribed` | Inscribed Polygon | center, radius (to vertices), sides, angle?: deg | Polygon | parity |  |
@@ -108,7 +108,7 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `sketch.spline.control_point` | Control Point Spline | points: control points (2…500), cubic | Spline (cubic Bézier) | partial | Bézier segments, not a control-point B-spline |
 | `sketch.spline.control_point_5` | Control Point Spline (Degree 5) | points: control points (2…500), degree 5 |  | gap |  |
 | `sketch.spline.fit_point` | Fit Point Spline | points: [[x,y] or point refs…] (2…500): the spline passes through them, periodic?: boolean (default false); periodic cubic fit closes smoothly through at least  | Fit-point spline | parity |  |
-| `sketch.spline3d` | 3D Spline | points: [[x,y,z]…] world fit points (2 or more): a smooth 3D curve through them (needs 3D Sketch on) |  | gap |  |
+| `sketch.spline3d` | 3D Spline | points: [[x,y,z]…] world fit points (2 or more): a smooth 3D curve through them (needs 3D Sketch on) | Solid › 3D Sketch (spline) | parity-ish | a smooth curve through typed world points; the engine builds the B-spline, the viewport draws a Catmull-Rom through the same points |
 | `sketch.spun_profile` | Spun Profile | body: name, axis: a line of the active sketch (curve id) \| X\|Y\|Z: the body's outline revolved about the axis, in the sketch plane |  | gap |  |
 | `sketch.text` | Text | text: string (\\n breaks lines), at: baseline start [x,y], height?: capital height mm (default 5), angle?: deg; at's x and y, height and angle each take a numbe | Text | parity |  |
 | `sketch.toggle_driven` | Toggle Driven Dimension | constraint: dimension id, driven?: bool (default toggles); a driving dimension gets a parameter with its current value | in-canvas editing | parity-ish | interaction, not a tool; ours drags, snaps, solves live |
@@ -240,15 +240,15 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | `inspect.center_of_mass` | Center of Mass | bodies?: [names] (default all): the centre of mass (uniform density) of each and of all together | Physical properties | parity | mass, volume, centre of mass per body |
 | `inspect.clearance` | Clearance | bodies?: [names] (default: every solid body, in world placement, but those in `against`); against?: [names] (only pairs with one body in `bodies` and the other  | Clearance (`part-clearance`) | partial | done 2026-10-22 (r44): shortest distance per body pair, zero when they touch or overlap. Missing: `against` grouping, world placement of assemblies |
 | `inspect.compare` | Compare Bodies | a, b: body names (default: the two selected bodies, or the design's only two), in world placement; tolerance?: mm (0.001 to 10, default 0.01): \      surfaces c | Compare bodies (`part-compare`) | partial | done 2026-10-22 (r44): only-in-A, only-in-B and shared volumes, identical within a tolerance, the differences shown. Missing: choosing the pair from a selection |
-| `inspect.continuity` | Continuity Analysis | body?: name (default: the visible bodies); edges?: [x,y,z] points or {"index": i} (default: every edge of the body; \              a pick must match one body);  |  | gap |  |
-| `inspect.curvature_comb` | Curvature Comb Analysis | curves?: [sketch curve ids] (sketch?: id\|name, default active) \| edges?: [[x,y,z] points on body edges] \| faces?: [[x,y,z] points on faces] with count?: isop |  | gap |  |
+| `inspect.continuity` | Continuity Analysis | body?: name (default: the visible bodies); edges?: [x,y,z] points or {"index": i} (default: every edge of the body; \              a pick must match one body);  | Solid › Inspection › Continuity | parity | done 2026-10-23 (r53): every edge between two faces (or the selected edges) classed G0/G1/G2 from face normals and normal curvature across the edge, coloured in the viewport |
+| `inspect.curvature_comb` | Curvature Comb Analysis | curves?: [sketch curve ids] (sketch?: id\|name, default active) \| edges?: [[x,y,z] points on body edges] \| faces?: [[x,y,z] points on faces] with count?: isop | Solid › Inspection › Curvature Comb | partial | body edges (selected or all) with sample count and tooth scale; sketch curves and face isoparametric combs not yet |
 | `inspect.curvature_map` | Curvature Map Analysis | radius?: mm shown red (default: a tenth of the model's size); clear?: true turns the analysis off | Curvature map display style | partial | done 2026-10-22 (r44): a display style colouring how fast the normal turns across the screen. Missing: a radius threshold in mm |
 | `inspect.draft` | Draft Analysis | pull?: [x,y,z] direction (default Z); angle?: degrees (default 1); clear?: true turns the analysis off | View › Draft analysis | partial | done 2026-10-21: green pulls out, red undercut, yellow within 1° of the +Z pull; the pull direction and angle are fixed for now |
 | `inspect.environment_map` | Environment Map Analysis | clear?: true turns the analysis off | View › Material (reflection)  | partial | display, not an analysis mode |
 | `inspect.interference` | Interference | bodies?: [names] (default: all, in world placement); budget_s?: seconds (default 240, at most 86400: pairs not finished by then are listed in unchecked as "not  | Interference Analysis | parity |  |
-| `inspect.isocurve` | Isocurve Analysis | faces: [[x,y,z]…] points on faces; count?: curves each way (default 8): the faces' isoparametric curves |  | gap |  |
+| `inspect.isocurve` | Isocurve Analysis | faces: [[x,y,z]…] points on faces; count?: curves each way (default 8): the faces' isoparametric curves | Solid › Inspection › Isocurves | parity | selected faces or all, count each way; a trimmed face shows the curves of its whole surface |
 | `inspect.measure` | Measure | bodies?: [names] (default all); or items: [1-2 selections] → length/area/volume; diameter, radius, circumference or arc_length/angle_deg of circles, arcs and cy | Measure | parity | distance, centre distance, angle, lengths/areas/volumes of picks |
-| `inspect.minimum_radius` | Minimum Radius Analysis | curves?: [sketch curve ids] (sketch?) \| edges?: [[x,y,z]…] \| faces?: [[x,y,z]…] (default: every face of every body); the smallest radius of curvature of each  |  | gap |  |
+| `inspect.minimum_radius` | Minimum Radius Analysis | curves?: [sketch curve ids] (sketch?) \| edges?: [[x,y,z]…] \| faces?: [[x,y,z]…] (default: every face of every body); the smallest radius of curvature of each  | Solid › Inspection › Minimum Radius | partial | faces (16×16 samples of principal curvature) and selected edges, overall minimum marked, threshold flag; sketch curves not yet |
 | `inspect.section` | Section Analysis | plane: XY\|XZ\|YZ \| construction plane name or id \| {origin, normal}; offset?: expr along the plane's normal (XY: +Z, XZ: +Y, YZ: +X); \          at?: expr, t | Section View | parity | plane + offset, live clip |
 | `inspect.zebra` | Zebra Analysis | stripes?: number across the view (default 12); clear?: true turns the analysis off | View › Zebra analysis | parity | done 2026-10-21: stripes follow the reflected view direction (shader overlay); fixed stripe count |
 
@@ -302,33 +302,33 @@ Totals: verify 121, gap 117, parity 66, n/a 46, partial 33, parity-ish 13, ours+
 | SolidCraft | Title | Their contract | Ours | Status | Missing / note |
 |---|---|---|---|---|---|
 | `assembly.bom` | Bill of Materials | component?: id or name (default the design); levels?: flat (default: every part at any depth, counted through its \          subassemblies) \| top (the componen | BOM panel | parity |  |
-| `component.activate` | Activate Component | component: id or name (0 or "root" for the design); occurrence?, path?: exact placement used to author shared geometry |  | gap | no active-component editing context |
+| `component.activate` | Activate Component | component: id or name (0 or "root" for the design); occurrence?, path?: exact placement used to author shared geometry |  | n/a | no in-context editing: a part is edited in its own document; the assembly holds occurrences of saved parts |
 | `component.break_link` | Break Link | component: id or name of a linked component — keeps its bodies as they are and forgets the design file | Studio versions | partial | links are Studio documents; break = copy |
-| `component.capture_position` | Capture Position | keeps pending occurrence moves |  | gap |  |
+| `component.capture_position` | Capture Position | keeps pending occurrence moves |  | n/a | occurrence moves commit at once (move_instance); nothing is pending |
 | `component.create` | New Component | name?, parent?: component id or name (default: the active one); parent_path?: exact parent placement; activate?: bool (default true) | Assembly workspace (new component) | parity |  |
 | `component.delete` | Delete Component | component: deletes it, its subcomponents, occurrences and features | Remove component | parity |  |
-| `component.from_bodies` | Create Components from Bodies | bodies: [names] → one new component per body, named after it |  | gap | make a component from part bodies |
+| `component.from_bodies` | Create Components from Bodies | bodies: [names] → one new component per body, named after it | Build › Bodies to Component (new component per body) | parity | the body takes the features it needs; a sketch two bodies share is copied; every occurrence of the source part loses it |
 | `component.insert_design` | Insert Design | path: a .solidcraft design → a new component linked to it, holding its solid bodies as placed in that design; \          name? (default: the design's name); par | Insert (part document) | parity |  |
 | `component.links` | List Links | → linked components: component, name, path, file (resolved), found | Studio Drive | partial |  |
 | `component.list` | List Components | compact?: bool (counts of bodies, features, sketches and construction planes instead of their names; occurrences leave out \          identity transforms; child | Parts list / `cad.assembly.inspect` | parity |  |
 | `component.metadata` | Part Properties | component: id or name (0 or "root": the design's own properties) → component, name, part_number, description, revision, \          metadata (as saved, other too | Properties panel | partial | read |
-| `component.metadata.set` | Change Part Properties | component: id or name (not the root: use document.metadata.set); part_number?, description?, revision?: text (empty or null \          removes); values?: {key:  |  | gap |  |
-| `component.move_bodies` | Move Bodies to Component | bodies: [names], component |  | gap |  |
-| `component.move_sketches` | Move Sketches to Component | sketches: [ids or names], component |  | gap |  |
-| `component.paste_new` | Paste New | component: independently copy its nested definition graph and history, materials and styles; occurrence?, path?: selected source placement; translate?: [x,y,z]. |  | gap |  |
+| `component.metadata.set` | Change Part Properties | component: id or name (not the root: use document.metadata.set); part_number?, description?, revision?: text (empty or null \          removes); values?: {key:  | Build › Part Properties | parity | part number, description, custom key = value properties; revision belongs to Studio releases |
+| `component.move_bodies` | Move Bodies to Component | bodies: [names], component | Build › Bodies to Component (into an occurrence) | parity | appended to the target part's history; features keep their ids |
+| `component.move_sketches` | Move Sketches to Component | sketches: [ids or names], component | Build › Bodies to Component (sketch checkboxes) | parity | a sketch other bodies still use is copied, not moved |
+| `component.paste_new` | Paste New | component: independently copy its nested definition graph and history, materials and styles; occurrence?, path?: selected source placement; translate?: [x,y,z]. | Build › Make Independent | parity | copies the part definition with its feature document; placed on the original (no translate parameter) |
 | `component.properties` | Component Physical Properties | component?: id or name (default active); descendants?: bool (default true). Measures the first placement, or all placements for root, including pending moves; m | Properties panel | partial |  |
 | `component.relink` | Relink Source | component: id or name of a linked component; path: a saved .solidcraft design — replaces the source and linked bodies for all its occurrences, preserving identi | Studio Drive | partial |  |
 | `component.rename` | Rename Component | component, name | Rename (parts list) | parity |  |
-| `component.revert_position` | Revert Position | occurrences?: [ids] (default all); drops selected pending occurrence moves |  | gap |  |
+| `component.revert_position` | Revert Position | occurrences?: [ids] (default all); drops selected pending occurrence moves | Undo insertion | n/a | nothing pending to revert; recipe undo restores the previous archive |
 | `component.unlock` | Unlock Contents | component: removes the rigid joints that hold its contents together (an imported assembly's rigid group), so its parts \          move and take joints one by on |  | gap |  |
 | `component.update_links` | Update Links | component?: id or name (default: every linked component) — reads the linked designs again and replaces their bodies where they changed | Studio Drive | partial |  |
-| `contact.check` | Check Contact | → pairs in contact sets that pass through each other now |  | gap |  |
-| `contact.create` | New Contact Set | occurrences: [ids or names] (two or more); name? |  | gap |  |
-| `contact.disable_all` | Disable Contact | contact off |  | gap |  |
-| `contact.edit` | Edit Contact Set | set: id\|name; occurrences?; name?; suppressed?: bool; delete?: bool |  | gap |  |
-| `contact.enable_all` | Enable All Contact | every occurrence takes part in contact (one set of all) |  | gap |  |
-| `contact.enable_sets` | Enable Contact Sets | enabled?: bool (default true) — driving joints and motion studies stop where bodies in one contact set would pass through each other |  | gap |  |
-| `contact.list` | List Contact Sets | → sets, enabled, all |  | gap |  |
+| `contact.check` | Check Contact | → pairs in contact sets that pass through each other now | Check contacts (`assembly-check-contacts`) | parity | done 2026-10-23 (r51): the pairs in contact sets that pass through each other at the current solve, with the overlap volume |
+| `contact.create` | New Contact Set | occurrences: [ids or names] (two or more); name? | Contact set dialog (`assembly-create-contact-set`) | parity | done 2026-10-23 (r51): two or more occurrences, named; stored by the Assembly workspace |
+| `contact.disable_all` | Disable Contact | contact off | Contacts on/off | parity | done 2026-10-23 (r51) |
+| `contact.edit` | Edit Contact Set | set: id\|name; occurrences?; name?; suppressed?: bool; delete?: bool | Workspace `update_contact_set` | partial | done 2026-10-23 (r51) as a workspace mutation (name, occurrences, suppressed, delete). Missing: a CAD dialog to edit an existing set |
+| `contact.enable_all` | Enable All Contact | every occurrence takes part in contact (one set of all) | Contacts on/off | partial | done 2026-10-23 (r51): with contacts on and no sets, every occurrence is one set |
+| `contact.enable_sets` | Enable Contact Sets | enabled?: bool (default true) — driving joints and motion studies stop where bodies in one contact set would pass through each other | Contacts on/off (`assembly-toggle-contacts`) | parity | done 2026-10-23 (r51): driven values and motion studies stop at the first step a set's bodies pass through each other |
+| `contact.list` | List Contact Sets | → sets, enabled, all | Assembly projection `contact_sets` | partial | done 2026-10-23 (r51): sets and the enabled flag are in the projection. Missing: a panel listing them |
 | `explode.create` | Exploded View | name?; scale? (automatic: each occurrence pushed away from the assembly's centre by scale × its offset, default 1); \          moves?: [{occurrence, translate:  | Explode (`assembly-explode`) | partial | done 2026-10-22 (r46): every instance pushed from the assembly centre by its offset (scale 1), shown only. Missing: named views, a chosen scale, manual offsets |
 | `explode.delete` | Delete Exploded View | view |  | n/a | no named exploded views yet |
 | `explode.list` | List Exploded Views |  |  | n/a | no named exploded views yet |

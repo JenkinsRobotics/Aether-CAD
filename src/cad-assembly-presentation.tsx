@@ -7,10 +7,12 @@ import type {
   BOMRowProjection,
   DiagnosticProjection,
   DOFProjection,
+  PartDefinitionProjection,
   StableID,
 } from "./cad-assembly-bridge";
 import type { CADInspectorSection } from "./cad-workspace-store";
 import type { AssemblyRelationDOFOption } from "./cad-relation-authoring";
+import { availableBodies, parsePartDocument } from "./aether-core";
 
 export type AssemblyPresentationCommandID =
   | "insert-instance"
@@ -43,7 +45,14 @@ export interface CADAssemblyPresentationProjection {
   readonly relationItems: readonly ListBoxItem[];
   readonly problemItems: readonly ListBoxItem[];
   readonly mateEndpointOptions: readonly AssemblyMateEndpointOption[];
+  /** Every unsuppressed occurrence, for dialogs that pick occurrences (contact sets). */
+  readonly instanceOptions?: readonly { readonly id: string; readonly name: string }[];
   readonly selectedMateDOF: DOFProjection | null;
+  /** The selected occurrence and its part, for Part Properties and Bodies to Component. */
+  readonly selectedInstanceID?: StableID | null;
+  readonly selectedPartDefinition?: PartDefinitionProjection | null;
+  /** Each unsuppressed occurrence with the bodies and sketches its part document holds. */
+  readonly componentContents?: readonly { readonly id: string; readonly name: string; readonly bodies: readonly { id: string; name: string }[]; readonly sketches: readonly { id: string; name: string }[] }[];
   readonly relationDOFOptions: readonly AssemblyRelationDOFOption[];
   readonly inspectorSections: readonly CADInspectorSection[];
   readonly bomRows: readonly BOMRowProjection[];
@@ -365,6 +374,23 @@ function inspector(
   }];
 }
 
+/** What each occurrence's part document holds, by name, for picking in dialogs.
+ *  Parts without a feature document (imported, linked) list nothing. */
+function componentContents(projection: AssemblyProjectionV1) {
+  return projection.instances.filter((instance) => !instance.suppressed).map((instance) => {
+    const definition = projection.part_definitions.find(({ id }) => id === instance.definition_id);
+    let bodies: { id: string; name: string }[] = [], sketches: { id: string; name: string }[] = [];
+    if (definition?.feature_document) {
+      try {
+        const doc = parsePartDocument(JSON.stringify(definition.feature_document));
+        bodies = availableBodies(doc).map(({ id, name }) => ({ id, name }));
+        sketches = doc.features.filter((f) => f.type === "sketch" || f.type === "profile").map((f) => ({ id: f.id, name: f.name }));
+      } catch { /* an unreadable document simply offers nothing to move */ }
+    }
+    return { id: instance.id, name: instance.name, bodies, sketches };
+  });
+}
+
 export function buildCADAssemblyPresentation(
   projection: AssemblyProjectionV1,
   solution: AssemblySolutionProjection | null,
@@ -375,6 +401,7 @@ export function buildCADAssemblyPresentation(
   const endpoints = mateEndpointOptions(projection);
   const canConnectTwoInstances = new Set(endpoints.map(({ instanceID }) => instanceID)).size >= 2;
   const selectedMate = projection.mates.find(({ id }) => id === selectedID);
+  const selectedInstance = projection.instances.find(({ id }) => id === selectedID);
   const relationDOFOptions = projection.mates.flatMap((mate) => mate.suppressed ? [] : mate.dofs
     .filter(({ state }) => state === "free")
     .map((dof) => ({
@@ -390,7 +417,11 @@ export function buildCADAssemblyPresentation(
     relationItems: relationItems(projection),
     problemItems: projection.issues.map(diagnosticItem),
     mateEndpointOptions: endpoints,
+    instanceOptions: projection.instances.filter((instance) => !instance.suppressed).map((instance) => ({ id: instance.id, name: instance.name })),
     selectedMateDOF: selectedMate?.dofs.length === 1 ? selectedMate.dofs[0] : null,
+    selectedInstanceID: selectedInstance?.id ?? null,
+    selectedPartDefinition: selectedInstance ? projection.part_definitions.find(({ id }) => id === selectedInstance.definition_id) ?? null : null,
+    componentContents: componentContents(projection),
     relationDOFOptions,
     inspectorSections: inspector(projection, solution, selectedID),
     bomRows: bom?.rows ?? [],

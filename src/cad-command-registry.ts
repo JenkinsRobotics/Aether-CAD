@@ -73,7 +73,7 @@ export type CADCommandID =
   | "assembly-create-mate"
   | "assembly-set-mate-dof-value"
   | "assembly-edit-mate-dof-limits"
-  | "assembly-create-relation" | "assembly-explode" | "assembly-motion-study"
+  | "assembly-create-relation" | "assembly-create-contact-set" | "assembly-toggle-contacts" | "assembly-check-contacts" | "assembly-explode" | "assembly-motion-study"
   | "assembly-toggle-mate-suppressed"
   | "assembly-remove-mate"
   | "assembly-mate-fastened"
@@ -95,6 +95,9 @@ export type CADCommandID =
   | "assembly-toggle-grounded"
   | "assembly-toggle-suppressed"
   | "assembly-remove-instance"
+  | "assembly-make-independent" | "assembly-linked-copy" | "assembly-part-properties" | "assembly-bodies-to-component"
+  | "feature-curve3d"
+  | "part-continuity" | "part-curvature-comb" | "part-isocurve" | "part-minimum-radius"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -220,7 +223,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-create-mate",
   "assembly-set-mate-dof-value",
   "assembly-edit-mate-dof-limits",
-  "assembly-create-relation", "assembly-explode", "assembly-motion-study",
+  "assembly-create-relation", "assembly-create-contact-set", "assembly-toggle-contacts", "assembly-check-contacts", "assembly-explode", "assembly-motion-study",
   "assembly-toggle-mate-suppressed",
   "assembly-remove-mate",
   "assembly-mate-fastened",
@@ -240,6 +243,9 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-toggle-grounded",
   "assembly-toggle-suppressed",
   "assembly-remove-instance",
+  "assembly-make-independent", "assembly-linked-copy", "assembly-part-properties", "assembly-bodies-to-component",
+  "feature-curve3d",
+  "part-continuity", "part-curvature-comb", "part-isocurve", "part-minimum-radius",
   "fit-view",
   "clear-mates",
   "view-top",

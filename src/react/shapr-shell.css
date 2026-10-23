@@ -65,6 +65,8 @@
 .cad-recovery-link { position: absolute; right: 0; top: -48px; }
 .cad-start-center > .aui-state { max-width: 720px; min-height: 420px; margin: 0 auto; border: 1px solid var(--aether-color-border); border-radius: 12px; background: var(--aether-color-bg-panel); }
 .cad-start-form { display: grid; gap: 10px; min-width: min(430px, 70vw); }
+.cad-contact-occurrences { display: grid; gap: 4px; margin: 0; padding: 6px 8px; border: 1px solid var(--aether-color-border); border-radius: 6px; max-height: 160px; overflow: auto; }
+.cad-textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 11px; padding: 6px; border: 1px solid var(--aether-color-border); border-radius: 6px; background: var(--aether-color-surface); color: inherit; resize: vertical; }
 .cad-form-note { margin: 4px 0 0; color: var(--aether-color-text-faint); font-size: 10px; line-height: 1.5; }
 .cad-import-summary { display: grid; min-width: min(460px, 72vw); gap: 16px; }
 .cad-import-summary > div { display: flex; gap: 12px; align-items: flex-start; }

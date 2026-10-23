@@ -40,6 +40,8 @@ export {
   sketchDefinitionState,
 } from "@aether/core/sketch";
 export { parsePartDocument, serializePartDocument } from "@aether/core/document";
+// Components from bodies: which features a body needs, split out of its document.
+export { availableBodies, splitDocument, appendDocument } from "@aether/core/document";
 // Picking one region of a multi-region sketch: resolve the drawing the way
 // the engine sees it, then stamp identity on the contour that was picked.
 export { resolveProfileDrawing, identifySketchContour, profileSketchFrame, projectSketchDrawing } from "@aether/core/document";

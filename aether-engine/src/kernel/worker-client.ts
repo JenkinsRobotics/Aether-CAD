@@ -102,6 +102,11 @@ export class OCCTWorkerClient {
     return this.send<DistanceMeasurement>({ type: "measure-distance", document, entities });
   }
 
+  async checkContacts(input: import("./contacts").ContactCheckInput): Promise<{ overlaps: import("./contacts").ContactOverlap[]; checked_pairs: number }> {
+    await this.ready;
+    return this.send({ type: "check-contacts", input });
+  }
+
   async analyzePart(document: PartDocument, options: AnalysisOptions): Promise<AnalysisResult> {
     await this.ready;
     return this.send<AnalysisResult>({ type: "analyze-part", document, options });

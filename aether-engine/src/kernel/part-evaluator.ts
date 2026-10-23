@@ -50,6 +50,7 @@ import {
   type EdgeFinder,
   type RadiusConfig, type FilletRadius, type ChamferRadius,
 } from "replicad";
+import { makeLine as makeLine3D, makeBSplineApproximation as approximateBSpline } from "replicad";
 
 /** A feature this engine cannot build yet; the caller may try another engine. */
 export class UnsupportedFeature extends Error {
@@ -449,7 +450,7 @@ export function evaluatePartDocument(
   // The feature previewed: the last unsuppressed solid feature before the rollback bar.
   const history = document.features.slice(0, rollbackPosition(document));
   const last = history[history.length - 1];
-  const previewId = options.preview && last && !last.suppressed && !["sketch", "profile", "plane", "axis", "point", "thread"].includes(last.type) ? last.id : undefined;
+  const previewId = options.preview && last && !last.suppressed && !["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(last.type) ? last.id : undefined;
   // Manipulators the previewed feature publishes as its branch runs: one per draggable
   // parameter, placed on the geometry it changes. Extrude also keeps its axes contract.
   const previewHandles: PreviewHandle[] = [], previewAxes: ExtrusionPreviewAxis[] = [];
@@ -515,7 +516,7 @@ export function evaluatePartDocument(
       stepOwned = [];
       let failed = false;
       try {
-      if (feature.suppressed || feature.type === "plane" || feature.type === "axis" || feature.type === "point" || feature.type === "thread") continue;
+      if (feature.suppressed || feature.type === "plane" || feature.type === "axis" || feature.type === "point" || feature.type === "thread" || feature.type === "curve3d") continue;
       try {
         if (feature.type === "sketch") {
           const state = rectangleSketchRevision(feature);
@@ -636,7 +637,17 @@ export function evaluatePartDocument(
           return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
         };
         // A closed region (or any contour) of an earlier sketch as a wire on that sketch's plane.
+        /** A 3D sketch stands in for a sketch profile where a path is expected: no contours, one curve. */
+        const pathSource = (sourceId: string) => profiles.get(sourceId) ?? (history.some((f) => f.id === sourceId && f.type === "curve3d" && !f.suppressed) ? { contours: [{ id: sourceId }] } as unknown as NonNullable<ReturnType<typeof profiles.get>> : undefined);
         const sketchWire = (sourceId: string, contourId: string | undefined, label: string, anyContour = false, selection?: ProfileRegionSelection): Wire => {
+          // A 3D sketch is already a world curve: lines end to end, or one smooth curve through the points.
+          const curve3d = history.find((f) => f.id === sourceId && f.type === "curve3d" && !f.suppressed);
+          if (curve3d && curve3d.type === "curve3d") {
+            if (curve3d.kind === "point") throw new Error(`${label}: a 3D point is not a path.`);
+            const pts = curve3d.pointsMillimeters;
+            const edges = curve3d.kind === "line" ? pts.slice(1).map((p, i) => own(makeLine3D(pts[i], p))) : [own(approximateBSpline(pts, { tolerance: 1e-4 }))];
+            return own(assembleWire(edges));
+          }
           const sketchProfile = profiles.get(sourceId);
           if (!sketchProfile) throw new Error(`${label} needs an available sketch.`);
           let drawing: Drawing | undefined;
@@ -938,7 +949,7 @@ export function evaluatePartDocument(
           if (feature.patternType === "path") {
             // Along a sketch curve: copies at equal arc length, kept as drawn or turned to
             // follow the path's tangent (SolidCraft's identical | path).
-            const pathProfile = profiles.get(feature.pathFeatureId);
+            const pathProfile = pathSource(feature.pathFeatureId);
             if (!pathProfile) throw new Error("Pattern on path needs a curve of an earlier sketch.");
             const pathId = feature.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : undefined);
             if (pathId === undefined) throw new Error("Pattern path sketch has several curves — choose which one to use.");
@@ -2026,7 +2037,7 @@ export function evaluatePartDocument(
           // Sweep (PartDesign Pipe, standard mode, transformed transitions): a
           // closed profile region swept along a curve of another sketch.
           const profileWire = sketchWire(feature.profileFeatureId, feature.profileContourId, "Sweep profile", false, feature.profileRegion ? feature : undefined);
-          const pathProfile = profiles.get(feature.pathFeatureId);
+          const pathProfile = pathSource(feature.pathFeatureId);
           if (!pathProfile) throw new Error("Sweep requires a profile and a path.");
           const pathId = feature.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : undefined);
           if (pathId === undefined && pathProfile.contours.length !== 1) throw new Error("Sweep path sketch has several curves — choose which one to use.");
@@ -2047,7 +2058,7 @@ export function evaluatePartDocument(
                 else if (typeof orientation === "object") { const u = unit(orientation.direction), dir = new oc.gp_Dir_4(u[0], u[1], u[2]); owned.push(dir); builder.SetMode_3(dir); }
                 else builder.SetMode_1(false);
                 if (feature.rail) {
-                  const railProfile = profiles.get(feature.rail.pathFeatureId);
+                  const railProfile = pathSource(feature.rail.pathFeatureId);
                   if (!railProfile) throw new Error("Sweep rail sketch is unavailable.");
                   const railId = feature.rail.pathContourId ?? (railProfile.contours.length === 1 ? railProfile.contours[0].id : undefined);
                   if (railId === undefined) throw new Error("Sweep rail sketch has several curves — choose which one to use.");
@@ -2086,7 +2097,7 @@ export function evaluatePartDocument(
         } else if (feature.type === "pipe") {
           // Pipe: a circle square to the path at its start, swept along it; a wall
           // thickness subtracts the same sweep of the inner radius.
-          const pathProfile = profiles.get(feature.pathFeatureId);
+          const pathProfile = pathSource(feature.pathFeatureId);
           if (!pathProfile) throw new Error("Pipe needs a path curve in an earlier sketch.");
           const pathId = feature.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : undefined);
           if (pathId === undefined) throw new Error("Pipe path sketch has several curves — choose which one to use.");

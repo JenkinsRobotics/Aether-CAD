@@ -20,7 +20,7 @@ export const patternEditor:FeatureEditor={
       copyPrefix:field('Copy ID prefix',feature?.copyBodyIds?String(Object.values(feature.copyBodyIds as Record<string,string>)[0]??'').replace(/-\d+$/,''):`${doc.documentId}:pattern-${crypto.randomUUID()}`),
       source:reference('Source feature',[...patternSourceTypes],feature?.sourceFeatureId),
       patternType:field('Pattern type',feature?.patternType ?? 'linear',['linear','polar','path']),
-      pathSketch:reference('Path sketch',['sketch','profile'],path?.pathFeatureId),
+      pathSketch:reference('Path sketch',['sketch','profile','curve3d'],path?.pathFeatureId),
       pathMode:field('Path spacing by',path?.distanceMillimeters!==undefined?'distance':'spacing',['spacing','distance']),
       pathSpacing:field('Spacing along path (mm)',String(path?.spacingMillimeters ?? 10)),
       pathDistance:field('Overall distance (mm)',String(path?.distanceMillimeters ?? 30)),

@@ -9,6 +9,7 @@ import { evaluatePartDocument, FeatureFailure, UnsupportedFeature } from "./part
 import { sketchSectionContours } from "./sketch-section";
 import { measureDistance } from "./measure";
 import { analyzePart } from "./analysis";
+import { checkContacts, type ContactCheckInput, type ContactOverlap } from "./contacts";
 import { exportPart } from "./export";
 import { buildPartGeometry } from "./part-geometry";
 import { initNodeKernel } from "./node-kernel";
@@ -42,6 +43,11 @@ export class InProcessKernelClient {
     await this.prepare(document);
     try { return measureDistance(document, entities); } catch (error) { return rethrow(error); }
   }
+  async checkContacts(input: ContactCheckInput): Promise<{ overlaps: ContactOverlap[]; checked_pairs: number }> {
+    for (const part of input.parts) await this.prepare(part.document);
+    return checkContacts(input);
+  }
+
   async analyzePart(document: PartDocument, options: AnalysisOptions): Promise<AnalysisResult> {
     await this.prepare(document);
     try { return analyzePart(document, options); } catch (error) { return rethrow(error); }

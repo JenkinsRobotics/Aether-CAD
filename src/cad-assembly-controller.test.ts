@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { availableBodies, createRectanglePartDocument, type PartDocument } from "./aether-core";
 import type {
   AssemblyProjectionV1,
   AssemblySolutionProjection,
@@ -988,5 +989,52 @@ describe('atomic assembly recipe transactions', () => {
     finish({handle:descriptor.handle,revision:'2',assembly:{...assembly,revision:'2'},solution:{...solution,revision:'2'},bom:{...bom,revision:'2'}});
     await expect(pending).rejects.toThrow(/changed while editing/);
     expect(controller.geometryProjection).toBeNull();controller.dispose();
+  });
+
+  it("edits part properties, copies occurrences, and moves bodies into components", async () => {
+    const doc = createRectanglePartDocument("Bracket", { widthMillimeters: 20, heightMillimeters: 10, depthMillimeters: 5 });
+    (doc.features as unknown[]).push(
+      { ...doc.features[0], id: "s2", name: "Sketch 2" },
+      { id: "e2", type: "extrude", name: "Boss", profileFeatureId: "s2", operation: "new", distanceMillimeters: 12, suppressed: false },
+    );
+    const [first, second] = availableBodies(doc).map((b) => b.id);
+    const store = new CADAssemblyWorkspaceStore();
+    let current: AssemblyProjectionV1 = { ...assembly, part_definitions: [{ ...assembly.part_definitions[0], feature_document: doc }] };
+    const mutate = vi.fn(async (method: string, params: Readonly<Record<string, unknown>>) => {
+      const revision = String(Number(current.revision) + 1);
+      if (method === "add_part_definition") current = { ...current, part_definitions: [...current.part_definitions, { ...(params.part_definition as object), id: `part-${current.part_definitions.length + 1}` } as never] };
+      if (method === "update_part_definition") { const next = params.part_definition as { id: string }; current = { ...current, part_definitions: current.part_definitions.map((p) => p.id === next.id ? next as never : p) }; }
+      if (method === "add_instance") { const next = params.instance as { rest_transform: unknown }; current = { ...current, instances: [...current.instances, { parent_instance_id: null, solved_world_transform: next.rest_transform, suppressed: false, visible: true, source_status: "resolved", ...next, id: `instance-${current.instances.length + 1}` } as never] }; }
+      current = { ...current, revision };
+      return { handle: descriptor.handle, revision, assembly: current, solution: { ...solution, revision, instance_world_transforms: current.instances.map((i) => ({ instance_id: i.id, transform: i.solved_world_transform })) }, bom: { ...bom, revision } };
+    });
+    const statuses = vi.fn();
+    const controller = new CADAssemblyController({ client: client({ mutate, describeAssembly: vi.fn(async () => current) }), store, onStatus: statuses });
+    await controller.newWorkspace("Drive Module");
+    store.dispatch({ type: "select-entities", ids: ["instance-1"], mode: "single" });
+
+    await controller.updatePartProperties({ partNumber: " BR-2 ", description: "Left bracket", properties: "finish = anodised" });
+    expect(mutate).toHaveBeenLastCalledWith("update_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ id: "part-1", part_number: "BR-2", description: "Left bracket", custom_properties: [{ key: "finish", value: "anodised" }], feature_document: doc }) }));
+
+    await controller.addLinkedCopyOfSelectedInstance();
+    expect(mutate).toHaveBeenLastCalledWith("add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-1", name: "Bracket:2" }) }));
+
+    await controller.copySelectedInstanceIndependent();
+    expect(mutate).toHaveBeenNthCalledWith(3, "add_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ name: "Bracket copy", part_number: "BR-2", feature_document: doc }) }));
+    expect(mutate).toHaveBeenNthCalledWith(4, "add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-2", name: "Bracket:1 copy" }) }));
+
+    await controller.moveBodiesToComponent({ sourceInstanceID: "instance-1", bodyIDs: [second], sketchIDs: [], target: "new", name: "" });
+    const bossDefinition = current.part_definitions.find((p) => p.name === "Body 2")!;
+    expect((bossDefinition.feature_document as PartDocument).features.map((f) => f.id)).toEqual(["s2", "e2"]);
+    expect((current.part_definitions[0].feature_document as PartDocument).features.map((f) => f.id)).toEqual(doc.features.slice(0, 2).map((f) => f.id));
+    expect(current.instances.at(-1)).toMatchObject({ name: "Body 2:1", definition_id: bossDefinition.id });
+
+    // Move the boss back into the bracket, into an existing occurrence.
+    const bossInstance = current.instances.at(-1)!;
+    await controller.moveBodiesToComponent({ sourceInstanceID: bossInstance.id, bodyIDs: [availableBodies(bossDefinition.feature_document as PartDocument)[0].id], sketchIDs: [], target: "instance-1", name: "" });
+    expect((current.part_definitions[0].feature_document as PartDocument).features.map((f) => f.id)).toEqual([...doc.features.slice(0, 2).map((f) => f.id), "s2", "e2"]);
+    expect((current.part_definitions.find((p) => p.id === bossDefinition.id)!.feature_document as PartDocument).features).toEqual([]);
+    expect(availableBodies(current.part_definitions[0].feature_document as PartDocument).map((b) => b.id)).toEqual([first, second]);
+    expect(statuses).toHaveBeenLastCalledWith(expect.stringMatching(/^Moved 1 body and 0 sketches/), "success");
   });
 });

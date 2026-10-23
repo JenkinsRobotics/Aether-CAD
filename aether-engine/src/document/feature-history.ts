@@ -73,7 +73,7 @@ function stableBodies(doc: PartDocument): PartDocument {
       }
       // Pin legacy implicit targets before removing/reordering their producer.
       // Otherwise the same operation could silently switch to another body.
-      if (!["profile", "sketch", "plane", "axis", "point", "thread"].includes(feature.type) && targetBody)
+      if (!["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(feature.type) && targetBody)
         return { ...feature, targetBodyId: ("targetBodyId" in feature && feature.targetBodyId) || targetBody };
       return feature;
     }),
@@ -145,7 +145,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       // checked against actual native availability during evaluation.
       if(!f.suppressed||includeSuppressedModifiers)for(const id of bodyProducers.keys())bodyProducers.set(id,f.id);
       if(!f.suppressed)lastBody=f.scopeResolution?.groups.at(-1)?.bodyId??lastBody;
-    } else if (!["sketch", "profile", "plane", "axis", "point", "thread"].includes(f.type)) {
+    } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f.type)) {
       const body =
         "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
       const targets = f.type === "offset-face" ? offsetFaceBodies(f) : f.type === "extrude" && f.targetBodyIds ? f.targetBodyIds : [body];

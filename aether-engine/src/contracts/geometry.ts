@@ -137,13 +137,14 @@ export interface AppliedMate {
 }
 
 /** Exact analyses and file output, in the shape the FreeCAD services answered with. */
-export interface AnalysisOptions { kind: "properties" | "section" | "interference" | "clearance" | "compare"; plane?: "XY" | "XZ" | "YZ"; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; /** compare: the two bodies (default: the first two); clearance: the bodies to check (default: all). */ bodyIds?: string[]; /** compare: a difference smaller than this (mm³) counts as none. */ tolerance_mm3?: number }
-export interface AnalysisResult { status: "ok"; kind: AnalysisOptions["kind"]; bodies: PartGeometryData[]; measurements: Record<string, unknown>[] }
+export interface AnalysisOptions { kind: "properties" | "section" | "interference" | "clearance" | "compare" | "continuity" | "curvature_comb" | "isocurve" | "minimum_radius"; /** curve analyses: the faces or edges to analyse (default: all). */ entities?: MeasureEntity[]; /** isocurve: curves each way; curvature_comb: samples per edge. */ count?: number; /** curvature_comb: tooth mm per 1/mm of curvature. */ scale?: number; /** minimum_radius: flag radii below this (mm). */ radius_mm?: number; plane?: "XY" | "XZ" | "YZ"; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; /** compare: the two bodies (default: the first two); clearance: the bodies to check (default: all). */ bodyIds?: string[]; /** compare: a difference smaller than this (mm³) counts as none. */ tolerance_mm3?: number }
+export interface AnalysisResult { status: "ok"; kind: AnalysisOptions["kind"]; bodies: PartGeometryData[]; measurements: Record<string, unknown>[]; /** World polylines the viewport draws for curve analyses. */ curves?: { label: string; color: string; polylines: [number, number, number][][] }[] }
 export interface ExportOptions { format: "step" | "stl"; bodyIds?: string[] | null; toleranceMillimeters?: number }
 export interface ExportResult { format: "step" | "stl"; units: "mm"; body_count: number; bytes: ArrayBuffer }
 
 export type WorkerRequest =
   | { type: "analyze-part"; requestId: number; document: PartDocument; options: AnalysisOptions }
+  | { type: "check-contacts"; requestId: number; input: import("../kernel/contacts").ContactCheckInput }
   | { type: "export-part"; requestId: number; document: PartDocument; options: ExportOptions }
   | {
       type: "import-step";
@@ -196,6 +197,7 @@ export type WorkerResponse =
       measurement: DistanceMeasurement;
     }
   | { type: "part-analyzed"; requestId: number; result: AnalysisResult }
+  | { type: "contacts-checked"; requestId: number; result: { overlaps: import("../kernel/contacts").ContactOverlap[]; checked_pairs: number } }
   | { type: "sketch-sectioned"; requestId: number; contours: import("../sketch/drawing").SketchContour[] }
   | { type: "part-exported"; requestId: number; result: ExportResult }
   | {

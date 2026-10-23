@@ -24,6 +24,7 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "pipe") return `Ø${feature.diameterMillimeters} mm${feature.wallMillimeters ? ` · ${feature.wallMillimeters} mm wall` : ""}`;
   if (feature.type === "bounding-solid") return `${feature.marginMillimeters} mm margin`;
   if (feature.type === "thread") return `${feature.designation} cosmetic`;
+  if (feature.type === "curve3d") return feature.kind === "point" ? "3D point" : `3D ${feature.kind} · ${feature.pointsMillimeters.length} points`;
   if (feature.type === "split") return `keep ${feature.keep} · ${feature.plane.kind === "principal" ? feature.plane.plane : feature.plane.kind}`;
   if (feature.type === "delete-face") return `${feature.faces.length} faces removed`;
   if (feature.type === "offset-face") return feature.replaceWith ? `replace ${feature.faces.length} faces` : `${feature.distanceMillimeters} mm · ${feature.faces.length} faces`;
