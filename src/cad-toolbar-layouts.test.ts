@@ -310,5 +310,5 @@ it("names and illustrates the three core inspection commands distinctly",()=>{
 
 it('connects Plastic Draft and Shell to native feature authoring',()=>{
  const modify=toolbarWorkspaceFor('part','plastic').groups.find(group=>group.label==='Modify')!;
- expect(modify.tools.map(tool=>tool.action)).toEqual(['feature-draft','feature-shell']);
+ expect(modify.tools.map(tool=>tool.action)).toEqual(['feature-draft','feature-shell','show-plastic-rules']);
 });

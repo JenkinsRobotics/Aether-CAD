@@ -22,7 +22,8 @@ export type {Curve3DFeature} from './curve3d';
 import {validateSurfaceFeature, surfaceFeatureTypes, type SurfaceFeature} from './surface';
 import {validateSheetMetalFeature, sheetMetalFeatureTypes, type SheetMetalFeature} from './sheet-metal';
 import {validateRemoveBody, type RemoveBodyFeature} from './remove-body';
-import {validateBoss, validateRest, type BossFeature, type RestFeature} from './plastic';
+import {validateBoss, validateRest, validateLip, validateSnapFit, type BossFeature, type RestFeature, type LipFeature, type SnapFitFeature} from './plastic';
+export type {LipFeature, SnapFitFeature} from './plastic';
 export type {FaceExtrudeFeature} from "./face-extrude";
 import {validateBoolean, type BooleanFeature} from "./boolean";
 export type {BooleanFeature} from "./boolean";
@@ -163,7 +164,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = Curve3DFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -179,6 +180,8 @@ export function validateSolidFeature(
   if ((sheetMetalFeatureTypes as readonly string[]).includes(feature.type)) return validateSheetMetalFeature(feature as SheetMetalFeature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "rest") return validateRest(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "lip") return validateLip(feature,earlier,missingReference as (id:string)=>boolean);
+  if (feature.type === "snap-fit") return validateSnapFit(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "remove-body") return validateRemoveBody(feature);
   if (feature.type === "bounding-solid") return validateBoundingSolid(feature);
   if (feature.type === "thread") return validateThread(feature,earlier,missingReference as (id:string)=>boolean);

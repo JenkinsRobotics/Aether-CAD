@@ -1020,3 +1020,38 @@ viewport draws in an analysis overlay; the analysis window takes the current sel
 and edges, or everything. Known limits: isocurves and the face sample follow the untrimmed
 surface's parameter box, so a face with holes shows curves across them; sketch curves are not
 analysed yet; the comb has no face (isoparametric) mode.
+
+### r54 (2026-10-23): plastic rules, lip and groove, snap fit
+
+Installed.
+
+Plastic rules (SolidCraft's `plastic.rules`, `manage_rules`, `assign_rule`) are a table on the
+part document (`document/plastic-rules.ts`): named rules with wall, draft, nominal radius,
+clearance and material, an active rule, and per-body assignments; new rules start from a
+three-entry library (ABS 1.5 mm first, as SolidCraft does). The Plastic Rules window edits a
+draft and applies it like any feature window. Boss, Rest, Lip and Snap Fit read the body's rule,
+else the active one, for their defaults. Lip / Groove (`plastic.lip`) takes the picked planar rim
+face, offsets its inner or outer wire by the width with sharp corners, prisms both faces along the
+rim normal and keeps the band; a lip fuses, a groove (widened by the gap) is sunk and cut. Snap
+Fit (`plastic.snap_fit`) prisms a side profile (arm, ledge out to the catch depth, ramp back to
+the tip) across the width, with handles on the arm length and catch depth. Gotcha recorded for
+the next feature on faces: replicad's `outerWire()`, `innerWires()` and `offset2D()` delete the
+object they are called on, so wires are taken from clones. Not built: Rule Fillet (fillets sized
+from the rule) and a rounded lip corner mode.
+
+### r55 (2026-10-23): as-built joints, rigid groups, reach, motion trace and plot
+
+Installed.
+
+As-built joints (SolidCraft's `joint.as_built`) take two occurrences where they stand: the joint
+frame is a world frame (B's origin and axis unless given), and `cad-joint-authoring.ts`
+expresses it in each part's coordinates by the inverse of the occurrence's placement quaternion;
+the controller adds a connector with that frame to each part and the mate between them, so the
+current placement already satisfies it. A rigid group (`joint.rigid_group`) is the selected
+occurrences fastened as built to the first. Reach Point (`joint.reach`) translates an
+occurrence's rest transform so its origin lands on a typed world point through `update_instance`.
+The motion study gains a trace (the traced occurrence's origin through the frames, drawn in the
+analysis overlay and keepable as CSV), an inline plot of the driven value or an occurrence
+coordinate, and an interference mode that checks every pair at each step whatever the contact
+flag says. Not built: a group entity to unlock (`component.unlock`), picking the reach `at`
+point in the viewport, keeping a trace as sketch geometry, cam and sweep joints.

@@ -259,6 +259,7 @@ registerAssemblyCommands({
   removeSelectedInstance: () => assemblyController.removeSelectedInstance(),
   copySelectedInstanceIndependent: () => assemblyController.copySelectedInstanceIndependent(),
   addLinkedCopyOfSelectedInstance: () => assemblyController.addLinkedCopyOfSelectedInstance(),
+  addRigidGroupFromSelection: () => assemblyController.addRigidGroupFromSelection(),
   toggleSelectedMateSuppressed: () => assemblyController.toggleSelectedMateSuppressed(),
   removeSelectedMate: () => assemblyController.removeSelectedMate(),
   resetMatePreview: () => {
@@ -825,6 +826,18 @@ cadPresentation.registerActionHandler((action) => {
       .catch(() => undefined);
     return;
   }
+  if (action.type === "create-assembly-as-built-joint") {
+    void assemblyController.addAsBuiltJoint(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "reach-assembly-point") {
+    void assemblyController.reachPoint(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
   if (action.type === "move-bodies-to-component") {
     void assemblyController.moveBodiesToComponent(action.draft)
       .then(() => cadPresentation.patch({ startDialog: null }))
@@ -1352,7 +1365,7 @@ cadCommands.setEnabled("assembly-explode", true);
 cadCommands.register("assembly-motion-study", () => {
   const projection = assemblyController.geometryProjection;
   if (!projection) { setStatus("Open an assembly before running a motion study.", "error"); return; }
-  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"));
+  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"), (curves) => viewer.setAnalysisCurves(curves));
 });
 cadCommands.setEnabled("assembly-motion-study", true);
 

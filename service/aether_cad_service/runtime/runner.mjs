@@ -5345,6 +5345,23 @@ function evaluateDocumentVariables(value2) {
   for (const name of definitions.keys()) resolve2(name);
   return resolved;
 }
+const pos$1 = (v) => typeof v === "number" && Number.isFinite(v) && v > 0;
+function validatePlasticRule(rule) {
+  if (!rule.name?.trim()) throw new Error("A plastic rule needs a name.");
+  if (!pos$1(rule.thicknessMillimeters) || !pos$1(rule.nominalRadiusMillimeters)) throw new Error("Rule thickness and radius must be positive.");
+  if (!(Number.isFinite(rule.draftDegrees) && rule.draftDegrees >= 0 && rule.draftDegrees < 45)) throw new Error("Rule draft must be between 0 and 45 degrees.");
+  if (!(Number.isFinite(rule.clearanceMillimeters) && rule.clearanceMillimeters >= 0)) throw new Error("Rule clearance must be zero or more.");
+  if (rule.knifeEdgeMillimeters !== void 0 && !pos$1(rule.knifeEdgeMillimeters)) throw new Error("Rule knife edge must be positive.");
+}
+function validatePlasticRules(table2) {
+  if (table2 === void 0) return;
+  const t = table2;
+  if (!t || typeof t !== "object" || !Array.isArray(t.rules)) throw new Error("Plastic rules must list rules.");
+  t.rules.forEach(validatePlasticRule);
+  if (new Set(t.rules.map((r) => r.name)).size !== t.rules.length) throw new Error("Plastic rule names must be unique.");
+  if (t.active !== void 0 && !t.rules.some((r) => r.name === t.active)) throw new Error("The active plastic rule is not defined.");
+  for (const name of Object.values(t.assignments ?? {})) if (!t.rules.some((r) => r.name === name)) throw new Error(`Assigned plastic rule ${name} is not defined.`);
+}
 function validateSketchPresentation(value2) {
   if (value2 === void 0) return;
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
@@ -5650,6 +5667,21 @@ function validateRest(feature, earlier, missing) {
   if (feature.lengthMillimeters !== void 0 && !pos(feature.lengthMillimeters)) throw Error("Rest length must be positive.");
   if (feature.alongMillimeters !== void 0 && !(Array.isArray(feature.alongMillimeters) && feature.alongMillimeters.length === 3 && feature.alongMillimeters.every(Number.isFinite) && Math.hypot(...feature.alongMillimeters) > 1e-9)) throw Error("Rest direction must be a nonzero vector.");
 }
+function validateLip(feature, earlier, missing) {
+  if (typeof feature.targetBodyId !== "string") throw Error("Lip needs a target part.");
+  validateSolidFaceReference(feature.face, earlier, missing, "Lip face");
+  if (feature.face.surfaceType) throw Error("A lip goes on a planar rim face.");
+  if (!["lip", "groove"].includes(feature.shape) || !["inside", "outside"].includes(feature.side)) throw Error("Lip needs a shape (lip or groove) and a side.");
+  if (!pos(feature.widthMillimeters) || !pos(feature.heightMillimeters)) throw Error("Lip width and height must be positive.");
+  if (feature.gapMillimeters !== void 0 && !(Number.isFinite(feature.gapMillimeters) && feature.gapMillimeters >= 0)) throw Error("Groove gap must be zero or more.");
+}
+function validateSnapFit(feature, earlier, missing) {
+  validateOnFace(feature, earlier, missing, "Snap fit");
+  const h = feature.hookDirectionMillimeters;
+  if (!Array.isArray(h) || h.length !== 3 || !h.every(Number.isFinite) || Math.hypot(...h) < 1e-9) throw Error("Snap fit needs a hook direction.");
+  if (![feature.lengthMillimeters, feature.thicknessMillimeters, feature.widthMillimeters, feature.catchDepthMillimeters, feature.catchLengthMillimeters].every(pos)) throw Error("Snap fit sizes must be positive.");
+  if (feature.catchLengthMillimeters >= feature.lengthMillimeters) throw Error("The catch must be shorter than the arm.");
+}
 function validateBoolean(feature) {
   if (!["union", "cut", "intersection"].includes(feature.operation))
     throw new Error("Choose Union, Cut or Intersection.");
@@ -5747,6 +5779,8 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
   if (sheetMetalFeatureTypes.includes(feature.type)) return validateSheetMetalFeature(feature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature, earlier, missingReference);
   if (feature.type === "rest") return validateRest(feature, earlier, missingReference);
+  if (feature.type === "lip") return validateLip(feature, earlier, missingReference);
+  if (feature.type === "snap-fit") return validateSnapFit(feature, earlier, missingReference);
   if (feature.type === "remove-body") return validateRemoveBody(feature);
   if (feature.type === "bounding-solid") return validateBoundingSolid(feature);
   if (feature.type === "thread") return validateThread(feature, earlier, missingReference);
@@ -6426,6 +6460,7 @@ function validatePartDocument(value2) {
   validateSketchPresentation(document2.sketchPresentation);
   validateImageCanvases(document2.imageCanvases);
   validateTreeOrganization(document2.organization);
+  validatePlasticRules(document2.plasticRules);
   if (!document2.documentId || typeof document2.documentId !== "string") {
     throw new Error("Part documentId is required.");
   }
@@ -10163,6 +10198,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HoleFacePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  cutType: "plain" | "counterbore" | "countersink";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);',
   "import-cad": "export interface ImportCADFeature {\n  id:string; type:'import-cad'; name:string; suppressed:boolean; operation:'new';\n  bodyId:string; sourceName:string; dataBase64:string; format:CADImportFormat;\n  meshMode?:'reference'|'solid'; meshUnits?:MeshImportUnits;\n}\n\nexport type CADImportFormat = 'step' | 'iges' | 'brep' | 'stl' | 'obj' | 'ply' | 'off';\n\nexport type MeshImportUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';",
   "import-step": 'export interface ImportSTEPFeature {\n  id: string;\n  type: "import-step";\n  name: string;\n  suppressed: boolean;\n  operation: "new";\n  bodyId: string;\n  sourceName: string;\n  dataBase64: string;\n}',
+  "lip": "export interface LipFeature {\n  id:string;type:'lip';name:string;suppressed:boolean;\n  targetBodyId:string;\n  face:SolidFaceReference;\n  shape:'lip'|'groove';\n  side:'inside'|'outside';\n  widthMillimeters:number;heightMillimeters:number;\n  /** Groove clearance added to the width; default: none. */\n  gapMillimeters?:number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
   "loft": "export interface LoftFeature {\n  id: string;\n  type: 'loft';\n  name: string;\n  suppressed: boolean;\n  sections: ({profileFeatureId: string} & ProfileRegionSelection)[];\n  /** Apex before the first section / after the last (SolidCraft's point sections). */\n  startPoint?: LoftApex;\n  endPoint?: LoftApex;\n  operation: 'new' | 'add' | 'cut';\n  ruled: boolean;\n  bodyId?: string;\n  targetBodyId?: string;\n}\n\nexport type LoftApex = ExtrusionPointReference | { kind: 'point'; positionMillimeters: [number, number, number] };\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};",
   "mirror": `export interface MirrorFeature {
   id: string;
@@ -10510,6 +10546,7 @@ export interface CurvedEdgeReference {
   "sheet-unfold": 'export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }',
   "shell": 'export interface ShellFeature {\n  id: string;\n  type: "shell";\n  name: string;\n  targetBodyId?: string;\n  thicknessMillimeters: number;\n  /** Faces left open. Prefer a face reference (the face of an earlier solid by\n   *  outward normal or surface type), which survives upstream dimension edits;\n   *  the plane/offset form matches a fixed coordinate and is kept for older files. */\n  removedFaces?: ShellOpenFace[];\n  /** Which side of the original surface the wall takes; default inside. */\n  direction?: "inside" | "outside" | "both";\n  /** Also open every face tangent-continuous with a picked one. */\n  tangentChain?: boolean;\n  suppressed: boolean;\n}\n\nexport type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";',
   "sketch": 'export interface SketchFeature {\n  id: string;\n  type: "sketch";\n  name: string;\n  plane: SketchPlane;\n  profile: RectangleProfile;\n  constraints: SketchConstraint[];\n  dimensions: SketchDimension[];\n  suppressed: boolean;\n}\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";\n\nexport interface RectangleProfile {\n  type: "center-rectangle";\n  widthMillimeters: number;\n  heightMillimeters: number;\n  centerXMillimeters: number;\n  centerYMillimeters: number;\n  construction: boolean;\n}\n\nexport interface SketchConstraint {\n  id: string;\n  type: SketchConstraintType;\n  target: "center-rectangle";\n}\n\nexport interface SketchDimension {\n  id: string;\n  type: SketchDimensionType;\n  target: "center-rectangle";\n  valueMillimeters: number;\n}\n\nexport type SketchConstraintType =\n  | "horizontal"\n  | "vertical"\n  | "coincident-origin";\n\nexport type SketchDimensionType = "width" | "height";',
+  "snap-fit": "export interface SnapFitFeature extends OnFace {\n  id:string;type:'snap-fit';name:string;suppressed:boolean;\n  /** Which way the catch faces, across the face. */\n  hookDirectionMillimeters:[number,number,number];\n  lengthMillimeters:number;thicknessMillimeters:number;widthMillimeters:number;\n  catchDepthMillimeters:number;catchLengthMillimeters:number;\n}",
   "split": `export interface SplitFeature {
   id:string;type:'split';name:string;suppressed:boolean;
   bodyIds:[string];
@@ -36917,6 +36954,67 @@ function evaluatePartDocument(document2, options = {}) {
             const joined = body.fuse(tool3);
             if (!isShape3D(joined) || measureVolume(joined) <= before + 1e-9) throw new Error(`${feature.type === "boss" ? "Boss" : "Rest"} adds no material. Check that the point lies on the face.`);
             bodies.set(feature.targetBodyId, own(joined));
+            tools.set(feature.id, tool3);
+            currentBodyID = feature.targetBodyId;
+            continue;
+          }
+          if (feature.type === "lip" || feature.type === "snap-fit") {
+            const body = bodies.get(feature.targetBodyId);
+            if (!body) throw new Error(`${feature.type === "lip" ? "Lip" : "Snap fit"} needs an available target part.`);
+            const face = faceByReference(body, feature.face, feature.type === "lip" ? "Lip face" : "Snap fit face");
+            const prism = (f, v) => {
+              const o = getOC(), vec2 = new o.gp_Vec_4(v[0], v[1], v[2]);
+              try {
+                const s = cast(new o.BRepPrimAPI_MakePrism_1(f.wrapped, vec2, false, true).Shape());
+                if (!isShape3D(s)) throw new Error("The plastic feature is not a solid.");
+                return own(s);
+              } finally {
+                vec2.delete();
+              }
+            };
+            let tool3;
+            if (feature.type === "lip") {
+              const center = deleteAfterVectorTuple(face.center), n = unit$1([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
+              const outer = own(face.clone().outerWire()), inners = face.clone().innerWires();
+              inners.forEach((w) => own(w));
+              const width = feature.widthMillimeters + (feature.shape === "groove" ? feature.gapMillimeters ?? 0 : 0);
+              const areaOf = (w) => measureArea(own(makeFace(w)));
+              const offsetBy = (w, grow) => {
+                const a = own(w.clone().offset2D(width, "intersection"));
+                return areaOf(a) > areaOf(w) === grow ? a : own(w.clone().offset2D(-width, "intersection"));
+              };
+              let bandOuter, bandInner;
+              if (feature.side === "inside") {
+                if (!inners.length) throw new Error("A lip inside needs a rim face with an inner edge: shell the body first.");
+                bandInner = inners[0];
+                bandOuter = offsetBy(inners[0], true);
+              } else {
+                bandOuter = outer;
+                bandInner = offsetBy(outer, false);
+              }
+              const along = scale(n, feature.shape === "groove" ? -feature.heightMillimeters : feature.heightMillimeters);
+              const band = prism(own(makeFace(bandOuter)), along).cut(prism(own(makeFace(bandInner)), along));
+              if (!isShape3D(band) || measureVolume(band) <= 1e-9) throw new Error("The lip band is empty. Check the width against the rim.");
+              tool3 = own(band);
+              const start = deleteAfterVectorTuple(bandOuter.startPoint);
+              publish(feature, { parameter: "height", kind: "linear", originMillimeters: add$2([start[0], start[1], start[2]], along), direction: feature.shape === "groove" ? scale(n, -1) : n, label: feature.shape === "groove" ? "Groove depth" : "Lip height" });
+            } else {
+              const base = [...feature.pointMillimeters], n = unit$1([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))]);
+              const raw = feature.hookDirectionMillimeters, hook = unit$1(sub$2(raw, scale(n, dot$2(raw, n))));
+              if (norm$2(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
+              const across = unit$1(cross$2(n, hook));
+              const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
+              const at = (x, y) => add$2(add$2(add$2(base, scale(hook, x)), scale(n, y)), scale(across, -w / 2));
+              const pts = [at(0, 0), at(t, 0), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L)];
+              const wire = own(assembleWire(pts.map((p, i) => own(makeLine(p, pts[(i + 1) % pts.length])))));
+              tool3 = prism(own(makeFace(wire)), scale(across, w));
+              publish(feature, { parameter: "length", kind: "linear", originMillimeters: add$2(base, scale(n, L)), direction: n, label: "Arm length" });
+              publish(feature, { parameter: "catchDepth", kind: "linear", originMillimeters: at(t + cd, L - cl), direction: hook, label: "Catch depth" });
+            }
+            const before = measureVolume(body);
+            const result = feature.type === "lip" && feature.shape === "groove" ? body.cut(tool3) : body.fuse(tool3);
+            if (!isShape3D(result) || Math.abs(measureVolume(result) - before) <= 1e-9) throw new Error(`${feature.type === "lip" ? feature.shape === "groove" ? "Groove" : "Lip" : "Snap fit"} changes nothing. Check that it lies on the face.`);
+            bodies.set(feature.targetBodyId, own(result));
             tools.set(feature.id, tool3);
             currentBodyID = feature.targetBodyId;
             continue;

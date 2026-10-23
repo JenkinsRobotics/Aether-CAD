@@ -11,6 +11,7 @@ const host = () => ({
   removeSelectedMate: vi.fn(async () => {}),
   copySelectedInstanceIndependent: vi.fn(async () => {}),
   addLinkedCopyOfSelectedInstance: vi.fn(async () => {}),
+  addRigidGroupFromSelection: vi.fn(async () => {}),
   resetMatePreview: vi.fn(),
 });
 

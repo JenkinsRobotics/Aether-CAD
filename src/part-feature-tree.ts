@@ -18,6 +18,8 @@ export interface PartTreeItem {
 function featureDetail(feature: PartFeature): string {
   if (feature.type === "transform") return `${feature.transform.kind} · ${feature.bodyIds.length} parts${feature.copyBodyIds ? " · copies" : ""}`;
   if (feature.type === "boss") return `Ø${feature.diameterMillimeters} × ${feature.heightMillimeters} mm${feature.holeDiameterMillimeters ? ` · Ø${feature.holeDiameterMillimeters} hole` : ""}`;
+  if (feature.type === "lip") return `${feature.shape} ${feature.side} · ${feature.widthMillimeters} × ${feature.heightMillimeters} mm`;
+  if (feature.type === "snap-fit") return `${feature.lengthMillimeters} × ${feature.thicknessMillimeters} × ${feature.widthMillimeters} mm · catch ${feature.catchDepthMillimeters}`;
   if (feature.type === "rest") return `${feature.widthMillimeters}${feature.lengthMillimeters ? ` × ${feature.lengthMillimeters}` : " Ø"} × ${feature.heightMillimeters} mm`;
   if (feature.type === "coil") return `R${feature.radiusMillimeters} · pitch ${feature.pitchMillimeters} · ${feature.turns} turns`;
   if (feature.type === "remove-body") return `${feature.bodyIds.length} parts removed`;

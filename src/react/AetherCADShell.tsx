@@ -47,7 +47,7 @@ import {
 } from "@aether/ui";
 import { CadIcon } from "./CadIcon";
 import { DrawingWorkspaceRoute, StartCenter, ViewportCameraNavigation, ViewportSurface } from "./chrome";
-import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog, AssemblyContactSetDialog, PartPropertiesDialog, BodiesToComponentDialog } from "./dialogs";
+import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog, AssemblyContactSetDialog, PartPropertiesDialog, BodiesToComponentDialog, AsBuiltJointDialog, ReachPointDialog } from "./dialogs";
 import {
   ActionItemsPanel,
   AdvisorPanel,
@@ -104,6 +104,9 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "assembly-linked-copy", label: "Linked Copy", category: "Assembly", keywords: ["another occurrence instance"], icon: <AetherIcon name="link" /> },
   { id: "assembly-part-properties", label: "Part Properties", category: "Assembly", keywords: ["part number description metadata"], icon: <AetherIcon name="settings" /> },
   { id: "assembly-bodies-to-component", label: "Bodies to Component", category: "Assembly", keywords: ["from bodies move sketches"], icon: <AetherIcon name="part" /> },
+  { id: "assembly-as-built-joint", label: "As-Built Joint", category: "Assembly", keywords: ["joint where they are"], icon: <AetherIcon name="link" /> },
+  { id: "assembly-rigid-group", label: "Rigid Group", category: "Assembly", keywords: ["move together fastened"], icon: <AetherIcon name="link" /> },
+  { id: "assembly-reach-point", label: "Reach Point", category: "Assembly", keywords: ["move occurrence to point"], icon: <AetherIcon name="fit" /> },
   { id: "clear-mates", label: "Clear Session Mates", category: "Assembly", keywords: ["remove constraints"], icon: <AetherIcon name="close" /> },
   { id: "fit-view", label: "Fit View", category: "View", keywords: ["zoom frame all"], shortcut: "F", recent: true, icon: <AetherIcon name="fit" /> },
   { id: "view-top", label: "Top View", category: "View", keywords: ["camera orientation"], icon: "T" },
@@ -545,7 +548,7 @@ export function AetherCADShell() {
       <AssemblyConnectorDialog presentation={presentation} />
       <AssemblyMateDialog presentation={presentation} />
       <AssemblyMateDOFDialog presentation={presentation} />
-      <AssemblyRelationDialog presentation={presentation} /><AssemblyContactSetDialog presentation={presentation} /><PartPropertiesDialog presentation={presentation} /><BodiesToComponentDialog presentation={presentation} />
+      <AssemblyRelationDialog presentation={presentation} /><AssemblyContactSetDialog presentation={presentation} /><PartPropertiesDialog presentation={presentation} /><BodiesToComponentDialog presentation={presentation} /><AsBuiltJointDialog presentation={presentation} /><ReachPointDialog presentation={presentation} />
       <ExportCenter presentation={presentation} />
       <CADCanvasDialog open={canvasOpen!==null} decal={canvasOpen==='decal'} onClose={()=>setCanvasOpen(null)} />
       <CADPrimitiveDialog kind={primitive} onClose={()=>setPrimitive(null)} />

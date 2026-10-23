@@ -1193,6 +1193,56 @@ export function evaluatePartDocument(
           currentBodyID = feature.targetBodyId;
           continue;
         }
+        if (feature.type === "lip" || feature.type === "snap-fit") {
+          // Plastic lip/groove and snap fit: prisms built on the picked planar face.
+          const body = bodies.get(feature.targetBodyId);
+          if (!body) throw new Error(`${feature.type === "lip" ? "Lip" : "Snap fit"} needs an available target part.`);
+          const face = faceByReference(body, feature.face, feature.type === "lip" ? "Lip face" : "Snap fit face");
+          const prism = (f: Face, v: V3): Shape3D => {
+            const o = getOC(), vec = new o.gp_Vec_4(v[0], v[1], v[2]);
+            try { const s = cast(new o.BRepPrimAPI_MakePrism_1(f.wrapped, vec, false, true).Shape()); if (!isShape3D(s)) throw new Error("The plastic feature is not a solid."); return own(s); }
+            finally { vec.delete(); }
+          };
+          let tool: Shape3D;
+          if (feature.type === "lip") {
+            const center = deleteAfterVectorTuple(face.center), n = unit([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))] as V3);
+            // replicad's outerWire() and innerWires() consume their face: ask clones, after the centre and normal.
+            const outer = own(face.clone().outerWire()), inners = face.clone().innerWires(); inners.forEach((w) => own(w));
+            const width = feature.widthMillimeters + (feature.shape === "groove" ? feature.gapMillimeters ?? 0 : 0);
+            const areaOf = (w: Wire) => measureArea(own(makeFace(w)));
+            // offset2D's sign follows the wire's winding; ask for the side by area.
+            const offsetBy = (w: Wire, grow: boolean): Wire => { const a = own(w.clone().offset2D(width, "intersection")); return (areaOf(a) > areaOf(w)) === grow ? a : own(w.clone().offset2D(-width, "intersection")); };
+            let bandOuter: Wire, bandInner: Wire;
+            if (feature.side === "inside") { if (!inners.length) throw new Error("A lip inside needs a rim face with an inner edge: shell the body first."); bandInner = inners[0]; bandOuter = offsetBy(inners[0], true); }
+            else { bandOuter = outer; bandInner = offsetBy(outer, false); }
+            const along = scale(n, feature.shape === "groove" ? -feature.heightMillimeters : feature.heightMillimeters);
+            const band = prism(own(makeFace(bandOuter)), along).cut(prism(own(makeFace(bandInner)), along));
+            if (!isShape3D(band) || measureVolume(band) <= 1e-9) throw new Error("The lip band is empty. Check the width against the rim.");
+            tool = own(band);
+            const start = deleteAfterVectorTuple(bandOuter.startPoint);
+            publish(feature, { parameter: "height", kind: "linear", originMillimeters: add([start[0], start[1], start[2]] as V3, along), direction: feature.shape === "groove" ? scale(n, -1) : n, label: feature.shape === "groove" ? "Groove depth" : "Lip height" });
+          } else {
+            const base = [...feature.pointMillimeters] as V3, n = unit([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))] as V3);
+            const raw = feature.hookDirectionMillimeters as V3, hook = unit(sub(raw, scale(n, dot(raw, n))));
+            if (norm(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
+            const across = unit(cross(n, hook));
+            const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
+            const at = (x: number, y: number): V3 => add(add(add(base, scale(hook, x)), scale(n, y)), scale(across, -w / 2));
+            // Side profile: the arm, then a ledge out to the catch depth and a ramp back to the tip.
+            const pts = [at(0, 0), at(t, 0), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L)];
+            const wire = own(assembleWire(pts.map((p, i) => own(makeLine(p, pts[(i + 1) % pts.length])))));
+            tool = prism(own(makeFace(wire)), scale(across, w));
+            publish(feature, { parameter: "length", kind: "linear", originMillimeters: add(base, scale(n, L)), direction: n, label: "Arm length" });
+            publish(feature, { parameter: "catchDepth", kind: "linear", originMillimeters: at(t + cd, L - cl), direction: hook, label: "Catch depth" });
+          }
+          const before = measureVolume(body);
+          const result = feature.type === "lip" && feature.shape === "groove" ? body.cut(tool) : body.fuse(tool);
+          if (!isShape3D(result) || Math.abs(measureVolume(result) - before) <= 1e-9) throw new Error(`${feature.type === "lip" ? (feature.shape === "groove" ? "Groove" : "Lip") : "Snap fit"} changes nothing. Check that it lies on the face.`);
+          bodies.set(feature.targetBodyId, own(result));
+          tools.set(feature.id, tool);
+          currentBodyID = feature.targetBodyId;
+          continue;
+        }
         if (feature.type === "remove-body") {
           for (const id of feature.bodyIds) { const shape = bodies.get(id); if (!shape) throw new Error("A part to remove is unavailable."); bodies.delete(id); }
           if (currentBodyID && !bodies.has(currentBodyID)) currentBodyID = [...bodies.keys()].at(-1);

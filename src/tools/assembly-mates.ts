@@ -20,6 +20,9 @@ export const assemblyMatesWorkspace: CADRibbonWorkspaceDefinition = {
       tool("assembly-path", "Pin Slot", "slot", "assembly-mate-pin_slot"),
       tool("assembly-coincident", "Planar", "plane", "assembly-mate-planar"),
       tool("assembly-mate-ball", "Ball", "ball", "assembly-mate-ball"),
+      tool("assembly-as-built", "As-Built Joint", "link", "assembly-as-built-joint"),
+      tool("assembly-rigid-group", "Rigid Group", "ground", "assembly-rigid-group"),
+      tool("assembly-reach", "Reach Point", "fit", "assembly-reach-point"),
       // Width and tangent need surface geometry the solver has no joint for;
       // perpendicular, distance and angle the solver handles but the
       // workspace cannot store. Greyed with the reason, rather than offered

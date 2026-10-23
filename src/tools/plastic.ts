@@ -15,14 +15,15 @@ export const plasticWorkspace: CADRibbonWorkspaceDefinition = {
       tool("plastic-rule-fillet", "Rule Fillet", "fillet", undefined, plasticProducer),
       tool("plastic-boss", "Boss", "hole", "feature-boss"),
       tool("plastic-rest", "Rest", "box", "feature-rest"),
-      tool("plastic-snap-fit", "Snap Fit", "hinge", undefined, plasticProducer),
+      tool("plastic-snap-fit", "Snap Fit", "hinge", "feature-snap-fit"),
       tool("plastic-rib", "Rib", "frame", "feature-extrude"),
       tool("plastic-web", "Web", "grid", "feature-extrude"),
-      tool("plastic-lip-groove", "Lip / Groove", "slot", undefined, plasticProducer),
+      tool("plastic-lip-groove", "Lip / Groove", "slot", "feature-lip"),
     ] },
     { id: "plastic-modify", label: "Modify", tools: [
       tool("plastic-draft", "Draft", "draft", "feature-draft"),
       tool("plastic-shell", "Shell", "shell", "feature-shell"),
+      tool("plastic-rules", "Plastic Rules", "settings", "show-plastic-rules"),
     ] },
   ],
 };
