@@ -12,7 +12,6 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       // Fusion opens its Create list with Create Sketch, and it is the first
       // thing a new part needs. The Sketch tray itself is contextual.
       tool("solid-sketch", "Sketch", "sketch", "sketch"),
-      tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
       // Distinct creation operations are peers, not variants of Extrude.
       tool("solid-extrude", "Extrude", "extrude", "feature-extrude"),
       tool("solid-revolve", "Revolve", "revolve", "feature-revolve"),
@@ -28,6 +27,9 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-bounding-solid", "Bounding Solid", "box", "feature-bounding-solid"),
       tool("solid-thread", "Thread", "thread", "feature-thread"),
       tool("solid-coil", "Coil", "sweep", "feature-coil"),
+      // Last of the real tools: the Create list opens downward without a height limit, so
+      // each row added above Cone pushes it toward the bottom of the window.
+      tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
       tool("solid-weld", "Weld", "weld", undefined, solidProducer),
       tool("solid-sheet", "Sheet", "sheet", undefined, solidProducer),
     ] },

@@ -35,6 +35,8 @@ const DIALOGS: readonly (readonly [CADCommandID, CADStartDialog])[] = [
   ["assembly-bodies-to-component", "bodies-to-component"],
   ["assembly-as-built-joint", "as-built-joint"],
   ["assembly-reach-point", "reach-point"],
+  ["assembly-insert-standard-part", "insert-standard-part"],
+  ["assembly-resize-standard-part", "resize-standard-part"],
 ];
 
 export function registerAssemblyCommands(host: AssemblyCommandHost): void {

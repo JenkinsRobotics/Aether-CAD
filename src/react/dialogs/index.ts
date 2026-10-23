@@ -13,3 +13,4 @@ export { PartPropertiesDialog } from "./part-properties";
 export { BodiesToComponentDialog } from "./bodies-to-component";
 export { AsBuiltJointDialog } from "./as-built";
 export { ReachPointDialog, type ReachPointDraft } from "./reach-point";
+export { StandardPartDialog, type StandardPartDraft } from "./standard-part";

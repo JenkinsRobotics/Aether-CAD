@@ -56,8 +56,8 @@ export interface SheetFoldFeature {
 }
 export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }
 export interface SheetRefoldFeature { id: string; type: "sheet-refold"; name: string; suppressed: boolean; bodyIds: [string] }
-export type SheetMetalFeature = SheetBaseFeature | SheetFlangeFeature | SheetHemFeature | SheetFoldFeature | SheetUnfoldFeature | SheetRefoldFeature;
-export const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold"] as const;
+export type SheetMetalFeature = SheetBaseFeature | SheetFlangeFeature | SheetHemFeature | SheetFoldFeature | SheetUnfoldFeature | SheetRefoldFeature | SheetPerforateFeature;
+export const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"] as const;
 export const defaultSheetMetalRule: SheetMetalRule = { thicknessMillimeters: 1.5, bendRadiusMillimeters: 1.5, kFactor: 0.44 };
 
 /** The unfolded length a bend of this angle takes: the arc at the neutral axis. */
@@ -101,5 +101,67 @@ export function validateSheetMetalFeature(feature: SheetMetalFeature, earlier: R
       return;
     case "sheet-unfold": oneBody(feature.bodyIds, "Unfold"); return;
     case "sheet-refold": oneBody(feature.bodyIds, "Refold"); return;
+    case "sheet-perforate": validateSheetPerforate(feature); return;
   }
+}
+
+/** Perforate (SolidCraft's sheet.perforate): a grid of round holes through a planar face of
+ *  the sheet, kept clear of its edges and cut-outs by the margin. Staggered rows sit at 60°. */
+export interface SheetPerforateFeature {
+  id: string; type: "sheet-perforate"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  face: import("./solid-face-reference").SolidFaceReference;
+  diameterMillimeters: number;
+  /** Centre-to-centre distance between neighbouring holes. */
+  pitchMillimeters: number;
+  /** Clearance from edges and cut-outs to the hole's rim; default: the diameter. */
+  marginMillimeters?: number;
+  pattern?: "staggered" | "square";
+}
+export function validateSheetPerforate(feature: SheetPerforateFeature): void {
+  oneBody(feature.bodyIds, "Perforate");
+  if (!feature.face || typeof feature.face.sourceFeatureId !== "string") throw new Error("Perforate needs a picked face.");
+  if (feature.face.surfaceType) throw new Error("Perforate goes on a planar face.");
+  if (!finite(feature.diameterMillimeters) || feature.diameterMillimeters <= 0) throw new Error("Perforate needs a positive hole diameter.");
+  if (!finite(feature.pitchMillimeters) || feature.pitchMillimeters <= feature.diameterMillimeters) throw new Error("The pitch must be larger than the hole diameter.");
+  if (feature.marginMillimeters !== undefined && !(finite(feature.marginMillimeters) && feature.marginMillimeters >= 0)) throw new Error("The margin must be zero or more.");
+  if (feature.pattern !== undefined && feature.pattern !== "staggered" && feature.pattern !== "square") throw new Error("Perforate pattern is staggered or square.");
+}
+
+/** One bend of a sheet body, as the bend table lists it. */
+export interface BendTableRow {
+  feature_id: string; name: string; kind: "flange" | "hem" | "fold"; edges: string;
+  angle_deg: number; inner_radius_mm: number; thickness_mm: number; k_factor: number;
+  /** Arc length at the neutral axis: the flat length the bend takes. */
+  bend_allowance_mm: number;
+  /** 2·(R + T)·tan(θ/2) − allowance: what to take off the outside dimensions; none at 180°. */
+  bend_deduction_mm: number | null;
+  /** The straight leg past the bend (flanges and hems). */
+  leg_mm: number | null;
+  direction: "up" | "down";
+}
+/** sheet.export_bend_table: every bend of a sheet body in history order, with its rule. */
+export function sheetBendTable(doc: { features: { id: string; type: string; suppressed?: boolean }[] }, bodyId: string, base: SheetBaseFeature): BendTableRow[] {
+  const rows: BendTableRow[] = [];
+  for (const f of doc.features as SheetMetalFeature[]) {
+    if (f.suppressed || (f.type !== "sheet-flange" && f.type !== "sheet-hem" && f.type !== "sheet-fold") || f.bodyIds[0] !== bodyId) continue;
+    const angle = f.type === "sheet-hem" ? 180 : f.angleDegrees;
+    const radius = f.type === "sheet-hem" ? f.gapMillimeters ?? base.bendRadiusMillimeters : f.bendRadiusMillimeters ?? base.bendRadiusMillimeters;
+    const allowance = bendAllowanceMillimeters(angle, radius, base);
+    rows.push({
+      feature_id: f.id, name: f.name, kind: f.type === "sheet-flange" ? "flange" : f.type === "sheet-hem" ? "hem" : "fold",
+      edges: f.type === "sheet-fold" ? "sketch line" : f.edges.map((e) => e.label).join("; "),
+      angle_deg: angle, inner_radius_mm: radius, thickness_mm: base.thicknessMillimeters, k_factor: base.kFactor,
+      bend_allowance_mm: allowance,
+      bend_deduction_mm: angle >= 180 - 1e-9 ? null : 2 * (radius + base.thicknessMillimeters) * Math.tan(angle * Math.PI / 360) - allowance,
+      leg_mm: f.type === "sheet-flange" ? f.distanceMillimeters : f.type === "sheet-hem" ? f.lengthMillimeters : null,
+      direction: f.inward ? "up" : "down",
+    });
+  }
+  return rows;
+}
+export function bendTableCSV(rows: BendTableRow[]): string {
+  const keys: (keyof BendTableRow)[] = ["feature_id", "name", "kind", "edges", "angle_deg", "inner_radius_mm", "thickness_mm", "k_factor", "bend_allowance_mm", "bend_deduction_mm", "leg_mm", "direction"];
+  const cell = (v: unknown) => v === null ? "" : typeof v === "number" ? String(Math.round(v * 1e6) / 1e6) : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  return [keys.join(","), ...rows.map((r) => keys.map((k) => cell(r[k])).join(","))].join("\n");
 }

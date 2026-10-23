@@ -1037,4 +1037,30 @@ describe('atomic assembly recipe transactions', () => {
     expect(availableBodies(current.part_definitions[0].feature_document as PartDocument).map((b) => b.id)).toEqual([first, second]);
     expect(statuses).toHaveBeenLastCalledWith(expect.stringMatching(/^Moved 1 body and 0 sketches/), "success");
   });
+
+  it("inserts a standard part and resizes it in place", async () => {
+    const store = new CADAssemblyWorkspaceStore();
+    let current: AssemblyProjectionV1 = assembly;
+    const mutate = vi.fn(async (method: string, params: Readonly<Record<string, unknown>>) => {
+      const revision = String(Number(current.revision) + 1);
+      if (method === "add_part_definition") current = { ...current, part_definitions: [...current.part_definitions, { ...(params.part_definition as object), id: `part-${current.part_definitions.length + 1}` } as never] };
+      if (method === "update_part_definition") { const next = params.part_definition as { id: string }; current = { ...current, part_definitions: current.part_definitions.map((p) => p.id === next.id ? next as never : p) }; }
+      if (method === "add_instance") { const next = params.instance as { rest_transform: unknown }; current = { ...current, instances: [...current.instances, { parent_instance_id: null, solved_world_transform: next.rest_transform, suppressed: false, visible: true, source_status: "resolved", ...next, id: `instance-${current.instances.length + 1}` } as never] }; }
+      current = { ...current, revision };
+      return { handle: descriptor.handle, revision, assembly: current, solution: { ...solution, revision }, bom: { ...bom, revision } };
+    });
+    const controller = new CADAssemblyController({ client: client({ mutate, describeAssembly: vi.fn(async () => current) }), store, onStatus: vi.fn() });
+    await controller.newWorkspace("Drive Module");
+    await controller.insertStandardPart({ family: "hex_bolt", size: "M6", length: 20 }, [10, 0, 0]);
+    const part = current.part_definitions.at(-1)!;
+    expect(part).toMatchObject({ name: "ISO 4017 M6 × 20", part_number: "ISO 4017 M6 × 20" });
+    expect(part.custom_properties).toEqual([{ key: "standard_part_family", value: "hex_bolt" }, { key: "standard_part_size", value: "M6" }, { key: "standard_part_length", value: "20" }]);
+    expect(current.instances.at(-1)).toMatchObject({ name: "ISO 4017 M6 × 20:1", rest_transform: { position_m: [0.01, 0, 0] } });
+    store.dispatch({ type: "select-entities", ids: [current.instances.at(-1)!.id], mode: "single" });
+    await controller.resizeSelectedStandardPart({ family: "hex_bolt", size: "M8", length: 30 });
+    expect(current.part_definitions.at(-1)).toMatchObject({ id: part.id, name: "ISO 4017 M8 × 30" });
+    expect((current.part_definitions.at(-1)!.feature_document as { name: string }).name).toBe("ISO 4017 M8 × 30");
+    await expect(controller.resizeSelectedStandardPart({ family: "hex_nut", size: "M8" })).rejects.toThrow(/keeps the family/);
+  });
 });
+

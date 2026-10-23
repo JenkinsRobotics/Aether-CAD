@@ -832,6 +832,13 @@ cadPresentation.registerActionHandler((action) => {
       .catch(() => undefined);
     return;
   }
+  if (action.type === "insert-standard-part") {
+    const { request, positionMillimeters, resize } = action.draft;
+    void (resize ? assemblyController.resizeSelectedStandardPart(request) : assemblyController.insertStandardPart(request, positionMillimeters))
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
   if (action.type === "reach-assembly-point") {
     void assemblyController.reachPoint(action.draft)
       .then(() => cadPresentation.patch({ startDialog: null }))

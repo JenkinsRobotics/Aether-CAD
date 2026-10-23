@@ -50,7 +50,7 @@ import {
   type EdgeFinder,
   type RadiusConfig, type FilletRadius, type ChamferRadius,
 } from "replicad";
-import { makeLine as makeLine3D, makeBSplineApproximation as approximateBSpline } from "replicad";
+import { makeLine as makeLine3D, makeBSplineApproximation as approximateBSpline, makeCompound, makeVertex } from "replicad";
 
 /** A feature this engine cannot build yet; the caller may try another engine. */
 export class UnsupportedFeature extends Error {
@@ -1959,6 +1959,52 @@ export function evaluatePartDocument(
           bodies.set(id, result); currentBodyID = id;
           continue;
         }
+        /** Perforate: hole cylinders through a planar face of the sheet, with their axis points.
+         *  Candidates on a square or 60° grid in the face's plane are kept when inside the outer
+         *  boundary, outside every cut-out, and at least margin + radius from every boundary. */
+        const perforations = (body: Shape3D, f: import("../document/sheet-metal").SheetPerforateFeature, thickness: number): { tools: Shape3D[]; points: V3[] } => {
+          const face = faceByReference(body, f.face, "Perforate face");
+          const c = [...deleteAfterVectorTuple(face.center)] as V3, n = unit([...deleteAfterVectorTuple(face.normalAt([c[0], c[1], c[2]]))] as V3);
+          const x = unit(canonicalPlaneXDirection(n) as V3), y = unit(cross(n, x));
+          const to2 = (p: V3): [number, number] => [dot(sub(p, c), x), dot(sub(p, c), y)];
+          const polygon = (w: Wire): [number, number][] => {
+            const pts: [number, number][] = [];
+            for (const edge of w.edges) { own(edge); for (let i = 0; i < 24; i++) { const v = edge.pointAt(i / 24); pts.push(to2([v.x, v.y, v.z])); v.delete(); } }
+            return pts;
+          };
+          // replicad's outerWire() and innerWires() consume their face.
+          const outer = polygon(own(face.clone().outerWire())), holes = face.clone().innerWires().map((w) => polygon(own(w)));
+          const inside = (poly: [number, number][], [px, py]: [number, number]) => { let hit = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) hit = !hit; } return hit; };
+          const distance = (poly: [number, number][], [px, py]: [number, number]) => { let best = Infinity; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [ax, ay] = poly[j], [bx, by] = poly[i], dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0; best = Math.min(best, Math.hypot(px - ax - t * dx, py - ay - t * dy)); } return best; };
+          const r = f.diameterMillimeters / 2, clear = (f.marginMillimeters ?? f.diameterMillimeters) + r, p = f.pitchMillimeters;
+          const xs = outer.map((q) => q[0]), ys = outer.map((q) => q[1]);
+          const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+          const rowStep = f.pattern === "square" ? p : p * Math.sqrt(3) / 2;
+          // Centre the grid on the face's bounding box so the margins come out even.
+          const cols = Math.floor((x1 - x0 - 2 * clear) / p), rows = Math.floor((y1 - y0 - 2 * clear) / rowStep);
+          const startX = (x0 + x1) / 2 - (cols * p) / 2, startY = (y0 + y1) / 2 - (rows * rowStep) / 2;
+          const points: V3[] = [];
+          for (let j = 0; j <= rows; j++) for (let i = -1; i <= cols + 1; i++) {
+            const q: [number, number] = [startX + i * p + (f.pattern !== "square" && j % 2 ? p / 2 : 0), startY + j * rowStep];
+            if (!inside(outer, q) || holes.some((h) => inside(h, q)) || distance(outer, q) < clear - 1e-9 || holes.some((h) => distance(h, q) < clear - 1e-9)) continue;
+            points.push(add(add(c, scale(x, q[0])), scale(y, q[1])));
+            if (points.length > 5000) throw new Error("Perforate would make more than 5000 holes. Increase the pitch.");
+          }
+          if (!points.length) throw new Error("No hole fits inside the margin. Reduce the margin, the diameter or the pitch.");
+          const depth = thickness + 0.02;
+          return { points, tools: points.map((q) => own(makeCylinder(r, depth, add(q, scale(n, 0.01)), [-n[0], -n[1], -n[2]] as V3))) };
+        };
+        if (feature.type === "sheet-perforate") {
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("The sheet metal body is unavailable.");
+          const { base } = sheetRuleOf(id);
+          const { tools: holes } = perforations(body, feature, base.thicknessMillimeters);
+          const before = measureVolume(body);
+          const cut = body.cut(own(makeCompound(holes) as Shape3D));
+          if (!isShape3D(cut) || measureVolume(cut) >= before - 1e-9) throw new Error("Perforate removed nothing. Check that the face belongs to the sheet.");
+          bodies.set(id, own(cut)); currentBodyID = id;
+          continue;
+        }
         if (feature.type === "sheet-unfold") {
           // Unfold: the plate as the base made it, plus each bend laid flat (leg + bend
           // allowance) from the edge it was bent from. Bends on bends are not laid out yet.
@@ -1967,7 +2013,18 @@ export function evaluatePartDocument(
           const plate = bodyAt(base.id, id);
           if (!plate) throw new Error("The sheet metal base is unavailable.");
           let flat: Shape3D = own(plate.clone());
-          for (const f of document.features.slice(baseIndex + 1, index)) {
+          for (let k = baseIndex + 1; k < index; k++) {
+            const f = document.features[k];
+            // Perforations on the base plate are cut again where the plate lies flat; holes on
+            // flanges are not laid out (the plate is the only face that keeps its place).
+            if (f.type === "sheet-perforate" && !f.suppressed && f.bodyIds[0] === id) {
+              const before = bodyAt(document.features[k - 1].id, id);
+              if (!before) continue;
+              const { tools, points } = perforations(before, f, base.thicknessMillimeters);
+              const onPlate = tools.filter((_, i) => { const v = own(makeVertex(points[i])); return measureDistanceBetween(plate, v) < 1e-6; });
+              if (onPlate.length) { const cut = flat.cut(own(makeCompound(onPlate) as Shape3D)); if (isShape3D(cut)) flat = own(cut); }
+              continue;
+            }
             if (f.suppressed || (f.type !== "sheet-flange" && f.type !== "sheet-hem") || f.bodyIds[0] !== id) continue;
             flat = f.type === "sheet-flange"
               ? bendFromEdges(flat, id, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" })
