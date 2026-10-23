@@ -33,7 +33,7 @@ export function mountPreviewHandles(panel: HTMLElement, controls: Controls, unit
         const scale = live.scale ?? 1;
         window.dispatchEvent(new CustomEvent('aether-native-extrusion-handle', { detail: { origin: live.originMillimeters, direction: live.direction, depth: depth / scale,
           respond: (projection: AxisProjection | null) => respond(projection ? { ...projection, depthAt: (x, y) => { const value = projection.depthAt(x, y); return value === null ? null : value * scale; } } : null) } }));
-      }, { valueMode: 'positive', label: handle.label ?? handle.parameter, ready: () => ready, formatLabel: (value, suffix) => `${handle.label ?? handle.parameter} · ${value} ${suffix}` });
+      }, { valueMode: handle.signed ? 'signed' : 'positive', label: handle.label ?? handle.parameter, ready: () => ready, formatLabel: (value, suffix) => `${handle.label ?? handle.parameter} · ${value} ${suffix}` });
     } else mountAngleHandle(panel, control, units.angle, () => current(handle.parameter), () => ready, handle.label ?? 'Angle');
   };
   panel.addEventListener('aether-feature-preview-state', receive);

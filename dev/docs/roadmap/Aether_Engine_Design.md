@@ -952,3 +952,13 @@ that has a length, angle or size, not only the few that had it. Three pieces:
   run at a time). Engine-side preview cost measured on a plate with a boss: extrude edits 2–9 ms,
   a fillet 68 ms; the overlay mesh is three times coarser than the committed one.
 
+### r50 (2026-10-22): manipulators, second slice
+
+Installed.
+
+Boss and rest height (and boss diameter), pattern spacing and polar angle, and Push/Pull's own
+axis (the first face's centre along its normal) join the published handles. Still without a
+handle: draft angle (its axis lies in the neutral plane and needs a chosen edge), construction
+plane offset (the plane window has its own preview path) and sketch dimensions (the sketch
+canvas drags them already).
+

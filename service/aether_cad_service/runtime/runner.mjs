@@ -36632,6 +36632,11 @@ function evaluatePartDocument(document2, options = {}) {
                 const s = feature.second;
                 rows.push({ direction: scale(directionOf(s.direction, s.axis ?? "Y"), s.reversed ? -1 : 1), step: s.spacingMillimeters, offsets: offsets(s.count, s.alignment) });
               }
+              if (feature.id === previewId) {
+                const anchor = tools.get(feature.sourceFeatureId) ?? (feature.bodyIds ? bodies.get(feature.bodyIds[0]) : void 0);
+                const c = anchor ? anchor.boundingBox.center : [0, 0, 0];
+                publish(feature, { parameter: "spacing", kind: "linear", originMillimeters: [0, 1, 2].map((i) => c[i] + rows[0].direction[i] * feature.spacingMillimeters), direction: rows[0].direction, label: "Pattern spacing" });
+              }
               for (const i of rows[0].offsets) for (const j of rows[1]?.offsets ?? [0]) {
                 if (i === 0 && j === 0) continue;
                 const move = add$1(scale(rows[0].direction, rows[0].step * i), rows[1] ? scale(rows[1].direction, rows[1].step * j) : [0, 0, 0]);
@@ -36651,6 +36656,7 @@ function evaluatePartDocument(document2, options = {}) {
                 origin = t.axisOriginMillimeters;
                 axis = t.axisDirection;
               }
+              publish(feature, { parameter: "angle", kind: "angular", originMillimeters: origin, direction: axis, label: "Pattern angle" });
               for (const i of offsets(count, feature.alignment)) if (i !== 0) placements.push((shape) => own(shape.clone().rotate(step * i * sign, origin, axis)));
             }
             if (partPattern) {
@@ -36797,6 +36803,8 @@ function evaluatePartDocument(document2, options = {}) {
               face.delete();
             }
             const base = [...feature.pointMillimeters], height = feature.heightMillimeters, draft = (feature.draftDegrees ?? 0) * Math.PI / 180;
+            publish(feature, { parameter: "height", kind: "linear", originMillimeters: add$1(base, scale(outward, height)), direction: outward, label: `${feature.type === "boss" ? "Boss" : "Rest"} height` });
+            if (feature.type === "boss") publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: add$1(base, scale(xDir, feature.diameterMillimeters / 2)), direction: xDir, scale: 2, label: "Boss diameter" });
             const taper = (radius) => Math.max(radius - height * Math.tan(draft), radius * 0.05);
             const frustum = (bottomRadius, topRadius, h) => {
               const section = own(draw([0, 0]).lineTo([bottomRadius, 0]).lineTo([topRadius, h]).lineTo([0, h]).close());
@@ -37276,6 +37284,12 @@ function evaluatePartDocument(document2, options = {}) {
               const body = bodies.get(ref.bodyId);
               if (!body) throw new Error("Offset faces need an available solid part.");
               const face = faceByReference(body, ref, "Offset faces");
+              if (feature.id === previewId && ref === feature.faces[0]) {
+                const c = face.center, nv = face.normalAt(c);
+                publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
+                c.delete();
+                nv.delete();
+              }
               try {
                 const kind = face.geomType === "CYLINDRE" ? "CYLINDER" : face.geomType;
                 const analytic = ["PLANE", "CYLINDER", "SPHERE", "CONE", "TORUS"].includes(kind);

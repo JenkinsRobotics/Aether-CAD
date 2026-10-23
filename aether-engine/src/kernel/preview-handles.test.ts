@@ -66,3 +66,28 @@ it("publishes depth and diameter handles for a hole, and length and angle handle
   expect(flange.map((h) => `${h.parameter}:${h.kind}`).sort()).toEqual(["angle:angular", "distance:linear"]);
   expect(r(flange.find((h) => h.parameter === "distance")!.direction)).toEqual([1, 0, 0]);
 });
+
+it("publishes boss height and diameter, pattern spacing and angle, and push/pull's axis", () => {
+  const doc = plate();
+  const bodyId = bodyIDForFeature(doc, doc.features[1]);
+  const face = { sourceFeatureId: "e", bodyId, label: "top", normal: [0, 0, 1] as [number, number, number] };
+  doc.features.push({ id: "b", type: "boss", name: "Boss", suppressed: false, targetBodyId: bodyId, face, pointMillimeters: [30, 20, 10], diameterMillimeters: 8, heightMillimeters: 6 } as PartFeature);
+  const boss = evaluatePartDocument(doc, { preview: true }).previewHandles!;
+  expect(boss.map((h) => h.parameter).sort()).toEqual(["diameter", "height"]);
+  expect(r(boss.find((h) => h.parameter === "height")!.originMillimeters)).toEqual([30, 20, 16]);
+  const linear = plate();
+  linear.features.push({ id: "c", type: "profile", name: "c", plane: "XY", offsetMillimeters: 10, suppressed: false, profile: { type: "circle", radiusMillimeters: 2, centerMillimeters: [10, 20] } } as PartFeature,
+    { id: "post", type: "extrude", name: "Post", profileFeatureId: "c", distanceMillimeters: 5, operation: "add", suppressed: false } as PartFeature,
+    { id: "p", type: "pattern", name: "P", suppressed: false, sourceFeatureId: "post", patternType: "linear", axis: "X", count: 3, spacingMillimeters: 15, reversed: false } as PartFeature);
+  const spacing = evaluatePartDocument(linear, { preview: true }).previewHandles!.find((h) => h.parameter === "spacing")!;
+  expect(r(spacing.direction)).toEqual([1, 0, 0]); expect(spacing.originMillimeters[0]).toBeCloseTo(25, 3);
+  const circular = { ...linear, features: [...linear.features.slice(0, -1), { id: "p", type: "pattern", name: "P", suppressed: false, sourceFeatureId: "post", patternType: "polar", axis: "Z", count: 4, angleDegrees: 360, reversed: false } as PartFeature] };
+  expect(evaluatePartDocument(circular, { preview: true }).previewHandles!.find((h) => h.parameter === "angle")?.kind).toBe("angular");
+  const push = plate();
+  const pushFace = { ...face, bodyId: bodyIDForFeature(push, push.features[1]) }; // each document has its own identity
+  push.features.push({ id: "o", type: "offset-face", name: "Push", suppressed: false, faces: [pushFace], distanceMillimeters: 3 } as PartFeature);
+  const pushHandle = evaluatePartDocument(push, { preview: true }).previewHandles?.find((h) => h.parameter === "distance");
+  expect(pushHandle).toMatchObject({ kind: "linear", signed: true });
+  expect(r(pushHandle!.originMillimeters)).toEqual([30, 20, 10]); expect(r(pushHandle!.direction)).toEqual([0, 0, 1]);
+});
+

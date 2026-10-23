@@ -980,6 +980,11 @@ export function evaluatePartDocument(
               const s = feature.second;
               rows.push({ direction: scale(directionOf(s.direction, s.axis ?? "Y"), s.reversed ? -1 : 1), step: s.spacingMillimeters, offsets: offsets(s.count, s.alignment) });
             }
+            if (feature.id === previewId) {
+              const anchor = tools.get(feature.sourceFeatureId) ?? (feature.bodyIds ? bodies.get(feature.bodyIds[0]) : undefined);
+              const c = anchor ? (anchor.boundingBox.center as number[]) : [0, 0, 0];
+              publish(feature, { parameter: "spacing", kind: "linear", originMillimeters: [0, 1, 2].map((i) => c[i] + rows[0].direction[i] * feature.spacingMillimeters) as V3, direction: rows[0].direction, label: "Pattern spacing" });
+            }
             for (const i of rows[0].offsets) for (const j of rows[1]?.offsets ?? [0]) {
               if (i === 0 && j === 0) continue;
               const move = add(scale(rows[0].direction, rows[0].step * i), rows[1] ? scale(rows[1].direction, rows[1].step * j) : [0, 0, 0]);
@@ -996,6 +1001,7 @@ export function evaluatePartDocument(
               const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
               origin = t.axisOriginMillimeters; axis = t.axisDirection;
             }
+            publish(feature, { parameter: "angle", kind: "angular", originMillimeters: origin, direction: axis, label: "Pattern angle" });
             for (const i of offsets(count, feature.alignment)) if (i !== 0) placements.push((shape) => own(shape.clone().rotate(step * i * sign, origin, axis)));
           }
           if (partPattern) {
@@ -1129,6 +1135,8 @@ export function evaluatePartDocument(
           let outward: V3, xDir: V3;
           try { const center = deleteAfterVectorTuple(face.center); const n = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]])); outward = unit([n[0], n[1], n[2]]); xDir = canonicalPlaneXDirection(outward); } finally { face.delete(); }
           const base: V3 = [...feature.pointMillimeters] as V3, height = feature.heightMillimeters, draft = (feature.draftDegrees ?? 0) * Math.PI / 180;
+          publish(feature, { parameter: "height", kind: "linear", originMillimeters: add(base, scale(outward, height)), direction: outward, label: `${feature.type === "boss" ? "Boss" : "Rest"} height` });
+          if (feature.type === "boss") publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: add(base, scale(xDir, feature.diameterMillimeters / 2)), direction: xDir, scale: 2, label: "Boss diameter" });
           const taper = (radius: number) => Math.max(radius - height * Math.tan(draft), radius * 0.05);
           const frustum = (bottomRadius: number, topRadius: number, h: number): Shape3D => {
             // Revolved about +Z from the origin, turned onto the outward normal, moved to the base point.
@@ -1512,6 +1520,12 @@ export function evaluatePartDocument(
             const body = bodies.get(ref.bodyId);
             if (!body) throw new Error("Offset faces need an available solid part.");
             const face = faceByReference(body, ref, "Offset faces");
+            if (feature.id === previewId && ref === feature.faces[0]) {
+              // Push/Pull's handle: the first face's centre along its normal, signed (push or pull).
+              const c = face.center, nv = face.normalAt(c);
+              publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
+              c.delete(); nv.delete();
+            }
             try {
               const kind = face.geomType === "CYLINDRE" ? "CYLINDER" : face.geomType;
               const analytic = ["PLANE", "CYLINDER", "SPHERE", "CONE", "TORUS"].includes(kind);
