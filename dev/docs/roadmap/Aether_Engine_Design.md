@@ -1112,3 +1112,13 @@ occurrences, which is what a rigid group made.
 Also in r58: 3D Sketch moved to the end of Solid › Create. The shared submenu opens under its row
 with no height limit, and the extra row pushed Cone off the bottom of the window in the
 frontend browser suite; a clamp or upward flip belongs in @aether/ui.
+
+### r59 (2026-10-23): @aether/ui alpha.207
+
+Installed.
+
+CAD pins @aether/ui 0.2.0-alpha.207, whose Menu clamps open submenus to the window: a submenu that
+would run past the bottom slides up, one past the right edge opens to the left, and only one
+taller than the window scrolls. This is the source fix for the Cone menu failure that r58 worked
+around by reordering Solid › Create; the reorder stays. Suites, both UI harnesses and the
+opencascade.js pin were unchanged by the upgrade.
