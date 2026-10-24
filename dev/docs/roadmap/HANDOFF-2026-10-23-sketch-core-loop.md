@@ -2,23 +2,61 @@
 
 ## Continuation — Codex, 2026-10-23
 
-r65 is installed and ready. The final selector correction is `c6c042b` on
-`alpha-0.1`. Engine 1,083 tests, the nine corrected in-world checks, production
-build, all 16 tools-browser workflows and bracket/bent-pipe/table models pass.
-The promotion preserved 74 database tables, schema, host, workers and other apps;
-PostgreSQL was not restarted. Nothing was pushed.
+r65 is installed and ready. The fixed-plane overlay correction is `c6c042b`
+on `alpha-0.1`; its release preserved all 74 database tables, schema, host,
+workers and other apps. Nothing was pushed.
 
-Region work continues in `Aether-CAD-regions-review` on `wip/sketch-arrangement`.
-Exact intersection cells now reach the 2D/3D pickers and the evaluator; references
-use source/container IDs and directed boundary spans, preserving legacy picks.
-The expanded engine suite passes 1,105 tests. The full UI pass exposed derived
-fill/source-curve classification and isolated-worktree asset loading issues;
-all 247 affected checks pass after correction. Three test teardown paths now
-drain pending React work before removing browser globals (13 checks pass without
-unhandled errors). Production and automation builds pass. Mouse drawing proves
-three overlap cells and their half-cylinder extrusion; face cut/add, upstream
-edit and reopen qualification are still in progress. Current evidence and remaining headless findings are recorded in
-`../AetherStudio/dev/docs/reality/CAD_Functional_Audit_2026-10-23.md`.
+The region implementation is now integrated on `alpha-0.1`, including legacy
+joined-profile compatibility (`e189dce`). The isolated `wip/sketch-arrangement`
+worktree remains as a checkpoint; continue development in the main CAD checkout.
+Overlaps, nested loops and divider lines produce exact selectable cells. Saved
+references retain source/container IDs and directed boundary spans; an old joined
+profile remains a whole profile and cannot silently become a trimmed cell.
+Circular pocket floors are selectable sketch supports. Supported sketches follow
+unique planar faces translated along their normal after a depth edit; arbitrary
+profile/topology changes still can require reselection.
+
+The real mouse core loop passes all seven stages: offset plane 30 mm; draw
+rectangle/circle overlap; pick the half-disc and extrude; sketch on the face and
+cut; sketch on the remaining face and add; edit the first extrusion; save/reopen.
+No browser errors or server geometry calls. Rebuilding the five saved files with
+the final main runner matches analytic volumes within 1e-7 relative tolerance,
+with unchanged final body identity after reopening.
+
+Final engine gate: 1,106 tests. App gate: 1,760 passed and one pre-existing skip;
+its last preview-handle teardown error is corrected and the focused disposal test
+passes cleanly. Production build and fresh-process headless geometry/export gates
+pass. All 258 packaged-service checks pass, including eight native mate compose/reopen
+cases. The host unit suite passes 62 tests with one existing ignored test.
+The production-profile browser gates pass all 16 tools and all three models
+(bracket, bent pipe, table), with zero browser errors, engine fallbacks or server
+geometry calls. Both disposable-host runs also pass the real Animation client
+load/save/reopen regression.
+
+Packaging review found two real delivery gaps. The Node adapter now includes the
+full OCCT fallback, with kernel diagnostics kept off JSON stdout. The CAD codec
+is updated to immutable build19 from Animation `726c0af`, whose only changed
+runtime module adds the five mate kinds already offered by CAD. Contacts and cam
+changes are not included. The full worker exceeds the installed host's 8 MiB
+package bound, so a narrow host change raises the operator package bound to
+32 MiB; client document/request/response limits stay unchanged. Its release
+build and the boundary acceptance/refusal tests pass.
+
+**r66 is qualified but not installed.** Its matching CAD frontend/worker needs that host change.
+The CAD release contract permits frontend-only generations, so a concrete staged
+host/worker update requires Jonathan's separate approval before live cutover.
+Use `.verification/cad-functional-audit-2026-10-23/promote-r66.py` in Studio.
+`stage` verifies the exact gated frontend/worker/host fingerprints and carries
+other apps from the latest marker. Run `promote` only after Jonathan approves
+the host/worker cutover. If the marker advances, restage from the new marker
+instead of loosening the guard. Preserve Map and every other app.
+Do not run the old frontend-only r66 promoter with this 18 MiB worker.
+
+Evidence, exact remaining gates and limits are in
+`../AetherStudio/dev/docs/reality/CAD_Functional_Audit_2026-10-23.md` and
+`../AetherStudio/.verification/cad-functional-audit-2026-10-23/`.
+Cam's CAD side, Surface Match, and sweep joint remain later work; this is not a
+claim of complete SolidCraft or Onshape parity.
 
 The original handoff below is retained as the starting-state record.
 
