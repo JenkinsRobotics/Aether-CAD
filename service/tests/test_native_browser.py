@@ -1,25 +1,16 @@
 """Request helpers for the installed worker's project and settings services."""
 
-import base64
 import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-from aether_cad_service.browser_runtime import SERVICES
-from aether_cad_service.service import CADService
-from aether_freecad import locate_freecad
-from core.host.state import Problem
 
 ROOT = Path(__file__).resolve().parents[1] / "aether_cad_service"
-REQUESTS = json.loads(
-    (Path(__file__).with_name("fixtures") / "browser-requests.json").read_text()
-)
 
 
-def invoke(tmp_path, action, arguments, freecad=None):
+def invoke(tmp_path, action, arguments):
     result = subprocess.run(
         [
             sys.executable,
@@ -27,7 +18,6 @@ def invoke(tmp_path, action, arguments, freecad=None):
             "-S",
             str(ROOT / "runtime/runner.pyz"),
             shutil.which("node"),
-            freecad or locate_freecad(),
         ],
         input=json.dumps({"service": "/api/cad/" + action, "arguments": arguments}),
         text=True,
@@ -44,14 +34,6 @@ def invoke(tmp_path, action, arguments, freecad=None):
     assert result.returncode == 0, result.stderr
     assert not result.stderr
     return json.loads(result.stdout)
-
-
-def stable(result):
-    return {
-        k: v
-        for k, v in result.items()
-        if k not in ("build_seconds", "solve_seconds", "command", "data_base64")
-    }
 
 
 # Recipe composition has a container and a two-stage native rebuild; it is
