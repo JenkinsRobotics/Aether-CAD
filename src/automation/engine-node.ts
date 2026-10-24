@@ -2,13 +2,14 @@
  *  in its worker, loaded from the wasm beside the bundle. One process per
  *  request (the host owns the deadline), so the kernel loads once per run. */
 import { readFileSync } from 'node:fs';
-import { initNodeKernel, solidMeasures } from '@aether/core/kernel/node';
+import { initNodeKernel, runNodeOperation, solidMeasures } from '@aether/core/kernel/node';
 import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds } from '@aether/core/kernel';
 import { parsePartDocument } from '@aether/core/document';
 import type { AnalysisOptions, ExportOptions } from '@aether/core/contracts';
 import type { AssemblyJobInput } from '@aether/core/contracts';
 
 let ready: Promise<void> | undefined;
+const fullWasmPath = new URL('./opencascade.wasm', import.meta.url);
 export function ensureEngine(): Promise<void> {
   if (!ready) ready = initNodeKernel(readFileSync(new URL('./replicad_single.wasm', import.meta.url)));
   return ready;
@@ -28,9 +29,9 @@ export async function buildPhase(content: string, options: { rollback?: number }
   if (typeof options.rollback === 'number') document.rollbackIndex = options.rollback;
   const bodies: { id: string; geometry_kind: string; volume_mm3: number; face_count: number; edge_count: number; bbox_mm: number[][]; topology: unknown[] }[] = [];
   try {
-    const model = evaluatePartDocument(document, { withBodies: (shapes) => {
+    const model = await runNodeOperation(document, () => evaluatePartDocument(document, { withBodies: (shapes) => {
       for (const [id, shape] of shapes) bodies.push({ id, geometry_kind: 'solid', ...solidMeasures(shape), bbox_mm: shape.boundingBox.bounds.map((b) => [...b]), topology: [] });
-    } });
+    } }), fullWasmPath);
     for (const part of model.parts) { const body = bodies.find((b) => b.id === part.id); if (body) body.topology = part.topology ?? []; }
     return { status: 'ok', engine: 'Aether', message: '', build_seconds: (performance.now() - started) / 1000, body_outputs: model.bodyOutputs ?? {}, scope_resolutions: model.scopeResolutions ?? {}, sketch_frames: model.sketchFrames ?? {}, diagnostics: [], bodies };
   } catch (error) {
@@ -40,13 +41,13 @@ export async function buildPhase(content: string, options: { rollback?: number }
 
 export async function analyzePhase(content: string, options: AnalysisOptions) {
   await ensureEngine();
-  try { const result = analyzePart(parsePartDocument(content), options); return { status: 'ok', engine: 'Aether', kind: result.kind, measurements: result.measurements, diagnostics: [] }; }
+  try { const document = parsePartDocument(content); const result = await runNodeOperation(document, () => analyzePart(document, options), fullWasmPath); return { status: 'ok', engine: 'Aether', kind: result.kind, measurements: result.measurements, diagnostics: [] }; }
   catch (error) { return { status: 'error', engine: 'Aether', measurements: [], diagnostics: [diagnostic(error)] }; }
 }
 
 export async function exportPhase(content: string, options: ExportOptions) {
   await ensureEngine();
-  try { const result = await exportPart(parsePartDocument(content), options); return { status: 'ok', engine: 'Aether', format: options.format, data_base64: Buffer.from(result.bytes).toString('base64'), diagnostics: [] }; }
+  try { const document = parsePartDocument(content); const result = await runNodeOperation(document, () => exportPart(document, options), fullWasmPath); return { status: 'ok', engine: 'Aether', format: options.format, data_base64: Buffer.from(result.bytes).toString('base64'), diagnostics: [] }; }
   catch (error) { return { status: 'error', engine: 'Aether', format: options.format, diagnostics: [diagnostic(error)] }; }
 }
 

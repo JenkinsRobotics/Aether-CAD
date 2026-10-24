@@ -11,7 +11,8 @@
     "check": "tsc -b --pretty false",
     "smoke:step": "node scripts/smoke-step.mjs",
     "smoke:browser": "node scripts/e2e-import.mjs",
-    "build:automation": "node scripts/build-automation.mjs"
+    "build:automation": "node scripts/build-automation.mjs",
+    "test:headless": "npm run build:automation && node scripts/verify-headless-kernel.mjs"
   },
   "dependencies": {
     "@aether/assets": "file:vendor/aether-assets-0.2.0-alpha.29.tgz",

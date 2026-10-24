@@ -126,6 +126,7 @@ def test_bundle_is_self_contained_and_catalog_matches_legacy():
     with zipfile.ZipFile(RUNTIME / "runner.pyz") as archive:
         assert "ATTRIBUTION.md" in archive.namelist()
         assert "aether_cad_service/runtime/replicad_single.wasm" in archive.namelist()
+        assert "aether_cad_service/runtime/opencascade.wasm" in archive.namelist()
         assert not any(name.startswith("aether_freecad/") for name in archive.namelist())
         for name in ["__main__.py", "aether_cad_service/automation_runtime.py"]:
             assert b"core.host" not in archive.read(name)
@@ -214,3 +215,17 @@ def test_noop_and_invalid_geometry_preserve_document(tmp_path):
 
 # Geometry builds in the Node runner with the Aether engine: no separately installed native
 # engine exists whose absence could be mistaken for invalid geometry.
+
+@pytest.mark.parametrize("name", ["transform-scale-xyz", "extrude-up-to-cone"])
+def test_installed_runner_loads_full_kernel_on_demand(tmp_path, name):
+    oracle = ROOT.parents[1] / "aether-engine/src/kernel/oracle"
+    fixtures = json.loads((oracle / "fixtures.json").read_text())
+    references = json.loads((oracle / "freecad-references.json").read_text())[name]
+    document = next(fixture for fixture in fixtures if fixture["name"] == name)
+    answer = invoke(tmp_path, "cad.part.evaluate", json.dumps(document), {})
+    assert "error" not in answer, answer
+    bodies = answer["result"]["evaluated_bodies"]
+    assert len(bodies) == len(references)
+    for expected in references:
+        body = next(body for body in bodies if body["id"] == expected["id"])
+        assert body["volume_mm3"] == pytest.approx(expected["volume_mm3"], rel=1e-7)
