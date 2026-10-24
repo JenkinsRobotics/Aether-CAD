@@ -19,3 +19,13 @@ it('keeps unique directions parametric and refuses missing metrics, curved faces
  expect(anchorForPlanarFace([missing,face(2,[4,5,6])],1)).toBeNull();
  expect(anchorForPlanarFace([{...face(1,[2,3,4]),surfaceType:'CYLINDRE'}],1)).toBeNull();
 });
+
+it('anchors the top of a pocket even when its floor center is represented by a circle marker',()=>{
+ const floor:FaceTopologyData={id:2,surfaceType:'PLANE',measurements:{areaSquareMillimeters:Math.PI*4,centerMillimeters:[0,0,5],planarNormal:[0,0,1]},candidates:[{id:'circle',faceId:2,kind:'circle-center',label:'Circle',origin:[0,0,5],zAxis:[0,0,1],xAxis:[1,0,0],yAxis:[0,1,0]}]};
+ const topology=[face(1,[0,0,10],100-Math.PI*4),floor];
+ expect(planarFaceCandidates(topology,[0,0,1]).map(c=>c.faceId)).toEqual([1,2]);
+ const anchor=anchorForPlanarFace(topology,1)!;
+ expect(anchor).toEqual({centerMillimeters:[0,0,10],areaSquareMillimeters:100-Math.PI*4});
+ expect(planarFaceCandidates(topology,[0,0,1],anchor).map(c=>c.faceId)).toEqual([1]);
+ expect(anchorForPlanarFace(topology,2)).toEqual({centerMillimeters:[0,0,5],areaSquareMillimeters:Math.PI*4});
+});
