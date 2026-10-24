@@ -180,3 +180,13 @@ Still to do (in this order):
 - Never enter credentials on the live host (localhost:8780). Real checks run on
   the harness's disposable host.
 - No Python or server-side geometry.
+
+## Codex continuation — r65 gate correction
+
+The clean alpha engine suite passes 1,083 tests. The app suite passed 1,749 and
+reported one CSS-scope guard failure: the newly positioned fixed-plane control
+used the `.cad-sketch-workspace … .sketch-` geometry prefix. Its unique control
+class now owns the positioning directly; hidden controls still stay hidden.
+All nine in-world sketch checks pass after the correction, and the production
+build passes. Browser qualification and installation continue separately.
+Region work remains isolated in `wip/sketch-arrangement`.
