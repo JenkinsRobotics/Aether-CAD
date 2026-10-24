@@ -25,7 +25,7 @@ export function validateProfileRegionSelection(selection: ProfileRegionSelection
 }
 export function profileRegionIdentity(selection: ProfileRegionSelection): string {
   const r = selection.profileRegion;
-  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...(r.inside?.length ? { inside: [...r.inside].sort() } : {}), ...(r.ordinal ? { ordinal: r.ordinal } : {}), ...(r.boundary ? { boundary: [...r.boundary].sort() } : {}) } : selection.profileContourId ?? null);
+  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...(r.inside !== undefined ? { inside: [...r.inside].sort() } : {}), ...(r.ordinal ? { ordinal: r.ordinal } : {}), ...(r.boundary ? { boundary: [...r.boundary].sort() } : {}) } : selection.profileContourId ?? null);
 }
 export function matchesProfileRegion(selection: ProfileRegionSelection, candidate: { contourId?: string; sourceContourIds?: string[]; insideContourIds?: string[]; ordinal?: number; boundary?: string[] }): boolean {
   // Position-only disambiguation is unsuitable for persistent feature identity.

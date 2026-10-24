@@ -1,4 +1,4 @@
-import { regionBoundaryIdentity } from "@aether/core/sketch/reference/connected-sketch-regions";
+import { connectedSketchRegions, regionBoundaryIdentity } from "@aether/core/sketch/reference/connected-sketch-regions";
 import { identifySketchContour, resolveProfileDrawing } from "../aether-core";
 import { takePickedSketchRegion } from "../sketch-region-selection";
 import { sketchRegions } from "@aether/core/document";
@@ -20,7 +20,13 @@ export function featureRegionChoices(context: FeatureEditorContext, sketch: impo
   const selectedIds = saved.filter((p: any) => p.profileFeatureId === sketch.id).flatMap((p: any) => p.profileContourIds ?? (p.profileContourId ? [p.profileContourId] : []));
   const wholeSketch = feature.profileFeatureId === sketch.id && !feature.profileSelections && !feature.profileContourId && !feature.profileContourIds && !feature.profileRegion;
   const legacy = sketchRegions(sketch, true, context.doc.features).filter(r => r.closed !== false && (wholeSketch || (r.contourId && selectedIds.includes(r.contourId))) && !faces.some(face => face.contourIndex === r.contourIndex));
-  return [...faces, ...legacy.map(r => ({ ...r, label: `${r.label} · original profile` }))];
+  const joinedSelections = saved.filter((p: any) => p.profileFeatureId === sketch.id && p.profileRegion?.inside === undefined && p.profileRegion);
+  const joined = joinedSelections.length && sketch.type === 'profile' ? connectedSketchRegions(resolveProfileDrawing(context.doc.features, sketch.id)).regions.flatMap(region => {
+    const candidate: import('@aether/core/document').SketchRegion = { engineId: `${sketch.id}#joined#${Math.min(...region.contourIndices)}`, contourIndex: Math.min(...region.contourIndices),
+      sourceContourIndices: region.contourIndices, sourceContourIds: region.contourIds, previewContour: region.contour, closed: true, label: 'Original connected profile' };
+    return joinedSelections.some((pick: ProfileRegionSelection) => matchesProfileRegion(pick, candidate)) && !faces.some(face => matchesProfileRegion({profileRegion:{contourIds:region.contourIds!}},face)) ? [candidate] : [];
+  }) : [];
+  return [...faces, ...legacy.map(r => ({ ...r, label: `${r.label} · original profile` })), ...joined];
 }
 function controlRegions(context: FeatureEditorContext, source: Controls[string], region: Controls[string]) {
   const sketch = context.doc.features.find(f => f.id === source.value);

@@ -1,5 +1,5 @@
 import { sketchRegionGroups } from "../sketch/regions/groups";
-import { sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
+import { connectedSketchRegions, sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
 import { matchesProfileRegion, profileRegionIdentity, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
 import { resolveProfileDrawing } from "../document/profile-projection";
 import { canonicalPlaneXDirection, flipSketchFrame, principalFrame, resolvePlaneFrame } from "../document/construction-planes";
@@ -779,24 +779,23 @@ export function evaluatePartDocument(
                 combined=combined ? own(contour.hole ? combined.cut(region) : combined.fuse(region)) : region;
               }
             }
-            // Regions several open curves enclose together (the picker's "connected" regions),
-            // keyed as FreeCAD's body identities were; they are chosen by reference, never implied.
-            for (const boundary of sketchFaceRegions(solved)) {
-              if (boundary.cell) {
-                const outer = own(contourDrawing(boundary.contour, feature.id));
-                const holes = (boundary.holes ?? []).map(hole => own(contourDrawing(hole, feature.id)));
-                const drawing = holes.reduce((shape, hole) => own(shape.cut(hole)), outer);
-                const contourIds = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
-                const inside = boundary.insideContourIds ?? boundary.insideContourIndices?.map(String);
-                cells.push({ key: `cell:${profileRegionIdentity({ profileRegion: { contourIds, inside, ordinal: boundary.ordinal, boundary: boundary.boundary } })}`,
-                  drawing, outer, holes, sourceContourIds: boundary.sourceContourIds,
-                  insideContourIds: boundary.insideContourIds, ordinal: boundary.ordinal, boundary: boundary.boundary, cell: true });
-                continue;
-              }
-              if (boundary.sourceContourIndices.length < 2) continue;
-              const ids = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
+            // Legacy joined references mean the entire closed degree-two group,
+            // even when other curves split it into new arrangement cells.
+            for (const boundary of connectedSketchRegions(solved).regions) {
+              const ids = boundary.contourIds ?? boundary.contourIndices.map(String);
               const region = own(contourDrawing(boundary.contour, feature.id));
-              regions.push({ key: `connected:${JSON.stringify([...ids].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary.sourceContourIds });
+              regions.push({ key: `connected:${JSON.stringify([...ids].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary.contourIds });
+            }
+            for (const boundary of sketchFaceRegions(solved)) {
+              if (!boundary.cell) continue;
+              const outer = own(contourDrawing(boundary.contour, feature.id));
+              const holes = (boundary.holes ?? []).map(hole => own(contourDrawing(hole, feature.id)));
+              const drawing = holes.reduce((shape, hole) => own(shape.cut(hole)), outer);
+              const contourIds = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
+              const inside = boundary.insideContourIds ?? boundary.insideContourIndices?.map(String);
+              cells.push({ key: `cell:${profileRegionIdentity({ profileRegion: { contourIds, inside, ordinal: boundary.ordinal, boundary: boundary.boundary } })}`,
+                drawing, outer, holes, sourceContourIds: boundary.sourceContourIds,
+                insideContourIds: boundary.insideContourIds, ordinal: boundary.ordinal, boundary: boundary.boundary, cell: true });
             }
             // Open contours remain saved and editable, but cannot create a solid.
             drawing=combined;

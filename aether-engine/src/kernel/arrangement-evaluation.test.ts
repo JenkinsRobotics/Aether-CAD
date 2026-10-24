@@ -114,3 +114,24 @@ it('extrudes exact divided rational-conic regions without flattening the curve',
   expect(volumes.every(v=>v>0)).toBe(true);
   expect(volumes.reduce((a,b)=>a+b,0)).toBeCloseTo(2000/3,5);
 });
+
+
+it('preserves legacy joined loops beside arrangement cells and refuses a broken old group', () => {
+  const source = sketch([
+    {id:'arch',type:'path',start:[0,0],segments:[{type:'line',end:[10,10]},{type:'line',end:[20,0]}]},
+    {id:'base',type:'path',start:[20,0],segments:[{type:'line',end:[0,0]}]},
+    {id:'circle',type:'circle',center:[10,5],radius:2},
+  ]);
+  const doc=createEmptyPartDocument('Legacy joined profile');
+  doc.features=[source,{id:'pad',name:'Pad',type:'extrude',suppressed:false,profileFeatureId:'sketch',profileRegion:{contourIds:['arch','base']},operation:'new',distanceMillimeters:5}];
+  expect(sketchRegions(source).some(r=>r.cell)).toBe(true);
+  expect(measure(doc).volume).toBeCloseTo(500,6);
+  const drawing=source.profile as SketchDrawing;
+  drawing.contours.pop();
+  (drawing.contours[1] as Extract<SketchContour,{type:'path'}>).segments[0].end=[-1,0];
+  expect(() => measure(doc)).toThrow(/no longer form/);
+  // The new bounded cell is a valid explicit pick, but is not the old full group.
+  const cell=sketchRegions(source).find(r=>r.cell)!;
+  expect(cell.insideContourIds).toEqual([]);
+  expect(measure(documentFor(source,()=>[cell])).volume).toBeCloseTo(500,6);
+});

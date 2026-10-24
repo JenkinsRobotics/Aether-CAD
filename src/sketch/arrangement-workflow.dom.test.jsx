@@ -93,3 +93,20 @@ it.each([false,true])('edits an older extrusion across intersecting contours wit
   const saved=serializeExtrudeSelections({selections:controls.selections.value,creationMode:'solid'},context);
   expect(saved).toEqual(explicit?{profileFeatureId:'s',profileContourId:'rectangle'}:{profileFeatureId:'s'});
 });
+
+
+it('keeps an older joined profile editable when a new nested contour creates cells', () => {
+  const {doc}=setup();
+  doc.features[0].profile.contours=[
+    {id:'arch',type:'path',start:[0,0],segments:[{type:'line',end:[10,10]},{type:'line',end:[20,0]}]},
+    {id:'base',type:'path',start:[20,0],segments:[{type:'line',end:[0,0]}]},
+    {id:'circle',type:'circle',center:[10,5],radius:2},
+  ];
+  const feature={id:'old',type:'extrude',name:'Old joined pad',profileFeatureId:'s',profileRegion:{contourIds:['arch','base']},operation:'new',distanceMillimeters:5,suppressed:false};
+  const context={doc,feature};
+  const choices=featureRegionChoices(context,doc.features[0]);
+  expect(choices.filter(r=>r.cell)).toHaveLength(2);
+  const original=choices.find(r=>matchesProfileRegion(feature,r));
+  expect(original.cell).toBeUndefined();
+  expect(stampProfileSelections(context,[{featureId:'s',contourIndex:original.contourIndex}])[0]).toEqual({profileFeatureId:'s',profileRegion:{contourIds:['arch','base']}});
+});
