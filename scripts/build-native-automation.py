@@ -44,6 +44,7 @@ files = {
     "aether_cad_service/program_runtime.py": service / "program_runtime.py",
     "aether_cad_service/runtime/runner.mjs": runtime / "runner.mjs",
     "aether_cad_service/runtime/replicad_single.wasm": runtime / "replicad_single.wasm",
+    "aether_cad_service/runtime/opencascade.wasm": runtime / "opencascade.wasm",
     "ATTRIBUTION.md": root / "aether-engine/ATTRIBUTION.md",
 }
 # Only the canonical, dependency-free document codec is included from the

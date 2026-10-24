@@ -12,8 +12,7 @@ import { analyzePart } from "./analysis";
 import { checkContacts, type ContactCheckInput, type ContactOverlap } from "./contacts";
 import { exportPart } from "./export";
 import { buildPartGeometry } from "./part-geometry";
-import { initNodeKernel } from "./node-kernel";
-import { loadExtendedKernel, needsExtendedKernel } from "./extended-kernel";
+import { initNodeKernel, runNodeOperation } from "./node-kernel";
 import { EngineError } from "./worker-client";
 
 const rethrow = (error: unknown): never => {
@@ -27,38 +26,29 @@ export class InProcessKernelClient {
   constructor(wasmPath = new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) {
     this.ready = initNodeKernel(readFileSync(wasmPath));
   }
-  private async prepare(document: PartDocument, full = false): Promise<void> {
+  private async run<T>(document: PartDocument | readonly PartDocument[], operation: () => T | Promise<T>): Promise<T> {
     await this.ready;
-    if (full || needsExtendedKernel(document)) await loadExtendedKernel(async () => (await import("opencascade.js/dist/node.js")).default());
+    try { return await runNodeOperation(document, operation); }
+    catch (error) { return rethrow(error); }
   }
   async evaluatePart(document: PartDocument, options: { preview?: boolean } = {}): Promise<ImportedModelData> {
-    await this.prepare(document);
-    try { return evaluatePartDocument(document, options); }
-    catch (error) {
-      if (error instanceof UnsupportedFeature && error.fullBuild) { await this.prepare(document, true); try { return evaluatePartDocument(document, options); } catch (again) { return rethrow(again); } }
-      return rethrow(error);
-    }
+    return this.run(document, () => evaluatePartDocument(document, options));
   }
   async measureDistance(document: PartDocument, entities: MeasureEntity[]): Promise<DistanceMeasurement> {
-    await this.prepare(document);
-    try { return measureDistance(document, entities); } catch (error) { return rethrow(error); }
+    return this.run(document, () => measureDistance(document, entities));
   }
   async checkContacts(input: ContactCheckInput): Promise<{ overlaps: ContactOverlap[]; checked_pairs: number }> {
-    for (const part of input.parts) await this.prepare(part.document);
-    return checkContacts(input);
+    return this.run(input.parts.map(part => part.document), () => checkContacts(input));
   }
 
   async analyzePart(document: PartDocument, options: AnalysisOptions): Promise<AnalysisResult> {
-    await this.prepare(document);
-    try { return analyzePart(document, options); } catch (error) { return rethrow(error); }
+    return this.run(document, () => analyzePart(document, options));
   }
   async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]): Promise<import("../sketch/drawing").SketchContour[]> {
-    await this.prepare(document);
-    try { return sketchSectionContours(document, frame, kind, axis); } catch (error) { return rethrow(error); }
+    return this.run(document, () => sketchSectionContours(document, frame, kind, axis));
   }
   async exportPart(document: PartDocument, options: ExportOptions): Promise<ExportResult> {
-    await this.prepare(document);
-    try { return await exportPart(document, options); } catch (error) { return rethrow(error); }
+    return this.run(document, () => exportPart(document, options));
   }
   async importSTEP(file: File): Promise<ImportedModelData> {
     await this.ready;

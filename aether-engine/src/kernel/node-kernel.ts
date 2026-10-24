@@ -3,10 +3,12 @@
  *  its own dependencies resolve wherever the runner bundle is built from. */
 import init from "replicad-opencascadejs";
 import { setOC, measureVolume, type Shape3D } from "replicad";
+import { kernelDiagnostic } from './node-operation';
+export { runNodeOperation } from './node-operation';
 
 let installed: Promise<void> | undefined;
 export function initNodeKernel(wasmBinary: ArrayBuffer | Uint8Array): Promise<void> {
-  if (!installed) installed = (async () => { setOC(await (init as unknown as (options: { wasmBinary: ArrayBuffer | Uint8Array }) => Promise<never>)({ wasmBinary })); })();
+  if (!installed) installed = (async () => { setOC(await (init as unknown as (options: object) => Promise<never>)({ wasmBinary, print: kernelDiagnostic, printErr: kernelDiagnostic })); })();
   return installed;
 }
 

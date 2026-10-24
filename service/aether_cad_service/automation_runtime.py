@@ -24,11 +24,15 @@ def worker(request, *, node=None):
         )
     try:
         completed = subprocess.run(
-            [node, "--max-old-space-size=256", str(runner)],
+            # Full OCCT bindings exceed 256 MiB during initialization. Keep a
+            # bounded heap while allowing the browser-equivalent kernel to load.
+            [node, "--max-old-space-size=512", str(runner)],
             input=json.dumps(request, allow_nan=False),
             text=True,
             capture_output=True,
-            timeout=15,
+            # Geometry may initialize the full kernel; stay below the host
+            # worker deadline (35 s), including command preparation and teardown.
+            timeout=25 if request.get("phase") in ("build", "analyze", "export") else 15,
             check=False,
         )
         if completed.returncode or len(completed.stdout.encode()) > 8 * 1024 * 1024:
