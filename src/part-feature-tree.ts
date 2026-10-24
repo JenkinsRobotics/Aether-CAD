@@ -94,6 +94,7 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "surface-stitch") return `${feature.bodyIds.length} sheets sewn`;
   if (feature.type === "surface-unstitch") return "faces apart";
   if (feature.type === "surface-reverse-normal") return "normal reversed";
+  if (feature.type === "surface-fair") return `strength ${feature.strength ?? 1}${feature.toleranceMillimeters !== undefined ? ` · ≤ ${feature.toleranceMillimeters} mm` : ""}`;
   return `${feature.radiusMillimeters} mm`;
 }
 

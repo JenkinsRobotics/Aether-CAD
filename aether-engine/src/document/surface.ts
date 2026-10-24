@@ -108,6 +108,15 @@ export interface SurfaceBlendFeature {
   from: { bodyId: string; edges: EdgeFinishEdge[] };
   to: { bodyId: string; edges: EdgeFinishEdge[] };
 }
+/** Fair (SolidCraft's surface.fair): a sheet's untrimmed faces with their interior control
+ *  points relaxed, border rows held; strength scales the step, the tolerance caps any move. */
+export interface SurfaceFairFeature {
+  id: string; type: "surface-fair"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  faces?: SolidFaceReference[];
+  strength?: number;
+  toleranceMillimeters?: number;
+}
 /** Trim (SolidCraft's surface.trim): the sheet cut at a plane, the side holding the keep point kept. */
 export interface SurfaceTrimFeature {
   id: string; type: "surface-trim"; name: string; suppressed: boolean;
@@ -121,11 +130,11 @@ export interface SurfaceUntrimFeature {
   bodyIds: [string];
   face: SolidFaceReference;
 }
-export type SurfaceFeature = SurfaceTrimFeature | SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
+export type SurfaceFeature = SurfaceFairFeature | SurfaceTrimFeature | SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
   | SurfaceExtrudeFeature | SurfaceRevolveFeature | SurfaceLoftFeature | SurfacePatchFeature | SurfaceSweepFeature
   | SurfaceOffsetFeature | SurfaceThickenFeature | SurfaceStitchFeature | SurfaceUnstitchFeature | SurfaceReverseNormalFeature;
 
-export const surfaceFeatureTypes = ["surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
+export const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
 /** The surface features that make a new sheet (or, for Thicken with "new", a solid). */
 export const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
 
@@ -148,6 +157,12 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
         if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
         for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
       }
+      return;
+    case "surface-fair":
+      ids(feature.bodyIds, "Fair", 1);
+      for (const face of feature.faces ?? []) validateSolidFaceReference(face, earlier, missing as (id: string) => boolean);
+      if (feature.strength !== undefined && !(finite(feature.strength) && feature.strength > 0 && feature.strength <= 1)) throw new Error("Fair strength is more than 0 and at most 1.");
+      if (feature.toleranceMillimeters !== undefined && !(finite(feature.toleranceMillimeters) && feature.toleranceMillimeters > 0)) throw new Error("Fair's largest move must be positive.");
       return;
     case "surface-trim":
       ids(feature.bodyIds, "Trim", 1);

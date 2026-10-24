@@ -1270,6 +1270,57 @@ export function evaluatePartDocument(
           } finally { progress.delete(); sewing.delete(); }
           continue;
         }
+        if (feature.type === "surface-fair") {
+          // Fair: each picked (or every) untrimmed face's B-spline control net relaxed with its
+          // border rows held, so the boundary stays put and the interior bends less; the faces
+          // are rebuilt on the faired surfaces and sewn back.
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Fair needs an available surface body.");
+          const o = getOC() as any;
+          const all = body.faces;
+          const targets = feature.faces?.length ? feature.faces.map((ref) => faceByReference(body, ref, "Face to fair")) : all;
+          const strength = feature.strength ?? 1, limit = feature.toleranceMillimeters;
+          const rebuilt: any[] = [];
+          for (const face of targets) {
+            const handle = o.GeomConvert.SurfaceToBSplineSurface(o.BRep_Tool.Surface_2(face.wrapped)), s = handle.get();
+            // Untrimmed: the face covers the surface's whole knot range and has no holes.
+            const uv = face.UVBounds, holes = face.clone().innerWires();
+            holes.forEach((w) => w.delete());
+            const near = (a: number, b: number) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+            if (holes.length || !near(uv.uMin, s.UKnot(s.FirstUKnotIndex())) || !near(uv.uMax, s.UKnot(s.LastUKnotIndex())) || !near(uv.vMin, s.VKnot(s.FirstVKnotIndex())) || !near(uv.vMax, s.VKnot(s.LastVKnotIndex())))
+              throw new Error("Fair works on untrimmed faces (a loft, boundary or patch); this face is trimmed.");
+            const nu = s.NbUPoles(), nv = s.NbVPoles();
+            if (nu < 3 || nv < 3) throw new Error("This face has no interior control points to fair.");
+            const P: V3[][] = [];
+            for (let i = 1; i <= nu; i++) { const row: V3[] = []; for (let j = 1; j <= nv; j++) { const p = s.Pole(i, j); row.push([p.X(), p.Y(), p.Z()]); p.delete(); } P.push(row); }
+            // ponytail: membrane (Laplace) relaxation of the net, not SolidCraft's thin-plate Gram solve; boundary rows are exact either way.
+            const T = P.map((row) => row.map((p) => [...p] as V3));
+            for (let sweep = 0; sweep < 400; sweep++)
+              for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++)
+                T[i][j] = [0, 1, 2].map((k) => (T[i - 1][j][k] + T[i + 1][j][k] + T[i][j - 1][k] + T[i][j + 1][k]) / 4) as V3;
+            for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++) {
+              let d = [0, 1, 2].map((k) => (T[i][j][k] - P[i][j][k]) * strength) as V3;
+              const l = Math.hypot(...d);
+              if (limit !== undefined && l > limit) d = d.map((x) => (x * limit) / l) as V3;
+              const q = new o.gp_Pnt_3(P[i][j][0] + d[0], P[i][j][1] + d[1], P[i][j][2] + d[2]); s.SetPole_1(i + 1, j + 1, q); q.delete();
+            }
+            const maker = new o.BRepBuilderAPI_MakeFace_8(new o.Handle_Geom_Surface_2(s), 1e-6);
+            if (!maker.IsDone()) throw new Error("The faired face could not be rebuilt.");
+            rebuilt.push(maker.Face()); maker.delete();
+          }
+          const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
+          try {
+            for (const face of all) if (!targets.some((t) => t.isSame(face))) sewing.Add(face.wrapped);
+            for (const face of rebuilt) sewing.Add(face);
+            sewing.Perform(progress);
+            const raw = sewing.SewedShape(), shape = cast(raw) as any;
+            let sheet: Shape3D;
+            if (isShape3D(shape)) sheet = shape;
+            else { const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, raw); sheet = cast(shell) as Shape3D; }
+            bodies.set(id, own(sheet)); currentBodyID = id;
+          } finally { progress.delete(); sewing.delete(); }
+          continue;
+        }
         if (feature.type === "surface-trim") {
           // Trim: the sheet's faces split by a large face on the plane; the pieces on the keep
           // point's side stay, sewn back into one sheet.

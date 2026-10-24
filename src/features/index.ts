@@ -34,6 +34,7 @@ import { snapFitEditor } from "./snap-fit";
 import { boundaryFillEditor } from "./boundary-fill";
 import { splitFaceEditor } from "./split-face";
 import { surfaceTrimEditor } from "./surface-trim";
+import { surfaceFairEditor } from "./surface-fair";
 import type { FeatureEditor } from "./shared";
 
 export const featureEditors: readonly FeatureEditor[] = [
@@ -71,6 +72,7 @@ export const featureEditors: readonly FeatureEditor[] = [
   boundaryFillEditor,
   splitFaceEditor,
   surfaceTrimEditor,
+  surfaceFairEditor,
 ];
 
 export function featureEditor(type: string): FeatureEditor | undefined {
