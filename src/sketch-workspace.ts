@@ -443,26 +443,34 @@ export function openSketchWorkspace(
   };
   /** Intersect / Include 3D geometry (SolidCraft): the part's section curves at this
    *  sketch's plane, or its edges lying in it, inserted as sketch geometry. */
-  const includeModelGeometry = async (kind: "section" | "edges") => {
+  const includeModelGeometry = async (kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]) => {
     if (busy) return;
     const doc = workingSource();
     const planeFrame = flipSketchFrame(frame ?? constructionPlaneFrame({ id: "", name: "", type: "plane", plane, offsetMillimeters, suppressed: false }), flip);
     const index = doc.features.findIndex((f) => f.id === featureID);
     const before = { ...doc, features: doc.features.slice(0, index < 0 ? rollbackPosition(doc) : index), rollbackIndex: undefined };
     try {
-      message.textContent = kind === "section" ? "Intersecting the part with the sketch plane…" : "Collecting the part's edges in the sketch plane…";
-      const contours = await aetherKernel().sketchSection(before, planeFrame, kind);
-      if (!contours.length) { message.textContent = kind === "section" ? "The sketch plane does not cut the part." : "No part edges lie in the sketch plane."; return; }
+      message.textContent = kind !== "edges" ? "Intersecting the part with the sketch plane…" : "Collecting the part's edges in the sketch plane…";
+      const contours = await aetherKernel().sketchSection(before, planeFrame, kind, axis);
+      if (!contours.length) { message.textContent = kind !== "edges" ? "The sketch plane does not cut the part." : "No part edges lie in the sketch plane."; return; }
       checkpoint();
       for (const contour of contours) drawing.contours.push({ ...contour, ...(construction ? { construction: true } : {}) });
       activePath = -1; pending = []; render();
-      message.textContent = `${contours.length} ${kind === "section" ? "section curves" : "edges"} added to the sketch.`;
+      message.textContent = `${contours.length} ${kind === "spun" ? "spun profile" : kind === "fit" ? "fitted section curves" : kind === "section" ? "section curves" : "edges"} added to the sketch.`;
     } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
   };
   const toolEvent = (event: Event) => {
     if (started) {
       const name = (event as CustomEvent).detail;
-      if (name === "intersect" || name === "include-edges") { void includeModelGeometry(name === "intersect" ? "section" : "edges"); return; }
+      if (name === "spun-profile") {
+        // The axis is the one selected sketch line.
+        const ref = selectedEntities.find((r) => r.kind === "line"), c = ref ? drawing.contours[ref.contour] : undefined;
+        if (!ref || !c || c.type !== "path" || ref.index === undefined) { message.textContent = "Select one sketch line as the spin axis, then Spun profile."; return; }
+        const from = ref.index === 0 ? c.start : c.segments[ref.index - 1].end, to = c.segments[ref.index].end;
+        void includeModelGeometry("spun", [[...from], [...to]] as [[number, number], [number, number]]);
+        return;
+      }
+      if (name === "intersect" || name === "include-edges" || name === "fit-section") { void includeModelGeometry(name === "intersect" ? "section" : name === "fit-section" ? "fit" : "edges"); return; }
       // Control-point splines are the spline tool in another mode; the button stays lit.
       if (name in splineToolNames || name === "fit-spline") {
         if (name === activeTool) { chooseTool("select"); return; }

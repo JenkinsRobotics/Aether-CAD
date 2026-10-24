@@ -31,6 +31,9 @@ import { shellEditor } from "./shell";
 import { curve3dEditor } from "./curve3d";
 import { lipEditor } from "./lip";
 import { snapFitEditor } from "./snap-fit";
+import { boundaryFillEditor } from "./boundary-fill";
+import { splitFaceEditor } from "./split-face";
+import { surfaceTrimEditor } from "./surface-trim";
 import type { FeatureEditor } from "./shared";
 
 export const featureEditors: readonly FeatureEditor[] = [
@@ -65,6 +68,9 @@ export const featureEditors: readonly FeatureEditor[] = [
   curve3dEditor,
   lipEditor,
   snapFitEditor,
+  boundaryFillEditor,
+  splitFaceEditor,
+  surfaceTrimEditor,
 ];
 
 export function featureEditor(type: string): FeatureEditor | undefined {

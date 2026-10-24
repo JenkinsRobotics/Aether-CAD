@@ -1,6 +1,7 @@
 /** Mesh — Fusion's MESH tab. Triangle geometry, not B-rep.
  *
- *  Entirely greyed: Aether has no editable mesh body type. A mesh workbench
+ *  Convert Mesh turns a constant-section mesh reference into a sketch and an extrusion (r64).
+ *  The rest stays greyed: Aether has no editable mesh body type. A mesh workbench
  *  could back most of this, but nothing carries a mesh across the JSON
  *  boundary yet, so there is no producer to call.
  */
@@ -20,6 +21,9 @@ export const meshWorkspace: CADRibbonWorkspaceDefinition = {
       tool("mesh-smooth", "Smooth", "curve", undefined, meshProducer),
       tool("mesh-plane-cut", "Plane Cut", "split", undefined, meshProducer),
       tool("mesh-separate", "Separate", "copy", undefined, meshProducer),
+    ] },
+    { id: "mesh-convert", label: "Convert", tools: [
+      tool("mesh-convert", "Convert Mesh", "part", "mesh-convert"),
     ] },
     { id: "mesh-repair", label: "Repair", tools: [
       tool("mesh-close-holes", "Close Holes", "face", undefined, meshProducer),

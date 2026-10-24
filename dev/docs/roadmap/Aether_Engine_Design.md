@@ -1159,3 +1159,44 @@ degree 5 has no cubic form, so each span is split in eight and each piece is the
 matching the true curve's point and tangent at its ends (G1, within 0.05 mm in the test). Few
 points lower the degree. The preview draws the control polygon. Not built: G3/G4 blends, and
 editing a finished control spline by its control points (it is stored as Béziers).
+
+### r62 (2026-10-23): fit curves to section, spun profile
+
+Installed.
+
+Fit Curves to Section (SolidCraft's `sketch.fit_curves_to_section`) is a third kind of the sketch
+section request: solid bodies are cut exactly as Intersect does, and mesh bodies (which the
+evaluator now hands to callers beside the solids) are cut triangle by triangle against the
+sketch plane, the crossings chained by shared end points, and each chain fitted. The fitter
+takes a closed chain that lies on one circle as a circle; otherwise it walks the chain taking the
+longest run that one line or one arc holds within 0.05 mm, checking the middle of every segment
+too so an arc never cuts across a sharp corner. Spun Profile (`sketch.spun_profile`) turns the
+bodies about a selected sketch line: points along every triangle edge of a fine tessellation
+(edges, not just vertices, since a cylinder's side has vertices only at its rings) give axial
+position and radius, the largest radius per 0.05 mm step becomes a closed half-profile on one side
+of the axis, and the fitter turns it into lines and arcs. Not built: choosing the side of the
+axis, and a world axis (X, Y, Z) instead of a sketch line.
+
+### r63 (2026-10-23): boundary fill, split face, surface trim
+
+Installed.
+
+The single wasm build has no splitter (`BRepAlgoAPI_Splitter`, `BRepFeat_SplitShape` are absent)
+and sheet-against-solid Common/Cut return nothing, which is why Trim was blocked. It does carry
+the general fuse, `BRepAlgoAPI_BuilderAlgo`: `kernel/general-fuse.ts` splits faces by a tool
+face and reads each face's pieces from `Modified` (lists drained with `First_1`/`RemoveFirst`).
+Split Face (SolidCraft's `solid.split_face`) splits the picked faces by a large face on a
+principal or construction plane and sews the body's other faces and the pieces back into one
+solid, checked to keep its volume. Trim (`surface.trim`) splits every face of a sheet the same
+way and sews back the pieces whose parameter-box centre lies on the keep point's side. Boundary
+Fill (`solid.boundary_fill`) needs no splitting: a cell is the intersection of the tools that
+contain the picked point (distance zero to the solid) minus the others, the cells are fused, and
+the result is a new body or joins, cuts or intersects a target; removing the tools lists them as
+consumed. Not built: Split Face and Trim by another surface or by sketch curves.
+
+Convert Mesh (SolidCraft's `mesh.convert`) takes a constant-section mesh reference: the axis is
+the largest facet's normal or its cross product with the first non-parallel normal, accepted
+only if every facet is parallel or square to it and every vertex lies on one of the two cap
+planes. The mid-height section, cut and fitted as in r62, becomes an ordinary sketch on the lower
+cap (a profile with a frame) and an extrusion of the cap-to-cap depth; the mesh import is
+suppressed, not deleted. Unlike SolidCraft, the result is editable history, not a frozen body.

@@ -1,3 +1,4 @@
+import { validateMirrorPlane } from "./mirror-plane";
 import { validateTransformVectorReference, type TransformVectorReference } from "./part-transform";
 import { validateEdgeFinishEdge, type EdgeFinishEdge } from "./solid-edge-reference";
 import { validateSolidFaceReference, type SolidFaceReference } from "./solid-face-reference";
@@ -107,17 +108,24 @@ export interface SurfaceBlendFeature {
   from: { bodyId: string; edges: EdgeFinishEdge[] };
   to: { bodyId: string; edges: EdgeFinishEdge[] };
 }
+/** Trim (SolidCraft's surface.trim): the sheet cut at a plane, the side holding the keep point kept. */
+export interface SurfaceTrimFeature {
+  id: string; type: "surface-trim"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  plane: import("./mirror-plane").MirrorPlaneReference;
+  keepPointMillimeters: [number, number, number];
+}
 /** Untrim: a picked face rebuilt from its outer boundary alone, its holes gone, in place. */
 export interface SurfaceUntrimFeature {
   id: string; type: "surface-untrim"; name: string; suppressed: boolean;
   bodyIds: [string];
   face: SolidFaceReference;
 }
-export type SurfaceFeature = SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
+export type SurfaceFeature = SurfaceTrimFeature | SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
   | SurfaceExtrudeFeature | SurfaceRevolveFeature | SurfaceLoftFeature | SurfacePatchFeature | SurfaceSweepFeature
   | SurfaceOffsetFeature | SurfaceThickenFeature | SurfaceStitchFeature | SurfaceUnstitchFeature | SurfaceReverseNormalFeature;
 
-export const surfaceFeatureTypes = ["surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
+export const surfaceFeatureTypes = ["surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
 /** The surface features that make a new sheet (or, for Thicken with "new", a solid). */
 export const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
 
@@ -140,6 +148,11 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
         if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
         for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
       }
+      return;
+    case "surface-trim":
+      ids(feature.bodyIds, "Trim", 1);
+      validateMirrorPlane(feature.plane, earlier, missing as (id: string) => boolean, "Trim plane");
+      if (!Array.isArray(feature.keepPointMillimeters) || feature.keepPointMillimeters.length !== 3 || !feature.keepPointMillimeters.every(finite)) throw new Error("Trim needs a keep point on the side to keep.");
       return;
     case "surface-untrim":
       ids(feature.bodyIds, "Untrim", 1);

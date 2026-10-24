@@ -1,10 +1,11 @@
 /** Surface — Fusion's SURFACE tab. Open, zero-thickness geometry.
  *
  *  Sheets are shells in the same body list as solids (`aether-engine/src/document/surface.ts`).
- *  Trim stays greyed: trimming needs shell-against-solid booleans the kernel build
+ *  Trim cuts at a plane with the general fuse (r63); trimming by another surface or curves
+ *  is not built yet. Earlier note: trimming needed shell-against-solid booleans the kernel build
  *  does not perform.
  */
-import { surfaceProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
+import { tool, type CADRibbonWorkspaceDefinition } from "./shared";
 
 export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
   id: "surface",
@@ -22,7 +23,7 @@ export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
       tool("surface-blend", "Blend", "loft", "feature-surface-blend"),
     ] },
     { id: "surface-modify", label: "Modify", tools: [
-      tool("surface-trim", "Trim", "trim", undefined, surfaceProducer),
+      tool("surface-trim", "Trim", "trim", "feature-surface-trim"),
       tool("surface-extend", "Extend", "push-pull", "feature-surface-extend"),
       tool("surface-stitch", "Stitch", "weld", "feature-surface-stitch"),
       tool("surface-unstitch", "Unstitch", "split", "feature-surface-unstitch"),
