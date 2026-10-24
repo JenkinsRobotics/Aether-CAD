@@ -12,8 +12,8 @@
   },
   "shared_packages": {
     "@aether/assets": {
-      "archive": "vendor/aether-assets-0.2.0-alpha.28.tgz",
-      "sha256": "62b0ff5b53fc49a876021ae7a58658cc67b6c26b77d43c15a7a90c21b01fdf90"
+      "archive": "vendor/aether-assets-0.2.0-alpha.29.tgz",
+      "sha256": "8c913bdb147053d1e50d3eba1067bee278730276d69a28fe985ebf126849dec2"
     },
     "@aether/session": {
       "archive": "vendor/aether-session-0.2.0-alpha.185.tgz",
