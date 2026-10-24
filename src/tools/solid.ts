@@ -29,7 +29,11 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-coil", "Coil", "sweep", "feature-coil"),
       // Last of the real tools: the Create list opens downward without a height limit, so
       // each row added above Cone pushes it toward the bottom of the window.
-      tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
+      {...tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"), variants: [
+        tool("solid-intersection-curve", "Intersection curve", "curve", "sketch-intersection-curve"),
+        tool("solid-isoparametric-curve", "Isoparametric curve", "curve", "sketch-isoparametric-curve"),
+        tool("solid-project-to-surface", "Project to surface", "curve", "sketch-project-to-surface"),
+      ]},
       tool("solid-weld", "Weld", "weld", undefined, solidProducer),
       tool("solid-sheet", "Sheet", "sheet", undefined, solidProducer),
     ] },

@@ -32,6 +32,7 @@ import { isDirectModificationTool } from "./sketch/tool-instructions";
 import { mountSelectionConstraintStatus } from "./sketch/selection-constraint-status";
 import { mountDimensionLabelDrag } from "./sketch/dimension-label-drag";
 import { mountFitSplineTool } from "./sketch/fit-spline-tool";
+import { splineMode, splineToolNames } from "./sketch/spline-mode";
 import { mountDxfImportPanel } from "./sketch/dxf-import-panel";
 import { inferDrawingPlacement } from "./sketch/drawing-inference";
 import { bindSelectionDrag } from "./sketch/selection-drag";
@@ -462,6 +463,12 @@ export function openSketchWorkspace(
     if (started) {
       const name = (event as CustomEvent).detail;
       if (name === "intersect" || name === "include-edges") { void includeModelGeometry(name === "intersect" ? "section" : "edges"); return; }
+      // Control-point splines are the spline tool in another mode; the button stays lit.
+      if (name in splineToolNames || name === "fit-spline") {
+        if (name === activeTool) { chooseTool("select"); return; }
+        splineMode.value = name === "fit-spline" ? "fit" : splineToolNames[name as keyof typeof splineToolNames];
+        chooseTool("fit-spline"); setActiveTool(name); return;
+      }
       if (name === activeTool && name !== "select") {
         chooseTool("select");
         return;

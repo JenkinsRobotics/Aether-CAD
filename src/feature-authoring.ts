@@ -25,6 +25,7 @@ import { documentUnits } from "./document-preferences";
 import {
   rollbackPosition,
   insertFeature,
+  breakProjectionLink,
   setFeatureSuppressed,
   removeFeature,
   moveFeature,
@@ -506,6 +507,9 @@ const presentFeatureWindow = (
           : next,
         doc,
       ));
+    } else if (action.actionID === "break-link" && f) {
+      // SolidCraft's sketch.break_link: the projected sketch keeps its curves but stops following its source.
+      try { void change(breakProjectionLink(doc, f.id)); } catch (error) { alert((error as Error).message); }
     } else if (action.actionID === "delete-feature" && f) {
       const ids = selectionWith(doc, action, f);
       const affected = new Set(ids.flatMap((id) => [...dependentFeatures(doc, id)]));

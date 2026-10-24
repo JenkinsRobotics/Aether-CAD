@@ -103,6 +103,8 @@ export type CADCommandID =
   | "feature-sheet-perforate" | "sheet-export-bend-table"
   | "assembly-insert-standard-part" | "assembly-resize-standard-part"
   | "sketch-auto-constrain-datum" | "assembly-unlock"
+  | "sketch-intersection-curve" | "sketch-isoparametric-curve" | "sketch-project-to-surface"
+  | "sketch-blend-curve" | "sketch-blend-curve-g2" | "sketch-control-spline" | "sketch-control-spline-5"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -256,6 +258,8 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-sheet-perforate", "sheet-export-bend-table",
   "assembly-insert-standard-part", "assembly-resize-standard-part",
   "sketch-auto-constrain-datum", "assembly-unlock",
+  "sketch-intersection-curve", "sketch-isoparametric-curve", "sketch-project-to-surface",
+  "sketch-blend-curve", "sketch-blend-curve-g2", "sketch-control-spline", "sketch-control-spline-5",
   "fit-view",
   "clear-mates",
   "view-top",

@@ -29,7 +29,11 @@ it("measures the minimum radius and draws isocurves and a comb on a cylinder", (
   const iso = analyzePart(doc, { kind: "isocurve", count: 4 });
   // Three faces (side, two caps), two families each.
   expect(iso.curves).toHaveLength(6);
-  expect(iso.curves!.every((c) => c.polylines.length === 4 && c.polylines[0].length === 33)).toBe(true);
+  // The side keeps whole lines; the caps keep the parts of their lines inside the disc.
+  expect(iso.curves!.filter((c) => c.polylines.length === 4 && c.polylines.every((l) => l.length === 33))).toHaveLength(2);
+  // Every isocurve point lies on the drum: on the side (r = 10) or a cap (z = 0 or 8, r ≤ 10).
+  const onDrum = (p: number[]) => (Math.abs(Math.hypot(p[0], p[1]) - 10) < 1e-6 && p[2] > -1e-6 && p[2] < 8 + 1e-6) || ((Math.abs(p[2]) < 1e-6 || Math.abs(p[2] - 8) < 1e-6) && Math.hypot(p[0], p[1]) <= 10 + 1e-6);
+  expect(iso.curves!.every((c) => c.polylines.every((line) => line.every(onDrum)))).toBe(true);
 
   const comb = analyzePart(doc, { kind: "curvature_comb", count: 16 });
   const rims = comb.measurements.filter((m) => typeof m.min_radius_mm === "number") as { min_radius_mm: number }[];
