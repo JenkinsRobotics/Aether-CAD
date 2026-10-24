@@ -1,23 +1,32 @@
 /** Explicit Part19 reference to one boundary assembled from authored contours.
- * A single contour continues to use the existing profileContourId field. */
-export interface ProfileRegionReference { contourIds: string[] }
+ * A single contour continues to use the existing profileContourId field.
+ *
+ * A region of the sketch's arrangement (shapes that overlap, nest or are cut by
+ * lines) adds `inside`: the closed contours whose interior holds it, which tells
+ * apart the cells two shapes make; and `ordinal` (1, 2, …, by position) only when
+ * several cells share the same boundary contours and containers. */
+export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number }
 export interface ProfileRegionSelection {
   profileContourId?: string;
   profileRegion?: ProfileRegionReference;
 }
+const ids = (list: unknown, min: number) => Array.isArray(list) && list.length >= min && list.length <= 1000 &&
+  list.every(id => typeof id === 'string' && !!id.trim() && id.length <= 128) && new Set(list).size === list.length;
 export function validateProfileRegionSelection(selection: ProfileRegionSelection): void {
   const value = selection.profileRegion;
   if (value === undefined) return;
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => key !== 'contourIds') ||
-    !Array.isArray(value.contourIds) || value.contourIds.length < 2 || value.contourIds.length > 1000 ||
-    value.contourIds.some(id => typeof id !== 'string' || !id.trim() || id.length > 128) || new Set(value.contourIds).size !== value.contourIds.length ||
+  const cell = value && typeof value === 'object' && value.inside !== undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['contourIds', 'inside', 'ordinal'].includes(key)) ||
+    !ids(value.contourIds, cell ? 1 : 2) || (cell && !ids(value.inside, 0)) ||
+    (value.ordinal !== undefined && !(Number.isInteger(value.ordinal) && value.ordinal >= 1 && value.ordinal <= 10000)) ||
     selection.profileContourId !== undefined) throw Error('A connected sketch region needs distinct source contour identities, without a single-contour reference.');
 }
 export function profileRegionIdentity(selection: ProfileRegionSelection): string {
-  return JSON.stringify(selection.profileRegion ? { contours: [...selection.profileRegion.contourIds].sort() } : selection.profileContourId ?? null);
+  const r = selection.profileRegion;
+  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...(r.inside?.length ? { inside: [...r.inside].sort() } : {}), ...(r.ordinal ? { ordinal: r.ordinal } : {}) } : selection.profileContourId ?? null);
 }
-export function matchesProfileRegion(selection: ProfileRegionSelection, candidate: { contourId?: string; sourceContourIds?: string[] }): boolean {
+export function matchesProfileRegion(selection: ProfileRegionSelection, candidate: { contourId?: string; sourceContourIds?: string[]; insideContourIds?: string[]; ordinal?: number }): boolean {
   return selection.profileRegion
-    ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds } })
+    ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal } })
     : selection.profileContourId !== undefined ? candidate.contourId === selection.profileContourId : false;
 }

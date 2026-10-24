@@ -3,6 +3,7 @@ import { contourClosed } from '../../sketch/drawing';
 import { curveIntersections } from '../../sketch/curves/pairs';
 import { polynomialRoots } from '../../sketch/curves/intersections';
 import { circleSegments } from '../../sketch/curves/picking';
+import { sketchArrangement } from '../regions/arrangement';
 
 type Path = Extract<SketchContour, { type: 'path' }>;
 export interface ConnectedSketchRegion {
@@ -181,9 +182,54 @@ export function resolveConnectedSketchRegion(drawing: SketchDrawing, contourIds:
   return region;
 }
 
+export interface SketchFaceRegion {
+  /** Transient UI identity: the contour's index for a contour's own region; past the
+   *  last contour for a cell of the arrangement. Saved features use contour IDs. */
+  contourIndex: number;
+  contour: SketchContour;
+  /** Islands taken out of the region (arrangement cells only). */
+  holes?: Path[];
+  sourceContourIndices: number[];
+  sourceContourIds?: string[];
+  /** Arrangement cells: the closed contours whose interior holds it. */
+  insideContourIndices?: number[];
+  insideContourIds?: string[];
+  /** Arrangement cells sharing sources and containers, told apart by position. */
+  ordinal?: number;
+  cell?: true;
+}
+
+/** The sketch's arrangement cells, when its shapes overlap, nest, or are cut by
+ *  curves (SolidCraft's find_profiles); undefined when each closed contour is a
+ *  region of its own, or the arrangement cannot be built exactly. */
+export function sketchArrangementRegions(drawing: SketchDrawing): SketchFaceRegion[] | undefined {
+  const faces = sketchArrangement(drawing);
+  if (!faces) return undefined;
+  const closedCount = drawing.contours.filter(c => !c.construction && !(c.type === 'path' && c.infinite) && contourClosed(c)).length;
+  const trivial = faces.length === closedCount && faces.every(f => !f.holes.length && f.sourceContourIndices.length === 1 &&
+    f.insideContourIndices.length === 1 && f.insideContourIndices[0] === f.sourceContourIndices[0]);
+  if (trivial) return undefined;
+  const idsOf = (indices: number[]) => { const ids = indices.map(i => drawing.contours[i]?.id); return ids.every((v): v is string => !!v) ? ids : undefined; };
+  const signature = (f: (typeof faces)[number]) => JSON.stringify([f.sourceContourIndices, f.insideContourIndices]);
+  const groups = new Map<string, (typeof faces)[number][]>();
+  for (const f of faces) groups.set(signature(f), [...(groups.get(signature(f)) ?? []), f]);
+  for (const list of groups.values()) list.sort((a, b) => a.sample[0] - b.sample[0] || a.sample[1] - b.sample[1]);
+  return faces.map((f, k) => {
+    const group = groups.get(signature(f))!;
+    return {
+      contourIndex: drawing.contours.length + k, contour: f.boundary, holes: f.holes,
+      sourceContourIndices: f.sourceContourIndices, sourceContourIds: idsOf(f.sourceContourIndices),
+      insideContourIndices: f.insideContourIndices, insideContourIds: idsOf(f.insideContourIndices),
+      ...(group.length > 1 ? { ordinal: group.indexOf(f) + 1 } : {}), cell: true as const,
+    };
+  });
+}
+
 /** One region projection shared by canvas filling, picking and job translation.
  * The index is transient UI identity only; saved features use contributor IDs. */
-export function sketchFaceRegions(drawing: SketchDrawing) {
+export function sketchFaceRegions(drawing: SketchDrawing): SketchFaceRegion[] {
+  const cells = sketchArrangementRegions(drawing);
+  if (cells) return cells;
   const closed = drawing.contours.flatMap((contour, index) => contour.construction || !contourClosed(contour) ? [] : [{
     contourIndex: index, contour, sourceContourIndices: [index], sourceContourIds: contour.id ? [contour.id] : undefined,
   }]);
