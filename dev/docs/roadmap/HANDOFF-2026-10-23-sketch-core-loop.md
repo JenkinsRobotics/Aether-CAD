@@ -1,5 +1,28 @@
 # Handoff — 2026-10-23: the sketch core loop
 
+## Continuation — Codex, 2026-10-23
+
+r65 is installed and ready. The final selector correction is `c6c042b` on
+`alpha-0.1`. Engine 1,083 tests, the nine corrected in-world checks, production
+build, all 16 tools-browser workflows and bracket/bent-pipe/table models pass.
+The promotion preserved 74 database tables, schema, host, workers and other apps;
+PostgreSQL was not restarted. Nothing was pushed.
+
+Region work continues in `Aether-CAD-regions-review` on `wip/sketch-arrangement`.
+Exact intersection cells now reach the 2D/3D pickers and the evaluator; references
+use source/container IDs and directed boundary spans, preserving legacy picks.
+The expanded engine suite passes 1,105 tests. The full UI pass exposed derived
+fill/source-curve classification and isolated-worktree asset loading issues;
+all 247 affected checks pass after correction. Three test teardown paths now
+drain pending React work before removing browser globals (13 checks pass without
+unhandled errors). Production and automation builds pass. Mouse drawing proves
+three overlap cells and their half-cylinder extrusion; face cut/add, upstream
+edit and reopen qualification are still in progress. Current evidence and remaining headless findings are recorded in
+`../AetherStudio/dev/docs/reality/CAD_Functional_Audit_2026-10-23.md`.
+
+The original handoff below is retained as the starting-state record.
+
+
 Jonathan's priority, in his words: planes first, then a sketch plane you can place
 anywhere without breaking, then sketches on it that form closed contours and
 identify the zones that can be extruded, then extrusions and other features from

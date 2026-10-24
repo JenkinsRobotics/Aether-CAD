@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const sources = ["aether-engine/src/document", "aether-engine/src/sketch"];
+const sources = ["aether-engine/src/document", "aether-engine/src/sketch", "aether-engine/src/sketch/reference"];
 export const OUTPUT = join(root, "src/operations/feature-schemas.generated.ts");
 
 /** Every exported interface/type declaration in the core, by name. */

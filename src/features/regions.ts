@@ -1,3 +1,4 @@
+import { regionBoundaryIdentity } from "@aether/core/sketch/reference/connected-sketch-regions";
 import { identifySketchContour, resolveProfileDrawing } from "../aether-core";
 import { takePickedSketchRegion } from "../sketch-region-selection";
 import { sketchRegions } from "@aether/core/document";
@@ -8,10 +9,30 @@ import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/
  *  `presentFeatureWindow` removes the original <label>, so the row cannot be
  *  found by walking up from the control afterwards. */
 const regionRows = new WeakMap<Element, HTMLElement>();
+const circleControls = new WeakSet<Element>();
+/** Existing features can still name an authored whole contour. Keep that pick
+ * available while offering the new cells, rather than silently changing geometry. */
+export function featureRegionChoices(context: FeatureEditorContext, sketch: import('@aether/core/document').PartFeature, curves = false) {
+  const faces = sketchRegions(sketch, curves, context.doc.features);
+  if (curves || !context.feature) return faces;
+  const feature = context.feature;
+  const saved = feature.profileSelections ?? feature.sections ?? [{ ...feature, profileFeatureId: feature.profileFeatureId ?? sketch.id }];
+  const selectedIds = saved.filter((p: any) => p.profileFeatureId === sketch.id).flatMap((p: any) => p.profileContourIds ?? (p.profileContourId ? [p.profileContourId] : []));
+  const wholeSketch = feature.profileFeatureId === sketch.id && !feature.profileSelections && !feature.profileContourId && !feature.profileContourIds && !feature.profileRegion;
+  const legacy = sketchRegions(sketch, true, context.doc.features).filter(r => r.closed !== false && (wholeSketch || (r.contourId && selectedIds.includes(r.contourId))) && !faces.some(face => face.contourIndex === r.contourIndex));
+  return [...faces, ...legacy.map(r => ({ ...r, label: `${r.label} · original profile` }))];
+}
+function controlRegions(context: FeatureEditorContext, source: Controls[string], region: Controls[string]) {
+  const sketch = context.doc.features.find(f => f.id === source.value);
+  return !sketch ? [] : circleControls.has(region)
+    ? sketchRegions(sketch, true, context.doc.features).filter(r => r.circle)
+    : featureRegionChoices(context, sketch);
+}
+
 
 function announceRegion(context: FeatureEditorContext, source: Controls[string], region: Controls[string]) {
   const sketch = context.doc.features.find(f => f.id === source.value);
-  const regions = sketch ? sketchRegions(sketch, false, context.doc.features) : [];
+  const regions = controlRegions(context, source, region);
   const indices = region instanceof window.HTMLSelectElement && region.multiple ? Array.from(region.selectedOptions, o => Number(o.value)) : region.value ? [Number(region.value)] : [];
   const selectedRegions = regions.filter(r => indices.includes(r.contourIndex));
   const selected = selectedRegions[0];
@@ -21,7 +42,7 @@ function announceRegion(context: FeatureEditorContext, source: Controls[string],
   if (hint?.classList.contains("cad-region-selection-summary")) hint.textContent = selected
     ? `${selectedRegions.length} of ${regions.length} closed regions selected.${region instanceof window.HTMLSelectElement && region.multiple ? " Enclosed contours form holes. Ctrl/Cmd-click to select several regions." : " Only this region will be used."}`
     : `Choose a closed region in the viewport or dropdown. Selecting the sketch does not select all its regions.`;
-  window.dispatchEvent(new CustomEvent("aether-region-mode", { detail: { active: true, sourceId: source.value, contourIndex: selected?.contourIndex ?? null, contourIndices: indices, regionMode: region instanceof window.HTMLSelectElement && region.multiple } }));
+  window.dispatchEvent(new CustomEvent("aether-region-mode", { detail: { active: true, circleMode: circleControls.has(region), legacySelections: selectedRegions.filter(r => !r.cell && r.contourId).map(r => ({featureId:source.value,contourIndex:r.contourIndex})), sourceId: source.value, contourIndex: selected?.contourIndex ?? null, contourIndices: indices, regionMode: region instanceof window.HTMLSelectElement && region.multiple } }));
 }
 
 /** Fill the region picker from whichever sketch is currently chosen.
@@ -34,8 +55,7 @@ export function syncRegions(
   source: Controls[string],
   region: Controls[string],
 ) {
-  const sketch = context.doc.features.find((f) => f.id === source.value);
-  const regions = sketch ? sketchRegions(sketch, false, context.doc.features) : [];
+  const regions = controlRegions(context, source, region);
   region.replaceChildren();
   for (const candidate of regions) {
     const option = document.createElement("option");
@@ -99,22 +119,26 @@ export function stampProfileSelections(
   const selected = picks.map(pick => {
     const feature = doc.features.find(f => f.id === pick.featureId);
     if (!feature || feature.suppressed || !('profile' in feature)) throw Error('Select an available source sketch.');
-    const region = sketchRegions(feature, curves, doc.features).find(r => r.contourIndex === pick.contourIndex);
+    const region = featureRegionChoices(staged, feature, curves).find(r => r.contourIndex === pick.contourIndex);
     if (!region) throw Error('That sketch region is no longer available. Reselect it.');
     const base = { profileFeatureId: feature.id };
     if (feature.profile.type === 'projection') throw Error('Pick a region on an authored sketch, not a projected one.');
     if (feature.type === 'sketch' || (feature.profile.type !== 'drawing' && !identifyPrimitives)) return base;
     if (!region.sourceContourIndices) return { ...base, profileContourId: stampRegion(staged, feature.id, pick.contourIndex) };
     const drawing = resolveProfileDrawing(doc.features, feature.id);
-    const ids = region.sourceContourIndices.map(index => {
+    const identify = (index: number) => {
       const contour = drawing.contours[index];
       if (!contour) throw Error('A connected sketch region source is missing.');
       identifySketchContour(contour, () => crypto.randomUUID());
       return contour.id!;
-    });
+    };
+    const ids = region.sourceContourIndices.map(identify);
+    const inside = region.insideContourIndices?.map(identify);
+    if (region.ordinal) throw Error('This region has ambiguous source boundaries. Add a divider or select a different region.');
+    const boundary = region.boundarySides ? regionBoundaryIdentity(drawing, region.boundarySides) : undefined;
     delete drawing.pierceContext;
     feature.profile = drawing;
-    return { ...base, profileRegion: { contourIds: ids } };
+    return { ...base, profileRegion: { contourIds: ids, ...(inside ? { inside } : {}), ...(boundary ? { boundary } : {}) } };
   });
   validatePartDocument(doc);
   context.doc.features = doc.features;
@@ -122,8 +146,9 @@ export function stampProfileSelections(
 }
 
 
-export function regionControls(context: FeatureEditorContext, source: Controls[string], label = "Region", multiple = false) {
+export function regionControls(context: FeatureEditorContext, source: Controls[string], label = "Region", multiple = false, circles = false) {
   const region = context.field(label, "", [""]);
+  if (circles) circleControls.add(region);
   if (multiple && region instanceof window.HTMLSelectElement) { region.multiple = true; region.size = 4; region.style.height = "auto"; region.style.minHeight = "5.5rem"; }
   source.addEventListener("change", () => syncRegions(context, source, region));
   syncRegions(context, source, region);

@@ -1,8 +1,6 @@
-/** The regions of a sketch a solid feature can be built on, as the pickers list
- *  them: one per closed contour (or the sole profile), plus the closed regions
- *  several open curves enclose together. The engine's evaluator keys its own
- *  regions the same way (the contour id, or the sketch id for a sole region),
- *  so a pick here names the region it builds. */
+/** Shared region projection for sketch display, picking and feature references.
+ * Overlaps, nesting and dividers use arrangement cells; ordinary isolated loops
+ * retain their contour indices. Curve callers can request authored entities. */
 import { resolveProfileDrawing } from "./profile-projection";
 import { sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
 import type { SketchContour, SketchDrawing } from "../sketch/drawing";
@@ -13,12 +11,19 @@ export interface SketchRegion {
   engineId: string;
   /** The contour's own stable id, when it has one. */
   contourId?: string;
-  /** Where the contour sits in the sketch. */
+  /** Transient picker index; cells start after the authored contour indices. */
   contourIndex: number;
   /** A region enclosed by several open curves references its sources. */
   sourceContourIndices?: number[];
   sourceContourIds?: string[];
+  insideContourIndices?: number[];
+  insideContourIds?: string[];
+  ordinal?: number;
+  boundary?: string[];
+  boundarySides?: import("../sketch/regions/arrangement").ArrangementFace["sides"];
   previewContour?: SketchContour;
+  holes?: SketchContour[];
+  cell?: true;
   /** The circle a hole can be centred on. */
   circle?: boolean;
   /** What to call it in a picker. */
@@ -44,6 +49,14 @@ export function sketchRegions(feature: PartFeature, includeOpen = false, history
   if (profile.type !== "drawing") return [];
   const drawing = profile as unknown as SketchDrawing;
   const contours = drawing.contours ?? [];
+  const faces = includeOpen ? [] : sketchFaceRegions(drawing);
+  if (faces.some(face => face.cell)) return faces.map((face, index) => ({
+    engineId: `${feature.id}#cell#${index}`, contourIndex: face.contourIndex,
+    sourceContourIndices: face.sourceContourIndices, sourceContourIds: face.sourceContourIds,
+    insideContourIndices: face.insideContourIndices, insideContourIds: face.insideContourIds,
+    ordinal: face.ordinal, boundary: face.boundary, boundarySides: face.boundarySides, previewContour: face.contour, holes: face.holes,
+    cell: face.cell, closed: true, label: `Region ${index + 1}`,
+  }));
   const regions: SketchRegion[] = [];
   contours.forEach((contour, index) => {
     if (contour.construction) return;
@@ -63,7 +76,7 @@ export function sketchRegions(feature: PartFeature, includeOpen = false, history
     const straight = closed && segments.every((segment) => segment.type === "line") && segments.length >= 3;
     regions.push({ engineId, contourId: contour.id, contourIndex: index, closed, label: straight ? `${label} · ${segments.length} sides` : `${label} · ${closed ? "curved" : "open path"}` });
   });
-  for (const boundary of sketchFaceRegions(drawing)) {
+  for (const boundary of faces) {
     if (boundary.sourceContourIndices.length < 2) continue;
     const sources = boundary.sourceContourIndices.map((index) => regions.find((region) => region.contourIndex === index && !region.sourceContourIndices));
     if (sources.some((source) => !source || source.closed !== false)) continue;

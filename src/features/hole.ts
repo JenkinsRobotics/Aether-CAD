@@ -1,5 +1,5 @@
 import { sketchRegions, type SolidFaceReference } from "@aether/core/document";
-import {layoutRegion, regionControls, selectedRegion} from './regions';
+import {layoutRegion, regionControls, stampProfileSelections} from './regions';
 import {faceIdentity, mountPickedReferences} from './picked-references';
 import {requireSelections, layoutParameterRows, type FeatureEditor} from './shared';
 
@@ -14,7 +14,7 @@ export const holeEditor: FeatureEditor = {
     const placement = feature?.placement;
     return {
       placement: field('Placement', placement ? 'face' : 'sketch', ['sketch', 'face']),
-      source, region: regionControls(context, source, 'Circular region'),
+      source, region: regionControls(context, source, 'Circular region', false, true),
       allCircles: field('Every circle of the sketch', feature?.allCircles ? 'yes' : 'no', ['no', 'yes']),
       face: field('Hole face', JSON.stringify(placement ? [placement.face] : [])),
       pointX: field('Point X (mm)', String(placement?.pointMillimeters[0] ?? 0)),
@@ -77,8 +77,8 @@ export const holeEditor: FeatureEditor = {
     }
     if (!controls.source.value) return 'Choose a center sketch, or a face to drill into.';
     const sketch = context.doc.features.find(feature => feature.id === controls.source.value);
-    if (controls.allCircles.value === 'yes') return sketch && sketchRegions(sketch, false, context.doc.features).some(r => r.circle) ? null : 'The sketch has no circles.';
-    const region = sketch && sketchRegions(sketch, false, context.doc.features).find(region => String(region.contourIndex) === controls.region.value);
+    if (controls.allCircles.value === 'yes') return sketch && sketchRegions(sketch, true, context.doc.features).some(r => r.circle) ? null : 'The sketch has no circles.';
+    const region = sketch && sketchRegions(sketch, true, context.doc.features).find(region => String(region.contourIndex) === controls.region.value);
     if (!region?.circle) return 'Choose a circular sketch region for the hole center.';
     return null;
   },
@@ -89,7 +89,7 @@ export const holeEditor: FeatureEditor = {
     return {
       ...(face
         ? { placement: { kind: 'face-point', face: picked, pointMillimeters: [Number(values.pointX), Number(values.pointY), Number(values.pointZ)] } }
-        : values.allCircles === 'yes' ? { profileFeatureId: values.source, allCircles: true } : { profileFeatureId: values.source, ...selectedRegion(values, context) }),
+        : values.allCircles === 'yes' ? { profileFeatureId: values.source, allCircles: true } : stampProfileSelections(context, [{featureId: values.source, contourIndex: Number(values.region)}], true)[0]),
       cutType: values.cutType, diameterMillimeters: Number(values.diameter),
       depthType: values.depthType, depthMillimeters: Number(values.depth),
       ...(values.cutType !== 'plain' ? {counterDiameterMillimeters: Number(values.counterDiameter)} : {}),

@@ -194,8 +194,10 @@ export interface SketchFaceRegion {
   /** Arrangement cells: the closed contours whose interior holds it. */
   insideContourIndices?: number[];
   insideContourIds?: string[];
-  /** Arrangement cells sharing sources and containers, told apart by position. */
+  /** Ambiguous duplicate boundary signature; unsuitable for saved selections. */
   ordinal?: number;
+  boundary?: string[];
+  boundarySides?: import("../regions/arrangement").ArrangementFace["sides"];
   cell?: true;
 }
 
@@ -206,8 +208,10 @@ export function sketchArrangementRegions(drawing: SketchDrawing): SketchFaceRegi
   const faces = sketchArrangement(drawing);
   if (!faces) return undefined;
   const closedCount = drawing.contours.filter(c => !c.construction && !(c.type === 'path' && c.infinite) && contourClosed(c)).length;
-  const trivial = faces.length === closedCount && faces.every(f => !f.holes.length && f.sourceContourIndices.length === 1 &&
-    f.insideContourIndices.length === 1 && f.insideContourIndices[0] === f.sourceContourIndices[0]);
+  const joined = connectedSketchRegions(drawing).regions;
+  const trivial = faces.length === closedCount + joined.length && faces.every(f => !f.holes.length && (
+    (f.sourceContourIndices.length === 1 && f.insideContourIndices.length === 1 && f.insideContourIndices[0] === f.sourceContourIndices[0]) ||
+    (!f.insideContourIndices.length && joined.some(r => r.contourIndices.length === f.sourceContourIndices.length && r.contourIndices.every(i => f.sourceContourIndices.includes(i))))));
   if (trivial) return undefined;
   const idsOf = (indices: number[]) => { const ids = indices.map(i => drawing.contours[i]?.id); return ids.every((v): v is string => !!v) ? ids : undefined; };
   const signature = (f: (typeof faces)[number]) => JSON.stringify([f.sourceContourIndices, f.insideContourIndices]);
@@ -220,14 +224,30 @@ export function sketchArrangementRegions(drawing: SketchDrawing): SketchFaceRegi
       contourIndex: drawing.contours.length + k, contour: f.boundary, holes: f.holes,
       sourceContourIndices: f.sourceContourIndices, sourceContourIds: idsOf(f.sourceContourIndices),
       insideContourIndices: f.insideContourIndices, insideContourIds: idsOf(f.insideContourIndices),
-      ...(group.length > 1 ? { ordinal: group.indexOf(f) + 1 } : {}), cell: true as const,
+      ...(group.length > 1 ? {
+        boundarySides: f.sides,
+        boundary: regionBoundaryIdentity(drawing, f.sides),
+        // Mark duplicate signatures so pickers refuse a position-based reference.
+        ...(group.filter(other => JSON.stringify(regionBoundaryIdentity(drawing, other.sides, true)) === JSON.stringify(regionBoundaryIdentity(drawing, f.sides, true))).length > 1 ? { ordinal: group.indexOf(f) + 1 } : {}),
+      } : {}), cell: true as const,
     };
   });
 }
 
 /** One region projection shared by canvas filling, picking and job translation.
  * The index is transient UI identity only; saved features use contributor IDs. */
+const faceCache = new WeakMap<SketchDrawing, { signature: string; regions: SketchFaceRegion[] }>();
 export function sketchFaceRegions(drawing: SketchDrawing): SketchFaceRegion[] {
+  // Pointer movement redraws unchanged sketches. Geometry is mutable during a
+  // gesture, so object identity alone cannot be used to cache the arrangement.
+  const signature = JSON.stringify(drawing.contours);
+  const cached = faceCache.get(drawing);
+  if (cached?.signature === signature) return cached.regions;
+  const regions = deriveSketchFaceRegions(drawing);
+  faceCache.set(drawing, { signature, regions });
+  return regions;
+}
+function deriveSketchFaceRegions(drawing: SketchDrawing): SketchFaceRegion[] {
   const cells = sketchArrangementRegions(drawing);
   if (cells) return cells;
   const closed = drawing.contours.flatMap((contour, index) => contour.construction || !contourClosed(contour) ? [] : [{
@@ -238,4 +258,15 @@ export function sketchFaceRegions(drawing: SketchDrawing): SketchFaceRegion[] {
     sourceContourIndices: region.contourIndices, sourceContourIds: region.contourIds,
   }));
   return [...closed, ...joined].sort((a, b) => a.contourIndex - b.contourIndex);
+}
+
+/** Source-span directions distinguish the two sides of a divider even after a
+ * sketch is rotated. Coordinates and transient contour order are never identity. */
+export function regionBoundaryIdentity(drawing: SketchDrawing, sides: import("../regions/arrangement").ArrangementFace["sides"], useIndices = false): string[] | undefined {
+  if (!useIndices && sides.some(side => !drawing.contours[side.contour]?.id)) return undefined;
+  return [...new Set(sides.map(side => {
+    const contour = drawing.contours[side.contour];
+    const span = contour.type === 'path' && side.segment !== null ? (contour.segments[side.segment].id ?? side.segment) : 'circle';
+    return JSON.stringify([useIndices ? side.contour : contour.id, span, side.forward]);
+  }))].sort();
 }

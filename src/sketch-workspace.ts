@@ -826,7 +826,7 @@ export function openSketchWorkspace(
     selectedRegion = region;
     setPickedSketchRegion({ featureId: featureID, contourIndex: region });
     renderSelection();
-    message.textContent = `Region ${region + 1} selected — pick a solid tool to build on it.`;
+    message.textContent = `Region ${sketchFaceRegions(drawing).findIndex(r => r.contourIndex === region) + 1} selected — pick a solid tool to build on it.`;
   }
   function render() {
     win.setError(supportIssue??(pierceIssues.length?`Pierce: ${pierceIssues[0].message} Open Constraints to repair or remove the source.`:null));
@@ -869,7 +869,7 @@ export function openSketchWorkspace(
       (state.message ? ` · ${state.message}` : "");
     const profiles = drawing.contours.filter(c => !c.construction);
     const closed = profiles.filter(contourClosed).length;
-    message.textContent = constraints.tool.active() ? constraints.tool.prompt() : `${frame ? "Planar face" : plane} · ${tool} · ${closed} closed / ${profiles.length - closed} open profiles. ${instructions[tool] ?? ""}`;
+    message.textContent = constraints.tool.active() ? constraints.tool.prompt() : `${frame ? "Planar face" : plane} · ${tool} · ${closed} closed / ${profiles.length - closed} open profiles · ${sketchFaceRegions(drawing).length} selectable regions. ${instructions[tool] ?? ""}`;
     renderSketchCanvas(svg, drawing, bounds, pending, dimensionPositions);
     if (showConstraints) renderConstraintMarks(svg, drawing, bounds,
       surface ? 18 * (surface.scaleAt() ?? bounds.width / 800) : bounds.width / 60);

@@ -2,7 +2,7 @@ import { matchesProfileRegion } from '@aether/core/sketch/reference/profile-regi
 import { sketchRegions } from "@aether/core/document";
 import { takePickedSketchRegion } from "../sketch-region-selection";
 import { cadWorkspace } from "../cad-workspace-store";
-import { stampProfileSelections } from "./regions";
+import { featureRegionChoices, stampProfileSelections } from "./regions";
 import type { Controls, Control, FeatureEditorContext } from "./shared";
 
 type Pick = { featureId: string; contourIndex: number };
@@ -19,7 +19,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   const selections = context.field("Selected profiles", "[]");
   const sketches = context.doc.features.filter(f => [...(source as HTMLSelectElement).options].some(o => o.value === f.id));
   const curves=()=>creationMode?.value==='thin';
-  const regions = (id: string) => { const f = sketches.find(f => f.id === id); return f ? sketchRegions(f,curves(),context.doc.features) : []; };
+  const regions = (id: string) => { const f = sketches.find(f => f.id === id); return f ? featureRegionChoices(context,f,curves()) : []; };
   const initial: Pick[] = [];
   const feature = context.feature;
   if (feature?.profileSelections) {
@@ -30,7 +30,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   } else if (feature?.profileFeatureId) {
     const ids = feature.profileContourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
     const choices = regions(feature.profileFeatureId);
-    for (const r of choices.filter(r => feature.profileRegion ? matchesProfileRegion(feature, r) : ids ? ids.includes(r.contourId) : choices.length === 1)) initial.push({featureId: feature.profileFeatureId, contourIndex: r.contourIndex});
+    for (const r of choices.filter(r => feature.profileRegion ? matchesProfileRegion(feature, r) : ids ? ids.includes(r.contourId) : !r.cell)) initial.push({featureId: feature.profileFeatureId, contourIndex: r.contourIndex});
   }
   selections.dataset.initial = JSON.stringify(initial);
   initialByContext.set(context, selections.dataset.initial);
@@ -40,7 +40,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   const syncRegion = () => {
     region.replaceChildren(...regions(source.value).map(r => {
       const option = document.createElement("option"); option.value = String(r.contourIndex);
-      option.textContent = `${curves()?"Curve":"Face"} ${r.contourIndex + 1}`;
+      option.textContent = curves() ? `Curve ${r.contourIndex + 1}` : r.label;
       option.selected = read().some(p => p.featureId === source.value && p.contourIndex === r.contourIndex);
       return option;
     }));
@@ -55,8 +55,8 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       const label=box.element.querySelector('.aui-feature-entities-caption');
       if(label)label.textContent=caption;
     }
-    box?.render(picks.map(p => ({label: `${curves()?"Curve":"Face"} ${p.contourIndex + 1} of ${sketches.find(f => f.id === p.featureId)?.name ?? "sketch"}`, onRemove: () => update(picks.filter(other => key(other) !== key(p)))})));
-    window.dispatchEvent(new CustomEvent("aether-region-mode", {detail: {active:pickingActive, curveMode:curves(), regionMode: feature?.regionMode === "faces" || !feature || selections.value !== selections.dataset.initial, selections:picks, allowedSourceIds:sketches.map(f=>f.id)}}));
+    box?.render(picks.map(p => ({label: `${curves()?`Curve ${p.contourIndex + 1}`:regions(p.featureId).find(r=>r.contourIndex===p.contourIndex)?.label ?? "Missing region"} of ${sketches.find(f => f.id === p.featureId)?.name ?? "sketch"}`, onRemove: () => update(picks.filter(other => key(other) !== key(p)))})));
+    window.dispatchEvent(new CustomEvent("aether-region-mode", {detail: {active:pickingActive, curveMode:curves(), regionMode: feature?.regionMode === "faces" || !feature || selections.value !== selections.dataset.initial, selections:picks, legacySelections:picks.filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex && r.contourId && !r.cell)), allowedSourceIds:sketches.map(f=>f.id)}}));
   };
   pickingModes.set(selections,active=>{pickingActive=active;render();});
   const update = (picks: Pick[]) => {

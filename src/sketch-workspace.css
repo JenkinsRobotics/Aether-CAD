@@ -105,7 +105,7 @@ svg.cad-sketch-canvas .sketch-dimension text:hover,svg.cad-sketch-canvas .sketch
 svg.cad-sketch-canvas .sketch-dimension path { fill:none; stroke:var(--aether-color-accent,#399cff); stroke-width:1; vector-effect:non-scaling-stroke; pointer-events:none; }
 
 /* Per-entity state overrides whole-sketch color; geometry fills and selection stay separate. */
-svg.cad-sketch-canvas .sketch-region-fill.sketch-contour { stroke: none; }
+svg.cad-sketch-canvas .sketch-region-fill { stroke: none; }
 svg.cad-sketch-canvas .sketch-entity-edge { fill:none; stroke-width:1.8px; vector-effect:non-scaling-stroke; pointer-events:none; }
 svg.cad-sketch-canvas .sketch-entity-edge.construction { stroke-dasharray:8 5; opacity:.7; }
 svg.cad-sketch-canvas [data-entity-constraint-state="under-constrained"] { stroke:var(--cad-sketch-geometry, #0000ff); }
