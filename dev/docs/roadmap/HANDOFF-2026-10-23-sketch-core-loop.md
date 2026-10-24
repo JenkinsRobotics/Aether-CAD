@@ -42,15 +42,23 @@ package bound, so a narrow host change raises the operator package bound to
 32 MiB; client document/request/response limits stay unchanged. Its release
 build and the boundary acceptance/refusal tests pass.
 
-**r66 is qualified but not installed.** Its matching CAD frontend/worker needs that host change.
-The CAD release contract permits frontend-only generations, so a concrete staged
-host/worker update requires Jonathan's separate approval before live cutover.
-Use `.verification/cad-functional-audit-2026-10-23/promote-r66.py` in Studio.
-`stage` verifies the exact gated frontend/worker/host fingerprints and carries
-other apps from the latest marker. Run `promote` only after Jonathan approves
-the host/worker cutover. If the marker advances, restage from the new marker
-instead of loosening the guard. Preserve Map and every other app.
-Do not run the old frontend-only r66 promoter with this 18 MiB worker.
+**r66 was installed on 2026-10-24 with Jonathan's one-time approval.**
+The stale r19 stage was archived and rebuilt from `map-visualizer-20261023-r23`.
+Generation: `cad-aether-engine-20261020-r66`; host SHA-256:
+`cf73339a4ec95fe6840fac694587a8afa2cc462a544ac3f2d14d7e2dc876445f`.
+Map's 3,520 frontend files, player downloads and settings are unchanged, along
+with every other app, network-r1 TLS/binding support and schema 26/5/3/4.
+The server is ready, live Map/Pi public routes and certificate checks pass;
+authenticated Map library/editor/modes and app.zip match in the disposable-host
+check. No production fixture login, portal changes, database migration/restart
+or remote push. The matching CAD worker and 32 MiB package-limit host are active.
+
+The guarded release tooling and record are in `../AetherStudio/dev/rebuild/cad-r66/`.
+The install-change guard remains mandatory. Future CAD generations retain their
+normal frontend-only scope unless their matching worker/host change is authorized.
+Studio and CAD now use `alpha-0.1`; Jonathan is handling Map's branch.
+Independent app updates without a full Studio restart are now separately
+requested Studio development; they are not part of the r66 installed host.
 
 Evidence, exact remaining gates and limits are in
 `../AetherStudio/dev/docs/reality/CAD_Functional_Audit_2026-10-23.md` and
