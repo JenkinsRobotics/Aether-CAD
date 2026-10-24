@@ -19,6 +19,9 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "transform") return `${feature.transform.kind} · ${feature.bodyIds.length} parts${feature.copyBodyIds ? " · copies" : ""}`;
   if (feature.type === "boss") return `Ø${feature.diameterMillimeters} × ${feature.heightMillimeters} mm${feature.holeDiameterMillimeters ? ` · Ø${feature.holeDiameterMillimeters} hole` : ""}`;
   if (feature.type === "sheet-perforate") return `Ø${feature.diameterMillimeters} at ${feature.pitchMillimeters} mm · ${feature.pattern ?? "staggered"}`;
+  if (feature.type === "surface-trim") return `at ${feature.plane.kind === "principal" ? `${feature.plane.plane} ${feature.plane.offsetMillimeters} mm` : "a plane"}`;
+  if (feature.type === "split-face") return `${feature.faces.length} face${feature.faces.length === 1 ? "" : "s"} split`;
+  if (feature.type === "boundary-fill") return `${feature.cellPointsMillimeters.length} cell${feature.cellPointsMillimeters.length === 1 ? "" : "s"} of ${feature.toolBodyIds.length} tools · ${feature.operation}`;
   if (feature.type === "lip") return `${feature.shape} ${feature.side} · ${feature.widthMillimeters} × ${feature.heightMillimeters} mm`;
   if (feature.type === "snap-fit") return `${feature.lengthMillimeters} × ${feature.thicknessMillimeters} × ${feature.widthMillimeters} mm · catch ${feature.catchDepthMillimeters}`;
   if (feature.type === "rest") return `${feature.widthMillimeters}${feature.lengthMillimeters ? ` × ${feature.lengthMillimeters}` : " Ø"} × ${feature.heightMillimeters} mm`;

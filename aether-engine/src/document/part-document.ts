@@ -405,7 +405,7 @@ export function validatePartDocument(
       const outputs=feature.copyBodyIds?Object.values(feature.copyBodyIds):[];
       for(const id of outputs){if(bodies.has(id))throw Error('Copy outputs need new body identities.');bodies.add(id);}
     } else if (
-      (isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
+      (isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
       "operation" in feature && feature.operation === "new"
     ) {
       const id =

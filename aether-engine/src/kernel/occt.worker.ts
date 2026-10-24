@@ -133,7 +133,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     if (request.type === "sketch-section") {
       await prepareFor(request.document);
-      const response: WorkerResponse = { type: "sketch-sectioned", requestId: request.requestId, contours: sketchSectionContours(request.document, request.frame, request.kind) };
+      const response: WorkerResponse = { type: "sketch-sectioned", requestId: request.requestId, contours: sketchSectionContours(request.document, request.frame, request.kind, request.axis) };
       self.postMessage(response);
       return;
     }

@@ -52,9 +52,9 @@ export class InProcessKernelClient {
     await this.prepare(document);
     try { return analyzePart(document, options); } catch (error) { return rethrow(error); }
   }
-  async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges"): Promise<import("../sketch/drawing").SketchContour[]> {
+  async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]): Promise<import("../sketch/drawing").SketchContour[]> {
     await this.prepare(document);
-    try { return sketchSectionContours(document, frame, kind); } catch (error) { return rethrow(error); }
+    try { return sketchSectionContours(document, frame, kind, axis); } catch (error) { return rethrow(error); }
   }
   async exportPart(document: PartDocument, options: ExportOptions): Promise<ExportResult> {
     await this.prepare(document);

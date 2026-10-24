@@ -44,9 +44,9 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
         tool("solid-variable-fillet", "Variable Fillet", "fillet", undefined, solidProducer),
         tool("solid-face-fillet", "Face Fillet", "fillet", undefined, solidProducer),
       ]},
-      tool("solid-boolean", "Boolean", "boolean", "feature-boolean"),
+      {...tool("solid-boolean", "Boolean", "boolean", "feature-boolean"), variants: [tool("solid-boundary-fill", "Boundary Fill", "boolean", "feature-boundary-fill")]},
       tool("solid-shell", "Shell", "shell", "feature-shell"),
-      tool("solid-split", "Split", "split", "feature-split"),
+      {...tool("solid-split", "Split", "split", "feature-split"), variants: [tool("solid-split-face", "Split Face", "split", "feature-split-face")]},
       {...tool("solid-push-pull", "Push/Pull", "push-pull", "feature-face-extrude"), variants:[
         tool("solid-offset-face", "Move faces", "push-pull", "feature-offset-face"),
       ]},

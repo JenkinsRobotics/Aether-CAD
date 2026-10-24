@@ -1487,7 +1487,7 @@ window.addEventListener("aether-sketch-face-request", (event) => {
   const support = frame && face && activePartDocument ? supportForFace(activePartDocument, face.partId, frame, face.label, beforeFeatureId,anchor??undefined) : undefined;
   window.dispatchEvent(new CustomEvent("aether-sketch-face", {detail: frame && support ? {frame, ...face, support} : {error: frame ? "Select a face on an earlier body in this Part's history, or use its plane as a fixed plane." : "Select a flat face first. Curved surfaces cannot support a planar sketch.", ...(frame ? {fixedFrame: frame, label: face?.label} : {})}}));
 });
-for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "two-tangent-circle", "three-tangent-circle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
+for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "fit-section", "spun-profile", "two-tangent-circle", "three-tangent-circle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
   cadCommands.register(`sketch-${tool}`, () => { window.dispatchEvent(new CustomEvent("aether-sketch-tool", {detail:tool})); });
   cadCommands.setEnabled(`sketch-${tool}`, false);
 }

@@ -18,6 +18,10 @@ import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid
 import {validateThread, type ThreadFeature} from './thread';
 import {validateCoil, type CoilFeature} from './coil';
 import {validateCurve3D, type Curve3DFeature} from './curve3d';
+import {validateBoundaryFill, type BoundaryFillFeature} from './boundary-fill';
+import {validateSplitFace, type SplitFaceFeature} from './split-face';
+export type {SplitFaceFeature} from './split-face';
+export type {BoundaryFillFeature} from './boundary-fill';
 export type {Curve3DFeature} from './curve3d';
 import {validateSurfaceFeature, surfaceFeatureTypes, type SurfaceFeature} from './surface';
 import {validateSheetMetalFeature, sheetMetalFeatureTypes, type SheetMetalFeature} from './sheet-metal';
@@ -164,7 +168,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -176,6 +180,8 @@ export function validateSolidFeature(
   if (feature.type === "pipe") return validatePipe(feature,earlier,missingReference);
   if (feature.type === "coil") return validateCoil(feature);
   if (feature.type === "curve3d") return validateCurve3D(feature);
+  if (feature.type === "boundary-fill") return validateBoundaryFill(feature);
+  if (feature.type === "split-face") return validateSplitFace(feature, earlier, missingReference as (id: string) => boolean);
   if ((surfaceFeatureTypes as readonly string[]).includes(feature.type)) return validateSurfaceFeature(feature as SurfaceFeature, earlier, missingReference);
   if ((sheetMetalFeatureTypes as readonly string[]).includes(feature.type)) return validateSheetMetalFeature(feature as SheetMetalFeature, earlier, missingReference);
   if (feature.type === "boss") return validateBoss(feature,earlier,missingReference as (id:string)=>boolean);

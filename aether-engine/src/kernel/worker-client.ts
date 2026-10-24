@@ -112,9 +112,9 @@ export class OCCTWorkerClient {
     return this.send<AnalysisResult>({ type: "analyze-part", document, options });
   }
 
-  async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges"): Promise<import("../sketch/drawing").SketchContour[]> {
+  async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]): Promise<import("../sketch/drawing").SketchContour[]> {
     await this.ready;
-    return this.send<import("../sketch/drawing").SketchContour[]>({ type: "sketch-section", document, frame, kind });
+    return this.send<import("../sketch/drawing").SketchContour[]>({ type: "sketch-section", document, frame, kind, ...(axis ? { axis } : {}) });
   }
 
   async exportPart(document: PartDocument, options: ExportOptions): Promise<ExportResult> {

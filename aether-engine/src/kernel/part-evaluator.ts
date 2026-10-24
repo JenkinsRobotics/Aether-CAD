@@ -50,6 +50,7 @@ import {
   type EdgeFinder,
   type RadiusConfig, type FilletRadius, type ChamferRadius,
 } from "replicad";
+import { planeToolFace, splitFacesByTool } from "./general-fuse";
 import { makeLine as makeLine3D, makeBSplineApproximation as approximateBSpline, makeCompound, makeVertex } from "replicad";
 
 /** A feature this engine cannot build yet; the caller may try another engine. */
@@ -433,7 +434,7 @@ export function cachedSteps(documentId: string): number { return steps.get(docum
 /** Evaluates persisted features into an exact OCCT solid; meshes are disposable. */
 export function evaluatePartDocument(
   document: PartDocument,
-  options: { preview?: boolean; withBodies?: (bodies: ReadonlyMap<string, Shape3D>) => void } = {},
+  options: { preview?: boolean; withBodies?: (bodies: ReadonlyMap<string, Shape3D>) => void; withMeshes?: (meshes: ReadonlyMap<string, MeshPart>) => void } = {},
 ): ImportedModelData {
   validatePartDocument(document);
   const started = performance.now();
@@ -1241,6 +1242,62 @@ export function evaluatePartDocument(
           bodies.set(feature.targetBodyId, own(result));
           tools.set(feature.id, tool);
           currentBodyID = feature.targetBodyId;
+          continue;
+        }
+        if (feature.type === "split-face") {
+          // Each picked face split by a large face on the plane (general fuse); its pieces replace
+          // it, and the part is sewn back into one solid of the same volume.
+          const id = feature.targetBodyId, body = bodies.get(id);
+          if (!body) throw new Error("Split face needs an available part.");
+          const o = getOC() as any, plane = mirrorPlaneOf(feature.plane);
+          const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(plane.origin.x, plane.origin.y, plane.origin.z));
+          const tool = own(planeToolFace([plane.origin.x, plane.origin.y, plane.origin.z], [plane.zDir.x, plane.zDir.y, plane.zDir.z], size));
+          const picked = feature.faces.map((ref) => own(faceByReference(body, ref, "Face to split")));
+          const split = splitFacesByTool(picked, tool);
+          if (split.some((pieces) => pieces.length < 2)) throw new Error("The plane does not cross a picked face.");
+          const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
+          try {
+            for (const face of body.faces) { if (!picked.some((p) => p.isSame(face))) sewing.Add(face.wrapped); face.delete(); }
+            for (const piece of split.flat()) { sewing.Add(piece.wrapped); own(piece); }
+            sewing.Perform(progress);
+            let result = cast(sewing.SewedShape()) as any;
+            if ((result.wrapped as any).ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
+              const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid()) as Shape3D;
+              result = measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid;
+            }
+            if (!isShape3D(result) || Math.abs(measureVolume(result) - measureVolume(body)) > 1e-6 * Math.max(1, measureVolume(body))) throw new Error("The split faces could not be sewn back into the part.");
+            bodies.set(id, own(result as Shape3D)); currentBodyID = id;
+          } finally { progress.delete(); sewing.delete(); }
+          continue;
+        }
+        if (feature.type === "surface-trim") {
+          // Trim: the sheet's faces split by a large face on the plane; the pieces on the keep
+          // point's side stay, sewn back into one sheet.
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Trim needs an available surface body.");
+          const o = getOC() as any, plane = mirrorPlaneOf(feature.plane);
+          const origin: V3 = [plane.origin.x, plane.origin.y, plane.origin.z], normal: V3 = [plane.zDir.x, plane.zDir.y, plane.zDir.z];
+          const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin));
+          const side = (p: readonly number[]) => (p[0] - origin[0]) * normal[0] + (p[1] - origin[1]) * normal[1] + (p[2] - origin[2]) * normal[2];
+          const keep = side(feature.keepPointMillimeters);
+          if (Math.abs(keep) < 1e-9) throw new Error("The keep point lies on the trimming plane. Move it to the side to keep.");
+          const tool = own(planeToolFace(origin, normal, size));
+          const faces = body.faces.map((f) => own(f));
+          const pieces = splitFacesByTool(faces, tool).flat().map((p) => own(p));
+          // A piece's side: a point inside it, the centre of its parameter box (pieces are on one side or the other).
+          const kept = pieces.filter((p) => { const q = p.pointOnSurface(0.5, 0.5); const s = side([q.x, q.y, q.z]); q.delete(); return s * keep > 0; });
+          if (!kept.length) throw new Error("Nothing of the surface lies on the keep point's side.");
+          if (kept.length === pieces.length) throw new Error("The plane does not cross the surface.");
+          const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
+          try {
+            for (const p of kept) sewing.Add(p.wrapped);
+            sewing.Perform(progress);
+            const raw = sewing.SewedShape(), shape = cast(raw) as any;
+            let sheet: Shape3D;
+            if (isShape3D(shape)) sheet = shape;
+            else { const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, raw); sheet = cast(shell) as Shape3D; }
+            bodies.set(id, own(sheet)); currentBodyID = id;
+          } finally { progress.delete(); sewing.delete(); }
           continue;
         }
         if (feature.type === "remove-body") {
@@ -2188,6 +2245,24 @@ export function evaluatePartDocument(
           catch (error) { throw new Error(error instanceof Error && error.message.startsWith("Sweep") ? error.message : "Sweep could not be built along that path. Check that the profile sits on the path and the path does not self-intersect.", { cause: error }); }
           if (!isShape3D(swept as Shape3D) || measureVolume(swept as Shape3D) <= 1e-9) throw new Error("Sweep did not produce a solid.");
           tool = own((swept as Shape3D).simplify());
+        } else if (feature.type === "boundary-fill") {
+          // Each picked point: inside the tools that contain it (distance zero), outside the rest.
+          const tools = feature.toolBodyIds.map((id) => { const b = bodies.get(id); if (!b) throw new Error("A boundary fill tool body is unavailable."); return [id, b] as const; });
+          const cells: Shape3D[] = [];
+          for (const p of feature.cellPointsMillimeters) {
+            const v = own(makeVertex(p as V3));
+            const inside = tools.filter(([, b]) => measureDistanceBetween(b, v) < 1e-7), outside = tools.filter((t) => !inside.includes(t));
+            if (!inside.length) throw new Error(`The point ${p.map((x) => Math.round(x * 1000) / 1000).join(", ")} is outside every tool: a cell must lie inside at least one.`);
+            let cell: Shape3D = own(inside[0][1].clone());
+            for (const [, b] of inside.slice(1)) { const r = cell.intersect(b); if (!isShape3D(r)) throw new Error("A cell is empty."); cell = own(r); }
+            for (const [, b] of outside) { const r = cell.cut(b); if (!isShape3D(r)) throw new Error("A cell is empty."); cell = own(r); }
+            if (measureVolume(cell) <= 1e-9) throw new Error("A picked cell has no volume.");
+            cells.push(cell);
+          }
+          let filled = cells[0];
+          for (const c of cells.slice(1)) { const r = filled.fuse(c); if (!isShape3D(r)) throw new Error("The cells could not be joined."); filled = own(r); }
+          tool = filled;
+          if (feature.removeTools) for (const [id] of tools) bodies.delete(id);
         } else if (feature.type === "coil") {
           // Coil: a round wire swept along a helix (Frenet frame keeps the section square to it).
           const center: V3 = feature.centerMillimeters ? [...feature.centerMillimeters] as V3 : [0, 0, 0];
@@ -3161,6 +3236,7 @@ export function evaluatePartDocument(
       featurePreview = { featureId: previewId, base: previewBase, added: removes ? [] : [part], removed: removes ? [part] : [], ...(previewAxes.length ? { extrusionAxes: previewAxes } : {}) };
     }
     options.withBodies?.(bodies);
+    options.withMeshes?.(meshParts);
     const names = availableBodies(document);
     return {
       sourceName: document.name + ".acpart",

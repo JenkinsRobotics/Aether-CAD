@@ -6,6 +6,7 @@ import { evaluatePartDocument, release, solidsOf } from "./part-evaluator";
 import { buildPartGeometry } from "./part-geometry";
 import { analyzeCurves } from "./curve-analysis";
 import { deriveCurves } from "./derived-curves";
+import { prismaticMeshProfile } from "./mesh-convert";
 import type { PartDocument } from "../document/index";
 import type { AnalysisOptions, AnalysisResult, PartGeometryData } from "../contracts/index";
 
@@ -51,7 +52,13 @@ function volumeProperties(shape: Shape3D, about?: V3): { mass: number; center: V
 
 export function analyzePart(document: PartDocument, options: AnalysisOptions): AnalysisResult {
   let shapes = new Map<string, Shape3D>();
-  evaluatePartDocument(document, { withBodies: (bodies) => { shapes = new Map(bodies); } });
+  let meshes = new Map<string, { vertices: ArrayLike<number>; triangles: ArrayLike<number> }>();
+  evaluatePartDocument(document, { withBodies: (bodies) => { shapes = new Map(bodies); }, withMeshes: (m) => { meshes = new Map(m); } });
+  if (options.kind === "mesh_convert") {
+    const id = options.bodyIds?.[0] ?? [...meshes.keys()][0], mesh = id ? meshes.get(id) : undefined;
+    if (!mesh) throw new Error("Choose a mesh reference body to convert.");
+    return { status: "ok", kind: options.kind, bodies: [], measurements: [{ body_id: id, ...prismaticMeshProfile(mesh, options.tolerance_mm ?? 0.05) }] };
+  }
   if (!shapes.size) throw new Error("Analysis needs at least one solid body.");
   const bodies: PartGeometryData[] = [], measurements: Record<string, unknown>[] = [];
   const render = (shape: Shape3D, id: string) => {

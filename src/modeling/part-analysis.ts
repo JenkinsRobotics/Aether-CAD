@@ -14,11 +14,11 @@ const CURVE_KINDS: readonly Kind[] = ["continuity", "curvature_comb", "isocurve"
 type CurveOverlay = { label: string; color: string; polylines: [number, number, number][][] };
 /** The engine answers with measurements and, for sections and interference, meshes to show. */
 type AnalysisAnswer = { status: "ok"; measurements: Record<string, unknown>[]; parts?: ImportedModelData["parts"]; curves?: CurveOverlay[] };
-export async function analyzePart(doc: PartDocument, analysis: { kind: Kind | "distance" | "intersection_curve" | "isoparametric_curve" | "project_curve"; plane?: string; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; entities?: readonly object[]; count?: number; scale?: number; radius_mm?: number; uv?: "u" | "v"; polylines?: [number, number, number][][]; direction?: [number, number, number] }, signal?: AbortSignal) {
+export async function analyzePart(doc: PartDocument, analysis: { kind: Kind | "distance" | "intersection_curve" | "isoparametric_curve" | "project_curve" | "mesh_convert"; bodyIds?: string[]; plane?: string; offset_mm?: number; reverse?: boolean; density_kg_m3?: number; entities?: readonly object[]; count?: number; scale?: number; radius_mm?: number; uv?: "u" | "v"; polylines?: [number, number, number][][]; direction?: [number, number, number] }, signal?: AbortSignal) {
   void signal;
   if (analysis.kind === "distance") return onEngine<AnalysisAnswer>({ aether: async () => measureOnAether(doc, (analysis.entities ?? []) as MeasureReference[]) as unknown as AnalysisAnswer });
-  const { kind, plane, offset_mm, reverse, density_kg_m3, count, scale, radius_mm, uv, polylines, direction } = analysis;
-  return onEngine<AnalysisAnswer>({ aether: () => analyzeOnAether(doc, { kind, plane: plane as "XY" | "XZ" | "YZ" | undefined, offset_mm, reverse, density_kg_m3, count, scale, radius_mm, uv, polylines, direction, entities: analysis.entities as MeasureReference[] | undefined }) });
+  const { kind, plane, offset_mm, reverse, density_kg_m3, count, scale, radius_mm, uv, polylines, direction, bodyIds } = analysis;
+  return onEngine<AnalysisAnswer>({ aether: () => analyzeOnAether(doc, { kind, plane: plane as "XY" | "XZ" | "YZ" | undefined, offset_mm, reverse, density_kg_m3, count, scale, radius_mm, uv, polylines, direction, bodyIds, entities: analysis.entities as MeasureReference[] | undefined }) });
 }
 
 

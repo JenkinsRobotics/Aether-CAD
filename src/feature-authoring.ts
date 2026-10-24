@@ -4,6 +4,7 @@ const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "
 import { mountConstructionCommands } from "./construction-commands";
 import { mountSheetMetalCommands } from "./sheet-metal-commands";
 import { mountPlasticRulesCommands } from "./plastic-rules-window";
+import { mountMeshConvertCommand } from "./mesh-convert-command";
 import { mountConfigurationCommands } from "./configurations-window";
 import { mountTimelinePaste } from "./timeline-clipboard-commands";
 import { mountPreviewHandles } from "./features/preview-handles";
@@ -50,6 +51,7 @@ export function mountFeatureAuthoring(
   mountSheetMetalCommands(getDocument);
   mountConfigurationCommands(getDocument, apply);
   mountPlasticRulesCommands(getDocument, apply);
+  mountMeshConvertCommand(getDocument, apply);
   mountTimelinePaste(getDocument, apply);
   const actions = document.createElement("div");
   const error = document.createElement("p");
@@ -256,7 +258,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-trim","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);

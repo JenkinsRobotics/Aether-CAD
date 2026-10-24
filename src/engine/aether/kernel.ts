@@ -21,7 +21,7 @@ function inProcess(): KernelClient {
     measureDistance: (document, entities) => real().then((c) => c.measureDistance(document, entities)),
     analyzePart: (document, options) => real().then((c) => c.analyzePart(document, options)),
     checkContacts: (input) => real().then((c) => c.checkContacts(input)),
-    sketchSection: (document, frame, kind) => real().then((c) => c.sketchSection(document, frame, kind)),
+    sketchSection: (document, frame, kind, axis) => real().then((c) => c.sketchSection(document, frame, kind, axis)),
     exportPart: (document, options) => real().then((c) => c.exportPart(document, options)),
     importSTEP: (file) => real().then((c) => c.importSTEP(file)),
     dispose: () => { void loading?.then((c) => c.dispose()); },
