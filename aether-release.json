@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "app": "cad",
+  "source_branch": "alpha-0.1",
+  "package": "package.json",
+  "frontend": "dist",
+  "worker": "service/aether_cad_service/runtime/native-worker.json",
+  "downloads": null
+}

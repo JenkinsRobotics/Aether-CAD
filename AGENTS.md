@@ -1,3 +1,12 @@
+## Independent app releases — Jonathan, 2026-10-24
+
+This repository is the authoritative source for this app. Develop on `alpha-0.1`.
+`aether-release.json` identifies its frontend and optional worker/player outputs.
+Build and verify here, commit the source locally, then stage an immutable
+`alpha-0.1.N` package through Studio's operator tooling. Studio serves the selected
+release; it must not run a development checkout or overwrite another app.
+See `RELEASING.md`. Do not push or promote to master without separate approval.
+
 ## GitHub checkout handoff — 2026-10-10
 
 Active development is now in `Aether-CAD`. The existing app snapshot was
