@@ -222,5 +222,7 @@ export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines }
 
 export { contourNestingDepths } from "./regions/nesting";
 export { autoConstrainDrawing, autoConstrainFromDatum } from "./operations/auto-constrain";
+export { blendCurve } from "./operations/blend-curve";
+export { controlPointSpline } from "./curves/control-spline";
 export { sketchDrawingToDXF } from "./export/dxf";
 export { looseEnds } from "./operations/loose-ends";

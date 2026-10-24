@@ -2,13 +2,13 @@ import { renderSnapFeedback } from "./snap-feedback";
 import { isDirectModificationTool } from "./tool-instructions";
 import { directModification } from "./direct-modification";
 import { previewTangentArc } from "./tangent-arc-tool";
+import { splineContour, splineMode } from "./spline-mode";
 import { conicPlacement, type ConicRhoInput } from '@aether/core/sketch/reference/conic-authoring';
 import { conicKind } from '@aether/core/sketch/reference/conic-geometry';
 
 import {
   pickCurve,
   contourClosed,
-  fitSketchSpline,
   sketchVariantTools,
   sketchVariantPointCounts,
   sketchVariantContour,
@@ -142,7 +142,9 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
       points.push(p);
     if (points.length >= 2) {
       try {
-        const contour = fitSketchSpline(points, { closed: closing });
+        const contour = splineContour(points, closing);
+        // A control-point spline also shows its control polygon.
+        if (splineMode.value !== "fit") svg.append(el("path", { d: `M ${points.map((q) => `${q[0]} ${-q[1]}`).join(" L ")}`, class: "sketch-preview-layer sketch-preview sketch-control-polygon" }));
         if (contour.type === "path")
           svg.append(
             el("path", {

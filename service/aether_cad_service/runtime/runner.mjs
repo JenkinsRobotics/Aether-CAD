@@ -467,7 +467,7 @@ function validateSurfaceFeature(feature, earlier, missing) {
       return;
     case "surface-loft":
       if (!Array.isArray(feature.sections) || feature.sections.length < 2) throw new Error("Surface loft needs at least two sections.");
-      for (const section of feature.sections) sketchRef(section.profileFeatureId, earlier, "Surface loft section");
+      for (const section2 of feature.sections) sketchRef(section2.profileFeatureId, earlier, "Surface loft section");
       return;
     case "surface-patch":
       sketchRef(feature.profileFeatureId, earlier, "Patch");
@@ -1255,7 +1255,7 @@ function sketchEntityPoint(d, r) {
   }
   return r.index === 0 ? c.start : c.segments[r.index - 1]?.end;
 }
-function resolve(d, r) {
+function resolve$1(d, r) {
   const c = referencedContour(d, r);
   r = resolveSegmentReference(c, r);
   if (!c) throw new Error("Constraint references missing geometry.");
@@ -1377,7 +1377,7 @@ function measuredDimensionValue(d, c) {
   if (c.value !== void 0 || c.valueFrom !== void 0 || c.valueSign !== void 0 || c.valueScale !== void 0 || c.valueOffset !== void 0)
     throw Error("Reference dimensions cannot contain driving values or links.");
   if (c.kind === "conic-rho") return referencedConic(d, c.a).rho;
-  const a = resolve(d, c.a), b = c.b ? resolve(d, c.b) : void 0;
+  const a = resolve$1(d, c.a), b = c.b ? resolve$1(d, c.b) : void 0;
   if ((c.kind === "radius" || c.kind === "diameter") && a.circle)
     return a.circle.radius * (c.kind === "diameter" ? 2 : 1);
   if (c.kind === "length" && a.line)
@@ -1574,7 +1574,7 @@ function splineEndTangentResiduals(path, constraint) {
 }
 function fixedEntityGeometry(drawing, ref) {
   if (ref.projectedContourId !== void 0) throw Error("Projected geometry is already read-only. Fix authored geometry instead.");
-  resolve(drawing, ref);
+  resolve$1(drawing, ref);
   const contour = drawing.contours[ref.contour];
   ref = resolveSegmentReference(contour, ref);
   if (ref.kind === "point") throw Error("A point Fix uses its point target.");
@@ -1648,7 +1648,7 @@ function patternSourceContour(d, ref) {
       ...source.sourceLayer !== void 0 ? { sourceLayer: source.sourceLayer } : {},
       construction: source.construction
     };
-  const e = resolve(d, ref);
+  const e = resolve$1(d, ref);
   if (ref.kind === "contour" && source) return source;
   if (ref.kind === "circle" && source?.type === "circle") return source;
   if (e.point)
@@ -2872,8 +2872,8 @@ function closedSlotResiduals(d, c) {
   if (c.a.kind !== "contour" || c.b?.kind !== "contour" || source?.type !== "path" || c.slotBoundary !== "inner" && c.slotBoundary !== "outer")
     throw Error("Closed slot boundary references are invalid.");
   return offsetResiduals(
-    resolve(d, c.a),
-    resolve(d, c.b),
+    resolve$1(d, c.a),
+    resolve$1(d, c.b),
     closedSlotOffset(source, c.slotBoundary, dimensionValue(d, c))
   );
 }
@@ -4025,14 +4025,14 @@ function pierceTargetReference(drawing, target, point2) {
   const contour = drawing.contours[target.contour];
   const ref = resolveSegmentReference(contour, structuredClone(target));
   if (ref.kind === "point") {
-    if (ref.parameter !== void 0 || ref.sliding !== void 0 || !resolve(drawing, ref).point)
+    if (ref.parameter !== void 0 || ref.sliding !== void 0 || !resolve$1(drawing, ref).point)
       throw Error("Invalid Pierce point target.");
     return ref;
   }
   if (ref.kind === "circle" && contour?.type === "circle") {
     if (ref.parameter !== void 0 || ref.sliding !== void 0 || ref.control !== void 0)
       throw Error("Invalid Pierce circle target.");
-    resolve(drawing, ref);
+    resolve$1(drawing, ref);
     return ref;
   }
   if (contour?.type !== "path" || !["line", "arc", "ellipse", "curve"].includes(ref.kind) || ref.control !== void 0)
@@ -4046,7 +4046,7 @@ function pierceTargetReference(drawing, target, point2) {
   return { ...ref, kind: "curve", parameter: parameter2, sliding: true };
 }
 function targetPoint(drawing, a, point2) {
-  const entity = resolve(drawing, a);
+  const entity = resolve$1(drawing, a);
   if (entity.circle) {
     const { center, radius } = entity.circle;
     const dx = point2[0] - center[0], dy = point2[1] - center[1], length = Math.hypot(dx, dy);
@@ -4164,11 +4164,11 @@ function constraintResiduals(d, c) {
       validatePatternSuppression(d, c);
       return [];
     }
-    const target = c.b ? resolve(d, c.b).contour : void 0;
+    const target = c.b ? resolve$1(d, c.b).contour : void 0;
     if (c.axis) {
       if (c.transform)
         throw Error("A live mirror axis cannot also have a fixed transform.");
-      const axis = resolve(d, c.axis).line;
+      const axis = resolve$1(d, c.axis).line;
       if (!axis) throw Error("Select a line.");
       return patternResiduals(
         source,
@@ -4178,7 +4178,7 @@ function constraintResiduals(d, c) {
     }
     return patternResiduals(source, target, patternRelationTransform(d, c));
   }
-  const a = resolve(d, c.a), b = c.b ? resolve(d, c.b) : void 0;
+  const a = resolve$1(d, c.a), b = c.b ? resolve$1(d, c.b) : void 0;
   const point2 = (e) => {
     if (!e?.point) throw new Error("Select a point.");
     return e.point;
@@ -4315,7 +4315,7 @@ function constraintResiduals(d, c) {
       return symmetricResiduals(
         a,
         b,
-        c.axis ? resolve(d, c.axis) : void 0,
+        c.axis ? resolve$1(d, c.axis) : void 0,
         c.splineReversed
       );
     case "slot":
@@ -4994,7 +4994,7 @@ function localPierceValidation(drawing) {
   }
   for (const c of drawing.constraints ?? []) {
     validatePierceConstraint(c);
-    if (c.kind === "pierce") resolve(drawing, c.a);
+    if (c.kind === "pierce") resolve$1(drawing, c.a);
   }
   return { ...drawing, constraints: drawing.constraints?.filter((c) => c.kind !== "pierce") };
 }
@@ -5107,7 +5107,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       for (const end of [f, f.secondEnd]) if (end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
     }
     if (f.type === "boolean") refs.push(...f.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f.type === "loft") refs.push(...f.sections.map((section) => section.profileFeatureId));
+    if (f.type === "loft") refs.push(...f.sections.map((section2) => section2.profileFeatureId));
     if ("profileFeatureId" in f && f.profileFeatureId) refs.push(f.profileFeatureId);
     if (f.type === "hole" && f.placement) refs.push(f.placement.face.sourceFeatureId);
     if (f.type === "extrude" && f.endType === "up-to-face" && f.endReference) refs.push(f.endReference.sourceFeatureId);
@@ -5734,13 +5734,13 @@ function validateLoft(feature, earlier, missing) {
   if (!Array.isArray(feature.sections) || feature.sections.length + apexes.length < 2 || !feature.sections.length)
     throw new Error("Loft needs at least two ordered sections (sketches, or a sketch and an apex).");
   const identities = /* @__PURE__ */ new Set();
-  for (const section of feature.sections) {
-    if (!section || typeof section.profileFeatureId !== "string" || !missing(section.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(section.profileFeatureId) ?? ""))
+  for (const section2 of feature.sections) {
+    if (!section2 || typeof section2.profileFeatureId !== "string" || !missing(section2.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(section2.profileFeatureId) ?? ""))
       throw new Error("Each loft section must reference an earlier sketch.");
-    if (section.profileContourId !== void 0 && (typeof section.profileContourId !== "string" || !section.profileContourId.trim() || section.profileContourId.length > 128))
+    if (section2.profileContourId !== void 0 && (typeof section2.profileContourId !== "string" || !section2.profileContourId.trim() || section2.profileContourId.length > 128))
       throw new Error("Invalid loft contour reference.");
-    validateProfileRegionSelection(section);
-    const identity = JSON.stringify([section.profileFeatureId, profileRegionIdentity(section)]);
+    validateProfileRegionSelection(section2);
+    const identity = JSON.stringify([section2.profileFeatureId, profileRegionIdentity(section2)]);
     if (identities.has(identity)) throw new Error("A loft section cannot be selected twice.");
     identities.add(identity);
   }
@@ -36915,8 +36915,8 @@ function evaluatePartDocument(document2, options = {}) {
               const length = feature.depthType === "through-all" ? throughAllDistance([body], center, direction) : depth;
               const cylinder = (radius, extent) => own(makeCylinder(radius, extent, center, direction));
               const frustum = (topRadius, bottomRadius, height) => {
-                const section = own(draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius, -height]).lineTo([0, -height]).close());
-                let cone = own(section.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
+                const section2 = own(draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius, -height]).lineTo([0, -height]).close());
+                let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
                 if (!isShape3D(cone)) throw new Error("The hole tool is not a valid solid.");
                 cone = own(cone);
                 const from = [0, 0, -1];
@@ -36984,8 +36984,8 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature.type === "boss") publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: add$2(base, scale(xDir, feature.diameterMillimeters / 2)), direction: xDir, scale: 2, label: "Boss diameter" });
             const taper = (radius) => Math.max(radius - height * Math.tan(draft), radius * 0.05);
             const frustum = (bottomRadius, topRadius, h) => {
-              const section = own(draw([0, 0]).lineTo([bottomRadius, 0]).lineTo([topRadius, h]).lineTo([0, h]).close());
-              let cone = own(section.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
+              const section2 = own(draw([0, 0]).lineTo([bottomRadius, 0]).lineTo([topRadius, h]).lineTo([0, h]).close());
+              let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
               if (!isShape3D(cone)) throw new Error("The boss is not a valid solid.");
               cone = own(cone);
               const from = [0, 0, 1], d = dot$2(from, outward);
@@ -37853,10 +37853,10 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.lineTo(innerEnd);
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
-              const section = own(pen.close());
+              const section2 = own(pen.close());
               const zdir = unit$1(cross$2(o, n)), from = dot$2(zdir, tdir) > 0 ? a : b;
               const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
-              const piece = own(section.sketchOnPlane(plane2)).extrude(length);
+              const piece = own(section2.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
               const fused = result.fuse(own(piece));
               if (!isShape3D(fused)) throw new Error(`${options2.what} did not join the sheet.`);
@@ -37920,11 +37920,11 @@ function evaluatePartDocument(document2, options = {}) {
             pen.threePointsArcTo(at(r + t, alpha), at(r + t, alpha / 2));
             pen.lineTo(at(r, alpha));
             pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
-            const section = own(pen.close());
+            const section2 = own(pen.close());
             const zdir = unit$1(cross$2(o, n));
             const start = add$2(p, scale(tdir, dot$2(zdir, tdir) > 0 ? s0 : s1));
             const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
-            const bend = own(own(section.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
+            const bend = own(own(section2.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
             const axisOrigin = add$2(p, scale(n, feature.inward ? r : -(t + r)));
             const sign = feature.inward ? 1 : -1;
             const turned = own(own(moving.translate(-o[0] * ba, -o[1] * ba, -o[2] * ba)).rotate(sign * feature.angleDegrees, axisOrigin, tdir));
@@ -38146,7 +38146,7 @@ function evaluatePartDocument(document2, options = {}) {
             tool22 = own(source.clone().mirror(mirrorPlaneOf(feature.mirrorPlane ?? { kind: "principal", plane: feature.plane, offsetMillimeters: feature.offsetMillimeters })));
           } else if (feature.type === "loft") {
             if (feature.sections.length + [feature.startPoint, feature.endPoint].filter(Boolean).length < 2) throw new Error("Loft requires at least two ordered sections.");
-            const wires = feature.sections.map((section) => sketchWire(section.profileFeatureId, section.profileContourId, "Loft section", false, section.profileRegion ? section : void 0));
+            const wires = feature.sections.map((section2) => sketchWire(section2.profileFeatureId, section2.profileContourId, "Loft section", false, section2.profileRegion ? section2 : void 0));
             const apex = (a) => !a ? void 0 : a.kind === "point" ? [...a.positionMillimeters] : stopPoint(a);
             const lofted = loft(wires, { ruled: Boolean(feature.ruled), startPoint: apex(feature.startPoint), endPoint: apex(feature.endPoint) });
             if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("Every loft section must be an available closed sketch region.");
@@ -38444,7 +38444,7 @@ function evaluatePartDocument(document2, options = {}) {
               }
             } else if (feature.type === "surface-loft") {
               const maker = new o.BRepOffsetAPI_ThruSections(false, Boolean(feature.ruled), 1e-6);
-              for (const section of feature.sections) maker.AddWire(sketchWire(section.profileFeatureId, section.contourId, "Surface loft section", true).wrapped);
+              for (const section2 of feature.sections) maker.AddWire(sketchWire(section2.profileFeatureId, section2.contourId, "Surface loft section", true).wrapped);
               maker.Build(progress());
               tool22 = sheetArea(sheetOf(maker.Shape()));
             } else if (feature.type === "surface-patch") {
@@ -39609,6 +39609,189 @@ function solveAssemblyJob(job) {
     diagnostics
   };
 }
+function clipToFace(face, points, tolerance2 = 1e-5) {
+  const runs = [];
+  let run = [];
+  for (const p of points) {
+    const v = makeVertex(p);
+    let on = false;
+    try {
+      on = measureDistanceBetween(face, v) <= tolerance2;
+    } finally {
+      v.delete();
+    }
+    if (on) run.push(p);
+    else if (run.length) {
+      if (run.length > 1) runs.push(run);
+      run = [];
+    }
+  }
+  if (run.length > 1) runs.push(run);
+  return runs;
+}
+function resolve(bodies, entity, own) {
+  const body = bodies.get(entity.body_id);
+  if (!body) throw new Error("Pick faces or bodies of this part.");
+  if (entity.face_id === void 0) return body;
+  let face;
+  for (const item of facesOf(body)) {
+    own(item.face);
+    if (item.id === entity.face_id) face = item.face;
+  }
+  if (!face) throw new Error("A picked face is no longer on the part.");
+  return face;
+}
+function edgePolylines(shape) {
+  const oc = getOC();
+  const pieces = [];
+  const explorer = new oc.TopExp_Explorer_2(shape.wrapped, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+  while (explorer.More()) {
+    const edge = oc.TopoDS.Edge_1(explorer.Current());
+    const adaptor = new oc.BRepAdaptor_Curve_2(edge);
+    const sampler = new oc.GCPnts_TangentialDeflection_2(adaptor, 0.1, 0.01, 2, 1e-9, 1e-7);
+    const points = [];
+    for (let i = 1; i <= sampler.NbPoints(); i++) {
+      const p = sampler.Value(i);
+      points.push([p.X(), p.Y(), p.Z()]);
+      p.delete();
+    }
+    if (points.length > 1) pieces.push(points);
+    sampler.delete();
+    adaptor.delete();
+    explorer.Next();
+  }
+  explorer.delete();
+  const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-4;
+  const chains = [];
+  const left = [...pieces];
+  while (left.length) {
+    let chain = left.shift();
+    for (let grown = true; grown; ) {
+      grown = false;
+      for (let i = 0; i < left.length; i++) {
+        const p = left[i], head2 = chain[0], tail = chain[chain.length - 1];
+        if (near(tail, p[0])) chain = [...chain, ...p.slice(1)];
+        else if (near(tail, p[p.length - 1])) chain = [...chain, ...[...p].reverse().slice(1)];
+        else if (near(head2, p[p.length - 1])) chain = [...p, ...chain.slice(1)];
+        else if (near(head2, p[0])) chain = [...[...p].reverse(), ...chain.slice(1)];
+        else continue;
+        left.splice(i, 1);
+        grown = true;
+        break;
+      }
+    }
+    chains.push(chain);
+  }
+  return chains;
+}
+function section(a, b) {
+  const oc = getOC();
+  const algo = new oc.BRepAlgoAPI_Section_3(a.wrapped, b.wrapped, false);
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    algo.Approximation(true);
+    algo.Build(progress);
+    if (!algo.IsDone()) throw new Error("The section could not be computed.");
+    const result = cast(algo.Shape());
+    try {
+      return edgePolylines(result);
+    } finally {
+      result.delete();
+    }
+  } finally {
+    progress.delete();
+    algo.delete();
+  }
+}
+function deriveCurves(bodies, options) {
+  const owned = [];
+  const own = (s) => {
+    owned.push(s);
+  };
+  try {
+    const entities = options.entities ?? [];
+    if (options.kind === "intersection_curve") {
+      if (entities.length !== 2) throw new Error("Pick two faces or bodies to intersect.");
+      const curves2 = section(resolve(bodies, entities[0], own), resolve(bodies, entities[1], own));
+      if (!curves2.length) throw new Error("The two picks do not meet.");
+      return curves2;
+    }
+    if (options.kind === "isoparametric_curve") {
+      const pick = entities.find((e) => e.face_id !== void 0 && e.edge_index === void 0);
+      if (!pick) throw new Error("Pick a face for the isoparametric curve.");
+      const face = resolve(bodies, pick, own);
+      const { uMin, uMax, vMin, vMax } = face.UVBounds;
+      const at = options.point_mm ?? (() => {
+        const c = face.center;
+        const p = [c.x, c.y, c.z];
+        c.delete();
+        return p;
+      })();
+      const [ua, va] = face.uvCoordinates(at);
+      const u0 = (ua - uMin) / (uMax - uMin || 1), v0 = (va - vMin) / (vMax - vMin || 1);
+      const points = [];
+      for (let i = 0; i <= 64; i++) {
+        const t = i / 64;
+        const p = options.uv === "v" ? face.pointOnSurface(u0, t) : face.pointOnSurface(t, v0);
+        points.push([p.x, p.y, p.z]);
+        p.delete();
+      }
+      const runs = clipToFace(face, points);
+      if (!runs.length) throw new Error("That line misses the face. Pick a point on it.");
+      return runs;
+    }
+    if (options.kind === "project_curve") {
+      const pick = entities.find((e) => e.face_id !== void 0 && e.edge_index === void 0);
+      if (!pick) throw new Error("Pick the face to project onto.");
+      const d = options.direction;
+      if (!d || Math.hypot(...d) < 1e-9) throw new Error("Projection needs a direction.");
+      if (!options.polylines?.length) throw new Error("Choose a sketch with curves to project.");
+      const face = resolve(bodies, pick, own);
+      const oc = getOC();
+      const n = Math.hypot(...d), dir = [d[0] / n, d[1] / n, d[2] / n];
+      const bb = face.boundingBox;
+      const span = Math.hypot(...bb.bounds[1].map((v, i) => v - bb.bounds[0][i])) || 1;
+      bb.delete();
+      const reach = span * 4 + 1e3;
+      const curves2 = [];
+      for (const polyline of options.polylines) {
+        if (polyline.length < 2) continue;
+        const builder = new oc.TopoDS_Builder(), compound = new oc.TopoDS_Compound();
+        builder.MakeCompound(compound);
+        for (let i = 1; i < polyline.length; i++) {
+          const a = polyline[i - 1], b = polyline[i];
+          if (Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-9) continue;
+          const p1 = new oc.gp_Pnt_3(a[0] - dir[0] * reach, a[1] - dir[1] * reach, a[2] - dir[2] * reach), p2 = new oc.gp_Pnt_3(b[0] - dir[0] * reach, b[1] - dir[1] * reach, b[2] - dir[2] * reach);
+          const edge = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2), vec2 = new oc.gp_Vec_4(dir[0] * 2 * reach, dir[1] * 2 * reach, dir[2] * 2 * reach);
+          const prism = new oc.BRepPrimAPI_MakePrism_1(edge.Edge(), vec2, false, true);
+          builder.Add(compound, prism.Shape());
+          prism.delete();
+          vec2.delete();
+          edge.delete();
+          p1.delete();
+          p2.delete();
+        }
+        builder.delete();
+        const sheet = cast(compound);
+        try {
+          curves2.push(...section(sheet, face));
+        } finally {
+          sheet.delete();
+        }
+      }
+      if (!curves2.length) throw new Error("The sketch does not project onto that face along its normal.");
+      return curves2;
+    }
+    throw new Error("Choose intersection, isoparametric or projection.");
+  } finally {
+    owned.forEach((s) => {
+      try {
+        s.delete();
+      } catch {
+      }
+    });
+  }
+}
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
@@ -39783,19 +39966,18 @@ function analyzeCurves(bodies, options) {
       if (!faces.length) throw new Error("Isocurves need a face.");
       const count = Math.max(1, Math.min(64, Math.round(options.count ?? 8)));
       for (const f of faces) {
-        const { uMin, uMax, vMin, vMax } = f.face.UVBounds;
         const line2 = (fixedU, k) => {
           const t = (k + 0.5) / count, pts = [];
           for (let i = 0; i <= 32; i++) {
             const a = i / 32;
-            const p = fixedU ? f.face.pointOnSurface(uMin + (uMax - uMin) * t, vMin + (vMax - vMin) * a) : f.face.pointOnSurface(uMin + (uMax - uMin) * a, vMin + (vMax - vMin) * t);
+            const p = fixedU ? f.face.pointOnSurface(t, a) : f.face.pointOnSurface(a, t);
             pts.push([p.x, p.y, p.z]);
             p.delete();
           }
           return pts;
         };
-        curves2.push({ label: `u ${f.bodyId} face ${f.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_, k) => line2(true, k)) });
-        curves2.push({ label: `v ${f.bodyId} face ${f.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_, k) => line2(false, k)) });
+        curves2.push({ label: `u ${f.bodyId} face ${f.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line2(true, k))).flat() });
+        curves2.push({ label: `v ${f.bodyId} face ${f.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line2(false, k))).flat() });
         measurements.push({ body_id: f.bodyId, face_id: f.faceId, count, surface: f.face.geomType });
       }
     } else if (options.kind === "continuity") {
@@ -40017,6 +40199,9 @@ function analyzePart(document2, options) {
   } else if (options.kind === "continuity" || options.kind === "curvature_comb" || options.kind === "isocurve" || options.kind === "minimum_radius") {
     const result = analyzeCurves(shapes, { kind: options.kind, entities: options.entities, count: options.count, scale: options.scale, radius_mm: options.radius_mm });
     return { status: "ok", kind: options.kind, bodies, measurements: result.measurements, curves: result.curves };
+  } else if (options.kind === "intersection_curve" || options.kind === "isoparametric_curve" || options.kind === "project_curve") {
+    const polylines = deriveCurves(shapes, { kind: options.kind, entities: options.entities, uv: options.uv, point_mm: options.point_mm, polylines: options.polylines, direction: options.direction });
+    return { status: "ok", kind: options.kind, bodies, measurements: polylines.map((p, i) => ({ curve: i, points: p.length })), curves: polylines.map((p, i) => ({ label: `curve ${i + 1}`, color: "#3e8ef7", polylines: [p] })) };
   } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }

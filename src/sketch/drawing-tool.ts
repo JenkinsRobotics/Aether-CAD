@@ -1,11 +1,10 @@
 import { isRectanglePlacement, squareCorner, constrainPlacedSquare } from "./rectangle-placement";
 import { placeTangentArc } from "./tangent-arc-tool";
 import { conicPlacement, createSketchConic, type ConicRhoInput } from '@aether/core/sketch/reference/conic-authoring';
+import { addSplineContour, splineContour } from './spline-mode';
 import {
   inferSketchSemicircle,
   contourClosed,
-  fitSketchSpline,
-  constrainFitSpline,
   constrainSketchRectangle,
   constrainSketchEllipse,
   constrainSketchPolygon,
@@ -78,13 +77,12 @@ export function placeDrawingPoint(
       Math.hypot(p[0] - state.pending[0][0], p[1] - state.pending[0][1]) <
         closeTolerance
     ) {
-      const drawing = structuredClone(state.drawing);
-      const contour = fitSketchSpline(state.pending, { closed: true });
+      const contour = splineContour(state.pending, true);
       if (construction) contour.construction = true;
-      drawing.contours.push(contour);
+      const drawing = addSplineContour(state.drawing, contour);
       validateSketchDrawing(drawing);
       return {
-        drawing: constrainFitSpline(drawing, drawing.contours.length - 1),
+        drawing,
         pending: [],
         activePath: -1,
         committed: true,

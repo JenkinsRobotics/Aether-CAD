@@ -5,6 +5,7 @@ import { getOC, isShape3D, makeBaseBox, measureArea, measureDistanceBetween, mea
 import { evaluatePartDocument, release, solidsOf } from "./part-evaluator";
 import { buildPartGeometry } from "./part-geometry";
 import { analyzeCurves } from "./curve-analysis";
+import { deriveCurves } from "./derived-curves";
 import type { PartDocument } from "../document/index";
 import type { AnalysisOptions, AnalysisResult, PartGeometryData } from "../contracts/index";
 
@@ -140,6 +141,9 @@ export function analyzePart(document: PartDocument, options: AnalysisOptions): A
   } else if (options.kind === "continuity" || options.kind === "curvature_comb" || options.kind === "isocurve" || options.kind === "minimum_radius") {
     const result = analyzeCurves(shapes, { kind: options.kind, entities: options.entities, count: options.count, scale: options.scale, radius_mm: options.radius_mm });
     return { status: "ok", kind: options.kind, bodies, measurements: result.measurements, curves: result.curves };
+  } else if (options.kind === "intersection_curve" || options.kind === "isoparametric_curve" || options.kind === "project_curve") {
+    const polylines = deriveCurves(shapes, { kind: options.kind, entities: options.entities, uv: options.uv, point_mm: options.point_mm, polylines: options.polylines, direction: options.direction });
+    return { status: "ok", kind: options.kind, bodies, measurements: polylines.map((p, i) => ({ curve: i, points: p.length })), curves: polylines.map((p, i) => ({ label: `curve ${i + 1}`, color: "#3e8ef7", polylines: [p] })) };
   } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }

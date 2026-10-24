@@ -37,6 +37,7 @@ import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
 import { openMotionStudyWindow } from "./assembly-motion-window";
+import { mountDerivedCurveCommands } from "./derived-curves-window";
 import { mountTimelineCopy } from "./timeline-clipboard-commands";
 import {
   beginMateAuthoring,
@@ -620,7 +621,7 @@ function selectReference(id: ReferenceGeometryId): void {
 }
 
 cadWorkspace.registerActionHandler((action) => {
-  if(action.type==="move-item"||action.type==="create-folder"||action.type==="rollback-to"||(action.type==="item-action"&&["edit-feature","suppress-feature","rollback-before","rollback-start","rollback-end","body-visibility","body-rename","folder-rename","folder-delete","folder-unnest","rollback-back","rollback-forward","rename-feature","delete-feature"].includes(action.actionID))){
+  if(action.type==="move-item"||action.type==="create-folder"||action.type==="rollback-to"||(action.type==="item-action"&&["edit-feature","suppress-feature","rollback-before","rollback-start","rollback-end","body-visibility","body-rename","folder-rename","folder-delete","folder-unnest","rollback-back","rollback-forward","rename-feature","delete-feature","break-link"].includes(action.actionID))){
     window.dispatchEvent(new CustomEvent('aether-feature-action',{detail:{...action,selectedFeatureIDs:[...selectedFeatureIDs]}}));return;
   }
 
@@ -1419,6 +1420,13 @@ mountFeatureAuthoring(()=>activePartDocument,async doc=>{
  await evaluateAndShowPart(doc,"Feature history updated.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
 });
+// Curves from the model (intersection, isoparametric, projection) become 3D sketch features.
+mountDerivedCurveCommands({
+ getDocument: () => activePartDocument,
+ apply: async doc => { await evaluateAndShowPart(doc, "Curves added as 3D sketch features.", false, { overlay: false }); if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage); },
+ selection: () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null),
+ showCurves: curves => viewer.setAnalysisCurves(curves),
+});
 
 // Point and edge picks for the plane methods that need them (Three point,
 // Angle). Selection already produces vertex/edge items; this hands back their
@@ -1479,7 +1487,7 @@ window.addEventListener("aether-sketch-face-request", (event) => {
   const support = frame && face && activePartDocument ? supportForFace(activePartDocument, face.partId, frame, face.label, beforeFeatureId,anchor??undefined) : undefined;
   window.dispatchEvent(new CustomEvent("aether-sketch-face", {detail: frame && support ? {frame, ...face, support} : {error: frame ? "Select a face on an earlier body in this Part's history, or use its plane as a fixed plane." : "Select a flat face first. Curved surfaces cannot support a planar sketch.", ...(frame ? {fixedFrame: frame, label: face?.label} : {})}}));
 });
-for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "two-tangent-circle", "three-tangent-circle", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
+for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "two-tangent-circle", "three-tangent-circle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
   cadCommands.register(`sketch-${tool}`, () => { window.dispatchEvent(new CustomEvent("aether-sketch-tool", {detail:tool})); });
   cadCommands.setEnabled(`sketch-${tool}`, false);
 }
@@ -1491,7 +1499,7 @@ window.addEventListener("aether-sketch-editing", event => {
 });
 window.addEventListener("aether-sketch-mode", event => {
   const active=Boolean((event as CustomEvent).detail);
-  for(const tool of ["select", "line", "arc", "circle", "rectangle", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) cadCommands.setEnabled(`sketch-${tool}`, active);
+  for(const tool of ["select", "line", "arc", "circle", "rectangle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) cadCommands.setEnabled(`sketch-${tool}`, active);
 });
 
 window.addEventListener("aether-sketch-surface", event => {

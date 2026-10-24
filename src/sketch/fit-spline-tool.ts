@@ -1,11 +1,10 @@
 import {
-  fitSketchSpline,
-  constrainFitSpline,
   validateSketchDrawing,
   type SketchDrawing,
   type SketchPoint,
 } from "@aether/core/sketch";
 import { cadCommands } from "../cad-command-registry";
+import { addSplineContour, splineContour } from "./spline-mode";
 /** UI lifecycle only; interpolation belongs to Core. Pending points do not
  * enter the document until this explicit finish action succeeds. */
 export function mountFitSplineTool(
@@ -52,12 +51,11 @@ export function mountFitSplineTool(
     const s = options.state();
     if (s.tool !== "fit-spline" || s.busy) return;
     try {
-      const contour = fitSketchSpline(s.pending, { closed });
+      const contour = splineContour(s.pending, closed);
       if (s.construction) contour.construction = true;
-      const next = structuredClone(s.drawing);
-      next.contours.push(contour);
+      const next = addSplineContour(s.drawing, contour);
       validateSketchDrawing(next);
-      options.commit(constrainFitSpline(next, next.contours.length - 1));
+      options.commit(next);
     } catch (e) {
       options.error((e as Error).message);
     }

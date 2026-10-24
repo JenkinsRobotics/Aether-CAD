@@ -1122,3 +1122,40 @@ would run past the bottom slides up, one past the right edge opens to the left, 
 taller than the window scrolls. This is the source fix for the Cone menu failure that r58 worked
 around by reordering Solid › Create; the reorder stays. Suites, both UI harnesses and the
 opencascade.js pin were unchanged by the upgrade.
+
+### r60 (2026-10-23): curves from the model
+
+Installed.
+
+Intersection curve, isoparametric curve and project to surface (SolidCraft's
+`sketch.intersection_curve`, `sketch.isoparametric_curve`, `sketch.project_to_surface`) are three
+more analysis kinds in `kernel/derived-curves.ts` that return world polylines; a window previews
+them in the analysis overlay and adds them as 3D sketch features (straight runs as lines, the
+rest as splines through at most 200 samples). Intersection sections two selected faces or bodies
+with `BRepAlgoAPI_Section` and joins the unordered section edges end to end. Isoparametric takes
+the u or v line through the face's centre. Projection sweeps each sketch segment along the
+sketch normal into a ruled sheet (one prism per segment, both ways) and sections it with the
+target face, so the projection runs along a direction, not to the nearest point. The curves are
+computed once and do not follow later edits (SolidCraft links them). Fixed on the way: replicad's
+`pointOnSurface` takes 0..1 over the face's bounds while `uvCoordinates` answers in surface
+parameters, so r53's isocurves were sampled off the face; isocurves are also clipped to the
+trimmed face now (point-to-face distance, since no 2D face classifier is bound), which removes
+the r53 limitation on faces with holes.
+
+### r61 (2026-10-23): blend curve, break link, control-point splines
+
+Installed.
+
+Blend curve (SolidCraft's `sketch.blend_curve`) joins two selected free curve ends with a cubic
+Bézier whose controls leave each end along its curve, a third of the gap out; G1 adds tangent
+relations at both joins (satisfied as placed), G2 adds curvature relations (which include
+tangency) and solves with the source contours held fixed. Break Link (`sketch.break_link`) is a
+feature-tree action on projected sketches: the projected curves are resolved once and kept as
+free geometry ahead of the sketch's own curves, and every relation that named a projected curve
+by its id now names its contour index. Control-point splines (`sketch.spline.control_point`,
+`control_point_5`) are the spline tool in another mode: the clicked points are the control
+polygon of a clamped uniform B-spline. Degree 3 converts exactly to one Bézier per knot span;
+degree 5 has no cubic form, so each span is split in eight and each piece is the cubic Hermite
+matching the true curve's point and tangent at its ends (G1, within 0.05 mm in the test). Few
+points lower the degree. The preview draws the control polygon. Not built: G3/G4 blends, and
+editing a finished control spline by its control points (it is stored as Béziers).

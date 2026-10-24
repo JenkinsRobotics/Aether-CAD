@@ -14,6 +14,7 @@ export * from "./file-types";
 export * from "./feature-history";
 export * from "./component-split";
 export { validateCurve3D, curve3dPolylines, moveCurve3DPoint, type Curve3DFeature } from "./curve3d";
+export { breakProjectionLink } from "./break-link";
 export { STANDARD_PARTS, standardPartLibrary, standardPartDocument, standardPartIssues, standardPartLabel, standardPartVolume, standardPartProperties, standardPartFromProperties, type StandardPartFamily, type StandardPartRequest } from "./standard-parts";
 export { validateConfigRules, applyConfigRules, activateConfiguration, previewConfiguration, setConfigRule, removeConfigRule, type ConfigRule, type RuleCondition, type RuleEffect, type RuleOperator, type RuleTrace } from "./config-rules";
 export { PLASTIC_RULE_LIBRARY, validatePlasticRules, plasticRuleFor, setPlasticRule, removePlasticRule, setActivePlasticRule, assignPlasticRule, type PlasticRule, type PlasticRulesTable } from "./plastic-rules";

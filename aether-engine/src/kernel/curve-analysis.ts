@@ -5,6 +5,7 @@
 import { getOC, type AnyShape, type Edge, type Face, type Shape3D } from "replicad";
 import type { MeasureEntity } from "../contracts/index";
 import { facesOf } from "./exact-topology";
+import { clipToFace } from "./derived-curves";
 
 type V3 = [number, number, number];
 export interface CurveOverlay { label: string; color: string; polylines: V3[][] }
@@ -186,18 +187,19 @@ export function analyzeCurves(bodies: ReadonlyMap<string, Shape3D>, options: Cur
       if (!faces.length) throw new Error("Isocurves need a face.");
       const count = Math.max(1, Math.min(64, Math.round(options.count ?? 8)));
       for (const f of faces) {
-        const { uMin, uMax, vMin, vMax } = f.face.UVBounds;
+        // replicad's pointOnSurface takes 0..1 over the face's parameter bounds.
         const line = (fixedU: boolean, k: number): V3[] => {
           const t = (k + 0.5) / count, pts: V3[] = [];
           for (let i = 0; i <= 32; i++) {
             const a = i / 32;
-            const p = fixedU ? f.face.pointOnSurface(uMin + (uMax - uMin) * t, vMin + (vMax - vMin) * a) : f.face.pointOnSurface(uMin + (uMax - uMin) * a, vMin + (vMax - vMin) * t);
+            const p = fixedU ? f.face.pointOnSurface(t, a) : f.face.pointOnSurface(a, t);
             pts.push([p.x, p.y, p.z]); p.delete();
           }
           return pts;
         };
-        curves.push({ label: `u ${f.bodyId} face ${f.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_, k) => line(true, k)) });
-        curves.push({ label: `v ${f.bodyId} face ${f.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_, k) => line(false, k)) });
+        // Clipped to the trimmed face: holes and the corners of a planar face's parameter box drop out.
+        curves.push({ label: `u ${f.bodyId} face ${f.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line(true, k))).flat() });
+        curves.push({ label: `v ${f.bodyId} face ${f.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line(false, k))).flat() });
         measurements.push({ body_id: f.bodyId, face_id: f.faceId, count, surface: f.face.geomType });
       }
     } else if (options.kind === "continuity") {
