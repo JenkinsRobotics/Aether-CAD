@@ -1200,3 +1200,18 @@ only if every facet is parallel or square to it and every vertex lies on one of 
 planes. The mid-height section, cut and fitted as in r62, becomes an ordinary sketch on the lower
 cap (a profile with a frame) and an extrusion of the cap-to-cap depth; the mesh import is
 suppressed, not deleted. Unlike SolidCraft, the result is editable history, not a frozen body.
+
+### r64 (2026-10-23): surface fair
+
+Installed.
+
+Fair (SolidCraft's `surface.fair`) converts each untrimmed face of a sheet to its B-spline
+(`GeomConvert.SurfaceToBSplineSurface`), holds the border rows of control points and relaxes the
+interior ones, then rebuilds the faces on the faired surfaces and sews the sheet back. "Untrimmed"
+is tested directly (the face spans the surface's knot range and has no holes), since OCCT's
+natural-restriction flag is not set on loft faces. Holding the border rows keeps the boundary
+exact for clamped splines, so the sheet still meets its neighbours. Strength scales the step and
+an optional cap limits any control point's move. The relaxation is a membrane (each interior
+point toward its four neighbours' average), not SolidCraft's thin-plate Gram solve; both flatten
+a bump, the thin plate keeps more of an intended curvature. A face made of straight segments in
+one direction has no interior rows and is refused.

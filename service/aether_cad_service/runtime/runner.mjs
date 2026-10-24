@@ -407,7 +407,7 @@ function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing
     if (t.combine && copies) throw Error("A combined mirror joins the original; it makes no copies.");
   } else throw Error("Choose Translate, Rotate, Scale, Mirror, Align or Copy in place.");
 }
-const surfaceFeatureTypes = ["surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
+const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
 const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
 const finite$2 = (v) => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id2, earlier, what) => {
@@ -428,6 +428,12 @@ function validateSurfaceFeature(feature, earlier, missing) {
         if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
         for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing);
       }
+      return;
+    case "surface-fair":
+      ids(feature.bodyIds, "Fair", 1);
+      for (const face of feature.faces ?? []) validateSolidFaceReference(face, earlier, missing);
+      if (feature.strength !== void 0 && !(finite$2(feature.strength) && feature.strength > 0 && feature.strength <= 1)) throw new Error("Fair strength is more than 0 and at most 1.");
+      if (feature.toleranceMillimeters !== void 0 && !(finite$2(feature.toleranceMillimeters) && feature.toleranceMillimeters > 0)) throw new Error("Fair's largest move must be positive.");
       return;
     case "surface-trim":
       ids(feature.bodyIds, "Trim", 1);
@@ -10738,6 +10744,7 @@ export interface CurvedEdgeReference {
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }`,
   "surface-extrude": 'export interface SurfaceExtrudeFeature {\n  id: string; type: "surface-extrude"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The sketch curves to extrude (open or closed chains); every curve when absent. */\n  contourIds?: string[];\n  distanceMillimeters: number;\n  reversed?: boolean;\n  symmetric?: boolean;\n}',
+  "surface-fair": 'export interface SurfaceFairFeature {\n  id: string; type: "surface-fair"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  faces?: SolidFaceReference[];\n  strength?: number;\n  toleranceMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "surface-loft": 'export interface SurfaceLoftFeature {\n  id: string; type: "surface-loft"; name: string; suppressed: boolean; operation: "new";\n  sections: { profileFeatureId: string; contourId?: string }[];\n  ruled?: boolean;\n}',
   "surface-offset": 'export interface SurfaceOffsetFeature {\n  id: string; type: "surface-offset"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  distanceMillimeters: number;\n}',
   "surface-patch": 'export interface SurfacePatchFeature {\n  id: string; type: "surface-patch"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The closed curves to fill; every closed curve when absent. */\n  contourIds?: string[];\n}',
@@ -37227,6 +37234,72 @@ function evaluatePartDocument(document2, options = {}) {
               }
               if (!isShape3D(result) || Math.abs(measureVolume(result) - measureVolume(body)) > 1e-6 * Math.max(1, measureVolume(body))) throw new Error("The split faces could not be sewn back into the part.");
               bodies.set(id2, own(result));
+              currentBodyID = id2;
+            } finally {
+              progress.delete();
+              sewing.delete();
+            }
+            continue;
+          }
+          if (feature.type === "surface-fair") {
+            const id2 = feature.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("Fair needs an available surface body.");
+            const o = getOC();
+            const all = body.faces;
+            const targets = feature.faces?.length ? feature.faces.map((ref) => faceByReference(body, ref, "Face to fair")) : all;
+            const strength = feature.strength ?? 1, limit = feature.toleranceMillimeters;
+            const rebuilt = [];
+            for (const face of targets) {
+              const handle = o.GeomConvert.SurfaceToBSplineSurface(o.BRep_Tool.Surface_2(face.wrapped)), s = handle.get();
+              const uv = face.UVBounds, holes = face.clone().innerWires();
+              holes.forEach((w) => w.delete());
+              const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+              if (holes.length || !near(uv.uMin, s.UKnot(s.FirstUKnotIndex())) || !near(uv.uMax, s.UKnot(s.LastUKnotIndex())) || !near(uv.vMin, s.VKnot(s.FirstVKnotIndex())) || !near(uv.vMax, s.VKnot(s.LastVKnotIndex())))
+                throw new Error("Fair works on untrimmed faces (a loft, boundary or patch); this face is trimmed.");
+              const nu = s.NbUPoles(), nv = s.NbVPoles();
+              if (nu < 3 || nv < 3) throw new Error("This face has no interior control points to fair.");
+              const P = [];
+              for (let i = 1; i <= nu; i++) {
+                const row = [];
+                for (let j = 1; j <= nv; j++) {
+                  const p = s.Pole(i, j);
+                  row.push([p.X(), p.Y(), p.Z()]);
+                  p.delete();
+                }
+                P.push(row);
+              }
+              const T = P.map((row) => row.map((p) => [...p]));
+              for (let sweep = 0; sweep < 400; sweep++)
+                for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++)
+                  T[i][j] = [0, 1, 2].map((k) => (T[i - 1][j][k] + T[i + 1][j][k] + T[i][j - 1][k] + T[i][j + 1][k]) / 4);
+              for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++) {
+                let d = [0, 1, 2].map((k) => (T[i][j][k] - P[i][j][k]) * strength);
+                const l = Math.hypot(...d);
+                if (limit !== void 0 && l > limit) d = d.map((x) => x * limit / l);
+                const q = new o.gp_Pnt_3(P[i][j][0] + d[0], P[i][j][1] + d[1], P[i][j][2] + d[2]);
+                s.SetPole_1(i + 1, j + 1, q);
+                q.delete();
+              }
+              const maker = new o.BRepBuilderAPI_MakeFace_8(new o.Handle_Geom_Surface_2(s), 1e-6);
+              if (!maker.IsDone()) throw new Error("The faired face could not be rebuilt.");
+              rebuilt.push(maker.Face());
+              maker.delete();
+            }
+            const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
+            try {
+              for (const face of all) if (!targets.some((t) => t.isSame(face))) sewing.Add(face.wrapped);
+              for (const face of rebuilt) sewing.Add(face);
+              sewing.Perform(progress);
+              const raw = sewing.SewedShape(), shape = cast(raw);
+              let sheet;
+              if (isShape3D(shape)) sheet = shape;
+              else {
+                const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+                builder.MakeShell(shell);
+                builder.Add(shell, raw);
+                sheet = cast(shell);
+              }
+              bodies.set(id2, own(sheet));
               currentBodyID = id2;
             } finally {
               progress.delete();

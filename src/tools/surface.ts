@@ -29,6 +29,7 @@ export const surfaceWorkspace: CADRibbonWorkspaceDefinition = {
       tool("surface-unstitch", "Unstitch", "split", "feature-surface-unstitch"),
       tool("surface-reverse-normal", "Reverse Normal", "normal", "feature-surface-reverse-normal"),
       tool("surface-untrim", "Untrim", "face", "feature-surface-untrim"),
+      tool("surface-fair", "Fair", "curve", "feature-surface-fair"),
       tool("surface-thicken", "Thicken", "thicken", "feature-surface-thicken"),
     ] },
   ],

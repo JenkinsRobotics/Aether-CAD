@@ -104,7 +104,7 @@ export type CADCommandID =
   | "assembly-insert-standard-part" | "assembly-resize-standard-part"
   | "sketch-auto-constrain-datum" | "assembly-unlock"
   | "sketch-intersection-curve" | "sketch-isoparametric-curve" | "sketch-project-to-surface"
-  | "sketch-blend-curve" | "sketch-blend-curve-g2" | "sketch-control-spline" | "sketch-control-spline-5" | "sketch-fit-section" | "sketch-spun-profile" | "feature-boundary-fill" | "feature-split-face" | "feature-surface-trim" | "mesh-convert"
+  | "sketch-blend-curve" | "sketch-blend-curve-g2" | "sketch-control-spline" | "sketch-control-spline-5" | "sketch-fit-section" | "sketch-spun-profile" | "feature-boundary-fill" | "feature-split-face" | "feature-surface-trim" | "mesh-convert" | "feature-surface-fair"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -259,7 +259,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-insert-standard-part", "assembly-resize-standard-part",
   "sketch-auto-constrain-datum", "assembly-unlock",
   "sketch-intersection-curve", "sketch-isoparametric-curve", "sketch-project-to-surface",
-  "sketch-blend-curve", "sketch-blend-curve-g2", "sketch-control-spline", "sketch-control-spline-5", "sketch-fit-section", "sketch-spun-profile", "feature-boundary-fill", "feature-split-face", "feature-surface-trim", "mesh-convert",
+  "sketch-blend-curve", "sketch-blend-curve-g2", "sketch-control-spline", "sketch-control-spline-5", "sketch-fit-section", "sketch-spun-profile", "feature-boundary-fill", "feature-split-face", "feature-surface-trim", "mesh-convert", "feature-surface-fair",
   "fit-view",
   "clear-mates",
   "view-top",
