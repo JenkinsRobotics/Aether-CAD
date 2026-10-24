@@ -12,6 +12,8 @@ export class RegionPicker {
   private selectedIndices: number[] = [];
   private regionMode = false;
   private curveMode = false;
+  private circleMode = false;
+  private legacySelections: {featureId:string;contourIndex:number}[] = [];
   private selections: {featureId:string;contourIndex:number}[] | undefined;
   private allowedSourceIds: string[] | undefined;
   private meshes: (THREE.Mesh | THREE.Line)[] = [];
@@ -24,6 +26,8 @@ export class RegionPicker {
       this.selectedIndices = detail.contourIndices ?? (detail.contourIndex == null ? [] : [detail.contourIndex]);
       this.regionMode = detail.regionMode ?? false;
       this.curveMode = detail.curveMode ?? false;
+      this.circleMode = detail.circleMode ?? false;
+      this.legacySelections = detail.legacySelections ?? [];
       this.rebuild();
     });
   }
@@ -55,7 +59,10 @@ export class RegionPicker {
       const x = new THREE.Vector3(...frame.xDirection), normal = new THREE.Vector3(...frame.normal);
       const y = new THREE.Vector3().crossVectors(normal, x);
       const drawing = resolveProfileDrawing(this.document.features, feature.id);
-      const regions = sketchRegions(feature,this.curveMode,this.document.features);
+      const regions = this.circleMode ? sketchRegions(feature,true,this.document.features).filter(r => r.circle) : sketchRegions(feature,this.curveMode,this.document.features);
+      if (!this.curveMode && !this.circleMode && this.legacySelections.some(p => p.featureId === feature.id)) for (const r of sketchRegions(feature,true,this.document.features)) {
+        if (r.closed !== false && this.legacySelections.some(p => p.featureId === feature.id && p.contourIndex === r.contourIndex) && !regions.some(c => c.contourIndex === r.contourIndex)) regions.push(r);
+      }
       const loops = regions.map(r => sketchContourPolyline(r.previewContour ?? drawing.contours[r.contourIndex]).map(p => new THREE.Vector2(...p)));
       const contains = (outer: THREE.Vector2[], inner: THREE.Vector2[]) => inner.every(p => {
         let inside = false;
@@ -78,7 +85,9 @@ export class RegionPicker {
         }
         if (points.length < 3) continue;
         const shape = new THREE.Shape(points);
-        if (this.regionMode) {
+        if (region.cell) {
+          for (const hole of region.holes ?? []) shape.holes.push(new THREE.Path(sketchContourPolyline(hole).map(p => new THREE.Vector2(...p))));
+        } else if (this.regionMode) {
           const children = loops.filter((loop, i) => i !== regionIndex && Math.abs(THREE.ShapeUtils.area(loop)) < Math.abs(THREE.ShapeUtils.area(points)) && contains(points, loop));
           for (const child of children) if (!children.some(other => other !== child && contains(other, child))) shape.holes.push(new THREE.Path(child));
         }

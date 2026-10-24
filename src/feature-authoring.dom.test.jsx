@@ -191,7 +191,7 @@ it('carries an explicitly selected single-region sketch into Extrude without cho
   try {
     cadWorkspace.publish({...original,selectedItemIDs:new Set(['feature/profile/profile-1'])});
     mountFeatureAuthoring(()=>doc,apply);cadCommands.execute('feature-extrude');
-    await vi.waitFor(()=>expect(document.querySelector('.cad-feature-dialog').textContent).toContain('Face 1 of Sketch 1'));
+    await vi.waitFor(()=>expect(document.querySelector('.cad-feature-dialog').textContent).toContain('Region 1 · circle of Sketch 1'));
     document.querySelector('.cad-feature-dialog form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
     await vi.waitFor(()=>expect(apply).toHaveBeenCalled());
     expect(doc.features.at(-1)).toMatchObject({type:'extrude',profileFeatureId:'profile-1'});

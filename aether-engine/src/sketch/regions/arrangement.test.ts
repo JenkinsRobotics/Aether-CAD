@@ -46,4 +46,33 @@ describe("sketch arrangement (SolidCraft's find_profiles)", () => {
     // Three lines making a triangle, one ending on another's middle.
     expect(areas(drawing(line([0, 0], [10, 0]), line([10, 0], [5, 10]), line([5, 10], [0, 0]), line([5, 0], [5, 10])))).toEqual([25, 25]);
   });
+  it('handles a shared edge and coincident geometry without duplicate regions', () => {
+    expect(areas(drawing(rect(0, 0, 10, 10), rect(10, 0, 20, 10)))).toEqual([100, 100]);
+    expect(areas(drawing(rect(0, 0, 10, 10), rect(0, 0, 10, 10)))).toEqual([100]);
+    expect(areas(drawing(circle([0, 0], 5), circle([0, 0], 5)))).toEqual([expect.closeTo(Math.PI * 25, 1)]);
+  });
+  it.each([0, 1000, 100000])('does not close a 0.001 mm gap after translation by %s mm', x => {
+    const open: SketchContour = { type: 'path', start: [x, 0], segments: [
+      { type: 'line', end: [x + 10, 0] }, { type: 'line', end: [x + 10, 10] },
+      { type: 'line', end: [x, 10] }, { type: 'line', end: [x, 0.001] },
+    ] };
+    expect(areas(drawing(open))).toEqual([]);
+  });
+});
+
+it.each([0.25, 0.5, 0.75])('splits rational conics exactly at several intersections (rho %s)', rho => {
+  const cap: SketchContour = { type: 'path', start: [-10, 0], segments: [
+    { type: 'conic', control: [0, 20], rho, end: [10, 0] }, { type: 'line', end: [-10, 0] },
+  ] };
+  const faces = sketchArrangement(drawing(cap, line([-20, 3], [20, 3])))!;
+  expect(faces).toHaveLength(2);
+  expect(faces.every(f => f.boundary.segments.some(s => s.type === 'conic'))).toBe(true);
+  for (const face of faces) face.boundary.segments.at(-1)!.end.forEach((v, i) => expect(v).toBeCloseTo(face.boundary.start[i], 7));
+  const total = faces.reduce((a, f) => a + f.area, 0);
+  expect(total).toBeCloseTo(sketchArrangement(drawing(cap))![0].area, 1);
+});
+
+it('keeps tangent circles separate and splits a crossing open polyline into its bounded faces', () => {
+  expect(areas(drawing(circle([0,0],5),circle([10,0],5)))).toEqual([expect.closeTo(Math.PI*25,1),expect.closeTo(Math.PI*25,1)]);
+  expect(areas(drawing({type:'path',start:[0,0],segments:[{type:'line',end:[10,10]},{type:'line',end:[0,10]},{type:'line',end:[10,0]},{type:'line',end:[0,0]}]}))).toEqual([25,25]);
 });

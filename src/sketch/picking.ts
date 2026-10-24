@@ -94,10 +94,12 @@ export function pickSketchRegion(
 ): number | null {
   let best: number | null = null;
   let smallest = Infinity;
-  sketchFaceRegions(drawing).forEach(({ contour, contourIndex: index }) => {
+  sketchFaceRegions(drawing).forEach(({ contour, holes = [], contourIndex: index }) => {
     const outline = sketchContourPolyline(contour);
     if (!pointInPolygon(outline, p)) return;
-    const area = Math.abs(polygonArea(outline));
+    const islands = holes.map(hole => sketchContourPolyline(hole));
+    if (islands.some(hole => pointInPolygon(hole, p))) return;
+    const area = Math.abs(polygonArea(outline)) - islands.reduce((sum, hole) => sum + Math.abs(polygonArea(hole)), 0);
     if (area < smallest) {
       smallest = area;
       best = index;

@@ -11,7 +11,9 @@ import type { SketchContour, SketchDrawing, SketchPoint, SketchSegment } from ".
 import { curveIntersections, type Curve } from "../curves/pairs";
 import { circleSegments } from "../curves/picking";
 import { subdivideSegment } from "../curves/subdivide";
-import { closestSegmentParameter, segmentPoint } from "../curves/parameterization";
+import { conicSubspanParameter } from "../reference/conic-geometry";
+import { sketchArcGeometry } from "../arc-geometry";
+import { ellipseFrame, segmentPoint } from "../curves/parameterization";
 
 type Path = Extract<SketchContour, { type: "path" }>;
 
@@ -22,6 +24,8 @@ export interface ArrangementFace {
   holes: Path[];
   /** Authored contours whose curves bound the face (outer boundary and holes), sorted. */
   sourceContourIndices: number[];
+  /** Directed authored spans bounding this cell, independent of its position. */
+  sides: { contour: number; segment: number | null; forward: boolean }[];
   /** Closed authored contours whose interior holds the face, sorted. */
   insideContourIndices: number[];
   /** A point inside the face (not in a hole). */
@@ -30,7 +34,8 @@ export interface ArrangementFace {
   area: number;
 }
 
-interface Piece { contour: number; curve: Curve; from: number; to: number }
+type Side = ArrangementFace["sides"][number];
+interface Piece { sources: Side[]; curve: Curve; from: number; to: number }
 
 const dist = (a: SketchPoint, b: SketchPoint) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -44,19 +49,16 @@ function reversed(curve: Curve): Curve {
     ...(rest.type === "bezier" ? { controls: [rest.controls[1], rest.controls[0]] } : {}),
     ...(rest.type === "ellipse" ? { sweep: !rest.sweep } : {}),
   } as SketchSegment;
-  if (rest.type === "conic") return conicReversed(curve);
   return { start: [...s.end], segment };
 }
-/** Conics are split and sampled through their own geometry; reversing goes through
- *  subdivision-free resampling of the same carrier: refuse rather than guess. */
-function conicReversed(_curve: Curve): Curve { throw new Error("conic boundaries are not arranged"); }
 
 function samples(curve: Curve, n = 24): SketchPoint[] {
   return Array.from({ length: n + 1 }, (_, i) => segmentPoint(curve.start, curve.segment, i / n));
 }
 const signedArea = (poly: SketchPoint[]) => {
   let a = 0;
-  for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; a += p[0] * q[1] - q[0] * p[1]; }
+  const origin = poly[0];
+  for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; a += (p[0] - origin[0]) * (q[1] - origin[1]) - (q[0] - origin[0]) * (p[1] - origin[1]); }
   return a / 2;
 };
 function contains(poly: SketchPoint[], p: SketchPoint): boolean {
@@ -68,30 +70,42 @@ function contains(poly: SketchPoint[], p: SketchPoint): boolean {
   return inside;
 }
 const polyline = (curves: Curve[]) => curves.flatMap((c) => samples(c, c.segment.type === "line" ? 1 : 96).slice(0, -1));
-const toPath = (curves: Curve[]): Path => ({ type: "path", start: [...curves[0].start], segments: curves.map((c) => c.segment) });
+const toPath = (curves: Curve[]): Path => ({ type: "path", start: [...curves[0].start], segments: curves.map(c => {
+  const { id: _id, endVertexId: _vertex, ...geometry } = structuredClone(c.segment);
+  return geometry;
+}) });
 
-/** The sketch's arrangement, or undefined when it cannot be built exactly (overlapping
- *  collinear curves, conics, numerically ambiguous crossings) — the caller then keeps
- *  one region per closed contour. */
+/** The sketch's arrangement, or undefined when curve intersection cannot resolve
+ * the authored geometry. All emitted boundaries retain exact curve types. */
 export function sketchArrangement(drawing: SketchDrawing): ArrangementFace[] | undefined {
-  const source: { contour: number; curve: Curve }[] = [];
+  const source: { contour: number; segment: number | null; curve: Curve }[] = [];
   drawing.contours.forEach((c, contour) => {
     if (c.construction || (c.type === "path" && c.infinite)) return;
-    if (c.type === "circle") { if (c.radius > 0) for (const curve of circleSegments(c.center, c.radius)) source.push({ contour, curve }); return; }
+    if (c.type === "circle") { if (c.radius > 0) for (const curve of circleSegments(c.center, c.radius)) source.push({ contour, segment: null, curve }); return; }
     let start = c.start;
-    for (const segment of c.segments) { source.push({ contour, curve: { start, segment } }); start = segment.end; }
+    for (const [index, segment] of c.segments.entries()) { source.push({ contour, segment: index, curve: { start, segment } }); start = segment.end; }
   });
-  if (!source.length || source.some((s) => s.curve.segment.type === "conic")) return undefined;
-  const all = source.flatMap((s) => samples(s.curve, 8));
-  const scale = Math.max(1, ...all.map((p) => Math.max(Math.abs(p[0]), Math.abs(p[1]))));
-  const tol = 1e-7 * scale;
-  // Bounding boxes, grown for an arc's bulge between samples.
-  const boxes = source.map((s) => {
-    const pts = samples(s.curve, 16);
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
-    const pad = 0.05 * Math.hypot(x1 - x0, y1 - y0) + tol;
-    return [x0 - pad, y0 - pad, x1 + pad, y1 + pad];
+  if (!source.length) return [];
+  let scale = 1;
+  for (const item of source) for (const p of samples(item.curve, 8)) scale = Math.max(scale, Math.abs(p[0]), Math.abs(p[1]));
+  // Match the wire tolerance, allowing only floating-point roundoff at large
+  // coordinates. Translating a sketch must never snap a visible gap closed.
+  const tol = Math.max(1e-7, 64 * Number.EPSILON * scale);
+  // Conservative carrier bounds: a sampled bulge must never hide a crossing.
+  const boxes = source.map(({ curve }) => {
+    const s = curve.segment, points = [curve.start, s.end];
+    if (s.type === 'bezier') points.push(...s.controls);
+    if (s.type === 'conic') points.push(s.control);
+    if (s.type === 'arc') {
+      const { center, radius } = sketchArcGeometry(curve.start, s.middle, s.end);
+      points.push([center[0] - radius, center[1] - radius], [center[0] + radius, center[1] + radius]);
+    }
+    if (s.type === 'ellipse') {
+      const { center, radiusX, radiusY } = ellipseFrame(curve.start, s), radius = Math.max(radiusX, radiusY);
+      points.push([center[0] - radius, center[1] - radius], [center[0] + radius, center[1] + radius]);
+    }
+    return [Math.min(...points.map(p => p[0])) - tol, Math.min(...points.map(p => p[1])) - tol,
+      Math.max(...points.map(p => p[0])) + tol, Math.max(...points.map(p => p[1])) + tol];
   });
   const cuts: number[][] = source.map(() => []);
   try {
@@ -105,23 +119,39 @@ export function sketchArrangement(drawing: SketchDrawing): ArrangementFace[] | u
   const pieces: Piece[] = [];
   source.forEach((s, k) => {
     const ts = [...new Set(cuts[k].filter((t) => t > 1e-9 && t < 1 - 1e-9))].sort((a, b) => a - b);
-    const points = ts.map((t) => segmentPoint(s.curve.start, s.curve.segment, t));
     let rest: Curve = s.curve;
-    for (const p of points) {
+    let previous = 0;
+    for (const parameter of ts) {
+      const p = segmentPoint(s.curve.start, s.curve.segment, parameter);
       if (dist(p, rest.start) <= tol || dist(p, rest.segment.end) <= tol) continue;
-      const t = closestSegmentParameter(rest.start, rest.segment, p).parameter;
+      const t = s.curve.segment.type === 'conic'
+        ? conicSubspanParameter(s.curve.segment.rho, parameter, previous, 1)
+        : (parameter - previous) / (1 - previous);
       if (t <= 1e-9 || t >= 1 - 1e-9) continue;
       const [a, b] = subdivideSegment(rest.start, rest.segment, t);
-      pieces.push({ contour: s.contour, curve: { start: rest.start, segment: a }, from: -1, to: -1 });
+      pieces.push({ sources: [{ contour: s.contour, segment: s.segment, forward: true }], curve: { start: rest.start, segment: a }, from: -1, to: -1 });
       rest = { start: a.end, segment: b };
+      previous = parameter;
     }
-    pieces.push({ contour: s.contour, curve: rest, from: -1, to: -1 });
+    pieces.push({ sources: [{ contour: s.contour, segment: s.segment, forward: true }], curve: rest, from: -1, to: -1 });
   });
   // Nodes: piece ends within the tolerance are one node.
   const nodes: SketchPoint[] = [];
-  const node = (p: SketchPoint) => { const k = nodes.findIndex((n) => dist(n, p) <= 1e3 * tol); if (k >= 0) return k; nodes.push(p); return nodes.length - 1; };
+  const node = (p: SketchPoint) => { const k = nodes.findIndex((n) => dist(n, p) <= tol); if (k >= 0) return k; nodes.push(p); return nodes.length - 1; };
   for (const piece of pieces) { piece.from = node(piece.curve.start); piece.to = node(piece.curve.segment.end); }
-  let live = pieces.filter((p) => p.from !== p.to || samples(p.curve, 4).some((q) => dist(q, p.curve.start) > 1e3 * tol));
+  // Shared edges are one graph edge, with both contributors. Keeping duplicate
+  // half-edges loses faces when rectangles share a side or a line follows an edge.
+  const unique: Piece[] = [];
+  for (const piece of pieces) {
+    const match = unique.find(other => {
+      const forward = other.from === piece.from && other.to === piece.to;
+      if (!forward && !(other.from === piece.to && other.to === piece.from)) return false;
+      return [0.25, 0.5, 0.75].every(t => dist(segmentPoint(piece.curve.start, piece.curve.segment, t), segmentPoint(other.curve.start, other.curve.segment, forward ? t : 1 - t)) <= tol);
+    });
+    if (match) match.sources.push(...piece.sources.map(side => ({ ...side, forward: match.from === piece.from ? side.forward : !side.forward })));
+    else unique.push(piece);
+  }
+  let live = unique.filter((p) => p.from !== p.to || samples(p.curve, 4).some((q) => dist(q, p.curve.start) > tol));
   // Dangling curves bound nothing: peel them off.
   for (let changed = true; changed;) {
     changed = false;
@@ -150,15 +180,15 @@ export function sketchArrangement(drawing: SketchDrawing): ArrangementFace[] | u
     const list = out.get(half[i].to)!, back = i ^ 1, k = list.indexOf(back);
     return list[(k - 1 + list.length) % list.length];
   };
-  const used = new Set<number>(), loops: { curves: Curve[]; pieces: Piece[]; area: number; poly: SketchPoint[] }[] = [];
+  const used = new Set<number>(), loops: { curves: Curve[]; pieces: Piece[]; area: number; poly: SketchPoint[]; sides: Side[] }[] = [];
   for (let i = 0; i < half.length; i++) {
     if (used.has(i)) continue;
-    const curves: Curve[] = [], ps: Piece[] = [];
+    const curves: Curve[] = [], ps: Piece[] = [], sides: Side[] = [];
     let h = i;
-    for (let guard = 0; !used.has(h) && guard <= half.length; guard++) { used.add(h); curves.push(half[h].curve); ps.push(half[h].piece); h = next(h); }
+    for (let guard = 0; !used.has(h) && guard <= half.length; guard++) { used.add(h); curves.push(half[h].curve); ps.push(half[h].piece); sides.push(...half[h].piece.sources.map(side => ({ ...side, forward: h % 2 ? !side.forward : side.forward }))); h = next(h); }
     if (h !== i) return undefined;
     const poly = polyline(curves);
-    loops.push({ curves, pieces: ps, area: signedArea(poly), poly });
+    loops.push({ curves, pieces: ps, area: signedArea(poly), poly, sides });
   }
   const faces = loops.filter((l) => l.area > tol * tol);
   const outers = loops.filter((l) => l.area < -tol * tol);
@@ -181,11 +211,12 @@ export function sketchArrangement(drawing: SketchDrawing): ArrangementFace[] | u
   return faces.map((face) => {
     const holes = holesOf.get(face) ?? [];
     const sample = interiorPoint(face.poly, holes.map((h) => h.poly));
-    const sources = new Set([...face.pieces, ...holes.flatMap((h) => h.pieces)].map((p) => p.contour));
+    const sides = [...face.sides, ...holes.flatMap(h => h.sides)];
+    const sources = new Set(sides.map(s => s.contour));
     return {
       boundary: toPath(face.curves),
       holes: holes.map((h) => toPath(h.curves)),
-      sourceContourIndices: [...sources].sort((a, b) => a - b),
+      sourceContourIndices: [...sources].sort((a, b) => a - b), sides,
       insideContourIndices: closed.filter((c) => contains(c.poly, sample)).map((c) => c.index),
       sample,
       area: face.area + holes.reduce((sum, h) => sum + h.area, 0),

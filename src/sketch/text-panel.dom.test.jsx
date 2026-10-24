@@ -26,7 +26,9 @@ beforeAll(async () => {
     vi.stubGlobal(key, dom.window[key]);
   open = (await import("../sketch-workspace")).openSketchWorkspace;
 });
-afterAll(() => {
+afterAll(async () => {
+  // Let queued React cleanup finish before removing the browser globals.
+  await new Promise(setImmediate);
   dom.window.close();
   vi.unstubAllGlobals();
 });

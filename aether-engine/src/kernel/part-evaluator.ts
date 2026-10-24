@@ -1,6 +1,6 @@
 import { sketchRegionGroups } from "../sketch/regions/groups";
 import { sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
-import { matchesProfileRegion, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
+import { matchesProfileRegion, profileRegionIdentity, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
 import { resolveProfileDrawing } from "../document/profile-projection";
 import { canonicalPlaneXDirection, flipSketchFrame, principalFrame, resolvePlaneFrame } from "../document/construction-planes";
 import { bendAllowanceMillimeters, type SheetMetalRule } from "../document/sheet-metal";
@@ -374,7 +374,7 @@ export function release(value: unknown) {
 }
 /** A sketch's closed regions, each with the key FreeCAD's body identities are
  *  derived from (the contour id, or the sketch id for a sole region). */
-interface Region { key: string; drawing: Drawing; outer?: Drawing; holes?: Drawing[]; /** A region several open curves enclose together, by their contour ids. */ sourceContourIds?: string[] }
+interface Region { key: string; drawing: Drawing; outer?: Drawing; holes?: Drawing[]; /** A region several open curves enclose together, by their contour ids. */ sourceContourIds?: string[]; insideContourIds?: string[]; ordinal?: number; boundary?: string[]; cell?: true }
 interface Circle { key: string; center: [number, number]; radius: number }
 /** An exact rho conic (FreeCAD's conic_wire): a rational quadratic B-spline whose
  *  middle pole is the endpoint tangents' intersection, weighted rho/(1−rho), so a
@@ -406,7 +406,7 @@ function contourDrawing(contour: SketchContour, _featureId: string): Drawing {
   }
   return pen.done();
 }
-type Profiles = Map<string, { drawing?: Drawing; plane: "XY" | "XZ" | "YZ" | Plane; offset: number; regions: Region[]; circles: Circle[]; contours: SketchContour[] }>;
+type Profiles = Map<string, { drawing?: Drawing; plane: "XY" | "XZ" | "YZ" | Plane; offset: number; regions: Region[]; cells?: Region[]; circles: Circle[]; contours: SketchContour[] }>;
 /** The engine state after one feature of a document's history, kept so the
  *  next evaluation replays only from the first feature that changed. */
 interface Step { key: string; profiles: Profiles; tools: Map<string, Shape3D>; bodies: Map<string, Shape3D>; meshes: Map<string, MeshPart>; currentBodyID?: string; outputs: Record<string, string[]>; frames: Record<string, SketchFrame>; scopes: Record<string, ExtrusionScopeResolution>; owned: unknown[] }
@@ -653,7 +653,7 @@ export function evaluatePartDocument(
           if (!sketchProfile) throw new Error(`${label} needs an available sketch.`);
           let drawing: Drawing | undefined;
           if (selection?.profileRegion) {
-            drawing = sketchProfile.regions.find((r) => r.sourceContourIds && matchesProfileRegion(selection, r))?.drawing;
+            drawing = [...sketchProfile.regions, ...(sketchProfile.cells ?? [])].find((r) => r.sourceContourIds && matchesProfileRegion(selection, r))?.drawing;
             if (!drawing) throw new Error(`${label}: the referenced curves no longer form the same closed region. Repair the sketch or reselect the region.`);
           } else if (anyContour && (contourId !== undefined || sketchProfile.contours.length === 1)) {
             // A sole curve needs no id (saved sketches before contour ids).
@@ -727,6 +727,7 @@ export function evaluatePartDocument(
           // Open-only sketches register too: thin walls and direction lines use them.
           let drawing: Drawing | undefined;
           const regions: Region[] = [];
+          const cells: Region[] = [];
           const circles: Circle[] = [];
           const contours: SketchContour[] = [];
           // Projected sketches and sketches with Pierce constraints are resolved in their
@@ -766,6 +767,17 @@ export function evaluatePartDocument(
             // Regions several open curves enclose together (the picker's "connected" regions),
             // keyed as FreeCAD's body identities were; they are chosen by reference, never implied.
             for (const boundary of sketchFaceRegions(solved)) {
+              if (boundary.cell) {
+                const outer = own(contourDrawing(boundary.contour, feature.id));
+                const holes = (boundary.holes ?? []).map(hole => own(contourDrawing(hole, feature.id)));
+                const drawing = holes.reduce((shape, hole) => own(shape.cut(hole)), outer);
+                const contourIds = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
+                const inside = boundary.insideContourIds ?? boundary.insideContourIndices?.map(String);
+                cells.push({ key: `cell:${profileRegionIdentity({ profileRegion: { contourIds, inside, ordinal: boundary.ordinal, boundary: boundary.boundary } })}`,
+                  drawing, outer, holes, sourceContourIds: boundary.sourceContourIds,
+                  insideContourIds: boundary.insideContourIds, ordinal: boundary.ordinal, boundary: boundary.boundary, cell: true });
+                continue;
+              }
               if (boundary.sourceContourIndices.length < 2) continue;
               const ids = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
               const region = own(contourDrawing(boundary.contour, feature.id));
@@ -788,6 +800,7 @@ export function evaluatePartDocument(
           profiles.set(feature.id, {
             drawing: drawing && own(drawing),
             regions: regions.length ? regions : drawing ? [{ key: feature.id, drawing }] : [],
+            cells,
             circles,
             contours,
             // Always sketch on an explicit principalFrame plane: replicad's
@@ -2575,7 +2588,7 @@ export function evaluatePartDocument(
             // Nothing named: the whole sketch (every region), as saved text and legacy documents expect.
             if ((pick.profileContourId === undefined && !pick.profileRegion) || thinWalls) return null;
             const region = pick.profileRegion
-              ? profile.regions.find((r) => r.sourceContourIds && matchesProfileRegion(pick as ProfileRegionSelection, r))
+              ? [...profile.regions, ...(profile.cells ?? [])].find((r) => r.sourceContourIds && matchesProfileRegion(pick as ProfileRegionSelection, r))
               : profile.regions.find((r) => r.key === pick.profileContourId);
             if (!region) throw new Error(pick.profileRegion ? "The referenced curves no longer form the same closed region. Repair the sketch or reselect the region." : "A selected region is no longer in its sketch.");
             return region;
@@ -3247,9 +3260,10 @@ export function evaluatePartDocument(
             const solids = solidsOf(tool);
             // One region: every solid is its own, no per-region prisms and booleans
             // (they cost more than the extrusion itself).
-            const regionTools = profile.regions.length === 1 ? [] : profile.regions.map((region) => ({ key: region.key, tool: extrudeDrawing(region.drawing, [region]) }));
+            const identityRegions = regionsChosen.some(region => region.cell) ? regionsChosen : profile.regions;
+            const regionTools = identityRegions.length === 1 ? [] : identityRegions.map((region) => ({ key: region.key, tool: extrudeDrawing(region.drawing, [region]) }));
             const keys = solids.map((solid) => {
-              const identities = profile.regions.length === 1 ? [profile.regions[0].key] : regionTools.filter(({ tool: regionTool }) => { const overlap = solid.intersect(regionTool); const volume = isShape3D(overlap) ? measureVolume(overlap) : 0; release(overlap); return volume > 1e-8; }).map((r) => r.key).sort();
+              const identities = identityRegions.length === 1 ? [identityRegions[0].key] : regionTools.filter(({ tool: regionTool }) => { const overlap = solid.intersect(regionTool); const volume = isShape3D(overlap) ? measureVolume(overlap) : 0; release(overlap); return volume > 1e-8; }).map((r) => r.key).sort();
               if (!identities.length) throw new Error("Could not identify an extrusion output body.");
               return sha256Hex(JSON.stringify(identities)).slice(0, 24);
             });

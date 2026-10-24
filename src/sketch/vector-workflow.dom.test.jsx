@@ -5,7 +5,7 @@ import {clickSketchControl} from './test-controls';
 import {cadCommands} from '../cad-command-registry';
 const require=createRequire(import.meta.url),{JSDOM}=require('jsdom');let dom,open;
 beforeAll(async()=>{dom=new JSDOM('<div class="cad-studio-viewport"></div>',{url:'http://localhost/cad/'});for(const key of ['window','document','HTMLElement','CustomEvent','Event','DOMParser','location'])vi.stubGlobal(key,dom.window[key]);open=(await import('../sketch-workspace')).openSketchWorkspace;});
-afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
+afterAll(async()=>{await new Promise(setImmediate);dom.window.close();vi.unstubAllGlobals();});
 it('opens Vector tools through the command, imports holes/cubics with units, undoes and reopens',async()=>{
  let doc=createEmptyPartDocument('SVG vectors');const apply=vi.fn(async next=>{doc=next;});open(()=>doc,apply);clickSketchControl('Top (XY)');cadCommands.execute('sketch-vector');
  const file=document.querySelector('[aria-label="CAD SVG file"]');expect(file).toBeTruthy();

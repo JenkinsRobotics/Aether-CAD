@@ -1,3 +1,4 @@
+import { sketchFaceRegions } from "@aether/core/sketch/reference/connected-sketch-regions";
 import { describe, expect, it } from "vitest";
 import { pickSketchEntity, pickSketchRegion } from "./picking";
 import type { SketchDrawing } from "@aether/core/sketch";
@@ -55,8 +56,9 @@ describe("picking a closed region by clicking inside it", () => {
   it("prefers the smallest region containing the point, so nesting works", () => {
     const drawing = { type: "drawing" as const, contours: [square(0, 40), square(10, 10)] };
     // Inside both; the inner one is what the user is pointing at.
-    expect(pickSketchRegion(drawing, [15, 5])).toBe(1);
-    expect(pickSketchRegion(drawing, [35, 35])).toBe(0);
+    const faces = sketchFaceRegions(drawing);
+    expect(pickSketchRegion(drawing, [15, 5])).toBe(faces.find(r => r.insideContourIndices?.length === 2)!.contourIndex);
+    expect(pickSketchRegion(drawing, [35, 35])).toBe(faces.find(r => r.insideContourIndices?.length === 1)!.contourIndex);
   });
 
   it("ignores construction and open contours, which bound nothing", () => {

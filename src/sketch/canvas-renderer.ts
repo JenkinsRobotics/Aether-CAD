@@ -79,10 +79,13 @@ export function renderSketchCanvas(
         ),
       ]
     : drawing.contours.map((_, i) => i);
-  for (const region of sketchFaceRegions(drawing)) {
-    if (region.sourceContourIndices.length > 1 && region.contour.type === 'path') el('path', {
-      d: contourPath(region.contour), 'data-region-index': region.contourIndex,
-      class: 'sketch-contour closed sketch-region-fill derived-region',
+  const faces = sketchFaceRegions(drawing);
+  const arranged = faces.some(region => region.cell);
+  for (const region of faces) {
+    if ((region.cell || region.sourceContourIndices.length > 1) && region.contour.type === 'path') el('path', {
+      d: [region.contour, ...(region.holes ?? [])].map(contourPath).join(' '), 'data-region-index': region.contourIndex,
+      'fill-rule': 'evenodd',
+      class: 'closed sketch-region-fill derived-region',
     });
   }
   order.forEach((index) => {
@@ -90,6 +93,7 @@ export function renderSketchCanvas(
     const isPoint = c.type === "path" && !c.segments.length;
     const attrs = {
       "data-contour-index": index,
+      ...(arranged && !isPoint ? { style: "fill: none" } : {}),
       class: `sketch-contour ${isPoint ? "point" : contourClosed(c) ? "closed" : "open"}${c.hole ? " hole" : ""}${c.construction ? " construction" : ""}`,
     };
     if (c.type === "circle")
