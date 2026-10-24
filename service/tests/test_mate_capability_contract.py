@@ -13,15 +13,15 @@ refused after the fact.
 Read as text so this needs no Node and no build.
 """
 
+import inspect
 import re
 from pathlib import Path
-import inspect
 
-from aether_animation.aether_workspace import AetherWorkspace  # noqa: F401  (import guard)
+from aether_animation.aether_workspace import AetherWorkspace
 from aether_animation.mates import JointType
 
 REPO = Path(__file__).resolve().parents[2]
-WORKSPACE = Path(inspect.getfile(AetherWorkspace))
+WORKSPACE_SOURCE = inspect.getsource(AetherWorkspace)
 AUTHORING = REPO / "src/cad-mate-authoring.ts"
 # The Assembly ribbon was one file until it was split by concern; mate buttons
 # now live beside the relations that share their tooling. Read both, so a
@@ -34,8 +34,8 @@ RIBBON = (
 
 def workspace_supported() -> set[str]:
     """The ids the workspace reports in its Assembly capabilities block."""
-    source = WORKSPACE.read_text()
-    block = re.search(r'"supported_mate_type_ids":\s*\[(.*?)\]', source, re.S)
+    source = WORKSPACE_SOURCE
+    block = re.search(r'"supported_mate_type_ids":\s*\[(.*?)\]', source, re.DOTALL)
     assert block, "capabilities no longer advertise supported_mate_type_ids"
     names = re.findall(r"JointType\.(\w+)\.value", block.group(1))
     assert names, "capability list is no longer built from JointType"
@@ -45,7 +45,7 @@ def workspace_supported() -> set[str]:
 def picker_offers() -> set[str]:
     """The ids the CAD mate dialog puts in its Type dropdown."""
     source = AUTHORING.read_text()
-    block = re.search(r"assemblyMateTypeOptions[^=]*=\s*Object\.freeze\(\[(.*?)\]\)", source, re.S)
+    block = re.search(r"assemblyMateTypeOptions[^=]*=\s*Object\.freeze\(\[(.*?)\]\)", source, re.DOTALL)
     assert block, "the mate type option list moved or changed shape"
     return set(re.findall(r'value:\s*"([a-z_]+)"', block.group(1)))
 

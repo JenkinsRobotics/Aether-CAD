@@ -2,7 +2,7 @@
 import { expect, it } from "vitest";
 import { mountPreviewHandles } from "./preview-handles";
 
-it("mounts a linear handle for each published parameter that has a control, and an angle ring for angles", () => {
+it("mounts feature handles and removes them when their panel closes", async () => {
   document.body.innerHTML = '<div class="cad-studio-viewport"></div><div id="panel" data-feature-id="f"></div>';
   // The handles' update loops are not under test; a frame request that never fires keeps jsdom quiet at teardown.
   (window as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame = () => 0;
@@ -19,4 +19,8 @@ it("mounts a linear handle for each published parameter that has a control, and 
   ] } } }));
   expect(document.querySelectorAll(".cad-extrusion-handle")).toHaveLength(1); // radius → size; ghost has no control
   expect(document.querySelectorAll(".cad-angle-handle")).toHaveLength(1);
+  panel.remove();
+  // Let the real disposal observers run while their owning window still exists.
+  await Promise.resolve();
+  expect(document.querySelectorAll(".cad-extrusion-handle, .cad-angle-handle")).toHaveLength(0);
 });

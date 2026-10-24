@@ -65,6 +65,9 @@ with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
         entry = zipfile.ZipInfo(name)
         entry.compress_type = zipfile.ZIP_DEFLATED
         bundle.writestr(entry, path.read_bytes())
+# The native host snapshots one verified bundle, capped independently of requests.
+if archive.stat().st_size > 32 * 1024 * 1024:
+    raise ValueError("CAD worker exceeds the native host's 32 MiB package limit")
 commands = json.loads((service / "automation-commands.json").read_text())
 manifest = {
     "schema": 1,

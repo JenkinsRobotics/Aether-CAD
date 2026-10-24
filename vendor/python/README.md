@@ -1,5 +1,17 @@
 # CAD workspace codec dependency
 
+2026-10-23: immutable build `0.1.0-19` adopts the already-verified eight-mate
+workspace change from Animation commit `726c0afff55a966643454bf264f0b4a0e09126d6`.
+All five runtime modules match that commit; only `aether_workspace.py` changes
+from codec18. CAD previously offered eight mate kinds while its packaged codec
+accepted only three. This updates the dependency, without copying newer contact
+or cam semantics into this release. Existing wheels remain unchanged. The full
+native service suite runs with this exact wheel through
+`scripts/test-native-service.py`; eight isolated-worker compose/reopen cases
+exercise the offered kinds. Packaging provenance is retained in Studio's
+`.verification/cad-functional-audit-2026-10-23/codec19-provenance.json` and
+`package-codec19.py`.
+
 2026-10-14: immutable build `0.1.0-17` adds Part20 conic records. It retains the
 previous wheel's files and changes only the canonical `aether_workspace.py`
 version whitelist, wheel build metadata and RECORD hashes. The five bundled

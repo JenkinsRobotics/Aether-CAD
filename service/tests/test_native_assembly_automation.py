@@ -138,6 +138,25 @@ def test_preview_compose_mate_and_reopen_keep_unrelated_parts(tmp_path):
 
 
 @NATIVE
+@pytest.mark.parametrize("kind", ["fastened", "revolute", "prismatic", "cylindrical", "ball", "planar", "pin_slot", "parallel"])
+def test_shipped_codec_authors_every_mate_offered_by_cad(tmp_path, kind):
+    content = source()
+    inspected = invoke(tmp_path, "cad.assembly.inspect", content)["result"]
+    assert kind in inspected["capabilities"]["supported_mate_type_ids"]
+    recipe = inspected["example"]
+    recipe.pop("patterns")
+    recipe["instances"].append({"key": "moving", "part": "block"})
+    recipe["mates"] = [{"key": "joint", "kind": kind,
+                        "a": {"instance": "Block:1"}, "b": {"instance": "moving"}}]
+    result = invoke(tmp_path, "cad.assembly.compose", content,
+                    {"recipe_json": json.dumps(recipe)}, native=True)
+    assert "error" not in result, result
+    reopened = decode(result["content"])
+    assert next(iter(reopened.mates.values()))["type_id"] == kind
+    assert len(reopened.instances) == 2
+
+
+@NATIVE
 def test_geometry_failure_returns_no_candidate(tmp_path):
     content = source()
     recipe = invoke(tmp_path, "cad.assembly.inspect", content)["result"]["example"]
