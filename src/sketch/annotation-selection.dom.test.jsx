@@ -24,7 +24,7 @@ beforeEach(() => {
   open(() => doc, apply, doc.features[0]); svg = document.querySelector('.cad-sketch-canvas');
 });
 afterEach(() => document.querySelector('.cad-sketch-window [data-feature-action="discard"]')?.click());
-afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
+afterAll(async () => { await new Promise(resolve => setImmediate(resolve)); dom.window.close(); vi.unstubAllGlobals(); });
 const click = (node, options = {}) => node.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, ...options }));
 const key = (key, options = {}) => document.body.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options }));
 it('selects a dimension without editing geometry; Delete and undo preserve the circle and its other constraint', async () => {

@@ -11,7 +11,7 @@ beforeAll(async()=>{
 });
 beforeEach(()=>{document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Part');apply=vi.fn(async next=>{doc=next;});});
 afterEach(()=>{document.querySelector('.cad-plane-window .cad-plane-window [data-feature-action="discard"]')?.click();document.querySelector('.cad-plane-window .cad-plane-window [data-feature-action="discard"]')?.click();});
-afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
+afterAll(async () => {await new Promise(resolve => setImmediate(resolve)); dom.window.close();vi.unstubAllGlobals();});
 
 it('authors a mid plane from viewport/tree picked references and commits on Enter',async()=>{
  doc.features.push({id:'base',type:'plane',name:'Plane 1',plane:'XY',offsetMillimeters:30,suppressed:false});

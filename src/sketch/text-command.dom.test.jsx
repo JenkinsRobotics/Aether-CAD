@@ -30,8 +30,8 @@ beforeAll(async () => {
     vi.stubGlobal(key, dom.window[key]);
   open = (await import("../sketch-workspace")).openSketchWorkspace;
 });
-afterAll(() => {
-  dom.window.close();
+afterAll(async () => {
+  await new Promise(resolve => setImmediate(resolve)); dom.window.close();
   vi.unstubAllGlobals();
 });
 const click = clickSketchControl;

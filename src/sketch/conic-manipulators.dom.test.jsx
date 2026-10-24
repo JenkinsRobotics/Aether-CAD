@@ -13,7 +13,7 @@ beforeAll(async () => {
   open = (await import('../sketch-workspace')).openSketchWorkspace;
 });
 afterEach(() => { if (q('.cad-sketch-workspace')) click('Cancel'); });
-afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
+afterAll(async () => { await new Promise(resolve => setImmediate(resolve)); dom.window.close(); vi.unstubAllGlobals(); });
 function setup(change = d => d) {
   let doc = createEmptyPartDocument('Conic handles');
   const drawing = change(createSketchConic({ type: 'drawing', contours: [] }, [[0, 0], [20, 0], [10, 20], [10, 6]]));

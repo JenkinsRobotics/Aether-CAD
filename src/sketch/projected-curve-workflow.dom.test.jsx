@@ -78,8 +78,8 @@ afterEach(() => {
     if (b.getAttribute("aria-label") === "Cancel sketch") b.click();
   });
 });
-afterAll(() => {
-  dom.window.close();
+afterAll(async () => {
+  await new Promise(resolve => setImmediate(resolve)); dom.window.close();
   vi.unstubAllGlobals();
 });
 const click = clickSketchControl;

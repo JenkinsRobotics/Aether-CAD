@@ -27,7 +27,7 @@ beforeEach(()=>{
  apply=vi.fn(async next=>{doc=next;});
 });
 afterEach(()=>{click('Cancel sketch');});
-afterAll(async()=>{document.body.replaceChildren();await Promise.resolve();dom.window.close();vi.unstubAllGlobals();});
+afterAll(async () => {document.body.replaceChildren();await Promise.resolve();await new Promise(resolve => setImmediate(resolve)); dom.window.close();vi.unstubAllGlobals();});
 
 it('repairs a failed support without changing contour/constraint IDs, dimensions or downstream features',async()=>{
  const before=structuredClone(doc);

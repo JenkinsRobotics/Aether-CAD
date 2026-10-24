@@ -16,7 +16,7 @@ beforeEach(()=>{
  apply=vi.fn(async next=>{doc=next;});
 });
 afterEach(()=>{querySketchControl('.cad-sketch-window [data-feature-action="discard"]')?.click();});
-afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
+afterAll(async () => {await new Promise(resolve => setImmediate(resolve)); dom.window.close();vi.unstubAllGlobals();});
 const target=()=>doc.features.find(f=>f.id==='target');
 const finish=()=>querySketchControl('.cad-sketch-window [data-feature-action="accept"]');
 const changePlane=()=>querySketchControl('button[title="Change sketch plane"]').click();

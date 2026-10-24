@@ -33,8 +33,8 @@ beforeAll(async () => {
   openSketch = (await import("./sketch-workspace")).openSketchWorkspace;
   openPlane = (await import("./plane-window")).openPlaneWindow;
 });
-afterAll(() => {
-  dom.window.close();
+afterAll(async () => {
+  await new Promise(resolve => setImmediate(resolve)); dom.window.close();
   vi.unstubAllGlobals();
 });
 beforeEach(() => {

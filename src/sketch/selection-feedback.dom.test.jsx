@@ -28,7 +28,7 @@ beforeEach(() => {
   svg = querySketchControl('svg.cad-sketch-canvas');
 });
 afterEach(() => [...querySketchControls('button')].find(b => b.getAttribute('aria-label') === 'Cancel sketch')?.click());
-afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
+afterAll(async () => { await new Promise(resolve => setImmediate(resolve)); dom.window.close(); vi.unstubAllGlobals(); });
 function pointer(type, x, y, options = {}) {
   const e = new dom.window.MouseEvent(type, { clientX: 100 + x * 4, clientY: 200 - y * 4, button: 0, bubbles: true, cancelable: true, ...options });
   Object.defineProperty(e, 'pointerId', { value: 1 }); svg.dispatchEvent(e);
