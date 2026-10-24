@@ -181,6 +181,13 @@ it("sketches on a face resolve their frame from the body as it was after the sou
   const pinned = evaluatePartDocument({ ...document, features: [...document.features, onTop, boss, anchored, pin] });
   expect(pinned.sketchFrames?.["second-sketch"]?.originMillimeters.map(v => Math.round(v * 1e6) / 1e6)).toEqual([10, 0, 25]);
   expect(Math.max(...Array.from(pinned.parts[0].vertices).filter((_, i) => i % 3 === 2))).toBeCloseTo(28, 3);
+  const taller = { ...document, features: [...document.features.map(f => f.id === "ex" ? { ...f, distanceMillimeters: 30 } : f), onTop, boss, anchored, pin] };
+  const followed = evaluatePartDocument(taller);
+  expect(followed.sketchFrames?.["second-sketch"]?.originMillimeters.map(v => Math.round(v * 1e6) / 1e6)).toEqual([10, 0, 35]);
+  expect(Math.max(...Array.from(followed.parts[0].vertices).filter((_, i) => i % 3 === 2))).toBeCloseTo(38, 3);
+  const shifted = { ...anchored, support: { ...anchored.support, faceAnchor: { ...anchored.support.faceAnchor, centerMillimeters: [11, 0, 25] as [number, number, number] } } };
+  expect(() => evaluatePartDocument({ ...taller, features: [...taller.features.slice(0, -2), shifted, pin] })).toThrow(/Sketch support face changed or is ambiguous/);
+
 });
 
 it("builds only the sketch regions a feature selected, the way the UI records picks", () => {

@@ -547,19 +547,34 @@ export function evaluatePartDocument(
           return Math.hypot(center[0] - anchor.centerMillimeters[0], center[1] - anchor.centerMillimeters[1], center[2] - anchor.centerMillimeters[2]) <= 1e-6
             && Math.abs(measureArea(face) - anchor.areaSquareMillimeters) <= Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9);
         };
-        const uniqueFace = (body: Shape3D, matches: (face: Face) => boolean, label: string, hasAnchor: boolean): Face => {
-          const found: Face[] = [];
-          for (const { face } of facesOf(body)) { if (matches(face)) found.push(face); else face.delete(); }
-          if (found.length !== 1) { found.forEach((face) => face.delete()); throw new Error(`${label} ${hasAnchor ? "changed or is ambiguous" : "is missing or ambiguous"}. Reselect the face on the earlier geometry.`); }
-          return found[0];
+        const uniqueFace = (body: Shape3D, matches: (face: Face) => boolean, label: string, hasAnchor: boolean, fallback?: (face: Face) => boolean): Face => {
+          const faces = facesOf(body).map(({ face }) => face);
+          let found = faces.filter(matches);
+          if (!found.length && fallback) found = faces.filter(fallback);
+          const selected = found.length === 1 ? found[0] : undefined;
+          faces.forEach((face) => { if (face !== selected) face.delete(); });
+          if (!selected) throw new Error(`${label} ${hasAnchor ? "changed or is ambiguous" : "is missing or ambiguous"}. Reselect the face on the earlier geometry.`);
+          return selected;
         };
-        const planarFaceOf = (body: Shape3D, normal: V3, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string): Face =>
-          uniqueFace(body, (face) => {
+        const planarFaceOf = (body: Shape3D, normal: V3, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string, followNormalTranslation = false): Face => {
+          const aligned = (face: Face) => {
             if (face.geomType !== "PLANE") return false;
             const center = deleteAfterVectorTuple(face.center);
             const outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-            return outward[0] * normal[0] + outward[1] * normal[1] + outward[2] * normal[2] > 1 - 1e-7 && anchored(face, anchor);
-          }, `${label} face`, Boolean(anchor));
+            return outward[0] * normal[0] + outward[1] * normal[1] + outward[2] * normal[2] > 1 - 1e-7;
+          };
+          // An upstream depth edit can move a sketch's supporting face along its
+          // normal. Follow only a unique face with the same area and in-plane
+          // centroid; lateral changes or multiple matches require reselection.
+          const translated = followNormalTranslation && anchor ? (face: Face) => {
+            if (!aligned(face) || Math.abs(measureArea(face) - anchor.areaSquareMillimeters) > Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9)) return false;
+            const center = deleteAfterVectorTuple(face.center);
+            const delta = sub([...center] as V3, anchor.centerMillimeters as V3);
+            const along = delta[0] * normal[0] + delta[1] * normal[1] + delta[2] * normal[2];
+            return norm(sub(delta, scale(normal, along))) <= 1e-6;
+          } : undefined;
+          return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated);
+        };
         const surfaceKinds: Record<string, string[]> = { cylinder: ["CYLINDRE", "CYLINDER"], cone: ["CONE"], sphere: ["SPHERE"], torus: ["TORUS"], bspline: ["BSPLINE_SURFACE"], bezier: ["BEZIER_SURFACE"], extrusion: ["EXTRUSION_SURFACE"], revolution: ["REVOLUTION_SURFACE"] };
         const surfaceFaceOf = (body: Shape3D, surfaceType: string, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string): Face => {
           const kinds = surfaceKinds[surfaceType];
@@ -569,10 +584,10 @@ export function evaluatePartDocument(
         const faceByReference = (body: Shape3D, ref: { normal?: V3 | number[]; surfaceType?: string; faceAnchor?: { centerMillimeters: number[]; areaSquareMillimeters: number } }, label: string): Face =>
           ref.surfaceType ? surfaceFaceOf(body, ref.surfaceType, ref.faceAnchor, label) : planarFaceOf(body, unit(ref.normal as V3), ref.faceAnchor, label);
         // The centre of such a planar face on the body as it was right after the feature that made it.
-        const planarFaceCenter = (sourceFeatureId: string, bodyId: string, normal: V3, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string, missing: string): V3 => {
+        const planarFaceCenter = (sourceFeatureId: string, bodyId: string, normal: V3, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string, missing: string, followNormalTranslation = false): V3 => {
           const body = bodyAt(sourceFeatureId, bodyId);
           if (!body) throw new Error(missing);
-          const face = planarFaceOf(body, normal, anchor, label);
+          const face = planarFaceOf(body, normal, anchor, label, followNormalTranslation);
           const center = [...deleteAfterVectorTuple(face.center)] as V3;
           face.delete();
           return center;
@@ -714,7 +729,7 @@ export function evaluatePartDocument(
           let supportFrame: SketchFrame | undefined;
           if (feature.support) {
             const support = feature.support;
-            const center = planarFaceCenter(support.sourceFeatureId, support.bodyId, support.normal as V3, support.faceAnchor, "Sketch support", "Sketch support body is unavailable at its source feature. Edit the sketch and reselect a planar face.");
+            const center = planarFaceCenter(support.sourceFeatureId, support.bodyId, support.normal as V3, support.faceAnchor, "Sketch support", "Sketch support body is unavailable at its source feature. Edit the sketch and reselect a planar face.", true);
             supportFrame = { originMillimeters: center, normal: [...support.normal], xDirection: [...support.xDirection] };
             // Published unflipped: the UI writes it back as the sketch's frame and applies the flip itself.
             sketchFrames[feature.id] = supportFrame;

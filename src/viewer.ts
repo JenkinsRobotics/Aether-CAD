@@ -12,7 +12,7 @@ import { updateSketchEnvironment } from "./sketch/environment-appearance";
 import type { PlaneTheme } from "./viewport/appearance-themes";
 import type { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { selectedCandidateId } from "./viewport/topology-selection";
-import {anchorForPlanarFace,planarFaceCandidates} from './viewport/planar-face-reference';
+import {anchorForPlanarFace,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
 import {pickHistoryFace} from './viewport/history-face-picking';
 import type {PlanarFaceAnchor} from '@aether/core/document';
 import { measurementsInWorld } from "./viewport/topology-measurement";
@@ -612,7 +612,7 @@ export class MateViewport {
 
   selectedImageFace(documentId?:string):import("@aether/core/document").ImageCanvas['face'] {
     const data=this.selectedFaceData();if(!data||!documentId||data.part.sourceDocumentId!==documentId||data.topology.surfaceType!=="PLANE")return undefined;
-    const center=data.topology.candidates.find(c=>c.kind==='face-center'),anchor=this.selectedFaceAnchor();
+    const center=planarFaceCenter(data.topology),anchor=this.selectedFaceAnchor();
     if(!center||anchor===null)return undefined;
     return {bodyId:data.part.id,normal:[...center.zAxis],...(anchor?{anchor}: {})};
   }
@@ -638,7 +638,7 @@ export class MateViewport {
     const label=`Face ${part.faceRanges.findIndex(range=>range.faceId===topology.id)+1} of ${part.name}`;
     if(topology.surfaceReference)return {bodyId:part.id,label,...structuredClone(topology.surfaceReference)};
     if(topology.surfaceType!=='PLANE')return null;
-    const center=topology.candidates.find(c=>c.kind==='face-center'),faceAnchor=anchorForPlanarFace(part.topology,topology.id);
+    const center=planarFaceCenter(topology),faceAnchor=anchorForPlanarFace(part.topology,topology.id);
     if(!center||faceAnchor===null)return null;
     return {bodyId:part.id,label,normal:[...center.zAxis] as [number,number,number],...(faceAnchor?{faceAnchor}:{}),centerMillimeters:[...center.origin] as [number,number,number]};
   }
@@ -663,7 +663,7 @@ export class MateViewport {
     const data=this.selectedFaceData();
     if(!data||data.topology.surfaceType!=="PLANE")return null;
     const {topology,matrix}=data;
-    const candidate=topology.candidates.find(c=>c.kind==="face-center");
+    const candidate=planarFaceCenter(topology);
     if(!candidate) return null;
     const origin=new THREE.Vector3(...candidate.origin).applyMatrix4(matrix);
     const normal=new THREE.Vector3(...candidate.zAxis).transformDirection(matrix);
