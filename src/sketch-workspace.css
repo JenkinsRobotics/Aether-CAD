@@ -23,6 +23,10 @@
 /* The shared CAD shell owns viewport positioning; this sheet only styles sketch content. */
 .cad-sketch-workspace { position:absolute; inset:0; display:grid; grid-template-columns:minmax(0,1fr) 260px; background:var(--aether-color-bg-app,#111922); z-index:12; }
 .cad-sketch-workspace.choosing-plane { background:transparent; pointer-events:none; }
+/* The shared .aui-button sets display, which beats the [hidden] attribute; a hidden
+   control in this full-screen grid then stretched over the whole viewport. */
+.cad-sketch-workspace [hidden] { display:none; }
+.cad-sketch-workspace > .sketch-fixed-plane-offer { position:absolute; left:24px; bottom:36px; pointer-events:auto; }
 /* The shared @aether/ui feature window mounts inside this section. It styles and
    positions itself (.aui-feature-window is absolute); this sheet must not restyle
    it, or it stops matching the UI gallery. The section is pointer-transparent, so

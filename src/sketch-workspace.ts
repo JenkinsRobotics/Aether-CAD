@@ -395,7 +395,7 @@ export function openSketchWorkspace(
     }
   };
   const fixedPlaneOffer = document.createElement("button");
-  fixedPlaneOffer.type = "button"; fixedPlaneOffer.className = "aui-button"; fixedPlaneOffer.textContent = "Use fixed plane"; fixedPlaneOffer.hidden = true;
+  fixedPlaneOffer.type = "button"; fixedPlaneOffer.className = "aui-button sketch-fixed-plane-offer"; fixedPlaneOffer.textContent = "Use fixed plane"; fixedPlaneOffer.hidden = true;
   fixedPlaneOffer.setAttribute("aria-label", "Use the picked face's plane as a fixed sketch plane");
   message.after(fixedPlaneOffer);
   window.addEventListener("aether-sketch-face", face);
