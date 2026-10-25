@@ -37,7 +37,8 @@ replay. The subsequent presentation-only repair passes all 10 mounted editor
 tests and typecheck; its rebuild preserves the exact native worker bytes.
 The actual browser passes dimension editing/undo/redo, live-agent source crossing
 and dimension editing, atomic invalid-edit refusal, extrusion and saved reopen
-(49.35 s), with no browser errors or server geometry calls. The real Animation
+(final visual run: 65.14 s), with no browser errors or server geometry calls.
+The real Animation
 client regression passes in that same disposable host. The broader 16-step
 modeling browser also passes (293.22 s), including cut/add/intersect, revolve,
 fillet, shell, mirror, pattern, Boolean, hole, surfaces and sheet-metal DXF, with
@@ -54,7 +55,8 @@ The first new assertion targeted the intentionally unstroked region-fill path;
 it now inspects the rendered entity edge. A second assertion used the wrong
 shared body selector; it now checks the actual floating-panel body. Both failed
 logs are retained. An unused custom paragraph selector was removed so the
-window retains the shared typography.
+window retains the shared typography. A login redirect race in the test was
+fixed by waiting for navigation/network readiness before creating its fixture.
 Frozen legacy fixture bytes remain unchanged. Source constructors now use the
 current version; fixture loaders exercise the real migration boundary.
 

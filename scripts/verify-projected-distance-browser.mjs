@@ -49,6 +49,7 @@ try {
   await page.locator('input[name="password"]').fill('account-test-password-2026');
   await button('Sign in').click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
+  await page.waitForLoadState('networkidle');
   const document = JSON.parse(await readFile(new URL('../service/tests/fixtures/projected-distance.json', import.meta.url), 'utf8'));
   document.documentId = randomUUID();
   file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Distance intent.acpart', data_base64: Buffer.from(JSON.stringify(document)).toString('base64') });
