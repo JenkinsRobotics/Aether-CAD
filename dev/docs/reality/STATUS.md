@@ -64,8 +64,60 @@ has been changed by this source work.
 
 ### Remaining baseline work
 
-Drawings still have presentation and OCCT hidden-line foundations but no connected
-authoring producer. Complete the real drawing workflow, assembly/agent editing
-coverage, and remaining reference tool variants before claiming the baseline.
+The following drawing increment connects the authoring producer for local Part drawings. Complete the remaining drawing variants, assembly/agent editing coverage, and reference tool variants before claiming the baseline.
 The reference command matrix contains historical claims that still need workflow
 verification; an enabled control or a generic feature schema is not proof of parity.
+
+
+## 2026-10-24 — initial functional Part drawings
+
+This is qualified source, not an installed release claim.
+The existing Drawing route now uses a canonical CAD Drawing document and the
+same OCCT engine as the modeler. `.acdrawing` embeds its source Part snapshot and
+saved sheet/view/annotation intent; projected edges are derived, never the saved
+truth. See `DRAWING_FORMAT.md` at the repository root.
+
+- Real base views (six orthographic directions plus isometric), hidden edges,
+  and first/third-angle projected views with inherited scale and alignment.
+- Multiple editable sheets, view position/scale/visibility, notes and overall
+  width/height dimensions measured from geometric extrema. Source refresh
+  rebuilds dimensions; changed open Parts mark their drawings stale.
+- Transactional commands and undo/redo: failed validation or geometry retain the
+  previous drawing and history. Drawing keyboard undo never edits the Part.
+- Local save/open, SVG and DXF active-sheet export. Lines, circles and circular
+  arcs remain analytic; other curve display/export chords are explicitly reported
+  at 0.01 mm model-space tolerance. Overall dimension values do not use chords.
+- Local headless runner discovery/create/mutate/inspect/export uses the same
+  commands/projector. Fresh processes preserve IDs, dimensions and source hashes.
+  It is not yet registered as a Studio MCP or live AI panel tool.
+
+Qualification evidence is in `.verification/baseline-2026-10-24/`:
+
+- All 1,124 engine tests pass. The full app run passed 1,775 tests with one
+  existing skip and one obsolete “engine unavailable” text assertion; the
+  assertion is corrected, and all 32 affected shell/drawing/controller tests pass.
+- Type checking and the frontend/packaged-worker build pass. Fresh-process drawing
+  commands prove associative 12 → 24 mm dimensions, inherited projection scale,
+  analytic circle exports, save/reopen and invalid-refresh refusal. SVG/DXF tests
+  reimport the DXF to verify physical millimeter scale and layers.
+- All 258 packaged-worker release tests pass against the finished package.
+  An earlier run overlapped a rebuild and failed because the output directory
+  temporarily lacked runner.pyz; this was a qualification scheduling error.
+  RELEASING.md now requires builds to finish before worker tests start.
+- The real authenticated browser flow passes base/projected views, notes and
+  dimensions, source-feature editing, explicit rebuild, keyboard undo/redo,
+  invalid edits, SVG/DXF downloads, local-file reopen, multiple sheets and
+  return to the model. The disposable host also verifies the existing Animation
+  browser client. Scripts are saved in `scripts/verify-drawings*.mjs`.
+- Two earlier browser attempts used outdated selectors (the old floating Drawing
+  button and a sheet label without its tree-expansion prefix). Both are corrected.
+  Drawing mode retains the model panel DOM/layout but clears modeling controls;
+  responsive drawing layout avoids horizontal sheet clipping.
+
+Native/installed apps, Map, host, database and network settings remain untouched.
+
+Remaining: section and assembly drawings/BOMs, arbitrary edge-attached/angular/
+radial dimensions, PDF, title-block editing, placement by dragging, persistent
+Studio drawing registration and full live-agent exposure. Current source refresh
+is explicit and requires the same Part document ID; no cross-document automatic
+update subscription is claimed. The broader CAD baseline goal remains active.

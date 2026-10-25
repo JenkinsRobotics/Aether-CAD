@@ -14,6 +14,7 @@ import { exportPart } from "./export";
 import { buildPartGeometry } from "./part-geometry";
 import { initNodeKernel, runNodeOperation } from "./node-kernel";
 import { EngineError } from "./worker-client";
+import { projectPartDrawing } from "./drawing-projection";
 
 const rethrow = (error: unknown): never => {
   if (error instanceof UnsupportedFeature) throw new EngineError(error.message, error.featureId, undefined, true);
@@ -33,6 +34,9 @@ export class InProcessKernelClient {
   }
   async evaluatePart(document: PartDocument, options: { preview?: boolean } = {}): Promise<ImportedModelData> {
     return this.run(document, () => evaluatePartDocument(document, options));
+  }
+  async projectDrawing(document: PartDocument, options: import("../drawing/projection").PartDrawingOptions): Promise<import("../drawing/projection").PartDrawingProjection> {
+    return this.run(document, () => projectPartDrawing(document, options));
   }
   async measureDistance(document: PartDocument, entities: MeasureEntity[]): Promise<DistanceMeasurement> {
     return this.run(document, () => measureDistance(document, entities));

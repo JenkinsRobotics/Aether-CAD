@@ -3,7 +3,7 @@
  *  (Node: tests, scripts) the same engine runs in the calling thread. */
 import { OCCTWorkerClient } from "@aether/core/kernel";
 
-type KernelClient = Pick<OCCTWorkerClient, "evaluatePart" | "measureDistance" | "analyzePart" | "checkContacts" | "exportPart" | "importSTEP" | "sketchSection" | "dispose" | "ready">;
+type KernelClient = Pick<OCCTWorkerClient, "evaluatePart" | "projectDrawing" | "measureDistance" | "analyzePart" | "checkContacts" | "exportPart" | "importSTEP" | "sketchSection" | "dispose" | "ready">;
 let client: KernelClient | undefined;
 export function aetherKernel(): KernelClient {
   if (client) return client;
@@ -18,6 +18,7 @@ function inProcess(): KernelClient {
   return {
     get ready() { return real().then(() => undefined); },
     evaluatePart: (document, options) => real().then((c) => c.evaluatePart(document, options)),
+    projectDrawing: (document, options) => real().then((c) => c.projectDrawing(document, options)),
     measureDistance: (document, entities) => real().then((c) => c.measureDistance(document, entities)),
     analyzePart: (document, options) => real().then((c) => c.analyzePart(document, options)),
     checkContacts: (input) => real().then((c) => c.checkContacts(input)),

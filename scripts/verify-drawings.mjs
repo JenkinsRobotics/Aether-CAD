@@ -1,0 +1,48 @@
+// Fresh-process qualification of the packaged local drawing command surface.
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const runner = fileURLToPath(new URL('../service/aether_cad_service/runtime/runner.mjs', import.meta.url));
+let processes = 0;
+const run = request => {
+  processes++;
+  const child = spawnSync(process.execPath, [runner], { input: JSON.stringify(request), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  assert.equal(child.status, 0, child.stderr);
+  const result = JSON.parse(child.stdout); assert.equal(result.error, undefined, result.error); return result;
+};
+const part = { format: 'aether-part', formatVersion: 21, documentId: 'drawing-source', name: 'Drawing cylinder', units: 'millimeter', features: [
+  { id: 'profile', type: 'profile', name: 'Circle', suppressed: false, plane: 'XY', offsetMillimeters: 0, profile: { type: 'circle', centerMillimeters: [0, 0], radiusMillimeters: 7 } },
+  { id: 'extrude', type: 'extrude', name: 'Extrude', suppressed: false, profileFeatureId: 'profile', distanceMillimeters: 12, operation: 'new' },
+] };
+assert.ok(run({ phase: 'drawing_docs' }).operations.includes('mutate'));
+let result = run({ phase: 'drawing', operation: 'create', content: JSON.stringify(part) });
+const sheetId = result.active_sheet_id;
+const mutate = command => { result = run({ phase: 'drawing', operation: 'mutate', content: result.content, command }); };
+mutate({ type: 'add-view', sheetId, view: { id: 'front', name: 'Front', orientation: 'front', originMm: [80, 100], scale: 0.5, hiddenLines: true } });
+mutate({ type: 'add-view', sheetId, view: { id: 'top', name: 'Top', orientation: 'top', originMm: [80, 60], scale: 1, hiddenLines: false, parentId: 'front' } });
+mutate({ type: 'add-annotation', sheetId, annotation: { id: 'height', kind: 'height', viewId: 'front', positionMm: [100, 100], decimals: 2 } });
+assert.equal(result.sheets[0].annotations[0].text, '12.00');
+assert.equal(result.sheets[0].views[1].scale, 0.5);
+const before = result.content;
+part.features[1].distanceMillimeters = 24;
+mutate({ type: 'refresh-source', source: part });
+assert.equal(result.sheets[0].annotations[0].text, '24.00');
+assert.notEqual(result.content, before);
+const reopened = run({ phase: 'drawing', operation: 'inspect', content: result.content });
+assert.equal(reopened.revision, result.revision);
+assert.deepEqual(reopened.sheets, result.sheets);
+const svg = run({ phase: 'drawing', operation: 'export', content: result.content, format: 'svg' }).text;
+const dxf = run({ phase: 'drawing', operation: 'export', content: result.content, format: 'dxf' }).text;
+assert.ok(svg.includes('width="297mm"'));
+assert.ok(svg.includes('24.00'));
+assert.ok(dxf.includes('0\nCIRCLE\n'));
+assert.ok(dxf.includes('40\n3.5\n'), 'The circle radius must be scaled from 7 model mm to 3.5 paper mm.');
+const oversized = structuredClone(part);
+oversized.features.push(...Array.from({ length: 511 }, (_, i) => ({ ...structuredClone(part.features[0]), id: `extra-${i}`, suppressed: true })));
+const refused = spawnSync(process.execPath, [runner], { input: JSON.stringify({ phase: 'drawing', operation: 'mutate', content: result.content, command: { type: 'refresh-source', source: oversized } }), encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+processes++;
+assert.equal(refused.status, 0, refused.stderr);
+const refusal = JSON.parse(refused.stdout);
+assert.match(refusal.error, /at most 512 features/);
+assert.equal(refusal.content, undefined, 'An invalid refresh must not return replacement content.');
+console.log(JSON.stringify({ status: 'passed', fresh_processes: processes, source_changed_dimension: '12.00 → 24.00', analytic_circle_export: true, saved_reopen: true, invalid_refresh_refused: true }));

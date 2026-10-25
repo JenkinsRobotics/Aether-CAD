@@ -412,6 +412,13 @@ export function AetherCADShell() {
     browser: { ...panelPositions.browser, placement: presentation.panelPlacements.browser },
     inspector: { ...panelPositions.inspector, placement: presentation.panelPlacements.inspector },
   }), [panelPositions, presentation.panelPlacements.browser, presentation.panelPlacements.inspector]);
+  const drawingMode = presentation.workspaceMode === "drawing";
+  // Drawing owns its sheet tree and inspector. Keep the model panels mounted
+  // and retain their layout so returning to the Part restores the same workspace.
+  const drawingHiddenPanels = new Set(["browser", "feature-tree", ...rightPanels.map(panel => panel.id)]);
+  const visiblePanelState: WorkspacePanelState = drawingMode
+    ? { ...studioPanelState, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, { ...studioPanelState[id], placement: "hidden" as const }])) }
+    : studioPanelState;
   // Derive routing groups from the actual rails so new panels cannot bypass
   // same-side exclusivity (Comments/Notes/Tasks and View/Performance did).
   // Features and parts is pinned (Onshape): it keeps its column while the
@@ -521,12 +528,12 @@ export function AetherCADShell() {
           preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
           preservePanelContent
           toolbarSpan="center"
-          pinnedPanels={["browser"]}
-          sideBottom={{ right: sketchEditing ? null : <CADStudioViewTools /> }}
+          pinnedPanels={drawingMode ? [] : ["browser"]}
+          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools /> }}
           style={{ height: "100%" }}
-          panelState={studioPanelState}
-          onPanelStateChange={updateStudioPanels}
-          toolbar={<CADTraditionalRibbon
+          panelState={visiblePanelState}
+          onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}
+          toolbar={drawingMode ? null : <CADTraditionalRibbon
             suite={suite}
             documentType={documentType}
             sketchEditing={sketchEditing}
@@ -535,9 +542,9 @@ export function AetherCADShell() {
             onSelectWorkspace={selectRibbonWorkspace}
             onAction={runRibbonAction}
           />}
-          leftPanels={leftPanels}
-          rightPanels={rightPanels}
-          bottom={<>{suite ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} /></div></>}
+          leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
+          rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}
+          bottom={<>{suite || drawingMode ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} /></div></>}
         >
           <div className="cad-studio-viewport" aria-hidden={presentation.workspaceMode === "drawing"} inert={presentation.workspaceMode === "drawing"}>
             <ViewportSurface presentation={presentation} />

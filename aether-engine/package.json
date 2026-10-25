@@ -8,6 +8,7 @@
     "./assembly": "./src/assembly/index.ts",
     "./contracts": "./src/contracts/index.ts",
     "./document": "./src/document/index.ts",
+    "./drawing": "./src/drawing/index.ts",
     "./geometry": "./src/geometry/index.ts",
     "./kernel": "./src/kernel/index.ts",
     "./sketch": "./src/sketch/index.ts",

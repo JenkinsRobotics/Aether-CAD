@@ -17,6 +17,12 @@ Package-manager versions and the shared UI dependency version are separate.
    the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
    wheel from `vendor/python/`, never an editable sibling Animation checkout.
    A default pytest run skips release gates and is insufficient for qualification.
+   Drawing changes also require `node scripts/verify-drawings.mjs`. Run
+   `scripts/verify-drawings-browser.mjs` through Studio's disposable authenticated
+   browser fixture with the candidate frontend and matching worker. It covers
+   source editing, associative rebuild, keyboard history, SVG/DXF and local reopen.
+   Finish building before starting worker qualification: the automation build
+   replaces its output directory, so tests must not read it during a rebuild.
 3. Commit the qualified source locally on `alpha-0.1`. Do not include scratch
    output, secrets or another contributor's unfinished work. Staging refuses
    tracked modifications and validates repository identity and artifact paths.

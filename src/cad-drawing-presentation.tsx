@@ -310,7 +310,7 @@ function inspector(
     badge: rebuild?.status ?? "not rebuilt",
     properties: [
       { id: "name", label: "Name", value: projection.name },
-      { id: "revision", label: "Revision", value: projection.revision },
+      { id: "revision", label: "Revision", value: projection.revision.slice(0, 12) },
       { id: "sheets", label: "Sheets", value: String(projection.sheets.length) },
       { id: "active-sheet", label: "Active sheet", value: active?.name ?? "None" },
       { id: "views", label: "Views", value: String(projection.sheets.reduce((sum, sheet) => sum + sheet.views.length, 0)) },

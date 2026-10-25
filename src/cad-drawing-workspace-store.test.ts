@@ -100,6 +100,6 @@ describe("CADDrawingWorkspaceStore", () => {
     expect(store.snapshot()).toMatchObject({ loadState: "error", message: "Exact projection failed.", projection: null, data: null });
     store.setUnavailable();
     expect(store.snapshot().loadState).toBe("unavailable");
-    expect(store.snapshot().message).toContain("canonical Core projection engine");
+    expect(store.snapshot().message).toContain("saved .acdrawing file");
   });
 });

@@ -36,6 +36,7 @@ import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./s
 import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
+import { drawingEditor } from "./drawing/controller";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountDerivedCurveCommands } from "./derived-curves-window";
 import { mountTimelineCopy } from "./timeline-clipboard-commands";
@@ -104,6 +105,7 @@ const expandedDocuments = new Set<string>();
 const collapsedFolders = new Set<string>();
 const knownDocuments = new Set<string>();
 let activePartDocument: PartDocument | null = null;
+drawingEditor.configure(() => activePartDocument);
 const selectedFeatureIDs=new Set<string>();
 let untitledPartNumber = 1;
 let awaitingSketchPlane = false;
@@ -872,10 +874,13 @@ cadPresentation.registerActionHandler((action) => {
     return;
   }
   if (action.type === "select-workspace-mode") {
+    if (action.mode === "drawing" && document.querySelector(".cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window")) {
+      setStatus("Finish or cancel the current sketch or feature before opening its drawing.");
+      return;
+    }
     cadPresentation.patch({ workspaceMode: action.mode, startScreen: "workspace" });
-    setStatus(action.mode === "drawing"
-      ? "Drawing workspace opened; exact sheets are waiting for the canonical Core producer."
-      : "3D modeling workspace opened.");
+    if (action.mode === "drawing") void drawingEditor.enter().catch(error => setStatus(error instanceof Error ? error.message : String(error)));
+    setStatus(action.mode === "drawing" ? "Drawing workspace opened." : "3D modeling workspace opened.");
     return;
   }
   if (action.type === "select-layout") {
@@ -1211,6 +1216,7 @@ window.addEventListener("keydown", (event) => {
     target instanceof HTMLTextAreaElement ||
     target?.isContentEditable === true || Boolean(target?.closest?.('[contenteditable="true"], [contenteditable=""]'));
   if (isEditingText || event.defaultPrevented) return;
+  if (cadPresentation.snapshot().workspaceMode === "drawing") return;
   const selectionShortcut = ({"1":"selection-window","2":"selection-freeform","3":"selection-paint"} as const)[event.key as "1"|"2"|"3"];
   if (selectionShortcut && !event.metaKey && !event.ctrlKey && !event.altKey && !event.isComposing && !sketchEditor?.active && !document.querySelector('.cad-feature-dialog, .cad-plane-window, [role="dialog"], [role="menu"]')) {
     event.preventDefault();

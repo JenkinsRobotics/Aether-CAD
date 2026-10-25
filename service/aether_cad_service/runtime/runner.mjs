@@ -416,8 +416,8 @@ const finite$2 = (v) => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id2, earlier, what) => {
   if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
 };
-const ids$1 = (list, what, exact) => {
-  if (!Array.isArray(list) || !list.length || list.some((id2) => typeof id2 !== "string") || exact !== void 0 && list.length !== exact) throw new Error(`${what} needs ${exact === 1 ? "one surface body" : "surface bodies"}.`);
+const ids$1 = (list2, what, exact) => {
+  if (!Array.isArray(list2) || !list2.length || list2.some((id2) => typeof id2 !== "string") || exact !== void 0 && list2.length !== exact) throw new Error(`${what} needs ${exact === 1 ? "one surface body" : "surface bodies"}.`);
 };
 function validateSurfaceFeature(feature, earlier, missing) {
   switch (feature.type) {
@@ -512,7 +512,7 @@ function validateSurfaceFeature(feature, earlier, missing) {
       return;
   }
 }
-const ids = (list, min) => Array.isArray(list) && list.length >= min && list.length <= 1e3 && list.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list).size === list.length;
+const ids = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
 function validateProfileRegionSelection(selection) {
   const value2 = selection.profileRegion;
   if (value2 === void 0) return;
@@ -834,15 +834,15 @@ function validateTextItems(drawing) {
       throw Error("Invalid retained text outline digest.");
   }
 }
-function point(value2) {
+function point$1(value2) {
   if (!Array.isArray(value2) || value2.length !== 2 || !value2.every((v) => typeof v === "number" && Number.isFinite(v)))
     throw Error("Conic points must contain two finite coordinates.");
 }
 function validateConic(start, segment) {
-  point(start);
+  point$1(start);
   if (!segment || segment.type !== "conic") throw Error("Expected a conic segment.");
-  point(segment.end);
-  point(segment.control);
+  point$1(segment.end);
+  point$1(segment.control);
   if (!Number.isFinite(segment.rho) || segment.rho <= 0 || segment.rho >= 1)
     throw Error("Conic rho must be greater than 0 and less than 1.");
   const a2 = [segment.control[0] - start[0], segment.control[1] - start[1]], b = [segment.end[0] - start[0], segment.end[1] - start[1]], la = Math.hypot(...a2), lb = Math.hypot(...b);
@@ -2199,7 +2199,7 @@ const subtract = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
 ];
-const unique$1 = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list) => !i || Math.abs(t - list[i - 1]) > 1e-8);
+const unique$1 = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list2) => !i || Math.abs(t - list2[i - 1]) > 1e-8);
 function polynomialRoots(coefficients, lo = 0, hi = 1) {
   const scale2 = Math.max(...coefficients.map(Math.abs), 1), c2 = coefficients.map((v) => v / scale2);
   while (c2.length > 1 && Math.abs(c2.at(-1)) < 1e-13) c2.pop();
@@ -2660,7 +2660,7 @@ function curveIntersections(first, second) {
     else hits = bezierPairs(first, second);
   }
   return hits.sort((a2, b) => a2.first - b.first).filter(
-    (h, i, list) => !list.slice(0, i).some(
+    (h, i, list2) => !list2.slice(0, i).some(
       (p2) => Math.abs(p2.first - h.first) < 1e-5 && Math.abs(p2.second - h.second) < 1e-5
     )
   );
@@ -4108,9 +4108,9 @@ function translatedSeed(drawing, contacts) {
   const next = structuredClone(drawing), moves = /* @__PURE__ */ new Map();
   for (const { a: a2, point: point2 } of contacts) {
     const at = targetPoint(drawing, a2, point2);
-    const list = moves.get(a2.contour) ?? [];
-    list.push([point2[0] - at[0], point2[1] - at[1]]);
-    moves.set(a2.contour, list);
+    const list2 = moves.get(a2.contour) ?? [];
+    list2.push([point2[0] - at[0], point2[1] - at[1]]);
+    moves.set(a2.contour, list2);
   }
   for (const [index, deltas] of moves) {
     const dx = deltas.reduce((s, d2) => s + d2[0], 0) / deltas.length;
@@ -4872,7 +4872,7 @@ class PierceReferenceError extends Error {
 const dot$6 = (a2, b) => a2.reduce((sum, value2, i) => sum + value2 * b[i], 0);
 const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const value = (coefficients, t) => coefficients.reduceRight((sum, n) => sum * t + n, 0);
-const unique = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list) => i === 0 || Math.abs(t - list[i - 1]) > 8 * Number.EPSILON);
+const unique = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list2) => i === 0 || Math.abs(t - list2[i - 1]) > 8 * Number.EPSILON);
 function distanceRoots(coefficients) {
   const scale2 = Math.max(...coefficients.map(Math.abs)), c2 = coefficients.map((v) => v / scale2);
   while (c2.length > 1 && c2.at(-1) === 0) c2.pop();
@@ -7126,10 +7126,10 @@ function sketchArrangement(drawing) {
   };
   const out = /* @__PURE__ */ new Map();
   half.forEach((h, i) => out.set(h.from, [...out.get(h.from) ?? [], i]));
-  for (const list of out.values()) list.sort((a2, b) => angle2(half[a2]) - angle2(half[b]));
+  for (const list2 of out.values()) list2.sort((a2, b) => angle2(half[a2]) - angle2(half[b]));
   const next = (i) => {
-    const list = out.get(half[i].to), back = i ^ 1, k2 = list.indexOf(back);
-    return list[(k2 - 1 + list.length) % list.length];
+    const list2 = out.get(half[i].to), back = i ^ 1, k2 = list2.indexOf(back);
+    return list2[(k2 - 1 + list2.length) % list2.length];
   };
   const used = /* @__PURE__ */ new Set(), loops = [];
   for (let i = 0; i < half.length; i++) {
@@ -7292,7 +7292,7 @@ function connectedSketchRegions(drawing) {
     for (const n of edge.nodes) incident.set(n, [...incident.get(n) ?? [], i]);
   });
   const ambiguous = /* @__PURE__ */ new Set();
-  for (const [node2, list] of members) for (const a2 of list) for (const b of list) {
+  for (const [node2, list2] of members) for (const a2 of list2) for (const b of list2) {
     if (distance(points[a2], points[b]) > tolerance) ambiguous.add(node2);
   }
   const regions = [], issues = [], visited = /* @__PURE__ */ new Set();
@@ -7366,7 +7366,7 @@ function sketchArrangementRegions(drawing) {
   const signature = (f2) => JSON.stringify([f2.sourceContourIndices, f2.insideContourIndices]);
   const groups = /* @__PURE__ */ new Map();
   for (const f2 of faces) groups.set(signature(f2), [...groups.get(signature(f2)) ?? [], f2]);
-  for (const list of groups.values()) list.sort((a2, b) => a2.sample[0] - b.sample[0] || a2.sample[1] - b.sample[1]);
+  for (const list2 of groups.values()) list2.sort((a2, b) => a2.sample[0] - b.sample[0] || a2.sample[1] - b.sample[1]);
   return faces.map((f2, k2) => {
     const group = groups.get(signature(f2));
     return {
@@ -12984,9 +12984,9 @@ const featureEditTools = [
   tool$1("feature_move", "Move one feature earlier (negative delta) or later in the history. Refused when it would break references. One undo step.", { feature_id: featureId, delta: { type: "integer", minimum: -511, maximum: 511 } }, ["feature_id", "delta"])
 ];
 const featureEditToolNames = featureEditTools.map((t) => t.name);
-const object$1 = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
+const object$2 = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
 function parseObject(text2, label) {
-  if (object$1(text2)) return structuredClone(text2);
+  if (object$2(text2)) return structuredClone(text2);
   if (typeof text2 !== "string") throw Error(`${label} must be a JSON object string.`);
   let value2;
   try {
@@ -12994,7 +12994,7 @@ function parseObject(text2, label) {
   } catch {
     throw Error(`${label} is not valid JSON.`);
   }
-  if (!object$1(value2)) throw Error(`${label} must be a JSON object.`);
+  if (!object$2(value2)) throw Error(`${label} must be a JSON object.`);
   return value2;
 }
 function existing(doc, id2) {
@@ -13034,27 +13034,27 @@ function prepareFeatureOperation(doc, name, args) {
   }
   throw Error("Unknown feature operation.");
 }
-const number = { type: "number" }, string = { type: "string" }, boolean = { type: "boolean" };
+const number$1 = { type: "number" }, string = { type: "string" }, boolean = { type: "boolean" };
 const tool = (name, description, properties, required = []) => ({ name: "aether_cad_" + name, description, inputSchema: { type: "object", properties, required, additionalProperties: false } });
-const vector3 = { type: "array", items: number, minItems: 3, maxItems: 3 };
-const plane = { name: string, plane: { type: "string", enum: ["XY", "XZ", "YZ"] }, frame: { type: "object", properties: { origin_mm: vector3, x_direction: vector3, y_direction: vector3 }, required: ["origin_mm", "x_direction", "y_direction"], additionalProperties: false }, offset_mm: number, flip: { type: "string", enum: ["x", "y"] } };
-const operation = { name: string, profile_id: string, profile_point_mm: { type: "array", items: number, minItems: 2, maxItems: 2 }, operation: { type: "string", enum: ["new", "add", "cut"] }, target_body_id: string };
+const vector3 = { type: "array", items: number$1, minItems: 3, maxItems: 3 };
+const plane = { name: string, plane: { type: "string", enum: ["XY", "XZ", "YZ"] }, frame: { type: "object", properties: { origin_mm: vector3, x_direction: vector3, y_direction: vector3 }, required: ["origin_mm", "x_direction", "y_direction"], additionalProperties: false }, offset_mm: number$1, flip: { type: "string", enum: ["x", "y"] } };
+const operation = { name: string, profile_id: string, profile_point_mm: { type: "array", items: number$1, minItems: 2, maxItems: 2 }, operation: { type: "string", enum: ["new", "add", "cut"] }, target_body_id: string };
 const cadAgentTools = [
   ...partAITools,
   ...featureReadTools,
   ...featureEditTools,
   tool("inspect", "Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.", { offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }),
   tool("feature_references", "Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.", { feature_id: string, direction: { type: "string", enum: ["inputs", "dependents"] }, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["feature_id"]),
-  tool("solid_primitive", "Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.", { kind: { type: "string", enum: Object.keys(primitiveFields) }, width_mm: number, length_mm: number, height_mm: number, radius_mm: number, tube_radius_mm: number }, ["kind"]),
+  tool("solid_primitive", "Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.", { kind: { type: "string", enum: Object.keys(primitiveFields) }, width_mm: number$1, length_mm: number$1, height_mm: number$1, radius_mm: number$1, tube_radius_mm: number$1 }, ["kind"]),
   tool("sketch_inspect", "Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.", { feature_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 25 } }, ["feature_id"]),
-  tool("sketch_translate", "Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.", { feature_id: string, dx_mm: number, dy_mm: number }, ["feature_id", "dx_mm", "dy_mm"]),
-  tool("sketch_dimension", "Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.", { feature_id: string, dimension_id: string, value: number }, ["feature_id", "dimension_id", "value"]),
-  tool("sketch_rectangle", "Add an editable rectangular sketch profile. Specify plane (XY/XZ/YZ) OR frame (origin_mm and perpendicular unit x_direction/y_direction). x_mm/y_mm are local coordinates; offset_mm moves along the unflipped normal. Optional flip x/y reverses the normal about that local axis.", { ...plane, x_mm: number, y_mm: number, width_mm: number, height_mm: number }, ["x_mm", "y_mm", "width_mm", "height_mm"]),
-  tool("sketch_circle", "Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.", { ...plane, center_x_mm: number, center_y_mm: number, radius_mm: number }, ["center_x_mm", "center_y_mm", "radius_mm"]),
-  tool("sketch_polygon", "Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.", { ...plane, points_mm: { type: "array", minItems: 3, maxItems: 128, items: { type: "array", items: number, minItems: 2, maxItems: 2 } } }, ["points_mm"]),
-  tool("extrude", "Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.", { ...operation, depth_mm: number, reversed: boolean, all_regions: boolean }, ["profile_id", "depth_mm", "operation"]),
-  tool("revolve", "Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.", { ...operation, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number }, ["profile_id", "axis", "angle_deg", "operation"]),
-  tool("extrude_depth", "Change an existing blind/symmetric extrusion depth, then rebuild.", { feature_id: string, depth_mm: number }, ["feature_id", "depth_mm"]),
+  tool("sketch_translate", "Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.", { feature_id: string, dx_mm: number$1, dy_mm: number$1 }, ["feature_id", "dx_mm", "dy_mm"]),
+  tool("sketch_dimension", "Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.", { feature_id: string, dimension_id: string, value: number$1 }, ["feature_id", "dimension_id", "value"]),
+  tool("sketch_rectangle", "Add an editable rectangular sketch profile. Specify plane (XY/XZ/YZ) OR frame (origin_mm and perpendicular unit x_direction/y_direction). x_mm/y_mm are local coordinates; offset_mm moves along the unflipped normal. Optional flip x/y reverses the normal about that local axis.", { ...plane, x_mm: number$1, y_mm: number$1, width_mm: number$1, height_mm: number$1 }, ["x_mm", "y_mm", "width_mm", "height_mm"]),
+  tool("sketch_circle", "Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.", { ...plane, center_x_mm: number$1, center_y_mm: number$1, radius_mm: number$1 }, ["center_x_mm", "center_y_mm", "radius_mm"]),
+  tool("sketch_polygon", "Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.", { ...plane, points_mm: { type: "array", minItems: 3, maxItems: 128, items: { type: "array", items: number$1, minItems: 2, maxItems: 2 } } }, ["points_mm"]),
+  tool("extrude", "Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.", { ...operation, depth_mm: number$1, reversed: boolean, all_regions: boolean }, ["profile_id", "depth_mm", "operation"]),
+  tool("revolve", "Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.", { ...operation, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number$1 }, ["profile_id", "axis", "angle_deg", "operation"]),
+  tool("extrude_depth", "Change an existing blind/symmetric extrusion depth, then rebuild.", { feature_id: string, depth_mm: number$1 }, ["feature_id", "depth_mm"]),
   tool("suppress", "Suppress or unsuppress an existing feature. Rebuild must succeed.", { feature_id: string, suppressed: boolean }, ["feature_id", "suppressed"]),
   tool("undo", "Undo one successful Part edit, using the same history as the editor.", {}),
   tool("redo", "Redo one Part edit, using the same history as the editor.", {})
@@ -13149,9 +13149,9 @@ function preparePartEdit(doc, name, args) {
 }
 const programToolNames = ["sketch_translate", "sketch_dimension", "solid_primitive", "sketch_rectangle", "sketch_circle", "sketch_polygon", "extrude", "revolve", "extrude_depth", "suppress", "feature_add", "feature_update", "feature_delete", "feature_move"].map((name) => `aether_cad_${name}`);
 const edits = new Set(programToolNames);
-const object = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
+const object$1 = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
 function fields(value2, names) {
-  if (!object(value2) || Object.keys(value2).some((key) => !names.includes(key))) throw Error("Unknown or malformed program fields.");
+  if (!object$1(value2) || Object.keys(value2).some((key) => !names.includes(key))) throw Error("Unknown or malformed program fields.");
 }
 function parseProgram(encoded) {
   if (typeof encoded !== "string" || new TextEncoder().encode(encoded).length > 65536) throw Error("Use a program of at most 64 KiB.");
@@ -13162,7 +13162,7 @@ function parseProgram(encoded) {
   for (const step of program.steps) {
     fields(step, ["id", "tool", "arguments"]);
     if (typeof step.id !== "string" || !/^[a-zA-Z][a-zA-Z0-9_-]{0,39}$/.test(step.id) || ids2.has(step.id)) throw Error("Use unique step IDs of 1–40 letters, digits, underscores or hyphens, starting with a letter.");
-    if (typeof step.tool !== "string" || !edits.has(step.tool) || !object(step.arguments)) throw Error("Choose an existing Part editing tool with an arguments object.");
+    if (typeof step.tool !== "string" || !edits.has(step.tool) || !object$1(step.arguments)) throw Error("Choose an existing Part editing tool with an arguments object.");
     ids2.add(step.id);
   }
   return program.steps;
@@ -13173,7 +13173,7 @@ function prepareProgramStep(source, step, references) {
   function resolve2(value2, depth = 0) {
     if (depth > 12) throw Error("Program arguments are nested too deeply.");
     if (Array.isArray(value2)) return value2.map((item) => resolve2(item, depth + 1));
-    if (!object(value2)) return value2;
+    if (!object$1(value2)) return value2;
     if ("$ref" in value2) {
       fields(value2, ["$ref"]);
       const match = typeof value2.$ref === "string" && /^([a-zA-Z][a-zA-Z0-9_-]{0,39})\.(feature_id|body_id)$/.exec(value2.$ref);
@@ -26030,14 +26030,14 @@ Table.prototype.encode = function() {
 Table.prototype.sizeOf = function() {
   return sizeOf.TABLE(this);
 };
-function ushortList(itemName, list, count) {
+function ushortList(itemName, list2, count) {
   if (count === void 0) {
-    count = list.length;
+    count = list2.length;
   }
-  var fields2 = new Array(list.length + 1);
+  var fields2 = new Array(list2.length + 1);
   fields2[0] = { name: itemName + "Count", type: "USHORT", value: count };
-  for (var i = 0; i < list.length; i++) {
-    fields2[i + 1] = { name: itemName + i, type: "USHORT", value: list[i] };
+  for (var i = 0; i < list2.length; i++) {
+    fields2[i + 1] = { name: itemName + i, type: "USHORT", value: list2[i] };
   }
   return fields2;
 }
@@ -26318,47 +26318,47 @@ Parser.prototype.parseOffset16List = Parser.prototype.parseUShortList = function
   return offsets;
 };
 Parser.prototype.parseShortList = function(count) {
-  var list = new Array(count);
+  var list2 = new Array(count);
   var dataView = this.data;
   var offset2 = this.offset + this.relativeOffset;
   for (var i = 0; i < count; i++) {
-    list[i] = dataView.getInt16(offset2);
+    list2[i] = dataView.getInt16(offset2);
     offset2 += 2;
   }
   this.relativeOffset += count * 2;
-  return list;
+  return list2;
 };
 Parser.prototype.parseByteList = function(count) {
-  var list = new Array(count);
+  var list2 = new Array(count);
   var dataView = this.data;
   var offset2 = this.offset + this.relativeOffset;
   for (var i = 0; i < count; i++) {
-    list[i] = dataView.getUint8(offset2++);
+    list2[i] = dataView.getUint8(offset2++);
   }
   this.relativeOffset += count;
-  return list;
+  return list2;
 };
 Parser.prototype.parseList = function(count, itemCallback) {
   if (!itemCallback) {
     itemCallback = count;
     count = this.parseUShort();
   }
-  var list = new Array(count);
+  var list2 = new Array(count);
   for (var i = 0; i < count; i++) {
-    list[i] = itemCallback.call(this);
+    list2[i] = itemCallback.call(this);
   }
-  return list;
+  return list2;
 };
 Parser.prototype.parseList32 = function(count, itemCallback) {
   if (!itemCallback) {
     itemCallback = count;
     count = this.parseULong();
   }
-  var list = new Array(count);
+  var list2 = new Array(count);
   for (var i = 0; i < count; i++) {
-    list[i] = itemCallback.call(this);
+    list2[i] = itemCallback.call(this);
   }
-  return list;
+  return list2;
 };
 Parser.prototype.parseRecordList = function(count, recordDescription) {
   if (!recordDescription) {
@@ -26475,11 +26475,11 @@ Parser.prototype.parseListOfLists = function(itemCallback) {
   var offsets = this.parseOffset16List();
   var count = offsets.length;
   var relativeOffset = this.relativeOffset;
-  var list = new Array(count);
+  var list2 = new Array(count);
   for (var i = 0; i < count; i++) {
     var start = offsets[i];
     if (start === 0) {
-      list[i] = void 0;
+      list2[i] = void 0;
       continue;
     }
     this.relativeOffset = start;
@@ -26490,13 +26490,13 @@ Parser.prototype.parseListOfLists = function(itemCallback) {
         this.relativeOffset = start + subOffsets[j];
         subList[j] = itemCallback.call(this);
       }
-      list[i] = subList;
+      list2[i] = subList;
     } else {
-      list[i] = this.parseUShortList();
+      list2[i] = this.parseUShortList();
     }
   }
   this.relativeOffset = relativeOffset;
-  return list;
+  return list2;
 };
 Parser.prototype.parseCoverage = function() {
   var startOffset = this.offset + this.relativeOffset;
@@ -37847,7 +37847,7 @@ function vertexAnchorsOf(shape) {
   for (const [key, r] of records) anchors.set(key, { positionMillimeters: r.point, shapeFingerprint: fingerprint, incidence: JSON.stringify([r.faceIndices, r.edgeIndices]), signature: hashText(JSON.stringify([structure, r.faces.slice().sort(), r.edges.slice().sort()])) });
   return anchors;
 }
-const text = (bytes) => new TextDecoder("latin1").decode(bytes);
+const text$1 = (bytes) => new TextDecoder("latin1").decode(bytes);
 function indexed(points, faces) {
   const vertices = [], triangles = [];
   const count = points.length / 3;
@@ -37879,7 +37879,7 @@ function parseSTL(bytes) {
     return { vertices: vertices2, triangles };
   }
   const vertices = [];
-  for (const line2 of text(bytes).split(/\r?\n/)) {
+  for (const line2 of text$1(bytes).split(/\r?\n/)) {
     const m2 = /^\s*vertex\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(line2);
     if (m2) vertices.push(Number(m2[1]), Number(m2[2]), Number(m2[3]));
   }
@@ -37888,7 +37888,7 @@ function parseSTL(bytes) {
 }
 function parseOBJ(bytes) {
   const points = [], faces = [];
-  for (const raw of text(bytes).split(/\r?\n/)) {
+  for (const raw of text$1(bytes).split(/\r?\n/)) {
     const line2 = raw.trim();
     if (line2.startsWith("v ")) {
       const p2 = line2.split(/\s+/).slice(1, 4).map(Number);
@@ -37905,7 +37905,7 @@ function parseOBJ(bytes) {
   return indexed(points, faces);
 }
 function parseOFF(bytes) {
-  const lines = text(bytes).split(/\r?\n/).map((l) => l.replace(/#.*/, "").trim()).filter(Boolean);
+  const lines = text$1(bytes).split(/\r?\n/).map((l) => l.replace(/#.*/, "").trim()).filter(Boolean);
   if (!/^OFF/i.test(lines[0] ?? "")) throw new Error("OFF could not be read.");
   const header = lines[0].length > 3 ? lines[0].slice(3).trim() : lines[1];
   const [nv, nf] = header.split(/\s+/).map(Number);
@@ -37919,9 +37919,9 @@ function parseOFF(bytes) {
   return indexed(points, faces);
 }
 function parsePLY(bytes) {
-  const headerEnd = text(bytes.subarray(0, Math.min(bytes.length, 65536))).indexOf("end_header");
+  const headerEnd = text$1(bytes.subarray(0, Math.min(bytes.length, 65536))).indexOf("end_header");
   if (headerEnd < 0) throw new Error("PLY could not be read.");
-  const headerText = text(bytes.subarray(0, headerEnd));
+  const headerText = text$1(bytes.subarray(0, headerEnd));
   const bodyStart = headerEnd + "end_header".length + (bytes[headerEnd + 10] === 13 ? 2 : 1);
   const lines = headerText.split(/\r?\n/).map((l) => l.trim());
   const format = lines.find((l) => l.startsWith("format"))?.split(/\s+/)[1];
@@ -37935,7 +37935,7 @@ function parsePLY(bytes) {
   const sizes = { char: 1, uchar: 1, int8: 1, uint8: 1, short: 2, ushort: 2, int16: 2, uint16: 2, int: 4, uint: 4, int32: 4, uint32: 4, float: 4, float32: 4, double: 8, float64: 8 };
   const points = [], faces = [];
   if (format === "ascii") {
-    const tokens = text(bytes.subarray(bodyStart)).split(/\s+/).filter(Boolean);
+    const tokens = text$1(bytes.subarray(bodyStart)).split(/\s+/).filter(Boolean);
     let at = 0;
     for (const element of elements) for (let i = 0; i < element.count; i++) {
       const values = {};
@@ -37964,9 +37964,9 @@ function parsePLY(bytes) {
       for (const prop of element.props) {
         if (prop.type === "list") {
           const n = read(prop.list[0]);
-          const list = [];
-          for (let k2 = 0; k2 < n; k2++) list.push(read(prop.list[1]));
-          values[prop.name] = list;
+          const list2 = [];
+          for (let k2 = 0; k2 < n; k2++) list2.push(read(prop.list[1]));
+          values[prop.name] = list2;
         } else values[prop.name] = read(prop.type);
       }
       if (element.name === "vertex") points.push(values.x, values.y, values.z);
@@ -38517,8 +38517,8 @@ function hashKey(text2) {
   for (let i = 0; i < text2.length; i++) hash = Math.imul(hash ^ text2.charCodeAt(i), 16777619) >>> 0;
   return hash.toString(36) + text2.length.toString(36);
 }
-function dropSteps(list, from) {
-  for (const step of list.splice(from)) for (const shape of step.owned.reverse()) release(shape);
+function dropSteps(list2, from) {
+  for (const step of list2.splice(from)) for (const shape of step.owned.reverse()) release(shape);
 }
 function evaluatePartDocument(document2, options = {}) {
   validatePartDocument(document2);
@@ -39717,11 +39717,11 @@ function evaluatePartDocument(document2, options = {}) {
               const outward = (wall) => {
                 const oc = getOC();
                 const faces = open(new FaceFinder()).find(body);
-                const list = new oc.TopTools_ListOfShape_1();
-                faces.forEach((face) => list.Append_1(face.wrapped));
+                const list2 = new oc.TopTools_ListOfShape_1();
+                faces.forEach((face) => list2.Append_1(face.wrapped));
                 const builder = new oc.BRepOffsetAPI_MakeThickSolid(), progress = new oc.Message_ProgressRange_1();
                 try {
-                  builder.MakeThickSolidByJoin(body.wrapped, list, wall, 1e-4, oc.BRepOffset_Mode.BRepOffset_Skin, false, false, oc.GeomAbs_JoinType.GeomAbs_Intersection, false, progress);
+                  builder.MakeThickSolidByJoin(body.wrapped, list2, wall, 1e-4, oc.BRepOffset_Mode.BRepOffset_Skin, false, false, oc.GeomAbs_JoinType.GeomAbs_Intersection, false, progress);
                   const shape = cast(builder.Shape());
                   if (!isShape3D(shape)) {
                     shape.delete();
@@ -39730,7 +39730,7 @@ function evaluatePartDocument(document2, options = {}) {
                   return own(shape);
                 } finally {
                   faces.forEach((face) => face.delete());
-                  list.delete();
+                  list2.delete();
                   builder.delete();
                   progress.delete();
                 }
@@ -40538,7 +40538,7 @@ function evaluatePartDocument(document2, options = {}) {
           }
           if (feature.type === "surface-stitch" || feature.type === "surface-unstitch" || feature.type === "surface-reverse-normal") {
             const o = getOC();
-            const sheetOf = (raw) => {
+            const sheetOf2 = (raw) => {
               const shape = cast(raw);
               if (isShape3D(shape)) return own(shape);
               const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
@@ -40555,7 +40555,7 @@ function evaluatePartDocument(document2, options = {}) {
               const sewing = new o.BRepBuilderAPI_Sewing(feature.toleranceMillimeters ?? 1e-3, true, true, true, false);
               for (const id2 of feature.bodyIds) sewing.Add(surfaceBody(id2, "Stitch").wrapped);
               sewing.Perform(new o.Message_ProgressRange_1());
-              let result = sheetOf(sewing.SewedShape());
+              let result = sheetOf2(sewing.SewedShape());
               if (result.wrapped.ShapeType().value === o.TopAbs_ShapeEnum.TopAbs_SHELL.value && o.BRep_Tool.IsClosed_1(result.wrapped)) {
                 const solid = cast(new o.BRepBuilderAPI_MakeSolid_3(result.wrapped).Solid());
                 result = own(measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid);
@@ -40570,7 +40570,7 @@ function evaluatePartDocument(document2, options = {}) {
               const ids2 = body.faces.map((face, index2) => {
                 const id2 = `${prefix}:solid-${index2 + 1}`;
                 if (bodies.has(id2)) throw new Error("Duplicate output body identity.");
-                bodies.set(id2, sheetOf(face.wrapped));
+                bodies.set(id2, sheetOf2(face.wrapped));
                 return id2;
               });
               if (!ids2.length) throw new Error("Unstitch found no faces.");
@@ -40854,7 +40854,7 @@ function evaluatePartDocument(document2, options = {}) {
           } else if (feature.type === "surface-extrude" || feature.type === "surface-revolve" || feature.type === "surface-loft" || feature.type === "surface-patch" || feature.type === "surface-sweep" || feature.type === "surface-offset" || feature.type === "surface-thicken") {
             const o = getOC();
             const progress = () => new o.Message_ProgressRange_1();
-            const sheetOf = (raw) => {
+            const sheetOf2 = (raw) => {
               const shape = cast(raw);
               if (isShape3D(shape)) return own(shape);
               const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
@@ -40871,11 +40871,11 @@ function evaluatePartDocument(document2, options = {}) {
               return chosen.map((c2) => sketchWire(sketchId, c2.id, what, true));
             };
             const joined = (raws) => {
-              if (raws.length === 1) return sheetOf(raws[0]);
+              if (raws.length === 1) return sheetOf2(raws[0]);
               const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
               for (const raw of raws) sewing.Add(raw);
               sewing.Perform(progress());
-              return sheetOf(sewing.SewedShape());
+              return sheetOf2(sewing.SewedShape());
             };
             const sheetArea = (sheet) => {
               const a2 = measureArea(sheet);
@@ -40924,7 +40924,7 @@ function evaluatePartDocument(document2, options = {}) {
               const maker = new o.BRepOffsetAPI_ThruSections(false, Boolean(feature.ruled), 1e-6);
               for (const section2 of feature.sections) maker.AddWire(sketchWire(section2.profileFeatureId, section2.contourId, "Surface loft section", true).wrapped);
               maker.Build(progress());
-              tool22 = sheetArea(sheetOf(maker.Shape()));
+              tool22 = sheetArea(sheetOf2(maker.Shape()));
             } else if (feature.type === "surface-patch") {
               const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Patch", true);
               tool22 = sheetArea(joined(wires.map((wire) => own(makeFace(wire)).wrapped)));
@@ -40949,7 +40949,7 @@ function evaluatePartDocument(document2, options = {}) {
               else {
                 const maker = new o.BRepOffsetAPI_MakeOffsetShape();
                 maker.PerformByJoin(body.wrapped, feature.distanceMillimeters, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
-                tool22 = sheetArea(sheetOf(maker.Shape()));
+                tool22 = sheetArea(sheetOf2(maker.Shape()));
               }
             } else {
               const pieces = feature.bodyIds.map((id2) => {
@@ -40969,7 +40969,7 @@ function evaluatePartDocument(document2, options = {}) {
                 if (feature.symmetric) {
                   const back = new o.BRepOffsetAPI_MakeOffsetShape();
                   back.PerformByJoin(sheet.wrapped, -t / 2, 1e-4, o.BRepOffset_Mode.BRepOffset_Skin, true, false, o.GeomAbs_JoinType.GeomAbs_Arc, false, progress());
-                  sheet = sheetOf(back.Shape());
+                  sheet = sheetOf2(back.Shape());
                 }
                 const maker = new o.BRepOffsetAPI_MakeThickSolid();
                 maker.MakeThickSolidBySimple(sheet.wrapped, t);
@@ -41870,6 +41870,50 @@ function solidMeasures(shape) {
   edges.forEach((e) => e.delete());
   return measures;
 }
+function withHiddenLineProjection(shape, options, read) {
+  const oc = getOC();
+  const {
+    viewNormal = [0, -1, 0]
+  } = options;
+  const [dx, dy, dz] = viewNormal;
+  if (![dx, dy, dz].every(Number.isFinite) || Math.hypot(dx, dy, dz) < 1e-9)
+    throw new Error("A drawing view needs a non-zero view direction.");
+  const up = options.upDirection ?? (Math.abs(dz) > 0.999 * Math.hypot(dx, dy, dz) ? [0, 1, 0] : [0, 0, 1]);
+  const planeX = [
+    up[1] * dz - up[2] * dy,
+    up[2] * dx - up[0] * dz,
+    up[0] * dy - up[1] * dx
+  ];
+  if (!planeX.every(Number.isFinite) || Math.hypot(...planeX) < 1e-9)
+    throw new Error("The up direction cannot be parallel to the view normal.");
+  const owned = [];
+  const own = (value2) => {
+    owned.push(value2);
+    return value2;
+  };
+  try {
+    const algorithm = own(new oc.HLRBRep_Algo_1());
+    algorithm.Add_2(shape.wrapped, 0);
+    const origin = own(new oc.gp_Pnt_3(0, 0, 0));
+    const axis = own(new oc.gp_Dir_4(dx, dy, dz));
+    const reference = own(new oc.gp_Dir_4(planeX[0], planeX[1], planeX[2]));
+    const frame = own(new oc.gp_Ax2_2(origin, axis, reference));
+    const projector = own(new oc.HLRAlgo_Projector_2(frame));
+    algorithm.Projector_1(projector);
+    algorithm.Update();
+    algorithm.Hide_1();
+    const handle = own(new oc.Handle_HLRBRep_Algo_2(algorithm));
+    const result = own(new oc.HLRBRep_HLRToShape(handle));
+    return read({
+      visible: own(result.VCompound_1()),
+      hidden: own(result.HCompound_1()),
+      visibleOutline: own(result.OutLineVCompound_1()),
+      hiddenOutline: own(result.OutLineHCompound_1())
+    });
+  } finally {
+    for (const resource of owned.reverse()) resource.delete();
+  }
+}
 const add$1 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
 const sub$2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const dot$2 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
@@ -42500,9 +42544,9 @@ function analyzeCurves(bodies, options) {
       if (!edges.length) throw new Error("Continuity needs an edge between two faces.");
       const facesByBody = /* @__PURE__ */ new Map();
       for (const [bodyId, body] of bodies) {
-        const list = facesOf(body).map((i) => ({ id: i.id, face: i.face }));
-        list.forEach((i) => own(i.face));
-        facesByBody.set(bodyId, list);
+        const list2 = facesOf(body).map((i) => ({ id: i.id, face: i.face }));
+        list2.forEach((i) => own(i.face));
+        facesByBody.set(bodyId, list2);
       }
       for (const e of edges) {
         const adjacent = (facesByBody.get(e.bodyId) ?? []).filter((f2) => {
@@ -42898,6 +42942,454 @@ async function exportPart(document2, options) {
     if (whole !== selected[0]) whole.delete();
   }
 }
+function drawingViewFrame(orientation) {
+  switch (orientation) {
+    case "front":
+      return { normal: [0, -1, 0], up: [0, 0, 1] };
+    case "back":
+      return { normal: [0, 1, 0], up: [0, 0, 1] };
+    case "top":
+      return { normal: [0, 0, 1], up: [0, 1, 0] };
+    case "bottom":
+      return { normal: [0, 0, -1], up: [0, -1, 0] };
+    case "right":
+      return { normal: [1, 0, 0], up: [0, 0, 1] };
+    case "left":
+      return { normal: [-1, 0, 0], up: [0, 0, 1] };
+    case "isometric":
+      return { normal: [1, -1, 1], up: [0, 0, 1] };
+    default:
+      throw Error("Unknown drawing orientation.");
+  }
+}
+function projectPartDrawing(document2, options) {
+  const { normal, up } = drawingViewFrame(options.orientation);
+  let result;
+  evaluatePartDocument(document2, { withBodies: (bodies) => {
+    const ids2 = options.bodyIds ?? [...bodies.keys()];
+    if (!ids2.length || new Set(ids2).size !== ids2.length) throw Error("A drawing view requires distinct exact bodies.");
+    const shapes = ids2.map((id2) => {
+      const shape = bodies.get(id2);
+      if (!shape) throw Error(`Drawing body ${id2} no longer exists.`);
+      return shape;
+    });
+    const compound = makeCompound(shapes.map((shape) => shape.clone()));
+    try {
+      result = withHiddenLineProjection(compound, { viewNormal: normal, upDirection: up }, (projected) => {
+        const visible = [projected.visible, projected.visibleOutline];
+        const hidden = [projected.hidden, projected.hiddenOutline];
+        const all = [...visible, ...hidden].filter((s) => s && !s.IsNull());
+        if (!all.length) throw Error("The model has no projectable edges.");
+        const oc = getOC(), box = new oc.Bnd_Box_1();
+        try {
+          all.forEach((shape) => oc.BRepBndLib.AddOptimal(shape, box, false, false));
+          const lo = box.CornerMin(), hi = box.CornerMax();
+          try {
+            return { visible: visible.flatMap(readCurves), hidden: hidden.flatMap(readCurves), bounds: [lo.X(), lo.Y(), hi.X(), hi.Y()], bodyIds: ids2 };
+          } finally {
+            lo.delete();
+            hi.delete();
+          }
+        } finally {
+          box.delete();
+        }
+      });
+    } finally {
+      compound.delete();
+    }
+  } });
+  if (!result) throw Error("Create an exact solid before making a drawing.");
+  return result;
+}
+function readCurves(shape) {
+  if (!shape || shape.IsNull()) return [];
+  const oc = getOC(), curves2 = [];
+  const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+  try {
+    for (; explorer.More(); explorer.Next()) {
+      const current2 = explorer.Current(), edge = oc.TopoDS.Edge_1(current2), adaptor = new oc.BRepAdaptor_Curve_2(edge);
+      try {
+        const first = adaptor.FirstParameter(), last = adaptor.LastParameter();
+        const start = adaptor.Value(first), end = adaptor.Value(last);
+        try {
+          const type = adaptor.GetType();
+          if (type === oc.GeomAbs_CurveType.GeomAbs_Line) {
+            curves2.push({ kind: "line", start: [start.X(), start.Y()], end: [end.X(), end.Y()] });
+          } else if (type === oc.GeomAbs_CurveType.GeomAbs_Circle) {
+            const circle = adaptor.Circle(), center = circle.Location(), axis = circle.Axis(), direction = axis.Direction();
+            try {
+              const c2 = [center.X(), center.Y()], radius = circle.Radius();
+              if (Math.abs(last - first) >= 2 * Math.PI - 1e-8) curves2.push({ kind: "circle", center: c2, radius });
+              else curves2.push({ kind: "arc", center: c2, radius, start: Math.atan2(start.Y() - c2[1], start.X() - c2[0]), end: Math.atan2(end.Y() - c2[1], end.X() - c2[0]), ccw: direction.Z() > 0 });
+            } finally {
+              direction.delete();
+              axis.delete();
+              center.delete();
+              circle.delete();
+            }
+          } else {
+            const toleranceMm = 0.01, sampler = new oc.GCPnts_TangentialDeflection_2(adaptor, 0.05, toleranceMm, 2, 1e-9, 1e-7);
+            try {
+              const points = [];
+              for (let i = 1; i <= sampler.NbPoints(); i++) {
+                const p2 = sampler.Value(i);
+                try {
+                  points.push([p2.X(), p2.Y()]);
+                } finally {
+                  p2.delete();
+                }
+              }
+              if (points.length > 1) curves2.push({ kind: "polyline", points, toleranceMm });
+            } finally {
+              sampler.delete();
+            }
+          }
+        } finally {
+          start.delete();
+          end.delete();
+        }
+      } finally {
+        adaptor.delete();
+        edge.delete();
+        current2.delete();
+      }
+    }
+  } finally {
+    explorer.delete();
+  }
+  return curves2;
+}
+const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
+function object(value2) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
+}
+function text(value2) {
+  if (typeof value2 !== "string" || !value2.trim() || value2.length > 1e3) throw Error("Drawing names and IDs must contain 1–1000 characters.");
+}
+function number(value2, min, max) {
+  if (typeof value2 !== "number" || !Number.isFinite(value2) || value2 < min || value2 > max) throw Error(`Drawing value must be between ${min} and ${max}.`);
+}
+function point(value2) {
+  if (!Array.isArray(value2) || value2.length !== 2) throw Error("Drawing positions need two millimeter coordinates.");
+  value2.forEach((v) => number(v, -1e5, 1e5));
+}
+function list(value2, limit) {
+  if (!Array.isArray(value2) || value2.length > limit) throw Error(`Drawing list exceeds ${limit} entries or is not an array.`);
+}
+function validateDrawingDocument(value2) {
+  object(value2);
+  if (value2.format !== "aether-drawing" || value2.formatVersion !== 1) throw Error("Unsupported Drawing file format or version.");
+  text(value2.documentId);
+  text(value2.name);
+  text(value2.activeSheetId);
+  validatePartDocument(value2.source);
+  list(value2.sheets, 100);
+  const ids2 = /* @__PURE__ */ new Set();
+  let totalViews = 0;
+  const id2 = (value22) => {
+    text(value22);
+    if (ids2.has(value22)) throw Error(`Duplicate drawing ID: ${value22}`);
+    ids2.add(value22);
+  };
+  id2(value2.documentId);
+  for (const sheet of value2.sheets) {
+    object(sheet);
+    id2(sheet.id);
+    text(sheet.name);
+    number(sheet.widthMm, 25, 2e3);
+    number(sheet.heightMm, 25, 2e3);
+    if (!["first_angle", "third_angle"].includes(sheet.projection)) throw Error("Choose first-angle or third-angle projection.");
+    list(sheet.views, 100);
+    list(sheet.annotations, 1e3);
+    totalViews += sheet.views.length;
+    if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
+    const views = /* @__PURE__ */ new Map();
+    for (const view of sheet.views) {
+      object(view);
+      id2(view.id);
+      text(view.name);
+      point(view.originMm);
+      number(view.scale, 1e-3, 1e3);
+      if (!drawingOrientations.includes(view.orientation)) throw Error("Unknown drawing view orientation.");
+      if (typeof view.hiddenLines !== "boolean") throw Error("Hidden-line visibility must be a boolean.");
+      if (view.parentId !== void 0) text(view.parentId);
+      if (view.bodyIds !== void 0) {
+        list(view.bodyIds, 500);
+        view.bodyIds.forEach(text);
+        if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies.");
+      }
+      views.set(view.id, view);
+    }
+    for (const view of views.values()) if (view.parentId) {
+      const parent = views.get(view.parentId);
+      if (!parent || parent.parentId || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
+        throw Error("A projected view must reference a base front view on the same sheet.");
+      }
+    }
+    for (const annotation of sheet.annotations) {
+      object(annotation);
+      id2(annotation.id);
+      point(annotation.positionMm);
+      if (annotation.kind === "note") text(annotation.text);
+      else if (annotation.kind === "width" || annotation.kind === "height") {
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
+        number(annotation.decimals, 0, 6);
+        if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+      } else throw Error("Unsupported drawing annotation.");
+    }
+  }
+  if (!value2.sheets.some((s) => s.id === value2.activeSheetId)) throw Error("The active drawing sheet does not exist.");
+}
+function createDrawingDocument(source, id2 = crypto.randomUUID()) {
+  const doc = {
+    format: "aether-drawing",
+    formatVersion: 1,
+    documentId: id2,
+    name: `${source.name} Drawing`,
+    source: structuredClone(source),
+    activeSheetId: `${id2}/sheet1`,
+    sheets: [{ id: `${id2}/sheet1`, name: "Sheet 1", widthMm: 297, heightMm: 210, projection: "third_angle", views: [], annotations: [] }]
+  };
+  validateDrawingDocument(doc);
+  return doc;
+}
+function serializeDrawingDocument(doc) {
+  validateDrawingDocument(doc);
+  return JSON.stringify(doc, null, 2);
+}
+function parseDrawingDocument(source) {
+  if (source.length > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
+  const doc = JSON.parse(source);
+  validateDrawingDocument(doc);
+  return doc;
+}
+function applyDrawingCommand(source, command) {
+  validateDrawingDocument(source);
+  const doc = structuredClone(source);
+  if (command.type === "refresh-source") {
+    if (command.source.documentId !== doc.source.documentId) throw Error("Refresh requires the same source Part document.");
+    doc.source = structuredClone(command.source);
+  } else if (command.type === "add-sheet") {
+    doc.sheets.push(structuredClone(command.sheet));
+    doc.activeSheetId = command.sheet.id;
+  } else {
+    const sheet = doc.sheets.find((s) => s.id === command.sheetId);
+    if (!sheet) throw Error("Drawing sheet does not exist.");
+    switch (command.type) {
+      case "select-sheet":
+        doc.activeSheetId = sheet.id;
+        break;
+      case "remove-sheet": {
+        if (doc.sheets.length === 1) throw Error("Keep at least one drawing sheet.");
+        doc.sheets = doc.sheets.filter((s) => s.id !== sheet.id);
+        if (doc.activeSheetId === sheet.id) doc.activeSheetId = doc.sheets[0].id;
+        break;
+      }
+      case "update-sheet":
+        for (const key of ["name", "widthMm", "heightMm", "projection"]) if (command[key] !== void 0) Object.assign(sheet, { [key]: command[key] });
+        break;
+      case "add-view":
+        sheet.views.push(structuredClone(command.view));
+        break;
+      case "update-view": {
+        const view = sheet.views.find((v) => v.id === command.viewId);
+        if (!view) throw Error("Drawing view does not exist.");
+        if (Object.keys(command.changes).some((key) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds"].includes(key))) throw Error("Unknown drawing view property.");
+        Object.assign(view, structuredClone(command.changes));
+        break;
+      }
+      case "remove-view": {
+        if (!sheet.views.some((v) => v.id === command.viewId)) throw Error("Drawing view does not exist.");
+        if (sheet.views.some((v) => v.parentId === command.viewId) || sheet.annotations.some((a2) => a2.kind !== "note" && a2.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
+        sheet.views = sheet.views.filter((v) => v.id !== command.viewId);
+        break;
+      }
+      case "add-annotation":
+        sheet.annotations.push(structuredClone(command.annotation));
+        break;
+      case "update-annotation": {
+        const index = sheet.annotations.findIndex((a2) => a2.id === command.annotation.id);
+        if (index < 0) throw Error("Drawing annotation does not exist.");
+        sheet.annotations[index] = structuredClone(command.annotation);
+        break;
+      }
+      case "remove-annotation": {
+        if (!sheet.annotations.some((a2) => a2.id === command.annotationId)) throw Error("Drawing annotation does not exist.");
+        sheet.annotations = sheet.annotations.filter((a2) => a2.id !== command.annotationId);
+        break;
+      }
+      default:
+        throw Error("Unknown drawing command.");
+    }
+  }
+  validateDrawingDocument(doc);
+  return doc;
+}
+function resolvedDrawingView(sheet, view) {
+  if (!view.parentId) return view;
+  const parent = sheet.views.find((v) => v.id === view.parentId);
+  const vertical = view.orientation === "top" || view.orientation === "bottom";
+  const negative = view.orientation === "top" || view.orientation === "left";
+  const sign = (negative ? -1 : 1) * (sheet.projection === "third_angle" ? 1 : -1);
+  const distance2 = Math.max(10, Math.abs(view.originMm[vertical ? 1 : 0] - parent.originMm[vertical ? 1 : 0]));
+  return {
+    ...view,
+    scale: parent.scale,
+    bodyIds: parent.bodyIds,
+    originMm: vertical ? [parent.originMm[0], parent.originMm[1] + sign * distance2] : [parent.originMm[0] + sign * distance2, parent.originMm[1]]
+  };
+}
+async function buildDrawing(input, project) {
+  const document2 = structuredClone(input);
+  validateDrawingDocument(document2);
+  const result = { document: document2, revision: sha256Hex(JSON.stringify(document2)), sourceHash: sha256Hex(JSON.stringify(document2.source)), sheets: [], approximatedCurveCount: 0 };
+  const cache = /* @__PURE__ */ new Map();
+  for (const sheet of document2.sheets) {
+    const built = { sheet, views: [], annotations: [] };
+    for (const authored of sheet.views) {
+      const view = resolvedDrawingView(sheet, authored);
+      const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {} };
+      const key = JSON.stringify(options);
+      let geometry = cache.get(key);
+      if (!geometry) {
+        geometry = await project(document2.source, options);
+        cache.set(key, geometry);
+      }
+      const [x0, y0, x1, y1] = geometry.bounds, s = view.scale;
+      if (!geometry.bounds.every(Number.isFinite) || x1 < x0 || y1 < y0) throw Error("Drawing projection returned invalid bounds.");
+      const translationMm = [view.originMm[0] - s * (x0 + x1) / 2, view.originMm[1] + s * (y0 + y1) / 2];
+      built.views.push({ view, geometry, translationMm, boundsMm: [translationMm[0] + s * x0, translationMm[1] - s * y1, translationMm[0] + s * x1, translationMm[1] - s * y0] });
+      result.approximatedCurveCount += geometry.visible.concat(view.hiddenLines ? geometry.hidden : []).filter((c2) => c2.kind === "polyline").length;
+    }
+    for (const annotation of sheet.annotations) {
+      if (annotation.kind === "note") {
+        built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, lines: [] });
+        continue;
+      }
+      const view = built.views.find((v) => v.view.id === annotation.viewId);
+      const [x0, y0, x1, y1] = view.boundsMm;
+      const horizontal = annotation.kind === "width";
+      const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
+      const [x2, y2] = annotation.positionMm;
+      const a2 = horizontal ? [x0, y2] : [x2, y0], b = horizontal ? [x1, y2] : [x2, y1];
+      const baseline = horizontal ? y2 < y0 ? y0 : y1 : x2 < x0 ? x0 : x1;
+      const lines = [
+        [a2, b],
+        [horizontal ? [x0, baseline] : [baseline, y0], horizontal ? [x0, y2 + 2] : [x2 + 2, y0]],
+        [horizontal ? [x1, baseline] : [baseline, y1], horizontal ? [x1, y2 + 2] : [x2 + 2, y1]]
+      ];
+      for (const [tip, direction] of [[a2, 1], [b, -1]]) {
+        const p2 = horizontal ? [tip[0] + direction * 2, tip[1] - 0.7] : [tip[0] - 0.7, tip[1] + direction * 2];
+        const q = horizontal ? [tip[0] + direction * 2, tip[1] + 0.7] : [tip[0] + 0.7, tip[1] + direction * 2];
+        lines.push([tip, p2], [p2, q], [q, tip]);
+      }
+      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, positionMm: horizontal ? [(x0 + x1) / 2, y2 - 1.5] : [x2 + 1.5, (y0 + y1) / 2], lines });
+    }
+    result.sheets.push(built);
+  }
+  return result;
+}
+function sheetPoint(view, point2) {
+  return [view.translationMm[0] + point2[0] * view.view.scale, view.translationMm[1] - point2[1] * view.view.scale];
+}
+function drawingCurvePath(curve, view) {
+  const p2 = (point2) => sheetPoint(view, point2).join(" ");
+  if (curve.kind === "line") return `M ${p2(curve.start)} L ${p2(curve.end)}`;
+  if (curve.kind === "polyline") return curve.points.map((point2, i) => `${i ? "L" : "M"} ${p2(point2)}`).join(" ");
+  const r = curve.radius * view.view.scale;
+  if (curve.kind === "circle") {
+    const [x2, y2] = sheetPoint(view, curve.center);
+    return `M ${x2 + r} ${y2} A ${r} ${r} 0 1 0 ${x2 - r} ${y2} A ${r} ${r} 0 1 0 ${x2 + r} ${y2}`;
+  }
+  const start = [curve.center[0] + curve.radius * Math.cos(curve.start), curve.center[1] + curve.radius * Math.sin(curve.start)];
+  const end = [curve.center[0] + curve.radius * Math.cos(curve.end), curve.center[1] + curve.radius * Math.sin(curve.end)];
+  const sweep = ((curve.ccw ? curve.end - curve.start : curve.start - curve.end) + 2 * Math.PI) % (2 * Math.PI);
+  return `M ${p2(start)} A ${r} ${r} 0 ${sweep > Math.PI ? 1 : 0} ${curve.ccw ? 0 : 1} ${p2(end)}`;
+}
+const xml = (text2) => text2.replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c2]);
+const sheetOf = (drawing, id2) => {
+  const sheet = drawing.sheets.find((s) => s.sheet.id === id2);
+  if (!sheet) throw Error("Drawing sheet does not exist.");
+  return sheet;
+};
+function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
+  const { sheet, views, annotations } = sheetOf(drawing, sheetId);
+  const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
+  for (const view of views) {
+    for (const [curves2, hidden] of [[view.geometry.visible, false], [view.view.hiddenLines ? view.geometry.hidden : [], true]]) for (const curve of curves2) {
+      elements.push(`<path d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="${hidden ? 0.18 : 0.3}"${hidden ? ' stroke-dasharray="3 2"' : ""}/>`);
+    }
+    elements.push(`<text x="${view.view.originMm[0]}" y="${view.boundsMm[3] + 6}" font-size="3" text-anchor="middle">${xml(view.view.name)} · ${view.view.scale}:1</text>`);
+  }
+  for (const annotation of annotations) {
+    for (const [a2, b] of annotation.lines) elements.push(`<path d="M ${a2.join(" ")} L ${b.join(" ")}" stroke="#222" stroke-width="0.2" fill="none"/>`);
+    elements.push(`<text x="${annotation.positionMm[0]}" y="${annotation.positionMm[1]}" font-size="3.5"${annotation.valueMm !== void 0 ? ' text-anchor="middle"' : ""}>${xml(annotation.text)}</text>`);
+  }
+  elements.push(`<text x="${sheet.widthMm - 12}" y="${sheet.heightMm - 14}" font-size="3.5" text-anchor="end">${xml(drawing.document.name)} · ${xml(sheet.name)} · mm · ${sheet.projection.replace("_", " ")}</text>`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.widthMm}mm" height="${sheet.heightMm}mm" viewBox="0 0 ${sheet.widthMm} ${sheet.heightMm}" font-family="sans-serif">${elements.join("\n")}</svg>`;
+}
+function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
+  const { sheet, views, annotations } = sheetOf(drawing, sheetId);
+  const out = [0, "SECTION", 2, "HEADER", 9, "$ACADVER", 1, "AC1015", 9, "$INSUNITS", 70, 4, 0, "ENDSEC", 0, "SECTION", 2, "TABLES", 0, "TABLE", 2, "LTYPE", 70, 2, 0, "LTYPE", 2, "CONTINUOUS", 70, 0, 3, "Solid", 72, 65, 73, 0, 40, 0, 0, "LTYPE", 2, "HIDDEN", 70, 0, 3, "Hidden", 72, 65, 73, 2, 40, 5, 49, 3, 74, 0, 49, -2, 74, 0, 0, "ENDTAB", 0, "ENDSEC", 0, "SECTION", 2, "ENTITIES"];
+  const line2 = (a2, b, hidden = false, layer = hidden ? "HIDDEN" : "VISIBLE") => out.push(0, "LINE", 100, "AcDbEntity", 8, layer, 6, hidden ? "HIDDEN" : "CONTINUOUS", 100, "AcDbLine", 10, a2[0], 20, sheet.heightMm - a2[1], 30, 0, 11, b[0], 21, sheet.heightMm - b[1], 31, 0);
+  const text2 = (value2, position) => out.push(0, "TEXT", 100, "AcDbEntity", 8, "ANNOTATIONS", 100, "AcDbText", 10, position[0], 20, sheet.heightMm - position[1], 30, 0, 40, 3.5, 1, value2.replace(/[\x00-\x1f]/g, " ").replace(/[^\x20-\x7e]/g, (c2) => `\\U+${c2.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")}`));
+  const border = [[10, 10], [sheet.widthMm - 10, 10], [sheet.widthMm - 10, sheet.heightMm - 10], [10, sheet.heightMm - 10]];
+  border.forEach((p2, i) => line2(p2, border[(i + 1) % 4], false, "SHEET"));
+  for (const view of views) for (const [curves2, hidden] of [[view.geometry.visible, false], [view.view.hiddenLines ? view.geometry.hidden : [], true]]) for (const curve of curves2) {
+    if (curve.kind === "line") line2(sheetPoint(view, curve.start), sheetPoint(view, curve.end), hidden);
+    else if (curve.kind === "polyline") curve.points.slice(1).forEach((p2, i) => line2(sheetPoint(view, curve.points[i]), sheetPoint(view, p2), hidden));
+    else {
+      const center = sheetPoint(view, curve.center);
+      out.push(0, curve.kind === "circle" ? "CIRCLE" : "ARC", 100, "AcDbEntity", 8, hidden ? "HIDDEN" : "VISIBLE", 6, hidden ? "HIDDEN" : "CONTINUOUS", 100, "AcDbCircle", 10, center[0], 20, sheet.heightMm - center[1], 30, 0, 40, curve.radius * view.view.scale);
+      if (curve.kind === "arc") out.push(100, "AcDbArc", 50, (curve.ccw ? curve.start : curve.end) * 180 / Math.PI, 51, (curve.ccw ? curve.end : curve.start) * 180 / Math.PI);
+    }
+  }
+  for (const annotation of annotations) {
+    annotation.lines.forEach(([a2, b]) => line2(a2, b, false, "ANNOTATIONS"));
+    text2(annotation.text, annotation.positionMm);
+  }
+  text2(`${drawing.document.name} / ${sheet.name} / mm`, [12, sheet.heightMm - 14]);
+  out.push(0, "ENDSEC", 0, "EOF");
+  return out.join("\n") + "\n";
+}
+const drawingCommandDocs = {
+  phase: "drawing",
+  operations: ["create", "mutate", "inspect", "export"],
+  content: "create: serialized .acpart; other operations: serialized .acdrawing. Returned content is a complete local drawing including its source snapshot.",
+  command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "update-annotation", "remove-annotation", "refresh-source"],
+  orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
+  annotations: ["note", "width", "height"],
+  exports: ["svg", "dxf"],
+  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "Sections, assembly sources, edge-attached dimensions and PDF are not implemented yet."]
+};
+async function executeDrawingRequest(request, project) {
+  if (request.phase === "drawing_docs") return drawingCommandDocs;
+  if (Object.keys(request).some((key) => !["phase", "operation", "content", "command", "format", "sheet_id"].includes(key))) throw Error("Unknown drawing request argument.");
+  if (typeof request.content !== "string") throw Error("Drawing operation requires serialized content.");
+  if (!["create", "mutate", "inspect", "export"].includes(String(request.operation))) throw Error("Unknown drawing operation.");
+  if (request.operation !== "mutate" && request.command !== void 0) throw Error("Only mutate accepts a drawing command.");
+  if (request.operation !== "export" && (request.format !== void 0 || request.sheet_id !== void 0)) throw Error("Only export accepts a format or sheet_id.");
+  const source = request.operation === "create" ? createDrawingDocument(parsePartDocument(request.content)) : parseDrawingDocument(request.content);
+  if (request.operation === "mutate" && (!request.command || typeof request.command !== "object" || Array.isArray(request.command))) throw Error("mutate requires a drawing command.");
+  const document2 = request.operation === "mutate" ? applyDrawingCommand(source, request.command) : source;
+  if (document2.source.features.length > 512) throw Error("Drawing automation supports source Parts with at most 512 features.");
+  const built = await buildDrawing(document2, project);
+  if (request.operation === "export") {
+    if (request.sheet_id !== void 0 && typeof request.sheet_id !== "string") throw Error("sheet_id must be a string.");
+    if (request.format !== "svg" && request.format !== "dxf") throw Error("Choose SVG or DXF drawing export.");
+    return { status: "ok", format: request.format, text: request.format === "svg" ? exportDrawingSVG(built, request.sheet_id) : exportDrawingDXF(built, request.sheet_id) };
+  }
+  return {
+    status: "ok",
+    content: serializeDrawingDocument(document2),
+    revision: built.revision,
+    source_hash: built.sourceHash,
+    drawing_id: document2.documentId,
+    active_sheet_id: document2.activeSheetId,
+    sheets: built.sheets.map(({ sheet, views, annotations }) => ({ id: sheet.id, name: sheet.name, size_mm: [sheet.widthMm, sheet.heightMm], projection: sheet.projection, views: views.map((v) => ({ id: v.view.id, name: v.view.name, orientation: v.view.orientation, scale: v.view.scale, origin_mm: v.view.originMm, model_bounds_mm: v.geometry.bounds, sheet_bounds_mm: v.boundsMm, body_ids: v.geometry.bodyIds, visible_curves: v.geometry.visible.length, hidden_curves: v.geometry.hidden.length })), annotations: annotations.map((a2) => ({ id: a2.id, text: a2.text, value_mm: a2.valueMm, view_id: a2.viewId })) }))
+  };
+}
 let ready;
 const fullWasmPath = new URL("./opencascade.wasm", import.meta.url);
 function ensureEngine() {
@@ -42951,6 +43443,12 @@ async function exportPhase(content, options) {
 function assemblyPhase(job) {
   return solveAssemblyJob(job);
 }
+async function drawingPhase(request) {
+  return executeDrawingRequest(request, async (document2, options) => {
+    await ensureEngine();
+    return runNodeOperation(document2, () => projectPartDrawing(document2, options), fullWasmPath);
+  });
+}
 const engineDescription = () => ({ ok: true, engine: "Aether", kernel: "OpenCASCADE (OpenCascade.js, in-process)", mate_kinds: [...solvableMateKinds] });
 async function main() {
   try {
@@ -42974,7 +43472,7 @@ async function main() {
       projection.instances = projection.instances.map((instance) => ({ ...instance, rest_transform: instance.solved_world_transform }));
       stdout.write(JSON.stringify(assemblyJobFor(projection)));
     } else {
-      const result = request.phase === "build" ? await buildPhase(request.content, { rollback: request.rollback }) : request.phase === "analyze" ? await analyzePhase(request.content, request.options) : request.phase === "export" ? await exportPhase(request.content, request.options) : request.phase === "assembly_solve" ? assemblyPhase(request.job) : request.phase === "engine" ? engineDescription() : request.phase === "assembly_example" ? exampleAssemblyRecipe("linear", request.part_id ?? void 0) : request.phase === "compare" ? { changed: serializePartDocument(parsePartDocument(request.content)) !== serializePartDocument(parsePartDocument(request.candidate)) } : request.phase === "program_begin" ? beginSavedProgram(request.content, request.program_json) : request.phase === "program_step" ? prepareSavedProgramStep(request.content, request.step, request.references) : request.phase === "program_accept" ? acceptSavedProgramStep(request) : request.command === "cad.sketch.inspect" ? { result: inspectSketch(parsePartDocument(request.content), request.arguments) } : request.command === "cad.part.docs" ? { result: savedProgramDocs(request.arguments) } : request.phase === "finalize" ? { content: finalizeCandidate(request.content, request.body_outputs, request.sketch_frames, request.scope_resolutions) } : prepareCommand(request.command, request.content, request.arguments);
+      const result = request.phase === "build" ? await buildPhase(request.content, { rollback: request.rollback }) : request.phase === "drawing" || request.phase === "drawing_docs" ? await drawingPhase(request) : request.phase === "analyze" ? await analyzePhase(request.content, request.options) : request.phase === "export" ? await exportPhase(request.content, request.options) : request.phase === "assembly_solve" ? assemblyPhase(request.job) : request.phase === "engine" ? engineDescription() : request.phase === "assembly_example" ? exampleAssemblyRecipe("linear", request.part_id ?? void 0) : request.phase === "compare" ? { changed: serializePartDocument(parsePartDocument(request.content)) !== serializePartDocument(parsePartDocument(request.candidate)) } : request.phase === "program_begin" ? beginSavedProgram(request.content, request.program_json) : request.phase === "program_step" ? prepareSavedProgramStep(request.content, request.step, request.references) : request.phase === "program_accept" ? acceptSavedProgramStep(request) : request.command === "cad.sketch.inspect" ? { result: inspectSketch(parsePartDocument(request.content), request.arguments) } : request.command === "cad.part.docs" ? { result: savedProgramDocs(request.arguments) } : request.phase === "finalize" ? { content: finalizeCandidate(request.content, request.body_outputs, request.sketch_frames, request.scope_resolutions) } : prepareCommand(request.command, request.content, request.arguments);
       const encoded = JSON.stringify(result);
       if (Buffer.byteLength(encoded) > 8 * 1024 * 1024) throw Error("CAD result exceeds the automation size limit.");
       stdout.write(encoded);

@@ -282,7 +282,7 @@ describe("AetherCADShell", () => {
     }
   });
 
-  it("routes to the truthful Drawing dependency workbench without unmounting the 3D viewport", () => {
+  it("routes to Drawing creation and file opening without unmounting the 3D viewport", () => {
     cadPresentation.patch({ workspaceMode: "drawing" });
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).toContain('data-workspace-mode="drawing"');
@@ -290,8 +290,9 @@ describe("AetherCADShell", () => {
     expect(html).toContain('class="cad-drawing-route active" aria-hidden="false"');
     expect(html).toContain('aria-label="Drawing workspace navigation"');
     expect(html).toContain("← 3D model");
-    expect(html).toContain("Exact Drawing engine unavailable");
-    expect(html).toContain("waiting for the canonical Core projection engine");
+    expect(html).toContain("Open or create a drawing");
+    expect(html).toContain("Open a Part to create its drawing, or open a saved .acdrawing file.");
+    expect(html).toContain("New from Part");
     expect(html).toContain('id="viewport"');
     expect(html).not.toContain('data-drawing-command="add-sheet"');
   });

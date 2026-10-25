@@ -119,9 +119,9 @@ function render(store: CADDrawingWorkspaceStore, onCommand = vi.fn()): string {
 describe("DrawingWorkspace", () => {
   it("renders explicit unavailable, loading, and error dependency states", () => {
     const store = new CADDrawingWorkspaceStore();
-    expect(render(store)).toContain("Exact Drawing engine unavailable");
+    expect(render(store)).toContain("Open or create a drawing");
     store.setLoading("Reading exact sheets…");
-    expect(render(store)).toContain("Loading exact Drawing");
+    expect(render(store)).toContain("Building drawing");
     expect(render(store)).toContain("Reading exact sheets…");
     store.setError("Core rejected the Drawing projection.");
     const errorHTML = render(store);
@@ -147,7 +147,7 @@ describe("DrawingWorkspace", () => {
     expect(html).toContain('data-snap-id="snap-1"');
     expect(html).toContain("60.00");
     expect(html).toContain("Drive Bracket");
-    expect(html).toContain("1 sheets · 1 views · 1 exact primitives");
+    expect(html).toContain("1 sheets · 1 views · 1 projected primitives");
     expect(html).toContain("Exact section projection is unavailable.");
     expect(html).toContain("Workspace is linked read-only.");
     expect(store.snapshot().data?.commandAvailability.find((item) => item.id === "export-dxf")?.disabledReason).toBe("DXF export is unavailable.");

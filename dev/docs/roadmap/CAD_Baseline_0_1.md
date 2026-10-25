@@ -29,7 +29,7 @@ commit; Map and other apps must remain unchanged.
 | Sketch and model | Place/redefine a sketch, draw/edit dimensions and constraints, select exact regions, extrude/add/cut, revolve/sweep/loft, edge finishes, Boolean, edit earlier features, undo/redo, save/reopen | r66 core mouse loop passed. Close remaining tool variants and attachment failures with exact-geometry and operator checks. |
 | Agent modeling | Discover contracts and live IDs, create/edit the same documents and regions as the UI, inspect exact results, atomically reject failed/stale edits, replay a saved program | General feature operations exist. Source verified 2026-10-24: shared region picks, explicit sketch frames, exact cut/add/revolve, driving edits and saved-runner reopen. Convenience live-face/datum binding and remaining authoring breadth still need work. |
 | Assemblies | Reuse parts, place/ground instances, create/edit/delete supported mates and relations, change DOFs/limits, solve without overwriting intent, BOM, save/reopen; same actions for agents | Eight mate kinds are packaged and compose/reopen tested. Cam, sweep joint, contact editing/listing and agent edit breadth remain. Recheck against the pinned codec, never a newer editable dependency. |
-| Drawings | Create a sheet from a real part/assembly, base/projected/section views, associative dimensions/annotations, source-change rebuild, export and reopen | Current route is an unavailable workbench despite existing HLR and sheet presentation code. Needs a connected producer, persistent authoring and UI/agent commands. |
+| Drawings | Create a sheet from a real part/assembly, base/projected/section views, associative dimensions/annotations, source-change rebuild, export and reopen | Source now connects real part projections, local saved drawing authoring, base/projected views, overall dimensions, notes, source refresh, undo/redo and SVG/DXF export. Section/assembly drawings, edge-attached dimensions, PDF and Studio/live-agent integration remain. |
 | Reference tool coverage | Review every remaining relevant tracker row against SolidCraft's input contract and tests; distinguish supported subsets from full parity | Surface Match, advanced sweep/loft/fillet and sheet-metal cases remain. An enabled ribbon item alone does not close a row. |
 | Delivery | Qualified frontend and matching compatible worker, immutable app-only activation, final live smoke check | Repository contracts and Studio's independent update path are ready; no server/Map changes required for compatible CAD packages. |
 
@@ -67,6 +67,4 @@ status and each qualification record.
 2026-10-24: the first source increment unifies UI/agent region references, removes
 display-tessellation errors from curved-edge picking, and adds explicit agent
 sketch frames. The mouse loop and exact saved-model measurements pass. See
-`../reality/STATUS.md` for test evidence and release state. The next functional
-packet is a real drawing producer and saved authoring workflow, using the
-existing presentation components and OCCT geometry.
+`../reality/STATUS.md` for test evidence and release state. The drawing producer and saved authoring workflow now have an initial implementation using the existing presentation components and OCCT geometry; see the source reality status for the supported subset and remaining gates.

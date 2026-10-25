@@ -97,6 +97,11 @@ export class OCCTWorkerClient {
     return this.send<ImportedModelData>({ type: "evaluate-part", document, options });
   }
 
+  async projectDrawing(document: PartDocument, options: import("../drawing/projection").PartDrawingOptions): Promise<import("../drawing/projection").PartDrawingProjection> {
+    await this.ready;
+    return this.send({ type: "project-drawing", document, options });
+  }
+
   async measureDistance(document: PartDocument, entities: MeasureEntity[]): Promise<DistanceMeasurement> {
     await this.ready;
     return this.send<DistanceMeasurement>({ type: "measure-distance", document, entities });

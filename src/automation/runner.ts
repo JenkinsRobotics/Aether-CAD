@@ -5,7 +5,7 @@ import { assemblyJobFor } from '../assembly-job';
 import { parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { beginSavedProgram, prepareSavedProgramStep, acceptSavedProgramStep, savedProgramDocs } from './saved-program';
 import { exampleAssemblyRecipe } from '../assembly-recipe';
-import { buildPhase, analyzePhase, exportPhase, assemblyPhase, engineDescription } from './engine-node';
+import { buildPhase, analyzePhase, exportPhase, assemblyPhase, engineDescription, drawingPhase } from './engine-node';
 async function main() {
 try {
   const chunks: Buffer[]=[]; let bytes=0;
@@ -29,6 +29,7 @@ try {
     stdout.write(JSON.stringify(assemblyJobFor(projection)));
   } else {
   const result = request.phase === 'build' ? await buildPhase(request.content, { rollback: request.rollback })
+    : request.phase === 'drawing' || request.phase === 'drawing_docs' ? await drawingPhase(request)
     : request.phase === 'analyze' ? await analyzePhase(request.content, request.options)
     : request.phase === 'export' ? await exportPhase(request.content, request.options)
     : request.phase === 'assembly_solve' ? assemblyPhase(request.job)

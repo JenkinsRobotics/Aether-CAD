@@ -12,4 +12,5 @@ export { OCCTWorkerClient, EngineError } from "./worker-client";
 export { solveAssemblyJob, solvableMateKinds, jointResiduals } from "./assembly-solver";
 export { analyzePart } from "./analysis";
 export { exportPart } from "./export";
+export { projectPartDrawing } from "./drawing-projection";
 export { sketchSectionContours } from "./sketch-section";

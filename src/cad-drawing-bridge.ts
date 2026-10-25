@@ -195,6 +195,7 @@ export interface DrawingAnnotationProjection {
   readonly text: string;
   readonly text_origin_sheet_mm: SheetPoint;
   readonly leader_points_sheet_mm: readonly SheetPoint[];
+  readonly geometry_lines_sheet_mm?: readonly (readonly [SheetPoint, SheetPoint])[];
   readonly references: readonly {
     readonly source_entity_id: DrawingStableID;
     readonly source_topology_id: DrawingStableID | null;
@@ -490,6 +491,11 @@ function validateAnnotation(value: unknown, path: string): void {
   text(item.text, `${path}.text`);
   tuple(item.text_origin_sheet_mm, 2, `${path}.text_origin_sheet_mm`);
   pointArray(item.leader_points_sheet_mm, `${path}.leader_points_sheet_mm`);
+  if (item.geometry_lines_sheet_mm !== undefined) array(item.geometry_lines_sheet_mm, `${path}.geometry_lines_sheet_mm`).forEach((line, i) => {
+    const points = array(line, `${path}.geometry_lines_sheet_mm[${i}]`);
+    if (points.length !== 2) throw new DrawingProjectionDecodeError(path, "dimension line needs two endpoints");
+    points.forEach((point, j) => tuple(point, 2, `${path}.geometry_lines_sheet_mm[${i}][${j}]`));
+  });
   array(item.references, `${path}.references`).forEach((entry, index) => {
     const referencePath = `${path}.references[${index}]`;
     const reference = record(entry, referencePath);

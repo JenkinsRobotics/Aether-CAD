@@ -99,11 +99,11 @@ function DependencyState({ snapshot }: { snapshot: CADDrawingWorkspaceSnapshot }
     return <ErrorState title="Drawing unavailable" description={snapshot.message} />;
   }
   if (snapshot.loadState === "loading") {
-    return <EmptyState icon="…" title="Loading exact Drawing" description={snapshot.message} />;
+    return <EmptyState icon="…" title="Building drawing" description={snapshot.message} />;
   }
   return <EmptyState
     icon="▤"
-    title="Exact Drawing engine unavailable"
+    title="Open or create a drawing"
     description={snapshot.message}
   />;
 }
@@ -291,7 +291,7 @@ export function DrawingWorkspace({ snapshot, onAction, onCommand, commandsConnec
           onExit();
         }}
       >← 3D model</Button>
-      <div><strong>Drawing</strong><small>Exact Core projection workspace</small></div>
+      <div><strong>Drawing</strong><small>Part sheets and annotations</small></div>
     </nav> : null}
     {!ready ? <div className="cad-drawing-dependency-state"><DependencyState snapshot={snapshot} /></div> : <>
       <DrawingCommandBar snapshot={snapshot} onCommand={onCommand} commandsConnected={commandsConnected} />
@@ -302,7 +302,7 @@ export function DrawingWorkspace({ snapshot, onAction, onCommand, commandsConnec
       </div>
       <footer className="cad-drawing-status" role="status" aria-live="polite">
         <span>{snapshot.message}</span>
-        <span>{snapshot.data!.summary.sheetCount} sheets · {snapshot.data!.summary.viewCount} views · {snapshot.data!.summary.primitiveCount} exact primitives</span>
+        <span>{snapshot.data!.summary.sheetCount} sheets · {snapshot.data!.summary.viewCount} views · {snapshot.data!.summary.primitiveCount} projected primitives</span>
         <span>{snapshot.data!.summary.rebuildStatus.replace("_", " ")}</span>
       </footer>
     </>}

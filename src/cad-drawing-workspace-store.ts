@@ -44,7 +44,7 @@ function selected(
   return next;
 }
 
-const defaultMessage = "Exact Drawing sheets are waiting for the canonical Core projection engine.";
+const defaultMessage = "Open a Part to create its drawing, or open a saved .acdrawing file.";
 
 const initialSnapshot: CADDrawingWorkspaceSnapshot = Object.freeze({
   loadState: "unavailable",
@@ -101,7 +101,7 @@ export class CADDrawingWorkspaceStore {
     this.publish({ ...this.current, loadState: "error", message, projection: null, rebuild: null, data: null });
   }
 
-  setReady(projection: DrawingProjectionV1, rebuild: DrawingRebuildProjection | null): void {
+  setReady(projection: DrawingProjectionV1, rebuild: DrawingRebuildProjection | null, message?: string): void {
     const firstPresentation = buildCADDrawingPresentation(projection, rebuild);
     const entityIDs = selectableIDs(firstPresentation);
     const selectedEntityIDs = new Set([...this.current.selectedEntityIDs].filter((id) => entityIDs.has(id)));
@@ -121,7 +121,7 @@ export class CADDrawingWorkspaceStore {
     this.publish({
       ...this.current,
       loadState: "ready",
-      message: `Drawing revision ${data.revision}`,
+      message: message ?? `Drawing revision ${data.revision.slice(0, 12)}`,
       projection,
       rebuild,
       data,

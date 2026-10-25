@@ -48,7 +48,7 @@ export function StartCenter({ presentation }: { presentation: CADPresentationSna
             <div className="cad-template-grid">
               <button type="button" onClick={() => { setWorkspaceType("part"); cadPresentation.dispatch({ type: "show-start-dialog", dialog: "new-workspace" }); }}><CadIcon name="model" /><b>Part</b><span>Sketch and exact solid features</span></button>
               <button type="button" onClick={() => { setWorkspaceType("assembly"); setPartName("Assembly 1"); cadPresentation.dispatch({ type: "show-start-dialog", dialog: "new-workspace" }); }}><CadIcon name="assembly" /><b>Assembly</b><span>Persistent mates, solve, and BOM</span></button>
-              <button type="button" disabled title="Available when exact drawing projections land"><CadIcon name="items" /><b>Drawing</b><span>Exact projections required</span></button>
+              <button type="button" onClick={() => cadPresentation.dispatch({ type: "select-workspace-mode", mode: "drawing" })}><CadIcon name="items" /><b>Drawing</b><span>Part views, dimensions and sheets</span></button>
             </div>
           </section>
           <section className="cad-home-section cad-home-recent" aria-label="Recent workspaces">

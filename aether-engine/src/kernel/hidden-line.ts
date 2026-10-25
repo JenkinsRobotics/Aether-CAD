@@ -48,14 +48,23 @@ export function projectHiddenLineView(
   shape: AnyShape,
   options: HiddenLineOptions = {},
 ): HiddenLineView {
+  return withHiddenLineProjection(shape, options, result => {
+    const read = (compound: TopoDS_Shape) => polylinesOf(compound, options.angularToleranceRadians ?? 0.1, options.chordalToleranceMillimeters ?? 0.01);
+    return { visible: read(result.visible), hidden: read(result.hidden), visibleOutline: read(result.visibleOutline), hiddenOutline: read(result.hiddenOutline) };
+  });
+}
+
+/** Borrowed OCCT compounds are valid only during `read`. Both drawing display
+ * and analytic export consume this same hidden-line classification. */
+export function withHiddenLineProjection<T>(shape: AnyShape, options: HiddenLineOptions, read: (result: {
+  visible: TopoDS_Shape; hidden: TopoDS_Shape; visibleOutline: TopoDS_Shape; hiddenOutline: TopoDS_Shape;
+}) => T): T {
   const oc = getOC();
   const {
     viewNormal = [0, -1, 0],
-    angularToleranceRadians = 0.1,
-    chordalToleranceMillimeters = 0.01,
   } = options;
   const [dx, dy, dz] = viewNormal;
-  if (Math.hypot(dx, dy, dz) < 1e-9)
+  if (![dx, dy, dz].every(Number.isFinite) || Math.hypot(dx, dy, dz) < 1e-9)
     throw new Error("A drawing view needs a non-zero view direction.");
   // A view normal alone leaves the in-plane rotation to OCCT, which projects
   // the drawing at an arbitrary roll. Pin the plane's X axis from the up
@@ -68,42 +77,32 @@ export function projectHiddenLineView(
     up[2] * dx - up[0] * dz,
     up[0] * dy - up[1] * dx,
   ];
-  if (Math.hypot(...planeX) < 1e-9)
+  if (!planeX.every(Number.isFinite) || Math.hypot(...planeX) < 1e-9)
     throw new Error("The up direction cannot be parallel to the view normal.");
 
-  const algorithm = new oc.HLRBRep_Algo_1();
-  // nbIso 0: no isoparametric curves. Those are a shaded-preview aid, not
-  // drawing geometry, and they would pollute the edge sets.
-  algorithm.Add_2(shape.wrapped, 0);
-  const origin = new oc.gp_Pnt_3(0, 0, 0);
-  const axis = new oc.gp_Dir_4(dx, dy, dz);
-  const reference = new oc.gp_Dir_4(planeX[0], planeX[1], planeX[2]);
-  const frame = new oc.gp_Ax2_2(origin, axis, reference);
-  const projector = new oc.HLRAlgo_Projector_2(frame);
-  algorithm.Projector_1(projector);
-  algorithm.Update();
-  algorithm.Hide_1();
-
-  const handle = new oc.Handle_HLRBRep_Algo_2(algorithm);
-  const result = new oc.HLRBRep_HLRToShape(handle);
-  const read = (compound: ReturnType<typeof result.VCompound_1>) =>
-    polylinesOf(compound, angularToleranceRadians, chordalToleranceMillimeters);
-  const view: HiddenLineView = {
-    visible: read(result.VCompound_1()),
-    hidden: read(result.HCompound_1()),
-    visibleOutline: read(result.OutLineVCompound_1()),
-    hiddenOutline: read(result.OutLineHCompound_1()),
-  };
-
-  result.delete();
-  handle.delete();
-  projector.delete();
-  frame.delete();
-  reference.delete();
-  axis.delete();
-  origin.delete();
-  algorithm.delete();
-  return view;
+  const owned: { delete(): void }[] = [];
+  const own = <T extends { delete(): void }>(value: T): T => { owned.push(value); return value; };
+  try {
+    const algorithm = own(new oc.HLRBRep_Algo_1());
+    // nbIso 0: isoparametric curves are preview aids, not drawing edges.
+    algorithm.Add_2(shape.wrapped, 0);
+    const origin = own(new oc.gp_Pnt_3(0, 0, 0));
+    const axis = own(new oc.gp_Dir_4(dx, dy, dz));
+    const reference = own(new oc.gp_Dir_4(planeX[0], planeX[1], planeX[2]));
+    const frame = own(new oc.gp_Ax2_2(origin, axis, reference));
+    const projector = own(new oc.HLRAlgo_Projector_2(frame));
+    algorithm.Projector_1(projector);
+    algorithm.Update();
+    algorithm.Hide_1();
+    const handle = own(new oc.Handle_HLRBRep_Algo_2(algorithm));
+    const result = own(new oc.HLRBRep_HLRToShape(handle));
+    return read({
+      visible: own(result.VCompound_1()), hidden: own(result.HCompound_1()),
+      visibleOutline: own(result.OutLineVCompound_1()), hiddenOutline: own(result.OutLineHCompound_1()),
+    });
+  } finally {
+    for (const resource of owned.reverse()) resource.delete();
+  }
 }
 
 /** Walk a compound's edges and tessellate each into view-plane points.

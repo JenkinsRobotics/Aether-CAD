@@ -3,7 +3,8 @@
  *  request (the host owns the deadline), so the kernel loads once per run. */
 import { readFileSync } from 'node:fs';
 import { initNodeKernel, runNodeOperation, solidMeasures } from '@aether/core/kernel/node';
-import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds } from '@aether/core/kernel';
+import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds, projectPartDrawing } from '@aether/core/kernel';
+import { executeDrawingRequest } from './drawing-commands';
 import { parsePartDocument } from '@aether/core/document';
 import type { AnalysisOptions, ExportOptions } from '@aether/core/contracts';
 import type { AssemblyJobInput } from '@aether/core/contracts';
@@ -52,5 +53,12 @@ export async function exportPhase(content: string, options: ExportOptions) {
 }
 
 export function assemblyPhase(job: AssemblyJobInput) { return solveAssemblyJob(job); }
+
+export async function drawingPhase(request: Record<string, unknown>) {
+  return executeDrawingRequest(request, async (document, options) => {
+    await ensureEngine();
+    return runNodeOperation(document, () => projectPartDrawing(document, options), fullWasmPath);
+  });
+}
 
 export const engineDescription = () => ({ ok: true, engine: 'Aether', kernel: 'OpenCASCADE (OpenCascade.js, in-process)', mate_kinds: [...solvableMateKinds] });
