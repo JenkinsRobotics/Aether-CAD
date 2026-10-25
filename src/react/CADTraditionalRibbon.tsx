@@ -212,8 +212,14 @@ export function CADTraditionalRibbon({
   const selectWorkspaceMode = (id: string) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); };
 
   // The Studio tool bar's suggested commands, right of its Command field.
-  const commandShortcuts = ([["part-undo", "Undo", "amber"], ["part-redo", "Redo", "blue"], ["fit-view", "Frame", "green"]] as const)
-    .map(([command, label, tone]) => ({ id: `command:${command}`, label, tone, disabled: !commands[command].enabled }));
+  const historyCommands = sketchEditing
+    ? ["sketch-undo", "sketch-redo"] as const
+    : activeMode === "assembly" ? ["assembly-undo-recipe", "assembly-redo-recipe"] as const
+      : ["part-undo", "part-redo"] as const;
+  const historyAvailable = activeMode !== "drawing" && (sketchEditing || (activeMode === "assembly" ? assembly.loadState === "ready" : partOpen));
+  const commandShortcuts = ([[historyCommands[0], "Undo", "amber"], [historyCommands[1], "Redo", "blue"], ["fit-view", "Frame", "green"]] as const)
+    .map(([command, label, tone]) => ({ id: `command:${command}`, label, tone,
+      disabled: !commands[command].enabled || !commands[command].registered || (command !== "fit-view" && !historyAvailable) }));
 
   // Compact mode is a single context-aware strip, independent of the last tab.
   // The compact tray retains category navigation and each category's commands.

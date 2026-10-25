@@ -231,9 +231,11 @@ try{
     await palette.waitFor({state:'hidden'});
     await expect(components.getByRole('treeitem')).toHaveCount(3,{timeout:60000});
     state=await inspect();assert.equal(state.parts.length,2);assert.equal(state.counts.instances,3);
-    state=await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});
-    assert.equal(state.counts.instances,2);assert.equal(state.parts.length,1,'One undo removes both copied definition and occurrence');
-    state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});
+    await button('Undo').click();
+    await expect(components.getByRole('treeitem')).toHaveCount(2,{timeout:60000});state=await inspect();
+    assert.equal(state.counts.instances,2);assert.equal(state.parts.length,1,'One common-button undo removes both copied definition and occurrence');
+    await button('Redo').click();
+    await expect(components.getByRole('treeitem')).toHaveCount(3,{timeout:60000});state=await inspect();
     assert.equal(state.counts.instances,3);assert.equal(state.parts.length,2);
     let saved;for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===state.source_revision)break;await page.waitForTimeout(100);}
     assert.equal(String(saved.revision),state.source_revision);
@@ -242,6 +244,7 @@ try{
     assert.deepEqual(saved.part_definitions[0].feature_document.features,saved.part_definitions[1].feature_document.features);
     await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:copyOnly?'Copy continuity':'Pose pin_slot'}).waitFor({timeout:90000});await share();
     const reopened=await inspect();assert.equal(reopened.counts.instances,3);assert.equal(reopened.parts.length,2);assert.equal(reopened.can_undo,false);
+    await expect(button('Undo')).toBeDisabled();await expect(button('Redo')).toBeDisabled();
     await expect(components.getByRole('treeitem')).toHaveCount(3);
     await unshare(true);await button('AI advisor').click();
   });

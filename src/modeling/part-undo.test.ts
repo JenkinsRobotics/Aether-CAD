@@ -36,3 +36,20 @@ it("undo and redo commands step the same history as the keyboard and report when
     expect(changes.at(-1)).toEqual([true, false]);
   } finally { (globalThis as any).window = original; }
 });
+
+it("refuses Part history when its document is not the active editable workspace", async () => {
+  const { installPartUndo } = await import("./part-undo");
+  const listeners = new Map<string, () => void>();
+  const original = globalThis.window;
+  (globalThis as any).window = { addEventListener: (name: string, listener: () => void) => listeners.set(name, listener) };
+  try {
+    const doc = createEmptyPartDocument("A"); let current = doc, active = true, applied = 0;
+    const undo = installPartUndo(() => current, async next => { current = next; applied++; }, () => {}, () => active);
+    listeners.get("aether-part-updated")!(); current = { ...doc, name: "B" }; listeners.get("aether-part-updated")!();
+    active = false; expect(undo.canStep(-1)).toBe(false); expect(await undo.step(-1)).toBe(false);
+    expect(applied).toBe(0); expect(current.name).toBe("B");
+    active = true; expect(await undo.step(-1)).toBe(true); expect(current.name).toBe("A");
+    active = false; expect(undo.canStep(1)).toBe(false); expect(await undo.step(1)).toBe(false);
+    active = true; expect(await undo.step(1)).toBe(true); expect(current.name).toBe("B");
+  } finally { (globalThis as any).window = original; }
+});

@@ -19,7 +19,7 @@ export class PartUndoHistory {
   accept(direction: -1 | 1) { if (this.candidate(direction)) this.index += direction; }
 }
 
-export function installPartUndo(getDocument: () => PartDocument | null, apply: (doc: PartDocument) => Promise<void>, changed: () => void = () => {}) {
+export function installPartUndo(getDocument: () => PartDocument | null, apply: (doc: PartDocument) => Promise<void>, changed: () => void = () => {}, active: () => boolean = () => true) {
   const history = new PartUndoHistory();
   let restoring = false;
   window.addEventListener("aether-part-updated", () => {
@@ -29,17 +29,17 @@ export function installPartUndo(getDocument: () => PartDocument | null, apply: (
   });
   /** One undo (-1) or redo (1) — the keyboard, tool bar and command palette all run this. */
   const step = async (direction: -1 | 1): Promise<boolean> => {
-    const previous = restoring ? null : history.candidate(direction);
+    const previous = restoring || !active() ? null : history.candidate(direction);
     if (!previous || previous.documentId !== getDocument()?.documentId) return false;
-    restoring = true;
+    restoring = true; changed();
     try { await apply(previous); history.accept(direction); return true; }
     catch { return false; /* The normal apply path reports the failure; keep the history cursor. */ }
     finally { restoring = false; changed(); }
   };
   window.addEventListener("keydown", async event => {
-    if (event.defaultPrevented || !(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "z") return;
+    if (!active() || event.defaultPrevented || !(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "z") return;
     const target = event.target instanceof HTMLElement ? event.target : null;
-    if (target?.closest('input,textarea,select,[contenteditable="true"]') || document.querySelector(".cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window")) return;
+    if (target?.closest('input,textarea,select,[contenteditable="true"]') || document.querySelector('[role="dialog"],.cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window')) return;
     if (restoring) { event.preventDefault(); return; }
     const direction = event.shiftKey ? 1 : -1;
     const previous = history.candidate(direction);
@@ -49,7 +49,7 @@ export function installPartUndo(getDocument: () => PartDocument | null, apply: (
   });
   return {
     step,
-    canStep: (direction: -1 | 1) => !restoring && history.candidate(direction)?.documentId === getDocument()?.documentId && getDocument() !== null,
+    canStep: (direction: -1 | 1) => active() && !restoring && history.candidate(direction)?.documentId === getDocument()?.documentId && getDocument() !== null,
     candidate: (direction: -1 | 1) => restoring ? null : history.candidate(direction),
     /** Native evaluation happens before this synchronous commit. */
     commit: (direction: -1 | 1, expected: PartDocument, applyEvaluated: () => void) => {

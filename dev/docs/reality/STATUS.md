@@ -445,3 +445,23 @@ Animation-client load/pose/serialize/reopen regression. No browser errors or leg
 `contacts-qualified-browser/results.json`. The worker and pinned codec are byte-identical
 to the previous qualified release. No installation or other app changes. Contact
 checks still validate discrete solved positions, not continuous swept collision detection.
+
+
+## 2026-10-24 — Contextual history controls (source qualified)
+
+The common bottom Undo/Redo controls now route to the active Sketch, Part or
+Assembly history, using the same registered operations as keyboard and agent
+actions. They disable for unavailable history or an unopened Assembly. The Part
+history boundary refuses stepping when its retained source snapshot belongs to
+an inactive or read-only workspace, or while a sketch editor owns the interaction.
+Keyboard Part undo also respects modal dialogs. Drawings keep their own history
+controls and focus handling.
+
+Focused tests: 24 pass; types/build pass. The real browser copies a component,
+uses the common Undo button to remove its definition and occurrence together,
+uses Redo to restore both, then checks persisted identity/geometry and reopens
+with disabled empty-history controls. The Animation-client regression passes.
+No page errors or legacy /cad/rpc calls. Two initial DOM fixture attempts lacked
+the actual StudioWorkspace context; the corrected test uses the public shared
+container. Worker/codec hashes remain unchanged. Evidence:
+`.verification/baseline-2026-10-24/contextual-history-*`. No installation changes.

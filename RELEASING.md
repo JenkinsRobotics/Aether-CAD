@@ -24,6 +24,7 @@ Package-manager versions and the shared UI dependency version are separate.
    Assembly edit changes require `scripts/verify-assembly-edit-browser.mjs` through
    the same disposable fixture. It exercises actual MCP editor calls, native
    assembly solves, guarded joint/relation/mate edits, history and saved reopen.
+   Check the common bottom Undo/Redo buttons as well as keyboard/agent history.
    Check multiple undo/redo steps spanning composition, UI coordinate edits and
    agent edits; a failed edit preserves the redo branch, a new edit clears it,
    and saved reopen clears local history. Compound UI insertion/copy/grouping must

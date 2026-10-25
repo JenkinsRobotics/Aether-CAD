@@ -8,6 +8,9 @@ import { AssemblyMateDOFDialog } from './dialogs/mate-dof';
 import { CADAssemblyPartsPanel } from './panels/parts';
 import { AssemblyContactSetDialog } from './dialogs/contact-set';
 import { AssemblyContactSets } from './panels/contact-sets';
+import { CADTraditionalRibbon } from './CADTraditionalRibbon';
+import { cadCommands } from '../cad-command-registry';
+import { StudioWorkspace } from '@aether/ui';
 
 let root, container, unlisten, actions, projection;
 const rotation = { id:'turn', name:'rotation', kind:'rotation', state:'free', value_rad:Math.PI/4,
@@ -92,4 +95,27 @@ it('renders the contact actions menu and dispatches edits against the selected c
   expect(item).toBeTruthy();await act(async()=>item.click());
   expect(actions.at(-1)).toMatchObject({type:'update-assembly-contact-set',draft:{suppressed:true,instanceIDs:['base','pin']}});
   expect(actions.at(-1).source).toBe(source);
+});
+
+
+it('routes common history buttons to the active document and sketch, and respects availability',async()=>{
+  const ids=['part-undo','part-redo','assembly-undo-recipe','assembly-redo-recipe','sketch-undo','sketch-redo'];
+  const called=[], cleanup=ids.map(id=>cadCommands.register(id,()=>called.push(id)));
+  const oldMode=cadPresentation.snapshot().workspaceMode;
+  const show=async(documentType,sketchEditing=false,partOpen=true)=>act(async()=>root.render(
+    <StudioWorkspace><CADTraditionalRibbon documentType={documentType} sketchEditing={sketchEditing} partOpen={partOpen}
+      activeWorkspace={documentType==='assembly'?'assembly-build':'solid'} onSelectWorkspace={()=>{}} onAction={()=>{}}/></StudioWorkspace>));
+  const undo=()=>[...container.querySelectorAll('button')].find(button=>button.textContent==='Undo');
+  try {
+    cadPresentation.patch({workspaceMode:'modeling'});ids.forEach(id=>cadCommands.setEnabled(id,true));
+    await show('assembly',false,false);await click('Undo');await click('Redo');
+    expect(called.splice(0)).toEqual(['assembly-undo-recipe','assembly-redo-recipe']);
+    await act(async()=>cadCommands.setEnabled('assembly-undo-recipe',false));expect(undo().disabled).toBe(true);
+    await show('part');await click('Undo');await click('Redo');
+    expect(called.splice(0)).toEqual(['part-undo','part-redo']);
+    await show('part',true);await click('Undo');await click('Redo');
+    expect(called.splice(0)).toEqual(['sketch-undo','sketch-redo']);
+    await show('project',false,false);expect(undo().disabled).toBe(true);
+    await act(async()=>cadAssemblyWorkspace.setUnavailable());await show('assembly',false,false);expect(undo().disabled).toBe(true);
+  } finally { cleanup.forEach(fn=>fn());cadPresentation.patch({workspaceMode:oldMode}); }
 });
