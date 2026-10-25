@@ -17,6 +17,15 @@ Package-manager versions and the shared UI dependency version are separate.
    the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
    wheel from `vendor/python/`, never an editable sibling Animation checkout.
    A default pytest run skips release gates and is insufficient for qualification.
+   Kernel feature changes also require `scripts/verify-modeling-browser.mjs`
+   through Studio's disposable authenticated browser fixture with the candidate
+   frontend and matching worker. It covers sketch creation, additive/subtractive
+   extrusion, revolve, finishing, shell, mirror, pattern, Boolean, hole, surfaces
+   and sheet-metal export. Every step must pass with no server geometry requests;
+   there is no tolerant mode. For implementation-only module extractions, compare
+   saved models against the previous worker: stable IDs, anchors, measurements,
+   body outputs, reference scopes and frames must remain equivalent. OCCT traversal
+   order and diagnostic incidence indexes are not stable identities.
    Drawing changes also require `node scripts/verify-drawings.mjs`. Sections require
    analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
    source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF

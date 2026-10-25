@@ -1,3 +1,8 @@
+import { UnsupportedFeature, FeatureFailure } from "./feature-errors";
+import { sub, add, scale, neg, cross, norm, unit, dot, type V3 } from "./vector";
+import { buildEdgeFinish } from "./features/edge-finish";
+import { applyBooleanFeature } from "./features/boolean";
+import { applyPatternFeature } from "./features/pattern";
 import { sketchRegionGroups } from "../sketch/regions/groups";
 import { connectedSketchRegions, sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
 import { matchesProfileRegion, profileRegionIdentity, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
@@ -47,22 +52,11 @@ import {
   drawRectangle,
   type Drawing,
   type Shape3D,
-  type EdgeFinder,
-  type RadiusConfig, type FilletRadius, type ChamferRadius,
 } from "replicad";
 import { planeToolFace, splitFacesByTool } from "./general-fuse";
 import { makeLine as makeLine3D, makeBSplineApproximation as approximateBSpline, makeCompound, makeVertex } from "replicad";
 
-/** A feature this engine cannot build yet; the caller may try another engine. */
-export class UnsupportedFeature extends Error {
-  /** `fullBuild`: the full OpenCascade.js build can do this; the worker loads it and retries. */
-  constructor(readonly featureId: string, what: string, readonly fullBuild = false) { super(what); this.name = "UnsupportedFeature"; }
-}
-/** A feature the engine tried and could not build: the user's error. */
-export class FeatureFailure extends Error {
-  constructor(readonly featureId: string, readonly featureName: string, message: string) { super(`${featureName}: ${message}`); this.name = "FeatureFailure"; }
-}
-
+export { UnsupportedFeature, FeatureFailure } from "./feature-errors";
 /** Every solid of a shape as its own body (what "separate bodies" means). */
 export function solidsOf(shape: Shape3D): Shape3D[] {
   const oc = getOC();
@@ -87,45 +81,6 @@ function throughAllDistance(bodies: Iterable<Shape3D>, origin: [number, number, 
   }
   return farthest + 1;
 }
-type V3 = [number, number, number];
-const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-
-/** Midpoints of every edge tangent-continuous with the seed edges (SolidCraft's tangent
- *  chain): edges meeting at a vertex with parallel tangents there, followed outward. */
-function tangentChainMidpoints(body: Shape3D, seeds: readonly V3[]): V3[] {
-  const edges = body.edges;
-  try {
-    const key = (p: { x: number; y: number; z: number }) => `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
-    const info = edges.map((edge) => {
-      const s = edge.startPoint, t = edge.endPoint, m = edge.pointAt(0.5), ts = edge.tangentAt(0), te = edge.tangentAt(1);
-      const out = { start: key(s), end: key(t), mid: [m.x, m.y, m.z] as V3, tStart: [ts.x, ts.y, ts.z] as V3, tEnd: [te.x, te.y, te.z] as V3 };
-      s.delete(); t.delete(); m.delete(); ts.delete(); te.delete(); return out;
-    });
-    const parallel = (a: V3, b: V3) => Math.abs(dot(a, b)) / Math.max(Math.hypot(...a) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
-    const chosen = new Set<number>();
-    const queue = info.map((_, i) => i).filter((i) => seeds.some((p) => Math.hypot(p[0] - info[i].mid[0], p[1] - info[i].mid[1], p[2] - info[i].mid[2]) < 1e-3));
-    queue.forEach((i) => chosen.add(i));
-    while (queue.length) {
-      const i = queue.pop()!;
-      for (const [vertex, tangent] of [[info[i].start, info[i].tStart], [info[i].end, info[i].tEnd]] as [string, V3][]) {
-        info.forEach((other, j) => {
-          if (chosen.has(j)) return;
-          const shared = other.start === vertex ? other.tStart : other.end === vertex ? other.tEnd : null;
-          if (shared && parallel(tangent, shared)) { chosen.add(j); queue.push(j); }
-        });
-      }
-    }
-    return [...chosen].map((i) => info[i].mid);
-  } finally { edges.forEach((edge) => edge.delete()); }
-}
-
-const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const scale = (a: V3, s: number): V3 => [a[0] * s, a[1] * s, a[2] * s];
-const neg = (a: V3): V3 => scale(a, -1);
-const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a: V3) => Math.hypot(a[0], a[1], a[2]);
-const unit = (a: V3): V3 => scale(a, 1 / norm(a));
 function* corners(bounds: [ArrayLike<number>, ArrayLike<number>]): Generator<V3> {
   for (const x of [bounds[0][0], bounds[1][0]]) for (const y of [bounds[0][1], bounds[1][1]]) for (const z of [bounds[0][2], bounds[1][2]]) yield [x, y, z];
 }
@@ -829,245 +784,22 @@ export function evaluatePartDocument(
         if (feature.type === "fillet" || feature.type === "chamfer") {
           const id = feature.targetBodyId ?? currentBodyID;
           const body = id && bodies.get(id);
-          if (!body || !id)
-            throw new Error("Create a solid before finishing edges.");
-          // An edge plane pins one world coordinate to the offset (FreeCAD's
-          // `_edges_in_plane`: XY pins z, XZ pins y, YZ pins x), which saved documents
-          // rely on; replicad's named XZ plane would pin y to the opposite sign.
-          const edgePlane = feature.edgePlane ? (() => {
-            const axis = ({ XY: [0, 0, 1], XZ: [0, 1, 0], YZ: [1, 0, 0] } as Record<string, V3>)[feature.edgePlane.plane];
-            const xDirection = ({ XY: [1, 0, 0], XZ: [1, 0, 0], YZ: [0, 1, 0] } as Record<string, V3>)[feature.edgePlane.plane];
-            if (!axis) throw new Error(`Unknown edge plane ${feature.edgePlane.plane}.`);
-            return own(new Plane(scale(axis, feature.edgePlane.offsetMillimeters), xDirection, axis));
-          })() : undefined;
-          // Picked edges replace the plane pin: each is found again on the body it was
-          // picked on (a straight edge by its vertex anchors, any edge by midpoint and
-          // length) and the finish runs on exactly those edges, never the nearest.
-          const pickedPoints = feature.edges?.map((pick): V3 => {
-            if (pick.bodyId !== id) throw new Error(`${pick.label} is on another body. Reselect edges on the target body.`);
-            const refuse = () => new Error(`${pick.label} changed or is missing. Reselect the edges to finish.`);
-            if (pick.kind === "solid-edge") {
-              const anchors = [...vertexAnchorsOf(body).values()];
-              const vertex = (anchor: typeof pick.anchor.start): V3 => {
-                const matches = anchors.filter((a) => a.signature === anchor.signature);
-                const found = matches.length === 1 ? matches[0] : matches.find((a) => a.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
-                if (!found) throw refuse();
-                return [...found.positionMillimeters] as V3;
-              };
-              const a = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-              return scale(add(a, b), 0.5);
-            }
-            const target = pick.midpointMillimeters as V3, tolerance = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
-            const edges = body.edges;
-            try {
-              const hit = edges.find((edge) => {
-                const m = edge.pointAt(0.5), d = Math.hypot(m.x - target[0], m.y - target[1], m.z - target[2]); m.delete();
-                return d < 1e-3 && Math.abs(edge.length - pick.lengthMillimeters) <= tolerance;
-              });
-              if (!hit) throw refuse();
-              const m = hit.pointAt(0.5); const point: V3 = [m.x, m.y, m.z]; m.delete();
-              return point;
-            } finally { edges.forEach((edge) => edge.delete()); }
-          });
-          const chainPoints = pickedPoints && feature.tangentChain ? tangentChainMidpoints(body, pickedPoints) : pickedPoints;
-          if (feature.id === previewId) {
-            // The size handle sits on the first finished edge and pulls into the part.
-            const seed = chainPoints?.[0] ?? (() => { const edges = body.edges; const m = edges[0]?.pointAt(0.5); const p: V3 | undefined = m ? [m.x, m.y, m.z] : undefined; m?.delete(); edges.forEach((edge) => edge.delete()); return p; })();
-            if (seed) {
-              const faces = new FaceFinder().containsPoint(seed).find(body);
-              const inward = faces.reduce<V3>((sum, f) => { const nv = f.normalAt(seed); const r: V3 = [sum[0] - nv.x, sum[1] - nv.y, sum[2] - nv.z]; nv.delete(); return r; }, [0, 0, 0]);
-              faces.forEach((f) => f.delete());
-              publish(feature, { parameter: "radius", kind: "linear", originMillimeters: seed, direction: norm(inward) > 1e-9 ? unit(inward) : [0, 0, -1], label: feature.type === "fillet" ? "Fillet radius" : "Chamfer size" });
-            }
-          }
-          const filter = chainPoints ? (edges: EdgeFinder) => edges.either(chainPoints.map((p) => (f: EdgeFinder) => f.containsPoint(p)))
-            : edgePlane ? (edges: EdgeFinder) => edges.inPlane(edgePlane) : undefined;
-          const near = (p: V3, q: { x: number; y: number; z: number }) => Math.hypot(p[0] - q.x, p[1] - q.y, p[2] - q.z) < 1e-3;
-          // Per-edge sizes (a pick's own radius) and a variable fillet (size → end size).
-          const size = feature.radiusMillimeters;
-          const filletRadius = (): RadiusConfig<FilletRadius> => {
-            const end = feature.type === "fillet" ? feature.endRadiusMillimeters : undefined;
-            const perEdge = pickedPoints && feature.edges!.some((pick) => pick.radiusMillimeters !== undefined);
-            if (!perEdge) return end !== undefined ? [size, end] : size;
-            return (edge) => { const m = edge.pointAt(0.5); const i = pickedPoints!.findIndex((p) => near(p, m)); const inChain = chainPoints!.some((p) => near(p, m)); m.delete(); return i >= 0 ? (feature.edges![i].radiusMillimeters ?? size) : inChain ? size : null; };
-          };
-          // An asymmetric chamfer needs the face its first leg lies on: the picked
-          // reference face, else the adjacent face facing up most (SolidCraft's default).
-          const chamferRadius = (): RadiusConfig<ChamferRadius> => {
-            if (feature.type !== "chamfer" || (feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined)) return size;
-            let reference: Face;
-            if (feature.referenceFace) reference = faceByReference(body, feature.referenceFace, "Chamfer reference face");
-            else {
-              const point = pickedPoints?.[0];
-              if (!point) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
-              const adjacent = body.faces.filter((face) => { const edges = face.edges; const hit = edges.some((edge) => { const m = edge.pointAt(0.5); const h = near(point, m); m.delete(); return h; }); edges.forEach((edge) => edge.delete()); return hit; });
-              if (!adjacent.length) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
-              const up = (face: Face) => { const center = deleteAfterVectorTuple(face.center); return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2]; };
-              reference = adjacent.sort((a, b) => up(b) - up(a))[0];
-              adjacent.slice(1).forEach((face) => face.delete());
-            }
-            const selectedFace = (f: FaceFinder) => f.inList([reference]);
-            return feature.angleDegrees !== undefined ? { distance: size, angle: feature.angleDegrees, selectedFace } : { distances: [size, feature.secondDistanceMillimeters!], selectedFace };
-          };
-          let rounded: Shape3D;
-          try {
-            rounded = feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
-          } catch (error) {
-            throw new Error(`${feature.type === "fillet" ? "Fillet" : "Chamfer"} did not produce a valid solid. Reduce the size or choose fewer edges.`, { cause: error });
-          }
-          bodies.set(id, own(rounded));
+          if (!body || !id) throw new Error("Create a solid before finishing edges.");
+          bodies.set(id, own(buildEdgeFinish(feature, id, body, { own, previewId, publish, faceByReference })));
           continue;
         }
         if (feature.type === "extrude") {
           // Named so a forced engine tells the user exactly what is missing.
         }
         if (feature.type === "boolean") {
-          // FreeCAD's rule: tools are resolved at this point of the history and,
-          // unless kept, consumed by the operation.
-          const target = bodies.get(feature.targetBodyId);
-          if (!target) throw new Error("Boolean needs an existing target solid.");
-          if (!feature.toolBodyIds.length) throw new Error("Boolean needs at least one tool body.");
-          if (new Set(feature.toolBodyIds).size !== feature.toolBodyIds.length) throw new Error("Boolean tool bodies must be distinct.");
-          const toolShapes = feature.toolBodyIds.map((id) => bodies.get(id));
-          if (toolShapes.some((shape) => !shape || shape === target)) throw new Error("Choose available tool bodies different from the target.");
-          let result: Shape3D = target;
-          for (const shape of toolShapes as Shape3D[]) {
-            const next = feature.operation === "union" ? result.fuse(shape) : feature.operation === "cut" ? result.cut(shape) : result.intersect(shape);
-            if (!isShape3D(next)) throw new Error("The operation left no solid.");
-            result = own(next);
-          }
-          bodies.set(feature.targetBodyId, result);
-          if (!feature.keepTools) for (const id of feature.toolBodyIds) bodies.delete(id);
-          currentBodyID = feature.targetBodyId;
+          currentBodyID = applyBooleanFeature(feature, bodies, own);
           continue;
         }
         if (feature.type === "pattern") {
-          // PartDesign patterns: the source feature's own tool, repeated along a
-          // body axis (count includes the original) and applied the way the
-          // source was — added or removed. A full polar turn spaces the copies
-          // over 360°; a partial one spreads them from the original to the angle.
-          const partPattern = Boolean(feature.bodyIds);
-          const source = partPattern ? undefined : history.find((f) => f.id === feature.sourceFeatureId);
-          const tool = partPattern ? undefined : tools.get(feature.sourceFeatureId);
-          if (!partPattern) {
-            if (!source || !tool || !("operation" in source)) throw new Error("Choose a source feature in the selected target body.");
-            if (!["extrude", "revolve"].includes(source.type)) throw new Error("Choose an additive or subtractive profile feature to pattern.");
-            if (source.operation === "intersect") throw new UnsupportedFeature(feature.id, "patterns of intersect features");
-          }
-          const count = feature.count;
-          if (!Number.isInteger(count) || count < 2) throw new Error("Pattern needs at least two occurrences, including the original.");
-          const principal = (axis: "X" | "Y" | "Z"): V3 => axis === "X" ? [1, 0, 0] : axis === "Y" ? [0, 1, 0] : [0, 0, 1];
-          // A direction beyond the principal axes: a vector, or a picked straight edge
-          // (resolved the way a transform's reference line is).
-          const directionOf = (ref: import("../document/pattern").PatternDirection | undefined, axis: "X" | "Y" | "Z"): V3 => {
-            if (!ref) return principal(axis);
-            if (ref.kind === "vector") return unit(ref.direction);
-            const t = resolveTransform({ kind: "translate-reference", reference: ref, distanceMillimeters: 1 });
-            return (t as { translationMillimeters: V3 }).translationMillimeters;
-          };
-          const id = partPattern ? feature.bodyIds![0] : (("targetBodyId" in feature && feature.targetBodyId) || currentBodyID);
-          const target = id ? bodies.get(id) : undefined;
-          if (!target || !id) throw new Error("Select an existing target body.");
-          // Where the original sits in a row: index offsets for the copies.
-          const offsets = (n: number, alignment: "left" | "center" | "right" | undefined): number[] => {
-            const first = alignment === "left" ? -(n - 1) : alignment === "center" ? -Math.floor((n - 1) / 2) : 0;
-            return Array.from({ length: n }, (_, i) => first + i);
-          };
-          let placements: ((shape: Shape3D) => Shape3D)[] = [];
-          if (feature.patternType === "path") {
-            // Along a sketch curve: copies at equal arc length, kept as drawn or turned to
-            // follow the path's tangent (SolidCraft's identical | path).
-            const pathProfile = pathSource(feature.pathFeatureId);
-            if (!pathProfile) throw new Error("Pattern on path needs a curve of an earlier sketch.");
-            const pathId = feature.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : undefined);
-            if (pathId === undefined) throw new Error("Pattern path sketch has several curves — choose which one to use.");
-            const spine = sketchWire(feature.pathFeatureId, pathId, "Pattern path", true);
-            const samples: { at: V3; tangent: V3; s: number }[] = [];
-            let s = 0;
-            for (const edge of spine.edges) {
-              const steps = 64; let previous: V3 | undefined;
-              for (let i = 0; i <= steps; i++) {
-                const p = edge.pointAt(i / steps), d = edge.tangentAt(i / steps);
-                const at: V3 = [p.x, p.y, p.z], tangent = unit([d.x, d.y, d.z]); p.delete(); d.delete();
-                if (previous) s += Math.hypot(at[0] - previous[0], at[1] - previous[1], at[2] - previous[2]);
-                samples.push({ at, tangent, s }); previous = at;
-              }
-              edge.delete();
-            }
-            const total = s, step = feature.spacingMillimeters ?? (feature.distanceMillimeters! / (count - 1));
-            if (!(step > 0) || step * (count - 1) > total + 1e-6) throw new Error("The pattern does not fit along the path. Reduce the spacing or the count.");
-            const at = (distance: number) => { let k = samples.findIndex((sample) => sample.s >= distance); if (k < 0) k = samples.length - 1; return samples[Math.max(0, k)]; };
-            const start = samples[0];
-            for (let i = 1; i < count; i++) {
-              const target = at(step * i), move = sub(target.at, start.at);
-              placements.push((shape) => {
-                let moved: Shape3D = own(shape.clone().translate(move[0], move[1], move[2]));
-                if (feature.orientation === "path") {
-                  const axis = cross(start.tangent, target.tangent), angle = Math.acos(Math.max(-1, Math.min(1, dot(start.tangent, target.tangent)))) * 180 / Math.PI;
-                  if (Math.hypot(...axis) > 1e-9 && angle > 1e-9) moved = own(moved.rotate(angle, target.at, unit(axis)));
-                }
-                return moved;
-              });
-            }
-          } else if (feature.patternType === "linear") {
-            const extent = feature.spacingMillimeters * (count - 1);
-            if (!Number.isFinite(extent) || extent <= 0) throw new Error("Pattern spacing must be positive and finite.");
-            const rows: { direction: V3; step: number; offsets: number[] }[] = [
-              { direction: scale(directionOf(feature.direction, feature.axis), feature.reversed ? -1 : 1), step: feature.spacingMillimeters, offsets: offsets(count, feature.alignment) },
-            ];
-            if (feature.second) {
-              const s = feature.second;
-              rows.push({ direction: scale(directionOf(s.direction, s.axis ?? "Y"), s.reversed ? -1 : 1), step: s.spacingMillimeters, offsets: offsets(s.count, s.alignment) });
-            }
-            if (feature.id === previewId) {
-              const anchor = tools.get(feature.sourceFeatureId) ?? (feature.bodyIds ? bodies.get(feature.bodyIds[0]) : undefined);
-              const c = anchor ? (anchor.boundingBox.center as number[]) : [0, 0, 0];
-              publish(feature, { parameter: "spacing", kind: "linear", originMillimeters: [0, 1, 2].map((i) => c[i] + rows[0].direction[i] * feature.spacingMillimeters) as V3, direction: rows[0].direction, label: "Pattern spacing" });
-            }
-            for (const i of rows[0].offsets) for (const j of rows[1]?.offsets ?? [0]) {
-              if (i === 0 && j === 0) continue;
-              const move = add(scale(rows[0].direction, rows[0].step * i), rows[1] ? scale(rows[1].direction, rows[1].step * j) : [0, 0, 0]);
-              placements.push((shape) => own(shape.clone().translate(move[0], move[1], move[2])));
-            }
-          } else {
-            const extent = feature.angleDegrees;
-            if (!Number.isFinite(extent) || !(extent > 0 && extent <= 360)) throw new Error("Pattern angle must be greater than 0 and at most 360 degrees.");
-            const step = extent === 360 ? 360 / count : extent / (count - 1), sign = feature.reversed ? -1 : 1;
-            let origin: V3 = [0, 0, 0], axis: V3 = principal(feature.axis);
-            if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
-            else if (feature.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
-            else if (feature.axisReference) {
-              const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
-              origin = t.axisOriginMillimeters; axis = t.axisDirection;
-            }
-            publish(feature, { parameter: "angle", kind: "angular", originMillimeters: origin, direction: axis, label: "Pattern angle" });
-            for (const i of offsets(count, feature.alignment)) if (i !== 0) placements.push((shape) => own(shape.clone().rotate(step * i * sign, origin, axis)));
-          }
-          if (partPattern) {
-            // Whole parts: every placement of every chosen part becomes a new part.
-            const ids: string[] = [];
-            for (const bodyId of feature.bodyIds!) {
-              const shape = bodies.get(bodyId);
-              if (!shape) throw new Error("A part to pattern is unavailable.");
-              placements.forEach((place, index) => { const copyId = `${feature.copyBodyIds![bodyId]}:${index + 1}`; if (bodies.has(copyId)) throw new Error("Duplicate output body identity."); bodies.set(copyId, place(shape)); ids.push(copyId); });
-            }
-            bodyOutputs[feature.id] = ids;
-            currentBodyID = ids[ids.length - 1] ?? currentBodyID;
-            continue;
-          }
-          let body: Shape3D = target;
-          const copies: Shape3D[] = [];
-          for (const place of placements) {
-            const copy = place(tool!);
-            copies.push(copy);
-            const next = (source as { operation?: string }).operation === "cut" ? body.cut(copy) : body.fuse(copy);
-            if (!isShape3D(next)) throw new Error("The operation left no solid.");
-            body = own(next);
-          }
-          bodies.set(id, body);
-          currentBodyID = id;
-          // The copies together are what a mirror or later pattern of this feature repeats.
-          tools.set(feature.id, copies.length === 1 ? copies[0] : own(copies.slice(1).reduce((all, copy) => own(all.fuse(copy)), copies[0])));
+          currentBodyID = applyPatternFeature(feature, {
+            history, bodies, tools, bodyOutputs, currentBodyID, own, previewId,
+            publish, resolveTransform, pathSource, sketchWire, axisFeatureLine,
+          });
           continue;
         }
         if (feature.type === "hole") {

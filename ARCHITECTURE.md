@@ -165,6 +165,31 @@ parallel evaluator or exposing OCCT/Three.js objects across the boundary.
 
 ## Source map
 
+### Current kernel feature ownership (2026-10-24)
+
+The evaluator coordinates ordered history, cached steps, shape lifetime, atomic
+failure and result publication. Feature implementations belong in focused modules
+under `aether-engine/src/kernel/features/`, with explicit typed inputs. A feature
+must not import the evaluator to reach its private state. Context callbacks resolve
+existing document references and register temporary resources with the current
+step; they do not create a second history or cache.
+
+| Module | Owns |
+| --- | --- |
+| `features/edge-finish.ts` | Fillet/chamfer edge resolution, tangent chains, size rules and preview handles. |
+| `features/boolean.ts` | Boolean target/tool validation, exact operations and authored tool consumption. |
+| `features/pattern.ts` | Linear, polar and path placements; tool versus whole-body patterns; output identities and preview handles. |
+| `feature-errors.ts` | Feature failure identities, re-exported from the evaluator for existing callers. |
+| `vector.ts` | The product-local vector operations used by these modules and the evaluator. |
+
+Existing end-to-end kernel tests still run features through the public evaluator,
+covering topology identity, exact measurements, preview, cache invalidation and
+saved replay together. This first extraction removes these implementations from
+the older evaluator; extrusion/revolve, sheet metal, surfaces, transforms and
+other remaining branches still need the same treatment as baseline work proceeds.
+
+### Application responsibilities
+
 | File | Responsibility |
 | --- | --- |
 | `aether-core.ts` | Sole app-facing engine facade and future extraction contract. |

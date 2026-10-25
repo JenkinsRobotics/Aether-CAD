@@ -503,3 +503,44 @@ frontend files are byte-identical to the browser-qualified output. The rebuilt
 worker passes all 308 native checks again (174.32 seconds), fresh-process drawing
 checks, old-reader refusal and pinned-codec/package equality. Its final SHA-256
 is `360daff4a45cc586fdcd8bc4f5838370d85cbd5aacc9804882150b87f7ede504`.
+
+## 2026-10-24 — Focused kernel feature modules (source qualified)
+
+The existing fillet/chamfer, Boolean and pattern implementations now live under
+`aether-engine/src/kernel/features/`. Explicit typed contexts supply only the
+needed bodies, references, preview callbacks and step resource ownership. The
+evaluator retains ordered replay, cache ownership and transaction commit; modules
+do not import it or create another state store. Feature error identities remain
+compatible through re-exports. Product-local vector operations are reused.
+
+The evaluator decreases from 3,337 to 3,069 lines in this first extraction.
+The larger extrusion/revolve, sheet-metal, surface and other branches remain to
+extract. Geometry and authored behavior are unchanged. Full engine: 1,146 pass;
+full app: 1,856 pass/one existing skip; engine/app types and build pass. The initial
+context declaration incorrectly required legacy contour IDs; it now preserves
+their existing optional type. All 308 packaged native tests pass, along with
+headless exact-build/export, saved-region/frame/replay, drawing section/export/
+reopen and pinned-codec/package checks.
+
+The CAD-owned modeling browser fixture passes all 16 steps (293.61 seconds with
+the actual Animation-client regression), including applied hole, revolve cut,
+surface/thicken and sheet-metal export after the extracted features. No page
+errors or server geometry requests occur. The fixture has no tolerant mode and
+retains the saved part before/after the hole for fresh-process checks. The earlier
+browser attempts remain recorded: a default-direction hole preview was refused;
+a subsequent negative assertion incorrectly assumed that this drill removed no
+material. The saved model, after its revolve and union, has material on both sides
+of the sketch. Explicit normal direction passes the final browser run. The first
+preview refusal was not reproduced by cold builds; this is not claimed as a
+separate product fix.
+
+Against the frozen alpha-0.1.10 worker, cold builds of the same saved part and both
+hole directions retain volumes, bounds, stable topology IDs, anchor signatures,
+shape fingerprints, body outputs, reference scopes and sketch frames. Comparison
+uses 1e-9 numeric tolerance and ignores only OCCT traversal ordering and diagnostic
+incidence indexes; incidence degrees are retained. An old-to-old control also
+passes. Evidence: `.verification/baseline-2026-10-24/evaluator-modules-*`, especially
+`evaluator-modules-tools-qualified/log.json` and `evaluator-modules-before-after.json`.
+The matching worker SHA-256 is
+`09c42ffe5c7d44a7958ea32a43e0fc3e7a01304cce01246f2135d6f143ced3e8`;
+the canonical codec21 package remains unchanged. No installed activation or push.
