@@ -2,10 +2,11 @@ import { cadCommands } from '../cad-command-registry';
 /** Regression helpers exercise public commands and attached, visible editors. */
 export function showSketchEditor(editor) {
   if (!document.querySelector('.cad-sketch-workspace')) return;
+  if (document.querySelector(`.sketch-tool-fields[data-editor="${editor}"]`)) return;
   const command = { coordinates: 'sketch-coordinates', constraints: 'sketch-constraints', variables: 'sketch-variables', clipboard: 'sketch-clipboard' }[editor];
   if (command) cadCommands.execute(command);
   else {
-    cadCommands.execute('sketch-coordinates');
+    cadCommands.execute('sketch-constraints');
     const picker = document.querySelector('[aria-label="Sketch editor"]');
     if (picker) { picker.value = editor; picker.dispatchEvent(new Event('change')); }
   }

@@ -5,6 +5,20 @@ behavior reference, including modeling, drawings, assemblies and agent use.
 The source is Aether-CAD on alpha-0.1. Aether's in-process OCCT engine and the
 approved shared Aether UI remain the product architecture.
 
+## 2026-10-25 checkpoint — goal remains incomplete
+
+Before the insertion correction, the tracker marked 207 of 345 in-scope commands
+as parity/ours+ (about 60%); 128 were partial/parity-ish and 10 were gaps/unverified.
+These are command coverage labels, **not** a production-readiness percentage.
+`component.insert_design` was overclaimed: its visible dialog created an empty
+Part definition rather than choosing actual geometry. It is now marked partial,
+leaving 206 covered, 129 partial/approximate and 10 gaps/unverified. The current
+source picker and Files drag reuse the validated Assembly recipe operation;
+current-design instances share definitions, external saved sources are explicit
+independent copies. Nested subassemblies and external associative design links
+remain open. Standard parts cover the implemented ISO families and bearings;
+this is not an import of every reference standard/library.
+
 ## Reference and starting evidence
 
 The supplied solidcraft-main.zip contains SolidCraft 0.16.2 (Cargo.toml). Its

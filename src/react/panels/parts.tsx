@@ -1,7 +1,8 @@
+import { cadCommands } from "../../cad-command-registry";
 import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 /** Parts are a flat projection of the existing body tree, not a second model. */
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { AetherIcon, TreePanel, FeatureTypeIcon, Menu, featureTreeMenuItems, type TreeNode } from "@aether/ui";
+import { AetherIcon, Button, TreePanel, FeatureTypeIcon, Menu, featureTreeMenuItems, type TreeNode } from "@aether/ui";
 import { useCADPanelContext } from "./panel-context-commands";
 import { cadViewportContext } from "../../viewport/context-menu";
 import { cadFeatureActions, cadTreeCommand } from "./feature-tree-commands";
@@ -75,6 +76,8 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
 /** Assembly occurrences come from the same canonical projection as the mate
  * inspector. Do not count only authored Part-document body IDs here. */
 export function CADAssemblyPartsPanel() {
+  const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
+  const canInsert = commands["assembly-insert-component"].enabled;
   const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
   const rows = assembly.data?.instanceRows ?? [];
   const panelMenu = useCADPanelContext(rows, "assembly");
@@ -84,6 +87,9 @@ export function CADAssemblyPartsPanel() {
       nodes={rows} rowHeight={24} showFilter={false} className="cad-parts-list"
       selectedIDs={assembly.selectedEntityIDs}
       onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })}
-      emptyState="Insert a component to build this assembly." />
+      headerControls={[{ id: "insert", label: "Insert Part", icon: <AetherIcon name="plus"/>,
+        disabled: !canInsert,
+        onClick: () => cadCommands.execute("assembly-insert-component") }]}
+      emptyState={<Button disabled={!canInsert} onClick={() => cadCommands.execute("assembly-insert-component")}>Insert Part…</Button>} />
   </div>;
 }

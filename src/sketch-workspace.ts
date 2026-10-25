@@ -849,6 +849,7 @@ export function openSketchWorkspace(
       return;
     }
     coordinates.update(tool);
+    toolWindow.setTitle("coordinates", tool === "select" ? "Coordinates" : tool.replace(/-/g, " ").replace(/^./, value => value.toUpperCase()));
     arcDirection.update(tool);
     ellipseRadius.update(tool);
     const state = constraintDisplayState(sketchConstraintState(drawing));

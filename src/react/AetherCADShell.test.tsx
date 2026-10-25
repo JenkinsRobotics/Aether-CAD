@@ -437,22 +437,17 @@ describe("AetherCADShell", () => {
     expect(html).toContain("Save native Part");
   });
 
-  it("renders component identity, preferred placement units, mass, and grounding authoring fields", () => {
+  it("offers real assembly sources, placement, grounding and standard parts", () => {
     cadPresentation.patch({ startDialog: "insert-component" });
     const html = renderToStaticMarkup(<AetherCADShell />);
-    expect(html).toContain('aria-label="Insert Assembly component"');
-    expect(html).toContain('id="assembly-part-name"');
-    expect(html).toContain('id="assembly-part-number"');
-    expect(html).toContain('id="assembly-source-label"');
-    expect(html).toContain('id="assembly-instance-name"');
-    expect(html).toContain('id="assembly-mass-kg"');
-    expect(html).toContain('id="assembly-position-x"');
-    expect(html).toContain('id="assembly-position-y"');
-    expect(html).toContain('id="assembly-position-z"');
-    expect(html).toContain(">kg<");
-    expect(html).toContain(">mm<");
-    expect(html).toContain("Ground component");
-    expect(html).toContain("Insert Component");
+    expect(html).toContain('aria-label="Insert parts"');
+    expect(html).toContain('This design');
+    expect(html).toContain('Other designs');
+    expect(html).toContain('Standard parts');
+    expect(html).not.toContain('assembly-source-label');
+    for (const axis of ['x', 'y', 'z']) expect(html).toContain(`id="assembly-position-${axis}"`);
+    expect(html).toContain('Ground component');
+    expect(html).toContain('Insert Part');
   });
 
   it("renders one explicit Part-local manual connector frame", () => {

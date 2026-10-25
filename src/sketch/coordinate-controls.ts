@@ -1,3 +1,4 @@
+import { createCoordinateFields } from "@aether/ui";
 import type { SketchPoint } from "@aether/core/sketch";
 import { mountEllipticalRadiusControl } from "./elliptical-radius-control";
 import { mountArcDirectionControl } from "./arc-direction-control";
@@ -15,11 +16,13 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
   variables?(): readonly DocumentVariable[] | undefined;
   confirmConic?(): void;
 }) {
-  const button = (label: string, run: () => void) => {
+  const button = (label: string, run: () => void, container: HTMLElement = parent) => {
     const button = document.createElement("button");
-    button.type = "button"; button.textContent = label; button.onclick = run; parent.append(button);
+    button.type = "button"; button.textContent = label; button.onclick = run; container.append(button); return button;
   };
-  button("New contour", o.newContour); button("Close contour", o.closeContour);
+  const contourActions = document.createElement('div');
+  contourActions.className = 'sketch-contour-actions'; parent.append(contourActions);
+  button("New contour", o.newContour, contourActions); button("Close contour", o.closeContour, contourActions);
   const numeric = (label: string, value: string) => {
     const row = document.createElement("label"), input = document.createElement("input");
     input.type = "number"; input.step = "any"; input.value = value; input.setAttribute("aria-label", label);
@@ -28,9 +31,14 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
     input.addEventListener("keydown", event => {
       if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); }
     });
-    row.append(label, input); parent.append(row); return input;
+    row.className = 'aui-feature-row';
+    const caption = document.createElement('span'); caption.textContent = label;
+    row.append(caption, input); parent.append(row); return input;
   };
   const x = numeric("X (mm)", "0"), y = numeric("Y (mm)", "0");
+  const oldRows = [x.parentElement!, y.parentElement!];
+  const coordinateRow = createCoordinateFields('Point (mm)', [{ axis: 'X', control: x }, { axis: 'Y', control: y }]);
+  oldRows.forEach(row => row.remove()); parent.append(coordinateRow);
   const point = (): SketchPoint => [Number(x.value), Number(y.value)];
   for (const input of [x, y]) input.oninput = () => { const p = point(); o.preview(p.every(Number.isFinite) ? p : null); };
   button("Place point", () => { const p = point(); if (p.every(Number.isFinite)) o.place(p); });
@@ -41,11 +49,13 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
   sides.min = "3"; sides.max = "100"; sides.step = "1"; sides.oninput = o.changed;
   const cornerRadius = numeric("Radius (mm)", "2"); cornerRadius.min = "0"; cornerRadius.oninput = o.changed;
   const slotWidth = numeric("Point slot width (mm)", "6"); slotWidth.min = "0"; slotWidth.oninput = o.changed;
+  const snapOptions = document.createElement('details'), summary = document.createElement('summary');
+  summary.textContent = 'Snapping'; snapOptions.append(summary); parent.append(snapOptions);
   for (const [label, change] of [["Snap to geometry", o.geometrySnap], ["Snap to grid", o.gridSnap]] as const) {
     const row = document.createElement("label"), input = document.createElement("input");
     input.type = "checkbox"; input.checked = true; input.setAttribute("aria-label", label);
-    input.onchange = () => change(input.checked); row.append(input, label); parent.append(row);
+    input.onchange = () => change(input.checked); row.append(input, label); snapOptions.append(row);
   }
   return { point, sides: () => Number(sides.value), cornerRadius: () => Number(cornerRadius.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
-    update: (tool: string) => { sides.parentElement!.hidden = !tool.endsWith("polygon"); cornerRadius.parentElement!.hidden = tool !== "rounded-rectangle" && tool !== "two-tangent-circle"; slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
+    update: (tool: string) => { contourActions.hidden = !["line", "arc", "spline", "bezier"].includes(tool); sides.parentElement!.hidden = !tool.endsWith("polygon"); cornerRadius.parentElement!.hidden = tool !== "rounded-rectangle" && tool !== "two-tangent-circle"; slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
 }

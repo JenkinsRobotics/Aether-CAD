@@ -2,7 +2,7 @@
 
 Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
 
-Totals (398 commands): parity 205, partial 93, n/a 53, gap 3, parity-ish 35, verify 7, ours+ 2
+Totals (398 commands): parity 204, partial 94, n/a 53, gap 3, parity-ish 35, verify 7, ours+ 2
 
 ## Sketch (105)
 
@@ -308,7 +308,7 @@ Totals (398 commands): parity 205, partial 93, n/a 53, gap 3, parity-ish 35, ver
 | `component.create` | New Component | name?, parent?: component id or name (default: the active one); parent_path?: exact parent placement; activate?: bool (default true) | Assembly workspace (new component) | parity |  |
 | `component.delete` | Delete Component | component: deletes it, its subcomponents, occurrences and features | Remove component | parity |  |
 | `component.from_bodies` | Create Components from Bodies | bodies: [names] → one new component per body, named after it | Build › Bodies to Component (new component per body) | parity | the body takes the features it needs; a sketch two bodies share is copied; every occurrence of the source part loses it |
-| `component.insert_design` | Insert Design | path: a .solidcraft design → a new component linked to it, holding its solid bodies as placed in that design; \          name? (default: the design's name); par | Insert (part document) | parity |  |
+| `component.insert_design` | Insert Design | path: a .solidcraft design → a new component linked to it, holding its solid bodies as placed in that design; \          name? (default: the design's name); par | Insert Part source picker / Files drag | partial | 2026-10-25 audit corrected an overclaim: the old dialog created metadata-only Parts. The source picker now inserts actual current-design definitions or copies a pinned saved Part/Hybrid Part using the validated recipe operation. External live links and nested subassemblies remain unsupported. |
 | `component.links` | List Links | → linked components: component, name, path, file (resolved), found | Studio Drive | partial |  |
 | `component.list` | List Components | compact?: bool (counts of bodies, features, sketches and construction planes instead of their names; occurrences leave out \          identity transforms; child | Parts list / `cad.assembly.inspect` | parity |  |
 | `component.metadata` | Part Properties | component: id or name (0 or "root": the design's own properties) → component, name, part_number, description, revision, \          metadata (as saved, other too | Properties panel | partial | read |

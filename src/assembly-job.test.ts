@@ -239,3 +239,14 @@ it("shares derived pose seeds across browser/worker without changing authored pl
   expect(solved.status,solved.message).toBe("ok");
   solved.instances[1].placement_mm.forEach((v,i)=>expect(v).toBeCloseTo([30,30,10][i],5));
 });
+
+// A Hybrid can contain draft Parts outside the current Assembly. They must not
+// prevent inserting/solving a finished Part that is actually instantiated.
+it("ignores unrelated unfinished Part definitions in a Hybrid", () => {
+  const result = assemblyJobFor(projection({ part_definitions: [
+    { id: 'p1', name: 'Bracket', feature_document: document() },
+    { id: 'empty', name: 'Unfinished' },
+  ] }));
+  expect(result.untranslated).toEqual([]);
+  expect(result.job.parts.map(part => part.id)).toEqual(['p1']);
+});

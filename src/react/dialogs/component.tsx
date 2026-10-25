@@ -1,72 +1,98 @@
-/** Insert an Assembly component: identity, units, mass and grounding. */
-import { type AssemblyComponentDraft, assemblyComponentDraftIssues, defaultAssemblyComponentDraft } from "../../cad-assembly-authoring";
-import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { CADQuantityField } from "../CADQuantityField";
-import { Button, Checkbox, Dialog, FieldRow, TextField } from "@aether/ui";
-import { useState } from "react";
+/** Choose real geometry; insertion and drag/drop share one validated command. */
+import { useEffect, useRef, useState } from 'react';
+import { AetherIcon, Button, Checkbox, CoordinateFields, Dialog, Tabs, TextField } from '@aether/ui';
+import { type CADPresentationSnapshot, cadPresentation } from '../../cad-presentation-store';
+import { CADQuantityField } from '../CADQuantityField';
+import { currentInsertCandidates, insertAssemblySource, assemblyInsertionAvailable } from '../../assembly/insertion-session';
+import { listInsertFiles, savedInsertCandidates, type SavedInsertFile } from '../../assembly/insertion-sources';
+import type { InsertCandidate } from '../../assembly/insertion';
+import './component.css';
 
 export function AssemblyComponentDialog({ presentation }: { presentation: CADPresentationSnapshot }) {
-  const [draft, setDraft] = useState<AssemblyComponentDraft>(defaultAssemblyComponentDraft);
-  const close = () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: null });
-  const issues = assemblyComponentDraftIssues(draft);
-  const setPosition = (index: 0 | 1 | 2, value: number | null) => {
-    if (value === null) return;
-    setDraft((current) => {
-      const position = [...current.positionM] as [number, number, number];
-      position[index] = value;
-      return { ...current, positionM: position };
-    });
+  return presentation.startDialog === 'insert-component' ? <AssemblyInsertPicker/> : null;
+}
+function AssemblyInsertPicker() {
+  const [scope, setScope] = useState('design');
+  const [query, setQuery] = useState('');
+  const [candidates, setCandidates] = useState<InsertCandidate[]>(currentInsertCandidates);
+  const [files, setFiles] = useState<SavedInsertFile[]>([]);
+  const [file, setFile] = useState<SavedInsertFile | null>(null);
+  const [selected, setSelected] = useState<InsertCandidate | null>(null);
+  const [positionM, setPosition] = useState<[number, number, number]>([0, 0, 0]);
+  const [grounded, setGrounded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
+  const serial = useRef(0);
+  const abort = useRef(new AbortController());
+  const close = () => { abort.current.abort(); cadPresentation.dispatch({ type: 'show-start-dialog', dialog: null }); };
+  useEffect(() => () => { abort.current.abort(); serial.current++; }, []);
+  useEffect(() => {
+    let live = true; setPreview(null);
+    if (selected?.document) void import('../../preview-document').then(({ previewDocument }) =>
+      previewDocument(JSON.stringify(selected.document))).then(image => { if (live) setPreview(image); }).catch(() => {});
+    return () => { live = false; };
+  }, [selected]);
+  const changeScope = async (next: string) => {
+    if (busy) return;
+    if (next === 'standard') { cadPresentation.dispatch({ type: 'show-start-dialog', dialog: 'insert-standard-part' }); return; }
+    const request = ++serial.current;
+    setScope(next); setFile(null); setSelected(null); setQuery(''); setError(''); setLoading(false);
+    setCandidates(next === 'design' ? currentInsertCandidates() : []);
+    if (next !== 'saved') return;
+    setLoading(true);
+    try { const result = await listInsertFiles(); if (request === serial.current) setFiles(result); }
+    catch (error) { if (request === serial.current) setError(String(error)); }
+    finally { if (request === serial.current) setLoading(false); }
   };
-  return (
-    <Dialog
-      open={presentation.startDialog === "insert-component"}
-      title="Insert Assembly component"
-      onClose={close}
-      actions={(
-        <>
-          <Button onClick={close}>Cancel</Button>
-          <Button
-            primary
-            disabled={issues.length > 0}
-            onClick={() => cadPresentation.dispatch({ type: "insert-assembly-component", draft })}
-          >Insert Component</Button>
-        </>
-      )}
-    >
-      <div className="cad-start-form">
-        <FieldRow label="Part name" htmlFor="assembly-part-name">
-          <TextField id="assembly-part-name" value={draft.partName} onChange={(event) => setDraft({ ...draft, partName: event.target.value })} />
-        </FieldRow>
-        <FieldRow label="Part number" htmlFor="assembly-part-number">
-          <TextField id="assembly-part-number" value={draft.partNumber} placeholder="Optional" onChange={(event) => setDraft({ ...draft, partNumber: event.target.value })} />
-        </FieldRow>
-        <FieldRow label="Source label" htmlFor="assembly-source-label">
-          <TextField id="assembly-source-label" value={draft.sourceLabel} onChange={(event) => setDraft({ ...draft, sourceLabel: event.target.value })} />
-        </FieldRow>
-        <FieldRow label="Instance name" htmlFor="assembly-instance-name">
-          <TextField id="assembly-instance-name" value={draft.instanceName} onChange={(event) => setDraft({ ...draft, instanceName: event.target.value })} />
-        </FieldRow>
-        <FieldRow label="Mass" htmlFor="assembly-mass-kg">
-          <CADQuantityField family="mass" id="assembly-mass-kg" value={draft.massKg} min={0} step={0.01}  scrubLabel="Mass" onValueChange={(massKg) => setDraft({ ...draft, massKg })} />
-        </FieldRow>
-        <FieldRow label="Position X" htmlFor="assembly-position-x">
-          <CADQuantityField family="length" id="assembly-position-x" value={draft.positionM[0]} step={0.01}  scrubLabel="Position X" onValueChange={(value) => setPosition(0, value)} />
-        </FieldRow>
-        <FieldRow label="Position Y" htmlFor="assembly-position-y">
-          <CADQuantityField family="length" id="assembly-position-y" value={draft.positionM[1]} step={0.01}  scrubLabel="Position Y" onValueChange={(value) => setPosition(1, value)} />
-        </FieldRow>
-        <FieldRow label="Position Z" htmlFor="assembly-position-z">
-          <CADQuantityField family="length" id="assembly-position-z" value={draft.positionM[2]} step={0.01}  scrubLabel="Position Z" onValueChange={(value) => setPosition(2, value)} />
-        </FieldRow>
-        <Checkbox
-          checked={draft.grounded}
-          onChange={(event) => setDraft({ ...draft, grounded: event.target.checked })}
-          label="Ground component"
-          description="Fix this instance at its authored rest transform."
-        />
-        <p className="cad-form-note">The canonical Core creates the Part definition and stable Assembly instance. Viewport geometry remains dependent on a resolved source asset.</p>
-        {issues.length > 0 ? <p className="cad-form-note" role="alert">{issues.join(" ")}</p> : null}
+  const chooseFile = async (next: SavedInsertFile) => {
+    const request = ++serial.current;
+    setFile(next); setSelected(null); setQuery(''); setError(''); setLoading(true); setCandidates([]);
+    try { const result = await savedInsertCandidates(next.id, next.revision); if (request === serial.current) setCandidates(result); }
+    catch (error) { if (request === serial.current) setError(String(error)); }
+    finally { if (request === serial.current) setLoading(false); }
+  };
+  const insert = async () => {
+    if (!selected?.source || busy) return;
+    setBusy(true); setError('');
+    try { await insertAssemblySource(selected.source, { positionM, grounded }, abort.current.signal); close(); }
+    catch (error) { if (!abort.current.signal.aborted) setError(error instanceof Error ? error.message : String(error)); }
+    finally { if (!abort.current.signal.aborted) setBusy(false); }
+  };
+  const showingFiles = scope === 'saved' && !file;
+  const match = (name: string) => name.toLowerCase().includes(query.toLowerCase());
+  const shownCandidates = candidates.filter(item => match(item.name));
+  const shownFiles = files.filter(item => match(item.name));
+  return <Dialog open title="Insert parts" onClose={close} actions={<>
+    <Button onClick={close}>{busy ? 'Cancel insertion' : 'Cancel'}</Button>
+    <Button primary disabled={!selected?.source || !!selected.unavailable || busy || loading || !assemblyInsertionAvailable()}
+      onClick={() => void insert()}>{busy ? 'Inserting…' : 'Insert Part'}</Button>
+  </>}>
+    <div className="cad-assembly-insert">
+      <Tabs activeID={scope} onSelect={next => void changeScope(next)} tabs={[
+        { id: 'design', label: 'This design' }, { id: 'saved', label: 'Other designs' }, { id: 'standard', label: 'Standard parts' },
+      ]}/>
+      {file && <div className="cad-insert-source-path"><Button disabled={busy} onClick={() => void changeScope('saved')}><AetherIcon name="chevron-left"/> Designs</Button><span title={file.name}>{file.name} · Revision {file.revision}</span></div>}
+      <TextField aria-label={showingFiles ? 'Search designs' : 'Search parts'} placeholder={showingFiles ? 'Search designs…' : 'Search parts…'}
+        value={query} onChange={event => setQuery(event.target.value)}/>
+      <div className="cad-insert-sources" aria-label="Insertion sources">
+        {loading ? <p role="status">Loading saved designs…</p> : showingFiles ? shownFiles.map(item =>
+          <Button key={item.id} disabled={busy} onClick={() => void chooseFile(item)}><AetherIcon name="folder"/><span>{item.name}</span><small>Revision {item.revision}</small></Button>)
+          : shownCandidates.map(item => <Button key={item.id} disabled={busy || !!item.unavailable} title={item.unavailable ?? item.name}
+            aria-pressed={selected?.id === item.id} onClick={() => setSelected(item)}>
+            <AetherIcon name={item.kind === 'part' ? 'cube' : 'layers'}/><span>{item.name}<small>{item.unavailable ?? 'Part Studio'}</small></span>
+          </Button>)}
+        {!loading && !(showingFiles ? shownFiles : shownCandidates).length && <p>{showingFiles ? 'No saved Part or Hybrid designs found.' : 'No Parts found. Create a Part with a solid in this design, or choose Other designs.'}</p>}
       </div>
-    </Dialog>
-  );
+      {selected && <div className="cad-insert-preview">{preview ? <img src={preview} alt={`Preview of ${selected.name}`}/> : <AetherIcon name="cube"/>}<span>{selected.name}</span></div>}
+      <CoordinateFields label="Position" fields={(['X', 'Y', 'Z'] as const).map((axis, index) => ({ axis, control:
+        <CADQuantityField family="length" id={`assembly-position-${axis.toLowerCase()}`} aria-label={`Position ${axis}`} value={positionM[index]} step={0.001}
+          scrubLabel={`Position ${axis}`} onValueChange={value => { if (value !== null) setPosition(current => current.map((v, i) => i === index ? value : v) as [number, number, number]); }}/>,
+      }))}/>
+      <Checkbox checked={grounded} onChange={event => setGrounded(event.target.checked)} label="Ground component"/>
+      <p className="cad-form-note">{scope === 'design' ? 'Instances share this design’s Part. Drag a Part from Files into the viewport to insert it at the origin.' : 'Inserts an independent copy of the selected saved revision. The source design is unchanged.'}</p>
+      {error && <p role="alert">{error}</p>}
+    </div>
+  </Dialog>;
 }

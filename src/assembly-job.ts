@@ -78,7 +78,10 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
   // without one cannot be placed, and every instance of it is lost with it.
   const parts: AssemblyPartDefinition[] = [];
   const buildable = new Set<string>();
+  const usedParts = new Set(projection.instances.filter(instance => !instance.suppressed && instance.definition_kind === "part").map(instance => instance.definition_id));
   for (const definition of projection.part_definitions) {
+    // A Hybrid also holds unfinished Parts that are not in this Assembly.
+    if (!usedParts.has(definition.id)) continue;
     const document = definition.feature_document as PartDocument | undefined;
     if (!document) {
       note(definition.id, definition.name, "the part carries no feature document");

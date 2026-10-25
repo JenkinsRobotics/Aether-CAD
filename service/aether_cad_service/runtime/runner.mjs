@@ -10590,7 +10590,9 @@ function assemblyJobFor(projection) {
   const note = (id2, name5, reason) => untranslated.push({ id: id2, name: name5, reason });
   const parts = [];
   const buildable = /* @__PURE__ */ new Set();
+  const usedParts = new Set(projection.instances.filter((instance) => !instance.suppressed && instance.definition_kind === "part").map((instance) => instance.definition_id));
   for (const definition of projection.part_definitions) {
+    if (!usedParts.has(definition.id)) continue;
     const document2 = definition.feature_document;
     if (!document2) {
       note(definition.id, definition.name, "the part carries no feature document");

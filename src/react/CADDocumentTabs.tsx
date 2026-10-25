@@ -1,3 +1,4 @@
+import { ASSEMBLY_PART_MIME } from "../assembly/insertion-session";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { AetherIcon, DocumentTabBrowser, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
 import { NewDesignDialog } from "@aether/ui/new-design";
@@ -306,7 +307,12 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   return <>
     {error && <div role="alert">{error}</div>}
     {variant === "browser"
-      ? <CADFilesPanel documentID={documentID} connection={connection}>
+      ? <CADFilesPanel documentID={documentID} connection={connection} onDesignDragStart={event => {
+          const id = (event.target as Element).closest('[data-document-tab-id]')?.getAttribute('data-document-tab-id');
+          if (!id || !project?.id || !project.parts.some(part => part.id === id)) return;
+          event.dataTransfer.setData(ASSEMBLY_PART_MIME, JSON.stringify({ kind: 'design-part', workspaceId: project.id, partId: id }));
+          event.dataTransfer.effectAllowed = 'copyMove';
+        }}>
           <DocumentTabBrowser {...controls} key={documentID ?? "draft"} title={project ? "Design contents" : "Current document"}
             rootLabel={project ? projectName : `${presentation.documentName} · Standalone ${kind}`}
             folders={project ? folders : []} onFoldersChange={project ? updateFolders : undefined} onOrganize={project ? controls.onOrganize : undefined}

@@ -41,10 +41,11 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
       option.value = value; option.textContent = title; picker.append(option);
     }
     picker.value = id; picker.onchange = () => show(picker.value as Editor);
-    window.body.append(picker, section.element);
+    if (id !== "coordinates") window.body.append(picker);
+    window.body.append(section.element);
     styleControls();
     // These editors already group their fields with standard disclosures.
-    for (const details of section.element.querySelectorAll(":scope > details, :scope > section > details"))
+    if (id !== "coordinates") for (const details of section.element.querySelectorAll(":scope > details, :scope > section > details"))
       (details as HTMLDetailsElement).open = true;
   };
   const commands: [CADCommandID, Editor][] = [
@@ -52,6 +53,10 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
     ["sketch-vector", "vector"], ["sketch-variables", "variables"], ["sketch-clipboard", "clipboard"],
   ];
   function refresh() {
+    // A tool temporarily owns the editor surface. Restore the sketch settings
+    // when it closes instead of stacking two windows with duplicate footers.
+    const sketchWindow = root.querySelector<HTMLElement>(".cad-sketch-window");
+    if (sketchWindow) sketchWindow.hidden = Boolean(active);
     for (const [command, editor] of commands) {
       cadCommands.setEnabled(command, enabled());
       cadCommands.setActive(command, active === editor);
@@ -72,6 +77,14 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
       return element;
     },
     show, close, refresh,
+    setTitle(id: Editor, title: string) {
+      const section = sections.get(id); if (!section) return;
+      section.title = title;
+      if (active === id && window) {
+        const heading = window.panel.querySelector<HTMLElement>('.aui-float-panel-title');
+        if (heading) { heading.textContent = title; heading.title = title; }
+      }
+    },
     dispose() {
       observer.disconnect(); close(); disposeCommands.forEach(dispose => dispose());
       globalThis.window.removeEventListener("aether-sketch-text", text, true);

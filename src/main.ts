@@ -1,3 +1,4 @@
+import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "./assembly/insertion-session";
 import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
 import { toggleMeasureWindow } from "./measure/MeasureWindow";
 import { openSectionView, turnOffSectionView } from "./section/SectionViewWindow";
@@ -303,6 +304,12 @@ const assemblyController = new CADAssemblyController({
   },
   onStatus: setStatus,
 });
+configureAssemblyInsertion({
+  projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+  editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && assemblyController.canEditInstances,
+  insert: (recipe, signal, assertCurrent) => assemblyController.composeRecipe(recipe, signal, assertCurrent),
+});
+installAssemblyInsertionDrop(viewportElement, error => setStatus(String(error), 'error'));
 const assemblyContextKey=()=>`assembly:${assemblyController.document?.workspaceID??'none'}:${assemblyController.document?.assemblyID??'none'}:${location.search}`;
 configureAssemblyAgentWorkspace({
   active:()=>activeWorkspaceKind==='assembly',contextKey:assemblyContextKey,
@@ -330,7 +337,7 @@ function syncAssemblyCommands(): void {
   const mate = assemblyController.selectedMate;
   const enabled = assemblyController.canEditSelectedInstance;
   const mateEnabled = assemblyController.canEditSelectedMate;
-  cadCommands.setEnabled("assembly-insert-component", assemblyController.canEditInstances);
+  cadCommands.setEnabled("assembly-insert-component", recipeEditable);
   cadCommands.setEnabled("assembly-add-connector", assemblyController.canAddConnector);
   cadCommands.setEnabled("assembly-create-mate", assemblyController.canAddMate);
   cadCommands.setEnabled("assembly-set-mate-dof-value", assemblyController.canEditSelectedMateDOF);
@@ -1440,7 +1447,6 @@ async function renderCanonicalAssembly():Promise<void>{
    const definition=projection.part_definitions.find(p=>p.id===instance.definition_id);
    if(!definition?.feature_document)continue;
    const doc=parsePartDocument(JSON.stringify(definition.feature_document));
-   if(!doc.features.some(f=>f.type==='extrude'||f.type==='revolve'))continue;
    const model=await worker.evaluatePart(doc);const transform=instance.solved_world_transform;
    for(const body of model.parts)if(doc.bodyProperties?.[body.id]?.visible!==false)bodies.push({data:{...body,id:'assembly:'+instance.id+':'+body.id,name:instance.name+' · '+body.name},positionMillimeters:transform.position_m.map(v=>v*1000),quaternion:transform.rotation_quaternion_xyzw});
   }

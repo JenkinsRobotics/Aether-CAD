@@ -1,0 +1,12 @@
+.cad-assembly-insert { display:flex; flex-direction:column; gap:12px; width:min(480px,75vw); }
+.cad-insert-sources { display:flex; flex-direction:column; gap:4px; min-height:130px; max-height:260px; overflow:auto; }
+.cad-insert-sources > button { display:flex; text-align:left; justify-content:flex-start; min-height:44px; height:auto; padding:8px; gap:10px; white-space:normal; }
+.cad-insert-sources > button > svg { flex-shrink:0; width:18px; height:18px; }
+.cad-insert-sources > button > span { min-width:0; overflow-wrap:anywhere; }
+.cad-insert-sources small { display:block; font-size:11px; color:var(--aether-color-text-dim); }
+.cad-insert-sources button[aria-pressed=true] { outline:1px solid var(--aether-color-accent,#3579ff); outline-offset:-1px; }
+.cad-insert-source-path { display:flex; align-items:center; gap:8px; min-width:0; }
+.cad-insert-source-path > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cad-insert-preview { display:flex; align-items:center; gap:10px; }
+.cad-insert-preview img { width:96px; height:72px; object-fit:contain; background:var(--aether-color-surface); border-radius:8px; }
+.cad-insert-preview svg { width:32px; height:32px; }

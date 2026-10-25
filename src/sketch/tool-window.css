@@ -4,3 +4,12 @@
 .sketch-tool-fields input:not([type="checkbox"]), .sketch-tool-fields select { min-width: 0; max-width: 100%; }
 .sketch-tool-status { position: absolute; bottom: 12px; left: 24px; right: 300px; pointer-events: none; color: var(--aether-color-text); font-size: 12px; }
 .sketch-tool-status:empty { display: none; }
+
+/* Reuse the standard feature-row/coordinate anatomy; keep creation controls dense. */
+.sketch-tool-fields[data-editor="coordinates"] { gap:6px; }
+.sketch-tool-fields[data-editor="coordinates"] > label { flex-wrap:nowrap; margin:0; min-height:26px; }
+.sketch-contour-actions { display:flex; gap:6px; }
+.sketch-contour-actions > button { flex:1; }
+.sketch-tool-fields[data-editor="coordinates"] > button { min-height:28px; }
+.sketch-tool-fields[data-editor="coordinates"] details > summary { cursor:pointer; color:var(--aether-color-text-dim); font-size:11px; }
+.sketch-tool-fields[data-editor="coordinates"] details label { margin:4px 0; }
