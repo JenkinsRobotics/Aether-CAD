@@ -1,6 +1,16 @@
 # Aether CAD source status
 
-## 2026-10-25 — Compact sketch tool controls (source)
+## 2026-10-25 — CAD alpha-0.1.17 installed: Part insertion and compact sketch editors
+
+Source `ae28e4047f54d263d432a6377f790461b759742b` and its matching worker are independently installed.
+All 3,528 frontend files and the worker match the qualified build.
+Release manifest SHA-256: `29ffbdb02d696d891556540b3335aa8fe528d3e20e0bc035e5a01da0b3e5608e`.
+Map alpha-0.1.5, UI alpha-0.1.2, all other apps, host PID 22157 and configuration
+are unchanged. Map loads/pings and all six Pi downloads pass. Server ready;
+no restart, database/settings change or push. Evidence is in
+`.verification/assembly-insert-2026-10-25/`.
+
+## 2026-10-25 — Compact sketch tool controls
 
 Sketch creation popups use the shared UI alpha.215 coordinate row: XY stays on
 one line; Assembly Insert uses the same presentation for XYZ. Drawing popups are
@@ -12,7 +22,7 @@ The shared FeatureWindow continues to own the window and standard field styles;
 CAD retains input units, gesture behavior and geometry. Coordinate entry and
 keyboard placement remain supported.
 
-## 2026-10-25 — Real Assembly Part insertion (source)
+## 2026-10-25 — Real Assembly Part insertion
 
 Insert now chooses actual Parts from the current Hybrid design or a pinned saved
 Part/Hybrid revision. Current-design occurrences share their Part definition;
@@ -28,16 +38,20 @@ already used by agents, with undo/redo, normal autosave and stale editor guards.
 Unrelated unfinished Hybrid Parts no longer block Assembly translation. Assembly
 rendering no longer filters Parts to only histories containing Extrude/Revolve.
 Nested subassemblies and external associative links remain unsupported; the
-picker says so. This does not complete the SolidCraft baseline. Qualification
-and installation are recorded separately once complete.
+picker says so. This does not complete the SolidCraft baseline.
 
-Qualification so far: CAD full app suite 1,916 pass / 1 skipped; final compact
+Qualification: CAD full app suite 1,916 pass / 1 skipped; final compact
 editor regression 166 pass (including one new window replacement test). Engine
 1,173 pass, native packaged service 318 pass, shared UI 924 pass. Product/UI
 types and builds, headless kernel and exact sketch-region checks pass. Final
 authenticated insertion browser: six workflows pass with no page errors, including
 Files drag/history, both saved-source types, source preservation, reopen and
-compact Circle/Rectangle fields. Existing Assembly editing regression is pending.
+compact Circle/Rectangle fields. All ten existing Assembly editing workflows pass
+as two bounded groups: six core edit/history/reopen checks and four joint-pose,
+compound-copy and contact-management checks. Both groups preserve all operation
+assertions and finish with no browser errors or legacy CAD RPC requests. The
+combined run previously hit the fixture's 480-second overall deadline after eight
+passing workflows; no product-code change or deadline relaxation was required.
 
 ## 2026-10-25 — CAD alpha-0.1.16 installed
 

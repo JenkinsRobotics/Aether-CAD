@@ -12,7 +12,7 @@ as parity/ours+ (about 60%); 128 were partial/parity-ish and 10 were gaps/unveri
 These are command coverage labels, **not** a production-readiness percentage.
 `component.insert_design` was overclaimed: its visible dialog created an empty
 Part definition rather than choosing actual geometry. It is now marked partial,
-leaving 206 covered, 129 partial/approximate and 10 gaps/unverified. The current
+leaving 206 covered, 129 partial/approximate and 10 gaps/unverified. Installed alpha-0.1.17’s
 source picker and Files drag reuse the validated Assembly recipe operation;
 current-design instances share definitions, external saved sources are explicit
 independent copies. Nested subassemblies and external associative design links

@@ -56,6 +56,12 @@ Package-manager versions and the shared UI dependency version are separate.
    Assembly edit changes require `scripts/verify-assembly-edit-browser.mjs` through
    the same disposable fixture. It exercises actual MCP editor calls, native
    assembly solves, guarded joint/relation/mate edits, history and saved reopen.
+   The disposable host caps each complete browser invocation at 480 seconds.
+   Run the same script once with `AETHER_ASSEMBLY_BROWSER_CORE_ONLY=1` (six core
+   edit/history workflows) and once with `AETHER_ASSEMBLY_BROWSER_POSE_ONLY=1`
+   (both joint poses, compound copy and contact management) when the combined
+   run exceeds that budget. Both groups must pass; neither replaces the other
+   and every per-operation and final error assertion remains enabled.
    Check the common bottom Undo/Redo buttons as well as keyboard/agent history.
    Check multiple undo/redo steps spanning composition, UI coordinate edits and
    agent edits; a failed edit preserves the redo branch, a new edit clears it,

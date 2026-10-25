@@ -10,6 +10,9 @@ const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
 const copyOnly=process.env.AETHER_ASSEMBLY_BROWSER_COPY_ONLY==='1';
 const contactOnly=process.env.AETHER_ASSEMBLY_BROWSER_CONTACT_ONLY==='1';
+// Split long qualification into bounded fixtures without weakening assertions.
+const coreOnly=process.env.AETHER_ASSEMBLY_BROWSER_CORE_ONLY==='1';
+assert.ok(!(coreOnly && (copyOnly || contactOnly || process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY==='1')), 'Choose one Assembly browser group');
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');
 await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],steps=[];
@@ -158,7 +161,7 @@ try{
     await unshare(true);await button('AI advisor').click();
   });
   }
-  for (const kind of (contactOnly||copyOnly?[]:['ball','pin_slot'])) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
+  for (const kind of (coreOnly||contactOnly||copyOnly?[]:['ball','pin_slot'])) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
     file=await call('library/project_create',{app:'cad',name:`Pose ${kind}`,operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
     await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
     await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});
@@ -208,7 +211,7 @@ try{
     await edit({type:'mate-update',id:mate.id,name:`Checked ${kind}`});contactsVerified=true;
     await unshare(true);await button('AI advisor').click();
   });
-  if(!contactOnly)await step('compound-ui-copy-history-and-reopen',async()=>{
+  if(!coreOnly&&!contactOnly)await step('compound-ui-copy-history-and-reopen',async()=>{
     if(copyOnly){
       file=await call('library/project_create',{app:'cad',name:'Copy continuity',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
       await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
@@ -248,7 +251,7 @@ try{
     await expect(components.getByRole('treeitem')).toHaveCount(3);
     await unshare(true);await button('AI advisor').click();
   });
-  if(!copyOnly)await step('contact-panel-management-and-collision-refusal',async()=>{
+  if(!coreOnly&&!copyOnly)await step('contact-panel-management-and-collision-refusal',async()=>{
     file=await call('library/project_create',{app:'cad',name:'Contact management',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
     await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
     await page.locator('.aui-studio-document-title').filter({hasText:'Contact management'}).waitFor({timeout:90000});
