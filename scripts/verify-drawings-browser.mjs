@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { verifyDrawingAgent } from './verify-drawing-agent-browser.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -17,8 +18,9 @@ const button = name => page.getByRole('button', { name, exact: true });
 const step = async (name, action) => { console.log('Begin ' + name); await action(); steps.push(name); console.log('Passed ' + name); await page.screenshot({ path: join(evidence, `${steps.length}-${name}.png`) }); };
 const add = async () => { await page.getByRole('dialog').getByRole('button', { name: 'Add', exact: true }).click(); await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 60000 }); };
 const drawing = async () => { await button('Workspace: Design').click(); await page.getByRole('menuitemradio', {name: 'Drawing', exact: true}).click(); await button('Base view').waitFor({ timeout: 60000 }); };
-const save = async name => { const pending = page.waitForEvent('download'); await button('Save').click(); const download = await pending; const path = join(evidence, name); await download.saveAs(path); return JSON.parse(await readFile(path, 'utf8')); };
-let file, saved;
+const save = async name => { await button('Save').click(); const pending = page.waitForEvent('download'); await button('Download drawing').click(); const download = await pending; const path = join(evidence, name); await download.saveAs(path); return JSON.parse(await readFile(path, 'utf8')); };
+const readSaved = id => page.evaluate(async id => { const r = await fetch('/api/library/read', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({app:'cad',id})}); if(!r.ok)throw Error(await r.text());return r.json(); },id);
+let file, saved, drawingFileId;
 try {
   await page.goto(origin + '/cad/'); await page.locator('input[name="username"]').fill('editor'); await page.locator('input[name="password"]').fill('account-test-password-2026'); await button('Sign in').click();
   await page.getByText('A space for your next idea.', { exact: false }).waitFor({ timeout: 30000 });
@@ -41,6 +43,9 @@ try {
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^12.00$/ })).toHaveCount(1);
     await button('Annotation').click(); await page.locator('#drawing-note').fill('Deburr <all> edges'); await page.locator('#drawing-x').fill('25'); await page.locator('#drawing-y').fill('170'); await add();
     saved = await save('before.acdrawing'); assert.equal(saved.sheets[0].annotations.length, 2);
+    drawingFileId = new URL(page.url()).searchParams.get('document'); assert.notEqual(drawingFileId,file.id);
+    const stored = await readSaved(drawingFileId); assert.deepEqual(JSON.parse(Buffer.from(stored.data_base64,'base64')),saved);
+    assert.equal(saved.sourceReference.fileId,file.id); assert.equal((await readSaved(file.id)).revision,1);
   });
   await step('source-edit-and-associative-rebuild', async () => {
     await button('← 3D model').click(); await page.getByRole('treeitem', { name: /^Extrude\b/ }).first().dblclick();
@@ -62,10 +67,13 @@ try {
       await button('Export Drawing').click(); const pending = page.waitForEvent('download'); await page.getByRole('menuitem', { name: format, exact: true }).click(); const download = await pending; const path = join(evidence, 'sheet.' + format.toLowerCase()); await download.saveAs(path); const content = await readFile(path, 'utf8'); assert.ok(content.includes('24.00')); if (format === 'SVG') assert.ok(content.includes('Deburr &lt;all&gt; edges'));
     }
     saved = await save('final.acdrawing');
-    await page.reload(); await page.getByRole('treeitem', { name: /Extrude/ }).first().waitFor({ timeout: 90000 }); await drawing();
+    await page.reload(); await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1, { timeout: 90000 });
+    assert.equal(new URL(page.url()).searchParams.get('document'),drawingFileId);
     await page.locator('.cad-drawing-filebar input[type=file]').setInputFiles(join(evidence, 'final.acdrawing'));
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1, { timeout: 60000 });
     const reopened = await save('reopened.acdrawing'); assert.deepEqual(reopened, saved);
+    assert.notEqual(new URL(page.url()).searchParams.get('document'),drawingFileId);
+    assert.deepEqual(JSON.parse(Buffer.from((await readSaved(drawingFileId)).data_base64,'base64')),saved);
   });
   await step('multiple-sheets', async () => {
     await button('Add sheet').click(); await page.locator('#drawing-width').fill('210'); await page.locator('#drawing-height').fill('297'); await add();
@@ -86,6 +94,39 @@ try {
     await expect(page.getByRole('treeitem', { name: /^Extrude\b/ }).first()).toBeVisible();
     await drawing();
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1);
+  });
+  await step('live-drawing-agent', async () => { await verifyDrawingAgent(page,origin); });
+  await step('saved-and-read-only-drawing', async () => {
+    await button('Save').click();
+    const id = new URL(page.url()).searchParams.get('document'), stored = await readSaved(id);
+    const original = JSON.parse(Buffer.from((await readSaved(file.id)).data_base64,'base64')); assert.equal(original.features[1].distanceMillimeters,24);
+    await page.goto(`${origin}/cad/index.html?document=${id}&revision=${stored.revision}`);
+    await expect(page.locator('svg[data-sheet-id] text').filter({hasText:'Agent-verified note'})).toHaveCount(1,{timeout:90000});
+    await expect(page.getByText('Read-only drawing',{exact:true})).toBeVisible();
+    await button('Annotation').click(); await expect(page.getByRole('alert')).toContainText('read-only');
+    await page.getByRole('treeitem',{name:/Sheet 2\b/}).first().click();
+    await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox','0 0 210 297');
+    await page.getByRole('treeitem',{name:/Sheet 1\b/}).first().click();
+    await expect(page.locator('svg[data-sheet-id] text').filter({hasText:'Agent-verified note'})).toHaveCount(1);
+    assert.equal((await readSaved(id)).revision,stored.revision);
+  });
+  await step('drawing-tab-and-metadata', async () => {
+    await button('Create or open a design').click(); await page.getByRole('menuitem',{name:'Create new design…',exact:true}).click();
+    await page.getByRole('dialog').getByRole('radio',{name:'Drawing',exact:true}).click();
+    await page.getByRole('dialog').getByRole('button',{name:'Create New',exact:true}).click();
+    await page.getByRole('dialog').getByLabel('Name',{exact:true}).fill('Manufacturing drawing');
+    await page.getByRole('dialog').getByRole('button',{name:'Create',exact:true}).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0,{timeout:60000});
+    await expect(page.getByText('Manufacturing drawing',{exact:true}).first()).toBeVisible();
+    const id=new URL(page.url()).searchParams.get('document'), stored=await readSaved(id);
+    const doc=JSON.parse(Buffer.from(stored.data_base64,'base64')); assert.equal(doc.name,'Manufacturing drawing'); assert.equal(doc.sourceReference.fileId,file.id);
+    const request=(action,data)=>page.evaluate(async({action,data})=>{const r=await fetch('/api/library/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({app:'cad',...data})});const value=await r.json();if(!r.ok)throw Error(JSON.stringify(value));return value;},{action,data});
+    const meta=await request('cad_metadata',{id}); assert.equal(meta.items.find(i=>i.id==='drawing').kind,'drawing');
+    const renamed=await request('cad_operation',{id,operation:'rename',name:'Released drawing',expected_revision:meta.revision,operation_id:randomUUID()});
+    const renamedDoc=JSON.parse(Buffer.from((await readSaved(id)).data_base64,'base64')); assert.equal(renamedDoc.name,'Released drawing');assert.deepEqual(renamedDoc.source,doc.source);
+    const copy=await request('cad_operation',{id,operation:'copy',name:'Drawing copy',parent:null,expected_revision:renamed.revision,operation_id:randomUUID()});
+    assert.notEqual(copy.id,id);assert.deepEqual(JSON.parse(Buffer.from((await readSaved(copy.id)).data_base64,'base64')).sourceReference,doc.sourceReference);
+    await page.reload(); await expect(page.getByText('Released drawing',{exact:true}).first()).toBeVisible({timeout:60000});
   });
   assert.deepEqual(errors, []);
   await writeFile(join(evidence, 'results.json'), JSON.stringify({ status: 'passed', steps, errors }, null, 2));

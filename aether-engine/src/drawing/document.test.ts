@@ -39,3 +39,13 @@ it("retains dimension references on refresh and refuses a different Part", () =>
   expect(() => applyDrawingCommand(refreshed, { type: "remove-view", sheetId, viewId: "front" })).toThrow(/dependent/);
   expect(() => applyDrawingCommand(refreshed, { type: "refresh-source", source: part() })).toThrow(/same source/);
 });
+it("round trips a bounded source locator without making it geometry authority", () => {
+  const drawing = createDrawingDocument(part());
+  drawing.sourceReference = { fileId: "library-part", partId: "element", branch: "experiment", revision: 4 };
+  expect(parseDrawingDocument(serializeDrawingDocument(drawing)).sourceReference).toEqual(drawing.sourceReference);
+  const original = drawing.source;
+  for (const ref of [{ fileId: "" }, { fileId: "p", revision: 0 }, { fileId: "p", revision: 1.5 }, { fileId: "p", url: "https://unexpected" }]) {
+    expect(() => serializeDrawingDocument({ ...drawing, sourceReference: ref })).toThrow();
+  }
+  expect(drawing.source).toBe(original);
+});

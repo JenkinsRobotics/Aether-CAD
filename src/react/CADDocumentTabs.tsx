@@ -16,8 +16,9 @@ import { CADTabStrip } from "./CADTabStrip";
 import { orderedTabs, readTabOrder, reorderTabs } from "../document-tab-state";
 import { navigateDocument } from "../document-navigation";
 
+import { drawingFiles } from "../drawing/files";
 import type { Project } from "../host-library";
-type OpenFile = { id: string; name: string; kind?: "part" | "assembly" };
+type OpenFile = { id: string; name: string; kind?: "part" | "assembly" | "drawing" };
 
 // Open-file tabs are a per-browser convenience, like an editor's open tabs.
 const tabStorage = browserTabStorage;
@@ -26,6 +27,7 @@ const readOpenFiles = (): OpenFile[] => {
 };
 const writeOpenFiles = (files: OpenFile[]) => { try { tabStorage().setItem(OPEN_FILES_KEY, JSON.stringify(files)); } catch { /* device preference only */ } };
 const partIcon = <AetherIcon name="cube" data-design-kind="part" />;
+const drawingIcon = <AetherIcon name="file" data-design-kind="drawing" />;
 const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
 
 /**
@@ -48,7 +50,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
     return () => document.removeEventListener('aether-save-state', changed);
   }, []);
   const presentation = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
-  const kind = presentation.workspaceMode === "assembly" && !presentation.partOpen ? "assembly" : "part";
+  const kind = presentation.workspaceMode === "drawing" ? "drawing" : presentation.workspaceMode === "assembly" && !presentation.partOpen ? "assembly" : "part";
   const [project, setProject] = useState<Project | null>(null);
   const [projectName, setProjectName] = useState("Hybrid Design");
   const [openFiles, setOpenFiles] = useState<OpenFile[]>(readOpenFiles);
@@ -63,8 +65,8 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   const [order, setOrder] = useState<string[]>([]);
   useEffect(() => {
     const changed = () => setNavigation(value => value + 1);
-    window.addEventListener("cad-document-navigation", changed);
-    return () => window.removeEventListener("cad-document-navigation", changed);
+    window.addEventListener("cad-document-navigation", changed); window.addEventListener("cad-document-saved", changed);
+    return () => { window.removeEventListener("cad-document-navigation", changed); window.removeEventListener("cad-document-saved", changed); };
   }, []);
   const search = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
   const documentID = search.get("document");
@@ -98,7 +100,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
         const files = readOpenFiles().filter(file => file.id !== documentID);
         writeOpenFiles(files); setOpenFiles(files); return;
       }
-      if (!documentID || presentation.backendState !== "ready" || (!presentation.partOpen && kind !== "assembly")) return;
+      if (!documentID || presentation.backendState !== "ready" || (!presentation.partOpen && kind !== "assembly" && kind !== "drawing")) return;
       const files = readOpenFiles();
       const entry: OpenFile = { id: documentID, name: presentation.documentName, kind };
       const next = files.some(file => file.id === documentID) ? files.map(file => file.id === documentID ? entry : file) : [...files, entry];
@@ -117,6 +119,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   const inProject = (kind: string): kind is "part" | "assembly" => Boolean(project) && (kind === "part" || kind === "assembly");
   const create = async (kind: string, name: string) => {
     await connection.flush();
+    if (kind === "drawing") { await drawingFiles.create(name); await drawingFiles.save(); return; }
     if (inProject(kind)) {
       const { editHostedProject, projectItemURL } = await import("../host-library");
       const result = await editHostedProject("add_" + kind, name);
@@ -128,7 +131,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
     await navigateDocument(`/cad/index.html?document=${encodeURIComponent(created.id)}`);
   };
   const dialogs = <>
-    {choosing && <NewDesignDialog kinds={CAD_DESIGN_KINDS} learnMoreHref="https://github.com/aether-studio"
+    {choosing && <NewDesignDialog kinds={CAD_DESIGN_KINDS.map(item => item.id === "drawing" ? { ...item, unavailable: presentation.partOpen || kind === "drawing" ? undefined : "Open a source Part to create its drawing." } : item)} learnMoreHref="https://github.com/aether-studio"
       units={{ label: "Unit System", value: units, onChange: setUnits, options: DESIGN_UNIT_OPTIONS }}
       onClose={() => setChoosing(false)} onCreate={(kind) => { setChoosing(false); setCreating(kind); }} />}
     {creating && <NewFileDialog title={`New ${creating}`} directory={inProject(creating) ? presentation.documentName : "My files"}
@@ -157,7 +160,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
       setOpenFiles(next);
       if (id === documentID) void go(next.length ? `/cad/index.html?document=${encodeURIComponent(next.at(-1)!.id)}` : "/cad/");
     };
-    tabs = files.map(file => ({ id: file.id, label: file.name, detail: file.kind === "assembly" ? "Assembly" : "Part Studio", icon: file.kind === "assembly" ? assemblyIcon : partIcon,
+    tabs = files.map(file => ({ id: file.id, label: file.name, detail: file.kind === "drawing" ? "Drawing" : file.kind === "assembly" ? "Assembly" : "Part Studio", icon: file.kind === "drawing" ? drawingIcon : file.kind === "assembly" ? assemblyIcon : partIcon,
       current: file.id === (documentID ?? "draft"),
       onSelect: () => void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`),
       onClose: file.id === "draft" ? undefined : () => close(file.id) }));
@@ -195,7 +198,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   const targetFor=(id:string):CADTabTarget=>{
     const tab=tabs.find(tab=>tab.id===id)!;
     const contextual=Boolean(project)||Boolean(tab.current&&documentID);
-    return {id,name:tab.label,kind:tab.detail==='Assembly'?'assembly':'part',current:Boolean(tab.current),
+    return {id,name:tab.label,kind:tab.detail==='Drawing'?'drawing':tab.detail==='Assembly'?'assembly':'part',current:Boolean(tab.current),
       documentId:project?documentID:id==='draft'?null:id,itemId:project?id:undefined,
       branch:contextual?search.get('branch')??undefined:undefined,
       revision:contextual&&search.has('revision')?Number(search.get('revision')):undefined,
@@ -239,7 +242,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
     {error && <div role="alert">{error}</div>}
     <CADTabStrip leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />}
       revisionForTab={id=>revisions[id]??{label:'V1.0',title:'Working version V1.0'}} tabActions={id=>tabActionItems(targetFor(id))} onTabAction={runTabAction} saveStatus={saveStatus} tabs={tabs} placement={placement} label={project ? "Project tabs" : "Open files"} folders={folders} onFoldersChange={updateFolders} onOrganize={()=>setOrganizing(true)} onManage={() => setManaging(true)} onAdd={() => setChoosing(true)} onReorder={reorder} onDetach={detach} />
-    {managing && <CADFileManagerWindow tabs={tabs} project={project ? {name:projectName,linkedIds:project.parts.filter(part=>part.source?.kind==='linked').map(part=>part.id)} : null} standaloneTabs={project ? openFiles.map(file=>({id:file.id,label:file.name,detail:file.kind==='assembly'?'Assembly':'Part Studio',icon:file.kind==='assembly'?assemblyIcon:partIcon,onSelect:()=>void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`)})) : []} connection={connection} onClose={() => setManaging(false)} />}
+    {managing && <CADFileManagerWindow tabs={tabs} project={project ? {name:projectName,linkedIds:project.parts.filter(part=>part.source?.kind==='linked').map(part=>part.id)} : null} standaloneTabs={project ? openFiles.map(file=>({id:file.id,label:file.name,detail:file.kind==='drawing'?'Drawing':file.kind==='assembly'?'Assembly':'Part Studio',icon:file.kind==='drawing'?drawingIcon:file.kind==='assembly'?assemblyIcon:partIcon,onSelect:()=>void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`)})) : []} connection={connection} onClose={() => setManaging(false)} />}
     {organizing && <CADTabFolders tabs={tabs} folders={folders} onChange={updateFolders} onClose={()=>setOrganizing(false)}/>}
     {tabAction&&<CADTabActionDialog target={tabAction.target} action={tabAction.action} flush={connection.flush} onClose={()=>setTabAction(null)} onApplied={actionApplied}/>}
     {dialogs}

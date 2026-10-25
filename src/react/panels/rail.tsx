@@ -145,6 +145,7 @@ const KIND_LABEL: Record<string, string> = {
   acasm: "Assembly",
   acad: "Project",
   acdrw: "Drawing",
+  acdrawing: "Drawing",
 };
 const documentKind = (name: string) => KIND_LABEL[name.split(".").pop()?.toLowerCase() ?? ""] ?? "Document";
 

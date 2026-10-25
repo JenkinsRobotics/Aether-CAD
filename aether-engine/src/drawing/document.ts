@@ -4,6 +4,15 @@ export type DrawingPoint = [number, number];
 export type DrawingOrientation = "front" | "back" | "top" | "bottom" | "left" | "right" | "isometric";
 export const drawingOrientations: readonly DrawingOrientation[] = ["front", "back", "top", "bottom", "left", "right", "isometric"];
 
+/** A storage locator, interpreted by the app transport only. Geometry always
+ * rebuilds from the embedded snapshot, including when this source is offline. */
+export interface DrawingSourceReference {
+  fileId: string;
+  partId?: string;
+  branch?: string;
+  revision?: number;
+}
+
 /** Authoring intent only. Projected edges are disposable and never saved as truth.
  * The embedded Part snapshot makes a local drawing reproducible without Studio.
  * Refresh explicitly replaces that snapshot with the same document's new revision. */
@@ -13,6 +22,7 @@ export interface DrawingDocument {
   documentId: string;
   name: string;
   source: PartDocument;
+  sourceReference?: DrawingSourceReference;
   activeSheetId: string;
   sheets: DrawingSheet[];
 }
@@ -82,6 +92,13 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
   if (value.format !== "aether-drawing" || value.formatVersion !== 1) throw Error("Unsupported Drawing file format or version.");
   text(value.documentId); text(value.name); text(value.activeSheetId);
   validatePartDocument(value.source);
+  if (value.sourceReference !== undefined) {
+    const ref = value.sourceReference; object(ref); text(ref.fileId);
+    if (Object.keys(ref).some(key => !["fileId", "partId", "branch", "revision"].includes(key))) throw Error("Unknown drawing source reference field.");
+    if (ref.partId !== undefined) text(ref.partId);
+    if (ref.branch !== undefined) text(ref.branch);
+    if (ref.revision !== undefined) { number(ref.revision, 1, Number.MAX_SAFE_INTEGER); if (!Number.isSafeInteger(ref.revision)) throw Error("Source revision must be an integer."); }
+  }
   list(value.sheets, 100);
   const ids = new Set<string>();
   let totalViews = 0;

@@ -77,3 +77,15 @@ it('refuses deleting files without owner authority and project tabs that disappe
  await expect(prepareTabDeletion({...target,itemId:'missing'},meta())).rejects.toThrow('no longer exists');
  expect(mocks.recycle).not.toHaveBeenCalled();expect(mocks.request).not.toHaveBeenCalled();
 });
+it('shows the Drawing authoring document and routes properties to its own metadata item',async()=>{
+ const {createDrawingDocument}=await import('@aether/core/drawing');
+ const drawing=createDrawingDocument(createEmptyPartDocument('Source'));
+ drawing.sourceReference={fileId:'original-part',branch:'Experiment'};
+ const drawingTarget:CADTabTarget={id:'drawing',name:drawing.name,kind:'drawing',current:true,documentId:'drawing-file'};
+ mocks.request.mockResolvedValue({data_base64:Buffer.from(JSON.stringify(drawing)).toString('base64')});
+ expect(JSON.parse(await tabPartCode(drawingTarget))).toEqual(drawing);
+ const drawingMeta={...meta(),id:'drawing-file',items:[{id:'drawing',kind:'drawing',name:drawing.name,description:'',category:'Drawing'}]};
+ await editTabProperties(drawingTarget,drawingMeta,{name:'Drawing name',description:'Manufacturing notes',category:'Drawing'});
+ expect(mocks.request.mock.calls.at(-1)?.[2]).toMatchObject({id:'drawing-file',item_id:'drawing',operation:'properties'});
+ expect(tabActionItems(drawingTarget).some(item=>item.id==='code'&&!item.disabled)).toBe(true);
+});

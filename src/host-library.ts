@@ -1,7 +1,9 @@
 import { documentRequest } from "@aether/session/documents";
 import { AutosaveSession, readRecovery, recoveryKey, sessionOwner } from "@aether/session/autosave";
 import { configureDocumentSession } from "./document-session";
-import { isPartFile, isProjectFile } from "@aether/core/document/file-types";
+import { isPartFile, isProjectFile, isDrawingFile } from "@aether/core/document/file-types";
+import { parsePartDocument, type PartDocument } from "@aether/core/document";
+import type { DrawingSourceReference } from "@aether/core/drawing";
 import type { AssemblyProjectionV1 } from './cad-assembly-bridge';
 /** Hosted file transport only; document interpretation stays in Core. */
 export const hostedCAD = location.pathname.startsWith("/cad/");
@@ -35,6 +37,34 @@ export function syncHostedAssemblyProject(projection: AssemblyProjectionV1): voi
 }
 /** Saved container name, distinct from the active Part Studio name. */
 export function hostedDocumentName(): string | null { return active?.name ?? null; }
+/** Capture a source locator without changing the active editor/save target. */
+export function hostedSourceReference(): DrawingSourceReference | undefined {
+  if (!active || (!activePartId && !isPartFile(active.name))) return undefined;
+  return { fileId: active.id, ...(activePartId ? { partId: activePartId } : {}),
+    ...(query.has("branch") ? { branch: query.get("branch")! } : {}),
+    ...(query.has("revision") ? { revision: Number(query.get("revision")) } : {}) };
+}
+export function hostedSourceURL(ref: DrawingSourceReference): string {
+  const search = new URLSearchParams({ document: ref.fileId });
+  if (ref.partId) search.set("part", ref.partId);
+  if (ref.branch) search.set("branch", ref.branch);
+  if (ref.revision !== undefined) search.set("revision", String(ref.revision));
+  return `/cad/index.html?${search}`;
+}
+export async function readHostedSource(ref: DrawingSourceReference): Promise<PartDocument> {
+  const file = await request(ref.revision === undefined ? "read" : "read_revision", {
+    id: ref.fileId, branch: ref.branch, ...(ref.revision === undefined ? {} : { revision: ref.revision }),
+  });
+  if (ref.partId) {
+    if (!isProjectFile(file.name)) throw Error("The drawing source is no longer a project.");
+    const result = await request("project_read", { id: ref.fileId, revision: file.revision, branch: ref.branch }) as StoredFile & { project: Project };
+    const part = result.project.parts.find(part => part.id === ref.partId);
+    if (!part?.document) throw Error("The drawing's source Part is no longer present in this project.");
+    return parsePartDocument(JSON.stringify(part.document));
+  }
+  if (!isPartFile(file.name) || !file.data_base64) throw Error("The drawing source is not a saved Part.");
+  return parsePartDocument(new TextDecoder().decode(Uint8Array.from(atob(file.data_base64), c => c.charCodeAt(0))));
+}
 let activePartId: string | null = null;
 let linkedPartReadOnly = false;
 /** Live editor automation observes the same linked/revision access as saving. */
@@ -190,8 +220,9 @@ export function detachHostedFile() {
   linkedPartReadOnly = false;
   document.querySelector(".project-tabs")?.remove();
   draftID = crypto.randomUUID();
-  query.delete("document"); query.set("draft", draftID);
-  history.replaceState(null, "", location.pathname + "?draft=" + draftID);
+  query = new URLSearchParams({ draft: draftID });
+  if (new URLSearchParams(location.search).has("isolated")) query.set("isolated", "1");
+  history.replaceState(null, "", location.pathname + "?" + query);
   if (owner) startQueue();
 }
 /** Switch transport identity transactionally after the old document is saved. */
@@ -333,6 +364,7 @@ async function persistHostedFile(
       active &&
       ((isPartFile(active.name) && isPartFile(name)) ||
         (isProjectFile(active.name) && isProjectFile(name)) ||
+        (isDrawingFile(active.name) && isDrawingFile(name)) ||
         active.name.split(".").at(-1) === name.split(".").at(-1));
     if (active && sameType) {
       if (!active.writable)
@@ -345,16 +377,19 @@ async function persistHostedFile(
         data_base64,
         branch: query.get("branch") ?? undefined,
       });
-    } else
+    } else {
       active = await request("create", {
         name,
         data_base64,
         parent: query.get("folder"),
         scope: query.get("scope") === "workspace" ? "workspace" : "personal",
       });
-    const nextQuery=new URLSearchParams(location.search);
-    nextQuery.set('document',active.id);nextQuery.delete('draft');nextQuery.delete('new');
-    history.replaceState(null,'',`/cad/index.html?${nextQuery}`);
+      activeProject = null; activePartId = null; linkedPartReadOnly = false;
+      for (const key of ["part", "assembly", "branch", "revision"]) query.delete(key);
+    }
+    query.set('document',active.id);query.delete('draft');query.delete('new');
+    history.replaceState(null,'',`/cad/index.html?${query}`);
+    window.dispatchEvent(new Event("cad-document-saved"));
   } finally {
     saving = false;
   }

@@ -3,7 +3,7 @@ import { openSectionView, turnOffSectionView } from "./section/SectionViewWindow
 import { sectionView } from "./section/section-view-store";
 import { cadObjectAppearance } from './cad-object-appearance';
 import {configureImageFacePicker} from "./modeling/cad-import-service";
-import { configureDocumentNavigation } from "./document-navigation";
+import { configureDocumentNavigation, navigateDocument } from "./document-navigation";
 import { rebuildRecovering, recordFeatureErrors, renderableDocument } from "./modeling/feature-errors";
 import { configureEditHistory, editingDocument } from "./modeling/edit-history";
 import { supportForFace, sourceFeatureForBody } from "./modeling/sketch-support";
@@ -16,7 +16,8 @@ import { configurePartExport } from "./modeling/part-export";
 import { configureViewportContext } from "./viewport/context-menu";
 import { installPartUndo } from "./modeling/part-undo";
 import { verifyPart, viewportProof } from './ai/proof';
-import { configureCADAgentWorkspace, configureAssemblyAgentWorkspace } from './automation/live-workspace';
+import { configureCADAgentWorkspace, configureAssemblyAgentWorkspace, configureDrawingAgentWorkspace } from './automation/live-workspace';
+import { drawingAgentInteraction } from './automation/drawing-agent';
 import { assemblyAgentInteraction } from './automation/assembly-agent';
 import { openAssemblyRecipeDialog } from './react/assembly-recipe-dialog';
 import { documentSession } from './document-session';
@@ -37,6 +38,9 @@ import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
 import { drawingEditor } from "./drawing/controller";
+import { configureDrawingFiles, downloadDrawingFile } from "./drawing/files";
+import { createDrawingDocument, serializeDrawingDocument, type DrawingDocument } from "@aether/core/drawing";
+import { isDrawingFile } from "@aether/core/document/file-types";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountDerivedCurveCommands } from "./derived-curves-window";
 import { mountTimelineCopy } from "./timeline-clipboard-commands";
@@ -62,7 +66,7 @@ import {
 } from "./aether-core";
 import { createHostAetherCoreClient } from "./host-aether-core-client";
 import { savePartDocument, serializePartDocument } from "./part-file";
-import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave } from "./host-library";
+import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave, flushAutosaveNow, hostedSourceReference, hostedSourceURL, readHostedSource } from "./host-library";
 import {
   sketchPlaneForReference,
   parseReferenceVisibility,
@@ -105,14 +109,110 @@ const expandedDocuments = new Set<string>();
 const collapsedFolders = new Set<string>();
 const knownDocuments = new Set<string>();
 let activePartDocument: PartDocument | null = null;
-drawingEditor.configure(() => activePartDocument);
 const selectedFeatureIDs=new Set<string>();
 let untitledPartNumber = 1;
 let awaitingSketchPlane = false;
 let pendingPartName: string | null = null;
 let selectedSketchPlane: SketchPlane | null = null;
 let sketchEditor: SketchEditor | null = null;
-let activeWorkspaceKind: "part" | "assembly" = "part";
+let activeWorkspaceKind: "part" | "assembly" | "drawing" = "part";
+// Drawing files have their own save identity. A source Part is only a snapshot
+// plus an optional Studio locator; it is never saved into the drawing's file.
+const drawingURLs = new Map<string, string>();
+const drawingSourceKey = (sourceId: string, reference?: DrawingDocument["sourceReference"]) => JSON.stringify([sourceId, reference ?? null]);
+const drawingContextKey = () => `drawing:${drawingEditor.snapshot()?.document.documentId ?? "none"}:${documentSession()?.id ?? "local"}:${location.search}`;
+let drawingFileBusy = false;
+drawingEditor.configure(() => activePartDocument, {
+  writable: () => activeWorkspaceKind === "drawing" && hostedPartEditable() && !drawingFileBusy,
+  contextKey: drawingContextKey,
+  changed: kind => {
+    if (kind === "edited" && activeWorkspaceKind === "drawing") {
+      if (hostedCAD) markHostedDirty();
+      window.dispatchEvent(new Event("aether-drawing-updated"));
+    }
+  },
+  readSource: async drawing => {
+    if (hostedCAD && drawing.sourceReference) return readHostedSource(drawing.sourceReference);
+    if (activePartDocument?.documentId === drawing.source.documentId) return activePartDocument;
+    throw Error("This drawing contains a source snapshot. Open its original Part to rebuild from newer geometry.");
+  },
+});
+configureDrawingAgentWorkspace({
+  active: () => activeWorkspaceKind === "drawing",
+  contextKey: drawingContextKey,
+  interaction: key => drawingAgentInteraction(drawingEditor, key, () => activeWorkspaceKind === "drawing" ? drawingContextKey() : "inactive-drawing"),
+});
+function drawingSnapshot() {
+  return { name: `${drawingEditor.snapshot()!.document.name}.acdrw`, bytes: new TextEncoder().encode(drawingEditor.serialize()) };
+}
+async function saveDrawing(): Promise<void> {
+  const value = drawingSnapshot();
+  if (hostedCAD) await saveHostedFile(value.name, value.bytes);
+  else downloadDrawingFile(value.name, drawingEditor.serialize());
+}
+function rememberDrawing(): void {
+  const drawing = drawingEditor.snapshot()?.document;
+  if (activeWorkspaceKind === "drawing" && drawing && new URLSearchParams(location.search).has("document")) {
+    drawingURLs.set(drawingSourceKey(drawing.source.documentId, drawing.sourceReference), location.href);
+  }
+}
+function presentDrawing(): void {
+  activeWorkspaceKind = "drawing";
+  cadPresentation.patch({ startScreen: "workspace", startDialog: null, workspaceMode: "drawing" });
+  updateLists();
+  window.dispatchEvent(new Event("aether-drawing-updated"));
+}
+async function drawingFileOperation(run: () => Promise<void>): Promise<void> {
+  if (drawingFileBusy || drawingEditor.history().busy) throw Error("Wait for the current drawing operation.");
+  drawingFileBusy = true; const inert = document.body.inert; document.body.inert = true;
+  try { if (hostedCAD) await flushAutosaveNow(); await run(); }
+  finally { drawingFileBusy = false; document.body.inert = inert; if (activeWorkspaceKind === "drawing") await drawingEditor.enter(); }
+}
+async function newDrawing(file?: File, name?: string): Promise<void> {
+  await drawingFileOperation(async () => {
+    let text: string;
+    if (file) {
+      if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
+      text = await file.text();
+    } else {
+      const old = drawingEditor.snapshot()?.document;
+      const source = activeWorkspaceKind === "drawing" ? old?.source : activeWorkspaceKind === "part" ? activePartDocument : null;
+      if (!source) throw Error("Open a source Part first.");
+      const drawing = createDrawingDocument(source);
+      if (name !== undefined) drawing.name = name.trim();
+      drawing.sourceReference = activeWorkspaceKind === "drawing" ? old?.sourceReference : hostedCAD ? hostedSourceReference() : undefined;
+      text = serializeDrawingDocument(drawing);
+    }
+    // Build before changing storage identity: failed files preserve the old editor.
+    await drawingEditor.open(text);
+    if (hostedCAD) detachHostedFile();
+    presentDrawing();
+    if (hostedCAD) markHostedDirty();
+  });
+}
+async function enterDrawing(): Promise<void> {
+  if (activeWorkspaceKind === "drawing") { await drawingEditor.enter(); return; }
+  const source = activeWorkspaceKind === "part" ? activePartDocument : null;
+  const previousURL = source && drawingURLs.get(drawingSourceKey(source.documentId, hostedCAD ? hostedSourceReference() : undefined));
+  if (hostedCAD && previousURL) { await navigateDocument(previousURL); return; }
+  if (!hostedCAD && source && drawingEditor.snapshot()?.document.source.documentId === source.documentId) { presentDrawing(); await drawingEditor.enter(); return; }
+  await newDrawing();
+}
+async function leaveDrawing(): Promise<void> {
+  if (drawingEditor.history().busy || drawingFileBusy) throw Error("Wait for the drawing rebuild before opening its source.");
+  const drawing = drawingEditor.snapshot()?.document;
+  if (!drawing) return;
+  if (hostedCAD && drawing.sourceReference) { await navigateDocument(hostedSourceURL(drawing.sourceReference)); return; }
+  await drawingFileOperation(async () => {
+    const source = structuredClone(activePartDocument?.documentId === drawing.source.documentId ? activePartDocument : drawing.source);
+    const model = await worker.evaluatePart(source);
+    if (hostedCAD) detachHostedFile();
+    activeWorkspaceKind = "part";
+    showEvaluatedPart(source, model, new Map(), "Opened the drawing source snapshot.");
+    cadPresentation.patch({ workspaceMode: "modeling" }); updateLists();
+  });
+}
+configureDrawingFiles({ create: name => newDrawing(undefined, name), open: newDrawing, save: saveDrawing, leave: leaveDrawing });
 const referenceVisibility: Record<ReferenceGeometryId, boolean> = {
   origin: false,
   axes: false,
@@ -169,7 +269,7 @@ function setStatus(
 }
 
 const assemblyController = new CADAssemblyController({
-  writable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable(),
+  writable: () => !drawingFileBusy && activeWorkspaceKind === 'assembly' && hostedPartEditable(),
   ...(hostedCAD ? { saveFile: saveHostedFile } : {}),
   onDocumentChanged(document) {
     if (!document) return;
@@ -301,6 +401,7 @@ function syncToolUI(): void {
 }
 
 function showBrowserPanel(panel: CADBrowserPanel): void {
+  if (activeWorkspaceKind === "drawing") { void leaveDrawing().then(() => showBrowserPanel(panel)).catch(error => setStatus(String(error), "error")); return; }
   const presentation = cadPresentation.snapshot();
   cadPresentation.patch({
     activePanel: panel,
@@ -314,8 +415,8 @@ function showBrowserPanel(panel: CADBrowserPanel): void {
 function syncRibbonAvailability(): void {
   const rows = viewer.getPartRows();
   const connectors = viewer.getConnectorRows();
-  cadCommands.setEnabled("save-part", activePartDocument !== null);
-  cadCommands.setEnabled("commit-part", activePartDocument !== null && hostedCAD);
+  cadCommands.setEnabled("save-part", activeWorkspaceKind === "drawing" || activePartDocument !== null);
+  cadCommands.setEnabled("commit-part", (activeWorkspaceKind === "drawing" || activePartDocument !== null) && hostedCAD);
   cadCommands.setEnabled("connector", rows.length > 0);
   cadCommands.setEnabled("fastened", connectors.length >= 2);
   cadCommands.setEnabled("fit-view", rows.length > 0);
@@ -383,10 +484,10 @@ function updateLists(notifyDocumentChange = true): void {
   );
 
   cadPresentation.patch({
-    documentName: activeWorkspaceKind === "assembly"
+    documentName: activeWorkspaceKind === "drawing" ? drawingEditor.snapshot()?.document.name ?? "Drawing" : activeWorkspaceKind === "assembly"
       ? assemblyController.document?.name ?? "Untitled Assembly"
       : activePartDocument?.name ?? "Untitled Part",
-    partOpen: activePartDocument !== null,
+    partOpen: activeWorkspaceKind === "part" && activePartDocument !== null,
     metricsText: `${activePartDocument?.name ?? "No Part open"} · ${rows.length} bodies · ${topology.faceCount} faces · ${topology.candidateCount} exact snaps · ${connectors.length} connectors · ${mates.length} mates`,
     cylinderAxisCandidates: topology.candidatesByKind["cylinder-axis"],
     analyticCenterCandidates:
@@ -737,21 +838,15 @@ cadPresentation.registerActionHandler((action) => {
     return;
   }
   if (action.type === "create-part-workspace") {
-    if (hostedCAD) detachHostedFile();
-    activeWorkspaceKind = "part";
-    cadPresentation.patch({ startScreen: "workspace", startDialog: null, workspaceMode: "modeling" });
     void createBlankPart(action.name);
     return;
   }
   if (action.type === "create-assembly-workspace") {
-    if (hostedCAD) detachHostedFile();
-    cadPresentation.patch({
-      startScreen: "workspace",
-      startDialog: null,
-      workspaceMode: "modeling",
-      activePanel: "mates",
-    });
-    void assemblyController.newWorkspace(action.name).catch(() => undefined);
+    void (async () => {
+      if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); }
+      cadPresentation.patch({ startScreen: "workspace", startDialog: null, workspaceMode: "modeling", activePanel: "mates" });
+      await assemblyController.newWorkspace(action.name);
+    })().catch(error => setStatus(String(error), "error"));
     return;
   }
   if (action.type === "insert-assembly-component") {
@@ -878,9 +973,9 @@ cadPresentation.registerActionHandler((action) => {
       setStatus("Finish or cancel the current sketch or feature before opening its drawing.");
       return;
     }
-    cadPresentation.patch({ workspaceMode: action.mode, startScreen: "workspace" });
-    if (action.mode === "drawing") void drawingEditor.enter().catch(error => setStatus(error instanceof Error ? error.message : String(error)));
-    setStatus(action.mode === "drawing" ? "Drawing workspace opened." : "3D modeling workspace opened.");
+    if (action.mode === "drawing") void enterDrawing().catch(error => setStatus(String(error), "error"));
+    else if (activeWorkspaceKind === "drawing") void leaveDrawing().catch(error => setStatus(String(error), "error"));
+    else { cadPresentation.patch({ workspaceMode: action.mode, startScreen: "workspace" }); setStatus("3D modeling workspace opened."); }
     return;
   }
   if (action.type === "select-layout") {
@@ -1096,7 +1191,7 @@ function cancelPlaneSelection(): void {
 
 async function createBlankPart(name:string):Promise<void>{
  try{
-  if(hostedCAD)detachHostedFile();activeWorkspaceKind='part';cadPresentation.patch({startScreen:'workspace',startDialog:null,workspaceMode:'modeling'});
+  if(hostedCAD){await flushAutosaveNow();detachHostedFile();}activeWorkspaceKind='part';cadPresentation.patch({startScreen:'workspace',startDialog:null,workspaceMode:'modeling'});
   const doc=createEmptyPartDocument(name);await evaluateAndShowPart(doc,'Created an empty Part. Add a sketch profile to begin.');
   if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
   if(hostedCAD){await saveHostedFile(doc.name+'.acpart',new TextEncoder().encode(serializePartDocument(doc)));setStatus('Created '+doc.name+' on your server. Add a sketch profile to begin.','success');}
@@ -1132,8 +1227,9 @@ partPicker.addEventListener("change", async () => {
   if (!file) return;
   try {
     const document = parsePartDocument(await file.text());
+    if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); }
     activeWorkspaceKind = "part";
-    if (hostedCAD) detachHostedFile();
+    cadPresentation.patch({ workspaceMode: "modeling" });
     await evaluateAndShowPart(document, `Opened ${file.name}.`);
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), "error");
@@ -1146,6 +1242,7 @@ assemblyPicker.addEventListener("change", async () => {
   const file = assemblyPicker.files?.[0];
   if (!file) return;
   try {
+    if (hostedCAD) await flushAutosaveNow();
     await assemblyController.openFile(file);
   } catch {
     // The controller publishes the typed Core error to the shared status surface.
@@ -1160,6 +1257,7 @@ configureDocumentPrint(() => viewer.capturePrintImage());
 // PDM Commit — it flushes the autosave and names an annotated checkpoint.
 if (hostedCAD) configureAutosave(async () => {
   try {
+    if (activeWorkspaceKind === "drawing") { await saveDrawing(); return; }
     if (activeWorkspaceKind === "assembly") { await assemblyController.save(); return; }
     if (!activePartDocument) return;
     await saveHostedFile(`${activePartDocument.name}.acpart`, new TextEncoder().encode(serializePartDocument(activePartDocument)));
@@ -1168,11 +1266,12 @@ if (hostedCAD) configureAutosave(async () => {
     setStatus(error instanceof Error ? error.message : String(error), "error");
     throw error;
   }
-}, () => activePartDocument && activeWorkspaceKind === "part"
+}, () => activeWorkspaceKind === "drawing" && drawingEditor.snapshot() ? drawingSnapshot() : activePartDocument && activeWorkspaceKind === "part"
   ? { name: `${activePartDocument.name}.acpart`, bytes: new TextEncoder().encode(serializePartDocument(activePartDocument)) } : null);
 cadCommands.register("save-part", async () => {
   // Save persists the working state (VS Code ⌘S); it never prompts. Commits
   // are the separate, deliberate checkpoints.
+  if (activeWorkspaceKind === "drawing") { await saveDrawing().catch(error => setStatus(String(error), "error")); return; }
   if (!activePartDocument) return;
   try {
     const fileName = `${activePartDocument.name}.acpart`;
@@ -1186,7 +1285,7 @@ cadCommands.register("save-part", async () => {
 });
 cadCommands.register("commit-part", () => {
   // The shell shows the shared Create version dialog (same as Version control).
-  if (activePartDocument && hostedCAD) window.dispatchEvent(new Event("aether-create-version"));
+  if ((activeWorkspaceKind === "drawing" || activePartDocument) && hostedCAD) window.dispatchEvent(new Event("aether-create-version"));
 });
 
 function toggleTool(tool: AuthoringTool): void {
@@ -1247,7 +1346,10 @@ updateLists();
 async function openLibraryDocument(file: File, url: URL) {
   if (sketchEditor?.active) throw new Error("Finish or cancel the active sketch before switching tabs.");
   cadPresentation.patch({ startScreen: "workspace", startDialog: null });
-  if (isPartFile(file.name)) {
+  if (isDrawingFile(file.name)) {
+    await drawingEditor.open(await file.text());
+    presentDrawing(); rememberDrawing();
+  } else if (isPartFile(file.name)) {
     const document = parsePartDocument(await file.text());
     await evaluateAndShowPart(document, `Opened ${file.name} from your server.`, true);
     activeWorkspaceKind = "part";
@@ -1271,11 +1373,14 @@ async function openLibraryDocument(file: File, url: URL) {
 }
 if (hostedCAD) {
   window.addEventListener("cad-document-navigation-error", event => setStatus((event as CustomEvent<string>).detail, "error"));
-  window.addEventListener("cad-document-navigation", () => { updateLists(); mountProjectTabs(); });
+  window.addEventListener("cad-document-navigation", () => { updateLists(); mountProjectTabs(); rememberDrawing(); });
+  window.addEventListener("cad-document-saved", () => { rememberDrawing(); cadPresentation.patch({}); });
   configureDocumentNavigation(async url => {
+    if (drawingEditor.history().busy) throw new Error("Wait for the drawing rebuild before switching tabs.");
     if (sketchEditor?.active || document.querySelector(".cad-feature-dialog,.cad-plane-window")) throw new Error("Finish or cancel the active sketch or feature before switching tabs.");
     await worker.ready;
     await switchHostedDocument(url, openLibraryDocument);
+    if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
     syncAssemblyCommands();
     selectedFeatureIDs.clear(); selectedSketchPlane = null;
     viewer.setTool("none");
@@ -1285,7 +1390,8 @@ if (hostedCAD) {
     const file = await loadHostedFile();
     if (file) {
       await openLibraryDocument(file, new URL(location.href));
-      markHostedClean(); syncAssemblyCommands(); mountProjectTabs();
+      markHostedClean(); if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
+      syncAssemblyCommands(); mountProjectTabs();
     } else if (new URLSearchParams(location.search).get("new") === "part") {
       cadPresentation.patch({ startScreen: "workspace", startDialog: "new-workspace" });
     }
@@ -1413,7 +1519,7 @@ cadCommands.setEnabled("part-redo", false);
 configureCADAgentWorkspace({
   current:()=>activePartDocument,
   contextKey:()=>`${documentSession()?.id??'local'}:${activePartDocument?.documentId??'no-part'}:${location.search}`,
-  available:()=>activeWorkspaceKind==='part'&&cadPresentation.snapshot().workspaceMode==='modeling'&&!cadPresentation.snapshot().loading&&!document.querySelector('.cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window'),
+  available:()=>!drawingFileBusy&&activeWorkspaceKind==='part'&&cadPresentation.snapshot().workspaceMode==='modeling'&&!cadPresentation.snapshot().loading&&!document.querySelector('.cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window'),
   writable:hostedPartEditable,
   verify:verifyPart,
   preview:(doc,signal)=>viewportProof(viewer.captureViewport(1024),doc.documentId,signal),

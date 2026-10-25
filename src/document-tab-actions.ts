@@ -1,5 +1,6 @@
 import type { MenuItem } from '@aether/ui';
 import { decodeDocument, documentRequest, fileRecycleRequest } from '@aether/session/documents';
+import { parseDrawingDocument, serializeDrawingDocument } from '@aether/core/drawing';
 import { parsePartDocument, serializePartDocument } from '@aether/core/document';
 import type { Metadata } from './react/CADDocumentSettings';
 
@@ -7,7 +8,7 @@ import type { Metadata } from './react/CADDocumentSettings';
 export interface CADTabTarget {
   id: string;
   name: string;
-  kind: 'part' | 'assembly';
+  kind: 'part' | 'assembly' | 'drawing';
   current: boolean;
   documentId: string | null;
   itemId?: string;
@@ -50,12 +51,12 @@ export async function loadTabMetadata(target:CADTabTarget):Promise<Metadata> {
   return read('/api/library/cad_metadata',{app:'cad',...scope(target)});
 }
 export function tabMetadataItem(target:CADTabTarget,meta:Metadata) {
-  const item=meta.items.find(item=>item.id===(target.itemId??'part'));
+  const item=meta.items.find(item=>item.id===(target.itemId??(target.kind==='drawing'?'drawing':'part')));
   if(!item)throw Error('This tab no longer exists in the document. Reopen the document.');
   return item;
 }
 export async function tabPartCode(target:CADTabTarget):Promise<string> {
-  if(target.kind!=='part')throw Error('Show code is available for Part Studios.');
+  if(target.kind==='assembly')throw Error('Show code is available for Part Studios and Drawings.');
   let text:string;
   if(!target.documentId) {
     const {currentEditorSnapshot}=await import('./host-library');
@@ -72,7 +73,7 @@ export async function tabPartCode(target:CADTabTarget):Promise<string> {
     text=decodeDocument(result.data_base64);
   }
   // Show the actual portable feature document, not a fabricated modeling script.
-  return serializePartDocument(parsePartDocument(text));
+  return target.kind==='drawing'?serializeDrawingDocument(parseDrawingDocument(text)):serializePartDocument(parsePartDocument(text));
 }
 export async function editTabProperties(target:CADTabTarget,meta:Metadata,values:{name:string;description:string;category:string},renameOnly=false) {
   if(!meta.writable||target.revision||target.linked)throw Error('This tab is read-only.');

@@ -58,3 +58,40 @@ it("marks the saved source stale after an upstream edit until explicitly rebuilt
   await editor.refresh(); expect(store.snapshot().rebuild?.status).toBe("current");
   expect(editor.snapshot()!.document.source.name).toBe("Changed Part");
 });
+it("refuses read-only edits, and cancellation or context changes during a rebuild", async () => {
+  let writable = true, context = "first", resolve!: (result: PartDrawingProjection) => void;
+  const changed = vi.fn(), editor = new DrawingEditor(new CADDrawingWorkspaceStore(), () => new Promise(r => { resolve = r; }));
+  editor.configure(source, { writable: () => writable, contextKey: () => context, changed }); await editor.enter();
+  const original = editor.serialize(), command = { type: "add-view" as const, sheetId: editor.snapshot()!.document.activeSheetId, view };
+  writable = false; await expect(editor.execute(command)).rejects.toThrow(/read-only/); writable = true;
+  for (const interrupt of [() => { context = "other"; }, () => { writable = false; }]) {
+    context = "first"; writable = true;
+    const pending = editor.execute(command); interrupt(); resolve(geometry);
+    await expect(pending).rejects.toThrow(); expect(editor.serialize()).toBe(original); expect(editor.history().canUndo).toBe(false);
+  }
+  writable = true;
+  const signal = new AbortController(), pending = editor.execute(command, { signal: signal.signal }); signal.abort(); resolve(geometry);
+  await expect(pending).rejects.toThrow(); expect(editor.serialize()).toBe(original);
+  expect(changed.mock.calls).toEqual([["opened"]]);
+});
+it("reads a source asynchronously and refuses a different source without advancing history", async () => {
+  const part = source(), readSource = vi.fn(async () => ({ ...part, name: "New source revision" }));
+  const editor = new DrawingEditor(new CADDrawingWorkspaceStore(), async () => geometry);
+  editor.configure(() => part, { readSource }); await editor.enter();
+  await editor.refresh(); expect(editor.snapshot()!.document.source.name).toBe("New source revision");
+  await editor.travel(-1); expect(editor.snapshot()!.document.source.name).toBe("Part");
+  readSource.mockResolvedValueOnce({ ...part, documentId: "wrong" });
+  await expect(editor.refresh()).rejects.toThrow(/same source/); expect(editor.history().canRedo).toBe(true);
+});
+it("allows viewing other sheets in a read-only drawing without editing saved intent or history", async () => {
+  let writable = true;
+  const store = new CADDrawingWorkspaceStore(), editor = new DrawingEditor(store, async () => geometry);
+  editor.configure(source, { writable: () => writable }); await editor.enter();
+  const first = editor.snapshot()!.document.activeSheetId;
+  await editor.execute({ type: "add-sheet", sheet: { id: "second", name: "Second", widthMm: 210, heightMm: 297, projection: "third_angle", views: [], annotations: [] } });
+  const before = editor.serialize(), history = editor.history(); writable = false;
+  await editor.selectSheet(first);
+  expect(store.snapshot().projection?.active_sheet_id).toBe(first);
+  expect(editor.displayedSheetId()).toBe(first); expect(editor.serialize()).toBe(before); expect(editor.history()).toEqual(history);
+  await expect(editor.execute({ type: "select-sheet", sheetId: first })).rejects.toThrow(/read-only/);
+});

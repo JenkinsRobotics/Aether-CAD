@@ -2,7 +2,7 @@ import type { AgentTool } from '@aether/ui/AgentServices';
 import { plateProgram } from './program';
 
 /** Documentation projects the executable tool catalog, never a second API list. */
-export function discoverCAD(tools:readonly AgentTool[],args:Record<string,unknown>,workspace:'part'|'assembly') {
+export function discoverCAD(tools:readonly AgentTool[],args:Record<string,unknown>,workspace:'part'|'assembly'|'drawing') {
   if(Object.keys(args).some(key=>!['query','name','offset'].includes(key)) ||
       (args.query!==undefined&&(typeof args.query!=='string'||args.query.length>200)) ||
       (args.name!==undefined&&(typeof args.name!=='string'||args.name.length>100)))throw Error('Use a query of at most 200 characters or an exact tool name.');

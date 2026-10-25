@@ -38,18 +38,38 @@ def defaults():
     }
 
 
+def validate_drawing_header(doc):
+    # Settings carry portable metadata only; the TS drawing module validates
+    # authoring commands and geometry when the product opens/rebuilds the file.
+    if not isinstance(doc, dict) or doc.get("format") != "aether-drawing" or type(doc.get("formatVersion")) is not int or doc["formatVersion"] != 1:
+        raise ValueError("Unsupported Drawing format.")
+    text(doc.get("name"), 1000, True)
+    text(doc.get("documentId"), 1000, True)
+    text(doc.get("activeSheetId"), 1000, True)
+    if not isinstance(doc.get("sheets"), list) or not 1 <= len(doc["sheets"]) <= 100:
+        raise ValueError("Invalid Drawing sheets.")
+    validate_part_header(doc.get("source"))
+
+
 class CADDocument:
     def __init__(self, content):
         self.workspace = None
+        self.drawing = None
         if content.startswith(b"PK"):
             self.workspace = AetherWorkspace.from_bytes(content)
             validate_workspace_part_headers(self.workspace)
             self.part = None
             raw = self.workspace.document_settings
         else:
-            self.part = json.loads(content)
-            validate_part_header(self.part)
-            raw = self.part.get("document_settings", {})
+            decoded = json.loads(content)
+            if isinstance(decoded, dict) and decoded.get("format") == "aether-drawing":
+                validate_drawing_header(decoded)
+                self.drawing = decoded
+                self.part = None
+            else:
+                validate_part_header(decoded)
+                self.part = decoded
+            raw = decoded.get("document_settings", {})
         if not isinstance(raw, dict):
             raise ValueError("Invalid document settings.")
         self.settings = {**defaults(), **copy.deepcopy(raw)}
@@ -63,6 +83,10 @@ class CADDocument:
             validate_workspace_part_headers(self.workspace)
             self.workspace.document_settings = self.settings
             return self.workspace.to_bytes()[0]
+        if self.drawing is not None:
+            validate_drawing_header(self.drawing)
+            self.drawing["document_settings"] = self.settings
+            return json.dumps(self.drawing, ensure_ascii=False, allow_nan=False).encode()
         validate_part_header(self.part)
         self.part["document_settings"] = self.settings
         return json.dumps(self.part, ensure_ascii=False, allow_nan=False).encode()
@@ -111,6 +135,9 @@ class CADDocument:
                                 for body in self.bodies(item["feature_document"], key)
                             ]
                         )
+        elif self.drawing is not None:
+            result.append({"id": "drawing", "kind": "drawing", "name": self.drawing["name"],
+                           "description": self.drawing.get("description", ""), "category": self.drawing.get("category", "Drawing")})
         else:
             result.append(
                 {
@@ -152,6 +179,8 @@ class CADDocument:
         return result
 
     def upgrade_documents(self):
+        if self.drawing is not None:
+            return {}
         docs = (
             {"part": self.part}
             if self.part
@@ -182,7 +211,7 @@ class CADDocument:
             "settings": settings,
             "items": self.items(),
             "unitCatalog": UNITS,
-            "featureVersion": PART_DOCUMENT_VERSION,
+            "featureVersion": 1 if self.drawing is not None else PART_DOCUMENT_VERSION,
             "upgradeNeeded": bool(self.upgrade_documents()),
             "upgradeDocuments": self.upgrade_documents(),
             "deleted": [
@@ -214,6 +243,8 @@ class CADDocument:
             name = text(data.get("name"), 180, True)
             if self.workspace:
                 self.workspace.name = name
+            elif self.drawing is not None:
+                self.drawing["name"] = name
             else:
                 self.part["name"] = name
         elif operation == "properties":
@@ -284,6 +315,11 @@ class CADDocument:
                 target["mass_kg"] = mass
                 self.settings["itemQuantities"][key].pop("mass", None)
             doc = target.get("feature_document")
+        elif self.drawing is not None:
+            if parent != "drawing" or body:
+                raise ValueError("Drawing item not found.")
+            target = self.drawing
+            doc = None
         else:
             if parent != "part":
                 raise ValueError("Item not found.")

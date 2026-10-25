@@ -43083,6 +43083,18 @@ function validateDrawingDocument(value2) {
   text(value2.name);
   text(value2.activeSheetId);
   validatePartDocument(value2.source);
+  if (value2.sourceReference !== void 0) {
+    const ref = value2.sourceReference;
+    object(ref);
+    text(ref.fileId);
+    if (Object.keys(ref).some((key) => !["fileId", "partId", "branch", "revision"].includes(key))) throw Error("Unknown drawing source reference field.");
+    if (ref.partId !== void 0) text(ref.partId);
+    if (ref.branch !== void 0) text(ref.branch);
+    if (ref.revision !== void 0) {
+      number(ref.revision, 1, Number.MAX_SAFE_INTEGER);
+      if (!Number.isSafeInteger(ref.revision)) throw Error("Source revision must be an integer.");
+    }
+  }
   list(value2.sheets, 100);
   const ids2 = /* @__PURE__ */ new Set();
   let totalViews = 0;

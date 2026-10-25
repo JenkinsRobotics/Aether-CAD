@@ -2,6 +2,7 @@ type OpenDocument = (url: URL) => Promise<void>;
 let openDocument: OpenDocument | undefined;
 let switching = false;
 let loadedURL = typeof location === 'undefined' ? '' : location.href;
+if (typeof window !== 'undefined') window.addEventListener('cad-document-saved', () => { if (!switching) loadedURL = location.href; });
 if (typeof window !== 'undefined') window.addEventListener('popstate', () => {
   const target = new URL(location.href);
   if (!openDocument) return;

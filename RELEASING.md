@@ -20,7 +20,7 @@ Package-manager versions and the shared UI dependency version are separate.
    Drawing changes also require `node scripts/verify-drawings.mjs`. Run
    `scripts/verify-drawings-browser.mjs` through Studio's disposable authenticated
    browser fixture with the candidate frontend and matching worker. It covers
-   source editing, associative rebuild, keyboard history, SVG/DXF and local reopen.
+   source editing, associative rebuild, keyboard history, SVG/DXF, portable file reopen, independent Studio autosave/reload, read-only revisions and live MCP drawing edits. It imports `verify-drawing-agent-browser.mjs` for the actual shared-editor broker checks.
    Finish building before starting worker qualification: the automation build
    replaces its output directory, so tests must not read it during a rebuild.
 3. Commit the qualified source locally on `alpha-0.1`. Do not include scratch

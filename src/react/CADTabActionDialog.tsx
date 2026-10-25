@@ -18,14 +18,14 @@ export function CADTabActionDialog({target,action,flush,onClose,onApplied}:{targ
       if(codeView){
         const value=await tabPartCode(target);if(!live)return;setCode(value);
         if(action==='clipboard') {
-          try {if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);if(live)setMessage('Part document copied.');}
+          try {if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(value);if(live)setMessage('Document copied.');}
           catch {if(live)setMessage('Select the code below and copy it with your keyboard.');}
         }
         return;
       }
       const value=await loadTabMetadata(target);if(!live)return;
       setMeta(value);
-      const item=target.kind==='part'||target.itemId?tabMetadataItem(target,value):null;
+      const item=target.kind!=='assembly'||target.itemId?tabMetadataItem(target,value):null;
       setName(action==='duplicate'?`${item?.name??target.name.replace(/\.[^.]+$/,'')} copy`:item?.name??target.name.replace(/\.[^.]+$/,''));
       setDescription(item?.description??'');setCategory(item?.category??'');
       if(action==='delete'){const checked=await prepareTabDeletion(target,value);if(live)setDeletion(checked);}
@@ -46,7 +46,7 @@ export function CADTabActionDialog({target,action,flush,onClose,onApplied}:{targ
     }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
   };
   const copyCode=async()=>{
-    try {if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(code);setMessage('Part document copied.');}
+    try {if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(code);setMessage('Document copied.');}
     catch {setMessage('Select the code below and copy it with your keyboard.');}
   };
   const titles:Partial<Record<CADTabAction,string>>={delete:`Delete ${target.name}?`,rename:`Rename ${target.name}`,properties:`Properties — ${target.name}`,duplicate:`Duplicate ${target.name}`,code:`Code — ${target.name}`,clipboard:`Copy ${target.name} to clipboard`};
@@ -58,14 +58,14 @@ export function CADTabActionDialog({target,action,flush,onClose,onApplied}:{targ
   </>}>
     {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
     {loading&&<p role="status">Loading {target.name}…</p>}
-    {!loading&&codeView&&<><p>Aether Part JSON — the feature document, including geometry parameters and units.</p>
-      <textarea aria-label="Part document code" readOnly value={code} spellCheck={false} onFocus={event=>{if(action==='clipboard')event.currentTarget.select();}} style={{width:'100%',minWidth:300,height:'min(50vh,420px)',fontFamily:'monospace',boxSizing:'border-box'}}/>
+    {!loading&&codeView&&<><p>Aether document JSON — the portable authoring document.</p>
+      <textarea aria-label={target.kind==='drawing'?"Drawing document code":"Part document code"} readOnly value={code} spellCheck={false} onFocus={event=>{if(action==='clipboard')event.currentTarget.select();}} style={{width:'100%',minWidth:300,height:'min(50vh,420px)',fontFamily:'monospace',boxSizing:'border-box'}}/>
     </>}
     {!loading&&meta&&!codeView&&<>
       {action==='delete'?<p>{target.itemId?'The tab will be retained under Restore deleted workspaces. Dependent assemblies or connectors must be removed before deletion.':'This document will move to the recycle bin. It can be restored from Aether Drive.'}</p>:<>
         <FieldRow label="Name" htmlFor="tab-action-name"><TextField id="tab-action-name" value={name} maxLength={180} disabled={busy||(readonly&&action!=='duplicate')} onChange={event=>setName(event.target.value)}/></FieldRow>
         {action==='properties'&&<>
-          <FieldRow label="Type"><span>{target.kind==='part'?'Part Studio':'Assembly'}</span></FieldRow>
+          <FieldRow label="Type"><span>{target.kind==='drawing'?'Drawing':target.kind==='part'?'Part Studio':'Assembly'}</span></FieldRow>
           <FieldRow label="Saved revision"><span>{meta.revision}</span></FieldRow>
           <FieldRow label="Length units"><span>{meta.settings.units?.length?.unit??'mm'}</span></FieldRow>
           <FieldRow label="Description" htmlFor="tab-action-description"><TextField id="tab-action-description" value={description} maxLength={10000} disabled={readonly||busy} onChange={event=>setDescription(event.target.value)}/></FieldRow>

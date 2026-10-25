@@ -1,11 +1,11 @@
 /** The Drawing workspace route. */
 import { cadDrawingWorkspace } from "../../cad-drawing-workspace-store";
-import { cadPresentation } from "../../cad-presentation-store";
 import { DrawingWorkspace } from "../DrawingWorkspace";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@aether/ui";
 import { exportDrawingDXF, exportDrawingSVG } from "@aether/core/drawing";
 import { drawingEditor } from "../../drawing/controller";
+import { drawingFiles, downloadDrawingFile } from "../../drawing/files";
 import { DrawingAuthorDialog, type DrawingDialogDraft } from "../../drawing/DrawingAuthorDialog";
 import type { DrawingPresentationCommandID } from "../../cad-drawing-presentation";
 
@@ -19,23 +19,21 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
     cadDrawingWorkspace.snapshot,
   );
   const built = drawingEditor.snapshot(), document = built?.document;
-  const sheet = document?.sheets.find(s => s.id === document.activeSheetId);
+  const sheet = document?.sheets.find(s => s.id === drawingEditor.displayedSheetId());
   const selectedId = drawing.selectedEntityIDs.values().next().value;
   const selectedKind = selectedId === sheet?.id ? "sheet" : sheet?.views.some(v => v.id === selectedId) ? "view" : sheet?.annotations.some(a => a.id === selectedId) ? "annotation" : null;
   const history = drawingEditor.history();
+  const editable = drawingEditor.writable();
   const run = async (action: () => Promise<void>) => { setError(""); try { await action(); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } };
-  const download = (name: string, content: string, type: string) => {
-    const url = URL.createObjectURL(new Blob([content], { type })), link = window.document.createElement("a");
-    link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
   const command = (id: DrawingPresentationCommandID) => {
     setError("");
+    if (!editable && ["add-sheet", "add-view", "add-annotation", "rebuild-drawing"].includes(id)) { setError("This drawing is read-only."); return; }
     if (id === "add-sheet" || id === "add-view" || id === "add-annotation") { setDraft({ kind: id === "add-sheet" ? "sheet" : id === "add-view" ? "view" : "annotation" }); return; }
     if (id === "rebuild-drawing") { void run(() => drawingEditor.refresh()); return; }
     if (!built) return;
-    if (id === "save-workspace") download(`${built.document.name}.acdrawing`, drawingEditor.serialize(), "application/json");
-    if (id === "export-svg") download(`${built.document.name}.svg`, exportDrawingSVG(built), "image/svg+xml");
-    if (id === "export-dxf") download(`${built.document.name}.dxf`, exportDrawingDXF(built), "application/dxf");
+    if (id === "save-workspace") void run(() => drawingFiles.save());
+    if (id === "export-svg") downloadDrawingFile(`${built.document.name}.svg`, exportDrawingSVG(built, sheet?.id), "image/svg+xml");
+    if (id === "export-dxf") downloadDrawingFile(`${built.document.name}.dxf`, exportDrawingDXF(built, sheet?.id), "application/dxf");
   };
   useEffect(() => {
     if (!active) return;
@@ -57,13 +55,15 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
     inert={!active}
   >
     <div className="cad-drawing-filebar" aria-label="Drawing files and editing">
-      <Button disabled={history.busy} onClick={() => void run(() => drawingEditor.create())}>New from Part</Button>
+      <Button disabled={history.busy} onClick={() => void run(() => drawingFiles.create())}>New from Part</Button>
       <Button disabled={history.busy} onClick={() => fileInput.current?.click()}>Open drawing</Button>
-      <Button disabled={!history.canUndo || history.busy} onClick={() => void run(() => drawingEditor.travel(-1))}>Undo</Button>
-      <Button disabled={!history.canRedo || history.busy} onClick={() => void run(() => drawingEditor.travel(1))}>Redo</Button>
-      <Button disabled={!selectedKind || history.busy} onClick={() => { if (selectedKind) setDraft({ kind: selectedKind, editId: selectedId }); }}>Edit selection</Button>
-      <Button disabled={!selectedKind || history.busy} onClick={() => { if (!sheet || !selectedId || !selectedKind) return; void run(() => drawingEditor.execute(selectedKind === "sheet" ? { type: "remove-sheet", sheetId: sheet.id } : selectedKind === "view" ? { type: "remove-view", sheetId: sheet.id, viewId: selectedId } : { type: "remove-annotation", sheetId: sheet.id, annotationId: selectedId })); }}>Delete</Button>
-      <input ref={fileInput} type="file" accept=".acdrawing,application/json" hidden onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void run(async () => { if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB."); await drawingEditor.open(await file.text()); }); }}/>
+      <Button disabled={!editable || !history.canUndo || history.busy} onClick={() => void run(() => drawingEditor.travel(-1))}>Undo</Button>
+      <Button disabled={!editable || !history.canRedo || history.busy} onClick={() => void run(() => drawingEditor.travel(1))}>Redo</Button>
+      <Button disabled={!editable || !selectedKind || history.busy} onClick={() => { if (selectedKind) setDraft({ kind: selectedKind, editId: selectedId }); }}>Edit selection</Button>
+      <Button disabled={!editable || !selectedKind || history.busy} onClick={() => { if (!sheet || !selectedId || !selectedKind) return; void run(() => drawingEditor.execute(selectedKind === "sheet" ? { type: "remove-sheet", sheetId: sheet.id } : selectedKind === "view" ? { type: "remove-view", sheetId: sheet.id, viewId: selectedId } : { type: "remove-annotation", sheetId: sheet.id, annotationId: selectedId })); }}>Delete</Button>
+      <Button disabled={!built || history.busy} onClick={() => { if (built) downloadDrawingFile(`${built.document.name}.acdrw`, drawingEditor.serialize()); }}>Download drawing</Button>
+      {!editable && built && <span>Read-only drawing</span>}
+      <input ref={fileInput} type="file" accept=".acdrw,.acdrawing,application/json" hidden onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void run(() => drawingFiles.open(file)); }}/>
       {error && <span role="alert">{error}</span>}
     </div>
     <DrawingWorkspace
@@ -73,12 +73,12 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
         if (action.type === "select-entities") {
           const id = action.ids[0];
           const owner = document?.sheets.find(s => s.id === id || s.views.some(v => v.id === id) || s.annotations.some(a => a.id === id));
-          if (owner && owner.id !== document?.activeSheetId) void run(() => drawingEditor.execute({ type: "select-sheet", sheetId: owner.id }));
+          if (owner && owner.id !== drawingEditor.displayedSheetId()) void run(() => drawingEditor.selectSheet(owner.id));
         }
       }}
       onCommand={command}
       commandsConnected={true}
-      onExit={() => cadPresentation.dispatch({ type: "select-workspace-mode", mode: "modeling" })}
+      onExit={() => void run(() => drawingFiles.leave())}
     />
     {draft && document && <DrawingAuthorDialog draft={draft} document={document} execute={command => drawingEditor.execute(command)} onClose={() => setDraft(null)}/>}
   </div>;

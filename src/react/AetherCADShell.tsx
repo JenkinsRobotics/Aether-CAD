@@ -229,7 +229,7 @@ export function AetherCADShell() {
   );
   // The Assembly workspace is a mode, not a file that has to be open: picking
   // it in the switcher shows the assembly ribbon over the same viewport.
-  const documentType: CADDocumentType =
+  const documentType: CADDocumentType = presentation.workspaceMode === "drawing" ? "drawing" :
     presentation.workspaceMode === "assembly"
       || (shellAssembly.loadState === "ready" && shellAssembly.data !== null)
       ? "assembly"

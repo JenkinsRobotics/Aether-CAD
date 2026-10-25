@@ -56,6 +56,7 @@ export function CADDocumentControls({
     documentRevision(address) === "Main"
       ? workspaceName === "Main" ? "V1.0" : workspaceName
       : documentRevision(address);
+  const drawing = cadPresentation.snapshot().workspaceMode === "drawing";
   const assembly = new URL(address).searchParams.has("assembly");
   const copyLink = async () => {
     // Read at click time: Save may have assigned the document its first server ID.
@@ -84,13 +85,13 @@ export function CADDocumentControls({
             id: "save",
             label: "Save document",
             disabled:
-              (!partOpen && !assembly) ||
+              (!partOpen && !assembly && !drawing) ||
               new URL(address).searchParams.has("revision"),
           },
-          { id: "commit", label: "Create version…", disabled: !partOpen || Boolean(assembly) },
+          { id: "commit", label: "Create version…", disabled: (!partOpen && !drawing) || Boolean(assembly) },
           { id: "recover", label: "Recover…" },
           { id: "open", label: "Open Part…" },
-          { id: "import", label: "Import CAD…" },
+          { id: "import", label: "Import CAD…", disabled: drawing },
           { id: "details", label: "Document details…", separatorBefore: true },
           { id: "export", label: "Export…", disabled: !partOpen },
           { id: "rename", label: "Rename document…", separatorBefore: true },
@@ -100,7 +101,7 @@ export function CADDocumentControls({
           { id: "update", label: "Update workspace…" },
           { id: "units", label: "Workspace units…" },
           { id: "properties", label: "Workspace properties…" },
-          { id: "print", label: "Print…", separatorBefore: true },
+          { id: "print", label: "Print…", disabled: drawing, disabledReason: drawing ? "Use the Drawing SVG or DXF export controls." : undefined, separatorBefore: true },
           ...((compact||menuOnly) ? [{ id: "link", label: "Copy document link", disabled: !link, disabledReason: "Save to the server to get a document link", separatorBefore: true }] : []),
           { id: "close", label: "Close document", separatorBefore: true },
         ]}

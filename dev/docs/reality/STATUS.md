@@ -121,3 +121,55 @@ radial dimensions, PDF, title-block editing, placement by dragging, persistent
 Studio drawing registration and full live-agent exposure. Current source refresh
 is explicit and requires the same Part document ID; no cross-document automatic
 update subscription is claimed. The broader CAD baseline goal remains active.
+
+
+## 2026-10-24 — Drawing storage and live agent editing
+
+Qualified source, not an installed release claim. The Drawing
+workspace now saves its own `.acdrw` file through Studio's existing autosave and
+recovery adapter. Legacy `.acdrawing` files still open. The embedded Part remains
+the reproducible geometry source; an optional file/branch/revision/Part locator
+supports explicit source refresh without changing the Drawing's save target.
+
+- New/imported drawings detach into their own file identity after the previous
+  file is flushed. Reload reopens the Drawing; returning to 3D opens its source.
+  Conflicting recovery retains its original revision instead of overwriting a
+  newer stored file. Source reads never retarget autosave.
+- The existing new-design menu creates a real Drawing. CAD's portable metadata
+  adapter supports rename, copy, properties and Show code without changing the
+  embedded source Part. It adds no Python geometry or host/database dependency.
+- Live AI/shared-editor MCP discover, inspect, edit, refresh, undo/redo and export
+  the open Drawing through the same validated controller as the UI. Edits require
+  the inspected revision, writable access and the same context after projection;
+  cancellation, invalid input and stale edits preserve the last good drawing.
+- Saved read-only drawings allow browsing sheets and exporting without changing
+  canonical state or history. Editing is refused. Agent exports return text and
+  do not claim a saved or published file.
+
+Qualification: all 1,786 app tests (one existing skip), 1,125 engine tests,
+260 packaged-worker release tests, TypeScript checks, frontend/worker builds,
+exact fresh-process drawing/region/kernel/STEP/standalone-package checks. The
+initial full app run overlapped a controller test edit and observed an old
+transform; the final frozen-source run passes. An earlier browser attempt caught
+a stale read-only UI projection during Drawing creation, fixed by republishing
+after the file transaction; another reached the expected stale-agent rejection
+but its harness incorrectly asserted every MCP result must succeed. That
+assertion now distinguishes expected failure receipts. Two later browser attempts
+used obsolete new-design and document-title selectors; both were corrected
+against the shipped shared components, without changing production code.
+
+All ten authenticated browser steps now pass, including new Drawing creation,
+separate Studio file IDs, source Part preservation, saved read-only sheet browsing,
+actual live-editor MCP edit/stale refusal/undo/redo/export, and packaged metadata
+rename/copy/reopen. No browser errors or server geometry requests were recorded.
+The existing Animation client regression also passes. The final frozen-worker
+SHA-256 is `0939774f6b26b9b2018ccee3640a6d786059e19e83137b73fa1c2fd7b31673b2`.
+Evidence: `.verification/baseline-2026-10-24/drawing-lifecycle-qualified-*` and
+`release-drawing-browser/results.json`. Earlier failing attempts are retained.
+
+Remaining: sections/hatching, assembly sources/BOM, edge-attached/angular/radial
+dimensions, PDF, title-block editing, drag placement and drawing version preview
+images. Closed-file Studio MCP Drawing operations are not registered; local
+headless and open-editor commands are separate verified paths. Real provider
+inference is not claimed from a browser MCP-broker test. No full CAD parity,
+installed activation, other-app change or remote push is claimed.

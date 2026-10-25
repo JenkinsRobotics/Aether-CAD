@@ -82,14 +82,17 @@ export class CADAgentEditor {
 let workspace:CADAgentWorkspace|undefined,editor:CADAgentEditor|undefined;
 let assemblyWorkspace: {active:()=>boolean;contextKey:()=>string;interaction:(key:string)=>AgentInteraction}|undefined;
 export function configureAssemblyAgentWorkspace(value:NonNullable<typeof assemblyWorkspace>){assemblyWorkspace=value;}
+let drawingWorkspace: typeof assemblyWorkspace;
+export function configureDrawingAgentWorkspace(value:NonNullable<typeof drawingWorkspace>){drawingWorkspace=value;}
 const listeners=new Set<()=>void>();
 export function configureCADAgentWorkspace(value:CADAgentWorkspace){workspace=value;editor=new CADAgentEditor(value);for(const listener of listeners)listener();}
-export const cadAgentContext=()=>assemblyWorkspace?.active()?assemblyWorkspace.contextKey():workspace?.contextKey()??'not-ready';
+export const cadAgentContext=()=>drawingWorkspace?.active()?drawingWorkspace.contextKey():assemblyWorkspace?.active()?assemblyWorkspace.contextKey():workspace?.contextKey()??'not-ready';
 export function subscribeCADAgent(listener:()=>void){
-  listeners.add(listener);window.addEventListener('aether-part-updated',listener);window.addEventListener('cad-document-navigation',listener);
-  return()=>{listeners.delete(listener);window.removeEventListener('aether-part-updated',listener);window.removeEventListener('cad-document-navigation',listener);};
+  listeners.add(listener);window.addEventListener('cad-document-saved',listener);window.addEventListener('aether-drawing-updated',listener);window.addEventListener('aether-part-updated',listener);window.addEventListener('cad-document-navigation',listener);
+  return()=>{listeners.delete(listener);window.removeEventListener('cad-document-saved',listener);window.removeEventListener('aether-drawing-updated',listener);window.removeEventListener('aether-part-updated',listener);window.removeEventListener('cad-document-navigation',listener);};
 }
 export function cadAgentInteraction(contextKey:string):AgentInteraction {
+  if(drawingWorkspace?.active())return drawingWorkspace.interaction(contextKey);
   if(assemblyWorkspace?.active())return assemblyWorkspace.interaction(contextKey);
   return {contextKey,tools:cadAgentTools,execute:async(call,signal)=>{
     if(!editor)throw Error('The CAD workspace is not ready.');
