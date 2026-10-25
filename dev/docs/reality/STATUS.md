@@ -1,5 +1,26 @@
 # Aether CAD source status
 
+## 2026-10-25 — CAD alpha-0.1.14 installed, Files panel verified
+
+The qualified alpha-0.1.14 app package is now active on localhost:8780, from
+commit 00f1286. It includes the Files panel/tray commit 5c6f4a1 and the pinned
+Aether UI alpha.208 package (ec905e3), as well as the baseline increments below.
+The Files folder button opens the left browser; the Part tray toggle is at the
+end of the bottom-right view tools. List/gallery preference, folder drag/drop
+and return to root, synchronized tray grouping, right-click actions and bounded
+layout passed three real-browser workflows against the installed immutable
+frontend and worker using disposable data (32.67 seconds). The initial smoke
+script selected two differently located New folder buttons; scoping it to the
+folder dialog fixed the test without a product change. Both runs are retained.
+
+All 3,526 CAD package files match their release hashes. Host ready, unchanged
+process/configuration, and all non-CAD selections preserved. Map alpha-0.1.2,
+its 3,530 package files and all six Pi downloads verified. No server restart,
+production document edits, database/network changes or remote push. Evidence:
+`.verification/baseline-2026-10-24/files-panel-installed-release.json` and
+`files-panel-installed-browser-final/`. Earlier "not activated" entries describe
+their original staging checkpoints; those increments are included in this release.
+
 ## 2026-10-25 — projected distance side intent (source; installation pending)
 
 Point/line and parallel-line dimensions retain their authored side when a
