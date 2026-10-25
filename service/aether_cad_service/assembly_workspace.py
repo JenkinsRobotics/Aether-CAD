@@ -22,6 +22,7 @@ MUTATIONS = frozenset((
     "add_relation", "update_relation", "remove_relation",
     "add_contact_set", "update_contact_set", "remove_contact_set", "set_contacts_enabled",
 ))
+DRAWING_MUTATIONS = frozenset(("add_drawing", "save_drawing"))
 READS = frozenset(("describe_assembly", "solve_assembly", "project_bom", "preview_mate"))
 MAX_REQUEST = 4 * 1024 * 1024
 # Leave room for command metadata inside the unchanged host request limit.
@@ -50,7 +51,7 @@ def execute(data):
     if len(json.dumps(data, allow_nan=False).encode()) > MAX_REQUEST:
         raise CommandError(413, "Assembly request exceeds limit.")
     method, params = data.get("method"), data.get("params")
-    if not isinstance(method, str) or method not in READS | MUTATIONS | {"new_workspace", "load_workspace"}:
+    if not isinstance(method, str) or method not in READS | MUTATIONS | DRAWING_MUTATIONS | {"new_workspace", "load_workspace"}:
         raise CommandError(400, "Unknown Assembly workspace operation.")
     if not isinstance(params, dict):
         raise CommandError(400, "Expected Assembly parameters.")
@@ -78,7 +79,15 @@ def execute(data):
             assembly_id = params.get("assembly_id", workspace.root_assembly_id)
             if not isinstance(assembly_id, str):
                 raise CommandError(400, "Expected an Assembly ID.")
-            if method in MUTATIONS:
+            if method in DRAWING_MUTATIONS:
+                from aether_animation.aether_project import edit_project, project_projection
+                from .document import validate_drawing_header
+                if params.get("expected_revision") != workspace.revision:
+                    raise CommandError(409, "Design changed; reload before editing.")
+                validate_drawing_header(params.get("document"))
+                edit_project(workspace, method, params)
+                result = project_projection(workspace)
+            elif method in MUTATIONS:
                 expected = params.get("expected_revision")
                 if not isinstance(expected, str):
                     raise CommandError(400, "Expected an Assembly revision.")

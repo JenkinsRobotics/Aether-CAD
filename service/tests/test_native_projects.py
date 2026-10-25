@@ -58,3 +58,10 @@ def test_corrupt_and_expanding_archives_are_rejected(tmp_path):
                 data = json.dumps(graph).encode()
             new.writestr(name, data)
     assert invoke(tmp_path, "project-read", {"data_base64": base64.b64encode(tampered.getvalue()).decode()}) == {"error": {"kind": "invalid"}}
+
+
+def test_add_part_accepts_null_document_from_host_optional_field(tmp_path):
+    original = created(tmp_path)
+    result = invoke(tmp_path, "project-edit", {**original, "operation": "add_part", "name": "Internal Part", "document": None})["result"]
+    assert len(result["project"]["parts"]) == 2
+    assert result["project"]["parts"][-1]["name"] == "Internal Part"

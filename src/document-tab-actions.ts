@@ -64,9 +64,9 @@ export async function tabPartCode(target:CADTabTarget):Promise<string> {
     if(!snapshot)throw Error('Wait for this Part to finish loading.');
     text=new TextDecoder().decode(snapshot.bytes);
   } else if(target.itemId) {
-    const result=await documentRequest<{project:{parts:{id:string;document:unknown}[]}}>('cad','project_read',scope(target));
-    const part=result.project.parts.find(part=>part.id===target.itemId);
-    if(!part?.document)throw Error('This tab has no editable Part document.');
+    const result=await documentRequest<{project:{parts:{id:string;document:unknown}[];drawings?:{id:string;document:unknown}[]}}>('cad','project_read',scope(target));
+    const part=(target.kind==='drawing'?result.project.drawings??[]:result.project.parts).find(part=>part.id===target.itemId);
+    if(!part?.document)throw Error('This tab has no editable document.');
     text=JSON.stringify(part.document);
   } else {
     const result=await documentRequest<{data_base64:string}>('cad',target.revision?'read_revision':'read',scope(target));
@@ -89,6 +89,12 @@ export async function duplicateTab(target:CADTabTarget,meta:Metadata,name:string
   if(target.itemId) {
     if(!meta.writable||target.revision)throw Error('This project is read-only.');
     const code=await tabPartCode({...target,revision:meta.revision});
+    if(target.kind==='drawing') {
+      const {persistDesignDrawing}=await import('./design/hosted-drawings');
+      const document=parseDrawingDocument(code);document.name=name;
+      const result=await persistDesignDrawing({id:target.documentId!,name:meta.name,revision:meta.revision,writable:meta.writable},target.branch,document);
+      return {id:result.file.id,itemId:result.id};
+    }
     const result=await documentRequest<{id:string;project:{parts:{id:string}[]}}>('cad','project_edit',{
       id:target.documentId,expected_revision:meta.revision,...(target.branch?{branch:target.branch}:{}),
       operation:'add_part',name,document:JSON.parse(code),

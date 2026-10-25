@@ -38,8 +38,9 @@ import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
 import { drawingEditor } from "./drawing/controller";
+import { activeProject, createHostedDesignDrawing } from "./host-library";
 import { configureDrawingFiles, downloadDrawingFile } from "./drawing/files";
-import { createDrawingDocument, serializeDrawingDocument, type DrawingDocument } from "@aether/core/drawing";
+import { createDrawingDocument, parseDrawingDocument, serializeDrawingDocument, type DrawingDocument } from "@aether/core/drawing";
 import { isDrawingFile } from "@aether/core/document/file-types";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountDerivedCurveCommands } from "./derived-curves-window";
@@ -185,7 +186,10 @@ async function newDrawing(file?: File, name?: string): Promise<void> {
     }
     // Build before changing storage identity: failed files preserve the old editor.
     await drawingEditor.open(text);
-    if (hostedCAD) detachHostedFile();
+    if (hostedCAD && activeProject && !file) {
+      const contained = await createHostedDesignDrawing(parseDrawingDocument(text));
+      await drawingEditor.open(serializeDrawingDocument(contained));
+    } else if (hostedCAD) detachHostedFile();
     presentDrawing();
     if (hostedCAD) markHostedDirty();
   });

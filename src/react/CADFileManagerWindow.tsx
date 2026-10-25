@@ -48,7 +48,7 @@ export function CADFileManagerWindow({connection,tabs,project,standaloneTabs,onC
       <div className="cad-file-manager-window-tabs">
         {page==='files' ? <Button onClick={()=>setPage('document')}>Back to tabs</Button> : <>
           <TextField aria-label="Search tabs" placeholder="Search tabs" value={query} onChange={event=>setQuery(event.target.value)}/>
-          <SelectField aria-label="Filter tab types" value={type} onChange={event=>setType(event.target.value)} options={[{value:"all",label:"All types"},{value:"Part Studio",label:"Part studios"},{value:"Assembly",label:"Assemblies"}]}/>
+          <SelectField aria-label="Filter tab types" value={type} onChange={event=>setType(event.target.value)} options={[{value:"all",label:"All types"},{value:"Part Studio",label:"Part studios"},{value:"Assembly",label:"Assemblies"},{value:"Drawing",label:"Drawings"}]}/>
           <Button aria-pressed={sorted} onClick={()=>setSorted(!sorted)}>Sort A–Z</Button>
           <Button onClick={()=>setPage('files')}>Open…</Button>
         </>}
@@ -59,9 +59,9 @@ export function CADFileManagerWindow({connection,tabs,project,standaloneTabs,onC
           <details className="cad-managed-design" open><summary><ToolIcon name="assembly"/><span><strong>{project.name}</strong><small>Hybrid Design</small></span></summary>
             <div className="cad-managed-design-children">
               <h3>Integrated contents</h3>
-              {(['Part Studio','Assembly'] as const).map(kind=>{
+              {(['Part Studio','Assembly','Drawing'] as const).map(kind=>{
                 const items=shown.filter(tab=>tab.detail===kind&&!project.linkedIds.includes(tab.id));
-                return items.length ? <section key={kind}><h4>{kind==='Assembly'?'Assemblies':'Part studios'}</h4>{list(items,`Integrated ${kind}`)}</section> : null;
+                return items.length ? <section key={kind}><h4>{kind==='Assembly'?'Assemblies':kind==='Drawing'?'Drawings':'Part studios'}</h4>{list(items,`Integrated ${kind}`)}</section> : null;
               })}
               {!shown.some(tab=>!project.linkedIds.includes(tab.id))&&<p className="cad-managed-tabs-empty">No integrated contents match this view.</p>}
               {project.linkedIds.length>0&&<section><h3>Linked standalone files</h3>{list(shown.filter(tab=>project.linkedIds.includes(tab.id)),'Linked standalone files')}</section>}

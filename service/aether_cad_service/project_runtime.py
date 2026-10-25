@@ -41,6 +41,9 @@ def decode(encoded):
             raise ValueError("Invalid container")
     workspace = AetherWorkspace.from_bytes(raw)
     validate_workspace_part_headers(workspace)
+    from .document import validate_drawing_header
+    for drawing in workspace.drawings.values():
+        validate_drawing_header(drawing["document"])
     return workspace
 
 
@@ -58,7 +61,7 @@ def execute(path, data):
     elif path in ("/api/cad/project-read", "/api/cad/project-edit"):
         workspace = decode(data["data_base64"])
         if path.endswith("-edit"):
-            if data["operation"] == "add_part" and "document" not in data:
+            if data["operation"] == "add_part" and data.get("document") is None:
                 data = {**data, "document": new_part_document()}
             if data["operation"] in ("add_part", "save_part", "link_part", "update_link"):
                 validate_part_header(data.get("document"))

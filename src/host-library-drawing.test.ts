@@ -85,3 +85,25 @@ it("reads a project Part source without changing the Drawing's document or eleme
   expect(calls.slice(-2)).toMatchObject([{ action: "read_revision", data: { revision: 7, branch: "test" } }, { action: "project_read", data: { revision: 7, branch: "test" } }]);
   expect((await import("./document-session")).documentSession()?.id).toBe("drawing"); expect(host.activeProject).toBeNull();
 });
+
+it("opens and autosaves an embedded Drawing against its design without creating a standalone file", async () => {
+  history.replaceState(null, "", "/cad/index.html?document=design&drawing=print&branch=experiment");
+  const drawing = createDrawingDocument(source); drawing.documentId = 'print';
+  const project = {parts: [{id:'part',name:'Bracket',document:source}],assemblies:[],drawings:[{id:'print',name:drawing.name,document:drawing}]};
+  files.set('design',{id:'design',name:'Design.acad',revision:5,writable:true,data_base64:'archive'});
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => String(url).endsWith('/project_read')
+    ? new Response(JSON.stringify({...files.get('design'),project})) : original(url, init));
+  const persist = vi.fn(async () => ({file:{...files.get('design'),revision:6},project,drawing,id:'print'}));
+  vi.doMock('./design/hosted-drawings',()=>({persistDesignDrawing:persist}));
+  try {
+    const host = await import('./host-library');
+    const file = await host.loadHostedFile();expect(file?.name).toMatch(/\.acdrw$/);host.markHostedClean();
+    drawing.name = 'Edited print';
+    await host.saveHostedFile('Edited print.acdrw',new TextEncoder().encode(serializeDrawingDocument(drawing)));
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({id:'design',revision:5}),'experiment',expect.objectContaining({name:'Edited print'}),'print');
+    expect(calls.some(call=>call.action==='create')).toBe(false);
+    expect((await import('./document-session')).documentSession()?.id).toBe('design');
+    expect(location.search).toContain('drawing=print');
+  } finally { vi.doUnmock('./design/hosted-drawings'); }
+});

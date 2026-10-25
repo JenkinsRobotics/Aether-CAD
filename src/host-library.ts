@@ -3,7 +3,7 @@ import { AutosaveSession, readRecovery, recoveryKey, sessionOwner } from "@aethe
 import { configureDocumentSession } from "./document-session";
 import { isPartFile, isProjectFile, isDrawingFile } from "@aether/core/document/file-types";
 import { parsePartDocument, type PartDocument } from "@aether/core/document";
-import type { DrawingSourceReference } from "@aether/core/drawing";
+import { parseDrawingDocument, type DrawingDocument, type DrawingSourceReference } from "@aether/core/drawing";
 import type { AssemblyProjectionV1 } from './cad-assembly-bridge';
 /** Hosted file transport only; document interpretation stays in Core. */
 export const hostedCAD = location.pathname.startsWith("/cad/");
@@ -23,6 +23,7 @@ export type Project = {
     source?: { kind: string; asset_ref?: string; label?: string };
   }[];
   assemblies: { id: string; name: string }[];
+  drawings?: { id: string; name: string; document: unknown }[];
 };
 export let activeProject: Project | null = null;
 /** Refresh project tabs from the active canonical archive after an assembly
@@ -66,6 +67,7 @@ export async function readHostedSource(ref: DrawingSourceReference): Promise<Par
   return parsePartDocument(new TextDecoder().decode(Uint8Array.from(atob(file.data_base64), c => c.charCodeAt(0))));
 }
 let activePartId: string | null = null;
+let activeDrawingId: string | null = null;
 let linkedPartReadOnly = false;
 /** Live editor automation observes the same linked/revision access as saving. */
 export function hostedPartEditable(): boolean {
@@ -78,7 +80,7 @@ export async function editHostedProject(
 ) {
   if (dirty)
     throw new Error("Save your current work before changing project items.");
-  if (!active?.writable) throw new Error("This project is read-only.");
+  if (!active?.writable || query.has("revision")) throw new Error("This project is read-only.");
   const result = (await request("project_edit", {
     id: active.id,
     expected_revision: active.revision,
@@ -92,7 +94,21 @@ export async function editHostedProject(
   queue?.updateBase(fileIdentity(active));
   return result;
 }
-export function projectItemURL(id: string, kind: "part" | "assembly") {
+/** Attach a fully built Drawing to the current design without creating a Drive file. */
+export async function createHostedDesignDrawing(drawing: DrawingDocument): Promise<DrawingDocument> {
+  if (!activeProject || !active?.writable || query.has("revision")) throw Error("Open a writable Hybrid design first.");
+  await flushAutosaveNow();
+  const { persistDesignDrawing } = await import("./design/hosted-drawings");
+  const result = await persistDesignDrawing(active, query.get("branch") ?? undefined, drawing);
+  active = result.file; activeProject = result.project; activePartId = null; activeDrawingId = result.id;
+  linkedPartReadOnly = false;
+  query.delete("part"); query.delete("assembly"); query.set("drawing", result.id);
+  history.replaceState(null, "", location.pathname + "?" + query);
+  startQueue();
+  window.dispatchEvent(new Event("cad-document-navigation"));
+  return result.drawing;
+}
+export function projectItemURL(id: string, kind: "part" | "assembly" | "drawing") {
   return (
     "/cad/index.html?document=" +
     encodeURIComponent(active!.id) +
@@ -126,7 +142,7 @@ let captureSerial = 0;
 let draftID = "";
 const snapshotText = (value: Snapshot) => JSON.stringify({ name: value.name, data: Array.from(value.bytes) });
 function keyFor(file: StoredFile | null) {
-  const scope = [file?.id ?? draftID, activePartId ?? query.get("assembly") ?? "", query.get("branch") ?? "", query.get("revision") ?? ""].join(":");
+  const scope = [file?.id ?? draftID, activeDrawingId ?? activePartId ?? query.get("assembly") ?? "", query.get("branch") ?? "", query.get("revision") ?? ""].join(":");
   return recoveryKey("cad", owner, scope);
 }
 function fileIdentity(file: StoredFile | null): StoredFile | null {
@@ -217,6 +233,7 @@ export function detachHostedFile() {
   active = null;
   activeProject = null;
   activePartId = null;
+  activeDrawingId = null;
   linkedPartReadOnly = false;
   document.querySelector(".project-tabs")?.remove();
   draftID = crypto.randomUUID();
@@ -228,11 +245,11 @@ export function detachHostedFile() {
 /** Switch transport identity transactionally after the old document is saved. */
 export async function switchHostedDocument(url: URL, open: (file: File, url: URL) => Promise<void>) {
   await flushAutosaveNow();
-  const previous = { active, activeProject, activePartId, linkedPartReadOnly, query, draftID };
+  const previous = { active, activeProject, activePartId, activeDrawingId, linkedPartReadOnly, query, draftID };
   let attemptedOpen = false;
   try {
     query = new URLSearchParams(url.search);
-    active = null; activeProject = null; activePartId = null; linkedPartReadOnly = false;
+    active = null; activeProject = null; activePartId = null; activeDrawingId = null; linkedPartReadOnly = false;
     const file = await loadHostedFile(false);
     if (!file) throw new Error("This tab has no saved document.");
     attemptedOpen = true;
@@ -241,7 +258,7 @@ export async function switchHostedDocument(url: URL, open: (file: File, url: URL
     url.search = query.toString();
   } catch (error) {
     active = previous.active; activeProject = previous.activeProject;
-    activePartId = previous.activePartId; linkedPartReadOnly = previous.linkedPartReadOnly;
+    activePartId = previous.activePartId; activeDrawingId = previous.activeDrawingId; linkedPartReadOnly = previous.linkedPartReadOnly;
     query = previous.query; draftID = previous.draftID;
     opening = false; recovering = false; dirty = false;
     startQueue();
@@ -286,6 +303,12 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
       branch: query.get("branch") ?? undefined,
     })) as StoredFile & { project: Project };
     activeProject = result.project;
+    if (query.has("drawing")) {
+      const drawing = activeProject.drawings?.find(item => item.id === query.get("drawing"));
+      if (!drawing) throw Error("This Drawing is not present in the selected design revision.");
+      activeDrawingId = drawing.id;
+      return restoreFile(new File([JSON.stringify(drawing.document)], drawing.name + ".acdrw"));
+    }
     if (query.has("assembly") && !activeProject.assemblies.some(item => item.id === query.get("assembly"))) throw new Error("This Assembly is not present in the selected project revision.");
     if (
       query.has("part") &&
@@ -339,6 +362,14 @@ async function persistHostedFile(
   if (saving) throw new Error("A save is already in progress.");
   saving = true;
   try {
+    if (activeDrawingId && active && isDrawingFile(name)) {
+      if (query.has("revision")) throw Error("This design revision is read-only.");
+      const { persistDesignDrawing } = await import("./design/hosted-drawings");
+      const result = await persistDesignDrawing(active, query.get("branch") ?? undefined,
+        parseDrawingDocument(new TextDecoder().decode(bytes)), activeDrawingId);
+      active = result.file; activeProject = result.project;
+      return;
+    }
     if (activePartId && active && isPartFile(name)) {
       if (!active.writable || linkedPartReadOnly)
         throw new Error(
@@ -384,8 +415,8 @@ async function persistHostedFile(
         parent: query.get("folder"),
         scope: query.get("scope") === "workspace" ? "workspace" : "personal",
       });
-      activeProject = null; activePartId = null; linkedPartReadOnly = false;
-      for (const key of ["part", "assembly", "branch", "revision"]) query.delete(key);
+      activeProject = null; activePartId = null; activeDrawingId = null; linkedPartReadOnly = false;
+      for (const key of ["part", "assembly", "drawing", "branch", "revision"]) query.delete(key);
     }
     query.set('document',active.id);query.delete('draft');query.delete('new');
     history.replaceState(null,'',`/cad/index.html?${query}`);

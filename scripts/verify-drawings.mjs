@@ -10,7 +10,7 @@ const run = request => {
   assert.equal(child.status, 0, child.stderr);
   const result = JSON.parse(child.stdout); assert.equal(result.error, undefined, result.error); return result;
 };
-const part = { format: 'aether-part', formatVersion: 21, documentId: 'drawing-source', name: 'Drawing cylinder', units: 'millimeter', features: [
+const part = { format: 'aether-part', formatVersion: 22, documentId: 'drawing-source', name: 'Drawing cylinder', units: 'millimeter', features: [
   { id: 'profile', type: 'profile', name: 'Circle', suppressed: false, plane: 'XY', offsetMillimeters: 0, profile: { type: 'circle', centerMillimeters: [0, 0], radiusMillimeters: 7 } },
   { id: 'extrude', type: 'extrude', name: 'Extrude', suppressed: false, profileFeatureId: 'profile', distanceMillimeters: 12, operation: 'new' },
 ] };

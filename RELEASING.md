@@ -109,3 +109,12 @@ Package-manager versions and the shared UI dependency version are separate.
 
 Current source setup is local. Installed app bytes remain unchanged.
 Stable `0.1` on `master` and remote publication are later release operations.
+
+Hybrid design browser changes require `scripts/verify-hybrid-files-browser.mjs`
+through the disposable authenticated fixture with the matching CAD worker. It
+checks explicit Part-to-Hybrid copying, internal Parts/Assemblies/Drawings,
+Drawing autosave/reopen, Drive navigation and scope isolation. Run
+`service/tests/test_native_design_drawings.py` for graph schema 3 round trips,
+metadata, recycle/restore and refusal by the previous released codec. Older
+installed CAD/Animation readers cannot open schema 3; they refuse rather than
+remove embedded Drawings. Do not downgrade the graph version for rollback.

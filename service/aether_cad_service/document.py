@@ -59,6 +59,8 @@ class CADDocument:
             self.workspace = AetherWorkspace.from_bytes(content)
             validate_workspace_part_headers(self.workspace)
             self.part = None
+            for drawing in self.workspace.drawings.values():
+                validate_drawing_header(drawing["document"])
             raw = self.workspace.document_settings
         else:
             decoded = json.loads(content)
@@ -105,6 +107,7 @@ class CADDocument:
             for kind, mapping in [
                 ("part", self.workspace.part_definitions),
                 ("assembly", self.workspace.assemblies),
+                ("drawing", self.workspace.drawings),
             ]:
                 for key, item in mapping.items():
                     result.append(
@@ -112,14 +115,14 @@ class CADDocument:
                             "id": key,
                             "kind": kind,
                             "name": item["name"],
-                            "description": item.get("description") or "",
+                            "description": (item.get("document", {}) if kind == "drawing" else item).get("description") or "",
                             "category": next(
                                 (
                                     p["value"]
                                     for p in item.get("custom_properties", [])
                                     if p["key"] == "category"
                                 ),
-                                kind.title(),
+                                item.get("document", {}).get("category", kind.title()) if kind == "drawing" else kind.title(),
                             ),
                             "readOnly": item.get("source", {}).get("kind") == "linked",
                         }
@@ -303,7 +306,7 @@ class CADDocument:
         if self.workspace:
             target = self.workspace.part_definitions.get(
                 parent
-            ) or self.workspace.assemblies.get(parent)
+            ) or self.workspace.assemblies.get(parent) or self.workspace.drawings.get(parent)
             if not target:
                 raise ValueError("Item not found.")
             if target.get("source", {}).get("kind") == "linked":
@@ -315,6 +318,8 @@ class CADDocument:
                 target["mass_kg"] = mass
                 self.settings["itemQuantities"][key].pop("mass", None)
             doc = target.get("feature_document")
+            if parent in self.workspace.drawings:
+                target["document"].update(name=name, description=description, category=category)
         elif self.drawing is not None:
             if parent != "drawing" or body:
                 raise ValueError("Drawing item not found.")
@@ -365,18 +370,18 @@ class CADDocument:
             mapping = (
                 self.workspace.part_definitions
                 if item["kind"] == "part"
-                else self.workspace.assemblies
+                else self.workspace.drawings if item["kind"] == "drawing" else self.workspace.assemblies
             )
             if key in mapping:
                 raise ValueError("An item already uses this identity.")
             mapping[key] = copy.deepcopy(item["value"])
             del trash[key]
             return
-        kind = "part" if key in self.workspace.part_definitions else "assembly"
+        kind = "part" if key in self.workspace.part_definitions else "drawing" if key in self.workspace.drawings else "assembly"
         mapping = (
             self.workspace.part_definitions
             if kind == "part"
-            else self.workspace.assemblies
+            else self.workspace.drawings if kind == "drawing" else self.workspace.assemblies
         )
         if key not in mapping:
             raise ValueError("Item not found.")

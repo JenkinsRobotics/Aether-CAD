@@ -41,7 +41,7 @@ it('reads exact selected Part JSON and refuses a missing project tab',async()=>{
  const part=createEmptyPartDocument('Bracket');mocks.request.mockResolvedValue({project:{parts:[{id:'part-b',document:part}]}});
  expect(JSON.parse(await tabPartCode({...target,revision:7}))).toMatchObject({name:'Bracket',format:'aether-part'});
  expect(mocks.request.mock.calls[0]).toEqual(['cad','project_read',{id:'file-b',branch:'Design B',revision:7}]);
- mocks.request.mockResolvedValue({project:{parts:[]}});await expect(tabPartCode(target)).rejects.toThrow('no editable Part');
+ mocks.request.mockResolvedValue({project:{parts:[]}});await expect(tabPartCode(target)).rejects.toThrow('no editable document');
 });
 it('reads unsaved code from the canonical editor snapshot',async()=>{
  mocks.snapshot.mockReturnValue({bytes:new TextEncoder().encode(JSON.stringify(createEmptyPartDocument('Draft')))});
@@ -88,4 +88,16 @@ it('shows the Drawing authoring document and routes properties to its own metada
  await editTabProperties(drawingTarget,drawingMeta,{name:'Drawing name',description:'Manufacturing notes',category:'Drawing'});
  expect(mocks.request.mock.calls.at(-1)?.[2]).toMatchObject({id:'drawing-file',item_id:'drawing',operation:'properties'});
  expect(tabActionItems(drawingTarget).some(item=>item.id==='code'&&!item.disabled)).toBe(true);
+});
+
+it('reads an internal Drawing from the selected design revision and retains its URL scope',async()=>{
+ const {createDrawingDocument}=await import('@aether/core/drawing');
+ const drawing=createDrawingDocument(createEmptyPartDocument('Internal source'));
+ const drawingTarget:CADTabTarget={...target,id:drawing.documentId,itemId:drawing.documentId,kind:'drawing',revision:7};
+ mocks.request.mockResolvedValue({project:{parts:[{id:'part-b',document:createEmptyPartDocument('Other')}],drawings:[{id:drawing.documentId,document:drawing}]}});
+ expect(JSON.parse(await tabPartCode(drawingTarget))).toEqual(drawing);
+ expect(mocks.request).toHaveBeenCalledWith('cad','project_read',{id:'file-b',branch:'Design B',revision:7});
+ const url=new URL(tabURL(drawingTarget),'http://localhost');
+ expect(url.searchParams.get('drawing')).toBe(drawing.documentId);
+ expect(url.searchParams.has('part')).toBe(false);
 });

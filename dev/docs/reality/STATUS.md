@@ -1,5 +1,37 @@
 # Aether CAD source status
 
+## 2026-10-25 — Hybrid design contents and Drive navigation
+
+Files now separates **This design** from **Drive**. The design tab shows only the
+current container's Part Studios, Assemblies and Drawings, or the single current
+standalone file. The plus and background menus create internal items in a Hybrid
+design. A standalone Part has an explicit **Create Hybrid design from this Part**
+copy command; it preserves the original file. Drive starts in the saved file's
+folder, supports breadcrumbs and workspace switching, and creates folders or
+independent CAD documents in the displayed location.
+
+Drawings are stored inside the same Hybrid archive, including source reference,
+sheets and annotations. Opening, autosave, metadata, duplicate, recycle/restore
+and branch/revision guards use the existing CAD/Studio document boundary. The
+matching product worker adds graph schema 3 via canonical codec23; older readers
+refuse it, while designs without drawings retain schema 1/2. No Studio host or
+database change is needed. A browser regression also fixed internal Part creation
+when Studio serializes an absent optional document as null.
+
+The UI creation-action contract is shared in @aether/ui alpha.214 (creation contract introduced in alpha.212). Tab folders
+and ordering remain device preferences. Drawing sources remain Part-based;
+Assembly drawing sources are outside this change. See HYBRID_DESIGN.md.
+
+Qualification: full CAD app suite 1,900 pass / 1 skipped, engine 1,173 pass,
+native packaged service 318 pass, canonical codec 84 focused pass; affected
+frontend checks: final 28 pass, including internal Drawing selection and save/reopen. Shared UI
+922 tests plus types, library and gallery builds pass. The disposable browser
+checks cover a real solid copied into a Hybrid design, internal item creation,
+drawing geometry and annotations saved/reopened, Drive folders and narrow layout.
+All 11 existing standalone drawing browser workflows also pass, including live
+agent edits, source refresh, exports, revisions and metadata. Headless kernel,
+region and 12-process drawing checks pass. User documents were not used as fixtures.
+
 ## 2026-10-25 — CAD alpha-0.1.15 installed: panel context actions
 
 The shared UI no longer appends generic Undo/Redo/Settings commands to CAD menus

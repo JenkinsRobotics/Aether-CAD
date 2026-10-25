@@ -71,7 +71,7 @@ export function CADTabActionDialog({target,action,flush,onClose,onApplied}:{targ
           <FieldRow label="Description" htmlFor="tab-action-description"><TextField id="tab-action-description" value={description} maxLength={10000} disabled={readonly||busy} onChange={event=>setDescription(event.target.value)}/></FieldRow>
           <FieldRow label="Category" htmlFor="tab-action-category"><TextField id="tab-action-category" value={category} maxLength={120} disabled={readonly||busy} onChange={event=>setCategory(event.target.value)}/></FieldRow>
         </>}
-        {action==='duplicate'&&<p>{target.itemId?'Creates an independent Part Studio in this document.':'Creates an independent copy in My files. The original history stays with its source.'}</p>}
+        {action==='duplicate'&&<p>{target.itemId?`Creates an independent ${target.kind==='drawing'?'Drawing':'Part Studio'} in this design.`:'Creates an independent copy in My files. The original history stays with its source.'}</p>}
       </>}
       {readonly&&action!=='duplicate'&&<p>This tab is read-only.</p>}
     </>}

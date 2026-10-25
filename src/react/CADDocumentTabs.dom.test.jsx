@@ -59,3 +59,20 @@ it('keeps the hamburger in the document tray and revision after the part name',a
  expect(tab.querySelector('.aui-document-tab-detail').textContent).toBe('Part Studio · V1.0');
  expect(tab.querySelector('.aui-tab-menu')).toBeTruthy();
 });
+
+it('limits This design to its current standalone document instead of every open file',async()=>{
+ browserTabStorage().setItem('aether-cad.open-files',JSON.stringify([{id:'elsewhere',name:'Unrelated Drive file',kind:'part'}]));
+ await act(async()=>root.render(<Tabs variant="browser" connection={{key:'test',name:'Bracket',flush:vi.fn()}}/>));
+ expect(container.querySelector('[data-document-tab-id="test"]')).toBeTruthy();
+ expect(container.querySelector('[data-document-tab-id="elsewhere"]')).toBeNull();
+ expect([...container.querySelectorAll('[role="tab"]')].map(tab=>tab.textContent)).toEqual(['This design','Drive']);
+ expect(container.textContent).toContain('Standalone part');
+});
+it('lists embedded drawings and uses internal creation actions in a Hybrid design',async()=>{
+ host.activeProject={parts:[{id:'p',name:'Bracket'}],assemblies:[{id:'a',name:'Mechanism'}],drawings:[{id:'d',name:'Manufacturing'}]};
+ await act(async()=>root.render(<Tabs variant="browser" connection={{key:'test',name:'Bracket',flush:vi.fn()}}/>));
+ expect([...container.querySelectorAll('[data-document-tab-id]')].map(tab=>tab.dataset.documentTabId)).toEqual(['p','a','d']);
+ await act(async()=>container.querySelector('[aria-label="Create in this design"]').click());
+ const items=[...document.querySelectorAll('[role="menuitem"]')].map(item=>item.textContent);
+ expect(items).toEqual(['Create Part Studio…','Create Assembly…','Create Drawing…']);
+});
