@@ -9,9 +9,9 @@ const body: TreeNode = {id:"feature/body/b1",label:"Part 1",actions:[{id:"body-v
 const rows = [sketch,revolve,body];
 function actions(node:TreeNode, selected=new Set([node.id])) {return cadFeatureActions(node,rows,selected,2,true);}
 test("CAD consumes the shared action order and only enables connected document commands",()=>{
- const menu=actions(sketch);expect(menu.slice(0,4).map(a=>a.item.label)).toEqual(["Rename","Edit…","Copy sketch","Show dimensions"]);
+ const menu=actions(sketch);expect(menu.slice(0,2).map(a=>a.item.label)).toEqual(["Rename","Edit…"]);
  for(const id of ["rename","edit","suppress","rollback-here","move-down"])expect(menu.find(a=>a.item.id===id)?.item.disabled).toBe(false);
- for(const id of ["copy-sketch","dimensions","visibility","dynamic-suppression","comment","dependencies"])expect(menu.find(a=>a.item.id===id)?.item.disabled).toBe(true);
+ for(const id of ["copy-sketch","dimensions","visibility","dynamic-suppression","comment","dependencies"])expect(menu.find(a=>a.item.id===id)).toBeUndefined();
  expect(actions(sketch,new Set([sketch.id,revolve.id])).find(a=>a.item.id==="suppress")?.item.disabled).toBe(true);
 });
 test("shared actions dispatch CAD's existing validated operations",()=>{

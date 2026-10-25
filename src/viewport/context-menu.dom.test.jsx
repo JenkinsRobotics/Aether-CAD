@@ -149,3 +149,16 @@ it('offers Unfix only for a live selected lock and invokes the validated command
   cadCommands.setEnabled('sketch-unfix',true);release();open();expect(items().some(x=>x.id==='sketch-unfix')).toBe(false);
  } finally {release();cadCommands.setEnabled('sketch-unfix',false);}
 });
+
+
+it('Parts background visibility uses one document update for every authored body', async()=>{
+ const second={id:'b3',name:'Part 3',sourceDocumentId:'d',visible:true};
+ const rows=[...viewer.getPartRows(),second]; viewer.getPartRows=()=>rows;
+ await cadViewportContext.setVisibility(['b1','b3'],false);
+ expect(apply).toHaveBeenCalledOnce();
+ expect(apply.mock.calls[0][0].bodyProperties).toMatchObject({b1:{visible:false},b3:{visible:false}});
+ expect(viewer.setPartVisibility).toHaveBeenCalledWith('b1',false);
+ expect(viewer.setPartVisibility).toHaveBeenCalledWith('b3',false);
+ cadViewportContext.zoomTo(['b1']);expect(viewer.zoomToParts).toHaveBeenCalledWith(['b1']);
+ cadViewportContext.isolate('b1');expect(viewer.isolatePart).toHaveBeenCalledWith('b1');
+});

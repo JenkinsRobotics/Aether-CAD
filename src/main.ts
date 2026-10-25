@@ -1538,7 +1538,7 @@ const partUndo: ReturnType<typeof installPartUndo> = installPartUndo(()=>activeP
  await evaluateAndShowPart(doc,"Document history restored.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
 }, () => { cadCommands.setEnabled("part-undo", partUndo?.canStep(-1) ?? false); cadCommands.setEnabled("part-redo", partUndo?.canStep(1) ?? false); }, () => activeWorkspaceKind === "part" && hostedPartEditable()
-  && cadPresentation.snapshot().workspaceMode === "modeling" && !sketchEditor);
+  && cadPresentation.snapshot().workspaceMode === "modeling" && !sketchEditor?.active);
 // Part undo/redo as commands: the same history as ⌘Z / ⌘⇧Z.
 cadCommands.register("part-undo", () => void partUndo.step(-1));
 cadCommands.register("part-redo", () => void partUndo.step(1));

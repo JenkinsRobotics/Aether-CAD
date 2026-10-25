@@ -1,5 +1,41 @@
 # Aether CAD source status
 
+## 2026-10-25 — panel context actions (qualified source; installation pending)
+
+The shared UI no longer appends generic Undo/Redo/Settings commands to CAD menus
+or substitutes them over blank panels. Files background menus create and organize
+folders, import/manage designs, and switch list/gallery; folder menus rename or
+ungroup without deleting documents, and document menus move files into folders.
+Feature backgrounds expose registered sketch, solid and reference creation,
+reference visibility, rollback, tree expansion/filtering and camera/display views.
+Parts backgrounds expose creation/import, atomic show/hide all and view controls;
+part rows include visibility, rename, appearance, isolation and framing. Unsupported
+placeholder feature commands are omitted. Existing feature edit, suppression,
+folder, reorder, rollback and delete handlers remain the document mutation boundary.
+Other shared collection panels expose their actual header/docking controls.
+
+The browser regression also exposed a permanently disabled Part Undo/Redo guard:
+SketchEditor is a persistent controller, so availability must check `.active`,
+not controller existence. Suppression now travels through the normal Part history.
+The generic context-menu Undo/Redo footer remains removed.
+
+Qualification: UI alpha.209 (`4a02c8a`) typecheck/library/gallery builds; CAD
+build/typecheck; 48 final focused CAD tests and 33 final focused shared UI tests;
+1,173 engine tests; all 315 native tests; headless kernel and region verification;
+four real authenticated browser workflows (110.59s, no page errors). The full
+source suites were also exercised: CAD's obsolete placeholder assertion was
+updated and rerun, and UI timing failures under concurrent load passed when
+rerun separately. Logs retain the interrupted overloaded runs and all retries.
+The final browser covers folder creation/move/rename/ungroup, view switching,
+feature folders/edit/suppress/unsuppress/undo/redo, Parts visibility and saved
+reopen, and camera/display commands. An initial browser failure identified the
+history guard; the final remaining test issue was its Cancel selector (the
+shared header uses `discard`). No product workaround was added for that selector.
+Worker archive a7ac606b…57105 and runner a3aff997…bd2 are unchanged from .14.
+Evidence: `.verification/baseline-2026-10-24/panel-context-browser-qualified/`
+and `panel-context-qualification/`.
+
+
 ## 2026-10-25 — CAD alpha-0.1.14 installed, Files panel verified
 
 The qualified alpha-0.1.14 app package is now active on localhost:8780, from

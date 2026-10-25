@@ -96,7 +96,7 @@ it('ribbon category changes preserve the chosen left view and right appearance i
   expect(isVisible(container.querySelector('[data-panel="configurations"]'))).toBe(true);
 });
 
-it('right-click on a feature row opens the Onshape-style context menu with working and greyed rows', async () => {
+it('right-click on a feature row offers its real controls without generic or placeholder commands', async () => {
   const { cadWorkspace } = await import('../cad-workspace-store');
   await act(async () => cadWorkspace.publish({
     itemNodes: [{ id: 'feature/sketch/s1', label: 'Sketch 1', actions: [{ id: 'edit-feature', label: 'Edit Sketch 1', icon: '✎' }] }],
@@ -111,8 +111,9 @@ it('right-click on a feature row opens the Onshape-style context menu with worki
   const menuItem = (label) => [...menu.querySelectorAll('[role="menuitem"],[role="menuitemradio"]')].find((el) => el.textContent.includes(label));
   expect(menuItem('Rename')).toBeTruthy();
   expect(menuItem('Edit…')).toBeTruthy();
-  const section = menuItem('Show dependencies…');
-  expect(section?.getAttribute('aria-disabled') ?? String(section?.disabled)).toMatch(/true/);
+  expect(menuItem('Show dependencies…')).toBeUndefined();
+  expect(menuItem('Undo sketch')).toBeUndefined();
+  expect(menuItem('Aether CAD settings')).toBeUndefined();
   const actions = [];
   const stop = cadWorkspace.registerActionHandler((a) => actions.push(a));
   await act(async () => menuItem('Edit…').click());

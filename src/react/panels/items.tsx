@@ -8,6 +8,7 @@ import { adjacentFeature, itemTreePresentation } from "./item-tree";
 import "./items.css";
 import { cadFeatureActions, cadTreeCommand, cadHistoryCount } from "./feature-tree-commands";
 import { CADPartsPanel, CADAssemblyPartsPanel } from "./parts";
+import { useCADPanelContext } from "./panel-context-commands";
 import { findTreeNode } from "./shared";
 
 export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.dispatch({ type: "select-panel", panel: "visualization" }); } }: { active: boolean; onShowAppearance?: () => void }) {
@@ -68,12 +69,19 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
       onClick: () => { if (selected && next) cadWorkspace.dispatch({ type: "move-item", id: selected.id, targetID: next.id, position: "after" }); } },
   ];
   const rawNodes = [...workspace.itemNodes, ...(workspace.bodyNodes ?? [])];
+  const panelMenu = useCADPanelContext(rawNodes);
   const menuActions = (id: string) => {
     const node = findTreeNode(rawNodes, id);
     return node && id !== "rollback-bar" && id !== "reference-folder" ? cadFeatureActions(node, rawNodes, selectedIDs, workspace.rollbackIndex, presentation.partOpen, workspace.historyItems.filter(row => row.id.startsWith("history/feature/")).map(row => row.id.slice("history/feature/".length))) : [];
   };
-  const menuItems = (id: string) => featureTreeMenuItems(menuActions(id));
+  const extraActions = (id: string) => (findTreeNode(rawNodes, id)?.actions ?? [])
+    .filter(action => ['break-link', 'folder-unnest'].includes(action.id));
+  const menuItems = (id: string) => [...featureTreeMenuItems(menuActions(id)),
+    ...extraActions(id).map(action => ({...action, id:`row:${action.id}`, separatorBefore:true, disabled:!presentation.partOpen}))];
   const runMenu = (id: string, commandID: string) => {
+    if (commandID.startsWith('row:') && presentation.partOpen && extraActions(id).some(action => action.id === commandID.slice(4))) {
+      dispatch(id,commandID.slice(4)); return;
+    }
     const node = findTreeNode(rawNodes, id), action = menuActions(id).find(entry => entry.item.id === commandID);
     if (!node || !action || action.item.disabled) return;
     if (action.request.command === "appearance") { selectRows([id]); onShowAppearance(); return; }
@@ -102,6 +110,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
           id="parts-list" className="cad-items-tree"
           nodes={nodes}
           controls={controls} controlsLabel="Feature tree controls"
+          backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
           menuItems={menuItems} menuLabel="Feature actions" onCommand={runMenu}
           onActivate={id=>cadWorkspace.dispatch({type:"item-action",id,actionID:"edit-feature"})}
           onMove={(id,targetID,position)=>cadWorkspace.dispatch({type:"move-item",id,targetID,position})}

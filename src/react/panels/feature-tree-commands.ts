@@ -45,8 +45,11 @@ export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], se
       default: return false;
     }
   };
+  const available = ["rename", "edit", "visibility", "suppress", "rollback", "move", "new-folder", "add-to-folder", "delete", "appearance"] as const;
   return featureTreeActions(item, { selected, features, rollbackIndex,
-    available: ["rename", "edit", "visibility", "suppress", "rollback", "move", "new-folder", "add-to-folder", "delete", "appearance"], canCommand: supported });
+    available, canCommand: supported })
+    .filter(action => (available as readonly string[]).includes(action.request.command))
+    .filter(action => action.request.command !== 'visibility' || node.actions?.some(entry => ['body-visibility', 'toggle-visibility'].includes(entry.id)));
 }
 /** No evaluator or new document mutation: dispatch the same commands as existing CAD controls. */
 export function cadTreeCommand(request: FeatureTreeRequest, node: TreeNode): CADWorkspaceAction | null {

@@ -20,6 +20,10 @@ class ViewportContextStore {
   private listeners = new Set<() => void>();
   open: (event: MouseEvent) => void = () => {};
   changeAppearance: (value: PartDisplayOverride) => void = () => {};
+  /** Shared by Parts background commands; all writes use the viewport's atomic document update. */
+  setVisibility: (ids: readonly string[], visible: boolean) => Promise<void> = async () => {};
+  isolate: (id: string | null) => void = () => {};
+  zoomTo: (ids?: readonly string[]) => void = () => {};
   snapshot = () => this.value;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   patch(value: Partial<ViewportContextSnapshot>) { this.value = { ...this.value, ...value }; this.listeners.forEach(fn => fn()); }
@@ -101,6 +105,9 @@ export function configureViewportContext(deps: {
       for (const id of ids) viewer.setPartVisibility(id, visible);
     } catch (error) { deps.status(error instanceof Error ? error.message : String(error)); }
   };
+  cadViewportContext.setVisibility = visibility;
+  cadViewportContext.isolate = id => viewer.isolatePart(id);
+  cadViewportContext.zoomTo = ids => viewer.zoomToParts(ids ? [...ids] : undefined);
   cadViewportContext.changeAppearance = value => {
     const detail = cadViewportContext.snapshot().detail;
     if (detail?.kind !== 'appearance' || !viewer.getPartRows().some(row => row.id === detail.id)) return;
@@ -198,5 +205,5 @@ export function configureViewportContext(deps: {
     }));
     cadViewportContext.patch({ menu: { anchor: { x: event.clientX, y: event.clientY }, items: guard(items) } });
   };
-  return () => { window.removeEventListener('aether-part-updated', invalidated); cadViewportContext.open = () => {}; cadViewportContext.changeAppearance = () => {}; invalidated(); };
+  return () => { window.removeEventListener('aether-part-updated', invalidated); cadViewportContext.setVisibility = async () => {}; cadViewportContext.isolate = () => {}; cadViewportContext.zoomTo = () => {}; cadViewportContext.open = () => {}; cadViewportContext.changeAppearance = () => {}; invalidated(); };
 }

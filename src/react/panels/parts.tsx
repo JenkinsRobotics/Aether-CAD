@@ -2,6 +2,8 @@ import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 /** Parts are a flat projection of the existing body tree, not a second model. */
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { AetherIcon, TreePanel, FeatureTypeIcon, Menu, featureTreeMenuItems, type TreeNode } from "@aether/ui";
+import { useCADPanelContext } from "./panel-context-commands";
+import { cadViewportContext } from "../../viewport/context-menu";
 import { cadFeatureActions, cadTreeCommand } from "./feature-tree-commands";
 
 export function partRows(nodes: readonly TreeNode[]): readonly TreeNode[] {
@@ -16,6 +18,7 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
   onShowAppearance: () => void;
 }) {
   const rows = useMemo(() => partRows(nodes), [nodes]);
+  const panelMenu = useCADPanelContext(rows, "parts");
   const items: TreeNode[] = rows.map(row => ({
     id: row.id,
     label: row.label,
@@ -41,6 +44,7 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
     onAction(selected.id, "body-rename");
   }}>
     <TreePanel title={`Parts (${rows.length})`} ariaLabel="CAD parts" nodes={items}
+      backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
       menuItems={()=>[]} className="cad-parts-list" rowHeight={24} showFilter={false}
       selectedIDs={selectedIDs} onSelect={onSelect}
       controls={[{ id: "body-rename", label: "Rename part", icon: <AetherIcon name="pencil" />,
@@ -49,7 +53,14 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
       onAction={onAction}
       onContextMenu={(id,x,y) => { if (!selectedIDs.has(id)) onSelect([id], "single"); setMenu({id,x,y}); }}
       emptyState={rows.length ? "No matching parts" : "Create or import a solid to see its parts here."} />
-    {menu && menuNode && <Menu open ariaLabel="Part actions" anchor={{x:menu.x,y:menu.y}} items={featureTreeMenuItems(menuActions)} onClose={()=>setMenu(null)} onSelect={id=>{
+    {menu && menuNode && <Menu open ariaLabel="Part actions" anchor={{x:menu.x,y:menu.y}} items={[...featureTreeMenuItems(menuActions),
+      {id:'zoom-part',label:'Zoom to part',separatorBefore:true},
+      {id:'isolate-part',label:'Isolate part'},
+      {id:'exit-isolation',label:'Exit isolation'},
+    ]} onClose={()=>setMenu(null)} onSelect={id=>{
+      if(id==='zoom-part')cadViewportContext.zoomTo([menuNode.id.slice(13)]);
+      else if(id==='isolate-part')cadViewportContext.isolate(menuNode.id.slice(13));
+      else if(id==='exit-isolation')cadViewportContext.isolate(null);
       const action=menuActions.find(entry=>entry.item.id===id);
       if(action&&!action.item.disabled){
         if(action.request.command==="appearance"){onSelect([menuNode.id],"single");onShowAppearance();}
@@ -66,8 +77,10 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
 export function CADAssemblyPartsPanel() {
   const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
   const rows = assembly.data?.instanceRows ?? [];
+  const panelMenu = useCADPanelContext(rows, "assembly");
   return <div className="cad-parts-panel">
     <TreePanel title={`Components (${rows.length})`} ariaLabel="CAD assembly components"
+      backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
       nodes={rows} rowHeight={24} showFilter={false} className="cad-parts-list"
       selectedIDs={assembly.selectedEntityIDs}
       onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })}

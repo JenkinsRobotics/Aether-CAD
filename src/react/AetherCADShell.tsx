@@ -2,7 +2,6 @@ import { CADShareDocument } from "./CADShareDocument";
 import { CADDocumentControls } from "./CADDocumentControls";
 import { CADStudioWorkspaceControls, CADStudioViewTools } from "./CADStudioControls";
 import { cadFeaturePalette } from './cad-feature-tray';
-import { sketchContextCommands } from '../sketch/context-commands';
 import type { CADToolContext } from '../tools/availability';
 import {CADPrimitiveDialog} from "./CADPrimitiveDialog";
 import { CADStatusNotice } from "./CADStatusNotice";
@@ -15,7 +14,6 @@ import {CADImportDialog} from "./CADImportDialog";
 import {CAD_IMPORT_ACCEPT} from "../modeling/cad-import";
 import { CADWorkspaceLayoutPopover } from "./CADWorkspaceLayoutPopover";
 import { CADPluginsIcon, CADPluginsWindow } from "./CADPluginsWindow";
-import { useContextCommands } from '@aether/ui';
 import { CADDocumentTabs } from "./CADDocumentTabs";
 import { useStudioApplications } from "@aether/session/applications";
 import { useDocumentConnection } from "@aether/session/useDocumentConnection";
@@ -193,12 +191,6 @@ export function AetherCADShell() {
     cadCommands.snapshot,
     cadCommands.snapshot,
   );
-  useContextCommands([
-    ...sketchContextCommands(),
-    { id:'undo', label:'Undo sketch', heading:'Edit', disabled:!commands['sketch-undo']?.enabled, run:() => { cadCommands.execute('sketch-undo'); } },
-    { id:'redo', label:'Redo sketch', disabled:!commands['sketch-redo']?.enabled, run:() => { cadCommands.execute('sketch-redo'); } },
-    { id:'zoom-fit', label:'Fit view', heading:'View', separatorBefore:true, disabled:!commands['fit-view']?.enabled, run:() => { cadCommands.execute('fit-view'); } },
-  ]);
   const [chromeTheme, setChromeTheme] = useState<"suite" | "classic">(() => {
     try { return localStorage.getItem("aether-cad.chrome.studio-v1") === "classic" ? "classic" : "suite"; } catch { return "suite"; }
   });
