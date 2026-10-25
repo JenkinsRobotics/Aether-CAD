@@ -1,5 +1,14 @@
 # CAD workspace codec dependency
 
+2026-10-24: immutable build `0.1.0-21` adopts canonical tree grounding and
+relation dependency evaluation from Animation commit
+`855619103608f0c6edd79e29141af30dde39db60`. All five runtime modules match that
+commit; only `aether_workspace.py` differs from codec20. The snapshot changes no
+file fields/schema and preserves authored rest poses. Both endpoint grounding,
+conflicting anchors, signed relation chains and cycle refusal are qualified at
+source and through CAD's saved native worker. `codec21-provenance.json` records
+exact module hashes. Older archives and the installed Animation app are unchanged.
+
 2026-10-24: immutable build `0.1.0-20` adopts canonical contact metadata and cam
 lift-table preservation plus the reader-version guard from Animation commit
 `453b382a2d690ab588848c5e917c75a6c1158be8`. All five bundled runtime modules match

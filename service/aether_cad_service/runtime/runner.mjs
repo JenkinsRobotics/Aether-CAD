@@ -10423,7 +10423,7 @@ const cross$5 = (a2, b) => [
   a2[2] * b[0] - a2[0] * b[2],
   a2[0] * b[1] - a2[1] * b[0]
 ];
-const dofAxis = (name) => name.endsWith("_x") ? "x" : name.endsWith("_y") ? "y" : "z";
+const dofAxis = (name, kind) => name.endsWith("_x") || kind === "pin_slot" && name === "translation" ? "x" : name.endsWith("_y") ? "y" : "z";
 function connectorPlacement(frame) {
   const origin = [
     frame.origin_m[0] * METRES_TO_MM,
@@ -10473,16 +10473,16 @@ function assemblyJobFor(projection) {
       return [];
     }
     placed.add(instance.id);
-    const rest = instance.rest_transform;
+    const pose = instance.grounded ? instance.rest_transform : instance.solved_world_transform ?? instance.rest_transform;
     return [{
       id: instance.id,
       part: instance.definition_id,
       placement_mm: [
-        rest.position_m[0] * METRES_TO_MM,
-        rest.position_m[1] * METRES_TO_MM,
-        rest.position_m[2] * METRES_TO_MM
+        pose.position_m[0] * METRES_TO_MM,
+        pose.position_m[1] * METRES_TO_MM,
+        pose.position_m[2] * METRES_TO_MM
       ],
-      rotation: [...rest.rotation_quaternion_xyzw],
+      rotation: [...pose.rotation_quaternion_xyzw],
       grounded: instance.grounded
     }];
   });
@@ -10518,13 +10518,14 @@ function assemblyJobFor(projection) {
     const dofs = (mate.dofs ?? []).filter((dof) => (dof.state === "driven" || dof.state === "free") && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
       name: dof.name,
       kind: dof.kind,
-      axis: dofAxis(dof.name),
-      value: dof.kind === "rotation" ? dof.value_rad * 180 / Math.PI : dof.value_m * METRES_TO_MM
+      axis: dofAxis(dof.name, mate.type_id),
+      value: (mate.type_id === "pin_slot" ? -1 : 1) * (dof.kind === "rotation" ? dof.value_rad * 180 / Math.PI : dof.value_m * METRES_TO_MM)
     }));
-    return [{ id: mate.id, kind: mate.type_id, a: a2, b, ...dofs.length ? { parameters: { dofs } } : {} }];
+    const endpoints = mate.type_id === "pin_slot" ? { a: b, b: a2 } : { a: a2, b };
+    return [{ id: mate.id, kind: mate.type_id, ...endpoints, ...dofs.length ? { parameters: { dofs } } : {} }];
   });
   const dofOwner = /* @__PURE__ */ new Map();
-  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind });
+  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind, sign: mate.type_id === "pin_slot" ? -1 : 1 });
   const solvedJoints = new Set(joints.map((joint) => joint.id));
   const relations = (projection.relations ?? []).flatMap((relation) => {
     if (relation.suppressed) return [];
@@ -10539,9 +10540,9 @@ function assemblyJobFor(projection) {
       return [];
     }
     const unit2 = (k2) => k2 === "rotation" ? 180 / Math.PI : METRES_TO_MM;
-    const ratio = relation.ratio * unit2(driven.kind) / unit2(driver.kind);
-    const offset2 = driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM;
-    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset: offset2, reversed: relation.reversed }];
+    const ratio = relation.ratio * unit2(driven.kind) / unit2(driver.kind) * driven.sign / driver.sign;
+    const offset2 = driven.sign * (driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM);
+    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset: offset2, reversed: false }];
   });
   return {
     job: { parts, instances, joints, ...relations.length ? { relations } : {} },
@@ -41944,7 +41945,7 @@ function frameOf(pose, end) {
   const local2 = end.placement_mm ? [...end.placement_mm] : [0, 0, 0];
   const rot = end.rotation ? qnorm([...end.rotation]) : [0, 0, 0, 1];
   const q = qmul(pose.q, rot);
-  return { o: add$1(pose.p, rotate(pose.q, local2)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
+  return { q, o: add$1(pose.p, rotate(pose.q, local2)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
 }
 const ORIENTATION_SCALE = 100;
 const DOF_TEMPLATES = {
@@ -41964,12 +41965,36 @@ function dofValue(kind, axis, a2, b) {
   const u2 = a2[companion], v = b[companion], n = a2[axis];
   return Math.atan2(dot$2(cross$2(u2, v), n), dot$2(u2, v)) * 180 / Math.PI;
 }
-function valueResiduals(a2, b, parameters = {}) {
+const angleGap = (value2) => ((value2 + 180) % 360 + 360) % 360 - 180;
+const inverseQ = (q) => [-q[0], -q[1], -q[2], q[3]];
+function ballRotation(values) {
+  return ["x", "y", "z"].reduce((q, axis, index) => {
+    const w2 = [0, 0, 0];
+    w2[index] = values.find((dof) => dof.name === `rotation_${axis}`).value * Math.PI / 180;
+    return qmul(q, expq(w2));
+  }, [0, 0, 0, 1]);
+}
+function heldRotation(kind, values) {
+  if (kind === "ball" && values.length === 3) return ballRotation(values);
+  if (kind === "fastened" || kind === "prismatic") return [0, 0, 0, 1];
+  const turn = values.find((d2) => d2.name === "rotation" && d2.kind === "rotation" && d2.axis === "z");
+  if (turn && ["revolute", "cylindrical", "planar", "pin_slot", "parallel"].includes(kind))
+    return expq([0, 0, turn.value * Math.PI / 180]);
+}
+function orientationResidual(target, actual, hemisphere) {
+  const error = qnorm(qmul(inverseQ(target), actual)).map((v) => hemisphere * v);
+  const length = Math.hypot(error[0], error[1], error[2]);
+  const scale2 = length < 1e-12 ? 2 : 2 * Math.atan2(length, error[3]) / length;
+  return error.slice(0, 3).map((v) => ORIENTATION_SCALE * scale2 * v);
+}
+function valueResiduals(a2, b, kind, parameters = {}, hemisphere = 1) {
   const values = parameters.dofs ?? [];
-  return values.map((dof) => {
+  const rotation = heldRotation(kind, values);
+  const orientation = rotation ? orientationResidual(qmul(a2.q, rotation), b.q, hemisphere) : [];
+  return [...orientation, ...values.filter((dof) => !rotation || dof.kind !== "rotation").map((dof) => {
     const current2 = dofValue(dof.kind, dof.axis, a2, b);
-    return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * ((current2 - dof.value + 540) % 360 - 180);
-  });
+    return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current2 - dof.value);
+  })];
 }
 function jointResiduals(kind, a2, b, parameters = {}) {
   const d2 = sub$2(b.o, a2.o), S = ORIENTATION_SCALE;
@@ -42058,34 +42083,72 @@ function solveAssemblyJob(job) {
       diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate names an instance that is not in the assembly" });
       continue;
     }
-    joints.push(joint);
+    joints.push({ ...joint, parameters: { ...joint.parameters, dofs: (joint.parameters?.dofs ?? []).map((dof) => ({ ...dof })) } });
   }
   const free = [...poses.keys()].filter((id2) => !grounded.has(id2));
   const byId = new Map(joints.map((joint) => [joint.id, joint]));
   const relations = [];
+  const dofOf = (joint, name) => (joint.parameters?.dofs ?? []).find((d2) => d2.name === name) ?? templateDof(joint.kind, name);
   for (const relation of job.relations ?? []) {
     const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
     if (!driver || !driven) {
       diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" });
       continue;
     }
+    if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof) || !Number.isFinite(relation.ratio) || !Number.isFinite(relation.offset ?? 0)) {
+      diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation has an invalid coordinate, ratio or offset" });
+      continue;
+    }
     relations.push(relation);
   }
-  const dofOf = (joint, name) => (joint.parameters?.dofs ?? []).find((d2) => d2.name === name) ?? templateDof(joint.kind, name);
-  const relationResiduals = (current2) => relations.flatMap((relation) => {
-    const driverJoint = byId.get(relation.driver.joint), drivenJoint = byId.get(relation.driven.joint);
-    const d1 = dofOf(driverJoint, relation.driver.dof), d2 = dofOf(drivenJoint, relation.driven.dof);
-    if (!d1 || !d2) return [];
-    const x2 = dofValue(d1.kind, d1.axis, frameOf(current2.get(driverJoint.a.instance), driverJoint.a), frameOf(current2.get(driverJoint.b.instance), driverJoint.b));
-    const y2 = dofValue(d2.kind, d2.axis, frameOf(current2.get(drivenJoint.a.instance), drivenJoint.a), frameOf(current2.get(drivenJoint.b.instance), drivenJoint.b));
-    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x2 + (relation.offset ?? 0);
-    const gap = d2.kind === "translation" ? y2 - target : (y2 - target + 540) % 360 - 180;
-    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * gap];
-  });
+  const heldValue = (joint, name) => joint.parameters.dofs.find((d2) => d2.name === name);
+  const relationTarget = (relation, x2) => (relation.reversed ? -relation.ratio : relation.ratio) * x2 + (relation.offset ?? 0);
+  for (let pass = 0; pass < relations.length; pass++) {
+    let added = false;
+    for (const relation of relations) {
+      const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
+      const x2 = heldValue(driver, relation.driver.dof);
+      if (x2 && !heldValue(driven, relation.driven.dof)) {
+        driven.parameters.dofs.push({ ...dofOf(driven, relation.driven.dof), value: relationTarget(relation, x2.value) });
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  for (const joint of joints) {
+    const values = joint.parameters.dofs;
+    const names = new Set(values.map((d2) => d2.name));
+    if (names.size !== values.length || values.some((d2) => {
+      const expected = templateDof(joint.kind, d2.name);
+      return !Number.isFinite(d2.value) || !expected || expected.kind !== d2.kind || expected.axis !== d2.axis;
+    })) diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate coordinate is invalid, duplicate or not finite" });
+    const ballConstrained = values.length || relations.some((r) => r.driver.joint === joint.id || r.driven.joint === joint.id);
+    if (joint.kind === "ball" && ballConstrained && (values.length !== 3 || DOF_TEMPLATES.ball.some((d2) => !values.some((v) => v.name === d2.name && v.kind === d2.kind && v.axis === d2.axis))))
+      diagnostics.push({ feature_id: joint.id, severity: "error", message: "a driven ball mate requires resolved X, Y and Z rotation coordinates" });
+  }
+  const orientationHemispheres = /* @__PURE__ */ new Map();
+  for (const joint of joints) {
+    const values = joint.parameters.dofs;
+    if (diagnostics.some((d2) => d2.feature_id === joint.id && d2.severity === "error")) continue;
+    const rotation = heldRotation(joint.kind, values);
+    if (!rotation) continue;
+    const a2 = frameOf(poses.get(joint.a.instance), joint.a), b = frameOf(poses.get(joint.b.instance), joint.b);
+    const target = qmul(a2.q, rotation);
+    orientationHemispheres.set(joint.id, qmul(inverseQ(target), b.q)[3] < 0 ? -1 : 1);
+  }
+  const relationResidual = (relation, current2) => {
+    const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
+    const d1 = dofOf(driver, relation.driver.dof), d2 = dofOf(driven, relation.driven.dof);
+    const measure = (joint, dof) => heldValue(joint, dof.name)?.value ?? dofValue(dof.kind, dof.axis, frameOf(current2.get(joint.a.instance), joint.a), frameOf(current2.get(joint.b.instance), joint.b));
+    const gap = measure(driven, d2) - relationTarget(relation, measure(driver, d1));
+    const exact = heldValue(driver, d1.name) && heldValue(driven, d2.name);
+    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * (exact ? gap : angleGap(gap))];
+  };
+  const relationResiduals = (current2) => relations.flatMap((relation) => relationResidual(relation, current2));
   const residuals = (current2) => [
     ...joints.flatMap((joint) => {
       const fa = frameOf(current2.get(joint.a.instance), joint.a), fb = frameOf(current2.get(joint.b.instance), joint.b);
-      return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
+      return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.kind, joint.parameters, orientationHemispheres.get(joint.id))];
     }),
     ...relationResiduals(current2)
   ];
@@ -42149,10 +42212,14 @@ function solveAssemblyJob(job) {
   if (!errorsBefore.length) {
     for (const joint of joints) {
       const fa = frameOf(poses.get(joint.a.instance), joint.a), fb = frameOf(poses.get(joint.b.instance), joint.b);
-      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
+      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.kind, joint.parameters, orientationHemispheres.get(joint.id))];
       const worst = Math.max(0, ...values.map(Math.abs));
       if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: joint.id, severity: "error", message: `Mate is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting mates or connector references.` });
     }
+  }
+  if (!errorsBefore.length) for (const relation of relations) {
+    const worst = Math.max(...relationResidual(relation, poses).map(Math.abs));
+    if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: relation.id, severity: "error", message: `Relation is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting coordinates or relations.` });
   }
   const errors = diagnostics.filter((d2) => d2.severity === "error");
   const message = errors.map((d2) => d2.message).join("; ");
@@ -43481,7 +43548,6 @@ async function main() {
       const used = new Set(projection.instances.filter((i) => !i.suppressed).map((i) => i.definition_id));
       for (const id2 of request.template_ids ?? []) used.add(id2);
       projection.part_definitions = projection.part_definitions.filter((p2) => used.has(p2.id));
-      projection.instances = projection.instances.map((instance) => ({ ...instance, rest_transform: instance.solved_world_transform }));
       stdout.write(JSON.stringify(assemblyJobFor(projection)));
     } else {
       const result = request.phase === "build" ? await buildPhase(request.content, { rollback: request.rollback }) : request.phase === "drawing" || request.phase === "drawing_docs" ? await drawingPhase(request) : request.phase === "analyze" ? await analyzePhase(request.content, request.options) : request.phase === "export" ? await exportPhase(request.content, request.options) : request.phase === "assembly_solve" ? assemblyPhase(request.job) : request.phase === "engine" ? engineDescription() : request.phase === "assembly_example" ? exampleAssemblyRecipe("linear", request.part_id ?? void 0) : request.phase === "compare" ? { changed: serializePartDocument(parsePartDocument(request.content)) !== serializePartDocument(parsePartDocument(request.candidate)) } : request.phase === "program_begin" ? beginSavedProgram(request.content, request.program_json) : request.phase === "program_step" ? prepareSavedProgramStep(request.content, request.step, request.references) : request.phase === "program_accept" ? acceptSavedProgramStep(request) : request.command === "cad.sketch.inspect" ? { result: inspectSketch(parsePartDocument(request.content), request.arguments) } : request.command === "cad.part.docs" ? { result: savedProgramDocs(request.arguments) } : request.phase === "finalize" ? { content: finalizeCandidate(request.content, request.body_outputs, request.sketch_frames, request.scope_resolutions) } : prepareCommand(request.command, request.content, request.arguments);

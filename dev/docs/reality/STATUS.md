@@ -289,3 +289,71 @@ Frontend and worker are verified together. Frozen evidence: `assembly-owned-pose
 under `.verification/baseline-2026-10-24/`. Type checks pass for app and engine;
 all 268 final native tests pass. This is a local source/staging checkpoint only:
 no running host, installed app, database, network setting or remote was changed.
+
+
+## 2026-10-24 — Saved Assembly pose consistency
+
+The broader nonzero-value probe is now addressed. Ball coordinates use composed
+local X/Y/Z rotations; full quaternion orientation residuals retain the intended
+pose across gimbal lock, half turns and multi-turn input. Pin Slot uses the
+canonical Rz(angle) then Tx(travel) convention by reversing the solver endpoints
+and negating both coordinates. Relation ratios and offsets transform with those
+coordinates. The workspace already stores signed ratios, so CAD no longer
+applies its display reversal flag a second time.
+
+The CAD solver resolves known coordinates through relations before pose solving,
+retains whole turns for fractional ratios, and verifies relation residuals as well
+as mate residuals. Conflicting/invalid coordinates, unresolved partial Ball
+coordinates and invalid relations refuse without publishing placements. A free
+Ball without specified coordinates remains free; a driven Ball needs all three
+coordinates, directly authored or resolved through relations. Job input remains
+unchanged. The browser, exact contact checks and saved worker now share the
+same derived pose seed in `assemblyJobFor`; the headless-only seed rewrite is
+removed. Saved rest transforms remain untouched and the numerical constraints
+still validate/correct the initial guess. This also keeps floating mated groups
+from choosing different arbitrary rigid placements between those entry points.
+
+The metadata audit also demonstrated two independent canonical bugs: grounding
+a mate's second endpoint left the first at rest, and creating a downstream
+relation before its driver evaluated the chain in the wrong order. Animation
+source commit `855619103608f0c6edd79e29141af30dde39db60` corrects tree traversal,
+checks conflicting grounded anchors, and resolves relation dependencies before
+posing components. Cycles are rejected atomically and on loading. The schema
+and authored rest transforms are unchanged. CAD adopts this only through
+immutable codec21; all five bundled modules match the commit. The installed
+Animation app remains unchanged.
+
+Source qualification: 1,830 app tests pass with one existing skip; 1,137 engine
+tests pass. After final validation guards and shared pose seeding, 37 focused
+engine and 90 affected app tests pass. App/engine types and the final
+frontend/worker build pass. Canonical
+source has 76 passing workspace/bridge/Part-version tests. The final packaged
+worker includes 39 saved/reopened pose comparisons covering all eight mate types,
+both grounding directions, rotated connectors, reversed relations with offsets,
+multi-turn relation chains, and a floating mated pair with a separate ground.
+All 307 final native tests pass. Fresh-process exact geometry, STEP/kernel/zipapp
+and saved sketch-region checks pass. The existing eight-instance UI/scripted
+provider composition, history and save/reopen regression passes, along with its
+Animation-client regression; no real model inference is claimed.
+
+Final worker SHA-256:
+`75569b0425185c9d2b813dd7ffa466314d20f15a48a2884bb056fc22d1bbe3b4`.
+Codec21 SHA-256:
+`9c1b9eef4d47a2a831b74242e0cfb9da13a53a971e1ce4b65a94e5e4012d8083`.
+Source and frozen-package evidence are under
+`.verification/baseline-2026-10-24/joint-pose-*`.
+The final `joint-pose-qualified-browser/results.json` records all eight real
+MCP/browser flows passing, with contacts verified, no browser errors and no
+`/cad/rpc` requests. Ball XYZ and Pin Slot nonzero edits are contact-checked again
+after saved reopen. The two earlier runs failed only during fixture connection
+cleanup (duplicate names, then an overlong name truncated by the UI); the final
+fixture uses short unique names and verifies their value immediately. Both
+failed attempts are retained. The matching disposable-host Animation regression
+also passes. No installed app, host, database, network or security setting changed.
+
+Remaining assembly work includes multi-step UI/agent history, the UI editor for
+multi-DOF mates, contact set editing/list panels, broader floating-component
+qualification, nested editing, cam and sweep joints. The canonical format still
+requires an acyclic mate tree with at most one incoming mate per instance;
+general closed-loop assemblies remain unsupported and joint.create is marked
+partial in the tracker. Contacts remain discrete pose checks, not swept collision detection. No full parity claim is made.

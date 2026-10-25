@@ -32,13 +32,14 @@ const expq = (w: V3): Q => { const a = norm(w); if (a < 1e-12) return [w[0] / 2,
 
 interface Pose { p: V3; q: Q }
 interface Frame { o: V3; x: V3; y: V3; z: V3 }
+interface OrientedFrame extends Frame { q: Q }
 
 /** The joint coordinate system of one mate end, in the world. */
-function frameOf(pose: Pose, end: AssemblyJointEnd): Frame {
+function frameOf(pose: Pose, end: AssemblyJointEnd): OrientedFrame {
   const local: V3 = end.placement_mm ? [...end.placement_mm] as V3 : [0, 0, 0];
   const rot: Q = end.rotation ? qnorm([...end.rotation] as Q) : [0, 0, 0, 1];
   const q = qmul(pose.q, rot);
-  return { o: add(pose.p, rotate(pose.q, local)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
+  return { q, o: add(pose.p, rotate(pose.q, local)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
 }
 
 /** Orientation residuals are unit-vector components; this many millimetres
@@ -71,10 +72,46 @@ export function dofValue(kind: "rotation" | "translation", axis: "x" | "y" | "z"
   const u = a[companion], v = b[companion], n = a[axis];
   return Math.atan2(dot(cross(u, v), n), dot(u, v)) * 180 / Math.PI;
 }
-/** Residuals holding a mate's driven values (`parameters.dofs`), on the mate residuals' scale. */
-export function valueResiduals(a: Frame, b: Frame, parameters: Record<string, unknown> = {}): number[] {
+const angleGap = (value: number) => ((value + 180) % 360 + 360) % 360 - 180;
+const inverseQ = (q: Q): Q => [-q[0], -q[1], -q[2], q[3]];
+
+/** Ball coordinates are successive local X/Y/Z rotations, not three
+ * independent angles measured about the first connector's fixed axes. */
+function ballRotation(values: AssemblyJointValue[]): Q {
+  return (["x", "y", "z"] as const).reduce<Q>((q, axis, index) => {
+    const w: V3 = [0, 0, 0];
+    w[index] = values.find(dof => dof.name === `rotation_${axis}`)!.value * Math.PI / 180;
+    return qmul(q, expq(w));
+  }, [0, 0, 0, 1]);
+}
+
+function heldRotation(kind: AssemblyMateKind, values: AssemblyJointValue[]): Q | undefined {
+  if (kind === "ball" && values.length === 3) return ballRotation(values);
+  if (kind === "fastened" || kind === "prismatic") return [0, 0, 0, 1];
+  const turn = values.find(d => d.name === "rotation" && d.kind === "rotation" && d.axis === "z");
+  if (turn && ["revolute", "cylindrical", "planar", "pin_slot", "parallel"].includes(kind))
+    return expq([0, 0, turn.value * Math.PI / 180]);
+}
+
+function orientationResidual(target: Q, actual: Q, hemisphere: number): number[] {
+  // Keep this branch fixed through finite differences. Choosing the shortest
+  // quaternion on every sample makes an exact half-turn discontinuous.
+  const error = qnorm(qmul(inverseQ(target), actual)).map(v => hemisphere * v) as Q;
+  const length = Math.hypot(error[0], error[1], error[2]);
+  const scale = length < 1e-12 ? 2 : 2 * Math.atan2(length, error[3]) / length;
+  return error.slice(0, 3).map(v => ORIENTATION_SCALE * scale * v);
+}
+
+/** Residuals holding authored or relation-resolved coordinates. Full ball
+ * orientation avoids Euler branch ambiguity and works at gimbal lock. */
+function valueResiduals(a: OrientedFrame, b: OrientedFrame, kind: AssemblyMateKind, parameters: Record<string, unknown> = {}, hemisphere = 1): number[] {
   const values = (parameters.dofs as AssemblyJointValue[] | undefined) ?? [];
-  return values.map((dof) => { const current = dofValue(dof.kind, dof.axis, a, b); return dof.kind === "translation" ? current - dof.value : ORIENTATION_SCALE * Math.PI / 180 * (((current - dof.value + 540) % 360) - 180); });
+  const rotation = heldRotation(kind, values);
+  const orientation = rotation ? orientationResidual(qmul(a.q, rotation), b.q, hemisphere) : [];
+  return [...orientation, ...values.filter(dof => !rotation || dof.kind !== "rotation").map(dof => {
+    const current = dofValue(dof.kind, dof.axis, a, b);
+    return dof.kind === "translation" ? current - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current - dof.value);
+  })];
 }
 export function jointResiduals(kind: AssemblyMateKind, a: Frame, b: Frame, parameters: Record<string, unknown> = {}): number[] {
   const d = sub(b.o, a.o), S = ORIENTATION_SCALE;
@@ -138,29 +175,73 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
   for (const joint of job.joints) {
     if (!solvableMateKinds.includes(joint.kind)) { diagnostics.push({ feature_id: joint.id, severity: "error", message: `unsupported mate kind '${joint.kind}'` }); continue; }
     if (!poses.has(joint.a.instance) || !poses.has(joint.b.instance)) { diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate names an instance that is not in the assembly" }); continue; }
-    joints.push(joint);
+    joints.push({ ...joint, parameters: { ...joint.parameters, dofs: ((joint.parameters?.dofs as AssemblyJointValue[] | undefined) ?? []).map(dof => ({ ...dof })) } });
   }
   const free = [...poses.keys()].filter((id) => !grounded.has(id));
   const byId = new Map(joints.map((joint) => [joint.id, joint]));
   const relations: AssemblyRelation[] = [];
+  const dofOf = (joint: AssemblyJoint, name: string): AssemblyJointValue | undefined => ((joint.parameters?.dofs as AssemblyJointValue[] | undefined) ?? []).find(d => d.name === name) ?? templateDof(joint.kind, name);
   for (const relation of job.relations ?? []) {
     const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
     if (!driver || !driven) { diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" }); continue; }
+    if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof)
+        || !Number.isFinite(relation.ratio) || !Number.isFinite(relation.offset ?? 0)) {
+      diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation has an invalid coordinate, ratio or offset" }); continue;
+    }
     relations.push(relation);
   }
-  const dofOf = (joint: AssemblyJoint, name: string): AssemblyJointValue | undefined => ((joint.parameters?.dofs as AssemblyJointValue[] | undefined) ?? []).find((d) => d.name === name) ?? templateDof(joint.kind, name);
-  const relationResiduals = (current: Map<string, Pose>): number[] => relations.flatMap((relation) => {
-    const driverJoint = byId.get(relation.driver.joint)!, drivenJoint = byId.get(relation.driven.joint)!;
-    const d1 = dofOf(driverJoint, relation.driver.dof), d2 = dofOf(drivenJoint, relation.driven.dof);
-    if (!d1 || !d2) return [];
-    const x = dofValue(d1.kind, d1.axis, frameOf(current.get(driverJoint.a.instance)!, driverJoint.a), frameOf(current.get(driverJoint.b.instance)!, driverJoint.b));
-    const y = dofValue(d2.kind, d2.axis, frameOf(current.get(drivenJoint.a.instance)!, drivenJoint.a), frameOf(current.get(drivenJoint.b.instance)!, drivenJoint.b));
-    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
-    const gap = d2.kind === "translation" ? y - target : ((y - target + 540) % 360) - 180;
-    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * gap];
-  });
+  const heldValue = (joint: AssemblyJoint, name: string) => (joint.parameters!.dofs as AssemblyJointValue[]).find(d => d.name === name);
+  const relationTarget = (relation: AssemblyRelation, x: number) => (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
+  // Carry scalar coordinates through relations before solving poses. This
+  // preserves multi-turn values and supplies a ball's dependent XYZ coordinate
+  // without trying to infer a unique Euler branch from its rendered quaternion.
+  for (let pass = 0; pass < relations.length; pass++) {
+    let added = false;
+    for (const relation of relations) {
+      const driver = byId.get(relation.driver.joint)!, driven = byId.get(relation.driven.joint)!;
+      const x = heldValue(driver, relation.driver.dof);
+      if (x && !heldValue(driven, relation.driven.dof)) {
+        (driven.parameters!.dofs as AssemblyJointValue[]).push({ ...dofOf(driven, relation.driven.dof)!, value: relationTarget(relation, x.value) });
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  for (const joint of joints) {
+    const values = joint.parameters!.dofs as AssemblyJointValue[];
+    const names = new Set(values.map(d => d.name));
+    if (names.size !== values.length || values.some(d => {
+      const expected = templateDof(joint.kind, d.name);
+      return !Number.isFinite(d.value) || !expected || expected.kind !== d.kind || expected.axis !== d.axis;
+    })) diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate coordinate is invalid, duplicate or not finite" });
+    const ballConstrained = values.length || relations.some(r => r.driver.joint === joint.id || r.driven.joint === joint.id);
+    if (joint.kind === "ball" && ballConstrained && (values.length !== 3 || DOF_TEMPLATES.ball.some(d => !values.some(v => v.name === d.name && v.kind === d.kind && v.axis === d.axis))))
+      diagnostics.push({ feature_id: joint.id, severity: "error", message: "a driven ball mate requires resolved X, Y and Z rotation coordinates" });
+  }
+  const orientationHemispheres = new Map<string, number>();
+  for (const joint of joints) {
+    const values = joint.parameters!.dofs as AssemblyJointValue[];
+    if (diagnostics.some(d => d.feature_id === joint.id && d.severity === "error")) continue;
+    const rotation = heldRotation(joint.kind, values);
+    if (!rotation) continue;
+    const a = frameOf(poses.get(joint.a.instance)!, joint.a), b = frameOf(poses.get(joint.b.instance)!, joint.b);
+    const target = qmul(a.q, rotation);
+    orientationHemispheres.set(joint.id, qmul(inverseQ(target), b.q)[3] < 0 ? -1 : 1);
+  }
+  const relationResidual = (relation: AssemblyRelation, current: Map<string, Pose>): number[] => {
+    const driver = byId.get(relation.driver.joint)!, driven = byId.get(relation.driven.joint)!;
+    const d1 = dofOf(driver, relation.driver.dof)!, d2 = dofOf(driven, relation.driven.dof)!;
+    const measure = (joint: AssemblyJoint, dof: AssemblyJointValue) => heldValue(joint, dof.name)?.value
+      ?? dofValue(dof.kind, dof.axis, frameOf(current.get(joint.a.instance)!, joint.a), frameOf(current.get(joint.b.instance)!, joint.b));
+    const gap = measure(driven, d2) - relationTarget(relation, measure(driver, d1));
+    // When both coordinates are authored/resolved, whole turns are meaningful
+    // (a downstream ratio may be fractional). Do not hide a 360-degree conflict.
+    const exact = heldValue(driver, d1.name) && heldValue(driven, d2.name);
+    return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * (exact ? gap : angleGap(gap))];
+  };
+  const relationResiduals = (current: Map<string, Pose>) => relations.flatMap(relation => relationResidual(relation, current));
   const residuals = (current: Map<string, Pose>): number[] => [
-    ...joints.flatMap((joint) => { const fa = frameOf(current.get(joint.a.instance)!, joint.a), fb = frameOf(current.get(joint.b.instance)!, joint.b); return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)]; }),
+    ...joints.flatMap((joint) => { const fa = frameOf(current.get(joint.a.instance)!, joint.a), fb = frameOf(current.get(joint.b.instance)!, joint.b); return [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.kind, joint.parameters, orientationHemispheres.get(joint.id))]; }),
     ...relationResiduals(current),
   ];
   const errorsBefore = diagnostics.filter((d) => d.severity === "error");
@@ -211,10 +292,14 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
   if (!errorsBefore.length) {
     for (const joint of joints) {
       const fa = frameOf(poses.get(joint.a.instance)!, joint.a), fb = frameOf(poses.get(joint.b.instance)!, joint.b);
-      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.parameters)];
+      const values = [...jointResiduals(joint.kind, fa, fb, joint.parameters), ...valueResiduals(fa, fb, joint.kind, joint.parameters, orientationHemispheres.get(joint.id))];
       const worst = Math.max(0, ...values.map(Math.abs));
       if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: joint.id, severity: "error", message: `Mate is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting mates or connector references.` });
     }
+  }
+  if (!errorsBefore.length) for (const relation of relations) {
+    const worst = Math.max(...relationResidual(relation, poses).map(Math.abs));
+    if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: relation.id, severity: "error", message: `Relation is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting coordinates or relations.` });
   }
   const errors = diagnostics.filter((d) => d.severity === "error");
   const message = errors.map((d) => d.message).join("; ");

@@ -29,7 +29,12 @@ Package-manager versions and the shared UI dependency version are separate.
    legacy assembly-solve request remains supported. The new path uses no host
    session handle, filesystem path, database or changed request/response limit.
    Contact tests must exercise enable/refusal, suppression, exact overlap checks,
-   retained authored placements and graph-schema-2 save/reopen. The frozen codec19
+   retained authored placements and graph-schema-2 save/reopen. Include combined
+   Ball and Pin Slot edits/reopen with contacts enabled. Saved-worker pose
+   comparisons must cover all eight mate types, both grounded endpoints, rotated
+   connectors, signed/offset relations and dependency chains, against the pinned
+   canonical codec. Never infer pose equivalence from displayed DOF fields alone.
+   The frozen codec19
    reader must reject contact/cam files; ordinary graph-schema-1 files retain
    identical old/new/old roundtrips. New contact/cam intent requires a new reader
    and cannot be opened after restoring an older CAD release. Never convert it

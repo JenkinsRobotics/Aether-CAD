@@ -44,8 +44,8 @@ export interface AssemblyJobTranslation {
   complete: boolean;
 }
 
-/** The axis a workspace DOF name implies: `translation_x` → x; plain `rotation`/`translation` → z. */
-const dofAxis = (name: string): "x" | "y" | "z" => (name.endsWith("_x") ? "x" : name.endsWith("_y") ? "y" : "z");
+/** The axis a workspace DOF name implies: `translation_x` → x; plain rotation/travel → z, except pin-slot travel → x. */
+const dofAxis = (name: string, kind: string): "x" | "y" | "z" => (name.endsWith("_x") || (kind === "pin_slot" && name === "translation") ? "x" : name.endsWith("_y") ? "y" : "z");
 
 /** A connector frame as a placement the engine can use directly. */
 function connectorPlacement(frame: ConnectorFrameProjection): {
@@ -111,16 +111,20 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
       return [];
     }
     placed.add(instance.id);
-    const rest = instance.rest_transform;
+    // Canonical tree poses are an initial guess, never new authored placement.
+    // Use the same guess in the viewport, contact checks and saved worker so a
+    // floating group cannot settle into a different arbitrary rigid transform.
+    // Constraints below still validate every coordinate and relation.
+    const pose = instance.grounded ? instance.rest_transform : instance.solved_world_transform ?? instance.rest_transform;
     return [{
       id: instance.id,
       part: instance.definition_id,
       placement_mm: [
-        rest.position_m[0] * METRES_TO_MM,
-        rest.position_m[1] * METRES_TO_MM,
-        rest.position_m[2] * METRES_TO_MM,
+        pose.position_m[0] * METRES_TO_MM,
+        pose.position_m[1] * METRES_TO_MM,
+        pose.position_m[2] * METRES_TO_MM,
       ] as [number, number, number],
-      rotation: [...rest.rotation_quaternion_xyzw] as [number, number, number, number],
+      rotation: [...pose.rotation_quaternion_xyzw] as [number, number, number, number],
       grounded: instance.grounded,
     }];
   });
@@ -160,14 +164,18 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
     // A "free" workspace DOF is editable, not valueless: keep its authored pose
     // in the geometry solve. Dependent DOFs are evaluated through their relation.
     const dofs = (mate.dofs ?? []).filter((dof) => (dof.state === "driven" || dof.state === "free") && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
-      name: dof.name, kind: dof.kind, axis: dofAxis(dof.name),
-      value: dof.kind === "rotation" ? (dof.value_rad as number) * 180 / Math.PI : (dof.value_m as number) * METRES_TO_MM,
+      name: dof.name, kind: dof.kind, axis: dofAxis(dof.name, mate.type_id),
+      value: (mate.type_id === "pin_slot" ? -1 : 1) * (dof.kind === "rotation" ? (dof.value_rad as number) * 180 / Math.PI : (dof.value_m as number) * METRES_TO_MM),
     }));
-    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, a, b, ...(dofs.length ? { parameters: { dofs } } : {}) }];
+    // Workspace pin-slot motion is B = A · Rz(angle) · Tx(travel). The
+    // solver's slot belongs to its first endpoint: A = B · Tx(-travel) ·
+    // Rz(-angle). Reverse endpoints and both coordinates, preserving saved intent.
+    const endpoints = mate.type_id === "pin_slot" ? { a: b, b: a } : { a, b };
+    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, ...endpoints, ...(dofs.length ? { parameters: { dofs } } : {}) }];
   });
   // Relations couple two mates' DOFs: the projection names DOF ids; the solver wants the mate and the DOF's name.
-  const dofOwner = new Map<string, { joint: string; dof: string; kind: "rotation" | "translation" }>();
-  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind });
+  const dofOwner = new Map<string, { joint: string; dof: string; kind: "rotation" | "translation"; sign: number }>();
+  for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind, sign: mate.type_id === "pin_slot" ? -1 : 1 });
   const solvedJoints = new Set(joints.map((joint) => joint.id));
   const relations = (projection.relations ?? []).flatMap((relation) => {
     if (relation.suppressed) return [];
@@ -175,11 +183,12 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
     if (!driver || !driven || !solvedJoints.has(driver.joint) || !solvedJoints.has(driven.joint)) { note(relation.id, relation.kind, "it couples a mate that is not solved"); return []; }
     const kind = relation.kind as "gear" | "rack_pinion" | "screw" | "linear";
     if (!["gear", "rack_pinion", "screw", "linear"].includes(kind)) { note(relation.id, relation.kind, `relation kind '${relation.kind}' is not solved`); return []; }
-    // The workspace's ratio is in its own units (radians, metres); ours are degrees and millimetres.
+    // Workspace ratios already include reversal; applying its display flag again
+    // would reverse twice. Convert signed SI coordinates into solver coordinates.
     const unit = (k: "rotation" | "translation") => (k === "rotation" ? 180 / Math.PI : METRES_TO_MM);
-    const ratio = relation.ratio * unit(driven.kind) / unit(driver.kind);
-    const offset = driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM;
-    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset, reversed: relation.reversed }];
+    const ratio = relation.ratio * unit(driven.kind) / unit(driver.kind) * driven.sign / driver.sign;
+    const offset = driven.sign * (driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM);
+    return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset, reversed: false }];
   });
 
   return {

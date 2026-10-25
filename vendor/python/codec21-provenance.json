@@ -1,0 +1,14 @@
+{
+  "source_commit": "855619103608f0c6edd79e29141af30dde39db60",
+  "changed_modules": [
+    "aether_animation/aether_workspace.py"
+  ],
+  "wheel_sha256": "9c1b9eef4d47a2a831b74242e0cfb9da13a53a971e1ce4b65a94e5e4012d8083",
+  "modules": {
+    "aether_animation/__init__.py": "b9ac0bc0e23ac4f09d38e5a41f13ec47bdde5cc155a4a14feaa988ee7ecf2352",
+    "aether_animation/aether_workspace.py": "36acef8465e4eb768eafd18feff12d442e6e844cbc3b7fb621029022c24e9405",
+    "aether_animation/aether_project.py": "5fa09332e925160d6ca3bc2a3fcbfbdb5fd7bb5ba32e97af0b7a22d63425c866",
+    "aether_animation/mates.py": "9fed73dd2fb8c404ae0f9d27eb15b477369c7c457a61035d058356aab61e8b6c",
+    "aether_animation/relation_kinds.py": "4f7a03b57b9dd15855f2c6b6a158e59cc147ac693245bd81849a7b0fab7e9df7"
+  }
+}

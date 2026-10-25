@@ -23,9 +23,6 @@ try {
     const used = new Set(projection.instances.filter((i: {suppressed:boolean}) => !i.suppressed).map((i: {definition_id:string}) => i.definition_id));
     for (const id of request.template_ids ?? []) used.add(id);
     projection.part_definitions = projection.part_definitions.filter((p: {id:string}) => used.has(p.id));
-    // Qualify the saved tree solver's pose, including its explicit free-DOF
-    // values. The solver must accept that pose rather than choose another one.
-    projection.instances = projection.instances.map((instance: any) => ({...instance,rest_transform:instance.solved_world_transform}));
     stdout.write(JSON.stringify(assemblyJobFor(projection)));
   } else {
   const result = request.phase === 'build' ? await buildPhase(request.content, { rollback: request.rollback })

@@ -16,7 +16,7 @@ const legacyRPC=[];page.on('request',r=>{if(new URL(r.url()).pathname==='/cad/rp
 const button=name=>page.getByRole('button',{name,exact:true});
 const step=async(name,run)=>{console.log('Begin '+name);await run();steps.push(name);console.log('Passed '+name);await page.screenshot({path:join(evidence,`${steps.length}-${name}.png`)});};
 const call=(action,args)=>page.evaluate(async({action,args})=>{const r=await fetch('/api/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(args)});const value=await r.json();if(!r.ok)throw Error(JSON.stringify(value));return value;},{action,args});
-let key,editor,file,assemblyID,state,angle,slide,rest,contactsVerified=false;
+let key,editor,file,assemblyID,state,angle,slide,rest,connectionName,contactsVerified=false;
 const mcp=async(method,params)=>{
   const r=await fetch(origin+'/mcp',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({jsonrpc:'2.0',id:randomUUID(),method,params})});const data=await r.json();assert.equal(r.ok,true,JSON.stringify(data));return data;
 };
@@ -25,7 +25,8 @@ const share=async(create=false)=>{
   if(!await page.getByRole('textbox',{name:/^Ask /}).isVisible())await button('AI advisor').click();
   await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();
   if(create){
-    await page.getByText('Use a connection key',{exact:true}).click();await page.getByRole('textbox',{name:'Agent connection name',exact:true}).fill('Assembly fixture');await button('Create connection key').click();
+    connectionName=`Assembly fixture ${randomUUID().slice(0,8)}`;
+    await page.getByText('Use a connection key',{exact:true}).click();await page.getByRole('textbox',{name:'Agent connection name',exact:true}).fill(connectionName);assert.equal(await page.getByRole('textbox',{name:'Agent connection name',exact:true}).inputValue(),connectionName);await button('Create connection key').click();
     key=await page.getByRole('textbox',{name:'Connection key',exact:true}).inputValue();
     await mcp('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'assembly-fixture',version:'1'}});
   }
@@ -50,9 +51,10 @@ const graph=async()=>{
   const saved=await call('library/read',{app:'cad',id:file.id});
   return JSON.parse(execFileSync('python3',['-c','import sys,io,zipfile; z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.read("state/graph.json").decode())'],{input:Buffer.from(saved.data_base64,'base64'),encoding:'utf8'}));
 };
-const unshare=async(revoke=false)=>{await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();await button('Stop sharing editor').click();if(revoke)await page.locator('.aui-agent-connection-card').filter({has:page.getByText('Assembly fixture',{exact:true})}).getByRole('button',{name:'Revoke',exact:true}).click();await button('Done').click();};
+const unshare=async(revoke=false)=>{await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();await button('Stop sharing editor').click();if(revoke)await page.locator('.aui-agent-connection-card').filter({has:page.getByText(connectionName,{exact:true})}).getByRole('button',{name:'Revoke',exact:true}).click();await button('Done').click();};
 try{
   await page.goto(origin+'/cad/');await page.locator('input[name="username"]').fill('editor');await page.locator('input[name="password"]').fill('account-test-password-2026');await button('Sign in').click();await page.getByText('A space for your next idea.',{exact:false}).waitFor({timeout:30000});
+  if(process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
   file=await call('library/project_create',{app:'cad',name:'Assembly agent baseline',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
   const url=`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`;await page.goto(url);await page.locator('.aui-studio-document-title').filter({hasText:'Assembly agent baseline'}).waitFor({timeout:90000});
   await step('compose-and-inspect',async()=>{
@@ -145,6 +147,31 @@ try{
     const reopened=await inspect();assert.equal(reopened.contacts_enabled,true);assert.equal((await inspect('contacts')).items.length,1);assert.equal(reopened.source_revision,final.source_revision);assert.notEqual(reopened.revision,final.revision);assert.equal(reopened.counts.instances,3);assert.deepEqual((await inspect('instances')).items.map(i=>[i.id,i.rest_transform]),rest);
     await invoke('aether_cad_assembly_edit',{expected_revision:final.revision,command_json:JSON.stringify({type:'dof-value',id:angle,value:60,unit:'deg'})},false);
     const reopenedAngle=(await inspect('mates')).items.flatMap(m=>m.dofs).find(d=>d.id===angle);assert.ok(Math.abs(reopenedAngle.value_rad-Math.PI/4)<1e-9);assert.ok(Math.abs(reopenedAngle.limit_max_rad-Math.PI/2)<1e-9);
+    await unshare(true);await button('AI advisor').click();
+  });
+  }
+  for (const kind of ['ball','pin_slot']) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
+    file=await call('library/project_create',{app:'cad',name:`Pose ${kind}`,operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
+    await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
+    await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});
+    await share(true);state=await inspect();const recipe=state.example;delete recipe.patterns;
+    recipe.instances=[{key:'base',part:'block',grounded:true},{key:'moving',part:'block',position_mm:[0,0,50]}];
+    recipe.mates=[{key:'joint',kind,a:{instance:'base',origin_mm:[0,0,50]},b:{instance:'moving'}}];
+    await invoke('aether_cad_assembly_compose',{expected_revision:state.revision,recipe_json:JSON.stringify(recipe)});
+    const mate=(await inspect('mates')).items[0];
+    // Every edit now crosses the actual browser solver and exact OCCT contact
+    // validator, not only the workspace's metadata projection.
+    await edit({type:'contacts-enabled',enabled:true});
+    for (const [i,dof] of mate.dofs.entries()) await edit({type:'dof-value',id:dof.id,value:kind==='ball'?[20,110,-40][i]:dof.kind==='rotation'?35:25,unit:dof.kind==='rotation'?'deg':'mm'});
+    const expected=(await inspect('mates')).items[0].dofs.map(d=>[d.name,d.value_rad,d.value_m]);
+    const final=await inspect();let saved;
+    for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===final.source_revision)break;await page.waitForTimeout(100);}
+    assert.equal(String(saved.revision),final.source_revision);assert.equal(saved.contacts_enabled,true);
+    await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});await share();
+    assert.deepEqual((await inspect('mates')).items[0].dofs.map(d=>[d.name,d.value_rad,d.value_m]),expected);
+    assert.equal((await inspect()).contacts_enabled,true);
+    // Trigger a post-reopen validation as well, then leave the true viewport visible.
+    await edit({type:'mate-update',id:mate.id,name:`Checked ${kind}`});contactsVerified=true;
     await unshare(true);await button('AI advisor').click();
   });
   assert.deepEqual(errors,[]);assert.deepEqual(legacyRPC,[],'CAD must not use Studio Animation RPC');await writeFile(join(evidence,'results.json'),JSON.stringify({status:'passed',steps,contactsVerified,errors},null,2));
