@@ -83,6 +83,7 @@ export {
 
 export { filletSketchCurves } from "./operations/fillet-curves";
 export { pickCurve } from "./curves/picking";
+export { classifySketchContourPoint } from "./curves/containment";
 
 export { chamferSketchCorner, type ChamferSize } from "./operations/chamfer";
 

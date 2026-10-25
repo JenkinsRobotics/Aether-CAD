@@ -48,9 +48,10 @@ describe("picking a closed region by clicking inside it", () => {
     };
     expect(pickSketchRegion(drawing, [0, 0])).toBe(0);
     expect(pickSketchRegion(drawing, [4.9, 0])).toBe(0);
-    // Just outside the rim: the sampler approximates the circle, so allow the
-    // chord error rather than asserting on a point that sits within it.
-    expect(pickSketchRegion(drawing, [5.6, 0])).toBeNull();
+    const angle = Math.PI / 48;
+    expect(pickSketchRegion(drawing, [4.9999*Math.cos(angle),4.9999*Math.sin(angle)])).toBe(0);
+    expect(pickSketchRegion(drawing, [5.0001*Math.cos(angle),5.0001*Math.sin(angle)])).toBeNull();
+    expect(pickSketchRegion(drawing, [5, 0])).toBeNull();
   });
 
   it("prefers the smallest region containing the point, so nesting works", () => {

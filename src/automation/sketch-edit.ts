@@ -1,5 +1,5 @@
 /** Existing-sketch adapters reuse the editor operations and retain feature IDs. */
-import { validatePartDocument, type PartDocument } from '@aether/core/document';
+import { validatePartDocument, sketchRegions, type PartDocument } from '@aether/core/document';
 import { moveSketchContours, similarityTransform, editDrawingDimension, rectangleSketchRevision, reviseCenterRectangleSketch } from '@aether/core/sketch';
 
 function sketch(doc:PartDocument,id:unknown) {
@@ -11,18 +11,29 @@ const finite=(value:unknown,name:string)=>{
   if(typeof value!=='number'||!Number.isFinite(value)||Math.abs(value)>1e6)throw Error(`${name} must be finite and within 1000000.`);
   return value;
 };
+function inspectRegions(doc:PartDocument, feature:PartDocument['features'][number], offset:number, limit:number) {
+  const regions=sketchRegions(feature,false,doc.features);
+  const authored=feature.type==='sketch'||(feature.type==='profile'&&feature.profile.type!=='projection');
+  return {total:regions.length,offset,items:regions.slice(offset,offset+limit).map(region=>({
+    label:region.label,index:region.contourIndex,selectable:authored&&region.ordinal===undefined,
+    contour_id:region.contourId,source_contour_indices:region.sourceContourIndices,
+    inside_contour_indices:region.insideContourIndices,boundary:region.previewContour,holes:region.holes??[],
+  })),next_offset:offset+limit<regions.length?offset+limit:null,
+  selection:'Use profile_point_mm strictly inside the desired closed region. Coordinates are local millimeters; indices are transient and must not be saved as references.'};
+}
 export function inspectSketch(doc:PartDocument,args:Record<string,unknown>) {
   const feature=sketch(doc,args.feature_id),offset=args.offset??0,limit=args.limit??10;
   if(typeof offset!=='number'||!Number.isSafeInteger(offset)||offset<0||typeof limit!=='number'||!Number.isSafeInteger(limit)||limit<1||limit>25)throw Error('Use offset >= 0 and limit 1–25.');
   const profile=feature.profile;
   const drawing=profile.type==='drawing'?profile:profile.type==='projection'?profile.authored:undefined;
   return {document_id:doc.documentId,feature_id:feature.id,name:feature.name,feature_type:feature.type,plane:feature.plane,suppressed:feature.suppressed,units:'millimeter',
-    ...(feature.type==='profile'?{offset_mm:feature.offsetMillimeters,frame:feature.frame,support:feature.support}:{}),
+    ...(feature.type==='profile'?{offset_mm:feature.offsetMillimeters,frame:feature.frame,flip:feature.flip,support:feature.support}:{}),
     profile:drawing?{type:profile.type,total_contours:drawing.contours.length,total_constraints:drawing.constraints?.length??0,
       contours:drawing.contours.slice(offset,offset+limit).map((contour,i)=>({index:offset+i,...contour})),
       constraints:(drawing.constraints??[]).slice(offset,offset+limit),
       next_offset:offset+limit<Math.max(drawing.contours.length,drawing.constraints?.length??0)?offset+limit:null}:profile,
     ...(feature.type==='sketch'?{constraints:feature.constraints,dimensions:feature.dimensions}:{}),
+    regions:feature.suppressed?{total:0,offset,items:[],next_offset:null}:inspectRegions(doc,feature,offset,limit),
     dependents:doc.features.filter(f=>'profileFeatureId' in f&&f.profileFeatureId===feature.id).map(f=>({id:f.id,name:f.name,type:f.type})),
     editing:profile.type==='projection'?'Projected geometry is read-only; edit its source sketch.':'Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved.'};
 }

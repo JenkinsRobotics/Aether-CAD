@@ -1,7 +1,8 @@
 import { sketchNodeLabel } from "./point-roles";
 import { sketchFaceRegions } from '@aether/core/sketch/reference/connected-sketch-regions';
-import { pointInPolygon, polygonArea, distanceToSegment } from '@aether/sketch';
+import { polygonArea, distanceToSegment } from '@aether/sketch';
 import {
+  classifySketchContourPoint,
   pickCurve,
   sketchArcGeometry,
   sketchContourPolyline,
@@ -95,10 +96,11 @@ export function pickSketchRegion(
   let best: number | null = null;
   let smallest = Infinity;
   sketchFaceRegions(drawing).forEach(({ contour, holes = [], contourIndex: index }) => {
+    if (classifySketchContourPoint(contour, p) !== 'inside') return;
+    if (holes.some(hole => classifySketchContourPoint(hole, p) !== 'outside')) return;
+    // Display area only orders nested candidates; it never determines membership.
     const outline = sketchContourPolyline(contour);
-    if (!pointInPolygon(outline, p)) return;
     const islands = holes.map(hole => sketchContourPolyline(hole));
-    if (islands.some(hole => pointInPolygon(hole, p))) return;
     const area = Math.abs(polygonArea(outline)) - islands.reduce((sum, hole) => sum + Math.abs(polygonArea(hole)), 0);
     if (area < smallest) {
       smallest = area;

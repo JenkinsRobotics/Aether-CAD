@@ -1,3 +1,5 @@
+import { agentSketchPlacement } from './sketch-placement';
+import { selectAgentProfileRegions } from './sketch-selection';
 /** Agent authoring is a client of the normal CAD document and native engine. */
 import { insertFeature, rollbackPosition, validatePartDocument, type PartDocument, type ProfileFeature, type PartFeature } from '@aether/core/document';
 import type { AgentTool } from '@aether/ui/AgentServices';
@@ -9,8 +11,9 @@ import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatur
 
 const number={type:'number'},string={type:'string'},boolean={type:'boolean'};
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=[]):AgentTool=>({name:'aether_cad_'+name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
-const plane={name:string,plane:{type:'string',enum:['XY','XZ','YZ']},offset_mm:number};
-const operation={name:string,profile_id:string,operation:{type:'string',enum:['new','add','cut']},target_body_id:string};
+const vector3={type:'array',items:number,minItems:3,maxItems:3};
+const plane={name:string,plane:{type:'string',enum:['XY','XZ','YZ']},frame:{type:'object',properties:{origin_mm:vector3,x_direction:vector3,y_direction:vector3},required:['origin_mm','x_direction','y_direction'],additionalProperties:false},offset_mm:number,flip:{type:'string',enum:['x','y']}};
+const operation={name:string,profile_id:string,profile_point_mm:{type:'array',items:number,minItems:2,maxItems:2},operation:{type:'string',enum:['new','add','cut']},target_body_id:string};
 export const cadAgentTools:AgentTool[]=[
   ...partAITools,
   ...featureReadTools,
@@ -18,14 +21,14 @@ export const cadAgentTools:AgentTool[]=[
   tool('inspect','Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.',{offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}}),
   tool('feature_references','Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.',{feature_id:string,direction:{type:'string',enum:['inputs','dependents']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}},['feature_id']),
   tool('solid_primitive','Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.',{kind:{type:'string',enum:Object.keys(primitiveFields)},width_mm:number,length_mm:number,height_mm:number,radius_mm:number,tube_radius_mm:number},['kind']),
-  tool('sketch_inspect','Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and dependents before editing. Page contours and constraints with offset/limit. Does not change the document.',{feature_id:string,offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:25}},['feature_id']),
+  tool('sketch_inspect','Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.',{feature_id:string,offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:25}},['feature_id']),
   tool('sketch_translate','Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.',{feature_id:string,dx_mm:number,dy_mm:number},['feature_id','dx_mm','dy_mm']),
   tool('sketch_dimension','Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.',{feature_id:string,dimension_id:string,value:number},['feature_id','dimension_id','value']),
-  tool('sketch_rectangle','Add an editable rectangular sketch profile on XY, XZ or YZ. x_mm/y_mm are local sketch coordinates; offset_mm moves its plane along its normal.',{...plane,x_mm:number,y_mm:number,width_mm:number,height_mm:number},['plane','x_mm','y_mm','width_mm','height_mm']),
-  tool('sketch_circle','Add an editable circular sketch profile; returns its feature ID.',{...plane,center_x_mm:number,center_y_mm:number,radius_mm:number},['plane','center_x_mm','center_y_mm','radius_mm']),
-  tool('sketch_polygon','Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Native CAD validates the profile.',{...plane,points_mm:{type:'array',minItems:3,maxItems:128,items:{type:'array',items:number,minItems:2,maxItems:2}}},['plane','points_mm']),
-  tool('extrude','Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. Exact native rebuild must succeed before the document changes.',{...operation,depth_mm:number,reversed:boolean},['profile_id','depth_mm','operation']),
-  tool('revolve','Revolve a sketch around a principal axis. add/cut require target_body_id. Native engine checks validity.',{...operation,axis:{type:'string',enum:['X','Y','Z']},angle_deg:number},['profile_id','axis','angle_deg','operation']),
+  tool('sketch_rectangle','Add an editable rectangular sketch profile. Specify plane (XY/XZ/YZ) OR frame (origin_mm and perpendicular unit x_direction/y_direction). x_mm/y_mm are local coordinates; offset_mm moves along the unflipped normal. Optional flip x/y reverses the normal about that local axis.',{...plane,x_mm:number,y_mm:number,width_mm:number,height_mm:number},['x_mm','y_mm','width_mm','height_mm']),
+  tool('sketch_circle','Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.',{...plane,center_x_mm:number,center_y_mm:number,radius_mm:number},['center_x_mm','center_y_mm','radius_mm']),
+  tool('sketch_polygon','Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.',{...plane,points_mm:{type:'array',minItems:3,maxItems:128,items:{type:'array',items:number,minItems:2,maxItems:2}}},['points_mm']),
+  tool('extrude','Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.',{...operation,depth_mm:number,reversed:boolean,all_regions:boolean},['profile_id','depth_mm','operation']),
+  tool('revolve','Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.',{...operation,axis:{type:'string',enum:['X','Y','Z']},angle_deg:number},['profile_id','axis','angle_deg','operation']),
   tool('extrude_depth','Change an existing blind/symmetric extrusion depth, then rebuild.',{feature_id:string,depth_mm:number},['feature_id','depth_mm']),
   tool('suppress','Suppress or unsuppress an existing feature. Rebuild must succeed.',{feature_id:string,suppressed:boolean},['feature_id','suppressed']),
   tool('undo','Undo one successful Part edit, using the same history as the editor.',{}),
@@ -81,9 +84,10 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
     if(!result.candidate)throw Error('The CAD operation produced no candidate.');
     return {document:JSON.parse(result.candidate) as PartDocument,featureID:args.feature_id};
   }
+  const candidate=structuredClone(doc);
   const id=crypto.randomUUID();let feature:PartFeature;
   if(name.startsWith('aether_cad_sketch_')) {
-    if(!['XY','XZ','YZ'].includes(String(args.plane)))throw Error('Choose XY, XZ or YZ.');
+    const placement=agentSketchPlacement(args);
     let profile:ProfileFeature['profile'];
     if(name==='aether_cad_sketch_circle')profile={type:'circle',centerMillimeters:[numberValue(args,'center_x_mm'),numberValue(args,'center_y_mm')],radiusMillimeters:numberValue(args,'radius_mm',undefined,true)};
     else if(name==='aether_cad_sketch_rectangle'){
@@ -93,22 +97,23 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
       if(!Array.isArray(args.points_mm)||args.points_mm.length<3||args.points_mm.length>128)throw Error('Use 3–128 points.');
       profile={type:'polygon',pointsMillimeters:args.points_mm.map(p=>{if(!Array.isArray(p)||p.length!==2)throw Error('Use x,y pairs.');return [numberValue({v:p[0]},'v'),numberValue({v:p[1]},'v')];})};
     }
-    feature={type:'profile',id,name:nameValue(args,`Sketch ${doc.features.length+1}`),suppressed:false,plane:args.plane as ProfileFeature['plane'],offsetMillimeters:numberValue(args,'offset_mm',0),profile};
+    feature={type:'profile',id,name:nameValue(args,`Sketch ${doc.features.length+1}`),suppressed:false,...placement,profile};
   }else if(name==='aether_cad_extrude'||name==='aether_cad_revolve'){
-    const profile=doc.features.find(f=>f.id===args.profile_id&&(f.type==='profile'||f.type==='sketch')&&!f.suppressed);
+    const profile=candidate.features.find(f=>f.id===args.profile_id&&(f.type==='profile'||f.type==='sketch')&&!f.suppressed);
     if(!profile)throw Error('Inspect the part and choose an unsuppressed sketch ID.');
     if(!['new','add','cut'].includes(String(args.operation)))throw Error('Choose new, add or cut.');
     const operation=args.operation as 'new'|'add'|'cut';
     if(operation!=='new'&&typeof args.target_body_id!=='string')throw Error('Choose a target_body_id from inspect.');
+    const selections=selectAgentProfileRegions(candidate,profile.id,args.profile_point_mm,name==='aether_cad_extrude'?args.all_regions:undefined);
     const common={id,suppressed:false,profileFeatureId:profile.id,operation,...(operation!=='new'?{targetBodyId:args.target_body_id as string}:{})};
     if(name==='aether_cad_extrude'){
       if(args.reversed!==undefined&&typeof args.reversed!=='boolean')throw Error('reversed must be true or false.');
-      feature={...common,type:'extrude',name:nameValue(args,'Extrude'),distanceMillimeters:numberValue(args,'depth_mm',undefined,true),endType:'blind',...(args.reversed?{reversed:true}:{}),...(operation==='new'?{separateBodies:true}:{})};
+      feature={...common,type:'extrude',profileSelections:selections,regionMode:'faces',name:nameValue(args,'Extrude'),distanceMillimeters:numberValue(args,'depth_mm',undefined,true),endType:'blind',...(args.reversed?{reversed:true}:{}),...(operation==='new'?{separateBodies:true}:{})};
     }else{
       if(!['X','Y','Z'].includes(String(args.axis)))throw Error('Choose X, Y or Z.');
       const angle=numberValue(args,'angle_deg',undefined,true);if(angle>360)throw Error('Revolve angle must be at most 360 degrees.');
-      feature={...common,type:'revolve',name:nameValue(args,'Revolve'),axis:args.axis as 'X'|'Y'|'Z',angleDegrees:angle};
+      feature={...common,...selections[0],type:'revolve',name:nameValue(args,'Revolve'),axis:args.axis as 'X'|'Y'|'Z',angleDegrees:angle};
     }
   }else throw Error('Unknown CAD edit.');
-  return {document:insertFeature(doc,feature),featureID:id};
+  return {document:insertFeature(candidate,feature),featureID:id};
 }

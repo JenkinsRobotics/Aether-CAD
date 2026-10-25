@@ -1,5 +1,6 @@
-import { connectedSketchRegions, regionBoundaryIdentity } from "@aether/core/sketch/reference/connected-sketch-regions";
-import { identifySketchContour, resolveProfileDrawing } from "../aether-core";
+import { stampSketchContour, stampResolvedProfileSelection } from '../modeling/profile-region-selection';
+import { connectedSketchRegions } from "@aether/core/sketch/reference/connected-sketch-regions";
+import { resolveProfileDrawing } from "../aether-core";
 import { takePickedSketchRegion } from "../sketch-region-selection";
 import { sketchRegions } from "@aether/core/document";
 import type { Controls, FeatureEditorContext } from "./shared";
@@ -100,16 +101,7 @@ export function stampRegion(
   sketchId: string,
   contourIndex: number,
 ): string {
-  const sketch = context.doc.features.find((f) => f.id === sketchId) as any;
-  if (sketch?.profile?.type === "projection")
-    throw new Error("Pick a region on an authored sketch, not a projected one.");
-  const drawing = resolveProfileDrawing(context.doc.features, sketchId);
-  const contour = drawing.contours[contourIndex];
-  if (!contour) throw new Error("That sketch region is no longer there.");
-  identifySketchContour(contour, () => crypto.randomUUID());
-  delete drawing.pierceContext;
-  sketch.profile = drawing;
-  return contour.id!;
+  return stampSketchContour(context.doc, sketchId, contourIndex);
 }
 
 /** Stage every contributor together; a failed later pick leaves the candidate
@@ -127,24 +119,7 @@ export function stampProfileSelections(
     if (!feature || feature.suppressed || !('profile' in feature)) throw Error('Select an available source sketch.');
     const region = featureRegionChoices(staged, feature, curves).find(r => r.contourIndex === pick.contourIndex);
     if (!region) throw Error('That sketch region is no longer available. Reselect it.');
-    const base = { profileFeatureId: feature.id };
-    if (feature.profile.type === 'projection') throw Error('Pick a region on an authored sketch, not a projected one.');
-    if (feature.type === 'sketch' || (feature.profile.type !== 'drawing' && !identifyPrimitives)) return base;
-    if (!region.sourceContourIndices) return { ...base, profileContourId: stampRegion(staged, feature.id, pick.contourIndex) };
-    const drawing = resolveProfileDrawing(doc.features, feature.id);
-    const identify = (index: number) => {
-      const contour = drawing.contours[index];
-      if (!contour) throw Error('A connected sketch region source is missing.');
-      identifySketchContour(contour, () => crypto.randomUUID());
-      return contour.id!;
-    };
-    const ids = region.sourceContourIndices.map(identify);
-    const inside = region.insideContourIndices?.map(identify);
-    if (region.ordinal) throw Error('This region has ambiguous source boundaries. Add a divider or select a different region.');
-    const boundary = region.boundarySides ? regionBoundaryIdentity(drawing, region.boundarySides) : undefined;
-    delete drawing.pierceContext;
-    feature.profile = drawing;
-    return { ...base, profileRegion: { contourIds: ids, ...(inside ? { inside } : {}), ...(boundary ? { boundary } : {}) } };
+    return stampResolvedProfileSelection(doc, feature, region, identifyPrimitives);
   });
   validatePartDocument(doc);
   context.doc.features = doc.features;

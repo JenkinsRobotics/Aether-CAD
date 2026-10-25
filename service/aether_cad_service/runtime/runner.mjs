@@ -12,13 +12,13 @@ import { createRequire } from "module";
 function canonicalPlaneXDirection(normal) {
   const length = Math.hypot(...normal);
   if (!length) return [1, 0, 0];
-  const n = normal.map((c) => c / length);
+  const n = normal.map((c2) => c2 / length);
   const reference = Math.abs(n[0]) > 0.9 ? [0, 1, 0] : [1, 0, 0];
-  const projection = reference.reduce((sum, c, i) => sum + c * n[i], 0);
-  const x = reference.map((c, i) => c - projection * n[i]);
-  const scale2 = Math.hypot(...x);
-  return x.map((c) => {
-    const v = c / scale2;
+  const projection = reference.reduce((sum, c2, i) => sum + c2 * n[i], 0);
+  const x2 = reference.map((c2, i) => c2 - projection * n[i]);
+  const scale2 = Math.hypot(...x2);
+  return x2.map((c2) => {
+    const v = c2 / scale2;
     return v === 0 ? 0 : v;
   });
 }
@@ -36,7 +36,7 @@ function resolvePlaneFrame(feature, earlier = []) {
   const frameOf2 = (reference) => {
     if (reference.kind === "principal") return principalFrame(reference.plane);
     if (reference.kind === "face") return reference.frame;
-    const index = earlier.findIndex((f) => f.id === reference.featureId);
+    const index = earlier.findIndex((f2) => f2.id === reference.featureId);
     const target = index >= 0 ? earlier[index] : void 0;
     if (!target || target.type !== "plane")
       throw new Error(`${feature.name}: plane references must be earlier construction planes.`);
@@ -56,20 +56,20 @@ function resolvePlaneFrame(feature, earlier = []) {
     });
   }
   if (definition.method === "three-point") {
-    const [p, q, r] = definition.points.map((point2) => point2.positionMillimeters);
-    const u = q.map((v2, i) => v2 - p[i]);
-    const v = r.map((value2, i) => value2 - p[i]);
+    const [p2, q, r] = definition.points.map((point2) => point2.positionMillimeters);
+    const u2 = q.map((v2, i) => v2 - p2[i]);
+    const v = r.map((value2, i) => value2 - p2[i]);
     const normal = [
-      u[1] * v[2] - u[2] * v[1],
-      u[2] * v[0] - u[0] * v[2],
-      u[0] * v[1] - u[1] * v[0]
+      u2[1] * v[2] - u2[2] * v[1],
+      u2[2] * v[0] - u2[0] * v[2],
+      u2[0] * v[1] - u2[1] * v[0]
     ];
     const length = Math.hypot(...normal);
     if (length < 1e-9)
       throw new Error(`${feature.name}: three point plane needs three non-collinear points.`);
-    const unit2 = normal.map((c) => c / length);
+    const unit2 = normal.map((c2) => c2 / length);
     return maybeFlip({
-      originMillimeters: p,
+      originMillimeters: p2,
       normal: unit2,
       // Canonical, so a three-point plane aligns like every other plane.
       xDirection: canonicalPlaneXDirection(unit2)
@@ -81,27 +81,27 @@ function resolvePlaneFrame(feature, earlier = []) {
     const axisLength = Math.hypot(...definition.axis.directionMillimeters);
     if (axisLength < 1e-9)
       throw new Error(`${feature.name}: the angle axis has no direction.`);
-    const k = definition.axis.directionMillimeters.map((c) => c / axisLength);
+    const k2 = definition.axis.directionMillimeters.map((c2) => c2 / axisLength);
     const base = frameOf2(definition.reference);
     const theta = definition.angleDegrees * Math.PI / 180;
     const cos = Math.cos(theta);
     const sin = Math.sin(theta);
     const n = base.normal;
-    const dot2 = k[0] * n[0] + k[1] * n[1] + k[2] * n[2];
+    const dot2 = k2[0] * n[0] + k2[1] * n[1] + k2[2] * n[2];
     if (Math.abs(dot2) > 1e-7)
       throw new Error(`${feature.name}: the angle axis must be parallel to the reference plane.`);
     const cross2 = [
-      k[1] * n[2] - k[2] * n[1],
-      k[2] * n[0] - k[0] * n[2],
-      k[0] * n[1] - k[1] * n[0]
+      k2[1] * n[2] - k2[2] * n[1],
+      k2[2] * n[0] - k2[0] * n[2],
+      k2[0] * n[1] - k2[1] * n[0]
     ];
     const rotated = n.map(
-      (c, i) => c * cos + cross2[i] * sin + k[i] * dot2 * (1 - cos)
+      (c2, i) => c2 * cos + cross2[i] * sin + k2[i] * dot2 * (1 - cos)
     );
     const length = Math.hypot(...rotated);
     if (length < 1e-9)
       throw new Error(`${feature.name}: the angle axis is parallel to the reference normal.`);
-    const unit2 = rotated.map((c) => c / length);
+    const unit2 = rotated.map((c2) => c2 / length);
     return maybeFlip({
       originMillimeters: definition.axis.originMillimeters,
       normal: unit2,
@@ -113,47 +113,47 @@ function resolvePlaneFrame(feature, earlier = []) {
     if (l < 1e-9) throw new Error(`${feature.name}: ${what} has no direction.`);
     return [v[0] / l, v[1] / l, v[2] / l];
   };
-  const crossOf = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  const crossOf = (u2, v) => [u2[1] * v[2] - u2[2] * v[1], u2[2] * v[0] - u2[0] * v[2], u2[0] * v[1] - u2[1] * v[0]];
   if (definition.method === "perpendicular") {
-    const d = unitOf(definition.axis.directionMillimeters, "the edge"), base = frameOf2(definition.reference);
-    const normal = crossOf(d, base.normal), length = Math.hypot(...normal);
+    const d2 = unitOf(definition.axis.directionMillimeters, "the edge"), base = frameOf2(definition.reference);
+    const normal = crossOf(d2, base.normal), length = Math.hypot(...normal);
     if (length < 1e-9) throw new Error(`${feature.name}: the edge is square to the reference plane already; choose another plane.`);
-    const unit2 = normal.map((c) => c / length);
+    const unit2 = normal.map((c2) => c2 / length);
     return maybeFlip({ originMillimeters: [...definition.axis.originMillimeters], normal: unit2, xDirection: canonicalPlaneXDirection(unit2) });
   }
   if (definition.method === "two-edges") {
-    const [a2, b2] = definition.axes, da = unitOf(a2.directionMillimeters, "the first edge"), db = unitOf(b2.directionMillimeters, "the second edge");
+    const [a22, b2] = definition.axes, da = unitOf(a22.directionMillimeters, "the first edge"), db = unitOf(b2.directionMillimeters, "the second edge");
     let normal = crossOf(da, db);
-    if (Math.hypot(...normal) < 1e-9) normal = crossOf(da, [b2.originMillimeters[0] - a2.originMillimeters[0], b2.originMillimeters[1] - a2.originMillimeters[1], b2.originMillimeters[2] - a2.originMillimeters[2]]);
+    if (Math.hypot(...normal) < 1e-9) normal = crossOf(da, [b2.originMillimeters[0] - a22.originMillimeters[0], b2.originMillimeters[1] - a22.originMillimeters[1], b2.originMillimeters[2] - a22.originMillimeters[2]]);
     const length = Math.hypot(...normal);
     if (length < 1e-9) throw new Error(`${feature.name}: the two edges lie on one line and do not define a plane.`);
-    const unit2 = normal.map((c) => c / length);
-    const gap2 = (b2.originMillimeters[0] - a2.originMillimeters[0]) * unit2[0] + (b2.originMillimeters[1] - a2.originMillimeters[1]) * unit2[1] + (b2.originMillimeters[2] - a2.originMillimeters[2]) * unit2[2];
+    const unit2 = normal.map((c2) => c2 / length);
+    const gap2 = (b2.originMillimeters[0] - a22.originMillimeters[0]) * unit2[0] + (b2.originMillimeters[1] - a22.originMillimeters[1]) * unit2[1] + (b2.originMillimeters[2] - a22.originMillimeters[2]) * unit2[2];
     if (Math.abs(gap2) > 1e-6) throw new Error(`${feature.name}: the two edges are not in one plane.`);
-    return maybeFlip({ originMillimeters: [...a2.originMillimeters], normal: unit2, xDirection: canonicalPlaneXDirection(unit2) });
+    return maybeFlip({ originMillimeters: [...a22.originMillimeters], normal: unit2, xDirection: canonicalPlaneXDirection(unit2) });
   }
   if (definition.method === "tangent") {
     const unit2 = unitOf(definition.surface.normalMillimeters, "the surface normal");
     return maybeFlip({ originMillimeters: [...definition.surface.pointMillimeters], normal: unit2, xDirection: canonicalPlaneXDirection(unit2) });
   }
   if (definition.method === "along-path") {
-    const d = unitOf(definition.axis.directionMillimeters, "the path");
+    const d2 = unitOf(definition.axis.directionMillimeters, "the path");
     if (!Number.isFinite(definition.t) || definition.t < 0 || definition.t > 1) throw new Error(`${feature.name}: the path fraction must be between 0 and 1.`);
     const length = definition.axis.lengthMillimeters ?? 0;
     const o = definition.axis.originMillimeters, along = (definition.t - 0.5) * length;
-    return maybeFlip({ originMillimeters: [o[0] + d[0] * along, o[1] + d[1] * along, o[2] + d[2] * along], normal: d, xDirection: canonicalPlaneXDirection(d) });
+    return maybeFlip({ originMillimeters: [o[0] + d2[0] * along, o[1] + d2[1] * along, o[2] + d2[2] * along], normal: d2, xDirection: canonicalPlaneXDirection(d2) });
   }
-  const [a, b] = definition.references.map(frameOf2);
-  const alignment = a.normal[0] * b.normal[0] + a.normal[1] * b.normal[1] + a.normal[2] * b.normal[2];
+  const [a2, b] = definition.references.map(frameOf2);
+  const alignment = a2.normal[0] * b.normal[0] + a2.normal[1] * b.normal[1] + a2.normal[2] * b.normal[2];
   if (Math.abs(alignment) < 1 - 1e-6)
     throw new Error(`${feature.name}: mid plane needs two parallel planes.`);
-  const gap = (b.originMillimeters[0] - a.originMillimeters[0]) * a.normal[0] + (b.originMillimeters[1] - a.originMillimeters[1]) * a.normal[1] + (b.originMillimeters[2] - a.originMillimeters[2]) * a.normal[2];
+  const gap = (b.originMillimeters[0] - a2.originMillimeters[0]) * a2.normal[0] + (b.originMillimeters[1] - a2.originMillimeters[1]) * a2.normal[1] + (b.originMillimeters[2] - a2.originMillimeters[2]) * a2.normal[2];
   return maybeFlip({
-    originMillimeters: a.originMillimeters.map(
-      (v, i) => v + a.normal[i] * gap / 2
+    originMillimeters: a2.originMillimeters.map(
+      (v, i) => v + a2.normal[i] * gap / 2
     ),
-    normal: a.normal,
-    xDirection: a.xDirection
+    normal: a2.normal,
+    xDirection: a2.xDirection
   });
 }
 function validatePlaneDefinition(feature, earlierPlaneIds, missingReference = () => false) {
@@ -240,8 +240,8 @@ function validateExtrusionPointReference(ref, earlier, missing) {
     if (!missing(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile" || !id2(ref.contourId) || !["vertex", "center"].includes(ref.point) || (ref.point === "vertex" ? !id2(ref.vertexId) : ref.vertexId !== void 0))
       throw Error("Invalid stopping sketch point reference.");
   } else if (ref.kind === "solid-vertex") {
-    const a = ref.anchor;
-    if (!id2(ref.bodyId, 256) || ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(earlier.get(ref.sourceFeatureId) ?? "") || !a || !Array.isArray(a.positionMillimeters) || a.positionMillimeters.length !== 3 || !a.positionMillimeters.every(Number.isFinite) || !id2(a.signature, 16384) || !id2(a.incidence, 16384) || typeof a.shapeFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(a.shapeFingerprint))
+    const a2 = ref.anchor;
+    if (!id2(ref.bodyId, 256) || ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(earlier.get(ref.sourceFeatureId) ?? "") || !a2 || !Array.isArray(a2.positionMillimeters) || a2.positionMillimeters.length !== 3 || !a2.positionMillimeters.every(Number.isFinite) || !id2(a2.signature, 16384) || !id2(a2.incidence, 16384) || typeof a2.shapeFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(a2.shapeFingerprint))
       throw Error("Invalid stopping solid vertex anchor.");
   } else throw Error("Unsupported stopping point reference.");
 }
@@ -263,7 +263,7 @@ const patternSourceTypes = ["extrude", "revolve", "sweep", "loft", "hole"];
 function patternCopyIds(feature) {
   if (!feature.bodyIds || !feature.copyBodyIds) return [];
   const copies = (feature.patternType === "linear" && feature.second ? feature.count * feature.second.count : feature.count) - 1;
-  return feature.bodyIds.flatMap((id2) => Array.from({ length: copies }, (_, i) => `${feature.copyBodyIds[id2]}:${i + 1}`));
+  return feature.bodyIds.flatMap((id2) => Array.from({ length: copies }, (_2, i) => `${feature.copyBodyIds[id2]}:${i + 1}`));
 }
 function validatePattern(feature, earlier, missing) {
   if (typeof feature.sourceFeatureId !== "string" || !missing(feature.sourceFeatureId) && !patternSourceTypes.includes(earlier.get(feature.sourceFeatureId) ?? ""))
@@ -301,12 +301,12 @@ function validatePattern(feature, earlier, missing) {
     }
   } else if (feature.patternType === "polar") {
     if (feature.axisReference !== void 0) {
-      const a = feature.axisReference;
-      if (a.kind === "vector") {
-        if (!Array.isArray(a.origin) || a.origin.length !== 3 || !a.origin.every(Number.isFinite) || !unit2(a.direction)) throw new Error("Pattern axis needs a finite origin and a nonzero direction.");
-      } else if (a.kind === "solid-edge") validateSolidEdgeReference(a, earlier, missing);
-      else if (a.kind === "feature") {
-        if (typeof a.featureId !== "string" || !missing(a.featureId) && earlier.get(a.featureId) !== "axis") throw new Error("Pattern axis must be an earlier axis feature.");
+      const a2 = feature.axisReference;
+      if (a2.kind === "vector") {
+        if (!Array.isArray(a2.origin) || a2.origin.length !== 3 || !a2.origin.every(Number.isFinite) || !unit2(a2.direction)) throw new Error("Pattern axis needs a finite origin and a nonzero direction.");
+      } else if (a2.kind === "solid-edge") validateSolidEdgeReference(a2, earlier, missing);
+      else if (a2.kind === "feature") {
+        if (typeof a2.featureId !== "string" || !missing(a2.featureId) && earlier.get(a2.featureId) !== "axis") throw new Error("Pattern axis must be an earlier axis feature.");
       } else throw new Error("Pattern axis must be a line, an axis feature or a straight solid edge.");
     }
     if (!Number.isFinite(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Pattern angle must be greater than 0 and at most 360 degrees.");
@@ -363,7 +363,7 @@ function transformReferences(t) {
   return [];
 }
 const id = (value2) => typeof value2 === "string" && !!value2.trim() && value2.length <= 256;
-const vector = (value2) => Array.isArray(value2) && value2.length === 3 && value2.every(Number.isFinite);
+const vector$1 = (value2) => Array.isArray(value2) && value2.length === 3 && value2.every(Number.isFinite);
 function validateTransformVectorReference(ref, earlier, missing) {
   if (ref?.kind === "sketch-line") {
     if (![ref.sourceFeatureId, ref.contourId, ref.segmentId].every((v) => id(v) && v.length <= 128) || !missing(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile") throw Error("Transform needs a straight line in an earlier sketch.");
@@ -385,13 +385,13 @@ function validateTransform(feature, earlier = /* @__PURE__ */ new Map(), missing
   } else if (t.kind === "rotate-reference") {
     if (!Number.isFinite(t.angleDegrees)) throw Error("Rotation angle must be finite.");
   } else if (t.kind === "scale-reference") {
-    if (!vector(t.scaleFactors) || t.scaleFactors.some((v) => v <= 0) || !Number.isFinite(t.scaleFactors.reduce((a, b) => a * b, 1)) || t.scaleFactors.reduce((a, b) => a * b, 1) <= 0) throw Error("Scale needs positive factors within the supported numeric range.");
+    if (!vector$1(t.scaleFactors) || t.scaleFactors.some((v) => v <= 0) || !Number.isFinite(t.scaleFactors.reduce((a2, b) => a2 * b, 1)) || t.scaleFactors.reduce((a2, b) => a2 * b, 1) <= 0) throw Error("Scale needs positive factors within the supported numeric range.");
   } else if (t.kind === "translate") {
-    if (!vector(t.translationMillimeters)) throw Error("Translation needs finite X, Y and Z distances.");
+    if (!vector$1(t.translationMillimeters)) throw Error("Translation needs finite X, Y and Z distances.");
   } else if (t.kind === "rotate") {
-    if (!vector(t.axisOriginMillimeters) || !vector(t.axisDirection) || Math.abs(Math.hypot(...t.axisDirection) - 1) > 1e-6 || !Number.isFinite(t.angleDegrees)) throw Error("Rotation needs a finite origin, unit axis and angle.");
+    if (!vector$1(t.axisOriginMillimeters) || !vector$1(t.axisDirection) || Math.abs(Math.hypot(...t.axisDirection) - 1) > 1e-6 || !Number.isFinite(t.angleDegrees)) throw Error("Rotation needs a finite origin, unit axis and angle.");
   } else if (t.kind === "scale") {
-    if (!vector(t.centerMillimeters) || !vector(t.scaleFactors) || t.scaleFactors.some((v) => v <= 0) || !Number.isFinite(t.scaleFactors.reduce((a, b) => a * b, 1)) || t.scaleFactors.reduce((a, b) => a * b, 1) <= 0) throw Error("Scale needs a finite center and positive factors within the supported numeric range.");
+    if (!vector$1(t.centerMillimeters) || !vector$1(t.scaleFactors) || t.scaleFactors.some((v) => v <= 0) || !Number.isFinite(t.scaleFactors.reduce((a2, b) => a2 * b, 1)) || t.scaleFactors.reduce((a2, b) => a2 * b, 1) <= 0) throw Error("Scale needs a finite center and positive factors within the supported numeric range.");
   } else if (t.kind === "copy") {
     if (!copies) throw Error("Copy in place needs new body identities.");
   } else if (t.kind === "align") {
@@ -468,15 +468,15 @@ function validateSurfaceFeature(feature, earlier, missing) {
       if (!finite$2(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
       if (!["X", "Y", "Z"].includes(feature.axis)) throw new Error("Surface revolve axis must be X, Y or Z.");
       if (feature.axisReference) {
-        const a = feature.axisReference, missingId = missing;
-        if (a.kind === "vector") {
-          if (![a.origin, a.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a.direction) < 1e-9) throw new Error("Surface revolve axis needs a finite origin and a nonzero direction.");
-        } else if (a.kind === "feature") {
-          if (typeof a.featureId !== "string" || !missing(a.featureId) && earlier.get(a.featureId) !== "axis") throw new Error("Surface revolve axis must be an earlier axis feature.");
-        } else if (a.kind === "two-points") {
-          validateTransformVectorReference(a.from, earlier, missingId);
-          validateTransformVectorReference(a.to, earlier, missingId);
-        } else validateTransformVectorReference(a, earlier, missingId);
+        const a2 = feature.axisReference, missingId = missing;
+        if (a2.kind === "vector") {
+          if (![a2.origin, a2.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a2.direction) < 1e-9) throw new Error("Surface revolve axis needs a finite origin and a nonzero direction.");
+        } else if (a2.kind === "feature") {
+          if (typeof a2.featureId !== "string" || !missing(a2.featureId) && earlier.get(a2.featureId) !== "axis") throw new Error("Surface revolve axis must be an earlier axis feature.");
+        } else if (a2.kind === "two-points") {
+          validateTransformVectorReference(a2.from, earlier, missingId);
+          validateTransformVectorReference(a2.to, earlier, missingId);
+        } else validateTransformVectorReference(a2, earlier, missingId);
       }
       return;
     case "surface-loft":
@@ -612,7 +612,7 @@ function numeric(value2) {
     throw Error("This operation requires a quantity, not text.");
   return value2;
 }
-const sameUnits = (a, b) => Math.abs(a.lengthPower - b.lengthPower) < 1e-12 && Math.abs(a.anglePower - b.anglePower) < 1e-12;
+const sameUnits = (a2, b) => Math.abs(a2.lengthPower - b.lengthPower) < 1e-12 && Math.abs(a2.anglePower - b.anglePower) < 1e-12;
 function scalar(value2) {
   const q = numeric(value2);
   if (!sameUnits(q, quantity(0)))
@@ -769,15 +769,15 @@ function textPlacementTransform(options, scale2 = 1) {
     (v) => typeof v === "number" && Number.isFinite(v) && v > 0
   ))
     throw Error("Frame-centered text needs a positive frame width and height.");
-  const angle2 = rotation * Math.PI / 180, cosine = Math.cos(angle2), sine = Math.sin(angle2), x = (options.flipHorizontal ? -1 : 1) * scale2, handedness = options.placementReflected ? -1 : 1, y = (options.flipVertical ? -1 : 1) * scale2 * handedness, shiftX = options.flipAboutFrame && options.flipHorizontal ? options.frameWidthMillimeters : 0, shiftY = options.flipAboutFrame && options.flipVertical ? textFrameHeight({
+  const angle2 = rotation * Math.PI / 180, cosine = Math.cos(angle2), sine = Math.sin(angle2), x2 = (options.flipHorizontal ? -1 : 1) * scale2, handedness = options.placementReflected ? -1 : 1, y2 = (options.flipVertical ? -1 : 1) * scale2 * handedness, shiftX = options.flipAboutFrame && options.flipHorizontal ? options.frameWidthMillimeters : 0, shiftY = options.flipAboutFrame && options.flipVertical ? textFrameHeight({
     emSizeMillimeters: options.emSizeMillimeters,
     fontAscenderRatio: options.fontAscenderRatio
   }) : 0;
   return {
-    a: cosine * x,
-    b: -sine * y,
-    c: sine * x,
-    d: cosine * y,
+    a: cosine * x2,
+    b: -sine * y2,
+    c: sine * x2,
+    d: cosine * y2,
     tx: origin[0] + cosine * shiftX - sine * shiftY * handedness,
     ty: origin[1] + sine * shiftX + cosine * shiftY * handedness
   };
@@ -845,8 +845,8 @@ function validateConic(start, segment) {
   point(segment.control);
   if (!Number.isFinite(segment.rho) || segment.rho <= 0 || segment.rho >= 1)
     throw Error("Conic rho must be greater than 0 and less than 1.");
-  const a = [segment.control[0] - start[0], segment.control[1] - start[1]], b = [segment.end[0] - start[0], segment.end[1] - start[1]], la = Math.hypot(...a), lb = Math.hypot(...b);
-  if (!Number.isFinite(la) || !Number.isFinite(lb) || la < 1e-9 || lb < 1e-9 || Math.abs(a[0] / la * (b[1] / lb) - a[1] / la * (b[0] / lb)) < 1e-12)
+  const a2 = [segment.control[0] - start[0], segment.control[1] - start[1]], b = [segment.end[0] - start[0], segment.end[1] - start[1]], la = Math.hypot(...a2), lb = Math.hypot(...b);
+  if (!Number.isFinite(la) || !Number.isFinite(lb) || la < 1e-9 || lb < 1e-9 || Math.abs(a2[0] / la * (b[1] / lb) - a2[1] / la * (b[0] / lb)) < 1e-12)
     throw Error("Conic endpoints and control must be distinct and noncollinear.");
 }
 function parameter(t) {
@@ -861,13 +861,13 @@ function conicKind(rho) {
 function evaluate(start, s, t) {
   validateConic(start, s);
   parameter(t);
-  const u = 1 - t, r = s.rho, v = 1 - r, d = v * (u * u + t * t) + 2 * r * u * t, dp = 2 * (2 * r - 1) * (1 - 2 * t), dd = 4 * (1 - 2 * r);
+  const u2 = 1 - t, r = s.rho, v = 1 - r, d2 = v * (u2 * u2 + t * t) + 2 * r * u2 * t, dp = 2 * (2 * r - 1) * (1 - 2 * t), dd = 4 * (1 - 2 * r);
   const position = [0, 0], first = [0, 0], second = [0, 0];
   for (const i of [0, 1]) {
-    const c = s.control[i] - start[i], e = s.end[i] - start[i], n = 2 * r * u * t * c + v * t * t * e, np = 2 * r * (1 - 2 * t) * c + 2 * v * t * e, npp = -4 * r * c + 2 * v * e, p = n / d;
-    position[i] = start[i] + p;
-    first[i] = (np - p * dp) / d;
-    second[i] = (npp - p * dd - 2 * first[i] * dp) / d;
+    const c2 = s.control[i] - start[i], e = s.end[i] - start[i], n = 2 * r * u2 * t * c2 + v * t * t * e, np = 2 * r * (1 - 2 * t) * c2 + 2 * v * t * e, npp = -4 * r * c2 + 2 * v * e, p2 = n / d2;
+    position[i] = start[i] + p2;
+    first[i] = (np - p2 * dp) / d2;
+    second[i] = (npp - p2 * dd - 2 * first[i] * dp) / d2;
   }
   if (t === 0) position.splice(0, 2, ...start);
   if (t === 1) position.splice(0, 2, ...s.end);
@@ -876,18 +876,18 @@ function evaluate(start, s, t) {
 const conicPoint = (start, segment, t) => evaluate(start, segment, t).position;
 const conicDerivative = (start, segment, t) => evaluate(start, segment, t).first;
 const conicSecondDerivative = (start, segment, t) => evaluate(start, segment, t).second;
-function roots(a, b, c) {
-  const scale2 = Math.max(Math.abs(a), Math.abs(b), Math.abs(c));
+function roots(a2, b, c2) {
+  const scale2 = Math.max(Math.abs(a2), Math.abs(b), Math.abs(c2));
   if (!scale2) return [];
-  a /= scale2;
+  a2 /= scale2;
   b /= scale2;
-  c /= scale2;
-  if (a === 0) return b === 0 ? [] : [-c / b];
-  const disc = b * b - 4 * a * c;
+  c2 /= scale2;
+  if (a2 === 0) return b === 0 ? [] : [-c2 / b];
+  const disc = b * b - 4 * a2 * c2;
   if (disc < 0) return [];
-  if (disc === 0) return [-b / (2 * a)];
+  if (disc === 0) return [-b / (2 * a2)];
   const q = -0.5 * (b + (b < 0 ? -1 : 1) * Math.sqrt(disc));
-  return [q / a, c / q];
+  return [q / a2, c2 / q];
 }
 function stationary(start, s) {
   const r = s.rho, d0 = 1 - r, d1 = 2 * (2 * r - 1), d2 = -d1;
@@ -901,24 +901,40 @@ function stationary(start, s) {
 }
 function projectConic(start, s, map, collapsed) {
   validateConic(start, s);
-  const a = map(start), next = { ...s, control: map(s.control), end: map(s.end) };
+  const a2 = map(start), next = { ...s, control: map(s.control), end: map(s.end) };
   if (!collapsed) return [next];
-  const ts = [0, ...stationary(a, next), 1].sort((x, y) => x - y), points = ts.map((t) => map(conicPoint(start, s, t)));
+  const ts = [0, ...stationary(a2, next), 1].sort((x2, y2) => x2 - y2), points = ts.map((t) => map(conicPoint(start, s, t)));
   return points.slice(1).flatMap((end, i) => Math.hypot(end[0] - points[i][0], end[1] - points[i][1]) < 1e-9 ? [] : [{ type: "line", end }]);
 }
-function blend(a, b, t) {
-  return [a[0] * (1 - t) + b[0] * t, a[1] * (1 - t) + b[1] * t, a[2] * (1 - t) + b[2] * t];
+function conicDisplayPolyline(start, s, tolerance2 = 0.025) {
+  validateConic(start, s);
+  if (!Number.isFinite(tolerance2) || tolerance2 <= 0) throw Error("Conic display tolerance must be positive.");
+  const points = [[...start]], pending = [{ span: { start, segment: s }, depth: 0 }];
+  while (pending.length) {
+    const { span, depth } = pending.pop(), a2 = span.start, b = span.segment.end, c2 = span.segment.control, dx = b[0] - a2[0], dy = b[1] - a2[1], l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((c2[0] - a2[0]) * dx + (c2[1] - a2[1]) * dy) / l)) : 0, error = Math.hypot(c2[0] - a2[0] - t * dx, c2[1] - a2[1] - t * dy);
+    if (error <= tolerance2) {
+      points.push([...b]);
+      continue;
+    }
+    if (depth >= 24 || points.length + pending.length >= 8192) throw Error("Conic display exceeds the subdivision limit.");
+    const [left, right] = splitConic(a2, span.segment, 0.5);
+    pending.push({ span: right, depth: depth + 1 }, { span: left, depth: depth + 1 });
+  }
+  return points;
+}
+function blend(a2, b, t) {
+  return [a2[0] * (1 - t) + b[0] * t, a2[1] * (1 - t) + b[1] * t, a2[2] * (1 - t) + b[2] * t];
 }
 function splitConic(start, s, t) {
   validateConic(start, s);
   if (!Number.isFinite(t) || t <= 0 || t >= 1) throw Error("Split inside the conic, away from its endpoints.");
-  const v = 1 - s.rho, a = [0, 0, v], b = [(s.control[0] - start[0]) * s.rho, (s.control[1] - start[1]) * s.rho, s.rho], c = [(s.end[0] - start[0]) * v, (s.end[1] - start[1]) * v, v], ab = blend(a, b, t), bc = blend(b, c, t), middle = blend(ab, bc, t);
-  const cartesian = (p) => [start[0] + p[0] / p[2], start[1] + p[1] / p[2]];
+  const v = 1 - s.rho, a2 = [0, 0, v], b = [(s.control[0] - start[0]) * s.rho, (s.control[1] - start[1]) * s.rho, s.rho], c2 = [(s.end[0] - start[0]) * v, (s.end[1] - start[1]) * v, v], ab = blend(a2, b, t), bc = blend(b, c2, t), middle = blend(ab, bc, t);
+  const cartesian = (p2) => [start[0] + p2[0] / p2[2], start[1] + p2[1] / p2[2]];
   const span = (p0, p1, p2) => {
     const weight = p1[2] / Math.sqrt(p0[2] * p2[2]);
     return { start: cartesian(p0), segment: { type: "conic", control: cartesian(p1), end: cartesian(p2), rho: s.rho === 0.5 ? 0.5 : weight / (1 + weight) } };
   };
-  const left = span(a, ab, middle), right = span(middle, bc, c);
+  const left = span(a2, ab, middle), right = span(middle, bc, c2);
   left.start = [...start];
   right.segment.end = [...s.end];
   return [left, right];
@@ -929,11 +945,11 @@ function conicSubspanParameter(rho, t, from, to) {
   parameter(from);
   parameter(to);
   if (from >= to) throw Error("Conic trim parameters must increase.");
-  const denominator = (v) => (1 - rho) * ((1 - v) ** 2 + v * v) + 2 * rho * v * (1 - v), k = Math.sqrt(denominator(from) / denominator(to)), u = Math.max(0, Math.min(1, (t - from) / (to - from)));
-  return u / (k + (1 - k) * u);
+  const denominator = (v) => (1 - rho) * ((1 - v) ** 2 + v * v) + 2 * rho * v * (1 - v), k2 = Math.sqrt(denominator(from) / denominator(to)), u2 = Math.max(0, Math.min(1, (t - from) / (to - from)));
+  return u2 / (k2 + (1 - k2) * u2);
 }
-function transformPoint(p, t) {
-  return [t.a * p[0] + t.b * p[1] + t.tx, t.c * p[0] + t.d * p[1] + t.ty];
+function transformPoint(p2, t) {
+  return [t.a * p2[0] + t.b * p2[1] + t.tx, t.c * p2[0] + t.d * p2[1] + t.ty];
 }
 function transformContour(source, t) {
   const scale2 = Math.hypot(t.a, t.c), det = t.a * t.d - t.b * t.c;
@@ -954,11 +970,11 @@ function transformContour(source, t) {
         segment.middle = transformPoint(segment.middle, t);
       if (segment.type === "bezier")
         segment.controls = segment.controls.map(
-          (p) => transformPoint(p, t)
+          (p2) => transformPoint(p2, t)
         );
       if (segment.type === "ellipse") {
-        const angle2 = segment.rotationDegrees * Math.PI / 180, x = Math.cos(angle2), y = Math.sin(angle2);
-        segment.rotationDegrees = Math.atan2(t.c * x + t.d * y, t.a * x + t.b * y) * 180 / Math.PI;
+        const angle2 = segment.rotationDegrees * Math.PI / 180, x2 = Math.cos(angle2), y2 = Math.sin(angle2);
+        segment.rotationDegrees = Math.atan2(t.c * x2 + t.d * y2, t.a * x2 + t.b * y2) * 180 / Math.PI;
         segment.radiusX *= scale2;
         segment.radiusY *= scale2;
         if (det < 0) segment.sweep = !segment.sweep;
@@ -970,14 +986,14 @@ function transformContour(source, t) {
 function similarityTransform(origin, translation, angleDegrees, scale2 = 1) {
   if (![...origin, ...translation, angleDegrees, scale2].every(Number.isFinite) || scale2 <= 0)
     throw new Error("Enter finite coordinates and a positive scale.");
-  const angle2 = angleDegrees * Math.PI / 180, a = scale2 * Math.cos(angle2), b = -scale2 * Math.sin(angle2), c = -b, d = a;
+  const angle2 = angleDegrees * Math.PI / 180, a2 = scale2 * Math.cos(angle2), b = -scale2 * Math.sin(angle2), c2 = -b, d2 = a2;
   return {
-    a,
+    a: a2,
     b,
-    c,
-    d,
-    tx: origin[0] + translation[0] - a * origin[0] - b * origin[1],
-    ty: origin[1] + translation[1] - c * origin[0] - d * origin[1]
+    c: c2,
+    d: d2,
+    tx: origin[0] + translation[0] - a2 * origin[0] - b * origin[1],
+    ty: origin[1] + translation[1] - c2 * origin[0] - d2 * origin[1]
   };
 }
 function patternInstanceCount(group) {
@@ -985,8 +1001,8 @@ function patternInstanceCount(group) {
     if (!Number.isInteger(n) || n < 1 || n > 100)
       throw Error("Pattern counts must be integers from 1 to 100.");
   };
-  const point2 = (p) => {
-    if (!Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite))
+  const point2 = (p2) => {
+    if (!Array.isArray(p2) || p2.length !== 2 || !p2.every(Number.isFinite))
       throw Error("Pattern coordinates must be finite.");
   };
   if (group.kind === "linear") {
@@ -1027,41 +1043,41 @@ function patternInstanceTransform(group, instance) {
     0
   );
 }
-function patternRelationTransform(d, c) {
-  if (c.patternGroup !== void 0) {
-    if (c.transform || c.axis)
+function patternRelationTransform(d2, c2) {
+  if (c2.patternGroup !== void 0) {
+    if (c2.transform || c2.axis)
       throw Error(
         "Grouped patterns cannot also contain a fixed transform or mirror axis."
       );
-    const group = d.patternGroups?.[c.patternGroup];
+    const group = d2.patternGroups?.[c2.patternGroup];
     if (!group) throw Error("Missing pattern group.");
-    return patternInstanceTransform(group, c.patternInstance);
+    return patternInstanceTransform(group, c2.patternInstance);
   }
-  return c.transform;
+  return c2.transform;
 }
-function validatePatternGroups(d) {
-  if (d.patternGroups === void 0) return;
-  if (!d.patternGroups || typeof d.patternGroups !== "object" || Array.isArray(d.patternGroups))
+function validatePatternGroups(d2) {
+  if (d2.patternGroups === void 0) return;
+  if (!d2.patternGroups || typeof d2.patternGroups !== "object" || Array.isArray(d2.patternGroups))
     throw Error("Invalid pattern groups.");
-  for (const [id2, group] of Object.entries(d.patternGroups)) {
+  for (const [id2, group] of Object.entries(d2.patternGroups)) {
     if (!id2.trim() || id2.length > 128)
       throw Error("Invalid pattern group identity.");
     patternInstanceCount(group);
   }
 }
 function sketchArcGeometry(start, middle, end) {
-  const u = [middle[0] - start[0], middle[1] - start[1]], v = [end[0] - start[0], end[1] - start[1]];
-  const det = 2 * (u[0] * v[1] - u[1] * v[0]);
+  const u2 = [middle[0] - start[0], middle[1] - start[1]], v = [end[0] - start[0], end[1] - start[1]];
+  const det = 2 * (u2[0] * v[1] - u2[1] * v[0]);
   if (Math.abs(det) < 1e-12)
     throw new Error("Arc points must not be collinear.");
-  const a = u[0] ** 2 + u[1] ** 2, b = v[0] ** 2 + v[1] ** 2;
+  const a2 = u2[0] ** 2 + u2[1] ** 2, b = v[0] ** 2 + v[1] ** 2;
   const center = [
-    start[0] + (a * v[1] - b * u[1]) / det,
-    start[1] + (u[0] * b - v[0] * a) / det
+    start[0] + (a2 * v[1] - b * u2[1]) / det,
+    start[1] + (u2[0] * b - v[0] * a2) / det
   ];
   const radius = Math.hypot(start[0] - center[0], start[1] - center[1]);
-  const angle2 = (p) => Math.atan2(p[1] - center[1], p[0] - center[0]), tau2 = 2 * Math.PI;
-  const delta2 = (a2, b2) => (b2 - a2 + tau2) % tau2;
+  const angle2 = (p2) => Math.atan2(p2[1] - center[1], p2[0] - center[0]), tau2 = 2 * Math.PI;
+  const delta2 = (a22, b2) => (b2 - a22 + tau2) % tau2;
   const startAngle = angle2(start), endAngle = angle2(end), counterclockwise = delta2(startAngle, angle2(middle)) < delta2(startAngle, endAngle);
   const sweep = counterclockwise ? delta2(startAngle, endAngle) : -delta2(endAngle, startAngle);
   const midpoint = [
@@ -1071,29 +1087,29 @@ function sketchArcGeometry(start, middle, end) {
   return { center, radius, midpoint, startAngle, sweep };
 }
 const tau$1 = 2 * Math.PI;
-const angleBetween = (u, v) => Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1]);
+const angleBetween = (u2, v) => Math.atan2(u2[0] * v[1] - u2[1] * v[0], u2[0] * v[0] + u2[1] * v[1]);
 function ellipseFrame(start, segment) {
   const rotation = segment.rotationDegrees * Math.PI / 180, cos = Math.cos(rotation), sin = Math.sin(rotation);
   let rx = Math.abs(segment.radiusX), ry = Math.abs(segment.radiusY);
   const dx = (start[0] - segment.end[0]) / 2, dy = (start[1] - segment.end[1]) / 2;
-  const x = cos * dx + sin * dy, y = -sin * dx + cos * dy;
+  const x2 = cos * dx + sin * dy, y2 = -sin * dx + cos * dy;
   if (rx <= 0 || ry <= 0 || Math.hypot(dx, dy) < 1e-12)
     throw new Error("Ellipse needs positive radii and distinct endpoints.");
-  const correction = x * x / (rx * rx) + y * y / (ry * ry);
+  const correction = x2 * x2 / (rx * rx) + y2 * y2 / (ry * ry);
   if (correction > 1) {
     const scale2 = Math.sqrt(correction);
     rx *= scale2;
     ry *= scale2;
   }
-  const denominator = rx * rx * y * y + ry * ry * x * x;
+  const denominator = rx * rx * y2 * y2 + ry * ry * x2 * x2;
   const factor = (segment.largeArc === segment.sweep ? -1 : 1) * Math.sqrt(Math.max(0, (rx * rx * ry * ry - denominator) / denominator));
-  const cx = factor * rx * y / ry, cy = -factor * ry * x / rx;
+  const cx = factor * rx * y2 / ry, cy = -factor * ry * x2 / rx;
   const center = [
     cos * cx - sin * cy + (start[0] + segment.end[0]) / 2,
     sin * cx + cos * cy + (start[1] + segment.end[1]) / 2
   ];
-  const u = [(x - cx) / rx, (y - cy) / ry], v = [(-x - cx) / rx, (-y - cy) / ry];
-  let sweep = angleBetween(u, v);
+  const u2 = [(x2 - cx) / rx, (y2 - cy) / ry], v = [(-x2 - cx) / rx, (-y2 - cy) / ry];
+  let sweep = angleBetween(u2, v);
   if (!segment.sweep && sweep > 0) sweep -= tau$1;
   if (segment.sweep && sweep < 0) sweep += tau$1;
   return {
@@ -1101,15 +1117,15 @@ function ellipseFrame(start, segment) {
     radiusX: rx,
     radiusY: ry,
     rotation,
-    startAngle: Math.atan2(u[1], u[0]),
+    startAngle: Math.atan2(u2[1], u2[0]),
     sweep
   };
 }
 function ellipsePoint(frame, parameter2) {
-  const angle2 = frame.startAngle + parameter2 * frame.sweep, x = frame.radiusX * Math.cos(angle2), y = frame.radiusY * Math.sin(angle2), cos = Math.cos(frame.rotation), sin = Math.sin(frame.rotation);
+  const angle2 = frame.startAngle + parameter2 * frame.sweep, x2 = frame.radiusX * Math.cos(angle2), y2 = frame.radiusY * Math.sin(angle2), cos = Math.cos(frame.rotation), sin = Math.sin(frame.rotation);
   return [
-    frame.center[0] + cos * x - sin * y,
-    frame.center[1] + sin * x + cos * y
+    frame.center[0] + cos * x2 - sin * y2,
+    frame.center[1] + sin * x2 + cos * y2
   ];
 }
 function segmentPoint(start, segment, t) {
@@ -1123,37 +1139,37 @@ function segmentPoint(start, segment, t) {
   if (segment.type === "ellipse")
     return ellipsePoint(ellipseFrame(start, segment), t);
   if (segment.type === "arc") {
-    const arc = sketchArcGeometry(start, segment.middle, segment.end), a2 = arc.startAngle + t * arc.sweep;
+    const arc = sketchArcGeometry(start, segment.middle, segment.end), a22 = arc.startAngle + t * arc.sweep;
     return [
-      arc.center[0] + arc.radius * Math.cos(a2),
-      arc.center[1] + arc.radius * Math.sin(a2)
+      arc.center[0] + arc.radius * Math.cos(a22),
+      arc.center[1] + arc.radius * Math.sin(a22)
     ];
   }
-  const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  const u2 = 1 - t, a2 = u2 * u2 * u2, b = 3 * u2 * u2 * t, c2 = 3 * u2 * t * t, d2 = t * t * t;
   return [
-    a * start[0] + b * segment.controls[0][0] + c * segment.controls[1][0] + d * segment.end[0],
-    a * start[1] + b * segment.controls[0][1] + c * segment.controls[1][1] + d * segment.end[1]
+    a2 * start[0] + b * segment.controls[0][0] + c2 * segment.controls[1][0] + d2 * segment.end[0],
+    a2 * start[1] + b * segment.controls[0][1] + c2 * segment.controls[1][1] + d2 * segment.end[1]
   ];
 }
 function closestSegmentParameter(start, segment, point2) {
   const squared = (t) => {
-    const p = segmentPoint(start, segment, t);
-    return (p[0] - point2[0]) ** 2 + (p[1] - point2[1]) ** 2;
+    const p2 = segmentPoint(start, segment, t);
+    return (p2[0] - point2[0]) ** 2 + (p2[1] - point2[1]) ** 2;
   };
   if (segment.type === "line") {
-    const x = segment.end[0] - start[0], y = segment.end[1] - start[1], den = x * x + y * y;
+    const x2 = segment.end[0] - start[0], y2 = segment.end[1] - start[1], den = x2 * x2 + y2 * y2;
     const parameter22 = den ? Math.max(
       0,
       Math.min(
         1,
-        ((point2[0] - start[0]) * x + (point2[1] - start[1]) * y) / den
+        ((point2[0] - start[0]) * x2 + (point2[1] - start[1]) * y2) / den
       )
     ) : 0;
     return { parameter: parameter22, distance: Math.sqrt(squared(parameter22)) };
   }
   const samples2 = 64, values = Array.from(
     { length: samples2 + 1 },
-    (_, i) => squared(i / samples2)
+    (_2, i) => squared(i / samples2)
   );
   let best = values[0], parameter2 = 0;
   for (let i = 0; i <= samples2; i++) {
@@ -1165,9 +1181,9 @@ function closestSegmentParameter(start, segment, point2) {
       continue;
     let lo = (i - 1) / samples2, hi = (i + 1) / samples2;
     for (let step = 0; step < 45; step++) {
-      const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3;
-      if (squared(a) < squared(b)) hi = b;
-      else lo = a;
+      const a2 = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3;
+      if (squared(a2) < squared(b)) hi = b;
+      else lo = a2;
     }
     const t = (lo + hi) / 2, value2 = squared(t);
     if (value2 < best) {
@@ -1195,10 +1211,10 @@ function scaledControlPoint(path, ref) {
     anchor[1] + scale2 * (control[1] - anchor[1])
   ];
 }
-function referencedContour(d, r) {
-  if (r?.projectedContourId === void 0) return d.contours[r?.contour];
+function referencedContour(d2, r) {
+  if (r?.projectedContourId === void 0) return d2.contours[r?.contour];
   if (typeof r.projectedContourId !== "string" || !r.projectedContourId.trim() || r.contour !== -1) throw Error("Invalid projected constraint reference.");
-  const matches = d.projectionContext?.filter((c) => c.id === r.projectedContourId) ?? [];
+  const matches = d2.projectionContext?.filter((c2) => c2.id === r.projectedContourId) ?? [];
   if (matches.length !== 1) throw Error(`Broken projected constraint reference: ${r.projectedContourId}.`);
   return matches[0];
 }
@@ -1239,14 +1255,14 @@ function curveJet(curve) {
     });
   if (s.type === "bezier")
     return (t) => {
-      const p = curve.start, [a, b] = s.controls, q = s.end;
+      const p2 = curve.start, [a2, b] = s.controls, q = s.end;
       const first = [0, 1].map(
-        (k) => 3 * ((1 - t) ** 2 * (a[k] - p[k]) + 2 * (1 - t) * t * (b[k] - a[k]) + t * t * (q[k] - b[k]))
+        (k2) => 3 * ((1 - t) ** 2 * (a2[k2] - p2[k2]) + 2 * (1 - t) * t * (b[k2] - a2[k2]) + t * t * (q[k2] - b[k2]))
       );
       const second = [0, 1].map(
-        (k) => 6 * ((1 - t) * (b[k] - 2 * a[k] + p[k]) + t * (q[k] - 2 * b[k] + a[k]))
+        (k2) => 6 * ((1 - t) * (b[k2] - 2 * a2[k2] + p2[k2]) + t * (q[k2] - 2 * b[k2] + a2[k2]))
       );
-      return { point: segmentPoint(p, s, t), first, second };
+      return { point: segmentPoint(p2, s, t), first, second };
     };
   const frame = s.type === "ellipse" ? ellipseFrame(curve.start, s) : (() => {
     const arc = sketchArcGeometry(curve.start, s.middle, s.end);
@@ -1257,65 +1273,65 @@ function curveJet(curve) {
       rotation: 0
     };
   })();
-  const c = Math.cos(frame.rotation), sn = Math.sin(frame.rotation), w = frame.sweep;
-  const rotate2 = (x, y) => [
-    c * x - sn * y,
-    sn * x + c * y
+  const c2 = Math.cos(frame.rotation), sn = Math.sin(frame.rotation), w2 = frame.sweep;
+  const rotate2 = (x2, y2) => [
+    c2 * x2 - sn * y2,
+    sn * x2 + c2 * y2
   ];
   return (t) => {
-    const angle2 = frame.startAngle + t * w;
+    const angle2 = frame.startAngle + t * w2;
     return {
       point: ellipsePoint(frame, t),
       first: rotate2(
-        -frame.radiusX * Math.sin(angle2) * w,
-        frame.radiusY * Math.cos(angle2) * w
+        -frame.radiusX * Math.sin(angle2) * w2,
+        frame.radiusY * Math.cos(angle2) * w2
       ),
       second: rotate2(
-        -frame.radiusX * Math.cos(angle2) * w * w,
-        -frame.radiusY * Math.sin(angle2) * w * w
+        -frame.radiusX * Math.cos(angle2) * w2 * w2,
+        -frame.radiusY * Math.sin(angle2) * w2 * w2
       )
     };
   };
 }
-function sketchEntityPoint(d, r) {
-  const c = referencedContour(d, r);
-  r = resolveSegmentReference(c, r);
-  if (c?.type === "circle") return c.center;
-  if (c?.type !== "path" || r.kind !== "point") return;
+function sketchEntityPoint(d2, r) {
+  const c2 = referencedContour(d2, r);
+  r = resolveSegmentReference(c2, r);
+  if (c2?.type === "circle") return c2.center;
+  if (c2?.type !== "path" || r.kind !== "point") return;
   if (r.control !== void 0) {
-    return scaledControlPoint(c, r);
+    return scaledControlPoint(c2, r);
   }
-  return r.index === 0 ? c.start : c.segments[r.index - 1]?.end;
+  return r.index === 0 ? c2.start : c2.segments[r.index - 1]?.end;
 }
-function resolve$1(d, r) {
-  const c = referencedContour(d, r);
-  r = resolveSegmentReference(c, r);
-  if (!c) throw new Error("Constraint references missing geometry.");
-  if (r.kind === "contour") return { contour: c };
-  if (r.kind === "curve" && c.type === "path") {
-    const segment = c.segments[r.index], parameter2 = r.parameter;
+function resolve$1(d2, r) {
+  const c2 = referencedContour(d2, r);
+  r = resolveSegmentReference(c2, r);
+  if (!c2) throw new Error("Constraint references missing geometry.");
+  if (r.kind === "contour") return { contour: c2 };
+  if (r.kind === "curve" && c2.type === "path") {
+    const segment = c2.segments[r.index], parameter2 = r.parameter;
     if (!Number.isInteger(r.index) || !segment || parameter2 === void 0 || !Number.isFinite(parameter2) || parameter2 < 0 || parameter2 > 1)
       throw new Error(
         "Curve contact requires a valid segment and parameter between zero and one."
       );
     const curve = curveJet({
-      start: r.index === 0 ? c.start : c.segments[r.index - 1].end,
+      start: r.index === 0 ? c2.start : c2.segments[r.index - 1].end,
       segment
     })(parameter2);
     return { curve };
   }
-  if (r.kind === "ellipse" && c.type === "path") {
-    const segment = c.segments[r.index];
-    if (segment?.type === "ellipse" && d.constraints?.some(
+  if (r.kind === "ellipse" && c2.type === "path") {
+    const segment = c2.segments[r.index];
+    if (segment?.type === "ellipse" && d2.constraints?.some(
       (q) => q.kind === "ellipse-shape" && q.a.contour === r.contour
     )) {
-      const first = c.segments[0];
+      const first = c2.segments[0];
       if (first.type !== "ellipse") throw Error("Invalid full ellipse.");
       return {
         ellipse: {
           center: [
-            (c.start[0] + first.end[0]) / 2,
-            (c.start[1] + first.end[1]) / 2
+            (c2.start[0] + first.end[0]) / 2,
+            (c2.start[1] + first.end[1]) / 2
           ],
           radiusX: first.radiusX,
           radiusY: first.radiusY,
@@ -1326,57 +1342,57 @@ function resolve$1(d, r) {
     if (segment?.type === "ellipse")
       return {
         ellipse: ellipseFrame(
-          r.index === 0 ? c.start : c.segments[r.index - 1].end,
+          r.index === 0 ? c2.start : c2.segments[r.index - 1].end,
           segment
         )
       };
   }
-  if (r.kind === "arc" && c.type === "path") {
-    const segment = c.segments[r.index];
+  if (r.kind === "arc" && c2.type === "path") {
+    const segment = c2.segments[r.index];
     if (segment?.type === "arc") {
       const arc = sketchArcGeometry(
-        r.index === 0 ? c.start : c.segments[r.index - 1].end,
+        r.index === 0 ? c2.start : c2.segments[r.index - 1].end,
         segment.middle,
         segment.end
       );
       return { circle: arc, arc };
     }
   }
-  if (r.kind === "circle" && c.type === "circle") return { circle: c };
+  if (r.kind === "circle" && c2.type === "circle") return { circle: c2 };
   if (r.kind === "point") {
     if (r.control !== void 0) {
-      const point2 = sketchEntityPoint(d, r);
+      const point2 = sketchEntityPoint(d2, r);
       if (point2) return { point: point2 };
       throw new Error("Missing curve control point.");
     }
-    if (c.type === "circle" && r.index === 0) return { point: c.center };
-    if (c.type === "path" && Number.isInteger(r.index) && r.index >= 0 && r.index <= c.segments.length)
-      return { point: r.index === 0 ? c.start : c.segments[r.index - 1].end };
+    if (c2.type === "circle" && r.index === 0) return { point: c2.center };
+    if (c2.type === "path" && Number.isInteger(r.index) && r.index >= 0 && r.index <= c2.segments.length)
+      return { point: r.index === 0 ? c2.start : c2.segments[r.index - 1].end };
   }
-  if (r.kind === "line" && c.type === "path" && c.segments[r.index]?.type === "line")
+  if (r.kind === "line" && c2.type === "path" && c2.segments[r.index]?.type === "line")
     return {
       line: [
-        r.index === 0 ? c.start : c.segments[r.index - 1].end,
-        c.segments[r.index].end
+        r.index === 0 ? c2.start : c2.segments[r.index - 1].end,
+        c2.segments[r.index].end
       ]
     };
   throw new Error("Constraint requires a compatible point, line or circle.");
 }
-function ellipseLocusResiduals(a, b) {
-  const scale2 = Math.max(a.radiusX, a.radiusY, b.radiusX, b.radiusY, 1e-8);
-  const matrix = (e) => {
-    const c = Math.cos(e.rotation), s = Math.sin(e.rotation), x2 = e.radiusX / scale2, y2 = e.radiusY / scale2;
+function ellipseLocusResiduals(a2, b) {
+  const scale2 = Math.max(a2.radiusX, a2.radiusY, b.radiusX, b.radiusY, 1e-8);
+  const matrix2 = (e) => {
+    const c2 = Math.cos(e.rotation), s = Math.sin(e.rotation), x22 = e.radiusX / scale2, y22 = e.radiusY / scale2;
     return [
-      x2 * x2 * c * c + y2 * y2 * s * s,
-      (x2 * x2 - y2 * y2) * c * s,
-      x2 * x2 * s * s + y2 * y2 * c * c
+      x22 * x22 * c2 * c2 + y22 * y22 * s * s,
+      (x22 * x22 - y22 * y22) * c2 * s,
+      x22 * x22 * s * s + y22 * y22 * c2 * c2
     ];
   };
-  const x = matrix(a), y = matrix(b);
+  const x2 = matrix2(a2), y2 = matrix2(b);
   return [
-    a.center[0] - b.center[0],
-    a.center[1] - b.center[1],
-    ...x.map((v, i) => (v - y[i]) * scale2)
+    a2.center[0] - b.center[0],
+    a2.center[1] - b.center[1],
+    ...x2.map((v, i) => (v - y2[i]) * scale2)
   ];
 }
 function pointLineMeasurement(point2, line2) {
@@ -1391,56 +1407,56 @@ function pointLineMeasurement(point2, line2) {
     )
   };
 }
-function lineLineMeasurement(a, b) {
-  const u = [a[1][0] - a[0][0], a[1][1] - a[0][1]];
+function lineLineMeasurement(a2, b) {
+  const u2 = [a2[1][0] - a2[0][0], a2[1][1] - a2[0][1]];
   const v = [b[1][0] - b[0][0], b[1][1] - b[0][1]];
-  const la = Math.hypot(...u), lb = Math.hypot(...v);
+  const la = Math.hypot(...u2), lb = Math.hypot(...v);
   if (la < 1e-10 || lb < 1e-10)
     throw Error("Select two nonzero-length lines for distance.");
-  const p = [(a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2];
-  const measurement = pointLineMeasurement(p, b);
+  const p2 = [(a2[0][0] + a2[1][0]) / 2, (a2[0][1] + a2[1][1]) / 2];
+  const measurement = pointLineMeasurement(p2, b);
   return {
     ...measurement,
-    point: p,
-    parallelError: u[0] / la * (v[1] / lb) - u[1] / la * (v[0] / lb)
+    point: p2,
+    parallelError: u2[0] / la * (v[1] / lb) - u2[1] / la * (v[0] / lb)
   };
 }
-function measuredDimensionValue(d, c) {
-  if (c.value !== void 0 || c.valueFrom !== void 0 || c.valueSign !== void 0 || c.valueScale !== void 0 || c.valueOffset !== void 0)
+function measuredDimensionValue(d2, c2) {
+  if (c2.value !== void 0 || c2.valueFrom !== void 0 || c2.valueSign !== void 0 || c2.valueScale !== void 0 || c2.valueOffset !== void 0)
     throw Error("Reference dimensions cannot contain driving values or links.");
-  if (c.kind === "conic-rho") return referencedConic(d, c.a).rho;
-  const a = resolve$1(d, c.a), b = c.b ? resolve$1(d, c.b) : void 0;
-  if ((c.kind === "radius" || c.kind === "diameter") && a.circle)
-    return a.circle.radius * (c.kind === "diameter" ? 2 : 1);
-  if (c.kind === "length" && a.line)
-    return Math.hypot(a.line[1][0] - a.line[0][0], a.line[1][1] - a.line[0][1]);
-  if (a.point && b?.point) {
-    const dx = b.point[0] - a.point[0], dy = b.point[1] - a.point[1];
-    if (c.kind === "distance") return Math.hypot(dx, dy);
-    if (c.kind === "horizontal-distance") return dx;
-    if (c.kind === "vertical-distance") return dy;
+  if (c2.kind === "conic-rho") return referencedConic(d2, c2.a).rho;
+  const a2 = resolve$1(d2, c2.a), b = c2.b ? resolve$1(d2, c2.b) : void 0;
+  if ((c2.kind === "radius" || c2.kind === "diameter") && a2.circle)
+    return a2.circle.radius * (c2.kind === "diameter" ? 2 : 1);
+  if (c2.kind === "length" && a2.line)
+    return Math.hypot(a2.line[1][0] - a2.line[0][0], a2.line[1][1] - a2.line[0][1]);
+  if (a2.point && b?.point) {
+    const dx = b.point[0] - a2.point[0], dy = b.point[1] - a2.point[1];
+    if (c2.kind === "distance") return Math.hypot(dx, dy);
+    if (c2.kind === "horizontal-distance") return dx;
+    if (c2.kind === "vertical-distance") return dy;
   }
-  if (c.kind === "distance") {
-    if (a.line && b?.line) {
-      const m = lineLineMeasurement(a.line, b.line);
-      if (Math.abs(m.parallelError) > 1e-7)
+  if (c2.kind === "distance") {
+    if (a2.line && b?.line) {
+      const m2 = lineLineMeasurement(a2.line, b.line);
+      if (Math.abs(m2.parallelError) > 1e-7)
         throw Error("Reference line distance requires parallel lines.");
-      return m.distance;
+      return m2.distance;
     }
-    if (a.point && b?.line)
-      return pointLineMeasurement(a.point, b.line).distance;
-    if (a.line && b?.point)
-      return pointLineMeasurement(b.point, a.line).distance;
+    if (a2.point && b?.line)
+      return pointLineMeasurement(a2.point, b.line).distance;
+    if (a2.line && b?.point)
+      return pointLineMeasurement(b.point, a2.line).distance;
   }
-  if (c.kind === "angle" && a.line && b?.line) {
-    const u = [a.line[1][0] - a.line[0][0], a.line[1][1] - a.line[0][1]], v = [b.line[1][0] - b.line[0][0], b.line[1][1] - b.line[0][1]];
-    if (Math.hypot(...u) < 1e-10 || Math.hypot(...v) < 1e-10)
+  if (c2.kind === "angle" && a2.line && b?.line) {
+    const u2 = [a2.line[1][0] - a2.line[0][0], a2.line[1][1] - a2.line[0][1]], v = [b.line[1][0] - b.line[0][0], b.line[1][1] - b.line[0][1]];
+    if (Math.hypot(...u2) < 1e-10 || Math.hypot(...v) < 1e-10)
       throw Error("Cannot measure a zero-length line angle.");
-    return Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1]) * 180 / Math.PI;
+    return Math.atan2(u2[0] * v[1] - u2[1] * v[0], u2[0] * v[0] + u2[1] * v[1]) * 180 / Math.PI;
   }
   throw Error("Select compatible geometry for a reference dimension.");
 }
-const dimensionUnit = (c) => c.kind === "conic-rho" ? "scalar" : c.kind === "angle" ? "angle" : [
+const dimensionUnit = (c2) => c2.kind === "conic-rho" ? "scalar" : c2.kind === "angle" ? "angle" : [
   "distance",
   "horizontal-distance",
   "vertical-distance",
@@ -1449,7 +1465,7 @@ const dimensionUnit = (c) => c.kind === "conic-rho" ? "scalar" : c.kind === "ang
   "diameter",
   "offset",
   "slot"
-].includes(c.kind) ? "length" : void 0;
+].includes(c2.kind) ? "length" : void 0;
 function resolveDimensionLink(drawing, constraint) {
   const expected = dimensionUnit(constraint);
   if (constraint.reference)
@@ -1476,7 +1492,7 @@ function resolveDimensionLink(drawing, constraint) {
         throw new Error("Only angular links support a sign of +1 or -1.");
       sign *= current2.valueSign;
     }
-    const target = drawing.constraints?.find((c) => c.id === current2.valueFrom);
+    const target = drawing.constraints?.find((c2) => c2.id === current2.valueFrom);
     if (!target) throw new Error("The linked dimension driver is missing.");
     if (target.reference)
       throw Error("Reference dimensions cannot drive geometry.");
@@ -1509,11 +1525,11 @@ function referencedConic(drawing, ref) {
   validateConic(r.index === 0 ? contour.start : contour.segments[r.index - 1].end, segment);
   return segment;
 }
-function conicRhoResiduals(drawing, c) {
-  if (c.b || c.axis || c.point || c.fixedGeometry) throw Error("Rho dimensions reference one conic curve.");
-  const rho = dimensionValue(drawing, c);
+function conicRhoResiduals(drawing, c2) {
+  if (c2.b || c2.axis || c2.point || c2.fixedGeometry) throw Error("Rho dimensions reference one conic curve.");
+  const rho = dimensionValue(drawing, c2);
   if (!Number.isFinite(rho) || rho <= 0 || rho >= 1) throw Error("Conic rho must be greater than 0 and less than 1.");
-  return [referencedConic(drawing, c.a).rho - rho];
+  return [referencedConic(drawing, c2.a).rho - rho];
 }
 function conicCoordinates(s) {
   return [
@@ -1538,9 +1554,9 @@ function splineEndTangentShape(path, spanIntervals, ends) {
   if (!ends.length || new Set(ends).size !== ends.length || ends.some((end) => !["start", "end"].includes(end)))
     throw Error("Select valid independent spline ends.");
   const points = [path.start, ...path.segments.map((s) => s.end)];
-  if (points.length > 1001 || points.some((p) => p.length !== 2 || p.some((v) => !Number.isFinite(v))))
+  if (points.length > 1001 || points.some((p2) => p2.length !== 2 || p2.some((v) => !Number.isFinite(v))))
     throw Error("Spline needs 2–1001 finite fit points.");
-  const h = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
+  const h = points.slice(1).map((p2, i) => Math.hypot(p2[0] - points[i][0], p2[1] - points[i][1]));
   if (h.some((v) => v < 1e-8)) throw Error("Consecutive spline fit points must be distinct.");
   if (spanIntervals !== void 0) {
     if (spanIntervals.length !== h.length || spanIntervals.some((v) => !Number.isFinite(v) || v <= 1e-10))
@@ -1598,9 +1614,9 @@ function splineEndTangentResiduals(path, constraint) {
   return path.segments.flatMap((segment, i) => {
     const target = expected.segments[i];
     if (segment.type !== "bezier" || target.type !== "bezier") throw Error("Select a cubic fit spline.");
-    return segment.controls.flatMap((p, j) => {
+    return segment.controls.flatMap((p2, j) => {
       if (i === 0 && j === 0 && ends.includes("start") || i === path.segments.length - 1 && j === 1 && ends.includes("end")) return [];
-      return [p[0] - target.controls[j][0], p[1] - target.controls[j][1]];
+      return [p2[0] - target.controls[j][0], p2[1] - target.controls[j][1]];
     });
   });
 }
@@ -1625,31 +1641,31 @@ function fixedGeometryResiduals(drawing, constraint) {
   const mismatch = () => {
     throw Error("Fixed geometry changed type or topology. Unfix it before changing its topology.");
   };
-  const point2 = (a, b) => [a[0] - b[0], a[1] - b[1]];
+  const point2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1]];
   if (current2.type === "circle" && target.type === "circle") return [...point2(current2.center, target.center), current2.radius - target.radius];
   if (current2.type !== "path" || target.type !== "path" || current2.segments.length !== target.segments.length) return mismatch();
   const residual = point2(current2.start, target.start);
   for (let i = 0; i < current2.segments.length; i++) {
-    const a = current2.segments[i], b = target.segments[i];
-    if (a.type !== b.type) return mismatch();
-    residual.push(...point2(a.end, b.end));
-    if (a.type === "arc" && b.type === "arc") residual.push(...point2(a.middle, b.middle));
-    if (a.type === "bezier" && b.type === "bezier") for (const j of [0, 1]) residual.push(...point2(a.controls[j], b.controls[j]));
-    if (a.type === "conic" && b.type === "conic") residual.push(...point2(a.control, b.control), a.rho - b.rho);
-    if (a.type === "ellipse" && b.type === "ellipse") {
-      if (a.largeArc !== b.largeArc || a.sweep !== b.sweep) return mismatch();
-      const rotation = (a.rotationDegrees - b.rotationDegrees) * Math.PI / 180;
-      residual.push(a.radiusX - b.radiusX, a.radiusY - b.radiusY, Math.atan2(Math.sin(rotation), Math.cos(rotation)) * Math.max(b.radiusX, b.radiusY));
+    const a2 = current2.segments[i], b = target.segments[i];
+    if (a2.type !== b.type) return mismatch();
+    residual.push(...point2(a2.end, b.end));
+    if (a2.type === "arc" && b.type === "arc") residual.push(...point2(a2.middle, b.middle));
+    if (a2.type === "bezier" && b.type === "bezier") for (const j of [0, 1]) residual.push(...point2(a2.controls[j], b.controls[j]));
+    if (a2.type === "conic" && b.type === "conic") residual.push(...point2(a2.control, b.control), a2.rho - b.rho);
+    if (a2.type === "ellipse" && b.type === "ellipse") {
+      if (a2.largeArc !== b.largeArc || a2.sweep !== b.sweep) return mismatch();
+      const rotation = (a2.rotationDegrees - b.rotationDegrees) * Math.PI / 180;
+      residual.push(a2.radiusX - b.radiusX, a2.radiusY - b.radiusY, Math.atan2(Math.sin(rotation), Math.cos(rotation)) * Math.max(b.radiusX, b.radiusY));
     }
   }
   return residual;
 }
 function angularSpanDistance(start, sweep, angle2) {
-  const tau2 = 2 * Math.PI, wrap = (x) => (x % tau2 + tau2) % tau2;
+  const tau2 = 2 * Math.PI, wrap = (x2) => (x2 % tau2 + tau2) % tau2;
   const travel = wrap(sweep >= 0 ? angle2 - start : start - angle2);
   if (Math.abs(sweep) >= tau2 - 1e-10 || travel <= Math.abs(sweep) + 1e-10 || tau2 - travel < 1e-10)
     return 0;
-  const distance2 = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  const distance2 = (a2, b) => Math.abs(Math.atan2(Math.sin(a2 - b), Math.cos(a2 - b)));
   return Math.min(distance2(angle2, start), distance2(angle2, start + sweep));
 }
 function circleContinuityResiduals(circle, curve, curvature = false) {
@@ -1663,14 +1679,14 @@ function circleContinuityResiduals(circle, curve, curvature = false) {
     (dx * curve.first[0] + dy * curve.first[1]) / (distance2 * speed)
   ];
   if (curvature) {
-    const k = (curve.first[0] * curve.second[1] - curve.first[1] * curve.second[0]) / speed ** 3;
+    const k2 = (curve.first[0] * curve.second[1] - curve.first[1] * curve.second[0]) / speed ** 3;
     const circleK = (curve.first[0] * dy - curve.first[1] * dx) / (speed * r * r);
-    residuals.push((k - circleK) * r);
+    residuals.push((k2 - circleK) * r);
   }
   return residuals;
 }
-function patternSourceContour(d, ref) {
-  const source = referencedContour(d, ref);
+function patternSourceContour(d2, ref) {
+  const source = referencedContour(d2, ref);
   ref = resolveSegmentReference(source, ref);
   if (ref.kind === "curve" && source?.type === "path" && Number.isInteger(ref.index) && ref.index >= 0 && source.segments[ref.index])
     return {
@@ -1680,7 +1696,7 @@ function patternSourceContour(d, ref) {
       ...source.sourceLayer !== void 0 ? { sourceLayer: source.sourceLayer } : {},
       construction: source.construction
     };
-  const e = resolve$1(d, ref);
+  const e = resolve$1(d2, ref);
   if (ref.kind === "contour" && source) return source;
   if (ref.kind === "circle" && source?.type === "circle") return source;
   if (e.point)
@@ -1700,69 +1716,69 @@ function patternSourceContour(d, ref) {
     construction: source.construction
   };
 }
-function validatePatternSuppression(d, c) {
-  const metadata = c.patternSuppression;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || !c.patternGroup || c.b)
+function validatePatternSuppression(d2, c2) {
+  const metadata = c2.patternSuppression;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || !c2.patternGroup || c2.b)
     throw Error("Invalid suppressed pattern instance.");
   if (metadata.id !== void 0 && (typeof metadata.id !== "string" || !metadata.id.trim() || metadata.id.length > 128))
     throw Error("Invalid suppressed instance identity.");
   for (const value2 of [metadata.construction, metadata.hole])
     if (value2 !== void 0 && typeof value2 !== "boolean")
       throw Error("Invalid suppressed instance flags.");
-  patternRelationTransform(d, c);
+  patternRelationTransform(d2, c2);
 }
 function mirrorTransform(start, end) {
   const dx = end[0] - start[0], dy = end[1] - start[1], length = Math.hypot(dx, dy);
   if (![...start, ...end].every(Number.isFinite) || length < 1e-8)
     throw new Error("Mirror needs two distinct points on its axis.");
-  const x = dx / length, y = dy / length, a = 2 * x * x - 1, b = 2 * x * y, c = b, d = 2 * y * y - 1;
+  const x2 = dx / length, y2 = dy / length, a2 = 2 * x2 * x2 - 1, b = 2 * x2 * y2, c2 = b, d2 = 2 * y2 * y2 - 1;
   return {
-    a,
+    a: a2,
     b,
-    c,
-    d,
-    tx: start[0] - a * start[0] - b * start[1],
-    ty: start[1] - c * start[0] - d * start[1]
+    c: c2,
+    d: d2,
+    tx: start[0] - a2 * start[0] - b * start[1],
+    ty: start[1] - c2 * start[0] - d2 * start[1]
   };
 }
-function diagnosticCoordinates(d, skipContours = /* @__PURE__ */ new Set()) {
+function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
   const coordinates = [], arcs = [];
   const rebuild = () => {
-    for (const a of arcs) {
-      const dx = a.end[0] - a.start[0], dy = a.end[1] - a.start[1];
-      a.middle[0] = (a.start[0] + a.end[0]) / 2 + dy * a.bulge / 2;
-      a.middle[1] = (a.start[1] + a.end[1]) / 2 - dx * a.bulge / 2;
+    for (const a2 of arcs) {
+      const dx = a2.end[0] - a2.start[0], dy = a2.end[1] - a2.start[1];
+      a2.middle[0] = (a2.start[0] + a2.end[0]) / 2 + dy * a2.bulge / 2;
+      a2.middle[1] = (a2.start[1] + a2.end[1]) / 2 - dx * a2.bulge / 2;
     }
   };
-  const point2 = (p, alias) => {
-    for (let k = 0; k < 2; k++)
+  const point2 = (p2, alias) => {
+    for (let k2 = 0; k2 < 2; k2++)
       coordinates.push({
-        get: () => p[k],
+        get: () => p2[k2],
         set: (v) => {
-          p[k] = v;
-          if (alias) alias[k] = v;
+          p2[k2] = v;
+          if (alias) alias[k2] = v;
           rebuild();
         }
       });
   };
-  for (const [index, c] of d.contours.entries()) {
+  for (const [index, c2] of d2.contours.entries()) {
     if (skipContours.has(index)) continue;
-    if (c.type === "circle") {
-      point2(c.center);
+    if (c2.type === "circle") {
+      point2(c2.center);
       coordinates.push({
-        get: () => c.radius,
+        get: () => c2.radius,
         set: (v) => {
-          c.radius = v;
+          c2.radius = v;
         }
       });
       continue;
     }
-    const closed = contourClosed(c);
-    point2(c.start, closed ? c.segments.at(-1)?.end : void 0);
-    let start = c.start;
-    for (const [i, s] of c.segments.entries()) {
-      if (!(closed && i === c.segments.length - 1)) point2(s.end);
-      if (s.type === "bezier") s.controls.forEach((p) => point2(p));
+    const closed = contourClosed(c2);
+    point2(c2.start, closed ? c2.segments.at(-1)?.end : void 0);
+    let start = c2.start;
+    for (const [i, s] of c2.segments.entries()) {
+      if (!(closed && i === c2.segments.length - 1)) point2(s.end);
+      if (s.type === "bezier") s.controls.forEach((p2) => point2(p2));
       if (s.type === "conic") coordinates.push(...conicCoordinates(s));
       if (s.type === "ellipse")
         for (const key of ["radiusX", "radiusY", "rotationDegrees"])
@@ -1818,11 +1834,11 @@ function patternResiduals(source, target, transform) {
       }
     });
   }
-  const coordinates = (c) => diagnosticCoordinates({
-    contours: [structuredClone(c)]
+  const coordinates = (c2) => diagnosticCoordinates({
+    contours: [structuredClone(c2)]
   }).map((v) => v.get());
-  const a = coordinates(expected), b = coordinates(target);
-  return b.map((value2, i) => value2 - a[i]);
+  const a2 = coordinates(expected), b = coordinates(target);
+  return b.map((value2, i) => value2 - a2[i]);
 }
 function periodicSplineSecond(points, h) {
   const n = points.length, diagonal = h.map((v, i) => 2 * (v + h[(i + n - 1) % n]));
@@ -1830,40 +1846,40 @@ function periodicSplineSecond(points, h) {
   diagonal[0] -= gamma;
   diagonal[n - 1] -= corner * corner / gamma;
   const solve = (rhs) => {
-    const d = [...diagonal], x = [...rhs];
+    const d2 = [...diagonal], x2 = [...rhs];
     for (let i = 1; i < n; i++) {
-      const f = h[i - 1] / d[i - 1];
-      d[i] -= f * h[i - 1];
-      x[i] -= f * x[i - 1];
+      const f2 = h[i - 1] / d2[i - 1];
+      d2[i] -= f2 * h[i - 1];
+      x2[i] -= f2 * x2[i - 1];
     }
-    x[n - 1] /= d[n - 1];
-    for (let i = n - 2; i >= 0; i--) x[i] = (x[i] - h[i] * x[i + 1]) / d[i];
-    return x;
+    x2[n - 1] /= d2[n - 1];
+    for (let i = n - 2; i >= 0; i--) x2[i] = (x2[i] - h[i] * x2[i + 1]) / d2[i];
+    return x2;
   };
-  const u = Array(n).fill(0);
-  u[0] = gamma;
-  u[n - 1] = corner;
-  const z = solve(u);
+  const u2 = Array(n).fill(0);
+  u2[0] = gamma;
+  u2[n - 1] = corner;
+  const z2 = solve(u2);
   const result = points.map(() => [0, 0]);
   for (const axis of [0, 1]) {
-    const rhs = points.map((p, i) => {
+    const rhs = points.map((p2, i) => {
       const previous = (i + n - 1) % n, next = (i + 1) % n;
-      return 6 * ((points[next][axis] - p[axis]) / h[i] - (p[axis] - points[previous][axis]) / h[previous]);
+      return 6 * ((points[next][axis] - p2[axis]) / h[i] - (p2[axis] - points[previous][axis]) / h[previous]);
     });
-    const x = solve(rhs), factor = (x[0] + corner * x[n - 1] / gamma) / (1 + z[0] + corner * z[n - 1] / gamma);
-    x.forEach((value2, i) => {
-      result[i][axis] = value2 - factor * z[i];
+    const x2 = solve(rhs), factor = (x2[0] + corner * x2[n - 1] / gamma) / (1 + z2[0] + corner * z2[n - 1] / gamma);
+    x2.forEach((value2, i) => {
+      result[i][axis] = value2 - factor * z2[i];
     });
   }
   return result;
 }
 function fitSketchSpline(points, options = {}) {
-  if (points.length < 2 || points.length > 1001 || points.some((p) => p.length !== 2 || p.some((v) => !Number.isFinite(v))))
+  if (points.length < 2 || points.length > 1001 || points.some((p2) => p2.length !== 2 || p2.some((v) => !Number.isFinite(v))))
     throw Error("Spline needs 2–1001 finite fit points.");
   const closed = options.closed === true;
   if (closed && (points.length < 3 || points.length > 1e3))
     throw Error("Closed spline needs 3–1000 fit points.");
-  const n = points.length, h = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
+  const n = points.length, h = points.slice(1).map((p2, i) => Math.hypot(p2[0] - points[i][0], p2[1] - points[i][1]));
   if (closed)
     h.push(
       Math.hypot(
@@ -1895,10 +1911,10 @@ function fitSketchSpline(points, options = {}) {
         second[i][axis] = (rhs[i] - h[i] * second[(i + 1) % n][axis]) / diagonal[i];
     }
   const segments = h.map((step, i) => {
-    const a = points[i], b = points[(i + 1) % n], c1 = [0, 0], c2 = [0, 0];
+    const a2 = points[i], b = points[(i + 1) % n], c1 = [0, 0], c2 = [0, 0];
     for (const axis of [0, 1]) {
-      const delta2 = b[axis] - a[axis];
-      c1[axis] = a[axis] + delta2 / 3 - step * step * (2 * second[i][axis] + second[(i + 1) % n][axis]) / 18;
+      const delta2 = b[axis] - a2[axis];
+      c1[axis] = a2[axis] + delta2 / 3 - step * step * (2 * second[i][axis] + second[(i + 1) % n][axis]) / 18;
       c2[axis] = b[axis] - delta2 / 3 - step * step * (second[i][axis] + 2 * second[(i + 1) % n][axis]) / 18;
     }
     return { type: "bezier", controls: [c1, c2], end: [...b] };
@@ -1924,12 +1940,12 @@ function splineShapeResiduals(path, spanIntervals) {
 function ellipseQuadrant(e, index) {
   if (!Number.isInteger(index) || index < 0 || index > 3)
     throw Error("Choose one of the four ellipse quadrants.");
-  const a = index * Math.PI / 2, x = e.radiusX * Math.cos(a), y = e.radiusY * Math.sin(a), c = Math.cos(e.rotation), s = Math.sin(e.rotation);
-  return [e.center[0] + c * x - s * y, e.center[1] + s * x + c * y];
+  const a2 = index * Math.PI / 2, x2 = e.radiusX * Math.cos(a2), y2 = e.radiusY * Math.sin(a2), c2 = Math.cos(e.rotation), s = Math.sin(e.rotation);
+  return [e.center[0] + c2 * x2 - s * y2, e.center[1] + s * x2 + c2 * y2];
 }
-function pointOnEllipse(e, p) {
-  const dx = p[0] - e.center[0], dy = p[1] - e.center[1], c = Math.cos(e.rotation), s = Math.sin(e.rotation);
-  return (Math.hypot((c * dx + s * dy) / e.radiusX, (-s * dx + c * dy) / e.radiusY) - 1) * Math.min(e.radiusX, e.radiusY);
+function pointOnEllipse(e, p2) {
+  const dx = p2[0] - e.center[0], dy = p2[1] - e.center[1], c2 = Math.cos(e.rotation), s = Math.sin(e.rotation);
+  return (Math.hypot((c2 * dx + s * dy) / e.radiusX, (-s * dx + c2 * dy) / e.radiusY) - 1) * Math.min(e.radiusX, e.radiusY);
 }
 function quadrantFrame(entity) {
   if (entity.ellipse) return entity.ellipse;
@@ -1944,28 +1960,28 @@ function quadrantFrame(entity) {
 }
 function quadrantSpan(entity) {
   if (entity.arc) return entity.arc;
-  const ellipse = entity.ellipse;
-  if (ellipse && "startAngle" in ellipse && "sweep" in ellipse && typeof ellipse.startAngle === "number" && typeof ellipse.sweep === "number")
-    return { startAngle: ellipse.startAngle, sweep: ellipse.sweep };
+  const ellipse2 = entity.ellipse;
+  if (ellipse2 && "startAngle" in ellipse2 && "sweep" in ellipse2 && typeof ellipse2.startAngle === "number" && typeof ellipse2.sweep === "number")
+    return { startAngle: ellipse2.startAngle, sweep: ellipse2.sweep };
   return void 0;
 }
 function ellipseShapeResiduals(path) {
   if (path.type !== "path" || !contourClosed(path) || path.segments.length !== 2)
     throw Error("Ellipse shape requires a closed two-half ellipse.");
-  const [a, b] = path.segments;
-  if (a.type !== "ellipse" || b.type !== "ellipse" || a.sweep !== b.sweep)
+  const [a2, b] = path.segments;
+  if (a2.type !== "ellipse" || b.type !== "ellipse" || a2.sweep !== b.sweep)
     throw Error("Ellipse halves must have matching sweep.");
-  const angle2 = a.rotationDegrees * Math.PI / 180, delta2 = (b.rotationDegrees - a.rotationDegrees) * Math.PI / 180;
+  const angle2 = a2.rotationDegrees * Math.PI / 180, delta2 = (b.rotationDegrees - a2.rotationDegrees) * Math.PI / 180;
   return [
-    b.radiusX - a.radiusX,
-    b.radiusY - a.radiusY,
+    b.radiusX - a2.radiusX,
+    b.radiusY - a2.radiusY,
     Math.atan2(Math.sin(delta2), Math.cos(delta2)),
-    path.start[0] - a.end[0] - 2 * a.radiusX * Math.cos(angle2),
-    path.start[1] - a.end[1] - 2 * a.radiusX * Math.sin(angle2)
+    path.start[0] - a2.end[0] - 2 * a2.radiusX * Math.cos(angle2),
+    path.start[1] - a2.end[1] - 2 * a2.radiusX * Math.sin(angle2)
   ];
 }
-function symmetricSplineResiduals(a, b, reflect, reversed2 = false) {
-  if (a.type !== "path" || b.type !== "path" || !a.segments.length || a.segments.length !== b.segments.length || [...a.segments, ...b.segments].some((s) => s.type !== "bezier") || contourClosed(a) !== contourClosed(b))
+function symmetricSplineResiduals(a2, b, reflect, reversed2 = false) {
+  if (a2.type !== "path" || b.type !== "path" || !a2.segments.length || a2.segments.length !== b.segments.length || [...a2.segments, ...b.segments].some((s) => s.type !== "bezier") || contourClosed(a2) !== contourClosed(b))
     throw Error(
       "Spline symmetry requires two Bezier contours with matching segment counts and closure."
     );
@@ -1975,9 +1991,9 @@ function symmetricSplineResiduals(a, b, reflect, reversed2 = false) {
       (s) => s.type === "bezier" ? [...s.controls, s.end] : []
     )
   ];
-  const source = points(a), target = points(b);
+  const source = points(a2), target = points(b);
   if (reversed2) target.reverse();
-  if (contourClosed(a)) {
+  if (contourClosed(a2)) {
     source.pop();
     target.pop();
   }
@@ -1986,69 +2002,69 @@ function symmetricSplineResiduals(a, b, reflect, reversed2 = false) {
     return [target[i][0] - expected[0], target[i][1] - expected[1]];
   });
 }
-function symmetricResiduals(a, b, axis, splineReversed = false) {
+function symmetricResiduals(a2, b, axis, splineReversed = false) {
   if (!axis?.line) throw Error("Select a line as the symmetry axis.");
   const [origin, end] = axis.line, dx = end[0] - origin[0], dy = end[1] - origin[1], length = Math.hypot(dx, dy);
   if (length < 1e-10) throw Error("Symmetry axis must have nonzero length.");
-  const x = dx / length, y = dy / length;
-  const reflect = (p) => {
-    const normal = (p[1] - origin[1]) * x - (p[0] - origin[0]) * y;
-    return [p[0] + 2 * normal * y, p[1] - 2 * normal * x];
+  const x2 = dx / length, y2 = dy / length;
+  const reflect = (p2) => {
+    const normal = (p2[1] - origin[1]) * x2 - (p2[0] - origin[0]) * y2;
+    return [p2[0] + 2 * normal * y2, p2[1] - 2 * normal * x2];
   };
-  const pair = (p, q) => {
-    const r = reflect(p);
+  const pair = (p2, q) => {
+    const r = reflect(p2);
     return [q[0] - r[0], q[1] - r[1]];
   };
-  if (a.contour && b?.contour) return symmetricSplineResiduals(a.contour, b.contour, reflect, splineReversed);
-  if (a.point && b?.point) return pair(a.point, b.point);
-  if (a.circle && b?.circle)
+  if (a2.contour && b?.contour) return symmetricSplineResiduals(a2.contour, b.contour, reflect, splineReversed);
+  if (a2.point && b?.point) return pair(a2.point, b.point);
+  if (a2.circle && b?.circle)
     return [
-      ...pair(a.circle.center, b.circle.center),
-      a.circle.radius - b.circle.radius
+      ...pair(a2.circle.center, b.circle.center),
+      a2.circle.radius - b.circle.radius
     ];
-  if (a.ellipse && b?.ellipse) {
+  if (a2.ellipse && b?.ellipse) {
     const tensor = (rx, ry, angle2) => {
-      const c = Math.cos(angle2), s = Math.sin(angle2), u = rx * rx, v = ry * ry;
-      return [u * c * c + v * s * s, (u - v) * s * c, u * s * s + v * c * c];
+      const c2 = Math.cos(angle2), s = Math.sin(angle2), u2 = rx * rx, v = ry * ry;
+      return [u2 * c2 * c2 + v * s * s, (u2 - v) * s * c2, u2 * s * s + v * c2 * c2];
     };
-    const p = a.ellipse, q = b.ellipse;
+    const p2 = a2.ellipse, q = b.ellipse;
     const expected = tensor(
-      p.radiusX,
-      p.radiusY,
-      2 * Math.atan2(y, x) - p.rotation
+      p2.radiusX,
+      p2.radiusY,
+      2 * Math.atan2(y2, x2) - p2.rotation
     ), actual = tensor(q.radiusX, q.radiusY, q.rotation);
-    const scale2 = Math.max(p.radiusX, p.radiusY, q.radiusX, q.radiusY);
+    const scale2 = Math.max(p2.radiusX, p2.radiusY, q.radiusX, q.radiusY);
     return [
-      ...pair(p.center, q.center),
+      ...pair(p2.center, q.center),
       ...actual.map((v, i) => (v - expected[i]) / scale2)
     ];
   }
-  if (a.line && b?.line) {
-    const p = reflect(a.line[0]), q = reflect(a.line[1]), u = [q[0] - p[0], q[1] - p[1]], v = [b.line[1][0] - b.line[0][0], b.line[1][1] - b.line[0][1]], n = Math.hypot(...u), m = Math.hypot(...v);
-    if (n < 1e-10 || m < 1e-10)
+  if (a2.line && b?.line) {
+    const p2 = reflect(a2.line[0]), q = reflect(a2.line[1]), u2 = [q[0] - p2[0], q[1] - p2[1]], v = [b.line[1][0] - b.line[0][0], b.line[1][1] - b.line[0][1]], n = Math.hypot(...u2), m2 = Math.hypot(...v);
+    if (n < 1e-10 || m2 < 1e-10)
       throw Error("Symmetric lines must have nonzero length.");
     return [
-      (u[0] * v[1] - u[1] * v[0]) / (n * m),
-      ((b.line[0][1] - p[1]) * u[0] - (b.line[0][0] - p[0]) * u[1]) / n
+      (u2[0] * v[1] - u2[1] * v[0]) / (n * m2),
+      ((b.line[0][1] - p2[1]) * u2[0] - (b.line[0][0] - p2[0]) * u2[1]) / n
     ];
   }
   throw Error(
     "Select two points, two lines, or two circles/circular arcs, or two ellipses."
   );
 }
-const sub$6 = (a, b) => [
-  a[0] - b[0],
-  a[1] - b[1]
+const sub$6 = (a2, b) => [
+  a2[0] - b[0],
+  a2[1] - b[1]
 ];
-const cross$d = (a, b) => a[0] * b[1] - a[1] * b[0];
+const cross$d = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
 function offsetCarrier(start, segment, distance2) {
   if (segment.type === "line") {
     const v = sub$6(segment.end, start), length = Math.hypot(...v);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction = [v[0] / length, v[1] / length];
-    const shift2 = (p) => [
-      p[0] - direction[1] * distance2,
-      p[1] + direction[0] * distance2
+    const shift2 = (p2) => [
+      p2[0] - direction[1] * distance2,
+      p2[1] + direction[0] * distance2
     ];
     return {
       kind: "line",
@@ -2059,45 +2075,45 @@ function offsetCarrier(start, segment, distance2) {
   }
   if (segment.type !== "arc")
     throw Error("Mixed offsets currently require lines and circular arcs.");
-  const g = sketchArcGeometry(start, segment.middle, segment.end), radius = g.radius - Math.sign(g.sweep) * distance2;
+  const g2 = sketchArcGeometry(start, segment.middle, segment.end), radius = g2.radius - Math.sign(g2.sweep) * distance2;
   if (radius <= 1e-8) throw Error("Offset collapses an arc.");
-  const shift = (p) => [
-    g.center[0] + (p[0] - g.center[0]) * radius / g.radius,
-    g.center[1] + (p[1] - g.center[1]) * radius / g.radius
+  const shift = (p2) => [
+    g2.center[0] + (p2[0] - g2.center[0]) * radius / g2.radius,
+    g2.center[1] + (p2[1] - g2.center[1]) * radius / g2.radius
   ];
   return {
     kind: "arc",
-    center: g.center,
+    center: g2.center,
     radius,
-    sweep: g.sweep,
+    sweep: g2.sweep,
     start: shift(start),
     end: shift(segment.end)
   };
 }
-function joinOffsetCarriers(a, b, corner) {
-  if (Math.hypot(...sub$6(a.end, b.start)) < 1e-8) return a.end;
+function joinOffsetCarriers(a2, b, corner) {
+  if (Math.hypot(...sub$6(a2.end, b.start)) < 1e-8) return a2.end;
   let candidates = [];
-  if (a.kind === "line" && b.kind === "line") {
-    const det = cross$d(a.direction, b.direction);
+  if (a2.kind === "line" && b.kind === "line") {
+    const det = cross$d(a2.direction, b.direction);
     if (Math.abs(det) < 1e-10)
       throw Error("Offset corner is parallel or reversing.");
-    const t = cross$d(sub$6(b.start, a.end), b.direction) / det;
+    const t = cross$d(sub$6(b.start, a2.end), b.direction) / det;
     candidates = [
-      [a.end[0] + t * a.direction[0], a.end[1] + t * a.direction[1]]
+      [a2.end[0] + t * a2.direction[0], a2.end[1] + t * a2.direction[1]]
     ];
-  } else if (a.kind === "arc" && b.kind === "arc") {
-    const v = sub$6(b.center, a.center), length = Math.hypot(...v);
+  } else if (a2.kind === "arc" && b.kind === "arc") {
+    const v = sub$6(b.center, a2.center), length = Math.hypot(...v);
     if (length < 1e-10) throw Error("Offset arcs have no unique corner.");
-    const along = (a.radius * a.radius - b.radius * b.radius + length * length) / (2 * length), height2 = a.radius * a.radius - along * along;
+    const along = (a2.radius * a2.radius - b.radius * b.radius + length * length) / (2 * length), height2 = a2.radius * a2.radius - along * along;
     if (height2 >= -1e-9) {
-      const h = Math.sqrt(Math.max(0, height2)), x = a.center[0] + along * v[0] / length, y = a.center[1] + along * v[1] / length;
+      const h = Math.sqrt(Math.max(0, height2)), x2 = a2.center[0] + along * v[0] / length, y2 = a2.center[1] + along * v[1] / length;
       candidates = [
-        [x - h * v[1] / length, y + h * v[0] / length],
-        [x + h * v[1] / length, y - h * v[0] / length]
+        [x2 - h * v[1] / length, y2 + h * v[0] / length],
+        [x2 + h * v[1] / length, y2 - h * v[0] / length]
       ];
     }
   } else {
-    const line2 = a.kind === "line" ? a : b, arc = a.kind === "arc" ? a : b;
+    const line2 = a2.kind === "line" ? a2 : b, arc = a2.kind === "arc" ? a2 : b;
     if (line2.kind !== "line" || arc.kind !== "arc") throw Error();
     const v = sub$6(line2.start, arc.center), projection = v[0] * line2.direction[0] + v[1] * line2.direction[1], discriminant = projection * projection - (v[0] * v[0] + v[1] * v[1] - arc.radius * arc.radius);
     if (discriminant >= -1e-9)
@@ -2115,26 +2131,26 @@ function joinOffsetCarriers(a, b, corner) {
       "Offset curves do not meet; this corner requires a topology change."
     );
   return candidates.sort(
-    (p, q) => Math.hypot(...sub$6(p, corner)) - Math.hypot(...sub$6(q, corner))
+    (p2, q) => Math.hypot(...sub$6(p2, corner)) - Math.hypot(...sub$6(q, corner))
   )[0];
 }
-function offsetCarrierSegment(c, start, end) {
-  if (c.kind === "line") {
+function offsetCarrierSegment(c2, start, end) {
+  if (c2.kind === "line") {
     const v = sub$6(end, start);
-    if (v[0] * c.direction[0] + v[1] * c.direction[1] <= 1e-8)
+    if (v[0] * c2.direction[0] + v[1] * c2.direction[1] <= 1e-8)
       throw Error("Offset reverses or collapses an edge.");
     return { type: "line", end };
   }
-  const a = Math.atan2(start[1] - c.center[1], start[0] - c.center[0]), b = Math.atan2(end[1] - c.center[1], end[0] - c.center[0]);
-  const tau2 = 2 * Math.PI, sign = Math.sign(c.sweep), sweep = sign * ((sign * (b - a) + tau2) % tau2);
-  if (Math.abs(sweep) < 1e-8 || Math.abs(sweep - c.sweep) > Math.PI)
+  const a2 = Math.atan2(start[1] - c2.center[1], start[0] - c2.center[0]), b = Math.atan2(end[1] - c2.center[1], end[0] - c2.center[0]);
+  const tau2 = 2 * Math.PI, sign = Math.sign(c2.sweep), sweep = sign * ((sign * (b - a2) + tau2) % tau2);
+  if (Math.abs(sweep) < 1e-8 || Math.abs(sweep - c2.sweep) > Math.PI)
     throw Error("Offset arc requires a topology change.");
   return {
     type: "arc",
     end,
     middle: [
-      c.center[0] + c.radius * Math.cos(a + sweep / 2),
-      c.center[1] + c.radius * Math.sin(a + sweep / 2)
+      c2.center[0] + c2.radius * Math.cos(a2 + sweep / 2),
+      c2.center[1] + c2.radius * Math.sin(a2 + sweep / 2)
     ]
   };
 }
@@ -2147,20 +2163,20 @@ function cubicOverlap(first, second) {
     if (closest.distance < 1e-8)
       candidates.push({ first: t, second: closest.parameter, point: point2 });
   }
-  for (const u of [0, 1]) {
-    const point2 = segmentPoint(second.start, second.segment, u), closest = closestSegmentParameter(first.start, first.segment, point2);
+  for (const u2 of [0, 1]) {
+    const point2 = segmentPoint(second.start, second.segment, u2), closest = closestSegmentParameter(first.start, first.segment, point2);
     if (closest.distance < 1e-8)
-      candidates.push({ first: closest.parameter, second: u, point: point2 });
+      candidates.push({ first: closest.parameter, second: u2, point: point2 });
   }
-  candidates.sort((a2, b2) => a2.first - b2.first);
-  const a = candidates[0], b = candidates.at(-1);
-  if (!a || !b || b.first - a.first < 1e-8 || Math.abs(b.second - a.second) < 1e-8)
+  candidates.sort((a22, b2) => a22.first - b2.first);
+  const a2 = candidates[0], b = candidates.at(-1);
+  if (!a2 || !b || b.first - a2.first < 1e-8 || Math.abs(b.second - a2.second) < 1e-8)
     return;
   const derivative2 = (curve, t) => {
     if (curve.segment.type !== "bezier") throw new Error("Expected cubic.");
-    const [p2, q2] = curve.segment.controls, start = curve.start, end = curve.segment.end;
+    const [p22, q2] = curve.segment.controls, start = curve.start, end = curve.segment.end;
     return [0, 1].map(
-      (k) => 3 * ((1 - t) ** 2 * (p2[k] - start[k]) + 2 * (1 - t) * t * (q2[k] - p2[k]) + t * t * (end[k] - q2[k]))
+      (k2) => 3 * ((1 - t) ** 2 * (p22[k2] - start[k2]) + 2 * (1 - t) * t * (q2[k2] - p22[k2]) + t * t * (end[k2] - q2[k2]))
     );
   };
   const polygon = (curve, lo, hi) => {
@@ -2172,79 +2188,79 @@ function cubicOverlap(first, second) {
       end
     ];
   };
-  const p = polygon(first, a.first, b.first), q = polygon(second, a.second, b.second);
-  if (p.every(
+  const p2 = polygon(first, a2.first, b.first), q = polygon(second, a2.second, b.second);
+  if (p2.every(
     (point2, i) => Math.hypot(point2[0] - q[i][0], point2[1] - q[i][1]) < 1e-7
   ))
-    return [a, b];
+    return [a2, b];
 }
-const cross$c = (a, b) => a[0] * b[1] - a[1] * b[0];
-const subtract = (a, b) => [
-  a[0] - b[0],
-  a[1] - b[1]
+const cross$c = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
+const subtract = (a2, b) => [
+  a2[0] - b[0],
+  a2[1] - b[1]
 ];
-const unique$1 = (values) => values.sort((a, b) => a - b).filter((t, i, list) => !i || Math.abs(t - list[i - 1]) > 1e-8);
+const unique$1 = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list) => !i || Math.abs(t - list[i - 1]) > 1e-8);
 function polynomialRoots(coefficients, lo = 0, hi = 1) {
-  const scale2 = Math.max(...coefficients.map(Math.abs), 1), c = coefficients.map((v) => v / scale2);
-  while (c.length > 1 && Math.abs(c.at(-1)) < 1e-13) c.pop();
-  const value2 = (x) => c.reduceRight((sum, n) => sum * x + n, 0);
-  if (c.length === 1) return [];
-  if (c.length === 2) {
-    const t = -c[0] / c[1];
+  const scale2 = Math.max(...coefficients.map(Math.abs), 1), c2 = coefficients.map((v) => v / scale2);
+  while (c2.length > 1 && Math.abs(c2.at(-1)) < 1e-13) c2.pop();
+  const value2 = (x2) => c2.reduceRight((sum, n) => sum * x2 + n, 0);
+  if (c2.length === 1) return [];
+  if (c2.length === 2) {
+    const t = -c2[0] / c2[1];
     return t >= lo - 1e-10 && t <= hi + 1e-10 ? [Math.max(lo, Math.min(hi, t))] : [];
   }
   const critical = polynomialRoots(
-    c.slice(1).map((v, i) => v * (i + 1)),
+    c2.slice(1).map((v, i) => v * (i + 1)),
     lo,
     hi
   ), bounds2 = unique$1([lo, ...critical, hi]), roots2 = [];
   for (const t of bounds2) if (Math.abs(value2(t)) < 1e-10) roots2.push(t);
   for (let i = 1; i < bounds2.length; i++) {
-    let a = bounds2[i - 1], b = bounds2[i], fa = value2(a);
+    let a2 = bounds2[i - 1], b = bounds2[i], fa = value2(a2);
     if (fa * value2(b) >= 0) continue;
     for (let n = 0; n < 60; n++) {
-      const middle = (a + b) / 2, fm = value2(middle);
+      const middle = (a2 + b) / 2, fm = value2(middle);
       if (fa * fm <= 0) b = middle;
       else {
-        a = middle;
+        a2 = middle;
         fa = fm;
       }
     }
-    roots2.push((a + b) / 2);
+    roots2.push((a2 + b) / 2);
   }
   return unique$1(roots2);
 }
-function quadratic(a, b, c) {
-  const discriminant = b * b - 4 * a * c;
-  if (discriminant < -1e-10 || a < 1e-20) return [];
+function quadratic(a2, b, c2) {
+  const discriminant = b * b - 4 * a2 * c2;
+  if (discriminant < -1e-10 || a2 < 1e-20) return [];
   const root = Math.sqrt(Math.max(0, discriminant));
-  return unique$1([(-b - root) / (2 * a), (-b + root) / (2 * a)]);
+  return unique$1([(-b - root) / (2 * a2), (-b + root) / (2 * a2)]);
 }
 function lineSegmentIntersections(lineStart, lineEnd, start, segment) {
   const direction = subtract(lineEnd, lineStart), lengthSquared = direction[0] ** 2 + direction[1] ** 2;
   if (lengthSquared < 1e-20)
     throw new Error("Intersection line has zero length.");
   if (segment.type === "conic") return lineConicIntersections(lineStart, lineEnd, start, segment);
-  const parameter2 = (p) => ((p[0] - lineStart[0]) * direction[0] + (p[1] - lineStart[1]) * direction[1]) / lengthSquared;
+  const parameter2 = (p2) => ((p2[0] - lineStart[0]) * direction[0] + (p2[1] - lineStart[1]) * direction[1]) / lengthSquared;
   if (segment.type === "line") {
     const other = subtract(segment.end, start), den = cross$c(direction, other);
     if (Math.abs(den) < 1e-12) return [];
-    const delta2 = subtract(start, lineStart), u = cross$c(delta2, direction) / den;
-    return u >= -1e-9 && u <= 1 + 1e-9 ? [cross$c(delta2, other) / den] : [];
+    const delta2 = subtract(start, lineStart), u2 = cross$c(delta2, direction) / den;
+    return u2 >= -1e-9 && u2 <= 1 + 1e-9 ? [cross$c(delta2, other) / den] : [];
   }
   if (segment.type === "bezier") {
-    const points = [start, ...segment.controls, segment.end], f = points.map((p) => cross$c(subtract(p, lineStart), direction));
+    const points = [start, ...segment.controls, segment.end], f2 = points.map((p2) => cross$c(subtract(p2, lineStart), direction));
     const roots22 = polynomialRoots([
-      f[0],
-      3 * (f[1] - f[0]),
-      3 * (f[2] - 2 * f[1] + f[0]),
-      f[3] - 3 * f[2] + 3 * f[1] - f[0]
+      f2[0],
+      3 * (f2[1] - f2[0]),
+      3 * (f2[2] - 2 * f2[1] + f2[0]),
+      f2[3] - 3 * f2[2] + 3 * f2[1] - f2[0]
     ]);
     return roots22.map((t) => {
-      const u = 1 - t;
+      const u2 = 1 - t;
       return parameter2([
-        u * u * u * points[0][0] + 3 * u * u * t * points[1][0] + 3 * u * t * t * points[2][0] + t * t * t * points[3][0],
-        u * u * u * points[0][1] + 3 * u * u * t * points[1][1] + 3 * u * t * t * points[2][1] + t * t * t * points[3][1]
+        u2 * u2 * u2 * points[0][0] + 3 * u2 * u2 * t * points[1][0] + 3 * u2 * t * t * points[2][0] + t * t * t * points[3][0],
+        u2 * u2 * u2 * points[0][1] + 3 * u2 * u2 * t * points[1][1] + 3 * u2 * t * t * points[2][1] + t * t * t * points[3][1]
       ]);
     });
   }
@@ -2270,46 +2286,46 @@ function lineSegmentIntersections(lineStart, lineEnd, start, segment) {
     return extent <= Math.abs(frame.sweep) + 1e-8 || Math.abs(extent - tau2) < 1e-8;
   });
 }
-const add$4 = (a, b, scale2 = 1) => Array.from({ length: Math.max(a.length, b.length) }, (_, i) => (a[i] ?? 0) + scale2 * (b[i] ?? 0));
-const mul$1 = (a, b) => {
-  const out = Array(a.length + b.length - 1).fill(0);
-  a.forEach((x, i) => b.forEach((y, j) => out[i + j] += x * y));
+const add$4 = (a2, b, scale2 = 1) => Array.from({ length: Math.max(a2.length, b.length) }, (_2, i) => (a2[i] ?? 0) + scale2 * (b[i] ?? 0));
+const mul$1 = (a2, b) => {
+  const out = Array(a2.length + b.length - 1).fill(0);
+  a2.forEach((x2, i) => b.forEach((y2, j) => out[i + j] += x2 * y2));
   return out;
 };
-const scaled = (p, k) => p.map((v) => v * k);
+const scaled = (p2, k2) => p2.map((v) => v * k2);
 function rational(curve, origin) {
-  const s = curve.segment, p = [curve.start[0] - origin[0], curve.start[1] - origin[1]], q = [s.end[0] - origin[0], s.end[1] - origin[1]];
-  if (s.type === "line") return { x: [p[0], q[0] - p[0]], y: [p[1], q[1] - p[1]], d: [1] };
+  const s = curve.segment, p2 = [curve.start[0] - origin[0], curve.start[1] - origin[1]], q = [s.end[0] - origin[0], s.end[1] - origin[1]];
+  if (s.type === "line") return { x: [p2[0], q[0] - p2[0]], y: [p2[1], q[1] - p2[1]], d: [1] };
   if (s.type === "bezier") {
-    const f2 = (i) => {
-      const a = s.controls[0][i] - origin[i], b = s.controls[1][i] - origin[i];
-      return [p[i], 3 * (a - p[i]), 3 * (b - 2 * a + p[i]), q[i] - 3 * b + 3 * a - p[i]];
+    const f22 = (i) => {
+      const a2 = s.controls[0][i] - origin[i], b = s.controls[1][i] - origin[i];
+      return [p2[i], 3 * (a2 - p2[i]), 3 * (b - 2 * a2 + p2[i]), q[i] - 3 * b + 3 * a2 - p2[i]];
     };
-    return { x: f2(0), y: f2(1), d: [1] };
+    return { x: f22(0), y: f22(1), d: [1] };
   }
   if (s.type !== "conic") throw Error("Expected a polynomial or rational quadratic curve.");
-  const r = s.rho, v = 1 - r, f = (i) => {
-    const a = s.control[i] - origin[i];
-    return [v * p[i], 2 * (r * a - v * p[i]), v * (p[i] + q[i]) - 2 * r * a];
+  const r = s.rho, v = 1 - r, f2 = (i) => {
+    const a2 = s.control[i] - origin[i];
+    return [v * p2[i], 2 * (r * a2 - v * p2[i]), v * (p2[i] + q[i]) - 2 * r * a2];
   };
-  return { x: f(0), y: f(1), d: [v, 2 * (2 * r - 1), 2 * (1 - 2 * r)] };
+  return { x: f2(0), y: f2(1), d: [v, 2 * (2 * r - 1), 2 * (1 - 2 * r)] };
 }
-function conicParameterAtPoint(start, s, p) {
+function conicParameterAtPoint(start, s, p2) {
   validateConic(start, s);
-  const a = [s.control[0] - start[0], s.control[1] - start[1]], b = [s.end[0] - start[0], s.end[1] - start[1]], q = [p[0] - start[0], p[1] - start[1]], det = a[0] * b[1] - a[1] * b[0], l1 = (q[0] * b[1] - q[1] * b[0]) / det, l2 = (a[0] * q[1] - a[1] * q[0]) / det, l0 = 1 - l1 - l2;
+  const a2 = [s.control[0] - start[0], s.control[1] - start[1]], b = [s.end[0] - start[0], s.end[1] - start[1]], q = [p2[0] - start[0], p2[1] - start[1]], det = a2[0] * b[1] - a2[1] * b[0], l1 = (q[0] * b[1] - q[1] * b[0]) / det, l2 = (a2[0] * q[1] - a2[1] * q[0]) / det, l0 = 1 - l1 - l2;
   if (Math.min(l0, l1, l2) < -1e-8) return;
-  const a0 = Math.sqrt(Math.max(0, l0)), a2 = Math.sqrt(Math.max(0, l2));
-  if (a0 + a2 < 1e-14) return;
-  const t = a2 / (a0 + a2), actual = conicPoint(start, s, t), scale2 = Math.max(1, Math.hypot(...a), Math.hypot(...b));
-  if (Math.hypot(actual[0] - p[0], actual[1] - p[1]) > 1e-7 * scale2) return;
+  const a0 = Math.sqrt(Math.max(0, l0)), a22 = Math.sqrt(Math.max(0, l2));
+  if (a0 + a22 < 1e-14) return;
+  const t = a22 / (a0 + a22), actual = conicPoint(start, s, t), scale2 = Math.max(1, Math.hypot(...a2), Math.hypot(...b));
+  if (Math.hypot(actual[0] - p2[0], actual[1] - p2[1]) > 1e-7 * scale2) return;
   return t;
 }
 function polynomialPair(first, second) {
-  const s = first.segment, origin = first.start, ax = s.control[0] - origin[0], ay = s.control[1] - origin[1], bx = s.end[0] - origin[0], by = s.end[1] - origin[1], det = ax * by - ay * bx, r = rational(second, origin), l1 = scaled(add$4(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$4(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$4(add$4(r.d, l1, -1), l2, -1), aa = scaled(mul$1(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$1(l0, l2), 4 * s.rho * s.rho), p = add$4(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
-  const coincident = p.every((v) => Math.abs(v) < scale2 * 1e-11), ts = coincident ? [0, 1, ...polynomialRoots(l0), ...polynomialRoots(l2)] : polynomialRoots(p.map((v) => v / scale2));
+  const s = first.segment, origin = first.start, ax = s.control[0] - origin[0], ay = s.control[1] - origin[1], bx = s.end[0] - origin[0], by = s.end[1] - origin[1], det = ax * by - ay * bx, r = rational(second, origin), l1 = scaled(add$4(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$4(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$4(add$4(r.d, l1, -1), l2, -1), aa = scaled(mul$1(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$1(l0, l2), 4 * s.rho * s.rho), p2 = add$4(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
+  const coincident = p2.every((v) => Math.abs(v) < scale2 * 1e-11), ts = coincident ? [0, 1, ...polynomialRoots(l0), ...polynomialRoots(l2)] : polynomialRoots(p2.map((v) => v / scale2));
   return ts.flatMap((t) => {
-    const point2 = segmentPoint(second.start, second.segment, t), u = conicParameterAtPoint(origin, s, point2);
-    return u === void 0 ? [] : [{ first: u, second: t, point: point2 }];
+    const point2 = segmentPoint(second.start, second.segment, t), u2 = conicParameterAtPoint(origin, s, point2);
+    return u2 === void 0 ? [] : [{ first: u2, second: t, point: point2 }];
   });
 }
 function conicCurveIntersections(first, second) {
@@ -2318,41 +2334,41 @@ function conicCurveIntersections(first, second) {
     return conicCurveIntersections(second, first).map((h) => ({ first: h.second, second: h.first, point: h.point }));
   }
   validateConic(first.start, first.segment);
-  const a = { ...first, segment: first.segment }, s = second.segment;
+  const a2 = { ...first, segment: first.segment }, s = second.segment;
   let hits;
-  if (s.type === "line" || s.type === "bezier" || s.type === "conic") hits = polynomialPair(a, second);
+  if (s.type === "line" || s.type === "bezier" || s.type === "conic") hits = polynomialPair(a2, second);
   else {
-    const f = s.type === "ellipse" ? ellipseFrame(second.start, s) : (() => {
-      const c2 = sketchArcGeometry(second.start, s.middle, s.end);
-      return { ...c2, radiusX: c2.radius, radiusY: c2.radius, rotation: 0 };
-    })(), count = Math.ceil(Math.abs(f.sweep) / (Math.PI / 2)), c = Math.cos(f.rotation), n = Math.sin(f.rotation), at = (angle2, scale2 = 1) => {
-      const x = f.radiusX * Math.cos(angle2) * scale2, y = f.radiusY * Math.sin(angle2) * scale2;
-      return [f.center[0] + c * x - n * y, f.center[1] + n * x + c * y];
+    const f2 = s.type === "ellipse" ? ellipseFrame(second.start, s) : (() => {
+      const c22 = sketchArcGeometry(second.start, s.middle, s.end);
+      return { ...c22, radiusX: c22.radius, radiusY: c22.radius, rotation: 0 };
+    })(), count = Math.ceil(Math.abs(f2.sweep) / (Math.PI / 2)), c2 = Math.cos(f2.rotation), n = Math.sin(f2.rotation), at = (angle2, scale2 = 1) => {
+      const x2 = f2.radiusX * Math.cos(angle2) * scale2, y2 = f2.radiusY * Math.sin(angle2) * scale2;
+      return [f2.center[0] + c2 * x2 - n * y2, f2.center[1] + n * x2 + c2 * y2];
     };
     hits = [];
     for (let i = 0; i < count; i++) {
-      const begin = f.startAngle + f.sweep * i / count, delta2 = f.sweep / count, w = Math.cos(delta2 / 2), part = { start: at(begin), segment: { type: "conic", end: at(begin + delta2), control: at(begin + delta2 / 2, 1 / w), rho: w / (1 + w) } };
-      for (const h of polynomialPair(a, part)) {
-        const x = h.point[0] - f.center[0], y = h.point[1] - f.center[1], angle2 = Math.atan2((-n * x + c * y) / f.radiusY, (c * x + n * y) / f.radiusX), shift = Math.atan2(Math.sin(angle2 - begin), Math.cos(angle2 - begin));
+      const begin = f2.startAngle + f2.sweep * i / count, delta2 = f2.sweep / count, w2 = Math.cos(delta2 / 2), part = { start: at(begin), segment: { type: "conic", end: at(begin + delta2), control: at(begin + delta2 / 2, 1 / w2), rho: w2 / (1 + w2) } };
+      for (const h of polynomialPair(a2, part)) {
+        const x2 = h.point[0] - f2.center[0], y2 = h.point[1] - f2.center[1], angle2 = Math.atan2((-n * x2 + c2 * y2) / f2.radiusY, (c2 * x2 + n * y2) / f2.radiusX), shift = Math.atan2(Math.sin(angle2 - begin), Math.cos(angle2 - begin));
         hits.push({ ...h, second: Math.max(0, Math.min(1, (i + shift / delta2) / count)) });
       }
     }
   }
-  return hits.sort((a2, b) => a2.first - b.first).filter((h, i, all) => !all.slice(0, i).some((p) => Math.abs(p.first - h.first) < 1e-7 && Math.abs(p.second - h.second) < 1e-7));
+  return hits.sort((a22, b) => a22.first - b.first).filter((h, i, all) => !all.slice(0, i).some((p2) => Math.abs(p2.first - h.first) < 1e-7 && Math.abs(p2.second - h.second) < 1e-7));
 }
-function lineConicIntersections(a, b, start, s) {
+function lineConicIntersections(a2, b, start, s) {
   validateConic(start, s);
-  const dx = b[0] - a[0], dy = b[1] - a[1], length = dx * dx + dy * dy;
+  const dx = b[0] - a2[0], dy = b[1] - a2[1], length = dx * dx + dy * dy;
   if (length < 1e-20) throw Error("Intersection line has zero length.");
-  const values = [start, s.control, s.end].map((p) => (p[0] - a[0]) * dy - (p[1] - a[1]) * dx), v = 1 - s.rho, r = s.rho;
+  const values = [start, s.control, s.end].map((p2) => (p2[0] - a2[0]) * dy - (p2[1] - a2[1]) * dx), v = 1 - s.rho, r = s.rho;
   return polynomialRoots([v * values[0], 2 * (r * values[1] - v * values[0]), v * (values[0] + values[2]) - 2 * r * values[1]]).map((t) => {
-    const p = conicPoint(start, s, t);
-    return ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length;
+    const p2 = conicPoint(start, s, t);
+    return ((p2[0] - a2[0]) * dx + (p2[1] - a2[1]) * dy) / length;
   });
 }
-const lerp = (a, b, t) => [
-  a[0] + t * (b[0] - a[0]),
-  a[1] + t * (b[1] - a[1])
+const lerp = (a2, b, t) => [
+  a2[0] + t * (b[0] - a2[0]),
+  a2[1] + t * (b[1] - a2[1])
 ];
 function subdivideSegment(start, segment, t) {
   if (!Number.isFinite(t) || t <= 1e-9 || t >= 1 - 1e-9)
@@ -2360,15 +2376,15 @@ function subdivideSegment(start, segment, t) {
       "Choose a split point inside the curve, away from its endpoints."
     );
   if (segment.type === "conic") {
-    const [a, b] = splitConic(start, segment, t);
-    return [a.segment, b.segment];
+    const [a2, b] = splitConic(start, segment, t);
+    return [a2.segment, b.segment];
   }
   if (segment.type === "bezier") {
-    const a = lerp(start, segment.controls[0], t), b = lerp(segment.controls[0], segment.controls[1], t), c = lerp(segment.controls[1], segment.end, t);
-    const d = lerp(a, b, t), e = lerp(b, c, t), mid2 = lerp(d, e, t);
+    const a2 = lerp(start, segment.controls[0], t), b = lerp(segment.controls[0], segment.controls[1], t), c2 = lerp(segment.controls[1], segment.end, t);
+    const d2 = lerp(a2, b, t), e = lerp(b, c2, t), mid2 = lerp(d2, e, t);
     return [
-      { type: "bezier", controls: [a, d], end: mid2 },
-      { type: "bezier", controls: [e, c], end: [...segment.end] }
+      { type: "bezier", controls: [a2, d2], end: mid2 },
+      { type: "bezier", controls: [e, c2], end: [...segment.end] }
     ];
   }
   const mid = segmentPoint(start, segment, t);
@@ -2403,14 +2419,14 @@ function subdivideSegment(start, segment, t) {
   ];
 }
 const tau = 2 * Math.PI;
-const squaredPolynomial = (p) => {
-  const out = Array(p.length * 2 - 1).fill(0);
-  p.forEach((a, i) => p.forEach((b, j) => out[i + j] += a * b));
+const squaredPolynomial = (p2) => {
+  const out = Array(p2.length * 2 - 1).fill(0);
+  p2.forEach((a2, i) => p2.forEach((b, j) => out[i + j] += a2 * b));
   return out;
 };
-const add$3 = (a, b) => Array.from(
-  { length: Math.max(a.length, b.length) },
-  (_, i) => (a[i] ?? 0) + (b[i] ?? 0)
+const add$3 = (a2, b) => Array.from(
+  { length: Math.max(a2.length, b.length) },
+  (_2, i) => (a2[i] ?? 0) + (b[i] ?? 0)
 );
 function conic(curve) {
   const s = curve.segment;
@@ -2421,32 +2437,32 @@ function conic(curve) {
   }
   return null;
 }
-function onConic(frame, p) {
-  const x = p[0] - frame.center[0], y = p[1] - frame.center[1], cos = Math.cos(frame.rotation), sin = Math.sin(frame.rotation);
+function onConic(frame, p2) {
+  const x2 = p2[0] - frame.center[0], y2 = p2[1] - frame.center[1], cos = Math.cos(frame.rotation), sin = Math.sin(frame.rotation);
   const angle2 = Math.atan2(
-    (-sin * x + cos * y) / frame.radiusY,
-    (cos * x + sin * y) / frame.radiusX
+    (-sin * x2 + cos * y2) / frame.radiusY,
+    (cos * x2 + sin * y2) / frame.radiusX
   );
   let extent = frame.sweep >= 0 ? (angle2 - frame.startAngle + tau) % tau : (frame.startAngle - angle2 + tau) % tau;
   if (Math.abs(extent - tau) < 1e-7) extent = 0;
   const t = extent / Math.abs(frame.sweep);
   return t >= -1e-8 && t <= 1 + 1e-8 ? Math.max(0, Math.min(1, t)) : null;
 }
-function local(frame, p) {
-  const x = p[0] - frame.center[0], y = p[1] - frame.center[1], c = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
-  return [(c * x + s * y) / frame.radiusX, (-s * x + c * y) / frame.radiusY];
+function local(frame, p2) {
+  const x2 = p2[0] - frame.center[0], y2 = p2[1] - frame.center[1], c2 = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
+  return [(c2 * x2 + s * y2) / frame.radiusX, (-s * x2 + c2 * y2) / frame.radiusY];
 }
 function bezierConic(curve, frame) {
   if (curve.segment.type !== "bezier")
     throw new Error("Expected a cubic curve.");
-  const p = [curve.start, ...curve.segment.controls, curve.segment.end].map(
-    (p2) => local(frame, p2)
+  const p2 = [curve.start, ...curve.segment.controls, curve.segment.end].map(
+    (p22) => local(frame, p22)
   );
   const coefficients = (axis) => [
-    p[0][axis],
-    3 * (p[1][axis] - p[0][axis]),
-    3 * (p[2][axis] - 2 * p[1][axis] + p[0][axis]),
-    p[3][axis] - 3 * p[2][axis] + 3 * p[1][axis] - p[0][axis]
+    p2[0][axis],
+    3 * (p2[1][axis] - p2[0][axis]),
+    3 * (p2[2][axis] - 2 * p2[1][axis] + p2[0][axis]),
+    p2[3][axis] - 3 * p2[2][axis] + 3 * p2[1][axis] - p2[0][axis]
   ];
   const polynomial = add$3(
     squaredPolynomial(coefficients(0)),
@@ -2456,16 +2472,16 @@ function bezierConic(curve, frame) {
   return polynomialRoots(polynomial);
 }
 function conicConic(first, second) {
-  const c = Math.cos(first.rotation), s = Math.sin(first.rotation);
-  const center = local(second, first.center), x = local(second, [
-    first.center[0] + c * first.radiusX,
+  const c2 = Math.cos(first.rotation), s = Math.sin(first.rotation);
+  const center = local(second, first.center), x2 = local(second, [
+    first.center[0] + c2 * first.radiusX,
     first.center[1] + s * first.radiusX
-  ]), y = local(second, [
+  ]), y2 = local(second, [
     first.center[0] - s * first.radiusY,
-    first.center[1] + c * first.radiusY
+    first.center[1] + c2 * first.radiusY
   ]);
-  const u = [x[0] - center[0], x[1] - center[1]], v = [y[0] - center[0], y[1] - center[1]];
-  const px = [center[0] + u[0], 2 * v[0], center[0] - u[0]], py = [center[1] + u[1], 2 * v[1], center[1] - u[1]];
+  const u2 = [x2[0] - center[0], x2[1] - center[1]], v = [y2[0] - center[0], y2[1] - center[1]];
+  const px = [center[0] + u2[0], 2 * v[0], center[0] - u2[0]], py = [center[1] + u2[1], 2 * v[1], center[1] - u2[1]];
   const polynomial = add$3(squaredPolynomial(px), squaredPolynomial(py));
   polynomial[0] -= 1;
   polynomial[2] -= 2;
@@ -2475,7 +2491,7 @@ function conicConic(first, second) {
   if (polynomial.every((v2) => Math.abs(v2) < 1e-10)) {
     const firstPoints = [0, 1].map((t) => ellipsePoint(first, t)), secondPoints = [0, 1].map((t) => ellipsePoint(second, t));
     return [...firstPoints, ...secondPoints].filter(
-      (p) => onConic(first, p) !== null && onConic(second, p) !== null
+      (p2) => onConic(first, p2) !== null && onConic(second, p2) !== null
     );
   }
   if (polynomial.length === 1) return [];
@@ -2484,45 +2500,45 @@ function conicConic(first, second) {
     (t) => 2 * Math.atan(t)
   );
   const piPoint = [
-    first.center[0] - c * first.radiusX,
+    first.center[0] - c2 * first.radiusX,
     first.center[1] - s * first.radiusX
   ], piLocal = local(second, piPoint);
   if (Math.abs(piLocal[0] ** 2 + piLocal[1] ** 2 - 1) < 1e-8)
     angles.push(Math.PI);
   return angles.map((angle2) => [
-    first.center[0] + c * first.radiusX * Math.cos(angle2) - s * first.radiusY * Math.sin(angle2),
-    first.center[1] + s * first.radiusX * Math.cos(angle2) + c * first.radiusY * Math.sin(angle2)
+    first.center[0] + c2 * first.radiusX * Math.cos(angle2) - s * first.radiusY * Math.sin(angle2),
+    first.center[1] + s * first.radiusX * Math.cos(angle2) + c2 * first.radiusY * Math.sin(angle2)
   ]);
 }
 function derivative(curve, t) {
-  const h = 1e-6, a = segmentPoint(curve.start, curve.segment, t - h), b = segmentPoint(curve.start, curve.segment, t + h);
-  return [(b[0] - a[0]) / (2 * h), (b[1] - a[1]) / (2 * h)];
+  const h = 1e-6, a2 = segmentPoint(curve.start, curve.segment, t - h), b = segmentPoint(curve.start, curve.segment, t + h);
+  return [(b[0] - a2[0]) / (2 * h), (b[1] - a2[1]) / (2 * h)];
 }
 function bezierPairs(first, second) {
   const box = (curve) => {
     const s = curve.segment;
     if (s.type !== "bezier") throw new Error("Expected cubic.");
-    const p = [curve.start, ...s.controls, s.end];
+    const p2 = [curve.start, ...s.controls, s.end];
     return {
-      x0: Math.min(...p.map((p2) => p2[0])),
-      x1: Math.max(...p.map((p2) => p2[0])),
-      y0: Math.min(...p.map((p2) => p2[1])),
-      y1: Math.max(...p.map((p2) => p2[1]))
+      x0: Math.min(...p2.map((p22) => p22[0])),
+      x1: Math.max(...p2.map((p22) => p22[0])),
+      y0: Math.min(...p2.map((p22) => p22[1])),
+      y1: Math.max(...p2.map((p22) => p22[1]))
     };
   };
   const halves = (piece) => {
-    const [a, b] = subdivideSegment(
+    const [a2, b] = subdivideSegment(
       piece.curve.start,
       piece.curve.segment,
       0.5
     ), mid = (piece.lo + piece.hi) / 2;
     return [
       {
-        curve: { start: piece.curve.start, segment: a },
+        curve: { start: piece.curve.start, segment: a2 },
         lo: piece.lo,
         hi: mid
       },
-      { curve: { start: a.end, segment: b }, lo: mid, hi: piece.hi }
+      { curve: { start: a2.end, segment: b }, lo: mid, hi: piece.hi }
     ];
   };
   const overlap = cubicOverlap(first, second);
@@ -2539,30 +2555,30 @@ function bezierPairs(first, second) {
       throw new Error(
         "Overlapping or unresolved cubic intersections; no geometry was changed."
       );
-    const [a, b] = queue.pop(), ab = box(a.curve), bb = box(b.curve);
+    const [a2, b] = queue.pop(), ab = box(a2.curve), bb = box(b.curve);
     if (ab.x1 < bb.x0 - 1e-9 || bb.x1 < ab.x0 - 1e-9 || ab.y1 < bb.y0 - 1e-9 || bb.y1 < ab.y0 - 1e-9)
       continue;
     const as = Math.max(ab.x1 - ab.x0, ab.y1 - ab.y0), bs = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0);
     if (Math.max(as, bs) < 1e-5) {
-      let t = (a.lo + a.hi) / 2, u = (b.lo + b.hi) / 2;
+      let t = (a2.lo + a2.hi) / 2, u2 = (b.lo + b.hi) / 2;
       for (let i = 0; i < 20; i++) {
-        const p2 = segmentPoint(first.start, first.segment, t), q2 = segmentPoint(second.start, second.segment, u), d = derivative(first, t), e = derivative(second, u), dx = p2[0] - q2[0], dy = p2[1] - q2[1], det = e[0] * d[1] - d[0] * e[1];
+        const p22 = segmentPoint(first.start, first.segment, t), q2 = segmentPoint(second.start, second.segment, u2), d2 = derivative(first, t), e = derivative(second, u2), dx = p22[0] - q2[0], dy = p22[1] - q2[1], det = e[0] * d2[1] - d2[0] * e[1];
         if (Math.abs(det) < 1e-12) break;
-        const dt = (dx * e[1] - e[0] * dy) / det, du = (dx * d[1] - d[0] * dy) / det;
+        const dt = (dx * e[1] - e[0] * dy) / det, du = (dx * d2[1] - d2[0] * dy) / det;
         t = Math.max(0, Math.min(1, t + dt));
-        u = Math.max(0, Math.min(1, u + du));
+        u2 = Math.max(0, Math.min(1, u2 + du));
       }
-      const p = segmentPoint(first.start, first.segment, t), q = segmentPoint(second.start, second.segment, u);
-      if (Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-7)
-        hits.push({ first: t, second: u, point: p });
+      const p2 = segmentPoint(first.start, first.segment, t), q = segmentPoint(second.start, second.segment, u2);
+      if (Math.hypot(p2[0] - q[0], p2[1] - q[1]) < 1e-7)
+        hits.push({ first: t, second: u2, point: p2 });
       continue;
     }
     if (as >= bs) {
-      const [left, right] = halves(a);
+      const [left, right] = halves(a2);
       queue.push([left, b], [right, b]);
     } else {
       const [left, right] = halves(b);
-      queue.push([a, left], [a, right]);
+      queue.push([a2, left], [a2, right]);
     }
   }
   return hits;
@@ -2579,12 +2595,12 @@ function curveIntersections(first, second) {
         second.segment.end
       ];
       if (length > 1e-20 && points.every(
-        (p) => Math.abs(
-          dx * (p[1] - first.start[1]) - dy * (p[0] - first.start[0])
+        (p2) => Math.abs(
+          dx * (p2[1] - first.start[1]) - dy * (p2[0] - first.start[0])
         ) / Math.sqrt(length) < 1e-8
       )) {
         const t = points.map(
-          (p) => ((p[0] - first.start[0]) * dx + (p[1] - first.start[1]) * dy) / length
+          (p2) => ((p2[0] - first.start[0]) * dx + (p2[1] - first.start[1]) * dy) / length
         );
         if (second.segment.type === "line") {
           const lo = Math.max(0, Math.min(...t)), hi = Math.min(1, Math.max(...t));
@@ -2624,18 +2640,18 @@ function curveIntersections(first, second) {
       point: h.point
     }));
   else {
-    const a = conic(first), b = conic(second);
-    if (a && b) {
-      for (const point2 of conicConic(a, b)) {
-        const t = onConic(a, point2), u = onConic(b, point2);
-        if (t !== null && u !== null) hits.push({ first: t, second: u, point: point2 });
+    const a2 = conic(first), b = conic(second);
+    if (a2 && b) {
+      for (const point2 of conicConic(a2, b)) {
+        const t = onConic(a2, point2), u2 = onConic(b, point2);
+        if (t !== null && u2 !== null) hits.push({ first: t, second: u2, point: point2 });
       }
     } else if (b) {
       for (const t of bezierConic(first, b)) {
-        const point2 = segmentPoint(first.start, first.segment, t), u = onConic(b, point2);
-        if (u !== null) hits.push({ first: t, second: u, point: point2 });
+        const point2 = segmentPoint(first.start, first.segment, t), u2 = onConic(b, point2);
+        if (u2 !== null) hits.push({ first: t, second: u2, point: point2 });
       }
-    } else if (a)
+    } else if (a2)
       return curveIntersections(second, first).map((h) => ({
         first: h.second,
         second: h.first,
@@ -2643,9 +2659,9 @@ function curveIntersections(first, second) {
       }));
     else hits = bezierPairs(first, second);
   }
-  return hits.sort((a, b) => a.first - b.first).filter(
+  return hits.sort((a2, b) => a2.first - b.first).filter(
     (h, i, list) => !list.slice(0, i).some(
-      (p) => Math.abs(p.first - h.first) < 1e-5 && Math.abs(p.second - h.second) < 1e-5
+      (p2) => Math.abs(p2.first - h.first) < 1e-5 && Math.abs(p2.second - h.second) < 1e-5
     )
   );
 }
@@ -2661,7 +2677,7 @@ function offsetMixedPath(source, distance2) {
     joins.push(joinOffsetCarriers(carriers[i - 1], carriers[i], points[i]));
   joins.push(closed ? [...joins[0]] : carriers.at(-1).end);
   const segments = carriers.map(
-    (c, i) => offsetCarrierSegment(c, joins[i], joins[i + 1])
+    (c2, i) => offsetCarrierSegment(c2, joins[i], joins[i + 1])
   );
   for (let i = 0; i < segments.length; i++)
     for (let j = i + 1; j < segments.length; j++) {
@@ -2678,22 +2694,22 @@ function offsetMixedPath(source, distance2) {
     }
   return { ...structuredClone(source), start: joins[0], segments };
 }
-function collinearLineContact(a, b, c, d, tolerance2 = 1e-8) {
-  const dx = b[0] - a[0], dy = b[1] - a[1];
+function collinearLineContact(a2, b, c2, d2, tolerance2 = 1e-8) {
+  const dx = b[0] - a2[0], dy = b[1] - a2[1];
   const length = Math.hypot(dx, dy);
   if (length <= tolerance2) return false;
   const ux = dx / length, uy = dy / length;
-  const perpendicular = (p) => Math.abs((p[0] - a[0]) * uy - (p[1] - a[1]) * ux);
-  if (perpendicular(c) > tolerance2 || perpendicular(d) > tolerance2)
+  const perpendicular = (p2) => Math.abs((p2[0] - a2[0]) * uy - (p2[1] - a2[1]) * ux);
+  if (perpendicular(c2) > tolerance2 || perpendicular(d2) > tolerance2)
     return false;
-  const project = (p) => (p[0] - a[0]) * ux + (p[1] - a[1]) * uy;
-  const t = project(c), u = project(d);
-  return Math.max(0, Math.min(t, u)) <= Math.min(length, Math.max(t, u)) + tolerance2;
+  const project = (p2) => (p2[0] - a2[0]) * ux + (p2[1] - a2[1]) * uy;
+  const t = project(c2), u2 = project(d2);
+  return Math.max(0, Math.min(t, u2)) <= Math.min(length, Math.max(t, u2)) + tolerance2;
 }
-const cross$b = (a, b) => a[0] * b[1] - a[1] * b[0];
-const sub$5 = (a, b) => [
-  a[0] - b[0],
-  a[1] - b[1]
+const cross$b = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
+const sub$5 = (a2, b) => [
+  a2[0] - b[0],
+  a2[1] - b[1]
 ];
 function offsetSketchContour(source, distance2) {
   if (!Number.isFinite(distance2) || Math.abs(distance2) < 1e-8)
@@ -2706,12 +2722,12 @@ function offsetSketchContour(source, distance2) {
     return out;
   }
   if (out.segments.length === 1 && out.segments[0].type === "arc") {
-    const s = out.segments[0], g = sketchArcGeometry(out.start, s.middle, s.end);
-    const radius = g.radius - Math.sign(g.sweep) * distance2;
+    const s = out.segments[0], g2 = sketchArcGeometry(out.start, s.middle, s.end);
+    const radius = g2.radius - Math.sign(g2.sweep) * distance2;
     if (radius <= 1e-8) throw Error("Offset collapses the arc.");
-    const radial = (p) => [
-      g.center[0] + (p[0] - g.center[0]) * radius / g.radius,
-      g.center[1] + (p[1] - g.center[1]) * radius / g.radius
+    const radial = (p2) => [
+      g2.center[0] + (p2[0] - g2.center[0]) * radius / g2.radius,
+      g2.center[1] + (p2[1] - g2.center[1]) * radius / g2.radius
     ];
     out.start = radial(out.start);
     s.middle = radial(s.middle);
@@ -2725,13 +2741,13 @@ function offsetSketchContour(source, distance2) {
       "Offset currently requires a line chain, circle or individual circular arc."
     );
   const closed = contourClosed(out), points = [out.start, ...out.segments.map((s) => s.end)];
-  const edges = out.segments.map((_, i) => {
+  const edges = out.segments.map((_2, i) => {
     const delta2 = sub$5(points[i + 1], points[i]), length = Math.hypot(...delta2);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction = [delta2[0] / length, delta2[1] / length];
-    const shift = (p) => [
-      p[0] - direction[1] * distance2,
-      p[1] + direction[0] * distance2
+    const shift = (p2) => [
+      p2[0] - direction[1] * distance2,
+      p2[1] + direction[0] * distance2
     ];
     return { direction, start: shift(points[i]), end: shift(points[i + 1]) };
   });
@@ -2771,8 +2787,8 @@ function offsetSketchContour(source, distance2) {
           throw Error("Offset would self-intersect.");
         continue;
       }
-      const between = sub$5(result[j], result[i]), t = cross$b(between, v) / det, u = cross$b(between, delta2) / det;
-      if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+      const between = sub$5(result[j], result[i]), t = cross$b(between, v) / det, u2 = cross$b(between, delta2) / det;
+      if (t >= 0 && t <= 1 && u2 >= 0 && u2 <= 1)
         throw Error("Offset would self-intersect.");
     }
   }
@@ -2805,126 +2821,126 @@ function closedSlotOffset(source, side, width) {
     throw Error("Closed slot centerline has no enclosed area.");
   return Math.sign(area) * (side === "inner" ? 1 : -1) * width / 2;
 }
-const delta = (a, b) => [
-  b[0] - a[0],
-  b[1] - a[1]
+const delta = (a2, b) => [
+  b[0] - a2[0],
+  b[1] - a2[1]
 ];
-const angle = (x) => Math.atan2(Math.sin(x), Math.cos(x));
+const angle = (x2) => Math.atan2(Math.sin(x2), Math.cos(x2));
 function mixedOffsetResiduals(source, target, distance2) {
   if (source.segments.length !== target.segments.length || contourClosed(source) !== contourClosed(target))
     throw Error("Offset chain topology changed.");
   const result = [];
-  let p = source.start, q = target.start;
+  let p2 = source.start, q = target.start;
   source.segments.forEach((s, i) => {
     const t = target.segments[i];
     if (t.type !== s.type) throw Error("Offset chain edge type changed.");
     const first = !contourClosed(source) && i === 0, last = !contourClosed(source) && i === source.segments.length - 1;
     if (s.type === "line" && t.type === "line") {
-      const u = delta(p, s.end), v = delta(q, t.end), length = Math.hypot(...u), otherLength = Math.hypot(...v);
+      const u2 = delta(p2, s.end), v = delta(q, t.end), length = Math.hypot(...u2), otherLength = Math.hypot(...v);
       if (length < 1e-10 || otherLength < 1e-10)
         throw Error("Offset line has zero length.");
-      const x = u[0] / length, y = u[1] / length;
+      const x2 = u2[0] / length, y2 = u2[1] / length;
       result.push(
-        Math.atan2(x * v[1] - y * v[0], x * v[0] + y * v[1]),
-        (q[1] - p[1]) * x - (q[0] - p[0]) * y - distance2
+        Math.atan2(x2 * v[1] - y2 * v[0], x2 * v[0] + y2 * v[1]),
+        (q[1] - p2[1]) * x2 - (q[0] - p2[0]) * y2 - distance2
       );
-      if (first) result.push((q[0] - p[0]) * x + (q[1] - p[1]) * y);
+      if (first) result.push((q[0] - p2[0]) * x2 + (q[1] - p2[1]) * y2);
       if (last)
-        result.push((t.end[0] - s.end[0]) * x + (t.end[1] - s.end[1]) * y);
+        result.push((t.end[0] - s.end[0]) * x2 + (t.end[1] - s.end[1]) * y2);
     } else if (s.type === "arc" && t.type === "arc") {
-      const a = sketchArcGeometry(p, s.middle, s.end), b = sketchArcGeometry(q, t.middle, t.end), sign = Math.sign(a.sweep);
-      if (a.radius - sign * distance2 <= 1e-8)
+      const a2 = sketchArcGeometry(p2, s.middle, s.end), b = sketchArcGeometry(q, t.middle, t.end), sign = Math.sign(a2.sweep);
+      if (a2.radius - sign * distance2 <= 1e-8)
         throw Error("Offset collapses an arc.");
       result.push(
-        b.center[0] - a.center[0],
-        b.center[1] - a.center[1],
-        Math.sign(b.sweep) * b.radius - sign * a.radius + distance2
+        b.center[0] - a2.center[0],
+        b.center[1] - a2.center[1],
+        Math.sign(b.sweep) * b.radius - sign * a2.radius + distance2
       );
-      if (first) result.push(angle(b.startAngle - a.startAngle));
+      if (first) result.push(angle(b.startAngle - a2.startAngle));
       if (last)
-        result.push(angle(b.startAngle + b.sweep - a.startAngle - a.sweep));
+        result.push(angle(b.startAngle + b.sweep - a2.startAngle - a2.sweep));
     } else
       throw Error(
         "Mixed offset relationships require lines and circular arcs."
       );
-    p = s.end;
+    p2 = s.end;
     q = t.end;
   });
   return result;
 }
-function offsetResiduals(a, b, distance2) {
+function offsetResiduals(a2, b, distance2) {
   if (!Number.isFinite(distance2))
     throw Error("Offset distance must be finite.");
-  if (a.contour && b?.contour) {
-    if (a.contour.type === "path" && b.contour.type === "path" && a.contour.segments.some((s) => s.type === "arc"))
-      return mixedOffsetResiduals(a.contour, b.contour, distance2);
-    const expected = offsetSketchContour(a.contour, distance2), target = b.contour;
+  if (a2.contour && b?.contour) {
+    if (a2.contour.type === "path" && b.contour.type === "path" && a2.contour.segments.some((s) => s.type === "arc"))
+      return mixedOffsetResiduals(a2.contour, b.contour, distance2);
+    const expected = offsetSketchContour(a2.contour, distance2), target = b.contour;
     if (expected.type !== "path" || target.type !== "path" || expected.segments.length !== target.segments.length || contourClosed(expected) !== contourClosed(target) || target.segments.some((s) => s.type !== "line"))
       throw Error(
         "Offset chain topology changed; remove the offset relation before changing its edges."
       );
-    const p = [expected.start, ...expected.segments.map((s) => s.end)];
+    const p2 = [expected.start, ...expected.segments.map((s) => s.end)];
     const q = [target.start, ...target.segments.map((s) => s.end)];
     if (contourClosed(expected)) {
-      p.pop();
+      p2.pop();
       q.pop();
     }
-    return p.flatMap((point2, i) => [q[i][0] - point2[0], q[i][1] - point2[1]]);
+    return p2.flatMap((point2, i) => [q[i][0] - point2[0], q[i][1] - point2[1]]);
   }
-  if (a.circle && b?.circle && !a.arc && !b.arc)
+  if (a2.circle && b?.circle && !a2.arc && !b.arc)
     return [
-      b.circle.center[0] - a.circle.center[0],
-      b.circle.center[1] - a.circle.center[1],
-      b.circle.radius - a.circle.radius - distance2
+      b.circle.center[0] - a2.circle.center[0],
+      b.circle.center[1] - a2.circle.center[1],
+      b.circle.radius - a2.circle.radius - distance2
     ];
-  if (a.arc && b?.arc) {
-    const angle2 = b.arc.startAngle - a.arc.startAngle;
+  if (a2.arc && b?.arc) {
+    const angle2 = b.arc.startAngle - a2.arc.startAngle;
     return [
-      b.arc.center[0] - a.arc.center[0],
-      b.arc.center[1] - a.arc.center[1],
-      b.arc.radius - a.arc.radius + Math.sign(a.arc.sweep) * distance2,
+      b.arc.center[0] - a2.arc.center[0],
+      b.arc.center[1] - a2.arc.center[1],
+      b.arc.radius - a2.arc.radius + Math.sign(a2.arc.sweep) * distance2,
       Math.atan2(Math.sin(angle2), Math.cos(angle2)),
-      b.arc.sweep - a.arc.sweep
+      b.arc.sweep - a2.arc.sweep
     ];
   }
-  if (a.line && b?.line) {
-    const dx = a.line[1][0] - a.line[0][0], dy = a.line[1][1] - a.line[0][1], length = Math.hypot(dx, dy);
+  if (a2.line && b?.line) {
+    const dx = a2.line[1][0] - a2.line[0][0], dy = a2.line[1][1] - a2.line[0][1], length = Math.hypot(dx, dy);
     if (length < 1e-10) throw Error("Cannot offset a zero-length line.");
-    return a.line.flatMap((p, i) => [
-      b.line[i][0] - p[0] + dy / length * distance2,
-      b.line[i][1] - p[1] - dx / length * distance2
+    return a2.line.flatMap((p2, i) => [
+      b.line[i][0] - p2[0] + dy / length * distance2,
+      b.line[i][1] - p2[1] - dx / length * distance2
     ]);
   }
   throw Error(
     "Offset relation requires two circles, two circular arcs or two lines."
   );
 }
-function closedSlotResiduals(d, c) {
-  const source = d.contours[c.a.contour];
-  if (c.a.kind !== "contour" || c.b?.kind !== "contour" || source?.type !== "path" || c.slotBoundary !== "inner" && c.slotBoundary !== "outer")
+function closedSlotResiduals(d2, c2) {
+  const source = d2.contours[c2.a.contour];
+  if (c2.a.kind !== "contour" || c2.b?.kind !== "contour" || source?.type !== "path" || c2.slotBoundary !== "inner" && c2.slotBoundary !== "outer")
     throw Error("Closed slot boundary references are invalid.");
   return offsetResiduals(
-    resolve$1(d, c.a),
-    resolve$1(d, c.b),
-    closedSlotOffset(source, c.slotBoundary, dimensionValue(d, c))
+    resolve$1(d2, c2.a),
+    resolve$1(d2, c2.b),
+    closedSlotOffset(source, c2.slotBoundary, dimensionValue(d2, c2))
   );
 }
-function circularSlotResiduals(d, c) {
-  const a = d.contours[c.a.contour], b = c.b ? d.contours[c.b.contour] : void 0, width = dimensionValue(d, c);
-  if (a?.type !== "circle" || c.a.kind !== "circle" || b?.type !== "circle" || c.b?.kind !== "circle" || !["inner", "outer"].includes(c.slotBoundary ?? ""))
+function circularSlotResiduals(d2, c2) {
+  const a2 = d2.contours[c2.a.contour], b = c2.b ? d2.contours[c2.b.contour] : void 0, width = dimensionValue(d2, c2);
+  if (a2?.type !== "circle" || c2.a.kind !== "circle" || b?.type !== "circle" || c2.b?.kind !== "circle" || !["inner", "outer"].includes(c2.slotBoundary ?? ""))
     throw Error("Circular slot references or boundary side are invalid.");
-  if (!Number.isFinite(width) || width <= 1e-8 || width >= 2 * a.radius - 1e-8)
+  if (!Number.isFinite(width) || width <= 1e-8 || width >= 2 * a2.radius - 1e-8)
     throw Error(
       "Circular slot width must be smaller than its centerline diameter."
     );
   return [
-    b.center[0] - a.center[0],
-    b.center[1] - a.center[1],
-    b.radius - a.radius - (c.slotBoundary === "outer" ? 1 : -1) * width / 2
+    b.center[0] - a2.center[0],
+    b.center[1] - a2.center[1],
+    b.radius - a2.radius - (c2.slotBoundary === "outer" ? 1 : -1) * width / 2
   ];
 }
 function smoothSlotResiduals(source, target, width) {
-  const n = source.segments.length, p = [target.start, ...target.segments.map((s) => s.end)];
+  const n = source.segments.length, p2 = [target.start, ...target.segments.map((s) => s.end)];
   if (target.segments.length !== 2 * n + 2)
     throw Error("Slot topology changed.");
   const left = {
@@ -2932,21 +2948,21 @@ function smoothSlotResiduals(source, target, width) {
     start: target.start,
     segments: target.segments.slice(0, n)
   };
-  const right = { type: "path", start: p[2 * n + 1], segments: [] };
+  const right = { type: "path", start: p2[2 * n + 1], segments: [] };
   for (let i = 2 * n; i >= n + 1; i--)
-    right.segments.push({ ...target.segments[i], end: p[i] });
+    right.segments.push({ ...target.segments[i], end: p2[i] });
   const result = [
     ...mixedOffsetResiduals(source, left, width / 2),
     ...mixedOffsetResiduals(source, right, -width / 2)
   ];
   const sp = [source.start, ...source.segments.map((s) => s.end)];
   for (let i = 0; i < n - 1; i++) {
-    const a = curveJet({ start: sp[i], segment: source.segments[i] })(1).first;
+    const a2 = curveJet({ start: sp[i], segment: source.segments[i] })(1).first;
     const b = curveJet({ start: sp[i + 1], segment: source.segments[i + 1] })(
       0
     ).first;
     result.push(
-      Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1])
+      Math.atan2(a2[0] * b[1] - a2[1] * b[0], a2[0] * b[0] + a2[1] * b[1])
     );
   }
   for (const [index, center] of [
@@ -2955,7 +2971,7 @@ function smoothSlotResiduals(source, target, width) {
   ]) {
     const s = target.segments[index];
     if (s.type !== "arc") throw Error("Slot cap must remain an arc.");
-    const arc = sketchArcGeometry(p[index], s.middle, s.end);
+    const arc = sketchArcGeometry(p2[index], s.middle, s.end);
     result.push(
       arc.center[0] - center[0],
       arc.center[1] - center[1],
@@ -2978,9 +2994,9 @@ function slotChainContour(source, width) {
     const carriers = source.segments.map(
       (s, i) => offsetCarrier(points[i], s, distance2)
     );
-    const starts = carriers.map((c) => c.start), ends = carriers.map((c) => c.end), joins = /* @__PURE__ */ new Map();
+    const starts = carriers.map((c2) => c2.start), ends = carriers.map((c2) => c2.end), joins = /* @__PURE__ */ new Map();
     for (let i = 0; i < carriers.length - 1; i++) {
-      const a = jets[i](1).first, b = jets[i + 1](0).first, turn = Math.atan2(a[0] * b[1] - a[1] * b[0], a[0] * b[0] + a[1] * b[1]);
+      const a2 = jets[i](1).first, b = jets[i + 1](0).first, turn = Math.atan2(a2[0] * b[1] - a2[1] * b[0], a2[0] * b[0] + a2[1] * b[1]);
       if (Math.abs(turn) > Math.PI - 1e-8)
         throw Error("Slot chain reverses direction.");
       if (turn * distance2 < -1e-8) {
@@ -3004,19 +3020,19 @@ function slotChainContour(source, width) {
       }
     }
     const segments2 = [];
-    carriers.forEach((c, i) => {
-      segments2.push(offsetCarrierSegment(c, starts[i], ends[i]));
+    carriers.forEach((c2, i) => {
+      segments2.push(offsetCarrierSegment(c2, starts[i], ends[i]));
       const join = joins.get(i);
       if (join) segments2.push(join);
     });
     return { type: "path", start: starts[0], segments: segments2 };
   }
   const left = boundary(radius), right = boundary(-radius), rp = [right.start, ...right.segments.map((s) => s.end)];
-  const cap = (p2, v, sign) => {
+  const cap = (p22, v, sign) => {
     const n = Math.hypot(...v);
     return [
-      p2[0] + sign * radius * v[0] / n,
-      p2[1] + sign * radius * v[1] / n
+      p22[0] + sign * radius * v[0] / n,
+      p22[1] + sign * radius * v[1] / n
     ];
   };
   const segments = [
@@ -3034,13 +3050,13 @@ function slotChainContour(source, width) {
     middle: cap(points[0], jets[0](0).first, -1),
     end: left.start
   });
-  const p = [left.start, ...segments.map((s) => s.end)];
+  const p2 = [left.start, ...segments.map((s) => s.end)];
   for (let i = 0; i < segments.length; i++)
     for (let j = i + 1; j < segments.length; j++) {
-      const adjacent = j === i + 1 || i === 0 && j === segments.length - 1, shared = j === i + 1 ? p[i + 1] : p[0];
+      const adjacent = j === i + 1 || i === 0 && j === segments.length - 1, shared = j === i + 1 ? p2[i + 1] : p2[0];
       if (curveIntersections(
-        { start: p[i], segment: segments[i] },
-        { start: p[j], segment: segments[j] }
+        { start: p2[i], segment: segments[i] },
+        { start: p2[j], segment: segments[j] }
       ).some(
         (hit) => !adjacent || Math.hypot(hit.point[0] - shared[0], hit.point[1] - shared[1]) > 1e-6
       ))
@@ -3050,14 +3066,14 @@ function slotChainContour(source, width) {
     }
   return { type: "path", start: left.start, segments };
 }
-function slotCenterline(d, ref) {
-  const p = d.contours[ref.contour];
-  ref = resolveSegmentReference(p, ref);
-  if (p?.type !== "path" || !Number.isInteger(ref.index) || ref.index < 0 || !["line", "arc"].includes(ref.kind) || p.segments[ref.index]?.type !== ref.kind)
+function slotCenterline(d2, ref) {
+  const p2 = d2.contours[ref.contour];
+  ref = resolveSegmentReference(p2, ref);
+  if (p2?.type !== "path" || !Number.isInteger(ref.index) || ref.index < 0 || !["line", "arc"].includes(ref.kind) || p2.segments[ref.index]?.type !== ref.kind)
     throw Error("Select a line or circular arc as the slot centerline.");
   return {
-    start: ref.index === 0 ? p.start : p.segments[ref.index - 1].end,
-    segment: p.segments[ref.index]
+    start: ref.index === 0 ? p2.start : p2.segments[ref.index - 1].end,
+    segment: p2.segments[ref.index]
   };
 }
 function slotContour(start, segment, width) {
@@ -3075,12 +3091,12 @@ function slotContour(start, segment, width) {
   const left = offsetSketchContour(centerline, radius), right = offsetSketchContour(centerline, -radius);
   if (left.type !== "path" || right.type !== "path") throw Error();
   const jet = curveJet({ start, segment }), first = jet(0).first, last = jet(1).first;
-  const cap = (p, v, sign) => {
+  const cap = (p2, v, sign) => {
     const n = Math.hypot(...v);
     if (n < 1e-10) throw Error("Slot centerline has no tangent.");
     return [
-      p[0] + sign * radius * v[0] / n,
-      p[1] + sign * radius * v[1] / n
+      p2[0] + sign * radius * v[0] / n,
+      p2[1] + sign * radius * v[1] / n
     ];
   };
   const end = segment.end;
@@ -3095,47 +3111,47 @@ function slotContour(start, segment, width) {
     ]
   };
 }
-function slotCenterlinePath(d, ref) {
+function slotCenterlinePath(d2, ref) {
   if (ref.kind === "contour") {
-    const p = d.contours[ref.contour];
-    if (p?.type !== "path" || contourClosed(p) || !p.segments.length || p.segments.some((s) => s.type !== "line" && s.type !== "arc"))
+    const p2 = d2.contours[ref.contour];
+    if (p2?.type !== "path" || contourClosed(p2) || !p2.segments.length || p2.segments.some((s) => s.type !== "line" && s.type !== "arc"))
       throw Error("Select an open line/arc chain.");
-    return p;
+    return p2;
   }
-  const { start, segment } = slotCenterline(d, ref);
+  const { start, segment } = slotCenterline(d2, ref);
   return { type: "path", start, segments: [segment] };
 }
-function slotProfile(d, ref, width) {
-  const path = slotCenterlinePath(d, ref);
+function slotProfile(d2, ref, width) {
+  const path = slotCenterlinePath(d2, ref);
   return path.segments.length === 1 ? slotContour(path.start, path.segments[0], width) : slotChainContour(path, width);
 }
-function slotResiduals(d, c) {
-  if (c.a.kind === "circle") return circularSlotResiduals(d, c);
-  if (c.slotBoundary !== void 0) return closedSlotResiduals(d, c);
-  const target = c.b?.kind === "contour" ? d.contours[c.b.contour] : void 0;
-  const source = slotCenterlinePath(d, c.a), width = dimensionValue(d, c);
+function slotResiduals(d2, c2) {
+  if (c2.a.kind === "circle") return circularSlotResiduals(d2, c2);
+  if (c2.slotBoundary !== void 0) return closedSlotResiduals(d2, c2);
+  const target = c2.b?.kind === "contour" ? d2.contours[c2.b.contour] : void 0;
+  const source = slotCenterlinePath(d2, c2.a), width = dimensionValue(d2, c2);
   if (source.segments.length > 1 && target?.type === "path" && target.segments.length === 2 * source.segments.length + 2)
     return smoothSlotResiduals(source, target, width);
-  const expected = slotProfile(d, c.a, width);
+  const expected = slotProfile(d2, c2.a, width);
   if (target?.type !== "path" || !contourClosed(target) || target.segments.length !== expected.segments.length || target.segments.some((s, i) => s.type !== expected.segments[i].type))
     throw Error("Slot topology changed.");
-  const p = [
+  const p2 = [
     expected.start,
     ...expected.segments.slice(0, -1).map((s) => s.end)
   ], q = [target.start, ...target.segments.slice(0, -1).map((s) => s.end)];
-  const residuals = p.flatMap((a, i) => [q[i][0] - a[0], q[i][1] - a[1]]);
+  const residuals = p2.flatMap((a2, i) => [q[i][0] - a2[0], q[i][1] - a2[1]]);
   expected.segments.forEach((s, i) => {
     const t = target.segments[i];
     if (s.type === "arc" && t.type === "arc")
       residuals.push(
-        Math.tan(sketchArcGeometry(q[i], t.middle, t.end).sweep / 4) - Math.tan(sketchArcGeometry(p[i], s.middle, s.end).sweep / 4)
+        Math.tan(sketchArcGeometry(q[i], t.middle, t.end).sweep / 4) - Math.tan(sketchArcGeometry(p2[i], s.middle, s.end).sweep / 4)
       );
   });
   return residuals;
 }
-function normalResiduals(a, b) {
-  const line2 = a.line ?? b?.line;
-  const curve = a.line ? b : a;
+function normalResiduals(a2, b) {
+  const line2 = a2.line ?? b?.line;
+  const curve = a2.line ? b : a2;
   if (!line2 || !curve?.circle && !curve?.curve)
     throw new Error(
       "Normal requires a line and a circle/arc or finite curve contact."
@@ -3144,28 +3160,28 @@ function normalResiduals(a, b) {
   const length = Math.hypot(dx, dy);
   if (length < 1e-10)
     throw new Error("A zero-length line has no normal direction.");
-  const x = dx / length, y = dy / length;
+  const x2 = dx / length, y2 = dy / length;
   const point2 = curve.circle?.center ?? curve.curve.point;
-  const incidence = (point2[0] - line2[0][0]) * y - (point2[1] - line2[0][1]) * x;
+  const incidence = (point2[0] - line2[0][0]) * y2 - (point2[1] - line2[0][1]) * x2;
   if (curve.circle) return [incidence];
   const jet = curve.curve, speed = Math.hypot(...jet.first);
   if (speed < 1e-10)
     throw new Error("A stationary curve point has no normal direction.");
-  return [incidence, (x * jet.first[0] + y * jet.first[1]) / speed];
+  return [incidence, (x2 * jet.first[0] + y2 * jet.first[1]) / speed];
 }
-function curveContinuityResiduals(p, q, curvature = false) {
-  const lp = Math.hypot(...p.first), lq = Math.hypot(...q.first);
+function curveContinuityResiduals(p2, q, curvature = false) {
+  const lp = Math.hypot(...p2.first), lq = Math.hypot(...q.first);
   if (lp < 1e-10 || lq < 1e-10)
     throw new Error("A stationary curve point has no continuity direction.");
-  const cross2 = (a, b) => a[0] * b[1] - a[1] * b[0];
+  const cross2 = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
   const residuals = [
-    p.point[0] - q.point[0],
-    p.point[1] - q.point[1],
-    cross2(p.first, q.first) / (lp * lq)
+    p2.point[0] - q.point[0],
+    p2.point[1] - q.point[1],
+    cross2(p2.first, q.first) / (lp * lq)
   ];
   if (curvature) {
-    const orientation = (p.first[0] * q.first[0] + p.first[1] * q.first[1]) / (lp * lq);
-    const kp = cross2(p.first, p.second) / lp ** 3;
+    const orientation = (p2.first[0] * q.first[0] + p2.first[1] * q.first[1]) / (lp * lq);
+    const kp = cross2(p2.first, p2.second) / lp ** 3;
     const kq = cross2(q.first, q.second) / lq ** 3;
     residuals.push((kp - orientation * kq) * Math.sqrt(lp * lq));
   }
@@ -3195,9 +3211,9 @@ function expressionFunction(name, args) {
   }
   if (name === "atan2") {
     arity(2);
-    const y = numeric(args[0]), x = numeric(args[1]);
-    if (!sameUnits(x, y)) throw Error("atan2 arguments need matching units.");
-    return quantity(Math.atan2(y.magnitudeSI, x.magnitudeSI), 0, 1);
+    const y2 = numeric(args[0]), x2 = numeric(args[1]);
+    if (!sameUnits(x2, y2)) throw Error("atan2 arguments need matching units.");
+    return quantity(Math.atan2(y2.magnitudeSI, x2.magnitudeSI), 0, 1);
   }
   arity(1);
   const q = numeric(args[0]);
@@ -3262,38 +3278,38 @@ function evaluateExpression(source, context = {}) {
       case "call":
         return expressionFunction(node2.name, node2.arguments.map(visit));
       case "binary": {
-        const a = visit(node2.left), b = visit(node2.right);
+        const a2 = visit(node2.left), b = visit(node2.right);
         if (node2.operator === "~") {
           if (context.allowText === false)
             throw Error("Text is not allowed in a numeric field.");
-          const result = expressionText(a) + expressionText(b);
+          const result = expressionText(a2) + expressionText(b);
           if (result.length > 1e4)
             throw Error("Expression text is too long.");
           return result;
         }
-        const x = numeric(a), y = numeric(b);
+        const x2 = numeric(a2), y2 = numeric(b);
         if (node2.operator === "+" || node2.operator === "-") {
-          if (!sameUnits(x, y))
+          if (!sameUnits(x2, y2))
             throw Error("Cannot add quantities with different units.");
           return quantity(
-            x.magnitudeSI + (node2.operator === "+" ? y.magnitudeSI : -y.magnitudeSI),
-            x.lengthPower,
-            x.anglePower
+            x2.magnitudeSI + (node2.operator === "+" ? y2.magnitudeSI : -y2.magnitudeSI),
+            x2.lengthPower,
+            x2.anglePower
           );
         }
         if (node2.operator === "^") {
-          const power = scalar(y);
+          const power = scalar(y2);
           return quantity(
-            x.magnitudeSI ** power,
-            x.lengthPower * power,
-            x.anglePower * power
+            x2.magnitudeSI ** power,
+            x2.lengthPower * power,
+            x2.anglePower * power
           );
         }
         const divide = node2.operator === "/", sign = divide ? -1 : 1;
         return quantity(
-          divide ? x.magnitudeSI / y.magnitudeSI : x.magnitudeSI * y.magnitudeSI,
-          x.lengthPower + sign * y.lengthPower,
-          x.anglePower + sign * y.anglePower
+          divide ? x2.magnitudeSI / y2.magnitudeSI : x2.magnitudeSI * y2.magnitudeSI,
+          x2.lengthPower + sign * y2.lengthPower,
+          x2.anglePower + sign * y2.anglePower
         );
       }
     }
@@ -3338,8 +3354,8 @@ function setU64FromNum(view, byteOffset, n, isLE) {
   view.setUint32(byteOffset, isLE ? l : h, isLE);
   view.setUint32(byteOffset + 4, isLE ? h : l, isLE);
 }
-function isBytes(a) {
-  return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array" && "BYTES_PER_ELEMENT" in a && a.BYTES_PER_ELEMENT === 1;
+function isBytes(a2) {
+  return a2 instanceof Uint8Array || ArrayBuffer.isView(a2) && a2.constructor.name === "Uint8Array" && "BYTES_PER_ELEMENT" in a2 && a2.BYTES_PER_ELEMENT === 1;
 }
 const atitle = (title) => title ? `"${title}" ` : "";
 function abytes(value2, length, title = "") {
@@ -3414,11 +3430,11 @@ const oidNist = (suffix) => ({
   // Larger suffix values would need base-128 OID encoding and a different length byte.
   oid: Uint8Array.from([6, 9, 96, 134, 72, 1, 101, 3, 4, 2, suffix])
 });
-function Chi(a, b, c) {
-  return a & b ^ ~a & c;
+function Chi(a2, b, c2) {
+  return a2 & b ^ ~a2 & c2;
 }
-function Maj(a, b, c) {
-  return a & b ^ a & c ^ b & c;
+function Maj(a2, b, c2) {
+  return a2 & b ^ a2 & c2 ^ b & c2;
 }
 class HashMD {
   blockLen;
@@ -3726,7 +3742,7 @@ function adjustTextForFrameWidth(drawing, item, previousScaledWidth) {
   );
   for (const id2 of item.contourIds) {
     if (id2 === item.frameContourId) continue;
-    const index = drawing.contours.findIndex((c) => c.id === id2);
+    const index = drawing.contours.findIndex((c2) => c2.id === id2);
     if (index >= 0)
       drawing.contours[index] = transformContour(
         drawing.contours[index],
@@ -3738,7 +3754,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
   const covered = /* @__PURE__ */ new Set(), coordinates = [], finish = [];
   for (const item of drawing.textItems ?? []) {
     const indices = item.contourIds.map(
-      (id2) => drawing.contours.findIndex((c) => c.id === id2)
+      (id2) => drawing.contours.findIndex((c2) => c2.id === id2)
     );
     if (indices.some((i) => i < 0) || textOutlineDigest(indices.map((i) => drawing.contours[i])) !== item.outlineDigest)
       continue;
@@ -3746,7 +3762,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
     if (indices.some((i) => options.fixed?.has(i)) || options.used && !indices.some((i) => options.used.has(i)))
       continue;
     const original = indices.map((i) => structuredClone(drawing.contours[i])), origin = [...item.originMillimeters], em = item.emSizeMillimeters, rotation = item.rotationDegrees, frameWidth = item.frameWidthMillimeters, frameIndex = drawing.contours.findIndex(
-      (c) => c.id === item.frameContourId
+      (c2) => c2.id === item.frameContourId
     );
     const state = item.frameContourId ? [0, 0, 0, 0, 0] : [0, 0, 0, 0];
     const render = () => {
@@ -3777,7 +3793,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
       }
     };
     state.forEach(
-      (_, i) => coordinates.push({
+      (_2, i) => coordinates.push({
         get: () => state[i],
         set: (value2) => {
           state[i] = value2;
@@ -3808,19 +3824,19 @@ function ellipseLocusCoordinates(drawing, fixed) {
       return;
     const linked = /* @__PURE__ */ new Set([0]);
     const pairs = [];
-    for (const c of drawing.constraints ?? []) {
-      if (c.kind !== "ellipse-locus" || c.reference || c.a.contour !== contour || c.b?.contour !== contour)
+    for (const c2 of drawing.constraints ?? []) {
+      if (c2.kind !== "ellipse-locus" || c2.reference || c2.a.contour !== contour || c2.b?.contour !== contour)
         continue;
       pairs.push([
-        resolveSegmentReference(path, c.a).index,
-        resolveSegmentReference(path, c.b).index
+        resolveSegmentReference(path, c2.a).index,
+        resolveSegmentReference(path, c2.b).index
       ]);
     }
     for (let changed = true; changed; ) {
       changed = false;
-      for (const [a, b] of pairs) {
-        if (linked.has(a) === linked.has(b)) continue;
-        linked.add(linked.has(a) ? b : a);
+      for (const [a2, b] of pairs) {
+        if (linked.has(a2) === linked.has(b)) continue;
+        linked.add(linked.has(a2) ? b : a2);
         changed = true;
       }
     }
@@ -3831,10 +3847,10 @@ function ellipseLocusCoordinates(drawing, fixed) {
     });
     const base = frames[0];
     if (frames.some(
-      (f) => ellipseLocusResiduals(base, f).some((r) => Math.abs(r) > 1e-7) || Math.abs(f.radiusX - base.radiusX) > 1e-7 || Math.abs(f.radiusY - base.radiusY) > 1e-7 || Math.abs(
+      (f2) => ellipseLocusResiduals(base, f2).some((r) => Math.abs(r) > 1e-7) || Math.abs(f2.radiusX - base.radiusX) > 1e-7 || Math.abs(f2.radiusY - base.radiusY) > 1e-7 || Math.abs(
         Math.atan2(
-          Math.sin(f.rotation - base.rotation),
-          Math.cos(f.rotation - base.rotation)
+          Math.sin(f2.rotation - base.rotation),
+          Math.cos(f2.rotation - base.rotation)
         )
       ) > 1e-7
     ))
@@ -3845,11 +3861,11 @@ function ellipseLocusCoordinates(drawing, fixed) {
       points[0][1] - points.at(-1)[1]
     ) < 1e-7;
     const cos = Math.cos(base.rotation), sin = Math.sin(base.rotation);
-    const angles = points.slice(0, closed ? -1 : void 0).map((p) => {
-      const x = p[0] - base.center[0], y = p[1] - base.center[1];
+    const angles = points.slice(0, closed ? -1 : void 0).map((p2) => {
+      const x2 = p2[0] - base.center[0], y2 = p2[1] - base.center[1];
       return Math.atan2(
-        (-sin * x + cos * y) / base.radiusY,
-        (cos * x + sin * y) / base.radiusX
+        (-sin * x2 + cos * y2) / base.radiusY,
+        (cos * x2 + sin * y2) / base.radiusX
       );
     });
     const state = [
@@ -3861,30 +3877,30 @@ function ellipseLocusCoordinates(drawing, fixed) {
       ...angles
     ];
     const render = () => {
-      const rx = Math.exp(state[2]), ry = Math.exp(state[3]), c = Math.cos(state[4]), s = Math.sin(state[4]);
-      const at = (a) => [
-        state[0] + c * rx * Math.cos(a) - s * ry * Math.sin(a),
-        state[1] + s * rx * Math.cos(a) + c * ry * Math.sin(a)
+      const rx = Math.exp(state[2]), ry = Math.exp(state[3]), c2 = Math.cos(state[4]), s = Math.sin(state[4]);
+      const at = (a2) => [
+        state[0] + c2 * rx * Math.cos(a2) - s * ry * Math.sin(a2),
+        state[1] + s * rx * Math.cos(a2) + c2 * ry * Math.sin(a2)
       ];
       for (let i = 0; i < points.length; i++) {
-        const p = at(state[5 + i % angles.length]);
-        points[i][0] = p[0];
-        points[i][1] = p[1];
+        const p2 = at(state[5 + i % angles.length]);
+        points[i][0] = p2[0];
+        points[i][1] = p2[1];
       }
       path.segments.forEach((segment, i) => {
         if (segment.type !== "ellipse") return;
         segment.radiusX = rx;
         segment.radiusY = ry;
         segment.rotationDegrees = state[4] * 180 / Math.PI;
-        const a = state[5 + i], b = state[5 + (i + 1) % angles.length];
+        const a2 = state[5 + i], b = state[5 + (i + 1) % angles.length];
         const tau2 = 2 * Math.PI;
-        const travel = ((segment.sweep ? b - a : a - b) % tau2 + tau2) % tau2;
+        const travel = ((segment.sweep ? b - a2 : a2 - b) % tau2 + tau2) % tau2;
         segment.largeArc = travel > Math.PI;
       });
     };
     covered.add(contour);
     state.forEach(
-      (_, i) => coordinates.push({
+      (_2, i) => coordinates.push({
         get: () => state[i],
         set: (value2) => {
           state[i] = value2;
@@ -3895,12 +3911,12 @@ function ellipseLocusCoordinates(drawing, fixed) {
   });
   return { covered, coordinates };
 }
-function contactParameterCoordinates(d) {
+function contactParameterCoordinates(d2) {
   const coordinates = [];
-  for (const c of d.constraints ?? [])
-    for (const ref of [c.a, c.b]) {
+  for (const c2 of d2.constraints ?? [])
+    for (const ref of [c2.a, c2.b]) {
       if (ref?.sliding === void 0) continue;
-      if (typeof ref.sliding !== "boolean" || ref.kind !== "curve" || !["coincident", "pierce", "tangent", "curvature", "normal"].includes(c.kind))
+      if (typeof ref.sliding !== "boolean" || ref.kind !== "curve" || !["coincident", "pierce", "tangent", "curvature", "normal"].includes(c2.kind))
         throw Error("Sliding parameters require a curve contact constraint.");
       if (!ref.sliding) continue;
       if (ref.parameter === void 0 || !Number.isFinite(ref.parameter) || ref.parameter < 0 || ref.parameter > 1)
@@ -3916,7 +3932,7 @@ function contactParameterCoordinates(d) {
   return coordinates;
 }
 function solveDrawingConstraints(source, options = {}) {
-  if (source.constraints?.some((c) => c.kind === "pierce")) return solveSavedPierceConstraints(source, options);
+  if (source.constraints?.some((c2) => c2.kind === "pierce")) return solveSavedPierceConstraints(source, options);
   const compare = globalThis.__aetherSolverComparison;
   if (!compare) return solveDrawingConstraintsCore(source, options);
   const given = structuredClone(source);
@@ -3930,49 +3946,49 @@ function solveDrawingConstraints(source, options = {}) {
   }
 }
 function solveDrawingConstraintsCore(source, options = {}) {
-  const d = structuredClone(source), constraints = d.constraints ?? [];
-  const parameters = contactParameterCoordinates(d);
-  if (!constraints.length) return d;
+  const d2 = structuredClone(source), constraints = d2.constraints ?? [];
+  const parameters = contactParameterCoordinates(d2);
+  if (!constraints.length) return d2;
   if (constraints.length > 512)
     throw new Error("This sketch supports up to 512 constraints.");
-  if (new Set(constraints.map((c) => c.id)).size !== constraints.length)
+  if (new Set(constraints.map((c2) => c2.id)).size !== constraints.length)
     throw new Error("Duplicate constraint IDs.");
-  for (const c of constraints) validateDimensionExpression(c);
-  for (const c of constraints)
-    if (c.valueFrom !== void 0 || c.valueSign !== void 0 || c.valueScale !== void 0 || c.valueOffset !== void 0)
-      dimensionDriver(d, c);
-  const initial = constraints.flatMap((c) => constraintResiduals(d, c));
+  for (const c2 of constraints) validateDimensionExpression(c2);
+  for (const c2 of constraints)
+    if (c2.valueFrom !== void 0 || c2.valueSign !== void 0 || c2.valueScale !== void 0 || c2.valueOffset !== void 0)
+      dimensionDriver(d2, c2);
+  const initial = constraints.flatMap((c2) => constraintResiduals(d2, c2));
   if (!initial.every(Number.isFinite)) throw new Error("Invalid constraint geometry.");
-  if (Math.max(...initial.map(Math.abs)) < 1e-7) return d;
+  if (Math.max(...initial.map(Math.abs)) < 1e-7) return d2;
   const vars = [];
-  const addPoint = (p, alias) => {
-    for (let k = 0; k < 2; k++)
+  const addPoint = (p2, alias) => {
+    for (let k2 = 0; k2 < 2; k2++)
       vars.push({
-        get: () => p[k],
+        get: () => p2[k2],
         set: (v) => {
-          p[k] = v;
-          if (alias) alias[k] = v;
+          p2[k2] = v;
+          if (alias) alias[k2] = v;
         }
       });
   };
   const used = new Set(
-    constraints.filter((c) => !c.reference).flatMap((c) => [c.a.contour, ...c.b ? [c.b.contour] : [], ...c.axis ? [c.axis.contour] : []])
+    constraints.filter((c2) => !c2.reference).flatMap((c2) => [c2.a.contour, ...c2.b ? [c2.b.contour] : [], ...c2.axis ? [c2.axis.contour] : []])
   );
-  const textGroups = textSimilarityCoordinates(d, { fixed: options.fixedContours, used });
+  const textGroups = textSimilarityCoordinates(d2, { fixed: options.fixedContours, used });
   vars.push(...textGroups.coordinates);
-  const linkedEllipses = ellipseLocusCoordinates(d, options.fixedContours);
+  const linkedEllipses = ellipseLocusCoordinates(d2, options.fixedContours);
   vars.push(...linkedEllipses.coordinates);
-  d.contours.forEach((c, i) => {
+  d2.contours.forEach((c2, i) => {
     if (!used.has(i) || options.fixedContours?.has(i) || linkedEllipses.covered.has(i) || textGroups.covered.has(i)) return;
-    if (c.type === "circle") {
-      addPoint(c.center);
-      vars.push({ get: () => c.radius, set: (v) => c.radius = v });
+    if (c2.type === "circle") {
+      addPoint(c2.center);
+      vars.push({ get: () => c2.radius, set: (v) => c2.radius = v });
     } else {
-      const last = c.segments.at(-1);
-      const closed = last && Math.hypot(last.end[0] - c.start[0], last.end[1] - c.start[1]) < 1e-6;
-      addPoint(c.start, closed ? last.end : void 0);
-      c.segments.forEach((s, j) => {
-        if (!(closed && j === c.segments.length - 1)) addPoint(s.end);
+      const last = c2.segments.at(-1);
+      const closed = last && Math.hypot(last.end[0] - c2.start[0], last.end[1] - c2.start[1]) < 1e-6;
+      addPoint(c2.start, closed ? last.end : void 0);
+      c2.segments.forEach((s, j) => {
+        if (!(closed && j === c2.segments.length - 1)) addPoint(s.end);
         if (s.type === "ellipse") {
           for (const key of ["radiusX", "radiusY"]) vars.push({ get: () => Math.log(s[key]), set: (v) => {
             s[key] = Math.exp(v);
@@ -3982,7 +3998,7 @@ function solveDrawingConstraintsCore(source, options = {}) {
           } });
         }
         if (s.type === "arc") addPoint(s.middle);
-        if (s.type === "bezier") s.controls.forEach((p) => addPoint(p));
+        if (s.type === "bezier") s.controls.forEach((p2) => addPoint(p2));
         if (s.type === "conic") vars.push(...conicCoordinates(s));
       });
     }
@@ -3990,26 +4006,26 @@ function solveDrawingConstraintsCore(source, options = {}) {
   vars.push(...parameters);
   if (vars.length > 512)
     throw new Error("Too many constrained sketch coordinates (maximum 512).");
-  const residual = () => constraints.flatMap((c) => constraintResiduals(d, c));
+  const residual = () => constraints.flatMap((c2) => constraintResiduals(d2, c2));
   const norm2 = (r) => r.reduce((n, v) => n + v * v, 0);
-  const linearSolve = (a, b) => {
+  const linearSolve = (a2, b) => {
     const n = b.length;
     for (let i = 0; i < n; i++) {
       let pivot = i;
       for (let j = i + 1; j < n; j++)
-        if (Math.abs(a[j][i]) > Math.abs(a[pivot][i])) pivot = j;
-      [a[i], a[pivot]] = [a[pivot], a[i]];
+        if (Math.abs(a2[j][i]) > Math.abs(a2[pivot][i])) pivot = j;
+      [a2[i], a2[pivot]] = [a2[pivot], a2[i]];
       [b[i], b[pivot]] = [b[pivot], b[i]];
-      const q = a[i][i];
+      const q = a2[i][i];
       if (Math.abs(q) < 1e-18)
         throw new Error("Constraint system is singular.");
-      for (let k = i; k < n; k++) a[i][k] /= q;
+      for (let k2 = i; k2 < n; k2++) a2[i][k2] /= q;
       b[i] /= q;
       for (let j = 0; j < n; j++)
         if (j !== i) {
-          const f = a[j][i];
-          for (let k = i; k < n; k++) a[j][k] -= f * a[i][k];
-          b[j] -= f * b[i];
+          const f2 = a2[j][i];
+          for (let k2 = i; k2 < n; k2++) a2[j][k2] -= f2 * a2[i][k2];
+          b[j] -= f2 * b[i];
         }
     }
     return b;
@@ -4026,19 +4042,19 @@ function solveDrawingConstraintsCore(source, options = {}) {
       v.set(before[j] + h);
       const plus = residual();
       v.set(before[j]);
-      return plus.map((p, i) => (p - r[i]) / h);
+      return plus.map((p2, i) => (p2 - r[i]) / h);
     });
-    const matrix = r.map(
-      (_, i) => r.map(
-        (_2, j) => columns.reduce((sum, c) => sum + c[i] * c[j], 0) + (i === j ? damping : 0)
+    const matrix2 = r.map(
+      (_2, i) => r.map(
+        (_22, j) => columns.reduce((sum, c2) => sum + c2[i] * c2[j], 0) + (i === j ? damping : 0)
       )
     );
     const step = linearSolve(
-      matrix,
+      matrix2,
       r.map((v) => -v)
     );
     vars.forEach(
-      (v, j) => v.set(before[j] + columns[j].reduce((sum, c, i) => sum + c * step[i], 0))
+      (v, j) => v.set(before[j] + columns[j].reduce((sum, c2, i) => sum + c2 * step[i], 0))
     );
     if (norm2(residual()) < norm2(r)) {
       damping = Math.max(1e-10, damping * 0.3);
@@ -4077,8 +4093,8 @@ function pierceTargetReference(drawing, target, point2) {
     throw Error("Pierce curve contact parameter must be between zero and one.");
   return { ...ref, kind: "curve", parameter: parameter2, sliding: true };
 }
-function targetPoint(drawing, a, point2) {
-  const entity = resolve$1(drawing, a);
+function targetPoint(drawing, a2, point2) {
+  const entity = resolve$1(drawing, a2);
   if (entity.circle) {
     const { center, radius } = entity.circle;
     const dx = point2[0] - center[0], dy = point2[1] - center[1], length = Math.hypot(dx, dy);
@@ -4090,27 +4106,27 @@ function targetPoint(drawing, a, point2) {
 }
 function translatedSeed(drawing, contacts) {
   const next = structuredClone(drawing), moves = /* @__PURE__ */ new Map();
-  for (const { a, point: point2 } of contacts) {
-    const at = targetPoint(drawing, a, point2);
-    const list = moves.get(a.contour) ?? [];
+  for (const { a: a2, point: point2 } of contacts) {
+    const at = targetPoint(drawing, a2, point2);
+    const list = moves.get(a2.contour) ?? [];
     list.push([point2[0] - at[0], point2[1] - at[1]]);
-    moves.set(a.contour, list);
+    moves.set(a2.contour, list);
   }
   for (const [index, deltas] of moves) {
-    const dx = deltas.reduce((s, d) => s + d[0], 0) / deltas.length;
-    const dy = deltas.reduce((s, d) => s + d[1], 0) / deltas.length;
-    const c = next.contours[index], seen = /* @__PURE__ */ new Set();
-    const move = (p) => {
-      if (!seen.has(p)) {
-        p[0] += dx;
-        p[1] += dy;
-        seen.add(p);
+    const dx = deltas.reduce((s, d2) => s + d2[0], 0) / deltas.length;
+    const dy = deltas.reduce((s, d2) => s + d2[1], 0) / deltas.length;
+    const c2 = next.contours[index], seen = /* @__PURE__ */ new Set();
+    const move = (p2) => {
+      if (!seen.has(p2)) {
+        p2[0] += dx;
+        p2[1] += dy;
+        seen.add(p2);
       }
     };
-    if (c.type === "circle") move(c.center);
+    if (c2.type === "circle") move(c2.center);
     else {
-      move(c.start);
-      for (const s of c.segments) {
+      move(c2.start);
+      for (const s of c2.segments) {
         move(s.end);
         if (s.type === "arc") move(s.middle);
         if (s.type === "bezier") s.controls.forEach(move);
@@ -4123,30 +4139,30 @@ function translatedSeed(drawing, contacts) {
 function solveRelations(drawing, constraints, pointFor, options = {}) {
   const next = structuredClone(drawing), count = next.contours.length;
   const existing2 = next.constraints ?? [];
-  const ids2 = new Set(existing2.map((c) => c.id)), fixed = new Set(options.fixedContours);
-  const prepared = constraints.map((c) => {
-    if (!c || c.kind !== "pierce" || typeof c.id !== "string" || !c.id.trim() || ids2.has(c.id))
+  const ids2 = new Set(existing2.map((c2) => c2.id)), fixed = new Set(options.fixedContours);
+  const prepared = constraints.map((c2) => {
+    if (!c2 || c2.kind !== "pierce" || typeof c2.id !== "string" || !c2.id.trim() || ids2.has(c2.id))
       throw Error("Pierce constraints need unique nonempty identities.");
-    ids2.add(c.id);
-    validatePierceConstraint(c);
-    const point2 = pointFor(c);
-    const a = pierceTargetReference(drawing, c.a, point2);
+    ids2.add(c2.id);
+    validatePierceConstraint(c2);
+    const point2 = pointFor(c2);
+    const a2 = pierceTargetReference(drawing, c2.a, point2);
     const contour = next.contours.length;
     next.contours.push({ type: "path", construction: true, start: [...point2], segments: [] });
     fixed.add(contour);
-    return { point: point2, draft: { ...structuredClone(c), a }, equation: {
-      id: c.id,
+    return { point: point2, draft: { ...structuredClone(c2), a: a2 }, equation: {
+      id: c2.id,
       kind: "coincident",
-      a,
+      a: a2,
       b: { contour, kind: "point", index: 0 }
     } };
   });
-  next.constraints = [...existing2, ...prepared.map((p) => p.equation)];
+  next.constraints = [...existing2, ...prepared.map((p2) => p2.equation)];
   const solve = (input) => {
     const result = solveDrawingConstraints(input, { fixedContours: fixed });
-    for (const [index, p] of prepared.entries()) {
-      const at = targetPoint(result, result.constraints[existing2.length + index].a, p.point);
-      if (Math.hypot(at[0] - p.point[0], at[1] - p.point[1]) >= 1e-7)
+    for (const [index, p2] of prepared.entries()) {
+      const at = targetPoint(result, result.constraints[existing2.length + index].a, p2.point);
+      if (Math.hypot(at[0] - p2.point[0], at[1] - p2.point[1]) >= 1e-7)
         throw Error("The Pierce contact cannot converge accurately. No geometry was changed.");
     }
     return result;
@@ -4156,51 +4172,51 @@ function solveRelations(drawing, constraints, pointFor, options = {}) {
     solved = solve(next);
   } catch (error) {
     if (!(error instanceof Error) || !/conflict|converge|singular/i.test(error.message)) throw error;
-    solved = solve(translatedSeed(next, prepared.map((p) => ({ a: p.draft.a, point: p.point }))));
+    solved = solve(translatedSeed(next, prepared.map((p2) => ({ a: p2.draft.a, point: p2.point }))));
   }
   const returned = { ...solved, contours: solved.contours.slice(0, count) };
   if (drawing.constraints === void 0) delete returned.constraints;
   else returned.constraints = solved.constraints.slice(0, existing2.length);
-  return { drawing: returned, constraints: prepared.map((p, index) => ({
-    ...p.draft,
+  return { drawing: returned, constraints: prepared.map((p2, index) => ({
+    ...p2.draft,
     a: structuredClone(solved.constraints[existing2.length + index].a)
   })) };
 }
 function solveSavedPierceConstraints(source, options = {}) {
-  const relations = source.constraints.filter((c) => c.kind === "pierce");
-  const ordinary = { ...source, constraints: source.constraints.filter((c) => c.kind !== "pierce") };
-  const solved = solveRelations(ordinary, relations, (c) => pierceContextPoint(source, c), options);
-  const byId = new Map([...solved.drawing.constraints ?? [], ...solved.constraints].map((c) => [c.id, c]));
-  return { ...solved.drawing, constraints: source.constraints.map((c) => byId.get(c.id)) };
+  const relations = source.constraints.filter((c2) => c2.kind === "pierce");
+  const ordinary = { ...source, constraints: source.constraints.filter((c2) => c2.kind !== "pierce") };
+  const solved = solveRelations(ordinary, relations, (c2) => pierceContextPoint(source, c2), options);
+  const byId = new Map([...solved.drawing.constraints ?? [], ...solved.constraints].map((c2) => [c2.id, c2]));
+  return { ...solved.drawing, constraints: source.constraints.map((c2) => byId.get(c2.id)) };
 }
-function pierceResiduals(drawing, c) {
-  const point2 = pierceContextPoint(drawing, c), at = targetPoint(drawing, c.a, point2);
+function pierceResiduals(drawing, c2) {
+  const point2 = pierceContextPoint(drawing, c2), at = targetPoint(drawing, c2.a, point2);
   return [at[0] - point2[0], at[1] - point2[1]];
 }
-function constraintResiduals(d, c) {
-  validatePierceConstraint(c);
-  if (c.kind === "pierce") return pierceResiduals(d, c);
-  validateSplineFreeEnds(c);
-  if (c.fixedGeometry !== void 0) return fixedGeometryResiduals(d, c);
-  if (c.reference !== void 0 && typeof c.reference !== "boolean")
+function constraintResiduals(d2, c2) {
+  validatePierceConstraint(c2);
+  if (c2.kind === "pierce") return pierceResiduals(d2, c2);
+  validateSplineFreeEnds(c2);
+  if (c2.fixedGeometry !== void 0) return fixedGeometryResiduals(d2, c2);
+  if (c2.reference !== void 0 && typeof c2.reference !== "boolean")
     throw Error("Invalid reference dimension flag.");
-  if (c.reference) {
-    if (!Number.isFinite(measuredDimensionValue(d, c)))
+  if (c2.reference) {
+    if (!Number.isFinite(measuredDimensionValue(d2, c2)))
       throw Error("Invalid reference measurement.");
     return [];
   }
-  if (c.kind === "conic-rho") return conicRhoResiduals(d, c);
-  if (c.kind === "pattern") {
-    const source = patternSourceContour(d, c.a);
-    if (c.patternSuppression !== void 0) {
-      validatePatternSuppression(d, c);
+  if (c2.kind === "conic-rho") return conicRhoResiduals(d2, c2);
+  if (c2.kind === "pattern") {
+    const source = patternSourceContour(d2, c2.a);
+    if (c2.patternSuppression !== void 0) {
+      validatePatternSuppression(d2, c2);
       return [];
     }
-    const target = c.b ? resolve$1(d, c.b).contour : void 0;
-    if (c.axis) {
-      if (c.transform)
+    const target = c2.b ? resolve$1(d2, c2.b).contour : void 0;
+    if (c2.axis) {
+      if (c2.transform)
         throw Error("A live mirror axis cannot also have a fixed transform.");
-      const axis = resolve$1(d, c.axis).line;
+      const axis = resolve$1(d2, c2.axis).line;
       if (!axis) throw Error("Select a line.");
       return patternResiduals(
         source,
@@ -4208,9 +4224,9 @@ function constraintResiduals(d, c) {
         mirrorTransform(axis[0], axis[1])
       );
     }
-    return patternResiduals(source, target, patternRelationTransform(d, c));
+    return patternResiduals(source, target, patternRelationTransform(d2, c2));
   }
-  const a = resolve$1(d, c.a), b = c.b ? resolve$1(d, c.b) : void 0;
+  const a2 = resolve$1(d2, c2.a), b = c2.b ? resolve$1(d2, c2.b) : void 0;
   const point2 = (e) => {
     if (!e?.point) throw new Error("Select a point.");
     return e.point;
@@ -4228,211 +4244,211 @@ function constraintResiduals(d, c) {
     l[1][1] - l[0][1]
   ];
   const length = (l) => Math.hypot(...delta2(l));
-  const value2 = () => dimensionValue(d, c);
+  const value2 = () => dimensionValue(d2, c2);
   const positive = () => {
     const n = value2();
     if (n <= 0) throw new Error("Dimension must be positive.");
     return n;
   };
-  switch (c.kind) {
+  switch (c2.kind) {
     case "horizontal":
-      return a.point && b?.point ? [a.point[1] - b.point[1]] : [delta2(line2(a))[1]];
+      return a2.point && b?.point ? [a2.point[1] - b.point[1]] : [delta2(line2(a2))[1]];
     case "vertical":
-      return a.point && b?.point ? [a.point[0] - b.point[0]] : [delta2(line2(a))[0]];
+      return a2.point && b?.point ? [a2.point[0] - b.point[0]] : [delta2(line2(a2))[0]];
     case "coincident": {
-      if (a.point && b?.point)
-        return [a.point[0] - b.point[0], a.point[1] - b.point[1]];
-      const p = a.point ?? b?.point, other = a.point ? b : a;
-      if (!p || !other)
+      if (a2.point && b?.point)
+        return [a2.point[0] - b.point[0], a2.point[1] - b.point[1]];
+      const p2 = a2.point ?? b?.point, other = a2.point ? b : a2;
+      if (!p2 || !other)
         throw new Error("Select a point and a point, line, circle or arc.");
       if (other.curve)
-        return [p[0] - other.curve.point[0], p[1] - other.curve.point[1]];
-      if (other.ellipse) return [pointOnEllipse(other.ellipse, p)];
+        return [p2[0] - other.curve.point[0], p2[1] - other.curve.point[1]];
+      if (other.ellipse) return [pointOnEllipse(other.ellipse, p2)];
       if (other.circle)
         return [
           Math.hypot(
-            p[0] - other.circle.center[0],
-            p[1] - other.circle.center[1]
+            p2[0] - other.circle.center[0],
+            p2[1] - other.circle.center[1]
           ) - other.circle.radius
         ];
-      const l = line2(other), u = delta2(l);
+      const l = line2(other), u2 = delta2(l);
       return [
-        (u[0] * (p[1] - l[0][1]) - u[1] * (p[0] - l[0][0])) / Math.max(length(l), 1e-10)
+        (u2[0] * (p2[1] - l[0][1]) - u2[1] * (p2[0] - l[0][0])) / Math.max(length(l), 1e-10)
       ];
     }
     case "fix": {
-      const p = point2(a);
-      if (!c.point || c.point.length !== 2 || !c.point.every(Number.isFinite))
+      const p2 = point2(a2);
+      if (!c2.point || c2.point.length !== 2 || !c2.point.every(Number.isFinite))
         throw new Error("Fix needs a finite point.");
-      return [p[0] - c.point[0], p[1] - c.point[1]];
+      return [p2[0] - c2.point[0], p2[1] - c2.point[1]];
     }
     case "concentric": {
-      const p = a.point ?? a.ellipse?.center ?? circle(a).center, q = b?.point ?? b?.ellipse?.center ?? circle(b).center;
-      return [p[0] - q[0], p[1] - q[1]];
+      const p2 = a2.point ?? a2.ellipse?.center ?? circle(a2).center, q = b?.point ?? b?.ellipse?.center ?? circle(b).center;
+      return [p2[0] - q[0], p2[1] - q[1]];
     }
     case "length":
-      return [length(line2(a)) - positive()];
+      return [length(line2(a2)) - positive()];
     case "radius":
-      return [circle(a).radius - positive()];
+      return [circle(a2).radius - positive()];
     case "diameter":
-      return [2 * circle(a).radius - positive()];
+      return [2 * circle(a2).radius - positive()];
     case "distance": {
-      if (a.line && b?.line) {
-        const m = lineLineMeasurement(a.line, b.line);
-        return [m.parallelError, m.distance - positive()];
+      if (a2.line && b?.line) {
+        const m2 = lineLineMeasurement(a2.line, b.line);
+        return [m2.parallelError, m2.distance - positive()];
       }
-      if (a.point && b?.line)
-        return [pointLineMeasurement(a.point, b.line).distance - positive()];
-      if (a.line && b?.point)
-        return [pointLineMeasurement(b.point, a.line).distance - positive()];
-      const p = point2(a), q = point2(b);
-      return [Math.hypot(p[0] - q[0], p[1] - q[1]) - positive()];
+      if (a2.point && b?.line)
+        return [pointLineMeasurement(a2.point, b.line).distance - positive()];
+      if (a2.line && b?.point)
+        return [pointLineMeasurement(b.point, a2.line).distance - positive()];
+      const p2 = point2(a2), q = point2(b);
+      return [Math.hypot(p2[0] - q[0], p2[1] - q[1]) - positive()];
     }
     case "horizontal-distance":
     case "vertical-distance": {
-      const axis = c.kind === "horizontal-distance" ? 0 : 1;
-      return [point2(b)[axis] - point2(a)[axis] - value2()];
+      const axis = c2.kind === "horizontal-distance" ? 0 : 1;
+      return [point2(b)[axis] - point2(a2)[axis] - value2()];
     }
     case "equal":
-      return a.circle && b?.circle ? [a.circle.radius - b.circle.radius] : [length(line2(a)) - length(line2(b))];
+      return a2.circle && b?.circle ? [a2.circle.radius - b.circle.radius] : [length(line2(a2)) - length(line2(b))];
     case "midpoint": {
-      const p = point2(b);
-      if (a.arc) return [p[0] - a.arc.midpoint[0], p[1] - a.arc.midpoint[1]];
-      const l = line2(a);
-      return [p[0] - (l[0][0] + l[1][0]) / 2, p[1] - (l[0][1] + l[1][1]) / 2];
+      const p2 = point2(b);
+      if (a2.arc) return [p2[0] - a2.arc.midpoint[0], p2[1] - a2.arc.midpoint[1]];
+      const l = line2(a2);
+      return [p2[0] - (l[0][0] + l[1][0]) / 2, p2[1] - (l[0][1] + l[1][1]) / 2];
     }
     case "collinear": {
-      const la = line2(a), lb = line2(b), u = delta2(la), v = delta2(lb), w = [lb[0][0] - la[0][0], lb[0][1] - la[0][1]];
-      const scale2 = Math.max(Math.hypot(...u), 1e-10);
-      return [(u[0] * v[1] - u[1] * v[0]) / Math.max(scale2 * Math.hypot(...v), 1e-10), (u[0] * w[1] - u[1] * w[0]) / scale2];
+      const la = line2(a2), lb = line2(b), u2 = delta2(la), v = delta2(lb), w2 = [lb[0][0] - la[0][0], lb[0][1] - la[0][1]];
+      const scale2 = Math.max(Math.hypot(...u2), 1e-10);
+      return [(u2[0] * v[1] - u2[1] * v[0]) / Math.max(scale2 * Math.hypot(...v), 1e-10), (u2[0] * w2[1] - u2[1] * w2[0]) / scale2];
     }
     case "parallel":
     case "perpendicular":
     case "angle": {
-      const u = delta2(line2(a)), v = delta2(line2(b)), scale2 = Math.max(Math.hypot(...u) * Math.hypot(...v), 1e-10);
-      if (c.kind === "parallel") return [(u[0] * v[1] - u[1] * v[0]) / scale2];
-      if (c.kind === "perpendicular")
-        return [(u[0] * v[0] + u[1] * v[1]) / scale2];
-      const angle2 = Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1]) - value2() * Math.PI / 180;
+      const u2 = delta2(line2(a2)), v = delta2(line2(b)), scale2 = Math.max(Math.hypot(...u2) * Math.hypot(...v), 1e-10);
+      if (c2.kind === "parallel") return [(u2[0] * v[1] - u2[1] * v[0]) / scale2];
+      if (c2.kind === "perpendicular")
+        return [(u2[0] * v[0] + u2[1] * v[1]) / scale2];
+      const angle2 = Math.atan2(u2[0] * v[1] - u2[1] * v[0], u2[0] * v[0] + u2[1] * v[1]) - value2() * Math.PI / 180;
       return [Math.atan2(Math.sin(angle2), Math.cos(angle2))];
     }
     case "quadrant": {
-      const p = a.point ?? b?.point, e = quadrantFrame(a) ?? (b ? quadrantFrame(b) : void 0);
-      if (!p || !e) throw Error("Select a point and a circle, arc or ellipse.");
-      const q = ellipseQuadrant(e, c.quadrant), span = quadrantSpan(a) ?? (b ? quadrantSpan(b) : void 0);
+      const p2 = a2.point ?? b?.point, e = quadrantFrame(a2) ?? (b ? quadrantFrame(b) : void 0);
+      if (!p2 || !e) throw Error("Select a point and a circle, arc or ellipse.");
+      const q = ellipseQuadrant(e, c2.quadrant), span = quadrantSpan(a2) ?? (b ? quadrantSpan(b) : void 0);
       return [
-        p[0] - q[0],
-        p[1] - q[1],
+        p2[0] - q[0],
+        p2[1] - q[1],
         ...span ? [
           Math.min(e.radiusX, e.radiusY) * angularSpanDistance(
             span.startAngle,
             span.sweep,
-            c.quadrant * Math.PI / 2
+            c2.quadrant * Math.PI / 2
           )
         ] : []
       ];
     }
     case "spline-shape":
-      if (!a.contour) throw Error("Select the whole fit spline contour.");
-      return c.splineFreeEnds ? splineEndTangentResiduals(a.contour, c) : splineShapeResiduals(a.contour, c.splineSpanIntervals);
+      if (!a2.contour) throw Error("Select the whole fit spline contour.");
+      return c2.splineFreeEnds ? splineEndTangentResiduals(a2.contour, c2) : splineShapeResiduals(a2.contour, c2.splineSpanIntervals);
     case "ellipse-locus":
-      if (!a.ellipse || !b?.ellipse) throw Error("Select two elliptical arcs.");
-      return ellipseLocusResiduals(a.ellipse, b.ellipse);
+      if (!a2.ellipse || !b?.ellipse) throw Error("Select two elliptical arcs.");
+      return ellipseLocusResiduals(a2.ellipse, b.ellipse);
     case "ellipse-shape":
-      if (!a.contour) throw Error("Select the whole ellipse contour.");
-      return ellipseShapeResiduals(a.contour);
+      if (!a2.contour) throw Error("Select the whole ellipse contour.");
+      return ellipseShapeResiduals(a2.contour);
     case "symmetric":
-      if (c.splineReversed !== void 0 && (typeof c.splineReversed !== "boolean" || !a.contour || !b?.contour))
+      if (c2.splineReversed !== void 0 && (typeof c2.splineReversed !== "boolean" || !a2.contour || !b?.contour))
         throw Error("Spline direction applies only to whole spline symmetry.");
       return symmetricResiduals(
-        a,
+        a2,
         b,
-        c.axis ? resolve$1(d, c.axis) : void 0,
-        c.splineReversed
+        c2.axis ? resolve$1(d2, c2.axis) : void 0,
+        c2.splineReversed
       );
     case "slot":
-      return slotResiduals(d, c);
+      return slotResiduals(d2, c2);
     case "offset":
-      return offsetResiduals(a, b, value2());
+      return offsetResiduals(a2, b, value2());
     case "normal":
-      return normalResiduals(a, b);
+      return normalResiduals(a2, b);
     case "curvature": {
-      if (a.circle && b?.curve)
-        return circleContinuityResiduals(a.circle, b.curve, true);
-      if (a.curve && b?.circle)
-        return circleContinuityResiduals(b.circle, a.curve, true);
-      if (!a.curve || !b?.curve)
+      if (a2.circle && b?.curve)
+        return circleContinuityResiduals(a2.circle, b.curve, true);
+      if (a2.curve && b?.circle)
+        return circleContinuityResiduals(b.circle, a2.curve, true);
+      if (!a2.curve || !b?.curve)
         throw new Error(
           "Select two finite curve contacts for curvature continuity."
         );
-      return curveContinuityResiduals(a.curve, b.curve, true);
+      return curveContinuityResiduals(a2.curve, b.curve, true);
     }
     case "tangent": {
-      if (a.circle && b?.curve)
-        return circleContinuityResiduals(a.circle, b.curve);
-      if (a.curve && b?.circle)
-        return circleContinuityResiduals(b.circle, a.curve);
-      if (a.curve && b?.curve) {
-        return curveContinuityResiduals(a.curve, b.curve);
+      if (a2.circle && b?.curve)
+        return circleContinuityResiduals(a2.circle, b.curve);
+      if (a2.curve && b?.circle)
+        return circleContinuityResiduals(b.circle, a2.curve);
+      if (a2.curve && b?.curve) {
+        return curveContinuityResiduals(a2.curve, b.curve);
       }
-      if (a.circle && b?.circle) {
+      if (a2.circle && b?.circle) {
         const distance2 = Math.hypot(
-          a.circle.center[0] - b.circle.center[0],
-          a.circle.center[1] - b.circle.center[1]
+          a2.circle.center[0] - b.circle.center[0],
+          a2.circle.center[1] - b.circle.center[1]
         );
         return [
-          distance2 - (c.tangentMode === "internal" ? Math.abs(a.circle.radius - b.circle.radius) : a.circle.radius + b.circle.radius)
+          distance2 - (c2.tangentMode === "internal" ? Math.abs(a2.circle.radius - b.circle.radius) : a2.circle.radius + b.circle.radius)
         ];
       }
-      const p = circle(a.circle ? a : b), l = line2(a.line ? a : b), u = delta2(l), len = Math.max(length(l), 1e-10);
+      const p2 = circle(a2.circle ? a2 : b), l = line2(a2.line ? a2 : b), u2 = delta2(l), len = Math.max(length(l), 1e-10);
       return [
         Math.abs(
-          u[0] * (p.center[1] - l[0][1]) - u[1] * (p.center[0] - l[0][0])
-        ) / len - p.radius
+          u2[0] * (p2.center[1] - l[0][1]) - u2[1] * (p2.center[0] - l[0][0])
+        ) / len - p2.radius
       ];
     }
     default:
       throw new Error("Unsupported sketch constraint.");
   }
 }
-const sameSketchPoint = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 1e-6;
-function contourClosed(c) {
-  return c.type === "circle" || c.segments.length > 0 && sameSketchPoint(c.start, c.segments.at(-1).end);
+const sameSketchPoint = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]) < 1e-6;
+function contourClosed(c2) {
+  return c2.type === "circle" || c2.segments.length > 0 && sameSketchPoint(c2.start, c2.segments.at(-1).end);
 }
 function validateSketchDrawing(input) {
   validatePatternGroups(input);
   validateTextItems(input);
-  const d = solveDrawingConstraints(input);
-  if (!Array.isArray(d.contours) || d.contours.length > 1e3)
+  const d2 = solveDrawingConstraints(input);
+  if (!Array.isArray(d2.contours) || d2.contours.length > 1e3)
     throw new Error("Invalid sketch contours.");
-  const point2 = (p) => {
-    if (!Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite))
+  const point2 = (p2) => {
+    if (!Array.isArray(p2) || p2.length !== 2 || !p2.every(Number.isFinite))
       throw new Error("Sketch coordinates must be finite.");
   };
   const ids2 = /* @__PURE__ */ new Set();
-  for (const c of d.contours) {
-    if (c.sourceLayer !== void 0 && (typeof c.sourceLayer !== "string" || !c.sourceLayer.length || c.sourceLayer.length > 255))
+  for (const c2 of d2.contours) {
+    if (c2.sourceLayer !== void 0 && (typeof c2.sourceLayer !== "string" || !c2.sourceLayer.length || c2.sourceLayer.length > 255))
       throw Error(
         "Source layer must be a nonempty name of at most 255 characters."
       );
-    if (c.id !== void 0) {
-      if (typeof c.id !== "string" || !c.id.trim() || c.id.length > 128 || ids2.has(c.id))
+    if (c2.id !== void 0) {
+      if (typeof c2.id !== "string" || !c2.id.trim() || c2.id.length > 128 || ids2.has(c2.id))
         throw Error(
           "Sketch contour identities must be unique nonempty strings."
         );
-      ids2.add(c.id);
+      ids2.add(c2.id);
     }
-    if (c.construction !== void 0 && typeof c.construction !== "boolean")
+    if (c2.construction !== void 0 && typeof c2.construction !== "boolean")
       throw new Error("Construction flag must be boolean.");
-    if (c.type === "path" && c.infinite !== void 0 && (typeof c.infinite !== "boolean" || c.infinite && (c.segments.length !== 1 || c.segments[0].type !== "line" || !c.construction)))
+    if (c2.type === "path" && c2.infinite !== void 0 && (typeof c2.infinite !== "boolean" || c2.infinite && (c2.segments.length !== 1 || c2.segments[0].type !== "line" || !c2.construction)))
       throw new Error("An infinite line is a single construction line.");
-    if (c.type === "circle") {
-      point2(c.center);
-      if (!Number.isFinite(c.radius) || c.radius <= 0)
+    if (c2.type === "circle") {
+      point2(c2.center);
+      if (!Number.isFinite(c2.radius) || c2.radius <= 0)
         throw new Error("Circle radius must be positive.");
-    } else if (c.type === "path") {
-      point2(c.start);
-      if (!Array.isArray(c.segments) || c.segments.length > 1e3)
+    } else if (c2.type === "path") {
+      point2(c2.start);
+      if (!Array.isArray(c2.segments) || c2.segments.length > 1e3)
         throw new Error("Invalid sketch path.");
       const vertexIds = /* @__PURE__ */ new Set();
       const vertex = (id2) => {
@@ -4443,14 +4459,14 @@ function validateSketchDrawing(input) {
           );
         vertexIds.add(id2);
       };
-      vertex(c.startVertexId);
-      c.segments.forEach((s, index) => {
-        const closing = index === c.segments.length - 1 && sameSketchPoint(s.end, c.start) && s.endVertexId === c.startVertexId;
+      vertex(c2.startVertexId);
+      c2.segments.forEach((s, index) => {
+        const closing = index === c2.segments.length - 1 && sameSketchPoint(s.end, c2.start) && s.endVertexId === c2.startVertexId;
         if (!closing) vertex(s.endVertexId);
       });
       const segmentIds = /* @__PURE__ */ new Set();
-      let previous = c.start;
-      for (const s of c.segments) {
+      let previous = c2.start;
+      for (const s of c2.segments) {
         if (s.id !== void 0) {
           if (typeof s.id !== "string" || !s.id.trim() || s.id.length > 128 || segmentIds.has(s.id))
             throw Error(
@@ -4482,6 +4498,15 @@ function validateSketchDrawing(input) {
     } else throw new Error("Unsupported sketch contour.");
   }
 }
+function identifySketchContour(contour, createId) {
+  contour.id ??= createId();
+  if (contour.type !== "path") return;
+  contour.startVertexId ??= createId();
+  contour.segments.forEach((segment, index) => {
+    segment.id ??= createId();
+    segment.endVertexId ??= index === contour.segments.length - 1 && contourClosed(contour) ? contour.startVertexId : createId();
+  });
+}
 function solveProjectedConstraints(authored, projected) {
   const next = structuredClone(authored), count = next.contours.length;
   const fixed = /* @__PURE__ */ new Set(), mapped = /* @__PURE__ */ new Map();
@@ -4492,7 +4517,7 @@ function solveProjectedConstraints(authored, projected) {
       throw Error("Invalid projected constraint reference.");
     let index = mapped.get(id2);
     if (index === void 0) {
-      const matches = projected.contours.filter((c) => c.id === id2);
+      const matches = projected.contours.filter((c2) => c2.id === id2);
       if (matches.length !== 1)
         throw Error(`Broken projected constraint reference: ${id2}.`);
       index = next.contours.length;
@@ -4500,25 +4525,25 @@ function solveProjectedConstraints(authored, projected) {
       fixed.add(index);
       mapped.set(id2, index);
     }
-    const { projectedContourId: _, ...local2 } = ref;
+    const { projectedContourId: _2, ...local2 } = ref;
     return { ...local2, contour: index };
   };
-  next.constraints = next.constraints?.map((c) => ({
-    ...c,
-    a: map(c.a),
-    ...c.b ? { b: map(c.b) } : {},
-    ...c.axis ? { axis: map(c.axis) } : {}
+  next.constraints = next.constraints?.map((c2) => ({
+    ...c2,
+    a: map(c2.a),
+    ...c2.b ? { b: map(c2.b) } : {},
+    ...c2.axis ? { axis: map(c2.axis) } : {}
   }));
   const solved = solveDrawingConstraints(next, { fixedContours: fixed });
   const restore = (original, updated) => ({
     ...structuredClone(original),
     ...original.kind === "curve" && original.sliding ? { parameter: updated.parameter } : {}
   });
-  const constraints = authored.constraints?.map((c, i) => ({
-    ...structuredClone(c),
-    a: restore(c.a, solved.constraints[i].a),
-    ...c.b ? { b: restore(c.b, solved.constraints[i].b) } : {},
-    ...c.axis ? { axis: restore(c.axis, solved.constraints[i].axis) } : {}
+  const constraints = authored.constraints?.map((c2, i) => ({
+    ...structuredClone(c2),
+    a: restore(c2.a, solved.constraints[i].a),
+    ...c2.b ? { b: restore(c2.b, solved.constraints[i].b) } : {},
+    ...c2.axis ? { axis: restore(c2.axis, solved.constraints[i].axis) } : {}
   }));
   return {
     ...structuredClone(authored),
@@ -4545,65 +4570,65 @@ function composeProjectedDrawing(projected, authored) {
   return { type: "drawing", contours };
 }
 function collapsedConicPoints(map, frame) {
-  const c = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
-  const u = map.vector([frame.radiusX * c, frame.radiusX * s]);
-  const v = map.vector([-frame.radiusY * s, frame.radiusY * c]);
-  const axis = Math.hypot(u[0], v[0]) >= Math.hypot(u[1], v[1]) ? 0 : 1;
-  const phase = Math.atan2(v[axis], u[axis]);
+  const c2 = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
+  const u2 = map.vector([frame.radiusX * c2, frame.radiusX * s]);
+  const v = map.vector([-frame.radiusY * s, frame.radiusY * c2]);
+  const axis = Math.hypot(u2[0], v[0]) >= Math.hypot(u2[1], v[1]) ? 0 : 1;
+  const phase = Math.atan2(v[axis], u2[axis]);
   const parameters = [0, 1];
-  for (let k = -6; k <= 6; k++) {
-    const t = (phase + k * Math.PI - frame.startAngle) / frame.sweep;
+  for (let k2 = -6; k2 <= 6; k2++) {
+    const t = (phase + k2 * Math.PI - frame.startAngle) / frame.sweep;
     if (t > 1e-12 && t < 1 - 1e-12) parameters.push(t);
   }
-  return parameters.sort((a, b) => a - b).map((t) => map.point(ellipsePoint(frame, t)));
+  return parameters.sort((a2, b) => a2 - b).map((t) => map.point(ellipsePoint(frame, t)));
 }
 function collapsedInterval(points) {
-  const axis = Math.max(...points.map((p) => p[0])) - Math.min(...points.map((p) => p[0])) >= Math.max(...points.map((p) => p[1])) - Math.min(...points.map((p) => p[1])) ? 0 : 1;
-  const sorted = [...points].sort((a, b) => a[axis] - b[axis]);
+  const axis = Math.max(...points.map((p2) => p2[0])) - Math.min(...points.map((p2) => p2[0])) >= Math.max(...points.map((p2) => p2[1])) - Math.min(...points.map((p2) => p2[1])) ? 0 : 1;
+  const sorted = [...points].sort((a2, b) => a2[axis] - b[axis]);
   return [sorted[0], sorted[sorted.length - 1]];
 }
-const dot$7 = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
-const cross$a = (a, b) => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0]
+const dot$7 = (a2, b) => a2.reduce((s, v, i) => s + v * b[i], 0);
+const cross$a = (a2, b) => [
+  a2[1] * b[2] - a2[2] * b[1],
+  a2[2] * b[0] - a2[0] * b[2],
+  a2[0] * b[1] - a2[1] * b[0]
 ];
 function basis(frame) {
-  const { originMillimeters: o, xDirection: x, normal: n } = frame;
-  if (![o, x, n].every(
+  const { originMillimeters: o, xDirection: x2, normal: n } = frame;
+  if (![o, x2, n].every(
     (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)
-  ) || Math.abs(Math.hypot(...x) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$7(x, n)) > 1e-6)
+  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$7(x2, n)) > 1e-6)
     throw Error("Projection needs valid orthonormal sketch frames.");
-  return { o, x, y: cross$a(n, x) };
+  return { o, x: x2, y: cross$a(n, x2) };
 }
 function sketchFrameMap(source, target) {
-  const a = basis(source), b = basis(target), delta2 = a.o.map((v, i) => v - b.o[i]);
-  const m = [
-    dot$7(a.x, b.x),
-    dot$7(a.y, b.x),
-    dot$7(a.x, b.y),
-    dot$7(a.y, b.y)
+  const a2 = basis(source), b = basis(target), delta2 = a2.o.map((v, i) => v - b.o[i]);
+  const m2 = [
+    dot$7(a2.x, b.x),
+    dot$7(a2.y, b.x),
+    dot$7(a2.x, b.y),
+    dot$7(a2.y, b.y)
   ];
   const offset2 = [dot$7(delta2, b.x), dot$7(delta2, b.y)];
-  const vector2 = (p) => [
-    m[0] * p[0] + m[1] * p[1],
-    m[2] * p[0] + m[3] * p[1]
+  const vector2 = (p2) => [
+    m2[0] * p2[0] + m2[1] * p2[1],
+    m2[2] * p2[0] + m2[3] * p2[1]
   ];
   return {
-    determinant: m[0] * m[3] - m[1] * m[2],
+    determinant: m2[0] * m2[3] - m2[1] * m2[2],
     vector: vector2,
-    point(p) {
-      const v = vector2(p);
+    point(p2) {
+      const v = vector2(p2);
       return [v[0] + offset2[0], v[1] + offset2[1]];
     }
   };
 }
 function projectedEllipse(map, rx, ry, rotation) {
-  const c = Math.cos(rotation), s = Math.sin(rotation), u = map.vector([rx * c, rx * s]), v = map.vector([-ry * s, ry * c]);
-  const scale2 = Math.max(...u.map(Math.abs), ...v.map(Math.abs));
+  const c2 = Math.cos(rotation), s = Math.sin(rotation), u2 = map.vector([rx * c2, rx * s]), v = map.vector([-ry * s, ry * c2]);
+  const scale2 = Math.max(...u2.map(Math.abs), ...v.map(Math.abs));
   if (!Number.isFinite(scale2) || scale2 === 0)
     throw Error("Conic mapping has no finite nonzero extent.");
-  const ux = u[0] / scale2, uy = u[1] / scale2, vx = v[0] / scale2, vy = v[1] / scale2;
+  const ux = u2[0] / scale2, uy = u2[1] / scale2, vx = v[0] / scale2, vy = v[1] / scale2;
   const xx = ux * ux + vx * vx, xy = ux * uy + vx * vy, yy = uy * uy + vy * vy;
   const major = Math.sqrt((xx + yy + Math.hypot(xx - yy, 2 * xy)) / 2);
   const radiusX = major * scale2;
@@ -4634,20 +4659,20 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
   if (!Number.isFinite(map.determinant) || !Number.isFinite(collapseTolerance) || collapseTolerance < 0)
     throw Error("Invalid affine mapping tolerance or determinant.");
   const collapsed = map.determinant === 0 || Math.abs(map.determinant) < collapseTolerance;
-  const contours = drawing.contours.map((c) => {
+  const contours = drawing.contours.map((c2) => {
     const flags = {
-      ...c.sourceLayer !== void 0 ? { sourceLayer: c.sourceLayer } : {},
-      ...c.id !== void 0 ? { id: c.id } : {},
-      ...c.hole !== void 0 ? { hole: c.hole } : {},
-      ...c.construction !== void 0 ? { construction: c.construction } : {}
+      ...c2.sourceLayer !== void 0 ? { sourceLayer: c2.sourceLayer } : {},
+      ...c2.id !== void 0 ? { id: c2.id } : {},
+      ...c2.hole !== void 0 ? { hole: c2.hole } : {},
+      ...c2.construction !== void 0 ? { construction: c2.construction } : {}
     };
-    if (c.type === "circle") {
+    if (c2.type === "circle") {
       if (collapsed) {
         const [start3, end] = collapsedInterval(
           collapsedConicPoints(map, {
-            center: c.center,
-            radiusX: c.radius,
-            radiusY: c.radius,
+            center: c2.center,
+            radiusX: c2.radius,
+            radiusY: c2.radius,
             rotation: 0,
             startAngle: 0,
             sweep: 2 * Math.PI
@@ -4661,15 +4686,15 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
           hole: false
         };
       }
-      const axes = projectedEllipse(map, c.radius, c.radius, 0);
+      const axes = projectedEllipse(map, c2.radius, c2.radius, 0);
       if (Math.abs(axes.radiusX - axes.radiusY) < 1e-10 * Math.max(1, axes.radiusX))
         return {
           type: "circle",
-          center: map.point(c.center),
+          center: map.point(c2.center),
           radius: axes.radiusX,
           ...flags
         };
-      const start2 = [c.center[0] + c.radius, c.center[1]], opposite = [c.center[0] - c.radius, c.center[1]];
+      const start2 = [c2.center[0] + c2.radius, c2.center[1]], opposite = [c2.center[0] - c2.radius, c2.center[1]];
       return {
         type: "path",
         start: map.point(start2),
@@ -4680,8 +4705,8 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
         ...flags
       };
     }
-    let previous = c.start;
-    let segments = c.segments.flatMap((segment) => {
+    let previous = c2.start;
+    let segments = c2.segments.flatMap((segment) => {
       const start2 = previous;
       previous = segment.end;
       if (segment.type === "conic") return projectConic(start2, segment, map.point, collapsed);
@@ -4700,11 +4725,11 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
         ];
       if (collapsed) {
         const frame = segment.type === "arc" ? (() => {
-          const a = sketchArcGeometry(start2, segment.middle, segment.end);
+          const a2 = sketchArcGeometry(start2, segment.middle, segment.end);
           return {
-            ...a,
-            radiusX: a.radius,
-            radiusY: a.radius,
+            ...a2,
+            radiusX: a2.radius,
+            radiusY: a2.radius,
             rotation: 0
           };
         })() : ellipseFrame(start2, segment);
@@ -4724,30 +4749,30 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
           )
         ];
       }
-      const ellipse = ellipseFrame(start2, segment);
+      const ellipse2 = ellipseFrame(start2, segment);
       return [
         projectedConicSegment(
           map,
           projectedEllipse(
             map,
-            ellipse.radiusX,
-            ellipse.radiusY,
-            ellipse.rotation
+            ellipse2.radiusX,
+            ellipse2.radiusY,
+            ellipse2.rotation
           ),
           segment.end,
-          ellipse.sweep
+          ellipse2.sweep
         )
       ];
     });
     if (!collapsed)
       segments.forEach((segment, index) => {
-        if (c.segments[index].id !== void 0)
-          segment.id = c.segments[index].id;
-        if (c.segments[index].endVertexId !== void 0)
-          segment.endVertexId = c.segments[index].endVertexId;
+        if (c2.segments[index].id !== void 0)
+          segment.id = c2.segments[index].id;
+        if (c2.segments[index].endVertexId !== void 0)
+          segment.endVertexId = c2.segments[index].endVertexId;
       });
-    let start = map.point(c.start);
-    if (collapsed && contourClosed(c) && c.segments.every((s) => s.type !== "bezier")) {
+    let start = map.point(c2.start);
+    if (collapsed && contourClosed(c2) && c2.segments.every((s) => s.type !== "bezier")) {
       const interval = collapsedInterval([
         start,
         ...segments.map((s) => s.end)
@@ -4759,7 +4784,7 @@ function mapSketchDrawing(source, map, collapseTolerance = 0) {
       type: "path",
       start,
       segments,
-      ...!collapsed && c.startVertexId !== void 0 ? { startVertexId: c.startVertexId } : {},
+      ...!collapsed && c2.startVertexId !== void 0 ? { startVertexId: c2.startVertexId } : {},
       ...flags,
       ...collapsed ? { hole: false } : {}
     };
@@ -4784,7 +4809,7 @@ function resolveProfileDrawing(features, featureId2) {
   const resolve2 = (id2, before, depth) => {
     if (depth > 256)
       throw Error("Projection dependency chain exceeds 256 profiles.");
-    const index = features.findIndex((f) => f.id === id2), feature = features[index];
+    const index = features.findIndex((f2) => f2.id === id2), feature = features[index];
     if (index < 0 || index >= before || feature.type !== "profile")
       throw Error(
         `Broken projection reference: ${id2} must be an earlier profile.`
@@ -4793,29 +4818,29 @@ function resolveProfileDrawing(features, featureId2) {
       throw Error(`Projection source is suppressed: ${feature.name} (${id2}).`);
     const hit = cache.get(id2);
     if (hit) return hit;
-    const p = feature.profile;
+    const p2 = feature.profile;
     let drawing;
-    if (p.type === "projection") {
-      const input = resolve2(p.sourceFeatureId, index, depth + 1), source = features.find(
-        (f) => f.id === p.sourceFeatureId
+    if (p2.type === "projection") {
+      const input = resolve2(p2.sourceFeatureId, index, depth + 1), source = features.find(
+        (f2) => f2.id === p2.sourceFeatureId
       );
-      const selected = p.sourceContourId === void 0 ? input.contours : input.contours.filter((c) => c.id === p.sourceContourId);
-      if (p.sourceContourId !== void 0 && selected.length !== 1) throw Error(`Broken projection contour reference: ${p.sourceContourId} in ${source.name}.`);
+      const selected = p2.sourceContourId === void 0 ? input.contours : input.contours.filter((c2) => c2.id === p2.sourceContourId);
+      if (p2.sourceContourId !== void 0 && selected.length !== 1) throw Error(`Broken projection contour reference: ${p2.sourceContourId} in ${source.name}.`);
       drawing = projectSketchDrawing(
         { type: "drawing", contours: selected },
         profileSketchFrame(source),
         profileSketchFrame(feature)
       );
-      drawing = composeProjectedDrawing(drawing, p.authored && withPierceContext(features, id2, p.authored, (sourceId) => resolve2(sourceId, index, depth + 1)));
-    } else if (p.type === "drawing") drawing = solveDrawingConstraints(withPierceContext(features, id2, p, (sourceId) => resolve2(sourceId, index, depth + 1)));
-    else if (p.type === "circle")
+      drawing = composeProjectedDrawing(drawing, p2.authored && withPierceContext(features, id2, p2.authored, (sourceId) => resolve2(sourceId, index, depth + 1)));
+    } else if (p2.type === "drawing") drawing = solveDrawingConstraints(withPierceContext(features, id2, p2, (sourceId) => resolve2(sourceId, index, depth + 1)));
+    else if (p2.type === "circle")
       drawing = {
         type: "drawing",
         contours: [
           {
             type: "circle",
-            center: [...p.centerMillimeters],
-            radius: p.radiusMillimeters
+            center: [...p2.centerMillimeters],
+            radius: p2.radiusMillimeters
           }
         ]
       };
@@ -4825,10 +4850,10 @@ function resolveProfileDrawing(features, featureId2) {
         contours: [
           {
             type: "path",
-            start: [...p.pointsMillimeters[0]],
+            start: [...p2.pointsMillimeters[0]],
             segments: [
-              ...p.pointsMillimeters.slice(1),
-              p.pointsMillimeters[0]
+              ...p2.pointsMillimeters.slice(1),
+              p2.pointsMillimeters[0]
             ].map((end) => ({ type: "line", end: [...end] }))
           }
         ]
@@ -4844,33 +4869,33 @@ class PierceReferenceError extends Error {
     this.name = "PierceReferenceError";
   }
 }
-const dot$6 = (a, b) => a.reduce((sum, value2, i) => sum + value2 * b[i], 0);
-const cross$9 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const dot$6 = (a2, b) => a2.reduce((sum, value2, i) => sum + value2 * b[i], 0);
+const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const value = (coefficients, t) => coefficients.reduceRight((sum, n) => sum * t + n, 0);
-const unique = (values) => values.sort((a, b) => a - b).filter((t, i, list) => i === 0 || Math.abs(t - list[i - 1]) > 8 * Number.EPSILON);
+const unique = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list) => i === 0 || Math.abs(t - list[i - 1]) > 8 * Number.EPSILON);
 function distanceRoots(coefficients) {
-  const scale2 = Math.max(...coefficients.map(Math.abs)), c = coefficients.map((v) => v / scale2);
-  while (c.length > 1 && c.at(-1) === 0) c.pop();
-  if (c.length === 1) return [];
-  if (c.length === 2) {
-    const t = -c[0] / c[1];
+  const scale2 = Math.max(...coefficients.map(Math.abs)), c2 = coefficients.map((v) => v / scale2);
+  while (c2.length > 1 && c2.at(-1) === 0) c2.pop();
+  if (c2.length === 1) return [];
+  if (c2.length === 2) {
+    const t = -c2[0] / c2[1];
     return t >= -1e-12 && t <= 1 + 1e-12 ? [Math.max(0, Math.min(1, t))] : [];
   }
-  const critical = distanceRoots(c.slice(1).map((v, i) => v * (i + 1))), bounds2 = unique([0, ...critical, 1]);
-  const zero = (t) => Math.abs(value(c, t)) <= Number.EPSILON * 16 * c.reduce((sum, v, i) => sum + Math.abs(v * t ** i), 0);
+  const critical = distanceRoots(c2.slice(1).map((v, i) => v * (i + 1))), bounds2 = unique([0, ...critical, 1]);
+  const zero = (t) => Math.abs(value(c2, t)) <= Number.EPSILON * 16 * c2.reduce((sum, v, i) => sum + Math.abs(v * t ** i), 0);
   const roots2 = bounds2.filter(zero);
   for (let i = 1; i < bounds2.length; i++) {
-    let a = bounds2[i - 1], b = bounds2[i], fa = value(c, a);
-    if (zero(a) || zero(b) || fa * value(c, b) >= 0) continue;
+    let a2 = bounds2[i - 1], b = bounds2[i], fa = value(c2, a2);
+    if (zero(a2) || zero(b) || fa * value(c2, b) >= 0) continue;
     for (let iteration = 0; iteration < 60; iteration++) {
-      const middle = (a + b) / 2, fm = value(c, middle);
+      const middle = (a2 + b) / 2, fm = value(c2, middle);
       if (fa * fm <= 0) b = middle;
       else {
-        a = middle;
+        a2 = middle;
         fa = fm;
       }
     }
-    roots2.push((a + b) / 2);
+    roots2.push((a2 + b) / 2);
   }
   return unique(roots2);
 }
@@ -4886,10 +4911,10 @@ function polynomialDirection(coefficients, t) {
 function pierceCurvePlane(curve, source, target) {
   const map = sketchFrameMap(source, target);
   validateSketchDrawing({ type: "drawing", contours: [curve.type === "circle" ? curve : { type: "path", start: curve.start, segments: [curve.segment] }] });
-  const y = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v, i) => v - target.originMillimeters[i]);
-  const a = dot$6(source.xDirection, target.normal), b = dot$6(y, target.normal), c = dot$6(delta2, target.normal);
-  const depth = (p) => a * p[0] + b * p[1] + c;
-  const world = (p) => source.originMillimeters.map((v, i) => v + source.xDirection[i] * p[0] + y[i] * p[1]);
+  const y2 = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v, i) => v - target.originMillimeters[i]);
+  const a2 = dot$6(source.xDirection, target.normal), b = dot$6(y2, target.normal), c2 = dot$6(delta2, target.normal);
+  const depth = (p2) => a2 * p2[0] + b * p2[1] + c2;
+  const world = (p2) => source.originMillimeters.map((v, i) => v + source.xDirection[i] * p2[0] + y2[i] * p2[1]);
   let coefficients, frame, poleDepths = [];
   if (curve.type === "circle") frame = { center: curve.center, radiusX: curve.radius, radiusY: curve.radius, rotation: 0, startAngle: 0, sweep: 2 * Math.PI };
   else {
@@ -4898,13 +4923,13 @@ function pierceCurvePlane(curve, source, target) {
       coefficients = [d0, d1 - d0];
       poleDepths = [d0, d1];
     } else if (s.type === "bezier") {
-      const u = depth(s.controls[0]), v = depth(s.controls[1]);
-      coefficients = [d0, 3 * (u - d0), 3 * (v - 2 * u + d0), d1 - 3 * v + 3 * u - d0];
-      poleDepths = [d0, u, v, d1];
+      const u2 = depth(s.controls[0]), v = depth(s.controls[1]);
+      coefficients = [d0, 3 * (u2 - d0), 3 * (v - 2 * u2 + d0), d1 - 3 * v + 3 * u2 - d0];
+      poleDepths = [d0, u2, v, d1];
     } else if (s.type === "conic") {
-      const r = s.rho, w = 1 - r, u = depth(s.control);
-      coefficients = [w * d0, 2 * (r * u - w * d0), w * (d0 + d1) - 2 * r * u];
-      poleDepths = [d0, u, d1];
+      const r = s.rho, w2 = 1 - r, u2 = depth(s.control);
+      coefficients = [w2 * d0, 2 * (r * u2 - w2 * d0), w2 * (d0 + d1) - 2 * r * u2];
+      poleDepths = [d0, u2, d1];
     } else if (s.type === "ellipse") frame = ellipseFrame(curve.start, s);
     else {
       const arc = sketchArcGeometry(curve.start, s.middle, s.end);
@@ -4918,32 +4943,32 @@ function pierceCurvePlane(curve, source, target) {
     parameters = distanceRoots(coefficients);
     direction = (t) => polynomialDirection(coefficients, t);
   } else {
-    const f = frame, cos = Math.cos(f.rotation), sin = Math.sin(f.rotation);
-    const x = f.radiusX * (a * cos + b * sin), y2 = f.radiusY * (-a * sin + b * cos), offset2 = depth(f.center), radius = Math.hypot(x, y2);
+    const f2 = frame, cos = Math.cos(f2.rotation), sin = Math.sin(f2.rotation);
+    const x2 = f2.radiusX * (a2 * cos + b * sin), y22 = f2.radiusY * (-a2 * sin + b * cos), offset2 = depth(f2.center), radius = Math.hypot(x2, y22);
     if (radius < 1e-12) {
       if (Math.abs(offset2) < 1e-10) throw new PierceReferenceError("The selected curve lies in the sketch plane; Pierce needs an isolated intersection.");
       return [];
     }
     const ratio = -offset2 / radius;
     if (ratio < -1 - 1e-12 || ratio > 1 + 1e-12) return [];
-    const phase = Math.atan2(y2, x), angle2 = Math.acos(Math.max(-1, Math.min(1, ratio)));
-    const low = Math.min(f.startAngle, f.startAngle + f.sweep), high = Math.max(f.startAngle, f.startAngle + f.sweep);
+    const phase = Math.atan2(y22, x2), angle2 = Math.acos(Math.max(-1, Math.min(1, ratio)));
+    const low = Math.min(f2.startAngle, f2.startAngle + f2.sweep), high = Math.max(f2.startAngle, f2.startAngle + f2.sweep);
     parameters = [];
     for (const base of [phase - angle2, phase + angle2]) for (let turn = Math.ceil((low - base - 1e-10) / (2 * Math.PI)); turn <= Math.floor((high - base + 1e-10) / (2 * Math.PI)); turn++) {
-      const t = (base + turn * 2 * Math.PI - f.startAngle) / f.sweep;
+      const t = (base + turn * 2 * Math.PI - f2.startAngle) / f2.sweep;
       if (t >= -1e-9 && t <= 1 + 1e-9) parameters.push(Math.max(0, Math.min(1, t)));
     }
     direction = (t) => {
-      const angle22 = f.startAngle + t * f.sweep, slope = (-x * Math.sin(angle22) + y2 * Math.cos(angle22)) * f.sweep;
-      return Math.abs(slope) < radius * Math.abs(f.sweep) * 1e-9 ? 0 : slope > 0 ? 1 : -1;
+      const angle22 = f2.startAngle + t * f2.sweep, slope = (-x2 * Math.sin(angle22) + y22 * Math.cos(angle22)) * f2.sweep;
+      return Math.abs(slope) < radius * Math.abs(f2.sweep) * 1e-9 ? 0 : slope > 0 ? 1 : -1;
     };
   }
   parameters = unique(parameters);
   if (curve.type === "circle" && parameters.length > 1 && parameters[0] < 1e-13 && parameters.at(-1) > 1 - 1e-13 && Math.hypot(...at(parameters[0]).map((v, i) => v - at(parameters.at(-1))[i])) < 1e-7) parameters.pop();
   return parameters.map((parameter2) => {
-    const p = at(parameter2);
-    if (Math.abs(depth(p)) > 1e-7) throw Error("The curve-plane contact could not be resolved accurately.");
-    return { parameter: parameter2, point: map.point(p), worldPoint: world(p), direction: direction(parameter2) };
+    const p2 = at(parameter2);
+    if (Math.abs(depth(p2)) > 1e-7) throw Error("The curve-plane contact could not be resolved accurately.");
+    return { parameter: parameter2, point: map.point(p2), worldPoint: world(p2), direction: direction(parameter2) };
   });
 }
 function branchCounts(hits) {
@@ -4958,12 +4983,12 @@ function resolvePierceBranch(hits, branch) {
 }
 function sketchPierceContacts(features, targetFeatureId, source, resolveDrawing = (id2) => resolveProfileDrawing(features, id2)) {
   if (!source || source.kind !== "sketch-curve" || typeof source.sourceFeatureId !== "string" || typeof source.sourceContourId !== "string" || !source.sourceContourId.trim()) throw Error("Invalid Pierce source reference.");
-  const targetIndex = features.findIndex((f) => f.id === targetFeatureId), sourceIndex = features.findIndex((f) => f.id === source.sourceFeatureId);
+  const targetIndex = features.findIndex((f2) => f2.id === targetFeatureId), sourceIndex = features.findIndex((f2) => f2.id === source.sourceFeatureId);
   const target = features[targetIndex], feature = features[sourceIndex];
   if (target?.type !== "profile" || sourceIndex < 0 || sourceIndex >= targetIndex || feature.type !== "profile") throw Error("Pierce must reference an earlier source sketch.");
-  if (features.filter((f) => f.id === source.sourceFeatureId).length !== 1 || features.filter((f) => f.id === targetFeatureId).length !== 1) throw Error("Invalid Pierce source reference.");
+  if (features.filter((f2) => f2.id === source.sourceFeatureId).length !== 1 || features.filter((f2) => f2.id === targetFeatureId).length !== 1) throw Error("Invalid Pierce source reference.");
   if (feature.suppressed) throw Error(`Pierce source is suppressed: ${feature.name}.`);
-  const contours = resolveDrawing(feature.id).contours.filter((c) => c.id === source.sourceContourId);
+  const contours = resolveDrawing(feature.id).contours.filter((c2) => c2.id === source.sourceContourId);
   if (contours.length !== 1) throw new PierceReferenceError("The Pierce source contour is missing or ambiguous. Reselect it.");
   const contour = contours[0];
   let curve;
@@ -4982,60 +5007,60 @@ function sketchPierceContacts(features, targetFeatureId, source, resolveDrawing 
 function resolveSketchPierce(features, targetFeatureId, reference, resolveDrawing) {
   return resolvePierceBranch(sketchPierceContacts(features, targetFeatureId, reference, resolveDrawing), reference.branch);
 }
-function validatePierceConstraint(c) {
-  if (c.kind !== "pierce") {
-    if (c.source !== void 0) throw Error("A Pierce source requires a Pierce constraint.");
+function validatePierceConstraint(c2) {
+  if (c2.kind !== "pierce") {
+    if (c2.source !== void 0) throw Error("A Pierce source requires a Pierce constraint.");
     return;
   }
-  const s = c.source, b = s?.branch;
+  const s = c2.source, b = s?.branch;
   const id2 = (v) => typeof v === "string" && !!v.trim() && v.length <= 128;
   if (!s || s.kind !== "sketch-curve" || !id2(s.sourceFeatureId) || !id2(s.sourceContourId) || s.sourceSegmentId !== void 0 && !id2(s.sourceSegmentId) || !b || ![-1, 0, 1].includes(b.direction) || !Number.isInteger(b.ordinal) || b.ordinal < 0 || !Array.isArray(b.counts) || b.counts.length !== 3 || !b.counts.every((n) => Number.isInteger(n) && n >= 0) || b.ordinal >= b.counts[b.direction + 1])
     throw Error("Pierce needs a valid stable source and selected intersection branch.");
-  if (!c.a || c.a.projectedContourId !== void 0 || Object.keys(c).some((key) => !["id", "kind", "a", "source"].includes(key)))
+  if (!c2.a || c2.a.projectedContourId !== void 0 || Object.keys(c2).some((key) => !["id", "kind", "a", "source"].includes(key)))
     throw Error("Pierce constrains one editable point or curve to its external source.");
 }
-function sameSource(a, b) {
-  return a.kind === b.kind && a.sourceFeatureId === b.sourceFeatureId && a.sourceContourId === b.sourceContourId && a.sourceSegmentId === b.sourceSegmentId && a.branch.direction === b.branch.direction && a.branch.ordinal === b.branch.ordinal && a.branch.counts.every((n, i) => n === b.branch.counts[i]);
+function sameSource(a2, b) {
+  return a2.kind === b.kind && a2.sourceFeatureId === b.sourceFeatureId && a2.sourceContourId === b.sourceContourId && a2.sourceSegmentId === b.sourceSegmentId && a2.branch.direction === b.branch.direction && a2.branch.ordinal === b.branch.ordinal && a2.branch.counts.every((n, i) => n === b.branch.counts[i]);
 }
-function pierceContextPoint(drawing, c) {
-  validatePierceConstraint(c);
-  const context = drawing.pierceContext?.[c.id];
-  if (!context || !context.source || !sameSource(context.source, c.source) || !Array.isArray(context.point) || context.point.length !== 2 || !context.point.every(Number.isFinite))
+function pierceContextPoint(drawing, c2) {
+  validatePierceConstraint(c2);
+  const context = drawing.pierceContext?.[c2.id];
+  if (!context || !context.source || !sameSource(context.source, c2.source) || !Array.isArray(context.point) || context.point.length !== 2 || !context.point.every(Number.isFinite))
     throw Error("Pierce source context is missing or stale. Resolve the sketch in its document.");
   return context.point;
 }
 function withPierceContext(features, targetId, drawing, resolveDrawing) {
   const next = structuredClone(drawing);
   delete next.pierceContext;
-  for (const c of next.constraints ?? []) {
-    validatePierceConstraint(c);
-    if (c.kind !== "pierce") continue;
-    const hit = resolveSketchPierce(features, targetId, c.source, resolveDrawing);
-    (next.pierceContext ??= /* @__PURE__ */ Object.create(null))[c.id] = { source: structuredClone(c.source), point: [...hit.point] };
+  for (const c2 of next.constraints ?? []) {
+    validatePierceConstraint(c2);
+    if (c2.kind !== "pierce") continue;
+    const hit = resolveSketchPierce(features, targetId, c2.source, resolveDrawing);
+    (next.pierceContext ??= /* @__PURE__ */ Object.create(null))[c2.id] = { source: structuredClone(c2.source), point: [...hit.point] };
   }
   return next;
 }
 function pierceDependencies(drawing) {
-  return [...new Set((drawing.constraints ?? []).filter((c) => c.kind === "pierce").map((c) => c.source?.sourceFeatureId ?? "missing-pierce-source"))];
+  return [...new Set((drawing.constraints ?? []).filter((c2) => c2.kind === "pierce").map((c2) => c2.source?.sourceFeatureId ?? "missing-pierce-source"))];
 }
 function localPierceValidation(drawing) {
   if (drawing.pierceContext !== void 0) throw Error("Resolved Pierce context must not be saved.");
-  if (drawing.constraints?.some((c) => c.kind === "pierce")) {
-    const ids2 = drawing.constraints.map((c) => c.id);
+  if (drawing.constraints?.some((c2) => c2.kind === "pierce")) {
+    const ids2 = drawing.constraints.map((c2) => c2.id);
     if (ids2.length > 512 || new Set(ids2).size !== ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.trim())) throw Error("Invalid or duplicate sketch constraint identities.");
   }
-  for (const c of drawing.constraints ?? []) {
-    validatePierceConstraint(c);
-    if (c.kind === "pierce") resolve$1(drawing, c.a);
+  for (const c2 of drawing.constraints ?? []) {
+    validatePierceConstraint(c2);
+    if (c2.kind === "pierce") resolve$1(drawing, c2.a);
   }
-  return { ...drawing, constraints: drawing.constraints?.filter((c) => c.kind !== "pierce") };
+  return { ...drawing, constraints: drawing.constraints?.filter((c2) => c2.kind !== "pierce") };
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature) {
   if (!surfaceCreatorTypes.includes(feature.type) && feature.type !== "surface-thicken" && feature.type !== "sheet-base" && (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.bodyId)
     return feature.bodyId;
   const first = doc.features.find(
-    (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken" || f.type === "sheet-base") && "operation" in f && f.operation === "new"
+    (f2) => (f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
   );
   return first?.id === feature.id ? `${doc.documentId}:body-1` : `${doc.documentId}:body-${feature.id}`;
 }
@@ -5061,8 +5086,8 @@ function stableBodies(doc) {
   let targetBody;
   return {
     ...structuredClone(doc),
-    features: doc.features.map((f) => {
-      const feature = structuredClone(f);
+    features: doc.features.map((f2) => {
+      const feature = structuredClone(f2);
       if (feature.type === "extrude" && feature.scopeMode === "all") {
         if (!feature.suppressed) targetBody = feature.scopeResolution?.groups.at(-1)?.bodyId ?? targetBody;
         return feature;
@@ -5086,9 +5111,9 @@ function stableBodies(doc) {
 function featureDependencies(doc, includeSuppressedModifiers = false) {
   const result = /* @__PURE__ */ new Map(), bodyProducers = /* @__PURE__ */ new Map();
   let lastBody;
-  for (const f of doc.features) {
+  for (const f2 of doc.features) {
     const refs = [];
-    if (f.type === "plane" && f.definition) {
+    if (f2.type === "plane" && f2.definition) {
       const visit = (value2) => {
         if (!value2 || typeof value2 !== "object") return;
         const ref = value2;
@@ -5096,89 +5121,89 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
         if (["face", "point", "axis"].includes(String(ref.kind))) refs.push(bodyProducers.get(String(ref.partId)) ?? `body:${ref.partId}`);
         Object.values(ref).forEach(visit);
       };
-      visit(f.definition);
+      visit(f2.definition);
     }
-    if (f.type === "transform" || f.type === "split") {
-      if (f.type === "transform") refs.push(...transformReferences(f.transform).map((ref) => ref.sourceFeatureId));
-      else if (f.plane.kind === "feature") refs.push(f.plane.featureId);
-      else if (f.plane.kind === "face") refs.push(f.plane.sourceFeatureId);
-      refs.push(...f.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-      if (!f.suppressed || includeSuppressedModifiers) {
-        for (const id2 of f.copyBodyIds ? bodyIDsForFeature(doc, f) : f.bodyIds) bodyProducers.set(id2, f.id);
-        if (f.copyBodyIds) lastBody = bodyIDsForFeature(doc, f).at(-1);
+    if (f2.type === "transform" || f2.type === "split") {
+      if (f2.type === "transform") refs.push(...transformReferences(f2.transform).map((ref) => ref.sourceFeatureId));
+      else if (f2.plane.kind === "feature") refs.push(f2.plane.featureId);
+      else if (f2.plane.kind === "face") refs.push(f2.plane.sourceFeatureId);
+      refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+      if (!f2.suppressed || includeSuppressedModifiers) {
+        for (const id2 of f2.copyBodyIds ? bodyIDsForFeature(doc, f2) : f2.bodyIds) bodyProducers.set(id2, f2.id);
+        if (f2.copyBodyIds) lastBody = bodyIDsForFeature(doc, f2).at(-1);
       }
-      result.set(f.id, [...new Set(refs)]);
+      result.set(f2.id, [...new Set(refs)]);
       continue;
     }
-    if (f.type === "delete-face") refs.push(...f.faces.map((face) => face.sourceFeatureId));
-    if (f.type === "pipe") refs.push(f.pathFeatureId);
-    if (f.type === "pattern" && f.bodyIds) {
-      refs.push(...f.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-      if (!f.suppressed || includeSuppressedModifiers) for (const id2 of patternCopyIds(f)) bodyProducers.set(id2, f.id);
+    if (f2.type === "delete-face") refs.push(...f2.faces.map((face) => face.sourceFeatureId));
+    if (f2.type === "pipe") refs.push(f2.pathFeatureId);
+    if (f2.type === "pattern" && f2.bodyIds) {
+      refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+      if (!f2.suppressed || includeSuppressedModifiers) for (const id2 of patternCopyIds(f2)) bodyProducers.set(id2, f2.id);
     }
-    if (f.type === "remove-body") refs.push(...f.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f.type === "thread") refs.push(f.face.sourceFeatureId);
-    if (f.type === "boss" || f.type === "rest") refs.push(f.face.sourceFeatureId);
-    if (f.type === "bounding-solid" && f.bodyIds) refs.push(...f.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f.type === "offset-face") {
-      refs.push(...f.faces.map((face) => face.sourceFeatureId));
-      if (f.replaceWith?.kind === "feature") refs.push(f.replaceWith.featureId);
-      else if (f.replaceWith?.kind === "face") refs.push(f.replaceWith.sourceFeatureId);
-      if (f.transform) refs.push(...transformReferences(f.transform).map((ref) => ref.sourceFeatureId));
+    if (f2.type === "remove-body") refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+    if (f2.type === "thread") refs.push(f2.face.sourceFeatureId);
+    if (f2.type === "boss" || f2.type === "rest") refs.push(f2.face.sourceFeatureId);
+    if (f2.type === "bounding-solid" && f2.bodyIds) refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+    if (f2.type === "offset-face") {
+      refs.push(...f2.faces.map((face) => face.sourceFeatureId));
+      if (f2.replaceWith?.kind === "feature") refs.push(f2.replaceWith.featureId);
+      else if (f2.replaceWith?.kind === "face") refs.push(f2.replaceWith.sourceFeatureId);
+      if (f2.transform) refs.push(...transformReferences(f2.transform).map((ref) => ref.sourceFeatureId));
     }
-    if (f.type === "profile" && f.support) refs.push(f.support.sourceFeatureId);
-    if (f.type === "profile") {
-      const drawing = f.profile.type === "drawing" ? f.profile : f.profile.type === "projection" ? f.profile.authored : void 0;
+    if (f2.type === "profile" && f2.support) refs.push(f2.support.sourceFeatureId);
+    if (f2.type === "profile") {
+      const drawing = f2.profile.type === "drawing" ? f2.profile : f2.profile.type === "projection" ? f2.profile.authored : void 0;
       if (drawing) refs.push(...pierceDependencies(drawing));
     }
-    if (f.type === "extrude" && f.startingReference && f.startingReference.kind !== "principal") refs.push(f.startingReference.sourceFeatureId);
-    if (f.type === "extrude") {
-      for (const end of [f, f.secondEnd]) if (end?.endType === "up-to-vertex" && end.endPointReference) refs.push(end.endPointReference.sourceFeatureId);
+    if (f2.type === "extrude" && f2.startingReference && f2.startingReference.kind !== "principal") refs.push(f2.startingReference.sourceFeatureId);
+    if (f2.type === "extrude") {
+      for (const end of [f2, f2.secondEnd]) if (end?.endType === "up-to-vertex" && end.endPointReference) refs.push(end.endPointReference.sourceFeatureId);
     }
-    if (f.type === "extrude" && f.directionReference) refs.push(f.directionReference.sourceFeatureId);
-    if (f.type === "extrude") {
-      for (const end of [f, f.secondEnd]) if (end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
+    if (f2.type === "extrude" && f2.directionReference) refs.push(f2.directionReference.sourceFeatureId);
+    if (f2.type === "extrude") {
+      for (const end of [f2, f2.secondEnd]) if (end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
     }
-    if (f.type === "boolean") refs.push(...f.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f.type === "split-face") {
-      refs.push(...f.faces.map((face) => face.sourceFeatureId));
-      if (f.plane.kind === "feature") refs.push(f.plane.featureId);
-      else if (f.plane.kind === "face") refs.push(f.plane.sourceFeatureId);
+    if (f2.type === "boolean") refs.push(...f2.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+    if (f2.type === "split-face") {
+      refs.push(...f2.faces.map((face) => face.sourceFeatureId));
+      if (f2.plane.kind === "feature") refs.push(f2.plane.featureId);
+      else if (f2.plane.kind === "face") refs.push(f2.plane.sourceFeatureId);
     }
-    if (f.type === "boundary-fill") refs.push(...f.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f.type === "loft") refs.push(...f.sections.map((section2) => section2.profileFeatureId));
-    if ("profileFeatureId" in f && f.profileFeatureId) refs.push(f.profileFeatureId);
-    if (f.type === "hole" && f.placement) refs.push(f.placement.face.sourceFeatureId);
-    if (f.type === "extrude" && f.endType === "up-to-face" && f.endReference) refs.push(f.endReference.sourceFeatureId);
-    if (f.type === "extrude" && f.secondEnd?.endType === "up-to-face" && f.secondEnd.endReference) refs.push(f.secondEnd.endReference.sourceFeatureId);
-    if (f.type === "extrude" && (f.endType === "up-to-next" || f.secondEnd?.endType === "up-to-next")) refs.push(...bodyProducers.values());
-    if (f.type === "extrude" && f.profileSelections) refs.push(...f.profileSelections.map((p) => p.profileFeatureId));
-    if ("pathFeatureId" in f) refs.push(f.pathFeatureId);
-    if ("sourceFeatureId" in f) refs.push(f.sourceFeatureId);
-    if (f.type === "profile" && f.profile.type === "projection") refs.push(f.profile.sourceFeatureId);
-    if ((f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "sheet-base" || surfaceCreatorTypes.includes(f.type) || f.type === "surface-thicken") && "operation" in f && f.operation === "new") {
-      for (const id2 of bodyIDsForFeature(doc, f)) {
+    if (f2.type === "boundary-fill") refs.push(...f2.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+    if (f2.type === "loft") refs.push(...f2.sections.map((section2) => section2.profileFeatureId));
+    if ("profileFeatureId" in f2 && f2.profileFeatureId) refs.push(f2.profileFeatureId);
+    if (f2.type === "hole" && f2.placement) refs.push(f2.placement.face.sourceFeatureId);
+    if (f2.type === "extrude" && f2.endType === "up-to-face" && f2.endReference) refs.push(f2.endReference.sourceFeatureId);
+    if (f2.type === "extrude" && f2.secondEnd?.endType === "up-to-face" && f2.secondEnd.endReference) refs.push(f2.secondEnd.endReference.sourceFeatureId);
+    if (f2.type === "extrude" && (f2.endType === "up-to-next" || f2.secondEnd?.endType === "up-to-next")) refs.push(...bodyProducers.values());
+    if (f2.type === "extrude" && f2.profileSelections) refs.push(...f2.profileSelections.map((p2) => p2.profileFeatureId));
+    if ("pathFeatureId" in f2) refs.push(f2.pathFeatureId);
+    if ("sourceFeatureId" in f2) refs.push(f2.sourceFeatureId);
+    if (f2.type === "profile" && f2.profile.type === "projection") refs.push(f2.profile.sourceFeatureId);
+    if ((f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
+      for (const id2 of bodyIDsForFeature(doc, f2)) {
         lastBody = id2;
-        bodyProducers.set(id2, f.id);
+        bodyProducers.set(id2, f2.id);
       }
-    } else if (f.type === "extrude" && f.scopeMode === "all") {
-      if (!f.suppressed || includeSuppressedModifiers) for (const id2 of bodyProducers.keys()) bodyProducers.set(id2, f.id);
-      if (!f.suppressed) lastBody = f.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
-    } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f.type)) {
-      const body = "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
-      const targets = f.type === "offset-face" ? offsetFaceBodies(f) : f.type === "extrude" && f.targetBodyIds ? f.targetBodyIds : [body];
+    } else if (f2.type === "extrude" && f2.scopeMode === "all") {
+      if (!f2.suppressed || includeSuppressedModifiers) for (const id2 of bodyProducers.keys()) bodyProducers.set(id2, f2.id);
+      if (!f2.suppressed) lastBody = f2.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
+    } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f2.type)) {
+      const body = "targetBodyId" in f2 && f2.targetBodyId ? f2.targetBodyId : lastBody;
+      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : f2.type === "extrude" && f2.targetBodyIds ? f2.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
-        const mergedIntoPrimary = f.type === "extrude" && f.operation === "add" && f.targetBodyIds && target !== body;
-        if (target && !mergedIntoPrimary && (!f.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f.id);
+        const mergedIntoPrimary = f2.type === "extrude" && f2.operation === "add" && f2.targetBodyIds && target !== body;
+        if (target && !mergedIntoPrimary && (!f2.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f2.id);
       }
     }
-    const consumed = consumedBodyIDs(f);
-    if (consumed.length && !(f.type === "extrude" && f.scopeMode === "all")) {
+    const consumed = consumedBodyIDs(f2);
+    if (consumed.length && !(f2.type === "extrude" && f2.scopeMode === "all")) {
       for (const id2 of consumed) bodyProducers.delete(id2);
-      lastBody = "targetBodyId" in f ? f.targetBodyId : lastBody;
+      lastBody = "targetBodyId" in f2 ? f2.targetBodyId : lastBody;
     }
-    result.set(f.id, [...new Set(refs)]);
+    result.set(f2.id, [...new Set(refs)]);
   }
   return result;
 }
@@ -5202,7 +5227,7 @@ function setFeatureSuppressed(doc, id2, suppressed) {
     visit(id2);
   }
   next.features = next.features.map(
-    (f) => affected.has(f.id) ? { ...f, suppressed } : f
+    (f2) => affected.has(f2.id) ? { ...f2, suppressed } : f2
   );
   validatePartDocument(next);
   return next;
@@ -5213,7 +5238,7 @@ function insertFeature(doc, feature) {
     feature = {
       ...feature,
       bodyId: feature.bodyId ?? (doc.features.some(
-        (f) => (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") && f.operation === "new"
+        (f2) => (f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad") && f2.operation === "new"
       ) ? `${doc.documentId}:body-${feature.id}` : `${doc.documentId}:body-1`)
     };
   next.features.splice(index, 0, feature);
@@ -5222,7 +5247,7 @@ function insertFeature(doc, feature) {
   return next;
 }
 function moveFeature(doc, id2, delta2) {
-  const next = stableBodies(doc), index = next.features.findIndex((f) => f.id === id2), target = index + delta2;
+  const next = stableBodies(doc), index = next.features.findIndex((f2) => f2.id === id2), target = index + delta2;
   if (index < 0 || target < 0 || target >= next.features.length)
     throw new Error("Choose a position inside the feature history.");
   const [feature] = next.features.splice(index, 1);
@@ -5232,20 +5257,20 @@ function moveFeature(doc, id2, delta2) {
 }
 function removeFeature(doc, id2) {
   const next = stableBodies(doc), affected = /* @__PURE__ */ new Set([id2]), cutoff = rollbackPosition(doc);
-  next.features = next.features.filter((f) => !affected.has(f.id));
+  next.features = next.features.filter((f2) => !affected.has(f2.id));
   if (doc.rollbackIndex !== void 0)
-    next.rollbackIndex = doc.features.slice(0, cutoff).filter((f) => !affected.has(f.id)).length;
+    next.rollbackIndex = doc.features.slice(0, cutoff).filter((f2) => !affected.has(f2.id)).length;
   validatePartDocument(next);
   return next;
 }
 function availableBodies(doc) {
   const errors = featureReferenceErrors(doc);
-  const consumed = new Set(doc.features.slice(0, rollbackPosition(doc)).flatMap((f) => !errors.has(f.id) ? consumedBodyIDs(f) : []));
+  const consumed = new Set(doc.features.slice(0, rollbackPosition(doc)).flatMap((f2) => !errors.has(f2.id) ? consumedBodyIDs(f2) : []));
   return doc.features.slice(0, rollbackPosition(doc)).filter(
-    (f) => !f.suppressed && !errors.has(f.id) && createdBodyIDs(doc, f).length > 0
-  ).flatMap((f) => bodyIDsForFeature(doc, f)).filter((id2) => !consumed.has(id2)).map((id2) => ({
+    (f2) => !f2.suppressed && !errors.has(f2.id) && createdBodyIDs(doc, f2).length > 0
+  ).flatMap((f2) => bodyIDsForFeature(doc, f2)).filter((id2) => !consumed.has(id2)).map((id2) => ({
     id: id2,
-    name: doc.bodyProperties?.[id2]?.name ?? `Body ${doc.features.flatMap((f) => createdBodyIDs(doc, f)).indexOf(id2) + 1}`,
+    name: doc.bodyProperties?.[id2]?.name ?? `Body ${doc.features.flatMap((f2) => createdBodyIDs(doc, f2)).indexOf(id2) + 1}`,
     visible: doc.bodyProperties?.[id2]?.visible ?? true
   }));
 }
@@ -5266,7 +5291,7 @@ function pierceReferenceFailure(features, feature, resolveDrawing) {
 function featureReferenceErrors(document2, failures = /* @__PURE__ */ new Map()) {
   const errors = /* @__PURE__ */ new Map();
   const earlier = /* @__PURE__ */ new Map();
-  const names = new Map(document2.features.map((f) => [f.id, f.name]));
+  const names = new Map(document2.features.map((f2) => [f2.id, f2.name]));
   const dependencies = featureDependencies(document2);
   const drawings = /* @__PURE__ */ new Map();
   const resolveDrawing = (id2) => {
@@ -5442,139 +5467,139 @@ function validateFaceExtrude(feature, earlier, missingReference) {
   if (typeof feature.faceLabel !== "string" || !feature.faceLabel.trim()) throw Error("Push/Pull needs a face label.");
   if (!Number.isFinite(feature.distanceMillimeters) || Math.abs(feature.distanceMillimeters) < 1e-6) throw Error("Push/Pull distance must be finite and nonzero.");
 }
-const sub$4 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cross$8 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const dot$5 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const sub$4 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const cross$8 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const dot$5 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const unit$2 = (v, what) => {
   const l = Math.hypot(v[0], v[1], v[2]);
   if (!(l > 1e-9)) throw new Error(`${what} has no direction.`);
   return [v[0] / l, v[1] / l, v[2] / l];
 };
 function resolveAxisLine(feature, earlier = []) {
-  const d = feature.definition;
+  const d2 = feature.definition;
   const frameOf2 = (reference) => {
     if (reference.kind === "principal") return resolvePlaneFrame({ name: "", plane: reference.plane, offsetMillimeters: 0 }, []);
     if (reference.kind === "face") return reference.frame;
-    const index = earlier.findIndex((f) => f.id === reference.featureId), target = index >= 0 ? earlier[index] : void 0;
+    const index = earlier.findIndex((f2) => f2.id === reference.featureId), target = index >= 0 ? earlier[index] : void 0;
     if (!target || target.type !== "plane") throw new Error(`${feature.name}: plane references must be earlier construction planes.`);
     return resolvePlaneFrame(target, earlier.slice(0, index));
   };
-  if (d.method === "edge") return { originMillimeters: [...d.axis.originMillimeters], directionMillimeters: unit$2(d.axis.directionMillimeters, `${feature.name}: edge`) };
-  if (d.method === "two-points") {
-    const [a2, b2] = d.points.map((p) => p.positionMillimeters);
-    return { originMillimeters: [...a2], directionMillimeters: unit$2(sub$4(b2, a2), `${feature.name}: the two points coincide and`) };
+  if (d2.method === "edge") return { originMillimeters: [...d2.axis.originMillimeters], directionMillimeters: unit$2(d2.axis.directionMillimeters, `${feature.name}: edge`) };
+  if (d2.method === "two-points") {
+    const [a22, b2] = d2.points.map((p2) => p2.positionMillimeters);
+    return { originMillimeters: [...a22], directionMillimeters: unit$2(sub$4(b2, a22), `${feature.name}: the two points coincide and`) };
   }
-  if (d.method === "normal-to-plane") {
-    const frame = frameOf2(d.reference);
-    return { originMillimeters: [...d.point.positionMillimeters], directionMillimeters: unit$2(frame.normal, `${feature.name}: plane`) };
+  if (d2.method === "normal-to-plane") {
+    const frame = frameOf2(d2.reference);
+    return { originMillimeters: [...d2.point.positionMillimeters], directionMillimeters: unit$2(frame.normal, `${feature.name}: plane`) };
   }
-  const [a, b] = d.references.map(frameOf2);
-  const direction = cross$8(a.normal, b.normal);
+  const [a2, b] = d2.references.map(frameOf2);
+  const direction = cross$8(a2.normal, b.normal);
   if (Math.hypot(...direction) < 1e-9) throw new Error(`${feature.name}: the two planes are parallel and do not meet.`);
-  const u = unit$2(direction, `${feature.name}: planes`), inA = cross$8(a.normal, u);
-  const t = dot$5(sub$4(b.originMillimeters, a.originMillimeters), b.normal) / dot$5(inA, b.normal);
-  const origin = [a.originMillimeters[0] + inA[0] * t, a.originMillimeters[1] + inA[1] * t, a.originMillimeters[2] + inA[2] * t];
-  return { originMillimeters: origin, directionMillimeters: u };
+  const u2 = unit$2(direction, `${feature.name}: planes`), inA = cross$8(a2.normal, u2);
+  const t = dot$5(sub$4(b.originMillimeters, a2.originMillimeters), b.normal) / dot$5(inA, b.normal);
+  const origin = [a2.originMillimeters[0] + inA[0] * t, a2.originMillimeters[1] + inA[1] * t, a2.originMillimeters[2] + inA[2] * t];
+  return { originMillimeters: origin, directionMillimeters: u2 };
 }
 function validateAxisDefinition(feature, earlierPlanes, missing = () => false) {
-  const d = feature.definition;
+  const d2 = feature.definition;
   const v3 = (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
-  const point2 = (p) => {
-    const q = p;
+  const point2 = (p2) => {
+    const q = p2;
     if (!q || q.kind !== "point" || typeof q.partId !== "string" || typeof q.candidateId !== "string" || !v3(q.positionMillimeters)) throw new Error("Axis points must be picked vertices or sketch points.");
   };
   const plane2 = (r) => {
-    const p = r;
-    if (!p || typeof p !== "object") throw new Error("Axis needs a plane reference.");
-    if (p.kind === "principal") {
-      if (!["XY", "XZ", "YZ"].includes(p.plane)) throw new Error("Invalid principal plane.");
+    const p2 = r;
+    if (!p2 || typeof p2 !== "object") throw new Error("Axis needs a plane reference.");
+    if (p2.kind === "principal") {
+      if (!["XY", "XZ", "YZ"].includes(p2.plane)) throw new Error("Invalid principal plane.");
       return;
     }
-    if (p.kind === "feature") {
-      if (typeof p.featureId !== "string" || !earlierPlanes.has(p.featureId) && !missing(p.featureId)) throw new Error("Axis plane references must be earlier construction planes.");
+    if (p2.kind === "feature") {
+      if (typeof p2.featureId !== "string" || !earlierPlanes.has(p2.featureId) && !missing(p2.featureId)) throw new Error("Axis plane references must be earlier construction planes.");
       return;
     }
-    if (p.kind === "face") {
-      if (typeof p.partId !== "string" || !Number.isInteger(p.faceId) || !p.frame || !v3(p.frame.normal) || !v3(p.frame.originMillimeters) || !v3(p.frame.xDirection)) throw new Error("Invalid face reference.");
+    if (p2.kind === "face") {
+      if (typeof p2.partId !== "string" || !Number.isInteger(p2.faceId) || !p2.frame || !v3(p2.frame.normal) || !v3(p2.frame.originMillimeters) || !v3(p2.frame.xDirection)) throw new Error("Invalid face reference.");
       return;
     }
     throw new Error("Invalid plane reference.");
   };
-  if (!d || typeof d !== "object") throw new Error("Axis needs a definition.");
-  if (d.method === "edge") {
-    if (!d.axis || d.axis.kind !== "axis" || !v3(d.axis.originMillimeters) || !v3(d.axis.directionMillimeters) || Math.hypot(...d.axis.directionMillimeters) < 1e-9) throw new Error("Axis through edge needs a picked straight edge.");
+  if (!d2 || typeof d2 !== "object") throw new Error("Axis needs a definition.");
+  if (d2.method === "edge") {
+    if (!d2.axis || d2.axis.kind !== "axis" || !v3(d2.axis.originMillimeters) || !v3(d2.axis.directionMillimeters) || Math.hypot(...d2.axis.directionMillimeters) < 1e-9) throw new Error("Axis through edge needs a picked straight edge.");
     return;
   }
-  if (d.method === "two-points") {
-    if (!Array.isArray(d.points) || d.points.length !== 2) throw new Error("Axis through two points needs exactly two points.");
-    d.points.forEach(point2);
+  if (d2.method === "two-points") {
+    if (!Array.isArray(d2.points) || d2.points.length !== 2) throw new Error("Axis through two points needs exactly two points.");
+    d2.points.forEach(point2);
     return;
   }
-  if (d.method === "normal-to-plane") {
-    plane2(d.reference);
-    point2(d.point);
+  if (d2.method === "normal-to-plane") {
+    plane2(d2.reference);
+    point2(d2.point);
     return;
   }
-  if (d.method === "two-planes") {
-    if (!Array.isArray(d.references) || d.references.length !== 2) throw new Error("Axis through two planes needs exactly two planes.");
-    d.references.forEach(plane2);
+  if (d2.method === "two-planes") {
+    if (!Array.isArray(d2.references) || d2.references.length !== 2) throw new Error("Axis through two planes needs exactly two planes.");
+    d2.references.forEach(plane2);
     return;
   }
   throw new Error("Unknown axis method.");
 }
 function validatePointDefinition(feature, earlierPlanes, missing = () => false) {
-  const d = feature.definition;
+  const d2 = feature.definition;
   const v3 = (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
-  const axis = (a, what) => {
-    const x = a;
-    if (!x || x.kind !== "axis" || typeof x.partId !== "string" || typeof x.candidateId !== "string" || !v3(x.originMillimeters) || !v3(x.directionMillimeters)) throw new Error(`${what} needs a picked edge.`);
+  const axis = (a2, what) => {
+    const x2 = a2;
+    if (!x2 || x2.kind !== "axis" || typeof x2.partId !== "string" || typeof x2.candidateId !== "string" || !v3(x2.originMillimeters) || !v3(x2.directionMillimeters)) throw new Error(`${what} needs a picked edge.`);
   };
   const plane2 = (r) => {
-    const p = r;
-    if (!p || typeof p !== "object") throw new Error("Point needs a plane reference.");
-    if (p.kind === "principal") {
-      if (!["XY", "XZ", "YZ"].includes(p.plane)) throw new Error("Invalid principal plane.");
+    const p2 = r;
+    if (!p2 || typeof p2 !== "object") throw new Error("Point needs a plane reference.");
+    if (p2.kind === "principal") {
+      if (!["XY", "XZ", "YZ"].includes(p2.plane)) throw new Error("Invalid principal plane.");
       return;
     }
-    if (p.kind === "feature") {
-      if (typeof p.featureId !== "string" || !earlierPlanes.has(p.featureId) && !missing(p.featureId)) throw new Error("Point plane references must be earlier construction planes.");
+    if (p2.kind === "feature") {
+      if (typeof p2.featureId !== "string" || !earlierPlanes.has(p2.featureId) && !missing(p2.featureId)) throw new Error("Point plane references must be earlier construction planes.");
       return;
     }
-    if (p.kind === "face") {
-      if (typeof p.partId !== "string" || !Number.isInteger(p.faceId) || !p.frame || !v3(p.frame.normal) || !v3(p.frame.originMillimeters)) throw new Error("Invalid face reference.");
+    if (p2.kind === "face") {
+      if (typeof p2.partId !== "string" || !Number.isInteger(p2.faceId) || !p2.frame || !v3(p2.frame.normal) || !v3(p2.frame.originMillimeters)) throw new Error("Invalid face reference.");
       return;
     }
     throw new Error("Invalid plane reference.");
   };
-  if (!d || typeof d !== "object") throw new Error("Point needs a definition.");
-  if (d.method === "vertex") {
-    const q = d.point;
+  if (!d2 || typeof d2 !== "object") throw new Error("Point needs a definition.");
+  if (d2.method === "vertex") {
+    const q = d2.point;
     if (!q || q.kind !== "point" || typeof q.partId !== "string" || typeof q.candidateId !== "string" || !v3(q.positionMillimeters)) throw new Error("Point at vertex needs a picked vertex.");
     return;
   }
-  if (d.method === "two-edges") {
-    if (!Array.isArray(d.axes) || d.axes.length !== 2) throw new Error("Point through two edges needs exactly two edges.");
-    d.axes.forEach((a) => axis(a, "Point through two edges"));
+  if (d2.method === "two-edges") {
+    if (!Array.isArray(d2.axes) || d2.axes.length !== 2) throw new Error("Point through two edges needs exactly two edges.");
+    d2.axes.forEach((a2) => axis(a2, "Point through two edges"));
     return;
   }
-  if (d.method === "three-planes") {
-    if (!Array.isArray(d.references) || d.references.length !== 3) throw new Error("Point through three planes needs exactly three planes.");
-    d.references.forEach(plane2);
+  if (d2.method === "three-planes") {
+    if (!Array.isArray(d2.references) || d2.references.length !== 3) throw new Error("Point through three planes needs exactly three planes.");
+    d2.references.forEach(plane2);
     return;
   }
-  if (d.method === "center") {
-    axis(d.axis, "Point at centre");
+  if (d2.method === "center") {
+    axis(d2.axis, "Point at centre");
     return;
   }
-  if (d.method === "edge-plane") {
-    axis(d.axis, "Point at edge and plane");
-    plane2(d.reference);
+  if (d2.method === "edge-plane") {
+    axis(d2.axis, "Point at edge and plane");
+    plane2(d2.reference);
     return;
   }
-  if (d.method === "along-path") {
-    axis(d.axis, "Point along path");
-    if (d.axis.lengthMillimeters === void 0) throw new Error("Point along path needs a straight edge with a length.");
-    if (!Number.isFinite(d.t) || d.t < 0 || d.t > 1) throw new Error("The path fraction must be between 0 and 1.");
+  if (d2.method === "along-path") {
+    axis(d2.axis, "Point along path");
+    if (d2.axis.lengthMillimeters === void 0) throw new Error("Point along path needs a straight edge with a length.");
+    if (!Number.isFinite(d2.t) || d2.t < 0 || d2.t > 1) throw new Error("The path fraction must be between 0 and 1.");
     return;
   }
   throw new Error("Unknown point method.");
@@ -5622,7 +5647,7 @@ function validateCoil(feature) {
   if (feature.axis !== void 0 && !["X", "Y", "Z"].includes(feature.axis)) throw Error("Coil axis must be X, Y or Z.");
   if (!["new", "add", "cut"].includes(feature.operation)) throw Error("Invalid coil operation.");
 }
-const finite3 = (p) => Array.isArray(p) && p.length === 3 && p.every((n) => typeof n === "number" && Number.isFinite(n));
+const finite3 = (p2) => Array.isArray(p2) && p2.length === 3 && p2.every((n) => typeof n === "number" && Number.isFinite(n));
 function validateCurve3D(feature) {
   if (!["line", "spline", "point"].includes(feature.kind)) throw new Error("A 3D sketch is lines, a spline or a point.");
   if (!Array.isArray(feature.pointsMillimeters) || !feature.pointsMillimeters.every(finite3)) throw new Error("3D sketch points must be finite [x, y, z] millimetres.");
@@ -5630,14 +5655,14 @@ function validateCurve3D(feature) {
   if (feature.pointsMillimeters.length < needed) throw new Error(feature.kind === "point" ? "A 3D point needs one point." : "A 3D curve needs two or more points.");
   if (feature.kind === "point" && feature.pointsMillimeters.length !== 1) throw new Error("A 3D point is one point; use lines for several.");
   for (let i = 1; i < feature.pointsMillimeters.length; i++) {
-    const [a, b] = [feature.pointsMillimeters[i - 1], feature.pointsMillimeters[i]];
-    if (Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-6) throw new Error("Consecutive 3D sketch points must be distinct.");
+    const [a2, b] = [feature.pointsMillimeters[i - 1], feature.pointsMillimeters[i]];
+    if (Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < 1e-6) throw new Error("Consecutive 3D sketch points must be distinct.");
   }
 }
 function validateBoundaryFill(feature) {
   if (!Array.isArray(feature.toolBodyIds) || !feature.toolBodyIds.length || feature.toolBodyIds.some((id2) => typeof id2 !== "string")) throw new Error("Boundary fill needs tool bodies.");
   if (new Set(feature.toolBodyIds).size !== feature.toolBodyIds.length) throw new Error("A tool body is listed twice.");
-  if (!Array.isArray(feature.cellPointsMillimeters) || !feature.cellPointsMillimeters.length || !feature.cellPointsMillimeters.every((p) => Array.isArray(p) && p.length === 3 && p.every(Number.isFinite))) throw new Error("Boundary fill needs a point inside each cell to fill.");
+  if (!Array.isArray(feature.cellPointsMillimeters) || !feature.cellPointsMillimeters.length || !feature.cellPointsMillimeters.every((p2) => Array.isArray(p2) && p2.length === 3 && p2.every(Number.isFinite))) throw new Error("Boundary fill needs a point inside each cell to fill.");
   if (!["new", "add", "cut", "intersect"].includes(feature.operation)) throw new Error("Boundary fill makes a new body, or joins, cuts or intersects one.");
   if (feature.operation !== "new" && feature.removeTools && feature.targetBodyId && feature.toolBodyIds.includes(feature.targetBodyId)) throw new Error("The target cannot be a tool that is removed.");
 }
@@ -5777,7 +5802,7 @@ function validateDraft(feature, earlier = /* @__PURE__ */ new Map(), missing = (
   if (feature.pullDirection !== void 0 && !(Array.isArray(feature.pullDirection) && feature.pullDirection.length === 3 && feature.pullDirection.every(Number.isFinite) && Math.hypot(...feature.pullDirection) > 1e-9)) throw new Error("Draft pull direction must be a nonzero vector.");
 }
 function validateLoft(feature, earlier, missing) {
-  const apexes = [feature.startPoint, feature.endPoint].filter((a) => a !== void 0);
+  const apexes = [feature.startPoint, feature.endPoint].filter((a2) => a2 !== void 0);
   for (const apex of apexes) {
     if (apex.kind === "point") {
       if (!Array.isArray(apex.positionMillimeters) || apex.positionMillimeters.length !== 3 || !apex.positionMillimeters.every(Number.isFinite)) throw new Error("Loft apex needs a finite position.");
@@ -5802,10 +5827,10 @@ function validateLoft(feature, earlier, missing) {
 function validateHole(feature, earlier, missing) {
   const positive = (value2) => typeof value2 === "number" && Number.isFinite(value2) && value2 > 0;
   if (feature.placement !== void 0) {
-    const p = feature.placement;
-    if (p.kind !== "face-point" || !Array.isArray(p.pointMillimeters) || p.pointMillimeters.length !== 3 || !p.pointMillimeters.every(Number.isFinite)) throw new Error("Hole placement needs a planar face and a point on it.");
-    validateSolidFaceReference(p.face, earlier, missing, "Hole face");
-    if (p.face.surfaceType) throw new Error("Hole face must be planar.");
+    const p2 = feature.placement;
+    if (p2.kind !== "face-point" || !Array.isArray(p2.pointMillimeters) || p2.pointMillimeters.length !== 3 || !p2.pointMillimeters.every(Number.isFinite)) throw new Error("Hole placement needs a planar face and a point on it.");
+    validateSolidFaceReference(p2.face, earlier, missing, "Hole face");
+    if (p2.face.surfaceType) throw new Error("Hole face must be planar.");
   } else if (typeof feature.profileFeatureId !== "string" || !missing(feature.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(feature.profileFeatureId) ?? ""))
     throw new Error("Hole must reference an earlier circular sketch region, or a point on a face.");
   if (feature.allCircles !== void 0 && typeof feature.allCircles !== "boolean") throw new Error("Invalid hole placement.");
@@ -5904,15 +5929,15 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
       if (!missingReference(s.sourceFeatureId) && !earlier.has(s.sourceFeatureId) || !s.bodyId || typeof s.bodyId !== "string" || typeof s.label !== "string" || ![s.normal, s.xDirection].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite) && Math.abs(Math.hypot(...v) - 1) < 1e-6) || Math.abs(s.normal.reduce((sum, v, i) => sum + v * s.xDirection[i], 0)) > 1e-6) throw new Error("Invalid sketch face support. Reselect a planar face.");
     }
     if (feature.frame) {
-      const { originMillimeters: origin, xDirection: x, normal: n } = feature.frame;
-      if (![origin, x, n].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.abs(Math.hypot(...x) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(x.reduce((sum, v, i) => sum + v * n[i], 0)) > 1e-6) throw new Error("Invalid sketch frame.");
+      const { originMillimeters: origin, xDirection: x2, normal: n } = feature.frame;
+      if (![origin, x2, n].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(x2.reduce((sum, v, i) => sum + v * n[i], 0)) > 1e-6) throw new Error("Invalid sketch frame.");
     }
     if (feature.profile?.type === "projection") {
       if (feature.profile.authored !== void 0) {
         const authored = feature.profile.authored;
         if (authored.projectionContext !== void 0) throw Error("Resolved projection context must not be saved.");
         const local2 = localPierceValidation(authored);
-        validateSketchDrawing({ ...local2, constraints: local2.constraints?.filter((c) => ![c.a, c.b, c.axis].some((r) => r?.projectedContourId !== void 0)) });
+        validateSketchDrawing({ ...local2, constraints: local2.constraints?.filter((c2) => ![c2.a, c2.b, c2.axis].some((r) => r?.projectedContourId !== void 0)) });
       }
       const contourId = feature.profile.sourceContourId;
       if (contourId !== void 0 && (typeof contourId !== "string" || !contourId.trim() || contourId.length > 128)) throw Error("Invalid projected contour identity.");
@@ -5928,26 +5953,26 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
     } else if (feature.profile?.type === "polygon") {
       const points = feature.profile.pointsMillimeters;
       if (!Array.isArray(points) || points.length < 3 || points.length > 1e3 || !points.every(
-        (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)
+        (p2) => Array.isArray(p2) && p2.length === 2 && p2.every(Number.isFinite)
       ))
         throw new Error("A closed profile needs at least three finite points.");
       const area = points.reduce(
-        (a, p, i) => a + p[0] * points[(i + 1) % points.length][1] - points[(i + 1) % points.length][0] * p[1],
+        (a2, p2, i) => a2 + p2[0] * points[(i + 1) % points.length][1] - points[(i + 1) % points.length][0] * p2[1],
         0
       );
       if (Math.abs(area) < 1e-8) throw new Error("Profile has zero area.");
     } else throw new Error("Unsupported sketch profile.");
   } else if (feature.type === "revolve") {
     if (feature.axisReference !== void 0) {
-      const a = feature.axisReference;
-      if (a.kind === "vector") {
-        if (![a.origin, a.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a.direction) < 1e-9) throw new Error("Revolve axis needs a finite origin and a nonzero direction.");
-      } else if (a.kind === "feature") {
-        if (typeof a.featureId !== "string" || !missingReference(a.featureId) && earlier.get(a.featureId) !== "axis") throw new Error("Revolve axis must be an earlier axis feature.");
-      } else if (a.kind === "two-points") {
-        validateTransformVectorReference(a.from, earlier, missingReference);
-        validateTransformVectorReference(a.to, earlier, missingReference);
-      } else validateTransformVectorReference(a, earlier, missingReference);
+      const a2 = feature.axisReference;
+      if (a2.kind === "vector") {
+        if (![a2.origin, a2.direction].every((v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)) || Math.hypot(...a2.direction) < 1e-9) throw new Error("Revolve axis needs a finite origin and a nonzero direction.");
+      } else if (a2.kind === "feature") {
+        if (typeof a2.featureId !== "string" || !missingReference(a2.featureId) && earlier.get(a2.featureId) !== "axis") throw new Error("Revolve axis must be an earlier axis feature.");
+      } else if (a2.kind === "two-points") {
+        validateTransformVectorReference(a2.from, earlier, missingReference);
+        validateTransformVectorReference(a2.to, earlier, missingReference);
+      } else validateTransformVectorReference(a2, earlier, missingReference);
     }
     if (!missingReference(feature.profileFeatureId) && !["profile", "sketch"].includes(
       earlier.get(feature.profileFeatureId) || ""
@@ -6012,7 +6037,7 @@ function validateSolidFeature(feature, earlier, missingReference = () => false) 
   } else throw new Error("Unsupported solid feature.");
 }
 function editDrawingDimension(source, id2, value2) {
-  const next = structuredClone(source), constraint = next.constraints?.find((c) => c.id === id2);
+  const next = structuredClone(source), constraint = next.constraints?.find((c2) => c2.id === id2);
   if (!constraint) throw new Error("Select an existing dimension.");
   if (!Number.isFinite(value2))
     throw new Error("Enter a finite dimension value.");
@@ -6181,11 +6206,11 @@ function validateSketchFeature(sketch2) {
   }
 }
 function transformRetainedTextItem(item, contours, transform) {
-  const scale2 = Math.hypot(transform.a, transform.c), reflected = transform.a * transform.d - transform.b * transform.c < 0, angle2 = item.rotationDegrees * Math.PI / 180, x = Math.cos(angle2), y = Math.sin(angle2);
+  const scale2 = Math.hypot(transform.a, transform.c), reflected = transform.a * transform.d - transform.b * transform.c < 0, angle2 = item.rotationDegrees * Math.PI / 180, x2 = Math.cos(angle2), y2 = Math.sin(angle2);
   return {
     ...structuredClone(item),
     originMillimeters: transformPoint(item.originMillimeters, transform),
-    rotationDegrees: Math.atan2(transform.c * x + transform.d * y, transform.a * x + transform.b * y) * 180 / Math.PI,
+    rotationDegrees: Math.atan2(transform.c * x2 + transform.d * y2, transform.a * x2 + transform.b * y2) * 180 / Math.PI,
     placementReflected: reflected ? !item.placementReflected : item.placementReflected,
     emSizeMillimeters: item.emSizeMillimeters * scale2,
     ...item.frameWidthMillimeters === void 0 ? {} : { frameWidthMillimeters: item.frameWidthMillimeters * scale2 },
@@ -6197,7 +6222,7 @@ function copyInternalConstraints(source, indices, firstContour, transform, prese
     indices.map((index, i) => [index, firstContour + i])
   );
   const scale2 = Math.hypot(transform.a, transform.c), det = Math.sign(transform.a * transform.d - transform.b * transform.c);
-  const axis = (x, y) => Math.abs(y) < 1e-8 * scale2 ? "horizontal" : Math.abs(x) < 1e-8 * scale2 ? "vertical" : void 0;
+  const axis = (x2, y2) => Math.abs(y2) < 1e-8 * scale2 ? "horizontal" : Math.abs(x2) < 1e-8 * scale2 ? "vertical" : void 0;
   const horizontal = axis(transform.a, transform.c), vertical = axis(transform.b, transform.d);
   const copies = /* @__PURE__ */ new Map();
   for (const original of source.constraints ?? []) {
@@ -6216,10 +6241,10 @@ function copyInternalConstraints(source, indices, firstContour, transform, prese
       constraint.kind = direction;
     }
     if (original.kind === "horizontal-distance" || original.kind === "vertical-distance") {
-      const x = original.kind === "horizontal-distance", direction = x ? horizontal : vertical;
+      const x2 = original.kind === "horizontal-distance", direction = x2 ? horizontal : vertical;
       if (!direction) continue;
       constraint.kind = direction === "horizontal" ? "horizontal-distance" : "vertical-distance";
-      factor = x ? direction === "horizontal" ? transform.a : transform.c : direction === "horizontal" ? transform.b : transform.d;
+      factor = x2 ? direction === "horizontal" ? transform.a : transform.c : direction === "horizontal" ? transform.b : transform.d;
     }
     if (original.kind === "angle") factor = det;
     if (original.kind === "offset" && source.contours[original.a.contour].type !== "circle")
@@ -6240,8 +6265,8 @@ function copyInternalConstraints(source, indices, firstContour, transform, prese
           [-1, 0],
           [0, -1]
         ], v = vectors[q];
-        const x = transform.a * v[0] + transform.b * v[1], y = transform.c * v[0] + transform.d * v[1];
-        constraint.quadrant = Math.abs(x) > Math.abs(y) ? x > 0 ? 0 : 2 : y > 0 ? 1 : 3;
+        const x2 = transform.a * v[0] + transform.b * v[1], y2 = transform.c * v[0] + transform.d * v[1];
+        constraint.quadrant = Math.abs(x2) > Math.abs(y2) ? x2 > 0 ? 0 : 2 : y2 > 0 ? 1 : 3;
       } else if (det < 0 && constraint.quadrant !== void 0)
         constraint.quadrant = [0, 3, 2, 1][constraint.quadrant];
     }
@@ -6274,10 +6299,10 @@ function copyInternalConstraints(source, indices, firstContour, transform, prese
 }
 function moveInternalConstraints(source, indices, transform) {
   const adapted = copyInternalConstraints(source, indices, 0, transform, true);
-  const ids2 = new Set(adapted.map((c) => c.id));
+  const ids2 = new Set(adapted.map((c2) => c2.id));
   for (const constraint of adapted) {
     for (const ref of [constraint.a, constraint.b, constraint.axis]) if (ref) ref.contour = indices[ref.contour];
-    const original = source.constraints.find((c) => c.id === constraint.id);
+    const original = source.constraints.find((c2) => c2.id === constraint.id);
     if (original.valueFrom !== void 0 && !ids2.has(original.valueFrom)) {
       for (const key of ["valueFrom", "valueSign", "valueScale", "valueOffset"]) {
         if (original[key] === void 0) delete constraint[key];
@@ -6286,7 +6311,7 @@ function moveInternalConstraints(source, indices, transform) {
       delete constraint.valueExpression;
     }
   }
-  const byId = new Map(adapted.map((c) => [c.id, c]));
+  const byId = new Map(adapted.map((c2) => [c2.id, c2]));
   return source.constraints?.map((original) => original.kind === "fix" ? structuredClone(original) : byId.get(original.id) ?? structuredClone(original));
 }
 function selectedContours(drawing, selection) {
@@ -6301,7 +6326,7 @@ function moveSketchContours(drawing, selection, transform) {
   for (const i of indices)
     next.contours[i] = transformContour(drawing.contours[i], transform);
   next.textItems = drawing.textItems?.map((item) => {
-    const owned = item.contourIds.map((id2) => drawing.contours.findIndex((c) => c.id === id2));
+    const owned = item.contourIds.map((id2) => drawing.contours.findIndex((c2) => c2.id === id2));
     if (owned.some((i) => !indices.includes(i)) || textOutlineDigest(owned.map((i) => drawing.contours[i])) !== item.outlineDigest) return structuredClone(item);
     return transformRetainedTextItem(item, owned.map((i) => next.contours[i]), transform);
   });
@@ -6335,32 +6360,119 @@ function circleSegments(center, radius) {
     }
   ];
 }
-function curves(c) {
-  if (c.type === "circle") return circleSegments(c.center, c.radius);
-  return c.segments.map((segment, i) => ({
-    start: i ? c.segments[i - 1].end : c.start,
+function pickCurve(drawing, point2, tolerance2) {
+  let best;
+  drawing.contours.forEach((c2, contour) => {
+    if (c2.type === "circle") {
+      const distance2 = Math.abs(
+        Math.hypot(point2[0] - c2.center[0], point2[1] - c2.center[1]) - c2.radius
+      ), angle2 = (Math.atan2(point2[1] - c2.center[1], point2[0] - c2.center[0]) + 2 * Math.PI) % (2 * Math.PI);
+      if (distance2 < tolerance2 && (!best || distance2 < best.distance - 1e-8))
+        best = {
+          contour,
+          segment: 0,
+          parameter: angle2 / (2 * Math.PI),
+          distance: distance2,
+          circle: true,
+          point: false
+        };
+    } else if (!c2.segments.length) {
+      const distance2 = Math.hypot(point2[0] - c2.start[0], point2[1] - c2.start[1]);
+      if (distance2 < tolerance2 && (!best || distance2 < best.distance - 1e-8))
+        best = {
+          contour,
+          segment: 0,
+          parameter: 0,
+          distance: distance2,
+          circle: false,
+          point: true
+        };
+    } else {
+      let start = c2.start;
+      c2.segments.forEach((segment, index) => {
+        const { parameter: parameter2, distance: distance2 } = closestSegmentParameter(
+          start,
+          segment,
+          point2
+        );
+        if (distance2 < tolerance2 && (!best || distance2 < best.distance - 1e-8))
+          best = {
+            contour,
+            segment: index,
+            parameter: parameter2,
+            distance: distance2,
+            circle: false,
+            point: false
+          };
+        start = segment.end;
+      });
+    }
+  });
+  if (!best) throw new Error("Select a sketch curve or point.");
+  return best;
+}
+const tolerance$1 = 1e-7;
+function classifySketchContourPoint(contour, point2) {
+  if (point2.some((v) => !Number.isFinite(v))) return "ambiguous";
+  if (!contourClosed(contour) || contour.construction) return "outside";
+  if (contour.type === "circle") {
+    const gap = Math.hypot(point2[0] - contour.center[0], point2[1] - contour.center[1]) - contour.radius;
+    return Math.abs(gap) <= tolerance$1 ? "boundary" : gap < 0 ? "inside" : "outside";
+  }
+  let start = contour.start;
+  const curves2 = contour.segments.map((segment) => {
+    const curve = { start, segment };
+    start = segment.end;
+    return { ...curve, jet: curveJet(curve) };
+  });
+  if (curves2.some((c2) => closestSegmentParameter(c2.start, c2.segment, point2).distance <= tolerance$1)) return "boundary";
+  rays: for (let attempt = 0; attempt < 12; attempt++) {
+    const angle2 = attempt * 2.399963229728653, direction = [Math.cos(angle2), Math.sin(angle2)];
+    const end = [point2[0] + direction[0], point2[1] + direction[1]];
+    let crossings = 0;
+    for (const c2 of curves2) {
+      const dx = c2.start[0] - point2[0], dy = c2.start[1] - point2[1];
+      if (dx * direction[0] + dy * direction[1] >= 0 && Math.abs(dx * direction[1] - dy * direction[0]) <= tolerance$1) continue rays;
+      for (const distance2 of lineSegmentIntersections(point2, end, c2.start, c2.segment)) {
+        if (distance2 <= 0) continue;
+        const hit = [point2[0] + distance2 * direction[0], point2[1] + distance2 * direction[1]];
+        const nearest = closestSegmentParameter(c2.start, c2.segment, hit);
+        if (nearest.distance > tolerance$1) continue rays;
+        const tangent = c2.jet(nearest.parameter).first, length = Math.hypot(...tangent);
+        if (length < tolerance$1 || Math.abs(tangent[0] * direction[1] - tangent[1] * direction[0]) <= length * 1e-7) continue rays;
+        crossings++;
+      }
+    }
+    return crossings % 2 ? "inside" : "outside";
+  }
+  return "ambiguous";
+}
+function curves(c2) {
+  if (c2.type === "circle") return circleSegments(c2.center, c2.radius);
+  return c2.segments.map((segment, i) => ({
+    start: i ? c2.segments[i - 1].end : c2.start,
     segment
   }));
 }
-const distance$1 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-function bound(c, p) {
-  const s = c.segment;
+const distance$1 = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]);
+function bound(c2, p2) {
+  const s = c2.segment;
   if (s.type === "arc") {
-    const a = sketchArcGeometry(c.start, s.middle, s.end);
-    return distance$1(p, a.center) + a.radius;
+    const a2 = sketchArcGeometry(c2.start, s.middle, s.end);
+    return distance$1(p2, a2.center) + a2.radius;
   }
   if (s.type === "ellipse") {
-    const a = ellipseFrame(c.start, s);
-    return distance$1(p, a.center) + Math.max(a.radiusX, a.radiusY);
+    const a2 = ellipseFrame(c2.start, s);
+    return distance$1(p2, a2.center) + Math.max(a2.radiusX, a2.radiusY);
   }
   return Math.max(
-    ...[c.start, s.end, ...s.type === "bezier" ? s.controls : s.type === "conic" ? [s.control] : []].map(
-      (q) => distance$1(p, q)
+    ...[c2.start, s.end, ...s.type === "bezier" ? s.controls : s.type === "conic" ? [s.control] : []].map(
+      (q) => distance$1(p2, q)
     )
   );
 }
-function inside(p, boundary) {
-  const length = 2 * (1 + Math.max(...boundary.map((c) => bound(c, p))));
+function inside(p2, boundary) {
+  const length = 2 * (1 + Math.max(...boundary.map((c2) => bound(c2, p2))));
   for (const angle2 of [
     0.123,
     0.713,
@@ -6372,16 +6484,16 @@ function inside(p, boundary) {
     5.119
   ]) {
     const direction = [Math.cos(angle2), Math.sin(angle2)], ray = {
-      start: p,
+      start: p2,
       segment: {
         type: "line",
-        end: [p[0] + length * direction[0], p[1] + length * direction[1]]
+        end: [p2[0] + length * direction[0], p2[1] + length * direction[1]]
       }
     };
     let crossings = 0, ambiguous = false;
-    for (const c of boundary) {
-      for (const hit of curveIntersections(ray, c)) {
-        const tangent = curveJet(c)(hit.second).first, n = Math.hypot(...tangent);
+    for (const c2 of boundary) {
+      for (const hit of curveIntersections(ray, c2)) {
+        const tangent = curveJet(c2)(hit.second).first, n = Math.hypot(...tangent);
         if (hit.first < 1e-9 || hit.second < 1e-8 || hit.second > 1 - 1e-8 || n < 1e-12 || Math.abs(direction[0] * tangent[1] - direction[1] * tangent[0]) / n < 1e-8) {
           ambiguous = true;
           break;
@@ -6395,24 +6507,24 @@ function inside(p, boundary) {
   return void 0;
 }
 function contourNestingDepths(contours) {
-  if (contours.some((c) => !contourClosed(c))) return;
+  if (contours.some((c2) => !contourClosed(c2))) return;
   const boundaries = contours.map(curves);
   for (let i = 0; i < boundaries.length; i++) {
-    const a = boundaries[i];
-    for (let j = 0; j < a.length; j++)
-      for (let k = j + 1; k < a.length; k++) {
+    const a2 = boundaries[i];
+    for (let j = 0; j < a2.length; j++)
+      for (let k2 = j + 1; k2 < a2.length; k2++) {
         const allowed = [];
-        if (k === j + 1) allowed.push(a[j].segment.end);
-        if (j === 0 && k === a.length - 1) allowed.push(a[0].start);
-        if (curveIntersections(a[j], a[k]).some(
-          (h) => !allowed.some((p) => distance$1(p, h.point) < 1e-7)
+        if (k2 === j + 1) allowed.push(a2[j].segment.end);
+        if (j === 0 && k2 === a2.length - 1) allowed.push(a2[0].start);
+        if (curveIntersections(a2[j], a2[k2]).some(
+          (h) => !allowed.some((p2) => distance$1(p2, h.point) < 1e-7)
         ))
           return;
       }
     for (let j = i + 1; j < boundaries.length; j++)
-      for (const c of a)
-        for (const d of boundaries[j])
-          if (curveIntersections(c, d).length) return;
+      for (const c2 of a2)
+        for (const d2 of boundaries[j])
+          if (curveIntersections(c2, d2).length) return;
   }
   const depths = [];
   for (let i = 0; i < boundaries.length; i++) {
@@ -6428,12 +6540,92 @@ function contourNestingDepths(contours) {
   return depths;
 }
 function sketchRegionOrder(contours) {
-  const indices = contours.map((_, i) => i);
-  if (!contours.some((c) => c.hole)) return indices;
+  const indices = contours.map((_2, i) => i);
+  if (!contours.some((c2) => c2.hole)) return indices;
   const depths = contourNestingDepths(contours);
   return indices.sort(
-    (a, b) => depths ? depths[a] - depths[b] : Number(Boolean(contours[a].hole)) - Number(Boolean(contours[b].hole))
+    (a2, b) => depths ? depths[a2] - depths[b] : Number(Boolean(contours[a2].hole)) - Number(Boolean(contours[b].hole))
   );
+}
+const TAU = Math.PI * 2;
+function ellipsePoints(start, segment, steps2) {
+  const phi = segment.rotationDegrees * Math.PI / 180;
+  const cos = Math.cos(phi), sin = Math.sin(phi);
+  let rx = Math.abs(segment.radiusX), ry = Math.abs(segment.radiusY);
+  if (!rx || !ry) return [segment.end];
+  const dx = (start[0] - segment.end[0]) / 2, dy = (start[1] - segment.end[1]) / 2;
+  const x1 = cos * dx + sin * dy, y1 = -sin * dx + cos * dy;
+  const lambda = x1 * x1 / (rx * rx) + y1 * y1 / (ry * ry);
+  if (lambda > 1) {
+    const scale2 = Math.sqrt(lambda);
+    rx *= scale2;
+    ry *= scale2;
+  }
+  const sign = segment.largeArc !== segment.sweep ? 1 : -1;
+  const numerator = rx * rx * ry * ry - rx * rx * y1 * y1 - ry * ry * x1 * x1;
+  const denominator = rx * rx * y1 * y1 + ry * ry * x1 * x1;
+  const factor = sign * Math.sqrt(Math.max(0, numerator / denominator));
+  const cxp = factor * rx * y1 / ry, cyp = -factor * ry * x1 / rx;
+  const cx = cos * cxp - sin * cyp + (start[0] + segment.end[0]) / 2;
+  const cy = sin * cxp + cos * cyp + (start[1] + segment.end[1]) / 2;
+  const theta = (px, py) => Math.atan2(py / ry, px / rx);
+  const start_theta = theta(x1 - cxp, y1 - cyp);
+  const end_theta = theta(-x1 - cxp, -y1 - cyp);
+  let sweep = end_theta - start_theta;
+  if (segment.sweep && sweep < 0) sweep += TAU;
+  if (!segment.sweep && sweep > 0) sweep -= TAU;
+  const points = [];
+  for (let index = 1; index <= steps2; index += 1) {
+    const t = start_theta + sweep * index / steps2;
+    const ex = rx * Math.cos(t), ey = ry * Math.sin(t);
+    points.push([cos * ex - sin * ey + cx, sin * ex + cos * ey + cy]);
+  }
+  points[points.length - 1] = segment.end;
+  return points;
+}
+function sketchContourPolyline(contour, arcSteps = 24) {
+  if (contour.type === "circle") {
+    const points2 = [];
+    for (let index = 0; index <= 48; index += 1) {
+      const t = TAU * index / 48;
+      points2.push([
+        contour.center[0] + contour.radius * Math.cos(t),
+        contour.center[1] + contour.radius * Math.sin(t)
+      ]);
+    }
+    return points2;
+  }
+  const points = [contour.start];
+  let previous = contour.start;
+  for (const segment of contour.segments) {
+    if (segment.type === "line") points.push(segment.end);
+    else if (segment.type === "arc") {
+      const geometry = sketchArcGeometry(previous, segment.middle, segment.end);
+      for (let index = 1; index <= arcSteps; index += 1) {
+        const t = geometry.startAngle + geometry.sweep * index / arcSteps;
+        points.push([
+          geometry.center[0] + geometry.radius * Math.cos(t),
+          geometry.center[1] + geometry.radius * Math.sin(t)
+        ]);
+      }
+      points[points.length - 1] = segment.end;
+    } else if (segment.type === "conic") {
+      points.push(...conicDisplayPolyline(previous, segment).slice(1));
+    } else if (segment.type === "bezier") {
+      const [c1, c2] = segment.controls;
+      for (let index = 1; index <= 16; index += 1) {
+        const t = index / 16, s = 1 - t;
+        points.push([
+          s * s * s * previous[0] + 3 * s * s * t * c1[0] + 3 * s * t * t * c2[0] + t * t * t * segment.end[0],
+          s * s * s * previous[1] + 3 * s * s * t * c1[1] + 3 * s * t * t * c2[1] + t * t * t * segment.end[1]
+        ]);
+      }
+    } else {
+      points.push(...ellipsePoints(previous, segment, arcSteps));
+    }
+    previous = segment.end;
+  }
+  return points;
 }
 const byID = (organization) => new Map(organization.folders.map((folder) => [folder.id, folder]));
 function ancestorChain(organization, folderID) {
@@ -6547,7 +6739,7 @@ function validatePartDocument(value2) {
         throw new Error("Bodies need a name and visibility state.");
   }
   const ids2 = /* @__PURE__ */ new Set();
-  const allIds = new Set(document2.features.map((f) => f?.id));
+  const allIds = new Set(document2.features.map((f2) => f2?.id));
   const missingReference = (id2) => typeof id2 === "string" && !!id2.trim() && !allIds.has(id2);
   const earlier = /* @__PURE__ */ new Map();
   const bodies = /* @__PURE__ */ new Set();
@@ -6623,7 +6815,7 @@ function validatePartDocument(value2) {
         throw new Error("Invalid extruded region identity.");
       if (feature.profileSelections !== void 0) {
         const picks = feature.profileSelections;
-        if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map((p) => JSON.stringify([p?.profileFeatureId, p ? profileRegionIdentity(p) : null]))).size !== picks.length || picks.some((p) => !p || !missingReference(p.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p.profileFeatureId) || "") || p.profileContourId !== void 0 && (typeof p.profileContourId !== "string" || !p.profileContourId.trim() || p.profileContourId.length > 128))) throw Error("Choose distinct faces from earlier sketches.");
+        if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map((p2) => JSON.stringify([p2?.profileFeatureId, p2 ? profileRegionIdentity(p2) : null]))).size !== picks.length || picks.some((p2) => !p2 || !missingReference(p2.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p2.profileFeatureId) || "") || p2.profileContourId !== void 0 && (typeof p2.profileContourId !== "string" || !p2.profileContourId.trim() || p2.profileContourId.length > 128))) throw Error("Choose distinct faces from earlier sketches.");
       }
       if (feature.separateBodies !== void 0 && typeof feature.separateBodies !== "boolean") throw Error("Invalid separate bodies option.");
       if (feature.bodyOutputs !== void 0 && (!feature.separateBodies || feature.operation !== "new" || !Array.isArray(feature.bodyOutputs) || !feature.bodyOutputs.length || feature.bodyOutputs.some((id2) => typeof id2 !== "string" || !id2.trim()))) throw Error("Invalid extrusion output bodies.");
@@ -6680,10 +6872,10 @@ function validatePartDocument(value2) {
   for (const feature of document2.features) {
     if (!feature.suppressed && !referenceErrors.has(feature.id) && feature.type === "profile") {
       const drawing = feature.profile.type === "drawing" ? feature.profile : feature.profile.type === "projection" ? feature.profile.authored : void 0;
-      if (drawing?.constraints?.some((c) => c.kind === "pierce")) resolveProfileDrawing(document2.features.map((f) => f.id === feature.id ? { ...f, suppressed: false } : f), feature.id);
+      if (drawing?.constraints?.some((c2) => c2.kind === "pierce")) resolveProfileDrawing(document2.features.map((f2) => f2.id === feature.id ? { ...f2, suppressed: false } : f2), feature.id);
     }
-    if (!referenceErrors.has(feature.id) && feature.type === "profile" && feature.profile.type === "projection" && !missingReference(feature.profile.sourceFeatureId) && feature.profile.authored?.constraints?.some((c) => [c.a, c.b, c.axis].some((r) => r?.projectedContourId !== void 0))) {
-      resolveProfileDrawing(document2.features.map((f) => f.type === "profile" ? { ...f, suppressed: false } : f), feature.id);
+    if (!referenceErrors.has(feature.id) && feature.type === "profile" && feature.profile.type === "projection" && !missingReference(feature.profile.sourceFeatureId) && feature.profile.authored?.constraints?.some((c2) => [c2.a, c2.b, c2.axis].some((r) => r?.projectedContourId !== void 0))) {
+      resolveProfileDrawing(document2.features.map((f2) => f2.type === "profile" ? { ...f2, suppressed: false } : f2), feature.id);
     }
   }
 }
@@ -6740,7 +6932,7 @@ function migratePartDocument(value2) {
   };
 }
 const metric = ["M3", "M4", "M5", "M6", "M8", "M10", "M12"];
-const zip$1 = (keys, rows) => Object.fromEntries(metric.map((m, i) => [m, Object.fromEntries(keys.map((k, j) => [k, rows[i][j]]))]));
+const zip$1 = (keys, rows) => Object.fromEntries(metric.map((m2, i) => [m2, Object.fromEntries(keys.map((k2, j) => [k2, rows[i][j]]))]));
 Object.freeze({
   socket_head_cap_screw: {
     name: "Socket head cap screw",
@@ -6774,7 +6966,7 @@ Object.freeze({
     name: "Dowel pin",
     standard: "ISO 8734",
     lengths: [6, 8, 10, 12, 16, 20, 24, 30, 40, 50],
-    sizes: Object.fromEntries([3, 4, 5, 6, 8, 10, 12].map((d) => [`${d}`, { d }]))
+    sizes: Object.fromEntries([3, 4, 5, 6, 8, 10, 12].map((d2) => [`${d2}`, { d: d2 }]))
   },
   bearing: {
     name: "Deep groove ball bearing",
@@ -6783,7 +6975,7 @@ Object.freeze({
   }
 });
 similarityTransform([0, 0], [0, 0], 0);
-const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const dist = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]);
 function reversed(curve) {
   const s = curve.segment;
   const { id: _id, endVertexId: _v, ...rest } = structuredClone(s);
@@ -6797,47 +6989,47 @@ function reversed(curve) {
   return { start: [...s.end], segment };
 }
 function samples(curve, n = 24) {
-  return Array.from({ length: n + 1 }, (_, i) => segmentPoint(curve.start, curve.segment, i / n));
+  return Array.from({ length: n + 1 }, (_2, i) => segmentPoint(curve.start, curve.segment, i / n));
 }
 const signedArea = (poly) => {
-  let a = 0;
+  let a2 = 0;
   const origin = poly[0];
   for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length];
-    a += (p[0] - origin[0]) * (q[1] - origin[1]) - (q[0] - origin[0]) * (p[1] - origin[1]);
+    const p2 = poly[i], q = poly[(i + 1) % poly.length];
+    a2 += (p2[0] - origin[0]) * (q[1] - origin[1]) - (q[0] - origin[0]) * (p2[1] - origin[1]);
   }
-  return a / 2;
+  return a2 / 2;
 };
-function contains(poly, p) {
+function contains(poly, p2) {
   let inside2 = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i], b = poly[j];
-    if (a[1] > p[1] !== b[1] > p[1] && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) inside2 = !inside2;
+    const a2 = poly[i], b = poly[j];
+    if (a2[1] > p2[1] !== b[1] > p2[1] && p2[0] < (b[0] - a2[0]) * (p2[1] - a2[1]) / (b[1] - a2[1]) + a2[0]) inside2 = !inside2;
   }
   return inside2;
 }
-const polyline = (curves2) => curves2.flatMap((c) => samples(c, c.segment.type === "line" ? 1 : 96).slice(0, -1));
-const toPath = (curves2) => ({ type: "path", start: [...curves2[0].start], segments: curves2.map((c) => {
-  const { id: _id, endVertexId: _vertex, ...geometry } = structuredClone(c.segment);
+const polyline = (curves2) => curves2.flatMap((c2) => samples(c2, c2.segment.type === "line" ? 1 : 96).slice(0, -1));
+const toPath = (curves2) => ({ type: "path", start: [...curves2[0].start], segments: curves2.map((c2) => {
+  const { id: _id, endVertexId: _vertex, ...geometry } = structuredClone(c2.segment);
   return geometry;
 }) });
 function sketchArrangement(drawing) {
   const source = [];
-  drawing.contours.forEach((c, contour) => {
-    if (c.construction || c.type === "path" && c.infinite) return;
-    if (c.type === "circle") {
-      if (c.radius > 0) for (const curve of circleSegments(c.center, c.radius)) source.push({ contour, segment: null, curve });
+  drawing.contours.forEach((c2, contour) => {
+    if (c2.construction || c2.type === "path" && c2.infinite) return;
+    if (c2.type === "circle") {
+      if (c2.radius > 0) for (const curve of circleSegments(c2.center, c2.radius)) source.push({ contour, segment: null, curve });
       return;
     }
-    let start = c.start;
-    for (const [index, segment] of c.segments.entries()) {
+    let start = c2.start;
+    for (const [index, segment] of c2.segments.entries()) {
       source.push({ contour, segment: index, curve: { start, segment } });
       start = segment.end;
     }
   });
   if (!source.length) return [];
   let scale2 = 1;
-  for (const item of source) for (const p of samples(item.curve, 8)) scale2 = Math.max(scale2, Math.abs(p[0]), Math.abs(p[1]));
+  for (const item of source) for (const p2 of samples(item.curve, 8)) scale2 = Math.max(scale2, Math.abs(p2[0]), Math.abs(p2[1]));
   const tol = Math.max(1e-7, 64 * Number.EPSILON * scale2);
   const boxes = source.map(({ curve }) => {
     const s = curve.segment, points = [curve.start, s.end];
@@ -6852,17 +7044,17 @@ function sketchArrangement(drawing) {
       points.push([center[0] - radius, center[1] - radius], [center[0] + radius, center[1] + radius]);
     }
     return [
-      Math.min(...points.map((p) => p[0])) - tol,
-      Math.min(...points.map((p) => p[1])) - tol,
-      Math.max(...points.map((p) => p[0])) + tol,
-      Math.max(...points.map((p) => p[1])) + tol
+      Math.min(...points.map((p2) => p2[0])) - tol,
+      Math.min(...points.map((p2) => p2[1])) - tol,
+      Math.max(...points.map((p2) => p2[0])) + tol,
+      Math.max(...points.map((p2) => p2[1])) + tol
     ];
   });
   const cuts = source.map(() => []);
   try {
     for (let i = 0; i < source.length; i++) for (let j = i + 1; j < source.length; j++) {
-      const a = boxes[i], b = boxes[j];
-      if (a[0] > b[2] || b[0] > a[2] || a[1] > b[3] || b[1] > a[3]) continue;
+      const a2 = boxes[i], b = boxes[j];
+      if (a2[0] > b[2] || b[0] > a2[2] || a2[1] > b[3] || b[1] > a2[3]) continue;
       for (const hit of curveIntersections(source[i].curve, source[j].curve)) {
         cuts[i].push(hit.first);
         cuts[j].push(hit.second);
@@ -6872,27 +7064,27 @@ function sketchArrangement(drawing) {
     return void 0;
   }
   const pieces = [];
-  source.forEach((s, k) => {
-    const ts = [...new Set(cuts[k].filter((t) => t > 1e-9 && t < 1 - 1e-9))].sort((a, b) => a - b);
+  source.forEach((s, k2) => {
+    const ts = [...new Set(cuts[k2].filter((t) => t > 1e-9 && t < 1 - 1e-9))].sort((a2, b) => a2 - b);
     let rest = s.curve;
     let previous = 0;
     for (const parameter2 of ts) {
-      const p = segmentPoint(s.curve.start, s.curve.segment, parameter2);
-      if (dist(p, rest.start) <= tol || dist(p, rest.segment.end) <= tol) continue;
+      const p2 = segmentPoint(s.curve.start, s.curve.segment, parameter2);
+      if (dist(p2, rest.start) <= tol || dist(p2, rest.segment.end) <= tol) continue;
       const t = s.curve.segment.type === "conic" ? conicSubspanParameter(s.curve.segment.rho, parameter2, previous, 1) : (parameter2 - previous) / (1 - previous);
       if (t <= 1e-9 || t >= 1 - 1e-9) continue;
-      const [a, b] = subdivideSegment(rest.start, rest.segment, t);
-      pieces.push({ sources: [{ contour: s.contour, segment: s.segment, forward: true }], curve: { start: rest.start, segment: a }, from: -1, to: -1 });
-      rest = { start: a.end, segment: b };
+      const [a2, b] = subdivideSegment(rest.start, rest.segment, t);
+      pieces.push({ sources: [{ contour: s.contour, segment: s.segment, forward: true }], curve: { start: rest.start, segment: a2 }, from: -1, to: -1 });
+      rest = { start: a2.end, segment: b };
       previous = parameter2;
     }
     pieces.push({ sources: [{ contour: s.contour, segment: s.segment, forward: true }], curve: rest, from: -1, to: -1 });
   });
   const nodes = [];
-  const node2 = (p) => {
-    const k = nodes.findIndex((n) => dist(n, p) <= tol);
-    if (k >= 0) return k;
-    nodes.push(p);
+  const node2 = (p2) => {
+    const k2 = nodes.findIndex((n) => dist(n, p2) <= tol);
+    if (k2 >= 0) return k2;
+    nodes.push(p2);
     return nodes.length - 1;
   };
   for (const piece of pieces) {
@@ -6909,24 +7101,24 @@ function sketchArrangement(drawing) {
     if (match) match.sources.push(...piece.sources.map((side) => ({ ...side, forward: match.from === piece.from ? side.forward : !side.forward })));
     else unique2.push(piece);
   }
-  let live = unique2.filter((p) => p.from !== p.to || samples(p.curve, 4).some((q) => dist(q, p.curve.start) > tol));
+  let live = unique2.filter((p2) => p2.from !== p2.to || samples(p2.curve, 4).some((q) => dist(q, p2.curve.start) > tol));
   for (let changed = true; changed; ) {
     changed = false;
     const degree = /* @__PURE__ */ new Map();
-    for (const p of live) {
-      degree.set(p.from, (degree.get(p.from) ?? 0) + 1);
-      degree.set(p.to, (degree.get(p.to) ?? 0) + 1);
+    for (const p2 of live) {
+      degree.set(p2.from, (degree.get(p2.from) ?? 0) + 1);
+      degree.set(p2.to, (degree.get(p2.to) ?? 0) + 1);
     }
-    const kept = live.filter((p) => degree.get(p.from) > 1 && degree.get(p.to) > 1);
+    const kept = live.filter((p2) => degree.get(p2.from) > 1 && degree.get(p2.to) > 1);
     if (kept.length !== live.length) {
       live = kept;
       changed = true;
     }
   }
   if (!live.length) return [];
-  const half = live.flatMap((p) => [
-    { piece: p, curve: p.curve, from: p.from, to: p.to },
-    { piece: p, curve: reversed(p.curve), from: p.to, to: p.from }
+  const half = live.flatMap((p2) => [
+    { piece: p2, curve: p2.curve, from: p2.from, to: p2.to },
+    { piece: p2, curve: reversed(p2.curve), from: p2.to, to: p2.from }
   ]);
   const angle2 = (h) => {
     const o = h.curve.start, q = segmentPoint(h.curve.start, h.curve.segment, 1e-3);
@@ -6934,10 +7126,10 @@ function sketchArrangement(drawing) {
   };
   const out = /* @__PURE__ */ new Map();
   half.forEach((h, i) => out.set(h.from, [...out.get(h.from) ?? [], i]));
-  for (const list of out.values()) list.sort((a, b) => angle2(half[a]) - angle2(half[b]));
+  for (const list of out.values()) list.sort((a2, b) => angle2(half[a2]) - angle2(half[b]));
   const next = (i) => {
-    const list = out.get(half[i].to), back = i ^ 1, k = list.indexOf(back);
-    return list[(k - 1 + list.length) % list.length];
+    const list = out.get(half[i].to), back = i ^ 1, k2 = list.indexOf(back);
+    return list[(k2 - 1 + list.length) % list.length];
   };
   const used = /* @__PURE__ */ new Set(), loops = [];
   for (let i = 0; i < half.length; i++) {
@@ -6960,15 +7152,15 @@ function sketchArrangement(drawing) {
   const holesOf = /* @__PURE__ */ new Map();
   for (const outer of outers) {
     const at = outer.poly[0];
-    const around = faces.filter((f) => !f.pieces.some((p) => outer.pieces.includes(p)) && contains(f.poly, at)).sort((a, b) => a.area - b.area)[0];
+    const around = faces.filter((f2) => !f2.pieces.some((p2) => outer.pieces.includes(p2)) && contains(f2.poly, at)).sort((a2, b) => a2.area - b.area)[0];
     if (around) holesOf.set(around, [...holesOf.get(around) ?? [], outer]);
   }
-  const closed = drawing.contours.flatMap((c, index) => {
-    if (c.construction) return [];
-    if (c.type === "circle") return [{ index, poly: polyline(circleSegments(c.center, c.radius)) }];
-    if (!c.segments.length || dist(c.start, c.segments.at(-1).end) > 1e-6) return [];
-    let start = c.start;
-    return [{ index, poly: polyline(c.segments.map((segment) => {
+  const closed = drawing.contours.flatMap((c2, index) => {
+    if (c2.construction) return [];
+    if (c2.type === "circle") return [{ index, poly: polyline(circleSegments(c2.center, c2.radius)) }];
+    if (!c2.segments.length || dist(c2.start, c2.segments.at(-1).end) > 1e-6) return [];
+    let start = c2.start;
+    return [{ index, poly: polyline(c2.segments.map((segment) => {
       const curve = { start, segment };
       start = segment.end;
       return curve;
@@ -6982,9 +7174,9 @@ function sketchArrangement(drawing) {
     return {
       boundary: toPath(face.curves),
       holes: holes.map((h) => toPath(h.curves)),
-      sourceContourIndices: [...sources].sort((a, b) => a - b),
+      sourceContourIndices: [...sources].sort((a2, b) => a2 - b),
       sides,
-      insideContourIndices: closed.filter((c) => contains(c.poly, sample)).map((c) => c.index),
+      insideContourIndices: closed.filter((c2) => contains(c2.poly, sample)).map((c2) => c2.index),
       sample,
       area: face.area + holes.reduce((sum, h) => sum + h.area, 0)
     };
@@ -6992,31 +7184,31 @@ function sketchArrangement(drawing) {
 }
 function interiorPoint(poly, holes) {
   let y0 = Infinity, y1 = -Infinity;
-  for (const p of poly) {
-    y0 = Math.min(y0, p[1]);
-    y1 = Math.max(y1, p[1]);
+  for (const p2 of poly) {
+    y0 = Math.min(y0, p2[1]);
+    y1 = Math.max(y1, p2[1]);
   }
   let best = poly[0], width = -1;
-  for (let k = 1; k < 16; k++) {
-    const y = y0 + (y1 - y0) * k / 16, xs = [];
+  for (let k2 = 1; k2 < 16; k2++) {
+    const y2 = y0 + (y1 - y0) * k2 / 16, xs = [];
     for (const ring of [poly, ...holes]) for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const a = ring[i], b = ring[j];
-      if (a[1] > y !== b[1] > y) xs.push(a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]));
+      const a2 = ring[i], b = ring[j];
+      if (a2[1] > y2 !== b[1] > y2) xs.push(a2[0] + (y2 - a2[1]) * (b[0] - a2[0]) / (b[1] - a2[1]));
     }
-    xs.sort((a, b) => a - b);
+    xs.sort((a2, b) => a2 - b);
     for (let i = 0; i + 1 < xs.length; i += 2) if (xs[i + 1] - xs[i] > width) {
       width = xs[i + 1] - xs[i];
-      best = [(xs[i] + xs[i + 1]) / 2, y];
+      best = [(xs[i] + xs[i + 1]) / 2, y2];
     }
   }
   return best;
 }
 const tolerance = 1e-7;
-const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-const cross$7 = (a, b) => a[0] * b[1] - a[1] * b[0];
+const distance = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]);
+const cross$7 = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
 function oriented(path, reverse) {
   const points = [path.start, ...path.segments.map((s) => s.end)];
-  const segments = path.segments.map((_, j) => {
+  const segments = path.segments.map((_2, j) => {
     const i = reverse ? path.segments.length - 1 - j : j;
     const { id: _id, endVertexId: _vertex, ...segment } = structuredClone(path.segments[i]);
     if (!reverse) return segment;
@@ -7030,20 +7222,20 @@ function oriented(path, reverse) {
   return { type: "path", start: [...points[reverse ? points.length - 1 : 0]], segments };
 }
 function regularCubic(start, segment) {
-  const [p, q] = segment.controls, end = segment.end;
-  const a = start.map((v, k2) => -v + 3 * p[k2] - 3 * q[k2] + end[k2]);
-  const b = start.map((v, k2) => 3 * v - 6 * p[k2] + 3 * q[k2]);
-  const c = start.map((v, k2) => 3 * (p[k2] - v));
-  const scale2 = Math.max(1, Math.hypot(...a), Math.hypot(...b), Math.hypot(...c));
-  const axis = Math.abs(a[0]) + Math.abs(b[0]) + Math.abs(c[0]) >= Math.abs(a[1]) + Math.abs(b[1]) + Math.abs(c[1]) ? 0 : 1;
-  for (const t of polynomialRoots([c[axis], 2 * b[axis], 3 * a[axis]])) {
-    if (t > 1e-9 && t < 1 - 1e-9 && Math.hypot(...a.map((v, k2) => 3 * v * t * t + 2 * b[k2] * t + c[k2])) < scale2 * 1e-10) return false;
+  const [p2, q] = segment.controls, end = segment.end;
+  const a2 = start.map((v, k22) => -v + 3 * p2[k22] - 3 * q[k22] + end[k22]);
+  const b = start.map((v, k22) => 3 * v - 6 * p2[k22] + 3 * q[k22]);
+  const c2 = start.map((v, k22) => 3 * (p2[k22] - v));
+  const scale2 = Math.max(1, Math.hypot(...a2), Math.hypot(...b), Math.hypot(...c2));
+  const axis = Math.abs(a2[0]) + Math.abs(b[0]) + Math.abs(c2[0]) >= Math.abs(a2[1]) + Math.abs(b[1]) + Math.abs(c2[1]) ? 0 : 1;
+  for (const t of polynomialRoots([c2[axis], 2 * b[axis], 3 * a2[axis]])) {
+    if (t > 1e-9 && t < 1 - 1e-9 && Math.hypot(...a2.map((v, k22) => 3 * v * t * t + 2 * b[k22] * t + c2[k22])) < scale2 * 1e-10) return false;
   }
-  const denominator = cross$7(a, b);
+  const denominator = cross$7(a2, b);
   if (Math.abs(denominator) <= scale2 * scale2 * 1e-12) return true;
-  const sum = -cross$7(a, c) / denominator;
-  const k = Math.abs(a[0]) >= Math.abs(a[1]) ? 0 : 1;
-  const product = sum * sum + (b[k] * sum + c[k]) / a[k];
+  const sum = -cross$7(a2, c2) / denominator;
+  const k2 = Math.abs(a2[0]) >= Math.abs(a2[1]) ? 0 : 1;
+  const product = sum * sum + (b[k2] * sum + c2[k2]) / a2[k2];
   const discriminant = sum * sum - 4 * product;
   if (discriminant <= 1e-16) return true;
   const low = (sum - Math.sqrt(discriminant)) / 2, high = (sum + Math.sqrt(discriminant)) / 2;
@@ -7062,7 +7254,7 @@ function simpleBoundary(path) {
         if (i === 0 && j === curves2.length - 1) allowed.push(path.start);
         const hits = curveIntersections(curve, curves2[j]);
         if (curve.segment.type === "line" && curves2[j].segment.type === "line" && hits.length > 1 && distance(hits[0].point, hits[1].point) > tolerance) return false;
-        if (hits.some((hit) => !allowed.some((p) => distance(p, hit.point) <= tolerance))) return false;
+        if (hits.some((hit) => !allowed.some((p2) => distance(p2, hit.point) <= tolerance))) return false;
       }
     }
     return true;
@@ -7079,7 +7271,7 @@ function connectedSketchRegions(drawing) {
     points.push(path.start, path.segments.at(-1).end);
     edges.push({ path, index, nodes: [first, first + 1] });
   });
-  const parents = points.map((_, i) => i);
+  const parents = points.map((_2, i) => i);
   function root(i) {
     while (parents[i] !== i) {
       parents[i] = parents[parents[i]];
@@ -7091,7 +7283,7 @@ function connectedSketchRegions(drawing) {
     if (distance(points[i], points[j]) <= tolerance) parents[root(j)] = root(i);
   }
   const members = /* @__PURE__ */ new Map(), incident = /* @__PURE__ */ new Map();
-  points.forEach((_, i) => {
+  points.forEach((_2, i) => {
     const r = root(i);
     members.set(r, [...members.get(r) ?? [], i]);
   });
@@ -7100,8 +7292,8 @@ function connectedSketchRegions(drawing) {
     for (const n of edge.nodes) incident.set(n, [...incident.get(n) ?? [], i]);
   });
   const ambiguous = /* @__PURE__ */ new Set();
-  for (const [node2, list] of members) for (const a of list) for (const b of list) {
-    if (distance(points[a], points[b]) > tolerance) ambiguous.add(node2);
+  for (const [node2, list] of members) for (const a2 of list) for (const b of list) {
+    if (distance(points[a2], points[b]) > tolerance) ambiguous.add(node2);
   }
   const regions = [], issues = [], visited = /* @__PURE__ */ new Set();
   edges.forEach((first, firstIndex) => {
@@ -7117,7 +7309,7 @@ function connectedSketchRegions(drawing) {
         pending.push(...incident.get(node2));
       }
     }
-    const indices = [...component].map((i) => edges[i].index).sort((a, b) => a - b);
+    const indices = [...component].map((i) => edges[i].index).sort((a2, b) => a2 - b);
     const reason = [...nodes].some((n) => ambiguous.has(n)) ? "ambiguous-endpoints" : [...nodes].some((n) => incident.get(n).length > 2) ? "branched" : [...nodes].some((n) => incident.get(n).length !== 2) ? "open" : void 0;
     if (reason) {
       issues.push({ contourIndices: indices, reason });
@@ -7132,7 +7324,7 @@ function connectedSketchRegions(drawing) {
       current2 = edge.nodes[reverse ? 0 : 1];
       id2 = incident.get(current2).find((candidate) => candidate !== id2);
     } while (id2 !== firstIndex && order.length <= component.size);
-    const contour = { type: "path", start: parts[0].start, segments: parts.flatMap((p) => p.segments) };
+    const contour = { type: "path", start: parts[0].start, segments: parts.flatMap((p2) => p2.segments) };
     if (order.length !== component.size || !simpleBoundary(contour)) {
       issues.push({ contourIndices: indices, reason: "invalid-boundary" });
       return;
@@ -7147,7 +7339,7 @@ function connectedSketchRegions(drawing) {
         const other = drawing.contours[i];
         if (other.construction || region.contourIndices.includes(i)) continue;
         const curves2 = other.type === "circle" ? circleSegments(other.center, other.radius) : other.segments.map((segment, j) => ({ start: j ? other.segments[j - 1].end : other.start, segment }));
-        if (boundary.some((a) => curves2.some((b) => curveIntersections(a, b).length > 0))) {
+        if (boundary.some((a2) => curves2.some((b) => curveIntersections(a2, b).length > 0))) {
           issues.push({ contourIndices: region.contourIndices, reason: "invalid-boundary" });
           return false;
         }
@@ -7163,33 +7355,33 @@ function connectedSketchRegions(drawing) {
 function sketchArrangementRegions(drawing) {
   const faces = sketchArrangement(drawing);
   if (!faces) return void 0;
-  const closedCount = drawing.contours.filter((c) => !c.construction && !(c.type === "path" && c.infinite) && contourClosed(c)).length;
+  const closedCount = drawing.contours.filter((c2) => !c2.construction && !(c2.type === "path" && c2.infinite) && contourClosed(c2)).length;
   const joined = connectedSketchRegions(drawing).regions;
-  const trivial = faces.length === closedCount + joined.length && faces.every((f) => !f.holes.length && (f.sourceContourIndices.length === 1 && f.insideContourIndices.length === 1 && f.insideContourIndices[0] === f.sourceContourIndices[0] || !f.insideContourIndices.length && joined.some((r) => r.contourIndices.length === f.sourceContourIndices.length && r.contourIndices.every((i) => f.sourceContourIndices.includes(i)))));
+  const trivial = faces.length === closedCount + joined.length && faces.every((f2) => !f2.holes.length && (f2.sourceContourIndices.length === 1 && f2.insideContourIndices.length === 1 && f2.insideContourIndices[0] === f2.sourceContourIndices[0] || !f2.insideContourIndices.length && joined.some((r) => r.contourIndices.length === f2.sourceContourIndices.length && r.contourIndices.every((i) => f2.sourceContourIndices.includes(i)))));
   if (trivial) return void 0;
   const idsOf = (indices) => {
     const ids2 = indices.map((i) => drawing.contours[i]?.id);
     return ids2.every((v) => !!v) ? ids2 : void 0;
   };
-  const signature = (f) => JSON.stringify([f.sourceContourIndices, f.insideContourIndices]);
+  const signature = (f2) => JSON.stringify([f2.sourceContourIndices, f2.insideContourIndices]);
   const groups = /* @__PURE__ */ new Map();
-  for (const f of faces) groups.set(signature(f), [...groups.get(signature(f)) ?? [], f]);
-  for (const list of groups.values()) list.sort((a, b) => a.sample[0] - b.sample[0] || a.sample[1] - b.sample[1]);
-  return faces.map((f, k) => {
-    const group = groups.get(signature(f));
+  for (const f2 of faces) groups.set(signature(f2), [...groups.get(signature(f2)) ?? [], f2]);
+  for (const list of groups.values()) list.sort((a2, b) => a2.sample[0] - b.sample[0] || a2.sample[1] - b.sample[1]);
+  return faces.map((f2, k2) => {
+    const group = groups.get(signature(f2));
     return {
-      contourIndex: drawing.contours.length + k,
-      contour: f.boundary,
-      holes: f.holes,
-      sourceContourIndices: f.sourceContourIndices,
-      sourceContourIds: idsOf(f.sourceContourIndices),
-      insideContourIndices: f.insideContourIndices,
-      insideContourIds: idsOf(f.insideContourIndices),
+      contourIndex: drawing.contours.length + k2,
+      contour: f2.boundary,
+      holes: f2.holes,
+      sourceContourIndices: f2.sourceContourIndices,
+      sourceContourIds: idsOf(f2.sourceContourIndices),
+      insideContourIndices: f2.insideContourIndices,
+      insideContourIds: idsOf(f2.insideContourIndices),
       ...group.length > 1 ? {
-        boundarySides: f.sides,
-        boundary: regionBoundaryIdentity(drawing, f.sides),
+        boundarySides: f2.sides,
+        boundary: regionBoundaryIdentity(drawing, f2.sides),
         // Mark duplicate signatures so pickers refuse a position-based reference.
-        ...group.filter((other) => JSON.stringify(regionBoundaryIdentity(drawing, other.sides, true)) === JSON.stringify(regionBoundaryIdentity(drawing, f.sides, true))).length > 1 ? { ordinal: group.indexOf(f) + 1 } : {}
+        ...group.filter((other) => JSON.stringify(regionBoundaryIdentity(drawing, other.sides, true)) === JSON.stringify(regionBoundaryIdentity(drawing, f2.sides, true))).length > 1 ? { ordinal: group.indexOf(f2) + 1 } : {}
       } : {},
       cell: true
     };
@@ -7219,7 +7411,7 @@ function deriveSketchFaceRegions(drawing) {
     sourceContourIndices: region.contourIndices,
     sourceContourIds: region.contourIds
   }));
-  return [...closed, ...joined].sort((a, b) => a.contourIndex - b.contourIndex);
+  return [...closed, ...joined].sort((a2, b) => a2.contourIndex - b.contourIndex);
 }
 function regionBoundaryIdentity(drawing, sides, useIndices = false) {
   if (!useIndices && sides.some((side) => !drawing.contours[side.contour]?.id)) return void 0;
@@ -7228,6 +7420,74 @@ function regionBoundaryIdentity(drawing, sides, useIndices = false) {
     const span = contour.type === "path" && side.segment !== null ? contour.segments[side.segment].id ?? side.segment : "circle";
     return JSON.stringify([useIndices ? side.contour : contour.id, span, side.forward]);
   }))].sort();
+}
+function sketchRegions(feature, includeOpen = false, history) {
+  if (feature.type !== "profile" && feature.type !== "sketch") return [];
+  const resolved = feature.type === "profile" && history ? { ...feature, profile: resolveProfileDrawing(history, feature.id) } : feature;
+  if (!history && feature.type === "profile") {
+    const drawing2 = feature.profile.type === "drawing" ? feature.profile : feature.profile.type === "projection" ? feature.profile.authored : void 0;
+    if (drawing2?.constraints?.some((c2) => c2.kind === "pierce")) throw Error("Resolve this sketch in its document before selecting regions.");
+  }
+  const profile = resolved.profile;
+  if (!profile || typeof profile !== "object") return [];
+  const sole = (circle = false) => [{ engineId: feature.id, contourIndex: 0, label: "Region 1", ...circle ? { circle } : {} }];
+  if (profile.type === "circle") return Number(profile.radiusMillimeters) > 0 ? sole(true) : [];
+  if (profile.type === "center-rectangle") return Number(profile.widthMillimeters) > 0 && Number(profile.heightMillimeters) > 0 && !profile.construction ? sole() : [];
+  if (profile.type === "polygon") return (profile.pointsMillimeters ?? []).length >= 3 ? sole() : [];
+  if (profile.type !== "drawing") return [];
+  const drawing = profile;
+  const contours = drawing.contours ?? [];
+  const faces = includeOpen ? [] : sketchFaceRegions(drawing);
+  if (faces.some((face) => face.cell)) return faces.map((face, index) => ({
+    engineId: `${feature.id}#cell#${index}`,
+    contourIndex: face.contourIndex,
+    sourceContourIndices: face.sourceContourIndices,
+    sourceContourIds: face.sourceContourIds,
+    insideContourIndices: face.insideContourIndices,
+    insideContourIds: face.insideContourIds,
+    ordinal: face.ordinal,
+    boundary: face.boundary,
+    boundarySides: face.boundarySides,
+    previewContour: face.contour,
+    holes: face.holes,
+    cell: face.cell,
+    closed: true,
+    label: `Region ${index + 1}`
+  }));
+  const regions = [];
+  contours.forEach((contour, index) => {
+    if (contour.construction) return;
+    const engineId = contours.length === 1 ? feature.id : `${feature.id}#${index}`;
+    const label = `Region ${index + 1}`;
+    if (contour.type === "circle") {
+      if (!(Number.isFinite(contour.radius) && contour.radius > 0)) return;
+      regions.push({ engineId, contourId: contour.id, contourIndex: index, label: `${label} · circle`, circle: true });
+      return;
+    }
+    const segments = contour.segments ?? [];
+    if (contour.type !== "path" || !contour.start || !segments.length) return;
+    if (!segments.every((segment) => ["line", "arc", "bezier", "ellipse", "conic"].includes(segment.type))) return;
+    if (segments.some((segment) => segment.type === "arc" && !Array.isArray(segment.middle))) return;
+    const end = segments[segments.length - 1].end;
+    const closed = Math.hypot(end[0] - contour.start[0], end[1] - contour.start[1]) < 1e-6;
+    const straight = closed && segments.every((segment) => segment.type === "line") && segments.length >= 3;
+    regions.push({ engineId, contourId: contour.id, contourIndex: index, closed, label: straight ? `${label} · ${segments.length} sides` : `${label} · ${closed ? "curved" : "open path"}` });
+  });
+  for (const boundary of faces) {
+    if (boundary.sourceContourIndices.length < 2) continue;
+    const sources = boundary.sourceContourIndices.map((index) => regions.find((region) => region.contourIndex === index && !region.sourceContourIndices));
+    if (sources.some((source) => !source || source.closed !== false)) continue;
+    regions.push({
+      engineId: `${feature.id}#joined#${boundary.contourIndex}`,
+      contourIndex: boundary.contourIndex,
+      sourceContourIndices: boundary.sourceContourIndices,
+      sourceContourIds: boundary.sourceContourIds,
+      previewContour: boundary.contour,
+      closed: true,
+      label: `Region ${boundary.contourIndex + 1} · ${sources.length} connected curves`
+    });
+  }
+  return regions.filter((region) => includeOpen ? !region.sourceContourIndices : region.closed !== false);
 }
 function sketch(doc, id2) {
   const feature = doc.features.find((feature2) => feature2.id === id2);
@@ -7238,6 +7498,26 @@ const finite = (value2, name) => {
   if (typeof value2 !== "number" || !Number.isFinite(value2) || Math.abs(value2) > 1e6) throw Error(`${name} must be finite and within 1000000.`);
   return value2;
 };
+function inspectRegions(doc, feature, offset2, limit) {
+  const regions = sketchRegions(feature, false, doc.features);
+  const authored = feature.type === "sketch" || feature.type === "profile" && feature.profile.type !== "projection";
+  return {
+    total: regions.length,
+    offset: offset2,
+    items: regions.slice(offset2, offset2 + limit).map((region) => ({
+      label: region.label,
+      index: region.contourIndex,
+      selectable: authored && region.ordinal === void 0,
+      contour_id: region.contourId,
+      source_contour_indices: region.sourceContourIndices,
+      inside_contour_indices: region.insideContourIndices,
+      boundary: region.previewContour,
+      holes: region.holes ?? []
+    })),
+    next_offset: offset2 + limit < regions.length ? offset2 + limit : null,
+    selection: "Use profile_point_mm strictly inside the desired closed region. Coordinates are local millimeters; indices are transient and must not be saved as references."
+  };
+}
 function inspectSketch(doc, args) {
   const feature = sketch(doc, args.feature_id), offset2 = args.offset ?? 0, limit = args.limit ?? 10;
   if (typeof offset2 !== "number" || !Number.isSafeInteger(offset2) || offset2 < 0 || typeof limit !== "number" || !Number.isSafeInteger(limit) || limit < 1 || limit > 25) throw Error("Use offset >= 0 and limit 1–25.");
@@ -7251,7 +7531,7 @@ function inspectSketch(doc, args) {
     plane: feature.plane,
     suppressed: feature.suppressed,
     units: "millimeter",
-    ...feature.type === "profile" ? { offset_mm: feature.offsetMillimeters, frame: feature.frame, support: feature.support } : {},
+    ...feature.type === "profile" ? { offset_mm: feature.offsetMillimeters, frame: feature.frame, flip: feature.flip, support: feature.support } : {},
     profile: drawing ? {
       type: profile.type,
       total_contours: drawing.contours.length,
@@ -7261,7 +7541,8 @@ function inspectSketch(doc, args) {
       next_offset: offset2 + limit < Math.max(drawing.contours.length, drawing.constraints?.length ?? 0) ? offset2 + limit : null
     } : profile,
     ...feature.type === "sketch" ? { constraints: feature.constraints, dimensions: feature.dimensions } : {},
-    dependents: doc.features.filter((f) => "profileFeatureId" in f && f.profileFeatureId === feature.id).map((f) => ({ id: f.id, name: f.name, type: f.type })),
+    regions: feature.suppressed ? { total: 0, offset: offset2, items: [], next_offset: null } : inspectRegions(doc, feature, offset2, limit),
+    dependents: doc.features.filter((f2) => "profileFeatureId" in f2 && f2.profileFeatureId === feature.id).map((f2) => ({ id: f2.id, name: f2.name, type: f2.type })),
     editing: profile.type === "projection" ? "Projected geometry is read-only; edit its source sketch." : "Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved."
   };
 }
@@ -7272,23 +7553,23 @@ function editSketch(doc, name, args) {
   if (name === "aether_cad_sketch_translate") {
     const dx = finite(args.dx_mm, "dx_mm"), dy = finite(args.dy_mm, "dy_mm");
     if (feature.type === "sketch") {
-      if ((dx !== 0 || dy !== 0) && feature.constraints.some((c) => c.type === "coincident-origin")) throw Error("The sketch center is constrained to the origin. It cannot translate without changing that constraint.");
+      if ((dx !== 0 || dy !== 0) && feature.constraints.some((c2) => c2.type === "coincident-origin")) throw Error("The sketch center is constrained to the origin. It cannot translate without changing that constraint.");
       feature.profile.centerXMillimeters += dx;
       feature.profile.centerYMillimeters += dy;
     } else if (profile.type === "circle") profile.centerMillimeters = [profile.centerMillimeters[0] + dx, profile.centerMillimeters[1] + dy];
-    else if (profile.type === "polygon") profile.pointsMillimeters = profile.pointsMillimeters.map(([x, y]) => [x + dx, y + dy]);
-    else if (profile.type === "drawing") feature.profile = moveSketchContours(profile, profile.contours.map((_, i) => i), similarityTransform([0, 0], [dx, dy], 0));
+    else if (profile.type === "polygon") profile.pointsMillimeters = profile.pointsMillimeters.map(([x2, y2]) => [x2 + dx, y2 + dy]);
+    else if (profile.type === "drawing") feature.profile = moveSketchContours(profile, profile.contours.map((_2, i) => i), similarityTransform([0, 0], [dx, dy], 0));
     else throw Error("This sketch type cannot translate directly. Projected geometry must be edited at its source.");
   } else {
     const value2 = finite(args.value, "value");
     if (typeof args.dimension_id !== "string") throw Error("Choose dimension_id from sketch_inspect.");
     if (feature.type === "sketch") {
-      const dimension = feature.dimensions.find((d) => d.id === args.dimension_id);
+      const dimension = feature.dimensions.find((d2) => d2.id === args.dimension_id);
       if (!dimension) throw Error("Choose an existing dimension_id.");
       feature.profile = reviseCenterRectangleSketch(feature, { ...rectangleSketchRevision(feature), [dimension.type === "width" ? "widthMillimeters" : "heightMillimeters"]: value2 }).profile;
       dimension.valueMillimeters = value2;
     } else if (profile.type === "drawing") {
-      const dimension = profile.constraints?.find((c) => c.id === args.dimension_id);
+      const dimension = profile.constraints?.find((c2) => c2.id === args.dimension_id);
       if (!dimension || dimension.value === void 0 || dimension.reference) throw Error("Choose an editable driving dimension from sketch_inspect.");
       feature.profile = editDrawingDimension(profile, args.dimension_id, value2);
     } else throw Error("This sketch has no driving dimensions.");
@@ -7297,7 +7578,7 @@ function editSketch(doc, name, args) {
   return { document: next, featureID: feature.id };
 }
 function resolveExtrusionScopes(doc, scopes = {}) {
-  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f) => f.type === "extrude" && f.scopeMode === "all" && !f.suppressed).map((f) => f.id));
+  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => f2.type === "extrude" && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
   if (Object.keys(scopes).some((id2) => !active.has(id2))) throw Error("Rebuild returned an unknown automatic extrusion scope.");
   const available = /* @__PURE__ */ new Set();
   const next = { ...doc, features: doc.features.map((feature) => {
@@ -7312,8 +7593,8 @@ function resolveExtrusionScopes(doc, scopes = {}) {
     if (!resolution) throw Error(`${feature.name}: rebuild did not resolve the automatic scope.`);
     validateExtrusionScopeResolution(resolution);
     if (resolution.targets.some((id2) => !available.has(id2))) throw Error(`${feature.name}: rebuild returned an unavailable scope part.`);
-    if (feature.type === "extrude" && feature.operation === "add" && resolution.groups.flatMap((g) => g.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
-    if (feature.type === "extrude" && feature.operation !== "add" && resolution.groups.some((g) => g.sources.length !== 1)) throw Error("Only Add can merge part identities.");
+    if (feature.type === "extrude" && feature.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
+    if (feature.type === "extrude" && feature.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
     if (feature.type === "extrude" && feature.operation === "intersect" && resolution.groups.length !== resolution.targets.length) throw Error("Intersect scope must retain overlapping parts.");
     scopeConsumedBodies(resolution).forEach((id2) => available.delete(id2));
     return { ...feature, scopeResolution: structuredClone(resolution) };
@@ -7323,7 +7604,7 @@ function resolveExtrusionScopes(doc, scopes = {}) {
 }
 function resolveBodyOutputs(document2, outputs = {}) {
   const cutoff = rollbackPosition(document2);
-  const expected = new Set(document2.features.slice(0, cutoff).filter((f) => !f.suppressed && (f.type === "extrude" && f.operation === "new" && f.separateBodies || f.type === "surface-unstitch" || (f.type === "transform" || f.type === "split") && f.copyBodyIds || f.type === "pattern" && f.bodyIds)).map((f) => f.id));
+  const expected = new Set(document2.features.slice(0, cutoff).filter((f2) => !f2.suppressed && (f2.type === "extrude" && f2.operation === "new" && f2.separateBodies || f2.type === "surface-unstitch" || (f2.type === "transform" || f2.type === "split") && f2.copyBodyIds || f2.type === "pattern" && f2.bodyIds)).map((f2) => f2.id));
   if (Object.keys(outputs).some((id2) => !expected.has(id2))) throw new Error("Rebuild returned an unknown body producer.");
   const next = { ...document2, features: document2.features.map((feature) => {
     if (!expected.has(feature.id)) return feature;
@@ -7342,12 +7623,12 @@ function resolveBodyOutputs(document2, outputs = {}) {
   return next;
 }
 function resolveSketchFrames(doc, frames = {}) {
-  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f) => f.type === "profile" && f.support && !f.suppressed).map((f) => f.id));
+  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => f2.type === "profile" && f2.support && !f2.suppressed).map((f2) => f2.id));
   if (Object.keys(frames).some((id2) => !active.has(id2))) throw new Error("Rebuild returned an unknown sketch support.");
-  const next = { ...doc, features: doc.features.map((f) => {
-    if (!active.has(f.id)) return f;
-    if (!frames[f.id]) throw new Error(`${f.name}: support plane was not resolved. Reselect a planar face.`);
-    return { ...f, frame: frames[f.id] };
+  const next = { ...doc, features: doc.features.map((f2) => {
+    if (!active.has(f2.id)) return f2;
+    if (!frames[f2.id]) throw new Error(`${f2.name}: support plane was not resolved. Reselect a planar face.`);
+    return { ...f2, frame: frames[f2.id] };
   }) };
   validatePartDocument(next);
   return next;
@@ -7361,13 +7642,13 @@ function describe(doc) {
     units: doc.units,
     rollback_index: rollbackPosition(doc),
     bodies: availableBodies(doc),
-    features: doc.features.map((f) => ({
-      id: f.id,
-      name: f.name,
-      type: f.type,
-      suppressed: f.suppressed,
-      ...f.type === "revolve" ? { angle_deg: f.angleDegrees, second_angle_deg: f.secondAngleDegrees ?? 0, symmetric: f.symmetric ?? false, reversed: f.reversed ?? false, axis: f.axis, operation: f.operation } : {},
-      ...f.type === "extrude" ? { depth_mm: f.distanceMillimeters, end_offset_mm: f.endOffsetMillimeters ?? 0, operation: f.operation, end_type: f.endType ?? "blind", target_body_id: f.targetBodyId, end_part_id: f.endPartId, end_point_reference: f.endPointReference, scope_mode: f.scopeMode, scope_resolution: f.scopeResolution, starting_reference: f.startingReference, starting_offset_mm: f.startingOffsetMillimeters ?? 0 } : {}
+    features: doc.features.map((f2) => ({
+      id: f2.id,
+      name: f2.name,
+      type: f2.type,
+      suppressed: f2.suppressed,
+      ...f2.type === "revolve" ? { angle_deg: f2.angleDegrees, second_angle_deg: f2.secondAngleDegrees ?? 0, symmetric: f2.symmetric ?? false, reversed: f2.reversed ?? false, axis: f2.axis, operation: f2.operation } : {},
+      ...f2.type === "extrude" ? { depth_mm: f2.distanceMillimeters, end_offset_mm: f2.endOffsetMillimeters ?? 0, operation: f2.operation, end_type: f2.endType ?? "blind", target_body_id: f2.targetBodyId, end_part_id: f2.endPartId, end_point_reference: f2.endPointReference, scope_mode: f2.scopeMode, scope_resolution: f2.scopeResolution, starting_reference: f2.startingReference, starting_offset_mm: f2.startingOffsetMillimeters ?? 0 } : {}
     }))
   };
 }
@@ -7379,7 +7660,7 @@ function prepareCommand(command, content, args) {
   let next = structuredClone(doc);
   if (!["cad.part.evaluate", "cad.part.verify", "cad.part.topology"].includes(command)) {
     if (rollbackPosition(doc) !== doc.features.length) throw Error("Move the rollback bar to the end before editing this saved part.");
-    const index = doc.features.findIndex((f) => f.id === args.feature_id);
+    const index = doc.features.findIndex((f2) => f2.id === args.feature_id);
     if (index < 0) throw Error("Feature not found. Inspect the part first.");
     const feature = doc.features[index];
     if (command.startsWith("cad.revolve.")) {
@@ -7448,12 +7729,12 @@ class Quaternion {
    * @param {number} [z=0] - The z value of this quaternion.
    * @param {number} [w=1] - The w value of this quaternion.
    */
-  constructor(x = 0, y = 0, z = 0, w = 1) {
+  constructor(x2 = 0, y2 = 0, z2 = 0, w2 = 1) {
     this.isQuaternion = true;
-    this._x = x;
-    this._y = y;
-    this._z = z;
-    this._w = w;
+    this._x = x2;
+    this._y = y2;
+    this._z = z2;
+    this._w = w2;
   }
   /**
    * Interpolates between two quaternions via SLERP. This implementation assumes the
@@ -7499,11 +7780,11 @@ class Quaternion {
       z0 = z0 * s + z1 * tDir;
       w0 = w0 * s + w1 * tDir;
       if (s === 1 - t) {
-        const f = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
-        x0 *= f;
-        y0 *= f;
-        z0 *= f;
-        w0 *= f;
+        const f2 = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
+        x0 *= f2;
+        y0 *= f2;
+        z0 *= f2;
+        w0 *= f2;
       }
     }
     dst[dstOffset] = x0;
@@ -7600,11 +7881,11 @@ class Quaternion {
    * @param {number} w - The w value of this quaternion.
    * @return {Quaternion} A reference to this quaternion.
    */
-  set(x, y, z, w) {
-    this._x = x;
-    this._y = y;
-    this._z = z;
-    this._w = w;
+  set(x2, y2, z2, w2) {
+    this._x = x2;
+    this._y = y2;
+    this._z = z2;
+    this._w = w2;
     this._onChangeCallback();
     return this;
   }
@@ -7639,15 +7920,15 @@ class Quaternion {
    * @return {Quaternion} A reference to this quaternion.
    */
   setFromEuler(euler, update = true) {
-    const x = euler._x, y = euler._y, z = euler._z, order = euler._order;
+    const x2 = euler._x, y2 = euler._y, z2 = euler._z, order = euler._order;
     const cos = Math.cos;
     const sin = Math.sin;
-    const c1 = cos(x / 2);
-    const c2 = cos(y / 2);
-    const c3 = cos(z / 2);
-    const s1 = sin(x / 2);
-    const s2 = sin(y / 2);
-    const s3 = sin(z / 2);
+    const c1 = cos(x2 / 2);
+    const c2 = cos(y2 / 2);
+    const c3 = cos(z2 / 2);
+    const s1 = sin(x2 / 2);
+    const s2 = sin(y2 / 2);
+    const s3 = sin(z2 / 2);
     switch (order) {
       case "XYZ":
         this._x = s1 * c2 * c3 + c1 * s2 * s3;
@@ -7713,8 +7994,8 @@ class Quaternion {
    * @param {Matrix4} m - A 4x4 matrix of which the upper 3x3 of matrix is a pure rotation matrix (i.e. unscaled).
    * @return {Quaternion} A reference to this quaternion.
    */
-  setFromRotationMatrix(m) {
-    const te = m.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], trace = m11 + m22 + m33;
+  setFromRotationMatrix(m2) {
+    const te = m2.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], trace = m11 + m22 + m33;
     if (trace > 0) {
       const s = 0.5 / Math.sqrt(trace + 1);
       this._w = 0.25 / s;
@@ -7907,8 +8188,8 @@ class Quaternion {
    * @param {Quaternion} b - The second quaternion.
    * @return {Quaternion} A reference to this quaternion.
    */
-  multiplyQuaternions(a, b) {
-    const qax = a._x, qay = a._y, qaz = a._z, qaw = a._w;
+  multiplyQuaternions(a2, b) {
+    const qax = a2._x, qay = a2._y, qaz = a2._z, qaw = a2._w;
     const qbx = b._x, qby = b._y, qbz = b._z, qbw = b._w;
     this._x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
     this._y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
@@ -7927,8 +8208,8 @@ class Quaternion {
   slerp(qb, t) {
     if (t === 0) return this;
     if (t === 1) return this.copy(qb);
-    const x = this._x, y = this._y, z = this._z, w = this._w;
-    let cosHalfTheta = w * qb._w + x * qb._x + y * qb._y + z * qb._z;
+    const x2 = this._x, y2 = this._y, z2 = this._z, w2 = this._w;
+    let cosHalfTheta = w2 * qb._w + x2 * qb._x + y2 * qb._y + z2 * qb._z;
     if (cosHalfTheta < 0) {
       this._w = -qb._w;
       this._x = -qb._x;
@@ -7939,29 +8220,29 @@ class Quaternion {
       this.copy(qb);
     }
     if (cosHalfTheta >= 1) {
-      this._w = w;
-      this._x = x;
-      this._y = y;
-      this._z = z;
+      this._w = w2;
+      this._x = x2;
+      this._y = y2;
+      this._z = z2;
       return this;
     }
     const sqrSinHalfTheta = 1 - cosHalfTheta * cosHalfTheta;
     if (sqrSinHalfTheta <= Number.EPSILON) {
       const s = 1 - t;
-      this._w = s * w + t * this._w;
-      this._x = s * x + t * this._x;
-      this._y = s * y + t * this._y;
-      this._z = s * z + t * this._z;
+      this._w = s * w2 + t * this._w;
+      this._x = s * x2 + t * this._x;
+      this._y = s * y2 + t * this._y;
+      this._z = s * z2 + t * this._z;
       this.normalize();
       return this;
     }
     const sinHalfTheta = Math.sqrt(sqrSinHalfTheta);
     const halfTheta = Math.atan2(sinHalfTheta, cosHalfTheta);
     const ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta, ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
-    this._w = w * ratioA + this._w * ratioB;
-    this._x = x * ratioA + this._x * ratioB;
-    this._y = y * ratioA + this._y * ratioB;
-    this._z = z * ratioA + this._z * ratioB;
+    this._w = w2 * ratioA + this._w * ratioB;
+    this._x = x2 * ratioA + this._x * ratioB;
+    this._y = y2 * ratioA + this._y * ratioB;
+    this._z = z2 * ratioA + this._z * ratioB;
     this._onChangeCallback();
     return this;
   }
@@ -8079,11 +8360,11 @@ class Vector3 {
    * @param {number} [y=0] - The y value of this vector.
    * @param {number} [z=0] - The z value of this vector.
    */
-  constructor(x = 0, y = 0, z = 0) {
+  constructor(x2 = 0, y2 = 0, z2 = 0) {
     Vector3.prototype.isVector3 = true;
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    this.x = x2;
+    this.y = y2;
+    this.z = z2;
   }
   /**
    * Sets the vector components.
@@ -8093,11 +8374,11 @@ class Vector3 {
    * @param {number} z - The value of the z component.
    * @return {Vector3} A reference to this vector.
    */
-  set(x, y, z) {
-    if (z === void 0) z = this.z;
-    this.x = x;
-    this.y = y;
-    this.z = z;
+  set(x2, y2, z2) {
+    if (z2 === void 0) z2 = this.z;
+    this.x = x2;
+    this.y = y2;
+    this.z = z2;
     return this;
   }
   /**
@@ -8118,8 +8399,8 @@ class Vector3 {
    * @param {number} x - The value to set.
    * @return {Vector3} A reference to this vector.
    */
-  setX(x) {
-    this.x = x;
+  setX(x2) {
+    this.x = x2;
     return this;
   }
   /**
@@ -8128,8 +8409,8 @@ class Vector3 {
    * @param {number} y - The value to set.
    * @return {Vector3} A reference to this vector.
    */
-  setY(y) {
-    this.y = y;
+  setY(y2) {
+    this.y = y2;
     return this;
   }
   /**
@@ -8138,8 +8419,8 @@ class Vector3 {
    * @param {number} z - The value to set.
    * @return {Vector3} A reference to this vector.
    */
-  setZ(z) {
-    this.z = z;
+  setZ(z2) {
+    this.z = z2;
     return this;
   }
   /**
@@ -8234,10 +8515,10 @@ class Vector3 {
    * @param {Vector3} b - The second vector.
    * @return {Vector3} A reference to this vector.
    */
-  addVectors(a, b) {
-    this.x = a.x + b.x;
-    this.y = a.y + b.y;
-    this.z = a.z + b.z;
+  addVectors(a2, b) {
+    this.x = a2.x + b.x;
+    this.y = a2.y + b.y;
+    this.z = a2.z + b.z;
     return this;
   }
   /**
@@ -8284,10 +8565,10 @@ class Vector3 {
    * @param {Vector3} b - The second vector.
    * @return {Vector3} A reference to this vector.
    */
-  subVectors(a, b) {
-    this.x = a.x - b.x;
-    this.y = a.y - b.y;
-    this.z = a.z - b.z;
+  subVectors(a2, b) {
+    this.x = a2.x - b.x;
+    this.y = a2.y - b.y;
+    this.z = a2.z - b.z;
     return this;
   }
   /**
@@ -8321,10 +8602,10 @@ class Vector3 {
    * @param {Vector3} b - The second vector.
    * @return {Vector3} A reference to this vector.
    */
-  multiplyVectors(a, b) {
-    this.x = a.x * b.x;
-    this.y = a.y * b.y;
-    this.z = a.z * b.z;
+  multiplyVectors(a2, b) {
+    this.x = a2.x * b.x;
+    this.y = a2.y * b.y;
+    this.z = a2.z * b.z;
     return this;
   }
   /**
@@ -8352,12 +8633,12 @@ class Vector3 {
    * @param {Matrix3} m - The 3x3 matrix.
    * @return {Vector3} A reference to this vector.
    */
-  applyMatrix3(m) {
-    const x = this.x, y = this.y, z = this.z;
-    const e = m.elements;
-    this.x = e[0] * x + e[3] * y + e[6] * z;
-    this.y = e[1] * x + e[4] * y + e[7] * z;
-    this.z = e[2] * x + e[5] * y + e[8] * z;
+  applyMatrix3(m2) {
+    const x2 = this.x, y2 = this.y, z2 = this.z;
+    const e = m2.elements;
+    this.x = e[0] * x2 + e[3] * y2 + e[6] * z2;
+    this.y = e[1] * x2 + e[4] * y2 + e[7] * z2;
+    this.z = e[2] * x2 + e[5] * y2 + e[8] * z2;
     return this;
   }
   /**
@@ -8367,8 +8648,8 @@ class Vector3 {
    * @param {Matrix3} m - The normal matrix.
    * @return {Vector3} A reference to this vector.
    */
-  applyNormalMatrix(m) {
-    return this.applyMatrix3(m).normalize();
+  applyNormalMatrix(m2) {
+    return this.applyMatrix3(m2).normalize();
   }
   /**
    * Multiplies this vector (with an implicit 1 in the 4th dimension) by m, and
@@ -8377,13 +8658,13 @@ class Vector3 {
    * @param {Matrix4} m - The matrix to apply.
    * @return {Vector3} A reference to this vector.
    */
-  applyMatrix4(m) {
-    const x = this.x, y = this.y, z = this.z;
-    const e = m.elements;
-    const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
-    this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
-    this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
-    this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
+  applyMatrix4(m2) {
+    const x2 = this.x, y2 = this.y, z2 = this.z;
+    const e = m2.elements;
+    const w2 = 1 / (e[3] * x2 + e[7] * y2 + e[11] * z2 + e[15]);
+    this.x = (e[0] * x2 + e[4] * y2 + e[8] * z2 + e[12]) * w2;
+    this.y = (e[1] * x2 + e[5] * y2 + e[9] * z2 + e[13]) * w2;
+    this.z = (e[2] * x2 + e[6] * y2 + e[10] * z2 + e[14]) * w2;
     return this;
   }
   /**
@@ -8430,12 +8711,12 @@ class Vector3 {
    * @param {Matrix4} m - The matrix.
    * @return {Vector3} A reference to this vector.
    */
-  transformDirection(m) {
-    const x = this.x, y = this.y, z = this.z;
-    const e = m.elements;
-    this.x = e[0] * x + e[4] * y + e[8] * z;
-    this.y = e[1] * x + e[5] * y + e[9] * z;
-    this.z = e[2] * x + e[6] * y + e[10] * z;
+  transformDirection(m2) {
+    const x2 = this.x, y2 = this.y, z2 = this.z;
+    const e = m2.elements;
+    this.x = e[0] * x2 + e[4] * y2 + e[8] * z2;
+    this.y = e[1] * x2 + e[5] * y2 + e[9] * z2;
+    this.z = e[2] * x2 + e[6] * y2 + e[10] * z2;
     return this.normalize();
   }
   /**
@@ -8690,8 +8971,8 @@ class Vector3 {
    * @param {Vector3} b - The second vector.
    * @return {Vector3} A reference to this vector.
    */
-  crossVectors(a, b) {
-    const ax = a.x, ay = a.y, az = a.z;
+  crossVectors(a2, b) {
+    const ax = a2.x, ay = a2.y, az = a2.z;
     const bx = b.x, by = b.y, bz = b.z;
     this.x = ay * bz - az * by;
     this.y = az * bx - ax * bz;
@@ -8802,8 +9083,8 @@ class Vector3 {
    * @param {Cylindrical} c - The cylindrical coordinates.
    * @return {Vector3} A reference to this vector.
    */
-  setFromCylindrical(c) {
-    return this.setFromCylindricalCoords(c.radius, c.theta, c.y);
+  setFromCylindrical(c2) {
+    return this.setFromCylindricalCoords(c2.radius, c2.theta, c2.y);
   }
   /**
    * Sets the vector components from the given cylindrical coordinates.
@@ -8813,9 +9094,9 @@ class Vector3 {
    * @param {number} y - The y value.
    * @return {Vector3} A reference to this vector.
    */
-  setFromCylindricalCoords(radius, theta, y) {
+  setFromCylindricalCoords(radius, theta, y2) {
     this.x = radius * Math.sin(theta);
-    this.y = y;
+    this.y = y2;
     this.z = radius * Math.cos(theta);
     return this;
   }
@@ -8826,8 +9107,8 @@ class Vector3 {
    * @param {Matrix4} m - The 4x4 matrix.
    * @return {Vector3} A reference to this vector.
    */
-  setFromMatrixPosition(m) {
-    const e = m.elements;
+  setFromMatrixPosition(m2) {
+    const e = m2.elements;
     this.x = e[12];
     this.y = e[13];
     this.z = e[14];
@@ -8840,10 +9121,10 @@ class Vector3 {
    * @param {Matrix4} m - The 4x4 matrix.
    * @return {Vector3} A reference to this vector.
    */
-  setFromMatrixScale(m) {
-    const sx = this.setFromMatrixColumn(m, 0).length();
-    const sy = this.setFromMatrixColumn(m, 1).length();
-    const sz = this.setFromMatrixColumn(m, 2).length();
+  setFromMatrixScale(m2) {
+    const sx = this.setFromMatrixColumn(m2, 0).length();
+    const sy = this.setFromMatrixColumn(m2, 1).length();
+    const sz = this.setFromMatrixColumn(m2, 2).length();
     this.x = sx;
     this.y = sy;
     this.z = sz;
@@ -8856,8 +9137,8 @@ class Vector3 {
    * @param {number} index - The column index.
    * @return {Vector3} A reference to this vector.
    */
-  setFromMatrixColumn(m, index) {
-    return this.fromArray(m.elements, index * 4);
+  setFromMatrixColumn(m2, index) {
+    return this.fromArray(m2.elements, index * 4);
   }
   /**
    * Sets the vector components from the specified matrix column.
@@ -8866,8 +9147,8 @@ class Vector3 {
    * @param {number} index - The column index.
    * @return {Vector3} A reference to this vector.
    */
-  setFromMatrix3Column(m, index) {
-    return this.fromArray(m.elements, index * 3);
+  setFromMatrix3Column(m2, index) {
+    return this.fromArray(m2.elements, index * 3);
   }
   /**
    * Sets the vector components from the given Euler angles.
@@ -8888,10 +9169,10 @@ class Vector3 {
    * @param {Color} c - The color to set.
    * @return {Vector3} A reference to this vector.
    */
-  setFromColor(c) {
-    this.x = c.r;
-    this.y = c.g;
-    this.z = c.b;
+  setFromColor(c2) {
+    this.x = c2.r;
+    this.y = c2.g;
+    this.z = c2.b;
     return this;
   }
   /**
@@ -8963,11 +9244,11 @@ class Vector3 {
    */
   randomDirection() {
     const theta = Math.random() * Math.PI * 2;
-    const u = Math.random() * 2 - 1;
-    const c = Math.sqrt(1 - u * u);
-    this.x = c * Math.cos(theta);
-    this.y = u;
-    this.z = c * Math.sin(theta);
+    const u2 = Math.random() * 2 - 1;
+    const c2 = Math.sqrt(1 - u2 * u2);
+    this.x = c2 * Math.cos(theta);
+    this.y = u2;
+    this.z = c2 * Math.sin(theta);
     return this;
   }
   *[Symbol.iterator]() {
@@ -9107,9 +9388,9 @@ class Matrix4 {
    * @param {Matrix4} m - The matrix to copy.
    * @return {Matrix4} A reference to this matrix.
    */
-  copy(m) {
+  copy(m2) {
     const te = this.elements;
-    const me = m.elements;
+    const me = m2.elements;
     te[0] = me[0];
     te[1] = me[1];
     te[2] = me[2];
@@ -9135,8 +9416,8 @@ class Matrix4 {
    * @param {Matrix4} m - The matrix to copy the translation component.
    * @return {Matrix4} A reference to this matrix.
    */
-  copyPosition(m) {
-    const te = this.elements, me = m.elements;
+  copyPosition(m2) {
+    const te = this.elements, me = m2.elements;
     te[12] = me[12];
     te[13] = me[13];
     te[14] = me[14];
@@ -9148,8 +9429,8 @@ class Matrix4 {
    * @param {Matrix3} m - The 3x3 matrix.
    * @return {Matrix4} A reference to this matrix.
    */
-  setFromMatrix3(m) {
-    const me = m.elements;
+  setFromMatrix3(m2) {
+    const me = m2.elements;
     this.set(
       me[0],
       me[3],
@@ -9222,12 +9503,12 @@ class Matrix4 {
    * @param {Matrix4} m - The matrix.
    * @return {Matrix4} A reference to this matrix.
    */
-  extractRotation(m) {
+  extractRotation(m2) {
     const te = this.elements;
-    const me = m.elements;
-    const scaleX = 1 / _v1$5.setFromMatrixColumn(m, 0).length();
-    const scaleY = 1 / _v1$5.setFromMatrixColumn(m, 1).length();
-    const scaleZ = 1 / _v1$5.setFromMatrixColumn(m, 2).length();
+    const me = m2.elements;
+    const scaleX = 1 / _v1$5.setFromMatrixColumn(m2, 0).length();
+    const scaleY = 1 / _v1$5.setFromMatrixColumn(m2, 1).length();
+    const scaleZ = 1 / _v1$5.setFromMatrixColumn(m2, 2).length();
     te[0] = me[0] * scaleX;
     te[1] = me[1] * scaleX;
     te[2] = me[2] * scaleX;
@@ -9258,76 +9539,76 @@ class Matrix4 {
    */
   makeRotationFromEuler(euler) {
     const te = this.elements;
-    const x = euler.x, y = euler.y, z = euler.z;
-    const a = Math.cos(x), b = Math.sin(x);
-    const c = Math.cos(y), d = Math.sin(y);
-    const e = Math.cos(z), f = Math.sin(z);
+    const x2 = euler.x, y2 = euler.y, z2 = euler.z;
+    const a2 = Math.cos(x2), b = Math.sin(x2);
+    const c2 = Math.cos(y2), d2 = Math.sin(y2);
+    const e = Math.cos(z2), f2 = Math.sin(z2);
     if (euler.order === "XYZ") {
-      const ae = a * e, af = a * f, be = b * e, bf = b * f;
-      te[0] = c * e;
-      te[4] = -c * f;
-      te[8] = d;
-      te[1] = af + be * d;
-      te[5] = ae - bf * d;
-      te[9] = -b * c;
-      te[2] = bf - ae * d;
-      te[6] = be + af * d;
-      te[10] = a * c;
+      const ae = a2 * e, af = a2 * f2, be = b * e, bf = b * f2;
+      te[0] = c2 * e;
+      te[4] = -c2 * f2;
+      te[8] = d2;
+      te[1] = af + be * d2;
+      te[5] = ae - bf * d2;
+      te[9] = -b * c2;
+      te[2] = bf - ae * d2;
+      te[6] = be + af * d2;
+      te[10] = a2 * c2;
     } else if (euler.order === "YXZ") {
-      const ce = c * e, cf = c * f, de = d * e, df = d * f;
+      const ce = c2 * e, cf = c2 * f2, de = d2 * e, df = d2 * f2;
       te[0] = ce + df * b;
       te[4] = de * b - cf;
-      te[8] = a * d;
-      te[1] = a * f;
-      te[5] = a * e;
+      te[8] = a2 * d2;
+      te[1] = a2 * f2;
+      te[5] = a2 * e;
       te[9] = -b;
       te[2] = cf * b - de;
       te[6] = df + ce * b;
-      te[10] = a * c;
+      te[10] = a2 * c2;
     } else if (euler.order === "ZXY") {
-      const ce = c * e, cf = c * f, de = d * e, df = d * f;
+      const ce = c2 * e, cf = c2 * f2, de = d2 * e, df = d2 * f2;
       te[0] = ce - df * b;
-      te[4] = -a * f;
+      te[4] = -a2 * f2;
       te[8] = de + cf * b;
       te[1] = cf + de * b;
-      te[5] = a * e;
+      te[5] = a2 * e;
       te[9] = df - ce * b;
-      te[2] = -a * d;
+      te[2] = -a2 * d2;
       te[6] = b;
-      te[10] = a * c;
+      te[10] = a2 * c2;
     } else if (euler.order === "ZYX") {
-      const ae = a * e, af = a * f, be = b * e, bf = b * f;
-      te[0] = c * e;
-      te[4] = be * d - af;
-      te[8] = ae * d + bf;
-      te[1] = c * f;
-      te[5] = bf * d + ae;
-      te[9] = af * d - be;
-      te[2] = -d;
-      te[6] = b * c;
-      te[10] = a * c;
+      const ae = a2 * e, af = a2 * f2, be = b * e, bf = b * f2;
+      te[0] = c2 * e;
+      te[4] = be * d2 - af;
+      te[8] = ae * d2 + bf;
+      te[1] = c2 * f2;
+      te[5] = bf * d2 + ae;
+      te[9] = af * d2 - be;
+      te[2] = -d2;
+      te[6] = b * c2;
+      te[10] = a2 * c2;
     } else if (euler.order === "YZX") {
-      const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
-      te[0] = c * e;
-      te[4] = bd - ac * f;
-      te[8] = bc * f + ad;
-      te[1] = f;
-      te[5] = a * e;
+      const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
+      te[0] = c2 * e;
+      te[4] = bd - ac * f2;
+      te[8] = bc * f2 + ad;
+      te[1] = f2;
+      te[5] = a2 * e;
       te[9] = -b * e;
-      te[2] = -d * e;
-      te[6] = ad * f + bc;
-      te[10] = ac - bd * f;
+      te[2] = -d2 * e;
+      te[6] = ad * f2 + bc;
+      te[10] = ac - bd * f2;
     } else if (euler.order === "XZY") {
-      const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
-      te[0] = c * e;
-      te[4] = -f;
-      te[8] = d * e;
-      te[1] = ac * f + bd;
-      te[5] = a * e;
-      te[9] = ad * f - bc;
-      te[2] = bc * f - ad;
+      const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
+      te[0] = c2 * e;
+      te[4] = -f2;
+      te[8] = d2 * e;
+      te[1] = ac * f2 + bd;
+      te[5] = a2 * e;
+      te[9] = ad * f2 - bc;
+      te[2] = bc * f2 - ad;
       te[6] = b * e;
-      te[10] = bd * f + ac;
+      te[10] = bd * f2 + ac;
     }
     te[3] = 0;
     te[7] = 0;
@@ -9394,8 +9675,8 @@ class Matrix4 {
    * @param {Matrix4} m - The matrix to multiply with.
    * @return {Matrix4} A reference to this matrix.
    */
-  multiply(m) {
-    return this.multiplyMatrices(this, m);
+  multiply(m2) {
+    return this.multiplyMatrices(this, m2);
   }
   /**
    * Pre-multiplies this matrix by the given 4x4 matrix.
@@ -9403,8 +9684,8 @@ class Matrix4 {
    * @param {Matrix4} m - The matrix to multiply with.
    * @return {Matrix4} A reference to this matrix.
    */
-  premultiply(m) {
-    return this.multiplyMatrices(m, this);
+  premultiply(m2) {
+    return this.multiplyMatrices(m2, this);
   }
   /**
    * Multiples the given 4x4 matrices and stores the result
@@ -9414,8 +9695,8 @@ class Matrix4 {
    * @param {Matrix4} b - The second matrix.
    * @return {Matrix4} A reference to this matrix.
    */
-  multiplyMatrices(a, b) {
-    const ae = a.elements;
+  multiplyMatrices(a2, b) {
+    const ae = a2.elements;
     const be = b.elements;
     const te = this.elements;
     const a11 = ae[0], a12 = ae[4], a13 = ae[8], a14 = ae[12];
@@ -9522,16 +9803,16 @@ class Matrix4 {
    * @param {number} z - The z component of the vector.
    * @return {Matrix4} A reference to this matrix.
    */
-  setPosition(x, y, z) {
+  setPosition(x2, y2, z2) {
     const te = this.elements;
-    if (x.isVector3) {
-      te[12] = x.x;
-      te[13] = x.y;
-      te[14] = x.z;
+    if (x2.isVector3) {
+      te[12] = x2.x;
+      te[13] = x2.y;
+      te[14] = x2.z;
     } else {
-      te[12] = x;
-      te[13] = y;
-      te[14] = z;
+      te[12] = x2;
+      te[13] = y2;
+      te[14] = z2;
     }
     return this;
   }
@@ -9573,19 +9854,19 @@ class Matrix4 {
    */
   scale(v) {
     const te = this.elements;
-    const x = v.x, y = v.y, z = v.z;
-    te[0] *= x;
-    te[4] *= y;
-    te[8] *= z;
-    te[1] *= x;
-    te[5] *= y;
-    te[9] *= z;
-    te[2] *= x;
-    te[6] *= y;
-    te[10] *= z;
-    te[3] *= x;
-    te[7] *= y;
-    te[11] *= z;
+    const x2 = v.x, y2 = v.y, z2 = v.z;
+    te[0] *= x2;
+    te[4] *= y2;
+    te[8] *= z2;
+    te[1] *= x2;
+    te[5] *= y2;
+    te[9] *= z2;
+    te[2] *= x2;
+    te[6] *= y2;
+    te[10] *= z2;
+    te[3] *= x2;
+    te[7] *= y2;
+    te[11] *= z2;
     return this;
   }
   /**
@@ -9608,21 +9889,21 @@ class Matrix4 {
    * @param {number} z - The amount to translate in the z axis.
    * @return {Matrix4} A reference to this matrix.
    */
-  makeTranslation(x, y, z) {
-    if (x.isVector3) {
+  makeTranslation(x2, y2, z2) {
+    if (x2.isVector3) {
       this.set(
         1,
         0,
         0,
-        x.x,
+        x2.x,
         0,
         1,
         0,
-        x.y,
+        x2.y,
         0,
         0,
         1,
-        x.z,
+        x2.z,
         0,
         0,
         0,
@@ -9633,15 +9914,15 @@ class Matrix4 {
         1,
         0,
         0,
-        x,
+        x2,
         0,
         1,
         0,
-        y,
+        y2,
         0,
         0,
         1,
-        z,
+        z2,
         0,
         0,
         0,
@@ -9658,19 +9939,19 @@ class Matrix4 {
    * @return {Matrix4} A reference to this matrix.
    */
   makeRotationX(theta) {
-    const c = Math.cos(theta), s = Math.sin(theta);
+    const c2 = Math.cos(theta), s = Math.sin(theta);
     this.set(
       1,
       0,
       0,
       0,
       0,
-      c,
+      c2,
       -s,
       0,
       0,
       s,
-      c,
+      c2,
       0,
       0,
       0,
@@ -9687,9 +9968,9 @@ class Matrix4 {
    * @return {Matrix4} A reference to this matrix.
    */
   makeRotationY(theta) {
-    const c = Math.cos(theta), s = Math.sin(theta);
+    const c2 = Math.cos(theta), s = Math.sin(theta);
     this.set(
-      c,
+      c2,
       0,
       s,
       0,
@@ -9699,7 +9980,7 @@ class Matrix4 {
       0,
       -s,
       0,
-      c,
+      c2,
       0,
       0,
       0,
@@ -9716,14 +9997,14 @@ class Matrix4 {
    * @return {Matrix4} A reference to this matrix.
    */
   makeRotationZ(theta) {
-    const c = Math.cos(theta), s = Math.sin(theta);
+    const c2 = Math.cos(theta), s = Math.sin(theta);
     this.set(
-      c,
+      c2,
       -s,
       0,
       0,
       s,
-      c,
+      c2,
       0,
       0,
       0,
@@ -9749,23 +10030,23 @@ class Matrix4 {
    * @return {Matrix4} A reference to this matrix.
    */
   makeRotationAxis(axis, angle2) {
-    const c = Math.cos(angle2);
+    const c2 = Math.cos(angle2);
     const s = Math.sin(angle2);
-    const t = 1 - c;
-    const x = axis.x, y = axis.y, z = axis.z;
-    const tx = t * x, ty = t * y;
+    const t = 1 - c2;
+    const x2 = axis.x, y2 = axis.y, z2 = axis.z;
+    const tx = t * x2, ty = t * y2;
     this.set(
-      tx * x + c,
-      tx * y - s * z,
-      tx * z + s * y,
+      tx * x2 + c2,
+      tx * y2 - s * z2,
+      tx * z2 + s * y2,
       0,
-      tx * y + s * z,
-      ty * y + c,
-      ty * z - s * x,
+      tx * y2 + s * z2,
+      ty * y2 + c2,
+      ty * z2 - s * x2,
       0,
-      tx * z - s * y,
-      ty * z + s * x,
-      t * z * z + c,
+      tx * z2 - s * y2,
+      ty * z2 + s * x2,
+      t * z2 * z2 + c2,
       0,
       0,
       0,
@@ -9782,19 +10063,19 @@ class Matrix4 {
    * @param {number} z - The amount to scale in the Z axis.
    * @return {Matrix4} A reference to this matrix.
    */
-  makeScale(x, y, z) {
+  makeScale(x2, y2, z2) {
     this.set(
-      x,
+      x2,
       0,
       0,
       0,
       0,
-      y,
+      y2,
       0,
       0,
       0,
       0,
-      z,
+      z2,
       0,
       0,
       0,
@@ -9846,11 +10127,11 @@ class Matrix4 {
    */
   compose(position, quaternion, scale2) {
     const te = this.elements;
-    const x = quaternion._x, y = quaternion._y, z = quaternion._z, w = quaternion._w;
-    const x2 = x + x, y2 = y + y, z2 = z + z;
-    const xx = x * x2, xy = x * y2, xz = x * z2;
-    const yy = y * y2, yz = y * z2, zz = z * z2;
-    const wx = w * x2, wy = w * y2, wz = w * z2;
+    const x2 = quaternion._x, y2 = quaternion._y, z2 = quaternion._z, w2 = quaternion._w;
+    const x22 = x2 + x2, y22 = y2 + y2, z22 = z2 + z2;
+    const xx = x2 * x22, xy = x2 * y22, xz = x2 * z22;
+    const yy = y2 * y22, yz = y2 * z22, zz = z2 * z22;
+    const wx = w2 * x22, wy = w2 * y22, wz = w2 * z22;
     const sx = scale2.x, sy = scale2.y, sz = scale2.z;
     te[0] = (1 - (yy + zz)) * sx;
     te[1] = (xy + wz) * sx;
@@ -9928,37 +10209,37 @@ class Matrix4 {
   	 */
   makePerspective(left, right, top, bottom, near, far, coordinateSystem = WebGLCoordinateSystem, reversedDepth = false) {
     const te = this.elements;
-    const x = 2 * near / (right - left);
-    const y = 2 * near / (top - bottom);
-    const a = (right + left) / (right - left);
+    const x2 = 2 * near / (right - left);
+    const y2 = 2 * near / (top - bottom);
+    const a2 = (right + left) / (right - left);
     const b = (top + bottom) / (top - bottom);
-    let c, d;
+    let c2, d2;
     if (reversedDepth) {
-      c = near / (far - near);
-      d = far * near / (far - near);
+      c2 = near / (far - near);
+      d2 = far * near / (far - near);
     } else {
       if (coordinateSystem === WebGLCoordinateSystem) {
-        c = -(far + near) / (far - near);
-        d = -2 * far * near / (far - near);
+        c2 = -(far + near) / (far - near);
+        d2 = -2 * far * near / (far - near);
       } else if (coordinateSystem === WebGPUCoordinateSystem) {
-        c = -far / (far - near);
-        d = -far * near / (far - near);
+        c2 = -far / (far - near);
+        d2 = -far * near / (far - near);
       } else {
         throw new Error("THREE.Matrix4.makePerspective(): Invalid coordinate system: " + coordinateSystem);
       }
     }
-    te[0] = x;
+    te[0] = x2;
     te[4] = 0;
-    te[8] = a;
+    te[8] = a2;
     te[12] = 0;
     te[1] = 0;
-    te[5] = y;
+    te[5] = y2;
     te[9] = b;
     te[13] = 0;
     te[2] = 0;
     te[6] = 0;
-    te[10] = c;
-    te[14] = d;
+    te[10] = c2;
+    te[14] = d2;
     te[3] = 0;
     te[7] = 0;
     te[11] = -1;
@@ -9981,37 +10262,37 @@ class Matrix4 {
   	 */
   makeOrthographic(left, right, top, bottom, near, far, coordinateSystem = WebGLCoordinateSystem, reversedDepth = false) {
     const te = this.elements;
-    const x = 2 / (right - left);
-    const y = 2 / (top - bottom);
-    const a = -(right + left) / (right - left);
+    const x2 = 2 / (right - left);
+    const y2 = 2 / (top - bottom);
+    const a2 = -(right + left) / (right - left);
     const b = -(top + bottom) / (top - bottom);
-    let c, d;
+    let c2, d2;
     if (reversedDepth) {
-      c = 1 / (far - near);
-      d = far / (far - near);
+      c2 = 1 / (far - near);
+      d2 = far / (far - near);
     } else {
       if (coordinateSystem === WebGLCoordinateSystem) {
-        c = -2 / (far - near);
-        d = -(far + near) / (far - near);
+        c2 = -2 / (far - near);
+        d2 = -(far + near) / (far - near);
       } else if (coordinateSystem === WebGPUCoordinateSystem) {
-        c = -1 / (far - near);
-        d = -near / (far - near);
+        c2 = -1 / (far - near);
+        d2 = -near / (far - near);
       } else {
         throw new Error("THREE.Matrix4.makeOrthographic(): Invalid coordinate system: " + coordinateSystem);
       }
     }
-    te[0] = x;
+    te[0] = x2;
     te[4] = 0;
     te[8] = 0;
-    te[12] = a;
+    te[12] = a2;
     te[1] = 0;
-    te[5] = y;
+    te[5] = y2;
     te[9] = 0;
     te[13] = b;
     te[2] = 0;
     te[6] = 0;
-    te[10] = c;
-    te[14] = d;
+    te[10] = c2;
+    te[14] = d2;
     te[3] = 0;
     te[7] = 0;
     te[11] = 0;
@@ -10024,9 +10305,9 @@ class Matrix4 {
    * @param {Matrix4} matrix - The matrix to test for equality.
    * @return {boolean} Whether this matrix is equal with the given one.
    */
-  equals(matrix) {
+  equals(matrix2) {
     const te = this.elements;
-    const me = matrix.elements;
+    const me = matrix2.elements;
     for (let i = 0; i < 16; i++) {
       if (te[i] !== me[i]) return false;
     }
@@ -10093,11 +10374,11 @@ if (typeof window !== "undefined") {
     window.__THREE__ = REVISION;
   }
 }
-function cross$6(a, b) {
+function cross$6(a2, b) {
   return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0]
+    a2[1] * b[2] - a2[2] * b[1],
+    a2[2] * b[0] - a2[0] * b[2],
+    a2[0] * b[1] - a2[1] * b[0]
   ];
 }
 function normalize$1(value2, label) {
@@ -10110,8 +10391,8 @@ function connectorTransform(frame) {
   const zAxis = normalize$1(frame.zAxis, "Connector Z");
   const yAxis = normalize$1(cross$6(zAxis, xInput), "Connector Y");
   const xAxis = normalize$1(cross$6(yAxis, zAxis), "Connector X");
-  const [x, y, z] = frame.origin;
-  if (![x, y, z].every(Number.isFinite)) {
+  const [x2, y2, z2] = frame.origin;
+  if (![x2, y2, z2].every(Number.isFinite)) {
     throw new Error("Connector origin must be finite.");
   }
   return [
@@ -10127,9 +10408,9 @@ function connectorTransform(frame) {
     zAxis[1],
     zAxis[2],
     0,
-    x,
-    y,
-    z,
+    x2,
+    y2,
+    z2,
     1
   ];
 }
@@ -10137,10 +10418,10 @@ function connectorMatrix(frame) {
   return new Matrix4().fromArray(connectorTransform(frame));
 }
 const METRES_TO_MM = 1e3;
-const cross$5 = (a, b) => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0]
+const cross$5 = (a2, b) => [
+  a2[1] * b[2] - a2[2] * b[1],
+  a2[2] * b[0] - a2[0] * b[2],
+  a2[0] * b[1] - a2[1] * b[0]
 ];
 const dofAxis = (name) => name.endsWith("_x") ? "x" : name.endsWith("_y") ? "y" : "z";
 function connectorPlacement(frame) {
@@ -10151,8 +10432,8 @@ function connectorPlacement(frame) {
   ];
   const zAxis = [...frame.primary_axis_xyz];
   const xAxis = [...frame.secondary_axis_xyz];
-  const matrix = connectorMatrix({ origin, zAxis, xAxis, yAxis: cross$5(zAxis, xAxis) });
-  const rotation = new Quaternion().setFromRotationMatrix(matrix);
+  const matrix2 = connectorMatrix({ origin, zAxis, xAxis, yAxis: cross$5(zAxis, xAxis) });
+  const rotation = new Quaternion().setFromRotationMatrix(matrix2);
   return {
     placement_mm: origin,
     rotation: [rotation.x, rotation.y, rotation.z, rotation.w]
@@ -10227,9 +10508,9 @@ function assemblyJobFor(projection) {
       }
       return { instance: endpoint.instance_id, ...connectorPlacement(frame) };
     };
-    const a = end(mate.endpoint_a);
+    const a2 = end(mate.endpoint_a);
     const b = end(mate.endpoint_b);
-    if (!a || !b) {
+    if (!a2 || !b) {
       if (!placed.has(mate.endpoint_a.instance_id) || !placed.has(mate.endpoint_b.instance_id))
         note(mate.id, mate.name, "it mates an instance that is not in the assembly");
       return [];
@@ -10240,7 +10521,7 @@ function assemblyJobFor(projection) {
       axis: dofAxis(dof.name),
       value: dof.kind === "rotation" ? dof.value_rad * 180 / Math.PI : dof.value_m * METRES_TO_MM
     }));
-    return [{ id: mate.id, kind: mate.type_id, a, b, ...dofs.length ? { parameters: { dofs } } : {} }];
+    return [{ id: mate.id, kind: mate.type_id, a: a2, b, ...dofs.length ? { parameters: { dofs } } : {} }];
   });
   const dofOwner = /* @__PURE__ */ new Map();
   for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind });
@@ -10257,7 +10538,7 @@ function assemblyJobFor(projection) {
       note(relation.id, relation.kind, `relation kind '${relation.kind}' is not solved`);
       return [];
     }
-    const unit2 = (k) => k === "rotation" ? 180 / Math.PI : METRES_TO_MM;
+    const unit2 = (k2) => k2 === "rotation" ? 180 / Math.PI : METRES_TO_MM;
     const ratio = relation.ratio * unit2(driven.kind) / unit2(driver.kind);
     const offset2 = driven.kind === "rotation" ? (relation.offset_rad ?? 0) * 180 / Math.PI : (relation.offset_m ?? 0) * METRES_TO_MM;
     return [{ id: relation.id, kind, driver: { joint: driver.joint, dof: driver.dof }, driven: { joint: driven.joint, dof: driven.dof }, ratio, offset: offset2, reversed: relation.reversed }];
@@ -10267,6 +10548,1534 @@ function assemblyJobFor(projection) {
     untranslated,
     complete: untranslated.length === 0
   };
+}
+const vector = (value2, name) => {
+  if (!Array.isArray(value2) || value2.length !== 3 || value2.some((v) => typeof v !== "number" || !Number.isFinite(v) || Math.abs(v) > 1e6)) throw Error(`${name} must have three finite components within 1000000.`);
+  return [...value2];
+};
+function agentSketchPlacement(args) {
+  const offset2 = args.offset_mm ?? 0;
+  if (typeof offset2 !== "number" || !Number.isFinite(offset2) || Math.abs(offset2) > 1e6) throw Error("offset_mm must be finite and within 1000000.");
+  if (args.flip !== void 0 && args.flip !== "x" && args.flip !== "y") throw Error("flip must be x or y.");
+  const flip = args.flip;
+  if (args.frame === void 0) {
+    if (!["XY", "XZ", "YZ"].includes(String(args.plane))) throw Error("Choose XY, XZ or YZ, or provide an explicit frame.");
+    return { plane: args.plane, offsetMillimeters: offset2, ...flip ? { flip } : {} };
+  }
+  if (args.plane !== void 0) throw Error("Choose plane or frame, not both.");
+  const frame = args.frame;
+  if (!frame || typeof frame !== "object" || Array.isArray(frame) || Object.keys(frame).some((k2) => !["origin_mm", "x_direction", "y_direction"].includes(k2))) throw Error("frame requires origin_mm, x_direction and y_direction.");
+  const f2 = frame, origin = vector(f2.origin_mm, "origin_mm"), x2 = vector(f2.x_direction, "x_direction"), y2 = vector(f2.y_direction, "y_direction");
+  if (Math.abs(Math.hypot(...x2) - 1) > 1e-8 || Math.abs(Math.hypot(...y2) - 1) > 1e-8 || Math.abs(x2.reduce((sum, v, i) => sum + v * y2[i], 0)) > 1e-8) throw Error("Frame axes must be perpendicular unit vectors.");
+  const normal = [x2[1] * y2[2] - x2[2] * y2[1], x2[2] * y2[0] - x2[0] * y2[2], x2[0] * y2[1] - x2[1] * y2[0]];
+  const placed = origin.map((v, i) => v + offset2 * normal[i]);
+  if (placed.some((v) => Math.abs(v) > 1e6)) throw Error("Offset frame origin exceeds 1000000 mm.");
+  return { plane: "XY", offsetMillimeters: offset2, frame: { originMillimeters: placed, xDirection: x2, normal }, ...flip ? { flip } : {} };
+}
+function polygonArea(points) {
+  let sum = 0;
+  for (let i = 0; i < points.length; i += 1) {
+    const [x1, y1] = points[i];
+    const [x2, y2] = points[(i + 1) % points.length];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return sum / 2;
+}
+class f {
+  constructor(t, e) {
+    this.next = null, this.key = t, this.data = e, this.left = null, this.right = null;
+  }
+}
+function d(n, t) {
+  return n > t ? 1 : n < t ? -1 : 0;
+}
+function u(n, t, e) {
+  const r = new f(null, null);
+  let l = r, i = r;
+  for (; ; ) {
+    const o = e(n, t.key);
+    if (o < 0) {
+      if (t.left === null) break;
+      if (e(n, t.left.key) < 0) {
+        const s = t.left;
+        if (t.left = s.right, s.right = t, t = s, t.left === null) break;
+      }
+      i.left = t, i = t, t = t.left;
+    } else if (o > 0) {
+      if (t.right === null) break;
+      if (e(n, t.right.key) > 0) {
+        const s = t.right;
+        if (t.right = s.left, s.left = t, t = s, t.right === null) break;
+      }
+      l.right = t, l = t, t = t.right;
+    } else break;
+  }
+  return l.right = t.left, i.left = t.right, t.left = r.right, t.right = r.left, t;
+}
+function c(n, t, e, r) {
+  const l = new f(n, t);
+  if (e === null)
+    return l.left = l.right = null, l;
+  e = u(n, e, r);
+  const i = r(n, e.key);
+  return i < 0 ? (l.left = e.left, l.right = e, e.left = null) : i >= 0 && (l.right = e.right, l.left = e, e.right = null), l;
+}
+function m(n, t, e) {
+  let r = null, l = null;
+  if (t) {
+    t = u(n, t, e);
+    const i = e(t.key, n);
+    i === 0 ? (r = t.left, l = t.right) : i < 0 ? (l = t.right, t.right = null, r = t) : (r = t.left, t.left = null, l = t);
+  }
+  return { left: r, right: l };
+}
+function w(n, t, e) {
+  return t === null ? n : (n === null || (t = u(n.key, t, e), t.left = n), t);
+}
+function _(n, t, e, r, l) {
+  if (n) {
+    r(`${t}${e ? "└── " : "├── "}${l(n)}
+`);
+    const i = t + (e ? "    " : "│   ");
+    n.left && _(n.left, i, false, r, l), n.right && _(n.right, i, true, r, l);
+  }
+}
+class z {
+  constructor(t = d) {
+    this._root = null, this._size = 0, this._comparator = t;
+  }
+  /**
+   * Inserts a key, allows duplicates
+   */
+  insert(t, e) {
+    return this._size++, this._root = c(t, e, this._root, this._comparator);
+  }
+  /**
+   * Adds a key, if it is not present in the tree
+   */
+  add(t, e) {
+    const r = new f(t, e);
+    this._root === null && (r.left = r.right = null, this._size++, this._root = r);
+    const l = this._comparator, i = u(t, this._root, l), o = l(t, i.key);
+    return o === 0 ? this._root = i : (o < 0 ? (r.left = i.left, r.right = i, i.left = null) : o > 0 && (r.right = i.right, r.left = i, i.right = null), this._size++, this._root = r), this._root;
+  }
+  /**
+   * @param  {Key} key
+   * @return {Node|null}
+   */
+  remove(t) {
+    this._root = this._remove(t, this._root, this._comparator);
+  }
+  /**
+   * Deletes i from the tree if it's there
+   */
+  _remove(t, e, r) {
+    let l;
+    return e === null ? null : (e = u(t, e, r), r(t, e.key) === 0 ? (e.left === null ? l = e.right : (l = u(t, e.left, r), l.right = e.right), this._size--, l) : e);
+  }
+  /**
+   * Removes and returns the node with smallest key
+   */
+  pop() {
+    let t = this._root;
+    if (t) {
+      for (; t.left; ) t = t.left;
+      return this._root = u(t.key, this._root, this._comparator), this._root = this._remove(t.key, this._root, this._comparator), { key: t.key, data: t.data };
+    }
+    return null;
+  }
+  /**
+   * Find without splaying
+   */
+  findStatic(t) {
+    let e = this._root;
+    const r = this._comparator;
+    for (; e; ) {
+      const l = r(t, e.key);
+      if (l === 0) return e;
+      l < 0 ? e = e.left : e = e.right;
+    }
+    return null;
+  }
+  find(t) {
+    return this._root && (this._root = u(t, this._root, this._comparator), this._comparator(t, this._root.key) !== 0) ? null : this._root;
+  }
+  contains(t) {
+    let e = this._root;
+    const r = this._comparator;
+    for (; e; ) {
+      const l = r(t, e.key);
+      if (l === 0) return true;
+      l < 0 ? e = e.left : e = e.right;
+    }
+    return false;
+  }
+  forEach(t, e) {
+    let r = this._root;
+    const l = [];
+    let i = false;
+    for (; !i; )
+      r !== null ? (l.push(r), r = r.left) : l.length !== 0 ? (r = l.pop(), t.call(e, r), r = r.right) : i = true;
+    return this;
+  }
+  /**
+   * Walk key range from `low` to `high`. Stops if `fn` returns a value.
+   */
+  range(t, e, r, l) {
+    const i = [], o = this._comparator;
+    let s = this._root, h;
+    for (; i.length !== 0 || s; )
+      if (s)
+        i.push(s), s = s.left;
+      else {
+        if (s = i.pop(), h = o(s.key, e), h > 0)
+          break;
+        if (o(s.key, t) >= 0 && r.call(l, s))
+          return this;
+        s = s.right;
+      }
+    return this;
+  }
+  /**
+   * Returns array of keys
+   */
+  keys() {
+    const t = [];
+    return this.forEach(({ key: e }) => {
+      t.push(e);
+    }), t;
+  }
+  /**
+   * Returns array of all the data in the nodes
+   */
+  values() {
+    const t = [];
+    return this.forEach(({ data: e }) => {
+      t.push(e);
+    }), t;
+  }
+  min() {
+    return this._root ? this.minNode(this._root).key : null;
+  }
+  max() {
+    return this._root ? this.maxNode(this._root).key : null;
+  }
+  minNode(t = this._root) {
+    if (t) for (; t.left; ) t = t.left;
+    return t;
+  }
+  maxNode(t = this._root) {
+    if (t) for (; t.right; ) t = t.right;
+    return t;
+  }
+  /**
+   * Returns node at given index
+   */
+  at(t) {
+    let e = this._root, r = false, l = 0;
+    const i = [];
+    for (; !r; )
+      if (e)
+        i.push(e), e = e.left;
+      else if (i.length > 0) {
+        if (e = i.pop(), l === t) return e;
+        l++, e = e.right;
+      } else r = true;
+    return null;
+  }
+  next(t) {
+    let e = this._root, r = null;
+    if (t.right) {
+      for (r = t.right; r.left; ) r = r.left;
+      return r;
+    }
+    const l = this._comparator;
+    for (; e; ) {
+      const i = l(t.key, e.key);
+      if (i === 0) break;
+      i < 0 ? (r = e, e = e.left) : e = e.right;
+    }
+    return r;
+  }
+  prev(t) {
+    let e = this._root, r = null;
+    if (t.left !== null) {
+      for (r = t.left; r.right; ) r = r.right;
+      return r;
+    }
+    const l = this._comparator;
+    for (; e; ) {
+      const i = l(t.key, e.key);
+      if (i === 0) break;
+      i < 0 ? e = e.left : (r = e, e = e.right);
+    }
+    return r;
+  }
+  clear() {
+    return this._root = null, this._size = 0, this;
+  }
+  toList() {
+    return k(this._root);
+  }
+  /**
+   * Bulk-load items. Both array have to be same size
+   */
+  load(t, e = [], r = false) {
+    let l = t.length;
+    const i = this._comparator;
+    if (r && g(t, e, 0, l - 1, i), this._root === null)
+      this._root = a(t, e, 0, l), this._size = l;
+    else {
+      const o = y(
+        this.toList(),
+        x(t, e),
+        i
+      );
+      l = this._size + l, this._root = p({ head: o }, 0, l);
+    }
+    return this;
+  }
+  isEmpty() {
+    return this._root === null;
+  }
+  get size() {
+    return this._size;
+  }
+  get root() {
+    return this._root;
+  }
+  toString(t = (e) => String(e.key)) {
+    const e = [];
+    return _(this._root, "", true, (r) => e.push(r), t), e.join("");
+  }
+  update(t, e, r) {
+    const l = this._comparator;
+    let { left: i, right: o } = m(t, this._root, l);
+    l(t, e) < 0 ? o = c(e, r, o, l) : i = c(e, r, i, l), this._root = w(i, o, l);
+  }
+  split(t) {
+    return m(t, this._root, this._comparator);
+  }
+  *[Symbol.iterator]() {
+    let t = this._root;
+    const e = [];
+    let r = false;
+    for (; !r; )
+      t !== null ? (e.push(t), t = t.left) : e.length !== 0 ? (t = e.pop(), yield t, t = t.right) : r = true;
+  }
+}
+function a(n, t, e, r) {
+  const l = r - e;
+  if (l > 0) {
+    const i = e + Math.floor(l / 2), o = n[i], s = t[i], h = new f(o, s);
+    return h.left = a(n, t, e, i), h.right = a(n, t, i + 1, r), h;
+  }
+  return null;
+}
+function x(n, t) {
+  const e = new f(null, null);
+  let r = e;
+  for (let l = 0; l < n.length; l++)
+    r = r.next = new f(n[l], t[l]);
+  return r.next = null, e.next;
+}
+function k(n) {
+  let t = n;
+  const e = [];
+  let r = false;
+  const l = new f(null, null);
+  let i = l;
+  for (; !r; )
+    t ? (e.push(t), t = t.left) : e.length > 0 ? (t = i = i.next = e.pop(), t = t.right) : r = true;
+  return i.next = null, l.next;
+}
+function p(n, t, e) {
+  const r = e - t;
+  if (r > 0) {
+    const l = t + Math.floor(r / 2), i = p(n, t, l), o = n.head;
+    return o.left = i, n.head = n.head.next, o.right = p(n, l + 1, e), o;
+  }
+  return null;
+}
+function y(n, t, e) {
+  const r = new f(null, null);
+  let l = r, i = n, o = t;
+  for (; i !== null && o !== null; )
+    e(i.key, o.key) < 0 ? (l.next = i, i = i.next) : (l.next = o, o = o.next), l = l.next;
+  return i !== null ? l.next = i : o !== null && (l.next = o), r.next;
+}
+function g(n, t, e, r, l) {
+  if (e >= r) return;
+  const i = n[e + r >> 1];
+  let o = e - 1, s = r + 1;
+  for (; ; ) {
+    do
+      o++;
+    while (l(n[o], i) < 0);
+    do
+      s--;
+    while (l(n[s], i) > 0);
+    if (o >= s) break;
+    let h = n[o];
+    n[o] = n[s], n[s] = h, h = t[o], t[o] = t[s], t[s] = h;
+  }
+  g(n, t, e, s, l), g(n, t, s + 1, r, l);
+}
+let epsilon = Number.EPSILON;
+if (epsilon === void 0) epsilon = Math.pow(2, -52);
+const EPSILON_SQ = epsilon * epsilon;
+const cmp = (a2, b) => {
+  if (-epsilon < a2 && a2 < epsilon) {
+    if (-epsilon < b && b < epsilon) {
+      return 0;
+    }
+  }
+  const ab = a2 - b;
+  if (ab * ab < EPSILON_SQ * a2 * b) {
+    return 0;
+  }
+  return a2 < b ? -1 : 1;
+};
+class PtRounder {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.xRounder = new CoordRounder();
+    this.yRounder = new CoordRounder();
+  }
+  round(x2, y2) {
+    return {
+      x: this.xRounder.round(x2),
+      y: this.yRounder.round(y2)
+    };
+  }
+}
+class CoordRounder {
+  constructor() {
+    this.tree = new z();
+    this.round(0);
+  }
+  // Note: this can rounds input values backwards or forwards.
+  //       You might ask, why not restrict this to just rounding
+  //       forwards? Wouldn't that allow left endpoints to always
+  //       remain left endpoints during splitting (never change to
+  //       right). No - it wouldn't, because we snap intersections
+  //       to endpoints (to establish independence from the segment
+  //       angle for t-intersections).
+  round(coord) {
+    const node2 = this.tree.add(coord);
+    const prevNode = this.tree.prev(node2);
+    if (prevNode !== null && cmp(node2.key, prevNode.key) === 0) {
+      this.tree.remove(coord);
+      return prevNode.key;
+    }
+    const nextNode = this.tree.next(node2);
+    if (nextNode !== null && cmp(node2.key, nextNode.key) === 0) {
+      this.tree.remove(coord);
+      return nextNode.key;
+    }
+    return coord;
+  }
+}
+new PtRounder();
+typeof process !== "undefined" && process.env.POLYGON_CLIPPING_MAX_QUEUE_SIZE || 1e6;
+typeof process !== "undefined" && process.env.POLYGON_CLIPPING_MAX_SWEEPLINE_SEGMENTS || 1e6;
+var path_parse;
+var hasRequiredPath_parse;
+function requirePath_parse() {
+  if (hasRequiredPath_parse) return path_parse;
+  hasRequiredPath_parse = 1;
+  var paramCounts = { a: 7, c: 6, h: 1, l: 2, m: 2, r: 4, q: 4, s: 4, t: 2, v: 1, z: 0 };
+  var SPECIAL_SPACES = [
+    5760,
+    6158,
+    8192,
+    8193,
+    8194,
+    8195,
+    8196,
+    8197,
+    8198,
+    8199,
+    8200,
+    8201,
+    8202,
+    8239,
+    8287,
+    12288,
+    65279
+  ];
+  function isSpace(ch) {
+    return ch === 10 || ch === 13 || ch === 8232 || ch === 8233 || // Line terminators
+    // White spaces
+    ch === 32 || ch === 9 || ch === 11 || ch === 12 || ch === 160 || ch >= 5760 && SPECIAL_SPACES.indexOf(ch) >= 0;
+  }
+  function isCommand(code) {
+    switch (code | 32) {
+      case 109:
+      case 122:
+      case 108:
+      case 104:
+      case 118:
+      case 99:
+      case 115:
+      case 113:
+      case 116:
+      case 97:
+      case 114:
+        return true;
+    }
+    return false;
+  }
+  function isArc(code) {
+    return (code | 32) === 97;
+  }
+  function isDigit(code) {
+    return code >= 48 && code <= 57;
+  }
+  function isDigitStart(code) {
+    return code >= 48 && code <= 57 || /* 0..9 */
+    code === 43 || /* + */
+    code === 45 || /* - */
+    code === 46;
+  }
+  function State2(path) {
+    this.index = 0;
+    this.path = path;
+    this.max = path.length;
+    this.result = [];
+    this.param = 0;
+    this.err = "";
+    this.segmentStart = 0;
+    this.data = [];
+  }
+  function skipSpaces(state) {
+    while (state.index < state.max && isSpace(state.path.charCodeAt(state.index))) {
+      state.index++;
+    }
+  }
+  function scanFlag(state) {
+    var ch = state.path.charCodeAt(state.index);
+    if (ch === 48) {
+      state.param = 0;
+      state.index++;
+      return;
+    }
+    if (ch === 49) {
+      state.param = 1;
+      state.index++;
+      return;
+    }
+    state.err = "SvgPath: arc flag can be 0 or 1 only (at pos " + state.index + ")";
+  }
+  function scanParam(state) {
+    var start = state.index, index = start, max = state.max, zeroFirst = false, hasCeiling = false, hasDecimal = false, hasDot = false, ch;
+    if (index >= max) {
+      state.err = "SvgPath: missed param (at pos " + index + ")";
+      return;
+    }
+    ch = state.path.charCodeAt(index);
+    if (ch === 43 || ch === 45) {
+      index++;
+      ch = index < max ? state.path.charCodeAt(index) : 0;
+    }
+    if (!isDigit(ch) && ch !== 46) {
+      state.err = "SvgPath: param should start with 0..9 or `.` (at pos " + index + ")";
+      return;
+    }
+    if (ch !== 46) {
+      zeroFirst = ch === 48;
+      index++;
+      ch = index < max ? state.path.charCodeAt(index) : 0;
+      if (zeroFirst && index < max) {
+        if (ch && isDigit(ch)) {
+          state.err = "SvgPath: numbers started with `0` such as `09` are illegal (at pos " + start + ")";
+          return;
+        }
+      }
+      while (index < max && isDigit(state.path.charCodeAt(index))) {
+        index++;
+        hasCeiling = true;
+      }
+      ch = index < max ? state.path.charCodeAt(index) : 0;
+    }
+    if (ch === 46) {
+      hasDot = true;
+      index++;
+      while (isDigit(state.path.charCodeAt(index))) {
+        index++;
+        hasDecimal = true;
+      }
+      ch = index < max ? state.path.charCodeAt(index) : 0;
+    }
+    if (ch === 101 || ch === 69) {
+      if (hasDot && !hasCeiling && !hasDecimal) {
+        state.err = "SvgPath: invalid float exponent (at pos " + index + ")";
+        return;
+      }
+      index++;
+      ch = index < max ? state.path.charCodeAt(index) : 0;
+      if (ch === 43 || ch === 45) {
+        index++;
+      }
+      if (index < max && isDigit(state.path.charCodeAt(index))) {
+        while (index < max && isDigit(state.path.charCodeAt(index))) {
+          index++;
+        }
+      } else {
+        state.err = "SvgPath: invalid float exponent (at pos " + index + ")";
+        return;
+      }
+    }
+    state.index = index;
+    state.param = parseFloat(state.path.slice(start, index)) + 0;
+  }
+  function finalizeSegment(state) {
+    var cmd, cmdLC;
+    cmd = state.path[state.segmentStart];
+    cmdLC = cmd.toLowerCase();
+    var params = state.data;
+    if (cmdLC === "m" && params.length > 2) {
+      state.result.push([cmd, params[0], params[1]]);
+      params = params.slice(2);
+      cmdLC = "l";
+      cmd = cmd === "m" ? "l" : "L";
+    }
+    if (cmdLC === "r") {
+      state.result.push([cmd].concat(params));
+    } else {
+      while (params.length >= paramCounts[cmdLC]) {
+        state.result.push([cmd].concat(params.splice(0, paramCounts[cmdLC])));
+        if (!paramCounts[cmdLC]) {
+          break;
+        }
+      }
+    }
+  }
+  function scanSegment(state) {
+    var max = state.max, cmdCode, is_arc, comma_found, need_params, i;
+    state.segmentStart = state.index;
+    cmdCode = state.path.charCodeAt(state.index);
+    is_arc = isArc(cmdCode);
+    if (!isCommand(cmdCode)) {
+      state.err = "SvgPath: bad command " + state.path[state.index] + " (at pos " + state.index + ")";
+      return;
+    }
+    need_params = paramCounts[state.path[state.index].toLowerCase()];
+    state.index++;
+    skipSpaces(state);
+    state.data = [];
+    if (!need_params) {
+      finalizeSegment(state);
+      return;
+    }
+    comma_found = false;
+    for (; ; ) {
+      for (i = need_params; i > 0; i--) {
+        if (is_arc && (i === 3 || i === 4)) scanFlag(state);
+        else scanParam(state);
+        if (state.err.length) {
+          finalizeSegment(state);
+          return;
+        }
+        state.data.push(state.param);
+        skipSpaces(state);
+        comma_found = false;
+        if (state.index < max && state.path.charCodeAt(state.index) === 44) {
+          state.index++;
+          skipSpaces(state);
+          comma_found = true;
+        }
+      }
+      if (comma_found) {
+        continue;
+      }
+      if (state.index >= state.max) {
+        break;
+      }
+      if (!isDigitStart(state.path.charCodeAt(state.index))) {
+        break;
+      }
+    }
+    finalizeSegment(state);
+  }
+  path_parse = function pathParse(svgPath) {
+    var state = new State2(svgPath);
+    var max = state.max;
+    skipSpaces(state);
+    while (state.index < max && !state.err.length) {
+      scanSegment(state);
+    }
+    if (state.result.length) {
+      if ("mM".indexOf(state.result[0][0]) < 0) {
+        state.err = "SvgPath: string should start with `M` or `m`";
+        state.result = [];
+      } else {
+        state.result[0][0] = "M";
+      }
+    }
+    return {
+      err: state.err,
+      segments: state.result
+    };
+  };
+  return path_parse;
+}
+var matrix;
+var hasRequiredMatrix;
+function requireMatrix() {
+  if (hasRequiredMatrix) return matrix;
+  hasRequiredMatrix = 1;
+  function combine(m1, m2) {
+    return [
+      m1[0] * m2[0] + m1[2] * m2[1],
+      m1[1] * m2[0] + m1[3] * m2[1],
+      m1[0] * m2[2] + m1[2] * m2[3],
+      m1[1] * m2[2] + m1[3] * m2[3],
+      m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+      m1[1] * m2[4] + m1[3] * m2[5] + m1[5]
+    ];
+  }
+  function Matrix() {
+    if (!(this instanceof Matrix)) {
+      return new Matrix();
+    }
+    this.queue = [];
+    this.cache = null;
+  }
+  Matrix.prototype.matrix = function(m2) {
+    if (m2[0] === 1 && m2[1] === 0 && m2[2] === 0 && m2[3] === 1 && m2[4] === 0 && m2[5] === 0) {
+      return this;
+    }
+    this.cache = null;
+    this.queue.push(m2);
+    return this;
+  };
+  Matrix.prototype.translate = function(tx, ty) {
+    if (tx !== 0 || ty !== 0) {
+      this.cache = null;
+      this.queue.push([1, 0, 0, 1, tx, ty]);
+    }
+    return this;
+  };
+  Matrix.prototype.scale = function(sx, sy) {
+    if (sx !== 1 || sy !== 1) {
+      this.cache = null;
+      this.queue.push([sx, 0, 0, sy, 0, 0]);
+    }
+    return this;
+  };
+  Matrix.prototype.rotate = function(angle2, rx, ry) {
+    var rad, cos, sin;
+    if (angle2 !== 0) {
+      this.translate(rx, ry);
+      rad = angle2 * Math.PI / 180;
+      cos = Math.cos(rad);
+      sin = Math.sin(rad);
+      this.queue.push([cos, sin, -sin, cos, 0, 0]);
+      this.cache = null;
+      this.translate(-rx, -ry);
+    }
+    return this;
+  };
+  Matrix.prototype.skewX = function(angle2) {
+    if (angle2 !== 0) {
+      this.cache = null;
+      this.queue.push([1, 0, Math.tan(angle2 * Math.PI / 180), 1, 0, 0]);
+    }
+    return this;
+  };
+  Matrix.prototype.skewY = function(angle2) {
+    if (angle2 !== 0) {
+      this.cache = null;
+      this.queue.push([1, Math.tan(angle2 * Math.PI / 180), 0, 1, 0, 0]);
+    }
+    return this;
+  };
+  Matrix.prototype.toArray = function() {
+    if (this.cache) {
+      return this.cache;
+    }
+    if (!this.queue.length) {
+      this.cache = [1, 0, 0, 1, 0, 0];
+      return this.cache;
+    }
+    this.cache = this.queue[0];
+    if (this.queue.length === 1) {
+      return this.cache;
+    }
+    for (var i = 1; i < this.queue.length; i++) {
+      this.cache = combine(this.cache, this.queue[i]);
+    }
+    return this.cache;
+  };
+  Matrix.prototype.calc = function(x2, y2, isRelative) {
+    var m2;
+    if (!this.queue.length) {
+      return [x2, y2];
+    }
+    if (!this.cache) {
+      this.cache = this.toArray();
+    }
+    m2 = this.cache;
+    return [
+      x2 * m2[0] + y2 * m2[2] + (isRelative ? 0 : m2[4]),
+      x2 * m2[1] + y2 * m2[3] + (isRelative ? 0 : m2[5])
+    ];
+  };
+  matrix = Matrix;
+  return matrix;
+}
+var transform_parse;
+var hasRequiredTransform_parse;
+function requireTransform_parse() {
+  if (hasRequiredTransform_parse) return transform_parse;
+  hasRequiredTransform_parse = 1;
+  var Matrix = requireMatrix();
+  var operations = {
+    matrix: true,
+    scale: true,
+    rotate: true,
+    translate: true,
+    skewX: true,
+    skewY: true
+  };
+  var CMD_SPLIT_RE = /\s*(matrix|translate|scale|rotate|skewX|skewY)\s*\(\s*(.+?)\s*\)[\s,]*/;
+  var PARAMS_SPLIT_RE = /[\s,]+/;
+  transform_parse = function transformParse(transformString) {
+    var matrix2 = new Matrix();
+    var cmd, params;
+    transformString.split(CMD_SPLIT_RE).forEach(function(item) {
+      if (!item.length) {
+        return;
+      }
+      if (typeof operations[item] !== "undefined") {
+        cmd = item;
+        return;
+      }
+      params = item.split(PARAMS_SPLIT_RE).map(function(i) {
+        return +i || 0;
+      });
+      switch (cmd) {
+        case "matrix":
+          if (params.length === 6) {
+            matrix2.matrix(params);
+          }
+          return;
+        case "scale":
+          if (params.length === 1) {
+            matrix2.scale(params[0], params[0]);
+          } else if (params.length === 2) {
+            matrix2.scale(params[0], params[1]);
+          }
+          return;
+        case "rotate":
+          if (params.length === 1) {
+            matrix2.rotate(params[0], 0, 0);
+          } else if (params.length === 3) {
+            matrix2.rotate(params[0], params[1], params[2]);
+          }
+          return;
+        case "translate":
+          if (params.length === 1) {
+            matrix2.translate(params[0], 0);
+          } else if (params.length === 2) {
+            matrix2.translate(params[0], params[1]);
+          }
+          return;
+        case "skewX":
+          if (params.length === 1) {
+            matrix2.skewX(params[0]);
+          }
+          return;
+        case "skewY":
+          if (params.length === 1) {
+            matrix2.skewY(params[0]);
+          }
+          return;
+      }
+    });
+    return matrix2;
+  };
+  return transform_parse;
+}
+var a2c;
+var hasRequiredA2c;
+function requireA2c() {
+  if (hasRequiredA2c) return a2c;
+  hasRequiredA2c = 1;
+  var TAU2 = Math.PI * 2;
+  function unit_vector_angle(ux, uy, vx, vy) {
+    var sign = ux * vy - uy * vx < 0 ? -1 : 1;
+    var dot2 = ux * vx + uy * vy;
+    if (dot2 > 1) {
+      dot2 = 1;
+    }
+    if (dot2 < -1) {
+      dot2 = -1;
+    }
+    return sign * Math.acos(dot2);
+  }
+  function get_arc_center(x1, y1, x2, y2, fa, fs, rx, ry, sin_phi, cos_phi) {
+    var x1p = cos_phi * (x1 - x2) / 2 + sin_phi * (y1 - y2) / 2;
+    var y1p = -sin_phi * (x1 - x2) / 2 + cos_phi * (y1 - y2) / 2;
+    var rx_sq = rx * rx;
+    var ry_sq = ry * ry;
+    var x1p_sq = x1p * x1p;
+    var y1p_sq = y1p * y1p;
+    var radicant = rx_sq * ry_sq - rx_sq * y1p_sq - ry_sq * x1p_sq;
+    if (radicant < 0) {
+      radicant = 0;
+    }
+    radicant /= rx_sq * y1p_sq + ry_sq * x1p_sq;
+    radicant = Math.sqrt(radicant) * (fa === fs ? -1 : 1);
+    var cxp = radicant * rx / ry * y1p;
+    var cyp = radicant * -ry / rx * x1p;
+    var cx = cos_phi * cxp - sin_phi * cyp + (x1 + x2) / 2;
+    var cy = sin_phi * cxp + cos_phi * cyp + (y1 + y2) / 2;
+    var v1x = (x1p - cxp) / rx;
+    var v1y = (y1p - cyp) / ry;
+    var v2x = (-x1p - cxp) / rx;
+    var v2y = (-y1p - cyp) / ry;
+    var theta1 = unit_vector_angle(1, 0, v1x, v1y);
+    var delta_theta = unit_vector_angle(v1x, v1y, v2x, v2y);
+    if (fs === 0 && delta_theta > 0) {
+      delta_theta -= TAU2;
+    }
+    if (fs === 1 && delta_theta < 0) {
+      delta_theta += TAU2;
+    }
+    return [cx, cy, theta1, delta_theta];
+  }
+  function approximate_unit_arc(theta1, delta_theta) {
+    var alpha = 4 / 3 * Math.tan(delta_theta / 4);
+    var x1 = Math.cos(theta1);
+    var y1 = Math.sin(theta1);
+    var x2 = Math.cos(theta1 + delta_theta);
+    var y2 = Math.sin(theta1 + delta_theta);
+    return [x1, y1, x1 - y1 * alpha, y1 + x1 * alpha, x2 + y2 * alpha, y2 - x2 * alpha, x2, y2];
+  }
+  a2c = function a2c2(x1, y1, x2, y2, fa, fs, rx, ry, phi) {
+    var sin_phi = Math.sin(phi * TAU2 / 360);
+    var cos_phi = Math.cos(phi * TAU2 / 360);
+    var x1p = cos_phi * (x1 - x2) / 2 + sin_phi * (y1 - y2) / 2;
+    var y1p = -sin_phi * (x1 - x2) / 2 + cos_phi * (y1 - y2) / 2;
+    if (x1p === 0 && y1p === 0) {
+      return [];
+    }
+    if (rx === 0 || ry === 0) {
+      return [];
+    }
+    rx = Math.abs(rx);
+    ry = Math.abs(ry);
+    var lambda = x1p * x1p / (rx * rx) + y1p * y1p / (ry * ry);
+    if (lambda > 1) {
+      rx *= Math.sqrt(lambda);
+      ry *= Math.sqrt(lambda);
+    }
+    var cc = get_arc_center(x1, y1, x2, y2, fa, fs, rx, ry, sin_phi, cos_phi);
+    var result = [];
+    var theta1 = cc[2];
+    var delta_theta = cc[3];
+    var segments = Math.max(Math.ceil(Math.abs(delta_theta) / (TAU2 / 4)), 1);
+    delta_theta /= segments;
+    for (var i = 0; i < segments; i++) {
+      result.push(approximate_unit_arc(theta1, delta_theta));
+      theta1 += delta_theta;
+    }
+    return result.map(function(curve) {
+      for (var i2 = 0; i2 < curve.length; i2 += 2) {
+        var x3 = curve[i2 + 0];
+        var y3 = curve[i2 + 1];
+        x3 *= rx;
+        y3 *= ry;
+        var xp = cos_phi * x3 - sin_phi * y3;
+        var yp = sin_phi * x3 + cos_phi * y3;
+        curve[i2 + 0] = xp + cc[0];
+        curve[i2 + 1] = yp + cc[1];
+      }
+      return curve;
+    });
+  };
+  return a2c;
+}
+var ellipse;
+var hasRequiredEllipse;
+function requireEllipse() {
+  if (hasRequiredEllipse) return ellipse;
+  hasRequiredEllipse = 1;
+  var epsilon2 = 1e-10;
+  var torad = Math.PI / 180;
+  function Ellipse(rx, ry, ax) {
+    if (!(this instanceof Ellipse)) {
+      return new Ellipse(rx, ry, ax);
+    }
+    this.rx = rx;
+    this.ry = ry;
+    this.ax = ax;
+  }
+  Ellipse.prototype.transform = function(m2) {
+    var c2 = Math.cos(this.ax * torad), s = Math.sin(this.ax * torad);
+    var ma = [
+      this.rx * (m2[0] * c2 + m2[2] * s),
+      this.rx * (m2[1] * c2 + m2[3] * s),
+      this.ry * (-m2[0] * s + m2[2] * c2),
+      this.ry * (-m2[1] * s + m2[3] * c2)
+    ];
+    var J = ma[0] * ma[0] + ma[2] * ma[2], K2 = ma[1] * ma[1] + ma[3] * ma[3];
+    var D = ((ma[0] - ma[3]) * (ma[0] - ma[3]) + (ma[2] + ma[1]) * (ma[2] + ma[1])) * ((ma[0] + ma[3]) * (ma[0] + ma[3]) + (ma[2] - ma[1]) * (ma[2] - ma[1]));
+    var JK = (J + K2) / 2;
+    if (D < epsilon2 * JK) {
+      this.rx = this.ry = Math.sqrt(JK);
+      this.ax = 0;
+      return this;
+    }
+    var L = ma[0] * ma[1] + ma[2] * ma[3];
+    D = Math.sqrt(D);
+    var l1 = JK + D / 2, l2 = JK - D / 2;
+    this.ax = Math.abs(L) < epsilon2 && Math.abs(l1 - K2) < epsilon2 ? 90 : Math.atan(
+      Math.abs(L) > Math.abs(l1 - K2) ? (l1 - J) / L : L / (l1 - K2)
+    ) * 180 / Math.PI;
+    if (this.ax >= 0) {
+      this.rx = Math.sqrt(l1);
+      this.ry = Math.sqrt(l2);
+    } else {
+      this.ax += 90;
+      this.rx = Math.sqrt(l2);
+      this.ry = Math.sqrt(l1);
+    }
+    return this;
+  };
+  Ellipse.prototype.isDegenerate = function() {
+    return this.rx < epsilon2 * this.ry || this.ry < epsilon2 * this.rx;
+  };
+  ellipse = Ellipse;
+  return ellipse;
+}
+var svgpath$1;
+var hasRequiredSvgpath$1;
+function requireSvgpath$1() {
+  if (hasRequiredSvgpath$1) return svgpath$1;
+  hasRequiredSvgpath$1 = 1;
+  var pathParse = requirePath_parse();
+  var transformParse = requireTransform_parse();
+  var matrix2 = requireMatrix();
+  var a2c2 = requireA2c();
+  var ellipse2 = requireEllipse();
+  function SvgPath(path) {
+    if (!(this instanceof SvgPath)) {
+      return new SvgPath(path);
+    }
+    var pstate = pathParse(path);
+    this.segments = pstate.segments;
+    this.err = pstate.err;
+    this.__stack = [];
+  }
+  SvgPath.from = function(src) {
+    if (typeof src === "string") return new SvgPath(src);
+    if (src instanceof SvgPath) {
+      var s = new SvgPath("");
+      s.err = src.err;
+      s.segments = src.segments.map(function(sgm) {
+        return sgm.slice();
+      });
+      s.__stack = src.__stack.map(function(m2) {
+        return matrix2().matrix(m2.toArray());
+      });
+      return s;
+    }
+    throw new Error("SvgPath.from: invalid param type " + src);
+  };
+  SvgPath.prototype.__matrix = function(m2) {
+    var self2 = this, i;
+    if (!m2.queue.length) {
+      return;
+    }
+    this.iterate(function(s, index, x2, y2) {
+      var p2, result, name, isRelative;
+      switch (s[0]) {
+        // Process 'assymetric' commands separately
+        case "v":
+          p2 = m2.calc(0, s[1], true);
+          result = p2[0] === 0 ? ["v", p2[1]] : ["l", p2[0], p2[1]];
+          break;
+        case "V":
+          p2 = m2.calc(x2, s[1], false);
+          result = p2[0] === m2.calc(x2, y2, false)[0] ? ["V", p2[1]] : ["L", p2[0], p2[1]];
+          break;
+        case "h":
+          p2 = m2.calc(s[1], 0, true);
+          result = p2[1] === 0 ? ["h", p2[0]] : ["l", p2[0], p2[1]];
+          break;
+        case "H":
+          p2 = m2.calc(s[1], y2, false);
+          result = p2[1] === m2.calc(x2, y2, false)[1] ? ["H", p2[0]] : ["L", p2[0], p2[1]];
+          break;
+        case "a":
+        case "A":
+          var ma = m2.toArray();
+          var e = ellipse2(s[1], s[2], s[3]).transform(ma);
+          if (ma[0] * ma[3] - ma[1] * ma[2] < 0) {
+            s[5] = s[5] ? "0" : "1";
+          }
+          p2 = m2.calc(s[6], s[7], s[0] === "a");
+          if (s[0] === "A" && s[6] === x2 && s[7] === y2 || s[0] === "a" && s[6] === 0 && s[7] === 0) {
+            result = [s[0] === "a" ? "l" : "L", p2[0], p2[1]];
+            break;
+          }
+          if (e.isDegenerate()) {
+            result = [s[0] === "a" ? "l" : "L", p2[0], p2[1]];
+          } else {
+            result = [s[0], e.rx, e.ry, e.ax, s[4], s[5], p2[0], p2[1]];
+          }
+          break;
+        case "m":
+          isRelative = index > 0;
+          p2 = m2.calc(s[1], s[2], isRelative);
+          result = ["m", p2[0], p2[1]];
+          break;
+        default:
+          name = s[0];
+          result = [name];
+          isRelative = name.toLowerCase() === name;
+          for (i = 1; i < s.length; i += 2) {
+            p2 = m2.calc(s[i], s[i + 1], isRelative);
+            result.push(p2[0], p2[1]);
+          }
+      }
+      self2.segments[index] = result;
+    }, true);
+  };
+  SvgPath.prototype.__evaluateStack = function() {
+    var m2, i;
+    if (!this.__stack.length) {
+      return;
+    }
+    if (this.__stack.length === 1) {
+      this.__matrix(this.__stack[0]);
+      this.__stack = [];
+      return;
+    }
+    m2 = matrix2();
+    i = this.__stack.length;
+    while (--i >= 0) {
+      m2.matrix(this.__stack[i].toArray());
+    }
+    this.__matrix(m2);
+    this.__stack = [];
+  };
+  SvgPath.prototype.toString = function() {
+    var result = "", prevCmd = "", cmdSkipped = false;
+    this.__evaluateStack();
+    for (var i = 0, len = this.segments.length; i < len; i++) {
+      var segment = this.segments[i];
+      var cmd = segment[0];
+      if (cmd !== prevCmd || cmd === "m" || cmd === "M") {
+        if (cmd === "m" && prevCmd === "z") result += " ";
+        result += cmd;
+        cmdSkipped = false;
+      } else {
+        cmdSkipped = true;
+      }
+      for (var pos2 = 1; pos2 < segment.length; pos2++) {
+        var val = segment[pos2];
+        if (pos2 === 1) {
+          if (cmdSkipped && val >= 0) result += " ";
+        } else if (val >= 0) result += " ";
+        result += val;
+      }
+      prevCmd = cmd;
+    }
+    return result;
+  };
+  SvgPath.prototype.translate = function(x2, y2) {
+    this.__stack.push(matrix2().translate(x2, y2 || 0));
+    return this;
+  };
+  SvgPath.prototype.scale = function(sx, sy) {
+    this.__stack.push(matrix2().scale(sx, !sy && sy !== 0 ? sx : sy));
+    return this;
+  };
+  SvgPath.prototype.rotate = function(angle2, rx, ry) {
+    this.__stack.push(matrix2().rotate(angle2, rx || 0, ry || 0));
+    return this;
+  };
+  SvgPath.prototype.skewX = function(degrees) {
+    this.__stack.push(matrix2().skewX(degrees));
+    return this;
+  };
+  SvgPath.prototype.skewY = function(degrees) {
+    this.__stack.push(matrix2().skewY(degrees));
+    return this;
+  };
+  SvgPath.prototype.matrix = function(m2) {
+    this.__stack.push(matrix2().matrix(m2));
+    return this;
+  };
+  SvgPath.prototype.transform = function(transformString) {
+    if (!transformString.trim()) {
+      return this;
+    }
+    this.__stack.push(transformParse(transformString));
+    return this;
+  };
+  SvgPath.prototype.round = function(d2) {
+    var contourStartDeltaX = 0, contourStartDeltaY = 0, deltaX = 0, deltaY = 0, l;
+    d2 = d2 || 0;
+    this.__evaluateStack();
+    this.segments.forEach(function(s) {
+      var isRelative = s[0].toLowerCase() === s[0];
+      switch (s[0]) {
+        case "H":
+        case "h":
+          if (isRelative) {
+            s[1] += deltaX;
+          }
+          deltaX = s[1] - s[1].toFixed(d2);
+          s[1] = +s[1].toFixed(d2);
+          return;
+        case "V":
+        case "v":
+          if (isRelative) {
+            s[1] += deltaY;
+          }
+          deltaY = s[1] - s[1].toFixed(d2);
+          s[1] = +s[1].toFixed(d2);
+          return;
+        case "Z":
+        case "z":
+          deltaX = contourStartDeltaX;
+          deltaY = contourStartDeltaY;
+          return;
+        case "M":
+        case "m":
+          if (isRelative) {
+            s[1] += deltaX;
+            s[2] += deltaY;
+          }
+          deltaX = s[1] - s[1].toFixed(d2);
+          deltaY = s[2] - s[2].toFixed(d2);
+          contourStartDeltaX = deltaX;
+          contourStartDeltaY = deltaY;
+          s[1] = +s[1].toFixed(d2);
+          s[2] = +s[2].toFixed(d2);
+          return;
+        case "A":
+        case "a":
+          if (isRelative) {
+            s[6] += deltaX;
+            s[7] += deltaY;
+          }
+          deltaX = s[6] - s[6].toFixed(d2);
+          deltaY = s[7] - s[7].toFixed(d2);
+          s[1] = +s[1].toFixed(d2);
+          s[2] = +s[2].toFixed(d2);
+          s[3] = +s[3].toFixed(d2 + 2);
+          s[6] = +s[6].toFixed(d2);
+          s[7] = +s[7].toFixed(d2);
+          return;
+        default:
+          l = s.length;
+          if (isRelative) {
+            s[l - 2] += deltaX;
+            s[l - 1] += deltaY;
+          }
+          deltaX = s[l - 2] - s[l - 2].toFixed(d2);
+          deltaY = s[l - 1] - s[l - 1].toFixed(d2);
+          s.forEach(function(val, i) {
+            if (!i) {
+              return;
+            }
+            s[i] = +s[i].toFixed(d2);
+          });
+          return;
+      }
+    });
+    return this;
+  };
+  SvgPath.prototype.iterate = function(iterator, keepLazyStack) {
+    var segments = this.segments, replacements = {}, needReplace = false, lastX = 0, lastY = 0, countourStartX = 0, countourStartY = 0;
+    var i, j, newSegments;
+    if (!keepLazyStack) {
+      this.__evaluateStack();
+    }
+    segments.forEach(function(s, index) {
+      var res = iterator(s, index, lastX, lastY);
+      if (Array.isArray(res)) {
+        replacements[index] = res;
+        needReplace = true;
+      }
+      var isRelative = s[0] === s[0].toLowerCase();
+      switch (s[0]) {
+        case "m":
+        case "M":
+          lastX = s[1] + (isRelative ? lastX : 0);
+          lastY = s[2] + (isRelative ? lastY : 0);
+          countourStartX = lastX;
+          countourStartY = lastY;
+          return;
+        case "h":
+        case "H":
+          lastX = s[1] + (isRelative ? lastX : 0);
+          return;
+        case "v":
+        case "V":
+          lastY = s[1] + (isRelative ? lastY : 0);
+          return;
+        case "z":
+        case "Z":
+          lastX = countourStartX;
+          lastY = countourStartY;
+          return;
+        default:
+          lastX = s[s.length - 2] + (isRelative ? lastX : 0);
+          lastY = s[s.length - 1] + (isRelative ? lastY : 0);
+      }
+    });
+    if (!needReplace) {
+      return this;
+    }
+    newSegments = [];
+    for (i = 0; i < segments.length; i++) {
+      if (typeof replacements[i] !== "undefined") {
+        for (j = 0; j < replacements[i].length; j++) {
+          newSegments.push(replacements[i][j]);
+        }
+      } else {
+        newSegments.push(segments[i]);
+      }
+    }
+    this.segments = newSegments;
+    return this;
+  };
+  SvgPath.prototype.abs = function() {
+    this.iterate(function(s, index, x2, y2) {
+      var name = s[0], nameUC = name.toUpperCase(), i;
+      if (name === nameUC) {
+        return;
+      }
+      s[0] = nameUC;
+      switch (name) {
+        case "v":
+          s[1] += y2;
+          return;
+        case "a":
+          s[6] += x2;
+          s[7] += y2;
+          return;
+        default:
+          for (i = 1; i < s.length; i++) {
+            s[i] += i % 2 ? x2 : y2;
+          }
+      }
+    }, true);
+    return this;
+  };
+  SvgPath.prototype.rel = function() {
+    this.iterate(function(s, index, x2, y2) {
+      var name = s[0], nameLC = name.toLowerCase(), i;
+      if (name === nameLC) {
+        return;
+      }
+      if (index === 0 && name === "M") {
+        return;
+      }
+      s[0] = nameLC;
+      switch (name) {
+        case "V":
+          s[1] -= y2;
+          return;
+        case "A":
+          s[6] -= x2;
+          s[7] -= y2;
+          return;
+        default:
+          for (i = 1; i < s.length; i++) {
+            s[i] -= i % 2 ? x2 : y2;
+          }
+      }
+    }, true);
+    return this;
+  };
+  SvgPath.prototype.unarc = function() {
+    this.iterate(function(s, index, x2, y2) {
+      var new_segments, nextX, nextY, result = [], name = s[0];
+      if (name !== "A" && name !== "a") {
+        return null;
+      }
+      if (name === "a") {
+        nextX = x2 + s[6];
+        nextY = y2 + s[7];
+      } else {
+        nextX = s[6];
+        nextY = s[7];
+      }
+      new_segments = a2c2(x2, y2, nextX, nextY, s[4], s[5], s[1], s[2], s[3]);
+      if (new_segments.length === 0) {
+        return [[s[0] === "a" ? "l" : "L", s[6], s[7]]];
+      }
+      new_segments.forEach(function(s2) {
+        result.push(["C", s2[2], s2[3], s2[4], s2[5], s2[6], s2[7]]);
+      });
+      return result;
+    });
+    return this;
+  };
+  SvgPath.prototype.unshort = function() {
+    var segments = this.segments;
+    var prevControlX, prevControlY, prevSegment;
+    var curControlX, curControlY;
+    this.iterate(function(s, idx, x2, y2) {
+      var name = s[0], nameUC = name.toUpperCase(), isRelative;
+      if (!idx) {
+        return;
+      }
+      if (nameUC === "T") {
+        isRelative = name === "t";
+        prevSegment = segments[idx - 1];
+        if (prevSegment[0] === "Q") {
+          prevControlX = prevSegment[1] - x2;
+          prevControlY = prevSegment[2] - y2;
+        } else if (prevSegment[0] === "q") {
+          prevControlX = prevSegment[1] - prevSegment[3];
+          prevControlY = prevSegment[2] - prevSegment[4];
+        } else {
+          prevControlX = 0;
+          prevControlY = 0;
+        }
+        curControlX = -prevControlX;
+        curControlY = -prevControlY;
+        if (!isRelative) {
+          curControlX += x2;
+          curControlY += y2;
+        }
+        segments[idx] = [
+          isRelative ? "q" : "Q",
+          curControlX,
+          curControlY,
+          s[1],
+          s[2]
+        ];
+      } else if (nameUC === "S") {
+        isRelative = name === "s";
+        prevSegment = segments[idx - 1];
+        if (prevSegment[0] === "C") {
+          prevControlX = prevSegment[3] - x2;
+          prevControlY = prevSegment[4] - y2;
+        } else if (prevSegment[0] === "c") {
+          prevControlX = prevSegment[3] - prevSegment[5];
+          prevControlY = prevSegment[4] - prevSegment[6];
+        } else {
+          prevControlX = 0;
+          prevControlY = 0;
+        }
+        curControlX = -prevControlX;
+        curControlY = -prevControlY;
+        if (!isRelative) {
+          curControlX += x2;
+          curControlY += y2;
+        }
+        segments[idx] = [
+          isRelative ? "c" : "C",
+          curControlX,
+          curControlY,
+          s[1],
+          s[2],
+          s[3],
+          s[4]
+        ];
+      }
+    });
+    return this;
+  };
+  svgpath$1 = SvgPath;
+  return svgpath$1;
+}
+var svgpath;
+var hasRequiredSvgpath;
+function requireSvgpath() {
+  if (hasRequiredSvgpath) return svgpath;
+  hasRequiredSvgpath = 1;
+  svgpath = requireSvgpath$1();
+  return svgpath;
+}
+requireSvgpath();
+function pickSketchRegion(drawing, p2) {
+  let best = null;
+  let smallest = Infinity;
+  sketchFaceRegions(drawing).forEach(({ contour, holes = [], contourIndex: index }) => {
+    if (classifySketchContourPoint(contour, p2) !== "inside") return;
+    if (holes.some((hole) => classifySketchContourPoint(hole, p2) !== "outside")) return;
+    const outline = sketchContourPolyline(contour);
+    const islands = holes.map((hole) => sketchContourPolyline(hole));
+    const area = Math.abs(polygonArea(outline)) - islands.reduce((sum, hole) => sum + Math.abs(polygonArea(hole)), 0);
+    if (area < smallest) {
+      smallest = area;
+      best = index;
+    }
+  });
+  return best;
+}
+function stampSketchContour(doc, sketchId, index) {
+  const feature = doc.features.find((f2) => f2.id === sketchId);
+  if (feature?.type !== "profile" || feature.profile.type === "projection") throw Error("Pick a region on an authored sketch, not a projected one.");
+  const drawing = resolveProfileDrawing(doc.features, sketchId);
+  const contour = drawing.contours[index];
+  if (!contour) throw Error("That sketch region is no longer there.");
+  identifySketchContour(contour, () => crypto.randomUUID());
+  delete drawing.pierceContext;
+  feature.profile = drawing;
+  return contour.id;
+}
+function stampResolvedProfileSelection(doc, feature, region, identifyPrimitives = false) {
+  if (feature.type !== "profile" && feature.type !== "sketch" || feature.suppressed) throw Error("Select an available source sketch.");
+  const base = { profileFeatureId: feature.id };
+  if (feature.profile.type === "projection") throw Error("Pick a region on an authored sketch, not a projected one.");
+  if (feature.type === "sketch" || feature.profile.type !== "drawing" && !identifyPrimitives) return base;
+  if (!region.sourceContourIndices) return { ...base, profileContourId: stampSketchContour(doc, feature.id, region.contourIndex) };
+  if (region.ordinal !== void 0) throw Error("This region has ambiguous source boundaries. Add a divider or select a different region.");
+  const drawing = resolveProfileDrawing(doc.features, feature.id);
+  const identify = (index) => {
+    const contour = drawing.contours[index];
+    if (!contour) throw Error("A connected sketch region source is missing.");
+    identifySketchContour(contour, () => crypto.randomUUID());
+    return contour.id;
+  };
+  const ids2 = region.sourceContourIndices.map(identify);
+  const inside2 = region.insideContourIndices?.map(identify);
+  const boundary = region.boundarySides ? regionBoundaryIdentity(drawing, region.boundarySides) : void 0;
+  delete drawing.pierceContext;
+  feature.profile = drawing;
+  return { ...base, profileRegion: { contourIds: ids2, ...inside2 ? { inside: inside2 } : {}, ...boundary ? { boundary } : {} } };
+}
+function selectionDrawing(doc, feature) {
+  if (feature.type === "profile") return resolveProfileDrawing(doc.features, feature.id);
+  if (feature.type !== "sketch") throw Error("Select a sketch.");
+  const p2 = feature.profile;
+  const x2 = p2.centerXMillimeters, y2 = p2.centerYMillimeters, w2 = p2.widthMillimeters / 2, h = p2.heightMillimeters / 2;
+  return { type: "drawing", contours: [{ type: "path", construction: p2.construction, start: [x2 - w2, y2 - h], segments: [[x2 + w2, y2 - h], [x2 + w2, y2 + h], [x2 - w2, y2 + h], [x2 - w2, y2 - h]].map((end) => ({ type: "line", end })) }] };
+}
+function selectAgentProfileRegions(doc, featureId2, point2, all = false) {
+  if (typeof all !== "boolean") throw Error("all_regions must be true or false.");
+  if (all && point2 !== void 0) throw Error("Choose profile_point_mm or all_regions, not both.");
+  const feature = doc.features.find((f2) => f2.id === featureId2);
+  if (!feature || feature.suppressed || !["profile", "sketch"].includes(feature.type)) throw Error("Inspect the part and choose an unsuppressed sketch ID.");
+  const regions = sketchRegions(feature, false, doc.features);
+  if (!regions.length) throw Error("The sketch has no closed regions. Close its contours before extruding.");
+  let selected = regions;
+  if (point2 !== void 0) {
+    if (!Array.isArray(point2) || point2.length !== 2 || point2.some((v) => typeof v !== "number" || !Number.isFinite(v) || Math.abs(v) > 1e6)) throw Error("profile_point_mm must contain two finite local coordinates within 1000000 mm.");
+    const drawing = selectionDrawing(doc, feature), p2 = point2;
+    const boundaries = { ...drawing, contours: drawing.contours.filter((c2) => !c2.construction) };
+    if (pickCurve(boundaries, p2, Infinity).distance <= 1e-6) throw Error("Choose profile_point_mm strictly inside a region, away from its boundary.");
+    const index = pickSketchRegion(drawing, p2);
+    selected = regions.filter((r) => r.contourIndex === index);
+    if (selected.length !== 1) throw Error("profile_point_mm is outside a selectable closed region.");
+  } else if (!all && regions.length !== 1) {
+    throw Error("The sketch has multiple closed regions. Inspect it and choose profile_point_mm, or explicitly set all_regions for Extrude.");
+  }
+  return selected.map((region) => stampResolvedProfileSelection(doc, feature, region));
 }
 const primitiveNames = { box: "Box", cylinder: "Cylinder", cone: "Cone", sphere: "Sphere", torus: "Torus" };
 const defaultPrimitiveDimensions = { width: 20, length: 30, height: 10, radius: 10, tubeRadius: 3 };
@@ -11189,7 +12998,7 @@ function parseObject(text2, label) {
   return value2;
 }
 function existing(doc, id2) {
-  const feature = typeof id2 === "string" ? doc.features.find((f) => f.id === id2) : void 0;
+  const feature = typeof id2 === "string" ? doc.features.find((f2) => f2.id === id2) : void 0;
   if (!feature) throw Error("Inspect the Part and choose an existing feature_id.");
   return feature;
 }
@@ -11208,7 +13017,7 @@ function prepareFeatureOperation(doc, name, args) {
     if ("id" in changes || "type" in changes) throw Error('"id" and "type" cannot change; add a new feature instead.');
     if (!Object.keys(changes).length) throw Error("changes_json has no fields to change.");
     const next = structuredClone(doc);
-    next.features = next.features.map((f) => f.id === feature.id ? { ...f, ...changes } : f);
+    next.features = next.features.map((f2) => f2.id === feature.id ? { ...f2, ...changes } : f2);
     validatePartDocument(next);
     return { document: next, featureID: feature.id };
   }
@@ -11227,8 +13036,9 @@ function prepareFeatureOperation(doc, name, args) {
 }
 const number = { type: "number" }, string = { type: "string" }, boolean = { type: "boolean" };
 const tool = (name, description, properties, required = []) => ({ name: "aether_cad_" + name, description, inputSchema: { type: "object", properties, required, additionalProperties: false } });
-const plane = { name: string, plane: { type: "string", enum: ["XY", "XZ", "YZ"] }, offset_mm: number };
-const operation = { name: string, profile_id: string, operation: { type: "string", enum: ["new", "add", "cut"] }, target_body_id: string };
+const vector3 = { type: "array", items: number, minItems: 3, maxItems: 3 };
+const plane = { name: string, plane: { type: "string", enum: ["XY", "XZ", "YZ"] }, frame: { type: "object", properties: { origin_mm: vector3, x_direction: vector3, y_direction: vector3 }, required: ["origin_mm", "x_direction", "y_direction"], additionalProperties: false }, offset_mm: number, flip: { type: "string", enum: ["x", "y"] } };
+const operation = { name: string, profile_id: string, profile_point_mm: { type: "array", items: number, minItems: 2, maxItems: 2 }, operation: { type: "string", enum: ["new", "add", "cut"] }, target_body_id: string };
 const cadAgentTools = [
   ...partAITools,
   ...featureReadTools,
@@ -11236,40 +13046,40 @@ const cadAgentTools = [
   tool("inspect", "Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.", { offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }),
   tool("feature_references", "Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.", { feature_id: string, direction: { type: "string", enum: ["inputs", "dependents"] }, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["feature_id"]),
   tool("solid_primitive", "Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.", { kind: { type: "string", enum: Object.keys(primitiveFields) }, width_mm: number, length_mm: number, height_mm: number, radius_mm: number, tube_radius_mm: number }, ["kind"]),
-  tool("sketch_inspect", "Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and dependents before editing. Page contours and constraints with offset/limit. Does not change the document.", { feature_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 25 } }, ["feature_id"]),
+  tool("sketch_inspect", "Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.", { feature_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 25 } }, ["feature_id"]),
   tool("sketch_translate", "Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.", { feature_id: string, dx_mm: number, dy_mm: number }, ["feature_id", "dx_mm", "dy_mm"]),
   tool("sketch_dimension", "Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.", { feature_id: string, dimension_id: string, value: number }, ["feature_id", "dimension_id", "value"]),
-  tool("sketch_rectangle", "Add an editable rectangular sketch profile on XY, XZ or YZ. x_mm/y_mm are local sketch coordinates; offset_mm moves its plane along its normal.", { ...plane, x_mm: number, y_mm: number, width_mm: number, height_mm: number }, ["plane", "x_mm", "y_mm", "width_mm", "height_mm"]),
-  tool("sketch_circle", "Add an editable circular sketch profile; returns its feature ID.", { ...plane, center_x_mm: number, center_y_mm: number, radius_mm: number }, ["plane", "center_x_mm", "center_y_mm", "radius_mm"]),
-  tool("sketch_polygon", "Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Native CAD validates the profile.", { ...plane, points_mm: { type: "array", minItems: 3, maxItems: 128, items: { type: "array", items: number, minItems: 2, maxItems: 2 } } }, ["plane", "points_mm"]),
-  tool("extrude", "Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. Exact native rebuild must succeed before the document changes.", { ...operation, depth_mm: number, reversed: boolean }, ["profile_id", "depth_mm", "operation"]),
-  tool("revolve", "Revolve a sketch around a principal axis. add/cut require target_body_id. Native engine checks validity.", { ...operation, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number }, ["profile_id", "axis", "angle_deg", "operation"]),
+  tool("sketch_rectangle", "Add an editable rectangular sketch profile. Specify plane (XY/XZ/YZ) OR frame (origin_mm and perpendicular unit x_direction/y_direction). x_mm/y_mm are local coordinates; offset_mm moves along the unflipped normal. Optional flip x/y reverses the normal about that local axis.", { ...plane, x_mm: number, y_mm: number, width_mm: number, height_mm: number }, ["x_mm", "y_mm", "width_mm", "height_mm"]),
+  tool("sketch_circle", "Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.", { ...plane, center_x_mm: number, center_y_mm: number, radius_mm: number }, ["center_x_mm", "center_y_mm", "radius_mm"]),
+  tool("sketch_polygon", "Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.", { ...plane, points_mm: { type: "array", minItems: 3, maxItems: 128, items: { type: "array", items: number, minItems: 2, maxItems: 2 } } }, ["points_mm"]),
+  tool("extrude", "Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.", { ...operation, depth_mm: number, reversed: boolean, all_regions: boolean }, ["profile_id", "depth_mm", "operation"]),
+  tool("revolve", "Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.", { ...operation, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number }, ["profile_id", "axis", "angle_deg", "operation"]),
   tool("extrude_depth", "Change an existing blind/symmetric extrusion depth, then rebuild.", { feature_id: string, depth_mm: number }, ["feature_id", "depth_mm"]),
   tool("suppress", "Suppress or unsuppress an existing feature. Rebuild must succeed.", { feature_id: string, suppressed: boolean }, ["feature_id", "suppressed"]),
   tool("undo", "Undo one successful Part edit, using the same history as the editor.", {}),
   tool("redo", "Redo one Part edit, using the same history as the editor.", {})
 ];
-function numberValue(a, key, fallback, positive = false) {
-  const v = a[key] ?? fallback;
+function numberValue(a2, key, fallback, positive = false) {
+  const v = a2[key] ?? fallback;
   if (typeof v !== "number" || !Number.isFinite(v) || Math.abs(v) > 1e6 || positive && v <= 0) throw Error(`${key} must be finite ${positive ? "and positive " : ""}within 1000000.`);
   return v;
 }
-function nameValue(a, fallback) {
-  const v = a.name ?? fallback;
+function nameValue(a2, fallback) {
+  const v = a2.name ?? fallback;
   if (typeof v !== "string" || !v.trim() || v.length > 200) throw Error("Use a name with 1–200 characters.");
   return v;
 }
 function validateLiveArguments(name, args) {
   const t = cadAgentTools.find((t2) => t2.name === name);
-  if (!t || !args || typeof args !== "object" || Array.isArray(args) || Object.keys(args).some((k) => !Object.hasOwn(t.inputSchema.properties, k))) throw Error("Unknown CAD tool or argument.");
+  if (!t || !args || typeof args !== "object" || Array.isArray(args) || Object.keys(args).some((k2) => !Object.hasOwn(t.inputSchema.properties, k2))) throw Error("Unknown CAD tool or argument.");
 }
 function inspectPart(doc, args = {}) {
   const offset2 = numberValue(args, "offset", 0), limit = numberValue(args, "limit", 25, true);
   if (!Number.isInteger(offset2) || offset2 < 0 || !Number.isInteger(limit) || limit > 50) throw Error("Use offset >= 0 and limit 1–50.");
   const result = prepareCommand("cad.part.inspect", JSON.stringify(doc), {}).result;
-  return { ...result, total_features: doc.features.length, offset: offset2, features: result.features.slice(offset2, offset2 + limit).map((f, i) => {
+  return { ...result, total_features: doc.features.length, offset: offset2, features: result.features.slice(offset2, offset2 + limit).map((f2, i) => {
     const source = doc.features[offset2 + i];
-    return { ...f, ...source.type === "profile" ? { plane: source.plane, offset_mm: source.offsetMillimeters, profile: source.profile.type === "circle" || source.profile.type === "polygon" ? source.profile : { type: source.profile.type } } : {} };
+    return { ...f2, ...source.type === "profile" ? { plane: source.plane, offset_mm: source.offsetMillimeters, profile: source.profile.type === "circle" || source.profile.type === "polygon" ? source.profile : { type: source.profile.type } } : {} };
   }), next_offset: offset2 + limit < doc.features.length ? offset2 + limit : null };
 }
 function preparePartEdit(doc, name, args) {
@@ -11299,41 +13109,43 @@ function preparePartEdit(doc, name, args) {
     if (!result.candidate) throw Error("The CAD operation produced no candidate.");
     return { document: JSON.parse(result.candidate), featureID: args.feature_id };
   }
+  const candidate = structuredClone(doc);
   const id2 = crypto.randomUUID();
   let feature;
   if (name.startsWith("aether_cad_sketch_")) {
-    if (!["XY", "XZ", "YZ"].includes(String(args.plane))) throw Error("Choose XY, XZ or YZ.");
+    const placement = agentSketchPlacement(args);
     let profile;
     if (name === "aether_cad_sketch_circle") profile = { type: "circle", centerMillimeters: [numberValue(args, "center_x_mm"), numberValue(args, "center_y_mm")], radiusMillimeters: numberValue(args, "radius_mm", void 0, true) };
     else if (name === "aether_cad_sketch_rectangle") {
-      const x = numberValue(args, "x_mm"), y = numberValue(args, "y_mm"), w = numberValue(args, "width_mm", void 0, true), h = numberValue(args, "height_mm", void 0, true);
-      profile = { type: "polygon", pointsMillimeters: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]] };
+      const x2 = numberValue(args, "x_mm"), y2 = numberValue(args, "y_mm"), w2 = numberValue(args, "width_mm", void 0, true), h = numberValue(args, "height_mm", void 0, true);
+      profile = { type: "polygon", pointsMillimeters: [[x2, y2], [x2 + w2, y2], [x2 + w2, y2 + h], [x2, y2 + h]] };
     } else {
       if (!Array.isArray(args.points_mm) || args.points_mm.length < 3 || args.points_mm.length > 128) throw Error("Use 3–128 points.");
-      profile = { type: "polygon", pointsMillimeters: args.points_mm.map((p) => {
-        if (!Array.isArray(p) || p.length !== 2) throw Error("Use x,y pairs.");
-        return [numberValue({ v: p[0] }, "v"), numberValue({ v: p[1] }, "v")];
+      profile = { type: "polygon", pointsMillimeters: args.points_mm.map((p2) => {
+        if (!Array.isArray(p2) || p2.length !== 2) throw Error("Use x,y pairs.");
+        return [numberValue({ v: p2[0] }, "v"), numberValue({ v: p2[1] }, "v")];
       }) };
     }
-    feature = { type: "profile", id: id2, name: nameValue(args, `Sketch ${doc.features.length + 1}`), suppressed: false, plane: args.plane, offsetMillimeters: numberValue(args, "offset_mm", 0), profile };
+    feature = { type: "profile", id: id2, name: nameValue(args, `Sketch ${doc.features.length + 1}`), suppressed: false, ...placement, profile };
   } else if (name === "aether_cad_extrude" || name === "aether_cad_revolve") {
-    const profile = doc.features.find((f) => f.id === args.profile_id && (f.type === "profile" || f.type === "sketch") && !f.suppressed);
+    const profile = candidate.features.find((f2) => f2.id === args.profile_id && (f2.type === "profile" || f2.type === "sketch") && !f2.suppressed);
     if (!profile) throw Error("Inspect the part and choose an unsuppressed sketch ID.");
     if (!["new", "add", "cut"].includes(String(args.operation))) throw Error("Choose new, add or cut.");
     const operation2 = args.operation;
     if (operation2 !== "new" && typeof args.target_body_id !== "string") throw Error("Choose a target_body_id from inspect.");
+    const selections = selectAgentProfileRegions(candidate, profile.id, args.profile_point_mm, name === "aether_cad_extrude" ? args.all_regions : void 0);
     const common = { id: id2, suppressed: false, profileFeatureId: profile.id, operation: operation2, ...operation2 !== "new" ? { targetBodyId: args.target_body_id } : {} };
     if (name === "aether_cad_extrude") {
       if (args.reversed !== void 0 && typeof args.reversed !== "boolean") throw Error("reversed must be true or false.");
-      feature = { ...common, type: "extrude", name: nameValue(args, "Extrude"), distanceMillimeters: numberValue(args, "depth_mm", void 0, true), endType: "blind", ...args.reversed ? { reversed: true } : {}, ...operation2 === "new" ? { separateBodies: true } : {} };
+      feature = { ...common, type: "extrude", profileSelections: selections, regionMode: "faces", name: nameValue(args, "Extrude"), distanceMillimeters: numberValue(args, "depth_mm", void 0, true), endType: "blind", ...args.reversed ? { reversed: true } : {}, ...operation2 === "new" ? { separateBodies: true } : {} };
     } else {
       if (!["X", "Y", "Z"].includes(String(args.axis))) throw Error("Choose X, Y or Z.");
       const angle2 = numberValue(args, "angle_deg", void 0, true);
       if (angle2 > 360) throw Error("Revolve angle must be at most 360 degrees.");
-      feature = { ...common, type: "revolve", name: nameValue(args, "Revolve"), axis: args.axis, angleDegrees: angle2 };
+      feature = { ...common, ...selections[0], type: "revolve", name: nameValue(args, "Revolve"), axis: args.axis, angleDegrees: angle2 };
     }
   } else throw Error("Unknown CAD edit.");
-  return { document: insertFeature(doc, feature), featureID: id2 };
+  return { document: insertFeature(candidate, feature), featureID: id2 };
 }
 const programToolNames = ["sketch_translate", "sketch_dimension", "solid_primitive", "sketch_rectangle", "sketch_circle", "sketch_polygon", "extrude", "revolve", "extrude_depth", "suppress", "feature_add", "feature_update", "feature_delete", "feature_move"].map((name) => `aether_cad_${name}`);
 const edits = new Set(programToolNames);
@@ -11625,29 +13437,29 @@ var Module$1 = (() => {
       var startIdx = outIdx;
       var endIdx = outIdx + maxBytesToWrite - 1;
       for (var i2 = 0; i2 < str.length; ++i2) {
-        var u = str.charCodeAt(i2);
-        if (u >= 55296 && u <= 57343) {
+        var u2 = str.charCodeAt(i2);
+        if (u2 >= 55296 && u2 <= 57343) {
           var u1 = str.charCodeAt(++i2);
-          u = 65536 + ((u & 1023) << 10) | u1 & 1023;
+          u2 = 65536 + ((u2 & 1023) << 10) | u1 & 1023;
         }
-        if (u <= 127) {
+        if (u2 <= 127) {
           if (outIdx >= endIdx) break;
-          heap[outIdx++] = u;
-        } else if (u <= 2047) {
+          heap[outIdx++] = u2;
+        } else if (u2 <= 2047) {
           if (outIdx + 1 >= endIdx) break;
-          heap[outIdx++] = 192 | u >> 6;
-          heap[outIdx++] = 128 | u & 63;
-        } else if (u <= 65535) {
+          heap[outIdx++] = 192 | u2 >> 6;
+          heap[outIdx++] = 128 | u2 & 63;
+        } else if (u2 <= 65535) {
           if (outIdx + 2 >= endIdx) break;
-          heap[outIdx++] = 224 | u >> 12;
-          heap[outIdx++] = 128 | u >> 6 & 63;
-          heap[outIdx++] = 128 | u & 63;
+          heap[outIdx++] = 224 | u2 >> 12;
+          heap[outIdx++] = 128 | u2 >> 6 & 63;
+          heap[outIdx++] = 128 | u2 & 63;
         } else {
           if (outIdx + 3 >= endIdx) break;
-          heap[outIdx++] = 240 | u >> 18;
-          heap[outIdx++] = 128 | u >> 12 & 63;
-          heap[outIdx++] = 128 | u >> 6 & 63;
-          heap[outIdx++] = 128 | u & 63;
+          heap[outIdx++] = 240 | u2 >> 18;
+          heap[outIdx++] = 128 | u2 >> 12 & 63;
+          heap[outIdx++] = 128 | u2 >> 6 & 63;
+          heap[outIdx++] = 128 | u2 & 63;
         }
       }
       heap[outIdx] = 0;
@@ -11659,11 +13471,11 @@ var Module$1 = (() => {
     function lengthBytesUTF8(str) {
       var len = 0;
       for (var i2 = 0; i2 < str.length; ++i2) {
-        var u = str.charCodeAt(i2);
-        if (u >= 55296 && u <= 57343) u = 65536 + ((u & 1023) << 10) | str.charCodeAt(++i2) & 1023;
-        if (u <= 127) ++len;
-        else if (u <= 2047) len += 2;
-        else if (u <= 65535) len += 3;
+        var u2 = str.charCodeAt(i2);
+        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str.charCodeAt(++i2) & 1023;
+        if (u2 <= 127) ++len;
+        else if (u2 <= 2047) len += 2;
+        else if (u2 <= 65535) len += 3;
         else len += 4;
       }
       return len;
@@ -12089,7 +13901,7 @@ var Module$1 = (() => {
       return parts;
     }, normalize: (path) => {
       var isAbsolute = PATH.isAbs(path), trailingSlash = path.substr(-1) === "/";
-      path = PATH.normalizeArray(path.split("/").filter((p) => !!p), !isAbsolute).join("/");
+      path = PATH.normalizeArray(path.split("/").filter((p2) => !!p2), !isAbsolute).join("/");
       if (!path && !isAbsolute) {
         path = ".";
       }
@@ -12151,7 +13963,7 @@ var Module$1 = (() => {
         resolvedPath = path + "/" + resolvedPath;
         resolvedAbsolute = PATH.isAbs(path);
       }
-      resolvedPath = PATH.normalizeArray(resolvedPath.split("/").filter((p) => !!p), !resolvedAbsolute).join("/");
+      resolvedPath = PATH.normalizeArray(resolvedPath.split("/").filter((p2) => !!p2), !resolvedAbsolute).join("/");
       return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
     }, relative: (from, to) => {
       from = PATH_FS.resolve(from).substr(1);
@@ -12571,7 +14383,7 @@ var Module$1 = (() => {
       if (opts.recurse_count > 8) {
         throw new FS.ErrnoError(32);
       }
-      var parts = PATH.normalizeArray(path.split("/").filter((p) => !!p), false);
+      var parts = PATH.normalizeArray(path.split("/").filter((p2) => !!p2), false);
       var current2 = FS.root;
       var current_path = "/";
       for (var i2 = 0; i2 < parts.length; i2++) {
@@ -12798,9 +14610,9 @@ var Module$1 = (() => {
       var mounts = [];
       var check2 = [mount];
       while (check2.length) {
-        var m = check2.pop();
-        mounts.push(m);
-        check2.push.apply(check2, m.mounts);
+        var m2 = check2.pop();
+        mounts.push(m2);
+        check2.push.apply(check2, m2.mounts);
       }
       return mounts;
     }, syncfs: (populate, callback) => {
@@ -12916,12 +14728,12 @@ var Module$1 = (() => {
       return FS.mknod(path, mode, 0);
     }, mkdirTree: (path, mode) => {
       var dirs = path.split("/");
-      var d = "";
+      var d2 = "";
       for (var i2 = 0; i2 < dirs.length; ++i2) {
         if (!dirs[i2]) continue;
-        d += "/" + dirs[i2];
+        d2 += "/" + dirs[i2];
         try {
-          FS.mkdir(d, mode);
+          FS.mkdir(d2, mode);
         } catch (e) {
           if (e.errno != 20) throw e;
         }
@@ -14132,9 +15944,9 @@ var Module$1 = (() => {
     var embind_charCodes = void 0;
     function readLatin1String(ptr) {
       var ret = "";
-      var c = ptr;
-      while (HEAPU8[c]) {
-        ret += embind_charCodes[HEAPU8[c++]];
+      var c2 = ptr;
+      while (HEAPU8[c2]) {
+        ret += embind_charCodes[HEAPU8[c2++]];
       }
       return ret;
     }
@@ -14148,8 +15960,8 @@ var Module$1 = (() => {
         return "_unknown";
       }
       name = name.replace(/[^a-zA-Z0-9_]/g, "$");
-      var f = name.charCodeAt(0);
-      if (f >= char_0 && f <= char_9) {
+      var f2 = name.charCodeAt(0);
+      if (f2 >= char_0 && f2 <= char_9) {
         return "_" + name;
       }
       return name;
@@ -14333,9 +16145,9 @@ var Module$1 = (() => {
     }
     function getLiveInheritedInstances() {
       var rv = [];
-      for (var k in registeredInstances) {
-        if (registeredInstances.hasOwnProperty(k)) {
-          rv.push(registeredInstances[k]);
+      for (var k2 in registeredInstances) {
+        if (registeredInstances.hasOwnProperty(k2)) {
+          rv.push(registeredInstances[k2]);
         }
       }
       return rv;
@@ -14716,8 +16528,8 @@ var Module$1 = (() => {
       }
     }
     function dynCallLegacy(sig, ptr, args) {
-      var f = Module2["dynCall_" + sig];
-      return args && args.length ? f.apply(null, [ptr].concat(args)) : f.call(null, ptr);
+      var f2 = Module2["dynCall_" + sig];
+      return args && args.length ? f2.apply(null, [ptr].concat(args)) : f2.call(null, ptr);
     }
     function dynCall(sig, ptr, args) {
       if (sig.includes("j")) {
@@ -15092,10 +16904,10 @@ var Module$1 = (() => {
       function ctor() {
       }
       ctor.values = {};
-      registerType(rawType, { name, constructor: ctor, "fromWireType": function(c) {
-        return this.constructor.values[c];
-      }, "toWireType": function(destructors, c) {
-        return c.value;
+      registerType(rawType, { name, constructor: ctor, "fromWireType": function(c2) {
+        return this.constructor.values[c2];
+      }, "toWireType": function(destructors, c2) {
+        return c2.value;
       }, "argPackAdvance": 8, "readValueFromPointer": enumReadValueFromPointer(name, shift, isSigned), destructorFunction: null });
       exposePublicSymbol(name, ctor);
     }
@@ -15234,11 +17046,11 @@ var Module$1 = (() => {
             }
           }
         } else {
-          var a = new Array(length);
+          var a2 = new Array(length);
           for (var i2 = 0; i2 < length; ++i2) {
-            a[i2] = String.fromCharCode(HEAPU8[value2 + 4 + i2]);
+            a2[i2] = String.fromCharCode(HEAPU8[value2 + 4 + i2]);
           }
-          str = a.join("");
+          str = a2.join("");
         }
         _free(value2);
         return str;
@@ -15403,11 +17215,11 @@ var Module$1 = (() => {
       return id2;
     }
     function emval_lookupTypes(argCount, argTypes) {
-      var a = new Array(argCount);
+      var a2 = new Array(argCount);
       for (var i2 = 0; i2 < argCount; ++i2) {
-        a[i2] = requireRegisteredType(HEAPU32[argTypes + i2 * POINTER_SIZE >> 2], "parameter " + i2);
+        a2[i2] = requireRegisteredType(HEAPU32[argTypes + i2 * POINTER_SIZE >> 2], "parameter " + i2);
       }
-      return a;
+      return a2;
     }
     var emval_registeredMethods = [];
     function __emval_get_method_caller(argCount, argTypes) {
@@ -15573,7 +17385,7 @@ var Module$1 = (() => {
       if (requestedSize > maxHeapSize) {
         return false;
       }
-      let alignUp = (x, multiple) => x + (multiple - x % multiple) % multiple;
+      let alignUp = (x2, multiple) => x2 + (multiple - x2 % multiple) % multiple;
       for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
         var overGrownHeapSize = oldSize * (1 + 0.2 / cutDown);
         overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
@@ -15593,13 +17405,13 @@ var Module$1 = (() => {
       if (!getEnvStrings.strings) {
         var lang = (typeof navigator == "object" && navigator.languages && navigator.languages[0] || "C").replace("-", "_") + ".UTF-8";
         var env = { "USER": "web_user", "LOGNAME": "web_user", "PATH": "/", "PWD": "/", "HOME": "/home/web_user", "LANG": lang, "_": getExecutableName() };
-        for (var x in ENV) {
-          if (ENV[x] === void 0) delete env[x];
-          else env[x] = ENV[x];
+        for (var x2 in ENV) {
+          if (ENV[x2] === void 0) delete env[x2];
+          else env[x2] = ENV[x2];
         }
         var strings = [];
-        for (var x in env) {
-          strings.push(x + "=" + env[x]);
+        for (var x2 in env) {
+          strings.push(x2 + "=" + env[x2]);
         }
         getEnvStrings.strings = strings;
       }
@@ -15716,7 +17528,7 @@ var Module$1 = (() => {
     }
     function inetPton6(str) {
       var words;
-      var w, offset2, z;
+      var w2, offset2, z2;
       var valid6regx = /^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$/i;
       var parts = [];
       if (!valid6regx.test(str)) {
@@ -15740,19 +17552,19 @@ var Module$1 = (() => {
         words = str.split(":");
       }
       offset2 = 0;
-      z = 0;
-      for (w = 0; w < words.length; w++) {
-        if (typeof words[w] == "string") {
-          if (words[w] === "Z") {
-            for (z = 0; z < 8 - words.length + 1; z++) {
-              parts[w + z] = 0;
+      z2 = 0;
+      for (w2 = 0; w2 < words.length; w2++) {
+        if (typeof words[w2] == "string") {
+          if (words[w2] === "Z") {
+            for (z2 = 0; z2 < 8 - words.length + 1; z2++) {
+              parts[w2 + z2] = 0;
             }
-            offset2 = z - 1;
+            offset2 = z2 - 1;
           } else {
-            parts[w + offset2] = _htons(parseInt(words[w], 16));
+            parts[w2 + offset2] = _htons(parseInt(words[w2], 16));
           }
         } else {
-          parts[w + offset2] = words[w];
+          parts[w2 + offset2] = words[w2];
         }
       }
       return [parts[1] << 16 | parts[0], parts[3] << 16 | parts[2], parts[5] << 16 | parts[4], parts[7] << 16 | parts[6]];
@@ -15927,9 +17739,9 @@ var Module$1 = (() => {
         program.uniformLocsById = uniformLocsById = {};
         program.uniformArrayNamesById = {};
         for (i2 = 0; i2 < GLctx.getProgramParameter(program, 35718); ++i2) {
-          var u = GLctx.getActiveUniform(program, i2);
-          var nm = u.name;
-          var sz = u.size;
+          var u2 = GLctx.getActiveUniform(program, i2);
+          var nm = u2.name;
+          var sz = u2.size;
           var lb = webglGetLeftBracePos(nm);
           var arrayName = lb > 0 ? nm.slice(0, lb) : nm;
           var id2 = program.uniformIdCounter;
@@ -15967,11 +17779,11 @@ var Module$1 = (() => {
       return -1;
     }
     function webglGetUniformLocation(location) {
-      var p = GLctx.currentProgram;
-      if (p) {
-        var webglLoc = p.uniformLocsById[location];
+      var p2 = GLctx.currentProgram;
+      if (p2) {
+        var webglLoc = p2.uniformLocsById[location];
         if (typeof webglLoc == "number") {
-          p.uniformLocsById[location] = webglLoc = GLctx.getUniformLocation(p, p.uniformArrayNamesById[location] + (webglLoc > 0 ? "[" + webglLoc + "]" : ""));
+          p2.uniformLocsById[location] = webglLoc = GLctx.getUniformLocation(p2, p2.uniformArrayNamesById[location] + (webglLoc > 0 ? "[" + webglLoc + "]" : ""));
         }
         return webglLoc;
       } else {
@@ -16500,7 +18312,7 @@ const localGC = (debug) => {
       return v;
     },
     () => {
-      [...cleaner.values()].forEach((d) => d.delete());
+      [...cleaner.values()].forEach((d2) => d2.delete());
       cleaner.clear();
     },
     void 0
@@ -16654,11 +18466,11 @@ const DIRECTIONS$1 = {
   Y: [0, 1, 0],
   Z: [0, 0, 1]
 };
-function makeDirection(p) {
-  if (p === "X" || p === "Y" || p === "Z") {
-    return DIRECTIONS$1[p];
+function makeDirection(p2) {
+  if (p2 === "X" || p2 === "Y" || p2 === "Z") {
+    return DIRECTIONS$1[p2];
   }
-  return p;
+  return p2;
 }
 function asPnt(coords) {
   const v = new Vector(coords);
@@ -16848,8 +18660,8 @@ class Plane {
       "reference"
     );
   }
-  setOrigin2d(x, y) {
-    this.origin = this.toWorldCoords([x, y]);
+  setOrigin2d(x2, y2) {
+    this.origin = this.toWorldCoords([x2, y2]);
   }
   toLocalCoords(vec2) {
     const pnt2 = this.globalToLocal.transformPoint(vec2);
@@ -17064,12 +18876,12 @@ function zip(arrays) {
 function round2(v) {
   return Math.round(v * 100) / 100;
 }
-const reprPnt = ([x, y]) => {
-  return `(${round2(x)},${round2(y)})`;
+const reprPnt = ([x2, y2]) => {
+  return `(${round2(x2)},${round2(y2)})`;
 };
-const asFixed = (p, precision = 1e-9) => {
-  let num = p;
-  if (Math.abs(p) < precision)
+const asFixed = (p2, precision = 1e-9) => {
+  let num = p2;
+  if (Math.abs(p2) < precision)
     num = 0;
   return num.toFixed(-Math.log10(precision));
 };
@@ -17083,17 +18895,17 @@ const removeDuplicatePoints = (points, precision = 1e-9) => {
     ).values()
   );
 };
-const pnt = ([x, y]) => {
+const pnt = ([x2, y2]) => {
   const oc = getOC();
-  return new oc.gp_Pnt2d_3(x, y);
+  return new oc.gp_Pnt2d_3(x2, y2);
 };
-const direction2d = ([x, y]) => {
+const direction2d = ([x2, y2]) => {
   const oc = getOC();
-  return new oc.gp_Dir2d_4(x, y);
+  return new oc.gp_Dir2d_4(x2, y2);
 };
-const vec = ([x, y]) => {
+const vec = ([x2, y2]) => {
   const oc = getOC();
-  return new oc.gp_Vec2d_4(x, y);
+  return new oc.gp_Vec2d_4(x2, y2);
 };
 const axis2d = (point2, direction) => {
   const oc = getOC();
@@ -17202,17 +19014,17 @@ const rotate2d = (point2, angle2, center = [0, 0]) => {
   return [xnew + cx, ynew + cy];
 };
 const polarToCartesian = (r, theta) => {
-  const x = Math.cos(theta) * r;
-  const y = Math.sin(theta) * r;
-  return [x, y];
+  const x2 = Math.cos(theta) * r;
+  const y2 = Math.sin(theta) * r;
+  return [x2, y2];
 };
-const cartesianToPolar = ([x, y]) => {
-  const r = distance2d([x, y]);
-  const theta = Math.atan2(y, x);
+const cartesianToPolar = ([x2, y2]) => {
+  const r = distance2d([x2, y2]);
+  const theta = Math.atan2(y2, x2);
   return [r, theta];
 };
-const determinant2x2 = (matrix) => {
-  return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+const determinant2x2 = (matrix2) => {
+  return matrix2[0][0] * matrix2[1][1] - matrix2[0][1] * matrix2[1][0];
 };
 class Curve2D extends WrappingObj {
   constructor(handle) {
@@ -17382,9 +19194,9 @@ class Curve2D extends WrappingObj {
     });
     parameters = Array.from(
       new Map(
-        parameters.map((p) => [precisionRound(p, -Math.log10(precision)), p])
+        parameters.map((p2) => [precisionRound(p2, -Math.log10(precision)), p2])
       ).values()
-    ).sort((a, b) => a - b);
+    ).sort((a2, b) => a2 - b);
     const firstParam = this.firstParameter;
     const lastParam = this.lastParameter;
     if (firstParam > lastParam) {
@@ -17508,8 +19320,8 @@ function approximateAsSvgCompatibleCurve(curves2, options = {
     if (curveType === "BSPLINE_CURVE") {
       const bspline2 = adaptor.BSpline().get();
       if (!bspline2.IsRational()) {
-        const c = BSplineToBezier(adaptor);
-        return approximateAsSvgCompatibleCurve(c, options);
+        const c2 = BSplineToBezier(adaptor);
+        return approximateAsSvgCompatibleCurve(c2, options);
       }
     }
     const bspline = approximateAsBSpline(
@@ -17567,16 +19379,16 @@ const intersectCurves = (first, second, precision = 1e-9) => {
   } finally {
     intersector.delete();
   }
-  const segmentsAsPoints = commonSegments.filter((c) => samePoint$2(c.firstPoint, c.lastPoint, precision)).map((c) => c.firstPoint);
+  const segmentsAsPoints = commonSegments.filter((c2) => samePoint$2(c2.firstPoint, c2.lastPoint, precision)).map((c2) => c2.firstPoint);
   if (segmentsAsPoints.length) {
     intersections.push(...segmentsAsPoints);
     commonSegments = commonSegments.filter(
-      (c) => !samePoint$2(c.firstPoint, c.lastPoint, precision)
+      (c2) => !samePoint$2(c2.firstPoint, c2.lastPoint, precision)
     );
   }
-  const commonSegmentsPoints = commonSegments.flatMap((c) => [
-    c.firstPoint,
-    c.lastPoint
+  const commonSegmentsPoints = commonSegments.flatMap((c2) => [
+    c2.firstPoint,
+    c2.lastPoint
   ]);
   return { intersections, commonSegments, commonSegmentsPoints };
 };
@@ -17663,11 +19475,11 @@ const make2dCircle = (radius, center = [0, 0]) => {
 const make2dEllipseArc = (majorRadius, minorRadius, startAngle, endAngle, center = [0, 0], xDir, direct = true) => {
   const oc = getOC();
   const [r, gc] = localGC();
-  const ellipse = r(
+  const ellipse2 = r(
     new oc.gp_Elips2d_2(r(axis2d(center, xDir)), majorRadius, minorRadius, true)
   );
   const segment = r(
-    new oc.GCE2d_MakeArcOfEllipse_1(ellipse, startAngle, endAngle, direct)
+    new oc.GCE2d_MakeArcOfEllipse_1(ellipse2, startAngle, endAngle, direct)
   ).Value();
   gc();
   return new Curve2D(segment);
@@ -17679,8 +19491,8 @@ const make2dBezierCurve = (startPoint, controls, endPoint) => {
     new oc.TColgp_Array1OfPnt2d_2(1, controls.length + 2)
   );
   arrayOfPoints.SetValue(1, r(pnt(startPoint)));
-  controls.forEach((p, i) => {
-    arrayOfPoints.SetValue(i + 2, r(pnt(p)));
+  controls.forEach((p2, i) => {
+    arrayOfPoints.SetValue(i + 2, r(pnt(p2)));
   });
   arrayOfPoints.SetValue(controls.length + 2, r(pnt(endPoint)));
   const bezCurve = new oc.Geom2d_BezierCurve_1(arrayOfPoints);
@@ -17719,8 +19531,8 @@ const make2dOffset = (curve, offset2) => {
       const centerPos = r(circle.Location());
       const center = [centerPos.X(), centerPos.Y()];
       const offsetViaCenter = (point2) => {
-        const [x, y] = normalize2d(subtract2d(point2, center));
-        return add2d(point2, [orientedOffset * x, orientedOffset * y]);
+        const [x2, y2] = normalize2d(subtract2d(point2, center));
+        return add2d(point2, [orientedOffset * x2, orientedOffset * y2]);
       };
       return {
         collapsed: true,
@@ -17791,8 +19603,8 @@ function removeCorner(firstCurve, secondCurve, radius) {
   }
   const center = potentialCenter;
   const splitForFillet = (curve, offsetCurve) => {
-    const [x, y] = offsetCurve.tangentAt(center);
-    const normal = normalize2d([-y, x]);
+    const [x2, y2] = offsetCurve.tangentAt(center);
+    const normal = normalize2d([-y2, x2]);
     const splitPoint = add2d(center, scalarMultiply2d(normal, offset2));
     const splitParam = curve.parameter(splitPoint, 1e-6);
     return curve.splitAt([splitParam]);
@@ -17839,11 +19651,11 @@ function dogboneFilletCurves(firstCurve, secondCurve, radius) {
   const tgt1 = normalize2d(firstCurve.tangentAt(1));
   const tgt2 = normalize2d(secondCurve.tangentAt(0));
   const sinAngle = crossProduct2d(tgt1, tgt2);
-  const a = Math.asin(sinAngle);
+  const a2 = Math.asin(sinAngle);
   if (Math.abs(sinAngle) < 1e-10)
     return [firstCurve, secondCurve];
   const orientationCorrection = sinAngle > 0 ? -1 : 1;
-  const offset2 = Math.abs(radius) * Math.sin(a / 2) * orientationCorrection;
+  const offset2 = Math.abs(radius) * Math.sin(a2 / 2) * orientationCorrection;
   const firstOffset = make2dOffset(firstCurve, offset2);
   const secondOffset = make2dOffset(secondCurve, offset2);
   if (!(firstOffset instanceof Curve2D) || !(secondOffset instanceof Curve2D)) {
@@ -18064,9 +19876,9 @@ class Flatbush {
       const minY = this._boxes[pos2++];
       const maxX = this._boxes[pos2++];
       const maxY = this._boxes[pos2++];
-      const x = Math.floor(hilbertMax * ((minX + maxX) / 2 - this.minX) / width);
-      const y = Math.floor(hilbertMax * ((minY + maxY) / 2 - this.minY) / height);
-      hilbertValues[i] = hilbert(x, y);
+      const x2 = Math.floor(hilbertMax * ((minX + maxX) / 2 - this.minX) / width);
+      const y2 = Math.floor(hilbertMax * ((minY + maxY) / 2 - this.minY) / height);
+      hilbertValues[i] = hilbert(x2, y2);
     }
     sort(hilbertValues, this._boxes, this._indices, 0, this.numItems - 1, this.nodeSize);
     for (let i = 0, pos2 = 0; i < this._levelBounds.length - 1; i++) {
@@ -18122,7 +19934,7 @@ class Flatbush {
     }
     return results;
   }
-  neighbors(x, y, maxResults = Infinity, maxDistance = Infinity, filterFn) {
+  neighbors(x2, y2, maxResults = Infinity, maxDistance = Infinity, filterFn) {
     if (this._pos !== this._boxes.length) {
       throw new Error("Data not yet indexed - call index.finish().");
     }
@@ -18134,8 +19946,8 @@ class Flatbush {
       const end = Math.min(nodeIndex + this.nodeSize * 4, upperBound(nodeIndex, this._levelBounds));
       for (let pos2 = nodeIndex; pos2 < end; pos2 += 4) {
         const index = this._indices[pos2 >> 2] | 0;
-        const dx = axisDist(x, this._boxes[pos2], this._boxes[pos2 + 2]);
-        const dy = axisDist(y, this._boxes[pos2 + 1], this._boxes[pos2 + 3]);
+        const dx = axisDist(x2, this._boxes[pos2], this._boxes[pos2 + 2]);
+        const dy = axisDist(y2, this._boxes[pos2 + 1], this._boxes[pos2 + 3]);
         const dist2 = dx * dx + dy * dy;
         if (nodeIndex < this.numItems * 4) {
           if (filterFn === void 0 || filterFn(index)) {
@@ -18163,18 +19975,18 @@ class Flatbush {
     return results;
   }
 }
-function axisDist(k, min, max) {
-  return k < min ? min - k : k <= max ? 0 : k - max;
+function axisDist(k2, min, max) {
+  return k2 < min ? min - k2 : k2 <= max ? 0 : k2 - max;
 }
 function upperBound(value2, arr) {
   let i = 0;
   let j = arr.length - 1;
   while (i < j) {
-    const m = i + j >> 1;
-    if (arr[m] > value2) {
-      j = m;
+    const m2 = i + j >> 1;
+    if (arr[m2] > value2) {
+      j = m2;
     } else {
-      i = m + 1;
+      i = m2 + 1;
     }
   }
   return arr[i];
@@ -18203,59 +20015,59 @@ function swap(values, boxes, indices, i, j) {
   const temp = values[i];
   values[i] = values[j];
   values[j] = temp;
-  const k = 4 * i;
-  const m = 4 * j;
-  const a = boxes[k];
-  const b = boxes[k + 1];
-  const c = boxes[k + 2];
-  const d = boxes[k + 3];
-  boxes[k] = boxes[m];
-  boxes[k + 1] = boxes[m + 1];
-  boxes[k + 2] = boxes[m + 2];
-  boxes[k + 3] = boxes[m + 3];
-  boxes[m] = a;
-  boxes[m + 1] = b;
-  boxes[m + 2] = c;
-  boxes[m + 3] = d;
+  const k2 = 4 * i;
+  const m2 = 4 * j;
+  const a2 = boxes[k2];
+  const b = boxes[k2 + 1];
+  const c2 = boxes[k2 + 2];
+  const d2 = boxes[k2 + 3];
+  boxes[k2] = boxes[m2];
+  boxes[k2 + 1] = boxes[m2 + 1];
+  boxes[k2 + 2] = boxes[m2 + 2];
+  boxes[k2 + 3] = boxes[m2 + 3];
+  boxes[m2] = a2;
+  boxes[m2 + 1] = b;
+  boxes[m2 + 2] = c2;
+  boxes[m2 + 3] = d2;
   const e = indices[i];
   indices[i] = indices[j];
   indices[j] = e;
 }
-function hilbert(x, y) {
-  let a = x ^ y;
-  let b = 65535 ^ a;
-  let c = 65535 ^ (x | y);
-  let d = x & (y ^ 65535);
-  let A = a | b >> 1;
-  let B = a >> 1 ^ a;
-  let C = c >> 1 ^ b & d >> 1 ^ c;
-  let D = a & c >> 1 ^ d >> 1 ^ d;
-  a = A;
+function hilbert(x2, y2) {
+  let a2 = x2 ^ y2;
+  let b = 65535 ^ a2;
+  let c2 = 65535 ^ (x2 | y2);
+  let d2 = x2 & (y2 ^ 65535);
+  let A = a2 | b >> 1;
+  let B = a2 >> 1 ^ a2;
+  let C = c2 >> 1 ^ b & d2 >> 1 ^ c2;
+  let D = a2 & c2 >> 1 ^ d2 >> 1 ^ d2;
+  a2 = A;
   b = B;
-  c = C;
-  d = D;
-  A = a & a >> 2 ^ b & b >> 2;
-  B = a & b >> 2 ^ b & (a ^ b) >> 2;
-  C ^= a & c >> 2 ^ b & d >> 2;
-  D ^= b & c >> 2 ^ (a ^ b) & d >> 2;
-  a = A;
+  c2 = C;
+  d2 = D;
+  A = a2 & a2 >> 2 ^ b & b >> 2;
+  B = a2 & b >> 2 ^ b & (a2 ^ b) >> 2;
+  C ^= a2 & c2 >> 2 ^ b & d2 >> 2;
+  D ^= b & c2 >> 2 ^ (a2 ^ b) & d2 >> 2;
+  a2 = A;
   b = B;
-  c = C;
-  d = D;
-  A = a & a >> 4 ^ b & b >> 4;
-  B = a & b >> 4 ^ b & (a ^ b) >> 4;
-  C ^= a & c >> 4 ^ b & d >> 4;
-  D ^= b & c >> 4 ^ (a ^ b) & d >> 4;
-  a = A;
+  c2 = C;
+  d2 = D;
+  A = a2 & a2 >> 4 ^ b & b >> 4;
+  B = a2 & b >> 4 ^ b & (a2 ^ b) >> 4;
+  C ^= a2 & c2 >> 4 ^ b & d2 >> 4;
+  D ^= b & c2 >> 4 ^ (a2 ^ b) & d2 >> 4;
+  a2 = A;
   b = B;
-  c = C;
-  d = D;
-  C ^= a & c >> 8 ^ b & d >> 8;
-  D ^= b & c >> 8 ^ (a ^ b) & d >> 8;
-  a = C ^ C >> 1;
+  c2 = C;
+  d2 = D;
+  C ^= a2 & c2 >> 8 ^ b & d2 >> 8;
+  D ^= b & c2 >> 8 ^ (a2 ^ b) & d2 >> 8;
+  a2 = C ^ C >> 1;
   b = D ^ D >> 1;
-  let i0 = x ^ y;
-  let i1 = b | 65535 ^ (i0 | a);
+  let i0 = x2 ^ y2;
+  let i1 = b | 65535 ^ (i0 | a2);
   i0 = (i0 | i0 << 8) & 16711935;
   i0 = (i0 | i0 << 4) & 252645135;
   i0 = (i0 | i0 << 2) & 858993459;
@@ -18268,9 +20080,9 @@ function hilbert(x, y) {
 }
 const stitchCurves = (curves2, precision = 1e-7) => {
   const startPoints = new Flatbush(curves2.length);
-  curves2.forEach((c) => {
-    const [x, y] = c.firstPoint;
-    startPoints.add(x - precision, y - precision, x + precision, y + precision);
+  curves2.forEach((c2) => {
+    const [x2, y2] = c2.firstPoint;
+    startPoints.add(x2 - precision, y2 - precision, x2 + precision, y2 + precision);
   });
   startPoints.finish();
   const stitchedCurves = [];
@@ -18287,19 +20099,19 @@ const stitchCurves = (curves2, precision = 1e-7) => {
         throw new Error("Infinite loop detected");
       }
       const lastPoint = connectedCurves[connectedCurves.length - 1].lastPoint;
-      const [x, y] = lastPoint;
+      const [x2, y2] = lastPoint;
       const neighbors = startPoints.search(
-        x - precision,
-        y - precision,
-        x + precision,
-        y + precision
+        x2 - precision,
+        y2 - precision,
+        x2 + precision,
+        y2 + precision
       );
       const indexDistance = (otherIndex) => Math.abs((currentIndex - otherIndex) % curves2.length);
       const potentialNextCurves = neighbors.filter((neighborIndex) => !visited.has(neighborIndex)).map((neighborIndex) => [
         curves2[neighborIndex],
         neighborIndex,
         indexDistance(neighborIndex)
-      ]).sort(([, , a], [, , b]) => indexDistance(a) - indexDistance(b));
+      ]).sort(([, , a2], [, , b]) => indexDistance(a2) - indexDistance(b));
       if (potentialNextCurves.length === 0) {
         stitchedCurves.push(connectedCurves);
         break;
@@ -18378,25 +20190,25 @@ const manifoldTransformFromTransformation = (t) => {
   const yPoint = transform.transformPoint([0, 1, 0]);
   const zPoint = transform.transformPoint([0, 0, 1]);
   const o = [origin.X(), origin.Y(), origin.Z()];
-  const x = [xPoint.X() - o[0], xPoint.Y() - o[1], xPoint.Z() - o[2]];
-  const y = [yPoint.X() - o[0], yPoint.Y() - o[1], yPoint.Z() - o[2]];
-  const z = [zPoint.X() - o[0], zPoint.Y() - o[1], zPoint.Z() - o[2]];
+  const x2 = [xPoint.X() - o[0], xPoint.Y() - o[1], xPoint.Z() - o[2]];
+  const y2 = [yPoint.X() - o[0], yPoint.Y() - o[1], yPoint.Z() - o[2]];
+  const z2 = [zPoint.X() - o[0], zPoint.Y() - o[1], zPoint.Z() - o[2]];
   origin.delete();
   xPoint.delete();
   yPoint.delete();
   zPoint.delete();
   return [
-    x[0],
-    y[0],
-    z[0],
+    x2[0],
+    y2[0],
+    z2[0],
     o[0],
-    x[1],
-    y[1],
-    z[1],
+    x2[1],
+    y2[1],
+    z2[1],
     o[1],
-    x[2],
-    y[2],
-    z[2],
+    x2[2],
+    y2[2],
+    z2[2],
     o[2]
   ];
 };
@@ -18665,7 +20477,7 @@ class Finder {
    * @category Filter Combination
    */
   and(findersList) {
-    findersList.forEach((f) => f(this));
+    findersList.forEach((f2) => f2(this));
     return this;
   }
   /**
@@ -19154,8 +20966,8 @@ class CornerFinder extends Finder {
     const minY = Math.min(y1, y2);
     const maxY = Math.max(y1, y2);
     function elementInBox({ element }) {
-      const [x, y] = element.point;
-      return x >= minX && x <= maxX && y >= minY && y <= maxY;
+      const [x3, y3] = element.point;
+      return x3 >= minX && x3 <= maxX && y3 >= minY && y3 <= maxY;
     }
     this.filters.push(elementInBox);
     return this;
@@ -19190,10 +21002,10 @@ class CornerFinder extends Finder {
     });
   }
 }
-function getSingleFace(f, shape) {
-  if (f instanceof Face)
-    return f;
-  const finder = f instanceof FaceFinder ? f : f(new FaceFinder());
+function getSingleFace(f2, shape) {
+  if (f2 instanceof Face)
+    return f2;
+  const finder = f2 instanceof FaceFinder ? f2 : f2(new FaceFinder());
   return finder.find(shape, { unique: true });
 }
 function isNumber(r) {
@@ -19456,13 +21268,13 @@ class Shape extends WrappingObj {
       const start = lines.length;
       let previousPoint = null;
       return [
-        (p) => {
+        (p2) => {
           if (previousPoint) {
             lines.push(...previousPoint);
-            previousPoint = [p.X(), p.Y(), p.Z()];
+            previousPoint = [p2.X(), p2.Y(), p2.Z()];
             lines.push(...previousPoint);
           } else {
-            previousPoint = [p.X(), p.Y(), p.Z()];
+            previousPoint = [p2.X(), p2.Y(), p2.Z()];
           }
         },
         (edgeHash) => {
@@ -19503,12 +21315,12 @@ class Shape extends WrappingObj {
         r(edgeNodes);
         const [recordPoint, done] = addEdge();
         for (let i = edgeNodes.Lower(); i <= edgeNodes.Upper(); i++) {
-          const p = r(
+          const p2 = r(
             r(tri.Node(edgeNodes.Value(i))).Transformed(
               edgeLoc.Transformation()
             )
           );
-          recordPoint(p);
+          recordPoint(p2);
         }
         done(edge.hashCode);
       }
@@ -19531,10 +21343,10 @@ class Shape extends WrappingObj {
       );
       const [recordPoint, done] = addEdge();
       for (let j = 0; j < tangDef.NbPoints(); j++) {
-        const p = r(
+        const p2 = r(
           tangDef.Value(j + 1).Transformed(aLocation.Transformation())
         );
-        recordPoint(p);
+        recordPoint(p2);
       }
       done(edgeHash);
     }
@@ -19794,16 +21606,16 @@ class Face extends Shape {
       vMax: vMax.current
     };
   }
-  pointOnSurface(u, v) {
+  pointOnSurface(u2, v) {
     const { uMin, uMax, vMin, vMax } = this.UVBounds;
     const surface = this._geomAdaptor();
-    const p = new this.oc.gp_Pnt_1();
-    const absoluteU = u * (uMax - uMin) + uMin;
+    const p2 = new this.oc.gp_Pnt_1();
+    const absoluteU = u2 * (uMax - uMin) + uMin;
     const absoluteV = v * (vMax - vMin) + vMin;
-    surface.D0(absoluteU, absoluteV, p);
-    const point2 = new Vector(p);
+    surface.D0(absoluteU, absoluteV, p2);
+    const point2 = new Vector(p2);
     surface.delete();
-    p.delete();
+    p2.delete();
     return point2;
   }
   uvCoordinates(point2) {
@@ -19822,20 +21634,20 @@ class Face extends Shape {
     return [uPtr.current, vPtr.current];
   }
   normalAt(locationVector) {
-    let u = 0;
+    let u2 = 0;
     let v = 0;
     const r = GCWithScope();
     if (!locationVector) {
       const { uMin, uMax, vMin, vMax } = this.UVBounds;
-      u = 0.5 * (uMin + uMax);
+      u2 = 0.5 * (uMin + uMax);
       v = 0.5 * (vMin + vMax);
     } else {
-      [u, v] = this.uvCoordinates(locationVector);
+      [u2, v] = this.uvCoordinates(locationVector);
     }
-    const p = r(new this.oc.gp_Pnt_1());
+    const p2 = r(new this.oc.gp_Pnt_1());
     const vn = r(new this.oc.gp_Vec_1());
     const props = r(new this.oc.BRepGProp_Face_2(this.wrapped, false));
-    props.Normal(u, v, p, vn);
+    props.Normal(u2, v, p2, vn);
     const normal = new Vector(vn);
     return normal;
   }
@@ -19853,7 +21665,7 @@ class Face extends Shape {
   }
   innerWires() {
     const outer = this.clone().outerWire();
-    const innerWires = this.wires.filter((w) => !outer.isSame(w));
+    const innerWires = this.wires.filter((w2) => !outer.isSame(w2));
     outer.delete();
     this.delete();
     return innerWires;
@@ -19879,20 +21691,20 @@ class Face extends Shape {
     const nbNodes = tri.NbNodes();
     triangulatedFace.vertices = new Array(nbNodes * 3);
     for (let i = 1; i <= nbNodes; i++) {
-      const p = r(r(tri.Node(i)).Transformed(transformation));
-      triangulatedFace.vertices[(i - 1) * 3 + 0] = p.X();
-      triangulatedFace.vertices[(i - 1) * 3 + 1] = p.Y();
-      triangulatedFace.vertices[(i - 1) * 3 + 2] = p.Z();
+      const p2 = r(r(tri.Node(i)).Transformed(transformation));
+      triangulatedFace.vertices[(i - 1) * 3 + 0] = p2.X();
+      triangulatedFace.vertices[(i - 1) * 3 + 1] = p2.Y();
+      triangulatedFace.vertices[(i - 1) * 3 + 2] = p2.Z();
     }
     const normalsArray = r(new this.oc.TColgp_Array1OfDir_2(1, nbNodes));
     const pc = r(new this.oc.Poly_Connect_2(triangulation));
     this.oc.StdPrs_ToolTriangulatedShape.Normal(this.wrapped, pc, normalsArray);
     triangulatedFace.verticesNormals = new Array(normalsArray.Length() * 3);
     for (let i = normalsArray.Lower(); i <= normalsArray.Upper(); i++) {
-      const d = r(r(normalsArray.Value(i)).Transformed(transformation));
-      triangulatedFace.verticesNormals[(i - 1) * 3 + 0] = d.X();
-      triangulatedFace.verticesNormals[(i - 1) * 3 + 1] = d.Y();
-      triangulatedFace.verticesNormals[(i - 1) * 3 + 2] = d.Z();
+      const d2 = r(r(normalsArray.Value(i)).Transformed(transformation));
+      triangulatedFace.verticesNormals[(i - 1) * 3 + 0] = d2.X();
+      triangulatedFace.verticesNormals[(i - 1) * 3 + 1] = d2.Y();
+      triangulatedFace.verticesNormals[(i - 1) * 3 + 2] = d2.Z();
     }
     const orient = this.orientation;
     const nbTriangles = tri.NbTriangles();
@@ -19991,21 +21803,21 @@ class _3DShape extends Shape {
     const { triangles, vertices } = this.mesh(options);
     const tol = (options == null ? void 0 : options.tolerance) ?? 1e-6;
     const scale2 = tol === 0 ? 0 : 1 / tol;
-    const keyFor = (x, y, z) => {
+    const keyFor = (x2, y2, z2) => {
       if (scale2 === 0)
-        return `${x}|${y}|${z}`;
-      return `${Math.round(x * scale2)}|${Math.round(y * scale2)}|${Math.round(
-        z * scale2
+        return `${x2}|${y2}|${z2}`;
+      return `${Math.round(x2 * scale2)}|${Math.round(y2 * scale2)}|${Math.round(
+        z2 * scale2
       )}`;
     };
     const mergeFrom = [];
     const mergeTo = [];
     const seen = /* @__PURE__ */ new Map();
     for (let i = 0; i < vertices.length; i += 3) {
-      const x = vertices[i];
-      const y = vertices[i + 1];
-      const z = vertices[i + 2];
-      const key = keyFor(x, y, z);
+      const x2 = vertices[i];
+      const y2 = vertices[i + 1];
+      const z2 = vertices[i + 2];
+      const key = keyFor(x2, y2, z2);
       const existing2 = seen.get(key);
       const idx = i / 3;
       if (existing2 !== void 0) {
@@ -20237,7 +22049,7 @@ class _3DShape extends Shape {
     const dir = asDir(inputPlane.zDir);
     const faces = faceFinder(new FaceFinder()).find(this);
     faces.forEach(
-      (f) => drafter.Add(f.wrapped, dir, angle2 * DEG2RAD, plane2, false)
+      (f2) => drafter.Add(f2.wrapped, dir, angle2 * DEG2RAD, plane2, false)
     );
     drafter.Build(new oc.Message_ProgressRange_1());
     const newShape = drafter.ModifiedShape(this.wrapped);
@@ -20343,10 +22155,10 @@ const makeHelix = (pitch, height, radius, center = [0, 0, 0], dir = [0, 0, 1], l
       r(new oc.Handle_Geom_Surface_2(geomSurf))
     )
   ).Edge();
-  const w = r(new oc.BRepBuilderAPI_MakeWire_2(e)).Wire();
-  oc.BRepLib.BuildCurves3d_2(w);
+  const w2 = r(new oc.BRepBuilderAPI_MakeWire_2(e)).Wire();
+  oc.BRepLib.BuildCurves3d_2(w2);
   gc();
-  return new Wire(w);
+  return new Wire(w2);
 };
 const makeThreePointArc = (v1, v2, v3) => {
   const oc = getOC();
@@ -20422,8 +22234,8 @@ const makeBSplineApproximation = function makeBSplineApproximation2(points, {
 const makeBezierCurve = (points) => {
   const oc = getOC();
   const arrayOfPoints = new oc.TColgp_Array1OfPnt_2(1, points.length);
-  points.forEach((p, i) => {
-    arrayOfPoints.SetValue(i + 1, asPnt(p));
+  points.forEach((p2, i) => {
+    arrayOfPoints.SetValue(i + 1, asPnt(p2));
   });
   const bezCurve = new oc.Geom_BezierCurve_1(arrayOfPoints);
   const curve = new oc.Handle_Geom_Curve_2(bezCurve);
@@ -20645,7 +22457,7 @@ const makePolygon = (points) => {
   );
   return makeFace(assembleWire(edges));
 };
-const isTangent = (c) => c === "symmetric" || typeof c === "number" || Array.isArray(c) && c.length === 2;
+const isTangent = (c2) => c2 === "symmetric" || typeof c2 === "number" || Array.isArray(c2) && c2.length === 2;
 const defaultsSplineConfig = (config) => {
   let conf;
   if (!config)
@@ -20894,7 +22706,7 @@ const loft = (wires, { ruled = true, startPoint, endPoint } = {}, returnShell = 
   if (startPoint) {
     loftBuilder.AddVertex(r(makeVertex(startPoint)).wrapped);
   }
-  wires.forEach((w) => loftBuilder.AddWire(w.wrapped));
+  wires.forEach((w2) => loftBuilder.AddWire(w2.wrapped));
   if (endPoint) {
     loftBuilder.AddVertex(r(makeVertex(endPoint)).wrapped);
   }
@@ -21095,17 +22907,17 @@ class Sketcher {
   _updatePointer(newPointer) {
     this.pointer = newPointer;
   }
-  movePointerTo([x, y]) {
+  movePointerTo([x2, y2]) {
     if (this.pendingEdges.length)
       throw new Error(
         "You can only move the pointer if there is no edge defined"
       );
-    this._updatePointer(this.plane.toWorldCoords([x, y]));
+    this._updatePointer(this.plane.toWorldCoords([x2, y2]));
     this.firstPoint = new Vector(this.pointer);
     return this;
   }
-  lineTo([x, y]) {
-    const endPoint = this.plane.toWorldCoords([x, y]);
+  lineTo([x2, y2]) {
+    const endPoint = this.plane.toWorldCoords([x2, y2]);
     this.pendingEdges.push(makeLine(this.pointer, endPoint));
     this._updatePointer(endPoint);
     return this;
@@ -21130,8 +22942,8 @@ class Sketcher {
   }
   polarLine(distance2, angle2) {
     const angleInRads = angle2 * DEG2RAD;
-    const [x, y] = polarToCartesian(distance2, angleInRads);
-    return this.line(x, y);
+    const [x2, y2] = polarToCartesian(distance2, angleInRads);
+    return this.line(x2, y2);
   }
   polarLineTo([r, theta]) {
     const angleInRads = theta * DEG2RAD;
@@ -21182,10 +22994,10 @@ class Sketcher {
   sagittaArcTo(end, sagitta) {
     const startPoint = this.pointer;
     const endPoint = this.plane.toWorldCoords(end);
-    let p = endPoint.add(startPoint);
-    const midPoint = p.multiply(0.5);
-    p = endPoint.sub(startPoint);
-    const sagDirection = p.cross(this.plane.zDir).normalized();
+    let p2 = endPoint.add(startPoint);
+    const midPoint = p2.multiply(0.5);
+    p2 = endPoint.sub(startPoint);
+    const sagDirection = p2.cross(this.plane.zDir).normalized();
     const sagVector = sagDirection.multiply(sagitta);
     const sagPoint = midPoint.add(sagVector);
     this.pendingEdges.push(makeThreePointArc(this.pointer, sagPoint, endPoint));
@@ -21304,7 +23116,7 @@ class Sketcher {
     } else {
       cp = controlPoints;
     }
-    const inWorldPoints = cp.map((p) => this.plane.toWorldCoords(p));
+    const inWorldPoints = cp.map((p2) => this.plane.toWorldCoords(p2));
     const endPoint = this.plane.toWorldCoords(end);
     this.pendingEdges.push(
       makeBezierCurve([this.pointer, ...inWorldPoints, endPoint])
@@ -21405,8 +23217,8 @@ class Sketcher {
 const curvesBoundingBox = (curves2) => {
   const oc = getOC();
   const boundBox = new oc.Bnd_Box2d();
-  curves2.forEach((c) => {
-    oc.BndLib_Add2dCurve.Add_3(c.wrapped, 1e-6, boundBox);
+  curves2.forEach((c2) => {
+    oc.BndLib_Add2dCurve.Add_3(c2.wrapped, 1e-6, boundBox);
   });
   return new BoundingBox2d(boundBox);
 };
@@ -21557,7 +23369,7 @@ class Blueprint {
     this._guessedOrientation = null;
   }
   delete() {
-    this.curves.forEach((c) => c.delete());
+    this.curves.forEach((c2) => c2.delete());
     if (this._boundingBox)
       this._boundingBox.delete();
   }
@@ -21565,7 +23377,7 @@ class Blueprint {
     return new Blueprint(this.curves);
   }
   get repr() {
-    return ["Blueprint", ...this.curves.map((c) => c.repr)].join("\n");
+    return ["Blueprint", ...this.curves.map((c2) => c2.repr)].join("\n");
   }
   get boundingBox() {
     if (!this._boundingBox) {
@@ -21578,16 +23390,16 @@ class Blueprint {
       return this._orientation;
     if (this._guessedOrientation)
       return this._guessedOrientation;
-    const vertices = this.curves.flatMap((c) => {
-      if (c.geomType !== "LINE") {
-        return [c.firstPoint, c.value(0.5)];
+    const vertices = this.curves.flatMap((c2) => {
+      if (c2.geomType !== "LINE") {
+        return [c2.firstPoint, c2.value(0.5)];
       }
-      return [c.firstPoint];
+      return [c2.firstPoint];
     });
     const approximateArea = vertices.map((v1, i) => {
       const v2 = vertices[(i + 1) % vertices.length];
       return (v2[0] - v1[0]) * (v2[1] + v1[1]);
-    }).reduce((a, b) => a + b, 0);
+    }).reduce((a2, b) => a2 + b, 0);
     this._guessedOrientation = approximateArea > 0 ? "clockwise" : "counterClockwise";
     return this._guessedOrientation;
   }
@@ -21696,8 +23508,8 @@ class Blueprint {
     const r = GCWithScope();
     const bp = this.clone().mirror([1, 0], [0, 0], "plane");
     const compatibleCurves = approximateAsSvgCompatibleCurve(bp.curves);
-    const path = compatibleCurves.flatMap((c) => {
-      return adaptedCurveToPathElem(r(c.adaptor()), c.lastPoint);
+    const path = compatibleCurves.flatMap((c2) => {
+      return adaptedCurveToPathElem(r(c2.adaptor()), c2.lastPoint);
     });
     const [startX, startY] = bp.curves[0].firstPoint;
     return `M ${round5(startX)} ${round5(startY)} ${path.join(" ")}${bp.isClosed() ? " Z" : ""}`;
@@ -21727,13 +23539,13 @@ class Blueprint {
     const intersector = new oc.Geom2dAPI_InterCurveCurve_1();
     const segment = make2dSegmentCurve(point2, this.boundingBox.outsidePoint());
     let crossCounts = 0;
-    const onCurve = this.curves.find((c) => c.isOnCurve(point2));
+    const onCurve = this.curves.find((c2) => c2.isOnCurve(point2));
     if (onCurve)
       return false;
-    this.curves.forEach((c) => {
-      if (c.boundingBox.isOut(segment.boundingBox))
+    this.curves.forEach((c2) => {
+      if (c2.boundingBox.isOut(segment.boundingBox))
         return;
-      intersector.Init_1(segment.wrapped, c.wrapped, 1e-9);
+      intersector.Init_1(segment.wrapped, c2.wrapped, 1e-9);
       crossCounts += intersector.NbPoints();
     });
     intersector.delete();
@@ -21773,11 +23585,11 @@ class BaseSketcher2d {
     this._nextCorner = null;
     this.pendingCurves = [];
   }
-  _convertToUV([x, y]) {
-    return [x, y];
+  _convertToUV([x2, y2]) {
+    return [x2, y2];
   }
-  _convertFromUV([u, v]) {
-    return [u, v];
+  _convertFromUV([u2, v]) {
+    return [u2, v];
   }
   /**
      * Returns the current pen position as [x, y] coordinates
@@ -21860,8 +23672,8 @@ class BaseSketcher2d {
   }
   polarLine(distance2, angle2) {
     const angleInRads = angle2 * DEG2RAD;
-    const [x, y] = polarToCartesian(distance2, angleInRads);
-    return this.line(x, y);
+    const [x2, y2] = polarToCartesian(distance2, angleInRads);
+    return this.line(x2, y2);
   }
   tangentLine(distance2) {
     const previousCurve = this.pendingCurves.length ? this.pendingCurves[this.pendingCurves.length - 1] : null;
@@ -22127,10 +23939,10 @@ class BaseSketcher2d {
       this._convertToUV(startToEndVector)
     );
     const mirroredCurves = this.pendingCurves.map(
-      (c) => new Curve2D(c.innerCurve.Mirrored_2(mirrorAxis))
+      (c2) => new Curve2D(c2.innerCurve.Mirrored_2(mirrorAxis))
     );
     mirroredCurves.reverse();
-    mirroredCurves.map((c) => c.reverse());
+    mirroredCurves.map((c2) => c2.reverse());
     this.pendingCurves.push(...mirroredCurves);
     this.pointer = this.firstPoint;
   }
@@ -22219,7 +24031,7 @@ const faceFromWires = (wires) => {
     holeWires = wires.slice(1);
   } catch (e) {
     baseFace = guessFaceFromWires(wires);
-    holeWires = wires.slice(1).map((w) => fixWire(w, baseFace));
+    holeWires = wires.slice(1).map((w2) => fixWire(w2, baseFace));
   }
   return addHolesInFace(baseFace, holeWires);
 };
@@ -22603,7 +24415,7 @@ const organiseBlueprints = (blueprints) => {
     basicGrouping.flatMap(cleanEdgeCases).map((compounds) => {
       if (compounds.length === 1)
         return compounds[0].blueprint;
-      compounds.sort((a, b) => a.isIn.length - b.isIn.length);
+      compounds.sort((a2, b) => a2.isIn.length - b.isIn.length);
       return new CompoundBlueprint(compounds.map(({ blueprint }) => blueprint));
     })
   );
@@ -22649,7 +24461,7 @@ const roundedRectangleBlueprint = (width, height, r = 0) => {
   return sk.close();
 };
 const PRECISION$1 = 1e-9;
-const samePoint$1 = (x, y) => samePoint$2(x, y, PRECISION$1);
+const samePoint$1 = (x2, y2) => samePoint$2(x2, y2, PRECISION$1);
 const curveMidPoint = (curve) => {
   const midParameter = (curve.lastParameter + curve.firstParameter) / 2;
   return curve.value(midParameter);
@@ -22672,7 +24484,7 @@ const rotateToStartAtSegment = (curves2, segment) => {
     startIndex = curves2.findIndex(onSegment);
     if (startIndex === -1) {
       console.error(
-        curves2.map((c) => c.repr),
+        curves2.map((c2) => c2.repr),
         segment.repr
       );
       throw new Error("Failed to rotate to segment start");
@@ -22774,9 +24586,9 @@ function blueprintsIntersectionSegments(first, second) {
   };
   let firstCurveSegments = zip([first.curves, firstCurvePoints]).flatMap(cutCurve);
   let secondCurveSegments = zip([second.curves, secondCurvePoints]).flatMap(cutCurve);
-  const commonSegmentsPoints = allCommonSegments.map((c) => [
-    c.firstPoint,
-    c.lastPoint
+  const commonSegmentsPoints = allCommonSegments.map((c2) => [
+    c2.firstPoint,
+    c2.lastPoint
   ]);
   allIntersections = removeNonCrossingPoint(
     allIntersections,
@@ -22834,15 +24646,15 @@ function blueprintsIntersectionSegments(first, second) {
   );
 }
 const splitPaths = (curves2) => {
-  const startPoints = curves2.map((c) => c.firstPoint);
-  let endPoints = curves2.map((c) => c.lastPoint);
+  const startPoints = curves2.map((c2) => c2.firstPoint);
+  let endPoints = curves2.map((c2) => c2.lastPoint);
   endPoints = endPoints.slice(-1).concat(endPoints.slice(0, -1));
   const discontinuities = zip([startPoints, endPoints]).map(([startPoint, endPoint], index) => {
     if (!samePoint$1(startPoint, endPoint)) {
       return index;
     }
     return null;
-  }).filter((f) => f !== null);
+  }).filter((f2) => f2 !== null);
   if (!discontinuities.length)
     return [curves2];
   const paths = zip([
@@ -23082,7 +24894,7 @@ const fuseIntersectingBlueprints = (blueprints) => {
     });
   });
   return organiseBlueprints(
-    output.map(({ current: current2 }) => current2).filter((a) => a).flatMap((b) => allBlueprints(b))
+    output.map(({ current: current2 }) => current2).filter((a2) => a2).flatMap((b) => allBlueprints(b))
   );
 };
 const allBlueprints = (shape) => {
@@ -23096,7 +24908,7 @@ const allBlueprints = (shape) => {
 };
 const fuseBlueprintWithCompound = (blueprint, compound) => {
   const outerFused = fuseBlueprints(blueprint, compound.blueprints[0]);
-  const innerFused = compound.blueprints.slice(1).map((c) => cutBlueprints(c, blueprint));
+  const innerFused = compound.blueprints.slice(1).map((c2) => cutBlueprints(c2, blueprint));
   return organiseBlueprints([
     ...allBlueprints(outerFused),
     ...innerFused.flatMap((fused) => allBlueprints(fused))
@@ -23113,8 +24925,8 @@ function allPairs(list1, list2) {
 }
 const fuseCompoundWithCompound = (first, second) => {
   const outerFused = fuseBlueprints(first.blueprints[0], second.blueprints[0]);
-  const inner1Fused = second.blueprints.slice(1).map((c) => cutBlueprints(c, first.blueprints[0]));
-  const inner2Fused = first.blueprints.slice(1).map((c) => cutBlueprints(c, second.blueprints[0]));
+  const inner1Fused = second.blueprints.slice(1).map((c2) => cutBlueprints(c2, first.blueprints[0]));
+  const inner2Fused = first.blueprints.slice(1).map((c2) => cutBlueprints(c2, second.blueprints[0]));
   const innerIntersections = allPairs(
     first.blueprints.slice(1),
     second.blueprints.slice(1)
@@ -23375,54 +25187,54 @@ function BoundingBox2() {
 BoundingBox2.prototype.isEmpty = function() {
   return isNaN(this.x1) || isNaN(this.y1) || isNaN(this.x2) || isNaN(this.y2);
 };
-BoundingBox2.prototype.addPoint = function(x, y) {
-  if (typeof x === "number") {
+BoundingBox2.prototype.addPoint = function(x2, y2) {
+  if (typeof x2 === "number") {
     if (isNaN(this.x1) || isNaN(this.x2)) {
-      this.x1 = x;
-      this.x2 = x;
+      this.x1 = x2;
+      this.x2 = x2;
     }
-    if (x < this.x1) {
-      this.x1 = x;
+    if (x2 < this.x1) {
+      this.x1 = x2;
     }
-    if (x > this.x2) {
-      this.x2 = x;
+    if (x2 > this.x2) {
+      this.x2 = x2;
     }
   }
-  if (typeof y === "number") {
+  if (typeof y2 === "number") {
     if (isNaN(this.y1) || isNaN(this.y2)) {
-      this.y1 = y;
-      this.y2 = y;
+      this.y1 = y2;
+      this.y2 = y2;
     }
-    if (y < this.y1) {
-      this.y1 = y;
+    if (y2 < this.y1) {
+      this.y1 = y2;
     }
-    if (y > this.y2) {
-      this.y2 = y;
+    if (y2 > this.y2) {
+      this.y2 = y2;
     }
   }
 };
-BoundingBox2.prototype.addX = function(x) {
-  this.addPoint(x, null);
+BoundingBox2.prototype.addX = function(x2) {
+  this.addPoint(x2, null);
 };
-BoundingBox2.prototype.addY = function(y) {
-  this.addPoint(null, y);
+BoundingBox2.prototype.addY = function(y2) {
+  this.addPoint(null, y2);
 };
-BoundingBox2.prototype.addBezier = function(x0, y0, x1, y1, x2, y2, x, y) {
+BoundingBox2.prototype.addBezier = function(x0, y0, x1, y1, x2, y2, x3, y3) {
   var p0 = [x0, y0];
   var p1 = [x1, y1];
   var p2 = [x2, y2];
-  var p3 = [x, y];
+  var p3 = [x3, y3];
   this.addPoint(x0, y0);
-  this.addPoint(x, y);
+  this.addPoint(x3, y3);
   for (var i = 0; i <= 1; i++) {
     var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
-    var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
-    var c = 3 * p1[i] - 3 * p0[i];
-    if (a === 0) {
+    var a2 = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
+    var c2 = 3 * p1[i] - 3 * p0[i];
+    if (a2 === 0) {
       if (b === 0) {
         continue;
       }
-      var t = -c / b;
+      var t = -c2 / b;
       if (0 < t && t < 1) {
         if (i === 0) {
           this.addX(derive(p0[i], p1[i], p2[i], p3[i], t));
@@ -23433,11 +25245,11 @@ BoundingBox2.prototype.addBezier = function(x0, y0, x1, y1, x2, y2, x, y) {
       }
       continue;
     }
-    var b2ac = Math.pow(b, 2) - 4 * c * a;
+    var b2ac = Math.pow(b, 2) - 4 * c2 * a2;
     if (b2ac < 0) {
       continue;
     }
-    var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
+    var t1 = (-b + Math.sqrt(b2ac)) / (2 * a2);
     if (0 < t1 && t1 < 1) {
       if (i === 0) {
         this.addX(derive(p0[i], p1[i], p2[i], p3[i], t1));
@@ -23446,7 +25258,7 @@ BoundingBox2.prototype.addBezier = function(x0, y0, x1, y1, x2, y2, x, y) {
         this.addY(derive(p0[i], p1[i], p2[i], p3[i], t1));
       }
     }
-    var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
+    var t2 = (-b - Math.sqrt(b2ac)) / (2 * a2);
     if (0 < t2 && t2 < 1) {
       if (i === 0) {
         this.addX(derive(p0[i], p1[i], p2[i], p3[i], t2));
@@ -23457,12 +25269,12 @@ BoundingBox2.prototype.addBezier = function(x0, y0, x1, y1, x2, y2, x, y) {
     }
   }
 };
-BoundingBox2.prototype.addQuad = function(x0, y0, x1, y1, x, y) {
+BoundingBox2.prototype.addQuad = function(x0, y0, x1, y1, x2, y2) {
   var cp1x = x0 + 2 / 3 * (x1 - x0);
   var cp1y = y0 + 2 / 3 * (y1 - y0);
-  var cp2x = cp1x + 1 / 3 * (x - x0);
-  var cp2y = cp1y + 1 / 3 * (y - y0);
-  this.addBezier(x0, y0, cp1x, cp1y, cp2x, cp2y, x, y);
+  var cp2x = cp1x + 1 / 3 * (x2 - x0);
+  var cp2y = cp1y + 1 / 3 * (y2 - y0);
+  this.addBezier(x0, y0, cp1x, cp1y, cp2x, cp2y, x2, y2);
 };
 function Path() {
   this.commands = [];
@@ -23470,38 +25282,38 @@ function Path() {
   this.stroke = null;
   this.strokeWidth = 1;
 }
-Path.prototype.moveTo = function(x, y) {
+Path.prototype.moveTo = function(x2, y2) {
   this.commands.push({
     type: "M",
-    x,
-    y
+    x: x2,
+    y: y2
   });
 };
-Path.prototype.lineTo = function(x, y) {
+Path.prototype.lineTo = function(x2, y2) {
   this.commands.push({
     type: "L",
-    x,
-    y
+    x: x2,
+    y: y2
   });
 };
-Path.prototype.curveTo = Path.prototype.bezierCurveTo = function(x1, y1, x2, y2, x, y) {
+Path.prototype.curveTo = Path.prototype.bezierCurveTo = function(x1, y1, x2, y2, x3, y3) {
   this.commands.push({
     type: "C",
     x1,
     y1,
     x2,
     y2,
-    x,
-    y
+    x: x3,
+    y: y3
   });
 };
-Path.prototype.quadTo = Path.prototype.quadraticCurveTo = function(x1, y1, x, y) {
+Path.prototype.quadTo = Path.prototype.quadraticCurveTo = function(x1, y1, x2, y2) {
   this.commands.push({
     type: "Q",
     x1,
     y1,
-    x,
-    y
+    x: x2,
+    y: y2
   });
 };
 Path.prototype.close = Path.prototype.closePath = function() {
@@ -23612,22 +25424,22 @@ Path.prototype.toPathData = function(decimalPlaces) {
     }
     return s;
   }
-  var d = "";
+  var d2 = "";
   for (var i = 0; i < this.commands.length; i += 1) {
     var cmd = this.commands[i];
     if (cmd.type === "M") {
-      d += "M" + packValues(cmd.x, cmd.y);
+      d2 += "M" + packValues(cmd.x, cmd.y);
     } else if (cmd.type === "L") {
-      d += "L" + packValues(cmd.x, cmd.y);
+      d2 += "L" + packValues(cmd.x, cmd.y);
     } else if (cmd.type === "C") {
-      d += "C" + packValues(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
+      d2 += "C" + packValues(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
     } else if (cmd.type === "Q") {
-      d += "Q" + packValues(cmd.x1, cmd.y1, cmd.x, cmd.y);
+      d2 += "Q" + packValues(cmd.x1, cmd.y1, cmd.x, cmd.y);
     } else if (cmd.type === "Z") {
-      d += "Z";
+      d2 += "Z";
     }
   }
-  return d;
+  return d2;
 };
 Path.prototype.toSVG = function(decimalPlaces) {
   var svg = '<path d="';
@@ -23779,22 +25591,22 @@ encode.NUMBER32 = function(v) {
 sizeOf.NUMBER32 = constant(5);
 encode.REAL = function(v) {
   var value2 = v.toString();
-  var m = /\.(\d*?)(?:9{5,20}|0{5,20})\d{0,2}(?:e(.+)|$)/.exec(value2);
-  if (m) {
-    var epsilon = parseFloat("1e" + ((m[2] ? +m[2] : 0) + m[1].length));
-    value2 = (Math.round(v * epsilon) / epsilon).toString();
+  var m2 = /\.(\d*?)(?:9{5,20}|0{5,20})\d{0,2}(?:e(.+)|$)/.exec(value2);
+  if (m2) {
+    var epsilon2 = parseFloat("1e" + ((m2[2] ? +m2[2] : 0) + m2[1].length));
+    value2 = (Math.round(v * epsilon2) / epsilon2).toString();
   }
   var nibbles = "";
   for (var i = 0, ii = value2.length; i < ii; i += 1) {
-    var c = value2[i];
-    if (c === "e") {
+    var c2 = value2[i];
+    if (c2 === "e") {
       nibbles += value2[++i] === "-" ? "c" : "b";
-    } else if (c === ".") {
+    } else if (c2 === ".") {
       nibbles += "a";
-    } else if (c === "-") {
+    } else if (c2 === "-") {
       nibbles += "e";
     } else {
-      nibbles += c;
+      nibbles += c2;
     }
   }
   nibbles += nibbles.length & 1 ? "f" : "ff";
@@ -23888,11 +25700,11 @@ decode.MACSTRING = function(dataView, offset2, dataLength, encoding) {
   }
   var result = "";
   for (var i = 0; i < dataLength; i++) {
-    var c = dataView.getUint8(offset2 + i);
-    if (c <= 127) {
-      result += String.fromCharCode(c);
+    var c2 = dataView.getUint8(offset2 + i);
+    if (c2 <= 127) {
+      result += String.fromCharCode(c2);
     } else {
-      result += table2[c & 127];
+      result += table2[c2 & 127];
     }
   }
   return result;
@@ -23936,14 +25748,14 @@ encode.MACSTRING = function(str, encoding) {
   }
   var result = [];
   for (var i = 0; i < str.length; i++) {
-    var c = str.charCodeAt(i);
-    if (c >= 128) {
-      c = table2[c];
-      if (c === void 0) {
+    var c2 = str.charCodeAt(i);
+    if (c2 >= 128) {
+      c2 = table2[c2];
+      if (c2 === void 0) {
         return void 0;
       }
     }
-    result[i] = c;
+    result[i] = c2;
   }
   return result;
 };
@@ -24056,20 +25868,20 @@ encode.INDEX = function(l) {
 sizeOf.INDEX = function(v) {
   return encode.INDEX(v).length;
 };
-encode.DICT = function(m) {
-  var d = [];
-  var keys = Object.keys(m);
+encode.DICT = function(m2) {
+  var d2 = [];
+  var keys = Object.keys(m2);
   var length = keys.length;
   for (var i = 0; i < length; i += 1) {
-    var k = parseInt(keys[i], 0);
-    var v = m[k];
-    d = d.concat(encode.OPERAND(v.value, v.type));
-    d = d.concat(encode.OPERATOR(k));
+    var k2 = parseInt(keys[i], 0);
+    var v = m2[k2];
+    d2 = d2.concat(encode.OPERAND(v.value, v.type));
+    d2 = d2.concat(encode.OPERATOR(k2));
   }
-  return d;
+  return d2;
 };
-sizeOf.DICT = function(m) {
-  return encode.DICT(m).length;
+sizeOf.DICT = function(m2) {
+  return encode.DICT(m2).length;
 };
 encode.OPERATOR = function(v) {
   if (v < 1200) {
@@ -24079,26 +25891,26 @@ encode.OPERATOR = function(v) {
   }
 };
 encode.OPERAND = function(v, type) {
-  var d = [];
+  var d2 = [];
   if (Array.isArray(type)) {
     for (var i = 0; i < type.length; i += 1) {
       check.argument(v.length === type.length, "Not enough arguments given for type" + type);
-      d = d.concat(encode.OPERAND(v[i], type[i]));
+      d2 = d2.concat(encode.OPERAND(v[i], type[i]));
     }
   } else {
     if (type === "SID") {
-      d = d.concat(encode.NUMBER(v));
+      d2 = d2.concat(encode.NUMBER(v));
     } else if (type === "offset") {
-      d = d.concat(encode.NUMBER32(v));
+      d2 = d2.concat(encode.NUMBER32(v));
     } else if (type === "number") {
-      d = d.concat(encode.NUMBER(v));
+      d2 = d2.concat(encode.NUMBER(v));
     } else if (type === "real") {
-      d = d.concat(encode.REAL(v));
+      d2 = d2.concat(encode.REAL(v));
     } else {
       throw new Error("Unknown operand type " + type);
     }
   }
-  return d;
+  return d2;
 };
 encode.OP = encode.BYTE;
 sizeOf.OP = sizeOf.BYTE;
@@ -24110,16 +25922,16 @@ encode.CHARSTRING = function(ops) {
       return cachedValue;
     }
   }
-  var d = [];
+  var d2 = [];
   var length = ops.length;
   for (var i = 0; i < length; i += 1) {
     var op = ops[i];
-    d = d.concat(encode[op.type](op.value));
+    d2 = d2.concat(encode[op.type](op.value));
   }
   if (wmm) {
-    wmm.set(ops, d);
+    wmm.set(ops, d2);
   }
-  return d;
+  return d2;
 };
 sizeOf.CHARSTRING = function(ops) {
   return encode.CHARSTRING(ops).length;
@@ -24135,7 +25947,7 @@ sizeOf.OBJECT = function(v) {
   return sizeOfFunction(v.value);
 };
 encode.TABLE = function(table2) {
-  var d = [];
+  var d2 = [];
   var length = table2.fields.length;
   var subtables = [];
   var subtableOffsets = [];
@@ -24149,22 +25961,22 @@ encode.TABLE = function(table2) {
     }
     var bytes = encodingFunction(value2);
     if (field.type === "TABLE") {
-      subtableOffsets.push(d.length);
-      d = d.concat([0, 0]);
+      subtableOffsets.push(d2.length);
+      d2 = d2.concat([0, 0]);
       subtables.push(bytes);
     } else {
-      d = d.concat(bytes);
+      d2 = d2.concat(bytes);
     }
   }
   for (var i$1 = 0; i$1 < subtables.length; i$1 += 1) {
     var o = subtableOffsets[i$1];
-    var offset2 = d.length;
+    var offset2 = d2.length;
     check.argument(offset2 < 65536, "Table " + table2.tableName + " too big.");
-    d[o] = offset2 >> 8;
-    d[o + 1] = offset2 & 255;
-    d = d.concat(subtables[i$1]);
+    d2[o] = offset2 >> 8;
+    d2[o + 1] = offset2 & 255;
+    d2 = d2.concat(subtables[i$1]);
   }
-  return d;
+  return d2;
 };
 sizeOf.TABLE = function(table2) {
   var numBytes = 0;
@@ -24204,10 +26016,10 @@ function Table(tableName, fields2, options) {
   if (options) {
     var optionKeys = Object.keys(options);
     for (var i$1 = 0; i$1 < optionKeys.length; i$1 += 1) {
-      var k = optionKeys[i$1];
-      var v = options[k];
-      if (this[k] !== void 0) {
-        this[k] = v;
+      var k2 = optionKeys[i$1];
+      var v = options[k2];
+      if (this[k2] !== void 0) {
+        this[k2] = v;
       }
     }
   }
@@ -24837,29 +26649,29 @@ var parse = {
   bytesToString,
   Parser
 };
-function parseCmapTableFormat12(cmap2, p) {
-  p.parseUShort();
-  cmap2.length = p.parseULong();
-  cmap2.language = p.parseULong();
+function parseCmapTableFormat12(cmap2, p2) {
+  p2.parseUShort();
+  cmap2.length = p2.parseULong();
+  cmap2.language = p2.parseULong();
   var groupCount;
-  cmap2.groupCount = groupCount = p.parseULong();
+  cmap2.groupCount = groupCount = p2.parseULong();
   cmap2.glyphIndexMap = {};
   for (var i = 0; i < groupCount; i += 1) {
-    var startCharCode = p.parseULong();
-    var endCharCode = p.parseULong();
-    var startGlyphId = p.parseULong();
-    for (var c = startCharCode; c <= endCharCode; c += 1) {
-      cmap2.glyphIndexMap[c] = startGlyphId;
+    var startCharCode = p2.parseULong();
+    var endCharCode = p2.parseULong();
+    var startGlyphId = p2.parseULong();
+    for (var c2 = startCharCode; c2 <= endCharCode; c2 += 1) {
+      cmap2.glyphIndexMap[c2] = startGlyphId;
       startGlyphId++;
     }
   }
 }
-function parseCmapTableFormat4(cmap2, p, data, start, offset2) {
-  cmap2.length = p.parseUShort();
-  cmap2.language = p.parseUShort();
+function parseCmapTableFormat4(cmap2, p2, data, start, offset2) {
+  cmap2.length = p2.parseUShort();
+  cmap2.language = p2.parseUShort();
   var segCount;
-  cmap2.segCount = segCount = p.parseUShort() >> 1;
-  p.skip("uShort", 3);
+  cmap2.segCount = segCount = p2.parseUShort() >> 1;
+  p2.skip("uShort", 3);
   cmap2.glyphIndexMap = {};
   var endCountParser = new parse.Parser(data, start + offset2 + 14);
   var startCountParser = new parse.Parser(data, start + offset2 + 16 + segCount * 2);
@@ -24872,19 +26684,19 @@ function parseCmapTableFormat4(cmap2, p, data, start, offset2) {
     var startCount = startCountParser.parseUShort();
     var idDelta = idDeltaParser.parseShort();
     var idRangeOffset = idRangeOffsetParser.parseUShort();
-    for (var c = startCount; c <= endCount; c += 1) {
+    for (var c2 = startCount; c2 <= endCount; c2 += 1) {
       if (idRangeOffset !== 0) {
         glyphIndexOffset = idRangeOffsetParser.offset + idRangeOffsetParser.relativeOffset - 2;
         glyphIndexOffset += idRangeOffset;
-        glyphIndexOffset += (c - startCount) * 2;
+        glyphIndexOffset += (c2 - startCount) * 2;
         glyphIndex = parse.getUShort(data, glyphIndexOffset);
         if (glyphIndex !== 0) {
           glyphIndex = glyphIndex + idDelta & 65535;
         }
       } else {
-        glyphIndex = c + idDelta & 65535;
+        glyphIndex = c2 + idDelta & 65535;
       }
-      cmap2.glyphIndexMap[c] = glyphIndex;
+      cmap2.glyphIndexMap[c2] = glyphIndex;
     }
   }
 }
@@ -24905,12 +26717,12 @@ function parseCmapTable(data, start) {
   if (offset2 === -1) {
     throw new Error("No valid cmap sub-tables found.");
   }
-  var p = new parse.Parser(data, start + offset2);
-  cmap2.format = p.parseUShort();
+  var p2 = new parse.Parser(data, start + offset2);
+  cmap2.format = p2.parseUShort();
   if (cmap2.format === 12) {
-    parseCmapTableFormat12(cmap2, p);
+    parseCmapTableFormat12(cmap2, p2);
   } else if (cmap2.format === 4) {
-    parseCmapTableFormat4(cmap2, p, data, start, offset2);
+    parseCmapTableFormat4(cmap2, p2, data, start, offset2);
   } else {
     throw new Error("Only format 4 and 12 cmap tables are supported (found format " + cmap2.format + ").");
   }
@@ -24937,8 +26749,8 @@ function makeCmapTable(glyphs) {
   var isPlan0Only = true;
   var i;
   for (i = glyphs.length - 1; i > 0; i -= 1) {
-    var g = glyphs.get(i);
-    if (g.unicode > 65535) {
+    var g2 = glyphs.get(i);
+    if (g2.unicode > 65535) {
       console.log("Adding CMAP format 12 (needed!)");
       isPlan0Only = false;
       break;
@@ -24978,8 +26790,8 @@ function makeCmapTable(glyphs) {
     for (var j = 0; j < glyph.unicodes.length; j += 1) {
       addSegment(t, glyph.unicodes[j], i);
     }
-    t.segments = t.segments.sort(function(a, b) {
-      return a.start - b.start;
+    t.segments = t.segments.sort(function(a2, b) {
+      return a2.start - b.start;
     });
   }
   addTerminatorSegment(t);
@@ -26206,8 +28018,8 @@ var standardNames = [
 function DefaultEncoding(font) {
   this.font = font;
 }
-DefaultEncoding.prototype.charToGlyphIndex = function(c) {
-  var code = c.codePointAt(0);
+DefaultEncoding.prototype.charToGlyphIndex = function(c2) {
+  var code = c2.codePointAt(0);
   var glyphs = this.font.glyphs;
   if (glyphs) {
     for (var i = 0; i < glyphs.length; i += 1) {
@@ -26247,8 +28059,8 @@ function getPathDefinition(glyph, path) {
       }
       return _path;
     },
-    set: function(p) {
-      _path = p;
+    set: function(p2) {
+      _path = p2;
     }
   };
 }
@@ -26286,9 +28098,9 @@ Glyph.prototype.addUnicode = function(unicode) {
 Glyph.prototype.getBoundingBox = function() {
   return this.path.getBoundingBox();
 };
-Glyph.prototype.getPath = function(x, y, fontSize, options, font) {
-  x = x !== void 0 ? x : 0;
-  y = y !== void 0 ? y : 0;
+Glyph.prototype.getPath = function(x2, y2, fontSize, options, font) {
+  x2 = x2 !== void 0 ? x2 : 0;
+  y2 = y2 !== void 0 ? y2 : 0;
   fontSize = fontSize !== void 0 ? fontSize : 72;
   var commands;
   var hPoints;
@@ -26302,8 +28114,8 @@ Glyph.prototype.getPath = function(x, y, fontSize, options, font) {
   }
   if (hPoints) {
     commands = font.hinting.getCommands(hPoints);
-    x = Math.round(x);
-    y = Math.round(y);
+    x2 = Math.round(x2);
+    y2 = Math.round(y2);
     xScale = yScale = 1;
   } else {
     commands = this.path.commands;
@@ -26315,34 +28127,34 @@ Glyph.prototype.getPath = function(x, y, fontSize, options, font) {
       yScale = scale2;
     }
   }
-  var p = new Path();
+  var p2 = new Path();
   for (var i = 0; i < commands.length; i += 1) {
     var cmd = commands[i];
     if (cmd.type === "M") {
-      p.moveTo(x + cmd.x * xScale, y + -cmd.y * yScale);
+      p2.moveTo(x2 + cmd.x * xScale, y2 + -cmd.y * yScale);
     } else if (cmd.type === "L") {
-      p.lineTo(x + cmd.x * xScale, y + -cmd.y * yScale);
+      p2.lineTo(x2 + cmd.x * xScale, y2 + -cmd.y * yScale);
     } else if (cmd.type === "Q") {
-      p.quadraticCurveTo(
-        x + cmd.x1 * xScale,
-        y + -cmd.y1 * yScale,
-        x + cmd.x * xScale,
-        y + -cmd.y * yScale
+      p2.quadraticCurveTo(
+        x2 + cmd.x1 * xScale,
+        y2 + -cmd.y1 * yScale,
+        x2 + cmd.x * xScale,
+        y2 + -cmd.y * yScale
       );
     } else if (cmd.type === "C") {
-      p.curveTo(
-        x + cmd.x1 * xScale,
-        y + -cmd.y1 * yScale,
-        x + cmd.x2 * xScale,
-        y + -cmd.y2 * yScale,
-        x + cmd.x * xScale,
-        y + -cmd.y * yScale
+      p2.curveTo(
+        x2 + cmd.x1 * xScale,
+        y2 + -cmd.y1 * yScale,
+        x2 + cmd.x2 * xScale,
+        y2 + -cmd.y2 * yScale,
+        x2 + cmd.x * xScale,
+        y2 + -cmd.y * yScale
       );
     } else if (cmd.type === "Z") {
-      p.closePath();
+      p2.closePath();
     }
   }
-  return p;
+  return p2;
 };
 Glyph.prototype.getContours = function() {
   if (this.points === void 0) {
@@ -26402,21 +28214,21 @@ Glyph.prototype.getMetrics = function() {
   metrics.rightSideBearing = this.advanceWidth - metrics.leftSideBearing - (metrics.xMax - metrics.xMin);
   return metrics;
 };
-Glyph.prototype.draw = function(ctx, x, y, fontSize, options) {
-  this.getPath(x, y, fontSize, options).draw(ctx);
+Glyph.prototype.draw = function(ctx, x2, y2, fontSize, options) {
+  this.getPath(x2, y2, fontSize, options).draw(ctx);
 };
-Glyph.prototype.drawPoints = function(ctx, x, y, fontSize) {
-  function drawCircles(l, x2, y2, scale3) {
+Glyph.prototype.drawPoints = function(ctx, x2, y2, fontSize) {
+  function drawCircles(l, x22, y22, scale3) {
     ctx.beginPath();
     for (var j = 0; j < l.length; j += 1) {
-      ctx.moveTo(x2 + l[j].x * scale3, y2 + l[j].y * scale3);
-      ctx.arc(x2 + l[j].x * scale3, y2 + l[j].y * scale3, 2, 0, Math.PI * 2, false);
+      ctx.moveTo(x22 + l[j].x * scale3, y22 + l[j].y * scale3);
+      ctx.arc(x22 + l[j].x * scale3, y22 + l[j].y * scale3, 2, 0, Math.PI * 2, false);
     }
     ctx.closePath();
     ctx.fill();
   }
-  x = x !== void 0 ? x : 0;
-  y = y !== void 0 ? y : 0;
+  x2 = x2 !== void 0 ? x2 : 0;
+  y2 = y2 !== void 0 ? y2 : 0;
   fontSize = fontSize !== void 0 ? fontSize : 24;
   var scale2 = 1 / this.path.unitsPerEm * fontSize;
   var blueCircles = [];
@@ -26435,32 +28247,32 @@ Glyph.prototype.drawPoints = function(ctx, x, y, fontSize) {
     }
   }
   ctx.fillStyle = "blue";
-  drawCircles(blueCircles, x, y, scale2);
+  drawCircles(blueCircles, x2, y2, scale2);
   ctx.fillStyle = "red";
-  drawCircles(redCircles, x, y, scale2);
+  drawCircles(redCircles, x2, y2, scale2);
 };
-Glyph.prototype.drawMetrics = function(ctx, x, y, fontSize) {
+Glyph.prototype.drawMetrics = function(ctx, x2, y2, fontSize) {
   var scale2;
-  x = x !== void 0 ? x : 0;
-  y = y !== void 0 ? y : 0;
+  x2 = x2 !== void 0 ? x2 : 0;
+  y2 = y2 !== void 0 ? y2 : 0;
   fontSize = fontSize !== void 0 ? fontSize : 24;
   scale2 = 1 / this.path.unitsPerEm * fontSize;
   ctx.lineWidth = 1;
   ctx.strokeStyle = "black";
-  draw$1.line(ctx, x, -1e4, x, 1e4);
-  draw$1.line(ctx, -1e4, y, 1e4, y);
+  draw$1.line(ctx, x2, -1e4, x2, 1e4);
+  draw$1.line(ctx, -1e4, y2, 1e4, y2);
   var xMin = this.xMin || 0;
   var yMin = this.yMin || 0;
   var xMax = this.xMax || 0;
   var yMax = this.yMax || 0;
   var advanceWidth = this.advanceWidth || 0;
   ctx.strokeStyle = "blue";
-  draw$1.line(ctx, x + xMin * scale2, -1e4, x + xMin * scale2, 1e4);
-  draw$1.line(ctx, x + xMax * scale2, -1e4, x + xMax * scale2, 1e4);
-  draw$1.line(ctx, -1e4, y + -yMin * scale2, 1e4, y + -yMin * scale2);
-  draw$1.line(ctx, -1e4, y + -yMax * scale2, 1e4, y + -yMax * scale2);
+  draw$1.line(ctx, x2 + xMin * scale2, -1e4, x2 + xMin * scale2, 1e4);
+  draw$1.line(ctx, x2 + xMax * scale2, -1e4, x2 + xMax * scale2, 1e4);
+  draw$1.line(ctx, -1e4, y2 + -yMin * scale2, 1e4, y2 + -yMin * scale2);
+  draw$1.line(ctx, -1e4, y2 + -yMax * scale2, 1e4, y2 + -yMax * scale2);
   ctx.strokeStyle = "green";
-  draw$1.line(ctx, x + advanceWidth * scale2, -1e4, x + advanceWidth * scale2, 1e4);
+  draw$1.line(ctx, x2 + advanceWidth * scale2, -1e4, x2 + advanceWidth * scale2, 1e4);
 };
 function defineDependentProperty(glyph, externalName, internalName) {
   Object.defineProperty(glyph, externalName, {
@@ -26553,15 +28365,15 @@ function cffGlyphLoader(font, index, parseCFFCharstring2, charstring) {
   };
 }
 var glyphset = { GlyphSet, glyphLoader, ttfGlyphLoader, cffGlyphLoader };
-function equals(a, b) {
-  if (a === b) {
+function equals(a2, b) {
+  if (a2 === b) {
     return true;
-  } else if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
+  } else if (Array.isArray(a2) && Array.isArray(b)) {
+    if (a2.length !== b.length) {
       return false;
     }
-    for (var i = 0; i < a.length; i += 1) {
-      if (!equals(a[i], b[i])) {
+    for (var i = 0; i < a2.length; i += 1) {
+      if (!equals(a2[i], b[i])) {
         return false;
       }
     }
@@ -26739,30 +28551,30 @@ function interpretDict(dict, meta2, strings) {
   var newDict = {};
   var value2;
   for (var i = 0; i < meta2.length; i += 1) {
-    var m = meta2[i];
-    if (Array.isArray(m.type)) {
+    var m2 = meta2[i];
+    if (Array.isArray(m2.type)) {
       var values = [];
-      values.length = m.type.length;
-      for (var j = 0; j < m.type.length; j++) {
-        value2 = dict[m.op] !== void 0 ? dict[m.op][j] : void 0;
+      values.length = m2.type.length;
+      for (var j = 0; j < m2.type.length; j++) {
+        value2 = dict[m2.op] !== void 0 ? dict[m2.op][j] : void 0;
         if (value2 === void 0) {
-          value2 = m.value !== void 0 && m.value[j] !== void 0 ? m.value[j] : null;
+          value2 = m2.value !== void 0 && m2.value[j] !== void 0 ? m2.value[j] : null;
         }
-        if (m.type[j] === "SID") {
+        if (m2.type[j] === "SID") {
           value2 = getCFFString(strings, value2);
         }
         values[j] = value2;
       }
-      newDict[m.name] = values;
+      newDict[m2.name] = values;
     } else {
-      value2 = dict[m.op];
+      value2 = dict[m2.op];
       if (value2 === void 0) {
-        value2 = m.value !== void 0 ? m.value : null;
+        value2 = m2.value !== void 0 ? m2.value : null;
       }
-      if (m.type === "SID") {
+      if (m2.type === "SID") {
         value2 = getCFFString(strings, value2);
       }
-      newDict[m.name] = value2;
+      newDict[m2.name] = value2;
     }
   }
   return newDict;
@@ -26921,13 +28733,13 @@ function parseCFFCharstring(font, glyph, code) {
   var c1y;
   var c2x;
   var c2y;
-  var p = new Path();
+  var p2 = new Path();
   var stack = [];
   var nStems = 0;
   var haveWidth = false;
   var open = false;
-  var x = 0;
-  var y = 0;
+  var x2 = 0;
+  var y2 = 0;
   var subrs;
   var subrsBias;
   var defaultWidthX;
@@ -26946,11 +28758,11 @@ function parseCFFCharstring(font, glyph, code) {
     nominalWidthX = font.tables.cff.topDict._nominalWidthX;
   }
   var width = defaultWidthX;
-  function newContour(x2, y2) {
+  function newContour(x22, y22) {
     if (open) {
-      p.closePath();
+      p2.closePath();
     }
-    p.moveTo(x2, y2);
+    p2.moveTo(x22, y22);
     open = true;
   }
   function parseStems() {
@@ -26992,47 +28804,47 @@ function parseCFFCharstring(font, glyph, code) {
             width = stack.shift() + nominalWidthX;
             haveWidth = true;
           }
-          y += stack.pop();
-          newContour(x, y);
+          y2 += stack.pop();
+          newContour(x2, y2);
           break;
         case 5:
           while (stack.length > 0) {
-            x += stack.shift();
-            y += stack.shift();
-            p.lineTo(x, y);
+            x2 += stack.shift();
+            y2 += stack.shift();
+            p2.lineTo(x2, y2);
           }
           break;
         case 6:
           while (stack.length > 0) {
-            x += stack.shift();
-            p.lineTo(x, y);
+            x2 += stack.shift();
+            p2.lineTo(x2, y2);
             if (stack.length === 0) {
               break;
             }
-            y += stack.shift();
-            p.lineTo(x, y);
+            y2 += stack.shift();
+            p2.lineTo(x2, y2);
           }
           break;
         case 7:
           while (stack.length > 0) {
-            y += stack.shift();
-            p.lineTo(x, y);
+            y2 += stack.shift();
+            p2.lineTo(x2, y2);
             if (stack.length === 0) {
               break;
             }
-            x += stack.shift();
-            p.lineTo(x, y);
+            x2 += stack.shift();
+            p2.lineTo(x2, y2);
           }
           break;
         case 8:
           while (stack.length > 0) {
-            c1x = x + stack.shift();
-            c1y = y + stack.shift();
+            c1x = x2 + stack.shift();
+            c1y = y2 + stack.shift();
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x + stack.shift();
-            y = c2y + stack.shift();
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x + stack.shift();
+            y2 = c2y + stack.shift();
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
           break;
         case 10:
@@ -27049,8 +28861,8 @@ function parseCFFCharstring(font, glyph, code) {
           i += 1;
           switch (v) {
             case 35:
-              c1x = x + stack.shift();
-              c1y = y + stack.shift();
+              c1x = x2 + stack.shift();
+              c1y = y2 + stack.shift();
               c2x = c1x + stack.shift();
               c2y = c1y + stack.shift();
               jpx = c2x + stack.shift();
@@ -27059,15 +28871,15 @@ function parseCFFCharstring(font, glyph, code) {
               c3y = jpy + stack.shift();
               c4x = c3x + stack.shift();
               c4y = c3y + stack.shift();
-              x = c4x + stack.shift();
-              y = c4y + stack.shift();
+              x2 = c4x + stack.shift();
+              y2 = c4y + stack.shift();
               stack.shift();
-              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              p2.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p2.curveTo(c3x, c3y, c4x, c4y, x2, y2);
               break;
             case 34:
-              c1x = x + stack.shift();
-              c1y = y;
+              c1x = x2 + stack.shift();
+              c1y = y2;
               c2x = c1x + stack.shift();
               c2y = c1y + stack.shift();
               jpx = c2x + stack.shift();
@@ -27075,14 +28887,14 @@ function parseCFFCharstring(font, glyph, code) {
               c3x = jpx + stack.shift();
               c3y = c2y;
               c4x = c3x + stack.shift();
-              c4y = y;
-              x = c4x + stack.shift();
-              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              c4y = y2;
+              x2 = c4x + stack.shift();
+              p2.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p2.curveTo(c3x, c3y, c4x, c4y, x2, y2);
               break;
             case 36:
-              c1x = x + stack.shift();
-              c1y = y + stack.shift();
+              c1x = x2 + stack.shift();
+              c1y = y2 + stack.shift();
               c2x = c1x + stack.shift();
               c2y = c1y + stack.shift();
               jpx = c2x + stack.shift();
@@ -27091,13 +28903,13 @@ function parseCFFCharstring(font, glyph, code) {
               c3y = c2y;
               c4x = c3x + stack.shift();
               c4y = c3y + stack.shift();
-              x = c4x + stack.shift();
-              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              x2 = c4x + stack.shift();
+              p2.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p2.curveTo(c3x, c3y, c4x, c4y, x2, y2);
               break;
             case 37:
-              c1x = x + stack.shift();
-              c1y = y + stack.shift();
+              c1x = x2 + stack.shift();
+              c1y = y2 + stack.shift();
               c2x = c1x + stack.shift();
               c2y = c1y + stack.shift();
               jpx = c2x + stack.shift();
@@ -27106,13 +28918,13 @@ function parseCFFCharstring(font, glyph, code) {
               c3y = jpy + stack.shift();
               c4x = c3x + stack.shift();
               c4y = c3y + stack.shift();
-              if (Math.abs(c4x - x) > Math.abs(c4y - y)) {
-                x = c4x + stack.shift();
+              if (Math.abs(c4x - x2) > Math.abs(c4y - y2)) {
+                x2 = c4x + stack.shift();
               } else {
-                y = c4y + stack.shift();
+                y2 = c4y + stack.shift();
               }
-              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              p2.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p2.curveTo(c3x, c3y, c4x, c4y, x2, y2);
               break;
             default:
               console.log("Glyph " + glyph.index + ": unknown operator 1200" + v);
@@ -27125,7 +28937,7 @@ function parseCFFCharstring(font, glyph, code) {
             haveWidth = true;
           }
           if (open) {
-            p.closePath();
+            p2.closePath();
             open = false;
           }
           break;
@@ -27142,75 +28954,75 @@ function parseCFFCharstring(font, glyph, code) {
             width = stack.shift() + nominalWidthX;
             haveWidth = true;
           }
-          y += stack.pop();
-          x += stack.pop();
-          newContour(x, y);
+          y2 += stack.pop();
+          x2 += stack.pop();
+          newContour(x2, y2);
           break;
         case 22:
           if (stack.length > 1 && !haveWidth) {
             width = stack.shift() + nominalWidthX;
             haveWidth = true;
           }
-          x += stack.pop();
-          newContour(x, y);
+          x2 += stack.pop();
+          newContour(x2, y2);
           break;
         case 23:
           parseStems();
           break;
         case 24:
           while (stack.length > 2) {
-            c1x = x + stack.shift();
-            c1y = y + stack.shift();
+            c1x = x2 + stack.shift();
+            c1y = y2 + stack.shift();
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x + stack.shift();
-            y = c2y + stack.shift();
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x + stack.shift();
+            y2 = c2y + stack.shift();
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
-          x += stack.shift();
-          y += stack.shift();
-          p.lineTo(x, y);
+          x2 += stack.shift();
+          y2 += stack.shift();
+          p2.lineTo(x2, y2);
           break;
         case 25:
           while (stack.length > 6) {
-            x += stack.shift();
-            y += stack.shift();
-            p.lineTo(x, y);
+            x2 += stack.shift();
+            y2 += stack.shift();
+            p2.lineTo(x2, y2);
           }
-          c1x = x + stack.shift();
-          c1y = y + stack.shift();
+          c1x = x2 + stack.shift();
+          c1y = y2 + stack.shift();
           c2x = c1x + stack.shift();
           c2y = c1y + stack.shift();
-          x = c2x + stack.shift();
-          y = c2y + stack.shift();
-          p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          x2 = c2x + stack.shift();
+          y2 = c2y + stack.shift();
+          p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           break;
         case 26:
           if (stack.length % 2) {
-            x += stack.shift();
+            x2 += stack.shift();
           }
           while (stack.length > 0) {
-            c1x = x;
-            c1y = y + stack.shift();
+            c1x = x2;
+            c1y = y2 + stack.shift();
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x;
-            y = c2y + stack.shift();
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x;
+            y2 = c2y + stack.shift();
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
           break;
         case 27:
           if (stack.length % 2) {
-            y += stack.shift();
+            y2 += stack.shift();
           }
           while (stack.length > 0) {
-            c1x = x + stack.shift();
-            c1y = y;
+            c1x = x2 + stack.shift();
+            c1y = y2;
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x + stack.shift();
-            y = c2y;
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x + stack.shift();
+            y2 = c2y;
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
           break;
         case 28:
@@ -27228,44 +29040,44 @@ function parseCFFCharstring(font, glyph, code) {
           break;
         case 30:
           while (stack.length > 0) {
-            c1x = x;
-            c1y = y + stack.shift();
+            c1x = x2;
+            c1y = y2 + stack.shift();
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x + stack.shift();
-            y = c2y + (stack.length === 1 ? stack.shift() : 0);
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x + stack.shift();
+            y2 = c2y + (stack.length === 1 ? stack.shift() : 0);
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
             if (stack.length === 0) {
               break;
             }
-            c1x = x + stack.shift();
-            c1y = y;
+            c1x = x2 + stack.shift();
+            c1y = y2;
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            y = c2y + stack.shift();
-            x = c2x + (stack.length === 1 ? stack.shift() : 0);
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            y2 = c2y + stack.shift();
+            x2 = c2x + (stack.length === 1 ? stack.shift() : 0);
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
           break;
         case 31:
           while (stack.length > 0) {
-            c1x = x + stack.shift();
-            c1y = y;
+            c1x = x2 + stack.shift();
+            c1y = y2;
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            y = c2y + stack.shift();
-            x = c2x + (stack.length === 1 ? stack.shift() : 0);
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            y2 = c2y + stack.shift();
+            x2 = c2x + (stack.length === 1 ? stack.shift() : 0);
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
             if (stack.length === 0) {
               break;
             }
-            c1x = x;
-            c1y = y + stack.shift();
+            c1x = x2;
+            c1y = y2 + stack.shift();
             c2x = c1x + stack.shift();
             c2y = c1y + stack.shift();
-            x = c2x + stack.shift();
-            y = c2y + (stack.length === 1 ? stack.shift() : 0);
-            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            x2 = c2x + stack.shift();
+            y2 = c2y + (stack.length === 1 ? stack.shift() : 0);
+            p2.curveTo(c1x, c1y, c2x, c2y, x2, y2);
           }
           break;
         default:
@@ -27294,7 +29106,7 @@ function parseCFFCharstring(font, glyph, code) {
   }
   parse2(code);
   glyph.advanceWidth = width;
-  return p;
+  return p2;
 }
 function parseCFFFDSelect(data, start, nGlyphs, fdArrayCount) {
   var fdSelect = [];
@@ -27450,7 +29262,7 @@ function makeNameIndex(fontNames) {
   return t;
 }
 function makeDict(meta2, attrs, strings) {
-  var m = {};
+  var m2 = {};
   for (var i = 0; i < meta2.length; i += 1) {
     var entry = meta2[i];
     var value2 = attrs[entry.name];
@@ -27458,10 +29270,10 @@ function makeDict(meta2, attrs, strings) {
       if (entry.type === "SID") {
         value2 = encodeString(value2, strings);
       }
-      m[entry.op] = { name: entry.name, type: entry.type, value: value2 };
+      m2[entry.op] = { name: entry.name, type: entry.type, value: value2 };
     }
   }
-  return m;
+  return m2;
 }
 function makeTopDict(attrs, strings) {
   var t = new table.Record("Top DICT", [
@@ -27507,8 +29319,8 @@ function glyphToOps(glyph) {
   var ops = [];
   var path = glyph.path;
   ops.push({ name: "width", type: "NUMBER", value: glyph.advanceWidth });
-  var x = 0;
-  var y = 0;
+  var x2 = 0;
+  var y2 = 0;
   for (var i = 0; i < path.commands.length; i += 1) {
     var dx = void 0;
     var dy = void 0;
@@ -27520,31 +29332,31 @@ function glyphToOps(glyph) {
         type: "C",
         x: cmd.x,
         y: cmd.y,
-        x1: Math.round(_13 * x + _23 * cmd.x1),
-        y1: Math.round(_13 * y + _23 * cmd.y1),
+        x1: Math.round(_13 * x2 + _23 * cmd.x1),
+        y1: Math.round(_13 * y2 + _23 * cmd.y1),
         x2: Math.round(_13 * cmd.x + _23 * cmd.x1),
         y2: Math.round(_13 * cmd.y + _23 * cmd.y1)
       };
     }
     if (cmd.type === "M") {
-      dx = Math.round(cmd.x - x);
-      dy = Math.round(cmd.y - y);
+      dx = Math.round(cmd.x - x2);
+      dy = Math.round(cmd.y - y2);
       ops.push({ name: "dx", type: "NUMBER", value: dx });
       ops.push({ name: "dy", type: "NUMBER", value: dy });
       ops.push({ name: "rmoveto", type: "OP", value: 21 });
-      x = Math.round(cmd.x);
-      y = Math.round(cmd.y);
+      x2 = Math.round(cmd.x);
+      y2 = Math.round(cmd.y);
     } else if (cmd.type === "L") {
-      dx = Math.round(cmd.x - x);
-      dy = Math.round(cmd.y - y);
+      dx = Math.round(cmd.x - x2);
+      dy = Math.round(cmd.y - y2);
       ops.push({ name: "dx", type: "NUMBER", value: dx });
       ops.push({ name: "dy", type: "NUMBER", value: dy });
       ops.push({ name: "rlineto", type: "OP", value: 5 });
-      x = Math.round(cmd.x);
-      y = Math.round(cmd.y);
+      x2 = Math.round(cmd.x);
+      y2 = Math.round(cmd.y);
     } else if (cmd.type === "C") {
-      var dx1 = Math.round(cmd.x1 - x);
-      var dy1 = Math.round(cmd.y1 - y);
+      var dx1 = Math.round(cmd.x1 - x2);
+      var dy1 = Math.round(cmd.y1 - y2);
       var dx2 = Math.round(cmd.x2 - cmd.x1);
       var dy2 = Math.round(cmd.y2 - cmd.y1);
       dx = Math.round(cmd.x - cmd.x2);
@@ -27556,8 +29368,8 @@ function glyphToOps(glyph) {
       ops.push({ name: "dx", type: "NUMBER", value: dx });
       ops.push({ name: "dy", type: "NUMBER", value: dy });
       ops.push({ name: "rrcurveto", type: "OP", value: 8 });
-      x = Math.round(cmd.x);
-      y = Math.round(cmd.y);
+      x2 = Math.round(cmd.x);
+      y2 = Math.round(cmd.y);
     }
   }
   ops.push({ name: "endchar", type: "OP", value: 14 });
@@ -27634,25 +29446,25 @@ function makeCFFTable(glyphs, options) {
 var cff = { parse: parseCFFTable, make: makeCFFTable };
 function parseHeadTable(data, start) {
   var head2 = {};
-  var p = new parse.Parser(data, start);
-  head2.version = p.parseVersion();
-  head2.fontRevision = Math.round(p.parseFixed() * 1e3) / 1e3;
-  head2.checkSumAdjustment = p.parseULong();
-  head2.magicNumber = p.parseULong();
+  var p2 = new parse.Parser(data, start);
+  head2.version = p2.parseVersion();
+  head2.fontRevision = Math.round(p2.parseFixed() * 1e3) / 1e3;
+  head2.checkSumAdjustment = p2.parseULong();
+  head2.magicNumber = p2.parseULong();
   check.argument(head2.magicNumber === 1594834165, "Font header has wrong magic number.");
-  head2.flags = p.parseUShort();
-  head2.unitsPerEm = p.parseUShort();
-  head2.created = p.parseLongDateTime();
-  head2.modified = p.parseLongDateTime();
-  head2.xMin = p.parseShort();
-  head2.yMin = p.parseShort();
-  head2.xMax = p.parseShort();
-  head2.yMax = p.parseShort();
-  head2.macStyle = p.parseUShort();
-  head2.lowestRecPPEM = p.parseUShort();
-  head2.fontDirectionHint = p.parseShort();
-  head2.indexToLocFormat = p.parseShort();
-  head2.glyphDataFormat = p.parseShort();
+  head2.flags = p2.parseUShort();
+  head2.unitsPerEm = p2.parseUShort();
+  head2.created = p2.parseLongDateTime();
+  head2.modified = p2.parseLongDateTime();
+  head2.xMin = p2.parseShort();
+  head2.yMin = p2.parseShort();
+  head2.xMax = p2.parseShort();
+  head2.yMax = p2.parseShort();
+  head2.macStyle = p2.parseUShort();
+  head2.lowestRecPPEM = p2.parseUShort();
+  head2.fontDirectionHint = p2.parseShort();
+  head2.indexToLocFormat = p2.parseShort();
+  head2.glyphDataFormat = p2.parseShort();
   return head2;
 }
 function makeHeadTable(options) {
@@ -27684,21 +29496,21 @@ function makeHeadTable(options) {
 var head = { parse: parseHeadTable, make: makeHeadTable };
 function parseHheaTable(data, start) {
   var hhea2 = {};
-  var p = new parse.Parser(data, start);
-  hhea2.version = p.parseVersion();
-  hhea2.ascender = p.parseShort();
-  hhea2.descender = p.parseShort();
-  hhea2.lineGap = p.parseShort();
-  hhea2.advanceWidthMax = p.parseUShort();
-  hhea2.minLeftSideBearing = p.parseShort();
-  hhea2.minRightSideBearing = p.parseShort();
-  hhea2.xMaxExtent = p.parseShort();
-  hhea2.caretSlopeRise = p.parseShort();
-  hhea2.caretSlopeRun = p.parseShort();
-  hhea2.caretOffset = p.parseShort();
-  p.relativeOffset += 8;
-  hhea2.metricDataFormat = p.parseShort();
-  hhea2.numberOfHMetrics = p.parseUShort();
+  var p2 = new parse.Parser(data, start);
+  hhea2.version = p2.parseVersion();
+  hhea2.ascender = p2.parseShort();
+  hhea2.descender = p2.parseShort();
+  hhea2.lineGap = p2.parseShort();
+  hhea2.advanceWidthMax = p2.parseUShort();
+  hhea2.minLeftSideBearing = p2.parseShort();
+  hhea2.minRightSideBearing = p2.parseShort();
+  hhea2.xMaxExtent = p2.parseShort();
+  hhea2.caretSlopeRise = p2.parseShort();
+  hhea2.caretSlopeRun = p2.parseShort();
+  hhea2.caretOffset = p2.parseShort();
+  p2.relativeOffset += 8;
+  hhea2.metricDataFormat = p2.parseShort();
+  hhea2.numberOfHMetrics = p2.parseUShort();
   return hhea2;
 }
 function makeHheaTable(options) {
@@ -27726,11 +29538,11 @@ var hhea = { parse: parseHheaTable, make: makeHheaTable };
 function parseHmtxTableAll(data, start, numMetrics, numGlyphs, glyphs) {
   var advanceWidth;
   var leftSideBearing;
-  var p = new parse.Parser(data, start);
+  var p2 = new parse.Parser(data, start);
   for (var i = 0; i < numGlyphs; i += 1) {
     if (i < numMetrics) {
-      advanceWidth = p.parseUShort();
-      leftSideBearing = p.parseShort();
+      advanceWidth = p2.parseUShort();
+      leftSideBearing = p2.parseShort();
     }
     var glyph = glyphs.get(i);
     glyph.advanceWidth = advanceWidth;
@@ -27741,11 +29553,11 @@ function parseHmtxTableOnLowMemory(font, data, start, numMetrics, numGlyphs) {
   font._hmtxTableData = {};
   var advanceWidth;
   var leftSideBearing;
-  var p = new parse.Parser(data, start);
+  var p2 = new parse.Parser(data, start);
   for (var i = 0; i < numGlyphs; i += 1) {
     if (i < numMetrics) {
-      advanceWidth = p.parseUShort();
-      leftSideBearing = p.parseShort();
+      advanceWidth = p2.parseUShort();
+      leftSideBearing = p2.parseShort();
     }
     font._hmtxTableData[i] = {
       advanceWidth,
@@ -27793,16 +29605,16 @@ function makeLtagTable(tags) {
   return result;
 }
 function parseLtagTable(data, start) {
-  var p = new parse.Parser(data, start);
-  var tableVersion = p.parseULong();
+  var p2 = new parse.Parser(data, start);
+  var tableVersion = p2.parseULong();
   check.argument(tableVersion === 1, "Unsupported ltag table version.");
-  p.skip("uLong", 1);
-  var numTags = p.parseULong();
+  p2.skip("uLong", 1);
+  var numTags = p2.parseULong();
   var tags = [];
   for (var i = 0; i < numTags; i++) {
     var tag = "";
-    var offset2 = start + p.parseUShort();
-    var length = p.parseUShort();
+    var offset2 = start + p2.parseUShort();
+    var length = p2.parseUShort();
     for (var j = offset2; j < offset2 + length; ++j) {
       tag += String.fromCharCode(data.getInt8(j));
     }
@@ -27813,23 +29625,23 @@ function parseLtagTable(data, start) {
 var ltag = { make: makeLtagTable, parse: parseLtagTable };
 function parseMaxpTable(data, start) {
   var maxp2 = {};
-  var p = new parse.Parser(data, start);
-  maxp2.version = p.parseVersion();
-  maxp2.numGlyphs = p.parseUShort();
+  var p2 = new parse.Parser(data, start);
+  maxp2.version = p2.parseVersion();
+  maxp2.numGlyphs = p2.parseUShort();
   if (maxp2.version === 1) {
-    maxp2.maxPoints = p.parseUShort();
-    maxp2.maxContours = p.parseUShort();
-    maxp2.maxCompositePoints = p.parseUShort();
-    maxp2.maxCompositeContours = p.parseUShort();
-    maxp2.maxZones = p.parseUShort();
-    maxp2.maxTwilightPoints = p.parseUShort();
-    maxp2.maxStorage = p.parseUShort();
-    maxp2.maxFunctionDefs = p.parseUShort();
-    maxp2.maxInstructionDefs = p.parseUShort();
-    maxp2.maxStackElements = p.parseUShort();
-    maxp2.maxSizeOfInstructions = p.parseUShort();
-    maxp2.maxComponentElements = p.parseUShort();
-    maxp2.maxComponentDepth = p.parseUShort();
+    maxp2.maxPoints = p2.parseUShort();
+    maxp2.maxContours = p2.parseUShort();
+    maxp2.maxCompositePoints = p2.parseUShort();
+    maxp2.maxCompositeContours = p2.parseUShort();
+    maxp2.maxZones = p2.parseUShort();
+    maxp2.maxTwilightPoints = p2.parseUShort();
+    maxp2.maxStorage = p2.parseUShort();
+    maxp2.maxFunctionDefs = p2.parseUShort();
+    maxp2.maxInstructionDefs = p2.parseUShort();
+    maxp2.maxStackElements = p2.parseUShort();
+    maxp2.maxSizeOfInstructions = p2.parseUShort();
+    maxp2.maxComponentElements = p2.parseUShort();
+    maxp2.maxComponentDepth = p2.parseUShort();
   }
   return maxp2;
 }
@@ -28588,18 +30400,18 @@ function getEncoding(platformID, encodingID, languageID) {
 }
 function parseNameTable(data, start, ltag2) {
   var name = {};
-  var p = new parse.Parser(data, start);
-  var format = p.parseUShort();
-  var count = p.parseUShort();
-  var stringOffset = p.offset + p.parseUShort();
+  var p2 = new parse.Parser(data, start);
+  var format = p2.parseUShort();
+  var count = p2.parseUShort();
+  var stringOffset = p2.offset + p2.parseUShort();
   for (var i = 0; i < count; i++) {
-    var platformID = p.parseUShort();
-    var encodingID = p.parseUShort();
-    var languageID = p.parseUShort();
-    var nameID = p.parseUShort();
+    var platformID = p2.parseUShort();
+    var encodingID = p2.parseUShort();
+    var languageID = p2.parseUShort();
+    var nameID = p2.parseUShort();
     var property = nameTableNames[nameID] || nameID;
-    var byteLength = p.parseUShort();
-    var offset2 = p.parseUShort();
+    var byteLength = p2.parseUShort();
+    var offset2 = p2.parseUShort();
     var language = getLanguageCode(platformID, languageID, ltag2);
     var encoding = getEncoding(platformID, encodingID, languageID);
     if (encoding !== void 0 && language !== void 0) {
@@ -28619,7 +30431,7 @@ function parseNameTable(data, start, ltag2) {
     }
   }
   if (format === 1) {
-    p.parseUShort();
+    p2.parseUShort();
   }
   return name;
 }
@@ -28646,8 +30458,8 @@ function findSubArray(needle, haystack) {
   loop:
     for (var pos2 = 0; pos2 < limit; pos2++) {
       for (; pos2 < limit; pos2++) {
-        for (var k = 0; k < needleLength; k++) {
-          if (haystack[pos2 + k] !== needle[k]) {
+        for (var k2 = 0; k2 < needleLength; k2++) {
+          if (haystack[pos2 + k2] !== needle[k2]) {
             continue loop;
           }
         }
@@ -28733,8 +30545,8 @@ function makeNameTable(names, ltag2) {
       }
     }
   }
-  nameRecords.sort(function(a, b) {
-    return a.platformID - b.platformID || a.encodingID - b.encodingID || a.languageID - b.languageID || a.nameID - b.nameID;
+  nameRecords.sort(function(a2, b) {
+    return a2.platformID - b.platformID || a2.encodingID - b.encodingID || a2.languageID - b.languageID || a2.nameID - b.nameID;
   });
   var t = new table.Table("name", [
     { name: "format", type: "USHORT", value: 0 },
@@ -29007,50 +30819,50 @@ function getUnicodeRange(unicode) {
 }
 function parseOS2Table(data, start) {
   var os22 = {};
-  var p = new parse.Parser(data, start);
-  os22.version = p.parseUShort();
-  os22.xAvgCharWidth = p.parseShort();
-  os22.usWeightClass = p.parseUShort();
-  os22.usWidthClass = p.parseUShort();
-  os22.fsType = p.parseUShort();
-  os22.ySubscriptXSize = p.parseShort();
-  os22.ySubscriptYSize = p.parseShort();
-  os22.ySubscriptXOffset = p.parseShort();
-  os22.ySubscriptYOffset = p.parseShort();
-  os22.ySuperscriptXSize = p.parseShort();
-  os22.ySuperscriptYSize = p.parseShort();
-  os22.ySuperscriptXOffset = p.parseShort();
-  os22.ySuperscriptYOffset = p.parseShort();
-  os22.yStrikeoutSize = p.parseShort();
-  os22.yStrikeoutPosition = p.parseShort();
-  os22.sFamilyClass = p.parseShort();
+  var p2 = new parse.Parser(data, start);
+  os22.version = p2.parseUShort();
+  os22.xAvgCharWidth = p2.parseShort();
+  os22.usWeightClass = p2.parseUShort();
+  os22.usWidthClass = p2.parseUShort();
+  os22.fsType = p2.parseUShort();
+  os22.ySubscriptXSize = p2.parseShort();
+  os22.ySubscriptYSize = p2.parseShort();
+  os22.ySubscriptXOffset = p2.parseShort();
+  os22.ySubscriptYOffset = p2.parseShort();
+  os22.ySuperscriptXSize = p2.parseShort();
+  os22.ySuperscriptYSize = p2.parseShort();
+  os22.ySuperscriptXOffset = p2.parseShort();
+  os22.ySuperscriptYOffset = p2.parseShort();
+  os22.yStrikeoutSize = p2.parseShort();
+  os22.yStrikeoutPosition = p2.parseShort();
+  os22.sFamilyClass = p2.parseShort();
   os22.panose = [];
   for (var i = 0; i < 10; i++) {
-    os22.panose[i] = p.parseByte();
+    os22.panose[i] = p2.parseByte();
   }
-  os22.ulUnicodeRange1 = p.parseULong();
-  os22.ulUnicodeRange2 = p.parseULong();
-  os22.ulUnicodeRange3 = p.parseULong();
-  os22.ulUnicodeRange4 = p.parseULong();
-  os22.achVendID = String.fromCharCode(p.parseByte(), p.parseByte(), p.parseByte(), p.parseByte());
-  os22.fsSelection = p.parseUShort();
-  os22.usFirstCharIndex = p.parseUShort();
-  os22.usLastCharIndex = p.parseUShort();
-  os22.sTypoAscender = p.parseShort();
-  os22.sTypoDescender = p.parseShort();
-  os22.sTypoLineGap = p.parseShort();
-  os22.usWinAscent = p.parseUShort();
-  os22.usWinDescent = p.parseUShort();
+  os22.ulUnicodeRange1 = p2.parseULong();
+  os22.ulUnicodeRange2 = p2.parseULong();
+  os22.ulUnicodeRange3 = p2.parseULong();
+  os22.ulUnicodeRange4 = p2.parseULong();
+  os22.achVendID = String.fromCharCode(p2.parseByte(), p2.parseByte(), p2.parseByte(), p2.parseByte());
+  os22.fsSelection = p2.parseUShort();
+  os22.usFirstCharIndex = p2.parseUShort();
+  os22.usLastCharIndex = p2.parseUShort();
+  os22.sTypoAscender = p2.parseShort();
+  os22.sTypoDescender = p2.parseShort();
+  os22.sTypoLineGap = p2.parseShort();
+  os22.usWinAscent = p2.parseUShort();
+  os22.usWinDescent = p2.parseUShort();
   if (os22.version >= 1) {
-    os22.ulCodePageRange1 = p.parseULong();
-    os22.ulCodePageRange2 = p.parseULong();
+    os22.ulCodePageRange1 = p2.parseULong();
+    os22.ulCodePageRange2 = p2.parseULong();
   }
   if (os22.version >= 2) {
-    os22.sxHeight = p.parseShort();
-    os22.sCapHeight = p.parseShort();
-    os22.usDefaultChar = p.parseUShort();
-    os22.usBreakChar = p.parseUShort();
-    os22.usMaxContent = p.parseUShort();
+    os22.sxHeight = p2.parseShort();
+    os22.sCapHeight = p2.parseShort();
+    os22.usDefaultChar = p2.parseUShort();
+    os22.usBreakChar = p2.parseUShort();
+    os22.usMaxContent = p2.parseUShort();
   }
   return os22;
 }
@@ -29107,39 +30919,39 @@ function makeOS2Table(options) {
 var os2 = { parse: parseOS2Table, make: makeOS2Table, unicodeRanges, getUnicodeRange };
 function parsePostTable(data, start) {
   var post2 = {};
-  var p = new parse.Parser(data, start);
-  post2.version = p.parseVersion();
-  post2.italicAngle = p.parseFixed();
-  post2.underlinePosition = p.parseShort();
-  post2.underlineThickness = p.parseShort();
-  post2.isFixedPitch = p.parseULong();
-  post2.minMemType42 = p.parseULong();
-  post2.maxMemType42 = p.parseULong();
-  post2.minMemType1 = p.parseULong();
-  post2.maxMemType1 = p.parseULong();
+  var p2 = new parse.Parser(data, start);
+  post2.version = p2.parseVersion();
+  post2.italicAngle = p2.parseFixed();
+  post2.underlinePosition = p2.parseShort();
+  post2.underlineThickness = p2.parseShort();
+  post2.isFixedPitch = p2.parseULong();
+  post2.minMemType42 = p2.parseULong();
+  post2.maxMemType42 = p2.parseULong();
+  post2.minMemType1 = p2.parseULong();
+  post2.maxMemType1 = p2.parseULong();
   switch (post2.version) {
     case 1:
       post2.names = standardNames.slice();
       break;
     case 2:
-      post2.numberOfGlyphs = p.parseUShort();
+      post2.numberOfGlyphs = p2.parseUShort();
       post2.glyphNameIndex = new Array(post2.numberOfGlyphs);
       for (var i = 0; i < post2.numberOfGlyphs; i++) {
-        post2.glyphNameIndex[i] = p.parseUShort();
+        post2.glyphNameIndex[i] = p2.parseUShort();
       }
       post2.names = [];
       for (var i$1 = 0; i$1 < post2.numberOfGlyphs; i$1++) {
         if (post2.glyphNameIndex[i$1] >= standardNames.length) {
-          var nameLength = p.parseChar();
-          post2.names.push(p.parseString(nameLength));
+          var nameLength = p2.parseChar();
+          post2.names.push(p2.parseString(nameLength));
         }
       }
       break;
     case 2.5:
-      post2.numberOfGlyphs = p.parseUShort();
+      post2.numberOfGlyphs = p2.parseUShort();
       post2.offset = new Array(post2.numberOfGlyphs);
       for (var i$2 = 0; i$2 < post2.numberOfGlyphs; i$2++) {
-        post2.offset[i$2] = p.parseChar();
+        post2.offset[i$2] = p2.parseChar();
       }
       break;
   }
@@ -29322,23 +31134,23 @@ subtableParsers[8] = function parseLookup8() {
 };
 function parseGsubTable(data, start) {
   start = start || 0;
-  var p = new Parser(data, start);
-  var tableVersion = p.parseVersion(1);
+  var p2 = new Parser(data, start);
+  var tableVersion = p2.parseVersion(1);
   check.argument(tableVersion === 1 || tableVersion === 1.1, "Unsupported GSUB table version.");
   if (tableVersion === 1) {
     return {
       version: tableVersion,
-      scripts: p.parseScriptList(),
-      features: p.parseFeatureList(),
-      lookups: p.parseLookupList(subtableParsers)
+      scripts: p2.parseScriptList(),
+      features: p2.parseFeatureList(),
+      lookups: p2.parseLookupList(subtableParsers)
     };
   } else {
     return {
       version: tableVersion,
-      scripts: p.parseScriptList(),
-      features: p.parseFeatureList(),
-      lookups: p.parseLookupList(subtableParsers),
-      variations: p.parseFeatureVariationsList()
+      scripts: p2.parseScriptList(),
+      features: p2.parseFeatureList(),
+      lookups: p2.parseLookupList(subtableParsers),
+      variations: p2.parseFeatureVariationsList()
     };
   }
 }
@@ -29441,17 +31253,17 @@ function makeGsubTable(gsub2) {
 }
 var gsub = { parse: parseGsubTable, make: makeGsubTable };
 function parseMetaTable(data, start) {
-  var p = new parse.Parser(data, start);
-  var tableVersion = p.parseULong();
+  var p2 = new parse.Parser(data, start);
+  var tableVersion = p2.parseULong();
   check.argument(tableVersion === 1, "Unsupported META table version.");
-  p.parseULong();
-  p.parseULong();
-  var numDataMaps = p.parseULong();
+  p2.parseULong();
+  p2.parseULong();
+  var numDataMaps = p2.parseULong();
   var tags = {};
   for (var i = 0; i < numDataMaps; i++) {
-    var tag = p.parseTag();
-    var dataOffset = p.parseULong();
-    var dataLength = p.parseULong();
+    var tag = p2.parseTag();
+    var dataOffset = p2.parseULong();
+    var dataLength = p2.parseULong();
     var text2 = decode.UTF8(data, start + dataOffset, dataLength);
     tags[tag] = text2;
   }
@@ -30083,8 +31895,8 @@ Position.prototype.getKerningValue = function(kerningLookups, leftIndex, rightIn
       switch (subtable.posFormat) {
         case 1:
           var pairSet = subtable.pairSets[covIndex];
-          for (var k = 0; k < pairSet.length; k++) {
-            var pair = pairSet[k];
+          for (var k2 = 0; k2 < pairSet.length; k2++) {
+            var pair = pairSet[k2];
             if (pair.secondGlyph === rightIndex) {
               return pair.value1 && pair.value1.xAdvance || 0;
             }
@@ -30220,8 +32032,8 @@ Substitution.prototype.getLigatures = function(feature, script, language) {
       for (var j = 0; j < glyphs.length; j++) {
         var startGlyph = glyphs[j];
         var ligSet = ligatureSets[j];
-        for (var k = 0; k < ligSet.length; k++) {
-          var lig = ligSet[k];
+        for (var k2 = 0; k2 < ligSet.length; k2++) {
+          var lig = ligSet[k2];
           ligatures.push({
             sub: [startGlyph].concat(lig.components),
             by: lig.ligGlyph
@@ -30379,10 +32191,10 @@ function checkArgument(expression, message) {
     throw message;
   }
 }
-function parseGlyphCoordinate(p, flag, previousValue, shortVectorBitMask, sameBitMask) {
+function parseGlyphCoordinate(p2, flag, previousValue, shortVectorBitMask, sameBitMask) {
   var v;
   if ((flag & shortVectorBitMask) > 0) {
-    v = p.parseByte();
+    v = p2.parseByte();
     if ((flag & sameBitMask) === 0) {
       v = -v;
     }
@@ -30391,37 +32203,37 @@ function parseGlyphCoordinate(p, flag, previousValue, shortVectorBitMask, sameBi
     if ((flag & sameBitMask) > 0) {
       v = previousValue;
     } else {
-      v = previousValue + p.parseShort();
+      v = previousValue + p2.parseShort();
     }
   }
   return v;
 }
 function parseGlyph(glyph, data, start) {
-  var p = new parse.Parser(data, start);
-  glyph.numberOfContours = p.parseShort();
-  glyph._xMin = p.parseShort();
-  glyph._yMin = p.parseShort();
-  glyph._xMax = p.parseShort();
-  glyph._yMax = p.parseShort();
+  var p2 = new parse.Parser(data, start);
+  glyph.numberOfContours = p2.parseShort();
+  glyph._xMin = p2.parseShort();
+  glyph._yMin = p2.parseShort();
+  glyph._xMax = p2.parseShort();
+  glyph._yMax = p2.parseShort();
   var flags;
   var flag;
   if (glyph.numberOfContours > 0) {
     var endPointIndices = glyph.endPointIndices = [];
     for (var i = 0; i < glyph.numberOfContours; i += 1) {
-      endPointIndices.push(p.parseUShort());
+      endPointIndices.push(p2.parseUShort());
     }
-    glyph.instructionLength = p.parseUShort();
+    glyph.instructionLength = p2.parseUShort();
     glyph.instructions = [];
     for (var i$1 = 0; i$1 < glyph.instructionLength; i$1 += 1) {
-      glyph.instructions.push(p.parseByte());
+      glyph.instructions.push(p2.parseByte());
     }
     var numberOfCoordinates = endPointIndices[endPointIndices.length - 1] + 1;
     flags = [];
     for (var i$2 = 0; i$2 < numberOfCoordinates; i$2 += 1) {
-      flag = p.parseByte();
+      flag = p2.parseByte();
       flags.push(flag);
       if ((flag & 8) > 0) {
-        var repeatCount = p.parseByte();
+        var repeatCount = p2.parseByte();
         for (var j = 0; j < repeatCount; j += 1) {
           flags.push(flag);
           i$2 += 1;
@@ -30444,14 +32256,14 @@ function parseGlyph(glyph, data, start) {
         for (var i$4 = 0; i$4 < numberOfCoordinates; i$4 += 1) {
           flag = flags[i$4];
           point2 = points[i$4];
-          point2.x = parseGlyphCoordinate(p, flag, px, 2, 16);
+          point2.x = parseGlyphCoordinate(p2, flag, px, 2, 16);
           px = point2.x;
         }
         var py = 0;
         for (var i$5 = 0; i$5 < numberOfCoordinates; i$5 += 1) {
           flag = flags[i$5];
           point2 = points[i$5];
-          point2.y = parseGlyphCoordinate(p, flag, py, 4, 32);
+          point2.y = parseGlyphCoordinate(p2, flag, py, 4, 32);
           py = point2.y;
         }
       }
@@ -30467,9 +32279,9 @@ function parseGlyph(glyph, data, start) {
     glyph.components = [];
     var moreComponents = true;
     while (moreComponents) {
-      flags = p.parseUShort();
+      flags = p2.parseUShort();
       var component = {
-        glyphIndex: p.parseUShort(),
+        glyphIndex: p2.parseUShort(),
         xScale: 1,
         scale01: 0,
         scale10: 0,
@@ -30479,38 +32291,38 @@ function parseGlyph(glyph, data, start) {
       };
       if ((flags & 1) > 0) {
         if ((flags & 2) > 0) {
-          component.dx = p.parseShort();
-          component.dy = p.parseShort();
+          component.dx = p2.parseShort();
+          component.dy = p2.parseShort();
         } else {
-          component.matchedPoints = [p.parseUShort(), p.parseUShort()];
+          component.matchedPoints = [p2.parseUShort(), p2.parseUShort()];
         }
       } else {
         if ((flags & 2) > 0) {
-          component.dx = p.parseChar();
-          component.dy = p.parseChar();
+          component.dx = p2.parseChar();
+          component.dy = p2.parseChar();
         } else {
-          component.matchedPoints = [p.parseByte(), p.parseByte()];
+          component.matchedPoints = [p2.parseByte(), p2.parseByte()];
         }
       }
       if ((flags & 8) > 0) {
-        component.xScale = component.yScale = p.parseF2Dot14();
+        component.xScale = component.yScale = p2.parseF2Dot14();
       } else if ((flags & 64) > 0) {
-        component.xScale = p.parseF2Dot14();
-        component.yScale = p.parseF2Dot14();
+        component.xScale = p2.parseF2Dot14();
+        component.yScale = p2.parseF2Dot14();
       } else if ((flags & 128) > 0) {
-        component.xScale = p.parseF2Dot14();
-        component.scale01 = p.parseF2Dot14();
-        component.scale10 = p.parseF2Dot14();
-        component.yScale = p.parseF2Dot14();
+        component.xScale = p2.parseF2Dot14();
+        component.scale01 = p2.parseF2Dot14();
+        component.scale10 = p2.parseF2Dot14();
+        component.yScale = p2.parseF2Dot14();
       }
       glyph.components.push(component);
       moreComponents = !!(flags & 32);
     }
     if (flags & 256) {
-      glyph.instructionLength = p.parseUShort();
+      glyph.instructionLength = p2.parseUShort();
       glyph.instructions = [];
       for (var i$6 = 0; i$6 < glyph.instructionLength; i$6 += 1) {
-        glyph.instructions.push(p.parseByte());
+        glyph.instructions.push(p2.parseByte());
       }
     }
   }
@@ -30544,9 +32356,9 @@ function getContours(points) {
   return contours;
 }
 function getPath(points) {
-  var p = new Path();
+  var p2 = new Path();
   if (!points) {
-    return p;
+    return p2;
   }
   var contours = getContours(points);
   for (var contourIndex = 0; contourIndex < contours.length; ++contourIndex) {
@@ -30555,13 +32367,13 @@ function getPath(points) {
     var curr = contour[contour.length - 1];
     var next = contour[0];
     if (curr.onCurve) {
-      p.moveTo(curr.x, curr.y);
+      p2.moveTo(curr.x, curr.y);
     } else {
       if (next.onCurve) {
-        p.moveTo(next.x, next.y);
+        p2.moveTo(next.x, next.y);
       } else {
         var start = { x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5 };
-        p.moveTo(start.x, start.y);
+        p2.moveTo(start.x, start.y);
       }
     }
     for (var i = 0; i < contour.length; ++i) {
@@ -30569,7 +32381,7 @@ function getPath(points) {
       curr = next;
       next = contour[(i + 1) % contour.length];
       if (curr.onCurve) {
-        p.lineTo(curr.x, curr.y);
+        p2.lineTo(curr.x, curr.y);
       } else {
         var next2 = next;
         if (!prev.onCurve) {
@@ -30578,12 +32390,12 @@ function getPath(points) {
         if (!next.onCurve) {
           next2 = { x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5 };
         }
-        p.quadraticCurveTo(curr.x, curr.y, next2.x, next2.y);
+        p2.quadraticCurveTo(curr.x, curr.y, next2.x, next2.y);
       }
     }
-    p.closePath();
+    p2.closePath();
   }
-  return p;
+  return p2;
 }
 function buildPath(glyphs, glyph) {
   if (glyph.isComposite) {
@@ -30715,7 +32527,7 @@ var xUnitVector = {
   // original positions had.
   //
   // See APPENDIX on INTERPOLATE at the bottom of this file.
-  interpolate: function(p, rp1, rp2, pv) {
+  interpolate: function(p2, rp1, rp2, pv) {
     var do1;
     var do2;
     var doa1;
@@ -30724,32 +32536,32 @@ var xUnitVector = {
     var dm2;
     var dt;
     if (!pv || pv === this) {
-      do1 = p.xo - rp1.xo;
-      do2 = p.xo - rp2.xo;
+      do1 = p2.xo - rp1.xo;
+      do2 = p2.xo - rp2.xo;
       dm1 = rp1.x - rp1.xo;
       dm2 = rp2.x - rp2.xo;
       doa1 = Math.abs(do1);
       doa2 = Math.abs(do2);
       dt = doa1 + doa2;
       if (dt === 0) {
-        p.x = p.xo + (dm1 + dm2) / 2;
+        p2.x = p2.xo + (dm1 + dm2) / 2;
         return;
       }
-      p.x = p.xo + (dm1 * doa2 + dm2 * doa1) / dt;
+      p2.x = p2.xo + (dm1 * doa2 + dm2 * doa1) / dt;
       return;
     }
-    do1 = pv.distance(p, rp1, true, true);
-    do2 = pv.distance(p, rp2, true, true);
+    do1 = pv.distance(p2, rp1, true, true);
+    do2 = pv.distance(p2, rp2, true, true);
     dm1 = pv.distance(rp1, rp1, false, true);
     dm2 = pv.distance(rp2, rp2, false, true);
     doa1 = Math.abs(do1);
     doa2 = Math.abs(do2);
     dt = doa1 + doa2;
     if (dt === 0) {
-      xUnitVector.setRelative(p, p, (dm1 + dm2) / 2, pv, true);
+      xUnitVector.setRelative(p2, p2, (dm1 + dm2) / 2, pv, true);
       return;
     }
-    xUnitVector.setRelative(p, p, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
+    xUnitVector.setRelative(p2, p2, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
   },
   // Slope of line normal to this
   normalSlope: Number.NEGATIVE_INFINITY,
@@ -30763,30 +32575,30 @@ var xUnitVector = {
   // d   ... distance on projection vector
   // pv  ... projection vector (undefined = this)
   // org ... if true, uses the original position of rp as reference.
-  setRelative: function(p, rp, d, pv, org) {
+  setRelative: function(p2, rp, d2, pv, org) {
     if (!pv || pv === this) {
-      p.x = (org ? rp.xo : rp.x) + d;
+      p2.x = (org ? rp.xo : rp.x) + d2;
       return;
     }
     var rpx = org ? rp.xo : rp.x;
     var rpy = org ? rp.yo : rp.y;
-    var rpdx = rpx + d * pv.x;
-    var rpdy = rpy + d * pv.y;
-    p.x = rpdx + (p.y - rpdy) / pv.normalSlope;
+    var rpdx = rpx + d2 * pv.x;
+    var rpdy = rpy + d2 * pv.y;
+    p2.x = rpdx + (p2.y - rpdy) / pv.normalSlope;
   },
   // Slope of vector line.
   slope: 0,
   // Touches the point p.
-  touch: function(p) {
-    p.xTouched = true;
+  touch: function(p2) {
+    p2.xTouched = true;
   },
   // Tests if a point p is touched.
-  touched: function(p) {
-    return p.xTouched;
+  touched: function(p2) {
+    return p2.xTouched;
   },
   // Untouches the point p.
-  untouch: function(p) {
-    p.xTouched = false;
+  untouch: function(p2) {
+    p2.xTouched = false;
   }
 };
 var yUnitVector = {
@@ -30803,7 +32615,7 @@ var yUnitVector = {
   // original positions had.
   //
   // See APPENDIX on INTERPOLATE at the bottom of this file.
-  interpolate: function(p, rp1, rp2, pv) {
+  interpolate: function(p2, rp1, rp2, pv) {
     var do1;
     var do2;
     var doa1;
@@ -30812,32 +32624,32 @@ var yUnitVector = {
     var dm2;
     var dt;
     if (!pv || pv === this) {
-      do1 = p.yo - rp1.yo;
-      do2 = p.yo - rp2.yo;
+      do1 = p2.yo - rp1.yo;
+      do2 = p2.yo - rp2.yo;
       dm1 = rp1.y - rp1.yo;
       dm2 = rp2.y - rp2.yo;
       doa1 = Math.abs(do1);
       doa2 = Math.abs(do2);
       dt = doa1 + doa2;
       if (dt === 0) {
-        p.y = p.yo + (dm1 + dm2) / 2;
+        p2.y = p2.yo + (dm1 + dm2) / 2;
         return;
       }
-      p.y = p.yo + (dm1 * doa2 + dm2 * doa1) / dt;
+      p2.y = p2.yo + (dm1 * doa2 + dm2 * doa1) / dt;
       return;
     }
-    do1 = pv.distance(p, rp1, true, true);
-    do2 = pv.distance(p, rp2, true, true);
+    do1 = pv.distance(p2, rp1, true, true);
+    do2 = pv.distance(p2, rp2, true, true);
     dm1 = pv.distance(rp1, rp1, false, true);
     dm2 = pv.distance(rp2, rp2, false, true);
     doa1 = Math.abs(do1);
     doa2 = Math.abs(do2);
     dt = doa1 + doa2;
     if (dt === 0) {
-      yUnitVector.setRelative(p, p, (dm1 + dm2) / 2, pv, true);
+      yUnitVector.setRelative(p2, p2, (dm1 + dm2) / 2, pv, true);
       return;
     }
-    yUnitVector.setRelative(p, p, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
+    yUnitVector.setRelative(p2, p2, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
   },
   // Slope of line normal to this.
   normalSlope: 0,
@@ -30851,46 +32663,46 @@ var yUnitVector = {
   // d   ... distance on projection vector
   // pv  ... projection vector (undefined = this)
   // org ... if true, uses the original position of rp as reference.
-  setRelative: function(p, rp, d, pv, org) {
+  setRelative: function(p2, rp, d2, pv, org) {
     if (!pv || pv === this) {
-      p.y = (org ? rp.yo : rp.y) + d;
+      p2.y = (org ? rp.yo : rp.y) + d2;
       return;
     }
     var rpx = org ? rp.xo : rp.x;
     var rpy = org ? rp.yo : rp.y;
-    var rpdx = rpx + d * pv.x;
-    var rpdy = rpy + d * pv.y;
-    p.y = rpdy + pv.normalSlope * (p.x - rpdx);
+    var rpdx = rpx + d2 * pv.x;
+    var rpdy = rpy + d2 * pv.y;
+    p2.y = rpdy + pv.normalSlope * (p2.x - rpdx);
   },
   // Slope of vector line.
   slope: Number.POSITIVE_INFINITY,
   // Touches the point p.
-  touch: function(p) {
-    p.yTouched = true;
+  touch: function(p2) {
+    p2.yTouched = true;
   },
   // Tests if a point p is touched.
-  touched: function(p) {
-    return p.yTouched;
+  touched: function(p2) {
+    return p2.yTouched;
   },
   // Untouches the point p.
-  untouch: function(p) {
-    p.yTouched = false;
+  untouch: function(p2) {
+    p2.yTouched = false;
   }
 };
 Object.freeze(xUnitVector);
 Object.freeze(yUnitVector);
-function UnitVector(x, y) {
-  this.x = x;
-  this.y = y;
+function UnitVector(x2, y2) {
+  this.x = x2;
+  this.y = y2;
   this.axis = void 0;
-  this.slope = y / x;
-  this.normalSlope = -x / y;
+  this.slope = y2 / x2;
+  this.normalSlope = -x2 / y2;
   Object.freeze(this);
 }
 UnitVector.prototype.distance = function(p1, p2, o1, o2) {
   return this.x * xUnitVector.distance(p1, p2, o1, o2) + this.y * yUnitVector.distance(p1, p2, o1, o2);
 };
-UnitVector.prototype.interpolate = function(p, rp1, rp2, pv) {
+UnitVector.prototype.interpolate = function(p2, rp1, rp2, pv) {
   var dm1;
   var dm2;
   var do1;
@@ -30898,51 +32710,51 @@ UnitVector.prototype.interpolate = function(p, rp1, rp2, pv) {
   var doa1;
   var doa2;
   var dt;
-  do1 = pv.distance(p, rp1, true, true);
-  do2 = pv.distance(p, rp2, true, true);
+  do1 = pv.distance(p2, rp1, true, true);
+  do2 = pv.distance(p2, rp2, true, true);
   dm1 = pv.distance(rp1, rp1, false, true);
   dm2 = pv.distance(rp2, rp2, false, true);
   doa1 = Math.abs(do1);
   doa2 = Math.abs(do2);
   dt = doa1 + doa2;
   if (dt === 0) {
-    this.setRelative(p, p, (dm1 + dm2) / 2, pv, true);
+    this.setRelative(p2, p2, (dm1 + dm2) / 2, pv, true);
     return;
   }
-  this.setRelative(p, p, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
+  this.setRelative(p2, p2, (dm1 * doa2 + dm2 * doa1) / dt, pv, true);
 };
-UnitVector.prototype.setRelative = function(p, rp, d, pv, org) {
+UnitVector.prototype.setRelative = function(p2, rp, d2, pv, org) {
   pv = pv || this;
   var rpx = org ? rp.xo : rp.x;
   var rpy = org ? rp.yo : rp.y;
-  var rpdx = rpx + d * pv.x;
-  var rpdy = rpy + d * pv.y;
+  var rpdx = rpx + d2 * pv.x;
+  var rpdy = rpy + d2 * pv.y;
   var pvns = pv.normalSlope;
   var fvs = this.slope;
-  var px = p.x;
-  var py = p.y;
-  p.x = (fvs * px - pvns * rpdx + rpdy - py) / (fvs - pvns);
-  p.y = fvs * (p.x - px) + py;
+  var px = p2.x;
+  var py = p2.y;
+  p2.x = (fvs * px - pvns * rpdx + rpdy - py) / (fvs - pvns);
+  p2.y = fvs * (p2.x - px) + py;
 };
-UnitVector.prototype.touch = function(p) {
-  p.xTouched = true;
-  p.yTouched = true;
+UnitVector.prototype.touch = function(p2) {
+  p2.xTouched = true;
+  p2.yTouched = true;
 };
-function getUnitVector(x, y) {
-  var d = Math.sqrt(x * x + y * y);
-  x /= d;
-  y /= d;
-  if (x === 1 && y === 0) {
+function getUnitVector(x2, y2) {
+  var d2 = Math.sqrt(x2 * x2 + y2 * y2);
+  x2 /= d2;
+  y2 /= d2;
+  if (x2 === 1 && y2 === 0) {
     return xUnitVector;
-  } else if (x === 0 && y === 1) {
+  } else if (x2 === 0 && y2 === 1) {
     return yUnitVector;
   } else {
-    return new UnitVector(x, y);
+    return new UnitVector(x2, y2);
   }
 }
-function HPoint(x, y, lastPointOfContour, onCurve) {
-  this.x = this.xo = Math.round(x * 64) / 64;
-  this.y = this.yo = Math.round(y * 64) / 64;
+function HPoint(x2, y2, lastPointOfContour, onCurve) {
+  this.x = this.xo = Math.round(x2 * 64) / 64;
+  this.y = this.yo = Math.round(y2 * 64) / 64;
   this.lastPointOfContour = lastPointOfContour;
   this.onCurve = onCurve;
   this.prevPointOnContour = void 0;
@@ -30952,18 +32764,18 @@ function HPoint(x, y, lastPointOfContour, onCurve) {
   Object.preventExtensions(this);
 }
 HPoint.prototype.nextTouched = function(v) {
-  var p = this.nextPointOnContour;
-  while (!v.touched(p) && p !== this) {
-    p = p.nextPointOnContour;
+  var p2 = this.nextPointOnContour;
+  while (!v.touched(p2) && p2 !== this) {
+    p2 = p2.nextPointOnContour;
   }
-  return p;
+  return p2;
 };
 HPoint.prototype.prevTouched = function(v) {
-  var p = this.prevPointOnContour;
-  while (!v.touched(p) && p !== this) {
-    p = p.prevPointOnContour;
+  var p2 = this.prevPointOnContour;
+  while (!v.touched(p2) && p2 !== this) {
+    p2 = p2.prevPointOnContour;
   }
-  return p;
+  return p2;
 };
 var HPZero = Object.freeze(new HPoint(0, 0));
 var defaultState = {
@@ -31025,8 +32837,8 @@ Hinting.prototype.exec = function(glyph, ppem) {
     if (oCvt) {
       var cvt = prepState.cvt = new Array(oCvt.length);
       var scale2 = ppem / font.unitsPerEm;
-      for (var c = 0; c < oCvt.length; c++) {
-        cvt[c] = oCvt[c] * scale2;
+      for (var c2 = 0; c2 < oCvt.length; c2++) {
+        cvt[c2] = oCvt[c2] * scale2;
       }
     } else {
       prepState.cvt = [];
@@ -31079,23 +32891,23 @@ execGlyph = function(glyph, prepState) {
     gZone = [];
     contours = [];
     for (var i = 0; i < components.length; i++) {
-      var c = components[i];
-      var cg = font.glyphs.get(c.glyphIndex);
+      var c2 = components[i];
+      var cg = font.glyphs.get(c2.glyphIndex);
       state = new State("glyf", cg.instructions);
       if (exports.DEBUG) {
         console.log("---EXEC COMP " + i + "---");
         state.step = -1;
       }
       execComponent(cg, state, xScale, yScale);
-      var dx = Math.round(c.dx * xScale);
-      var dy = Math.round(c.dy * yScale);
+      var dx = Math.round(c2.dx * xScale);
+      var dy = Math.round(c2.dy * yScale);
       var gz = state.gZone;
       var cc = state.contours;
       for (var pi = 0; pi < gz.length; pi++) {
-        var p = gz[pi];
-        p.xTouched = p.yTouched = false;
-        p.xo = p.x = p.x + dx;
-        p.yo = p.y = p.y + dy;
+        var p2 = gz[pi];
+        p2.xTouched = p2.yTouched = false;
+        p2.xo = p2.x = p2.x + dx;
+        p2.yo = p2.y = p2.y + dy;
       }
       var gLen = gZone.length;
       gZone.push.apply(gZone, gz);
@@ -31245,18 +33057,18 @@ function SFVTCA(v, state) {
   }
   state.fv = v;
 }
-function SPVTL(a, state) {
+function SPVTL(a2, state) {
   var stack = state.stack;
   var p2i = stack.pop();
   var p1i = stack.pop();
   var p2 = state.z2[p2i];
   var p1 = state.z1[p1i];
   if (exports.DEBUG) {
-    console.log("SPVTL[" + a + "]", p2i, p1i);
+    console.log("SPVTL[" + a2 + "]", p2i, p1i);
   }
   var dx;
   var dy;
-  if (!a) {
+  if (!a2) {
     dx = p1.x - p2.x;
     dy = p1.y - p2.y;
   } else {
@@ -31265,18 +33077,18 @@ function SPVTL(a, state) {
   }
   state.pv = state.dpv = getUnitVector(dx, dy);
 }
-function SFVTL(a, state) {
+function SFVTL(a2, state) {
   var stack = state.stack;
   var p2i = stack.pop();
   var p1i = stack.pop();
   var p2 = state.z2[p2i];
   var p1 = state.z1[p1i];
   if (exports.DEBUG) {
-    console.log("SFVTL[" + a + "]", p2i, p1i);
+    console.log("SFVTL[" + a2 + "]", p2i, p1i);
   }
   var dx;
   var dy;
-  if (!a) {
+  if (!a2) {
     dx = p1.x - p2.x;
     dy = p1.y - p2.y;
   } else {
@@ -31287,21 +33099,21 @@ function SFVTL(a, state) {
 }
 function SPVFS(state) {
   var stack = state.stack;
-  var y = stack.pop();
-  var x = stack.pop();
+  var y2 = stack.pop();
+  var x2 = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "SPVFS[]", y, x);
+    console.log(state.step, "SPVFS[]", y2, x2);
   }
-  state.pv = state.dpv = getUnitVector(x, y);
+  state.pv = state.dpv = getUnitVector(x2, y2);
 }
 function SFVFS(state) {
   var stack = state.stack;
-  var y = stack.pop();
-  var x = stack.pop();
+  var y2 = stack.pop();
+  var x2 = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "SPVFS[]", y, x);
+    console.log(state.step, "SPVFS[]", y2, x2);
   }
-  state.fv = getUnitVector(x, y);
+  state.fv = getUnitVector(x2, y2);
 }
 function GPV(state) {
   var stack = state.stack;
@@ -31340,7 +33152,7 @@ function ISECT(state) {
   var pa1 = z0[pa1i];
   var pb0 = z1[pb0i];
   var pb1 = z1[pb1i];
-  var p = state.z2[pi];
+  var p2 = state.z2[pi];
   if (exports.DEBUG) {
     console.log("ISECT[], ", pa0i, pa1i, pb0i, pb1i, pi);
   }
@@ -31355,8 +33167,8 @@ function ISECT(state) {
   var div = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
   var f1 = x1 * y2 - y1 * x2;
   var f2 = x3 * y4 - y3 * x4;
-  p.x = (f1 * (x3 - x4) - f2 * (x1 - x2)) / div;
-  p.y = (f1 * (y3 - y4) - f2 * (y1 - y2)) / div;
+  p2.x = (f1 * (x3 - x4) - f2 * (x1 - x2)) / div;
+  p2.y = (f1 * (y3 - y4) - f2 * (y1 - y2)) / div;
 }
 function SRP0(state) {
   state.rp0 = state.stack.pop();
@@ -31475,11 +33287,11 @@ function RTHG(state) {
   state.round = roundToHalfGrid;
 }
 function SMD(state) {
-  var d = state.stack.pop();
+  var d2 = state.stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "SMD[]", d);
+    console.log(state.step, "SMD[]", d2);
   }
-  state.minDis = d / 64;
+  state.minDis = d2 / 64;
 }
 function ELSE(state) {
   if (exports.DEBUG) {
@@ -31522,12 +33334,12 @@ function CLEAR(state) {
 }
 function SWAP(state) {
   var stack = state.stack;
-  var a = stack.pop();
+  var a2 = stack.pop();
   var b = stack.pop();
   if (exports.DEBUG) {
     console.log(state.step, "SWAP[]");
   }
-  stack.push(a);
+  stack.push(a2);
   stack.push(b);
 }
 function DEPTH(state) {
@@ -31540,19 +33352,19 @@ function DEPTH(state) {
 function LOOPCALL(state) {
   var stack = state.stack;
   var fn = stack.pop();
-  var c = stack.pop();
+  var c2 = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "LOOPCALL[]", fn, c);
+    console.log(state.step, "LOOPCALL[]", fn, c2);
   }
   var cip = state.ip;
   var cprog = state.prog;
   state.prog = state.funcs[fn];
-  for (var i = 0; i < c; i++) {
+  for (var i = 0; i < c2; i++) {
     exec(state);
     if (exports.DEBUG) {
       console.log(
         ++state.step,
-        i + 1 < c ? "next loopcall" : "done loopcall",
+        i + 1 < c2 ? "next loopcall" : "done loopcall",
         i
       );
     }
@@ -31577,19 +33389,19 @@ function CALL(state) {
 }
 function CINDEX(state) {
   var stack = state.stack;
-  var k = stack.pop();
+  var k2 = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "CINDEX[]", k);
+    console.log(state.step, "CINDEX[]", k2);
   }
-  stack.push(stack[stack.length - k]);
+  stack.push(stack[stack.length - k2]);
 }
 function MINDEX(state) {
   var stack = state.stack;
-  var k = stack.pop();
+  var k2 = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "MINDEX[]", k);
+    console.log(state.step, "MINDEX[]", k2);
   }
-  stack.push(stack.splice(stack.length - k, 1)[0]);
+  stack.push(stack.splice(stack.length - k2, 1)[0]);
 }
 function FDEF(state) {
   if (state.env !== "fpgm") {
@@ -31610,18 +33422,18 @@ function FDEF(state) {
 }
 function MDAP(round4, state) {
   var pi = state.stack.pop();
-  var p = state.z0[pi];
+  var p2 = state.z0[pi];
   var fv = state.fv;
   var pv = state.pv;
   if (exports.DEBUG) {
     console.log(state.step, "MDAP[" + round4 + "]", pi);
   }
-  var d = pv.distance(p, HPZero);
+  var d2 = pv.distance(p2, HPZero);
   if (round4) {
-    d = state.round(d);
+    d2 = state.round(d2);
   }
-  fv.setRelative(p, HPZero, d, pv);
-  fv.touch(p);
+  fv.setRelative(p2, HPZero, d2, pv);
+  fv.touch(p2);
   state.rp0 = state.rp1 = pi;
 }
 function IUP(v, state) {
@@ -31649,98 +33461,98 @@ function IUP(v, state) {
     v.interpolate(cp, pp, np, v);
   }
 }
-function SHP(a, state) {
+function SHP(a2, state) {
   var stack = state.stack;
-  var rpi = a ? state.rp1 : state.rp2;
-  var rp = (a ? state.z0 : state.z1)[rpi];
+  var rpi = a2 ? state.rp1 : state.rp2;
+  var rp = (a2 ? state.z0 : state.z1)[rpi];
   var fv = state.fv;
   var pv = state.pv;
   var loop = state.loop;
   var z2 = state.z2;
   while (loop--) {
     var pi = stack.pop();
-    var p = z2[pi];
-    var d = pv.distance(rp, rp, false, true);
-    fv.setRelative(p, p, d, pv);
-    fv.touch(p);
+    var p2 = z2[pi];
+    var d2 = pv.distance(rp, rp, false, true);
+    fv.setRelative(p2, p2, d2, pv);
+    fv.touch(p2);
     if (exports.DEBUG) {
       console.log(
         state.step,
-        (state.loop > 1 ? "loop " + (state.loop - loop) + ": " : "") + "SHP[" + (a ? "rp1" : "rp2") + "]",
+        (state.loop > 1 ? "loop " + (state.loop - loop) + ": " : "") + "SHP[" + (a2 ? "rp1" : "rp2") + "]",
         pi
       );
     }
   }
   state.loop = 1;
 }
-function SHC(a, state) {
+function SHC(a2, state) {
   var stack = state.stack;
-  var rpi = a ? state.rp1 : state.rp2;
-  var rp = (a ? state.z0 : state.z1)[rpi];
+  var rpi = a2 ? state.rp1 : state.rp2;
+  var rp = (a2 ? state.z0 : state.z1)[rpi];
   var fv = state.fv;
   var pv = state.pv;
   var ci = stack.pop();
   var sp = state.z2[state.contours[ci]];
-  var p = sp;
+  var p2 = sp;
   if (exports.DEBUG) {
-    console.log(state.step, "SHC[" + a + "]", ci);
+    console.log(state.step, "SHC[" + a2 + "]", ci);
   }
-  var d = pv.distance(rp, rp, false, true);
+  var d2 = pv.distance(rp, rp, false, true);
   do {
-    if (p !== rp) {
-      fv.setRelative(p, p, d, pv);
+    if (p2 !== rp) {
+      fv.setRelative(p2, p2, d2, pv);
     }
-    p = p.nextPointOnContour;
-  } while (p !== sp);
+    p2 = p2.nextPointOnContour;
+  } while (p2 !== sp);
 }
-function SHZ(a, state) {
+function SHZ(a2, state) {
   var stack = state.stack;
-  var rpi = a ? state.rp1 : state.rp2;
-  var rp = (a ? state.z0 : state.z1)[rpi];
+  var rpi = a2 ? state.rp1 : state.rp2;
+  var rp = (a2 ? state.z0 : state.z1)[rpi];
   var fv = state.fv;
   var pv = state.pv;
   var e = stack.pop();
   if (exports.DEBUG) {
-    console.log(state.step, "SHZ[" + a + "]", e);
+    console.log(state.step, "SHZ[" + a2 + "]", e);
   }
-  var z;
+  var z2;
   switch (e) {
     case 0:
-      z = state.tZone;
+      z2 = state.tZone;
       break;
     case 1:
-      z = state.gZone;
+      z2 = state.gZone;
       break;
     default:
       throw new Error("Invalid zone");
   }
-  var p;
-  var d = pv.distance(rp, rp, false, true);
-  var pLen = z.length - 2;
+  var p2;
+  var d2 = pv.distance(rp, rp, false, true);
+  var pLen = z2.length - 2;
   for (var i = 0; i < pLen; i++) {
-    p = z[i];
-    fv.setRelative(p, p, d, pv);
+    p2 = z2[i];
+    fv.setRelative(p2, p2, d2, pv);
   }
 }
 function SHPIX(state) {
   var stack = state.stack;
   var loop = state.loop;
   var fv = state.fv;
-  var d = stack.pop() / 64;
+  var d2 = stack.pop() / 64;
   var z2 = state.z2;
   while (loop--) {
     var pi = stack.pop();
-    var p = z2[pi];
+    var p2 = z2[pi];
     if (exports.DEBUG) {
       console.log(
         state.step,
         (state.loop > 1 ? "loop " + (state.loop - loop) + ": " : "") + "SHPIX[]",
         pi,
-        d
+        d2
       );
     }
-    fv.setRelative(p, p, d);
-    fv.touch(p);
+    fv.setRelative(p2, p2, d2);
+    fv.touch(p2);
   }
   state.loop = 1;
 }
@@ -31756,7 +33568,7 @@ function IP(state) {
   var z2 = state.z2;
   while (loop--) {
     var pi = stack.pop();
-    var p = z2[pi];
+    var p2 = z2[pi];
     if (exports.DEBUG) {
       console.log(
         state.step,
@@ -31767,27 +33579,27 @@ function IP(state) {
         rp2i
       );
     }
-    fv.interpolate(p, rp1, rp2, pv);
-    fv.touch(p);
+    fv.interpolate(p2, rp1, rp2, pv);
+    fv.touch(p2);
   }
   state.loop = 1;
 }
-function MSIRP(a, state) {
+function MSIRP(a2, state) {
   var stack = state.stack;
-  var d = stack.pop() / 64;
+  var d2 = stack.pop() / 64;
   var pi = stack.pop();
-  var p = state.z1[pi];
+  var p2 = state.z1[pi];
   var rp0 = state.z0[state.rp0];
   var fv = state.fv;
   var pv = state.pv;
-  fv.setRelative(p, rp0, d, pv);
-  fv.touch(p);
+  fv.setRelative(p2, rp0, d2, pv);
+  fv.touch(p2);
   if (exports.DEBUG) {
-    console.log(state.step, "MSIRP[" + a + "]", d, pi);
+    console.log(state.step, "MSIRP[" + a2 + "]", d2, pi);
   }
   state.rp1 = state.rp0;
   state.rp2 = pi;
-  if (a) {
+  if (a2) {
     state.rp0 = pi;
   }
 }
@@ -31801,7 +33613,7 @@ function ALIGNRP(state) {
   var z1 = state.z1;
   while (loop--) {
     var pi = stack.pop();
-    var p = z1[pi];
+    var p2 = z1[pi];
     if (exports.DEBUG) {
       console.log(
         state.step,
@@ -31809,8 +33621,8 @@ function ALIGNRP(state) {
         pi
       );
     }
-    fv.setRelative(p, rp0, 0, pv);
-    fv.touch(p);
+    fv.setRelative(p2, rp0, 0, pv);
+    fv.touch(p2);
   }
   state.loop = 1;
 }
@@ -31824,7 +33636,7 @@ function MIAP(round4, state) {
   var stack = state.stack;
   var n = stack.pop();
   var pi = stack.pop();
-  var p = state.z0[pi];
+  var p2 = state.z0[pi];
   var fv = state.fv;
   var pv = state.pv;
   var cv = state.cvt[n];
@@ -31839,19 +33651,19 @@ function MIAP(round4, state) {
       pi
     );
   }
-  var d = pv.distance(p, HPZero);
+  var d2 = pv.distance(p2, HPZero);
   if (round4) {
-    if (Math.abs(d - cv) < state.cvCutIn) {
-      d = cv;
+    if (Math.abs(d2 - cv) < state.cvCutIn) {
+      d2 = cv;
     }
-    d = state.round(d);
+    d2 = state.round(d2);
   }
-  fv.setRelative(p, HPZero, d, pv);
+  fv.setRelative(p2, HPZero, d2, pv);
   if (state.zp0 === 0) {
-    p.xo = p.x;
-    p.yo = p.y;
+    p2.xo = p2.x;
+    p2.yo = p2.y;
   }
-  fv.touch(p);
+  fv.touch(p2);
   state.rp0 = state.rp1 = pi;
 }
 function NPUSHB(state) {
@@ -31876,11 +33688,11 @@ function NPUSHW(state) {
     console.log(state.step, "NPUSHW[]", n);
   }
   for (var i = 0; i < n; i++) {
-    var w = prog[++ip] << 8 | prog[++ip];
-    if (w & 32768) {
-      w = -((w ^ 65535) + 1);
+    var w2 = prog[++ip] << 8 | prog[++ip];
+    if (w2 & 32768) {
+      w2 = -((w2 ^ 65535) + 1);
     }
-    stack.push(w);
+    stack.push(w2);
   }
   state.ip = ip;
 }
@@ -31924,26 +33736,26 @@ function RCVT(state) {
   }
   stack.push(state.cvt[cvte] * 64);
 }
-function GC(a, state) {
+function GC(a2, state) {
   var stack = state.stack;
   var pi = stack.pop();
-  var p = state.z2[pi];
+  var p2 = state.z2[pi];
   if (exports.DEBUG) {
-    console.log(state.step, "GC[" + a + "]", pi);
+    console.log(state.step, "GC[" + a2 + "]", pi);
   }
-  stack.push(state.dpv.distance(p, HPZero, a, false) * 64);
+  stack.push(state.dpv.distance(p2, HPZero, a2, false) * 64);
 }
-function MD(a, state) {
+function MD(a2, state) {
   var stack = state.stack;
   var pi2 = stack.pop();
   var pi1 = stack.pop();
   var p2 = state.z1[pi2];
   var p1 = state.z0[pi1];
-  var d = state.dpv.distance(p1, p2, a, a);
+  var d2 = state.dpv.distance(p1, p2, a2, a2);
   if (exports.DEBUG) {
-    console.log(state.step, "MD[" + a + "]", pi2, pi1, "->", d);
+    console.log(state.step, "MD[" + a2 + "]", pi2, pi1, "->", d2);
   }
-  state.stack.push(Math.round(d * 64));
+  state.stack.push(Math.round(d2 * 64));
 }
 function MPPEM(state) {
   if (exports.DEBUG) {
@@ -32096,8 +33908,8 @@ function DELTAP123(b, state) {
     if (exports.DEBUG) {
       console.log(state.step, "DELTAPFIX", pi, "by", mag * ds);
     }
-    var p = z0[pi];
-    fv.setRelative(p, p, mag * ds, pv);
+    var p2 = z0[pi];
+    fv.setRelative(p2, p2, mag * ds, pv);
   }
 }
 function SDB(state) {
@@ -32211,7 +34023,7 @@ function DELTAC123(b, state) {
     console.log(state.step, "DELTAC[" + b + "]", n, stack);
   }
   for (var i = 0; i < n; i++) {
-    var c = stack.pop();
+    var c2 = stack.pop();
     var arg = stack.pop();
     var appem = base + ((arg & 240) >> 4);
     if (appem !== ppem) {
@@ -32223,9 +34035,9 @@ function DELTAC123(b, state) {
     }
     var delta2 = mag * ds;
     if (exports.DEBUG) {
-      console.log(state.step, "DELTACFIX", c, "by", delta2);
+      console.log(state.step, "DELTACFIX", c2, "by", delta2);
     }
-    state.cvt[c] += delta2;
+    state.cvt[c2] += delta2;
   }
 }
 function SROUND(state) {
@@ -32340,18 +34152,18 @@ function SCANCTRL(state) {
     console.log(state.step, "SCANCTRL[]", n);
   }
 }
-function SDPVTL(a, state) {
+function SDPVTL(a2, state) {
   var stack = state.stack;
   var p2i = stack.pop();
   var p1i = stack.pop();
   var p2 = state.z2[p2i];
   var p1 = state.z1[p1i];
   if (exports.DEBUG) {
-    console.log(state.step, "SDPVTL[" + a + "]", p2i, p1i);
+    console.log(state.step, "SDPVTL[" + a2 + "]", p2i, p1i);
   }
   var dx;
   var dy;
-  if (!a) {
+  if (!a2) {
     dx = p1.x - p2.x;
     dy = p1.y - p2.y;
   } else {
@@ -32377,15 +34189,15 @@ function GETINFO(state) {
 }
 function ROLL(state) {
   var stack = state.stack;
-  var a = stack.pop();
+  var a2 = stack.pop();
   var b = stack.pop();
-  var c = stack.pop();
+  var c2 = stack.pop();
   if (exports.DEBUG) {
     console.log(state.step, "ROLL[]");
   }
   stack.push(b);
-  stack.push(a);
-  stack.push(c);
+  stack.push(a2);
+  stack.push(c2);
 }
 function MAX(state) {
   var stack = state.stack;
@@ -32448,11 +34260,11 @@ function PUSHW(n, state) {
     console.log(state.ip, "PUSHW[" + n + "]");
   }
   for (var i = 0; i < n; i++) {
-    var w = prog[++ip] << 8 | prog[++ip];
-    if (w & 32768) {
-      w = -((w ^ 65535) + 1);
+    var w2 = prog[++ip] << 8 | prog[++ip];
+    if (w2 & 32768) {
+      w2 = -((w2 ^ 65535) + 1);
     }
-    stack.push(w);
+    stack.push(w2);
   }
   state.ip = ip;
 }
@@ -32462,31 +34274,31 @@ function MDRP_MIRP(indirect, setRp0, keepD, ro, dt, state) {
   var pi = stack.pop();
   var rp0i = state.rp0;
   var rp = state.z0[rp0i];
-  var p = state.z1[pi];
+  var p2 = state.z1[pi];
   var md = state.minDis;
   var fv = state.fv;
   var pv = state.dpv;
   var od;
-  var d;
+  var d2;
   var sign;
   var cv;
-  d = od = pv.distance(p, rp, true, true);
-  sign = d >= 0 ? 1 : -1;
-  d = Math.abs(d);
+  d2 = od = pv.distance(p2, rp, true, true);
+  sign = d2 >= 0 ? 1 : -1;
+  d2 = Math.abs(d2);
   if (indirect) {
     cv = state.cvt[cvte];
-    if (ro && Math.abs(d - cv) < state.cvCutIn) {
-      d = cv;
+    if (ro && Math.abs(d2 - cv) < state.cvCutIn) {
+      d2 = cv;
     }
   }
-  if (keepD && d < md) {
-    d = md;
+  if (keepD && d2 < md) {
+    d2 = md;
   }
   if (ro) {
-    d = state.round(d);
+    d2 = state.round(d2);
   }
-  fv.setRelative(p, rp, sign * d, pv);
-  fv.touch(p);
+  fv.setRelative(p2, rp, sign * d2, pv);
+  fv.touch(p2);
   if (exports.DEBUG) {
     console.log(
       state.step,
@@ -32496,7 +34308,7 @@ function MDRP_MIRP(indirect, setRp0, keepD, ro, dt, state) {
       "(d =",
       od,
       "->",
-      sign * d,
+      sign * d2,
       ")"
     );
   }
@@ -33395,8 +35207,8 @@ Tokenizer.prototype.tokenize = function(text2) {
   this.dispatch("end", [this.tokens]);
   return this.tokens;
 };
-function isArabicChar(c) {
-  return /[\u0600-\u065F\u066A-\u06D2\u06FA-\u06FF]/.test(c);
+function isArabicChar(c2) {
+  return /[\u0600-\u065F\u066A-\u06D2\u06FA-\u06FF]/.test(c2);
 }
 function isIsolatedArabicChar(char) {
   return /[\u0630\u0690\u0621\u0631\u0661\u0671\u0622\u0632\u0672\u0692\u06C2\u0623\u0673\u0693\u06C3\u0624\u0694\u06C4\u0625\u0675\u0695\u06C5\u06E5\u0676\u0696\u06C6\u0627\u0677\u0697\u06C7\u0648\u0688\u0698\u06C8\u0689\u0699\u06C9\u068A\u06CA\u066B\u068B\u06CB\u068C\u068D\u06CD\u06FD\u068E\u06EE\u06FE\u062F\u068F\u06CF\u06EF]/.test(char);
@@ -33404,11 +35216,11 @@ function isIsolatedArabicChar(char) {
 function isTashkeelArabicChar(char) {
   return /[\u0600-\u0605\u060C-\u060E\u0610-\u061B\u061E\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED]/.test(char);
 }
-function isLatinChar(c) {
-  return /[A-z]/.test(c);
+function isLatinChar(c2) {
+  return /[A-z]/.test(c2);
 }
-function isWhiteSpace(c) {
-  return /\s/.test(c);
+function isWhiteSpace(c2) {
+  return /\s/.test(c2);
 }
 function FeatureQuery(font) {
   this.font = font;
@@ -33843,8 +35655,8 @@ function arabicSentenceEndCheck(contextParams) {
       if (nextIsWhitespace) {
         var arabicCharAhead = false;
         arabicCharAhead = contextParams.lookahead.some(
-          function(c) {
-            return isArabicChar(c) || isTashkeelArabicChar(c);
+          function(c2) {
+            return isArabicChar(c2) || isTashkeelArabicChar(c2);
           }
         );
         if (!arabicCharAhead) {
@@ -34126,8 +35938,8 @@ Bidi.prototype.applyFeatures = function(font, features) {
   if (!this.query) {
     this.query = new FeatureQuery(font);
   }
-  for (var f = 0; f < features.length; f++) {
-    var feature = features[f];
+  for (var f2 = 0; f2 < features.length; f2++) {
+    var feature = features[f2];
     if (!this.query.supports({ script: feature.script })) {
       continue;
     }
@@ -34284,14 +36096,14 @@ function Font(options) {
     }
   });
 }
-Font.prototype.hasChar = function(c) {
-  return this.encoding.charToGlyphIndex(c) !== null;
+Font.prototype.hasChar = function(c2) {
+  return this.encoding.charToGlyphIndex(c2) !== null;
 };
 Font.prototype.charToGlyphIndex = function(s) {
   return this.encoding.charToGlyphIndex(s);
 };
-Font.prototype.charToGlyph = function(c) {
-  var glyphIndex = this.charToGlyphIndex(c);
+Font.prototype.charToGlyph = function(c2) {
+  var glyphIndex = this.charToGlyphIndex(c2);
   var glyph = this.glyphs.get(glyphIndex);
   if (!glyph) {
     glyph = this.glyphs.get(0);
@@ -34367,9 +36179,9 @@ Font.prototype.defaultRenderOptions = {
     { script: "latn", tags: ["liga", "rlig"] }
   ]
 };
-Font.prototype.forEachGlyph = function(text2, x, y, fontSize, options, callback) {
-  x = x !== void 0 ? x : 0;
-  y = y !== void 0 ? y : 0;
+Font.prototype.forEachGlyph = function(text2, x2, y2, fontSize, options, callback) {
+  x2 = x2 !== void 0 ? x2 : 0;
+  y2 = y2 !== void 0 ? y2 : 0;
   fontSize = fontSize !== void 0 ? fontSize : 72;
   options = Object.assign({}, this.defaultRenderOptions, options);
   var fontScale = 1 / this.unitsPerEm * fontSize;
@@ -34381,33 +36193,33 @@ Font.prototype.forEachGlyph = function(text2, x, y, fontSize, options, callback)
   }
   for (var i = 0; i < glyphs.length; i += 1) {
     var glyph = glyphs[i];
-    callback.call(this, glyph, x, y, fontSize, options);
+    callback.call(this, glyph, x2, y2, fontSize, options);
     if (glyph.advanceWidth) {
-      x += glyph.advanceWidth * fontScale;
+      x2 += glyph.advanceWidth * fontScale;
     }
     if (options.kerning && i < glyphs.length - 1) {
       var kerningValue = kerningLookups ? this.position.getKerningValue(kerningLookups, glyph.index, glyphs[i + 1].index) : this.getKerningValue(glyph, glyphs[i + 1]);
-      x += kerningValue * fontScale;
+      x2 += kerningValue * fontScale;
     }
     if (options.letterSpacing) {
-      x += options.letterSpacing * fontSize;
+      x2 += options.letterSpacing * fontSize;
     } else if (options.tracking) {
-      x += options.tracking / 1e3 * fontSize;
+      x2 += options.tracking / 1e3 * fontSize;
     }
   }
-  return x;
+  return x2;
 };
-Font.prototype.getPath = function(text2, x, y, fontSize, options) {
+Font.prototype.getPath = function(text2, x2, y2, fontSize, options) {
   var fullPath = new Path();
-  this.forEachGlyph(text2, x, y, fontSize, options, function(glyph, gX, gY, gFontSize) {
+  this.forEachGlyph(text2, x2, y2, fontSize, options, function(glyph, gX, gY, gFontSize) {
     var glyphPath = glyph.getPath(gX, gY, gFontSize, options, this);
     fullPath.extend(glyphPath);
   });
   return fullPath;
 };
-Font.prototype.getPaths = function(text2, x, y, fontSize, options) {
+Font.prototype.getPaths = function(text2, x2, y2, fontSize, options) {
   var glyphPaths = [];
-  this.forEachGlyph(text2, x, y, fontSize, options, function(glyph, gX, gY, gFontSize) {
+  this.forEachGlyph(text2, x2, y2, fontSize, options, function(glyph, gX, gY, gFontSize) {
     var glyphPath = glyph.getPath(gX, gY, gFontSize, options, this);
     glyphPaths.push(glyphPath);
   });
@@ -34417,16 +36229,16 @@ Font.prototype.getAdvanceWidth = function(text2, fontSize, options) {
   return this.forEachGlyph(text2, 0, 0, fontSize, options, function() {
   });
 };
-Font.prototype.draw = function(ctx, text2, x, y, fontSize, options) {
-  this.getPath(text2, x, y, fontSize, options).draw(ctx);
+Font.prototype.draw = function(ctx, text2, x2, y2, fontSize, options) {
+  this.getPath(text2, x2, y2, fontSize, options).draw(ctx);
 };
-Font.prototype.drawPoints = function(ctx, text2, x, y, fontSize, options) {
-  this.forEachGlyph(text2, x, y, fontSize, options, function(glyph, gX, gY, gFontSize) {
+Font.prototype.drawPoints = function(ctx, text2, x2, y2, fontSize, options) {
+  this.forEachGlyph(text2, x2, y2, fontSize, options, function(glyph, gX, gY, gFontSize) {
     glyph.drawPoints(ctx, gX, gY, gFontSize);
   });
 };
-Font.prototype.drawMetrics = function(ctx, text2, x, y, fontSize, options) {
-  this.forEachGlyph(text2, x, y, fontSize, options, function(glyph, gX, gY, gFontSize) {
+Font.prototype.drawMetrics = function(ctx, text2, x2, y2, fontSize, options) {
+  this.forEachGlyph(text2, x2, y2, fontSize, options, function(glyph, gX, gY, gFontSize) {
     glyph.drawMetrics(ctx, gX, gY, gFontSize);
   });
 };
@@ -34625,9 +36437,9 @@ subtableParsers$1[9] = function parseLookup9() {
 };
 new Array(10);
 const PRECISION = 1e-8;
-const samePoint = (x, y) => samePoint$2(x, y, PRECISION * 10);
+const samePoint = (x2, y2) => samePoint$2(x2, y2, PRECISION * 10);
 const getIntersectionPoint = (line1Start, line1End, line2Start, line2End) => {
-  const x = determinant2x2([
+  const x2 = determinant2x2([
     [
       determinant2x2([
         [line1Start[0], line1Start[1]],
@@ -34670,7 +36482,7 @@ const getIntersectionPoint = (line1Start, line1End, line2Start, line2End) => {
       ])
     ]
   ]);
-  const y = determinant2x2([
+  const y2 = determinant2x2([
     [
       determinant2x2([
         [line1Start[0], line1Start[1]],
@@ -34713,7 +36525,7 @@ const getIntersectionPoint = (line1Start, line1End, line2Start, line2End) => {
       ])
     ]
   ]);
-  return [x, y];
+  return [x2, y2];
 };
 function joinRound(appendCurve, previousLastPoint, firstPoint, previousCurve, _curve) {
   const arcJoiner = make2dArcFromCenter(
@@ -34754,9 +36566,9 @@ const OFFSET_JOINERS = {
 };
 function rawOffsets(blueprint, offset2, offsetConfig = {}) {
   const correctedOffset = blueprint.orientation === "clockwise" ? -offset2 : offset2;
-  const offsetCurves = blueprint.curves.map((c) => ({
-    offset: make2dOffset(c, correctedOffset),
-    original: c
+  const offsetCurves = blueprint.curves.map((c2) => ({
+    offset: make2dOffset(c2, correctedOffset),
+    original: c2
   }));
   const offsettedArray = [];
   let savedLastCurve = null;
@@ -34872,14 +36684,14 @@ function offsetBlueprint(blueprint, offset2, offsetConfig = {}) {
   });
   const prunedCurves = splitCurves.filter((curve) => {
     const closeCurve = blueprint.curves.find(
-      (c) => c.distanceFrom(curve) < Math.abs(offset2) - PRECISION
+      (c2) => c2.distanceFrom(curve) < Math.abs(offset2) - PRECISION
     );
     return !closeCurve;
   });
   if (!prunedCurves.length)
     return null;
   const curvesGrouped = stitchCurves(prunedCurves);
-  const blueprints = curvesGrouped.filter((c) => c.length > 1).map((c) => new Blueprint(c)).filter((b) => b.isClosed());
+  const blueprints = curvesGrouped.filter((c2) => c2.length > 1).map((c2) => new Blueprint(c2)).filter((b) => b.isClosed());
   if (!blueprints.length)
     return null;
   if (blueprints.length === 1) {
@@ -35003,7 +36815,7 @@ class Drawing {
       } else if (shape instanceof Blueprint) {
         return {
           type: "Blueprint",
-          curves: shape.curves.map((c) => c.serialize())
+          curves: shape.curves.map((c2) => c2.serialize())
         };
       } else {
         throw new Error("Unknown shape type for serialization");
@@ -35262,44 +37074,44 @@ async function loadExtendedKernel(load) {
   return full;
 }
 function toExtended(shape) {
-  const oc = getOC(), f = full;
-  if (!f) throw new Error("The extended kernel is not loaded.");
+  const oc = getOC(), f2 = full;
+  if (!f2) throw new Error("The extended kernel is not loaded.");
   const name = `/x-${++counter}.brep`;
   const progress = new oc.Message_ProgressRange_1();
   oc.BRepTools.Write_3(shape.wrapped, name, progress);
   progress.delete();
   const bytes = oc.FS.readFile(name);
   oc.FS.unlink(name);
-  f.FS.writeFile(name, bytes);
-  const result = new f.TopoDS_Shape(), builder = new f.BRep_Builder(), range2 = new f.Message_ProgressRange_1();
-  const ok = f.BRepTools.Read_2(result, name, builder, range2);
+  f2.FS.writeFile(name, bytes);
+  const result = new f2.TopoDS_Shape(), builder = new f2.BRep_Builder(), range2 = new f2.Message_ProgressRange_1();
+  const ok = f2.BRepTools.Read_2(result, name, builder, range2);
   range2.delete();
   builder.delete();
-  f.FS.unlink(name);
+  f2.FS.unlink(name);
   if (!ok) throw new Error("Could not hand the shape to the extended kernel.");
   return result;
 }
 function fromExtended(shape) {
-  const f = full;
-  if (!f) throw new Error("The extended kernel is not loaded.");
+  const f2 = full;
+  if (!f2) throw new Error("The extended kernel is not loaded.");
   const name = `/x-${++counter}.step`;
-  const writer = new f.STEPControl_Writer_1();
-  f.Interface_Static.SetIVal("write.step.schema", 5);
+  const writer = new f2.STEPControl_Writer_1();
+  f2.Interface_Static.SetIVal("write.step.schema", 5);
   writer.Model(true).delete();
-  const progress = new f.Message_ProgressRange_1();
-  writer.Transfer(shape, f.STEPControl_StepModelType.STEPControl_AsIs, true, progress);
+  const progress = new f2.Message_ProgressRange_1();
+  writer.Transfer(shape, f2.STEPControl_StepModelType.STEPControl_AsIs, true, progress);
   const done = writer.Write(name);
   writer.delete();
   progress.delete();
-  if (done !== f.IFSelect_ReturnStatus.IFSelect_RetDone) throw new Error("The extended kernel could not hand its result back.");
-  const bytes = f.FS.readFile(name);
-  f.FS.unlink(name);
+  if (done !== f2.IFSelect_ReturnStatus.IFSelect_RetDone) throw new Error("The extended kernel could not hand its result back.");
+  const bytes = f2.FS.readFile(name);
+  f2.FS.unlink(name);
   return importSolidShape(bytes, "step");
 }
 function extendedSolids(shape) {
-  const f = full;
+  const f2 = full;
   const count = (kind) => {
-    const explorer = new f.TopExp_Explorer_2(shape, f.TopAbs_ShapeEnum[kind], f.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    const explorer = new f2.TopExp_Explorer_2(shape, f2.TopAbs_ShapeEnum[kind], f2.TopAbs_ShapeEnum.TopAbs_SHAPE);
     let n = 0;
     while (explorer.More()) {
       n++;
@@ -35310,25 +37122,25 @@ function extendedSolids(shape) {
   };
   if (count("TopAbs_SOLID") > 0) return shape;
   if (count("TopAbs_FACE") === 0) throw new Error("Import must contain valid solid geometry. Surface-only files need sewing/repair in the source application.");
-  const sewing = new f.BRepBuilderAPI_Sewing(1e-6, true, true, true, false);
+  const sewing = new f2.BRepBuilderAPI_Sewing(1e-6, true, true, true, false);
   sewing.Load(shape);
-  const progress = new f.Message_ProgressRange_1();
+  const progress = new f2.Message_ProgressRange_1();
   sewing.Perform(progress);
   const sewn = sewing.SewedShape();
   progress.delete();
   sewing.delete();
-  const builder = new f.BRep_Builder(), compound = new f.TopoDS_Compound();
+  const builder = new f2.BRep_Builder(), compound = new f2.TopoDS_Compound();
   builder.MakeCompound(compound);
-  const shells = new f.TopExp_Explorer_2(sewn, f.TopAbs_ShapeEnum.TopAbs_SHELL, f.TopAbs_ShapeEnum.TopAbs_SHAPE);
+  const shells = new f2.TopExp_Explorer_2(sewn, f2.TopAbs_ShapeEnum.TopAbs_SHELL, f2.TopAbs_ShapeEnum.TopAbs_SHAPE);
   let solids = 0;
   while (shells.More()) {
-    const shell = f.TopoDS.Shell_1(shells.Current());
-    if (!f.BRep_Tool.IsClosed_1(shell)) {
+    const shell = f2.TopoDS.Shell_1(shells.Current());
+    if (!f2.BRep_Tool.IsClosed_1(shell)) {
       shells.delete();
       builder.delete();
       throw new Error("Geometry contains an open shell. Import a mesh as a reference or repair the source.");
     }
-    const maker = new f.BRepBuilderAPI_MakeSolid_3(shell);
+    const maker = new f2.BRepBuilderAPI_MakeSolid_3(shell);
     builder.Add(compound, maker.Solid());
     maker.delete();
     solids++;
@@ -35340,8 +37152,8 @@ function extendedSolids(shape) {
   return compound;
 }
 function sketchRegionGroups(contours) {
-  if (!contours.some((c) => c.hole))
-    return contours.map((_, solid) => ({ solid, holes: [] }));
+  if (!contours.some((c2) => c2.hole))
+    return contours.map((_2, solid) => ({ solid, holes: [] }));
   const depths = contourNestingDepths(contours);
   if (!depths) return;
   const contained = (outer, inner) => {
@@ -35351,7 +37163,7 @@ function sketchRegionGroups(contours) {
   return contours.flatMap((contour, solid) => {
     if (contour.hole) return [];
     const holes = contours.flatMap(
-      (c, i) => c.hole && depths[i] > depths[solid] && contained(solid, i) ? [i] : []
+      (c2, i) => c2.hole && depths[i] > depths[solid] && contained(solid, i) ? [i] : []
     );
     return [
       {
@@ -35367,7 +37179,7 @@ function sketchRegionGroups(contours) {
 }
 function planeToolFace(origin, normal, size) {
   const o = getOC();
-  const p = new o.gp_Pnt_3(...origin), d = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p, d), pln = new o.gp_Pln_2(ax);
+  const p2 = new o.gp_Pnt_3(...origin), d2 = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p2, d2), pln = new o.gp_Pln_2(ax);
   const maker = new o.BRepBuilderAPI_MakeFace_9(pln, -size, size, -size, size);
   try {
     return cast(maker.Face());
@@ -35375,30 +37187,30 @@ function planeToolFace(origin, normal, size) {
     maker.delete();
     pln.delete();
     ax.delete();
-    d.delete();
-    p.delete();
+    d2.delete();
+    p2.delete();
   }
 }
 function splitFacesByTool(faces, tool2) {
   const o = getOC();
   const args = new o.TopTools_ListOfShape_1();
-  for (const f of faces) args.Append_1(f.wrapped);
+  for (const f2 of faces) args.Append_1(f2.wrapped);
   args.Append_1(tool2.wrapped);
   const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
   try {
     fuse.SetArguments(args);
     fuse.Build(progress);
     if (!fuse.IsDone()) throw new Error("The faces could not be split.");
-    return faces.map((f) => {
+    return faces.map((f2) => {
       const copy = new o.TopTools_ListOfShape_1();
-      copy.Assign(fuse.Modified(f.wrapped));
+      copy.Assign(fuse.Modified(f2.wrapped));
       const pieces = [];
       while (copy.Size() > 0) {
         pieces.push(cast(copy.First_1()));
         copy.RemoveFirst();
       }
       copy.delete();
-      return pieces.length ? pieces : [f.clone()];
+      return pieces.length ? pieces : [f2.clone()];
     });
   } finally {
     progress.delete();
@@ -35430,15 +37242,15 @@ function pointAlongAxis(origin, direction, distance2) {
     origin[2] + direction[2] * distance2
   ];
 }
-function cross$4(a, b) {
+function cross$4(a2, b) {
   return [
-    a[1] * b[2] - a[2] * b[1],
-    a[2] * b[0] - a[0] * b[2],
-    a[0] * b[1] - a[1] * b[0]
+    a2[1] * b[2] - a2[2] * b[1],
+    a2[2] * b[0] - a2[0] * b[2],
+    a2[0] * b[1] - a2[1] * b[0]
   ];
 }
-function dot$4(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+function dot$4(a2, b) {
+  return a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 }
 function normalize(value2) {
   const length = Math.hypot(value2[0], value2[1], value2[2]);
@@ -35473,8 +37285,8 @@ function cylinderAxisStations(firstV, lastV, tolerance2 = 1e-9) {
     { role: "end", parameter: lastV }
   ];
 }
-function sameOrigin(a, b, tolerance2 = 1e-7) {
-  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < tolerance2;
+function sameOrigin(a2, b, tolerance2 = 1e-7) {
+  return Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < tolerance2;
 }
 function connectorKindPreference(kind) {
   switch (kind) {
@@ -35545,9 +37357,9 @@ function curveCandidates(faceId, edge, faceFrame, edgeIndex) {
         measurements.radiusMillimeters = circle.Radius();
         measurements.centerMillimeters = deleteAfterPointTuple(circle.Location());
         {
-          const d = axis.Direction();
-          measurements.axisDirection = [d.X(), d.Y(), d.Z()];
-          d.delete();
+          const d2 = axis.Direction();
+          measurements.axisDirection = [d2.X(), d2.Y(), d2.Z()];
+          d2.delete();
         }
         candidates.push({
           id: `face-${faceId}-circle-${edgeIndex}`,
@@ -35567,16 +37379,16 @@ function curveCandidates(faceId, edge, faceFrame, edgeIndex) {
         circle.delete();
       }
     } else if (adaptor.GetType() === oc.GeomAbs_CurveType.GeomAbs_Ellipse) {
-      const ellipse = adaptor.Ellipse();
-      const axis = ellipse.Axis();
-      const position = ellipse.Position();
+      const ellipse2 = adaptor.Ellipse();
+      const axis = ellipse2.Axis();
+      const position = ellipse2.Position();
       try {
         candidates.push({
           id: `face-${faceId}-ellipse-${edgeIndex}`,
           faceId,
           kind: "ellipse-center",
           label: `Elliptical edge ${edgeIndex + 1} center`,
-          origin: deleteAfterPointTuple(ellipse.Location()),
+          origin: deleteAfterPointTuple(ellipse2.Location()),
           ...connectorAxes(
             deleteAfterPointTuple(axis.Direction()),
             deleteAfterPointTuple(position.XDirection())
@@ -35585,7 +37397,7 @@ function curveCandidates(faceId, edge, faceFrame, edgeIndex) {
       } finally {
         axis.delete();
         position.delete();
-        ellipse.delete();
+        ellipse2.delete();
       }
     }
   } catch (error) {
@@ -35916,15 +37728,15 @@ function buildPartGeometry(shape, sourceDocumentId, sourceName, partIndex, optio
   const angularTolerance = options.preview ? 0.35 : 0.2;
   if (!options.preview) {
     const anchors = vertexAnchorsOf(shape);
-    const keyOf = (p) => p.map((v) => (Math.round(v * 1e7) / 1e7 + 0).toFixed(7)).join(",");
+    const keyOf = (p2) => p2.map((v) => (Math.round(v * 1e7) / 1e7 + 0).toFixed(7)).join(",");
     topology = topology.map((face) => ({ ...face, candidates: face.candidates.map((candidate) => {
       if (candidate.kind === "vertex") {
         const anchor = anchors.get(keyOf(candidate.origin));
         return anchor ? { ...candidate, vertexAnchor: anchor } : candidate;
       }
       if (candidate.kind === "edge-midpoint" && candidate.measurements?.linearDirection && candidate.measurements.lengthMillimeters) {
-        const d = candidate.measurements.linearDirection, h = candidate.measurements.lengthMillimeters / 2, o = candidate.origin;
-        const start = anchors.get(keyOf([o[0] - d[0] * h, o[1] - d[1] * h, o[2] - d[2] * h])), end = anchors.get(keyOf([o[0] + d[0] * h, o[1] + d[1] * h, o[2] + d[2] * h]));
+        const d2 = candidate.measurements.linearDirection, h = candidate.measurements.lengthMillimeters / 2, o = candidate.origin;
+        const start = anchors.get(keyOf([o[0] - d2[0] * h, o[1] - d2[1] * h, o[2] - d2[2] * h])), end = anchors.get(keyOf([o[0] + d2[0] * h, o[1] + d2[1] * h, o[2] + d2[2] * h]));
         if (start && end && keyOf(start.positionMillimeters) !== keyOf(end.positionMillimeters)) return { ...candidate, edgeAnchor: { start, end } };
       }
       return candidate;
@@ -35963,19 +37775,19 @@ function buildPartGeometry(shape, sourceDocumentId, sourceName, partIndex, optio
 function hashText(text2) {
   const lanes = [2166136261, 2654435769, 2246822507, 3266489909, 668265263, 374761393, 3550635116, 4251993797];
   for (let i = 0; i < text2.length; i++) {
-    const c = text2.charCodeAt(i);
-    for (let k = 0; k < lanes.length; k++) lanes[k] = Math.imul(lanes[k] ^ c ^ k * 131, 16777619) >>> 0;
+    const c2 = text2.charCodeAt(i);
+    for (let k2 = 0; k2 < lanes.length; k2++) lanes[k2] = Math.imul(lanes[k2] ^ c2 ^ k2 * 131, 16777619) >>> 0;
   }
   return lanes.map((v) => v.toString(16).padStart(8, "0")).join("");
 }
 function vertexAnchorsOf(shape) {
-  const keyOf = (p) => p.map((v) => (Math.round(v * 1e7) / 1e7 + 0).toFixed(7)).join(",");
+  const keyOf = (p2) => p2.map((v) => (Math.round(v * 1e7) / 1e7 + 0).toFixed(7)).join(",");
   const records = /* @__PURE__ */ new Map();
-  const record = (p) => {
-    const key = keyOf(p);
+  const record = (p2) => {
+    const key = keyOf(p2);
     let r = records.get(key);
     if (!r) {
-      r = { point: [p[0], p[1], p[2]], faces: [], edges: [], faceIndices: [], edgeIndices: [] };
+      r = { point: [p2[0], p2[1], p2[2]], faces: [], edges: [], faceIndices: [], edgeIndices: [] };
       records.set(key, r);
     }
     return r;
@@ -35989,16 +37801,16 @@ function vertexAnchorsOf(shape) {
       const seen = /* @__PURE__ */ new Set();
       const faceEdges = face.edges;
       for (const edge of faceEdges) {
-        for (const p of [deleteAfterVectorTuple(edge.startPoint), deleteAfterVectorTuple(edge.endPoint)]) {
-          const key = keyOf(p);
+        for (const p2 of [deleteAfterVectorTuple(edge.startPoint), deleteAfterVectorTuple(edge.endPoint)]) {
+          const key = keyOf(p2);
           if (seen.has(key)) continue;
           seen.add(key);
           let normal = null;
           try {
-            normal = [...deleteAfterVectorTuple(face.normalAt([p[0], p[1], p[2]]))].map((v) => +v.toFixed(7) + 0);
+            normal = [...deleteAfterVectorTuple(face.normalAt([p2[0], p2[1], p2[2]]))].map((v) => +v.toFixed(7) + 0);
           } catch {
           }
-          const r = record(p);
+          const r = record(p2);
           r.faces.push(JSON.stringify([kind, normal]));
           r.faceIndices.push(faceIndex);
         }
@@ -36015,20 +37827,20 @@ function vertexAnchorsOf(shape) {
       const mid = deleteAfterVectorTuple(edge.pointAt(0.5));
       edgeSummaries.push(JSON.stringify([kind, +length.toFixed(7), [...mid].map((v) => +v.toFixed(7))]));
       const seen = /* @__PURE__ */ new Set();
-      for (const p of [deleteAfterVectorTuple(edge.startPoint), deleteAfterVectorTuple(edge.endPoint)]) {
-        const key = keyOf(p);
+      for (const p2 of [deleteAfterVectorTuple(edge.startPoint), deleteAfterVectorTuple(edge.endPoint)]) {
+        const key = keyOf(p2);
         if (seen.has(key)) continue;
         seen.add(key);
-        const r = record(p);
+        const r = record(p2);
         r.edges.push(kind);
         r.edgeIndices.push(edgeIndex);
       }
     });
   } finally {
-    faces.forEach((f) => f.delete());
+    faces.forEach((f2) => f2.delete());
     edges.forEach((e) => e.delete());
   }
-  const counts = [...faceKinds.reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1), /* @__PURE__ */ new Map())].sort();
+  const counts = [...faceKinds.reduce((m2, k2) => m2.set(k2, (m2.get(k2) ?? 0) + 1), /* @__PURE__ */ new Map())].sort();
   const structure = JSON.stringify([counts, edgeSummaries.length, records.size]);
   const fingerprint = hashText(JSON.stringify([[...records.keys()].sort(), faceKinds.slice().sort(), edgeSummaries.slice().sort()]));
   const anchors = /* @__PURE__ */ new Map();
@@ -36041,8 +37853,8 @@ function indexed(points, faces) {
   const count = points.length / 3;
   for (const face of faces) {
     if (face.length < 3) continue;
-    for (let k = 1; k + 1 < face.length; k++) {
-      for (const index of [face[0], face[k], face[k + 1]]) {
+    for (let k2 = 1; k2 + 1 < face.length; k2++) {
+      for (const index of [face[0], face[k2], face[k2 + 1]]) {
         if (!Number.isInteger(index) || index < 0 || index >= count) throw new Error("Mesh face refers to a missing vertex.");
         triangles.push(vertices.length / 3);
         vertices.push(points[index * 3], points[index * 3 + 1], points[index * 3 + 2]);
@@ -36059,7 +37871,7 @@ function parseSTL(bytes) {
     const vertices2 = new Float32Array(count * 9), triangles = new Uint32Array(count * 3);
     for (let i = 0; i < count; i++) {
       const at = 84 + i * 50 + 12;
-      for (let k = 0; k < 9; k++) vertices2[i * 9 + k] = view.getFloat32(at + k * 4, true);
+      for (let k2 = 0; k2 < 9; k2++) vertices2[i * 9 + k2] = view.getFloat32(at + k2 * 4, true);
       triangles[i * 3] = i * 3;
       triangles[i * 3 + 1] = i * 3 + 1;
       triangles[i * 3 + 2] = i * 3 + 2;
@@ -36068,19 +37880,19 @@ function parseSTL(bytes) {
   }
   const vertices = [];
   for (const line2 of text(bytes).split(/\r?\n/)) {
-    const m = /^\s*vertex\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(line2);
-    if (m) vertices.push(Number(m[1]), Number(m[2]), Number(m[3]));
+    const m2 = /^\s*vertex\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(line2);
+    if (m2) vertices.push(Number(m2[1]), Number(m2[2]), Number(m2[3]));
   }
   if (!vertices.length || vertices.length % 9) throw new Error("STL could not be read.");
-  return { vertices: Float32Array.from(vertices), triangles: Uint32Array.from({ length: vertices.length / 3 }, (_, i) => i) };
+  return { vertices: Float32Array.from(vertices), triangles: Uint32Array.from({ length: vertices.length / 3 }, (_2, i) => i) };
 }
 function parseOBJ(bytes) {
   const points = [], faces = [];
   for (const raw of text(bytes).split(/\r?\n/)) {
     const line2 = raw.trim();
     if (line2.startsWith("v ")) {
-      const p = line2.split(/\s+/).slice(1, 4).map(Number);
-      if (p.length === 3) points.push(...p);
+      const p2 = line2.split(/\s+/).slice(1, 4).map(Number);
+      if (p2.length === 3) points.push(...p2);
     } else if (line2.startsWith("f ")) {
       const count = points.length / 3;
       faces.push(line2.split(/\s+/).slice(1).map((token) => {
@@ -36101,8 +37913,8 @@ function parseOFF(bytes) {
   const points = [], faces = [];
   for (let i = 0; i < nv; i++) points.push(...lines[at++].split(/\s+/).slice(0, 3).map(Number));
   for (let i = 0; i < nf; i++) {
-    const f = lines[at++].split(/\s+/).map(Number);
-    faces.push(f.slice(1, 1 + f[0]));
+    const f2 = lines[at++].split(/\s+/).map(Number);
+    faces.push(f2.slice(1, 1 + f2[0]));
   }
   return indexed(points, faces);
 }
@@ -36153,7 +37965,7 @@ function parsePLY(bytes) {
         if (prop.type === "list") {
           const n = read(prop.list[0]);
           const list = [];
-          for (let k = 0; k < n; k++) list.push(read(prop.list[1]));
+          for (let k2 = 0; k2 < n; k2++) list.push(read(prop.list[1]));
           values[prop.name] = list;
         } else values[prop.name] = read(prop.type);
       }
@@ -36181,10 +37993,10 @@ function flatNormals(mesh) {
     nx /= length;
     ny /= length;
     nz /= length;
-    for (let k = 0; k < 3; k++) {
-      normals[i + k * 3] = nx;
-      normals[i + k * 3 + 1] = ny;
-      normals[i + k * 3 + 2] = nz;
+    for (let k2 = 0; k2 < 3; k2++) {
+      normals[i + k2 * 3] = nx;
+      normals[i + k2 * 3 + 1] = ny;
+      normals[i + k2 * 3 + 2] = nz;
     }
   }
   return normals;
@@ -36193,10 +38005,10 @@ function meshIsClosed(mesh) {
   const key = (i) => `${mesh.vertices[i * 3]},${mesh.vertices[i * 3 + 1]},${mesh.vertices[i * 3 + 2]}`;
   const edges = /* @__PURE__ */ new Map();
   for (let t = 0; t < mesh.triangles.length; t += 3) {
-    const k = [key(mesh.triangles[t]), key(mesh.triangles[t + 1]), key(mesh.triangles[t + 2])];
+    const k2 = [key(mesh.triangles[t]), key(mesh.triangles[t + 1]), key(mesh.triangles[t + 2])];
     for (let e = 0; e < 3; e++) {
-      const a = k[e], b = k[(e + 1) % 3];
-      const name = a < b ? `${a}|${b}` : `${b}|${a}`;
+      const a2 = k2[e], b = k2[(e + 1) % 3];
+      const name = a2 < b ? `${a2}|${b}` : `${b}|${a2}`;
       edges.set(name, (edges.get(name) ?? 0) + 1);
     }
   }
@@ -36211,8 +38023,8 @@ function binarySTL(mesh, scale2 = 1) {
   const normals = flatNormals(mesh);
   for (let i = 0; i < count; i++) {
     const at = 84 + i * 50;
-    for (let k = 0; k < 3; k++) view.setFloat32(at + k * 4, normals[i * 9 + k], true);
-    for (let c = 0; c < 3; c++) for (let k = 0; k < 3; k++) view.setFloat32(at + 12 + c * 12 + k * 4, mesh.vertices[mesh.triangles[i * 3 + c] * 3 + k] * scale2, true);
+    for (let k2 = 0; k2 < 3; k2++) view.setFloat32(at + k2 * 4, normals[i * 9 + k2], true);
+    for (let c2 = 0; c2 < 3; c2++) for (let k2 = 0; k2 < 3; k2++) view.setFloat32(at + 12 + c2 * 12 + k2 * 4, mesh.vertices[mesh.triangles[i * 3 + c2] * 3 + k2] * scale2, true);
   }
   return out;
 }
@@ -36226,48 +38038,48 @@ function sha256Hex(text2) {
   words[length >> 2] |= 128 << 24 - (length & 3) * 8;
   words[blocks * 16 - 1] = length * 8;
   const h = new Uint32Array([1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]);
-  const w = new Uint32Array(64);
-  const rotr2 = (x, n) => x >>> n | x << 32 - n;
+  const w2 = new Uint32Array(64);
+  const rotr2 = (x2, n) => x2 >>> n | x2 << 32 - n;
   for (let block = 0; block < blocks; block++) {
-    for (let i = 0; i < 16; i++) w[i] = words[block * 16 + i];
+    for (let i = 0; i < 16; i++) w2[i] = words[block * 16 + i];
     for (let i = 16; i < 64; i++) {
-      const s0 = rotr2(w[i - 15], 7) ^ rotr2(w[i - 15], 18) ^ w[i - 15] >>> 3;
-      const s1 = rotr2(w[i - 2], 17) ^ rotr2(w[i - 2], 19) ^ w[i - 2] >>> 10;
-      w[i] = w[i - 16] + s0 + w[i - 7] + s1 >>> 0;
+      const s0 = rotr2(w2[i - 15], 7) ^ rotr2(w2[i - 15], 18) ^ w2[i - 15] >>> 3;
+      const s1 = rotr2(w2[i - 2], 17) ^ rotr2(w2[i - 2], 19) ^ w2[i - 2] >>> 10;
+      w2[i] = w2[i - 16] + s0 + w2[i - 7] + s1 >>> 0;
     }
-    let [a, b, c, d, e, f, g, hh] = h;
+    let [a2, b, c2, d2, e, f2, g2, hh] = h;
     for (let i = 0; i < 64; i++) {
       const S1 = rotr2(e, 6) ^ rotr2(e, 11) ^ rotr2(e, 25);
-      const ch = e & f ^ ~e & g;
-      const t1 = hh + S1 + ch + K[i] + w[i] >>> 0;
-      const S0 = rotr2(a, 2) ^ rotr2(a, 13) ^ rotr2(a, 22);
-      const maj = a & b ^ a & c ^ b & c;
+      const ch = e & f2 ^ ~e & g2;
+      const t1 = hh + S1 + ch + K[i] + w2[i] >>> 0;
+      const S0 = rotr2(a2, 2) ^ rotr2(a2, 13) ^ rotr2(a2, 22);
+      const maj = a2 & b ^ a2 & c2 ^ b & c2;
       const t2 = S0 + maj >>> 0;
-      hh = g;
-      g = f;
-      f = e;
-      e = d + t1 >>> 0;
-      d = c;
-      c = b;
-      b = a;
-      a = t1 + t2 >>> 0;
+      hh = g2;
+      g2 = f2;
+      f2 = e;
+      e = d2 + t1 >>> 0;
+      d2 = c2;
+      c2 = b;
+      b = a2;
+      a2 = t1 + t2 >>> 0;
     }
-    h[0] = h[0] + a >>> 0;
+    h[0] = h[0] + a2 >>> 0;
     h[1] = h[1] + b >>> 0;
-    h[2] = h[2] + c >>> 0;
-    h[3] = h[3] + d >>> 0;
+    h[2] = h[2] + c2 >>> 0;
+    h[3] = h[3] + d2 >>> 0;
     h[4] = h[4] + e >>> 0;
-    h[5] = h[5] + f >>> 0;
-    h[6] = h[6] + g >>> 0;
+    h[5] = h[5] + f2 >>> 0;
+    h[6] = h[6] + g2 >>> 0;
     h[7] = h[7] + hh >>> 0;
   }
-  return Array.from(h, (x) => x.toString(16).padStart(8, "0")).join("");
+  return Array.from(h, (x2) => x2.toString(16).padStart(8, "0")).join("");
 }
-function once(kind, a, b, options = {}) {
+function once(kind, a2, b, options = {}) {
   const oc = getOC();
   const op = kind === "fuse" ? new oc.BRepAlgoAPI_Fuse_1() : kind === "cut" ? new oc.BRepAlgoAPI_Cut_1() : new oc.BRepAlgoAPI_Common_1();
   const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
-  arguments_.Append_1(a.wrapped);
+  arguments_.Append_1(a2.wrapped);
   tools.Append_1(b.wrapped);
   op.SetArguments(arguments_);
   op.SetTools(tools);
@@ -36336,29 +38148,29 @@ function throughAllDistance(bodies, origin, direction) {
   let farthest = 0;
   for (const body of bodies) {
     const box = body.boundingBox.bounds;
-    for (const x of [box[0][0], box[1][0]]) for (const y of [box[0][1], box[1][1]]) for (const z of [box[0][2], box[1][2]])
-      farthest = Math.max(farthest, (x - origin[0]) * direction[0] + (y - origin[1]) * direction[1] + (z - origin[2]) * direction[2]);
+    for (const x2 of [box[0][0], box[1][0]]) for (const y2 of [box[0][1], box[1][1]]) for (const z2 of [box[0][2], box[1][2]])
+      farthest = Math.max(farthest, (x2 - origin[0]) * direction[0] + (y2 - origin[1]) * direction[1] + (z2 - origin[2]) * direction[2]);
   }
   return farthest + 1;
 }
-const dot$3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const dot$3 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 function tangentChainMidpoints(body, seeds) {
   const edges = body.edges;
   try {
-    const key = (p) => `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
+    const key = (p2) => `${p2.x.toFixed(5)},${p2.y.toFixed(5)},${p2.z.toFixed(5)}`;
     const info = edges.map((edge) => {
-      const s = edge.startPoint, t = edge.endPoint, m = edge.pointAt(0.5), ts = edge.tangentAt(0), te = edge.tangentAt(1);
-      const out = { start: key(s), end: key(t), mid: [m.x, m.y, m.z], tStart: [ts.x, ts.y, ts.z], tEnd: [te.x, te.y, te.z] };
+      const s = edge.startPoint, t = edge.endPoint, m2 = edge.pointAt(0.5), ts = edge.tangentAt(0), te = edge.tangentAt(1);
+      const out = { start: key(s), end: key(t), mid: [m2.x, m2.y, m2.z], tStart: [ts.x, ts.y, ts.z], tEnd: [te.x, te.y, te.z] };
       s.delete();
       t.delete();
-      m.delete();
+      m2.delete();
       ts.delete();
       te.delete();
       return out;
     });
-    const parallel = (a, b) => Math.abs(dot$3(a, b)) / Math.max(Math.hypot(...a) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
+    const parallel = (a2, b) => Math.abs(dot$3(a2, b)) / Math.max(Math.hypot(...a2) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
     const chosen = /* @__PURE__ */ new Set();
-    const queue = info.map((_, i) => i).filter((i) => seeds.some((p) => Math.hypot(p[0] - info[i].mid[0], p[1] - info[i].mid[1], p[2] - info[i].mid[2]) < 1e-3));
+    const queue = info.map((_2, i) => i).filter((i) => seeds.some((p2) => Math.hypot(p2[0] - info[i].mid[0], p2[1] - info[i].mid[1], p2[2] - info[i].mid[2]) < 1e-3));
     queue.forEach((i) => chosen.add(i));
     while (queue.length) {
       const i = queue.pop();
@@ -36378,15 +38190,15 @@ function tangentChainMidpoints(body, seeds) {
     edges.forEach((edge) => edge.delete());
   }
 }
-const sub$3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const add$2 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
-const neg = (a) => scale(a, -1);
-const cross$3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm$2 = (a) => Math.hypot(a[0], a[1], a[2]);
-const unit$1 = (a) => scale(a, 1 / norm$2(a));
+const sub$3 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$2 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const scale = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const neg = (a2) => scale(a2, -1);
+const cross$3 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm$2 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$1 = (a2) => scale(a2, 1 / norm$2(a2));
 function* corners(bounds2) {
-  for (const x of [bounds2[0][0], bounds2[1][0]]) for (const y of [bounds2[0][1], bounds2[1][1]]) for (const z of [bounds2[0][2], bounds2[1][2]]) yield [x, y, z];
+  for (const x2 of [bounds2[0][0], bounds2[1][0]]) for (const y2 of [bounds2[0][1], bounds2[1][1]]) for (const z2 of [bounds2[0][2], bounds2[1][2]]) yield [x2, y2, z2];
 }
 const diagonalOfShape = (shape) => {
   const b = shape.boundingBox.bounds;
@@ -36397,12 +38209,12 @@ function quadricOf(face, near) {
   const kind = face.geomType === "CYLINDRE" ? "CYLINDER" : face.geomType;
   try {
     if (kind === "CYLINDER") {
-      const c = adaptor.Cylinder(), axis = c.Axis(), l = axis.Location(), d = axis.Direction();
-      const q = { kind, at: [l.X(), l.Y(), l.Z()], along: unit$1([d.X(), d.Y(), d.Z()]), r: c.Radius() };
+      const c2 = adaptor.Cylinder(), axis = c2.Axis(), l = axis.Location(), d2 = axis.Direction();
+      const q = { kind, at: [l.X(), l.Y(), l.Z()], along: unit$1([d2.X(), d2.Y(), d2.Z()]), r: c2.Radius() };
       l.delete();
-      d.delete();
+      d2.delete();
       axis.delete();
-      c.delete();
+      c2.delete();
       return q;
     }
     if (kind === "SPHERE") {
@@ -36412,11 +38224,11 @@ function quadricOf(face, near) {
       sph.delete();
       return q;
     }
-    const at = (u, v) => {
-      const point2 = adaptor.Value(u, v);
-      const p = [point2.X(), point2.Y(), point2.Z()];
+    const at = (u2, v) => {
+      const point2 = adaptor.Value(u2, v);
+      const p2 = [point2.X(), point2.Y(), point2.Z()];
       point2.delete();
-      return p;
+      return p2;
     };
     if (kind === "CONE") {
       const p0 = at(0, 0), p1 = at(Math.PI, 0), p2 = at(0, 1);
@@ -36440,7 +38252,7 @@ function quadricOf(face, near) {
     adaptor.delete();
   }
 }
-const perpendicularTo = (u) => unit$1(Math.abs(u[0]) < 0.9 ? cross$3(u, [1, 0, 0]) : cross$3(u, [0, 1, 0]));
+const perpendicularTo = (u2) => unit$1(Math.abs(u2[0]) < 0.9 ? cross$3(u2, [1, 0, 0]) : cross$3(u2, [0, 1, 0]));
 const quadricCentre = (q) => q.kind === "CONE" ? q.apex : q.at;
 function quadricSolid(q, length, own) {
   if (q.kind === "SPHERE") return own(makeSphere(q.r).translate(q.at[0], q.at[1], q.at[2]));
@@ -36460,18 +38272,18 @@ function quadricSolid(q, length, own) {
   const triangle = own(makePolygon([q.apex, base, rim]));
   return own(revolution(triangle, q.apex, q.along, 360));
 }
-function insideQuadric(q, p) {
-  if (q.kind === "SPHERE") return norm$2(sub$3(p, q.at)) < q.r;
-  const centre = quadricCentre(q), to = sub$3(p, centre), h = dot$3(to, q.along), rho = norm$2(sub$3(to, scale(q.along, h)));
+function insideQuadric(q, p2) {
+  if (q.kind === "SPHERE") return norm$2(sub$3(p2, q.at)) < q.r;
+  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$3(to, q.along), rho = norm$2(sub$3(to, scale(q.along, h)));
   if (q.kind === "CYLINDER") return rho < q.r;
   if (q.kind === "TORUS") return Math.hypot(rho - q.R, h) < q.r;
   return h > 0 && rho < h * q.tan;
 }
-function quadricRadial(q, p) {
-  if (q.kind === "SPHERE") return sub$3(p, q.at);
-  const centre = quadricCentre(q), to = sub$3(p, centre), h = dot$3(to, q.along), radial = sub$3(to, scale(q.along, h));
+function quadricRadial(q, p2) {
+  if (q.kind === "SPHERE") return sub$3(p2, q.at);
+  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$3(to, q.along), radial = sub$3(to, scale(q.along, h));
   if (q.kind !== "TORUS") return radial;
-  return sub$3(p, add$2(q.at, scale(unit$1(radial), q.R)));
+  return sub$3(p2, add$2(q.at, scale(unit$1(radial), q.R)));
 }
 function offsetQuadric(q, distance2) {
   if (q.kind === "CONE") {
@@ -36486,44 +38298,44 @@ function moveQuadric(q, movePoint, moveDirection) {
   if (q.kind === "CONE") return { ...q, apex: movePoint(q.apex), along: unit$1(moveDirection(q.along)) };
   return { ...q, at: movePoint(q.at), along: unit$1(moveDirection(q.along)) };
 }
-function keepSideOf(f, face, shape, probe, own, mustSeparate) {
+function keepSideOf(f2, face, shape, probe, own, mustSeparate) {
   if (measureVolume(shape) <= 1e-9) return shape;
-  const faceX = toExtended(face), handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
+  const faceX = toExtended(face), handle = f2.BRep_Tool.Surface_2(f2.TopoDS.Face_1(faceX));
   try {
-    return keepSideOfSurface(f, handle, shape, probe, own, mustSeparate);
+    return keepSideOfSurface(f2, handle, shape, probe, own, mustSeparate);
   } finally {
     handle.delete();
     faceX.delete();
   }
 }
-function keepSideOfSurface(f, handle, shape, probe, own, mustSeparate, transform) {
+function keepSideOfSurface(f2, handle, shape, probe, own, mustSeparate, transform) {
   if (measureVolume(shape) <= 1e-9) return shape;
   const shapeX = toExtended(shape);
   const diagonal = diagonalOfShape(shape), reach = 2 * diagonal, clamp2 = (value2, fallback) => Math.abs(value2) > 1e99 ? fallback : value2;
-  const adaptor = new f.GeomAdaptor_Surface_2(handle);
+  const adaptor = new f2.GeomAdaptor_Surface_2(handle);
   const u1 = clamp2(adaptor.FirstUParameter(), -reach), u2 = clamp2(adaptor.LastUParameter(), reach), v1 = clamp2(adaptor.FirstVParameter(), -reach), v2 = clamp2(adaptor.LastVParameter(), reach);
   adaptor.delete();
-  const trimmed = new f.Geom_RectangularTrimmedSurface_1(handle, u1, u2, v1, v2, true, true);
-  const trimmedHandle = new f.Handle_Geom_Surface_2(trimmed);
-  const spline = f.GeomConvert.SurfaceToBSplineSurface(trimmedHandle);
-  const bounded = new f.Handle_Geom_BoundedSurface_2(spline.get());
+  const trimmed = new f2.Geom_RectangularTrimmedSurface_1(handle, u1, u2, v1, v2, true, true);
+  const trimmedHandle = new f2.Handle_Geom_Surface_2(trimmed);
+  const spline = f2.GeomConvert.SurfaceToBSplineSurface(trimmedHandle);
+  const bounded = new f2.Handle_Geom_BoundedSurface_2(spline.get());
   for (const [inU, after] of [[true, true], [true, false], [false, true], [false, false]]) {
     try {
-      f.GeomLib.ExtendSurfByLength(bounded, diagonal / 4, 1, inU, after);
+      f2.GeomLib.ExtendSurfByLength(bounded, diagonal / 4, 1, inU, after);
     } catch {
     }
   }
-  const extended = new f.Handle_Geom_Surface_2(bounded.get()), patchAdaptor = new f.GeomAdaptor_Surface_2(extended);
-  const maker = new f.BRepBuilderAPI_MakeFace_14(extended, patchAdaptor.FirstUParameter(), patchAdaptor.LastUParameter(), patchAdaptor.FirstVParameter(), patchAdaptor.LastVParameter(), 1e-7);
+  const extended = new f2.Handle_Geom_Surface_2(bounded.get()), patchAdaptor = new f2.GeomAdaptor_Surface_2(extended);
+  const maker = new f2.BRepBuilderAPI_MakeFace_14(extended, patchAdaptor.FirstUParameter(), patchAdaptor.LastUParameter(), patchAdaptor.FirstVParameter(), patchAdaptor.LastVParameter(), 1e-7);
   patchAdaptor.delete();
   let patch = maker.Face();
   if (transform) {
-    const mover = new f.BRepBuilderAPI_Transform_2(patch, transform, true);
+    const mover = new f2.BRepBuilderAPI_Transform_2(patch, transform, true);
     patch = mover.Shape();
     mover.delete();
   }
-  const progress = new f.Message_ProgressRange_1();
-  const splitter = new f.BRepAlgoAPI_Splitter_1(), arguments_ = new f.TopTools_ListOfShape_1(), tools_ = new f.TopTools_ListOfShape_1();
+  const progress = new f2.Message_ProgressRange_1();
+  const splitter = new f2.BRepAlgoAPI_Splitter_1(), arguments_ = new f2.TopTools_ListOfShape_1(), tools_ = new f2.TopTools_ListOfShape_1();
   arguments_.Append_1(shapeX);
   tools_.Append_1(patch);
   splitter.SetArguments(arguments_);
@@ -36558,10 +38370,10 @@ function keepSideOfSurface(f, handle, shape, probe, own, mustSeparate, transform
     tool2.LoadS1(vertex.Shape());
     tool2.LoadS2(piece.wrapped);
     tool2.Perform(range2);
-    const d = tool2.IsDone() ? tool2.Value() : Infinity;
+    const d2 = tool2.IsDone() ? tool2.Value() : Infinity;
     tool2.delete();
     range2.delete();
-    return d;
+    return d2;
   });
   vertex.delete();
   point2.delete();
@@ -36588,11 +38400,11 @@ function tidy(shape) {
   }
   return shape;
 }
-function fuzzyBoolean(a, b, operation2, options = {}) {
+function fuzzyBoolean(a2, b, operation2, options = {}) {
   const oc = getOC();
   const op = operation2 === "fuse" ? new oc.BRepAlgoAPI_Fuse_1() : operation2 === "cut" ? new oc.BRepAlgoAPI_Cut_1() : new oc.BRepAlgoAPI_Common_1();
   const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
-  arguments_.Append_1(a.wrapped);
+  arguments_.Append_1(a2.wrapped);
   tools.Append_1(b.wrapped);
   op.SetArguments(arguments_);
   op.SetTools(tools);
@@ -36611,10 +38423,10 @@ function fuzzyBoolean(a, b, operation2, options = {}) {
   }
   return result;
 }
-function commonFaces(a, b) {
+function commonFaces(a2, b) {
   const oc = getOC();
   const progress = new oc.Message_ProgressRange_1();
-  const op = new oc.BRepAlgoAPI_Common_3(a.wrapped, b.wrapped, progress);
+  const op = new oc.BRepAlgoAPI_Common_3(a2.wrapped, b.wrapped, progress);
   const result = cast(op.Shape());
   const faces = result.faces;
   result.delete();
@@ -36622,9 +38434,9 @@ function commonFaces(a, b) {
   progress.delete();
   return faces;
 }
-function commonArea(a, b) {
+function commonArea(a2, b) {
   let area = 0;
-  for (const piece of commonFaces(a, b)) {
+  for (const piece of commonFaces(a2, b)) {
     area += measureArea(piece);
     piece.delete();
   }
@@ -36661,13 +38473,13 @@ function conicTo(pen, control, end, rho) {
   const oc = getOC();
   const inner = pen;
   const poles = new oc.TColgp_Array1OfPnt2d_2(1, 3);
-  [inner.pointer, control, end].forEach((p, i) => {
-    const uv = inner._convertToUV([p[0], p[1]]), point2 = new oc.gp_Pnt2d_3(uv[0], uv[1]);
+  [inner.pointer, control, end].forEach((p2, i) => {
+    const uv = inner._convertToUV([p2[0], p2[1]]), point2 = new oc.gp_Pnt2d_3(uv[0], uv[1]);
     poles.SetValue(i + 1, point2);
     point2.delete();
   });
   const weights = new oc.TColStd_Array1OfReal_2(1, 3);
-  [1, rho / (1 - rho), 1].forEach((w, i) => weights.SetValue(i + 1, w));
+  [1, rho / (1 - rho), 1].forEach((w2, i) => weights.SetValue(i + 1, w2));
   const knots = new oc.TColStd_Array1OfReal_2(1, 2);
   knots.SetValue(1, 0);
   knots.SetValue(2, 1);
@@ -36730,11 +38542,11 @@ function evaluatePartDocument(document2, options = {}) {
   const publish = (feature, handle) => {
     if (feature.id === previewId) previewHandles.push(handle);
   };
-  const perpendicular = (d) => {
-    const seed = Math.abs(d[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    const c = cross$3(d, seed);
-    const l = norm$2(c) || 1;
-    return [c[0] / l, c[1] / l, c[2] / l];
+  const perpendicular = (d2) => {
+    const seed = Math.abs(d2[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const c2 = cross$3(d2, seed);
+    const l = norm$2(c2) || 1;
+    return [c2[0] / l, c2[1] / l, c2[2] / l];
   };
   const keys = [];
   history.reduce((previous, feature) => {
@@ -36753,7 +38565,7 @@ function evaluatePartDocument(document2, options = {}) {
   let reuse = 0;
   while (reuse < cached.length && reuse < keys.length && cached[reuse].key === keys[reuse]) reuse++;
   if (previewId !== void 0) {
-    const at = history.findIndex((f) => f.id === previewId);
+    const at = history.findIndex((f2) => f2.id === previewId);
     if (at >= 0 && reuse > at) reuse = at;
   }
   if (reuse < cached.length && reuse < keys.length) dropSteps(cached, reuse);
@@ -36820,7 +38632,7 @@ function evaluatePartDocument(document2, options = {}) {
             continue;
           }
           const bodyAt = (sourceFeatureId, bodyId) => {
-            const sourceIndex = history.findIndex((f) => f.id === sourceFeatureId);
+            const sourceIndex = history.findIndex((f2) => f2.id === sourceFeatureId);
             return sourceIndex >= 0 && sourceIndex < index ? cached[sourceIndex]?.bodies.get(bodyId) : void 0;
           };
           const anchored = (face, anchor) => {
@@ -36876,31 +38688,31 @@ function evaluatePartDocument(document2, options = {}) {
             return typeof sketchProfile.plane === "string" ? sketchFrames[sourceId] ?? principalFrame(sketchProfile.plane, sketchProfile.offset) : { originMillimeters: [sketchProfile.plane.origin.x, sketchProfile.plane.origin.y, sketchProfile.plane.origin.z], normal: [sketchProfile.plane.zDir.x, sketchProfile.plane.zDir.y, sketchProfile.plane.zDir.z], xDirection: [sketchProfile.plane.xDir.x, sketchProfile.plane.xDir.y, sketchProfile.plane.xDir.z] };
           };
           const sketchCentroid = (sourceId) => {
-            const frame = sketchFrameOf(sourceId), p = profiles.get(sourceId);
-            const box = p?.drawing ? p.drawing.boundingBox : void 0;
+            const frame = sketchFrameOf(sourceId), p2 = profiles.get(sourceId);
+            const box = p2?.drawing ? p2.drawing.boundingBox : void 0;
             const [cx, cy] = box?.center ?? [0, 0];
-            const x = unit$1(frame.xDirection), n = unit$1(frame.normal), y = cross$3(n, x);
-            return [0, 1, 2].map((i) => frame.originMillimeters[i] + x[i] * cx + y[i] * cy);
+            const x2 = unit$1(frame.xDirection), n = unit$1(frame.normal), y2 = cross$3(n, x2);
+            return [0, 1, 2].map((i) => frame.originMillimeters[i] + x2[i] * cx + y2[i] * cy);
           };
           const sketchContour = (sourceId, contourId, unavailable) => {
-            const source = history.find((f) => f.id === sourceId);
+            const source = history.find((f2) => f2.id === sourceId);
             if (!source || source.type !== "profile" || !profiles.has(sourceId)) throw new Error(unavailable);
-            return resolveProfileDrawing(history, source.id).contours.find((c) => c.id === contourId);
+            return resolveProfileDrawing(history, source.id).contours.find((c2) => c2.id === contourId);
           };
           const sketchPoint = (sourceId, local2) => {
-            const f = sketchFrameOf(sourceId), x = f.xDirection, y = cross$3(f.normal, x);
-            return add$2(f.originMillimeters, add$2(scale(x, local2[0]), scale(y, local2[1])));
+            const f2 = sketchFrameOf(sourceId), x2 = f2.xDirection, y2 = cross$3(f2.normal, x2);
+            return add$2(f2.originMillimeters, add$2(scale(x2, local2[0]), scale(y2, local2[1])));
           };
           const stopPoint = (ref) => {
             if (!ref) throw new Error("Select a stopping vertex.");
             if (ref.kind === "solid-vertex") {
               const body = bodyAt(ref.sourceFeatureId, ref.bodyId);
               if (!body) throw new Error("Stopping vertex source is unavailable. Reselect an earlier part vertex.");
-              const p = ref.anchor.positionMillimeters;
+              const p2 = ref.anchor.positionMillimeters;
               const matches = [...vertexAnchorsOf(body).values()].filter((anchor) => anchor.signature === ref.anchor.signature);
               if (matches.length === 1) return [...matches[0].positionMillimeters];
               if (!matches.length) throw new Error("Stopping vertex changed or is missing. Reselect it on the earlier geometry.");
-              const exact = matches.find((anchor) => anchor.shapeFingerprint === ref.anchor.shapeFingerprint && Math.hypot(anchor.positionMillimeters[0] - p[0], anchor.positionMillimeters[1] - p[1], anchor.positionMillimeters[2] - p[2]) <= 1e-6);
+              const exact = matches.find((anchor) => anchor.shapeFingerprint === ref.anchor.shapeFingerprint && Math.hypot(anchor.positionMillimeters[0] - p2[0], anchor.positionMillimeters[1] - p2[1], anchor.positionMillimeters[2] - p2[2]) <= 1e-6);
               if (exact) return [...exact.positionMillimeters];
               throw new Error("Stopping vertex is ambiguous after an upstream change. Reselect it on the earlier geometry.");
             }
@@ -36922,13 +38734,13 @@ function evaluatePartDocument(document2, options = {}) {
             const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
             return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
           };
-          const pathSource = (sourceId) => profiles.get(sourceId) ?? (history.some((f) => f.id === sourceId && f.type === "curve3d" && !f.suppressed) ? { contours: [{ id: sourceId }] } : void 0);
+          const pathSource = (sourceId) => profiles.get(sourceId) ?? (history.some((f2) => f2.id === sourceId && f2.type === "curve3d" && !f2.suppressed) ? { contours: [{ id: sourceId }] } : void 0);
           const sketchWire = (sourceId, contourId, label, anyContour = false, selection) => {
-            const curve3d = history.find((f) => f.id === sourceId && f.type === "curve3d" && !f.suppressed);
+            const curve3d = history.find((f2) => f2.id === sourceId && f2.type === "curve3d" && !f2.suppressed);
             if (curve3d && curve3d.type === "curve3d") {
               if (curve3d.kind === "point") throw new Error(`${label}: a 3D point is not a path.`);
               const pts = curve3d.pointsMillimeters;
-              const edges = curve3d.kind === "line" ? pts.slice(1).map((p, i) => own(makeLine(pts[i], p))) : [own(makeBSplineApproximation(pts, { tolerance: 1e-4 }))];
+              const edges = curve3d.kind === "line" ? pts.slice(1).map((p2, i) => own(makeLine(pts[i], p2))) : [own(makeBSplineApproximation(pts, { tolerance: 1e-4 }))];
               return own(assembleWire(edges));
             }
             const sketchProfile = profiles.get(sourceId);
@@ -36938,7 +38750,7 @@ function evaluatePartDocument(document2, options = {}) {
               drawing = [...sketchProfile.regions, ...sketchProfile.cells ?? []].find((r) => r.sourceContourIds && matchesProfileRegion(selection, r))?.drawing;
               if (!drawing) throw new Error(`${label}: the referenced curves no longer form the same closed region. Repair the sketch or reselect the region.`);
             } else if (anyContour && (contourId !== void 0 || sketchProfile.contours.length === 1)) {
-              const contour = contourId === void 0 ? sketchProfile.contours[0] : sketchProfile.contours.find((c) => c.id === contourId);
+              const contour = contourId === void 0 ? sketchProfile.contours[0] : sketchProfile.contours.find((c2) => c2.id === contourId);
               if (!contour) throw new Error(`${label} curve is no longer in its sketch.`);
               drawing = own(contourDrawing(contour, sourceId));
             } else if (contourId !== void 0) {
@@ -36950,7 +38762,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             const plane2 = typeof sketchProfile.plane === "string" ? own(new Plane(principalFrame(sketchProfile.plane, sketchProfile.offset).originMillimeters, principalFrame(sketchProfile.plane).xDirection, principalFrame(sketchProfile.plane).normal)) : sketchProfile.plane;
             const region = !anyContour ? sketchProfile.regions.find((r) => r.drawing === drawing) : void 0;
-            const circle = region && !region.holes?.length ? sketchProfile.circles.find((c) => c.key === region.key) : void 0;
+            const circle = region && !region.holes?.length ? sketchProfile.circles.find((c2) => c2.key === region.key) : void 0;
             if (circle) {
               const center = deleteAfterVectorTuple(plane2.toWorldCoords(circle.center)), normal = deleteAfterVectorTuple(plane2.zDir);
               return own(assembleWire([own(makeCircle(circle.radius, [center[0], center[1], center[2]], [normal[0], normal[1], normal[2]]))]));
@@ -36960,7 +38772,7 @@ function evaluatePartDocument(document2, options = {}) {
             return sketch2.wire;
           };
           const axisFeatureLine = (featureId2) => {
-            const index2 = document2.features.findIndex((f) => f.id === featureId2), axisFeature = document2.features[index2];
+            const index2 = document2.features.findIndex((f2) => f2.id === featureId2), axisFeature = document2.features[index2];
             if (!axisFeature || axisFeature.type !== "axis") throw new Error("Axis feature is unavailable. Reselect an axis.");
             const line2 = resolveAxisLine(axisFeature, document2.features.slice(0, index2));
             return { origin: [...line2.originMillimeters], axis: unit$1(line2.directionMillimeters) };
@@ -37005,11 +38817,11 @@ function evaluatePartDocument(document2, options = {}) {
             const cells = [];
             const circles = [];
             const contours = [];
-            const pierced = feature.profile.type === "drawing" && (feature.profile.constraints ?? []).some((c) => c.kind === "pierce");
+            const pierced = feature.profile.type === "drawing" && (feature.profile.constraints ?? []).some((c2) => c2.kind === "pierce");
             const profile = feature.profile.type === "projection" || pierced ? resolveProfileDrawing(document2.features.slice(0, rollbackPosition(document2)), feature.id) : feature.profile;
             if (profile.type === "drawing") {
               const solved = solveDrawingConstraints(profile);
-              contours.push(...solved.contours.filter((c) => !c.construction));
+              contours.push(...solved.contours.filter((c2) => !c2.construction));
               const closed = contours.filter(contourClosed);
               let combined;
               const regionFor = (index2) => {
@@ -37027,7 +38839,7 @@ function evaluatePartDocument(document2, options = {}) {
                   regions.push({ key: keyOf(group.solid), drawing: region, outer, holes });
                   combined = combined ? own(combined.fuse(region)) : region;
                 }
-                if (!combined && closed.some((c) => c.hole)) throw new Error("A hole needs an outer closed profile.");
+                if (!combined && closed.some((c2) => c2.hole)) throw new Error("A hole needs an outer closed profile.");
               } else {
                 for (const index2 of sketchRegionOrder(closed)) {
                   const contour = closed[index2], region = regionFor(index2);
@@ -37104,26 +38916,26 @@ function evaluatePartDocument(document2, options = {}) {
               if (pick.kind === "solid-edge") {
                 const anchors = [...vertexAnchorsOf(body).values()];
                 const vertex = (anchor) => {
-                  const matches = anchors.filter((a2) => a2.signature === anchor.signature);
-                  const found = matches.length === 1 ? matches[0] : matches.find((a2) => a2.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a2.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
+                  const matches = anchors.filter((a22) => a22.signature === anchor.signature);
+                  const found = matches.length === 1 ? matches[0] : matches.find((a22) => a22.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a22.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
                   if (!found) throw refuse();
                   return [...found.positionMillimeters];
                 };
-                const a = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-                return scale(add$2(a, b), 0.5);
+                const a2 = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
+                return scale(add$2(a2, b), 0.5);
               }
               const target = pick.midpointMillimeters, tolerance2 = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
               const edges = body.edges;
               try {
                 const hit = edges.find((edge) => {
-                  const m2 = edge.pointAt(0.5), d = Math.hypot(m2.x - target[0], m2.y - target[1], m2.z - target[2]);
-                  m2.delete();
-                  return d < 1e-3 && Math.abs(edge.length - pick.lengthMillimeters) <= tolerance2;
+                  const m22 = edge.pointAt(0.5), d2 = Math.hypot(m22.x - target[0], m22.y - target[1], m22.z - target[2]);
+                  m22.delete();
+                  return d2 < 1e-3 && Math.abs(edge.length - pick.lengthMillimeters) <= tolerance2;
                 });
                 if (!hit) throw refuse();
-                const m = hit.pointAt(0.5);
-                const point2 = [m.x, m.y, m.z];
-                m.delete();
+                const m2 = hit.pointAt(0.5);
+                const point2 = [m2.x, m2.y, m2.z];
+                m2.delete();
                 return point2;
               } finally {
                 edges.forEach((edge) => edge.delete());
@@ -37133,36 +38945,36 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature.id === previewId) {
               const seed = chainPoints?.[0] ?? (() => {
                 const edges = body.edges;
-                const m = edges[0]?.pointAt(0.5);
-                const p = m ? [m.x, m.y, m.z] : void 0;
-                m?.delete();
+                const m2 = edges[0]?.pointAt(0.5);
+                const p2 = m2 ? [m2.x, m2.y, m2.z] : void 0;
+                m2?.delete();
                 edges.forEach((edge) => edge.delete());
-                return p;
+                return p2;
               })();
               if (seed) {
                 const faces = new FaceFinder().containsPoint(seed).find(body);
-                const inward = faces.reduce((sum, f) => {
-                  const nv = f.normalAt(seed);
+                const inward = faces.reduce((sum, f2) => {
+                  const nv = f2.normalAt(seed);
                   const r = [sum[0] - nv.x, sum[1] - nv.y, sum[2] - nv.z];
                   nv.delete();
                   return r;
                 }, [0, 0, 0]);
-                faces.forEach((f) => f.delete());
+                faces.forEach((f2) => f2.delete());
                 publish(feature, { parameter: "radius", kind: "linear", originMillimeters: seed, direction: norm$2(inward) > 1e-9 ? unit$1(inward) : [0, 0, -1], label: feature.type === "fillet" ? "Fillet radius" : "Chamfer size" });
               }
             }
-            const filter = chainPoints ? (edges) => edges.either(chainPoints.map((p) => (f) => f.containsPoint(p))) : edgePlane ? (edges) => edges.inPlane(edgePlane) : void 0;
-            const near = (p, q) => Math.hypot(p[0] - q.x, p[1] - q.y, p[2] - q.z) < 1e-3;
+            const filter = chainPoints ? (edges) => edges.either(chainPoints.map((p2) => (f2) => f2.containsPoint(p2))) : edgePlane ? (edges) => edges.inPlane(edgePlane) : void 0;
+            const near = (p2, q) => Math.hypot(p2[0] - q.x, p2[1] - q.y, p2[2] - q.z) < 1e-3;
             const size = feature.radiusMillimeters;
             const filletRadius = () => {
               const end = feature.type === "fillet" ? feature.endRadiusMillimeters : void 0;
               const perEdge = pickedPoints && feature.edges.some((pick) => pick.radiusMillimeters !== void 0);
               if (!perEdge) return end !== void 0 ? [size, end] : size;
               return (edge) => {
-                const m = edge.pointAt(0.5);
-                const i = pickedPoints.findIndex((p) => near(p, m));
-                const inChain = chainPoints.some((p) => near(p, m));
-                m.delete();
+                const m2 = edge.pointAt(0.5);
+                const i = pickedPoints.findIndex((p2) => near(p2, m2));
+                const inChain = chainPoints.some((p2) => near(p2, m2));
+                m2.delete();
                 return i >= 0 ? feature.edges[i].radiusMillimeters ?? size : inChain ? size : null;
               };
             };
@@ -37176,9 +38988,9 @@ function evaluatePartDocument(document2, options = {}) {
                 const adjacent = body.faces.filter((face) => {
                   const edges = face.edges;
                   const hit = edges.some((edge) => {
-                    const m = edge.pointAt(0.5);
-                    const h = near(point2, m);
-                    m.delete();
+                    const m2 = edge.pointAt(0.5);
+                    const h = near(point2, m2);
+                    m2.delete();
                     return h;
                   });
                   edges.forEach((edge) => edge.delete());
@@ -37189,10 +39001,10 @@ function evaluatePartDocument(document2, options = {}) {
                   const center = deleteAfterVectorTuple(face.center);
                   return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2];
                 };
-                reference = adjacent.sort((a, b) => up(b) - up(a))[0];
+                reference = adjacent.sort((a2, b) => up(b) - up(a2))[0];
                 adjacent.slice(1).forEach((face) => face.delete());
               }
-              const selectedFace = (f) => f.inList([reference]);
+              const selectedFace = (f2) => f2.inList([reference]);
               return feature.angleDegrees !== void 0 ? { distance: size, angle: feature.angleDegrees, selectedFace } : { distances: [size, feature.secondDistanceMillimeters], selectedFace };
             };
             let rounded;
@@ -37226,7 +39038,7 @@ function evaluatePartDocument(document2, options = {}) {
           }
           if (feature.type === "pattern") {
             const partPattern = Boolean(feature.bodyIds);
-            const source = partPattern ? void 0 : history.find((f) => f.id === feature.sourceFeatureId);
+            const source = partPattern ? void 0 : history.find((f2) => f2.id === feature.sourceFeatureId);
             const tool3 = partPattern ? void 0 : tools.get(feature.sourceFeatureId);
             if (!partPattern) {
               if (!source || !tool3 || !("operation" in source)) throw new Error("Choose a source feature in the selected target body.");
@@ -37247,7 +39059,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (!target || !id2) throw new Error("Select an existing target body.");
             const offsets = (n, alignment) => {
               const first = alignment === "left" ? -(n - 1) : alignment === "center" ? -Math.floor((n - 1) / 2) : 0;
-              return Array.from({ length: n }, (_, i) => first + i);
+              return Array.from({ length: n }, (_2, i) => first + i);
             };
             let placements = [];
             if (feature.patternType === "path") {
@@ -37262,10 +39074,10 @@ function evaluatePartDocument(document2, options = {}) {
                 const steps2 = 64;
                 let previous;
                 for (let i = 0; i <= steps2; i++) {
-                  const p = edge.pointAt(i / steps2), d = edge.tangentAt(i / steps2);
-                  const at2 = [p.x, p.y, p.z], tangent = unit$1([d.x, d.y, d.z]);
-                  p.delete();
-                  d.delete();
+                  const p2 = edge.pointAt(i / steps2), d2 = edge.tangentAt(i / steps2);
+                  const at2 = [p2.x, p2.y, p2.z], tangent = unit$1([d2.x, d2.y, d2.z]);
+                  p2.delete();
+                  d2.delete();
                   if (previous) s += Math.hypot(at2[0] - previous[0], at2[1] - previous[1], at2[2] - previous[2]);
                   samples2.push({ at: at2, tangent, s });
                   previous = at2;
@@ -37275,9 +39087,9 @@ function evaluatePartDocument(document2, options = {}) {
               const total = s, step = feature.spacingMillimeters ?? feature.distanceMillimeters / (count - 1);
               if (!(step > 0) || step * (count - 1) > total + 1e-6) throw new Error("The pattern does not fit along the path. Reduce the spacing or the count.");
               const at = (distance2) => {
-                let k = samples2.findIndex((sample) => sample.s >= distance2);
-                if (k < 0) k = samples2.length - 1;
-                return samples2[Math.max(0, k)];
+                let k2 = samples2.findIndex((sample) => sample.s >= distance2);
+                if (k2 < 0) k2 = samples2.length - 1;
+                return samples2[Math.max(0, k2)];
               };
               const start = samples2[0];
               for (let i = 1; i < count; i++) {
@@ -37303,8 +39115,8 @@ function evaluatePartDocument(document2, options = {}) {
               }
               if (feature.id === previewId) {
                 const anchor = tools.get(feature.sourceFeatureId) ?? (feature.bodyIds ? bodies.get(feature.bodyIds[0]) : void 0);
-                const c = anchor ? anchor.boundingBox.center : [0, 0, 0];
-                publish(feature, { parameter: "spacing", kind: "linear", originMillimeters: [0, 1, 2].map((i) => c[i] + rows[0].direction[i] * feature.spacingMillimeters), direction: rows[0].direction, label: "Pattern spacing" });
+                const c2 = anchor ? anchor.boundingBox.center : [0, 0, 0];
+                publish(feature, { parameter: "spacing", kind: "linear", originMillimeters: [0, 1, 2].map((i) => c2[i] + rows[0].direction[i] * feature.spacingMillimeters), direction: rows[0].direction, label: "Pattern spacing" });
               }
               for (const i of rows[0].offsets) for (const j of rows[1]?.offsets ?? [0]) {
                 if (i === 0 && j === 0) continue;
@@ -37375,12 +39187,12 @@ function evaluatePartDocument(document2, options = {}) {
             } else {
               const profile = profiles.get(feature.profileFeatureId);
               if (!profile) throw new Error("Choose one circular sketch region for the hole center.");
-              const circles = feature.allCircles ? profile.circles : profile.circles.filter((c) => feature.profileContourId === void 0 ? profile.circles.length === 1 : c.key === feature.profileContourId);
+              const circles = feature.allCircles ? profile.circles : profile.circles.filter((c2) => feature.profileContourId === void 0 ? profile.circles.length === 1 : c2.key === feature.profileContourId);
               if (!circles.length) throw new Error("Choose one circular sketch region for the hole center.");
               const frame = typeof profile.plane === "string" ? principalFrame(profile.plane, profile.offset) : { normal: [profile.plane.zDir.x, profile.plane.zDir.y, profile.plane.zDir.z], originMillimeters: [profile.plane.origin.x, profile.plane.origin.y, profile.plane.origin.z], xDirection: [profile.plane.xDir.x, profile.plane.xDir.y, profile.plane.xDir.z] };
-              const n = frame.normal, o = frame.originMillimeters, x = frame.xDirection;
-              const y = [n[1] * x[2] - n[2] * x[1], n[2] * x[0] - n[0] * x[2], n[0] * x[1] - n[1] * x[0]];
-              for (const circle of circles) starts.push({ center: [0, 1, 2].map((i) => o[i] + x[i] * circle.center[0] + y[i] * circle.center[1]), n: [-n[0], -n[1], -n[2]], x });
+              const n = frame.normal, o = frame.originMillimeters, x2 = frame.xDirection;
+              const y2 = [n[1] * x2[2] - n[2] * x2[1], n[2] * x2[0] - n[0] * x2[2], n[0] * x2[1] - n[1] * x2[0]];
+              for (const circle of circles) starts.push({ center: [0, 1, 2].map((i) => o[i] + x2[i] * circle.center[0] + y2[i] * circle.center[1]), n: [-n[0], -n[1], -n[2]], x: x2 });
             }
             const positive = (value2, label) => {
               if (!(typeof value2 === "number" && Number.isFinite(value2) && value2 > 0)) throw new Error(`${label} must be positive and finite.`);
@@ -37396,8 +39208,8 @@ function evaluatePartDocument(document2, options = {}) {
             let tool3;
             for (const start of starts) {
               const direction = feature.direction ? (() => {
-                const d = unit$1(feature.direction);
-                return dot$3(d, start.n) < 0 ? unit$1([-d[0], -d[1], -d[2]]) : d;
+                const d2 = unit$1(feature.direction);
+                return dot$3(d2, start.n) < 0 ? unit$1([-d2[0], -d2[1], -d2[2]]) : d2;
               })() : feature.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
               const center = start.center;
               if (start === starts[0]) {
@@ -37434,19 +39246,19 @@ function evaluatePartDocument(document2, options = {}) {
           }
           const mirrorPlaneOf = (ref) => {
             if (ref.kind === "principal") {
-              const f = principalFrame(ref.plane, ref.offsetMillimeters);
-              return own(new Plane(f.originMillimeters, f.xDirection, f.normal));
+              const f2 = principalFrame(ref.plane, ref.offsetMillimeters);
+              return own(new Plane(f2.originMillimeters, f2.xDirection, f2.normal));
             }
             if (ref.kind === "feature") {
-              const index2 = document2.features.findIndex((f2) => f2.id === ref.featureId), planeFeature = document2.features[index2];
+              const index2 = document2.features.findIndex((f22) => f22.id === ref.featureId), planeFeature = document2.features[index2];
               if (!planeFeature || planeFeature.type !== "plane") throw new Error("Mirror plane feature is unavailable. Reselect a plane.");
-              const f = constructionPlaneFrame(planeFeature, document2.features.slice(0, index2));
-              return own(new Plane(f.originMillimeters, f.xDirection, f.normal));
+              const f2 = constructionPlaneFrame(planeFeature, document2.features.slice(0, index2));
+              return own(new Plane(f2.originMillimeters, f2.xDirection, f2.normal));
             }
             if (ref.kind === "sketch-line") {
-              const [a, b] = sketchLine(ref, "The plane's sketch line is unavailable. Reselect a straight sketch line.");
-              const f = sketchFrameOf(ref.sourceFeatureId), along = unit$1(sub$3(b, a)), n = unit$1(cross$3(along, f.normal));
-              return own(new Plane(a, along, n));
+              const [a2, b] = sketchLine(ref, "The plane's sketch line is unavailable. Reselect a straight sketch line.");
+              const f2 = sketchFrameOf(ref.sourceFeatureId), along = unit$1(sub$3(b, a2)), n = unit$1(cross$3(along, f2.normal));
+              return own(new Plane(a2, along, n));
             }
             const body = bodies.get(ref.bodyId);
             if (!body) throw new Error("Mirror face body is unavailable. Reselect a planar face.");
@@ -37480,10 +39292,10 @@ function evaluatePartDocument(document2, options = {}) {
               let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
               if (!isShape3D(cone)) throw new Error("The boss is not a valid solid.");
               cone = own(cone);
-              const from = [0, 0, 1], d = dot$3(from, outward);
-              if (d < 1 - 1e-9) {
+              const from = [0, 0, 1], d2 = dot$3(from, outward);
+              if (d2 < 1 - 1e-9) {
                 const axis = cross$3(from, outward);
-                cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$1(axis) : [1, 0, 0]));
+                cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$1(axis) : [1, 0, 0]));
               }
               return own(cone.translate(base[0], base[1], base[2]));
             };
@@ -37504,9 +39316,9 @@ function evaluatePartDocument(document2, options = {}) {
             } else {
               const along = feature.alongMillimeters ? unit$1(feature.alongMillimeters) : xDir;
               const across = unit$1(cross$3(outward, along));
-              const rect = (w, l, at) => {
-                const corners2 = [[-l / 2, -w / 2], [l / 2, -w / 2], [l / 2, w / 2], [-l / 2, w / 2]].map(([a, b]) => add$2(add$2(at, scale(along, a)), scale(across, b)));
-                return own(assembleWire(corners2.map((p, i) => own(makeLine(p, corners2[(i + 1) % 4])))));
+              const rect = (w2, l, at) => {
+                const corners2 = [[-l / 2, -w2 / 2], [l / 2, -w2 / 2], [l / 2, w2 / 2], [-l / 2, w2 / 2]].map(([a2, b]) => add$2(add$2(at, scale(along, a2)), scale(across, b)));
+                return own(assembleWire(corners2.map((p2, i) => own(makeLine(p2, corners2[(i + 1) % 4])))));
               };
               const inset = height * Math.tan(draft);
               const topW = Math.max(feature.widthMillimeters - 2 * inset, feature.widthMillimeters * 0.05), topL = Math.max(feature.lengthMillimeters - 2 * inset, feature.lengthMillimeters * 0.05);
@@ -37526,10 +39338,10 @@ function evaluatePartDocument(document2, options = {}) {
             const body = bodies.get(feature.targetBodyId);
             if (!body) throw new Error(`${feature.type === "lip" ? "Lip" : "Snap fit"} needs an available target part.`);
             const face = faceByReference(body, feature.face, feature.type === "lip" ? "Lip face" : "Snap fit face");
-            const prism = (f, v) => {
+            const prism = (f2, v) => {
               const o = getOC(), vec2 = new o.gp_Vec_4(v[0], v[1], v[2]);
               try {
-                const s = cast(new o.BRepPrimAPI_MakePrism_1(f.wrapped, vec2, false, true).Shape());
+                const s = cast(new o.BRepPrimAPI_MakePrism_1(f2.wrapped, vec2, false, true).Shape());
                 if (!isShape3D(s)) throw new Error("The plastic feature is not a solid.");
                 return own(s);
               } finally {
@@ -37540,12 +39352,12 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature.type === "lip") {
               const center = deleteAfterVectorTuple(face.center), n = unit$1([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
               const outer = own(face.clone().outerWire()), inners = face.clone().innerWires();
-              inners.forEach((w) => own(w));
+              inners.forEach((w2) => own(w2));
               const width = feature.widthMillimeters + (feature.shape === "groove" ? feature.gapMillimeters ?? 0 : 0);
-              const areaOf = (w) => measureArea(own(makeFace(w)));
-              const offsetBy = (w, grow) => {
-                const a = own(w.clone().offset2D(width, "intersection"));
-                return areaOf(a) > areaOf(w) === grow ? a : own(w.clone().offset2D(-width, "intersection"));
+              const areaOf = (w2) => measureArea(own(makeFace(w2)));
+              const offsetBy = (w2, grow) => {
+                const a2 = own(w2.clone().offset2D(width, "intersection"));
+                return areaOf(a2) > areaOf(w2) === grow ? a2 : own(w2.clone().offset2D(-width, "intersection"));
               };
               let bandOuter, bandInner;
               if (feature.side === "inside") {
@@ -37567,11 +39379,11 @@ function evaluatePartDocument(document2, options = {}) {
               const raw = feature.hookDirectionMillimeters, hook = unit$1(sub$3(raw, scale(n, dot$3(raw, n))));
               if (norm$2(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
               const across = unit$1(cross$3(n, hook));
-              const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
-              const at = (x, y) => add$2(add$2(add$2(base, scale(hook, x)), scale(n, y)), scale(across, -w / 2));
+              const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
+              const at = (x2, y2) => add$2(add$2(add$2(base, scale(hook, x2)), scale(n, y2)), scale(across, -w2 / 2));
               const pts = [at(0, 0), at(t, 0), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L)];
-              const wire = own(assembleWire(pts.map((p, i) => own(makeLine(p, pts[(i + 1) % pts.length])))));
-              tool3 = prism(own(makeFace(wire)), scale(across, w));
+              const wire = own(assembleWire(pts.map((p2, i) => own(makeLine(p2, pts[(i + 1) % pts.length])))));
+              tool3 = prism(own(makeFace(wire)), scale(across, w2));
               publish(feature, { parameter: "length", kind: "linear", originMillimeters: add$2(base, scale(n, L)), direction: n, label: "Arm length" });
               publish(feature, { parameter: "catchDepth", kind: "linear", originMillimeters: at(t + cd, L - cl), direction: hook, label: "Catch depth" });
             }
@@ -37595,7 +39407,7 @@ function evaluatePartDocument(document2, options = {}) {
             const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
             try {
               for (const face of body.faces) {
-                if (!picked.some((p) => p.isSame(face))) sewing.Add(face.wrapped);
+                if (!picked.some((p2) => p2.isSame(face))) sewing.Add(face.wrapped);
                 face.delete();
               }
               for (const piece of split.flat()) {
@@ -37628,8 +39440,8 @@ function evaluatePartDocument(document2, options = {}) {
             for (const face of targets) {
               const handle = o.GeomConvert.SurfaceToBSplineSurface(o.BRep_Tool.Surface_2(face.wrapped)), s = handle.get();
               const uv = face.UVBounds, holes = face.clone().innerWires();
-              holes.forEach((w) => w.delete());
-              const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+              holes.forEach((w2) => w2.delete());
+              const near = (a2, b) => Math.abs(a2 - b) <= 1e-6 * Math.max(1, Math.abs(a2), Math.abs(b));
               if (holes.length || !near(uv.uMin, s.UKnot(s.FirstUKnotIndex())) || !near(uv.uMax, s.UKnot(s.LastUKnotIndex())) || !near(uv.vMin, s.VKnot(s.FirstVKnotIndex())) || !near(uv.vMax, s.VKnot(s.LastVKnotIndex())))
                 throw new Error("Fair works on untrimmed faces (a loft, boundary or patch); this face is trimmed.");
               const nu = s.NbUPoles(), nv = s.NbVPoles();
@@ -37638,21 +39450,21 @@ function evaluatePartDocument(document2, options = {}) {
               for (let i = 1; i <= nu; i++) {
                 const row = [];
                 for (let j = 1; j <= nv; j++) {
-                  const p = s.Pole(i, j);
-                  row.push([p.X(), p.Y(), p.Z()]);
-                  p.delete();
+                  const p2 = s.Pole(i, j);
+                  row.push([p2.X(), p2.Y(), p2.Z()]);
+                  p2.delete();
                 }
                 P.push(row);
               }
-              const T = P.map((row) => row.map((p) => [...p]));
+              const T = P.map((row) => row.map((p2) => [...p2]));
               for (let sweep = 0; sweep < 400; sweep++)
                 for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++)
-                  T[i][j] = [0, 1, 2].map((k) => (T[i - 1][j][k] + T[i + 1][j][k] + T[i][j - 1][k] + T[i][j + 1][k]) / 4);
+                  T[i][j] = [0, 1, 2].map((k2) => (T[i - 1][j][k2] + T[i + 1][j][k2] + T[i][j - 1][k2] + T[i][j + 1][k2]) / 4);
               for (let i = 1; i < nu - 1; i++) for (let j = 1; j < nv - 1; j++) {
-                let d = [0, 1, 2].map((k) => (T[i][j][k] - P[i][j][k]) * strength);
-                const l = Math.hypot(...d);
-                if (limit !== void 0 && l > limit) d = d.map((x) => x * limit / l);
-                const q = new o.gp_Pnt_3(P[i][j][0] + d[0], P[i][j][1] + d[1], P[i][j][2] + d[2]);
+                let d2 = [0, 1, 2].map((k2) => (T[i][j][k2] - P[i][j][k2]) * strength);
+                const l = Math.hypot(...d2);
+                if (limit !== void 0 && l > limit) d2 = d2.map((x2) => x2 * limit / l);
+                const q = new o.gp_Pnt_3(P[i][j][0] + d2[0], P[i][j][1] + d2[1], P[i][j][2] + d2[2]);
                 s.SetPole_1(i + 1, j + 1, q);
                 q.delete();
               }
@@ -37689,14 +39501,14 @@ function evaluatePartDocument(document2, options = {}) {
             const o = getOC(), plane2 = mirrorPlaneOf(feature.plane);
             const origin = [plane2.origin.x, plane2.origin.y, plane2.origin.z], normal = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z];
             const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin));
-            const side = (p) => (p[0] - origin[0]) * normal[0] + (p[1] - origin[1]) * normal[1] + (p[2] - origin[2]) * normal[2];
+            const side = (p2) => (p2[0] - origin[0]) * normal[0] + (p2[1] - origin[1]) * normal[1] + (p2[2] - origin[2]) * normal[2];
             const keep = side(feature.keepPointMillimeters);
             if (Math.abs(keep) < 1e-9) throw new Error("The keep point lies on the trimming plane. Move it to the side to keep.");
             const tool3 = own(planeToolFace(origin, normal, size));
-            const faces = body.faces.map((f) => own(f));
-            const pieces = splitFacesByTool(faces, tool3).flat().map((p) => own(p));
-            const kept = pieces.filter((p) => {
-              const q = p.pointOnSurface(0.5, 0.5);
+            const faces = body.faces.map((f2) => own(f2));
+            const pieces = splitFacesByTool(faces, tool3).flat().map((p2) => own(p2));
+            const kept = pieces.filter((p2) => {
+              const q = p2.pointOnSurface(0.5, 0.5);
               const s = side([q.x, q.y, q.z]);
               q.delete();
               return s * keep > 0;
@@ -37705,7 +39517,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (kept.length === pieces.length) throw new Error("The plane does not cross the surface.");
             const sewing = new o.BRepBuilderAPI_Sewing(1e-4, true, true, true, false), progress = new o.Message_ProgressRange_1();
             try {
-              for (const p of kept) sewing.Add(p.wrapped);
+              for (const p2 of kept) sewing.Add(p2.wrapped);
               sewing.Perform(progress);
               const raw = sewing.SewedShape(), shape = cast(raw);
               let sheet;
@@ -37749,15 +39561,15 @@ function evaluatePartDocument(document2, options = {}) {
                 ratio = t.scaleFactors[0] * t.scaleFactors[1] * t.scaleFactors[2];
                 if (new Set(t.scaleFactors).size === 1) result = own(shape.clone().scale(t.scaleFactors[0], t.centerMillimeters));
                 else {
-                  const f = extendedKernel();
-                  if (!f) throw new UnsupportedFeature(feature.id, "non-uniform scaling");
+                  const f2 = extendedKernel();
+                  if (!f2) throw new UnsupportedFeature(feature.id, "non-uniform scaling");
                   const [sx, sy, sz] = t.scaleFactors, [cx, cy, cz] = t.centerMillimeters;
-                  const source = toExtended(shape), g = new f.gp_GTrsf_1(), shift = new f.gp_XYZ_2(cx * (1 - sx), cy * (1 - sy), cz * (1 - sz));
-                  g.SetValue(1, 1, sx);
-                  g.SetValue(2, 2, sy);
-                  g.SetValue(3, 3, sz);
-                  g.SetTranslationPart(shift);
-                  const op = new f.BRepBuilderAPI_GTransform_2(source, g, true);
+                  const source = toExtended(shape), g2 = new f2.gp_GTrsf_1(), shift = new f2.gp_XYZ_2(cx * (1 - sx), cy * (1 - sy), cz * (1 - sz));
+                  g2.SetValue(1, 1, sx);
+                  g2.SetValue(2, 2, sy);
+                  g2.SetValue(3, 3, sz);
+                  g2.SetTranslationPart(shift);
+                  const op = new f2.BRepBuilderAPI_GTransform_2(source, g2, true);
                   try {
                     result = own(fromExtended(op.Shape()));
                   } catch (error) {
@@ -37765,7 +39577,7 @@ function evaluatePartDocument(document2, options = {}) {
                   } finally {
                     op.delete();
                     shift.delete();
-                    g.delete();
+                    g2.delete();
                     source.delete();
                   }
                 }
@@ -37788,8 +39600,8 @@ function evaluatePartDocument(document2, options = {}) {
                 let fromAt = from.at;
                 if (from.normal && to.normal) {
                   const target = t.flip ? to.normal : [-to.normal[0], -to.normal[1], -to.normal[2]];
-                  const d = dot$3(from.normal, target), axis = cross$3(from.normal, target), l = Math.hypot(...axis);
-                  const angle2 = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+                  const d2 = dot$3(from.normal, target), axis = cross$3(from.normal, target), l = Math.hypot(...axis);
+                  const angle2 = Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI;
                   if (angle2 > 1e-9) {
                     const about = l > 1e-9 ? unit$1(axis) : unit$1(cross$3(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
                     turned = own(shape.clone().rotate(angle2, from.at, about));
@@ -37835,9 +39647,9 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature.id === previewId) {
               const f0 = body.faces[0];
               if (f0) {
-                const c = f0.center, nv = f0.normalAt(c);
-                publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit$1([-nv.x, -nv.y, -nv.z]), label: "Shell thickness" });
-                c.delete();
+                const c2 = f0.center, nv = f0.normalAt(c2);
+                publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([-nv.x, -nv.y, -nv.z]), label: "Shell thickness" });
+                c2.delete();
                 nv.delete();
                 f0.delete();
               }
@@ -37872,16 +39684,16 @@ function evaluatePartDocument(document2, options = {}) {
                 if (!count) throw new Error("shell matched no face on that plane to open");
               }
               if (feature.tangentChain && referenced.length) {
-                const all = body.faces, chosen = new Set(referenced.map((face) => all.findIndex((f) => f.wrapped.IsSame(face.wrapped))).filter((i) => i >= 0));
+                const all = body.faces, chosen = new Set(referenced.map((face) => all.findIndex((f2) => f2.wrapped.IsSame(face.wrapped))).filter((i) => i >= 0));
                 const edgeKeys = (face) => {
                   const edges = face.edges;
                   try {
                     return edges.map((edge) => {
-                      const m = edge.pointAt(0.5);
-                      const k = `${m.x.toFixed(5)},${m.y.toFixed(5)},${m.z.toFixed(5)}`;
-                      const n = face.normalAt([m.x, m.y, m.z]);
-                      const out = [k, [n.x, n.y, n.z]];
-                      m.delete();
+                      const m2 = edge.pointAt(0.5);
+                      const k2 = `${m2.x.toFixed(5)},${m2.y.toFixed(5)},${m2.z.toFixed(5)}`;
+                      const n = face.normalAt([m2.x, m2.y, m2.z]);
+                      const out = [k2, [n.x, n.y, n.z]];
+                      m2.delete();
                       n.delete();
                       return out;
                     });
@@ -37890,9 +39702,9 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                 };
                 const keys2 = all.map(edgeKeys);
-                for (const i of [...chosen]) for (const [k, n] of keys2[i]) all.forEach((_, j) => {
+                for (const i of [...chosen]) for (const [k2, n] of keys2[i]) all.forEach((_2, j) => {
                   if (chosen.has(j)) return;
-                  const match = keys2[j].find(([k2]) => k2 === k);
+                  const match = keys2[j].find(([k22]) => k22 === k2);
                   if (match && dot$3(n, match[1]) > Math.cos(Math.PI / 180)) chosen.add(j);
                 });
                 all.forEach((face, i) => {
@@ -37900,7 +39712,7 @@ function evaluatePartDocument(document2, options = {}) {
                   else if (!chosen.has(i)) face.delete();
                 });
               }
-              const picks = [...planes.map((plane2) => (f) => f.inPlane(plane2)), ...referenced.length ? [(f) => f.inList(referenced)] : []];
+              const picks = [...planes.map((plane2) => (f2) => f2.inPlane(plane2)), ...referenced.length ? [(f2) => f2.inList(referenced)] : []];
               const open = (finder) => picks.length === 1 ? picks[0](finder) : finder.either(picks);
               const outward = (wall) => {
                 const oc = getOC();
@@ -38052,8 +39864,8 @@ function evaluatePartDocument(document2, options = {}) {
             const n = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z], o = [plane2.origin.x, plane2.origin.y, plane2.origin.z];
             const half = (sign) => {
               let box = own(makeBaseBox(size * 2, size * 2, size).translate(0, 0, sign > 0 ? 0 : -size));
-              const d = n[2], axis = cross$3([0, 0, 1], n), l = Math.hypot(...axis);
-              if (d < 1 - 1e-9) box = own(box.rotate(Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI, [0, 0, 0], l > 1e-9 ? axis : [1, 0, 0]));
+              const d2 = n[2], axis = cross$3([0, 0, 1], n), l = Math.hypot(...axis);
+              if (d2 < 1 - 1e-9) box = own(box.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], l > 1e-9 ? axis : [1, 0, 0]));
               return own(box.translate(o[0], o[1], o[2]));
             };
             const pieceOf = (sign) => {
@@ -38077,28 +39889,28 @@ function evaluatePartDocument(document2, options = {}) {
           if (feature.type === "delete-face") {
             const body = bodies.get(feature.targetBodyId);
             if (!body) throw new Error("Delete face needs an available target part.");
-            const f = extendedKernel();
-            if (!f) throw new UnsupportedFeature(feature.id, "deleting faces", true);
+            const f2 = extendedKernel();
+            if (!f2) throw new UnsupportedFeature(feature.id, "deleting faces", true);
             const targets = feature.faces.map((ref) => {
               const face = faceByReference(body, ref, "Face to delete");
               try {
-                const c = deleteAfterVectorTuple(face.center);
-                return [c[0], c[1], c[2]];
+                const c2 = deleteAfterVectorTuple(face.center);
+                return [c2[0], c2[1], c2[2]];
               } finally {
                 face.delete();
               }
             });
-            const shapeX = toExtended(body), op = new f.BRepAlgoAPI_Defeaturing();
+            const shapeX = toExtended(body), op = new f2.BRepAlgoAPI_Defeaturing();
             try {
               op.SetShape(shapeX);
-              const explorer = new f.TopExp_Explorer_2(shapeX, f.TopAbs_ShapeEnum.TopAbs_FACE, f.TopAbs_ShapeEnum.TopAbs_SHAPE);
+              const explorer = new f2.TopExp_Explorer_2(shapeX, f2.TopAbs_ShapeEnum.TopAbs_FACE, f2.TopAbs_ShapeEnum.TopAbs_SHAPE);
               let matched = 0;
               for (; explorer.More(); explorer.Next()) {
-                const current2 = explorer.Current(), props = new f.GProp_GProps_1();
-                f.BRepGProp.SurfaceProperties_1(current2, props, false, false);
-                const c = props.CentreOfMass();
-                const center = [c.X(), c.Y(), c.Z()];
-                c.delete();
+                const current2 = explorer.Current(), props = new f2.GProp_GProps_1();
+                f2.BRepGProp.SurfaceProperties_1(current2, props, false, false);
+                const c2 = props.CentreOfMass();
+                const center = [c2.X(), c2.Y(), c2.Z()];
+                c2.delete();
                 props.delete();
                 if (targets.some((t) => Math.hypot(t[0] - center[0], t[1] - center[1], t[2] - center[2]) < 1e-4)) {
                   op.AddFaceToRemove(current2);
@@ -38108,7 +39920,7 @@ function evaluatePartDocument(document2, options = {}) {
               explorer.delete();
               if (matched !== targets.length) throw new Error("A face to delete could not be found on the part. Reselect the faces.");
               op.SetRunParallel(false);
-              op.Build(new f.Message_ProgressRange_1());
+              op.Build(new f2.Message_ProgressRange_1());
               if (!op.IsDone() || op.HasErrors()) throw new Error("Those faces cannot be removed and healed. Remove fewer faces at a time.");
               const healed = own(fromExtended(op.Shape()));
               if (!isShape3D(healed) || measureVolume(healed) < 1e-9) throw new Error("Deleting those faces leaves no solid.");
@@ -38141,8 +39953,8 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (!t && (distance2 === void 0 || !Number.isFinite(distance2) || Math.abs(distance2) < 1e-6)) throw new Error("Offset distance must be finite and nonzero.");
             const rotateVector = (v, axis, degrees) => {
-              const u = unit$1(axis), th = degrees * Math.PI / 180, c = Math.cos(th), s = Math.sin(th), w = cross$3(u, v), d = dot$3(u, v);
-              return [v[0] * c + w[0] * s + u[0] * d * (1 - c), v[1] * c + w[1] * s + u[1] * d * (1 - c), v[2] * c + w[2] * s + u[2] * d * (1 - c)];
+              const u2 = unit$1(axis), th = degrees * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$3(u2, v), d2 = dot$3(u2, v);
+              return [v[0] * c2 + w2[0] * s + u2[0] * d2 * (1 - c2), v[1] * c2 + w2[1] * s + u2[1] * d2 * (1 - c2), v[2] * c2 + w2[2] * s + u2[2] * d2 * (1 - c2)];
             };
             const volumeOf = (shape) => {
               try {
@@ -38156,9 +39968,9 @@ function evaluatePartDocument(document2, options = {}) {
               if (!body) throw new Error("Offset faces need an available solid part.");
               const face = faceByReference(body, ref, "Offset faces");
               if (feature.id === previewId && ref === feature.faces[0]) {
-                const c = face.center, nv = face.normalAt(c);
-                publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit$1([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
-                c.delete();
+                const c2 = face.center, nv = face.normalAt(c2);
+                publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
+                c2.delete();
                 nv.delete();
               }
               try {
@@ -38180,18 +39992,18 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 const faceEdges = face.edges;
                 const span = 2 * diagonalOfShape(body) + travel + 1, step = Math.max(1e-4, diagonalOfShape(body) * 1e-4);
-                const onFace = (p) => {
-                  const cube = own(makeBaseBox(2 * step, 2 * step, 2 * step).translate(p[0], p[1], p[2] - step));
+                const onFace = (p2) => {
+                  const cube = own(makeBaseBox(2 * step, 2 * step, 2 * step).translate(p2[0], p2[1], p2[2] - step));
                   return commonArea(face, cube) > 0;
                 };
-                const nearestOnFace = (p) => {
-                  const oc = getOC(), point22 = new oc.gp_Pnt_3(p[0], p[1], p[2]), vertex = new oc.BRepBuilderAPI_MakeVertex(point22), progress = new oc.Message_ProgressRange_1();
+                const nearestOnFace = (p2) => {
+                  const oc = getOC(), point22 = new oc.gp_Pnt_3(p2[0], p2[1], p2[2]), vertex = new oc.BRepBuilderAPI_MakeVertex(point22), progress = new oc.Message_ProgressRange_1();
                   const distance22 = new oc.BRepExtrema_DistShapeShape_1();
                   try {
                     distance22.LoadS1(vertex.Shape());
                     distance22.LoadS2(face.wrapped);
                     distance22.Perform(progress);
-                    if (!distance22.IsDone() || distance22.NbSolution() < 1) return p;
+                    if (!distance22.IsDone() || distance22.NbSolution() < 1) return p2;
                     const nearest = distance22.PointOnShape2(1), q = [nearest.X(), nearest.Y(), nearest.Z()];
                     nearest.delete();
                     return q;
@@ -38226,15 +40038,15 @@ function evaluatePartDocument(document2, options = {}) {
                   const probe = nearestOnFace(add$2(middle, scale(inward, 20 * step)));
                   const otherKind = other.geomType === "CYLINDRE" ? "CYLINDER" : other.geomType;
                   if (otherKind === "PLANE") {
-                    const c = [...deleteAfterVectorTuple(other.center)];
-                    const outward = unit$1([...deleteAfterVectorTuple(other.normalAt([c[0], c[1], c[2]]))]);
-                    const side = halfSpace(c, dot$3(sub$3(probe, c), outward) > 0 ? outward : neg(outward), span, own);
+                    const c2 = [...deleteAfterVectorTuple(other.center)];
+                    const outward = unit$1([...deleteAfterVectorTuple(other.normalAt([c2[0], c2[1], c2[2]]))]);
+                    const side = halfSpace(c2, dot$3(sub$3(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
                     surfaces.push(side);
                     sides.push(side);
                   } else if (["CYLINDER", "SPHERE", "CONE", "TORUS"].includes(otherKind)) {
-                    const q = quadricOf(other, middle), length = 2 * span, solid = quadricSolid(q, length, own), c = quadricCentre(q);
+                    const q = quadricOf(other, middle), length = 2 * span, solid = quadricSolid(q, length, own), c2 = quadricCentre(q);
                     surfaces.push(solid);
-                    sides.push(insideQuadric(q, probe) ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c[0], c[1], c[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 })));
+                    sides.push(insideQuadric(q, probe) ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c2[0], c2[1], c2[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 })));
                   } else {
                     if (!extendedKernel()) {
                       other.delete();
@@ -38247,7 +40059,7 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 faceEdges.forEach((edge) => edge.delete());
                 if (!sides.length && !freeform.length) throw new Error("Offset faces must leave valid solid geometry. Reduce the distance or change the selection.");
-                const region = (operation2, x, y) => own(fuzzyBoolean(x, y, operation2, { glue: false, fuzzy: 1e-5 }));
+                const region = (operation2, x2, y2) => own(fuzzyBoolean(x2, y2, operation2, { glue: false, fuzzy: 1e-5 }));
                 let column = sides.length ? void 0 : bounds2;
                 for (const side of sides) column = column ? region("common", column, side) : side;
                 let insideOld, insideNew;
@@ -38255,18 +40067,18 @@ function evaluatePartDocument(document2, options = {}) {
                   insideOld = halfSpace(center, neg(normal), span, own);
                   insideNew = halfSpace(point2, neg(turned), span, own);
                 } else if (!analytic) {
-                  const f = extendedKernel(), faceX = toExtended(face), handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
+                  const f2 = extendedKernel(), faceX = toExtended(face), handle = f2.BRep_Tool.Surface_2(f2.TopoDS.Face_1(faceX));
                   const inside2 = sub$3(center, scale(normal, (t ? travel : Math.abs(distance2)) + 20 * step));
                   try {
-                    insideOld = keepSideOfSurface(f, handle, column, inside2, own, true);
+                    insideOld = keepSideOfSurface(f2, handle, column, inside2, own, true);
                     if (t) {
-                      const move = new f.gp_Trsf_1();
+                      const move = new f2.gp_Trsf_1();
                       if (t.kind === "translate") {
-                        const v = t.translationMillimeters, vec2 = new f.gp_Vec_4(v[0], v[1], v[2]);
+                        const v = t.translationMillimeters, vec2 = new f2.gp_Vec_4(v[0], v[1], v[2]);
                         move.SetTranslation_1(vec2);
                         vec2.delete();
                       } else {
-                        const o = t.axisOriginMillimeters, d = unit$1(t.axisDirection), origin = new f.gp_Pnt_3(o[0], o[1], o[2]), direction = new f.gp_Dir_4(d[0], d[1], d[2]), axis = new f.gp_Ax1_2(origin, direction);
+                        const o = t.axisOriginMillimeters, d2 = unit$1(t.axisDirection), origin = new f2.gp_Pnt_3(o[0], o[1], o[2]), direction = new f2.gp_Dir_4(d2[0], d2[1], d2[2]), axis = new f2.gp_Ax1_2(origin, direction);
                         move.SetRotation_1(axis, t.angleDegrees * Math.PI / 180);
                         axis.delete();
                         direction.delete();
@@ -38274,24 +40086,24 @@ function evaluatePartDocument(document2, options = {}) {
                       }
                       const movedInside = t.kind === "translate" ? add$2(inside2, t.translationMillimeters) : add$2(t.axisOriginMillimeters, rotateVector(sub$3(inside2, t.axisOriginMillimeters), t.axisDirection, t.angleDegrees));
                       try {
-                        insideNew = keepSideOfSurface(f, handle, column, movedInside, own, true, move);
+                        insideNew = keepSideOfSurface(f2, handle, column, movedInside, own, true, move);
                       } finally {
                         move.delete();
                       }
                     } else {
-                      const candidates = [distance2, -distance2].map((d) => new f.Geom_OffsetSurface(handle, d, false));
+                      const candidates = [distance2, -distance2].map((d2) => new f2.Geom_OffsetSurface(handle, d2, false));
                       const sample = (surface) => {
-                        const adaptor = new f.GeomAdaptor_Surface_2(surface), u = (adaptor.FirstUParameter() + adaptor.LastUParameter()) / 2, v = (adaptor.FirstVParameter() + adaptor.LastVParameter()) / 2;
-                        const uu = Number.isFinite(u) ? u : 0, vv = Number.isFinite(v) ? v : 0;
+                        const adaptor = new f2.GeomAdaptor_Surface_2(surface), u2 = (adaptor.FirstUParameter() + adaptor.LastUParameter()) / 2, v = (adaptor.FirstVParameter() + adaptor.LastVParameter()) / 2;
+                        const uu = Number.isFinite(u2) ? u2 : 0, vv = Number.isFinite(v) ? v : 0;
                         const pt = adaptor.Value(uu, vv), q = [pt.X(), pt.Y(), pt.Z()];
                         pt.delete();
                         adaptor.delete();
                         return q;
                       };
-                      const handles = candidates.map((c) => new f.Handle_Geom_Surface_2(c));
+                      const handles = candidates.map((c2) => new f2.Handle_Geom_Surface_2(c2));
                       const base = sample(handle), shifts = handles.map((h) => dot$3(sub$3(sample(h), base), normal) * Math.sign(distance2));
                       const chosen = shifts[0] >= shifts[1] ? 0 : 1;
-                      insideNew = keepSideOfSurface(f, handles[chosen], column, inside2, own, true);
+                      insideNew = keepSideOfSurface(f2, handles[chosen], column, inside2, own, true);
                       handles.forEach((h) => h.delete());
                     }
                   } finally {
@@ -38302,15 +40114,15 @@ function evaluatePartDocument(document2, options = {}) {
                   const q = quadricOf(face, center), length = 2 * span;
                   const convex = dot$3(normal, quadricRadial(q, center)) > 0;
                   const primitive = (shape) => {
-                    const solid = quadricSolid(shape, length, own), c = quadricCentre(shape);
-                    return convex ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c[0], c[1], c[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 }));
+                    const solid = quadricSolid(shape, length, own), c2 = quadricCentre(shape);
+                    return convex ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c2[0], c2[1], c2[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 }));
                   };
                   insideOld = primitive(q);
                   if (!t) insideNew = primitive(offsetQuadric(q, convex ? distance2 : -distance2));
-                  else if (t.kind === "translate") insideNew = primitive(moveQuadric(q, (p) => add$2(p, t.translationMillimeters), (dir) => dir));
+                  else if (t.kind === "translate") insideNew = primitive(moveQuadric(q, (p2) => add$2(p2, t.translationMillimeters), (dir) => dir));
                   else {
                     const o = t.axisOriginMillimeters;
-                    insideNew = primitive(moveQuadric(q, (p) => add$2(o, rotateVector(sub$3(p, o), t.axisDirection, t.angleDegrees)), (dir) => rotateVector(dir, t.axisDirection, t.angleDegrees)));
+                    insideNew = primitive(moveQuadric(q, (p2) => add$2(o, rotateVector(sub$3(p2, o), t.axisDirection, t.angleDegrees)), (dir) => rotateVector(dir, t.axisDirection, t.angleDegrees)));
                   }
                 }
                 for (const surface of surfaces) {
@@ -38362,8 +40174,8 @@ function evaluatePartDocument(document2, options = {}) {
               if (pick.bodyId !== bodyId) throw new Error(`${pick.label} is on another body. Reselect edges on the chosen body.`);
               if (pick.kind === "solid-edge") {
                 const vertex = (anchor) => {
-                  const matches = anchors.filter((a) => a.signature === anchor.signature);
-                  const found = matches.length === 1 ? matches[0] : matches.find((a) => a.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
+                  const matches = anchors.filter((a2) => a2.signature === anchor.signature);
+                  const found = matches.length === 1 ? matches[0] : matches.find((a2) => a2.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a2.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
                   if (!found) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
                   return [...found.positionMillimeters];
                 };
@@ -38374,9 +40186,9 @@ function evaluatePartDocument(document2, options = {}) {
             return midpoints.map((target, index2) => {
               const pick = picks[index2];
               const hit = edges.find((edge) => {
-                const m = edge.pointAt(0.5), d = Math.hypot(m.x - target[0], m.y - target[1], m.z - target[2]);
-                m.delete();
-                return d < 1e-3 && (pick.kind !== "curved-edge" || Math.abs(edge.length - pick.lengthMillimeters) <= Math.max(1e-3, pick.lengthMillimeters * 1e-6));
+                const m2 = edge.pointAt(0.5), d2 = Math.hypot(m2.x - target[0], m2.y - target[1], m2.z - target[2]);
+                m2.delete();
+                return d2 < 1e-3 && (pick.kind !== "curved-edge" || Math.abs(edge.length - pick.lengthMillimeters) <= Math.max(1e-3, pick.lengthMillimeters * 1e-6));
               });
               if (!hit) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
               return own(hit);
@@ -38385,8 +40197,8 @@ function evaluatePartDocument(document2, options = {}) {
           const ruledStrips = (body, bodyId, picks, distance2, mode, direction, what) => {
             const o = getOC();
             return pickedEdgesOf(body, bodyId, picks, what).map((edge) => {
-              const m = edge.pointAt(0.5), mid = [m.x, m.y, m.z];
-              m.delete();
+              const m2 = edge.pointAt(0.5), mid = [m2.x, m2.y, m2.z];
+              m2.delete();
               let reach;
               if (mode === "direction") reach = scale(unit$1(direction), distance2);
               else {
@@ -38399,8 +40211,8 @@ function evaluatePartDocument(document2, options = {}) {
                   const tv = edge.tangentAt(0.5), t = unit$1([tv.x, tv.y, tv.z]);
                   tv.delete();
                   let side = unit$1(cross$3(n, t));
-                  const c = face.center, away = sub$3(mid, [c.x, c.y, c.z]);
-                  c.delete();
+                  const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
+                  c2.delete();
                   if (dot$3(side, away) < 0) side = neg(side);
                   reach = scale(side, distance2);
                 }
@@ -38416,16 +40228,16 @@ function evaluatePartDocument(document2, options = {}) {
           };
           const chainWire = (edges, what) => {
             const ends = edges.map((edge) => {
-              const a = edge.startPoint, b = edge.endPoint;
-              const pts = [[a.x, a.y, a.z], [b.x, b.y, b.z]];
-              a.delete();
+              const a2 = edge.startPoint, b = edge.endPoint;
+              const pts = [[a2.x, a2.y, a2.z], [b.x, b.y, b.z]];
+              a2.delete();
               b.delete();
               return pts;
             });
-            const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) < 1e-3;
+            const near = (p2, q) => Math.hypot(p2[0] - q[0], p2[1] - q[1], p2[2] - q[2]) < 1e-3;
             const order = [0];
             let tail = ends[0][1];
-            const left = new Set(edges.map((_, i) => i).slice(1));
+            const left = new Set(edges.map((_2, i) => i).slice(1));
             while (left.size) {
               const next = [...left].find((i) => near(ends[i][0], tail) || near(ends[i][1], tail));
               if (next === void 0) throw new Error(`${what}: the picked edges do not meet end to end.`);
@@ -38436,7 +40248,7 @@ function evaluatePartDocument(document2, options = {}) {
             return own(assembleWire(order.map((i) => edges[i])));
           };
           const sheetRuleOf = (bodyId) => {
-            const index2 = document2.features.findIndex((f) => f.type === "sheet-base" && !f.suppressed && bodyIDForFeature(document2, f) === bodyId);
+            const index2 = document2.features.findIndex((f2) => f2.type === "sheet-base" && !f2.suppressed && bodyIDForFeature(document2, f2) === bodyId);
             if (index2 < 0) throw new Error("This body is not a sheet metal body. Start with a sheet metal base.");
             return { base: document2.features[index2], index: index2 };
           };
@@ -38444,29 +40256,29 @@ function evaluatePartDocument(document2, options = {}) {
             const t = rule.thicknessMillimeters, r = options2.innerRadius, alpha = options2.angleDegrees * Math.PI / 180;
             let result = body;
             for (const edge of pickedEdgesOf(body, bodyId, picks, options2.what)) {
-              const m = edge.pointAt(0.5), mid = [m.x, m.y, m.z];
-              m.delete();
-              const s = edge.startPoint, a = [s.x, s.y, s.z];
+              const m2 = edge.pointAt(0.5), mid = [m2.x, m2.y, m2.z];
+              m2.delete();
+              const s = edge.startPoint, a2 = [s.x, s.y, s.z];
               s.delete();
               const en = edge.endPoint, b = [en.x, en.y, en.z];
               en.delete();
-              const length = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-              const tdir = unit$1(sub$3(b, a));
-              const faces = new FaceFinder().containsPoint(mid).find(body).filter((f) => f.geomType === "PLANE");
+              const length = Math.hypot(b[0] - a2[0], b[1] - a2[1], b[2] - a2[2]);
+              const tdir = unit$1(sub$3(b, a2));
+              const faces = new FaceFinder().containsPoint(mid).find(body).filter((f2) => f2.geomType === "PLANE");
               if (!faces.length) throw new Error(`${options2.what}: the picked edge is not on a flat face of the sheet.`);
-              const face = faces.reduce((big, f) => measureArea(f) > measureArea(big) ? f : big);
+              const face = faces.reduce((big, f2) => measureArea(f2) > measureArea(big) ? f2 : big);
               const nv = face.normalAt(mid);
               let n = unit$1([nv.x, nv.y, nv.z]);
               nv.delete();
               let o = unit$1(cross$3(n, tdir));
-              const c = face.center, away = sub$3(mid, [c.x, c.y, c.z]);
-              c.delete();
+              const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
+              c2.delete();
               if (dot$3(o, away) < 0) o = neg(o);
               if (feature.id === previewId && !previewHandles.length) {
                 publish(feature, { parameter: feature.type === "sheet-hem" ? "length" : "distance", kind: "linear", originMillimeters: mid, direction: o, label: feature.type === "sheet-hem" ? "Hem length" : "Flange length" });
                 if (feature.type === "sheet-flange") publish(feature, { parameter: "angle", kind: "angular", originMillimeters: mid, direction: tdir, label: "Flange angle" });
               }
-              const v = (y) => options2.inward ? -t - y : y;
+              const v = (y2) => options2.inward ? -t - y2 : y2;
               const pen = draw([0, v(0)]);
               if (options2.flat) {
                 const reach = options2.leg + bendAllowanceMillimeters(options2.angleDegrees, r, rule);
@@ -38476,10 +40288,10 @@ function evaluatePartDocument(document2, options = {}) {
               } else {
                 const C = [0, -(t + r)];
                 const at = (rho, theta) => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
-                const d = [Math.cos(alpha), -Math.sin(alpha)];
+                const d2 = [Math.cos(alpha), -Math.sin(alpha)];
                 const outerEnd = at(r + t, alpha), innerEnd = at(r, alpha), L = options2.leg;
-                const dv = options2.inward ? -d[1] : d[1];
-                const lo = [outerEnd[0] + L * d[0], outerEnd[1] + L * dv], li = [innerEnd[0] + L * d[0], innerEnd[1] + L * dv];
+                const dv = options2.inward ? -d2[1] : d2[1];
+                const lo = [outerEnd[0] + L * d2[0], outerEnd[1] + L * dv], li = [innerEnd[0] + L * d2[0], innerEnd[1] + L * dv];
                 pen.threePointsArcTo(outerEnd, at(r + t, alpha / 2));
                 pen.lineTo(lo);
                 pen.lineTo(li);
@@ -38487,7 +40299,7 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
               const section2 = own(pen.close());
-              const zdir = unit$1(cross$3(o, n)), from = dot$3(zdir, tdir) > 0 ? a : b;
+              const zdir = unit$1(cross$3(o, n)), from = dot$3(zdir, tdir) > 0 ? a2 : b;
               const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
               const piece = own(section2.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
@@ -38513,20 +40325,20 @@ function evaluatePartDocument(document2, options = {}) {
             const { base } = sheetRuleOf(id2);
             const t = base.thicknessMillimeters, r = feature.bendRadiusMillimeters ?? base.bendRadiusMillimeters, alpha = feature.angleDegrees * Math.PI / 180;
             const ba = bendAllowanceMillimeters(feature.angleDegrees, r, base);
-            const [p, q] = sketchLine(feature.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
-            const tdir = unit$1(sub$3(q, p));
-            publish(feature, { parameter: "angle", kind: "angular", originMillimeters: scale(add$2(p, q), 0.5), direction: tdir, label: "Fold angle" });
-            const faces = body.faces.filter((f) => f.geomType === "PLANE");
-            const onFace = faces.filter((f) => {
-              const c = f.center, nv2 = f.normalAt(c);
+            const [p2, q] = sketchLine(feature.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
+            const tdir = unit$1(sub$3(q, p2));
+            publish(feature, { parameter: "angle", kind: "angular", originMillimeters: scale(add$2(p2, q), 0.5), direction: tdir, label: "Fold angle" });
+            const faces = body.faces.filter((f2) => f2.geomType === "PLANE");
+            const onFace = faces.filter((f2) => {
+              const c2 = f2.center, nv2 = f2.normalAt(c2);
               const n2 = [nv2.x, nv2.y, nv2.z];
-              const dPlane = Math.abs(dot$3(n2, sub$3(p, [c.x, c.y, c.z])));
-              c.delete();
+              const dPlane = Math.abs(dot$3(n2, sub$3(p2, [c2.x, c2.y, c2.z])));
+              c2.delete();
               nv2.delete();
               return dPlane < 1e-4;
             });
             if (!onFace.length) throw new Error("The fold line must lie on a flat face of the sheet.");
-            const face = onFace.reduce((big, f) => measureArea(f) > measureArea(big) ? f : big);
+            const face = onFace.reduce((big, f2) => measureArea(f2) > measureArea(big) ? f2 : big);
             const nv = face.normalAt(face.center);
             let n = unit$1([nv.x, nv.y, nv.z]);
             nv.delete();
@@ -38534,19 +40346,19 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature.otherSide) o = neg(o);
             const bounds2 = body.boundingBox.bounds, span = 4 * Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]);
             const slab = (from, to) => {
-              const d = own(draw([from, -span]).lineTo([to, -span]).lineTo([to, span]).lineTo([from, span]).close());
-              const plane2 = own(new Plane([p[0], p[1], p[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
-              const piece = own(d.sketchOnPlane(plane2)).extrude(span * 2);
+              const d2 = own(draw([from, -span]).lineTo([to, -span]).lineTo([to, span]).lineTo([from, span]).close());
+              const plane2 = own(new Plane([p2[0], p2[1], p2[2]], [o[0], o[1], o[2]], [-tdir[0], -tdir[1], -tdir[2]]));
+              const piece = own(d2.sketchOnPlane(plane2)).extrude(span * 2);
               return own(piece.translate(tdir[0] * span, tdir[1] * span, tdir[2] * span));
             };
             const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
             if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
             const sb = strip.boundingBox.bounds;
-            const along = (pt) => dot$3(sub$3(pt, p), tdir);
+            const along = (pt) => dot$3(sub$3(pt, p2), tdir);
             const corners2 = [];
-            for (const x of [sb[0][0], sb[1][0]]) for (const y of [sb[0][1], sb[1][1]]) for (const z of [sb[0][2], sb[1][2]]) corners2.push([x, y, z]);
+            for (const x2 of [sb[0][0], sb[1][0]]) for (const y2 of [sb[0][1], sb[1][1]]) for (const z2 of [sb[0][2], sb[1][2]]) corners2.push([x2, y2, z2]);
             const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
-            const v = (y) => feature.inward ? -t - y : y;
+            const v = (y2) => feature.inward ? -t - y2 : y2;
             const C = [0, -(t + r)];
             const at = (rho, theta) => [C[0] + rho * Math.sin(theta), v(C[1] + rho * Math.cos(theta))];
             const pen = draw([0, v(0)]);
@@ -38555,10 +40367,10 @@ function evaluatePartDocument(document2, options = {}) {
             pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
             const section2 = own(pen.close());
             const zdir = unit$1(cross$3(o, n));
-            const start = add$2(p, scale(tdir, dot$3(zdir, tdir) > 0 ? s0 : s1));
+            const start = add$2(p2, scale(tdir, dot$3(zdir, tdir) > 0 ? s0 : s1));
             const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
             const bend = own(own(section2.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
-            const axisOrigin = add$2(p, scale(n, feature.inward ? r : -(t + r)));
+            const axisOrigin = add$2(p2, scale(n, feature.inward ? r : -(t + r)));
             const sign = feature.inward ? 1 : -1;
             const turned = own(own(moving.translate(-o[0] * ba, -o[1] * ba, -o[2] * ba)).rotate(sign * feature.angleDegrees, axisOrigin, tdir));
             const result = own(own(fixed.fuse(bend)).fuse(turned));
@@ -38568,14 +40380,14 @@ function evaluatePartDocument(document2, options = {}) {
             currentBodyID = id2;
             continue;
           }
-          const perforations = (body, f, thickness) => {
-            const face = faceByReference(body, f.face, "Perforate face");
-            const c = [...deleteAfterVectorTuple(face.center)], n = unit$1([...deleteAfterVectorTuple(face.normalAt([c[0], c[1], c[2]]))]);
-            const x = unit$1(canonicalPlaneXDirection(n)), y = unit$1(cross$3(n, x));
-            const to2 = (p2) => [dot$3(sub$3(p2, c), x), dot$3(sub$3(p2, c), y)];
-            const polygon = (w) => {
+          const perforations = (body, f2, thickness) => {
+            const face = faceByReference(body, f2.face, "Perforate face");
+            const c2 = [...deleteAfterVectorTuple(face.center)], n = unit$1([...deleteAfterVectorTuple(face.normalAt([c2[0], c2[1], c2[2]]))]);
+            const x2 = unit$1(canonicalPlaneXDirection(n)), y2 = unit$1(cross$3(n, x2));
+            const to2 = (p22) => [dot$3(sub$3(p22, c2), x2), dot$3(sub$3(p22, c2), y2)];
+            const polygon = (w2) => {
               const pts = [];
-              for (const edge of w.edges) {
+              for (const edge of w2.edges) {
                 own(edge);
                 for (let i = 0; i < 24; i++) {
                   const v = edge.pointAt(i / 24);
@@ -38585,7 +40397,7 @@ function evaluatePartDocument(document2, options = {}) {
               }
               return pts;
             };
-            const outer = polygon(own(face.clone().outerWire())), holes = face.clone().innerWires().map((w) => polygon(own(w)));
+            const outer = polygon(own(face.clone().outerWire())), holes = face.clone().innerWires().map((w2) => polygon(own(w2)));
             const inside2 = (poly, [px, py]) => {
               let hit = false;
               for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -38602,17 +40414,17 @@ function evaluatePartDocument(document2, options = {}) {
               }
               return best;
             };
-            const r = f.diameterMillimeters / 2, clear = (f.marginMillimeters ?? f.diameterMillimeters) + r, p = f.pitchMillimeters;
+            const r = f2.diameterMillimeters / 2, clear = (f2.marginMillimeters ?? f2.diameterMillimeters) + r, p2 = f2.pitchMillimeters;
             const xs = outer.map((q) => q[0]), ys = outer.map((q) => q[1]);
             const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-            const rowStep = f.pattern === "square" ? p : p * Math.sqrt(3) / 2;
-            const cols = Math.floor((x1 - x0 - 2 * clear) / p), rows = Math.floor((y1 - y0 - 2 * clear) / rowStep);
-            const startX = (x0 + x1) / 2 - cols * p / 2, startY = (y0 + y1) / 2 - rows * rowStep / 2;
+            const rowStep = f2.pattern === "square" ? p2 : p2 * Math.sqrt(3) / 2;
+            const cols = Math.floor((x1 - x0 - 2 * clear) / p2), rows = Math.floor((y1 - y0 - 2 * clear) / rowStep);
+            const startX = (x0 + x1) / 2 - cols * p2 / 2, startY = (y0 + y1) / 2 - rows * rowStep / 2;
             const points = [];
             for (let j = 0; j <= rows; j++) for (let i = -1; i <= cols + 1; i++) {
-              const q = [startX + i * p + (f.pattern !== "square" && j % 2 ? p / 2 : 0), startY + j * rowStep];
+              const q = [startX + i * p2 + (f2.pattern !== "square" && j % 2 ? p2 / 2 : 0), startY + j * rowStep];
               if (!inside2(outer, q) || holes.some((h) => inside2(h, q)) || distance2(outer, q) < clear - 1e-9 || holes.some((h) => distance2(h, q) < clear - 1e-9)) continue;
-              points.push(add$2(add$2(c, scale(x, q[0])), scale(y, q[1])));
+              points.push(add$2(add$2(c2, scale(x2, q[0])), scale(y2, q[1])));
               if (points.length > 5e3) throw new Error("Perforate would make more than 5000 holes. Increase the pitch.");
             }
             if (!points.length) throw new Error("No hole fits inside the margin. Reduce the margin, the diameter or the pitch.");
@@ -38637,13 +40449,13 @@ function evaluatePartDocument(document2, options = {}) {
             const plate = bodyAt(base.id, id2);
             if (!plate) throw new Error("The sheet metal base is unavailable.");
             let flat = own(plate.clone());
-            for (let k = baseIndex + 1; k < index; k++) {
-              const f = document2.features[k];
-              if (f.type === "sheet-perforate" && !f.suppressed && f.bodyIds[0] === id2) {
-                const before = bodyAt(document2.features[k - 1].id, id2);
+            for (let k2 = baseIndex + 1; k2 < index; k2++) {
+              const f2 = document2.features[k2];
+              if (f2.type === "sheet-perforate" && !f2.suppressed && f2.bodyIds[0] === id2) {
+                const before = bodyAt(document2.features[k2 - 1].id, id2);
                 if (!before) continue;
-                const { tools: tools2, points } = perforations(before, f, base.thicknessMillimeters);
-                const onPlate = tools2.filter((_, i) => {
+                const { tools: tools2, points } = perforations(before, f2, base.thicknessMillimeters);
+                const onPlate = tools2.filter((_2, i) => {
                   const v = own(makeVertex(points[i]));
                   return measureDistanceBetween(plate, v) < 1e-6;
                 });
@@ -38653,8 +40465,8 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 continue;
               }
-              if (f.suppressed || f.type !== "sheet-flange" && f.type !== "sheet-hem" || f.bodyIds[0] !== id2) continue;
-              flat = f.type === "sheet-flange" ? bendFromEdges(flat, id2, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, f.edges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
+              if (f2.suppressed || f2.type !== "sheet-flange" && f2.type !== "sheet-hem" || f2.bodyIds[0] !== id2) continue;
+              flat = f2.type === "sheet-flange" ? bendFromEdges(flat, id2, f2.edges, base, { leg: f2.distanceMillimeters, angleDegrees: f2.angleDegrees, innerRadius: f2.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, f2.edges, base, { leg: f2.lengthMillimeters, angleDegrees: 180, innerRadius: f2.gapMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" });
             }
             bodies.set(id2, flat);
             currentBodyID = id2;
@@ -38662,7 +40474,7 @@ function evaluatePartDocument(document2, options = {}) {
           }
           if (feature.type === "sheet-refold") {
             const id2 = feature.bodyIds[0];
-            const unfoldIndex = document2.features.slice(0, index).map((f, i) => ({ f, i })).reverse().find(({ f }) => f.type === "sheet-unfold" && !f.suppressed && f.bodyIds[0] === id2)?.i;
+            const unfoldIndex = document2.features.slice(0, index).map((f2, i) => ({ f: f2, i })).reverse().find(({ f: f2 }) => f2.type === "sheet-unfold" && !f2.suppressed && f2.bodyIds[0] === id2)?.i;
             if (unfoldIndex === void 0 || unfoldIndex === 0) throw new Error("Refold needs an earlier Unfold of this body.");
             const folded = cached[unfoldIndex - 1]?.bodies.get(id2);
             if (!folded) throw new Error("The folded sheet is unavailable.");
@@ -38688,9 +40500,9 @@ function evaluatePartDocument(document2, options = {}) {
             }
             const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
             for (const face of body.faces) {
-              const c = face.center;
-              const keep = Math.hypot(c.x - centre[0], c.y - centre[1], c.z - centre[2]) > 1e-6;
-              c.delete();
+              const c2 = face.center;
+              const keep = Math.hypot(c2.x - centre[0], c2.y - centre[1], c2.z - centre[2]) > 1e-6;
+              c2.delete();
               if (keep) sewing.Add(face.wrapped);
             }
             sewing.Add(rebuilt.wrapped);
@@ -38780,7 +40592,7 @@ function evaluatePartDocument(document2, options = {}) {
           } else if (feature.type === "loft") {
             if (feature.sections.length + [feature.startPoint, feature.endPoint].filter(Boolean).length < 2) throw new Error("Loft requires at least two ordered sections.");
             const wires = feature.sections.map((section2) => sketchWire(section2.profileFeatureId, section2.profileContourId, "Loft section", false, section2.profileRegion ? section2 : void 0));
-            const apex = (a) => !a ? void 0 : a.kind === "point" ? [...a.positionMillimeters] : stopPoint(a);
+            const apex = (a2) => !a2 ? void 0 : a2.kind === "point" ? [...a2.positionMillimeters] : stopPoint(a2);
             const lofted = loft(wires, { ruled: Boolean(feature.ruled), startPoint: apex(feature.startPoint), endPoint: apex(feature.endPoint) });
             if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("Every loft section must be an available closed sketch region.");
             tool22 = own(lofted);
@@ -38805,7 +40617,7 @@ function evaluatePartDocument(document2, options = {}) {
                     owned.push(ax);
                     builder.SetMode_2(ax);
                   } else if (typeof orientation === "object") {
-                    const u = unit$1(orientation.direction), dir = new oc.gp_Dir_4(u[0], u[1], u[2]);
+                    const u2 = unit$1(orientation.direction), dir = new oc.gp_Dir_4(u2[0], u2[1], u2[2]);
                     owned.push(dir);
                     builder.SetMode_3(dir);
                   } else builder.SetMode_1(false);
@@ -38846,10 +40658,10 @@ function evaluatePartDocument(document2, options = {}) {
               return [id2, b];
             });
             const cells = [];
-            for (const p of feature.cellPointsMillimeters) {
-              const v = own(makeVertex(p));
+            for (const p2 of feature.cellPointsMillimeters) {
+              const v = own(makeVertex(p2));
               const inside2 = tools2.filter(([, b]) => measureDistanceBetween(b, v) < 1e-7), outside = tools2.filter((t) => !inside2.includes(t));
-              if (!inside2.length) throw new Error(`The point ${p.map((x) => Math.round(x * 1e3) / 1e3).join(", ")} is outside every tool: a cell must lie inside at least one.`);
+              if (!inside2.length) throw new Error(`The point ${p2.map((x2) => Math.round(x2 * 1e3) / 1e3).join(", ")} is outside every tool: a cell must lie inside at least one.`);
               let cell = own(inside2[0][1].clone());
               for (const [, b] of inside2.slice(1)) {
                 const r = cell.intersect(b);
@@ -38865,8 +40677,8 @@ function evaluatePartDocument(document2, options = {}) {
               cells.push(cell);
             }
             let filled = cells[0];
-            for (const c of cells.slice(1)) {
-              const r = filled.fuse(c);
+            for (const c2 of cells.slice(1)) {
+              const r = filled.fuse(c2);
               if (!isShape3D(r)) throw new Error("The cells could not be joined.");
               filled = own(r);
             }
@@ -38919,25 +40731,25 @@ function evaluatePartDocument(document2, options = {}) {
                 max[i] = Math.max(max[i], b[1][i]);
               }
             }
-            const m = feature.marginMillimeters;
-            publish(feature, { parameter: "margin", kind: "linear", originMillimeters: [max[0] + m, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2], direction: [1, 0, 0], label: "Margin" });
-            tool22 = own(makeBaseBox(max[0] - min[0] + 2 * m, max[1] - min[1] + 2 * m, max[2] - min[2] + 2 * m).translate(min[0] - m, min[1] - m, min[2] - m));
+            const m2 = feature.marginMillimeters;
+            publish(feature, { parameter: "margin", kind: "linear", originMillimeters: [max[0] + m2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2], direction: [1, 0, 0], label: "Margin" });
+            tool22 = own(makeBaseBox(max[0] - min[0] + 2 * m2, max[1] - min[1] + 2 * m2, max[2] - min[2] + 2 * m2).translate(min[0] - m2, min[1] - m2, min[2] - m2));
           } else if (feature.type === "import-step" || feature.type === "import-cad") {
             const format = feature.type === "import-step" ? "step" : feature.format;
-            const bytes = Uint8Array.from(atob(feature.dataBase64), (c) => c.charCodeAt(0));
+            const bytes = Uint8Array.from(atob(feature.dataBase64), (c2) => c2.charCodeAt(0));
             if (!bytes.length || bytes.length > 3 * 1024 * 1024) throw new Error("CAD source must be nonempty and at most 3 MiB.");
             const sewn = (shape) => {
               const solids = solidsOf(shape);
               const inSolids = solids.reduce((count, solid) => {
                 const faces2 = solid.faces;
                 count += faces2.length;
-                faces2.forEach((f) => f.delete());
+                faces2.forEach((f2) => f2.delete());
                 return count;
               }, 0);
               solids.forEach(release);
               const faces = shape.faces;
               const total = faces.length;
-              faces.forEach((f) => f.delete());
+              faces.forEach((f2) => f2.delete());
               if (inSolids !== total) throw new Error("Import contains unsewn surfaces. Repair them before solid import.");
               return shape;
             };
@@ -38959,20 +40771,20 @@ function evaluatePartDocument(document2, options = {}) {
               tool22 = sewn(own(importSolidShape(binarySTL(mesh, scale2), "stl")));
             } else if (format === "iges") {
               if (feature.type === "import-cad" && (feature.meshMode !== void 0 || feature.meshUnits !== void 0)) throw new Error("Exact CAD imports use their embedded source units.");
-              const f = extendedKernel();
-              if (!f) throw new UnsupportedFeature(feature.id, "IGES imports");
+              const f2 = extendedKernel();
+              if (!f2) throw new UnsupportedFeature(feature.id, "IGES imports");
               const name = `/import-${Math.random().toString(36).slice(2)}.igs`;
-              f.FS.writeFile(name, bytes);
-              const reader = new f.IGESControl_Reader_1(), progress = new f.Message_ProgressRange_1();
+              f2.FS.writeFile(name, bytes);
+              const reader = new f2.IGESControl_Reader_1(), progress = new f2.Message_ProgressRange_1();
               try {
-                if (reader.ReadFile(name) !== f.IFSelect_ReturnStatus.IFSelect_RetDone) throw new Error("IGES could not be read.");
+                if (reader.ReadFile(name) !== f2.IFSelect_ReturnStatus.IFSelect_RetDone) throw new Error("IGES could not be read.");
                 reader.TransferRoots(progress);
                 const shape = extendedSolids(reader.OneShape());
                 tool22 = sewn(own(fromExtended(shape)));
               } finally {
                 progress.delete();
                 reader.delete();
-                f.FS.unlink(name);
+                f2.FS.unlink(name);
               }
             } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
           } else if (feature.type === "sheet-base") {
@@ -39004,19 +40816,19 @@ function evaluatePartDocument(document2, options = {}) {
             const bodyA = bodies.get(feature.from.bodyId), bodyB = bodies.get(feature.to.bodyId);
             if (!bodyA || !bodyB) throw new Error("Blend surface needs two available bodies.");
             const o = getOC();
-            const a = chainWire(pickedEdgesOf(bodyA, feature.from.bodyId, feature.from.edges, "Blend surface"), "Blend surface");
+            const a2 = chainWire(pickedEdgesOf(bodyA, feature.from.bodyId, feature.from.edges, "Blend surface"), "Blend surface");
             const b = chainWire(pickedEdgesOf(bodyB, feature.to.bodyId, feature.to.edges, "Blend surface"), "Blend surface");
             const pt = (v) => {
-              const p = [v.x, v.y, v.z];
+              const p2 = [v.x, v.y, v.z];
               v.delete();
-              return p;
+              return p2;
             };
-            const a0 = pt(a.startPoint), a1 = pt(a.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
-            const dist2 = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+            const a0 = pt(a2.startPoint), a1 = pt(a2.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
+            const dist2 = (p2, q) => Math.hypot(p2[0] - q[0], p2[1] - q[1], p2[2] - q[2]);
             const straight = dist2(a1, b1) + dist2(a0, b0) <= dist2(a1, b0) + dist2(a0, b1);
             const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
             const back = straight ? own(cast(b.wrapped.Reversed())) : b;
-            const loop = own(assembleWire([a, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
+            const loop = own(assembleWire([a2, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
             const face = own(makeNonPlanarFace(loop));
             const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
             builder.MakeShell(shell);
@@ -39054,9 +40866,9 @@ function evaluatePartDocument(document2, options = {}) {
               const sketchProfile = profiles.get(sketchId);
               if (!sketchProfile) throw new Error(`${what} needs an earlier sketch.`);
               if (!sketchProfile.contours.length && sketchProfile.regions.length) return [sketchWire(sketchId, void 0, what, false)];
-              const chosen = sketchProfile.contours.filter((c) => (!contourIds || c.id !== void 0 && contourIds.includes(c.id)) && (!closedOnly || contourClosed(c)));
+              const chosen = sketchProfile.contours.filter((c2) => (!contourIds || c2.id !== void 0 && contourIds.includes(c2.id)) && (!closedOnly || contourClosed(c2)));
               if (!chosen.length) throw new Error(`${what}: the sketch has no ${closedOnly ? "closed " : ""}curves to use.`);
-              return chosen.map((c) => sketchWire(sketchId, c.id, what, true));
+              return chosen.map((c2) => sketchWire(sketchId, c2.id, what, true));
             };
             const joined = (raws) => {
               if (raws.length === 1) return sheetOf(raws[0]);
@@ -39066,15 +40878,15 @@ function evaluatePartDocument(document2, options = {}) {
               return sheetOf(sewing.SewedShape());
             };
             const sheetArea = (sheet) => {
-              const a = measureArea(sheet);
-              if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances.");
+              const a2 = measureArea(sheet);
+              if (!(a2 > 1e-9)) throw new Error("The surface has no area. Check the curves and distances.");
               return sheet;
             };
             if (feature.type === "surface-extrude") {
               const frame = sketchFrameOf(feature.profileFeatureId);
-              const d = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
+              const d2 = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
               publish(feature, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature.profileFeatureId), direction: scale(unit$1(frame.normal), feature.reversed ? -1 : 1), scale: feature.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
-              const along = scale(unit$1(frame.normal), d);
+              const along = scale(unit$1(frame.normal), d2);
               const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface extrude");
               tool22 = sheetArea(joined(wires.map((wire) => {
                 const start = feature.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
@@ -39097,7 +40909,7 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t.axisDirection;
               }
               if (feature.id === previewId) {
-                const c = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c, origin), axis);
+                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c2, origin), axis);
                 publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale(axis, t)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature.angleDegrees * Math.PI / 180 * (feature.reversed ? -1 : 1);
@@ -39126,9 +40938,9 @@ function evaluatePartDocument(document2, options = {}) {
               if (feature.id === previewId) {
                 const f0 = body.faces[0];
                 if (f0) {
-                  const c = f0.center, nv = f0.normalAt(c);
-                  publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Offset distance" });
-                  c.delete();
+                  const c2 = f0.center, nv = f0.normalAt(c2);
+                  publish(feature, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Offset distance" });
+                  c2.delete();
                   nv.delete();
                   f0.delete();
                 }
@@ -39146,9 +40958,9 @@ function evaluatePartDocument(document2, options = {}) {
                 if (feature.id === previewId && id2 === feature.bodyIds[0]) {
                   const f0 = sheet.faces[0];
                   if (f0) {
-                    const c = f0.center, nv = f0.normalAt(c);
-                    publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c.x, c.y, c.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Thickness" });
-                    c.delete();
+                    const c2 = f0.center, nv = f0.normalAt(c2);
+                    publish(feature, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Thickness" });
+                    c2.delete();
                     nv.delete();
                     f0.delete();
                   }
@@ -39201,7 +41013,7 @@ function evaluatePartDocument(document2, options = {}) {
             const basePlane = typeof profile.plane === "string" ? own(new Plane(frame.originMillimeters, frame.xDirection, frame.normal)) : profile.plane;
             const n = unit$1(frame.normal), o = frame.originMillimeters;
             const circleWire = (region) => {
-              const circle = !region.holes?.length ? profile.circles.find((c) => c.key === region.key) : void 0;
+              const circle = !region.holes?.length ? profile.circles.find((c2) => c2.key === region.key) : void 0;
               if (!circle) return void 0;
               const center = deleteAfterVectorTuple(basePlane.toWorldCoords(circle.center));
               return own(assembleWire([own(makeCircle(circle.radius, [center[0], center[1], center[2]], n))]));
@@ -39242,16 +41054,16 @@ function evaluatePartDocument(document2, options = {}) {
                 const start = feature.startingReference;
                 let origin, normal;
                 if (start.kind === "principal") {
-                  const f = principalFrame(start.plane, 0);
-                  origin = f.originMillimeters;
-                  normal = f.normal;
+                  const f2 = principalFrame(start.plane, 0);
+                  origin = f2.originMillimeters;
+                  normal = f2.normal;
                 } else if (start.kind === "plane") {
-                  const sourceIndex = history.findIndex((f2) => f2.id === start.sourceFeatureId);
+                  const sourceIndex = history.findIndex((f22) => f22.id === start.sourceFeatureId);
                   const plane2 = sourceIndex >= 0 && sourceIndex < index ? history[sourceIndex] : void 0;
                   if (!plane2 || plane2.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
-                  const f = resolvePlaneFrame(plane2, history.slice(0, sourceIndex));
-                  origin = f.originMillimeters;
-                  normal = f.normal;
+                  const f2 = resolvePlaneFrame(plane2, history.slice(0, sourceIndex));
+                  origin = f2.originMillimeters;
+                  normal = f2.normal;
                 } else {
                   normal = unit$1(start.normal);
                   origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
@@ -39329,9 +41141,9 @@ function evaluatePartDocument(document2, options = {}) {
                 return { axis, alignment: dot$3(axis, dir), origin: dot$3(o, axis) };
               };
               const farthestAlong = (shapes, axis) => {
-                let m = -Infinity;
-                for (const shape2 of shapes) for (const c of corners(shape2.boundingBox.bounds)) m = Math.max(m, dot$3(c, axis));
-                return m;
+                let m2 = -Infinity;
+                for (const shape2 of shapes) for (const c2 of corners(shape2.boundingBox.bounds)) m2 = Math.max(m2, dot$3(c2, axis));
+                return m2;
               };
               const diagonalOf = (shape2) => {
                 const b = shape2.boundingBox.bounds;
@@ -39364,8 +41176,8 @@ function evaluatePartDocument(document2, options = {}) {
                   if (!source) throw new Error("Up to face reference is unavailable. Reselect the stopping face.");
                   const stopFace = surfaceFaceOf(source, ref.surfaceType, ref.faceAnchor, "Up to face");
                   if (extendedStopSurfaces.includes(ref.surfaceType)) {
-                    const f = extendedKernel();
-                    if (!f) {
+                    const f2 = extendedKernel();
+                    if (!f2) {
                       stopFace.delete();
                       throw new UnsupportedFeature(feature.id, `${ref.surfaceType} stopping faces`);
                     }
@@ -39382,24 +41194,24 @@ function evaluatePartDocument(document2, options = {}) {
                     const tool5 = prism(start, start + 4 * span3, dir), ends2 = capFaces(tool5, dir, 1);
                     const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
                     const faceX = toExtended(stopFace), toolX = toExtended(tool5);
-                    const handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
-                    const adaptor2 = new f.GeomAdaptor_Surface_2(handle);
+                    const handle = f2.BRep_Tool.Surface_2(f2.TopoDS.Face_1(faceX));
+                    const adaptor2 = new f2.GeomAdaptor_Surface_2(handle);
                     const clamp2 = (value2, fallback) => Math.abs(value2) > 1e99 ? fallback : value2;
                     const reach = 4 * span3 + diagonalOfShape(stopFace);
-                    const maker = new f.BRepBuilderAPI_MakeFace_14(handle, clamp2(adaptor2.FirstUParameter(), -reach), clamp2(adaptor2.LastUParameter(), reach), clamp2(adaptor2.FirstVParameter(), -reach), clamp2(adaptor2.LastVParameter(), reach), 1e-7);
+                    const maker = new f2.BRepBuilderAPI_MakeFace_14(handle, clamp2(adaptor2.FirstUParameter(), -reach), clamp2(adaptor2.LastUParameter(), reach), clamp2(adaptor2.FirstVParameter(), -reach), clamp2(adaptor2.LastVParameter(), reach), 1e-7);
                     adaptor2.delete();
                     let patchX = maker.Face();
                     if (end.endOffset) {
-                      const move = new f.gp_Trsf_1(), vec2 = new f.gp_Vec_4(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset);
+                      const move = new f2.gp_Trsf_1(), vec2 = new f2.gp_Vec_4(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset);
                       move.SetTranslation_1(vec2);
-                      const mover = new f.BRepBuilderAPI_Transform_2(patchX, move, true);
+                      const mover = new f2.BRepBuilderAPI_Transform_2(patchX, move, true);
                       patchX = mover.Shape();
                       mover.delete();
                       vec2.delete();
                       move.delete();
                     }
-                    const progress = new f.Message_ProgressRange_1();
-                    const splitter = new f.BRepAlgoAPI_Splitter_1(), arguments_ = new f.TopTools_ListOfShape_1(), tools_ = new f.TopTools_ListOfShape_1();
+                    const progress = new f2.Message_ProgressRange_1();
+                    const splitter = new f2.BRepAlgoAPI_Splitter_1(), arguments_ = new f2.TopTools_ListOfShape_1(), tools_ = new f2.TopTools_ListOfShape_1();
                     arguments_.Append_1(toolX);
                     tools_.Append_1(patchX);
                     splitter.SetArguments(arguments_);
@@ -39463,12 +41275,12 @@ function evaluatePartDocument(document2, options = {}) {
                   const adaptor = new oc.BRepAdaptor_Surface_2(stopFace.wrapped, true);
                   let axisLocation, axisDirection = [0, 0, 1], radius;
                   if (ref.surfaceType === "cylinder") {
-                    const cylinder = adaptor.Cylinder(), axis2 = cylinder.Axis(), l = axis2.Location(), d = axis2.Direction();
+                    const cylinder = adaptor.Cylinder(), axis2 = cylinder.Axis(), l = axis2.Location(), d2 = axis2.Direction();
                     axisLocation = [l.X(), l.Y(), l.Z()];
-                    axisDirection = unit$1([d.X(), d.Y(), d.Z()]);
+                    axisDirection = unit$1([d2.X(), d2.Y(), d2.Z()]);
                     radius = cylinder.Radius();
                     l.delete();
-                    d.delete();
+                    d2.delete();
                     axis2.delete();
                     cylinder.delete();
                   } else {
@@ -39482,7 +41294,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const stopCenter = [...deleteAfterVectorTuple(stopFace.center)], stopDiagonal = diagonalOfShape(stopFace);
                   stopFace.delete();
                   const probe2 = prism(start, start + 1, dir);
-                  const startDiagonal = diagonalOf(probe2), epsilon = Math.max(1e-6, startDiagonal * 1e-9);
+                  const startDiagonal = diagonalOf(probe2), epsilon2 = Math.max(1e-6, startDiagonal * 1e-9);
                   const starts = capFaces(probe2, dir, -1);
                   if (starts.length !== 1) {
                     starts.forEach((cap) => cap.delete());
@@ -39493,7 +41305,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const [firstEdge] = startCap.edges;
                   const vertex = [...deleteAfterVectorTuple(firstEdge.startPoint)];
                   firstEdge.delete();
-                  const sample = add$2(vertex, scale(dir, epsilon));
+                  const sample = add$2(vertex, scale(dir, epsilon2));
                   const fromAxis = ref.surfaceType === "cylinder" ? norm$2(cross$3(sub$3(sample, axisLocation), axisDirection)) : norm$2(sub$3(sample, axisLocation));
                   const inside2 = fromAxis < radius;
                   const span2 = Math.max(1, norm$2(sub$3(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
@@ -39506,14 +41318,14 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                   const surface = end.endOffset ? own(primitive.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : primitive;
                   if (end.endOffset) half2 = own(half2.translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset));
-                  const shifted = own(startCap.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
+                  const shifted = own(startCap.clone().translate(dir[0] * epsilon2, dir[1] * epsilon2, dir[2] * epsilon2));
                   if (Math.abs(commonArea(shifted, half2) - startArea) > tolerance2) {
                     startCap.delete();
                     throw new Error("The stopping surface crosses or lies behind the extrusion start. Adjust the start or end offset.");
                   }
                   const { axis, alignment: alignment2, origin } = axisOf(dir);
                   const high2 = (farthestAlong([half2], axis) - origin) / alignment2 + 1;
-                  if (!(high2 > start + epsilon)) {
+                  if (!(high2 > start + epsilon2)) {
                     startCap.delete();
                     throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset.");
                   }
@@ -39572,11 +41384,11 @@ function evaluatePartDocument(document2, options = {}) {
                 const limits = [...bodies.values()];
                 if (!limits.length) throw new Error("Up to next requires an existing part in the extrusion direction.");
                 const { axis, alignment, origin } = axisOf(dir);
-                const epsilon = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-9);
+                const epsilon2 = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-9);
                 let reach = (farthestAlong(limits, axis) - origin) / alignment - low2;
-                if (!Number.isFinite(reach) || reach <= epsilon) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
+                if (!Number.isFinite(reach) || reach <= epsilon2) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
                 reach += Math.max(1, Math.max(...limits.map(diagonalOf)) * 1e-6) / alignment;
-                const probe = prism(low2 + epsilon, low2 + epsilon + reach, dir);
+                const probe = prism(low2 + epsilon2, low2 + epsilon2 + reach, dir);
                 const length = reach + Math.abs(end.endOffset) + 1;
                 const tool3 = prism(low2, low2 + length, dir);
                 const shadows = [];
@@ -39625,15 +41437,15 @@ function evaluatePartDocument(document2, options = {}) {
                 if (!limit) throw new Error("The stopping part is unavailable. Reselect an earlier solid part.");
                 const stop = end.endOffset ? own(limit.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : limit;
                 const { axis, alignment, origin } = axisOf(dir);
-                const epsilon = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-8);
-                const bound2 = (farthestAlong([stop], axis) - origin) / alignment + epsilon * 10;
-                if (!Number.isFinite(bound2) || bound2 <= low2 + epsilon) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
+                const epsilon2 = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-8);
+                const bound2 = (farthestAlong([stop], axis) - origin) / alignment + epsilon2 * 10;
+                if (!Number.isFinite(bound2) || bound2 <= low2 + epsilon2) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
                 const tool3 = prism(low2, bound2, dir);
                 const starts = capFaces(tool3, dir, -1), ends = capFaces(tool3, dir, 1);
                 try {
                   if (starts.length !== 1) throw new UnsupportedFeature(feature.id, "up-to-part extrusions of several regions");
                   const start = starts[0], startArea = measureArea(start), tolerance2 = Math.max(1e-8, startArea * 1e-8);
-                  const shifted = own(start.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
+                  const shifted = own(start.clone().translate(dir[0] * epsilon2, dir[1] * epsilon2, dir[2] * epsilon2));
                   const overlap = commonArea(shifted, stop);
                   const inside2 = Math.abs(overlap - startArea) <= tolerance2;
                   if (!inside2 && overlap > tolerance2) throw new Error("The stopping part crosses the extrusion start. Move the start to one side of its boundary.");
@@ -39689,27 +41501,27 @@ function evaluatePartDocument(document2, options = {}) {
             const extrudeThin = () => {
               if (feature.type !== "extrude" || !feature.thin) throw new Error("not a thin extrude");
               const thin = feature.thin;
-              let a = thin.thickness1Millimeters, b = thin.thickness2Millimeters;
-              if (![a, b].every((v) => Number.isFinite(v) && v >= 0 && v <= 1e6)) throw new Error("Wall thicknesses must be finite nonnegative distances up to 1000000 mm.");
+              let a2 = thin.thickness1Millimeters, b = thin.thickness2Millimeters;
+              if (![a2, b].every((v) => Number.isFinite(v) && v >= 0 && v <= 1e6)) throw new Error("Wall thicknesses must be finite nonnegative distances up to 1000000 mm.");
               if (thin.midplane) {
                 const total = thin.midplaneThicknessMillimeters ?? 0;
                 if (!Number.isFinite(total) || !(total > 0) || total > 1e6) throw new Error("Mid plane thickness must be positive and at most 1000000 mm.");
-                a = b = total / 2;
+                a2 = b = total / 2;
               }
-              if (a + b <= 1e-7) throw new Error("The total wall thickness must be positive.");
-              if (thin.flipped) [a, b] = [b, a];
+              if (a2 + b <= 1e-7) throw new Error("The total wall thickness must be positive.");
+              if (thin.flipped) [a2, b] = [b, a2];
               const named = picks.map((pick) => pick.profileContourId).filter((id2) => id2 !== void 0);
               if (!named.length) throw new Error("Select sketch curves for the thin wall.");
               const oc = getOC();
               const tools2 = [];
               for (const id2 of named) {
-                const contour = profile.contours.find((c) => c.id === id2);
+                const contour = profile.contours.find((c2) => c2.id === id2);
                 if (!contour) throw new Error("A selected curve is no longer in its sketch.");
                 const base = own(contourDrawing(contour, feature.id));
                 if (contourClosed(contour)) {
                   let wall;
                   try {
-                    const outer = a > 1e-12 ? own(base.offset(a, { lineJoinType: "miter" })) : base;
+                    const outer = a2 > 1e-12 ? own(base.offset(a2, { lineJoinType: "miter" })) : base;
                     const inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base;
                     wall = own(outer.cut(inner));
                   } catch (error) {
@@ -39752,21 +41564,21 @@ function evaluatePartDocument(document2, options = {}) {
                       op.delete();
                       const wires = result2.wires;
                       if (wires.length === 1 && !wires[0].isClosed) candidate = wires[0];
-                      else wires.forEach((w) => w.delete());
+                      else wires.forEach((w2) => w2.delete());
                       if (result2 !== candidate) result2.delete();
                     } catch {
                       candidate = void 0;
                     }
                     if (!candidate) continue;
-                    const p = point2(candidate.startPoint), q = point2(candidate.endPoint);
-                    const forward = norm$2(sub$3(p, startTarget)) < tolerance2 && norm$2(sub$3(q, endTarget)) < tolerance2;
-                    const backward = norm$2(sub$3(q, startTarget)) < tolerance2 && norm$2(sub$3(p, endTarget)) < tolerance2;
-                    if (forward || backward) return { wire: own(candidate), start: forward ? p : q, end: forward ? q : p };
+                    const p2 = point2(candidate.startPoint), q = point2(candidate.endPoint);
+                    const forward = norm$2(sub$3(p2, startTarget)) < tolerance2 && norm$2(sub$3(q, endTarget)) < tolerance2;
+                    const backward = norm$2(sub$3(q, startTarget)) < tolerance2 && norm$2(sub$3(p2, endTarget)) < tolerance2;
+                    if (forward || backward) return { wire: own(candidate), start: forward ? p2 : q, end: forward ? q : p2 };
                     candidate.delete();
                   }
                   throw new Error("This wall offset collapses or changes the open contour. Reduce thickness or repair the sketch.");
                 };
-                const right = offsetOpen(a), left = offsetOpen(-b);
+                const right = offsetOpen(a2), left = offsetOpen(-b);
                 const chain = (side, from) => {
                   const remaining = side.edges, ordered = [];
                   let at = from;
@@ -39814,7 +41626,7 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t.axisDirection;
               }
               if (feature.id === previewId) {
-                const c = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c, origin), axis);
+                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c2, origin), axis);
                 publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale(axis, t)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature.angleDegrees, second = feature.secondAngleDegrees ?? 0;
@@ -39831,10 +41643,10 @@ function evaluatePartDocument(document2, options = {}) {
               return isShape3D(shape) ? own(shape).simplify() : shape;
             };
             if (feature.type === "extrude" && feature.id === previewId) {
-              const frame2 = sketchFrameOf(feature.profileFeatureId), n2 = unit$1(frame2.normal), c = sketchCentroid(feature.profileFeatureId);
+              const frame2 = sketchFrameOf(feature.profileFeatureId), n2 = unit$1(frame2.normal), c2 = sketchCentroid(feature.profileFeatureId);
               const symmetric = feature.endType === "symmetric" || feature.endType === "symmetric-through-all";
-              previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c, direction: n2, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature.reversed) });
-              if (feature.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c, direction: [-n2[0], -n2[1], -n2[2]], scale: 1, reversed: Boolean(feature.reversed) });
+              previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c2, direction: n2, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature.reversed) });
+              if (feature.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c2, direction: [-n2[0], -n2[1], -n2[2]], scale: 1, reversed: Boolean(feature.reversed) });
             }
             const result = own(feature.type === "extrude" ? feature.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen) : revolve());
             if (!isShape3D(result))
@@ -39891,8 +41703,8 @@ function evaluatePartDocument(document2, options = {}) {
                   return 0;
                 }
               };
-              const overlap = (a, b) => {
-                const common = a.intersect(b);
+              const overlap = (a2, b) => {
+                const common = a2.intersect(b);
                 const volume = volumeOf(common);
                 release(common);
                 return volume;
@@ -39921,7 +41733,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const shape = group.shapes.length === 1 ? group.shapes[0] : own(group.shapes.slice(1).reduce((all, part) => own(all.fuse(part)), group.shapes[0]));
                   pending.push({ sources: ordered, shape });
                 }
-                pending.sort((a, b) => targets.indexOf(a.sources[0]) - targets.indexOf(b.sources[0]));
+                pending.sort((a2, b) => targets.indexOf(a2.sources[0]) - targets.indexOf(b.sources[0]));
               } else {
                 const toolBox = tool22.boundingBox.bounds;
                 const boxesMeet = (box) => [0, 1, 2].every((i) => box[0][i] <= toolBox[1][i] + 1e-7 && toolBox[0][i] <= box[1][i] + 1e-7);
@@ -40054,35 +41866,35 @@ function initNodeKernel(wasmBinary) {
 function solidMeasures(shape) {
   const faces = shape.faces, edges = shape.edges;
   const measures = { volume_mm3: measureVolume(shape), face_count: faces.length, edge_count: edges.length };
-  faces.forEach((f) => f.delete());
+  faces.forEach((f2) => f2.delete());
   edges.forEach((e) => e.delete());
   return measures;
 }
-const add$1 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const sub$2 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot$2 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross$2 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm$1 = (a) => Math.hypot(a[0], a[1], a[2]);
-const qmul = (a, b) => [
-  a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
-  a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
-  a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
-  a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]
+const add$1 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const sub$2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const dot$2 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const cross$2 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm$1 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const qmul = (a2, b) => [
+  a2[3] * b[0] + a2[0] * b[3] + a2[1] * b[2] - a2[2] * b[1],
+  a2[3] * b[1] - a2[0] * b[2] + a2[1] * b[3] + a2[2] * b[0],
+  a2[3] * b[2] + a2[0] * b[1] - a2[1] * b[0] + a2[2] * b[3],
+  a2[3] * b[3] - a2[0] * b[0] - a2[1] * b[1] - a2[2] * b[2]
 ];
 const qnorm = (q) => {
   const l = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
   return [q[0] / l, q[1] / l, q[2] / l, q[3] / l];
 };
 const rotate = (q, v) => {
-  const [x, y, z, w] = q;
-  const t = [2 * (y * v[2] - z * v[1]), 2 * (z * v[0] - x * v[2]), 2 * (x * v[1] - y * v[0])];
-  return [v[0] + w * t[0] + (y * t[2] - z * t[1]), v[1] + w * t[1] + (z * t[0] - x * t[2]), v[2] + w * t[2] + (x * t[1] - y * t[0])];
+  const [x2, y2, z2, w2] = q;
+  const t = [2 * (y2 * v[2] - z2 * v[1]), 2 * (z2 * v[0] - x2 * v[2]), 2 * (x2 * v[1] - y2 * v[0])];
+  return [v[0] + w2 * t[0] + (y2 * t[2] - z2 * t[1]), v[1] + w2 * t[1] + (z2 * t[0] - x2 * t[2]), v[2] + w2 * t[2] + (x2 * t[1] - y2 * t[0])];
 };
-const expq = (w) => {
-  const a = norm$1(w);
-  if (a < 1e-12) return [w[0] / 2, w[1] / 2, w[2] / 2, 1];
-  const s = Math.sin(a / 2) / a;
-  return qnorm([w[0] * s, w[1] * s, w[2] * s, Math.cos(a / 2)]);
+const expq = (w2) => {
+  const a2 = norm$1(w2);
+  if (a2 < 1e-12) return [w2[0] / 2, w2[1] / 2, w2[2] / 2, 1];
+  const s = Math.sin(a2 / 2) / a2;
+  return qnorm([w2[0] * s, w2[1] * s, w2[2] * s, Math.cos(a2 / 2)]);
 };
 function frameOf(pose, end) {
   const local2 = end.placement_mm ? [...end.placement_mm] : [0, 0, 0];
@@ -40100,30 +41912,30 @@ const DOF_TEMPLATES = {
   parallel: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "translation_z", kind: "translation", axis: "z", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
   ball: [{ name: "rotation_x", kind: "rotation", axis: "x", value: 0 }, { name: "rotation_y", kind: "rotation", axis: "y", value: 0 }, { name: "rotation_z", kind: "rotation", axis: "z", value: 0 }]
 };
-const templateDof = (kind, name) => DOF_TEMPLATES[kind]?.find((d) => d.name === name);
+const templateDof = (kind, name) => DOF_TEMPLATES[kind]?.find((d2) => d2.name === name);
 const solvableMateKinds = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
-function dofValue(kind, axis, a, b) {
-  if (kind === "translation") return dot$2(sub$2(b.o, a.o), a[axis]);
+function dofValue(kind, axis, a2, b) {
+  if (kind === "translation") return dot$2(sub$2(b.o, a2.o), a2[axis]);
   const companion = axis === "z" ? "x" : axis === "x" ? "y" : "z";
-  const u = a[companion], v = b[companion], n = a[axis];
-  return Math.atan2(dot$2(cross$2(u, v), n), dot$2(u, v)) * 180 / Math.PI;
+  const u2 = a2[companion], v = b[companion], n = a2[axis];
+  return Math.atan2(dot$2(cross$2(u2, v), n), dot$2(u2, v)) * 180 / Math.PI;
 }
-function valueResiduals(a, b, parameters = {}) {
+function valueResiduals(a2, b, parameters = {}) {
   const values = parameters.dofs ?? [];
   return values.map((dof) => {
-    const current2 = dofValue(dof.kind, dof.axis, a, b);
+    const current2 = dofValue(dof.kind, dof.axis, a2, b);
     return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * ((current2 - dof.value + 540) % 360 - 180);
   });
 }
-function jointResiduals(kind, a, b, parameters = {}) {
-  const d = sub$2(b.o, a.o), S = ORIENTATION_SCALE;
-  const coincide = () => [d[0], d[1], d[2]];
-  const onAxis = () => [dot$2(d, a.x), dot$2(d, a.y)];
-  const zAligned = () => [S * dot$2(b.z, a.x), S * dot$2(b.z, a.y)];
-  const sameTurn = () => [S * dot$2(b.x, a.y)];
+function jointResiduals(kind, a2, b, parameters = {}) {
+  const d2 = sub$2(b.o, a2.o), S = ORIENTATION_SCALE;
+  const coincide = () => [d2[0], d2[1], d2[2]];
+  const onAxis = () => [dot$2(d2, a2.x), dot$2(d2, a2.y)];
+  const zAligned = () => [S * dot$2(b.z, a2.x), S * dot$2(b.z, a2.y)];
+  const sameTurn = () => [S * dot$2(b.x, a2.y)];
   switch (kind) {
     case "fastened": {
-      const e = add$1(add$1(cross$2(a.x, b.x), cross$2(a.y, b.y)), cross$2(a.z, b.z));
+      const e = add$1(add$1(cross$2(a2.x, b.x), cross$2(a2.y, b.y)), cross$2(a2.z, b.z));
       return [...coincide(), S * e[0] / 2, S * e[1] / 2, S * e[2] / 2];
     }
     case "revolute":
@@ -40135,44 +41947,44 @@ function jointResiduals(kind, a, b, parameters = {}) {
     case "ball":
       return coincide();
     case "distance":
-      return [norm$1(d) - Number(parameters.distance_mm ?? 0)];
+      return [norm$1(d2) - Number(parameters.distance_mm ?? 0)];
     case "parallel": {
-      const c = cross$2(a.z, b.z);
-      return [S * c[0], S * c[1], S * c[2]];
+      const c2 = cross$2(a2.z, b.z);
+      return [S * c2[0], S * c2[1], S * c2[2]];
     }
     case "perpendicular":
-      return [S * dot$2(a.z, b.z)];
+      return [S * dot$2(a2.z, b.z)];
     case "angle":
-      return [S * (dot$2(a.z, b.z) - Math.cos(Number(parameters.angle_deg ?? 0) * Math.PI / 180))];
+      return [S * (dot$2(a2.z, b.z) - Math.cos(Number(parameters.angle_deg ?? 0) * Math.PI / 180))];
     // Planar: b's origin stays in a's plane and the normals align; it slides and turns in the plane.
     case "planar":
-      return [dot$2(d, a.z), ...zAligned()];
+      return [dot$2(d2, a2.z), ...zAligned()];
     // Pin slot: a revolute that may also slide along a's x (the slot's length).
     case "pin_slot":
-      return [dot$2(d, a.y), dot$2(d, a.z), ...zAligned()];
+      return [dot$2(d2, a2.y), dot$2(d2, a2.z), ...zAligned()];
     default:
       return [];
   }
 }
 function solveLinear(A, b) {
   const n = b.length, M = A.map((row, i) => [...row, b[i]]);
-  for (let c = 0; c < n; c++) {
-    let pivot = c;
-    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[pivot][c])) pivot = r;
-    if (Math.abs(M[pivot][c]) < 1e-300) return void 0;
-    [M[c], M[pivot]] = [M[pivot], M[c]];
-    for (let r = c + 1; r < n; r++) {
-      const f = M[r][c] / M[c][c];
-      if (f) for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+  for (let c2 = 0; c2 < n; c2++) {
+    let pivot = c2;
+    for (let r = c2 + 1; r < n; r++) if (Math.abs(M[r][c2]) > Math.abs(M[pivot][c2])) pivot = r;
+    if (Math.abs(M[pivot][c2]) < 1e-300) return void 0;
+    [M[c2], M[pivot]] = [M[pivot], M[c2]];
+    for (let r = c2 + 1; r < n; r++) {
+      const f2 = M[r][c2] / M[c2][c2];
+      if (f2) for (let k2 = c2; k2 <= n; k2++) M[r][k2] -= f2 * M[c2][k2];
     }
   }
-  const x = new Array(n).fill(0);
+  const x2 = new Array(n).fill(0);
   for (let r = n - 1; r >= 0; r--) {
     let s = M[r][n];
-    for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k];
-    x[r] = s / M[r][r];
+    for (let k2 = r + 1; k2 < n; k2++) s -= M[r][k2] * x2[k2];
+    x2[r] = s / M[r][r];
   }
-  return x;
+  return x2;
 }
 function solveAssemblyJob(job) {
   const started = performance.now();
@@ -40215,15 +42027,15 @@ function solveAssemblyJob(job) {
     }
     relations.push(relation);
   }
-  const dofOf = (joint, name) => (joint.parameters?.dofs ?? []).find((d) => d.name === name) ?? templateDof(joint.kind, name);
+  const dofOf = (joint, name) => (joint.parameters?.dofs ?? []).find((d2) => d2.name === name) ?? templateDof(joint.kind, name);
   const relationResiduals = (current2) => relations.flatMap((relation) => {
     const driverJoint = byId.get(relation.driver.joint), drivenJoint = byId.get(relation.driven.joint);
     const d1 = dofOf(driverJoint, relation.driver.dof), d2 = dofOf(drivenJoint, relation.driven.dof);
     if (!d1 || !d2) return [];
-    const x = dofValue(d1.kind, d1.axis, frameOf(current2.get(driverJoint.a.instance), driverJoint.a), frameOf(current2.get(driverJoint.b.instance), driverJoint.b));
-    const y = dofValue(d2.kind, d2.axis, frameOf(current2.get(drivenJoint.a.instance), drivenJoint.a), frameOf(current2.get(drivenJoint.b.instance), drivenJoint.b));
-    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
-    const gap = d2.kind === "translation" ? y - target : (y - target + 540) % 360 - 180;
+    const x2 = dofValue(d1.kind, d1.axis, frameOf(current2.get(driverJoint.a.instance), driverJoint.a), frameOf(current2.get(driverJoint.b.instance), driverJoint.b));
+    const y2 = dofValue(d2.kind, d2.axis, frameOf(current2.get(drivenJoint.a.instance), drivenJoint.a), frameOf(current2.get(drivenJoint.b.instance), drivenJoint.b));
+    const target = (relation.reversed ? -relation.ratio : relation.ratio) * x2 + (relation.offset ?? 0);
+    const gap = d2.kind === "translation" ? y2 - target : (y2 - target + 540) % 360 - 180;
     return [d2.kind === "translation" ? gap : ORIENTATION_SCALE * Math.PI / 180 * gap];
   });
   const residuals = (current2) => [
@@ -40233,34 +42045,34 @@ function solveAssemblyJob(job) {
     }),
     ...relationResiduals(current2)
   ];
-  const errorsBefore = diagnostics.filter((d) => d.severity === "error");
+  const errorsBefore = diagnostics.filter((d2) => d2.severity === "error");
   if (!errorsBefore.length && free.length && (joints.length || relations.length)) {
     let lambda = 1e-3;
     let r = residuals(poses), cost = r.reduce((s, v) => s + v * v, 0);
     for (let iteration = 0; iteration < 200 && cost > 1e-18; iteration++) {
-      const n = free.length * 6, m = r.length;
-      const J = Array.from({ length: m }, () => new Array(n).fill(0));
+      const n = free.length * 6, m2 = r.length;
+      const J = Array.from({ length: m2 }, () => new Array(n).fill(0));
       const h = 1e-5;
-      free.forEach((id2, k) => {
+      free.forEach((id2, k2) => {
         const base = poses.get(id2);
         for (let axis = 0; axis < 6; axis++) {
           const perturbed = (sign) => {
             const copy = new Map(poses);
-            const t = [0, 0, 0], w = [0, 0, 0];
+            const t = [0, 0, 0], w2 = [0, 0, 0];
             if (axis < 3) t[axis] = sign * h;
-            else w[axis - 3] = sign * h;
-            copy.set(id2, { p: add$1(base.p, t), q: qnorm(qmul(expq(w), base.q)) });
+            else w2[axis - 3] = sign * h;
+            copy.set(id2, { p: add$1(base.p, t), q: qnorm(qmul(expq(w2), base.q)) });
             return residuals(copy);
           };
           const plus = perturbed(1), minus = perturbed(-1);
-          for (let i = 0; i < m; i++) J[i][k * 6 + axis] = (plus[i] - minus[i]) / (2 * h);
+          for (let i = 0; i < m2; i++) J[i][k2 * 6 + axis] = (plus[i] - minus[i]) / (2 * h);
         }
       });
       const JtJ = Array.from({ length: n }, () => new Array(n).fill(0)), Jtr = new Array(n).fill(0);
-      for (let i = 0; i < m; i++) for (let a = 0; a < n; a++) {
-        if (!J[i][a]) continue;
-        Jtr[a] += J[i][a] * r[i];
-        for (let b = 0; b < n; b++) JtJ[a][b] += J[i][a] * J[i][b];
+      for (let i = 0; i < m2; i++) for (let a2 = 0; a2 < n; a2++) {
+        if (!J[i][a2]) continue;
+        Jtr[a2] += J[i][a2] * r[i];
+        for (let b = 0; b < n; b++) JtJ[a2][b] += J[i][a2] * J[i][b];
       }
       let improved = false;
       for (let attempt = 0; attempt < 12 && !improved; attempt++) {
@@ -40271,10 +42083,10 @@ function solveAssemblyJob(job) {
           continue;
         }
         const trial = new Map(poses);
-        free.forEach((id2, k) => {
+        free.forEach((id2, k2) => {
           const base = poses.get(id2);
-          const t = [step[k * 6], step[k * 6 + 1], step[k * 6 + 2]], w = [step[k * 6 + 3], step[k * 6 + 4], step[k * 6 + 5]];
-          trial.set(id2, { p: add$1(base.p, t), q: qnorm(qmul(expq(w), base.q)) });
+          const t = [step[k2 * 6], step[k2 * 6 + 1], step[k2 * 6 + 2]], w2 = [step[k2 * 6 + 3], step[k2 * 6 + 4], step[k2 * 6 + 5]];
+          trial.set(id2, { p: add$1(base.p, t), q: qnorm(qmul(expq(w2), base.q)) });
         });
         const trialResiduals = residuals(trial), trialCost = trialResiduals.reduce((s, v) => s + v * v, 0);
         if (trialCost < cost) {
@@ -40298,8 +42110,8 @@ function solveAssemblyJob(job) {
       if (!Number.isFinite(worst) || worst > 1e-4) diagnostics.push({ feature_id: joint.id, severity: "error", message: `Mate is not satisfied after solving: residual ${worst.toExponential(3)} exceeds 1e-4. Check conflicting mates or connector references.` });
     }
   }
-  const errors = diagnostics.filter((d) => d.severity === "error");
-  const message = errors.map((d) => d.message).join("; ");
+  const errors = diagnostics.filter((d2) => d2.severity === "error");
+  const message = errors.map((d2) => d2.message).join("; ");
   return {
     status: message ? "error" : "ok",
     engine: "Aether",
@@ -40315,15 +42127,15 @@ function solveAssemblyJob(job) {
 function clipToFace(face, points, tolerance2 = 1e-5) {
   const runs = [];
   let run = [];
-  for (const p of points) {
-    const v = makeVertex(p);
+  for (const p2 of points) {
+    const v = makeVertex(p2);
     let on = false;
     try {
       on = measureDistanceBetween(face, v) <= tolerance2;
     } finally {
       v.delete();
     }
-    if (on) run.push(p);
+    if (on) run.push(p2);
     else if (run.length) {
       if (run.length > 1) runs.push(run);
       run = [];
@@ -40354,9 +42166,9 @@ function edgePolylines(shape) {
     const sampler = new oc.GCPnts_TangentialDeflection_2(adaptor, 0.1, 0.01, 2, 1e-9, 1e-7);
     const points = [];
     for (let i = 1; i <= sampler.NbPoints(); i++) {
-      const p = sampler.Value(i);
-      points.push([p.X(), p.Y(), p.Z()]);
-      p.delete();
+      const p2 = sampler.Value(i);
+      points.push([p2.X(), p2.Y(), p2.Z()]);
+      p2.delete();
     }
     if (points.length > 1) pieces.push(points);
     sampler.delete();
@@ -40364,7 +42176,7 @@ function edgePolylines(shape) {
     explorer.Next();
   }
   explorer.delete();
-  const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-4;
+  const near = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < 1e-4;
   const chains = [];
   const left = [...pieces];
   while (left.length) {
@@ -40372,11 +42184,11 @@ function edgePolylines(shape) {
     for (let grown = true; grown; ) {
       grown = false;
       for (let i = 0; i < left.length; i++) {
-        const p = left[i], head2 = chain[0], tail = chain[chain.length - 1];
-        if (near(tail, p[0])) chain = [...chain, ...p.slice(1)];
-        else if (near(tail, p[p.length - 1])) chain = [...chain, ...[...p].reverse().slice(1)];
-        else if (near(head2, p[p.length - 1])) chain = [...p, ...chain.slice(1)];
-        else if (near(head2, p[0])) chain = [...[...p].reverse(), ...chain.slice(1)];
+        const p2 = left[i], head2 = chain[0], tail = chain[chain.length - 1];
+        if (near(tail, p2[0])) chain = [...chain, ...p2.slice(1)];
+        else if (near(tail, p2[p2.length - 1])) chain = [...chain, ...[...p2].reverse().slice(1)];
+        else if (near(head2, p2[p2.length - 1])) chain = [...p2, ...chain.slice(1)];
+        else if (near(head2, p2[0])) chain = [...[...p2].reverse(), ...chain.slice(1)];
         else continue;
         left.splice(i, 1);
         grown = true;
@@ -40387,9 +42199,9 @@ function edgePolylines(shape) {
   }
   return chains;
 }
-function section(a, b) {
+function section(a2, b) {
   const oc = getOC();
-  const algo = new oc.BRepAlgoAPI_Section_3(a.wrapped, b.wrapped, false);
+  const algo = new oc.BRepAlgoAPI_Section_3(a2.wrapped, b.wrapped, false);
   const progress = new oc.Message_ProgressRange_1();
   try {
     algo.Approximation(true);
@@ -40425,19 +42237,19 @@ function deriveCurves(bodies, options) {
       const face = resolve(bodies, pick, own);
       const { uMin, uMax, vMin, vMax } = face.UVBounds;
       const at = options.point_mm ?? (() => {
-        const c = face.center;
-        const p = [c.x, c.y, c.z];
-        c.delete();
-        return p;
+        const c2 = face.center;
+        const p2 = [c2.x, c2.y, c2.z];
+        c2.delete();
+        return p2;
       })();
       const [ua, va] = face.uvCoordinates(at);
       const u0 = (ua - uMin) / (uMax - uMin || 1), v0 = (va - vMin) / (vMax - vMin || 1);
       const points = [];
       for (let i = 0; i <= 64; i++) {
         const t = i / 64;
-        const p = options.uv === "v" ? face.pointOnSurface(u0, t) : face.pointOnSurface(t, v0);
-        points.push([p.x, p.y, p.z]);
-        p.delete();
+        const p2 = options.uv === "v" ? face.pointOnSurface(u0, t) : face.pointOnSurface(t, v0);
+        points.push([p2.x, p2.y, p2.z]);
+        p2.delete();
       }
       const runs = clipToFace(face, points);
       if (!runs.length) throw new Error("That line misses the face. Pick a point on it.");
@@ -40446,12 +42258,12 @@ function deriveCurves(bodies, options) {
     if (options.kind === "project_curve") {
       const pick = entities.find((e) => e.face_id !== void 0 && e.edge_index === void 0);
       if (!pick) throw new Error("Pick the face to project onto.");
-      const d = options.direction;
-      if (!d || Math.hypot(...d) < 1e-9) throw new Error("Projection needs a direction.");
+      const d2 = options.direction;
+      if (!d2 || Math.hypot(...d2) < 1e-9) throw new Error("Projection needs a direction.");
       if (!options.polylines?.length) throw new Error("Choose a sketch with curves to project.");
       const face = resolve(bodies, pick, own);
       const oc = getOC();
-      const n = Math.hypot(...d), dir = [d[0] / n, d[1] / n, d[2] / n];
+      const n = Math.hypot(...d2), dir = [d2[0] / n, d2[1] / n, d2[2] / n];
       const bb = face.boundingBox;
       const span = Math.hypot(...bb.bounds[1].map((v, i) => v - bb.bounds[0][i])) || 1;
       bb.delete();
@@ -40462,9 +42274,9 @@ function deriveCurves(bodies, options) {
         const builder = new oc.TopoDS_Builder(), compound = new oc.TopoDS_Compound();
         builder.MakeCompound(compound);
         for (let i = 1; i < polyline2.length; i++) {
-          const a = polyline2[i - 1], b = polyline2[i];
-          if (Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) < 1e-9) continue;
-          const p1 = new oc.gp_Pnt_3(a[0] - dir[0] * reach, a[1] - dir[1] * reach, a[2] - dir[2] * reach), p2 = new oc.gp_Pnt_3(b[0] - dir[0] * reach, b[1] - dir[1] * reach, b[2] - dir[2] * reach);
+          const a2 = polyline2[i - 1], b = polyline2[i];
+          if (Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < 1e-9) continue;
+          const p1 = new oc.gp_Pnt_3(a2[0] - dir[0] * reach, a2[1] - dir[1] * reach, a2[2] - dir[2] * reach), p2 = new oc.gp_Pnt_3(b[0] - dir[0] * reach, b[1] - dir[1] * reach, b[2] - dir[2] * reach);
           const edge = new oc.BRepBuilderAPI_MakeEdge_3(p1, p2), vec2 = new oc.gp_Vec_4(dir[0] * 2 * reach, dir[1] * 2 * reach, dir[2] * 2 * reach);
           const prism = new oc.BRepPrimAPI_MakePrism_1(edge.Edge(), vec2, false, true);
           builder.Add(compound, prism.Shape());
@@ -40495,15 +42307,15 @@ function deriveCurves(bodies, options) {
     });
   }
 }
-const sub$1 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
-const dot$1 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross$1 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a) => Math.hypot(a[0], a[1], a[2]);
-const unit = (a) => {
-  const n = norm(a);
-  return n > 1e-12 ? mul(a, 1 / n) : [0, 0, 0];
+const sub$1 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const mul = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const dot$1 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const cross$1 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit = (a2) => {
+  const n = norm(a2);
+  return n > 1e-12 ? mul(a2, 1 / n) : [0, 0, 0];
 };
 function pickFaces(bodies, entities, own) {
   const wanted = entities?.filter((e) => e.face_id !== void 0 && e.edge_index === void 0) ?? [];
@@ -40540,28 +42352,28 @@ function pickEdges(bodies, entities, own) {
 function sampleEdge(edge, count) {
   const oc = getOC();
   const adaptor = new oc.BRepAdaptor_Curve_2(edge.wrapped);
-  const p = new oc.gp_Pnt_1(), d1 = new oc.gp_Vec_1(), d2 = new oc.gp_Vec_1();
+  const p2 = new oc.gp_Pnt_1(), d1 = new oc.gp_Vec_1(), d2 = new oc.gp_Vec_1();
   try {
     const u0 = adaptor.FirstParameter(), u1 = adaptor.LastParameter();
     const out = [];
     for (let i = 0; i <= count; i++) {
-      adaptor.D2(u0 + (u1 - u0) * (i / count), p, d1, d2);
+      adaptor.D2(u0 + (u1 - u0) * (i / count), p2, d1, d2);
       const t = [d1.X(), d1.Y(), d1.Z()], s = [d2.X(), d2.Y(), d2.Z()];
       const speed = norm(t);
       const curvature = speed > 1e-12 ? norm(cross$1(t, s)) / speed ** 3 : 0;
       const normalPart = sub$1(s, mul(t, dot$1(t, s) / Math.max(speed * speed, 1e-18)));
-      out.push({ point: [p.X(), p.Y(), p.Z()], tangent: unit(t), curvature, direction: curvature > 1e-9 ? unit(normalPart) : [0, 0, 0] });
+      out.push({ point: [p2.X(), p2.Y(), p2.Z()], tangent: unit(t), curvature, direction: curvature > 1e-9 ? unit(normalPart) : [0, 0, 0] });
     }
     return out;
   } finally {
-    p.delete();
+    p2.delete();
     d1.delete();
     d2.delete();
     adaptor.delete();
   }
 }
-function sampleSurface(adaptor, u, v, scratch) {
-  adaptor.D2(u, v, scratch.p, scratch.d1u, scratch.d1v, scratch.d2u, scratch.d2v, scratch.d2uv);
+function sampleSurface(adaptor, u2, v, scratch) {
+  adaptor.D2(u2, v, scratch.p, scratch.d1u, scratch.d1v, scratch.d2u, scratch.d2v, scratch.d2uv);
   const du = [scratch.d1u.X(), scratch.d1u.Y(), scratch.d1u.Z()], dv = [scratch.d1v.X(), scratch.d1v.Y(), scratch.d1v.Z()];
   const duu = [scratch.d2u.X(), scratch.d2u.Y(), scratch.d2u.Z()], dvv = [scratch.d2v.X(), scratch.d2v.Y(), scratch.d2v.Z()], duv = [scratch.d2uv.X(), scratch.d2uv.Y(), scratch.d2uv.Z()];
   const normal = unit(cross$1(du, dv));
@@ -40574,11 +42386,11 @@ function principalCurvatures(s) {
   const root = Math.sqrt(Math.max(H * H - K2, 0));
   return [H + root, H - root];
 }
-function normalCurvature(s, w) {
+function normalCurvature(s, w2) {
   const det = s.E * s.G - s.F * s.F;
   if (det < 1e-18) return 0;
-  const a = dot$1(s.du, w), b = dot$1(s.dv, w);
-  const du = (s.G * a - s.F * b) / det, dv = (s.E * b - s.F * a) / det;
+  const a2 = dot$1(s.du, w2), b = dot$1(s.dv, w2);
+  const du = (s.G * a2 - s.F * b) / det, dv = (s.E * b - s.F * a2) / det;
   const I = s.E * du * du + 2 * s.F * du * dv + s.G * dv * dv;
   return I > 1e-18 ? (s.L * du * du + 2 * s.M * du * dv + s.N * dv * dv) / I : 0;
 }
@@ -40636,52 +42448,52 @@ function analyzeCurves(bodies, options) {
       const note = (radius, at) => {
         if (!overall || radius < overall.radius) overall = { radius, at };
       };
-      for (const f of faces) {
-        const { uMin, uMax, vMin, vMax } = f.face.UVBounds;
-        const best = withSurface(f.face, (adaptor, scratch) => {
+      for (const f2 of faces) {
+        const { uMin, uMax, vMin, vMax } = f2.face.UVBounds;
+        const best = withSurface(f2.face, (adaptor, scratch) => {
           let found = null;
           const n = 16;
           for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
             const s = sampleSurface(adaptor, uMin + (uMax - uMin) * (i / n), vMin + (vMax - vMin) * (j / n), scratch);
-            const k = Math.max(...principalCurvatures(s).map(Math.abs));
-            if (k > 1e-9 && (!found || 1 / k < found.radius)) found = { radius: 1 / k, at: s.point };
+            const k2 = Math.max(...principalCurvatures(s).map(Math.abs));
+            if (k2 > 1e-9 && (!found || 1 / k2 < found.radius)) found = { radius: 1 / k2, at: s.point };
           }
           return found;
         });
-        measurements.push({ body_id: f.bodyId, face_id: f.faceId, min_radius_mm: best?.radius ?? null, at_mm: best?.at ?? null, flagged: best !== null && threshold !== void 0 && best.radius < threshold });
+        measurements.push({ body_id: f2.bodyId, face_id: f2.faceId, min_radius_mm: best?.radius ?? null, at_mm: best?.at ?? null, flagged: best !== null && threshold !== void 0 && best.radius < threshold });
         if (best) note(best.radius, best.at);
       }
       for (const e of edges) {
         const samples2 = sampleEdge(e.edge, 64);
-        const peak = samples2.reduce((a, s) => s.curvature > a.curvature ? s : a, samples2[0]);
+        const peak = samples2.reduce((a2, s) => s.curvature > a2.curvature ? s : a2, samples2[0]);
         const radius = peak.curvature > 1e-9 ? 1 / peak.curvature : null;
         measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, min_radius_mm: radius, at_mm: radius === null ? null : peak.point, flagged: radius !== null && threshold !== void 0 && radius < threshold });
         if (radius !== null) note(radius, peak.point);
       }
       const o = overall;
       if (o) {
-        const r = Math.max(bounds(bodies) * 0.01, 0.5), [x, y, z] = o.at;
-        curves2.push({ label: `minimum radius ${o.radius.toFixed(3)} mm`, color: threshold !== void 0 && o.radius < threshold ? "#e5484d" : "#30a46c", polylines: [[[x - r, y, z], [x + r, y, z]], [[x, y - r, z], [x, y + r, z]], [[x, y, z - r], [x, y, z + r]]] });
+        const r = Math.max(bounds(bodies) * 0.01, 0.5), [x2, y2, z2] = o.at;
+        curves2.push({ label: `minimum radius ${o.radius.toFixed(3)} mm`, color: threshold !== void 0 && o.radius < threshold ? "#e5484d" : "#30a46c", polylines: [[[x2 - r, y2, z2], [x2 + r, y2, z2]], [[x2, y2 - r, z2], [x2, y2 + r, z2]], [[x2, y2, z2 - r], [x2, y2, z2 + r]]] });
         measurements.push({ overall_min_radius_mm: o.radius, at_mm: o.at });
       }
     } else if (options.kind === "isocurve") {
       const faces = pickFaces(bodies, options.entities, own);
       if (!faces.length) throw new Error("Isocurves need a face.");
       const count = Math.max(1, Math.min(64, Math.round(options.count ?? 8)));
-      for (const f of faces) {
-        const line2 = (fixedU, k) => {
-          const t = (k + 0.5) / count, pts = [];
+      for (const f2 of faces) {
+        const line2 = (fixedU, k2) => {
+          const t = (k2 + 0.5) / count, pts = [];
           for (let i = 0; i <= 32; i++) {
-            const a = i / 32;
-            const p = fixedU ? f.face.pointOnSurface(t, a) : f.face.pointOnSurface(a, t);
-            pts.push([p.x, p.y, p.z]);
-            p.delete();
+            const a2 = i / 32;
+            const p2 = fixedU ? f2.face.pointOnSurface(t, a2) : f2.face.pointOnSurface(a2, t);
+            pts.push([p2.x, p2.y, p2.z]);
+            p2.delete();
           }
           return pts;
         };
-        curves2.push({ label: `u ${f.bodyId} face ${f.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line2(true, k))).flat() });
-        curves2.push({ label: `v ${f.bodyId} face ${f.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_, k) => clipToFace(f.face, line2(false, k))).flat() });
-        measurements.push({ body_id: f.bodyId, face_id: f.faceId, count, surface: f.face.geomType });
+        curves2.push({ label: `u ${f2.bodyId} face ${f2.faceId}`, color: "#3e8ef7", polylines: Array.from({ length: count }, (_2, k2) => clipToFace(f2.face, line2(true, k2))).flat() });
+        curves2.push({ label: `v ${f2.bodyId} face ${f2.faceId}`, color: "#e879f9", polylines: Array.from({ length: count }, (_2, k2) => clipToFace(f2.face, line2(false, k2))).flat() });
+        measurements.push({ body_id: f2.bodyId, face_id: f2.faceId, count, surface: f2.face.geomType });
       }
     } else if (options.kind === "continuity") {
       const edges = pickEdges(bodies, options.entities, own);
@@ -40693,21 +42505,21 @@ function analyzeCurves(bodies, options) {
         facesByBody.set(bodyId, list);
       }
       for (const e of edges) {
-        const adjacent = (facesByBody.get(e.bodyId) ?? []).filter((f) => {
-          const edges2 = f.face.edges;
-          const hit = edges2.some((x) => x.isSame(e.edge));
-          edges2.forEach((x) => x.delete());
+        const adjacent = (facesByBody.get(e.bodyId) ?? []).filter((f2) => {
+          const edges2 = f2.face.edges;
+          const hit = edges2.some((x2) => x2.isSame(e.edge));
+          edges2.forEach((x2) => x2.delete());
           return hit;
         });
         if (adjacent.length !== 2) {
-          measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity: "open", faces: adjacent.map((f) => f.id) });
+          measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity: "open", faces: adjacent.map((f2) => f2.id) });
           continue;
         }
         const samples2 = sampleEdge(e.edge, 8).slice(1, -1);
         let maxAngle = 0, maxCurvatureGap = 0;
         for (const s of samples2) {
-          const normals = adjacent.map((f) => {
-            const n = f.face.normalAt([s.point[0], s.point[1], s.point[2]]);
+          const normals = adjacent.map((f2) => {
+            const n = f2.face.normalAt([s.point[0], s.point[1], s.point[2]]);
             const v = [n.x, n.y, n.z];
             n.delete();
             return unit(v);
@@ -40716,15 +42528,15 @@ function analyzeCurves(bodies, options) {
           maxAngle = Math.max(maxAngle, angle2);
           if (angle2 < 0.5) {
             const across = unit(cross$1(normals[0], s.tangent));
-            const kappas = adjacent.map((f) => withSurface(f.face, (adaptor, scratch) => {
-              const [u, v] = f.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
-              return normalCurvature(sampleSurface(adaptor, u, v, scratch), across);
+            const kappas = adjacent.map((f2) => withSurface(f2.face, (adaptor, scratch) => {
+              const [u2, v] = f2.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
+              return normalCurvature(sampleSurface(adaptor, u2, v, scratch), across);
             }));
             maxCurvatureGap = Math.max(maxCurvatureGap, Math.abs(Math.abs(kappas[0]) - Math.abs(kappas[1])));
           }
         }
         const continuity = maxAngle >= 0.5 ? "G0" : maxCurvatureGap > 1e-3 ? "G1" : "G2";
-        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f) => f.id) });
+        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f2) => f2.id) });
         curves2.push({ label: `${continuity} ${e.bodyId} face ${e.faceId} edge ${e.edgeIndex}`, color: continuity === "G0" ? "#e5484d" : continuity === "G1" ? "#f2b134" : "#30a46c", polylines: [sampleEdge(e.edge, 24).map((s) => s.point)] });
       }
     } else throw new Error("Choose continuity, curvature comb, isocurve or minimum radius.");
@@ -40738,37 +42550,37 @@ function analyzeCurves(bodies, options) {
     });
   }
 }
-const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const sub = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const dot = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const cross = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 function round(v) {
   const r = Math.round(v * 1e7) / 1e7;
   return r === 0 ? 0 : r;
 }
 function meshSectionPolylines(mesh, frame) {
-  const o = frame.originMillimeters, x = frame.xDirection, n = frame.normal, y = cross(n, x);
+  const o = frame.originMillimeters, x2 = frame.xDirection, n = frame.normal, y2 = cross(n, x2);
   const v = (i) => [mesh.vertices[3 * i], mesh.vertices[3 * i + 1], mesh.vertices[3 * i + 2]];
-  const side = (p) => dot(sub(p, o), n);
-  const to2D = (p) => {
-    const d = sub(p, o);
-    return [round(dot(d, x)), round(dot(d, y))];
+  const side = (p2) => dot(sub(p2, o), n);
+  const to2D = (p2) => {
+    const d2 = sub(p2, o);
+    return [round(dot(d2, x2)), round(dot(d2, y2))];
   };
   const segments = [];
   for (let t = 0; t + 2 < mesh.triangles.length; t += 3) {
-    const p = [v(mesh.triangles[t]), v(mesh.triangles[t + 1]), v(mesh.triangles[t + 2])], d = p.map(side);
+    const p2 = [v(mesh.triangles[t]), v(mesh.triangles[t + 1]), v(mesh.triangles[t + 2])], d2 = p2.map(side);
     const hits = [];
     for (let i = 0; i < 3; i++) {
-      const a = d[i], b = d[(i + 1) % 3];
-      if (a >= 0 === b >= 0) continue;
-      const s = a / (a - b), q = p[i], r = p[(i + 1) % 3];
+      const a2 = d2[i], b = d2[(i + 1) % 3];
+      if (a2 >= 0 === b >= 0) continue;
+      const s = a2 / (a2 - b), q = p2[i], r = p2[(i + 1) % 3];
       hits.push(to2D([q[0] + (r[0] - q[0]) * s, q[1] + (r[1] - q[1]) * s, q[2] + (r[2] - q[2]) * s]));
     }
     if (hits.length === 2 && Math.hypot(hits[0][0] - hits[1][0], hits[0][1] - hits[1][1]) > 1e-9) segments.push([hits[0], hits[1]]);
   }
-  const key = (p) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
+  const key = (p2) => `${p2[0].toFixed(5)},${p2[1].toFixed(5)}`;
   const byPoint = /* @__PURE__ */ new Map();
-  segments.forEach(([a, b], i) => {
-    for (const k of [key(a), key(b)]) byPoint.set(k, [...byPoint.get(k) ?? [], i]);
+  segments.forEach(([a2, b], i) => {
+    for (const k2 of [key(a2), key(b)]) byPoint.set(k2, [...byPoint.get(k2) ?? [], i]);
   });
   const used = /* @__PURE__ */ new Set(), chains = [];
   for (let start = 0; start < segments.length; start++) {
@@ -40781,7 +42593,7 @@ function meshSectionPolylines(mesh, frame) {
         const next = (byPoint.get(key(end)) ?? []).find((i) => !used.has(i));
         if (next === void 0) break;
         used.add(next);
-        const [a, b] = segments[next], other = key(a) === key(end) ? b : a;
+        const [a2, b] = segments[next], other = key(a2) === key(end) ? b : a2;
         if (forward) chain.push(other);
         else chain.unshift(other);
       }
@@ -40792,34 +42604,34 @@ function meshSectionPolylines(mesh, frame) {
 }
 function fitLinesAndArcs(points, tolerance2 = 0.05) {
   const closed = points.length > 3 && Math.hypot(points[0][0] - points[points.length - 1][0], points[0][1] - points[points.length - 1][1]) < 1e-6;
-  const circleThrough = (a, b, c) => {
-    const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
-    if (Math.abs(d) < 1e-12) return void 0;
-    const s = (p) => p[0] * p[0] + p[1] * p[1];
-    const center = [(s(a) * (b[1] - c[1]) + s(b) * (c[1] - a[1]) + s(c) * (a[1] - b[1])) / d, (s(a) * (c[0] - b[0]) + s(b) * (a[0] - c[0]) + s(c) * (b[0] - a[0])) / d];
-    return { center, radius: Math.hypot(a[0] - center[0], a[1] - center[1]) };
+  const circleThrough = (a2, b, c2) => {
+    const d2 = 2 * (a2[0] * (b[1] - c2[1]) + b[0] * (c2[1] - a2[1]) + c2[0] * (a2[1] - b[1]));
+    if (Math.abs(d2) < 1e-12) return void 0;
+    const s = (p2) => p2[0] * p2[0] + p2[1] * p2[1];
+    const center = [(s(a2) * (b[1] - c2[1]) + s(b) * (c2[1] - a2[1]) + s(c2) * (a2[1] - b[1])) / d2, (s(a2) * (c2[0] - b[0]) + s(b) * (a2[0] - c2[0]) + s(c2) * (b[0] - a2[0])) / d2];
+    return { center, radius: Math.hypot(a2[0] - center[0], a2[1] - center[1]) };
   };
   if (closed) {
     const ring = points.slice(0, -1), third = Math.floor(ring.length / 3);
-    const c = circleThrough(ring[0], ring[third], ring[2 * third]);
-    if (c && ring.every((p) => Math.abs(Math.hypot(p[0] - c.center[0], p[1] - c.center[1]) - c.radius) <= tolerance2)) return [{ type: "circle", center: [round(c.center[0]), round(c.center[1])], radius: round(c.radius) }];
+    const c2 = circleThrough(ring[0], ring[third], ring[2 * third]);
+    if (c2 && ring.every((p2) => Math.abs(Math.hypot(p2[0] - c2.center[0], p2[1] - c2.center[1]) - c2.radius) <= tolerance2)) return [{ type: "circle", center: [round(c2.center[0]), round(c2.center[1])], radius: round(c2.radius) }];
   }
   const lineFits = (i, j) => {
-    const a = points[i], b = points[j], length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const a2 = points[i], b = points[j], length = Math.hypot(b[0] - a2[0], b[1] - a2[1]);
     if (length < 1e-12) return false;
-    for (let k = i + 1; k < j; k++) {
-      const p = points[k];
-      if (Math.abs((b[0] - a[0]) * (a[1] - p[1]) - (a[0] - p[0]) * (b[1] - a[1])) / length > tolerance2) return false;
+    for (let k2 = i + 1; k2 < j; k2++) {
+      const p2 = points[k2];
+      if (Math.abs((b[0] - a2[0]) * (a2[1] - p2[1]) - (a2[0] - p2[0]) * (b[1] - a2[1])) / length > tolerance2) return false;
     }
     return true;
   };
   const arcFits = (i, j) => {
     if (j - i < 4) return false;
-    const mid = Math.floor((i + j) / 2), c = circleThrough(points[i], points[mid], points[j]);
-    if (!c || c.radius > 1e5) return false;
-    const off = (p) => Math.abs(Math.hypot(p[0] - c.center[0], p[1] - c.center[1]) - c.radius) > tolerance2;
-    for (let k = i; k <= j; k++) if (off(points[k])) return false;
-    for (let k = i; k < j; k++) if (off([(points[k][0] + points[k + 1][0]) / 2, (points[k][1] + points[k + 1][1]) / 2])) return false;
+    const mid = Math.floor((i + j) / 2), c2 = circleThrough(points[i], points[mid], points[j]);
+    if (!c2 || c2.radius > 1e5) return false;
+    const off = (p2) => Math.abs(Math.hypot(p2[0] - c2.center[0], p2[1] - c2.center[1]) - c2.radius) > tolerance2;
+    for (let k2 = i; k2 <= j; k2++) if (off(points[k2])) return false;
+    for (let k2 = i; k2 < j; k2++) if (off([(points[k2][0] + points[k2 + 1][0]) / 2, (points[k2][1] + points[k2 + 1][1]) / 2])) return false;
     return true;
   };
   const segments = [];
@@ -40847,21 +42659,21 @@ function prismaticMeshProfile(mesh, tolerance2 = 0.05) {
   const v = (i) => [mesh.vertices[3 * i], mesh.vertices[3 * i + 1], mesh.vertices[3 * i + 2]];
   const normals = [];
   for (let t = 0; t < count; t++) {
-    const [a, b, c] = [v(mesh.triangles[3 * t]), v(mesh.triangles[3 * t + 1]), v(mesh.triangles[3 * t + 2])];
-    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], l = Math.hypot(...n);
+    const [a2, b, c2] = [v(mesh.triangles[3 * t]), v(mesh.triangles[3 * t + 1]), v(mesh.triangles[3 * t + 2])];
+    const u2 = [b[0] - a2[0], b[1] - a2[1], b[2] - a2[2]], w2 = [c2[0] - a2[0], c2[1] - a2[1], c2[2] - a2[2]];
+    const n = [u2[1] * w2[2] - u2[2] * w2[1], u2[2] * w2[0] - u2[0] * w2[2], u2[0] * w2[1] - u2[1] * w2[0]], l = Math.hypot(...n);
     if (l > 1e-12) normals.push({ n: [n[0] / l, n[1] / l, n[2] / l], area: l / 2 });
   }
-  const fits = (a) => normals.every(({ n }) => {
-    const d = Math.abs(n[0] * a[0] + n[1] * a[1] + n[2] * a[2]);
-    return d > 1 - 1e-3 || d < 1e-3;
-  }) && normals.some(({ n }) => n[0] * a[0] + n[1] * a[1] + n[2] * a[2] > 1 - 1e-3) && normals.some(({ n }) => n[0] * a[0] + n[1] * a[1] + n[2] * a[2] < -0.999);
-  const n0 = normals.reduce((a, b) => b.area > a.area ? b : a).n;
+  const fits = (a2) => normals.every(({ n }) => {
+    const d2 = Math.abs(n[0] * a2[0] + n[1] * a2[1] + n[2] * a2[2]);
+    return d2 > 1 - 1e-3 || d2 < 1e-3;
+  }) && normals.some(({ n }) => n[0] * a2[0] + n[1] * a2[1] + n[2] * a2[2] > 1 - 1e-3) && normals.some(({ n }) => n[0] * a2[0] + n[1] * a2[1] + n[2] * a2[2] < -0.999);
+  const n0 = normals.reduce((a2, b) => b.area > a2.area ? b : a2).n;
   const other = normals.find(({ n }) => Math.abs(n[0] * n0[0] + n[1] * n0[1] + n[2] * n0[2]) < 1 - 1e-3)?.n;
   const candidates = [n0];
   if (other) {
-    const c = [n0[1] * other[2] - n0[2] * other[1], n0[2] * other[0] - n0[0] * other[2], n0[0] * other[1] - n0[1] * other[0]], l = Math.hypot(...c);
-    if (l > 1e-9) candidates.push([c[0] / l, c[1] / l, c[2] / l]);
+    const c2 = [n0[1] * other[2] - n0[2] * other[1], n0[2] * other[0] - n0[0] * other[2], n0[0] * other[1] - n0[1] * other[0]], l = Math.hypot(...c2);
+    if (l > 1e-9) candidates.push([c2[0] / l, c2[1] / l, c2[2] / l]);
   }
   let axis = candidates.find(fits);
   if (!axis) throw new Error("This mesh is not one profile extruded straight: no direction has every face parallel or square to it.");
@@ -40869,8 +42681,8 @@ function prismaticMeshProfile(mesh, tolerance2 = 0.05) {
   if (lead < 0) axis = [-axis[0], -axis[1], -axis[2]];
   const heights = [];
   for (let i = 0; i < mesh.vertices.length / 3; i++) {
-    const p = v(i);
-    heights.push(p[0] * axis[0] + p[1] * axis[1] + p[2] * axis[2]);
+    const p2 = v(i);
+    heights.push(p2[0] * axis[0] + p2[1] * axis[1] + p2[2] * axis[2]);
   }
   let h0 = Infinity, h1 = -Infinity;
   for (const h of heights) {
@@ -40879,12 +42691,12 @@ function prismaticMeshProfile(mesh, tolerance2 = 0.05) {
   }
   if (h1 - h0 <= tolerance2) throw new Error("The mesh is flat along its extrusion direction.");
   if (heights.some((h) => Math.abs(h - h0) > tolerance2 && Math.abs(h - h1) > tolerance2)) throw new Error("This mesh is not one profile extruded straight: it has vertices between its two caps.");
-  const x = canonicalPlaneXDirection(axis);
+  const x2 = canonicalPlaneXDirection(axis);
   const at = (h) => [axis[0] * h, axis[1] * h, axis[2] * h];
-  const polylines = meshSectionPolylines(mesh, { originMillimeters: at((h0 + h1) / 2), xDirection: x, normal: axis });
+  const polylines = meshSectionPolylines(mesh, { originMillimeters: at((h0 + h1) / 2), xDirection: x2, normal: axis });
   if (!polylines.length) throw new Error("The mesh has no section between its caps.");
-  if (polylines.some((p) => p.length < 3 || Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) > 1e-6)) throw new Error("The mesh is not closed: its section has open ends.");
-  return { frame: { originMillimeters: at(h0), xDirection: x, normal: axis }, depthMillimeters: h1 - h0, contours: polylines.flatMap((p) => fitLinesAndArcs(p, tolerance2)) };
+  if (polylines.some((p2) => p2.length < 3 || Math.hypot(p2[0][0] - p2[p2.length - 1][0], p2[0][1] - p2[p2.length - 1][1]) > 1e-6)) throw new Error("The mesh is not closed: its section has open ends.");
+  return { frame: { originMillimeters: at(h0), xDirection: x2, normal: axis }, depthMillimeters: h1 - h0, contours: polylines.flatMap((p2) => fitLinesAndArcs(p2, tolerance2)) };
 }
 function optimalBounds(shape) {
   const oc = getOC();
@@ -40901,13 +42713,13 @@ function volumeProperties(shape, about) {
   const oc = getOC();
   const props = new oc.GProp_GProps_1();
   oc.BRepGProp.VolumeProperties_1(shape.wrapped, props, false, false, false);
-  const c = props.CentreOfMass();
-  const center = [c.X(), c.Y(), c.Z()];
-  c.delete();
+  const c2 = props.CentreOfMass();
+  const center = [c2.X(), c2.Y(), c2.Z()];
+  c2.delete();
   const mass = props.Mass();
   const origin = about ?? center;
-  const moment = (d) => {
-    const point2 = new oc.gp_Pnt_3(origin[0], origin[1], origin[2]), direction = new oc.gp_Dir_4(d[0], d[1], d[2]);
+  const moment = (d2) => {
+    const point2 = new oc.gp_Pnt_3(origin[0], origin[1], origin[2]), direction = new oc.gp_Dir_4(d2[0], d2[1], d2[2]);
     const axis = new oc.gp_Ax1_2(point2, direction);
     const value2 = props.MomentOfInertia(axis);
     axis.delete();
@@ -40926,8 +42738,8 @@ function analyzePart(document2, options) {
   let meshes2 = /* @__PURE__ */ new Map();
   evaluatePartDocument(document2, { withBodies: (bodies2) => {
     shapes = new Map(bodies2);
-  }, withMeshes: (m) => {
-    meshes2 = new Map(m);
+  }, withMeshes: (m2) => {
+    meshes2 = new Map(m2);
   } });
   if (options.kind === "mesh_convert") {
     const id2 = options.bodyIds?.[0] ?? [...meshes2.keys()][0], mesh = id2 ? meshes2.get(id2) : void 0;
@@ -40952,17 +42764,17 @@ function analyzePart(document2, options) {
         if (!solids.length) throw new Error("Physical properties require valid solid geometry.");
         const volumes = solids.map((solid) => measureVolume(solid));
         if (volumes.some((v) => !Number.isFinite(v) || v <= 0)) throw new Error("Physical properties require positive finite volumes.");
-        const volume = volumes.reduce((a, b) => a + b, 0);
+        const volume = volumes.reduce((a2, b) => a2 + b, 0);
         const centers = solids.map((solid) => volumeProperties(solid).center);
-        const center = [0, 1, 2].map((i) => volumes.reduce((sum, v, k) => sum + v * centers[k][i], 0) / volume);
+        const center = [0, 1, 2].map((i) => volumes.reduce((sum, v, k2) => sum + v * centers[k2][i], 0) / volume);
         const [lo, hi] = optimalBounds(shape);
         const measurement = { body_id: key, volume_mm3: volume, area_mm2: measureArea(shape), center_mm: center, bounds_mm: [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]] };
         if (density !== void 0) {
           const inertia = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-          solids.forEach((solid, k) => {
-            const tensor = volumeProperties(solid, centers[k]).inertia;
-            const d = centers[k].map((c, i) => c - center[i]), d2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
-            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) inertia[i][j] += tensor[i][j] + volumes[k] * ((i === j ? d2 : 0) - d[i] * d[j]);
+          solids.forEach((solid, k2) => {
+            const tensor = volumeProperties(solid, centers[k2]).inertia;
+            const d2 = centers[k2].map((c2, i) => c2 - center[i]), d22 = d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2];
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) inertia[i][j] += tensor[i][j] + volumes[k2] * ((i === j ? d22 : 0) - d2[i] * d2[j]);
           });
           Object.assign(measurement, { density_kg_m3: density, mass_kg: volume * density * 1e-9, inertia_kg_m2: inertia.map((row) => row.map((v) => v * density * 1e-15)) });
         }
@@ -41060,7 +42872,7 @@ function analyzePart(document2, options) {
     return { status: "ok", kind: options.kind, bodies, measurements: result.measurements, curves: result.curves };
   } else if (options.kind === "intersection_curve" || options.kind === "isoparametric_curve" || options.kind === "project_curve") {
     const polylines = deriveCurves(shapes, { kind: options.kind, entities: options.entities, uv: options.uv, point_mm: options.point_mm, polylines: options.polylines, direction: options.direction });
-    return { status: "ok", kind: options.kind, bodies, measurements: polylines.map((p, i) => ({ curve: i, points: p.length })), curves: polylines.map((p, i) => ({ label: `curve ${i + 1}`, color: "#3e8ef7", polylines: [p] })) };
+    return { status: "ok", kind: options.kind, bodies, measurements: polylines.map((p2, i) => ({ curve: i, points: p2.length })), curves: polylines.map((p2, i) => ({ label: `curve ${i + 1}`, color: "#3e8ef7", polylines: [p2] })) };
   } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }
@@ -41158,7 +42970,7 @@ async function main() {
       }
       const used = new Set(projection.instances.filter((i) => !i.suppressed).map((i) => i.definition_id));
       for (const id2 of request.template_ids ?? []) used.add(id2);
-      projection.part_definitions = projection.part_definitions.filter((p) => used.has(p.id));
+      projection.part_definitions = projection.part_definitions.filter((p2) => used.has(p2.id));
       projection.instances = projection.instances.map((instance) => ({ ...instance, rest_transform: instance.solved_world_transform }));
       stdout.write(JSON.stringify(assemblyJobFor(projection)));
     } else {
@@ -41382,29 +43194,29 @@ var Module = (() => {
       var startIdx = outIdx;
       var endIdx = outIdx + maxBytesToWrite - 1;
       for (var i2 = 0; i2 < str.length; ++i2) {
-        var u = str.charCodeAt(i2);
-        if (u >= 55296 && u <= 57343) {
+        var u2 = str.charCodeAt(i2);
+        if (u2 >= 55296 && u2 <= 57343) {
           var u1 = str.charCodeAt(++i2);
-          u = 65536 + ((u & 1023) << 10) | u1 & 1023;
+          u2 = 65536 + ((u2 & 1023) << 10) | u1 & 1023;
         }
-        if (u <= 127) {
+        if (u2 <= 127) {
           if (outIdx >= endIdx) break;
-          heap[outIdx++ >>> 0] = u;
-        } else if (u <= 2047) {
+          heap[outIdx++ >>> 0] = u2;
+        } else if (u2 <= 2047) {
           if (outIdx + 1 >= endIdx) break;
-          heap[outIdx++ >>> 0] = 192 | u >> 6;
-          heap[outIdx++ >>> 0] = 128 | u & 63;
-        } else if (u <= 65535) {
+          heap[outIdx++ >>> 0] = 192 | u2 >> 6;
+          heap[outIdx++ >>> 0] = 128 | u2 & 63;
+        } else if (u2 <= 65535) {
           if (outIdx + 2 >= endIdx) break;
-          heap[outIdx++ >>> 0] = 224 | u >> 12;
-          heap[outIdx++ >>> 0] = 128 | u >> 6 & 63;
-          heap[outIdx++ >>> 0] = 128 | u & 63;
+          heap[outIdx++ >>> 0] = 224 | u2 >> 12;
+          heap[outIdx++ >>> 0] = 128 | u2 >> 6 & 63;
+          heap[outIdx++ >>> 0] = 128 | u2 & 63;
         } else {
           if (outIdx + 3 >= endIdx) break;
-          heap[outIdx++ >>> 0] = 240 | u >> 18;
-          heap[outIdx++ >>> 0] = 128 | u >> 12 & 63;
-          heap[outIdx++ >>> 0] = 128 | u >> 6 & 63;
-          heap[outIdx++ >>> 0] = 128 | u & 63;
+          heap[outIdx++ >>> 0] = 240 | u2 >> 18;
+          heap[outIdx++ >>> 0] = 128 | u2 >> 12 & 63;
+          heap[outIdx++ >>> 0] = 128 | u2 >> 6 & 63;
+          heap[outIdx++ >>> 0] = 128 | u2 & 63;
         }
       }
       heap[outIdx >>> 0] = 0;
@@ -41416,11 +43228,11 @@ var Module = (() => {
     function lengthBytesUTF8(str) {
       var len = 0;
       for (var i2 = 0; i2 < str.length; ++i2) {
-        var u = str.charCodeAt(i2);
-        if (u >= 55296 && u <= 57343) u = 65536 + ((u & 1023) << 10) | str.charCodeAt(++i2) & 1023;
-        if (u <= 127) ++len;
-        else if (u <= 2047) len += 2;
-        else if (u <= 65535) len += 3;
+        var u2 = str.charCodeAt(i2);
+        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str.charCodeAt(++i2) & 1023;
+        if (u2 <= 127) ++len;
+        else if (u2 <= 2047) len += 2;
+        else if (u2 <= 65535) len += 3;
         else len += 4;
       }
       return len;
@@ -42059,7 +43871,7 @@ var Module = (() => {
       return parts;
     }, normalize: (path) => {
       var isAbsolute = PATH.isAbs(path), trailingSlash = path.substr(-1) === "/";
-      path = PATH.normalizeArray(path.split("/").filter((p) => !!p), !isAbsolute).join("/");
+      path = PATH.normalizeArray(path.split("/").filter((p2) => !!p2), !isAbsolute).join("/");
       if (!path && !isAbsolute) {
         path = ".";
       }
@@ -42121,7 +43933,7 @@ var Module = (() => {
         resolvedPath = path + "/" + resolvedPath;
         resolvedAbsolute = PATH.isAbs(path);
       }
-      resolvedPath = PATH.normalizeArray(resolvedPath.split("/").filter((p) => !!p), !resolvedAbsolute).join("/");
+      resolvedPath = PATH.normalizeArray(resolvedPath.split("/").filter((p2) => !!p2), !resolvedAbsolute).join("/");
       return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
     }, relative: (from, to) => {
       from = PATH_FS.resolve(from).substr(1);
@@ -42544,7 +44356,7 @@ var Module = (() => {
       if (opts.recurse_count > 8) {
         throw new FS.ErrnoError(32);
       }
-      var parts = PATH.normalizeArray(path.split("/").filter((p) => !!p), false);
+      var parts = PATH.normalizeArray(path.split("/").filter((p2) => !!p2), false);
       var current2 = FS.root;
       var current_path = "/";
       for (var i2 = 0; i2 < parts.length; i2++) {
@@ -42771,9 +44583,9 @@ var Module = (() => {
       var mounts = [];
       var check2 = [mount];
       while (check2.length) {
-        var m = check2.pop();
-        mounts.push(m);
-        check2.push.apply(check2, m.mounts);
+        var m2 = check2.pop();
+        mounts.push(m2);
+        check2.push.apply(check2, m2.mounts);
       }
       return mounts;
     }, syncfs: (populate, callback) => {
@@ -42889,12 +44701,12 @@ var Module = (() => {
       return FS.mknod(path, mode, 0);
     }, mkdirTree: (path, mode) => {
       var dirs = path.split("/");
-      var d = "";
+      var d2 = "";
       for (var i2 = 0; i2 < dirs.length; ++i2) {
         if (!dirs[i2]) continue;
-        d += "/" + dirs[i2];
+        d2 += "/" + dirs[i2];
         try {
-          FS.mkdir(d, mode);
+          FS.mkdir(d2, mode);
         } catch (e) {
           if (e.errno != 20) throw e;
         }
@@ -44240,9 +46052,9 @@ var Module = (() => {
     var embind_charCodes = void 0;
     function readLatin1String(ptr) {
       var ret = "";
-      var c = ptr;
-      while (HEAPU8[c >>> 0]) {
-        ret += embind_charCodes[HEAPU8[c++ >>> 0]];
+      var c2 = ptr;
+      while (HEAPU8[c2 >>> 0]) {
+        ret += embind_charCodes[HEAPU8[c2++ >>> 0]];
       }
       return ret;
     }
@@ -44256,8 +46068,8 @@ var Module = (() => {
         return "_unknown";
       }
       name = name.replace(/[^a-zA-Z0-9_]/g, "$");
-      var f = name.charCodeAt(0);
-      if (f >= char_0 && f <= char_9) {
+      var f2 = name.charCodeAt(0);
+      if (f2 >= char_0 && f2 <= char_9) {
         return "_" + name;
       }
       return name;
@@ -44441,9 +46253,9 @@ var Module = (() => {
     }
     function getLiveInheritedInstances() {
       var rv = [];
-      for (var k in registeredInstances) {
-        if (registeredInstances.hasOwnProperty(k)) {
-          rv.push(registeredInstances[k]);
+      for (var k2 in registeredInstances) {
+        if (registeredInstances.hasOwnProperty(k2)) {
+          rv.push(registeredInstances[k2]);
         }
       }
       return rv;
@@ -44824,8 +46636,8 @@ var Module = (() => {
       }
     }
     function dynCallLegacy(sig, ptr, args) {
-      var f = Module2["dynCall_" + sig];
-      return args && args.length ? f.apply(null, [ptr].concat(args)) : f.call(null, ptr);
+      var f2 = Module2["dynCall_" + sig];
+      return args && args.length ? f2.apply(null, [ptr].concat(args)) : f2.call(null, ptr);
     }
     function dynCall(sig, ptr, args) {
       if (sig.includes("j")) {
@@ -45253,10 +47065,10 @@ var Module = (() => {
       function ctor() {
       }
       ctor.values = {};
-      registerType(rawType, { name, constructor: ctor, "fromWireType": function(c) {
-        return this.constructor.values[c];
-      }, "toWireType": function(destructors, c) {
-        return c.value;
+      registerType(rawType, { name, constructor: ctor, "fromWireType": function(c2) {
+        return this.constructor.values[c2];
+      }, "toWireType": function(destructors, c2) {
+        return c2.value;
       }, "argPackAdvance": 8, "readValueFromPointer": enumReadValueFromPointer(name, shift, isSigned), destructorFunction: null });
       exposePublicSymbol(name, ctor);
     }
@@ -45395,11 +47207,11 @@ var Module = (() => {
             }
           }
         } else {
-          var a = new Array(length);
+          var a2 = new Array(length);
           for (var i2 = 0; i2 < length; ++i2) {
-            a[i2] = String.fromCharCode(HEAPU8[value2 + 4 + i2 >>> 0]);
+            a2[i2] = String.fromCharCode(HEAPU8[value2 + 4 + i2 >>> 0]);
           }
-          str = a.join("");
+          str = a2.join("");
         }
         _free(value2);
         return str;
@@ -45566,11 +47378,11 @@ var Module = (() => {
       return id2;
     }
     function emval_lookupTypes(argCount, argTypes) {
-      var a = new Array(argCount);
+      var a2 = new Array(argCount);
       for (var i2 = 0; i2 < argCount; ++i2) {
-        a[i2] = requireRegisteredType(HEAPU32[argTypes + i2 * POINTER_SIZE >>> 2], "parameter " + i2);
+        a2[i2] = requireRegisteredType(HEAPU32[argTypes + i2 * POINTER_SIZE >>> 2], "parameter " + i2);
       }
-      return a;
+      return a2;
     }
     var emval_registeredMethods = [];
     function __emval_get_method_caller(argCount, argTypes) {
@@ -46222,14 +48034,14 @@ var Module = (() => {
           }
           return;
         }
-        var x = event.pageX - (scrollX + rect.left);
-        var y = event.pageY - (scrollY + rect.top);
-        x = x * (cw / rect.width);
-        y = y * (ch / rect.height);
-        Browser2.mouseMovementX = x - Browser2.mouseX;
-        Browser2.mouseMovementY = y - Browser2.mouseY;
-        Browser2.mouseX = x;
-        Browser2.mouseY = y;
+        var x2 = event.pageX - (scrollX + rect.left);
+        var y2 = event.pageY - (scrollY + rect.top);
+        x2 = x2 * (cw / rect.width);
+        y2 = y2 * (ch / rect.height);
+        Browser2.mouseMovementX = x2 - Browser2.mouseX;
+        Browser2.mouseMovementY = y2 - Browser2.mouseY;
+        Browser2.mouseX = x2;
+        Browser2.mouseY = y2;
       }
     }, resizeListeners: [], updateResizeListeners: function() {
       var canvas = Module2["canvas"];
@@ -46264,22 +48076,22 @@ var Module = (() => {
         wNative = canvas.widthNative;
         hNative = canvas.heightNative;
       }
-      var w = wNative;
+      var w2 = wNative;
       var h = hNative;
       if (Module2["forcedAspectRatio"] && Module2["forcedAspectRatio"] > 0) {
-        if (w / h < Module2["forcedAspectRatio"]) {
-          w = Math.round(h * Module2["forcedAspectRatio"]);
+        if (w2 / h < Module2["forcedAspectRatio"]) {
+          w2 = Math.round(h * Module2["forcedAspectRatio"]);
         } else {
-          h = Math.round(w / Module2["forcedAspectRatio"]);
+          h = Math.round(w2 / Module2["forcedAspectRatio"]);
         }
       }
       if ((document["fullscreenElement"] || document["mozFullScreenElement"] || document["msFullscreenElement"] || document["webkitFullscreenElement"] || document["webkitCurrentFullScreenElement"]) === canvas.parentNode && typeof screen != "undefined") {
-        var factor = Math.min(screen.width / w, screen.height / h);
-        w = Math.round(w * factor);
+        var factor = Math.min(screen.width / w2, screen.height / h);
+        w2 = Math.round(w2 * factor);
         h = Math.round(h * factor);
       }
       if (Browser2.resizeCanvas) {
-        if (canvas.width != w) canvas.width = w;
+        if (canvas.width != w2) canvas.width = w2;
         if (canvas.height != h) canvas.height = h;
         if (typeof canvas.style != "undefined") {
           canvas.style.removeProperty("width");
@@ -46289,8 +48101,8 @@ var Module = (() => {
         if (canvas.width != wNative) canvas.width = wNative;
         if (canvas.height != hNative) canvas.height = hNative;
         if (typeof canvas.style != "undefined") {
-          if (w != wNative || h != hNative) {
-            canvas.style.setProperty("width", w + "px", "important");
+          if (w2 != wNative || h != hNative) {
+            canvas.style.setProperty("width", w2 + "px", "important");
             canvas.style.setProperty("height", h + "px", "important");
           } else {
             canvas.style.removeProperty("width");
@@ -46758,15 +48570,15 @@ var Module = (() => {
       var str = "(";
       var first = true;
       for (var i2 in args) {
-        var a = args[i2];
+        var a2 = args[i2];
         if (!first) {
           str += ", ";
         }
         first = false;
-        if (typeof a == "number" || typeof a == "string") {
-          str += a;
+        if (typeof a2 == "number" || typeof a2 == "string") {
+          str += a2;
         } else {
-          str += "(" + typeof a + ")";
+          str += "(" + typeof a2 + ")";
         }
       }
       str += ")";
@@ -46885,8 +48697,8 @@ var Module = (() => {
         }
       }
       JSEvents2.deferredCalls.push({ targetFunction, precedence, argsList });
-      JSEvents2.deferredCalls.sort(function(x, y) {
-        return x.precedence < y.precedence;
+      JSEvents2.deferredCalls.sort(function(x2, y2) {
+        return x2.precedence < y2.precedence;
       });
     }, removeDeferredCalls: function(targetFunction) {
       for (var i2 = 0; i2 < JSEvents2.deferredCalls.length; ++i2) {
@@ -46984,7 +48796,7 @@ var Module = (() => {
     function _emscripten_get_heap_max() {
       return getHeapMax();
     }
-    function _emscripten_get_preloaded_image_data(path, w, h) {
+    function _emscripten_get_preloaded_image_data(path, w2, h) {
       if ((path | 0) === path) path = UTF8ToString(path);
       path = PATH_FS.resolve(path);
       var canvas = preloadedImages[path];
@@ -46993,7 +48805,7 @@ var Module = (() => {
         var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
         var buf = _malloc(canvas.width * canvas.height * 4);
         HEAPU8.set(image.data, buf >>> 0);
-        HEAP32[w >>> 2] = canvas.width;
+        HEAP32[w2 >>> 2] = canvas.width;
         HEAP32[h >>> 2] = canvas.height;
         return buf;
       }
@@ -47316,8 +49128,8 @@ var Module = (() => {
       HEAPU32[ptr >>> 2] = num;
       HEAPU32[ptr + 4 >>> 2] = (num - HEAPU32[ptr >>> 2]) / 4294967296;
     }
-    function emscriptenWebGLGet(name_, p, type) {
-      if (!p) {
+    function emscriptenWebGLGet(name_, p2, type) {
+      if (!p2) {
         GL.recordError(1281);
         return;
       }
@@ -47374,13 +49186,13 @@ var Module = (() => {
               for (var i2 = 0; i2 < result.length; ++i2) {
                 switch (type) {
                   case 0:
-                    HEAP32[p + i2 * 4 >>> 2] = result[i2];
+                    HEAP32[p2 + i2 * 4 >>> 2] = result[i2];
                     break;
                   case 2:
-                    HEAPF32[p + i2 * 4 >>> 2] = result[i2];
+                    HEAPF32[p2 + i2 * 4 >>> 2] = result[i2];
                     break;
                   case 4:
-                    HEAP8[p + i2 >>> 0] = result[i2] ? 1 : 0;
+                    HEAP8[p2 + i2 >>> 0] = result[i2] ? 1 : 0;
                     break;
                 }
               }
@@ -47403,21 +49215,21 @@ var Module = (() => {
       }
       switch (type) {
         case 1:
-          writeI53ToI64(p, ret);
+          writeI53ToI64(p2, ret);
           break;
         case 0:
-          HEAP32[p >>> 2] = ret;
+          HEAP32[p2 >>> 2] = ret;
           break;
         case 2:
-          HEAPF32[p >>> 2] = ret;
+          HEAPF32[p2 >>> 2] = ret;
           break;
         case 4:
-          HEAP8[p >>> 0] = ret ? 1 : 0;
+          HEAP8[p2 >>> 0] = ret ? 1 : 0;
           break;
       }
     }
-    function _emscripten_glGetBooleanv(name_, p) {
-      emscriptenWebGLGet(name_, p, 4);
+    function _emscripten_glGetBooleanv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 4);
     }
     function _emscripten_glGetBufferParameteriv(target, value2, data) {
       if (!data) {
@@ -47431,8 +49243,8 @@ var Module = (() => {
       GL.lastError = 0;
       return error;
     }
-    function _emscripten_glGetFloatv(name_, p) {
-      emscriptenWebGLGet(name_, p, 2);
+    function _emscripten_glGetFloatv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 2);
     }
     function _emscripten_glGetFramebufferAttachmentParameteriv(target, attachment, pname, params) {
       var result = GLctx.getFramebufferAttachmentParameter(target, attachment, pname);
@@ -47441,8 +49253,8 @@ var Module = (() => {
       }
       HEAP32[params >>> 2] = result;
     }
-    function _emscripten_glGetIntegerv(name_, p) {
-      emscriptenWebGLGet(name_, p, 0);
+    function _emscripten_glGetIntegerv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 0);
     }
     function _emscripten_glGetProgramInfoLog(program, maxLength, length, infoLog) {
       var log = GLctx.getProgramInfoLog(GL.programs[program]);
@@ -47450,8 +49262,8 @@ var Module = (() => {
       var numBytesWrittenExclNull = maxLength > 0 && infoLog ? stringToUTF8(log, infoLog, maxLength) : 0;
       if (length) HEAP32[length >>> 2] = numBytesWrittenExclNull;
     }
-    function _emscripten_glGetProgramiv(program, pname, p) {
-      if (!p) {
+    function _emscripten_glGetProgramiv(program, pname, p2) {
+      if (!p2) {
         GL.recordError(1281);
         return;
       }
@@ -47463,30 +49275,30 @@ var Module = (() => {
       if (pname == 35716) {
         var log = GLctx.getProgramInfoLog(program);
         if (log === null) log = "(unknown error)";
-        HEAP32[p >>> 2] = log.length + 1;
+        HEAP32[p2 >>> 2] = log.length + 1;
       } else if (pname == 35719) {
         if (!program.maxUniformLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35718); ++i2) {
             program.maxUniformLength = Math.max(program.maxUniformLength, GLctx.getActiveUniform(program, i2).name.length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxUniformLength;
+        HEAP32[p2 >>> 2] = program.maxUniformLength;
       } else if (pname == 35722) {
         if (!program.maxAttributeLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35721); ++i2) {
             program.maxAttributeLength = Math.max(program.maxAttributeLength, GLctx.getActiveAttrib(program, i2).name.length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxAttributeLength;
+        HEAP32[p2 >>> 2] = program.maxAttributeLength;
       } else if (pname == 35381) {
         if (!program.maxUniformBlockNameLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35382); ++i2) {
             program.maxUniformBlockNameLength = Math.max(program.maxUniformBlockNameLength, GLctx.getActiveUniformBlockName(program, i2).length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxUniformBlockNameLength;
+        HEAP32[p2 >>> 2] = program.maxUniformBlockNameLength;
       } else {
-        HEAP32[p >>> 2] = GLctx.getProgramParameter(program, pname);
+        HEAP32[p2 >>> 2] = GLctx.getProgramParameter(program, pname);
       }
     }
     function _emscripten_glGetQueryObjecti64vEXT(id2, pname, params) {
@@ -47587,8 +49399,8 @@ var Module = (() => {
       var numBytesWrittenExclNull = bufSize > 0 && source ? stringToUTF8(result, source, bufSize) : 0;
       if (length) HEAP32[length >>> 2] = numBytesWrittenExclNull;
     }
-    function _emscripten_glGetShaderiv(shader, pname, p) {
-      if (!p) {
+    function _emscripten_glGetShaderiv(shader, pname, p2) {
+      if (!p2) {
         GL.recordError(1281);
         return;
       }
@@ -47596,13 +49408,13 @@ var Module = (() => {
         var log = GLctx.getShaderInfoLog(GL.shaders[shader]);
         if (log === null) log = "(unknown error)";
         var logLength = log ? log.length + 1 : 0;
-        HEAP32[p >>> 2] = logLength;
+        HEAP32[p2 >>> 2] = logLength;
       } else if (pname == 35720) {
         var source = GLctx.getShaderSource(GL.shaders[shader]);
         var sourceLength = source ? source.length + 1 : 0;
-        HEAP32[p >>> 2] = sourceLength;
+        HEAP32[p2 >>> 2] = sourceLength;
       } else {
-        HEAP32[p >>> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname);
+        HEAP32[p2 >>> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname);
       }
     }
     function stringToNewUTF8(jsString) {
@@ -47682,9 +49494,9 @@ var Module = (() => {
         program.uniformLocsById = uniformLocsById = {};
         program.uniformArrayNamesById = {};
         for (i2 = 0; i2 < GLctx.getProgramParameter(program, 35718); ++i2) {
-          var u = GLctx.getActiveUniform(program, i2);
-          var nm = u.name;
-          var sz = u.size;
+          var u2 = GLctx.getActiveUniform(program, i2);
+          var nm = u2.name;
+          var sz = u2.size;
           var lb = webglGetLeftBracePos(nm);
           var arrayName = lb > 0 ? nm.slice(0, lb) : nm;
           var id2 = program.uniformIdCounter;
@@ -47722,11 +49534,11 @@ var Module = (() => {
       return -1;
     }
     function webglGetUniformLocation(location) {
-      var p = GLctx.currentProgram;
-      if (p) {
-        var webglLoc = p.uniformLocsById[location];
+      var p2 = GLctx.currentProgram;
+      if (p2) {
+        var webglLoc = p2.uniformLocsById[location];
         if (typeof webglLoc == "number") {
-          p.uniformLocsById[location] = webglLoc = GLctx.getUniformLocation(p, p.uniformArrayNamesById[location] + (webglLoc > 0 ? "[" + webglLoc + "]" : ""));
+          p2.uniformLocsById[location] = webglLoc = GLctx.getUniformLocation(p2, p2.uniformArrayNamesById[location] + (webglLoc > 0 ? "[" + webglLoc + "]" : ""));
         }
         return webglLoc;
       } else {
@@ -47886,8 +49698,8 @@ var Module = (() => {
       GLctx.disjointTimerQueryExt["queryCounterEXT"](GL.queries[id2], target);
     }
     function computeUnpackAlignedImageSize(width, height, sizePerPixel, alignment) {
-      function roundedToNextMultipleOf(x, y) {
-        return x + y - 1 & -y;
+      function roundedToNextMultipleOf(x2, y2) {
+        return x2 + y2 - 1 & -y2;
       }
       var plainRowSize = width * sizePerPixel;
       var alignedRowSize = roundedToNextMultipleOf(plainRowSize, alignment);
@@ -47916,13 +49728,13 @@ var Module = (() => {
       var bytes = computeUnpackAlignedImageSize(width, height, sizePerPixel, GL.unpackAlignment);
       return heap.subarray(pixels >>> shift, pixels + bytes >>> shift);
     }
-    function _emscripten_glReadPixels(x, y, width, height, format, type, pixels) {
+    function _emscripten_glReadPixels(x2, y2, width, height, format, type, pixels) {
       var pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels);
       if (!pixelData) {
         GL.recordError(1280);
         return;
       }
-      GLctx.readPixels(x, y, width, height, format, type, pixelData);
+      GLctx.readPixels(x2, y2, width, height, format, type, pixelData);
     }
     function _emscripten_glReleaseShaderCompiler() {
     }
@@ -48232,7 +50044,7 @@ var Module = (() => {
       if (requestedSize > maxHeapSize) {
         return false;
       }
-      let alignUp = (x, multiple) => x + (multiple - x % multiple) % multiple;
+      let alignUp = (x2, multiple) => x2 + (multiple - x2 % multiple) % multiple;
       for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
         var overGrownHeapSize = oldSize * (1 + 0.2 / cutDown);
         overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
@@ -48270,25 +50082,25 @@ var Module = (() => {
       return !!ext;
     }
     var __emscripten_webgl_power_preferences = ["default", "low-power", "high-performance"];
-    function _emscripten_webgl_get_context_attributes(c, a) {
-      if (!a) return -5;
-      c = GL.contexts[c];
-      if (!c) return -3;
-      var t = c.GLctx;
+    function _emscripten_webgl_get_context_attributes(c2, a2) {
+      if (!a2) return -5;
+      c2 = GL.contexts[c2];
+      if (!c2) return -3;
+      var t = c2.GLctx;
       if (!t) return -3;
       t = t.getContextAttributes();
-      HEAP32[a >>> 2] = t.alpha;
-      HEAP32[a + 4 >>> 2] = t.depth;
-      HEAP32[a + 8 >>> 2] = t.stencil;
-      HEAP32[a + 12 >>> 2] = t.antialias;
-      HEAP32[a + 16 >>> 2] = t.premultipliedAlpha;
-      HEAP32[a + 20 >>> 2] = t.preserveDrawingBuffer;
+      HEAP32[a2 >>> 2] = t.alpha;
+      HEAP32[a2 + 4 >>> 2] = t.depth;
+      HEAP32[a2 + 8 >>> 2] = t.stencil;
+      HEAP32[a2 + 12 >>> 2] = t.antialias;
+      HEAP32[a2 + 16 >>> 2] = t.premultipliedAlpha;
+      HEAP32[a2 + 20 >>> 2] = t.preserveDrawingBuffer;
       var power = t["powerPreference"] && __emscripten_webgl_power_preferences.indexOf(t["powerPreference"]);
-      HEAP32[a + 24 >>> 2] = power;
-      HEAP32[a + 28 >>> 2] = t.failIfMajorPerformanceCaveat;
-      HEAP32[a + 32 >>> 2] = c.version;
-      HEAP32[a + 36 >>> 2] = 0;
-      HEAP32[a + 40 >>> 2] = c.attributes.enableExtensionsByDefault;
+      HEAP32[a2 + 24 >>> 2] = power;
+      HEAP32[a2 + 28 >>> 2] = t.failIfMajorPerformanceCaveat;
+      HEAP32[a2 + 32 >>> 2] = c2.version;
+      HEAP32[a2 + 36 >>> 2] = 0;
+      HEAP32[a2 + 40 >>> 2] = c2.attributes.enableExtensionsByDefault;
       return 0;
     }
     function _emscripten_webgl_do_get_current_context() {
@@ -48305,13 +50117,13 @@ var Module = (() => {
       if (!getEnvStrings.strings) {
         var lang = (typeof navigator == "object" && navigator.languages && navigator.languages[0] || "C").replace("-", "_") + ".UTF-8";
         var env = { "USER": "web_user", "LOGNAME": "web_user", "PATH": "/", "PWD": "/", "HOME": "/home/web_user", "LANG": lang, "_": getExecutableName() };
-        for (var x in ENV) {
-          if (ENV[x] === void 0) delete env[x];
-          else env[x] = ENV[x];
+        for (var x2 in ENV) {
+          if (ENV[x2] === void 0) delete env[x2];
+          else env[x2] = ENV[x2];
         }
         var strings = [];
-        for (var x in env) {
-          strings.push(x + "=" + env[x]);
+        for (var x2 in env) {
+          strings.push(x2 + "=" + env[x2]);
         }
         getEnvStrings.strings = strings;
       }
@@ -48436,7 +50248,7 @@ var Module = (() => {
     }
     function inetPton6(str) {
       var words;
-      var w, offset2, z;
+      var w2, offset2, z2;
       var valid6regx = /^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$/i;
       var parts = [];
       if (!valid6regx.test(str)) {
@@ -48460,19 +50272,19 @@ var Module = (() => {
         words = str.split(":");
       }
       offset2 = 0;
-      z = 0;
-      for (w = 0; w < words.length; w++) {
-        if (typeof words[w] == "string") {
-          if (words[w] === "Z") {
-            for (z = 0; z < 8 - words.length + 1; z++) {
-              parts[w + z] = 0;
+      z2 = 0;
+      for (w2 = 0; w2 < words.length; w2++) {
+        if (typeof words[w2] == "string") {
+          if (words[w2] === "Z") {
+            for (z2 = 0; z2 < 8 - words.length + 1; z2++) {
+              parts[w2 + z2] = 0;
             }
-            offset2 = z - 1;
+            offset2 = z2 - 1;
           } else {
-            parts[w + offset2] = _htons(parseInt(words[w], 16));
+            parts[w2 + offset2] = _htons(parseInt(words[w2], 16));
           }
         } else {
-          parts[w + offset2] = words[w];
+          parts[w2 + offset2] = words[w2];
         }
       }
       return [parts[1] << 16 | parts[0], parts[3] << 16 | parts[2], parts[5] << 16 | parts[4], parts[7] << 16 | parts[6]];
@@ -48758,8 +50570,8 @@ var Module = (() => {
     function _glGetAttribLocation(program, name) {
       return GLctx.getAttribLocation(GL.programs[program], UTF8ToString(name));
     }
-    function _glGetBooleanv(name_, p) {
-      emscriptenWebGLGet(name_, p, 4);
+    function _glGetBooleanv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 4);
     }
     function _glGetBufferParameteriv(target, value2, data) {
       if (!data) {
@@ -48773,8 +50585,8 @@ var Module = (() => {
       GL.lastError = 0;
       return error;
     }
-    function _glGetFloatv(name_, p) {
-      emscriptenWebGLGet(name_, p, 2);
+    function _glGetFloatv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 2);
     }
     function _glGetFramebufferAttachmentParameteriv(target, attachment, pname, params) {
       var result = GLctx.getFramebufferAttachmentParameter(target, attachment, pname);
@@ -48783,8 +50595,8 @@ var Module = (() => {
       }
       HEAP32[params >>> 2] = result;
     }
-    function _glGetIntegerv(name_, p) {
-      emscriptenWebGLGet(name_, p, 0);
+    function _glGetIntegerv(name_, p2) {
+      emscriptenWebGLGet(name_, p2, 0);
     }
     function _glGetProgramInfoLog(program, maxLength, length, infoLog) {
       var log = GLctx.getProgramInfoLog(GL.programs[program]);
@@ -48792,8 +50604,8 @@ var Module = (() => {
       var numBytesWrittenExclNull = maxLength > 0 && infoLog ? stringToUTF8(log, infoLog, maxLength) : 0;
       if (length) HEAP32[length >>> 2] = numBytesWrittenExclNull;
     }
-    function _glGetProgramiv(program, pname, p) {
-      if (!p) {
+    function _glGetProgramiv(program, pname, p2) {
+      if (!p2) {
         GL.recordError(1281);
         return;
       }
@@ -48805,30 +50617,30 @@ var Module = (() => {
       if (pname == 35716) {
         var log = GLctx.getProgramInfoLog(program);
         if (log === null) log = "(unknown error)";
-        HEAP32[p >>> 2] = log.length + 1;
+        HEAP32[p2 >>> 2] = log.length + 1;
       } else if (pname == 35719) {
         if (!program.maxUniformLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35718); ++i2) {
             program.maxUniformLength = Math.max(program.maxUniformLength, GLctx.getActiveUniform(program, i2).name.length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxUniformLength;
+        HEAP32[p2 >>> 2] = program.maxUniformLength;
       } else if (pname == 35722) {
         if (!program.maxAttributeLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35721); ++i2) {
             program.maxAttributeLength = Math.max(program.maxAttributeLength, GLctx.getActiveAttrib(program, i2).name.length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxAttributeLength;
+        HEAP32[p2 >>> 2] = program.maxAttributeLength;
       } else if (pname == 35381) {
         if (!program.maxUniformBlockNameLength) {
           for (var i2 = 0; i2 < GLctx.getProgramParameter(program, 35382); ++i2) {
             program.maxUniformBlockNameLength = Math.max(program.maxUniformBlockNameLength, GLctx.getActiveUniformBlockName(program, i2).length + 1);
           }
         }
-        HEAP32[p >>> 2] = program.maxUniformBlockNameLength;
+        HEAP32[p2 >>> 2] = program.maxUniformBlockNameLength;
       } else {
-        HEAP32[p >>> 2] = GLctx.getProgramParameter(program, pname);
+        HEAP32[p2 >>> 2] = GLctx.getProgramParameter(program, pname);
       }
     }
     function _glGetRenderbufferParameteriv(target, pname, params) {
@@ -48856,8 +50668,8 @@ var Module = (() => {
       var numBytesWrittenExclNull = bufSize > 0 && source ? stringToUTF8(result, source, bufSize) : 0;
       if (length) HEAP32[length >>> 2] = numBytesWrittenExclNull;
     }
-    function _glGetShaderiv(shader, pname, p) {
-      if (!p) {
+    function _glGetShaderiv(shader, pname, p2) {
+      if (!p2) {
         GL.recordError(1281);
         return;
       }
@@ -48865,13 +50677,13 @@ var Module = (() => {
         var log = GLctx.getShaderInfoLog(GL.shaders[shader]);
         if (log === null) log = "(unknown error)";
         var logLength = log ? log.length + 1 : 0;
-        HEAP32[p >>> 2] = logLength;
+        HEAP32[p2 >>> 2] = logLength;
       } else if (pname == 35720) {
         var source = GLctx.getShaderSource(GL.shaders[shader]);
         var sourceLength = source ? source.length + 1 : 0;
-        HEAP32[p >>> 2] = sourceLength;
+        HEAP32[p2 >>> 2] = sourceLength;
       } else {
-        HEAP32[p >>> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname);
+        HEAP32[p2 >>> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname);
       }
     }
     function _glGetString(name_) {
@@ -49030,13 +50842,13 @@ var Module = (() => {
     function _glPolygonOffset(x0, x1) {
       GLctx["polygonOffset"](x0, x1);
     }
-    function _glReadPixels(x, y, width, height, format, type, pixels) {
+    function _glReadPixels(x2, y2, width, height, format, type, pixels) {
       var pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels);
       if (!pixelData) {
         GL.recordError(1280);
         return;
       }
-      GLctx.readPixels(x, y, width, height, format, type, pixelData);
+      GLctx.readPixels(x2, y2, width, height, format, type, pixelData);
     }
     function _glReleaseShaderCompiler() {
     }

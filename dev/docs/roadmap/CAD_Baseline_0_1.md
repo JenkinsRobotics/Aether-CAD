@@ -1,0 +1,72 @@
+# Aether CAD 0.1 functional baseline
+
+Jonathan's goal, 2026-10-24: finish the CAD baseline using SolidCraft as a
+behavior reference, including modeling, drawings, assemblies and agent use.
+The source is Aether-CAD on alpha-0.1. Aether's in-process OCCT engine and the
+approved shared Aether UI remain the product architecture.
+
+## Reference and starting evidence
+
+The supplied solidcraft-main.zip contains SolidCraft 0.16.2 (Cargo.toml). Its
+command contracts and tests are reference evidence, not instructions for this
+repository. No SolidCraft implementation is copied in this work.
+Tool_Parity_Tracker.md currently records 398 commands: 211 parity, 87 partial,
+35 parity-ish, 7 unverified, 3 gaps, 2 ours+ and 53 outside CAD. Those labels are
+historical assessments, not a passing acceptance suite. Each closure needs a
+real executable workflow and honest remaining limits.
+
+The last qualified core-loop build is r66: a datum offset, mouse-drawn overlapping
+profiles, exact region selection, extrusion, face sketch/cut/add, upstream depth
+edit and save/reopen. The existing audit is in Studio's
+`dev/docs/reality/CAD_Functional_Audit_2026-10-23.md`. Independent app releases now
+use alpha-0.1.N and do not restart Studio. No app release is implied by a source
+commit; Map and other apps must remain unchanged.
+
+## Completion gates
+
+| Area | Required operator workflow | Current state / next work |
+| --- | --- | --- |
+| Sketch and model | Place/redefine a sketch, draw/edit dimensions and constraints, select exact regions, extrude/add/cut, revolve/sweep/loft, edge finishes, Boolean, edit earlier features, undo/redo, save/reopen | r66 core mouse loop passed. Close remaining tool variants and attachment failures with exact-geometry and operator checks. |
+| Agent modeling | Discover contracts and live IDs, create/edit the same documents and regions as the UI, inspect exact results, atomically reject failed/stale edits, replay a saved program | General feature operations exist. Source verified 2026-10-24: shared region picks, explicit sketch frames, exact cut/add/revolve, driving edits and saved-runner reopen. Convenience live-face/datum binding and remaining authoring breadth still need work. |
+| Assemblies | Reuse parts, place/ground instances, create/edit/delete supported mates and relations, change DOFs/limits, solve without overwriting intent, BOM, save/reopen; same actions for agents | Eight mate kinds are packaged and compose/reopen tested. Cam, sweep joint, contact editing/listing and agent edit breadth remain. Recheck against the pinned codec, never a newer editable dependency. |
+| Drawings | Create a sheet from a real part/assembly, base/projected/section views, associative dimensions/annotations, source-change rebuild, export and reopen | Current route is an unavailable workbench despite existing HLR and sheet presentation code. Needs a connected producer, persistent authoring and UI/agent commands. |
+| Reference tool coverage | Review every remaining relevant tracker row against SolidCraft's input contract and tests; distinguish supported subsets from full parity | Surface Match, advanced sweep/loft/fillet and sheet-metal cases remain. An enabled ribbon item alone does not close a row. |
+| Delivery | Qualified frontend and matching compatible worker, immutable app-only activation, final live smoke check | Repository contracts and Studio's independent update path are ready; no server/Map changes required for compatible CAD packages. |
+
+Drawings require a separate Aether acceptance target. SolidCraft's supplied
+`docs/drawing-foundations.md` explicitly says its merged foundation does not
+produce sections, register drawing.view, export drawings or save a Drawing
+document. Matching that foundation would not satisfy Jonathan's request for
+working drawings. The target above remains required.
+
+## Work sequence
+
+1. Close demonstrated modeling/agent inconsistencies and keep the r66 mouse loop
+   green. Test regions and sketch frames through both the UI operation and the
+   saved agent runner; preserve feature, contour and body identities.
+2. Connect the existing drawing projection/rendering foundation to actual OCCT
+   output and canonical saved state, then add authoring, annotations and exports.
+3. Complete assembly authoring and agent editing through the existing canonical
+   controller and pinned codec; add the remaining relation types deliberately.
+4. Work the remaining reference matrix with real geometry fixtures and pick
+   coverage, including invalid/ambiguous topology and upstream edits.
+5. Qualify and stage CAD-only alpha updates. Record delivered versus source-only
+   capability; do not claim full parity before all applicable gates pass.
+
+## Evidence discipline
+
+Use deterministic analytic volume/bounds checks, reference identity/replay tests,
+real mouse workflows and fresh-process saved-runner tests. Refusal is acceptable
+only for explicitly unsupported or invalid input, and must leave the original
+state/history unchanged. Rendering alone is not geometry verification. Source
+and release IDs, failing attempts and remaining limits belong in the reality
+status and each qualification record.
+
+## Verified increments
+
+2026-10-24: the first source increment unifies UI/agent region references, removes
+display-tessellation errors from curved-edge picking, and adds explicit agent
+sketch frames. The mouse loop and exact saved-model measurements pass. See
+`../reality/STATUS.md` for test evidence and release state. The next functional
+packet is a real drawing producer and saved authoring workflow, using the
+existing presentation components and OCCT geometry.
