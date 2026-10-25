@@ -25,7 +25,7 @@ export function CADStudioWorkspaceControls({ documentType, onAction }: { documen
   </div>;
 }
 
-export function CADStudioViewTools() {
+export function CADStudioViewTools({partTray}:{partTray?:{shown:boolean;onToggle:()=>void}}={}) {
   const appearance = useSyncExternalStore(cadAppearance.subscribe, cadAppearance.snapshot, cadAppearance.snapshot);
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
   const [anchor, setAnchor] = useState<HTMLElement|null>(null);
@@ -40,7 +40,9 @@ export function CADStudioViewTools() {
       {id:"selection",label:"Selection tools",icon:<AetherIcon name="cursor"/>,pressed:!!anchor},
       {id:"measure",label:"Measure",icon:<AetherIcon name="ruler"/>,pressed:measuring,disabled:!commands.measure.enabled},
       {id:"section",label:"Section view",icon:<AetherIcon name="section-view"/>,pressed:sectioned||editingSection,disabled:!commands["section-view"].enabled},
+      ...(partTray?[{id:"part-tray",label:"Part tray",icon:<AetherIcon name="part-manager"/>,pressed:partTray.shown}]:[]),
     ]}]} onAction={id => {
+      if(id==="part-tray"){partTray?.onToggle();return;}
       if(id==="grid")cadAppearance.dispatch({type:"set-floor-mode",mode:appearance.floorMode==="both"?"floor":appearance.floorMode==="grid"?"none":appearance.floorMode==="floor"?"both":"grid"});
       else if(id==="fit")cadCommands.execute("fit-view");
       else if(id==="measure")cadCommands.execute("measure");

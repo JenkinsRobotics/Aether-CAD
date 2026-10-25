@@ -40,7 +40,7 @@ test('folder collapse keeps the active tab reachable',async()=>{
  const change=vi.fn();
  await act(()=>root.render(<CADTabStrip tabs={[{id:'a',label:'Part A',current:true},{id:'b',label:'Part B'}]} folders={[{id:'g',name:'Hardware',tabs:['a','b'],collapsed:true}]} onFoldersChange={change} placement="bottom" label="Files" onAdd={()=>{}} onReorder={()=>{}} onDetach={()=>{}}/>));
  expect([...host.querySelectorAll('[role="tab"]')].map(t=>t.querySelector('.aui-document-tab-label').textContent)).toEqual(['Part A']);
- const folder=host.querySelector('.cad-tab-folder-label');
+ const folder=host.querySelector('.aui-tab-folder-label');
  await act(()=>folder.click());expect(change.mock.calls[0][0][0].collapsed).toBe(false);
 });
 test('dropping onto a folder moves tab membership without selecting it',async()=>{
@@ -48,7 +48,7 @@ test('dropping onto a folder moves tab membership without selecting it',async()=
  const change=vi.fn(),select=vi.fn();
  await act(()=>root.render(<CADTabStrip tabs={[{id:'a',label:'Part A',current:true,onSelect:select}]} folders={[{id:'g',name:'Hardware',tabs:[],collapsed:false}]} onFoldersChange={change} placement="bottom" label="Files" onAdd={()=>{}} onReorder={()=>{}} onDetach={()=>{}}/>));
  const strip=host.firstElementChild;strip.setPointerCapture=()=>{};strip.hasPointerCapture=()=>false;strip.getBoundingClientRect=()=>({top:100,bottom:132});
- document.elementFromPoint=()=>host.querySelector('.cad-tab-folder-label');
+ document.elementFromPoint=()=>host.querySelector('.aui-tab-folder-label');
  await pointer(host.querySelector('[role="tab"]'),'pointerdown',10,110);await pointer(strip,'pointermove',200,110);await pointer(strip,'pointerup',200,110);
  expect(change.mock.calls[0][0][0].tabs).toEqual(['a']);expect(select).not.toHaveBeenCalled();
 });

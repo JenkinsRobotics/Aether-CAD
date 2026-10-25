@@ -1,11 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { AetherIcon, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
+import { AetherIcon, DocumentTabBrowser, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
 import { NewDesignDialog } from "@aether/ui/new-design";
 import { CAD_DESIGN_KINDS, DESIGN_UNIT_OPTIONS } from "@aether/session/library/design-kinds";
 import { createNativeFile } from "@aether/session/library/create-native-file";
 import { cadPresentation } from "../cad-presentation-store";
 
-import { tabActionItems, tabURL, type CADTabAction, type CADTabTarget } from '../document-tab-actions';
+import { tabActionItems, tabPartCode, tabURL, type CADTabAction, type CADTabTarget } from '../document-tab-actions';
 import { CADDocumentControls } from "./CADDocumentControls";
 import { loadDocumentMetadata } from "./CADDocumentSettings";
 import { CADTabActionDialog, type CADTabActionResult } from './CADTabActionDialog';
@@ -25,7 +25,10 @@ const tabStorage = browserTabStorage;
 const readOpenFiles = (): OpenFile[] => {
   try { const value = JSON.parse(tabStorage().getItem(OPEN_FILES_KEY) ?? "[]"); return Array.isArray(value) ? value : []; } catch { return []; }
 };
-const writeOpenFiles = (files: OpenFile[]) => { try { tabStorage().setItem(OPEN_FILES_KEY, JSON.stringify(files)); } catch { /* device preference only */ } };
+// The tray and the Files panel are two views of these tabs; each re-reads when the other writes.
+const LAYOUT_CHANGED = "cad-tab-layout-changed";
+const layoutChanged = () => window.dispatchEvent(new Event(LAYOUT_CHANGED));
+const writeOpenFiles = (files: OpenFile[]) => { try { tabStorage().setItem(OPEN_FILES_KEY, JSON.stringify(files)); } catch { /* device preference only */ } layoutChanged(); };
 const partIcon = <AetherIcon name="cube" data-design-kind="part" />;
 const drawingIcon = <AetherIcon name="file" data-design-kind="drawing" />;
 const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
@@ -37,7 +40,9 @@ const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
  * here gets a tab. Either way "+" opens the shared "What do you want to
  * design?" dialog; in a project, parts and assemblies are created inside it.
  */
-export function CADDocumentTabs({ connection, placement = "bottom" }: { connection: DocumentConnection; placement?: "bottom" | "header" }) {
+
+/** `variant="browser"` draws the same tabs, folders and controls as the left Files panel. */
+export function CADDocumentTabs({ connection, placement = "bottom", variant = "tray" }: { connection: DocumentConnection; placement?: "bottom" | "header"; variant?: "tray" | "browser" }) {
   const [revisions,setRevisions]=useState<Record<string,{label:string;title:string}>>({});
   const [tabAction,setTabAction]=useState<{target:CADTabTarget;action:CADTabAction}|null>(null);
   const [saveStatus, setSaveStatus] = useState('');
@@ -71,7 +76,11 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   const search = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
   const documentID = search.get("document");
   const orderKey = `aether-cad.tab-order:${documentID ?? "files"}`;
-  useEffect(() => setOrder(readTabOrder(orderKey)), [orderKey]);
+  useEffect(() => {
+    const read = () => { setOrder(readTabOrder(orderKey)); setOpenFiles(readOpenFiles()); };
+    read(); window.addEventListener(LAYOUT_CHANGED, read);
+    return () => window.removeEventListener(LAYOUT_CHANGED, read);
+  }, [orderKey]);
   const activeID = search.get("part") ?? search.get("assembly");
   useEffect(()=>{
     const key=project?(activeID??project.parts[0]?.id):documentID;
@@ -87,8 +96,12 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   },[documentID,activeID,project,navigation,presentation.documentName]);
   const folderKey = `aether-cad.tab-groups:${project ? documentID : "files"}`;
   const folderStorage = () => project ? localStorage : tabStorage();
-  useEffect(()=>setFolders(readTabFolders(folderStorage(),folderKey)),[folderKey]);
-  const updateFolders=(next:TabFolder[])=>{setFolders(next);try{folderStorage().setItem(folderKey,JSON.stringify(next));}catch{/* organization remains usable without storage */}};
+  useEffect(()=>{
+    const read=()=>setFolders(readTabFolders(folderStorage(),folderKey));
+    read();window.addEventListener(LAYOUT_CHANGED,read);
+    return()=>window.removeEventListener(LAYOUT_CHANGED,read);
+  },[folderKey]);
+  const updateFolders=(next:TabFolder[])=>{setFolders(next);try{folderStorage().setItem(folderKey,JSON.stringify(next));}catch{/* organization remains usable without storage */}layoutChanged();};
   useEffect(() => {
     let disposed = false;
     void import("../host-library").then(({ activeProject, hostedDocumentName }) => {
@@ -169,7 +182,7 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
   const reorder = (source: string, target: string) => {
     const next = reorderTabs(tabs.map(tab => tab.id), source, target);
     if (project) {
-      setOrder(next); try { localStorage.setItem(orderKey, JSON.stringify(next)); } catch { /* preference only */ }
+      setOrder(next); try { localStorage.setItem(orderKey, JSON.stringify(next)); } catch { /* preference only */ } layoutChanged();
     } else { const files = orderedTabs(openFiles, next); writeOpenFiles(files); setOpenFiles(files); }
   };
   const detach = (id: string) => {
@@ -204,6 +217,26 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
       revision:contextual&&search.has('revision')?Number(search.get('revision')):undefined,
       linked:project?.parts.find(part=>part.id===id)?.source?.kind==='linked'};
   };
+  // Part previews for the Files panel, built on this device by the same engine.
+  // Navigation refreshes them all; a save refreshes the open part's.
+  const [thumbnails,setThumbnails]=useState<Record<string,string>>({});
+  const partTabs=variant==="browser"?tabs.filter(tab=>tab.detail==="Part Studio").map(tab=>tab.id):[];
+  const currentPart=partTabs.find(id=>tabs.find(tab=>tab.id===id)?.current);
+  const preview=(ids:string[])=>{
+    let live=true;
+    void (async()=>{
+      const {previewDocument}=await import("../preview-document");
+      // ponytail: one engine build per part; cache by document revision if projects grow large.
+      for(const id of ids){
+        const image=await tabPartCode(targetFor(id)).then(previewDocument).catch(()=>null);
+        if(!live)return;
+        if(image)setThumbnails(previous=>({...previous,[id]:image}));
+      }
+    })();
+    return()=>{live=false;};
+  };
+  useEffect(()=>partTabs.length?preview(partTabs):undefined,[partTabs.join(","),navigation,presentation.backendState]);
+  useEffect(()=>saveStatus==="Saved"&&currentPart?preview([currentPart]):undefined,[saveStatus,currentPart]);
   const runTabAction=(id:string,action:string)=>{
     const target=targetFor(id),entry=tabActionItems(target).find(item=>item.id===action);
     if(!entry||entry.disabled)return;
@@ -238,10 +271,13 @@ export function CADDocumentTabs({ connection, placement = "bottom" }: { connecti
       else location.assign(location.href);
     }
   };
+  const controls={revisionForTab:(id:string)=>revisions[id]??{label:'V1.0',title:'Working version V1.0'},tabActions:(id:string)=>tabActionItems(targetFor(id)),onTabAction:runTabAction,saveStatus,tabs,
+    label:project ? "Project tabs" : "Open files",folders,onFoldersChange:updateFolders,onOrganize:()=>setOrganizing(true),onManage:() => setManaging(true),onAdd:() => setChoosing(true),onReorder:reorder,onDetach:detach};
   return <>
     {error && <div role="alert">{error}</div>}
-    <CADTabStrip leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />}
-      revisionForTab={id=>revisions[id]??{label:'V1.0',title:'Working version V1.0'}} tabActions={id=>tabActionItems(targetFor(id))} onTabAction={runTabAction} saveStatus={saveStatus} tabs={tabs} placement={placement} label={project ? "Project tabs" : "Open files"} folders={folders} onFoldersChange={updateFolders} onOrganize={()=>setOrganizing(true)} onManage={() => setManaging(true)} onAdd={() => setChoosing(true)} onReorder={reorder} onDetach={detach} />
+    {variant === "browser"
+      ? <DocumentTabBrowser {...controls} title="Files" rootLabel={project ? projectName : "Open files"} tabs={tabs.map(tab=>({...tab,thumbnail:thumbnails[tab.id]}))} />
+      : <CADTabStrip {...controls} leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />} placement={placement} />}
     {managing && <CADFileManagerWindow tabs={tabs} project={project ? {name:projectName,linkedIds:project.parts.filter(part=>part.source?.kind==='linked').map(part=>part.id)} : null} standaloneTabs={project ? openFiles.map(file=>({id:file.id,label:file.name,detail:file.kind==='drawing'?'Drawing':file.kind==='assembly'?'Assembly':'Part Studio',icon:file.kind==='drawing'?drawingIcon:file.kind==='assembly'?assemblyIcon:partIcon,onSelect:()=>void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`)})) : []} connection={connection} onClose={() => setManaging(false)} />}
     {organizing && <CADTabFolders tabs={tabs} folders={folders} onChange={updateFolders} onClose={()=>setOrganizing(false)}/>}
     {tabAction&&<CADTabActionDialog target={tabAction.target} action={tabAction.action} flush={connection.flush} onClose={()=>setTabAction(null)} onApplied={actionApplied}/>}

@@ -61,6 +61,22 @@ it('keeps the pinned Feature tree beside History and Version control, which repl
   expect(isVisible(container.querySelector('[aria-label="Versions and history"]'))).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
 });
+it('opens Files as a left panel and moves the part tray toggle to the view tools', async()=>{
+  await click('Files');
+  const files=container.querySelector('.aui-tab-browser');
+  expect(isVisible(files)).toBe(true);
+  expect(files.textContent).toContain('Part Studio');
+  expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
+  await click('Comments');
+  expect(isVisible(container.querySelector('.aui-tab-browser'))).toBe(false);
+  const tray=()=>container.querySelector('.cad-document-tray-slot');
+  const toggle=container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]');
+  expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  await act(async()=>toggle.click());
+  expect(tray().hidden).toBe(true);
+  await act(async()=>container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]').click());
+  expect(tray().hidden).toBe(false);
+});
 it('ribbon category changes preserve the chosen left view and right appearance is independent',async()=>{
   await click('History');
   for(const label of ['Solid','Surface','Manage','Output']) {

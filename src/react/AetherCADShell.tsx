@@ -386,7 +386,9 @@ export function AetherCADShell() {
   ], { features: "browser" }, documentConnection).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
   const advisor = leftPanels.find(panel=>panel.id === "advisor");
   if (advisor) advisor.icon = <AetherIcon name="brain"/>;
-  leftPanels.push({id:"files",title:"Part list",icon:<AetherIcon name="folder"/>,content:null,toggle:{pressed:showFileTray,onToggle:()=>setShowFileTray(value=>!value)}});
+  // Files (Jonathan, 2026-10-25): the bottom tray's tabs as a Fusion-style data panel.
+  // The tray itself stays at the bottom; its toggle is in the right-hand view tools.
+  leftPanels.push({id:"files",title:"Files",icon:<AetherIcon name="folder"/>,content:documentConnection?<CADDocumentTabs connection={documentConnection} variant="browser"/>:null});
   // The aux toolbar controls the auxiliary card and the part list (Model Studio
   // demo); the tree is the standard column. Users choose its buttons in Settings › Layout.
   // Only the Settings-chosen aux items have buttons; other aux panels (Create version,
@@ -423,7 +425,7 @@ export function AetherCADShell() {
   // same-side exclusivity (Comments/Notes/Tasks and View/Performance did).
   // Features and parts is pinned (Onshape): it keeps its column while the
   // rail's other panels open beside it, so it is outside this exclusivity.
-  const leftPanelIDs = leftPanels.map(panel => panel.id).filter(id => id !== "browser" && id !== "files" && id !== "feature-tree");
+  const leftPanelIDs = leftPanels.map(panel => panel.id).filter(id => id !== "browser" && id !== "feature-tree");
   const rightPanelIDs = rightPanels.map(panel => panel.id);
   const openLeftPanel = (id: string) => {
     const next = { ...studioPanelState };
@@ -529,7 +531,7 @@ export function AetherCADShell() {
           preservePanelContent
           toolbarSpan="center"
           pinnedPanels={drawingMode ? [] : ["browser"]}
-          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools /> }}
+          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:()=>setShowFileTray(value=>!value)}} /> }}
           style={{ height: "100%" }}
           panelState={visiblePanelState}
           onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}

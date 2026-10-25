@@ -922,7 +922,7 @@
 .cad-studio-workspace-controls { display:flex; align-items:center; gap:6px; }
 .cad-studio-control-divider { height:24px; width:1px; background:var(--aether-color-border); margin:0 4px; }
 .cad-studio-workspace-controls .aui-workspace-switcher { height:30px; padding:0 9px; border:1px solid var(--aether-color-border); border-radius:8px; background:var(--aether-color-bg-app); font:12px var(--aether-font-family); }
-.cad-studio-view-tools { width:216px; max-width:100%; }
+.cad-studio-view-tools { width:252px; max-width:100%; }
 .cad-studio-view-tools > .aui-floating-toolbar { width:100%; }
 .cad-studio-view-tools .aui-floating-toolbar-strip { padding:0; gap:0; border-radius:9px; }
 .cad-studio-view-tools .aui-floating-toolbar-group { flex:1; gap:0; align-items:stretch; }

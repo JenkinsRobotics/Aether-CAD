@@ -5,7 +5,7 @@ export const AUX_TOOLBAR_ITEMS = [
   { id: "comments", label: "Comments" },
   { id: "advisor", label: "AI advisor" },
   { id: "versions", label: "Version control" },
-  { id: "files", label: "Part list" },
+  { id: "files", label: "Files" },
   { id: "history", label: "Feature history" },
   { id: "feature-tree", label: "Feature tree" },
 ] as const;
