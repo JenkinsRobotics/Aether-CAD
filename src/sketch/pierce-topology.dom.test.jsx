@@ -14,7 +14,7 @@ beforeAll(async()=>{
 },30000);
 beforeEach(()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"></div>';
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));
  const source=doc.features[0];source.frame={originMillimeters:[0,0,-3],normal:[0,0,1],xDirection:[1,0,0]};
  source.profile.contours[0].start=[0,-5];source.profile.contours[0].segments[0].end=[0,5];
  target().profile.contours[0].center=[0,0];target().profile.constraints.find(c=>c.kind==='pierce').a={kind:'circle',contour:0};
@@ -44,7 +44,7 @@ it.each([true,false])('trims a circle with correct contact retention (%s), ordin
  await finish(`circle-trim-${keep}`);expect(target().profile.constraints.filter(c=>c.kind==='pierce')).toHaveLength(keep?1:0);
 });
 it('retains a constrained cubic control after split and keeps cancellation atomic',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='cubic-control').document);const old=serializePartDocument(doc);
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='cubic-control').document));const old=serializePartDocument(doc);
  const drawing=resolveProfileDrawing(doc.features,'target'),path=drawing.contours[0],at=segmentPoint(path.start,path.segments[0],.4);
  open(()=>doc,apply,target());tool('split');point(...at);expect(marked()).toBe(1);click('Cancel sketch');expect(serializePartDocument(doc)).toBe(old);
  open(()=>doc,apply,target());tool('split');point(...at);await finish('control-split');

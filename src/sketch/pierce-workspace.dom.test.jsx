@@ -12,7 +12,7 @@ beforeAll(async()=>{
 });
 beforeEach(()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"></div>';
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));
  apply=vi.fn(async next=>{doc=next;});
 });
 afterEach(()=>{querySketchControl('.cad-sketch-window [data-feature-action="discard"]')?.click();});

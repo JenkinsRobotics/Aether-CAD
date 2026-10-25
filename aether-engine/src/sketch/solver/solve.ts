@@ -6,6 +6,7 @@ import { contactParameterCoordinates } from "./contact-parameters";
 import { dimensionDriver } from "./dimension-links";
 import type { SketchDrawing, SketchPoint } from "../drawing";
 import { constraintResiduals } from "./residuals";
+import { captureDistanceSides } from "./distance-side";
 import { solveSavedPierceConstraints } from '../reference/pierce-constraints';
 /** SPIKE (2026-09-12): see solver/planegcs-spike.ts. Delete with the spike. */
 type SolverComparisonHost = {
@@ -43,6 +44,7 @@ function solveDrawingConstraintsCore(source: SketchDrawing, options: { fixedCont
     throw new Error("This sketch supports up to 512 constraints.");
   if (new Set(constraints.map((c) => c.id)).size !== constraints.length)
     throw new Error("Duplicate constraint IDs.");
+  captureDistanceSides(d);
   for (const c of constraints) validateDimensionExpression(c);
   for (const c of constraints)
     if (c.valueFrom !== undefined || c.valueSign !== undefined || c.valueScale !== undefined || c.valueOffset !== undefined)

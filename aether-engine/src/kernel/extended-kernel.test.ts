@@ -6,12 +6,12 @@ import initFull from "opencascade.js/dist/node.js";
 import { loadExtendedKernel, needsExtendedKernel } from "./extended-kernel";
 import { evaluatePartDocument } from "./part-evaluator";
 import fixtures from "./oracle/fixtures.json";
-import type { PartDocument } from "../document/index";
+import { parsePartDocument, type PartDocument } from "../document/index";
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) }));
   await loadExtendedKernel(() => (initFull as unknown as () => Promise<unknown>)());
 }, 120000);
-const fixture = (name: string) => (fixtures as unknown as PartDocument[]).find((f) => f.name === name)!;
+const fixture = (name: string) => parsePartDocument(JSON.stringify((fixtures as unknown as PartDocument[]).find((f) => f.name === name)!));
 const bodies = (doc: PartDocument) => { const out: { id: string; volume: number; bounds: number[][] }[] = []; evaluatePartDocument(doc, { withBodies: (b) => { for (const [id, s] of b) out.push({ id, volume: measureVolume(s as Shape3D), bounds: (s as Shape3D).boundingBox.bounds.map((v) => [...v].map((x) => +x.toFixed(3) + 0)) }); } }); return out; };
 
 it("knows which documents need the full build", () => {

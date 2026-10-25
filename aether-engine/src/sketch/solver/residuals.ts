@@ -25,6 +25,7 @@ import { normalResiduals } from "./normal";
 import { dimensionValue } from "./dimension-links";
 import { measuredDimensionValue } from "./measured-dimension";
 import { pointLineMeasurement } from "./point-line-measurement";
+import { signedLineDistance, validateDistanceSide } from "./distance-side";
 import { curveContinuityResiduals } from "./curve-continuity";
 import type { SketchDrawing, SketchPoint } from "../drawing";
 import type { DrawingConstraint } from "./types";
@@ -35,6 +36,7 @@ export function constraintResiduals(
   d: SketchDrawing,
   c: DrawingConstraint,
 ): number[] {
+  validateDistanceSide(d, c);
   validatePierceConstraint(c);
   if(c.kind==='pierce')return pierceResiduals(d,c);
   validateSplineFreeEnds(c);
@@ -145,12 +147,18 @@ export function constraintResiduals(
     case "distance": {
       if (a.line && b?.line) {
         const m = lineLineMeasurement(a.line, b.line);
-        return [m.parallelError, m.distance - positive()];
+        return [m.parallelError, c.distanceSide === undefined
+          ? m.distance - positive()
+          : signedLineDistance(m.point, b.line) - c.distanceSide * positive()];
       }
       if (a.point && b?.line)
-        return [pointLineMeasurement(a.point, b.line).distance - positive()];
+        return [c.distanceSide === undefined
+          ? pointLineMeasurement(a.point, b.line).distance - positive()
+          : signedLineDistance(a.point, b.line) - c.distanceSide * positive()];
       if (a.line && b?.point)
-        return [pointLineMeasurement(b.point, a.line).distance - positive()];
+        return [c.distanceSide === undefined
+          ? pointLineMeasurement(b.point, a.line).distance - positive()
+          : signedLineDistance(b.point, a.line) - c.distanceSide * positive()];
       const p = point(a),
         q = point(b);
       return [Math.hypot(p[0] - q[0], p[1] - q[1]) - positive()];

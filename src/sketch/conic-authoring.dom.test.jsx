@@ -1,3 +1,4 @@
+import { PART_DOCUMENT_VERSION } from "@aether/core/document";
 import { createRequire } from 'node:module';
 import { beforeAll, afterAll, afterEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
@@ -40,7 +41,7 @@ it('creates an exact four-point conic with matching preview, a real control node
   expect(q('.sketch-dimension').textContent).toContain('0.7');
   click('Undo'); expect(q('.sketch-contour')).toBeNull(); click('Redo');
   const saved = await t.save(), profile = saved.features[0].profile;
-  expect(saved.formatVersion).toBe(21);
+  expect(saved.formatVersion).toBe(PART_DOCUMENT_VERSION);
   expect(profile.contours[0]).toMatchObject({ start: [0, 0], segments: [{ type: 'conic', end: [20, 0], control: [10, 20], rho: .7 }] });
   expect(profile.constraints.filter(c => c.kind === 'conic-rho')).toMatchObject([{ value: .7 }]);
   open(() => saved, t.apply, saved.features[0]); expect(q('.sketch-contour').getAttribute('d')).toBe(preview);

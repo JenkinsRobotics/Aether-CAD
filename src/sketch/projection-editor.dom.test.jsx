@@ -60,6 +60,11 @@ const set = (label, value) => {
 };
 it("creates a reference-only projection with preview and relinks it after native reopen", async () => {
   openProjectionEditor(() => doc, apply);
+  expect(querySketchControl('.cad-projection-window.aui-feature-window')).toBeTruthy();
+  expect(querySketchControl('[aria-label="Projection preview"]').closest('.aui-feature-window')).toBeTruthy();
+  expect(querySketchControl('[aria-label="Projection preview"]').classList.contains('cad-sketch-canvas')).toBe(true);
+  expect(querySketchControl('[aria-label="Projection preview"]').nextElementSibling.textContent).toBe('Save and edit geometry');
+  expect(querySketchControl('button[title="Fit view"]')).toBeTruthy();
   expect(querySketchControl("dialog")).toBeNull();
   expect(querySketchControl(".sketch-contour").getAttribute("r")).toBe("4");
   set("Projection name", "Linked profile");

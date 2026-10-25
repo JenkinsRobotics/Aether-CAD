@@ -1,5 +1,6 @@
 """Saved Part19 groups use original exact sketch curves through the real zipapp."""
 
+from aether_cad_service.part_format import PART_DOCUMENT_VERSION
 import copy
 import json
 import math
@@ -86,7 +87,7 @@ def test_depth_edit_preserves_group_and_cancelled_failure_has_no_candidate_bytes
     source = joined_part()
     edited = invoke(tmp_path, source, "cad.extrude.setdepth", {"feature_id": "e", "depth_mm": 9})
     candidate = json.loads(edited["content"])
-    assert candidate["formatVersion"] == 21
+    assert candidate["formatVersion"] == PART_DOCUMENT_VERSION
     assert candidate["features"][0] == source["features"][0]
     assert candidate["features"][1]["profileRegion"] == source["features"][1]["profileRegion"]
     assert candidate["features"][1]["profileSelections"] == source["features"][1]["profileSelections"]

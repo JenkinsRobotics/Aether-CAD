@@ -4,11 +4,12 @@ import { beforeAll, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import init from "replicad-opencascadejs";
 import { setOC, measureVolume } from "replicad";
+import { parsePartDocument } from "../document/part-serialization";
 import { evaluatePartDocument } from "./part-evaluator";
 beforeAll(async () => { setOC(await (init as any)({ wasmBinary: readFileSync(new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) })); }, 60000);
 it("rebuilds every Scifirobot body tip as FreeCAD recorded it", () => {
   const dir = new URL("../../../scripts/examples/scifirobot/generated/", import.meta.url).pathname;
-  const doc = JSON.parse(readFileSync(dir + "Scifirobot.acpart", "utf8")), presentation = JSON.parse(readFileSync(dir + "presentation.json", "utf8")), proof = JSON.parse(readFileSync(dir + "proof.json", "utf8"));
+  const doc = parsePartDocument(readFileSync(dir + "Scifirobot.acpart", "utf8")), presentation = JSON.parse(readFileSync(dir + "presentation.json", "utf8")), proof = JSON.parse(readFileSync(dir + "proof.json", "utf8"));
   const owner: Record<string, string> = Object.fromEntries(presentation.features.map((r: any) => [r.id, r.bodyID]));
   const expected = new Map<string, any>(proof.tips.map((t: any) => [t.featureID, t]));
   const out: string[] = []; let ok = 0;

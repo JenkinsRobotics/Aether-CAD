@@ -1,5 +1,6 @@
 import { createCenterRectangleSketch } from "../sketch/index";
 import partFormat from "./part-format.json";
+import { withDocumentDistanceIntent } from "./distance-intent";
 import {
   LEGACY_PART_DOCUMENT_FORMAT,
   PART_DOCUMENT_FORMAT,
@@ -10,7 +11,7 @@ import {
 
 export function serializePartDocument(document: PartDocument): string {
   validatePartDocument(document);
-  return `${JSON.stringify(document, null, 2)}\n`;
+  return `${JSON.stringify(withDocumentDistanceIntent(document), null, 2)}\n`;
 }
 
 export function parsePartDocument(text: string): PartDocument {
@@ -22,7 +23,7 @@ export function parsePartDocument(text: string): PartDocument {
   }
   const migrated = migratePartDocument(value);
   validatePartDocument(migrated);
-  return migrated;
+  return withDocumentDistanceIntent(migrated);
 }
 
 export function migratePartDocument(value: unknown): unknown {

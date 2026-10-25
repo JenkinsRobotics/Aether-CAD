@@ -48,6 +48,8 @@ export function solveProjectedConstraints(
   });
   const constraints = authored.constraints?.map((c, i) => ({
     ...structuredClone(c),
+    ...(solved.constraints![i].distanceSide !== undefined
+      ? { distanceSide: solved.constraints![i].distanceSide } : {}),
     a: restore(c.a, solved.constraints![i].a),
     ...(c.b ? { b: restore(c.b, solved.constraints![i].b!) } : {}),
     ...(c.axis ? { axis: restore(c.axis, solved.constraints![i].axis!) } : {}),

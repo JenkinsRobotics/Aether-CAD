@@ -10,7 +10,7 @@ import { getOC, measureVolume, setOC, type Shape3D } from "replicad";
 import { evaluatePartDocument, resetEvaluationCache } from "../part-evaluator";
 import initFull from "opencascade.js/dist/node.js";
 import { loadExtendedKernel, needsExtendedKernel } from "../extended-kernel";
-import type { PartDocument } from "../../document/index";
+import { parsePartDocument, type PartDocument } from "../../document/index";
 import fixtures from "./fixtures.json";
 
 export interface BodyReference { id: string; volume_mm3: number; face_count: number; edge_count: number; bbox?: [number[], number[]] }
@@ -18,7 +18,7 @@ export type References = Record<string, BodyReference[]>;
 
 export function measureBodies(document: PartDocument): BodyReference[] {
   const out: BodyReference[] = [];
-  evaluatePartDocument(document, { withBodies: (bodies) => {
+  evaluatePartDocument(parsePartDocument(JSON.stringify(document)), { withBodies: (bodies) => {
     for (const [id, body] of bodies) {
       const faces = (body as Shape3D).faces, edges = (body as Shape3D).edges;
       // An optimal box: a plain Bnd_Box is loose around spline surfaces (a sweep's).

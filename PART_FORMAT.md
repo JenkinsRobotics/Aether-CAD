@@ -1,6 +1,31 @@
 # Part document format
 
-## Current v21 file boundary — 2026-10-14 (source; installation pending)
+## Current v22 file boundary — 2026-10-24 (source; installation pending)
+
+Part22 adds optional `distanceSide: 1 | -1` to driving point/line and
+parallel-line `distance` constraints. The positive magnitude remains `value`;
+positive side is right of the directed reference line. The solver captures the
+side before its first solve and retains it when a projected source crosses the
+constrained geometry. Reference measurements and point/point dimensions do not
+carry this field. Reflection reverses it; rotation, translation and positive
+scaling preserve it. Switching to a reference measurement removes the side;
+switching back captures the current geometry.
+
+Versions 1–21 remain readable. Parsing or saving captures missing legacy side
+intent against the available original geometry, without solving or rewriting
+authored coordinates or mutating the caller. Broken source references remain
+repairable. Their unavailable side cannot be inferred until repaired. Derived
+projection/Pierce context is never serialized.
+
+Sketch clipboard v2 guards fragments containing this intent; ordinary fragments
+remain v1. Earlier clipboard readers reject v2 instead of ignoring the side.
+The immutable codec22 package accepts embedded Part22 documents without owning
+CAD geometry. Codec21 and the prior CAD worker reject Part22. Older installed
+releases (including Animation workers with an older portable codec) cannot open
+these newly saved Part records; reverting executable packages does
+not downgrade document contents. Keep the original file when testing an upgrade.
+
+## Previous v21 file boundary — 2026-10-14 (source; installation pending)
 
 Part21 adds `kind: "pierce"` to the existing drawing constraint array. Its only
 fields are `id`, `kind`, target entity `a`, and `source`. The source identifies an

@@ -188,6 +188,20 @@ saved replay together. This first extraction removes these implementations from
 the older evaluator; extrusion/revolve, sheet metal, surfaces, transforms and
 other remaining branches still need the same treatment as baseline work proceeds.
 
+### Sketch dimension intent (2026-10-24)
+
+`sketch/solver/distance-side.ts` owns sign capture/validation;
+`document/distance-intent.ts` owns legacy read/save normalization;
+`document/profile-dimension.ts` supplies reference context for document edits.
+UI and agent adapters share the existing drawing-dimension operation and solver.
+`modeling/projected-profile-selection.ts` owns authored-region identity stamping
+inside mixed sketches; shared UI/agent selection routes through it.
+`sketch/projection-window.ts` owns shared feature-window presentation while
+`projection-editor.ts` owns the draft, references and guarded save transaction.
+Part/clipboard formats own persistence; the portable workspace codec only
+preserves versioned opaque CAD records. Tests sit beside these modules, with a
+shared saved fixture and separate native/browser workflow scripts.
+
 ### Application responsibilities
 
 | File | Responsibility |

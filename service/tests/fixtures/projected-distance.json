@@ -1,0 +1,32 @@
+{
+  "format": "aether-part",
+  "formatVersion": 21,
+  "documentId": "projected-distance",
+  "name": "Rail clearance",
+  "units": "millimeter",
+  "features": [
+    {
+      "id": "source", "name": "Rail", "type": "profile", "plane": "XY",
+      "offsetMillimeters": 0, "suppressed": false,
+      "profile": { "type": "drawing", "contours": [
+        { "id": "rail", "type": "path", "construction": true, "start": [0, 50],
+          "segments": [{ "type": "line", "end": [100, 50] }] }
+      ] }
+    },
+    {
+      "id": "target", "name": "Clearance", "type": "profile", "plane": "XY",
+      "offsetMillimeters": 0, "suppressed": false,
+      "profile": { "type": "projection", "sourceFeatureId": "source", "authored": {
+        "type": "drawing",
+        "contours": [{ "id": "circle", "type": "circle", "center": [50, 45], "radius": 2 }],
+        "constraints": [
+          { "id": "gap", "kind": "distance", "value": 5,
+            "a": { "kind": "point", "contour": 0, "index": 0 },
+            "b": { "kind": "line", "contour": -1, "projectedContourId": "rail", "index": 0 } },
+          { "id": "radius", "kind": "radius", "value": 2,
+            "a": { "kind": "circle", "contour": 0 } }
+        ]
+      } }
+    }
+  ]
+}

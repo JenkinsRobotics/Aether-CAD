@@ -1,4 +1,5 @@
 """Saved associative Pierce constraints cross the real packaged worker boundary."""
+from aether_cad_service.part_format import PART_DOCUMENT_VERSION
 import copy
 import json
 import math
@@ -42,7 +43,7 @@ def test_upstream_edit_rebuilds_and_keeps_pierce_in_saved_edit_candidate(tmp_pat
     edited = invoke(tmp_path, document, "cad.extrude.setdepth", {"feature_id": "pad", "depth_mm": 8})
     assert "error" not in edited, edited
     saved = json.loads(edited["content"])
-    assert saved["formatVersion"] == 21
+    assert saved["formatVersion"] == PART_DOCUMENT_VERSION
     assert saved["features"][1]["profile"]["constraints"] == document["features"][1]["profile"]["constraints"]
     assert bodies(invoke(tmp_path, saved))[0]["volume_mm3"] == pytest.approx(72 * math.pi, rel=1e-8)
 
@@ -80,6 +81,6 @@ def test_project_container_reopens_the_same_associative_native_part(tmp_path):
     saved = project("edit", {**created, "operation": "save_part", "part_id": created["project"]["parts"][0]["id"], "document": document})
     reopened = project("read", {"data_base64": saved["data_base64"]})
     retained = reopened["project"]["parts"][0]["document"]
-    assert retained["formatVersion"] == 21
+    assert retained["formatVersion"] == document["formatVersion"]
     assert retained["features"] == document["features"]
     assert bodies(invoke(tmp_path, retained))[0]["volume_mm3"] == pytest.approx(45 * math.pi, rel=1e-8)

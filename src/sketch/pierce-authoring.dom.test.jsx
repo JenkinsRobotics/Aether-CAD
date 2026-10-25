@@ -19,7 +19,7 @@ beforeAll(async()=>{
 },30000);
 beforeEach(()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"></div>';applyDocumentUnits({});
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));
  doc.features[0].profile={type:'drawing',contours:[{type:'path',start:[0,-5],segments:[{type:'line',end:[20,5]}]}]};
  const d=doc.features[1].profile;d.constraints=d.constraints.filter(c=>c.kind!=='pierce');d.contours[0].center=[0,0];
  apply=vi.fn(async next=>{doc=next;});cadCommands.setEnabled('sketch-constraint-pierce',true);
@@ -84,7 +84,7 @@ it('lets the user choose either exact circle-source intersection, with units and
  expect(target().profile.constraints.find(c=>c.kind==='pierce').source.sourceSegmentId).toBeUndefined();
 });
 it('opens a broken source for repair, replaces it under the same constraint identity and undoes repair',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);doc.features[0].id='replacement';doc.features[0].profile.contours[0].segments[0].end=[40,5];
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));doc.features[0].id='replacement';doc.features[0].profile.contours[0].segments[0].end=[40,5];
  const before=structuredClone(target().profile.constraints[1]);open(()=>doc,apply,target());expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);
  cadCommands.execute('sketch-constraints');document.querySelector('[data-constraint-kind="pierce"] button').click();
  change('Pierce source curve',field('Pierce source curve').options[1].value);click('Apply Pierce');expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(false);
@@ -92,7 +92,7 @@ it('opens a broken source for repair, replaces it under the same constraint iden
  await finish('repaired');expect(target().profile.constraints[1].id).toBe(before.id);expect(target().profile.constraints[1].source.sourceFeatureId).toBe('replacement');
 });
 it('removes broken sources individually without silently dropping the remaining relationship',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);doc.features.shift();const relation=structuredClone(target().profile.constraints[1]);relation.id='missing-two';relation.source.sourceFeatureId='other-missing';target().profile.constraints.push(relation);
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));doc.features.shift();const relation=structuredClone(target().profile.constraints[1]);relation.id='missing-two';relation.source.sourceFeatureId='other-missing';target().profile.constraints.push(relation);
  open(()=>doc,apply,target());cadCommands.execute('sketch-constraints');
  const remove=()=>[...document.querySelector('[data-constraint-kind="pierce"]').querySelectorAll('button')].find(b=>b.textContent==='Remove').click();
  remove();expect(document.querySelector('.cad-sketch-window [data-feature-action="accept"]').disabled).toBe(true);expect(document.querySelectorAll('[data-constraint-kind="pierce"]')).toHaveLength(1);
@@ -111,7 +111,7 @@ it('disambiguates overlapping source curves before authoring a relationship',asy
  await finish('overlap-choice');expect(target().profile.constraints.find(c=>c.kind==='pierce').source.sourceFeatureId).toBe('other-source');
 });
 it('changes an existing source branch under the same identity and preserves its dimensional constraints',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='circle-source-0').document);open(()=>doc,apply,target());cadCommands.execute('sketch-constraints');
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-source-0').document));open(()=>doc,apply,target());cadCommands.execute('sketch-constraints');
  const id=target().profile.constraints.find(c=>c.kind==='pierce').id;
  document.querySelector('[data-constraint-kind="pierce"] button').click();change('Pierce intersection','1');click('Apply Pierce');
  await finish('replace-branch');expect(target().profile.constraints.find(c=>c.kind==='pierce').id).toBe(id);
@@ -123,13 +123,13 @@ it('shows contact coordinates in document units while saving millimeter geometry
  click('Apply Pierce');await finish('inch-display');expect(target().profile.contours[0].center[0]).toBeCloseTo(10,7);
 });
 it('authors a spline control target without replacing the curve by a point',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='cubic-control').document);target().profile.constraints=[];
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='cubic-control').document));target().profile.constraints=[];
  open(()=>doc,apply,target());command();selectTarget(r=>r.control===0);click('Apply Pierce');await finish('spline-control');
  expect(target().profile.contours).toHaveLength(1);expect(target().profile.contours[0].segments[0].type).toBe('bezier');
  expect(target().profile.constraints[0].a).toMatchObject({kind:'point',control:0});
 });
 it('retains projection context when authoring a Pierce on an authored mixed-sketch curve',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='mixed-projection').document);target().profile.authored.constraints=target().profile.authored.constraints.filter(c=>c.kind!=='pierce');target().profile.authored.contours[0].center=[0,0];
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='mixed-projection').document));target().profile.authored.constraints=target().profile.authored.constraints.filter(c=>c.kind!=='pierce');target().profile.authored.contours[0].center=[0,0];
  open(()=>doc,apply,target());command();center();click('Apply Pierce');await finish('mixed');
  expect(target().profile.type).toBe('projection');expect(target().profile.authored.constraints.find(c=>c.kind==='pierce')).toBeTruthy();
  expect(JSON.stringify(doc)).not.toMatch(/pierceContext|projectionContext/);
@@ -148,7 +148,7 @@ it('picks a Pierce contact through the same in-world sketch surface after it is 
 });
 
 it('repairs a missing Pierce source without forcing reattachment of an independent valid support face',async()=>{
- doc=structuredClone(cases.find(c=>c.name==='circle-center').document);doc.features[0].id='replacement';
+ doc=parsePartDocument(JSON.stringify(cases.find(c=>c.name==='circle-center').document));doc.features[0].id='replacement';
  const sketch=target();sketch.support={sourceFeatureId:'support-pad',bodyId:'support-body',normal:[0,-1,0],xDirection:[1,0,0],label:'Face of Base'};
  sketch.frame={originMillimeters:[0,0,0],normal:[0,-1,0],xDirection:[1,0,0]};
  doc.features.splice(1,0,

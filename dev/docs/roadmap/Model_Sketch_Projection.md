@@ -49,8 +49,10 @@ intervening edits, closed contexts and cancellation before committing.
 1. Persist stable model-source references and resolve them at the target sketch's
    history position. Define split-edge, deleted-edge and merged-body behavior;
    never silently substitute the nearest unrelated edge.
-2. Expose resolved geometry as fixed reference context, with dimensions and
-   constraints retaining side/branch intent when the source moves.
+2. Expose resolved model geometry as fixed reference context. The shared distance
+   solver now preserves authored side for existing sketch projections (Part22);
+   other branch-sensitive relations and persistent model references still need
+   their own upstream-edit qualification.
 3. Add break-link, repair/lost-reference presentation, copy/undo/reopen and
    canonical portable-codec gates. Choose the document-format change explicitly.
 4. Verify source edits through UI, live and saved agents, using the local

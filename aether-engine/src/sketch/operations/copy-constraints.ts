@@ -6,6 +6,7 @@ import {
 } from "../solver/dimension-links";
 import type { DrawingConstraint } from "../solver/types";
 import { transformPoint, transformContour, type SketchTransform } from "../curves/similarity";
+import { captureDistanceSides } from "../solver/distance-side";
 
 /** Independent copies retain internal relations, never references to unselected
  * geometry. Pattern membership belongs to the original source/instance graph. */
@@ -16,6 +17,8 @@ export function copyInternalConstraints(
   transform: SketchTransform,
   preserveIdentities = false,
 ): DrawingConstraint[] {
+  source = structuredClone(source);
+  captureDistanceSides(source);
   const contours = new Map(
     indices.map((index, i) => [index, firstContour + i]),
   );
@@ -44,6 +47,8 @@ export function copyInternalConstraints(
     )
       continue;
     const constraint = structuredClone(original);
+    if (constraint.distanceSide !== undefined && det < 0)
+      constraint.distanceSide = constraint.distanceSide === 1 ? -1 : 1;
     constraint.id = preserveIdentities ? original.id : `constraint-${crypto.randomUUID()}`;
     for (const ref of [constraint.a, constraint.b, constraint.axis])
       if (ref) ref.contour = contours.get(ref.contour)!;

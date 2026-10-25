@@ -4,7 +4,7 @@ import init from "replicad-opencascadejs";
 import { setOC } from "replicad";
 import { cachedSteps, evaluatePartDocument, FeatureFailure, resetEvaluationCache, UnsupportedFeature } from "./part-evaluator";
 import { measureDistance } from "./measure";
-import { createRectanglePartDocument, type PartDocument } from "../document/index";
+import { PART_DOCUMENT_VERSION, createRectanglePartDocument, type PartDocument } from "../document/index";
 
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) }));
@@ -18,7 +18,7 @@ const withHole = (document = plate()): PartDocument => ({ ...document, features:
 const box = (id: string, x0: number, x1: number) => [
   { id: id + "s", name: "Sketch " + id, type: "profile" as const, plane: "XY" as const, offsetMillimeters: 0, suppressed: false, profile: { type: "polygon" as const, pointsMillimeters: [[x0, -20], [x1, -20], [x1, 20], [x0, 20]] as [number, number][] } },
   { id, name: "Extrude " + id, type: "extrude" as const, profileFeatureId: id + "s", distanceMillimeters: 30, endType: "blind" as const, operation: "new" as const, separateBodies: true, suppressed: false }];
-const boxes = { format: "aether-part", formatVersion: 21, documentId: "doc", name: "Boxes", units: "millimeter", features: [...box("A", -60, -5), ...box("B", 5, 60)] } as unknown as PartDocument;
+const boxes = { format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "doc", name: "Boxes", units: "millimeter", features: [...box("A", -60, -5), ...box("B", 5, 60)] } as unknown as PartDocument;
 
 it("separate bodies are named as the document records them and a later cut reaches them", () => {
   const document = plate();
@@ -209,7 +209,7 @@ it("builds only the sketch regions a feature selected, the way the UI records pi
 
 it("refuses a revolve whose profile crosses its axis instead of building an empty body", () => {
   const doc = {
-    format: "aether-part", formatVersion: 21, documentId: "axis", name: "Axis", units: "millimeter", features: [
+    format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "axis", name: "Axis", units: "millimeter", features: [
       { id: "s", type: "profile", name: "Sketch 1", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [{ type: "circle", id: "c", center: [0, 0], radius: 10 }] } },
       { id: "r", type: "revolve", name: "Revolve 1", profileFeatureId: "s", profileContourId: "c", axis: "X", angleDegrees: 90, operation: "new", suppressed: false }] } as unknown as PartDocument;
   expect(() => evaluatePartDocument(doc)).toThrow(/Revolve 1: Revolve profile crosses its axis/);

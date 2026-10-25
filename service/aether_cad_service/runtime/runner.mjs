@@ -557,8 +557,8 @@ function validateExtrusionStartReference(ref, earlier, missing) {
     if (typeof ref.bodyId !== "string" || !ref.bodyId.trim() || ref.bodyId.length > 256 || !Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) fail2();
   }
 }
-const current = 21;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+const current = 22;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
 const partFormat = {
   current,
   readable
@@ -3170,6 +3170,43 @@ function normalResiduals(a2, b) {
     throw new Error("A stationary curve point has no normal direction.");
   return [incidence, (x2 * jet.first[0] + y2 * jet.first[1]) / speed];
 }
+function signedLineDistance(point2, line2) {
+  const dx = line2[1][0] - line2[0][0];
+  const dy = line2[1][1] - line2[0][1];
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-10) throw Error("Select a nonzero-length line for distance.");
+  return ((point2[0] - line2[0][0]) * dy - (point2[1] - line2[0][1]) * dx) / length;
+}
+function spacing(drawing, constraint) {
+  if (constraint.kind !== "distance" || constraint.reference || !constraint.b) return;
+  const a2 = resolve$1(drawing, constraint.a);
+  const b = resolve$1(drawing, constraint.b);
+  if (a2.line && b.line) {
+    const midpoint = [(a2.line[0][0] + a2.line[1][0]) / 2, (a2.line[0][1] + a2.line[1][1]) / 2];
+    return signedLineDistance(midpoint, b.line);
+  }
+  if (a2.point && b.line) return signedLineDistance(a2.point, b.line);
+  if (a2.line && b.point) return signedLineDistance(b.point, a2.line);
+}
+function validateDistanceSideMetadata(constraint) {
+  if (constraint.distanceSide === void 0) return;
+  const kinds = [constraint.a?.kind, constraint.b?.kind];
+  if (constraint.distanceSide !== 1 && constraint.distanceSide !== -1 || constraint.kind !== "distance" || constraint.reference || !kinds.includes("line") || !kinds.every((kind) => ["point", "line", "curve"].includes(kind ?? "")))
+    throw Error("Distance side requires a driving point/line or parallel-line distance and a sign of +1 or -1.");
+}
+function validateDistanceSide(drawing, constraint) {
+  validateDistanceSideMetadata(constraint);
+  if (constraint.distanceSide !== void 0 && spacing(drawing, constraint) === void 0)
+    throw Error("Distance side requires a driving point/line or parallel-line distance and a sign of +1 or -1.");
+}
+function captureDistanceSides(drawing) {
+  for (const constraint of drawing.constraints ?? []) {
+    validateDistanceSide(drawing, constraint);
+    if (constraint.distanceSide !== void 0) continue;
+    const value2 = spacing(drawing, constraint);
+    if (value2 !== void 0) constraint.distanceSide = value2 < 0 ? -1 : 1;
+  }
+}
 function curveContinuityResiduals(p2, q, curvature = false) {
   const lp = Math.hypot(...p2.first), lq = Math.hypot(...q.first);
   if (lp < 1e-10 || lq < 1e-10)
@@ -3954,6 +3991,7 @@ function solveDrawingConstraintsCore(source, options = {}) {
     throw new Error("This sketch supports up to 512 constraints.");
   if (new Set(constraints.map((c2) => c2.id)).size !== constraints.length)
     throw new Error("Duplicate constraint IDs.");
+  captureDistanceSides(d2);
   for (const c2 of constraints) validateDimensionExpression(c2);
   for (const c2 of constraints)
     if (c2.valueFrom !== void 0 || c2.valueSign !== void 0 || c2.valueScale !== void 0 || c2.valueOffset !== void 0)
@@ -4195,6 +4233,7 @@ function pierceResiduals(drawing, c2) {
   return [at[0] - point2[0], at[1] - point2[1]];
 }
 function constraintResiduals(d2, c2) {
+  validateDistanceSide(d2, c2);
   validatePierceConstraint(c2);
   if (c2.kind === "pierce") return pierceResiduals(d2, c2);
   validateSplineFreeEnds(c2);
@@ -4296,12 +4335,12 @@ function constraintResiduals(d2, c2) {
     case "distance": {
       if (a2.line && b?.line) {
         const m2 = lineLineMeasurement(a2.line, b.line);
-        return [m2.parallelError, m2.distance - positive()];
+        return [m2.parallelError, c2.distanceSide === void 0 ? m2.distance - positive() : signedLineDistance(m2.point, b.line) - c2.distanceSide * positive()];
       }
       if (a2.point && b?.line)
-        return [pointLineMeasurement(a2.point, b.line).distance - positive()];
+        return [c2.distanceSide === void 0 ? pointLineMeasurement(a2.point, b.line).distance - positive() : signedLineDistance(a2.point, b.line) - c2.distanceSide * positive()];
       if (a2.line && b?.point)
-        return [pointLineMeasurement(b.point, a2.line).distance - positive()];
+        return [c2.distanceSide === void 0 ? pointLineMeasurement(b.point, a2.line).distance - positive() : signedLineDistance(b.point, a2.line) - c2.distanceSide * positive()];
       const p2 = point2(a2), q = point2(b);
       return [Math.hypot(p2[0] - q[0], p2[1] - q[1]) - positive()];
     }
@@ -4542,6 +4581,7 @@ function solveProjectedConstraints(authored, projected) {
   });
   const constraints = authored.constraints?.map((c2, i2) => ({
     ...structuredClone(c2),
+    ...solved.constraints[i2].distanceSide !== void 0 ? { distanceSide: solved.constraints[i2].distanceSide } : {},
     a: restore(c2.a, solved.constraints[i2].a),
     ...c2.b ? { b: restore(c2.b, solved.constraints[i2].b) } : {},
     ...c2.axis ? { axis: restore(c2.axis, solved.constraints[i2].axis) } : {}
@@ -5936,6 +5976,7 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     if (feature3.profile?.type === "projection") {
       if (feature3.profile.authored !== void 0) {
         const authored = feature3.profile.authored;
+        authored.constraints?.forEach(validateDistanceSideMetadata);
         if (authored.projectionContext !== void 0) throw Error("Resolved projection context must not be saved.");
         const local2 = localPierceValidation(authored);
         validateSketchDrawing({ ...local2, constraints: local2.constraints?.filter((c2) => ![c2.a, c2.b, c2.axis].some((r) => r?.projectedContourId !== void 0)) });
@@ -6219,6 +6260,8 @@ function transformRetainedTextItem(item, contours, transform2) {
   };
 }
 function copyInternalConstraints(source, indices, firstContour, transform2, preserveIdentities = false) {
+  source = structuredClone(source);
+  captureDistanceSides(source);
   const contours = new Map(
     indices.map((index2, i2) => [index2, firstContour + i2])
   );
@@ -6232,6 +6275,8 @@ function copyInternalConstraints(source, indices, firstContour, transform2, pres
     ))
       continue;
     const constraint = structuredClone(original);
+    if (constraint.distanceSide !== void 0 && det < 0)
+      constraint.distanceSide = constraint.distanceSide === 1 ? -1 : 1;
     constraint.id = preserveIdentities ? original.id : `constraint-${crypto.randomUUID()}`;
     for (const ref of [constraint.a, constraint.b, constraint.axis])
       if (ref) ref.contour = contours.get(ref.contour);
@@ -6909,9 +6954,23 @@ function validatePartDocument(value2) {
     }
   }
 }
+function withDocumentDistanceIntent(document2) {
+  const next = structuredClone(document2);
+  const unavailable = featureReferenceErrors({ ...next, rollbackIndex: void 0 });
+  for (const feature3 of next.features) {
+    if (feature3.type !== "profile" || unavailable.has(feature3.id)) continue;
+    const profile = feature3.profile;
+    const drawing = profile.type === "drawing" ? profile : profile.type === "projection" ? profile.authored : void 0;
+    if (!drawing?.constraints?.some((c2) => c2.kind === "distance" && !c2.reference && c2.distanceSide === void 0)) continue;
+    const context2 = profile.type === "projection" ? resolveProfileDrawing(next.features.map((f2) => f2.id === feature3.id ? { ...feature3, suppressed: false, profile: { ...profile, authored: void 0 } } : f2), feature3.id).contours : void 0;
+    const draft = { ...drawing, ...context2 ? { projectionContext: context2 } : {} };
+    captureDistanceSides(draft);
+  }
+  return next;
+}
 function serializePartDocument(document2) {
   validatePartDocument(document2);
-  return `${JSON.stringify(document2, null, 2)}
+  return `${JSON.stringify(withDocumentDistanceIntent(document2), null, 2)}
 `;
 }
 function parsePartDocument(text2) {
@@ -6923,7 +6982,7 @@ function parsePartDocument(text2) {
   }
   const migrated = migratePartDocument(value2);
   validatePartDocument(migrated);
-  return migrated;
+  return withDocumentDistanceIntent(migrated);
 }
 function migratePartDocument(value2) {
   if (!value2 || typeof value2 !== "object") return value2;
@@ -6960,6 +7019,31 @@ function migratePartDocument(value2) {
     formatVersion: PART_DOCUMENT_VERSION,
     features: features2
   };
+}
+function editProfileDimension(document2, featureId2, dimensionId2, value2) {
+  validatePartDocument(document2);
+  const next = withDocumentDistanceIntent(document2);
+  const feature3 = next.features.find((candidate) => candidate.id === featureId2);
+  if (feature3?.type !== "profile" || feature3.suppressed)
+    throw Error("Choose an unsuppressed profile sketch.");
+  const profile = feature3.profile;
+  const drawing = profile.type === "drawing" ? profile : profile.type === "projection" ? profile.authored : void 0;
+  const dimension = drawing?.constraints?.find((candidate) => candidate.id === dimensionId2);
+  if (!drawing || !dimension || dimension.value === void 0 || dimension.reference)
+    throw Error("Choose an editable driving dimension from sketch_inspect.");
+  let input = drawing;
+  if (profile.type === "projection") {
+    const references = resolveProfileDrawing(next.features.map((candidate) => candidate.id === featureId2 ? { ...feature3, profile: { ...profile, authored: void 0 } } : candidate), featureId2);
+    input = { ...drawing, projectionContext: references.contours };
+  }
+  input = withPierceContext(next.features, featureId2, input);
+  const solved = editDrawingDimension(input, dimensionId2, value2);
+  delete solved.projectionContext;
+  delete solved.pierceContext;
+  if (profile.type === "projection") profile.authored = solved;
+  else feature3.profile = solved;
+  validatePartDocument(next);
+  return next;
 }
 const metric = ["M3", "M4", "M5", "M6", "M8", "M10", "M12"];
 const zip$1 = (keys3, rows) => Object.fromEntries(metric.map((m2, i2) => [m2, Object.fromEntries(keys3.map((k2, j) => [k2, rows[i2][j]]))]));
@@ -7519,6 +7603,39 @@ function sketchRegions(feature3, includeOpen = false, history) {
   }
   return regions.filter((region) => includeOpen ? !region.sourceContourIndices : region.closed !== false);
 }
+function isAuthoredProjectionRegion(feature3, resolvedCount, region) {
+  if (feature3.profile.type !== "projection" || !feature3.profile.authored || region.ordinal !== void 0) return false;
+  const count = feature3.profile.authored.contours.length;
+  const offset2 = resolvedCount - count;
+  const indices = [...region.sourceContourIndices ?? [region.contourIndex], ...region.insideContourIndices ?? []];
+  return indices.length > 0 && indices.every((index2) => Number.isInteger(index2) && index2 >= offset2 && index2 < resolvedCount);
+}
+function stampAuthoredProjectionRegion(document2, feature3, region) {
+  const profile = feature3.profile;
+  const resolved = resolveProfileDrawing(document2.features, feature3.id);
+  if (profile.type !== "projection" || !profile.authored || !isAuthoredProjectionRegion(feature3, resolved.contours.length, region))
+    throw Error("Select a region bounded only by authored geometry. Projected boundaries cannot be stamped here.");
+  const authored = structuredClone(profile.authored);
+  const offset2 = resolved.contours.length - authored.contours.length;
+  const identify = (index2) => {
+    const contour = authored.contours[index2 - offset2];
+    identifySketchContour(contour, () => crypto.randomUUID());
+    return contour.id;
+  };
+  const base = { profileFeatureId: feature3.id };
+  let selection;
+  if (!region.sourceContourIndices) {
+    selection = { ...base, profileContourId: identify(region.contourIndex) };
+  } else {
+    const contourIds = region.sourceContourIndices.map(identify);
+    const inside2 = region.insideContourIndices?.map(identify);
+    const identified = resolveProfileDrawing(document2.features.map((candidate) => candidate.id === feature3.id ? { ...feature3, profile: { ...profile, authored } } : candidate), feature3.id);
+    const boundary = region.boundarySides ? regionBoundaryIdentity(identified, region.boundarySides) : void 0;
+    selection = { ...base, profileRegion: { contourIds, ...inside2 ? { inside: inside2 } : {}, ...boundary ? { boundary } : {} } };
+  }
+  profile.authored = authored;
+  return selection;
+}
 function sketch(doc, id2) {
   const feature3 = doc.features.find((feature22) => feature22.id === id2);
   if (!feature3 || feature3.type !== "profile" && feature3.type !== "sketch") throw Error("Inspect the Part and choose an existing sketch feature_id.");
@@ -7531,13 +7648,14 @@ const finite = (value2, name5) => {
 function inspectRegions(doc, feature3, offset2, limit) {
   const regions = sketchRegions(feature3, false, doc.features);
   const authored = feature3.type === "sketch" || feature3.type === "profile" && feature3.profile.type !== "projection";
+  const resolvedCount = feature3.type === "profile" && feature3.profile.type === "projection" ? resolveProfileDrawing(doc.features, feature3.id).contours.length : 0;
   return {
     total: regions.length,
     offset: offset2,
     items: regions.slice(offset2, offset2 + limit).map((region) => ({
       label: region.label,
       index: region.contourIndex,
-      selectable: authored && region.ordinal === void 0,
+      selectable: region.ordinal === void 0 && (authored || feature3.type === "profile" && isAuthoredProjectionRegion(feature3, resolvedCount, region)),
       contour_id: region.contourId,
       source_contour_indices: region.sourceContourIndices,
       inside_contour_indices: region.insideContourIndices,
@@ -7573,7 +7691,7 @@ function inspectSketch(doc, args) {
     ...feature3.type === "sketch" ? { constraints: feature3.constraints, dimensions: feature3.dimensions } : {},
     regions: feature3.suppressed ? { total: 0, offset: offset2, items: [], next_offset: null } : inspectRegions(doc, feature3, offset2, limit),
     dependents: doc.features.filter((f2) => "profileFeatureId" in f2 && f2.profileFeatureId === feature3.id).map((f2) => ({ id: f2.id, name: f2.name, type: f2.type })),
-    editing: profile.type === "projection" ? "Projected geometry is read-only; edit its source sketch." : "Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved."
+    editing: profile.type === "projection" ? "Projected geometry is read-only; edit its source sketch. Authored driving dimensions can be edited with sketch_dimension." : "Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved."
   };
 }
 function editSketch(doc, name5, args) {
@@ -7598,10 +7716,8 @@ function editSketch(doc, name5, args) {
       if (!dimension) throw Error("Choose an existing dimension_id.");
       feature3.profile = reviseCenterRectangleSketch(feature3, { ...rectangleSketchRevision(feature3), [dimension.type === "width" ? "widthMillimeters" : "heightMillimeters"]: value2 }).profile;
       dimension.valueMillimeters = value2;
-    } else if (profile.type === "drawing") {
-      const dimension = profile.constraints?.find((c2) => c2.id === args.dimension_id);
-      if (!dimension || dimension.value === void 0 || dimension.reference) throw Error("Choose an editable driving dimension from sketch_inspect.");
-      feature3.profile = editDrawingDimension(profile, args.dimension_id, value2);
+    } else if (profile.type === "drawing" || profile.type === "projection") {
+      return { document: editProfileDimension(next, feature3.id, args.dimension_id, value2), featureID: feature3.id };
     } else throw Error("This sketch has no driving dimensions.");
   }
   validatePartDocument(next);
@@ -12053,7 +12169,10 @@ function pickSketchRegion(drawing, p2) {
 }
 function stampSketchContour(doc, sketchId, index2) {
   const feature3 = doc.features.find((f2) => f2.id === sketchId);
-  if (feature3?.type !== "profile" || feature3.profile.type === "projection") throw Error("Pick a region on an authored sketch, not a projected one.");
+  if (feature3?.type !== "profile") throw Error("Pick a region on an authored sketch.");
+  if (feature3.profile.type === "projection") return stampAuthoredProjectionRegion(doc, feature3, {
+    contourIndex: index2
+  }).profileContourId;
   const drawing = resolveProfileDrawing(doc.features, sketchId);
   const contour = drawing.contours[index2];
   if (!contour) throw Error("That sketch region is no longer there.");
@@ -12065,7 +12184,7 @@ function stampSketchContour(doc, sketchId, index2) {
 function stampResolvedProfileSelection(doc, feature3, region, identifyPrimitives = false) {
   if (feature3.type !== "profile" && feature3.type !== "sketch" || feature3.suppressed) throw Error("Select an available source sketch.");
   const base = { profileFeatureId: feature3.id };
-  if (feature3.profile.type === "projection") throw Error("Pick a region on an authored sketch, not a projected one.");
+  if (feature3.type === "profile" && feature3.profile.type === "projection") return stampAuthoredProjectionRegion(doc, feature3, region);
   if (feature3.type === "sketch" || feature3.profile.type !== "drawing" && !identifyPrimitives) return base;
   if (!region.sourceContourIndices) return { ...base, profileContourId: stampSketchContour(doc, feature3.id, region.contourIndex) };
   if (region.ordinal !== void 0) throw Error("This region has ambiguous source boundaries. Add a divider or select a different region.");
@@ -43293,18 +43412,18 @@ function withDrawingSection(shapes, options, read3) {
     cutShapes.forEach((shape) => shape.delete());
   }
 }
-function hatchFace(face, right, up, spacing, out, budget) {
+function hatchFace(face, right, up, spacing2, out, budget) {
   const oc = getOC();
   const [lo, hi] = bounds(face);
   const direction2 = right.map((n, i2) => (n - up[i2]) * Math.SQRT1_2);
   const corners2 = Array.from({ length: 8 }, (_2, mask) => lo.map((n, i2) => mask & 1 << i2 ? hi[i2] : n));
   const distances = corners2.map((point2) => dot(point2, direction2));
-  const first = Math.ceil(Math.min(...distances) / spacing);
-  const last2 = Math.floor(Math.max(...distances) / spacing);
+  const first = Math.ceil(Math.min(...distances) / spacing2);
+  const last2 = Math.floor(Math.max(...distances) / spacing2);
   const count = last2 - first + 1;
   if (count > budget) throw Error("Section hatching exceeds 2048 lines. Reduce the view scale or increase hatch spacing.");
   for (let index2 = first; index2 <= last2; index2++) {
-    const distance2 = index2 * spacing;
+    const distance2 = index2 * spacing2;
     const origin = new oc.gp_Pnt_3(...direction2.map((n) => n * distance2));
     const normal = new oc.gp_Dir_4(...direction2);
     const plane2 = new oc.gp_Pln_3(origin, normal);
@@ -74053,11 +74172,11 @@ var endText = function() {
 var setFontAndSize = function(name5, size) {
   return PDFOperator.of(PDFOperatorNames.SetFontAndSize, [asPDFName(name5), asPDFNumber(size)]);
 };
-var setCharacterSpacing = function(spacing) {
-  return PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, [asPDFNumber(spacing)]);
+var setCharacterSpacing = function(spacing2) {
+  return PDFOperator.of(PDFOperatorNames.SetCharacterSpacing, [asPDFNumber(spacing2)]);
 };
-var setWordSpacing = function(spacing) {
-  return PDFOperator.of(PDFOperatorNames.SetWordSpacing, [asPDFNumber(spacing)]);
+var setWordSpacing = function(spacing2) {
+  return PDFOperator.of(PDFOperatorNames.SetWordSpacing, [asPDFNumber(spacing2)]);
 };
 var setCharacterSqueeze = function(squeeze) {
   return PDFOperator.of(PDFOperatorNames.SetTextHorizontalScaling, [asPDFNumber(squeeze)]);

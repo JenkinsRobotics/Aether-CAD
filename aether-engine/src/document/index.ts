@@ -8,6 +8,7 @@ export * from "./solid-features";
 export * from "./tree-organization";
 export {evaluateDocumentVariables,type DocumentVariable} from "./variables";
 export * from "./part-serialization";
+export { editProfileDimension } from "./profile-dimension";
 
 export * from "./file-types";
 

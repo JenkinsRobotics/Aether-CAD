@@ -3,13 +3,13 @@ import { readFileSync } from "node:fs";
 import init from "replicad-opencascadejs";
 import { setOC } from "replicad";
 import { analyzePart } from "./analysis";
-import type { PartDocument } from "../document/index";
+import { PART_DOCUMENT_VERSION, type PartDocument } from "../document/index";
 
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(require.resolve("replicad-opencascadejs/src/replicad_single.wasm")) }));
 }, 60000);
 
-const objDocument = (obj: string): PartDocument => ({ format: "aether-part", formatVersion: 21, documentId: "m", name: "Mesh", units: "millimeter", features: [
+const objDocument = (obj: string): PartDocument => ({ format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "m", name: "Mesh", units: "millimeter", features: [
   { id: "m", type: "import-cad", name: "Scan.obj", suppressed: false, operation: "new", bodyId: "m:body-m", sourceName: "Scan.obj", dataBase64: btoa(obj), format: "obj", meshMode: "reference", meshUnits: "mm" }] } as unknown as PartDocument);
 /** A 40 × 20 box, 6 tall along Y. */
 const box = "v -20 0 -10\nv 20 0 -10\nv 20 0 10\nv -20 0 10\nv -20 6 -10\nv 20 6 -10\nv 20 6 10\nv -20 6 10\nf 1 2 3 4\nf 5 8 7 6\nf 1 5 6 2\nf 2 6 7 3\nf 3 7 8 4\nf 4 8 5 1\n";

@@ -144,3 +144,11 @@ only the workspace Part-version whitelist changed from build15. CAD owns group
 validation and geometry. Prior wheels are retained. Current byte roundtrip and
 actual codec15 refusal are recorded in
 `.verification/sketch-connected-region-integration-2026-10-14/`.
+
+2026-10-24: immutable build `0.1.0-22` accepts embedded Part22 signed distance
+intent. All five runtime modules match canonical Animation commit
+`0aa5519e929a39fb40c6992014f5aa82cc4c7021`; only `aether_workspace.py` differs
+from codec21. The new reader preserves Part22 bytes; actual codec21 refuses them.
+Both preserve legacy Part21 bytes. Prior wheels remain unchanged. CAD owns all
+constraint interpretation. Evidence: `.verification/baseline-2026-10-24/` under
+`projected-dimension-codec-*` and `codec22-provenance.json`.

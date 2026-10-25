@@ -1,6 +1,7 @@
 /** Existing-sketch adapters reuse the editor operations and retain feature IDs. */
-import { validatePartDocument, sketchRegions, type PartDocument } from '@aether/core/document';
-import { moveSketchContours, similarityTransform, editDrawingDimension, rectangleSketchRevision, reviseCenterRectangleSketch } from '@aether/core/sketch';
+import { validatePartDocument, resolveProfileDrawing, editProfileDimension, sketchRegions, type PartDocument } from '@aether/core/document';
+import { isAuthoredProjectionRegion } from '../modeling/projected-profile-selection';
+import { moveSketchContours, similarityTransform, rectangleSketchRevision, reviseCenterRectangleSketch } from '@aether/core/sketch';
 
 function sketch(doc:PartDocument,id:unknown) {
   const feature=doc.features.find(feature=>feature.id===id);
@@ -14,8 +15,9 @@ const finite=(value:unknown,name:string)=>{
 function inspectRegions(doc:PartDocument, feature:PartDocument['features'][number], offset:number, limit:number) {
   const regions=sketchRegions(feature,false,doc.features);
   const authored=feature.type==='sketch'||(feature.type==='profile'&&feature.profile.type!=='projection');
+  const resolvedCount=feature.type==='profile'&&feature.profile.type==='projection'?resolveProfileDrawing(doc.features,feature.id).contours.length:0;
   return {total:regions.length,offset,items:regions.slice(offset,offset+limit).map(region=>({
-    label:region.label,index:region.contourIndex,selectable:authored&&region.ordinal===undefined,
+    label:region.label,index:region.contourIndex,selectable:region.ordinal===undefined&&(authored||(feature.type==='profile'&&isAuthoredProjectionRegion(feature,resolvedCount,region))),
     contour_id:region.contourId,source_contour_indices:region.sourceContourIndices,
     inside_contour_indices:region.insideContourIndices,boundary:region.previewContour,holes:region.holes??[],
   })),next_offset:offset+limit<regions.length?offset+limit:null,
@@ -35,7 +37,7 @@ export function inspectSketch(doc:PartDocument,args:Record<string,unknown>) {
     ...(feature.type==='sketch'?{constraints:feature.constraints,dimensions:feature.dimensions}:{}),
     regions:feature.suppressed?{total:0,offset,items:[],next_offset:null}:inspectRegions(doc,feature,offset,limit),
     dependents:doc.features.filter(f=>'profileFeatureId' in f&&f.profileFeatureId===feature.id).map(f=>({id:f.id,name:f.name,type:f.type})),
-    editing:profile.type==='projection'?'Projected geometry is read-only; edit its source sketch.':'Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved.'};
+    editing:profile.type==='projection'?'Projected geometry is read-only; edit its source sketch. Authored driving dimensions can be edited with sketch_dimension.':'Translate preserves constraints and identities; fixed or external anchors may reject. Dimension edits use the existing solver. Coordinates are local to the sketch plane; the plane is not moved.'};
 }
 export function editSketch(doc:PartDocument,name:string,args:Record<string,unknown>) {
   const next=structuredClone(doc),feature=sketch(next,args.feature_id);
@@ -58,10 +60,8 @@ export function editSketch(doc:PartDocument,name:string,args:Record<string,unkno
       if(!dimension)throw Error('Choose an existing dimension_id.');
       feature.profile=reviseCenterRectangleSketch(feature,{...rectangleSketchRevision(feature),[dimension.type==='width'?'widthMillimeters':'heightMillimeters']:value}).profile;
       dimension.valueMillimeters=value;
-    }else if(profile.type==='drawing') {
-      const dimension=profile.constraints?.find(c=>c.id===args.dimension_id);
-      if(!dimension||dimension.value===undefined||dimension.reference)throw Error('Choose an editable driving dimension from sketch_inspect.');
-      feature.profile=editDrawingDimension(profile,args.dimension_id,value);
+    }else if(profile.type==='drawing'||profile.type==='projection') {
+      return {document:editProfileDimension(next,feature.id,args.dimension_id,value),featureID:feature.id};
     }else throw Error('This sketch has no driving dimensions.');
   }
   validatePartDocument(next);

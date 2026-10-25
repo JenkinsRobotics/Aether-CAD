@@ -14,7 +14,7 @@ import { validateDocumentTextExpressions } from "./text-expressions";
 
 export interface SketchClipboard {
   format: "aether-sketch-clipboard";
-  version: 1;
+  version: 1 | 2;
   drawing: SketchDrawing;
   variables: DocumentVariable[];
 }
@@ -65,7 +65,7 @@ export function createSketchClipboard(
   );
   const result: SketchClipboard = {
     format: "aether-sketch-clipboard",
-    version: 1,
+    version: drawing.constraints?.some(c => c.distanceSide !== undefined) ? 2 : 1,
     drawing,
     variables: clipboardVariables(drawing, variables),
   };
@@ -74,7 +74,7 @@ export function createSketchClipboard(
 }
 export function serializeSketchClipboard(value: SketchClipboard): string {
   validateFragment(value.drawing, value.variables);
-  const text = JSON.stringify(value);
+  const text = JSON.stringify({ ...value, version: value.drawing.constraints?.some(c => c.distanceSide !== undefined) ? 2 : value.version });
   if (text.length > maxCharacters)
     throw Error("Sketch clipboard exceeds 128 MB of text.");
   return text;
@@ -86,7 +86,7 @@ export function parseSketchClipboard(text: string): SketchClipboard {
   if (
     !value ||
     value.format !== "aether-sketch-clipboard" ||
-    value.version !== 1 ||
+    ![1, 2].includes(value.version) ||
     !value.drawing ||
     value.drawing.type !== "drawing" ||
     !Array.isArray(value.variables)

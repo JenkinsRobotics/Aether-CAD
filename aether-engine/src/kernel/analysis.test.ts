@@ -5,7 +5,7 @@ import { setOC } from "replicad";
 import { analyzePart } from "./analysis";
 import { exportPart } from "./export";
 import { evaluatePartDocument } from "./part-evaluator";
-import { createRectanglePartDocument, type PartDocument } from "../document/index";
+import { PART_DOCUMENT_VERSION, createRectanglePartDocument, type PartDocument } from "../document/index";
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) }));
 }, 30000);
@@ -68,7 +68,7 @@ it("exports exact STEP and binary STL, and a STEP export imports back as the sam
   await expect(exportPart(plate(), { format: "step", bodyIds: ["missing"] })).rejects.toThrow(/export body is unavailable/);
   // Round trip through the import feature: the saved STEP source becomes a body of the same volume.
   const base64 = btoa(String.fromCharCode(...new Uint8Array(step.bytes)));
-  const imported: PartDocument = { format: "aether-part", formatVersion: 21, documentId: "imp", name: "Imported", units: "millimeter", features: [
+  const imported: PartDocument = { format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "imp", name: "Imported", units: "millimeter", features: [
     { id: "i", type: "import-step", name: "Plate.step", suppressed: false, operation: "new", bodyId: "imp:body-i", sourceName: "Plate.step", dataBase64: base64 }] } as unknown as PartDocument;
   const model = evaluatePartDocument(imported);
   expect(model.parts.map((p) => p.id)).toEqual(["imp:body-i"]);
@@ -83,7 +83,7 @@ it("exports exact STEP and binary STL, and a STEP export imports back as the sam
 
 it("imports meshes: STL as a mesh reference the viewer draws, OBJ as a faceted solid in source units", async () => {
   const stlBase64 = btoa(String.fromCharCode(...new Uint8Array((await exportPart(plate(), { format: "stl" })).bytes)));
-  const reference: PartDocument = { format: "aether-part", formatVersion: 21, documentId: "ref", name: "Reference", units: "millimeter", features: [
+  const reference: PartDocument = { format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "ref", name: "Reference", units: "millimeter", features: [
     { id: "m", type: "import-cad", name: "Plate.stl", suppressed: false, operation: "new", bodyId: "ref:body-m", sourceName: "Plate.stl", dataBase64: stlBase64, format: "stl", meshMode: "reference", meshUnits: "mm" }] } as unknown as PartDocument;
   const model = evaluatePartDocument(reference);
   expect(model.parts.map((p) => [p.id, p.geometryKind, p.triangles.length / 3])).toEqual([["ref:body-m", "mesh", 12]]);

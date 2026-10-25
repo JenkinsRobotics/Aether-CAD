@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import init from "replicad-opencascadejs";
 import { setOC } from "replicad";
 import { fitLinesAndArcs, sketchSectionContours } from "./sketch-section";
-import type { PartDocument } from "../document/index";
+import { PART_DOCUMENT_VERSION, type PartDocument } from "../document/index";
 
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(require.resolve("replicad-opencascadejs/src/replicad_single.wasm")) }));
@@ -17,7 +17,7 @@ function meshDocument(): PartDocument {
   const b = 2 * n;
   for (const [x, y, z] of [[20, -5, 0], [50, -5, 0], [50, 5, 0], [20, 5, 0], [20, -5, 20], [50, -5, 20], [50, 5, 20], [20, 5, 20]]) lines.push(`v ${x} ${y} ${z}`);
   for (const f of [[1, 4, 3, 2], [5, 6, 7, 8], [1, 2, 6, 5], [2, 3, 7, 6], [3, 4, 8, 7], [4, 1, 5, 8]]) lines.push(`f ${f.map((k) => k + b).join(" ")}`);
-  return { format: "aether-part", formatVersion: 21, documentId: "m", name: "Mesh", units: "millimeter", features: [
+  return { format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "m", name: "Mesh", units: "millimeter", features: [
     { id: "m", type: "import-cad", name: "Scan.obj", suppressed: false, operation: "new", bodyId: "m:body-m", sourceName: "Scan.obj", dataBase64: btoa(lines.join("\n")), format: "obj", meshMode: "reference", meshUnits: "mm" }] } as unknown as PartDocument;
 }
 

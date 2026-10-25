@@ -26,6 +26,12 @@ Package-manager versions and the shared UI dependency version are separate.
    saved models against the previous worker: stable IDs, anchors, measurements,
    body outputs, reference scopes and frames must remain equivalent. OCCT traversal
    order and diagnostic incidence indexes are not stable identities.
+   Signed projected dimensions require `test_native_distance_intent.py` and
+   `scripts/verify-projected-distance-browser.mjs`: source crossings, real UI
+   dimension editing/undo/redo, live-agent edits/refusals, exact rebuild and
+   saved reopen. Part22/clipboard2 require the prior readers to refuse new intent;
+   codec22 must match its canonical Animation commit. Package rollback does not
+   downgrade Part22 files to an older reader's format.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

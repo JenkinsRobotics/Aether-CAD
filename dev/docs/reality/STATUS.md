@@ -1,5 +1,68 @@
 # Aether CAD source status
 
+## 2026-10-25 — projected distance side intent (source; installation pending)
+
+Point/line and parallel-line dimensions retain their authored side when a
+reference crosses the geometry. The saved 5 mm clearance reproduction moves a
+rail from 50 to 20, 80, 6, 400 and back to 50 mm; both sides failed before the fix.
+The solver captures `distanceSide` before solving and preserves it through
+projected solves, editing, copy/reflection and reference/driver conversion.
+Displayed magnitudes and units are unchanged. Malformed metadata is refused,
+including when its source is unavailable.
+
+Live and saved agents can edit authored dimensions inside projected sketches
+through the same drawing operation as the editor. Authored regions can be
+extruded without flattening the projection or copying its solved reference
+coordinates. Projected and mixed-source region boundaries still fail atomically.
+The projection settings now use the shared compact FeatureWindow, field rows,
+contained preview and Fit-view footer; the legacy panel was behind Properties
+and blocked the actual browser workflow. No shared UI package changed.
+
+These responsibilities have separate modules: `solver/distance-side.ts`,
+`document/distance-intent.ts`, `document/profile-dimension.ts`,
+`modeling/projected-profile-selection.ts` and `sketch/projection-window.ts`.
+The existing editor became smaller; UI and agents share validated operations.
+
+Part22 captures missing legacy intent at read/save, without rewriting authored
+coordinates. Clipboard2 guards fragments carrying the new intent. Codec22 is an
+immutable snapshot of Animation commit `0aa5519e929a39fb40c6992014f5aa82cc4c7021`;
+all five runtime modules match. Actual codec21 and the previous CAD worker reject
+Part22, and the previous clipboard parser rejects v2. Both codecs preserve legacy
+Part21 bytes. Executable rollback does not downgrade saved documents. Canonical
+codec tests: 78 pass.
+
+Verification: 1,173 engine tests; 1,893 app tests with one existing skip;
+315 packaged native tests; typecheck/build; exact headless kernel and saved-region
+replay. The subsequent presentation-only repair passes all 10 mounted editor
+tests and typecheck; its rebuild preserves the exact native worker bytes.
+The actual browser passes dimension editing/undo/redo, live-agent source crossing
+and dimension editing, atomic invalid-edit refusal, extrusion and saved reopen
+(49.35 s), with no browser errors or server geometry calls. The real Animation
+client regression passes in that same disposable host. The broader 16-step
+modeling browser also passes (293.22 s), including cut/add/intersect, revolve,
+fillet, shell, mirror, pattern, Boolean, hole, surfaces and sheet-metal DXF, with
+no browser errors or server geometry calls.
+
+Initial failures remain recorded in `.verification/baseline-2026-10-24/`:
+fixture loaders bypassing the versioned Part reader, blanket rejection of
+projected-profile selections, an opaque-container test incorrectly expecting an
+embedded legacy Part upgrade, the obstructed legacy projection editor, and the final visual check finding a
+missing sketch-canvas style on its preview. The preview now reuses the standard
+canvas styling; its edit action sits directly below it. Browser assertions check
+visible strokes, a translucent plane and an edit button inside the visible body.
+The first new assertion targeted the intentionally unstroked region-fill path;
+it now inspects the rendered entity edge. A second assertion used the wrong
+shared body selector; it now checks the actual floating-panel body. Both failed
+logs are retained. An unused custom paragraph selector was removed so the
+window retains the shared typography.
+Frozen legacy fixture bytes remain unchanged. Source constructors now use the
+current version; fixture loaders exercise the real migration boundary.
+
+Limits: persistent model-edge links, stable split/deletion behavior, silhouettes
+and other branch-sensitive constraints remain open. This is not full SolidCraft
+parity. No installed activation.
+
+
 ## 2026-10-24 — model projection into editable sketches
 
 Include 3D edges now projects model boundaries outside the sketch plane, including

@@ -1,3 +1,4 @@
+import { PART_DOCUMENT_VERSION } from "@aether/core/document";
 import {expect,it} from 'vitest';
 import {createEmptyPartDocument,serializePartDocument,parsePartDocument,resolveProfileDrawing,featureDependencies,featureReferenceErrors,removeFeature,setFeatureSuppressed,moveFeature,updatePartDocumentVariables,type PartDocument,type ProfileFeature} from '@aether/core/document';
 import {solveDrawingConstraints,sketchConstraintState,type SketchDrawing} from '@aether/core/sketch';
@@ -12,9 +13,9 @@ function setup():PartDocument {
 }
 const attach=(doc=setup())=>addSketchPierce(doc,'target',{contour:0,kind:'point',index:0},'source',0,0,0);
 const drawing=(doc:PartDocument,id='target')=>(doc.features.find(f=>f.id===id) as ProfileFeature).profile as SketchDrawing;
-it('saves one associative constraint, source identities, and no derived contacts in Part21',()=>{
+it('saves one associative constraint, source identities, and no derived contacts in the current Part format',()=>{
  const original=setup(),before=structuredClone(original),doc=attach(original);expect(original).toEqual(before);
- const text=serializePartDocument(doc),reopened=parsePartDocument(text);expect(doc.formatVersion).toBe(21);expect(reopened).toEqual(doc);
+ const text=serializePartDocument(doc),reopened=parsePartDocument(text);expect(doc.formatVersion).toBe(PART_DOCUMENT_VERSION);expect(reopened).toEqual(doc);
  expect(text).toContain('"kind": "pierce"');expect(text).not.toMatch(/pierceContext|worldPoint|projectionContext/);
  expect(drawing(doc).constraints?.map(c=>c.id)).toEqual(['radius','pierce-1']);
  expect(resolveProfileDrawing(doc.features,'target').contours[0]).toMatchObject({center:[expect.closeTo(10,7),expect.closeTo(0,7)],radius:3});

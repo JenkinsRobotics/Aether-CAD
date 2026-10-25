@@ -1,6 +1,7 @@
 import { validateSketchDrawing, type SketchDrawing } from "../drawing";
 import { dimensionValue } from "../solver/dimension-links";
 import { referenceDimensionKinds } from "../solver/measured-dimension";
+import { captureDistanceSides } from "../solver/distance-side";
 
 /** Switching a driver to measurement freezes direct followers at their current
  * values. Their own followers stay linked; no link points at a reference value. */
@@ -28,6 +29,7 @@ export function setDimensionReference(
       delete follower.valueOffset;
     }
     c.reference = true;
+    delete c.distanceSide;
     delete c.valueExpression;
     delete c.value;
     delete c.valueFrom;
@@ -40,6 +42,7 @@ export function setDimensionReference(
       source.constraints!.find((c) => c.id === id)!,
     );
     delete c.reference;
+    captureDistanceSides(next);
   }
   validateSketchDrawing(next);
   return next;

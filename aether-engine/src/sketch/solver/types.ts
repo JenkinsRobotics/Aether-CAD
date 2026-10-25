@@ -69,6 +69,8 @@ export interface DrawingConstraint {
   /** Independent open-spline end controls; omitted ends retain natural interpolation. */
   splineFreeEnds?: ('start' | 'end')[];
   value?: number;
+  /** Authored side of a driving line distance; independent of its positive magnitude. */
+  distanceSide?: 1 | -1;
   /** Typed formula; value is its validated canonical mm/degree cache. */
   valueExpression?: string;
   /** Read-only measurement, contributes no solver equations. */

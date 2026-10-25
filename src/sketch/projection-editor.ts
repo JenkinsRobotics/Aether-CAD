@@ -1,3 +1,4 @@
+import { createProjectionWindow } from "./projection-window";
 import { mountEditHistory } from "../modeling/edit-history";
 import { openSketchWorkspace } from "../sketch-workspace";
 import {
@@ -24,7 +25,7 @@ export function openProjectionEditor(
       "Finish or cancel the active sketch before creating a whole-sketch projection.",
     );
   const source = getDocument(),
-    viewport = document.querySelector(".cad-studio-viewport");
+    viewport = document.querySelector<HTMLElement>(".cad-studio-viewport");
   if (!source || !viewport)
     throw Error("Open a Part before projecting a sketch.");
   const index = existing
@@ -32,29 +33,13 @@ export function openProjectionEditor(
     : rollbackPosition(source);
   if (index < 0) throw Error("The projected sketch no longer exists.");
   const featureId = existing?.id ?? crypto.randomUUID();
-  const root = document.createElement("section");
-  root.className = "cad-sketch-workspace";
-  root.setAttribute("aria-label", "Project sketch");
-  const canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  canvas.setAttribute("aria-label", "Projection preview");
-  const sidebar = document.createElement("aside");
-  root.append(canvas, sidebar);
-  viewport.append(root);
+  const presentation = createProjectionWindow({
+    viewport, existing: !!existing,
+    onAccept: () => saveProjection(), onDiscard: () => close(),
+  });
+  const { root, canvas, field, win } = presentation;
+  const sidebar = win.body;
   mountEditHistory(root, source, existing?.id);
-  const title = document.createElement("h2");
-  title.textContent = existing ? "Edit projection" : "Project sketch";
-  sidebar.append(title);
-  const field = (
-    label: string,
-    element: HTMLInputElement | HTMLSelectElement,
-  ) => {
-    const l = document.createElement("label");
-    l.textContent = label;
-    element.setAttribute("aria-label", label);
-    l.append(element);
-    sidebar.append(l);
-    return element;
-  };
   const name = field(
     "Projection name",
     document.createElement("input"),
@@ -124,26 +109,16 @@ export function openProjectionEditor(
   offset.type = "number";
   offset.step = "any";
   offset.value = String(existing?.offsetMillimeters ?? 0);
-  const message = document.createElement("p");
-  message.setAttribute("role", "status");
-  sidebar.append(message);
+  const message = win.status;
   const note = document.createElement("p");
-  note.textContent =
-    "Choose the entire sketch or one contour. Source edits update this projection. Edit the source to change its geometry.";
+  note.textContent = "Source edits update projected geometry.";
   sidebar.append(note);
-  const save = document.createElement("button");
-  save.type = "button";
-  save.textContent = existing ? "Update projection" : "Create projection";
-  const cancel = document.createElement("button");
-  cancel.type = "button";
-  cancel.textContent = "Cancel";
-  sidebar.append(save, cancel);
+  const save = win.accept, cancel = win.discard;
   let busy = false,
     candidate: PartDocument | null = null;
   const close = () => {
-    if (!busy) root.remove();
+    if (!busy) presentation.close();
   };
-  cancel.onclick = close;
   const preview = () => {
     candidate = null;
     save.disabled = true;
@@ -235,7 +210,10 @@ export function openProjectionEditor(
   for (const input of [name, geometry, plane, offset])
     input.addEventListener("input", preview);
   const edit = document.createElement("button");
-  edit.type = "button"; edit.textContent = "Save and edit geometry"; sidebar.append(edit);
+  edit.type = "button";
+  edit.className = "aui-button";
+  edit.textContent = "Save and edit geometry";
+  canvas.after(edit);
   const saveProjection = async (editGeometry = false) => {
     if (busy || !candidate) return;
     if (getDocument() !== source) {
@@ -252,7 +230,7 @@ export function openProjectionEditor(
       input.disabled = true;
     try {
       await apply(next);
-      root.remove();
+      presentation.close();
       if (editGeometry) openSketchWorkspace(getDocument, apply, next.features.find(f=>f.id===featureId) as ProfileFeature);
     } catch (e) {
       message.textContent = (e as Error).message;
@@ -265,7 +243,6 @@ export function openProjectionEditor(
       offset.disabled = plane.value === "frame";
     }
   };
-  save.onclick = () => { void saveProjection(); };
   edit.onclick = () => { void saveProjection(true); };
   root.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {

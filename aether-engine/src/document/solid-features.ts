@@ -1,3 +1,4 @@
+import { validateDistanceSideMetadata } from "../sketch/solver/distance-side";
 import {validateTransform,validateTransformVectorReference,type TransformFeature,type TransformVectorReference} from './part-transform';
 export type {TransformFeature} from './part-transform';
 import {validateOffsetFace,type OffsetFaceFeature} from './offset-face';
@@ -227,6 +228,7 @@ export function validateSolidFeature(
       if (feature.profile.authored !== undefined) {
         // External equations require the document source context, checked after feature validation.
         const authored=feature.profile.authored;
+        authored.constraints?.forEach(validateDistanceSideMetadata);
         if(authored.projectionContext!==undefined)throw Error("Resolved projection context must not be saved.");
         const local=localPierceValidation(authored);
         validateSketchDrawing({...local,constraints:local.constraints?.filter(c=>![c.a,c.b,c.axis].some(r=>r?.projectedContourId!==undefined))});
