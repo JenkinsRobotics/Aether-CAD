@@ -1,6 +1,6 @@
 import { AssemblyEditHistory } from "./assembly-edit-history";
 import { liveContactSets } from "./startup/assembly-contacts";
-import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-contact-authoring";
+import { assemblyContactSetPayload, assemblyContactSetDraftIssues, type AssemblyContactSetDraft } from "./cad-contact-authoring";
 import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
 import { appendDocument, availableBodies, parsePartDocument, splitDocument, type PartDocument } from "./aether-core";
 import type { PartDefinitionProjection } from "./cad-assembly-bridge";
@@ -434,6 +434,7 @@ export class CADAssemblyController {
       candidate.store.dispatch({ type: "select-entities", ids: [...this.store.snapshot().selectedEntityIDs], mode: "range" });
       await work(candidate);
       const next = candidate.canonical!;
+      if (next === source) { if (status) this.onStatus(...status); return; }
       if (next.assembly.assembly_id !== source.assembly.assembly_id || next.assembly.workspace_id !== previous.workspace_id
         || next.solution.status !== 'solved' || next.solution.limit_violations.length || next.assembly.issues.some(issue => issue.severity === 'error'))
         throw Error('The complete Assembly action did not produce a solved result.');
@@ -725,7 +726,7 @@ export class CADAssemblyController {
   }
 
   get canEditContacts(): boolean {
-    return Boolean(this.canonical?.assembly.capabilities.can_edit_contacts) && (this.canonical?.assembly.instances.filter((i) => !i.suppressed).length ?? 0) >= 2;
+    return this.writable() && Boolean(this.canonical?.assembly.capabilities.can_edit_contacts) && (this.canonical?.assembly.instances.filter((i) => !i.suppressed).length ?? 0) >= 2;
   }
   get contactsEnabled(): boolean { return Boolean(this.canonical?.assembly.contacts_enabled); }
 
@@ -733,9 +734,30 @@ export class CADAssemblyController {
     const canonical = this.canonical;
     if (!canonical || !this.canEditContacts) throw new Error("The current Assembly cannot hold contact sets.");
     try {
+      this.validateContactDraft(draft);
       await this.mutate("add_contact_set", { assembly_id: canonical.assembly.assembly_id, contact_set: assemblyContactSetPayload(draft) });
     } catch (error) { this.onStatus(`Contact set creation failed: ${messageFor(error)}`, "error"); throw error; }
     this.onStatus(`Contact set added with ${new Set(draft.instanceIDs).size} occurrences.`, "success");
+  }
+
+  private validateContactDraft(draft: AssemblyContactSetDraft): void {
+    const issues = [...assemblyContactSetDraftIssues(draft)];
+    if (draft.instanceIDs.some(id => !this.canonical?.assembly.instances.some(instance => instance.id === id)))
+      issues.push("A selected occurrence is no longer in this assembly.");
+    if (issues.length) throw Error(issues.join(" "));
+  }
+
+  private assertContactSource(source: import("./cad-assembly-bridge").ContactSetProjection): void {
+    if (!this.writable() || !this.canonical?.assembly.capabilities.can_edit_contacts) throw Error("The Assembly is read-only or contact editing is unavailable.");
+    if (!this.canonical.assembly.contact_sets?.includes(source)) throw Error("The contact set changed. Reopen its editor before applying this change.");
+  }
+
+  async updateContactSet(source: import("./cad-assembly-bridge").ContactSetProjection, draft: AssemblyContactSetDraft): Promise<void> {
+    try {
+      this.assertContactSource(source); this.validateContactDraft(draft);
+      await this.mutate("update_contact_set", { contact_set: { ...source, ...assemblyContactSetPayload(draft) } });
+      this.onStatus("Contact set updated.", "success");
+    } catch (error) { this.onStatus(`Contact set update failed: ${messageFor(error)}`, "error"); throw error; }
   }
   // ---- Components beyond insertion (SolidCraft's component.*) ----------------
 
@@ -858,6 +880,7 @@ export class CADAssemblyController {
         const target = canonical.assembly.instances.find(({ id }) => id === draft.target);
         if (!target) throw new Error("The target occurrence is gone.");
         const targetDefinition = this.definitionOf(target);
+        if (targetDefinition.id === sourceDefinition.id) throw Error("Source and target use the same Part definition. Make an independent copy first.");
         const split = splitDocument(remaining, { bodyIds: draft.bodyIDs, sketchIds: draft.sketchIDs }, targetDefinition.name);
         await this.replaceDefinition(targetDefinition, { feature_document: appendDocument(this.documentOf(targetDefinition), split.extracted) });
         await this.replaceDefinition(sourceDefinition, { feature_document: split.remaining });
@@ -968,6 +991,7 @@ export class CADAssemblyController {
   /** component.unlock: remove the fastened mates that hold the selected occurrences to each
    *  other (a rigid group, or an imported assembly's fixed joints), so they move one by one. */
   async unlockSelection(): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.unlockSelection());
     const canonical = this.canonical;
     if (!canonical) throw new Error("No canonical Assembly workspace is open.");
     const ids = new Set([...this.store.snapshot().selectedEntityIDs].filter((id) => canonical.assembly.instances.some((i) => i.id === id)));
@@ -980,17 +1004,22 @@ export class CADAssemblyController {
     } catch (error) { this.onStatus(`Unlock failed: ${messageFor(error)}`, "error"); throw error; }
   }
 
-  async removeContactSet(id: string): Promise<void> {
+  async removeContactSet(id: string, source?: import("./cad-assembly-bridge").ContactSetProjection): Promise<void> {
     const canonical = this.canonical;
     if (!canonical) throw new Error("No canonical Assembly workspace is open.");
-    await this.mutate("remove_contact_set", { assembly_id: canonical.assembly.assembly_id, contact_set_id: id });
-    this.onStatus("Contact set removed.", "success");
+    try {
+      if (source) { this.assertContactSource(source); if (source.id !== id) throw Error("Contact selection changed."); }
+      await this.mutate("remove_contact_set", { assembly_id: canonical.assembly.assembly_id, contact_set_id: id });
+      this.onStatus("Contact set removed.", "success");
+    } catch (error) { this.onStatus(`Contact set removal failed: ${messageFor(error)}`, "error"); throw error; }
   }
   async setContactsEnabled(enabled: boolean): Promise<void> {
     const canonical = this.canonical;
     if (!canonical) throw new Error("No canonical Assembly workspace is open.");
-    await this.mutate("set_contacts_enabled", { assembly_id: canonical.assembly.assembly_id, enabled });
-    this.onStatus(enabled ? "Contacts on: driven joints and motion studies stop where contact sets would pass through each other." : "Contacts off.", "success");
+    try {
+      await this.mutate("set_contacts_enabled", { assembly_id: canonical.assembly.assembly_id, enabled });
+      this.onStatus(enabled ? "Contact checks enabled." : "Contact checks disabled.", "success");
+    } catch (error) { this.onStatus(`Contact checks could not be changed: ${messageFor(error)}`, "error"); throw error; }
   }
 
   async addRelation(draft: AssemblyRelationDraft): Promise<void> {
@@ -1193,6 +1222,7 @@ export class CADAssemblyController {
       this.canonical.solution,
       this.canonical.bom,
       selectedID,
+      this.writable(),
     ));
   }
 

@@ -264,3 +264,13 @@ describe("buildCADAssemblyPresentation", () => {
     expect(componentNodes[1_199].id).toBe("instance-1199");
   });
 });
+
+it('projects contact membership and selection from canonical objects, including suppressed occurrences',()=>{
+  const base=fixture();const source={id:'contact-1',name:'Clearance',instance_ids:base.instances.map(instance=>instance.id),suppressed:true};
+  const projection={...base,capabilities:{...base.capabilities,can_edit_contacts:true},contacts_enabled:true,contact_sets:[source],instances:base.instances.map(instance=>({...instance,suppressed:true}))};
+  const view=buildCADAssemblyPresentation(projection,null,null,source.id,false);
+  expect(view.contacts?.selected).toBe(source);expect(view.contacts?.sets[0]).toBe(source);
+  expect(view.contacts?.editable).toBe(false);expect(view.contacts?.enabled).toBe(true);
+  expect(view.contacts?.instances.every(instance=>instance.suppressed)).toBe(true);
+  expect(view.treeNodes[0].children?.find(node=>node.id==='presentation/contacts')?.children?.[0]).toMatchObject({id:source.id,dimmed:true});
+});

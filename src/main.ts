@@ -334,6 +334,9 @@ function syncAssemblyCommands(): void {
   cadCommands.setEnabled("assembly-edit-mate-dof-limits", assemblyController.canEditSelectedMateDOF);
   cadCommands.setEnabled("assembly-create-relation", assemblyController.canAddRelation);
   cadCommands.setEnabled("assembly-create-contact-set", assemblyController.canEditContacts);
+  cadCommands.setEnabled("assembly-toggle-contacts", !!assemblyController.geometryProjection?.capabilities.can_edit_contacts && hostedPartEditable());
+  cadCommands.setEnabled("assembly-check-contacts", !!assemblyController.geometryProjection);
+  cadCommands.setActive("assembly-toggle-contacts", assemblyController.contactsEnabled);
   cadCommands.setEnabled("assembly-toggle-grounded", enabled);
   cadCommands.setEnabled("assembly-toggle-suppressed", enabled);
   cadCommands.setEnabled("assembly-remove-instance", enabled);
@@ -934,6 +937,16 @@ cadPresentation.registerActionHandler((action) => {
       .catch(() => undefined);
     return;
   }
+  if (action.type === "update-assembly-contact-set") {
+    void assemblyController.updateContactSet(action.source, action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "remove-assembly-contact-set") {
+    void assemblyController.removeContactSet(action.source.id, action.source).catch(() => undefined);
+    return;
+  }
   if (action.type === "update-part-properties") {
     void assemblyController.updatePartProperties(action.draft)
       .then(() => cadPresentation.patch({ startDialog: null }))
@@ -1493,9 +1506,9 @@ cadCommands.register("assembly-check-contacts", () => {
     .then((overlaps) => setStatus(describeOverlaps(overlaps), overlaps.length ? "error" : "success"))
     .catch((error: unknown) => setStatus(`Contact check: ${(error as Error).message}`, "error"));
 });
-cadCommands.setEnabled("assembly-check-contacts", true);
+cadCommands.setEnabled("assembly-check-contacts", !!assemblyController.geometryProjection);
 cadCommands.register("assembly-toggle-contacts", () => { void assemblyController.setContactsEnabled(!assemblyController.contactsEnabled).catch(() => undefined); });
-cadCommands.setEnabled("assembly-toggle-contacts", true);
+cadCommands.setEnabled("assembly-toggle-contacts", !!assemblyController.geometryProjection?.capabilities.can_edit_contacts && hostedPartEditable());
 cadCommands.register("assembly-explode", () => { void toggleExplodedView(); });
 cadCommands.setEnabled("assembly-explode", true);
 cadCommands.register("assembly-motion-study", () => {

@@ -6,6 +6,8 @@ import { cadAssemblyWorkspace } from '../cad-assembly-workspace-store';
 import { cadPresentation } from '../cad-presentation-store';
 import { AssemblyMateDOFDialog } from './dialogs/mate-dof';
 import { CADAssemblyPartsPanel } from './panels/parts';
+import { AssemblyContactSetDialog } from './dialogs/contact-set';
+import { AssemblyContactSets } from './panels/contact-sets';
 
 let root, container, unlisten, actions, projection;
 const rotation = { id:'turn', name:'rotation', kind:'rotation', state:'free', value_rad:Math.PI/4,
@@ -54,4 +56,40 @@ it('lists canonical occurrences, including hidden ones, and selects their actual
   const row=[...container.querySelectorAll('[role=treeitem]')].find(row=>row.textContent.includes('Pin'));
   expect(row).toBeTruthy(); await act(async()=>row.click());
   expect([...cadAssemblyWorkspace.snapshot().selectedEntityIDs]).toEqual(['pin']);
+});
+
+it('edits contact membership without losing suppressed members and rejects an ABA-stale dialog',async()=>{
+  const source={id:'contact',name:'Clearance',instance_ids:['base','pin'],suppressed:true};
+  projection={...projection,contacts:{enabled:true,editable:true,sets:[source],selected:source,
+    instances:[{id:'base',name:'Base',suppressed:false},{id:'pin',name:'Pin',suppressed:true}]}};
+  await act(async()=>{cadAssemblyWorkspace.setReady(projection);root.render(<AssemblyContactSetDialog presentation={{...cadPresentation.snapshot(),startDialog:'edit-contact-set'}}/>);});
+  expect(document.body.textContent).toContain('Pin (suppressed)');
+  expect([...document.querySelectorAll('input[type=checkbox]')].every(input=>input.checked)).toBe(true);
+  await click('Save Contact Set');
+  expect(actions.at(-1)).toMatchObject({type:'update-assembly-contact-set',draft:{name:'Clearance',instanceIDs:['base','pin'],suppressed:true}});
+  expect(actions.at(-1).source).toBe(source);
+  await act(async()=>cadAssemblyWorkspace.setReady({...projection,contacts:{...projection.contacts,sets:[{...source}],selected:{...source}}}));
+  expect(document.querySelector('[role=alert]').textContent).toContain('changed');
+  expect([...document.querySelectorAll('button')].find(button=>button.textContent==='Save Contact Set').disabled).toBe(true);
+});
+it('shows contact state and refuses editing in a read-only dialog',async()=>{
+  const source={id:'contact',name:'Clearance',instance_ids:['base','pin'],suppressed:true};
+  projection={...projection,contacts:{enabled:false,editable:false,sets:[source],selected:source,
+    instances:[{id:'base',name:'Base',suppressed:false},{id:'pin',name:'Pin',suppressed:true}]}};
+  await act(async()=>{cadAssemblyWorkspace.setReady(projection);root.render(<><AssemblyContactSets/><AssemblyContactSetDialog presentation={{...cadPresentation.snapshot(),startDialog:'edit-contact-set'}}/></>);});
+  expect(container.textContent).toContain('Contact checks off');expect(container.textContent).toContain('Suppressed');
+  expect(document.querySelector('[role=alert]').textContent).toContain('unavailable');
+  expect([...document.querySelectorAll('button')].find(button=>button.textContent==='Save Contact Set').disabled).toBe(true);
+});
+it('renders the contact actions menu and dispatches edits against the selected canonical set',async()=>{
+  const source={id:'contact',name:'Clearance',instance_ids:['base','pin'],suppressed:false};
+  projection={...projection,contacts:{enabled:true,editable:true,sets:[source],selected:source,
+    instances:[{id:'base',name:'Base',suppressed:false},{id:'pin',name:'Pin',suppressed:false}]}};
+  await act(async()=>{cadAssemblyWorkspace.setReady(projection);root.render(<AssemblyContactSets/>);});
+  const trigger=document.querySelector('button[aria-label="Contact actions"]');expect(trigger).toBeTruthy();
+  await act(async()=>trigger.click());
+  const item=[...document.querySelectorAll('[role=menuitem]')].find(item=>item.textContent.includes('Suppress Selected Contact Set'));
+  expect(item).toBeTruthy();await act(async()=>item.click());
+  expect(actions.at(-1)).toMatchObject({type:'update-assembly-contact-set',draft:{suppressed:true,instanceIDs:['base','pin']}});
+  expect(actions.at(-1).source).toBe(source);
 });

@@ -6,6 +6,7 @@ import { cadPresentation } from "../../cad-presentation-store";
 import { cadWorkspace } from "../../cad-workspace-store";
 import { AetherIcon, InspectorSection, DataTable, type DataTableColumn, EmptyState, ErrorState, ListBox, MenuButton, type MenuItem, SegmentedControl, Tabs, TreePanel } from "@aether/ui";
 import { useSyncExternalStore } from "react";
+import { AssemblyContactSets } from "./contact-sets";
 
 function MateActionsMenu() {
   const commands = useSyncExternalStore(
@@ -234,6 +235,7 @@ export function MatesPanel({ active }: { active: boolean }) {
       <ListBox ariaLabel="Canonical mates" items={assembly.data.mateItems} selectedIDs={assembly.selectedEntityIDs} onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })} emptyState="No mates." /></InspectorSection>
       <InspectorSection defaultOpen title="Relations">
       <ListBox ariaLabel="Canonical relations" items={assembly.data.relationItems} selectedIDs={assembly.selectedEntityIDs} onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })} emptyState="No relations." /></InspectorSection>
+      <AssemblyContactSets />
       {assembly.data.problemItems.length > 0 ? <InspectorSection defaultOpen title="Diagnostics"><ListBox ariaLabel="Assembly diagnostics" items={assembly.data.problemItems} selectedIDs={assembly.selectedEntityIDs} onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })} /></InspectorSection> : null}
     </div>;
   })();

@@ -1047,6 +1047,9 @@ describe('atomic assembly recipe transactions', () => {
     await controller.addLinkedCopyOfSelectedInstance();
     expect(mutate).toHaveBeenLastCalledWith("add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-1", name: "Bracket:2" }) }), expect.any(AbortSignal));
 
+    const beforeMove = mutate.mock.calls.length;
+    await expect(controller.moveBodiesToComponent({ sourceInstanceID: "instance-1", bodyIDs: [first], sketchIDs: [], target: current.instances[1].id, name: "" })).rejects.toThrow(/same Part definition/);
+    expect(mutate).toHaveBeenCalledTimes(beforeMove);
     await controller.copySelectedInstanceIndependent();
     expect(mutate).toHaveBeenNthCalledWith(3, "add_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ name: "Bracket copy", part_number: "BR-2" }) }), expect.any(AbortSignal));
     expect((mutate.mock.calls[2][1].part_definition as any).feature_document).toBeUndefined();
@@ -1099,12 +1102,12 @@ describe('atomic assembly recipe transactions', () => {
 
 
 describe('isolated explicit Assembly edits', () => {
-  function setup(validateContacts?: (projection: AssemblyProjectionV1) => Promise<void>) {
-    type State={revision:string;name:string;parts?:AssemblyProjectionV1['part_definitions'];extra?:AssemblyProjectionV1['instances']};
-    const states=new Map<string,State>([[descriptor.handle,{revision:'1',name:'Bracket:1'}]]);
+  function setup(validateContacts?: (projection: AssemblyProjectionV1) => Promise<void>, seed: Partial<AssemblyProjectionV1> = {}) {
+    type State={revision:string;name:string;parts?:AssemblyProjectionV1['part_definitions'];extra?:AssemblyProjectionV1['instances'];contacts?:AssemblyProjectionV1['contact_sets'];mates?:AssemblyProjectionV1['mates'];enabled?:boolean};
+    const states=new Map<string,State>([[descriptor.handle,{revision:'1',name:'Bracket:1',contacts:seed.contact_sets,mates:seed.mates,extra:seed.instances?.slice(1)}]]);
     let serial=0,writable=true;
     const state=(handle:string)=>{const s=states.get(handle);if(!s)throw Error('Released handle');return s;};
-    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,part_definitions:state(handle).parts??assembly.part_definitions,contacts_enabled:!!validateContacts,instances:[{...assembly.instances[0],name:state(handle).name},...(validateContacts?[{...assembly.instances[0],id:'instance-2'}]:[]),...(state(handle).extra??[])]});
+    const projection=(handle:string)=>({...assembly,...seed,contact_sets:state(handle).contacts?.map(set=>({...set,instance_ids:[...set.instance_ids]})),mates:state(handle).mates??[],revision:state(handle).revision,part_definitions:state(handle).parts??assembly.part_definitions,contacts_enabled:state(handle).enabled??!!validateContacts,instances:[{...assembly.instances[0],name:state(handle).name},...(validateContacts?[{...assembly.instances[0],id:'instance-2'}]:[]),...(state(handle).extra??[])]});
     const bridge=client({
       openWorkspace:vi.fn(async(encoded:string)=>{const s=JSON.parse(encoded) as State;const handle='candidate-'+(++serial);states.set(handle,s);return {...descriptor,revision:s.revision,handle};}),
       saveWorkspace:vi.fn(async(handle:string,revision:string)=>{const s=state(handle);if(revision!==s.revision)throw Error('Revision changed');return {handle,revision,graph_sha256:'hash',data_base64:JSON.stringify(s)};}),
@@ -1115,6 +1118,10 @@ describe('isolated explicit Assembly edits', () => {
         const s=state(params.handle);if(s.revision!==params.expected_revision)throw Error('Revision changed');
         if(method==='update_instance')s.name=(params.instance as any)?.name??s.name;
         if(method==='add_part_definition')s.parts=[...(s.parts??assembly.part_definitions),{...(params.part_definition as any),id:'part-copy'}];
+        if(method==='update_contact_set')s.contacts=(s.contacts??[]).map(set=>set.id===(params.contact_set as any).id?params.contact_set as any:set);
+        if(method==='remove_contact_set')s.contacts=(s.contacts??[]).filter(set=>set.id!==params.contact_set_id);
+        if(method==='set_contacts_enabled')s.enabled=params.enabled as boolean;
+        if(method==='remove_mate')s.mates=(s.mates??[]).filter(mate=>mate.id!==params.mate_id);
         if(method==='add_instance')s.extra=[...(s.extra??[]),{...assembly.instances[0],...(params.instance as any),id:'instance-copy'}];
         s.revision=String(Number(s.revision)+1);
         return {handle:params.handle,revision:s.revision,assembly:projection(params.handle),solution:{...solution,revision:s.revision},bom:{...bom,revision:s.revision}};
@@ -1196,6 +1203,48 @@ describe('isolated explicit Assembly edits', () => {
     finish();await expect(pending).rejects.toThrow();
     expect(controller.geometryProjection).toBe(mode==='close'?null:before);expect(controller.canUndoRecipe).toBe(false);
     expect(states.size).toBe(mode==='close'?0:1);controller.dispose();
+  });
+
+  it('edits and removes contact sets with shared history and refuses stale identity, unknown members and read-only changes',async()=>{
+    const contact={id:'set-1',name:'Pair',instance_ids:['instance-1','instance-2'],suppressed:false};
+    const seed={...assemblyWithLifecycleMate,capabilities:{...assembly.capabilities,can_edit_contacts:true},contact_sets:[contact]};
+    const {controller,lock}=setup(undefined,seed);await controller.newWorkspace('Assembly');
+    const source=controller.geometryProjection!.contact_sets![0];
+    await controller.updateContactSet(source,{name:'Clearance',instanceIDs:source.instance_ids,suppressed:true});
+    expect(controller.geometryProjection?.contact_sets?.[0]).toMatchObject({name:'Clearance',suppressed:true});
+    await controller.undoRecipe(-1);
+    const restored=controller.geometryProjection!.contact_sets![0];
+    expect(restored).toEqual(source);expect(restored).not.toBe(source);
+    await expect(controller.updateContactSet(source,{name:'Stale',instanceIDs:source.instance_ids})).rejects.toThrow(/changed/);
+    expect(controller.canRedoRecipe).toBe(true);
+    await expect(controller.updateContactSet(restored,{name:'Invalid',instanceIDs:['instance-1','missing']})).rejects.toThrow(/no longer/);
+    await controller.removeContactSet(restored.id,restored);expect(controller.geometryProjection?.contact_sets).toEqual([]);
+    await controller.undoRecipe(-1);expect(controller.geometryProjection?.contact_sets).toHaveLength(1);
+    lock();await expect(controller.updateContactSet(controller.geometryProjection!.contact_sets![0],{name:'Locked',instanceIDs:source.instance_ids})).rejects.toThrow(/read-only/);
+    controller.dispose();
+  });
+  it.each([false,true])('groups Unlock removals and preserves the original after a mid-action failure=%s',async(fail)=>{
+    const third={...assemblyWithLifecycleMate.instances[1],id:'instance-3'};
+    const mates=[lifecycleMate,{...lifecycleMate,id:'mate-2',endpoint_b:{...lifecycleMate.endpoint_b,instance_id:third.id}}];
+    const {controller,bridge,store,changed}=setup(undefined,{...assemblyWithLifecycleMate,instances:[...assemblyWithLifecycleMate.instances,third],mates});
+    await controller.newWorkspace('Assembly');store.dispatch({type:'select-entities',ids:['instance-1','instance-2','instance-3'],mode:'range'});changed.mockClear();
+    const original=controller.geometryProjection;
+    const mutate=vi.mocked(bridge.mutate).getMockImplementation()!;
+    vi.mocked(bridge.mutate).mockImplementation(async(method,params,signal)=>{
+      if(fail&&method==='remove_mate'&&params.mate_id==='mate-2')throw Error('Refused second removal');
+      return mutate(method,params,signal);
+    });
+    if(fail){await expect(controller.unlockSelection()).rejects.toThrow(/Refused/);expect(controller.geometryProjection).toBe(original);expect(changed).not.toHaveBeenCalled();}
+    else{await controller.unlockSelection();expect(controller.geometryProjection?.mates).toEqual([]);expect(changed).toHaveBeenCalledTimes(1);await controller.undoRecipe(-1);expect(controller.geometryProjection?.mates).toHaveLength(2);expect(controller.canUndoRecipe).toBe(false);}
+    controller.dispose();
+  });
+  it('leaves history and the original handle alone when Unlock has nothing to remove',async()=>{
+    const {controller,store,states,changed}=setup(undefined,{...assemblyWithLifecycleMate,mates:[]});
+    await controller.newWorkspace('Assembly');await controller.mutate('update_instance',{instance:{id:'instance-1',name:'Changed'}});
+    await controller.undoRecipe(-1);changed.mockClear();const original=controller.geometryProjection;
+    store.dispatch({type:'select-entities',ids:['instance-1','instance-2'],mode:'range'});
+    await controller.unlockSelection();expect(controller.geometryProjection).toBe(original);expect(controller.canRedoRecipe).toBe(true);
+    expect(changed).not.toHaveBeenCalled();expect(states.size).toBe(1);controller.dispose();
   });
 
   it('validates contact-enabled UI and agent edits before any live swap',async()=>{

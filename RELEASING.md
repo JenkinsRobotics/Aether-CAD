@@ -34,7 +34,9 @@ Package-manager versions and the shared UI dependency version are separate.
    released worker through `/api/cad/assembly` with `operation: workspace`. The
    legacy assembly-solve request remains supported. The new path uses no host
    session handle, filesystem path, database or changed request/response limit.
-   Contact tests must exercise enable/refusal, suppression, exact overlap checks,
+   Contact tests must exercise the visible list/dialog create/edit/member/remove
+   flows, retained suppressed members, stale/read-only refusal, visible overlap
+   errors, undo/reopen, enable/refusal, suppression, exact overlap checks,
    retained authored placements and graph-schema-2 save/reopen. Include combined
    Ball and Pin Slot edits/reopen with contacts enabled. Saved-worker pose
    comparisons must cover all eight mate types, both grounded endpoints, rotated

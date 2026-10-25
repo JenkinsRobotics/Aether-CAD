@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
 const copyOnly=process.env.AETHER_ASSEMBLY_BROWSER_COPY_ONLY==='1';
+const contactOnly=process.env.AETHER_ASSEMBLY_BROWSER_CONTACT_ONLY==='1';
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');
 await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],steps=[];
@@ -55,7 +56,7 @@ const graph=async()=>{
 const unshare=async(revoke=false)=>{await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();await button('Stop sharing editor').click();if(revoke)await page.locator('.aui-agent-connection-card').filter({has:page.getByText(connectionName,{exact:true})}).getByRole('button',{name:'Revoke',exact:true}).click();await button('Done').click();};
 try{
   await page.goto(origin+'/cad/');await page.locator('input[name="username"]').fill('editor');await page.locator('input[name="password"]').fill('account-test-password-2026');await button('Sign in').click();await page.getByText('A space for your next idea.',{exact:false}).waitFor({timeout:30000});
-  if(!copyOnly&&process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
+  if(!contactOnly&&!copyOnly&&process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
   file=await call('library/project_create',{app:'cad',name:'Assembly agent baseline',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
   const url=`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`;await page.goto(url);await page.locator('.aui-studio-document-title').filter({hasText:'Assembly agent baseline'}).waitFor({timeout:90000});
   await step('compose-and-inspect',async()=>{
@@ -157,7 +158,7 @@ try{
     await unshare(true);await button('AI advisor').click();
   });
   }
-  for (const kind of (copyOnly?[]:['ball','pin_slot'])) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
+  for (const kind of (contactOnly||copyOnly?[]:['ball','pin_slot'])) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
     file=await call('library/project_create',{app:'cad',name:`Pose ${kind}`,operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
     await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
     await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});
@@ -207,7 +208,7 @@ try{
     await edit({type:'mate-update',id:mate.id,name:`Checked ${kind}`});contactsVerified=true;
     await unshare(true);await button('AI advisor').click();
   });
-  await step('compound-ui-copy-history-and-reopen',async()=>{
+  if(!contactOnly)await step('compound-ui-copy-history-and-reopen',async()=>{
     if(copyOnly){
       file=await call('library/project_create',{app:'cad',name:'Copy continuity',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
       await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
@@ -242,6 +243,49 @@ try{
     await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:copyOnly?'Copy continuity':'Pose pin_slot'}).waitFor({timeout:90000});await share();
     const reopened=await inspect();assert.equal(reopened.counts.instances,3);assert.equal(reopened.parts.length,2);assert.equal(reopened.can_undo,false);
     await expect(components.getByRole('treeitem')).toHaveCount(3);
+    await unshare(true);await button('AI advisor').click();
+  });
+  if(!copyOnly)await step('contact-panel-management-and-collision-refusal',async()=>{
+    file=await call('library/project_create',{app:'cad',name:'Contact management',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
+    await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
+    await page.locator('.aui-studio-document-title').filter({hasText:'Contact management'}).waitFor({timeout:90000});
+    await share(true);state=await inspect();const recipe=state.example;delete recipe.patterns;
+    recipe.instances=[{key:'base',part:'block',grounded:true},{key:'moving',part:'block',position_mm:[0,0,50]},{key:'third',part:'block',position_mm:[50,0,0]}];recipe.mates=[];
+    await invoke('aether_cad_assembly_compose',{expected_revision:state.revision,recipe_json:JSON.stringify(recipe)});
+    const instances=(await inspect('instances')).items,third=instances.find(instance=>instance.name==='third'),moving=instances.find(instance=>instance.name==='moving');
+    const action=async name=>{await button('Contact actions').click();await page.getByRole('menuitem',{name,exact:true}).click();};
+    const list=page.getByRole('listbox',{name:'Contact sets',exact:true});
+    await action('Create Contact Set…');let dialog=page.getByRole('dialog',{name:'Create contact set',exact:true});
+    await dialog.locator('#assembly-contact-name').fill('Clearance');
+    await dialog.getByRole('checkbox',{name:'base',exact:true}).check();await dialog.getByRole('checkbox',{name:'moving',exact:true}).check();
+    await dialog.getByRole('button',{name:'Create Contact Set',exact:true}).click();await dialog.waitFor({state:'hidden'});
+    await expect(list.getByRole('option')).toHaveCount(1);await list.getByRole('option').click();
+    await action('Enable Contact Checks');await expect.poll(async()=>(await inspect()).contacts_enabled,{timeout:60000}).toBe(true);
+    await action('Edit Selected Contact Set…');dialog=page.getByRole('dialog',{name:'Edit contact set',exact:true});
+    await dialog.locator('#assembly-contact-name').fill('Adjusted clearance');
+    await dialog.getByRole('checkbox',{name:'base',exact:true}).uncheck();await dialog.getByRole('checkbox',{name:'third',exact:true}).check();
+    await dialog.getByRole('button',{name:'Save Contact Set',exact:true}).click();await dialog.waitFor({state:'hidden'});
+    let contact=(await inspect('contacts')).items[0];assert.equal(contact.name,'Adjusted clearance');assert.deepEqual(new Set(contact.instance_ids),new Set([moving.id,third.id]));
+    await action('Suppress Selected Contact Set');await expect.poll(async()=>(await inspect('contacts')).items[0].suppressed,{timeout:60000}).toBe(true);
+    await edit({type:'instance-suppressed',id:third.id,suppressed:true});
+    await action('Edit Selected Contact Set…');dialog=page.getByRole('dialog',{name:'Edit contact set',exact:true});
+    await expect(dialog.getByRole('checkbox',{name:'third (suppressed)',exact:true})).toBeChecked();
+    await dialog.getByRole('button',{name:'Save Contact Set',exact:true}).click();await dialog.waitFor({state:'hidden'});
+    assert.ok((await inspect('contacts')).items[0].instance_ids.includes(third.id));
+    await edit({type:'instance-suppressed',id:third.id,suppressed:false});await edit({type:'instance-update',id:third.id,position_mm:[0,0,50]});
+    const before=await inspect();await action('Restore Selected Contact Set');
+    await expect(page.getByText(/^Contact set update failed:/)).toBeVisible({timeout:60000});
+    assert.equal((await inspect()).revision,before.revision);assert.equal((await inspect('contacts')).items[0].suppressed,true);
+    await button('Dismiss').click();await edit({type:'instance-update',id:third.id,position_mm:[50,0,0]});
+    await action('Restore Selected Contact Set');await expect.poll(async()=>(await inspect('contacts')).items[0].suppressed,{timeout:60000}).toBe(false);
+    await action('Remove Selected Contact Set');await expect(list.getByRole('option')).toHaveCount(0,{timeout:60000});
+    state=await inspect();await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});
+    await expect(list.getByRole('option')).toHaveCount(1);contact=(await inspect('contacts')).items[0];assert.equal(contact.name,'Adjusted clearance');
+    const final=await inspect();let saved;for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===final.source_revision)break;await page.waitForTimeout(100);}
+    assert.equal(String(saved.revision),final.source_revision);
+    await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:'Contact management'}).waitFor({timeout:90000});await share();
+    assert.deepEqual((await inspect('contacts')).items,[contact]);assert.equal((await inspect()).contacts_enabled,true);
+    await expect(list.getByRole('option')).toHaveCount(1);contactsVerified=true;
     await unshare(true);await button('AI advisor').click();
   });
   assert.deepEqual(errors,[]);assert.deepEqual(legacyRPC,[],'CAD must not use Studio Animation RPC');await writeFile(join(evidence,'results.json'),JSON.stringify({status:'passed',steps,contactsVerified,errors},null,2));

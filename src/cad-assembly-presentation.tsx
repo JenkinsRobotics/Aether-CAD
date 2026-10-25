@@ -50,6 +50,13 @@ export interface CADAssemblyPresentationProjection {
   readonly instanceOptions?: readonly { readonly id: string; readonly name: string }[];
   readonly selectedMateDOF: DOFProjection | null;
   readonly selectedMateDOFs?: readonly DOFProjection[];
+  readonly contacts?: {
+    readonly enabled: boolean;
+    readonly editable: boolean;
+    readonly sets: readonly import("./cad-assembly-bridge").ContactSetProjection[];
+    readonly selected: import("./cad-assembly-bridge").ContactSetProjection | null;
+    readonly instances: readonly { id: string; name: string; suppressed: boolean }[];
+  };
   /** The selected occurrence and its part, for Part Properties and Bodies to Component. */
   readonly selectedInstanceID?: StableID | null;
   readonly selectedPartDefinition?: PartDefinitionProjection | null;
@@ -206,6 +213,9 @@ function buildTree(projection: AssemblyProjectionV1): readonly TreeNode[] {
     { id: "presentation/connectors", label: "Connectors", icon: <AetherIcon name="fit" />, badge: String(connectorNodes.length), children: connectorNodes },
     { id: "presentation/mates", label: "Mates", icon: <AetherIcon name="link" />, badge: String(mateNodes.length), children: mateNodes },
     { id: "presentation/relations", label: "Relations", icon: <AetherIcon name="arrows-horizontal" />, badge: String(relationNodes.length), children: relationNodes },
+    { id: "presentation/contacts", label: "Contact sets", icon: <AetherIcon name="link" />,
+      children: (projection.contact_sets ?? []).map(set => ({ id: set.id, label: set.name,
+        icon: <AetherIcon name="link" />, badge: set.suppressed ? "Suppressed" : undefined, dimmed: set.suppressed })) },
     { id: "presentation/configurations", label: "Configurations", icon: <AetherIcon name="columns" />, badge: String(configurationNodes.length), children: configurationNodes },
   ];
   if (orphans.length > 0) {
@@ -398,6 +408,7 @@ export function buildCADAssemblyPresentation(
   solution: AssemblySolutionProjection | null,
   bom: BOMProjectionV1 | null,
   selectedID: StableID | null = null,
+  writable = true,
 ): CADAssemblyPresentationProjection {
   const canMate = projection.capabilities.supported_mate_type_ids.length > 0;
   const endpoints = mateEndpointOptions(projection);
@@ -425,6 +436,10 @@ export function buildCADAssemblyPresentation(
     instanceOptions: projection.instances.filter((instance) => !instance.suppressed).map((instance) => ({ id: instance.id, name: instance.name })),
     selectedMateDOF: selectedMate && !selectedMate.suppressed ? selectedMate.dofs.find(dof => dof.state === "free") ?? null : null,
     selectedMateDOFs: selectedMate && !selectedMate.suppressed ? selectedMate.dofs.filter(dof => dof.state === "free") : [],
+    contacts: { enabled: projection.contacts_enabled ?? false,
+      editable: writable && !!projection.capabilities.can_edit_contacts,
+      sets: projection.contact_sets ?? [], selected: projection.contact_sets?.find(set => set.id === selectedID) ?? null,
+      instances: projection.instances.map(({ id, name, suppressed }) => ({ id, name, suppressed })) },
     selectedInstanceID: selectedInstance?.id ?? null,
     selectedPartDefinition: selectedInstance ? projection.part_definitions.find(({ id }) => id === selectedInstance.definition_id) ?? null : null,
     componentContents: componentContents(projection),

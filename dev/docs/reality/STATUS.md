@@ -414,3 +414,34 @@ Unlocking multiple fixed mates still needs the same compound-action grouping;
 contact-set list/edit UI remains next. Body moves between two occurrences of the
 same definition need an explicit refusal check. No installation or other app changes;
 overall baseline remains incomplete.
+
+
+## 2026-10-24 — Assembly contact management (source qualified)
+
+The existing Mates panel now projects saved contact sets through shared list,
+menu and dialog widgets. Users can create, rename, change members, suppress,
+restore and remove sets, and enable/disable checks. Suppressed occurrences stay
+in authored membership and are shown explicitly. Their inactive geometry remains
+excluded from checks. Editing a dialog whose canonical contact object changed
+(including undo/reopen with a repeated saved revision) is refused. Read-only
+controls are disabled; controller mutations retain the same atomic native and
+exact-contact validation as agents. Contact failures now produce visible feedback.
+
+Unlock runs as one compound edit; failure at a later removal leaves all original
+mates intact. An Unlock with no mates to remove preserves history and redo. Body
+moves between distinct occurrences of the same Part definition are refused,
+avoiding the append-then-replace loss of shared bodies. These source paths are
+covered by focused tests and the qualified frontend.
+Initial focused checks: 78 pass. Final fixed-source full app suite: 1,852 pass,
+one existing skip, including the no-op history guard. Final 80 focused checks,
+types and build pass. The first browser attempt found the contact action menu was
+not rendered because the shared disclosure section omits header actions; using
+its standard static action header fixes it, with a regression test. Browser
+qualification passes: actual UI creation, rename/member changes, suppression, retained
+suppressed occurrence membership, visible overlap refusal with unchanged revision,
+restore, delete, undo and saved reopen. The same fixture also passes the actual
+Animation-client load/pose/serialize/reopen regression. No browser errors or legacy
+/cad/rpc requests. Evidence: `.verification/baseline-2026-10-24/contacts-*`, especially
+`contacts-qualified-browser/results.json`. The worker and pinned codec are byte-identical
+to the previous qualified release. No installation or other app changes. Contact
+checks still validate discrete solved positions, not continuous swept collision detection.
