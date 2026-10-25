@@ -894,5 +894,63 @@
       "openWorldHint": false
     },
     "action": "sketch.inspect"
+  },
+  {
+    "id": "cad.sketch.includemodel",
+    "title": "Include model geometry in sketch",
+    "description": "Project selected model boundaries or vertices onto an editable sketch as independent copies, not associative links. Use current cad.part.topology face/edge IDs in entities_json: [{body_id,face_id?,edge_index?,vertex?:a|b}]. Omitted selection includes all earlier exact body boundaries. Analytic curves stay exact; other edges are reported with tolerance_mm. Rebuild succeeds before returning a candidate; latest revision required and open editors must reload.",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app",
+        "id",
+        "feature_id",
+        "expected_revision"
+      ],
+      "properties": {
+        "app": {
+          "type": "string",
+          "enum": [
+            "cad"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "feature_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "entities_json": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 65536
+        },
+        "construction": {
+          "type": "boolean"
+        },
+        "tolerance_mm": {
+          "type": "number",
+          "minimum": 1e-05,
+          "maximum": 1
+        }
+      }
+    },
+    "writes": true,
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "action": "sketch.includemodel"
   }
 ]

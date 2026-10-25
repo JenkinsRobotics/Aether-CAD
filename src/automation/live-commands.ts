@@ -7,6 +7,7 @@ import { prepareCommand } from './commands';
 import { appendSolidPrimitive, defaultPrimitiveDimensions, primitiveFields, type SolidPrimitive } from '../modeling/solid-primitives';
 import { partAITools } from '../ai/catalog';
 import { editSketch } from './sketch-edit';
+import { modelProjectionTool } from './model-projection';
 import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatureOperation } from '../operations/feature-operations';
 
 const number={type:'number'},string={type:'string'},boolean={type:'boolean'};
@@ -15,6 +16,7 @@ const vector3={type:'array',items:number,minItems:3,maxItems:3};
 const plane={name:string,plane:{type:'string',enum:['XY','XZ','YZ']},frame:{type:'object',properties:{origin_mm:vector3,x_direction:vector3,y_direction:vector3},required:['origin_mm','x_direction','y_direction'],additionalProperties:false},offset_mm:number,flip:{type:'string',enum:['x','y']}};
 const operation={name:string,profile_id:string,profile_point_mm:{type:'array',items:number,minItems:2,maxItems:2},operation:{type:'string',enum:['new','add','cut']},target_body_id:string};
 export const cadAgentTools:AgentTool[]=[
+  modelProjectionTool,
   ...partAITools,
   ...featureReadTools,
   ...featureEditTools,

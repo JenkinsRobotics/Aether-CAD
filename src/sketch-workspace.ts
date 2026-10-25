@@ -60,7 +60,7 @@ import {
 import { instructions } from "./sketch/tool-instructions";
 
 import { renderSketchPreview } from "./sketch/preview";
-import { constructionPlaneFrame, flipSketchFrame, rollbackPosition } from "@aether/core/document";
+import { constructionPlaneFrame, flipSketchFrame } from "@aether/core/document";
 import { snapSketchPoint } from "./sketch-snapping";
 import { solveDrawingConstraints, setSketchRadius, type SketchContour } from "@aether/core/sketch";
 import { constrainSketchSelection } from "./sketch/constraint-selection";
@@ -77,6 +77,8 @@ import {
 } from "@aether/core/sketch";
 import { featureReferenceErrors, updatePartDocumentVariables, type PartDocument, type ProfileFeature } from "@aether/core/document";
 import { cadSelection } from "./cad-selection-store";
+import { measureReference } from "./measure/measure-reference";
+import { createModelIncludeController, type ModelIncludeKind } from "./sketch/model-include";
 import { contourPath } from "./sketch/svg-geometry";
 import "./sketch-workspace.css";
 /** A key pressed into a field is text, not a shortcut. */
@@ -347,7 +349,7 @@ export function openSketchWorkspace(
     setActiveTool("select");
     // Auto-project (SolidCraft's project_edges): a new sketch on a face starts with the
     // face's edges as construction geometry when asked.
-    if (projectFaceEdges && support && !existing && !drawing.contours.length) queueMicrotask(() => { const was = construction; construction = true; void includeModelGeometry("edges").finally(() => { construction = was; }); });
+    if (projectFaceEdges && support && !existing && !drawing.contours.length) queueMicrotask(() => { void modelInclude.include("edges", { construction: true }); });
     window.addEventListener("keydown", globalKey);
     win.panel.removeAttribute("data-feature-state");
     fitBoundsToContent();
@@ -441,23 +443,24 @@ export function openSketchWorkspace(
     if (name !== "select" && name !== "dimension" && name !== "fit-spline") toolWindow.show("coordinates");
     else toolWindow.close();
   };
-  /** Intersect / Include 3D geometry (SolidCraft): the part's section curves at this
-   *  sketch's plane, or its edges lying in it, inserted as sketch geometry. */
-  const includeModelGeometry = async (kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]) => {
-    if (busy) return;
-    const doc = workingSource();
-    const planeFrame = flipSketchFrame(frame ?? constructionPlaneFrame({ id: "", name: "", type: "plane", plane, offsetMillimeters, suppressed: false }), flip);
-    const index = doc.features.findIndex((f) => f.id === featureID);
-    const before = { ...doc, features: doc.features.slice(0, index < 0 ? rollbackPosition(doc) : index), rollbackIndex: undefined };
-    try {
-      message.textContent = kind !== "edges" ? "Intersecting the part with the sketch plane…" : "Collecting the part's edges in the sketch plane…";
-      const contours = await aetherKernel().sketchSection(before, planeFrame, kind, axis);
-      if (!contours.length) { message.textContent = kind !== "edges" ? "The sketch plane does not cut the part." : "No part edges lie in the sketch plane."; return; }
-      checkpoint();
-      for (const contour of contours) drawing.contours.push({ ...contour, ...(construction ? { construction: true } : {}) });
-      activePath = -1; pending = []; render();
-      message.textContent = `${contours.length} ${kind === "spun" ? "spun profile" : kind === "fit" ? "fitted section curves" : kind === "section" ? "section curves" : "edges"} added to the sketch.`;
-    } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+  const modelInclude = createModelIncludeController({
+    kernel: aetherKernel,
+    read: () => !busy && started && getDocument() === source ? {
+      document: draftDocument(), featureId: featureID, drawing, construction,
+      frame: flipSketchFrame(frame ?? constructionPlaneFrame({ id: "", name: "", type: "plane", plane, offsetMillimeters, suppressed: false }), flip),
+      revision: JSON.stringify(draftDocument()),
+    } : null,
+    commit: next => { checkpoint(); drawing = next; activePath = -1; pending = []; render(); },
+    message: text => { message.textContent = text; },
+  });
+  const includeModelGeometry = async (kind: ModelIncludeKind, axis?: [SketchPoint, SketchPoint]) => {
+    const items = kind === "project" ? cadSelection.snapshot().items : [];
+    const entities = items.map(measureReference);
+    if (entities.some(entity => entity === null)) {
+      message.textContent = "Select model bodies, faces, edges or vertices to include.";
+      return;
+    }
+    await modelInclude.include(kind, { axis, ...(entities.length ? { projection: { entities: entities.filter(entity => entity !== null) } } : {}) });
   };
   const toolEvent = (event: Event) => {
     if (started) {
@@ -470,7 +473,7 @@ export function openSketchWorkspace(
         void includeModelGeometry("spun", [[...from], [...to]] as [[number, number], [number, number]]);
         return;
       }
-      if (name === "intersect" || name === "include-edges" || name === "fit-section") { void includeModelGeometry(name === "intersect" ? "section" : name === "fit-section" ? "fit" : "edges"); return; }
+      if (name === "intersect" || name === "include-edges" || name === "fit-section") { void includeModelGeometry(name === "intersect" ? "section" : name === "fit-section" ? "fit" : "project"); return; }
       // Control-point splines are the spline tool in another mode; the button stays lit.
       if (name in splineToolNames || name === "fit-spline") {
         if (name === activeTool) { chooseTool("select"); return; }
@@ -630,6 +633,7 @@ export function openSketchWorkspace(
   const { entityA, entityB, kind, hints } = constraints;
   const disposeDimensionUnits = bindDimensionLabelUnits(svg);
   const cleanup = () => {
+    modelInclude.dispose();
     historyActions.dispose();
     toolWindow.dispose();
     annotationSelection?.dispose();

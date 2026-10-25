@@ -1,5 +1,51 @@
 # Aether CAD source status
 
+## 2026-10-24 — model projection into editable sketches
+
+Include 3D edges now projects model boundaries outside the sketch plane, including
+selected faces/edges/vertices. Analytic circles and ellipses stay analytic on
+tilted frames; normal-aligned edges become point nodes. Unsupported curve types
+are explicitly reported as tolerance-based polylines. Source selection is strict;
+invalid/stale references cannot broaden to the whole model. Duplicate projected
+boundaries are removed. Face auto-projection retains its separate coplanar path.
+
+UI, live agent and saved-file adapters share the projection and validated copy
+insertion. UI and live-agent operations reject delayed results after intervening
+edits, cancellation or context changes. UI drafts also compare the plane; live
+agent commits recheck write access. UI saves retain the existing hosted-write guard. Curves are
+independent editable copies, not associative model links. This remains a partial
+parity item. Architecture, limits and remaining linked-reference work are in
+`../roadmap/Model_Sketch_Projection.md`.
+
+Focused checks: 10 kernel geometry/selection/dedup tests, 10 UI transaction tests,
+163 existing sketch-workspace checks, 9 agent projection tests, 11 existing live
+agent tests and 2 actual mounted Include command checks. The first mounted run
+exposed React work still pending during fixture teardown; awaiting React cleanup
+fixed both unhandled errors. Types pass; full engine suite passes 1,160 tests.
+The full app suite passes 1,887 tests with one existing skip. The first full native
+run passed 308 checks and failed five host checks because the new saved command
+ID used an underscore, forbidden by Studio's existing catalog contract. The CAD
+descriptor and runner were corrected to `cad.sketch.includemodel`; Studio is
+unchanged. All 313 native tests pass on the final worker. Fresh-process kernel,
+region/replay and pinned-codec package gates pass. The real browser test then
+found several sketch tools permanently disabled because command registration and
+editing availability used different lists. The new `sketch/tool-commands.ts`
+uses one catalog for both; its lifecycle regression and the 21 focused projection
+checks pass. The frontend rebuild keeps the qualified worker byte-for-byte equal.
+
+The three-step authenticated browser flow passes UI Include on a plane 25 mm
+above the source, live MCP projection/refusal/undo/redo, extrusion and saved
+reopen with two bodies, without browser errors or server geometry requests.
+Screenshots were inspected. All 16 broader modeling browser steps and the
+Animation-client regression pass (293.10 s), with no browser errors or server
+geometry requests. The frozen worker and all 3,524 frontend files match after
+qualification. Native worker SHA-256:
+`59d55a5e97721c6140e8a940e321930dee695965b789446be511bfdb665fac67`.
+The pinned codec21 is unchanged. Evidence lives under
+`.verification/baseline-2026-10-24/model-projection-*`.
+No installed release has changed; immutable staging is recorded in Studio's
+`LOCAL_DEVELOPMENT.md`.
+
 ## 2026-10-24 — shared sketch-region selection for UI and agents
 
 Source on `alpha-0.1`; this entry does not mean the installed release has changed.

@@ -227,3 +227,4 @@ export { blendCurve } from "./operations/blend-curve";
 export { controlPointSpline } from "./curves/control-spline";
 export { sketchDrawingToDXF } from "./export/dxf";
 export { looseEnds } from "./operations/loose-ends";
+export { validateModelProjection, type ModelProjectionOptions, type ModelProjectionResult } from "./model-projection";

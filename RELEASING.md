@@ -26,6 +26,14 @@ Package-manager versions and the shared UI dependency version are separate.
    saved models against the previous worker: stable IDs, anchors, measurements,
    body outputs, reference scopes and frames must remain equivalent. OCCT traversal
    order and diagnostic incidence indexes are not stable identities.
+   Model-to-sketch projection additionally requires the packaged
+   `service/tests/test_native_model_projection.py` cases and
+   `scripts/verify-model-projection-browser.mjs` through that disposable host.
+   Exercise the actual Include command, local undo/redo, live MCP refusal and
+   commit, exact extrusion of the projected profile and saved reopen. Analytic
+   curves, collapsed points/diameters and explicit spline approximation require
+   independent geometry checks. Independent copies must not be reported as
+   associative links; preserve the separate coplanar face-auto-projection path.
    Drawing changes also require `node scripts/verify-drawings.mjs`. Sections require
    analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
    source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF

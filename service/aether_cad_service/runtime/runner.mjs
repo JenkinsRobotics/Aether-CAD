@@ -6628,6 +6628,35 @@ function sketchContourPolyline(contour, arcSteps = 24) {
   }
   return points;
 }
+function validateModelProjection(frame, options) {
+  sketchFrameMap(frame, frame);
+  if (!options || typeof options !== "object" || Array.isArray(options))
+    throw Error("Model projection options must be an object.");
+  if (Object.keys(options).some((k2) => !["entities", "toleranceMillimeters"].includes(k2)))
+    throw Error("Unknown model projection option.");
+  const tolerance2 = options.toleranceMillimeters === void 0 ? 0.01 : options.toleranceMillimeters;
+  if (!Number.isFinite(tolerance2) || tolerance2 < 1e-5 || tolerance2 > 1)
+    throw Error("Projection tolerance must be between 0.00001 and 1 millimeter.");
+  if (options.entities !== void 0) {
+    if (!Array.isArray(options.entities) || !options.entities.length || options.entities.length > 256)
+      throw Error("Choose between 1 and 256 model entities.");
+    for (const entity of options.entities) {
+      if (!entity || typeof entity !== "object" || Array.isArray(entity) || Object.keys(entity).some((k2) => !["body_id", "face_id", "edge_index", "vertex"].includes(k2)))
+        throw Error("Invalid model projection entity.");
+      if (typeof entity.body_id !== "string" || !entity.body_id.trim() || entity.body_id.length > 256)
+        throw Error("Choose an existing model body_id.");
+      if (entity.face_id !== void 0 && !Number.isSafeInteger(entity.face_id))
+        throw Error("A projection face identifier must be an integer.");
+      if (entity.edge_index !== void 0 && (!Number.isSafeInteger(entity.edge_index) || entity.edge_index < 0))
+        throw Error("A projection edge index must be a nonnegative integer.");
+      if (entity.edge_index !== void 0 && entity.face_id === void 0)
+        throw Error("A projected edge requires its face_id.");
+      if (entity.vertex !== void 0 && (!["a", "b"].includes(entity.vertex) || entity.edge_index === void 0))
+        throw Error("A projected vertex requires an edge and endpoint a or b.");
+    }
+  }
+  return tolerance2;
+}
 const byID = (organization) => new Map(organization.folders.map((folder) => [folder.id, folder]));
 function ancestorChain(organization, folderID) {
   const folders = byID(organization);
@@ -12142,6 +12171,91 @@ const partAITools = [
     {}
   )
 ];
+function modelBeforeSketch(document2, featureId2) {
+  const index2 = document2.features.findIndex((feature3) => feature3.id === featureId2);
+  const end = index2 < 0 ? rollbackPosition(document2) : Math.min(index2, rollbackPosition(document2));
+  return { ...structuredClone(document2), features: structuredClone(document2.features.slice(0, end)), rollbackIndex: void 0 };
+}
+function appendModelContours(drawing, contours, construction) {
+  if (!contours.length) throw Error("The selected model has no geometry on this projection.");
+  const next = structuredClone(drawing);
+  for (const contour of structuredClone(contours)) {
+    delete contour.id;
+    if (contour.type === "path") {
+      delete contour.startVertexId;
+      for (const segment of contour.segments) {
+        delete segment.id;
+        delete segment.endVertexId;
+      }
+    }
+    if (construction) contour.construction = true;
+    identifySketchContour(contour, () => crypto.randomUUID());
+    next.contours.push(contour);
+  }
+  validateSketchDrawing(next);
+  return next;
+}
+const modelProjectionTool = {
+  name: "aether_cad_sketch_include_model",
+  description: "Project evaluated model edges, face boundaries or vertices into an existing editable sketch as independent copies. Omitted entities_json includes all earlier exact-body edges, not a silhouette. Does not create associative links. Analytic curves stay exact; other curves use tolerance_mm and are reported. Inspect current topology IDs before selecting. Rebuild and commit atomically.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["feature_id"],
+    properties: {
+      feature_id: { type: "string" },
+      entities_json: { type: "string", description: 'JSON array of {body_id,face_id?,edge_index?,vertex?:"a"|"b"}. Edge requires face_id; vertex requires edge_index. Body selection includes boundary edges; face selection includes its loops. IDs come from current evaluated topology, not saved positional references.' },
+      construction: { type: "boolean" },
+      tolerance_mm: { type: "number", minimum: 1e-5, maximum: 1 }
+    }
+  }
+};
+function editableDrawing(feature3) {
+  const profile = feature3.profile;
+  if (profile.type === "drawing") return structuredClone(profile);
+  if (profile.type === "circle") return { type: "drawing", contours: [{ type: "circle", center: [...profile.centerMillimeters], radius: profile.radiusMillimeters }] };
+  if (profile.type === "polygon") {
+    const points = profile.pointsMillimeters;
+    return { type: "drawing", contours: [{ type: "path", start: [...points[0]], segments: [...points.slice(1), points[0]].map((end) => ({ type: "line", end: [...end] })) }] };
+  }
+  throw Error("Include model geometry requires an editable sketch, not a linked projection.");
+}
+async function prepareModelProjection(source, args, kernel) {
+  validatePartDocument(source);
+  if (Object.keys(args).some((key2) => !["feature_id", "entities_json", "construction", "tolerance_mm"].includes(key2))) throw Error("Unknown model projection argument.");
+  if (rollbackPosition(source) !== source.features.length) throw Error("Move the rollback bar to the end before agent editing.");
+  if (source.features.length > 512) throw Error("Agent editing supports at most 512 features.");
+  if (args.construction !== void 0 && typeof args.construction !== "boolean") throw Error("Construction must be boolean.");
+  const index2 = source.features.findIndex((feature22) => feature22.id === args.feature_id);
+  const feature3 = source.features[index2];
+  if (feature3?.type !== "profile" || feature3.suppressed) throw Error("Choose an existing unsuppressed editable sketch feature_id.");
+  const drawing = editableDrawing(feature3);
+  const options = {};
+  if (args.entities_json !== void 0) {
+    if (typeof args.entities_json !== "string" || new TextEncoder().encode(args.entities_json).length > 65536) throw Error("Use entities_json of at most 64 KiB.");
+    options.entities = JSON.parse(args.entities_json);
+  }
+  if (args.tolerance_mm !== void 0) options.toleranceMillimeters = args.tolerance_mm;
+  validateModelProjection(flipSketchFrame(profileSketchFrame(feature3), feature3.flip), options);
+  let resolved = structuredClone(source);
+  if (feature3.support) {
+    const prefix2 = { ...resolved, features: resolved.features.slice(0, index2 + 1) };
+    const model = await kernel.evaluatePart(prefix2);
+    const updated = resolveSketchFrames(prefix2, model.sketchFrames);
+    resolved.features[index2] = updated.features[index2];
+  }
+  const target = resolved.features[index2];
+  const frame = flipSketchFrame(profileSketchFrame(target), target.flip);
+  validateModelProjection(frame, options);
+  const projected = await kernel.projectModelGeometry(modelBeforeSketch(resolved, feature3.id), frame, options);
+  target.profile = appendModelContours(drawing, projected.contours, args.construction === true);
+  validatePartDocument(resolved);
+  return {
+    document: resolved,
+    featureID: feature3.id,
+    projection: { added_contours: projected.contours.length, associative: false, approximated_edges: projected.approximatedEdges, tolerance_mm: projected.toleranceMillimeters }
+  };
+}
 const featureSchemas = {
   "axis": `export interface ConstructionAxisFeature {
   id: string;
@@ -13045,6 +13159,7 @@ const vector3 = { type: "array", items: number$1, minItems: 3, maxItems: 3 };
 const plane = { name: string, plane: { type: "string", enum: ["XY", "XZ", "YZ"] }, frame: { type: "object", properties: { origin_mm: vector3, x_direction: vector3, y_direction: vector3 }, required: ["origin_mm", "x_direction", "y_direction"], additionalProperties: false }, offset_mm: number$1, flip: { type: "string", enum: ["x", "y"] } };
 const operation = { name: string, profile_id: string, profile_point_mm: { type: "array", items: number$1, minItems: 2, maxItems: 2 }, operation: { type: "string", enum: ["new", "add", "cut"] }, target_body_id: string };
 const cadAgentTools = [
+  modelProjectionTool,
   ...partAITools,
   ...featureReadTools,
   ...featureEditTools,
@@ -41650,7 +41765,7 @@ function evaluatePartDocument(document2, options = {}) {
                 };
                 const right = offsetOpen(a2), left = offsetOpen(-b);
                 const chain = (side, from) => {
-                  const remaining = side.edges, ordered = [];
+                  const remaining = side.edges, ordered2 = [];
                   let at = from;
                   while (remaining.length) {
                     const next = remaining.findIndex((edge2) => norm$2(sub$3(point2(edge2.startPoint), at)) < 1e-6 || norm$2(sub$3(point2(edge2.endPoint), at)) < 1e-6);
@@ -41658,9 +41773,9 @@ function evaluatePartDocument(document2, options = {}) {
                     const [edge] = remaining.splice(next, 1);
                     const s0 = point2(edge.startPoint), s1 = point2(edge.endPoint);
                     at = norm$2(sub$3(s0, at)) < 1e-6 ? s1 : s0;
-                    ordered.push(edge);
+                    ordered2.push(edge);
                   }
-                  return ordered;
+                  return ordered2;
                 };
                 let face;
                 try {
@@ -41799,9 +41914,9 @@ function evaluatePartDocument(document2, options = {}) {
                   groups2.push(component);
                 }
                 for (const group of groups2) {
-                  const ordered = targets.filter((id2) => group.sources.has(id2));
+                  const ordered2 = targets.filter((id2) => group.sources.has(id2));
                   const shape = group.shapes.length === 1 ? group.shapes[0] : own(group.shapes.slice(1).reduce((all, part) => own(all.fuse(part)), group.shapes[0]));
-                  pending.push({ sources: ordered, shape });
+                  pending.push({ sources: ordered2, shape });
                 }
                 pending.sort((a2, b) => targets.indexOf(a2.sources[0]) - targets.indexOf(b.sources[0]));
               } else {
@@ -43333,6 +43448,251 @@ function readCurves(shape) {
   }
   return curves2;
 }
+function takePoint(point2) {
+  try {
+    return [point2.X(), point2.Y(), point2.Z()];
+  } finally {
+    point2.delete();
+  }
+}
+function projectionFrame(frame) {
+  const y2 = cross$4(frame.normal, frame.xDirection);
+  const vector2 = (v2) => [dot$5(v2, frame.xDirection), dot$5(v2, y2)];
+  return {
+    vector: vector2,
+    point: (p2) => vector2(sub$3(p2, frame.originMillimeters))
+  };
+}
+function projectModelEdge(edge, target, tolerance2) {
+  const oc = getOC();
+  const adaptor = new oc.BRepAdaptor_Curve_2(edge.wrapped);
+  const map = projectionFrame(target);
+  try {
+    const first = adaptor.FirstParameter(), last2 = adaptor.LastParameter();
+    if (![first, last2].every(Number.isFinite) || last2 <= first)
+      throw Error("The model edge has no finite parameter interval.");
+    const at = (u2) => map.point(takePoint(adaptor.Value(u2)));
+    const type = adaptor.GetType();
+    if (type === oc.GeomAbs_CurveType.GeomAbs_Line) {
+      const start = at(first), end = at(last2);
+      return { contour: { type: "path", start, segments: sameSketchPoint(start, end) ? [] : [{ type: "line", end }] }, approximated: false };
+    }
+    if (type === oc.GeomAbs_CurveType.GeomAbs_Circle || type === oc.GeomAbs_CurveType.GeomAbs_Ellipse) {
+      const circle = type === oc.GeomAbs_CurveType.GeomAbs_Circle;
+      const curve = circle ? adaptor.Circle() : adaptor.Ellipse();
+      const position = curve.Position(), axis = curve.Axis();
+      try {
+        const sourceFrame = {
+          originMillimeters: takePoint(curve.Location()),
+          xDirection: takePoint(position.XDirection()),
+          normal: takePoint(axis.Direction())
+        };
+        const radiusX = circle ? curve.Radius() : curve.MajorRadius();
+        const radiusY = circle ? radiusX : curve.MinorRadius();
+        const span = last2 - first;
+        if (span > 2 * Math.PI + 1e-7) throw Error("A projected conic cannot wind more than once.");
+        const full2 = Math.abs(span - 2 * Math.PI) < 1e-8;
+        const point2 = (u2) => [radiusX * Math.cos(u2), radiusY * Math.sin(u2)];
+        const start = point2(first);
+        let contour;
+        if (circle && full2) contour = { type: "circle", center: [0, 0], radius: radiusX };
+        else if (circle) contour = { type: "path", start, segments: [{ type: "arc", middle: point2((first + last2) / 2), end: point2(last2) }] };
+        else {
+          const ends = full2 ? [first + Math.PI, first + 2 * Math.PI] : [last2];
+          contour = { type: "path", start, segments: ends.map((u2) => ({
+            type: "ellipse",
+            end: full2 && u2 === ends.at(-1) ? start : point2(u2),
+            radiusX,
+            radiusY,
+            rotationDegrees: 0,
+            largeArc: !full2 && span > Math.PI,
+            sweep: true
+          })) };
+        }
+        return { contour: projectSketchDrawing({ type: "drawing", contours: [contour] }, sourceFrame, target).contours[0], approximated: false };
+      } finally {
+        axis.delete();
+        position.delete();
+        curve.delete();
+      }
+    }
+    if (type === oc.GeomAbs_CurveType.GeomAbs_BezierCurve && !adaptor.IsRational() && adaptor.Degree() <= 3)
+      return { contour: projectCubic(adaptor, target, first, last2), approximated: false };
+    const sampler = new oc.GCPnts_TangentialDeflection_2(adaptor, 0.05, tolerance2, 2, 1e-9, 1e-7);
+    try {
+      const count = sampler.NbPoints();
+      if (count < 2 || count > 1001) throw Error("Projection exceeds the sketch's 1000-segment limit; choose a coarser tolerance or a shorter edge.");
+      const points = [];
+      for (let i2 = 1; i2 <= count; i2++) {
+        const p2 = map.point(takePoint(sampler.Value(i2)));
+        if (!points.length || !sameSketchPoint(points.at(-1), p2)) points.push(p2);
+      }
+      return { contour: { type: "path", start: points[0], segments: points.slice(1).map((end) => ({ type: "line", end })) }, approximated: true };
+    } finally {
+      sampler.delete();
+    }
+  } finally {
+    adaptor.delete();
+  }
+}
+function projectCubic(adaptor, target, first, last2) {
+  const oc = getOC(), map = projectionFrame(target);
+  const p2 = new oc.gp_Pnt_1(), d2 = new oc.gp_Vec_1();
+  const at = (u2) => {
+    adaptor.D1(u2, p2, d2);
+    return { p: map.point([p2.X(), p2.Y(), p2.Z()]), d: map.vector([d2.X(), d2.Y(), d2.Z()]) };
+  };
+  try {
+    const a2 = at(first), b = at(last2);
+    const stops = sameSketchPoint(a2.p, b.p) ? [(first + last2) / 2, last2] : [last2];
+    let start = a2, u2 = first;
+    const segments = [];
+    for (const endU of stops) {
+      const end = at(endU), dt = (endU - u2) / 3;
+      const controls = [
+        [start.p[0] + start.d[0] * dt, start.p[1] + start.d[1] * dt],
+        [end.p[0] - end.d[0] * dt, end.p[1] - end.d[1] * dt]
+      ];
+      if (!sameSketchPoint(start.p, end.p)) segments.push({ type: "bezier", end: end.p, controls });
+      else if (controls.some((control) => !sameSketchPoint(control, start.p)))
+        throw Error("The projected cubic has coincident endpoints below sketch resolution.");
+      start = end;
+      u2 = endU;
+    }
+    return { type: "path", start: a2.p, segments };
+  } finally {
+    p2.delete();
+    d2.delete();
+  }
+}
+function withProjectionSources(bodies, entities, run) {
+  const owned = [];
+  const sources = [];
+  const requested = entities ?? [...bodies.keys()].map((body_id) => ({ body_id }));
+  const seenEdges = [];
+  const faceCache2 = /* @__PURE__ */ new Map();
+  const edgeCache = /* @__PURE__ */ new Map();
+  const add2 = (entity, edge) => {
+    if (entity.vertex === void 0) {
+      if (seenEdges.some((previous) => previous.isSame(edge))) return;
+      seenEdges.push(edge);
+    }
+    sources.push({ entity, edge });
+    if (sources.length > 4096) throw Error("Project at most 4096 source edges at once; choose specific faces or edges.");
+  };
+  try {
+    for (const entity of requested) {
+      const body = bodies.get(entity.body_id);
+      if (!body) throw Error(`Projection body ${entity.body_id} no longer exists or is not an exact body.`);
+      let faces = faceCache2.get(entity.body_id);
+      if (!faces) {
+        faces = facesOf(body);
+        owned.push(...faces.map((item) => item.face));
+        faceCache2.set(entity.body_id, faces);
+      }
+      const selected = entity.face_id === void 0 ? faces : faces.filter((item) => item.id === entity.face_id);
+      if (!selected.length) throw Error(`Projection face ${entity.face_id} no longer exists on ${entity.body_id}.`);
+      for (const { face, id: id2 } of selected) {
+        let edges = edgeCache.get(face);
+        if (!edges) {
+          edges = face.edges;
+          owned.push(...edges);
+          edgeCache.set(face, edges);
+        }
+        if (entity.edge_index !== void 0) {
+          const edge = edges[entity.edge_index];
+          if (!edge) throw Error(`Projection edge ${entity.edge_index} no longer exists on face ${id2}.`);
+          add2(entity, edge);
+        } else edges.forEach((edge, edge_index) => add2({ body_id: entity.body_id, face_id: id2, edge_index }, edge));
+      }
+    }
+    if (!sources.length) throw Error("The selected model contains no exact edges to project.");
+    return run(sources);
+  } finally {
+    owned.reverse().forEach((shape) => shape.delete());
+  }
+}
+const key$1 = (value2) => JSON.stringify(value2, (_k, v2) => typeof v2 === "number" ? Math.round(v2 * 1e7) / 1e7 : v2);
+const ordered = (a2, b) => [key$1(a2), key$1(b)].sort()[0];
+function ellipseShape(start, segment) {
+  const f2 = ellipseFrame(start, segment), c2 = Math.cos(f2.rotation), s = Math.sin(f2.rotation);
+  const a2 = f2.radiusX ** 2, b = f2.radiusY ** 2;
+  return [f2.center, a2 * c2 * c2 + b * s * s, (a2 - b) * c2 * s, a2 * s * s + b * c2 * c2];
+}
+function segmentKey(start, s) {
+  switch (s.type) {
+    case "line":
+      return ordered([s.type, start, s.end], [s.type, s.end, start]);
+    case "arc":
+      return ordered([s.type, start, s.middle, s.end], [s.type, s.end, s.middle, start]);
+    case "bezier":
+      return ordered([s.type, start, ...s.controls, s.end], [s.type, s.end, ...[...s.controls].reverse(), start]);
+    case "conic":
+      return ordered([s.type, start, s.control, s.rho, s.end], [s.type, s.end, s.control, s.rho, start]);
+    case "ellipse": {
+      const shape = ellipseShape(start, s), middle = segmentPoint(start, s, 0.5);
+      return ordered([s.type, shape, start, middle, s.end], [s.type, shape, s.end, middle, start]);
+    }
+  }
+}
+function deduplicateProjection(contours) {
+  const seen = /* @__PURE__ */ new Set();
+  return contours.filter((contour) => {
+    let signature;
+    if (contour.type === "circle") signature = key$1(["circle", contour.center, contour.radius]);
+    else if (!contour.segments.length) signature = key$1(["point", contour.start]);
+    else {
+      const s = contour.segments;
+      if (s.length === 2 && s.every((segment) => segment.type === "ellipse") && key$1(s[1].end) === key$1(contour.start) && key$1(ellipseShape(contour.start, s[0])) === key$1(ellipseShape(s[0].end, s[1]))) {
+        signature = key$1(["ellipse-ring", ellipseShape(contour.start, s[0])]);
+      } else {
+        let start = contour.start;
+        const parts = s.map((segment) => {
+          const result = segmentKey(start, segment);
+          start = segment.end;
+          return result;
+        });
+        signature = [key$1(parts), key$1([...parts].reverse())].sort()[0];
+      }
+    }
+    if (seen.has(signature)) return false;
+    seen.add(signature);
+    return true;
+  });
+}
+function projectModelGeometry(document2, frame, options = {}) {
+  validateModelProjection(frame, options);
+  let result;
+  evaluatePartDocument(document2, { withBodies: (bodies) => {
+    result = projectBodyGeometry(bodies, frame, options);
+  } });
+  if (!result) throw Error("Create an exact model before projecting its geometry.");
+  return result;
+}
+function projectBodyGeometry(bodies, frame, options = {}) {
+  const toleranceMillimeters = validateModelProjection(frame, options);
+  const map = projectionFrame(frame);
+  return withProjectionSources(bodies, options.entities, (sources) => {
+    const contours = [], approximatedEdges = [];
+    for (const { entity, edge } of sources) {
+      if (entity.vertex !== void 0) {
+        const vertex = entity.vertex === "a" ? edge.startPoint : edge.endPoint;
+        try {
+          contours.push({ type: "path", start: map.point([vertex.x, vertex.y, vertex.z]), segments: [] });
+        } finally {
+          vertex.delete();
+        }
+      } else {
+        const projected = projectModelEdge(edge, frame, toleranceMillimeters);
+        contours.push(projected.contour);
+        if (projected.approximated) approximatedEdges.push({ ...entity });
+      }
+    }
+    const unique2 = deduplicateProjection(contours);
+    validateSketchDrawing({ type: "drawing", contours: unique2 });
+    return { contours: unique2, approximatedEdges, toleranceMillimeters };
+  });
+}
 const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
 function object(value2) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
@@ -43876,6 +44236,21 @@ async function exportPhase(content, options) {
 function assemblyPhase(job) {
   return solveAssemblyJob(job);
 }
+async function modelProjectionPhase(content, arguments_) {
+  await ensureEngine();
+  const document2 = parsePartDocument(content);
+  const { app: _app, id: _id, expected_revision: _revision, ...args } = arguments_;
+  const prepared = await runNodeOperation(document2, () => prepareModelProjection(document2, args, {
+    evaluatePart: async (candidate) => evaluatePartDocument(candidate),
+    projectModelGeometry: async (...input) => projectModelGeometry(...input)
+  }), fullWasmPath);
+  return {
+    candidate: serializePartDocument(prepared.document),
+    build: true,
+    changed: true,
+    result: { feature_id: prepared.featureID, projection: prepared.projection }
+  };
+}
 async function drawingPhase(request) {
   return executeDrawingRequest(request, async (document2, options) => {
     await ensureEngine();
@@ -43904,7 +44279,7 @@ async function main() {
       projection.part_definitions = projection.part_definitions.filter((p2) => used.has(p2.id));
       stdout.write(JSON.stringify(assemblyJobFor(projection)));
     } else {
-      const result = request.phase === "build" ? await buildPhase(request.content, { rollback: request.rollback }) : request.phase === "drawing" || request.phase === "drawing_docs" ? await drawingPhase(request) : request.phase === "analyze" ? await analyzePhase(request.content, request.options) : request.phase === "export" ? await exportPhase(request.content, request.options) : request.phase === "assembly_solve" ? assemblyPhase(request.job) : request.phase === "engine" ? engineDescription() : request.phase === "assembly_example" ? exampleAssemblyRecipe("linear", request.part_id ?? void 0) : request.phase === "compare" ? { changed: serializePartDocument(parsePartDocument(request.content)) !== serializePartDocument(parsePartDocument(request.candidate)) } : request.phase === "program_begin" ? beginSavedProgram(request.content, request.program_json) : request.phase === "program_step" ? prepareSavedProgramStep(request.content, request.step, request.references) : request.phase === "program_accept" ? acceptSavedProgramStep(request) : request.command === "cad.sketch.inspect" ? { result: inspectSketch(parsePartDocument(request.content), request.arguments) } : request.command === "cad.part.docs" ? { result: savedProgramDocs(request.arguments) } : request.phase === "finalize" ? { content: finalizeCandidate(request.content, request.body_outputs, request.sketch_frames, request.scope_resolutions) } : prepareCommand(request.command, request.content, request.arguments);
+      const result = request.phase === "build" ? await buildPhase(request.content, { rollback: request.rollback }) : request.phase === "drawing" || request.phase === "drawing_docs" ? await drawingPhase(request) : request.phase === "analyze" ? await analyzePhase(request.content, request.options) : request.phase === "export" ? await exportPhase(request.content, request.options) : request.phase === "assembly_solve" ? assemblyPhase(request.job) : request.phase === "engine" ? engineDescription() : request.phase === "assembly_example" ? exampleAssemblyRecipe("linear", request.part_id ?? void 0) : request.phase === "compare" ? { changed: serializePartDocument(parsePartDocument(request.content)) !== serializePartDocument(parsePartDocument(request.candidate)) } : request.phase === "program_begin" ? beginSavedProgram(request.content, request.program_json) : request.phase === "program_step" ? prepareSavedProgramStep(request.content, request.step, request.references) : request.phase === "program_accept" ? acceptSavedProgramStep(request) : request.command === "cad.sketch.includemodel" ? await modelProjectionPhase(request.content, request.arguments) : request.command === "cad.sketch.inspect" ? { result: inspectSketch(parsePartDocument(request.content), request.arguments) } : request.command === "cad.part.docs" ? { result: savedProgramDocs(request.arguments) } : request.phase === "finalize" ? { content: finalizeCandidate(request.content, request.body_outputs, request.sketch_frames, request.scope_resolutions) } : prepareCommand(request.command, request.content, request.arguments);
       const encoded = JSON.stringify(result);
       if (Buffer.byteLength(encoded) > 8 * 1024 * 1024) throw Error("CAD result exceeds the automation size limit.");
       stdout.write(encoded);

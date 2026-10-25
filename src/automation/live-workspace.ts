@@ -10,6 +10,8 @@ import { inspectFeatureReferences } from './feature-inspection';
 import { discoverCAD } from '../ai/knowledge';
 import { executeProgram } from '../ai/program';
 import { readFeatureCatalog } from '../operations/feature-operations';
+import { prepareModelProjection } from './model-projection';
+import type { ModelIncludeKernel } from '../sketch/model-include';
 
 export interface CADAgentWorkspace {
   current:()=>PartDocument|null;
@@ -17,6 +19,7 @@ export interface CADAgentWorkspace {
   available:()=>boolean;
   writable:()=>boolean;
   evaluate:(doc:PartDocument)=>Promise<ImportedModelData>;
+  projectModelGeometry?: ModelIncludeKernel['projectModelGeometry'];
   commit:(doc:PartDocument,model:ImportedModelData)=>void;
   verify?:(doc:PartDocument,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
   preview?:(doc:PartDocument,signal:AbortSignal)=>Promise<unknown>|unknown;
@@ -67,14 +70,21 @@ export class CADAgentEditor {
         return resolved;
       };
       const program=call.name==='aether_cad_run_program'?await executeProgram(source,call.arguments.program_json,qualify):undefined;
-      const candidate=direction?w.history.candidate(direction):program?.document??preparePartEdit(source,call.name,call.arguments).document;
+      const projection=call.name==='aether_cad_sketch_include_model'
+        ? await prepareModelProjection(source,call.arguments,{evaluatePart:w.evaluate,projectModelGeometry:(...args)=>{
+          if(!w.projectModelGeometry)throw Error('This CAD runtime does not provide model projection.');
+          return w.projectModelGeometry(...args);
+        }}) : undefined;
+      signal.throwIfAborted();
+      if(w.current()!==source||serializePartDocument(source)!==signature||w.contextKey()!==contextKey||!w.available()||!w.writable())throw Error('The Part changed while preparing the edit. No agent edit was applied.');
+      const candidate=direction?w.history.candidate(direction):projection?.document??program?.document??preparePartEdit(source,call.name,call.arguments).document;
       if(!candidate||candidate.documentId!==source.documentId)throw Error('No edit is available in this Part history.');
       const resolved=program?program.document:await qualify(candidate);
       signal.throwIfAborted();
       if(w.current()!==source||serializePartDocument(source)!==signature||w.contextKey()!==contextKey||!w.available()||!w.writable())throw Error('The Part changed while rebuilding. No agent edit was applied; inspect and try again.');
       const commit=()=>w.commit(resolved,model);
       if(direction)w.history.commit(direction,candidate,commit);else commit();
-      return {changed:true,...(program?{steps:program.references}:{}),document_id:resolved.documentId,feature_ids:resolved.features.filter(f=>!source.features.some(previous=>previous.id===f.id)).map(f=>f.id),
+      return {changed:true,...(projection?{projection:projection.projection}:{}),...(program?{steps:program.references}:{}),document_id:resolved.documentId,feature_ids:resolved.features.filter(f=>!source.features.some(previous=>previous.id===f.id)).map(f=>f.id),
         body_ids:model.parts.map(part=>part.id),body_count:model.parts.length,feature_count:resolved.features.length,rebuild_ms:model.parseMilliseconds};
     }finally{this.busy=false;}
   }

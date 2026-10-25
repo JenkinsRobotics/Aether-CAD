@@ -3,10 +3,11 @@
  *  request (the host owns the deadline), so the kernel loads once per run. */
 import { readFileSync } from 'node:fs';
 import { initNodeKernel, runNodeOperation, solidMeasures } from '@aether/core/kernel/node';
-import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds, projectPartDrawing } from '@aether/core/kernel';
+import { evaluatePartDocument, FeatureFailure, UnsupportedFeature, analyzePart, exportPart, solveAssemblyJob, solvableMateKinds, projectPartDrawing, projectModelGeometry } from '@aether/core/kernel';
 import { executeDrawingRequest } from './drawing-commands';
 import { drawingFont } from './drawing-font';
-import { parsePartDocument } from '@aether/core/document';
+import { parsePartDocument, serializePartDocument } from '@aether/core/document';
+import { prepareModelProjection } from './model-projection';
 import type { AnalysisOptions, ExportOptions } from '@aether/core/contracts';
 import type { AssemblyJobInput } from '@aether/core/contracts';
 
@@ -54,6 +55,19 @@ export async function exportPhase(content: string, options: ExportOptions) {
 }
 
 export function assemblyPhase(job: AssemblyJobInput) { return solveAssemblyJob(job); }
+
+export async function modelProjectionPhase(content: string, arguments_: Record<string, unknown>) {
+  await ensureEngine();
+  const document = parsePartDocument(content);
+  // Studio owns document/revision routing; only CAD fields enter the operation.
+  const { app: _app, id: _id, expected_revision: _revision, ...args } = arguments_;
+  const prepared = await runNodeOperation(document, () => prepareModelProjection(document, args, {
+    evaluatePart: async candidate => evaluatePartDocument(candidate),
+    projectModelGeometry: async (...input) => projectModelGeometry(...input),
+  }), fullWasmPath);
+  return { candidate: serializePartDocument(prepared.document), build: true, changed: true,
+    result: { feature_id: prepared.featureID, projection: prepared.projection } };
+}
 
 export async function drawingPhase(request: Record<string, unknown>) {
   return executeDrawingRequest(request, async (document, options) => {

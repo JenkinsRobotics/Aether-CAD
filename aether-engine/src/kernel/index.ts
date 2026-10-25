@@ -14,3 +14,4 @@ export { analyzePart } from "./analysis";
 export { exportPart } from "./export";
 export { projectPartDrawing } from "./drawing-projection";
 export { sketchSectionContours } from "./sketch-section";
+export { projectModelGeometry } from "./sketch-projection";

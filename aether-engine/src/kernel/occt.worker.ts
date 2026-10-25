@@ -9,6 +9,7 @@ import type {
 } from "../contracts/index";
 import { evaluatePartDocument, FeatureFailure, UnsupportedFeature } from "./part-evaluator";
 import { sketchSectionContours } from "./sketch-section";
+import { projectModelGeometry } from "./sketch-projection";
 import { measureDistance } from "./measure";
 import { analyzePart } from "./analysis";
 import { projectPartDrawing } from "./drawing-projection";
@@ -136,6 +137,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       const result = await exportPart(request.document, request.options);
       const response: WorkerResponse = { type: "part-exported", requestId: request.requestId, result };
       self.postMessage(response, { transfer: [result.bytes] });
+      return;
+    }
+    if (request.type === "project-model-geometry") {
+      await prepareFor(request.document);
+      const response: WorkerResponse = { type: "model-projected", requestId: request.requestId, result: projectModelGeometry(request.document, request.frame, request.options) };
+      self.postMessage(response);
       return;
     }
     if (request.type === "sketch-section") {

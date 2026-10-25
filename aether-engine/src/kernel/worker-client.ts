@@ -10,6 +10,7 @@ import type {
   WorkerResponse,
 } from "../contracts/index";
 import type { PartDocument } from "../document/index";
+import type { ModelProjectionOptions, ModelProjectionResult } from "../sketch/model-projection";
 
 interface PendingRequest {
   resolve: (result: never) => void;
@@ -120,6 +121,11 @@ export class OCCTWorkerClient {
   async sketchSection(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, kind: "section" | "edges" | "fit" | "spun", axis?: [[number, number], [number, number]]): Promise<import("../sketch/drawing").SketchContour[]> {
     await this.ready;
     return this.send<import("../sketch/drawing").SketchContour[]>({ type: "sketch-section", document, frame, kind, ...(axis ? { axis } : {}) });
+  }
+
+  async projectModelGeometry(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, options: ModelProjectionOptions = {}): Promise<ModelProjectionResult> {
+    await this.ready;
+    return this.send<ModelProjectionResult>({ type: "project-model-geometry", document, frame, options });
   }
 
   async exportPart(document: PartDocument, options: ExportOptions): Promise<ExportResult> {

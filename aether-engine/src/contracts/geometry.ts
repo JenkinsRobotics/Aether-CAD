@@ -143,6 +143,13 @@ export interface ExportOptions { format: "step" | "stl"; bodyIds?: string[] | nu
 export interface ExportResult { format: "step" | "stl"; units: "mm"; body_count: number; bytes: ArrayBuffer }
 
 export type WorkerRequest =
+  | {
+      type: "project-model-geometry";
+      requestId: number;
+      document: PartDocument;
+      frame: import("../sketch/drawing").SketchFrame;
+      options: import("../sketch/model-projection").ModelProjectionOptions;
+    }
   | { type: "project-drawing"; requestId: number; document: PartDocument; options: import("../drawing/projection").PartDrawingOptions }
   | { type: "analyze-part"; requestId: number; document: PartDocument; options: AnalysisOptions }
   | { type: "check-contacts"; requestId: number; input: import("../kernel/contacts").ContactCheckInput }
@@ -183,6 +190,7 @@ export interface MeasureEntity { body_id: string; face_id?: number; edge_index?:
 export interface DistanceMeasurement { distance_mm: number; points: [Vec3, Vec3] }
 
 export type WorkerResponse =
+  | { type: "model-projected"; requestId: number; result: import("../sketch/model-projection").ModelProjectionResult }
   | { type: "drawing-projected"; requestId: number; result: import("../drawing/projection").PartDrawingProjection }
   | { type: "ready" }
   | {

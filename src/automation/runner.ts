@@ -5,7 +5,7 @@ import { assemblyJobFor } from '../assembly-job';
 import { parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { beginSavedProgram, prepareSavedProgramStep, acceptSavedProgramStep, savedProgramDocs } from './saved-program';
 import { exampleAssemblyRecipe } from '../assembly-recipe';
-import { buildPhase, analyzePhase, exportPhase, assemblyPhase, engineDescription, drawingPhase } from './engine-node';
+import { buildPhase, analyzePhase, exportPhase, assemblyPhase, engineDescription, drawingPhase, modelProjectionPhase } from './engine-node';
 async function main() {
 try {
   const chunks: Buffer[]=[]; let bytes=0;
@@ -36,6 +36,7 @@ try {
     : request.phase === 'program_begin' ? beginSavedProgram(request.content,request.program_json)
     : request.phase === 'program_step' ? prepareSavedProgramStep(request.content,request.step,request.references)
     : request.phase === 'program_accept' ? acceptSavedProgramStep(request)
+    : request.command === 'cad.sketch.includemodel' ? await modelProjectionPhase(request.content, request.arguments)
     : request.command === 'cad.sketch.inspect' ? {result:inspectSketch(parsePartDocument(request.content),request.arguments)}
     : request.command === 'cad.part.docs' ? {result:savedProgramDocs(request.arguments)}
     : request.phase === 'finalize'

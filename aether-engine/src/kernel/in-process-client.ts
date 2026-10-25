@@ -15,6 +15,8 @@ import { buildPartGeometry } from "./part-geometry";
 import { initNodeKernel, runNodeOperation } from "./node-kernel";
 import { EngineError } from "./worker-client";
 import { projectPartDrawing } from "./drawing-projection";
+import { projectModelGeometry } from "./sketch-projection";
+import type { ModelProjectionOptions, ModelProjectionResult } from "../sketch/model-projection";
 
 const rethrow = (error: unknown): never => {
   if (error instanceof UnsupportedFeature) throw new EngineError(error.message, error.featureId, undefined, true);
@@ -40,6 +42,9 @@ export class InProcessKernelClient {
   }
   async measureDistance(document: PartDocument, entities: MeasureEntity[]): Promise<DistanceMeasurement> {
     return this.run(document, () => measureDistance(document, entities));
+  }
+  async projectModelGeometry(document: PartDocument, frame: import("../sketch/drawing").SketchFrame, options: ModelProjectionOptions = {}): Promise<ModelProjectionResult> {
+    return this.run(document, () => projectModelGeometry(document, frame, options));
   }
   async checkContacts(input: ContactCheckInput): Promise<{ overlaps: ContactOverlap[]; checked_pairs: number }> {
     return this.run(input.parts.map(part => part.document), () => checkContacts(input));

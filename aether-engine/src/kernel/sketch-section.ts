@@ -10,9 +10,10 @@ const sub = (a: readonly number[], b: readonly number[]): V3 => [a[0] - b[0], a[
 const dot = (a: readonly number[], b: readonly number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a: readonly number[], b: readonly number[]): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
-/** SolidCraft's Intersect and Include 3D Geometry: the curves where the sketch plane
+/** Section/face auto-projection: the curves where the sketch plane
  *  cuts the document's bodies (`section`), or the body edges lying in that plane
- *  (`edges`), as exact sketch contours in the frame's coordinates. Lines, circles and
+ *  (`edges`). Out-of-plane Include Geometry uses sketch-projection instead.
+ *  Results are in the frame's coordinates. Lines, circles and
  *  circular arcs stay exact; other curves are sampled into short lines. */
 export function sketchSectionContours(document: PartDocument, frame: SketchFrame, kind: SketchSectionKind, axis?: [SketchPoint, SketchPoint]): SketchContour[] {
   if (kind === "spun") {

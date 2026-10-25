@@ -25,10 +25,9 @@ import { documentSession } from './document-session';
 import { hostedPartEditable, syncHostedAssemblyProject } from './host-library';
 import { registerSketchTextCommand } from "./sketch/text-command";
 import { registerSketchImportCommand } from "./sketch/import-command";
-import { contextualDrawingTools } from "./sketch/tangent-arc-tool";
-import { directModificationTools,modificationTools } from "./sketch/tool-instructions";
+import { registerSketchToolCommands } from "./sketch/tool-commands";
 import { constructionPlaneFrame } from "@aether/core/document";
-import { sketchProfilePolylines, sketchVariantTools } from "@aether/core/sketch";
+import { sketchProfilePolylines } from "@aether/core/sketch";
 import { profileFrame, rollbackPosition, curve3dPolylines } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
@@ -1553,6 +1552,7 @@ configureCADAgentWorkspace({
   verify:verifyPart,
   preview:(doc,signal)=>viewportProof(viewer.captureViewport(1024),doc.documentId,signal),
   evaluate:doc=>worker.evaluatePart(doc),
+  projectModelGeometry:(...args)=>aetherKernel().projectModelGeometry(...args),
   commit:(doc,model)=>{showEvaluatedPart(doc,model,new Map(),'Agent edit applied.');updateLists();},
   history:partUndo,
 });
@@ -1628,10 +1628,9 @@ window.addEventListener("aether-sketch-face-request", (event) => {
   const support = frame && face && activePartDocument ? supportForFace(activePartDocument, face.partId, frame, face.label, beforeFeatureId,anchor??undefined) : undefined;
   window.dispatchEvent(new CustomEvent("aether-sketch-face", {detail: frame && support ? {frame, ...face, support} : {error: frame ? "Select a face on an earlier body in this Part's history, or use its plane as a fixed plane." : "Select a flat face first. Curved surfaces cannot support a planar sketch.", ...(frame ? {fixedFrame: frame, label: face?.label} : {})}}));
 });
-for (const tool of ["select", "line", "arc", "circle", "rectangle", "intersect", "include-edges", "fit-section", "spun-profile", "two-tangent-circle", "three-tangent-circle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) {
-  cadCommands.register(`sketch-${tool}`, () => { window.dispatchEvent(new CustomEvent("aether-sketch-tool", {detail:tool})); });
-  cadCommands.setEnabled(`sketch-${tool}`, false);
-}
+const sketchToolCommands = registerSketchToolCommands(cadCommands, tool => {
+  window.dispatchEvent(new CustomEvent("aether-sketch-tool", { detail: tool }));
+});
 window.addEventListener("aether-sketch-editing", event => {
   const detail = (event as CustomEvent).detail as typeof draftSketch;
   draftSketch = detail;
@@ -1639,8 +1638,7 @@ window.addEventListener("aether-sketch-editing", event => {
   updateLists();
 });
 window.addEventListener("aether-sketch-mode", event => {
-  const active=Boolean((event as CustomEvent).detail);
-  for(const tool of ["select", "line", "arc", "circle", "rectangle", "control-spline", "control-spline-5", ...sketchVariantTools, ...contextualDrawingTools, ...modificationTools,...directModificationTools] as const) cadCommands.setEnabled(`sketch-${tool}`, active);
+  sketchToolCommands.setEditing(Boolean((event as CustomEvent).detail));
 });
 
 window.addEventListener("aether-sketch-surface", event => {
