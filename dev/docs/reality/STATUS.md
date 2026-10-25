@@ -1,6 +1,6 @@
 # Aether CAD source status
 
-## 2026-10-25 — panel context actions (qualified source; installation pending)
+## 2026-10-25 — CAD alpha-0.1.15 installed: panel context actions
 
 The shared UI no longer appends generic Undo/Redo/Settings commands to CAD menus
 or substitutes them over blank panels. Files background menus create and organize
@@ -34,6 +34,19 @@ shared header uses `discard`). No product workaround was added for that selector
 Worker archive a7ac606b…57105 and runner a3aff997…bd2 are unchanged from .14.
 Evidence: `.verification/baseline-2026-10-24/panel-context-browser-qualified/`
 and `panel-context-qualification/`.
+
+Installed locally from CAD commit `1ce8f1b56a7a7e1416d1bbd8a263eb79097a14ab`;
+manifest SHA-256 `a0d990cd9f77c4f368f31abaf17c158e99cd743b381ea227b63ef93521276812`.
+All 3,524 installed frontend files match the manifest and browser-qualified build.
+Frontend-only activation retains the identical alpha-0.1.14 worker. The host is
+ready without restart (process 22157); configuration hashes and every other app
+selection/record remain unchanged. Map alpha-0.1.2, all 3,530 package files and
+six Pi downloads pass post-install checks. No production document, database,
+network/security setting or remote repository was changed. Installation evidence:
+`panel-context-installed-release.json`, `panel-context-preservation.json` and
+`projected-dimension-install-panel-context-{preactivate,after}.json` in the same
+verification directory. Reopen `/cad/` or the alpha-0.1.15 URL to leave an older
+version-pinned tab; retain its `document` query parameter.
 
 
 ## 2026-10-25 — CAD alpha-0.1.14 installed, Files panel verified
