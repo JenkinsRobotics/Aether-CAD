@@ -9,6 +9,14 @@ Package-manager versions and the shared UI dependency version are separate.
    `AETHER_PACKAGE_CACHE`. Unpublished dependencies must be supplied by SHA-256.
    Product source must not import another repository's source files.
 2. Run `npm ci`, tests and `npm run build` from `.`.
+   Also run the owning engine's tests/type check from `aether-engine/`. Qualify
+   the rebuilt worker with `node scripts/verify-headless-kernel.mjs` and
+   `node scripts/verify-sketch-regions.mjs`, then run
+   `AETHER_TEST_FREECAD=1 <python-3.11-or-3.12> -m pytest service/tests -q`.
+   The historical flag enables the required native release tests; geometry uses
+   the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
+   wheel from `vendor/python/`, never an editable sibling Animation checkout.
+   A default pytest run skips release gates and is insufficient for qualification.
 3. Commit the qualified source locally on `alpha-0.1`. Do not include scratch
    output, secrets or another contributor's unfinished work. Staging refuses
    tracked modifications and validates repository identity and artifact paths.
