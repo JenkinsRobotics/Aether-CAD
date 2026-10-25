@@ -1,5 +1,14 @@
 # Aether CAD source status
 
+## 2026-10-25 — CAD alpha-0.1.16 installed
+
+Hybrid Files source ca05067 and its matching worker are now independently
+installed. All 3,529 frontend hashes and the worker match the qualified build.
+Map alpha-0.1.4, its six Pi downloads, all other apps, host 22157 and configuration
+are unchanged; no restart or push. Manifest SHA-256:
+`cd6af4cf7eda9cecfef468e2d0950645fdfebe40105ab78c85c0cfdbcabc83c6`.
+Final Hybrid browser 4 and standalone Drawing browser 11 pass; source details below.
+
 ## 2026-10-25 — Hybrid design contents and Drive navigation
 
 Files now separates **This design** from **Drive**. The design tab shows only the
