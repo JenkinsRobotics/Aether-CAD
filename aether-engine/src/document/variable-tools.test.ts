@@ -1,11 +1,11 @@
 import { expect, it } from "vitest";
-import { createEmptyPartDocument, type PartFeature } from "./index";
+import { createEmptyPartDocument } from "./index";
 import { completeExpression, exportVariables, importVariables, moveVariable, setVariableComment, setVariableFavorite, variableGraph, variableUsers } from "./variable-tools";
 
 const doc = () => {
   const d = createEmptyPartDocument("Vars");
   d.variables = [{ name: "width", kind: "length", expression: "40 mm" }, { name: "half", kind: "length", expression: "#width / 2" }, { name: "count", kind: "number", expression: "4" }];
-  d.features.push({ id: "s", type: "profile", name: "Sketch 1", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [], constraints: [{ id: "d1", kind: "distance", a: { contour: 0, kind: "point", index: 0 }, value: 10, expression: "#half + 1 mm" }] } } as PartFeature);
+  d.features.push({ id: "s", type: "profile", name: "Sketch 1", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [], constraints: [{ id: "d1", kind: "distance", a: { contour: 0, kind: "point", index: 0 }, value: 10, valueExpression: "#half + 1 mm" }] } });
   return d;
 };
 

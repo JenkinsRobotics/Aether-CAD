@@ -306,7 +306,7 @@ it("splits a body, replaces a face with a plane, and deletes a face", async () =
   const xMin = Math.min(...centers.map((c) => c.origin[0]));
   const volumes = (d: typeof box) => { const out: Record<string, number> = {}; evaluatePartDocument(d, { withBodies: (b) => { for (const [id, body] of b) out[id] = measureVolume(body as Shape3D); } }); return out; };
   // Split 10 mm in from the -X face, keeping both: the target keeps the negative side.
-  const both = { ...box, features: [...box.features, { id: "sp", type: "split" as const, name: "Split", suppressed: false, bodyIds: [built.id], copyBodyIds: { [built.id]: "piece-2" }, plane: { kind: "principal" as const, plane: "YZ" as const, offsetMillimeters: xMin + 10 }, keep: "both" as const }] };
+  const both = { ...box, features: [...box.features, { id: "sp", type: "split" as const, name: "Split", suppressed: false, bodyIds: [built.id] as [string], copyBodyIds: { [built.id]: "piece-2" }, plane: { kind: "principal" as const, plane: "YZ" as const, offsetMillimeters: xMin + 10 }, keep: "both" as const }] };
   expect(volumes(both)).toEqual({ [built.id]: expect.closeTo(2000, 3), "piece-2": expect.closeTo(4000, 3) });
   const positive = { ...both, features: [...box.features, { ...both.features[2], copyBodyIds: undefined, keep: "positive" as const }] };
   expect(volumes(positive)).toEqual({ [built.id]: expect.closeTo(4000, 3) });
@@ -403,7 +403,7 @@ it("drafts with a pull direction, drills along a direction, and splits by a sket
   const xMin = Math.min(...built.topology.flatMap((f) => f.candidates).filter((c) => c.kind === "face-center").map((c) => c.origin[0]));
   const yMin = Math.min(...built.topology.flatMap((f) => f.candidates).filter((c) => c.kind === "face-center").map((c) => c.origin[1]));
   const lineSketch = { id: "ls", type: "profile" as const, name: "Cut line", plane: "XY" as const, offsetMillimeters: 0, suppressed: false, profile: { type: "drawing" as const, contours: [{ id: "k", type: "path" as const, start: [xMin + 10, yMin - 5] as [number, number], segments: [{ id: "seg", type: "line" as const, end: [xMin + 10, yMin + 50] as [number, number] }] }] } };
-  const split = { ...box, features: [...box.features, lineSketch, { id: "sp", type: "split" as const, name: "Split", suppressed: false, bodyIds: [built.id], copyBodyIds: { [built.id]: "piece-2" }, plane: { kind: "sketch-line" as const, sourceFeatureId: "ls", contourId: "k", segmentId: "seg" }, keep: "both" as const }] };
+  const split = { ...box, features: [...box.features, lineSketch, { id: "sp", type: "split" as const, name: "Split", suppressed: false, bodyIds: [built.id] as [string], copyBodyIds: { [built.id]: "piece-2" }, plane: { kind: "sketch-line" as const, sourceFeatureId: "ls", contourId: "k", segmentId: "seg" }, keep: "both" as const }] };
   const pieces: Record<string, number> = {}; evaluatePartDocument(split, { withBodies: (b) => { for (const [id, body] of b) pieces[id] = measureVolume(body as Shape3D); } });
   expect(Object.values(pieces).sort((a, b) => a - b)).toEqual([expect.closeTo(2000, 3), expect.closeTo(4000, 3)]);
 }, 30000);
