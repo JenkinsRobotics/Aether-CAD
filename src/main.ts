@@ -269,6 +269,14 @@ function setStatus(
 }
 
 const assemblyController = new CADAssemblyController({
+  async validateContacts(projection) {
+    const solved = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job),
+      evaluate: (document) => aetherKernel().evaluatePart(document), parseDocument: parsePartDocument });
+    const overlaps = await checkAssemblyContacts(projection, solved.solution.instances, {
+      parseDocument: parsePartDocument, checkContacts: (input) => aetherKernel().checkContacts(input),
+    });
+    if (overlaps.length) throw Error(`${describeOverlaps(overlaps)} No edit was applied.`);
+  },
   writable: () => !drawingFileBusy && activeWorkspaceKind === 'assembly' && hostedPartEditable(),
   ...(hostedCAD ? { saveFile: saveHostedFile } : {}),
   onDocumentChanged(document) {

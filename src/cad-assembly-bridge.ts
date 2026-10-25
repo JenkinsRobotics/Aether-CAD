@@ -630,16 +630,6 @@ function decodeAssemblyWorkspaceArchive(value: unknown): AssemblyWorkspaceArchiv
   return root as unknown as AssemblyWorkspaceArchive;
 }
 
-interface BridgeEnvelope {
-  readonly ok: boolean;
-  readonly result?: unknown;
-  readonly error?: {
-    readonly code: string;
-    readonly message: string;
-    readonly path: string | null;
-  };
-}
-
 export class AssemblyBridgeError extends Error {
   constructor(
     readonly code: string,
@@ -686,12 +676,12 @@ export class AssemblyBridgeClient {
   private readonly baseURL: string;
   private readonly fetchImplementation: typeof globalThis.fetch;
   private readonly nextRequestID: () => string | number;
+  private readonly archives = new Map<string, AssemblyWorkspaceArchive>();
 
   constructor(options: AssemblyBridgeClientOptions) {
-    this.baseURL = (options.baseURL || (typeof window !== "undefined" && window.location.pathname.startsWith("/cad/") ? "/cad" : "")).replace(/\/$/, "");
+    this.baseURL = options.baseURL.replace(/\/$/, "");
     this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
-    let requestID = 0;
-    this.nextRequestID = options.nextRequestID ?? (() => ++requestID);
+    this.nextRequestID = options.nextRequestID ?? (() => crypto.randomUUID());
   }
 
   async newWorkspace(name: string, signal?: AbortSignal): Promise<AssemblyWorkspaceDescriptor> {
@@ -778,29 +768,55 @@ export class AssemblyBridgeClient {
     params: Readonly<Record<string, unknown>>,
     signal?: AbortSignal,
   ): Promise<unknown> {
-    const response = await this.fetchImplementation(`${this.baseURL}/rpc`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: this.nextRequestID(), method, params }),
-      signal,
+    signal?.throwIfAborted();
+    const opening = method === "new_workspace" || method === "load_workspace";
+    const handle = opening ? `cad-${this.nextRequestID()}` : string(params.handle, "params.handle");
+    const previous = this.archives.get(handle);
+    if (!opening && !previous) throw new AssemblyBridgeError("unknown_handle", "Assembly is closed.", "handle");
+    if (opening && previous) throw new AssemblyBridgeError("handle_conflict", "Assembly handle already exists.", "handle");
+    if (params.expected_revision !== undefined && params.expected_revision !== previous?.revision) {
+      throw new AssemblyBridgeError("revision_conflict", "Assembly changed; inspect it again.", "expected_revision");
+    }
+    if (method === "release") { this.archives.delete(handle); return {}; }
+    if (method === "save_workspace") return previous;
+    const { data_base64: openingData, ...parameters } = params;
+    const body = JSON.stringify({ operation: "workspace", method,
+      params: { ...parameters, handle }, data_base64: opening ? openingData : previous!.data_base64 });
+    if (new TextEncoder().encode(body).length > 4 * 1024 * 1024) {
+      throw new AssemblyBridgeError("request_too_large", "Assembly request exceeds the 4 MiB limit.", null);
+    }
+    const response = await this.fetchImplementation(`${this.baseURL}/api/cad/assembly`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body, signal,
     });
     if (!response.ok) {
-      throw new AssemblyBridgeError("transport_error", `Core bridge returned HTTP ${response.status}`, null);
+      throw new AssemblyBridgeError("transport_error", `CAD Assembly service returned HTTP ${response.status}`, null);
     }
-    const envelope = record(await response.json(), "response") as unknown as BridgeEnvelope;
+    const envelope = record(await response.json(), "response");
+    signal?.throwIfAborted();
+    if (this.archives.get(handle) !== previous) {
+      throw new AssemblyBridgeError("revision_conflict", "Assembly changed while the operation was running.", "handle");
+    }
     if (typeof envelope.ok !== "boolean") {
       throw new AssemblyProjectionDecodeError("response.ok", "expected boolean");
     }
     if (!envelope.ok) {
       const error = record(envelope.error, "response.error");
-      throw new AssemblyBridgeError(
-        string(error.code, "response.error.code"),
-        string(error.message, "response.error.message"),
-        nullableString(error.path, "response.error.path"),
-      );
+      throw new AssemblyBridgeError(string(error.code, "response.error.code"),
+        string(error.message, "response.error.message"), nullableString(error.path, "response.error.path"));
     }
     if (envelope.result === undefined) {
       throw new AssemblyProjectionDecodeError("response.result", "missing successful result");
+    }
+    if (opening || params.expected_revision !== undefined) {
+      // Validate every projection before accepting new bytes. A malformed reply,
+      // cancellation or concurrent mutation must never replace the current archive.
+      const result = opening ? decodeAssemblyWorkspaceDescriptor(envelope.result) : decodeAssemblyMutationResult(envelope.result);
+      const archive = decodeAssemblyWorkspaceArchive(envelope.archive);
+      if (archive.handle !== handle || result.handle !== handle || archive.revision !== result.revision
+        || (opening && archive.graph_sha256 !== (result as AssemblyWorkspaceDescriptor).graph_sha256)) {
+        throw new AssemblyProjectionDecodeError("response.archive", "must match the workspace result");
+      }
+      this.archives.set(handle, archive);
     }
     return envelope.result;
   }

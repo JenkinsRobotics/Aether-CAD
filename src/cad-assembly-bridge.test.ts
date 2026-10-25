@@ -202,88 +202,93 @@ describe("assembly projection decoder", () => {
   });
 });
 
-describe("AssemblyBridgeClient", () => {
-  it("requests browser-safe Core workspace open and save without interpreting the archive", async () => {
-    const results = [
-      {
-        schema_version: 1, handle: "handle-1", workspace_id: "workspace-1",
-        name: "Drive", revision: "7", graph_sha256: "abc",
-        root_assembly_id: "assembly-1", assembly_ids: ["assembly-1"],
-      },
-      { handle: "handle-1", revision: "7", graph_sha256: "abc", data_base64: "UEs=" },
-    ];
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({
-      ok: true,
-      result: results.shift(),
-    }), { status: 200 }));
-    const client = new AssemblyBridgeClient({ baseURL: "", fetch });
-
-    await client.openWorkspace("UEsDBA==");
-    await client.saveWorkspace("handle-1", "7");
-    expect(fetch.mock.calls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
-      { id: 1, method: "load_workspace", params: { data_base64: "UEsDBA==" } },
-      { id: 2, method: "save_workspace", params: { handle: "handle-1", expected_revision: "7", return_data: true } },
-    ]);
-  });
-
-  it("uses the existing rpc envelope and forwards abort signals", async () => {
+describe("AssemblyBridgeClient portable CAD transport", () => {
+  const descriptor = { schema_version: 1, handle: "cad-1", workspace_id: "workspace-1",
+    name: "Drive", revision: "revision-7", graph_sha256: "abc",
+    root_assembly_id: "assembly-1", assembly_ids: ["assembly-1"] };
+  const archive = { handle: "cad-1", revision: "revision-7", graph_sha256: "abc", data_base64: "UEs=" };
+  const open = { ok: true, result: descriptor, archive };
+  const mutation = { ok: true, result: { handle: "cad-1", revision: "revision-8",
+    assembly: { ...assembly, revision: "revision-8" }, solution: { ...solution, revision: "revision-8" },
+    bom: { ...bom, revision: "revision-8" } }, archive: { ...archive, revision: "revision-8", data_base64: "bmV3" } };
+  function setup(replies: unknown[]) {
+    let id = 0;
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify(replies.shift()), { status: 200 }));
+    return { fetch, client: new AssemblyBridgeClient({ baseURL: "http://cad/", fetch, nextRequestID: () => ++id }) };
+  }
+  it("uses the authorized CAD service with immutable bytes; save and release stay local", async () => {
+    const { client, fetch } = setup([open, { ok: true, result: assembly }]);
+    await client.openWorkspace("b2xk");
     const signal = new AbortController().signal;
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({ ok: true, result: assembly }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const client = new AssemblyBridgeClient({
-      baseURL: "http://127.0.0.1:8787/",
-      fetch,
-      nextRequestID: () => "request-1",
-    });
-
-    const result = await client.describeAssembly("handle-1", "assembly-1", signal);
-    expect(result.revision).toBe("revision-7");
-    expect(fetch).toHaveBeenCalledOnce();
-    const [url, init] = fetch.mock.calls[0];
-    expect(url).toBe("http://127.0.0.1:8787/rpc");
-    expect(init?.signal).toBe(signal);
-    expect(JSON.parse(String(init?.body))).toEqual({
-      id: "request-1",
-      method: "describe_assembly",
-      params: { handle: "handle-1", assembly_id: "assembly-1" },
-    });
+    await client.describeAssembly("cad-1", "assembly-1", signal);
+    expect(fetch.mock.calls[1][0]).toBe("http://cad/api/cad/assembly");
+    expect(fetch.mock.calls[1][1]?.signal).toBe(signal);
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toEqual({ operation: "workspace",
+      method: "describe_assembly", params: { handle: "cad-1", assembly_id: "assembly-1" }, data_base64: "UEs=" });
+    expect(await client.saveWorkspace("cad-1", "revision-7")).toEqual(archive);
+    await client.release("cad-1");
+    await expect(client.saveWorkspace("cad-1", "revision-7")).rejects.toMatchObject({ code: "unknown_handle" });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
-
-  it("routes mate preview without an expected revision or mutation envelope", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({
-      ok: true,
-      result: { revision: "revision-7", solution, diagnostics: [] },
-    }), { status: 200 }));
-    const client = new AssemblyBridgeClient({ baseURL: "", fetch });
-    const mate = { name: "Fixed", type_id: "fastened" };
-
-    await client.previewMate("handle-1", "assembly-1", mate);
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
-      id: 1,
-      method: "preview_mate",
-      params: { handle: "handle-1", assembly_id: "assembly-1", mate },
-    });
+  it("uses independent handles when opening the same archive twice", async () => {
+    const { client } = setup([open, { ...open, result: { ...descriptor, handle: "cad-2" }, archive: { ...archive, handle: "cad-2" } }]);
+    await client.openWorkspace("same"); await client.openWorkspace("same");
+    await client.release("cad-1");
+    expect((await client.saveWorkspace("cad-2", "revision-7")).handle).toBe("cad-2");
   });
-
-  it("preserves typed Core error codes and paths", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({
-      ok: false,
-      error: { code: "revision_conflict", message: "Workspace changed", path: "expected_revision" },
-    }), { status: 200 }));
-    const client = new AssemblyBridgeClient({ baseURL: "http://core", fetch });
-
-    const error: unknown = await client.mutate("add_mate", {
-      handle: "handle-1",
-      expected_revision: "revision-6",
-      mate: {},
-    }).catch((reason: unknown) => reason);
-    expect(error).toBeInstanceOf(AssemblyBridgeError);
-    expect(error).toMatchObject({
-      code: "revision_conflict",
-      path: "expected_revision",
-      message: "Workspace changed",
-    });
+  it("accepts validated mutation bytes and rejects a stale local revision before sending", async () => {
+    const { client, fetch } = setup([open, mutation]);
+    await client.openWorkspace("old");
+    await client.mutate("set_contacts_enabled", { handle: "cad-1", expected_revision: "revision-7", enabled: true });
+    expect((await client.saveWorkspace("cad-1", "revision-8")).data_base64).toBe("bmV3");
+    await expect(client.mutate("set_contacts_enabled", { handle: "cad-1", expected_revision: "revision-7", enabled: false })).rejects.toMatchObject({ code: "revision_conflict" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it("keeps typed domain errors and original bytes on failed mutation", async () => {
+    const { client } = setup([open, { ok: false, error: { code: "unknown_entity", message: "Unknown mate", path: "mate_id" } }]);
+    await client.openWorkspace("old");
+    await expect(client.mutate("remove_mate", { handle: "cad-1", expected_revision: "revision-7", mate_id: "missing" }))
+      .rejects.toMatchObject({ code: "unknown_entity", path: "mate_id" });
+    expect(await client.saveWorkspace("cad-1", "revision-7")).toEqual(archive);
+  });
+  it("refuses mismatched or malformed mutation projections before replacing bytes", async () => {
+    const { client } = setup([open, { ...mutation, archive: { ...mutation.archive, revision: "wrong" } },
+      { ...mutation, result: { ...mutation.result, solution: { ...solution, revision: "wrong" } } }]);
+    await client.openWorkspace("old");
+    for (let i = 0; i < 2; i++) {
+      await expect(client.mutate("remove_mate", { handle: "cad-1", expected_revision: "revision-7" })).rejects.toBeInstanceOf(AssemblyProjectionDecodeError);
+      expect(await client.saveWorkspace("cad-1", "revision-7")).toEqual(archive);
+    }
+  });
+  it("never commits a reply after cancellation even if fetch ignores abort", async () => {
+    const { client, fetch } = setup([open]);
+    await client.openWorkspace("old");
+    const abort = new AbortController();
+    fetch.mockImplementationOnce(async () => { abort.abort(); return new Response(JSON.stringify(mutation)); });
+    await expect(client.mutate("set_contacts_enabled", { handle: "cad-1", expected_revision: "revision-7", enabled: true }, abort.signal)).rejects.toThrow();
+    expect(await client.saveWorkspace("cad-1", "revision-7")).toEqual(archive);
+  });
+  it("never resurrects a released handle or overwrites a concurrent edit", async () => {
+    for (const release of [true, false]) {
+      const { client, fetch } = setup([open]); await client.openWorkspace("old");
+      let finish!: (response: Response) => void;
+      fetch.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+      const pending = client.mutate("set_contacts_enabled", { handle: "cad-1", expected_revision: "revision-7", enabled: true });
+      if (release) await client.release("cad-1");
+      else {
+        fetch.mockImplementationOnce(async () => new Response(JSON.stringify(mutation)));
+        await client.mutate("set_contacts_enabled", { handle: "cad-1", expected_revision: "revision-7", enabled: false });
+      }
+      finish(new Response(JSON.stringify(mutation)));
+      await expect(pending).rejects.toBeInstanceOf(AssemblyBridgeError);
+      if (!release) expect((await client.saveWorkspace("cad-1", "revision-8")).data_base64).toBe("bmV3");
+    }
+  });
+  it("previews without changing bytes", async () => {
+    const { client, fetch } = setup([open, { ok: true, result: { revision: "revision-7", solution, diagnostics: [] } }]);
+    await client.openWorkspace("old");
+    await client.previewMate("cad-1", "assembly-1", { type_id: "fastened" });
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body)).method).toBe("preview_mate");
+    expect(await client.saveWorkspace("cad-1", "revision-7")).toEqual(archive);
   });
 });

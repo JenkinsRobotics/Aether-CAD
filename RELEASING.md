@@ -24,6 +24,16 @@ Package-manager versions and the shared UI dependency version are separate.
    Assembly edit changes require `scripts/verify-assembly-edit-browser.mjs` through
    the same disposable fixture. It exercises actual MCP editor calls, native
    assembly solves, guarded joint/relation/mate edits, history and saved reopen.
+   It must also assert no `/cad/rpc` requests: Assembly metadata is served by CAD's
+   released worker through `/api/cad/assembly` with `operation: workspace`. The
+   legacy assembly-solve request remains supported. The new path uses no host
+   session handle, filesystem path, database or changed request/response limit.
+   Contact tests must exercise enable/refusal, suppression, exact overlap checks,
+   retained authored placements and graph-schema-2 save/reopen. The frozen codec19
+   reader must reject contact/cam files; ordinary graph-schema-1 files retain
+   identical old/new/old roundtrips. New contact/cam intent requires a new reader
+   and cannot be opened after restoring an older CAD release. Never convert it
+   to schema 1 merely to make an old reader accept it.
    Mutating live Assembly tools require `expected_revision` from inspection;
    provider fixtures must pass it for compose, edit, undo and redo too. This opaque
    editor token is distinct from the saved counter (`source_revision`) and changes

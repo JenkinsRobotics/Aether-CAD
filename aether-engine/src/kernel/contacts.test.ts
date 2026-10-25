@@ -29,3 +29,15 @@ it("reports the pairs of a contact set whose placed bodies pass through each oth
     { id: "b", part: "cube", placement_mm: [5, 0, 0], rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2] }], sets: [{ id: "set", instance_ids: ["a", "b"] }] });
   expect(turned.overlaps[0].volume_mm3).toBeCloseTo(500, 3);
 });
+
+it("refuses incomplete geometry and invalid placements instead of declaring them contact-free", () => {
+  const document = createRectanglePartDocument("Cube", { widthMillimeters: 10, heightMillimeters: 10, depthMillimeters: 10 });
+  const parts = [{ id: "cube", document }];
+  const placement = { id: "a", part: "cube", placement_mm: [0, 0, 0] as const, rotation: [0, 0, 0, 1] as const };
+  expect(() => checkContacts({ parts, placements: [placement], sets: [{ id: "s", instance_ids: ["a", "missing"] }] })).toThrow(/missing/);
+  expect(() => checkContacts({ parts, placements: [{ ...placement, rotation: [0, 0, 0, 0] }], sets: [] })).toThrow(/Invalid/);
+  expect(() => checkContacts({ parts: [], placements: [placement], sets: [] })).toThrow(/missing Part/);
+  // Valid work after failed intersections/validation must still use the kernel.
+  expect(checkContacts({ parts, placements: [placement, { ...placement, id: "b", placement_mm: [10, 0, 0] }],
+    sets: [{ id: "s", instance_ids: ["a", "b"] }] })).toEqual({ checked_pairs: 1, overlaps: [] });
+});

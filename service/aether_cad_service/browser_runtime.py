@@ -21,6 +21,9 @@ def execute(service, path, data):
         # The editor builds, exports and measures in-process; the host never computes geometry per user.
         raise CommandError(410, "The CAD editor builds geometry in the browser; this host service is retired.")
     if path == "/api/cad/assembly":
+        if data.get("operation") == "workspace":
+            from .assembly_workspace import execute as workspace
+            return workspace(data)
         if not isinstance(data.get("instances"), list) or len(data["instances"]) > 512:
             raise CommandError(413, "An assembly supports up to 512 instances.")
         return worker({"phase": "assembly_solve", "job": data}, node=node)

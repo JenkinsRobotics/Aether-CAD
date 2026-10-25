@@ -227,3 +227,65 @@ Remaining: general UI/agent history, nested assembly editing, cam/sweep joints,
 contact support from a qualified codec, component/Parts panel consistency,
 assembly drawings and broader SolidCraft tool variants. The overall CAD baseline
 goal remains active.
+
+
+## 2026-10-24 — CAD-owned Assembly runtime and contact validation
+
+Source implementation under qualification; no installation change.
+Portable Assembly metadata now uses CAD's own immutable worker and codec20 through
+an explicit workspace operation on the existing authorized `/api/cad/assembly`
+service. The browser retains separate archive handles; the server receives bytes,
+not paths or stateful Animation handles. Legacy assembly-solve requests and all
+host limits remain unchanged. Cancellation, concurrent edits, closed handles and
+malformed/mismatched responses cannot replace the cached archive. New workspace
+identity derives from a unique editor handle.
+
+Canonical Animation commit 453b382 protects contact sets, enable-all intent and
+cam metadata with graph schema 2. Plain files retain graph schema 1 and exact
+old/new/old roundtrips; buggy legacy unversioned contact archives upgrade on save.
+The old reader now rejects new intent instead of silently discarding it. The
+Animation app itself is unchanged; only CAD's immutable five-module dependency
+snapshot is updated. Cam authoring/profile sampling remains unsupported in CAD.
+
+Live contact-enabled edits, whether UI or agent initiated, use an isolated archive
+and exact Aether/OCCT validation before the live swap. Overlapping endpoints,
+missing exact Part geometry and incomplete placements refuse the edit. Suppressed
+sets stay off; suppressed occurrences are omitted. With no named sets, all active
+occurrences are checked. Hidden occurrences remain physical participants.
+Checks are discrete at evaluated poses, not continuous swept collision detection.
+Kernel failure paths release retained shapes and propagate measurement failures.
+
+Initial qualification: 1,824 app tests (one existing skip), 1,126 engine tests,
+268 native worker tests, type/build checks and saved headless geometry/region
+flows passed. The first real browser run then found a pose mismatch: the native
+workspace's editable DOFs are marked `free`, but the Aether job translator only
+forwarded values marked `driven`. Contact checking therefore evaluated a slider
+at zero despite its saved 25 mm value. The translator now preserves authored
+free/explicitly-driven values while leaving dependent values to relations. Two
+actual solver regressions cover translation and rotation without altering rest
+placements. All 76 affected tests and the new build pass. The rebuilt worker passes all 268
+native tests and fresh-process geometry/region workflows. All six MCP/browser
+flows pass, including actual overlap rejection, suppressed sets, clear slider
+movement and schema-2 save/reopen (`contactsVerified: true`, no browser errors).
+The browser asserts no calls to `/cad/rpc`; the existing Animation regression
+also passes. The existing eight-instance UI/scripted-provider recipe regression also passes,
+including history and reopen; no real model inference is claimed. This failure is retained
+in `assembly-owned-browser.log` and its evidence, not presented as a passing run. General assembly history, contact
+set editing/list panels, nested editing and cam/sweep joints remain separate gaps.
+
+A deliberate nonzero-DOF probe across the seven movable mate kinds found two
+additional pre-existing interoperability gaps: combined Ball XYZ rotations use
+different angle conventions between the saved workspace and the TS solver
+(quaternion agreement 0.997972 instead of 1), and Pin Slot travel is translated
+as Z instead of X. Its canonical rotation/translation order also requires review.
+These are recorded as the next bounded assembly task, not hidden by the passing
+slider/revolute tests. Other probed kinds agree in position and orientation.
+Evidence: `.verification/baseline-2026-10-24/assembly-owned-pose-probe.log` and
+`probe-assembly-values.py`. No full assembly parity is claimed.
+
+Final worker SHA-256: `acdfefceed193f27f0669b585160a43b59a210562892743acb6bb75e107606fd`.
+Frontend and worker are verified together. Frozen evidence: `assembly-owned-pose-*`,
+`assembly-owned-browser/results.json`, and `assembly-owned-regression-browser/`
+under `.verification/baseline-2026-10-24/`. Type checks pass for app and engine;
+all 268 final native tests pass. This is a local source/staging checkpoint only:
+no running host, installed app, database, network setting or remote was changed.

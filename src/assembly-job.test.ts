@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { solveAssemblyJob } from "@aether/core/kernel";
 import { assemblyJobFor } from "./assembly-job";
 import { createRectanglePartDocument } from "./aether-core";
 
@@ -145,4 +146,23 @@ it.each([
   expect(result.complete).toBe(false);
   expect(result.job.joints).toEqual([]);
   expect(result.untranslated).toEqual([expect.objectContaining({id:'m1',reason:expect.stringMatching(reason)})]);
+});
+
+it.each([
+  ["prismatic", "translation", "translation", 0.025, [30, 30, 35]],
+  ["revolute", "rotation", "rotation", Math.PI / 4, [30, 30, 10]],
+] as const)("preserves an editable %s DOF's authored value through the actual solver", (type, name, kind, value, expected) => {
+  const base = projection() as any;
+  const rest = structuredClone(base.instances[1].rest_transform);
+  base.mates[0] = { ...base.mates[0], type_id: type, dofs: [{ id: "value", name, kind, state: "free",
+    value_rad: kind === "rotation" ? value : null, value_m: kind === "translation" ? value : null }] };
+  const translated = assemblyJobFor(base);
+  const solved = solveAssemblyJob(translated.job);
+  expect(solved.status).toBe("ok");
+  const instance = solved.instances.find((i) => i.id === "i2")!;
+  instance.placement_mm.forEach((v, i) => expect(v).toBeCloseTo(expected[i], 5));
+  if (kind === "rotation") expect(Math.abs(instance.rotation[2])).toBeCloseTo(Math.sin(value / 2), 6);
+  expect(base.instances[1].rest_transform).toEqual(rest);
+  base.mates[0].dofs[0].state = "dependent";
+  expect(assemblyJobFor(base).job.joints[0].parameters?.dofs).toBeUndefined();
 });

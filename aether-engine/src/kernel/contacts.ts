@@ -19,37 +19,53 @@ function axisAngle(q: readonly [number, number, number, number]): { axis: [numbe
 }
 
 export function checkContacts(input: ContactCheckInput): { overlaps: ContactOverlap[]; checked_pairs: number } {
-  const partBodies = new Map<string, Shape3D[]>();
-  for (const part of input.parts) {
-    const bodies: Shape3D[] = [];
-    evaluatePartDocument(part.document, { withBodies: (map) => { for (const body of map.values()) bodies.push(body.clone()); } });
-    partBodies.set(part.id, bodies);
-  }
-  const placed = new Map<string, Shape3D[]>();
-  for (const placement of input.placements) {
-    const { axis, degrees } = axisAngle(placement.rotation);
-    placed.set(placement.id, (partBodies.get(placement.part) ?? []).map((body) => {
-      let shape: Shape3D = body.clone();
-      if (Math.abs(degrees) > 1e-9) shape = shape.rotate(degrees, [0, 0, 0], axis) as Shape3D;
-      return shape.translate(placement.placement_mm[0], placement.placement_mm[1], placement.placement_mm[2]) as Shape3D;
-    }));
-  }
-  const overlaps: ContactOverlap[] = [];
-  let pairs = 0;
-  for (const set of input.sets) {
-    const ids = set.instance_ids.filter((id) => placed.has(id));
-    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
-      pairs++;
-      let volume = 0;
-      for (const a of placed.get(ids[i])!) for (const b of placed.get(ids[j])!) {
-        const common = a.intersect(b);
-        try { if (isShape3D(common)) volume += measureVolume(common); } catch { /* no common solid */ }
-        release(common);
-      }
-      if (volume > 1e-6) overlaps.push({ set_id: set.id, first_instance_id: ids[i], second_instance_id: ids[j], volume_mm3: volume });
+  const partBodies = new Map<string, Shape3D[]>(), placed = new Map<string, Shape3D[]>();
+  try {
+    for (const part of input.parts) {
+      if (partBodies.has(part.id)) throw Error("Duplicate contact Part identity.");
+      const bodies: Shape3D[] = [];
+      partBodies.set(part.id, bodies);
+      evaluatePartDocument(part.document, { withBodies: (map) => { for (const body of map.values()) bodies.push(body.clone()); } });
+      if (!bodies.length) throw Error(`Contact Part ${part.id} has no exact solid geometry.`);
     }
+    for (const placement of input.placements) {
+      if (placed.has(placement.id) || !partBodies.has(placement.part)) throw Error("Contact placement has a duplicate ID or missing Part.");
+      if (placement.placement_mm.length !== 3 || placement.rotation.length !== 4
+        || [...placement.placement_mm, ...placement.rotation].some((v) => !Number.isFinite(v))
+        || Math.abs(Math.hypot(...placement.rotation) - 1) > 1e-6) throw Error("Invalid contact placement.");
+      const { axis, degrees } = axisAngle(placement.rotation);
+      const shapes: Shape3D[] = [];
+      placed.set(placement.id, shapes);
+      for (const body of partBodies.get(placement.part)!) {
+        let shape: Shape3D = body.clone();
+        try {
+          // Replicad transforms consume their input; only retain the final shape.
+          if (Math.abs(degrees) > 1e-9) shape = shape.rotate(degrees, [0, 0, 0], axis) as Shape3D;
+          shape = shape.translate(...placement.placement_mm) as Shape3D;
+          shapes.push(shape);
+        } catch (error) { release(shape); throw error; }
+      }
+    }
+    const overlaps: ContactOverlap[] = [];
+    let pairs = 0;
+    for (const set of input.sets) {
+      const ids = set.instance_ids;
+      if (new Set(ids).size !== ids.length || ids.some((id) => !placed.has(id))) throw Error("Contact set has duplicate or missing occurrences.");
+      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+        pairs++;
+        let volume = 0;
+        for (const a of placed.get(ids[i])!) for (const b of placed.get(ids[j])!) {
+          const common = a.intersect(b);
+          try { if (isShape3D(common)) volume += measureVolume(common); }
+          finally { release(common); }
+        }
+        if (!Number.isFinite(volume)) throw Error("Contact intersection returned an invalid volume.");
+        if (volume > 1e-6) overlaps.push({ set_id: set.id, first_instance_id: ids[i], second_instance_id: ids[j], volume_mm3: volume });
+      }
+    }
+    return { overlaps, checked_pairs: pairs };
+  } finally {
+    for (const bodies of placed.values()) bodies.forEach(release);
+    for (const bodies of partBodies.values()) bodies.forEach(release);
   }
-  for (const bodies of placed.values()) bodies.forEach(release);
-  for (const bodies of partBodies.values()) bodies.forEach(release);
-  return { overlaps, checked_pairs: pairs };
 }

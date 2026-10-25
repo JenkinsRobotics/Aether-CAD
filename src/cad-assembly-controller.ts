@@ -1,3 +1,4 @@
+import { liveContactSets } from "./startup/assembly-contacts";
 import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-contact-authoring";
 import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
 import { appendDocument, availableBodies, parsePartDocument, splitDocument, type PartDocument } from "./aether-core";
@@ -78,6 +79,7 @@ export interface AssemblyDocumentSummary {
 
 export interface CADAssemblyControllerOptions {
   readonly writable?: () => boolean;
+  readonly validateContacts?: (assembly: AssemblyProjectionV1) => Promise<void>;
   readonly compose?: (request: AssemblyComposeRequest, signal?: AbortSignal) => Promise<AssemblyComposeResult>;
   readonly client?: AssemblyControllerClient;
   readonly store?: CADAssemblyWorkspaceStore;
@@ -130,6 +132,7 @@ function messageFor(error: unknown): string {
 
 export class CADAssemblyController {
   private readonly writable: () => boolean;
+  private readonly validateContacts: (assembly: AssemblyProjectionV1) => Promise<void>;
   private readonly compose: NonNullable<CADAssemblyControllerOptions['compose']>;
   private composing = false;
   private mutating = false;
@@ -146,6 +149,7 @@ export class CADAssemblyController {
 
   constructor(options: CADAssemblyControllerOptions = {}) {
     this.writable = options.writable ?? (() => true);
+    this.validateContacts = options.validateContacts ?? (async () => { throw Error("Exact contact validation is unavailable. No edit was applied."); });
     this.compose = options.compose ?? composeAssembly;
     this.client = options.client ?? new AssemblyBridgeClient({ baseURL: "" });
     this.store = options.store ?? cadAssemblyWorkspace;
@@ -330,12 +334,12 @@ export class CADAssemblyController {
     try {
       if (fresh.workspace_id !== previous.workspace_id || (revision && fresh.revision !== revision)) throw Error('Unexpected assembly archive identity.');
       const assemblyID = source.assembly.assembly_id;
-      // These use one stateful codec session. Parallel requests consume worker
-      // slots while waiting on the same session lock and can reject startup.
+      // Keep requests bounded; each uses this immutable archive in CAD's own worker.
       const assembly = await this.client.describeAssembly(fresh.handle, assemblyID, signal);
       const solution = await this.client.solveAssembly(fresh.handle, assemblyID, signal);
       const bom = await this.client.projectBOM(fresh.handle, assemblyID, source.bom.mode, signal);
       this.assertRevision(fresh.revision,assembly,solution,bom);
+      if (liveContactSets(assembly).length) await this.validateContacts(assembly);
       signal.throwIfAborted(); assertCurrent();
       if (!this.writable() || this.descriptor !== previous || this.canonical !== source) throw Error('The Assembly changed while rebuilding. No recipe edit was applied.');
       this.descriptor = {...fresh,root_assembly_id:assemblyID};
@@ -392,6 +396,11 @@ export class CADAssemblyController {
     const revision = this.canonical?.assembly.revision;
     const requestedBOMMode = this.canonical?.bom.mode ?? "hierarchical";
     if (!descriptor || !revision) throw new Error("No canonical Assembly workspace is open.");
+    // Contact-enabled edits are evaluated on an isolated archive. This applies
+    // equally to UI controls and agents and never leaves a hidden live mutation.
+    if (this.canonical?.assembly.contacts_enabled || (method === "set_contacts_enabled" && params.enabled === true)) {
+      return this.editAtomically(method, params, revision);
+    }
     this.mutating = true;
     try {
     const result = await this.client.mutate(method, {

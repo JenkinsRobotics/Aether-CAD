@@ -1,5 +1,22 @@
 # CAD workspace codec dependency
 
+2026-10-24: immutable build `0.1.0-20` adopts canonical contact metadata and cam
+lift-table preservation plus the reader-version guard from Animation commit
+`453b382a2d690ab588848c5e917c75a6c1158be8`. All five bundled runtime modules match
+that commit exactly; `aether_workspace.py` and `relation_kinds.py` changed from
+codec19. As with prior snapshots, other unused wheel files retain their previous
+bytes. This is a portable-codec dependency snapshot, not a new Animation app build.
+`codec20-provenance.json` records source and per-module hashes; older wheels remain
+unchanged. CAD does not import sibling source at runtime.
+
+Graph schema 2 protects contact/cam intent from older readers; plain files retain
+schema 1 and identical roundtrips. Legacy schema-1 contact data is upgraded on
+save. Frozen codec19 refusal and native CAD worker roundtrips qualify this guard.
+CAD now routes portable Assembly operations through its own released worker at
+`/api/cad/assembly`, not Studio's Animation runtime. Exact geometry/contact checks
+stay in the in-process Aether engine. Cam authoring/sampling is not implemented
+by adopting the metadata library.
+
 2026-10-23: immutable build `0.1.0-19` adopts the already-verified eight-mate
 workspace change from Animation commit `726c0afff55a966643454bf264f0b4a0e09126d6`.
 All five runtime modules match that commit; only `aether_workspace.py` changes

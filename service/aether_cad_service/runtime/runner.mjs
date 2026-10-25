@@ -10515,7 +10515,7 @@ function assemblyJobFor(projection) {
         note(mate.id, mate.name, "it mates an instance that is not in the assembly");
       return [];
     }
-    const dofs = (mate.dofs ?? []).filter((dof) => dof.state === "driven" && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
+    const dofs = (mate.dofs ?? []).filter((dof) => (dof.state === "driven" || dof.state === "free") && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
       name: dof.name,
       kind: dof.kind,
       axis: dofAxis(dof.name),

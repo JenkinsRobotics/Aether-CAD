@@ -12,6 +12,7 @@ assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origi
 await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],steps=[];
 page.on('pageerror',e=>errors.push(e.message));
+const legacyRPC=[];page.on('request',r=>{if(new URL(r.url()).pathname==='/cad/rpc')legacyRPC.push(r.url());});
 const button=name=>page.getByRole('button',{name,exact:true});
 const step=async(name,run)=>{console.log('Begin '+name);await run();steps.push(name);console.log('Passed '+name);await page.screenshot({path:join(evidence,`${steps.length}-${name}.png`)});};
 const call=(action,args)=>page.evaluate(async({action,args})=>{const r=await fetch('/api/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(args)});const value=await r.json();if(!r.ok)throw Error(JSON.stringify(value));return value;},{action,args});
@@ -118,20 +119,34 @@ try{
     const added=(await inspect('connectors')).items.find(c=>!before.some(old=>old.id===c.id));assert.deepEqual(added.frame_part_local.origin_m,[0.001,0.002,0.003]);
     await edit({type:'remove',entity:'connector',id:added.id});
     const command={type:'contact-add',name:'Pair',instance_ids:state.instances.slice(0,2).map(i=>i.id)};
-    if(state.capabilities.can_edit_contacts){
-      await edit(command);const contact=(await inspect('contacts')).items[0];await edit({...command,type:'contact-update',id:contact.id,suppressed:true});await edit({type:'contacts-enabled',enabled:false});await edit({type:'remove',entity:'contact',id:contact.id});contactsVerified=true;
-    }else await edit(command,false);
+    assert.equal(state.capabilities.can_edit_contacts,true,'CAD owns the packaged contact codec');
+    await edit(command);const contact=(await inspect('contacts')).items[0];
+    // The mated base/arm overlap: enabling checks must reject without changing state.
+    await edit({type:'contacts-enabled',enabled:true},false);assert.equal((await inspect()).contacts_enabled,false);
+    await edit({...command,type:'contact-update',id:contact.id,suppressed:true});
+    await edit({type:'contacts-enabled',enabled:true});assert.equal((await inspect()).contacts_enabled,true);
+    await edit({...command,type:'contact-update',id:contact.id,suppressed:false},false);
+    // Check a clear, movable pair. Moving the slider into the base must be refused.
+    const instances=(await inspect('instances')).items;
+    const base=instances.find(i=>i.grounded),slider=instances.find(i=>i.id===(state.mates??[]).find(m=>m.type_id==='prismatic')?.endpoint_b.instance_id)
+      ?? instances.find(i=>i.name==='slider');
+    assert.ok(slider,'slider occurrence');
+    await edit({...command,type:'contact-update',id:contact.id,instance_ids:[base.id,slider.id],suppressed:false});
+    await edit({type:'dof-value',id:slide,value:0,unit:'mm'},false);
+    assert.equal((await inspect('mates')).items.flatMap(m=>m.dofs).find(d=>d.id===slide).value_m,0.025);
+    await edit({type:'dof-value',id:slide,value:30,unit:'mm'});
+    contactsVerified=true;
   });
   await step('save-reopen-and-inspect',async()=>{
     const final=await inspect();let saved;
     for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===final.source_revision)break;await page.waitForTimeout(100);}
-    assert.equal(String(saved.revision),final.source_revision);assert.equal(saved.instances.length,3);assert.equal(saved.mates.length,2);
+    assert.equal(String(saved.revision),final.source_revision);assert.equal(saved.instances.length,3);assert.equal(saved.mates.length,2);assert.equal(saved.schema_version,2);assert.equal(saved.contacts_enabled,true);assert.equal(saved.contact_sets.length,1);
     await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:'Assembly agent baseline'}).waitFor({timeout:90000});await share();
-    const reopened=await inspect();assert.equal(reopened.source_revision,final.source_revision);assert.notEqual(reopened.revision,final.revision);assert.equal(reopened.counts.instances,3);assert.deepEqual((await inspect('instances')).items.map(i=>[i.id,i.rest_transform]),rest);
+    const reopened=await inspect();assert.equal(reopened.contacts_enabled,true);assert.equal((await inspect('contacts')).items.length,1);assert.equal(reopened.source_revision,final.source_revision);assert.notEqual(reopened.revision,final.revision);assert.equal(reopened.counts.instances,3);assert.deepEqual((await inspect('instances')).items.map(i=>[i.id,i.rest_transform]),rest);
     await invoke('aether_cad_assembly_edit',{expected_revision:final.revision,command_json:JSON.stringify({type:'dof-value',id:angle,value:60,unit:'deg'})},false);
     const reopenedAngle=(await inspect('mates')).items.flatMap(m=>m.dofs).find(d=>d.id===angle);assert.ok(Math.abs(reopenedAngle.value_rad-Math.PI/4)<1e-9);assert.ok(Math.abs(reopenedAngle.limit_max_rad-Math.PI/2)<1e-9);
     await unshare(true);await button('AI advisor').click();
   });
-  assert.deepEqual(errors,[]);await writeFile(join(evidence,'results.json'),JSON.stringify({status:'passed',steps,contactsVerified,errors},null,2));
+  assert.deepEqual(errors,[]);assert.deepEqual(legacyRPC,[],'CAD must not use Studio Animation RPC');await writeFile(join(evidence,'results.json'),JSON.stringify({status:'passed',steps,contactsVerified,errors},null,2));
 }catch(error){await page.screenshot({path:join(evidence,'failure.png')});await writeFile(join(evidence,'failure.txt'),String(error.stack)+'\n'+await page.locator('body').innerText());throw error;}
 finally{await browser.close();}

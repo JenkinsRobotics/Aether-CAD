@@ -38,6 +38,7 @@ files = {
     "aether_cad_service/project_runtime.py": service / "project_runtime.py",
     "aether_cad_service/assembly_recipe.py": service / "assembly_recipe.py",
     "aether_cad_service/assembly_compose.py": service / "assembly_compose.py",
+    "aether_cad_service/assembly_workspace.py": service / "assembly_workspace.py",
     "aether_cad_service/assembly_automation.py": service / "assembly_automation.py",
     "aether_cad_service/browser_runtime.py": service / "browser_runtime.py",
     "aether_cad_service/automation_runtime.py": service / "automation_runtime.py",

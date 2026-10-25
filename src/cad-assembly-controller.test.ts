@@ -1066,12 +1066,12 @@ describe('atomic assembly recipe transactions', () => {
 
 
 describe('isolated explicit Assembly edits', () => {
-  function setup() {
+  function setup(validateContacts?: (projection: AssemblyProjectionV1) => Promise<void>) {
     type State={revision:string;name:string};
     const states=new Map<string,State>([[descriptor.handle,{revision:'1',name:'Bracket:1'}]]);
     let serial=0,writable=true;
     const state=(handle:string)=>{const s=states.get(handle);if(!s)throw Error('Released handle');return s;};
-    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,instances:[{...assembly.instances[0],name:state(handle).name}]});
+    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,contacts_enabled:!!validateContacts,instances:validateContacts ? [{...assembly.instances[0],name:state(handle).name},{...assembly.instances[0],id:'instance-2'}] : [{...assembly.instances[0],name:state(handle).name}]});
     const bridge=client({
       openWorkspace:vi.fn(async(encoded:string)=>{const s=JSON.parse(encoded) as State;const handle='candidate-'+(++serial);states.set(handle,s);return {...descriptor,revision:s.revision,handle};}),
       saveWorkspace:vi.fn(async(handle:string,revision:string)=>{const s=state(handle);if(revision!==s.revision)throw Error('Revision changed');return {handle,revision,graph_sha256:'hash',data_base64:JSON.stringify(s)};}),
@@ -1085,7 +1085,7 @@ describe('isolated explicit Assembly edits', () => {
       }),
       release:vi.fn(async(handle:string)=>{states.delete(handle);}),
     });
-    const controller=new CADAssemblyController({client:bridge,store:new CADAssemblyWorkspaceStore(),writable:()=>writable});
+    const controller=new CADAssemblyController({client:bridge,store:new CADAssemblyWorkspaceStore(),writable:()=>writable,validateContacts});
     return {controller,bridge,states,lock:()=>{writable=false;}};
   }
   it('edits a distinct handle, publishes one coherent result and reopens history without overwriting live intent',async()=>{
@@ -1097,6 +1097,19 @@ describe('isolated explicit Assembly edits', () => {
     await controller.undoRecipe(-1);expect(controller.geometryProjection?.instances[0].name).toBe('Bracket:1');
     await controller.undoRecipe(1);expect(controller.geometryProjection?.instances[0].name).toBe('Edited');
     expect(states.size).toBe(1);controller.dispose();
+  });
+  it('validates contact-enabled UI and agent edits before any live swap',async()=>{
+    const validate=vi.fn<() => Promise<void>>(async()=>{throw Error('Parts overlap.');});
+    const {controller,bridge,states}=setup(validate);await controller.newWorkspace('Assembly');
+    const original=controller.geometryProjection;
+    await expect(controller.mutate('update_instance',{instance:{id:'instance-1',name:'Collision'}})).rejects.toThrow(/overlap/);
+    expect(controller.geometryProjection).toBe(original);expect([...states.keys()]).toEqual([descriptor.handle]);
+    expect(controller.canUndoRecipe).toBe(false);
+    validate.mockImplementation(async()=>undefined);
+    await controller.editAtomically('update_instance',{instance:{id:'instance-1',name:'Clear'}},'1');
+    expect(validate).toHaveBeenCalledTimes(2);expect(controller.geometryProjection?.instances[0].name).toBe('Clear');
+    expect(bridge.mutate).not.toHaveBeenCalledWith(expect.anything(),expect.objectContaining({handle:descriptor.handle}),expect.anything());
+    expect(controller.canUndoRecipe).toBe(true);controller.dispose();
   });
   it('refuses stale revisions before allocating an isolated workspace',async()=>{
     const {controller,bridge}=setup();await controller.newWorkspace('Assembly');

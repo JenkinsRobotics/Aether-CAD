@@ -157,9 +157,9 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
         note(mate.id, mate.name, "it mates an instance that is not in the assembly");
       return [];
     }
-    // Driven degrees of freedom travel with the mate: the solver holds them at their
-    // value (degrees, millimetres), on the axis the workspace's DOF name implies.
-    const dofs = (mate.dofs ?? []).filter((dof) => dof.state === "driven" && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
+    // A "free" workspace DOF is editable, not valueless: keep its authored pose
+    // in the geometry solve. Dependent DOFs are evaluated through their relation.
+    const dofs = (mate.dofs ?? []).filter((dof) => (dof.state === "driven" || dof.state === "free") && (dof.kind === "rotation" ? dof.value_rad : dof.value_m) !== null).map((dof) => ({
       name: dof.name, kind: dof.kind, axis: dofAxis(dof.name),
       value: dof.kind === "rotation" ? (dof.value_rad as number) * 180 / Math.PI : (dof.value_m as number) * METRES_TO_MM,
     }));
