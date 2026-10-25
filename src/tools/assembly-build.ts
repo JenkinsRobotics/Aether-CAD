@@ -30,8 +30,8 @@ export const assemblyBuildWorkspace: CADRibbonWorkspaceDefinition = {
     { id: "build-modify", label: "Modify", tools: [
       tool("assembly-array-linear", "Linear array", "pattern", "assembly-linear-array"),
       tool("assembly-array-circular", "Circular array", "pattern", "assembly-circular-array"),
-      tool("assembly-recipe-undo", "Undo insertion", "back", "assembly-undo-recipe"),
-      tool("assembly-recipe-redo", "Redo insertion", "back", "assembly-redo-recipe"),
+      tool("assembly-recipe-undo", "Undo edit", "back", "assembly-undo-recipe"),
+      tool("assembly-recipe-redo", "Redo edit", "back", "assembly-redo-recipe"),
       tool("assembly-pattern", "Pattern", "pattern", undefined, assemblyProducer),
       tool("assembly-cut", "Assembly Cut", "cut", undefined, assemblyProducer),
       tool("assembly-drag", "Drag with Mates", "move", undefined, assemblyProducer),

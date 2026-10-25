@@ -1064,3 +1064,58 @@ describe('atomic assembly recipe transactions', () => {
   });
 });
 
+
+describe('isolated explicit Assembly edits', () => {
+  function setup() {
+    type State={revision:string;name:string};
+    const states=new Map<string,State>([[descriptor.handle,{revision:'1',name:'Bracket:1'}]]);
+    let serial=0,writable=true;
+    const state=(handle:string)=>{const s=states.get(handle);if(!s)throw Error('Released handle');return s;};
+    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,instances:[{...assembly.instances[0],name:state(handle).name}]});
+    const bridge=client({
+      openWorkspace:vi.fn(async(encoded:string)=>{const s=JSON.parse(encoded) as State;const handle='candidate-'+(++serial);states.set(handle,s);return {...descriptor,revision:s.revision,handle};}),
+      saveWorkspace:vi.fn(async(handle:string,revision:string)=>{const s=state(handle);if(revision!==s.revision)throw Error('Revision changed');return {handle,revision,graph_sha256:'hash',data_base64:JSON.stringify(s)};}),
+      describeAssembly:vi.fn(async(handle:string)=>projection(handle)),
+      solveAssembly:vi.fn(async(handle:string)=>({...solution,revision:state(handle).revision})),
+      projectBOM:vi.fn(async(handle:string)=>({...bom,revision:state(handle).revision})),
+      mutate:vi.fn(async(_method,params)=>{
+        const s=state(params.handle);if(s.revision!==params.expected_revision)throw Error('Revision changed');
+        s.name=(params.instance as any)?.name??s.name;s.revision=String(Number(s.revision)+1);
+        return {handle:params.handle,revision:s.revision,assembly:projection(params.handle),solution:{...solution,revision:s.revision},bom:{...bom,revision:s.revision}};
+      }),
+      release:vi.fn(async(handle:string)=>{states.delete(handle);}),
+    });
+    const controller=new CADAssemblyController({client:bridge,store:new CADAssemblyWorkspaceStore(),writable:()=>writable});
+    return {controller,bridge,states,lock:()=>{writable=false;}};
+  }
+  it('edits a distinct handle, publishes one coherent result and reopens history without overwriting live intent',async()=>{
+    const {controller,bridge,states}=setup();await controller.newWorkspace('Assembly');
+    await controller.editAtomically('update_instance',{instance:{id:'instance-1',name:'Edited'}},'1');
+    expect(bridge.mutate).toHaveBeenCalledWith('update_instance',expect.objectContaining({handle:'candidate-1',expected_revision:'1',assembly_id:'assembly-1'}),expect.any(AbortSignal));
+    expect(controller.geometryProjection?.instances[0].name).toBe('Edited');expect(controller.solutionProjection?.revision).toBe('2');expect(controller.bomProjection?.revision).toBe('2');
+    expect([...states.keys()]).toEqual(['candidate-2']);expect(controller.canUndoRecipe).toBe(true);
+    await controller.undoRecipe(-1);expect(controller.geometryProjection?.instances[0].name).toBe('Bracket:1');
+    await controller.undoRecipe(1);expect(controller.geometryProjection?.instances[0].name).toBe('Edited');
+    expect(states.size).toBe(1);controller.dispose();
+  });
+  it('refuses stale revisions before allocating an isolated workspace',async()=>{
+    const {controller,bridge}=setup();await controller.newWorkspace('Assembly');
+    await expect(controller.editAtomically('remove_instance',{instance_id:'instance-1'},'old')).rejects.toThrow(/revision/);
+    expect(bridge.openWorkspace).not.toHaveBeenCalled();controller.dispose();
+  });
+  it.each(['cancel','readonly','context','refresh','invalid-solve'] as const)('keeps live state and history after %s during an isolated edit',async(mode)=>{
+    const {controller,bridge,states,lock}=setup();await controller.newWorkspace('Assembly');
+    let finish!:()=>void,context=true;
+    const original=vi.mocked(bridge.mutate).getMockImplementation()!;
+    vi.mocked(bridge.mutate).mockImplementation(async(...args)=>{const result=await original(...args);await new Promise<void>(resolve=>{finish=resolve;});return mode==='invalid-solve'?{...result,solution:{...result.solution,status:'invalid'}}:result;});
+    const abort=new AbortController(),guard=()=>{if(!context)throw Error('Context changed');};
+    const pending=controller.editAtomically('update_instance',{instance:{name:'Candidate'}},'1',abort.signal,guard);
+    await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));
+    expect(states.get(descriptor.handle)?.name).toBe('Bracket:1');
+    await expect(controller.mutate('remove_instance',{instance_id:'instance-1'})).rejects.toThrow(/already rebuilding/);
+    if(mode==='cancel')abort.abort();if(mode==='readonly')lock();if(mode==='context')context=false;if(mode==='refresh')await controller.refresh();
+    const before=controller.geometryProjection;finish();await expect(pending).rejects.toThrow();
+    expect(controller.geometryProjection).toBe(before);expect(controller.geometryProjection?.instances[0].name).toBe('Bracket:1');
+    expect(controller.canUndoRecipe).toBe(false);expect([...states.keys()]).toEqual([descriptor.handle]);controller.dispose();
+  });
+});

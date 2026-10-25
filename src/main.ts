@@ -294,7 +294,7 @@ const assemblyController = new CADAssemblyController({
 const assemblyContextKey=()=>`assembly:${assemblyController.document?.workspaceID??'none'}:${assemblyController.document?.assemblyID??'none'}:${location.search}`;
 configureAssemblyAgentWorkspace({
   active:()=>activeWorkspaceKind==='assembly',contextKey:assemblyContextKey,
-  interaction:key=>assemblyAgentInteraction(assemblyController,key,assemblyContextKey,
+  interaction:key=>assemblyAgentInteraction(assemblyController,key,()=>activeWorkspaceKind==='assembly'?assemblyContextKey():'inactive-assembly',
     ()=>hostedPartEditable()&&!document.querySelector('[data-assembly-recipe],.cad-feature-dialog')),
 });
 for(const [command,kind] of [['assembly-part-template','template'],['assembly-from-json','single'],['assembly-linear-array','linear'],['assembly-circular-array','circular']] as const)

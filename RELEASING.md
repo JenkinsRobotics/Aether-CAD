@@ -21,6 +21,14 @@ Package-manager versions and the shared UI dependency version are separate.
    `scripts/verify-drawings-browser.mjs` through Studio's disposable authenticated
    browser fixture with the candidate frontend and matching worker. It covers
    source editing, associative rebuild, keyboard history, SVG/DXF, portable file reopen, independent Studio autosave/reload, read-only revisions and live MCP drawing edits. It imports `verify-drawing-agent-browser.mjs` for the actual shared-editor broker checks.
+   Assembly edit changes require `scripts/verify-assembly-edit-browser.mjs` through
+   the same disposable fixture. It exercises actual MCP editor calls, native
+   assembly solves, guarded joint/relation/mate edits, history and saved reopen.
+   Mutating live Assembly tools require `expected_revision` from inspection;
+   provider fixtures must pass it for compose, edit, undo and redo too. This opaque
+   editor token is distinct from the saved counter (`source_revision`) and changes
+   after undo/reopen even when the archive counter repeats. Also run
+   Studio's existing CAD assembly-agent regression after updating that consumer.
    Finish building before starting worker qualification: the automation build
    replaces its output directory, so tests must not read it during a rebuild.
 3. Commit the qualified source locally on `alpha-0.1`. Do not include scratch

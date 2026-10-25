@@ -173,3 +173,57 @@ images. Closed-file Studio MCP Drawing operations are not registered; local
 headless and open-editor commands are separate verified paths. Real provider
 inference is not claimed from a browser MCP-broker test. No full CAD parity,
 installed activation, other-app change or remote push is claimed.
+
+
+## 2026-10-24 — Guarded Assembly editing for live agents
+
+Qualified source, not an installed-release claim.
+The existing Assembly editor now exposes explicit-ID updates for instance names,
+rest placement/visibility, grounding and suppression; connectors and mates;
+DOF values/limits; linear, gear, screw and rack/pinion relations; and guarded
+removal. Contacts are capability-gated: the pinned codec does not offer contact
+editing, and the tool refuses it rather than claiming a simulated result.
+
+Edits reuse the UI's payload validators and native workspace operations on an
+isolated serialized workspace. Only a solved, revision-coherent result replaces
+the open document. Expected revision, document context, writable access and
+cancellation are rechecked after asynchronous work. Failed edits preserve the
+live handle, authored placements and history. Direct DOF editing requires a free,
+active DOF; dependent values are changed through their relation. Source Part
+geometry and rest transforms are never replaced by a solved occurrence pose.
+
+Inspection pages parts, instances, connectors, mates, relations, contacts, solve
+results and BOM in groups of 25 without embedding Part geometry. Canonical output
+uses meters/radians; edit inputs explicitly use millimeters/degrees. Relation
+ratios use driven SI units per driver SI unit. Existing compose/undo/redo tools
+now require expected_revision too, including the Studio test-provider consumer.
+One atomic edit/recipe undo step is available and invalidated by intervening
+ordinary Assembly edits; this is not a full assembly history implementation.
+
+Qualification: 1,816 app tests pass (one existing skip), including isolated
+handle atomicity, stale/context/read-only/cancellation races, failed solves and
+unit/ID/suppression validation. TypeScript and frontend/worker builds pass. The
+worker remains exactly SHA-256
+`0939774f6b26b9b2018ccee3640a6d786059e19e83137b73fa1c2fd7b31673b2`,
+identical to the previous 260-test worker qualification; engine sources are unchanged.
+All six actual MCP/browser steps pass: compose/inspect, joint values and limits,
+stale refusal/undo/redo, relation edits and dependent-value refusal, mate
+create/edit/remove and visibility, connector dependency refusal, and stored-file
+reopen with exact authored placements. The contact-capability refusal is tested,
+not contact functionality. No browser errors were recorded. The Animation
+browser regression also passes. The existing eight-instance UI/provider-fixture regression also passes.
+Final review identified an additional stale-edit ABA case: the native revision
+counter repeats after undo. Live tools now require an opaque projection token
+and expose source_revision separately for archive comparisons. The old token is
+refused after undo/divergent edit or reopen, even if the numeric counter repeats.
+All 64 focused assembly/controller/context tests pass after the token change,
+and the type/frontend/worker build passes again. Both final browser suites pass
+on those frozen bytes: all six actual MCP flows including the divergent undo
+branch and stale request after reopening, plus the eight-instance UI/provider
+recipe, history and reopen workflow. Evidence: `.verification/baseline-2026-10-24/assembly-edit-*`
+and `release-assembly-edit-browser/results.json`. No installed update,
+other-app change, database/settings mutation or remote push is claimed.
+Remaining: general UI/agent history, nested assembly editing, cam/sweep joints,
+contact support from a qualified codec, component/Parts panel consistency,
+assembly drawings and broader SolidCraft tool variants. The overall CAD baseline
+goal remains active.
