@@ -2,8 +2,9 @@
  * this separate lets the presentation use the same route in local previews. */
 import { drawingEditor } from "./controller";
 import { cadPresentation } from "../cad-presentation-store";
-export function downloadDrawingFile(name: string, content: string, type = "application/json"): void {
-  const url = URL.createObjectURL(new Blob([content], { type })), link = document.createElement("a");
+export function downloadDrawingFile(name: string, content: string | Uint8Array, type = "application/json"): void {
+  const bytes = typeof content === "string" ? content : Uint8Array.from(content).buffer;
+  const url = URL.createObjectURL(new Blob([bytes], { type })), link = document.createElement("a");
   link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export interface DrawingFileActions {

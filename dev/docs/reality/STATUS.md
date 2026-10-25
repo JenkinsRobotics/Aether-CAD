@@ -544,3 +544,72 @@ passes. Evidence: `.verification/baseline-2026-10-24/evaluator-modules-*`, espec
 The matching worker SHA-256 is
 `09c42ffe5c7d44a7958ea32a43e0fc3e7a01304cce01246f2135d6f143ced3e8`;
 the canonical codec21 package remains unchanged. No installed activation or push.
+
+## 2026-10-24 — Vector drawing PDF and shared label alignment
+
+Drawing Export now writes the displayed sheet or all sheets as vector PDF, with
+physical paper sizes, visible/hidden edges, section hatching, dimensions and
+searchable text. UI, open-editor AI/MCP and the packaged local runner share the
+same serializer. Agent PDF results carry `data_base64` and `mime_type`; their
+existing 2 MiB reply limit counts the complete encoded result. Export does not
+save or publish a document and remains available on read-only revisions.
+
+Implementation is split into focused modules: engine `drawing/pdf.ts` and
+`export-result.ts`, browser `drawing/pdf-export.ts`, and the runner's
+`automation/drawing-font.ts`. Routers compose these operations. Libraries load
+on demand, and the existing pinned Noto Sans font is subset-embedded; unsupported
+glyphs are refused. The frontend and worker retain matching font bytes and
+licenses, including PDF library/dependency notices. No document, codec, database,
+request-limit or host-setting change is needed.
+
+Async exports recheck revision/context/cancellation before returning; UI download
+guards invalidate synchronously when the workspace changes or unmounts. Focused
+tests cover read-only exports, StrictMode, changed snapshots, leaving and returning
+to the workspace, unmounting and aborting a live-agent request. Rendering exposed
+height dimension labels crossing their dimension line. Alignment is now part of
+the built drawing and consumed by the canvas, SVG, DXF and PDF: width values are
+centered, height values start 1.5 mm to the right of the line. The optional
+projection field preserves older callers; saved drawing intent is unchanged.
+
+Verification: full engine suite 1,149 pass; full app suite 1,865 pass/one existing
+skip. After the alignment correction, 13 engine and 34 app focused checks plus
+both type checks pass. The final synchronous route guard passes its five checks
+and the app type check. The rebuilt worker passes all 308 native tests in 213.24
+seconds. Existing headless exact-build/export and saved-region/frame/replay
+checks pass; final drawing section/DXF/reopen checks pass in 12 fresh processes,
+and the PDF fixture passes in 10 fresh processes. Separate pypdf/pdfplumber
+validation confirms physical pages, embedded Unicode fonts, vector line weights,
+searchable dimensions, and hatches excluding the bore. Both rendered pages were
+visually checked; dimension text now clears its line with no clipping.
+
+The first complete authenticated browser qualification passes all 11 workflows
+and the actual Animation-client regression in 131.31 seconds, with no page errors
+or server geometry requests. It covers UI active/portrait/all-sheet downloads,
+source refresh/history/reopen, actual MCP binary export, invalid selection refusal,
+and read-only export without a stored revision change. Independent parsing also
+confirms Unicode and dimension/section/agent text in these actual downloads.
+The frontend-only synchronous guard refinement is requalified separately before
+staging; its result is recorded below. The worker remains byte-identical.
+
+Earlier failures remain in the evidence: exact floating-point and drawing-title
+expectations, test union narrowing, and the independent reader's point-vs-mm line
+weight assumption were corrected. The rendered dimension-label overlap was a real
+product issue and was fixed across the shared layout consumers. Generated worker
+output retains upstream fontkit comment whitespace; source whitespace checks
+exclude that generated file. Evidence: `.verification/baseline-2026-10-24/drawing-pdf-*`.
+Worker SHA-256: `57bf791c7344dafd3eb1ccbc14b4bd2f0f416421a9aa8d78d4db6b47451223b8`.
+Canonical codec21 is unchanged.
+
+Remaining drawing gaps include assembly sources/BOM, edge-attached/angular/radial
+dimensions, stepped cuts/cutting-line annotations, title-block editing, placement
+by dragging and closed-file MCP tools. PDF supports the bundled font's character
+coverage; it preserves authored placement without automatically arranging sheets.
+PDF arcs use vector cubic paths; DXF retains analytic circular geometry. This
+increment does not complete the overall CAD baseline. No installed activation or
+push is performed.
+
+Final frontend requalification: all 11 browser workflows and the actual
+Animation-client regression pass again in 133.89 seconds, errors `[]`. Independent
+parsing of the final UI/agent/read-only downloads passes. The 3,524 qualified
+frontend files and unchanged worker digest are recorded in
+`drawing-pdf-qualified-output-final.json`. No code changes follow qualification.

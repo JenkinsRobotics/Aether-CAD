@@ -27,9 +27,8 @@ export function drawingPresentation(built: BuiltDrawing): DrawingProjectionV1 {
   const style = (id: string, dashed = false): DrawingStyleProjection => ({ id, name: id === "hidden" ? "Hidden edges" : id === "hatch" ? "Section hatching" : "Visible edges", line_weight_mm: id === "hatch" ? 0.15 : dashed ? 0.18 : 0.3, line_pattern: dashed ? "dashed" : "solid", dash_pattern_mm: dashed ? [3, 2] : [], color_rgba: [0.12, 0.14, 0.15, 1], text_height_mm: 3.5, font_family: "sans-serif", arrow_size_mm: 2, decimal_places: 2 });
   return {
     schema_version: 1, workspace_id: built.document.documentId, drawing_id: built.document.documentId, name: built.document.name, revision: built.revision, active_sheet_id: built.document.activeSheetId,
-    capabilities: { can_edit_sheets: true, supported_view_type_ids: ["base", "projected", "section"], supported_annotation_type_ids: ["note", "linear_dimension"], can_project_hidden_lines: true, can_project_sections: true, can_project_bom: false, can_rebuild: true, can_save_workspace: true, export_format_ids: ["svg", "dxf"], unavailable_reasons: [
+    capabilities: { can_edit_sheets: true, supported_view_type_ids: ["base", "projected", "section"], supported_annotation_type_ids: ["note", "linear_dimension"], can_project_hidden_lines: true, can_project_sections: true, can_project_bom: false, can_rebuild: true, can_save_workspace: true, export_format_ids: ["svg", "dxf", "pdf"], unavailable_reasons: [
       { capability_id: "can_project_bom", reason: "Assembly drawings and BOM placement are not connected yet." },
-      { capability_id: "export_pdf", reason: "PDF export is not connected yet. SVG and DXF are available." },
     ] },
     styles: [style("visible"), style("hidden", true), style("hatch")],
     issues: built.approximatedCurveCount ? [{ id: "curve-approximation", severity: "info", code: "display_curve_tolerance", message: `${built.approximatedCurveCount} noncircular curves use 0.01 mm display chords. Overall dimensions use geometric extrema.`, entity_ids: [], field_path: null, recoverable: false }] : [],
@@ -41,7 +40,7 @@ export function drawingPresentation(built: BuiltDrawing): DrawingProjectionV1 {
         { field_id: "units", label: "Units", value: `mm · ${sheet.projection.replace("_", " ")}`, editable: false },
       ] },
       views: views.map(view => viewProjection(built, view)), annotations: annotations.map(annotation => ({
-        id: annotation.id, type_id: annotation.valueMm === undefined ? "note" : "linear_dimension", view_id: annotation.viewId ?? null, layer_id: "visible", style_id: "visible", text: annotation.text, text_origin_sheet_mm: annotation.positionMm, leader_points_sheet_mm: [], geometry_lines_sheet_mm: annotation.lines, references: [],
+        id: annotation.id, type_id: annotation.valueMm === undefined ? "note" : "linear_dimension", view_id: annotation.viewId ?? null, layer_id: "visible", style_id: "visible", text: annotation.text, text_origin_sheet_mm: annotation.positionMm, text_alignment: annotation.textAlign, leader_points_sheet_mm: [], geometry_lines_sheet_mm: annotation.lines, references: [],
         measurement: annotation.valueMm === undefined ? null : { kind: "length", value_mm: annotation.valueMm, value_rad: null, tolerance_upper_mm: null, tolerance_lower_mm: null, tolerance_upper_rad: null, tolerance_lower_rad: null, display_text: annotation.text, overridden_text: false }, state: "current", diagnostic_ids: [],
       })), bom_tables: [], layers: ["visible", "hidden", "hatch"].map(id => ({ id, name: id, visible: true, printable: true, locked: false, style_id: id })), revision: built.revision,
     })),

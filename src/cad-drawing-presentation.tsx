@@ -24,6 +24,7 @@ export type DrawingPresentationCommandID =
   | "rebuild-drawing"
   | "save-workspace"
   | "export-pdf"
+  | "export-pdf-all"
   | "export-dxf"
   | "export-svg";
 
@@ -351,6 +352,7 @@ export function buildCADDrawingPresentation(
       availability(projection, "rebuild-drawing", projection.capabilities.can_rebuild, "can_rebuild", "Core does not expose exact Drawing rebuild."),
       availability(projection, "save-workspace", projection.capabilities.can_save_workspace, "can_save_workspace", "Core does not expose workspace persistence."),
       availability(projection, "export-pdf", exports.has("pdf"), "export_pdf", "Core does not expose PDF export."),
+      availability(projection, "export-pdf-all", exports.has("pdf"), "export_pdf", "Core does not expose PDF export."),
       availability(projection, "export-dxf", exports.has("dxf"), "export_dxf", "Core does not expose DXF export."),
       availability(projection, "export-svg", exports.has("svg"), "export_svg", "Core does not expose SVG export."),
     ],

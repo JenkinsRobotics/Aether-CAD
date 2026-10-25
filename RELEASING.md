@@ -32,7 +32,13 @@ Package-manager versions and the shared UI dependency version are separate.
    hatch export, and a frozen format-1 reader refusing new format-2 content. Run
    `scripts/verify-drawings-browser.mjs` through Studio's disposable authenticated
    browser fixture with the candidate frontend and matching worker. It covers
-   source editing, associative rebuild, keyboard history, SVG/DXF, portable file reopen, independent Studio autosave/reload, read-only revisions and live MCP drawing edits. It imports `verify-drawing-agent-browser.mjs` for the actual shared-editor broker checks.
+   source editing, associative rebuild, keyboard history, SVG/DXF/PDF (active and all sheets), portable file reopen, independent Studio autosave/reload, read-only revisions and live MCP drawing edits. It imports `verify-drawing-agent-browser.mjs` for the actual shared-editor broker checks.
+   PDF changes additionally require `node scripts/verify-drawing-pdf.mjs` and
+   `python scripts/verify-drawing-pdf.py` (pypdf/pdfplumber) against the same output
+   directory. Render every PDF page with Poppler and visually inspect it. Verify
+   embedded font/license equality in the frontend, standalone runner and zipapp.
+   Browser qualification includes UI/agent/read-only PDFs and all-sheet ordering;
+   route/agent tests cover revision changes, cancellation and workspace switches.
    Assembly edit changes require `scripts/verify-assembly-edit-browser.mjs` through
    the same disposable fixture. It exercises actual MCP editor calls, native
    assembly solves, guarded joint/relation/mate edits, history and saved reopen.

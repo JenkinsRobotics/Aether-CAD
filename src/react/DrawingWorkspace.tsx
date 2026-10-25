@@ -54,6 +54,7 @@ const commandLabels: Record<DrawingPresentationCommandID, string> = {
   "rebuild-drawing": "Rebuild",
   "save-workspace": "Save",
   "export-pdf": "PDF",
+  "export-pdf-all": "PDF · All sheets",
   "export-dxf": "DXF",
   "export-svg": "SVG",
 };
@@ -133,7 +134,7 @@ function CommandButton({
 }
 
 function DrawingCommandBar({ snapshot, onCommand, commandsConnected = true }: Pick<DrawingWorkspaceProps, "snapshot" | "onCommand" | "commandsConnected">) {
-  const exportItems: MenuItem[] = (["export-pdf", "export-dxf", "export-svg"] as const).map((id) => {
+  const exportItems: MenuItem[] = (["export-pdf", "export-pdf-all", "export-dxf", "export-svg"] as const).map((id) => {
     const availability = snapshot.data?.commandAvailability.find((item) => item.id === id);
     return {
       id,

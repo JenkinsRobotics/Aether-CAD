@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyDrawingAgent } from './verify-drawing-agent-browser.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
+const { PDFDocument } = createRequire(new URL('../aether-engine/package.json', import.meta.url))('pdf-lib');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
@@ -20,6 +21,22 @@ const add = async () => { await page.getByRole('dialog').getByRole('button', { n
 const drawing = async () => { await button('Workspace: Design').click(); await page.getByRole('menuitemradio', {name: 'Drawing', exact: true}).click(); await button('Base view').waitFor({ timeout: 60000 }); };
 const save = async name => { await button('Save').click(); const pending = page.waitForEvent('download'); await button('Download drawing').click(); const download = await pending; const path = join(evidence, name); await download.saveAs(path); return JSON.parse(await readFile(path, 'utf8')); };
 const readSaved = id => page.evaluate(async id => { const r = await fetch('/api/library/read', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({app:'cad',id})}); if(!r.ok)throw Error(await r.text());return r.json(); },id);
+const checkPDF = async (bytes, sizes) => {
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getPageCount(), sizes.length);
+  sizes.forEach(([width, height], index) => {
+    assert.ok(Math.abs(pdf.getPage(index).getWidth() - width * 72 / 25.4) < 1e-8);
+    assert.ok(Math.abs(pdf.getPage(index).getHeight() - height * 72 / 25.4) < 1e-8);
+  });
+};
+const exportPDF = async (name, sizes, all = false) => {
+  await button('Export Drawing').click();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: all ? 'PDF · All sheets' : 'PDF', exact: true }).click();
+  const path = join(evidence, name + '.pdf');
+  await (await pending).saveAs(path);
+  await checkPDF(await readFile(path), sizes);
+};
 let file, saved, drawingFileId;
 try {
   await page.goto(origin + '/cad/'); await page.locator('input[name="username"]').fill('editor'); await page.locator('input[name="password"]').fill('account-test-password-2026'); await button('Sign in').click();
@@ -54,7 +71,7 @@ try {
   await step('dimension-and-note', async () => {
     await button('Annotation').click(); await page.locator('#drawing-annotation-kind').selectOption('height'); await page.locator('#drawing-dimension-view').selectOption({ label: 'Front' }); await page.locator('#drawing-x').fill('115'); await page.locator('#drawing-y').fill('110'); await add();
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^12.00$/ })).toHaveCount(1);
-    await button('Annotation').click(); await page.locator('#drawing-note').fill('Deburr <all> edges'); await page.locator('#drawing-x').fill('25'); await page.locator('#drawing-y').fill('170'); await add();
+    await button('Annotation').click(); await page.locator('#drawing-note').fill('Deburr <all> edges · Ø8 ±0.1 mm'); await page.locator('#drawing-x').fill('25'); await page.locator('#drawing-y').fill('170'); await add();
     saved = await save('before.acdrawing'); assert.equal(saved.sheets[0].annotations.length, 2);
     drawingFileId = new URL(page.url()).searchParams.get('document'); assert.notEqual(drawingFileId,file.id);
     const stored = await readSaved(drawingFileId); assert.deepEqual(JSON.parse(Buffer.from(stored.data_base64,'base64')),saved);
@@ -79,6 +96,7 @@ try {
     for (const format of ['SVG', 'DXF']) {
       await button('Export Drawing').click(); const pending = page.waitForEvent('download'); await page.getByRole('menuitem', { name: format, exact: true }).click(); const download = await pending; const path = join(evidence, 'sheet.' + format.toLowerCase()); await download.saveAs(path); const content = await readFile(path, 'utf8'); assert.ok(content.includes('24.00')); if (format === 'SVG') {assert.ok(content.includes('Deburr &lt;all&gt; edges'));assert.ok(content.includes('data-layer="hatch"'));}else assert.ok(content.includes('8\nHATCH\n'));
     }
+    await exportPDF('sheet', [[297, 210]]);
     saved = await save('final.acdrawing');
     await page.reload(); await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1, { timeout: 90000 });
     assert.equal(new URL(page.url()).searchParams.get('document'),drawingFileId);
@@ -91,6 +109,8 @@ try {
   await step('multiple-sheets', async () => {
     await button('Add sheet').click(); await page.locator('#drawing-width').fill('210'); await page.locator('#drawing-height').fill('297'); await add();
     await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox', '0 0 210 297');
+    await exportPDF('portrait', [[210, 297]]);
+    await exportPDF('all-sheets', [[297, 210], [210, 297]], true);
     await page.getByRole('treeitem', { name: /Sheet 1\b/ }).first().click();
     await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox', '0 0 297 210');
     await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(3);
@@ -108,7 +128,10 @@ try {
     await drawing();
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1);
   });
-  await step('live-drawing-agent', async () => { await verifyDrawingAgent(page,origin); });
+  await step('live-drawing-agent', async () => { await verifyDrawingAgent(page, origin, async bytes => {
+      await writeFile(join(evidence, 'agent.pdf'), bytes);
+      await checkPDF(bytes, [[297, 210], [210, 297]]);
+    }); });
   await step('saved-and-read-only-drawing', async () => {
     await button('Save').click();
     const id = new URL(page.url()).searchParams.get('document'), stored = await readSaved(id);
@@ -116,6 +139,8 @@ try {
     await page.goto(`${origin}/cad/index.html?document=${id}&revision=${stored.revision}`);
     await expect(page.locator('svg[data-sheet-id] text').filter({hasText:'Agent-verified note'})).toHaveCount(1,{timeout:90000});
     await expect(page.getByText('Read-only drawing',{exact:true})).toBeVisible();
+    await exportPDF('read-only', [[297, 210], [210, 297]], true);
+    assert.equal((await readSaved(id)).revision, stored.revision);
     await button('Annotation').click(); await expect(page.getByRole('alert')).toContainText('read-only');
     await page.getByRole('treeitem',{name:/Sheet 2\b/}).first().click();
     await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox','0 0 210 297');

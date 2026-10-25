@@ -1,5 +1,6 @@
 import type { AgentInteraction, AgentTool } from "@aether/ui/AgentServices";
-import { exportDrawingDXF, exportDrawingSVG, type DrawingCommand, type BuiltDrawing } from "@aether/core/drawing";
+import { drawingExportResult, type DrawingCommand, type BuiltDrawing } from "@aether/core/drawing";
+import { loadDrawingFont } from "../drawing/pdf-export";
 import type { DrawingEditor } from "../drawing/controller";
 import { knowledgeTool } from "../ai/catalog";
 import { discoverCAD } from "../ai/knowledge";
@@ -13,7 +14,7 @@ export const drawingAgentTools: AgentTool[] = [
   tool("aether_cad_drawing_refresh", "Read the saved source Part from its original Studio file/branch and rebuild all drawing views and dimensions. Keeps the previous drawing if the source is missing, inaccessible or fails to build.", revision, ["expected_revision"]),
   tool("aether_cad_drawing_undo", "Undo one drawing edit; source refresh is undoable.", revision, ["expected_revision"]),
   tool("aether_cad_drawing_redo", "Redo one drawing edit.", revision, ["expected_revision"]),
-  tool("aether_cad_drawing_export", "Return SVG or DXF text for one sheet in physical millimeters, with the inspected revision. Does not save or publish a file. Larger exports remain available from the UI.", { ...revision, format: { type: "string", enum: ["svg", "dxf"] }, sheet_id: { type: "string" } }, ["expected_revision", "format"]),
+  tool("aether_cad_drawing_export", "Return SVG/DXF text or PDF data_base64 and mime_type, in physical millimeters, with the inspected revision. Defaults to the active sheet. PDF can export all sheets in document order. Does not save or publish a file. Larger exports remain available from the UI.", { ...revision, format: { type: "string", enum: ["svg", "dxf", "pdf"] }, sheet_id: { type: "string" }, all_sheets: { type: "boolean", description: "PDF only; mutually exclusive with sheet_id." } }, ["expected_revision", "format"]),
 ];
 export function inspectDrawing(built: BuiltDrawing, args: Record<string, unknown> = {}) {
   const sheet = built.sheets.find(s => s.sheet.id === (args.sheet_id ?? built.document.activeSheetId));
@@ -26,7 +27,7 @@ export function inspectDrawing(built: BuiltDrawing, args: Record<string, unknown
     sheet: { ...sheet.sheet, views: sheet.views.map(v => ({ ...v.view, hatch_lines: v.geometry.hatch?.length ?? 0, model_bounds_mm: v.geometry.bounds, body_ids: v.geometry.bodyIds })),
       annotations: sheet.sheet.annotations.slice(Number(offset), Number(offset) + 50).map(a => ({ ...a, value_mm: sheet.annotations.find(p => p.id === a.id)?.valueMm })),
       annotation_count: sheet.sheet.annotations.length, next_offset: Number(offset) + 50 < sheet.sheet.annotations.length ? Number(offset) + 50 : null },
-    limits: ["Part sources only; base/projected/principal section views and overall width/height dimensions, notes, SVG/DXF.", "No stepped/isometric sections, cutting-line annotations, assembly sources/BOM, edge-attached/angular/radial dimensions or PDF yet."],
+    limits: ["Part sources only; base/projected/principal section views and overall width/height dimensions, notes, SVG/DXF/PDF.", "No stepped/isometric sections, cutting-line annotations, assembly sources/BOM or edge-attached/angular/radial dimensions yet."],
   };
 }
 export function drawingAgentInteraction(editor: DrawingEditor, contextKey: string, currentKey: () => string): AgentInteraction {
@@ -42,10 +43,11 @@ export function drawingAgentInteraction(editor: DrawingEditor, contextKey: strin
     const check = () => { checkContext(); if (editor.snapshot() !== before || typeof call.arguments.expected_revision !== "string" || call.arguments.expected_revision !== before.revision) throw Error("The drawing revision changed. Inspect it before editing or exporting."); };
     check();
     if (call.name === "aether_cad_drawing_export") {
-      if (call.arguments.format !== "svg" && call.arguments.format !== "dxf") throw Error("Choose SVG or DXF drawing export.");
-      const text = call.arguments.format === "svg" ? exportDrawingSVG(before, call.arguments.sheet_id as string | undefined) : exportDrawingDXF(before, call.arguments.sheet_id as string | undefined);
-      if (text.length > 2 * 1024 * 1024) throw Error("This export exceeds the 2 MiB agent response limit. Use the Drawing Export control.");
-      return { changed: false, revision: before.revision, format: call.arguments.format, text };
+      const exported = await drawingExportResult(before, { format: call.arguments.format, sheetId: call.arguments.sheet_id, allSheets: call.arguments.all_sheets }, loadDrawingFont);
+      check();
+      const result = { changed: false, revision: before.revision, ...exported };
+      if (new TextEncoder().encode(JSON.stringify(result)).byteLength > 2 * 1024 * 1024) throw Error("This export exceeds the 2 MiB agent response limit. Use the Drawing Export control.");
+      return result;
     }
     const guard = { signal, assertCurrent: check };
     if (call.name === "aether_cad_drawing_edit") {

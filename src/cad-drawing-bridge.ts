@@ -194,6 +194,7 @@ export interface DrawingAnnotationProjection {
   readonly style_id: DrawingStableID;
   readonly text: string;
   readonly text_origin_sheet_mm: SheetPoint;
+  readonly text_alignment?: "left" | "center";
   readonly leader_points_sheet_mm: readonly SheetPoint[];
   readonly geometry_lines_sheet_mm?: readonly (readonly [SheetPoint, SheetPoint])[];
   readonly references: readonly {
@@ -490,6 +491,7 @@ function validateAnnotation(value: unknown, path: string): void {
   string(item.style_id, `${path}.style_id`);
   text(item.text, `${path}.text`);
   tuple(item.text_origin_sheet_mm, 2, `${path}.text_origin_sheet_mm`);
+  if (item.text_alignment !== undefined) oneOf(item.text_alignment, ["left", "center"], `${path}.text_alignment`);
   pointArray(item.leader_points_sheet_mm, `${path}.leader_points_sheet_mm`);
   if (item.geometry_lines_sheet_mm !== undefined) array(item.geometry_lines_sheet_mm, `${path}.geometry_lines_sheet_mm`).forEach((line, i) => {
     const points = array(line, `${path}.geometry_lines_sheet_mm[${i}]`);

@@ -79,3 +79,18 @@ it("rebuilds and exports section hatching with constant paper spacing and retain
   expect(exportDrawingSVG(reopened)).toContain('data-layer="hatch"');
   expect(exportDrawingDXF(reopened)).toContain('8\nHATCH\n');
 });
+
+it("shares width/height label alignment across layout, SVG and DXF", async () => {
+  const doc = drawing();
+  doc.sheets[0].annotations.push({ id: "width", kind: "width", viewId: "front", positionMm: [80, 140], decimals: 2 });
+  const built = await buildDrawing(doc, project);
+  const [height, note, width] = built.sheets[0].annotations;
+  expect(height.textAlign).toBe("left");
+  expect(height.positionMm[0]).toBeGreaterThan(height.lines[0][0][0]);
+  expect(note.textAlign).toBe("left");
+  expect(width.textAlign).toBe("center");
+  const svg = exportDrawingSVG(built);
+  expect(svg).toContain('font-size="3.5">10.00</text>');
+  expect(svg).toContain('font-size="3.5" text-anchor="middle">40.00</text>');
+  expect(exportDrawingDXF(built)).toContain('1\n40.00\n72\n1\n11\n80\n21\n71.5\n31\n0');
+});

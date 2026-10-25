@@ -15,6 +15,7 @@ export interface BuiltDrawingAnnotation {
   id: string;
   text: string;
   positionMm: DrawingPoint;
+  textAlign: "left" | "center";
   valueMm?: number;
   viewId?: string;
   lines: [DrawingPoint, DrawingPoint][];
@@ -42,7 +43,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
       result.approximatedCurveCount += geometry.visible.concat(view.hiddenLines ? geometry.hidden : []).filter(c => c.kind === "polyline").length;
     }
     for (const annotation of sheet.annotations) {
-      if (annotation.kind === "note") { built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, lines: [] }); continue; }
+      if (annotation.kind === "note") { built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] }); continue; }
       const view = built.views.find(v => v.view.id === annotation.viewId)!;
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
@@ -61,7 +62,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
         const q: DrawingPoint = horizontal ? [tip[0] + direction * 2, tip[1] + 0.7] : [tip[0] + 0.7, tip[1] + direction * 2];
         lines.push([tip, p], [p, q], [q, tip]);
       }
-      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, positionMm: horizontal ? [(x0 + x1) / 2, y - 1.5] : [x + 1.5, (y0 + y1) / 2], lines });
+      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, textAlign: horizontal ? "center" : "left", positionMm: horizontal ? [(x0 + x1) / 2, y - 1.5] : [x + 1.5, (y0 + y1) / 2], lines });
     }
     result.sheets.push(built);
   }

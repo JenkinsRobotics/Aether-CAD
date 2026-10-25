@@ -162,3 +162,11 @@ describe("DrawingSheetCanvas", () => {
     expect(html).toContain("A3 Layout · 420 × 297 mm · third angle");
   });
 });
+
+it("uses the canonical annotation alignment, defaulting older projections to left", () => {
+  for (const [alignment, anchor] of [["left", "start"], ["center", "middle"], [undefined, "start"]] as const) {
+    const projected = { ...sheet, annotations: sheet.annotations.map(annotation => ({ ...annotation, text_alignment: alignment })) };
+    const html = renderToStaticMarkup(<DrawingSheetCanvas sheet={projected} styles={[]}/>);
+    expect(html).toContain(`text-anchor="${anchor}"`);
+  }
+});

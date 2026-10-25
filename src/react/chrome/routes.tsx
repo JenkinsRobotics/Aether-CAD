@@ -1,17 +1,24 @@
 /** The Drawing workspace route. */
 import { cadDrawingWorkspace } from "../../cad-drawing-workspace-store";
 import { DrawingWorkspace } from "../DrawingWorkspace";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@aether/ui";
 import { exportDrawingDXF, exportDrawingSVG } from "@aether/core/drawing";
 import { drawingEditor } from "../../drawing/controller";
 import { drawingFiles, downloadDrawingFile } from "../../drawing/files";
+import { drawingPDF } from "../../drawing/pdf-export";
 import { DrawingAuthorDialog, type DrawingDialogDraft } from "../../drawing/DrawingAuthorDialog";
 import type { DrawingPresentationCommandID } from "../../cad-drawing-presentation";
 
 export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
   const [draft, setDraft] = useState<DrawingDialogDraft | null>(null);
   const [error, setError] = useState("");
+  const exportContext = useRef(0);
+  // Invalidate before another async export can finish after a workspace switch.
+  useLayoutEffect(() => {
+    exportContext.current += 1;
+    return () => { exportContext.current += 1; };
+  }, [active]);
   const fileInput = useRef<HTMLInputElement>(null);
   const drawing = useSyncExternalStore(
     cadDrawingWorkspace.subscribe,
@@ -34,6 +41,12 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
     if (id === "save-workspace") void run(() => drawingFiles.save());
     if (id === "export-svg") downloadDrawingFile(`${built.document.name}.svg`, exportDrawingSVG(built, sheet?.id), "image/svg+xml");
     if (id === "export-dxf") downloadDrawingFile(`${built.document.name}.dxf`, exportDrawingDXF(built, sheet?.id), "application/dxf");
+    if (id === "export-pdf" || id === "export-pdf-all") void run(async () => {
+      const context = exportContext.current;
+      const bytes = await drawingPDF(built, id === "export-pdf-all" ? undefined : sheet?.id, id === "export-pdf-all");
+      if (!active || exportContext.current !== context || drawingEditor.snapshot() !== built) throw Error("The Drawing changed during PDF export. Export it again.");
+      downloadDrawingFile(`${built.document.name}.pdf`, bytes, "application/pdf");
+    });
   };
   useEffect(() => {
     if (!active) return;

@@ -19,6 +19,10 @@ if hashlib.sha256(asset_bytes).hexdigest() != assets["sha256"]:
     raise ValueError("Shared asset archive fingerprint differs")
 with tarfile.open(fileobj=io.BytesIO(asset_bytes), mode="r:gz") as package:
     units = package.extractfile("package/cad/units.json").read()
+    drawing_font = package.extractfile("package/fonts/noto-sans/NotoSans-Regular.ttf").read()
+    drawing_font_license = package.extractfile("package/fonts/noto-sans/LICENSE").read()
+(runtime / "NotoSans-Regular.ttf").write_bytes(drawing_font)
+(runtime / "NotoSans-LICENSE.txt").write_bytes(drawing_font_license)
 (service / "data").mkdir(exist_ok=True)
 (service / "data/units.json").write_bytes(units)
 # One document-version authority, also available to isolated Python packages.
@@ -46,8 +50,15 @@ files = {
     "aether_cad_service/runtime/runner.mjs": runtime / "runner.mjs",
     "aether_cad_service/runtime/replicad_single.wasm": runtime / "replicad_single.wasm",
     "aether_cad_service/runtime/opencascade.wasm": runtime / "opencascade.wasm",
+    "aether_cad_service/runtime/NotoSans-Regular.ttf": runtime / "NotoSans-Regular.ttf",
+    "aether_cad_service/runtime/NotoSans-LICENSE.txt": runtime / "NotoSans-LICENSE.txt",
     "ATTRIBUTION.md": root / "aether-engine/ATTRIBUTION.md",
 }
+# The browser and worker distribute the same library/font notices.
+for license_path in sorted((root / "public/licenses/drawing-pdf").glob("*.txt")):
+    files["licenses/" + license_path.name] = license_path
+if (root / "public/licenses/drawing-pdf/NotoSans-LICENSE.txt").read_bytes() != drawing_font_license:
+    raise ValueError("Published drawing font license differs from the pinned asset package")
 # Only the canonical, dependency-free document codec is included from the
 # versioned Animation distribution. No sibling source or installed site packages.
 lock = json.loads((root / "vendor/python/workspace-codec.json").read_text())

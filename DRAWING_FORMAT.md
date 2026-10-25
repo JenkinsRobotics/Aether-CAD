@@ -13,6 +13,8 @@ Studio database. Drawings use the existing Studio document storage, autosave, re
 | `aether-engine/src/kernel/drawing-section.ts` | Temporary exact cut solids and hole-clipped hatch geometry; owns their OCCT lifetime. |
 | `aether-engine/src/kernel/drawing-projection.ts` | Hidden-line projection and analytic drawing curves. |
 | `aether-engine/src/drawing/build.ts` and `export.ts` | Sheet placement/dimensions and SVG/DXF serialization. |
+| `aether-engine/src/drawing/pdf.ts` and `export-result.ts` | Vector PDF serialization and shared agent/headless binary envelope. |
+| `src/drawing/pdf-export.ts` and `src/automation/drawing-font.ts` | Browser and packaged-runner adapters for the same pinned font asset. |
 | `src/drawing/` | Editor transactions/history, shared-widget authoring and canvas presentation adapters. |
 | `src/automation/drawing-agent.ts` and `drawing-commands.ts` | Live-editor and headless adapters to those same validated operations. |
 
@@ -57,7 +59,7 @@ or topology indices are saved in the authoring file.
 
 SVG and DXF export the active sheet in physical sheet millimeters. Hidden edges
 are dashed; the exports contain the current notes and dimension graphics.
-Assembly source drawings/BOMs, PDF, arbitrary edge-attached dimensions,
+Assembly source drawings/BOMs, arbitrary edge-attached dimensions,
 title-block editing and placement by dragging are not implemented in this slice.
 
 ## Local headless commands
@@ -70,8 +72,8 @@ request from stdin. `{ "phase": "drawing_docs" }` returns discovery information.
 - `operation: "mutate"`, `content`: a serialized `.acdrawing`, and `command`:
   a `DrawingCommand` from the canonical contract.
 - `operation: "inspect"`, `content`: a serialized `.acdrawing`.
-- `operation: "export"`, `content`, `format: "svg" | "dxf"`, and optional
-  `sheet_id`.
+- `operation: "export"`, `content`, `format: "svg" | "dxf" | "pdf"`, and optional
+  `sheet_id`. PDF also accepts `all_sheets: true`, mutually exclusive with `sheet_id`.
 
 Create/mutate/inspect return the complete serialized drawing, source/revision
 hashes, sheet/view IDs, model/sheet bounds and regenerated dimensions. Failed
@@ -96,8 +98,9 @@ available through Studio's existing explicit Share this editor flow. Mutation
 and export require the inspected `expected_revision`; mutation also rechecks
 permissions, cancellation and document context after exact projection. Annotation
 inspection is paged, and exports above 2 MiB use the UI download control. Tool
-exports return text; they do not publish a file. A hosted read-only revision
-refuses edits while still allowing sheet browsing and SVG/DXF export. CAD metadata operations can rename/copy the drawing and edit its properties without changing the embedded source. Real-provider inference and closed-file MCP drawing operations are
+exports return SVG/DXF text or PDF `data_base64` with `mime_type: "application/pdf"`;
+they do not publish a file. A hosted read-only revision
+refuses edits while still allowing sheet browsing and SVG/DXF/PDF export. CAD metadata operations can rename/copy the drawing and edit its properties without changing the embedded source. Real-provider inference and closed-file MCP drawing operations are
 not claimed by this implementation.
 
 
@@ -123,3 +126,40 @@ is authored. Adding a section upgrades to format 2; it never silently downgrades
 when a section is removed. Older readers reject version 2, preserving section
 intent across release rollback. Undo may restore the earlier complete format-1
 snapshot. Metadata rename/copy retains the complete version and section data.
+
+
+## Vector PDF export
+
+The UI offers **PDF** for the displayed sheet and **PDF · All sheets** for every
+sheet in document order. UI, open-editor agents and the packaged local runner
+use the same serializer and built snapshot. Each page uses its exact physical
+paper dimensions (72/25.4 points per millimeter), with PDF print scaling disabled.
+Printer settings can still override this; select actual size for scaled output.
+Visible/hidden edges, section hatches, dimension graphics and notes remain vector
+content. Circular SVG paths become cubic PDF curves; DXF remains the analytic
+exchange format. Lines use physical weights: visible 0.3 mm, hidden 0.18 mm,
+hatch 0.15 mm, dimensions 0.2 mm and border 0.35 mm. Hidden dashes are 3/2 mm.
+
+The existing hash-pinned Noto Sans font is subset-embedded, keeping supported
+Unicode text searchable. Missing glyphs produce an explicit refusal; the exporter
+does not silently substitute boxes. Notes preserve line breaks. The footer fits
+inside the border and retains the full document title in PDF metadata. Authored
+view/note placement is preserved; export does not automatically rearrange a sheet.
+The font and licenses ship with the frontend and matching worker; no system font,
+external font service, host update or document-format migration is required.
+
+Async live exports recheck document revision, editor context and cancellation
+before returning; UI downloads also reject after leaving/reopening the workspace.
+Read-only drawings can export without changing history, source or stored revision.
+The 2 MiB agent reply bound counts the encoded JSON including base64; larger PDFs
+use the UI. `scripts/verify-drawing-pdf.mjs` exercises the packaged runner and
+`scripts/verify-drawing-pdf.py` independently validates pages, font embedding,
+Unicode, vector strokes and bore-clipped section hatches using pypdf/pdfplumber.
+Render both pages with Poppler and inspect them as part of release qualification.
+
+Dimension label alignment comes from the built layout: width values are centered
+above their line, while height values start to its right with 1.5 mm clearance.
+The canvas and SVG/DXF/PDF consume that same alignment. The projection's optional
+`text_alignment` defaults to left for older callers; saved drawing intent is
+unchanged. DXF uses standard TEXT justification and second alignment-point codes
+([Autodesk reference](https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-DXF/files/GUID-62E5383D-8A14-47B4-BFC4-35824CAE8363.htm)).

@@ -1,7 +1,7 @@
 /** Actual open Drawing + explicit sharing + HTTP MCP broker. No model fixture. */
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-export async function verifyDrawingAgent(page,origin) {
+export async function verifyDrawingAgent(page,origin, checkPDF) {
   const button=name=>page.getByRole('button',{name,exact:true});
   if(!await page.getByRole('textbox',{name:/^Ask /}).isVisible()) await button('AI advisor').click();
   await button('Agent connections').click(); await page.getByRole('radio',{name:'MCP agents',exact:true}).click();
@@ -52,6 +52,12 @@ export async function verifyDrawingAgent(page,origin) {
   state=await invoke('aether_cad_drawing_redo',{expected_revision:state.revision});
   const exported=await invoke('aether_cad_drawing_export',{expected_revision:state.revision,format:'svg'});
   assert.ok(exported.text.includes('Agent-verified note'));assert.ok(exported.text.includes('data-layer="hatch"'));
+  const pdf = await invoke('aether_cad_drawing_export', { expected_revision: state.revision, format: 'pdf', all_sheets: true });
+  assert.equal(pdf.mime_type, 'application/pdf');
+  assert.equal(pdf.changed, false);
+  await checkPDF(Buffer.from(pdf.data_base64, 'base64'));
+  await invoke('aether_cad_drawing_export', { expected_revision: state.revision, format: 'pdf', all_sheets: true, sheet_id: state.active_sheet_id }, false);
+  assert.equal((await invoke('aether_cad_drawing_inspect')).revision, state.revision);
   await button('Agent connections').click(); await page.getByRole('radio',{name:'MCP agents',exact:true}).click();
   await button('Stop sharing editor').click();
   assert.ok(!(await tool('editor_list',{})).editors.some(e=>e.editor===editor));
