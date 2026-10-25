@@ -40,6 +40,7 @@ export interface AssemblyMateEndpointOption {
 export interface CADAssemblyPresentationProjection {
   readonly revision: string;
   readonly treeNodes: readonly TreeNode[];
+  readonly instanceRows?: readonly TreeNode[];
   readonly connectorItems: readonly ListBoxItem[];
   readonly mateItems: readonly ListBoxItem[];
   readonly relationItems: readonly ListBoxItem[];
@@ -48,6 +49,7 @@ export interface CADAssemblyPresentationProjection {
   /** Every unsuppressed occurrence, for dialogs that pick occurrences (contact sets). */
   readonly instanceOptions?: readonly { readonly id: string; readonly name: string }[];
   readonly selectedMateDOF: DOFProjection | null;
+  readonly selectedMateDOFs?: readonly DOFProjection[];
   /** The selected occurrence and its part, for Part Properties and Bodies to Component. */
   readonly selectedInstanceID?: StableID | null;
   readonly selectedPartDefinition?: PartDefinitionProjection | null;
@@ -412,13 +414,17 @@ export function buildCADAssemblyPresentation(
   return {
     revision: projection.revision,
     treeNodes: buildTree(projection),
+    instanceRows: projection.instances.map(instance => ({ id: instance.id, label: instance.name,
+      icon: <AetherIcon name="cube" />, badge: instanceBadge(instance),
+      dimmed: instance.suppressed || !instance.visible || instance.source_status !== "resolved" })),
     connectorItems: connectorItems(projection),
     mateItems: mateItems(projection),
     relationItems: relationItems(projection),
     problemItems: projection.issues.map(diagnosticItem),
     mateEndpointOptions: endpoints,
     instanceOptions: projection.instances.filter((instance) => !instance.suppressed).map((instance) => ({ id: instance.id, name: instance.name })),
-    selectedMateDOF: selectedMate?.dofs.length === 1 ? selectedMate.dofs[0] : null,
+    selectedMateDOF: selectedMate && !selectedMate.suppressed ? selectedMate.dofs.find(dof => dof.state === "free") ?? null : null,
+    selectedMateDOFs: selectedMate && !selectedMate.suppressed ? selectedMate.dofs.filter(dof => dof.state === "free") : [],
     selectedInstanceID: selectedInstance?.id ?? null,
     selectedPartDefinition: selectedInstance ? projection.part_definitions.find(({ id }) => id === selectedInstance.definition_id) ?? null : null,
     componentContents: componentContents(projection),

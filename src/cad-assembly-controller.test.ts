@@ -155,14 +155,19 @@ const assemblyWithRevoluteMate: AssemblyProjectionV1 = {
 };
 
 function client(overrides: Partial<AssemblyControllerClient> = {}): AssemblyControllerClient {
+  let opened = 0;
   return {
     newWorkspace: vi.fn(async () => descriptor),
-    openWorkspace: vi.fn(async () => descriptor),
-    saveWorkspace: vi.fn(async () => ({
-      handle: descriptor.handle,
-      revision: "1",
+    openWorkspace: vi.fn(async (encoded: string) => {
+      let revision = "1";
+      try { revision = JSON.parse(atob(encoded)).revision; } catch { /* Opaque imported file fixture. */ }
+      return { ...descriptor, revision, handle: `fixture-candidate-${++opened}` };
+    }),
+    saveWorkspace: vi.fn(async (handle: string, revision: string) => ({
+      handle,
+      revision,
       graph_sha256: "abc",
-      data_base64: btoa("canonical archive"),
+      data_base64: btoa(JSON.stringify({ revision })),
     })),
     describeAssembly: vi.fn(async () => assembly),
     solveAssembly: vi.fn(async () => solution),
@@ -214,7 +219,7 @@ describe("CADAssemblyController", () => {
     await controller.openFile(file);
     expect(bridge.openWorkspace).toHaveBeenCalledWith("AQID", expect.any(AbortSignal));
     await controller.save();
-    expect(saveFile).toHaveBeenCalledWith("Drive Module.acasm", new TextEncoder().encode("canonical archive"));
+    expect(saveFile).toHaveBeenCalledWith("Drive Module.acasm", new TextEncoder().encode(JSON.stringify({ revision: "1" })));
   });
 
   it("refuses mixed Core revisions without publishing partial data", async () => {
@@ -271,12 +276,12 @@ describe("CADAssemblyController", () => {
     expect(controller.canEditSelectedInstance).toBe(true);
     await controller.toggleSelectedInstanceGrounded();
     expect(mutate).toHaveBeenNthCalledWith(1, "set_instance_grounded", expect.objectContaining({
-      handle: descriptor.handle,
+      handle: expect.stringMatching(/^fixture-candidate-/),
       expected_revision: "1",
       assembly_id: "assembly-1",
       instance_id: "instance-1",
       grounded: false,
-    }));
+    }), expect.any(AbortSignal));
     expect(controller.selectedInstance?.grounded).toBe(false);
 
     await controller.toggleSelectedInstanceSuppressed();
@@ -284,14 +289,14 @@ describe("CADAssemblyController", () => {
       expected_revision: "2",
       instance_id: "instance-1",
       suppressed: true,
-    }));
+    }), expect.any(AbortSignal));
     expect(controller.selectedInstance?.suppressed).toBe(true);
 
     await controller.removeSelectedInstance();
     expect(mutate).toHaveBeenNthCalledWith(3, "remove_instance", expect.objectContaining({
       expected_revision: "3",
       instance_id: "instance-1",
-    }));
+    }), expect.any(AbortSignal));
     expect(controller.selectedInstance).toBeNull();
     expect(store.snapshot().selectedEntityIDs.size).toBe(0);
     expect(statuses).toHaveBeenLastCalledWith(
@@ -343,9 +348,10 @@ describe("CADAssemblyController", () => {
     expect(store.snapshot().data?.revision).toBe("2");
     expect(store.snapshot().data?.summary.bomMode).toBe("flattened");
     expect(projectBOM).toHaveBeenLastCalledWith(
-      descriptor.handle,
+      "fixture-candidate-1",
       descriptor.root_assembly_id,
       "flattened",
+      expect.any(AbortSignal),
     );
     expect(statuses).toHaveBeenLastCalledWith("Bracket:1 is now free.", "success");
   });
@@ -426,11 +432,11 @@ describe("CADAssemblyController", () => {
     });
 
     expect(mutate).toHaveBeenNthCalledWith(1, "add_part_definition", expect.objectContaining({
-      handle: descriptor.handle,
+      handle: expect.stringMatching(/^fixture-candidate-/),
       expected_revision: "1",
       assembly_id: "assembly-1",
       part_definition: expect.objectContaining({ name: "Bearing", part_number: "BRG-6202", mass_kg: 0.08 }),
-    }));
+    }), expect.any(AbortSignal));
     expect(mutate).toHaveBeenNthCalledWith(2, "add_instance", expect.objectContaining({
       expected_revision: "2",
       instance: expect.objectContaining({
@@ -438,7 +444,7 @@ describe("CADAssemblyController", () => {
         name: "Bearing:1",
         rest_transform: { position_m: [0.1, 0.2, 0.3], rotation_quaternion_xyzw: [0, 0, 0, 1] },
       }),
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().data?.summary).toMatchObject({ instanceCount: 2 });
     expect(store.snapshot().data?.bomRows.at(-1)).toMatchObject({ part_number: "BRG-6202", quantity: 1 });
     expect(statuses).toHaveBeenLastCalledWith(
@@ -447,7 +453,7 @@ describe("CADAssemblyController", () => {
     );
   });
 
-  it("removes the unused definition when instance insertion fails", async () => {
+  it("discards the whole insertion when the occurrence fails", async () => {
     const store = new CADAssemblyWorkspaceStore();
     const addedPart = { ...assembly.part_definitions[0], id: "part-2", name: "Bearing" };
     const mutate = vi.fn()
@@ -480,17 +486,14 @@ describe("CADAssemblyController", () => {
       grounded: true,
     })).rejects.toThrow("instance name conflicts");
 
-    expect(mutate).toHaveBeenNthCalledWith(3, "remove_part_definition", expect.objectContaining({
-      expected_revision: "2",
-      assembly_id: "assembly-1",
-      part_definition_id: "part-2",
-    }));
-    expect(store.snapshot().data?.revision).toBe("3");
+    expect(mutate).toHaveBeenCalledTimes(2);
+    expect(store.snapshot().data?.revision).toBe("1");
     expect(store.snapshot().data?.summary.instanceCount).toBe(1);
+    expect(controller.geometryProjection?.part_definitions).toEqual(assembly.part_definitions);
+    expect(controller.canUndoRecipe).toBe(false);
     expect(statuses).toHaveBeenLastCalledWith(
-      "Component insertion failed: instance name conflicts The unused Part definition was removed.",
-      "error",
-    );
+      "Assembly action failed: instance name conflicts No edit was applied.", "error");
+
   });
 
   it("adds a manual Part-local connector and selects the stable ID returned by Core", async () => {
@@ -545,7 +548,7 @@ describe("CADAssemblyController", () => {
         },
         provenance: { kind: "manual", stable_feature_id: null, label: "Datum A" },
       },
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set(["connector-2"]));
     expect(store.snapshot().data?.inspectorSections[0]).toMatchObject({ id: "connector", label: "Mate connector" });
     expect(statuses).toHaveBeenLastCalledWith("Added Shaft axis to Bracket:1.", "success");
@@ -636,7 +639,7 @@ describe("CADAssemblyController", () => {
       expected_revision: "1",
       assembly_id: "assembly-1",
       mate: expect.objectContaining({ name: "Base fixed to arm", type_id: "fastened" }),
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set(["mate-2"]));
     expect(store.snapshot().data?.inspectorSections[0]).toMatchObject({ id: "mate", badge: "satisfied" });
     expect(statuses).toHaveBeenLastCalledWith(
@@ -685,7 +688,7 @@ describe("CADAssemblyController", () => {
       expected_revision: "1",
       assembly_id: "assembly-1",
       mate: expect.objectContaining({ id: "mate-1", suppressed: true }),
-    }));
+    }), expect.any(AbortSignal));
     expect(controller.selectedMate?.suppressed).toBe(true);
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set(["mate-1"]));
 
@@ -693,14 +696,14 @@ describe("CADAssemblyController", () => {
     expect(mutate).toHaveBeenNthCalledWith(2, "update_mate", expect.objectContaining({
       expected_revision: "2",
       mate: expect.objectContaining({ id: "mate-1", suppressed: false }),
-    }));
+    }), expect.any(AbortSignal));
 
     await controller.removeSelectedMate();
     expect(mutate).toHaveBeenNthCalledWith(3, "remove_mate", expect.objectContaining({
       expected_revision: "3",
       assembly_id: "assembly-1",
       mate_id: "mate-1",
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set());
     expect(statuses).toHaveBeenLastCalledWith(
       "Removed Base fixed to arm from the canonical Assembly.",
@@ -790,7 +793,7 @@ describe("CADAssemblyController", () => {
       assembly_id: "assembly-1",
       dof_id: "dof-pivot",
       value_rad: Math.PI / 4,
-    }));
+    }), expect.any(AbortSignal));
     expect(controller.selectedMateDOF?.value_rad).toBe(Math.PI / 4);
 
     await controller.updateSelectedMateDOFLimits({
@@ -813,7 +816,7 @@ describe("CADAssemblyController", () => {
           limit_max_rad: Math.PI / 2,
         })],
       }),
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set(["mate-pivot"]));
     expect(statuses).toHaveBeenLastCalledWith("rotation limits are now enabled.", "success");
 
@@ -833,6 +836,31 @@ describe("CADAssemblyController", () => {
     await dependentController.newWorkspace("Drive Module");
     dependentStore.dispatch({ type: "select-entities", ids: ["mate-pivot"], mode: "single" });
     expect(dependentController.canEditSelectedMateDOF).toBe(false);
+  });
+
+  it("edits an explicitly chosen coordinate on a multi-DOF mate and preserves its siblings", async () => {
+    const store=new CADAssemblyWorkspaceStore();
+    const dofs=['x','y','z'].map((axis,i)=>({...revoluteMate.dofs[0],id:`ball-${axis}`,name:`rotation_${axis}`,value_rad:i/10}));
+    const mate={...revoluteMate,type_id:'ball',dofs};
+    let current:AssemblyProjectionV1={...assemblyWithRevoluteMate,capabilities:{...assembly.capabilities,supported_mate_type_ids:['ball']},mates:[mate]};
+    const mutate=vi.fn(async(method:string,params:Readonly<Record<string,unknown>>)=>{
+      const revision=String(Number(current.revision)+1);
+      const authored=params.mate as MateProjection | undefined;
+      const next=method==='update_mate'?{...current.mates[0],...authored,dofs:current.mates[0].dofs.map(dof=>({...dof,...authored!.dofs.find(next=>next.name===dof.name)}))}:{...current.mates[0],dofs:current.mates[0].dofs.map(dof=>dof.id===params.dof_id?{...dof,value_rad:params.value_rad as number}:dof)};
+      current={...current,revision,mates:[next]};
+      return {handle:descriptor.handle,revision,assembly:current,solution:{...solution,revision},bom:{...bom,revision}};
+    });
+    const controller=new CADAssemblyController({client:client({describeAssembly:vi.fn(async()=>current),mutate}),store});
+    await controller.newWorkspace('Ball'); store.dispatch({type:'select-entities',ids:[mate.id],mode:'single'});
+    expect(controller.canEditSelectedMateDOF).toBe(true);
+    expect(store.snapshot().data?.selectedMateDOFs?.map(d=>d.id)).toEqual(['ball-x','ball-y','ball-z']);
+    const draft={dofID:'ball-y',name:'rotation_y',kind:'rotation' as const,value:110,limitsEnabled:false,minimum:null,maximum:null};
+    await controller.setSelectedMateDOFValue(draft);
+    await controller.updateSelectedMateDOFLimits({...draft,limitsEnabled:true,minimum:-120,maximum:120});
+    expect(controller.selectedMate?.dofs[1]).toMatchObject({value_rad:110*Math.PI/180,limit_min_rad:-120*Math.PI/180,limit_max_rad:120*Math.PI/180});
+    expect(controller.selectedMate?.dofs[0]).toEqual(dofs[0]);expect(controller.selectedMate?.dofs[2]).toEqual(dofs[2]);
+    await expect(controller.setSelectedMateDOFValue({...draft,dofID:'another-mate'})).rejects.toThrow(/free coordinate/);
+    controller.dispose();
   });
 
   it("adds a typed relation and selects only Core's returned stable ID", async () => {
@@ -897,7 +925,7 @@ describe("CADAssemblyController", () => {
         ratio: -2,
         offset_rad: Math.PI / 12,
       }),
-    }));
+    }), expect.any(AbortSignal));
     expect(store.snapshot().selectedEntityIDs).toEqual(new Set(["relation-1"]));
     expect(store.snapshot().data?.inspectorSections[0]).toMatchObject({ id: "relation", badge: "gear" });
     expect(statuses).toHaveBeenLastCalledWith("Added gear relation to the canonical Assembly.", "success");
@@ -992,7 +1020,7 @@ describe('atomic assembly recipe transactions', () => {
   });
 
   it("edits part properties, copies occurrences, and moves bodies into components", async () => {
-    const doc = createRectanglePartDocument("Bracket", { widthMillimeters: 20, heightMillimeters: 10, depthMillimeters: 5 });
+    const doc = { ...createRectanglePartDocument("Bracket", { widthMillimeters: 20, heightMillimeters: 10, depthMillimeters: 5 }), documentId: "part-1" };
     (doc.features as unknown[]).push(
       { ...doc.features[0], id: "s2", name: "Sketch 2" },
       { id: "e2", type: "extrude", name: "Boss", profileFeatureId: "s2", operation: "new", distanceMillimeters: 12, suppressed: false },
@@ -1014,17 +1042,20 @@ describe('atomic assembly recipe transactions', () => {
     store.dispatch({ type: "select-entities", ids: ["instance-1"], mode: "single" });
 
     await controller.updatePartProperties({ partNumber: " BR-2 ", description: "Left bracket", properties: "finish = anodised" });
-    expect(mutate).toHaveBeenLastCalledWith("update_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ id: "part-1", part_number: "BR-2", description: "Left bracket", custom_properties: [{ key: "finish", value: "anodised" }], feature_document: doc }) }));
+    expect(mutate).toHaveBeenLastCalledWith("update_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ id: "part-1", part_number: "BR-2", description: "Left bracket", custom_properties: [{ key: "finish", value: "anodised" }], feature_document: doc }) }), expect.any(AbortSignal));
 
     await controller.addLinkedCopyOfSelectedInstance();
-    expect(mutate).toHaveBeenLastCalledWith("add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-1", name: "Bracket:2" }) }));
+    expect(mutate).toHaveBeenLastCalledWith("add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-1", name: "Bracket:2" }) }), expect.any(AbortSignal));
 
     await controller.copySelectedInstanceIndependent();
-    expect(mutate).toHaveBeenNthCalledWith(3, "add_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ name: "Bracket copy", part_number: "BR-2", feature_document: doc }) }));
-    expect(mutate).toHaveBeenNthCalledWith(4, "add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-2", name: "Bracket:1 copy" }) }));
+    expect(mutate).toHaveBeenNthCalledWith(3, "add_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ name: "Bracket copy", part_number: "BR-2" }) }), expect.any(AbortSignal));
+    expect((mutate.mock.calls[2][1].part_definition as any).feature_document).toBeUndefined();
+    expect(mutate).toHaveBeenNthCalledWith(4, "update_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ id: "part-2", feature_document: { ...doc, documentId: "part-2", name: "Bracket copy" } }) }), expect.any(AbortSignal));
+    expect(mutate).toHaveBeenNthCalledWith(5, "add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-2", name: "Bracket:1 copy" }) }), expect.any(AbortSignal));
 
     await controller.moveBodiesToComponent({ sourceInstanceID: "instance-1", bodyIDs: [second], sketchIDs: [], target: "new", name: "" });
     const bossDefinition = current.part_definitions.find((p) => p.name === "Body 2")!;
+    expect((bossDefinition.feature_document as PartDocument).documentId).toBe(bossDefinition.id);
     expect((bossDefinition.feature_document as PartDocument).features.map((f) => f.id)).toEqual(["s2", "e2"]);
     expect((current.part_definitions[0].feature_document as PartDocument).features.map((f) => f.id)).toEqual(doc.features.slice(0, 2).map((f) => f.id));
     expect(current.instances.at(-1)).toMatchObject({ name: "Body 2:1", definition_id: bossDefinition.id });
@@ -1053,6 +1084,7 @@ describe('atomic assembly recipe transactions', () => {
     await controller.newWorkspace("Drive Module");
     await controller.insertStandardPart({ family: "hex_bolt", size: "M6", length: 20 }, [10, 0, 0]);
     const part = current.part_definitions.at(-1)!;
+    expect((part.feature_document as PartDocument).documentId).toBe(part.id);
     expect(part).toMatchObject({ name: "ISO 4017 M6 × 20", part_number: "ISO 4017 M6 × 20" });
     expect(part.custom_properties).toEqual([{ key: "standard_part_family", value: "hex_bolt" }, { key: "standard_part_size", value: "M6" }, { key: "standard_part_length", value: "20" }]);
     expect(current.instances.at(-1)).toMatchObject({ name: "ISO 4017 M6 × 20:1", rest_transform: { position_m: [0.01, 0, 0] } });
@@ -1060,6 +1092,7 @@ describe('atomic assembly recipe transactions', () => {
     await controller.resizeSelectedStandardPart({ family: "hex_bolt", size: "M8", length: 30 });
     expect(current.part_definitions.at(-1)).toMatchObject({ id: part.id, name: "ISO 4017 M8 × 30" });
     expect((current.part_definitions.at(-1)!.feature_document as { name: string }).name).toBe("ISO 4017 M8 × 30");
+    expect((current.part_definitions.at(-1)!.feature_document as PartDocument).documentId).toBe(part.id);
     await expect(controller.resizeSelectedStandardPart({ family: "hex_nut", size: "M8" })).rejects.toThrow(/keeps the family/);
   });
 });
@@ -1067,37 +1100,104 @@ describe('atomic assembly recipe transactions', () => {
 
 describe('isolated explicit Assembly edits', () => {
   function setup(validateContacts?: (projection: AssemblyProjectionV1) => Promise<void>) {
-    type State={revision:string;name:string};
+    type State={revision:string;name:string;parts?:AssemblyProjectionV1['part_definitions'];extra?:AssemblyProjectionV1['instances']};
     const states=new Map<string,State>([[descriptor.handle,{revision:'1',name:'Bracket:1'}]]);
     let serial=0,writable=true;
     const state=(handle:string)=>{const s=states.get(handle);if(!s)throw Error('Released handle');return s;};
-    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,contacts_enabled:!!validateContacts,instances:validateContacts ? [{...assembly.instances[0],name:state(handle).name},{...assembly.instances[0],id:'instance-2'}] : [{...assembly.instances[0],name:state(handle).name}]});
+    const projection=(handle:string)=>({...assembly,revision:state(handle).revision,part_definitions:state(handle).parts??assembly.part_definitions,contacts_enabled:!!validateContacts,instances:[{...assembly.instances[0],name:state(handle).name},...(validateContacts?[{...assembly.instances[0],id:'instance-2'}]:[]),...(state(handle).extra??[])]});
     const bridge=client({
       openWorkspace:vi.fn(async(encoded:string)=>{const s=JSON.parse(encoded) as State;const handle='candidate-'+(++serial);states.set(handle,s);return {...descriptor,revision:s.revision,handle};}),
       saveWorkspace:vi.fn(async(handle:string,revision:string)=>{const s=state(handle);if(revision!==s.revision)throw Error('Revision changed');return {handle,revision,graph_sha256:'hash',data_base64:JSON.stringify(s)};}),
       describeAssembly:vi.fn(async(handle:string)=>projection(handle)),
       solveAssembly:vi.fn(async(handle:string)=>({...solution,revision:state(handle).revision})),
-      projectBOM:vi.fn(async(handle:string)=>({...bom,revision:state(handle).revision})),
-      mutate:vi.fn(async(_method,params)=>{
+      projectBOM:vi.fn(async(handle:string,_id:string,mode:"hierarchical"|"flattened")=>({...bom,mode,revision:state(handle).revision})),
+      mutate:vi.fn(async(method,params)=>{
         const s=state(params.handle);if(s.revision!==params.expected_revision)throw Error('Revision changed');
-        s.name=(params.instance as any)?.name??s.name;s.revision=String(Number(s.revision)+1);
+        if(method==='update_instance')s.name=(params.instance as any)?.name??s.name;
+        if(method==='add_part_definition')s.parts=[...(s.parts??assembly.part_definitions),{...(params.part_definition as any),id:'part-copy'}];
+        if(method==='add_instance')s.extra=[...(s.extra??[]),{...assembly.instances[0],...(params.instance as any),id:'instance-copy'}];
+        s.revision=String(Number(s.revision)+1);
         return {handle:params.handle,revision:s.revision,assembly:projection(params.handle),solution:{...solution,revision:s.revision},bom:{...bom,revision:s.revision}};
       }),
       release:vi.fn(async(handle:string)=>{states.delete(handle);}),
     });
-    const controller=new CADAssemblyController({client:bridge,store:new CADAssemblyWorkspaceStore(),writable:()=>writable,validateContacts});
-    return {controller,bridge,states,lock:()=>{writable=false;}};
+    const store=new CADAssemblyWorkspaceStore(),changed=vi.fn();
+    const controller=new CADAssemblyController({client:bridge,store,writable:()=>writable,validateContacts,onDocumentChanged:changed});
+    return {controller,bridge,states,store,changed,lock:()=>{writable=false;}};
   }
   it('edits a distinct handle, publishes one coherent result and reopens history without overwriting live intent',async()=>{
     const {controller,bridge,states}=setup();await controller.newWorkspace('Assembly');
     await controller.editAtomically('update_instance',{instance:{id:'instance-1',name:'Edited'}},'1');
     expect(bridge.mutate).toHaveBeenCalledWith('update_instance',expect.objectContaining({handle:'candidate-1',expected_revision:'1',assembly_id:'assembly-1'}),expect.any(AbortSignal));
     expect(controller.geometryProjection?.instances[0].name).toBe('Edited');expect(controller.solutionProjection?.revision).toBe('2');expect(controller.bomProjection?.revision).toBe('2');
-    expect([...states.keys()]).toEqual(['candidate-2']);expect(controller.canUndoRecipe).toBe(true);
+    expect([...states.keys()]).toEqual(['candidate-1']);expect(controller.canUndoRecipe).toBe(true);
     await controller.undoRecipe(-1);expect(controller.geometryProjection?.instances[0].name).toBe('Bracket:1');
     await controller.undoRecipe(1);expect(controller.geometryProjection?.instances[0].name).toBe('Edited');
     expect(states.size).toBe(1);controller.dispose();
   });
+  it('shares multiple UI/agent edits, preserves history through BOM views, and branches safely', async () => {
+    const {controller,bridge,states}=setup(); await controller.newWorkspace('Assembly');
+    const update=(name:string)=>controller.mutate('update_instance',{instance:{id:'instance-1',name}});
+    await update('UI one');
+    await controller.editAtomically('update_instance',{instance:{id:'instance-1',name:'Agent two'}},'2');
+    await update('UI three');
+    await controller.selectBOMMode('flattened'); expect(controller.canUndoRecipe).toBe(true);
+    for (const name of ['Agent two','UI one','Bracket:1']) {
+      await controller.undoRecipe(-1); expect(controller.geometryProjection?.instances[0].name).toBe(name);
+      expect(controller.bomProjection?.mode).toBe('flattened'); expect(states.size).toBe(1);
+    }
+    expect(controller.canUndoRecipe).toBe(false);
+    await controller.undoRecipe(1); await controller.undoRecipe(1);
+    expect(controller.geometryProjection?.instances[0].name).toBe('Agent two');
+    const before=controller.geometryProjection;
+    vi.mocked(bridge.mutate).mockRejectedValueOnce(Error('Refused edit'));
+    await expect(update('Failure')).rejects.toThrow('Refused edit');
+    expect(controller.geometryProjection).toBe(before); expect(controller.canRedoRecipe).toBe(true);
+    await update('New branch'); expect(controller.canRedoRecipe).toBe(false);
+    await controller.undoRecipe(-1); expect(controller.geometryProjection?.instances[0].name).toBe('Agent two');
+    await controller.close(); expect(controller.canUndoRecipe).toBe(false); expect(controller.canRedoRecipe).toBe(false);
+    expect(states.size).toBe(0); controller.dispose();
+  });
+
+  it('commits a multi-operation independent copy once and undoes its definition and occurrence together',async()=>{
+    const {controller,store,bridge,states,changed}=setup();await controller.newWorkspace('Assembly');
+    await controller.mutate('update_instance',{instance:{id:'instance-1',name:'Before copy'}});
+    store.dispatch({type:'select-entities',ids:['instance-1'],mode:'single'});changed.mockClear();
+    await controller.copySelectedInstanceIndependent();
+    expect(controller.geometryProjection?.part_definitions).toHaveLength(2);
+    expect(controller.geometryProjection?.instances).toHaveLength(2);expect(changed).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(bridge.mutate).mock.calls.slice(-2).map(([,params])=>params.handle)).toEqual(['candidate-2','candidate-2']);
+    await controller.undoRecipe(-1);expect(controller.geometryProjection?.part_definitions).toHaveLength(1);expect(controller.geometryProjection?.instances).toHaveLength(1);
+    expect(controller.geometryProjection?.instances[0].name).toBe('Before copy');
+    await controller.undoRecipe(-1);expect(controller.geometryProjection?.instances[0].name).toBe('Bracket:1');
+    await controller.undoRecipe(1);await controller.undoRecipe(1);expect(controller.geometryProjection?.instances).toHaveLength(2);
+    expect(states.size).toBe(1);controller.dispose();
+  });
+  it.each(['native','contact','readonly','close'] as const)('does not publish intermediate compound state after %s failure',async(mode)=>{
+    const validate=vi.fn(async()=>{});
+    const {controller,store,bridge,states,changed,lock}=setup(mode==='contact'?validate:undefined);
+    await controller.newWorkspace('Assembly');store.dispatch({type:'select-entities',ids:['instance-1'],mode:'single'});
+    const before=controller.geometryProjection;changed.mockClear();
+    let finish!:()=>void;
+    const mutate=vi.mocked(bridge.mutate).getMockImplementation()!;
+    vi.mocked(bridge.mutate).mockImplementation(async(method,params,signal)=>{
+      if(method==='add_instance'){
+        await new Promise<void>(resolve=>{finish=resolve;});
+        if(mode==='native')throw Error('Insertion refused');
+      }
+      return mutate(method,params,signal);
+    });
+    if(mode==='contact')validate.mockRejectedValue(Error('Parts overlap'));
+    const pending=controller.copySelectedInstanceIndependent();
+    await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));
+    expect(controller.geometryProjection).toBe(before);expect(changed).not.toHaveBeenCalled();
+    await expect(controller.mutate('update_instance',{})).rejects.toThrow(/already rebuilding/);
+    if(mode==='readonly')lock();if(mode==='close')await controller.close();
+    finish();await expect(pending).rejects.toThrow();
+    expect(controller.geometryProjection).toBe(mode==='close'?null:before);expect(controller.canUndoRecipe).toBe(false);
+    expect(states.size).toBe(mode==='close'?0:1);controller.dispose();
+  });
+
   it('validates contact-enabled UI and agent edits before any live swap',async()=>{
     const validate=vi.fn<() => Promise<void>>(async()=>{throw Error('Parts overlap.');});
     const {controller,bridge,states}=setup(validate);await controller.newWorkspace('Assembly');

@@ -1,3 +1,4 @@
+import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 /** Items — the feature tree, the left rail's main panel. */
 import { cadPresentation } from "../../cad-presentation-store";
 import { cadWorkspace } from "../../cad-workspace-store";
@@ -6,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { adjacentFeature, itemTreePresentation } from "./item-tree";
 import "./items.css";
 import { cadFeatureActions, cadTreeCommand, cadHistoryCount } from "./feature-tree-commands";
-import { CADPartsPanel } from "./parts";
+import { CADPartsPanel, CADAssemblyPartsPanel } from "./parts";
 import { findTreeNode } from "./shared";
 
 export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.dispatch({ type: "select-panel", panel: "visualization" }); } }: { active: boolean; onShowAppearance?: () => void }) {
@@ -15,6 +16,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
     cadWorkspace.snapshot,
     cadWorkspace.snapshot,
   );
+  const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
   const [filter, setFilter] = useState("");
   const [category, setCategory] = useState("all");
   const presentation = useSyncExternalStore(
@@ -22,6 +24,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
     cadPresentation.snapshot,
     cadPresentation.snapshot,
   );
+  const showAssembly = !presentation.partOpen && presentation.workspaceMode !== "drawing" && assembly.loadState === "ready";
   const filterRef = useRef<HTMLInputElement>(null);
   const nodes = useMemo(() => itemTreePresentation(workspace.itemNodes), [workspace.itemNodes]);
   const bodies = useMemo(() => itemTreePresentation(workspace.bodyNodes ?? []), [workspace.bodyNodes]);
@@ -87,7 +90,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
       const index=event.key==="ArrowUp"?workspace.rollbackIndex-1:event.key==="ArrowDown"?workspace.rollbackIndex+1:event.key==="Home"?0:event.key==="End"?count:null;
       if(index!==null){event.preventDefault();event.stopPropagation();cadWorkspace.dispatch({type:"rollback-to",index:Math.max(0,Math.min(count,index))});}
     }}>
-      <TreePanelSplit primaryLabel="Features" secondaryLabel="Parts" defaultRatio={0.77} storageKey="aether-cad.studio-feature-parts-split" primary={<TreePanel
+      <TreePanelSplit primaryLabel="Features" secondaryLabel={showAssembly ? "Components" : "Parts"} defaultRatio={0.77} storageKey="aether-cad.studio-feature-parts-split" primary={<TreePanel
           ariaLabel="CAD features" title={`Features (${cadHistoryCount(workspace.itemNodes)})`} headerControls={[controls[0]]}
           onCategoryChange={setCategory} filterLabel="Filter Features" filterInputID="items-filter" filterInputRef={filterRef} onFilterChange={setFilter}
           filterOptions={[
@@ -125,7 +128,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
             ? "Aether CAD could not start — see the status bar and browser console."
             : "No matching items"}
 
-        />} secondary={<CADPartsPanel
+        />} secondary={showAssembly ? <CADAssemblyPartsPanel /> : <CADPartsPanel
           nodes={bodies} selectedIDs={selectedIDs} onSelect={selectRows}
           onAction={dispatch} onShowAppearance={onShowAppearance}
         />} />

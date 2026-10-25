@@ -1,3 +1,4 @@
+import { AssemblyEditHistory } from "./assembly-edit-history";
 import { liveContactSets } from "./startup/assembly-contacts";
 import { assemblyContactSetPayload, type AssemblyContactSetDraft } from "./cad-contact-authoring";
 import { parseCustomProperties, type BodiesToComponentDraft, type PartPropertiesDraft, bodiesToComponentDraftIssues, partPropertiesDraftIssues } from "./cad-component-authoring";
@@ -135,8 +136,8 @@ export class CADAssemblyController {
   private readonly validateContacts: (assembly: AssemblyProjectionV1) => Promise<void>;
   private readonly compose: NonNullable<CADAssemblyControllerOptions['compose']>;
   private composing = false;
-  private mutating = false;
-  private recipeHistory: {before:string; after:string; canonical:CanonicalSnapshot; undone:boolean} | null = null;
+  private isolatedUITransaction = false;
+  private readonly editHistory = new AssemblyEditHistory<AssemblyProjectionV1>();
   private readonly client: AssemblyControllerClient;
   private readonly store: CADAssemblyWorkspaceStore;
   private readonly saveFile: (fileName: string, bytes: Uint8Array) => void | Promise<void>;
@@ -229,7 +230,7 @@ export class CADAssemblyController {
 
   get selectedMateDOF(): DOFProjection | null {
     const mate = this.selectedMate;
-    return mate?.dofs.length === 1 ? mate.dofs[0] : null;
+    return mate && !mate.suppressed ? mate.dofs.find(dof => dof.state === "free") ?? null : null;
   }
 
   get canEditSelectedMateDOF(): boolean {
@@ -263,12 +264,13 @@ export class CADAssemblyController {
   async editAtomically(method: AssemblyMutationMethod, params: Readonly<Record<string, unknown>>, expectedRevision: string,
     signal = new AbortController().signal, assertCurrent: () => void = () => {}): Promise<void> {
     signal.throwIfAborted(); assertCurrent();
-    if (this.composing || this.mutating) throw Error('An assembly edit is already rebuilding.');
+    if (this.composing) throw Error('An assembly edit is already rebuilding.');
     const descriptor = this.descriptor, source = this.canonical;
     if (!descriptor || !source || !this.writable()) throw Error('Open an editable Assembly first.');
     if (source.assembly.revision !== expectedRevision) throw Error('The Assembly revision changed. Inspect it before editing.');
     this.composing = true;
     let candidate: AssemblyWorkspaceDescriptor | undefined;
+    let adopted = false;
     try {
       const before = await this.client.saveWorkspace(descriptor.handle, expectedRevision, signal);
       if (before.revision !== expectedRevision) throw Error('The Assembly changed before serialization.');
@@ -281,23 +283,38 @@ export class CADAssemblyController {
       if (result.assembly.assembly_id !== source.assembly.assembly_id || result.solution.status !== 'solved' || result.solution.limit_violations.length > 0 || result.assembly.issues.some(issue => issue.severity === 'error')) throw Error('Assembly edit did not produce a solved result. No edit was applied.');
       const after = await this.client.saveWorkspace(candidate.handle, result.revision, signal);
       if (after.revision !== result.revision) throw Error('The isolated Assembly changed before serialization.');
-      const committed = await this.replaceRecipeArchive(after.data_base64, descriptor, source, signal, after.revision, assertCurrent);
-      this.recipeHistory = committed === this.canonical ? { before: before.data_base64, after: after.data_base64, canonical: committed, undone: false } : null;
+      let bom = result.bom;
+      if (bom.mode !== source.bom.mode) bom = await this.client.projectBOM(candidate.handle, source.assembly.assembly_id, source.bom.mode, signal);
+      this.assertRevision(after.revision, result.assembly, result.solution, bom);
+      if (liveContactSets(result.assembly).length) await this.validateContacts(result.assembly);
+      signal.throwIfAborted(); assertCurrent();
+      if (!this.writable() || this.descriptor !== descriptor || this.canonical !== source)
+        throw Error('The Assembly changed while editing. No edit was applied.');
+      if (result.assembly.workspace_id !== descriptor.workspace_id || bom.assembly_id !== source.assembly.assembly_id)
+        throw Error('Unexpected isolated Assembly identity.');
+      // The mutation already returned the solved projection and coherent BOM.
+      // Adopt that qualified candidate instead of reopening and solving it again.
+      this.descriptor = { ...candidate, revision: after.revision, graph_sha256: after.graph_sha256, root_assembly_id: source.assembly.assembly_id };
+      this.canonical = { assembly: result.assembly, solution: result.solution, bom };
+      this.editHistory.record(before.data_base64, after.data_base64, source.assembly, result.assembly);
+      adopted = true;
       this.publishCanonical();
+      this.publishDocument();
     } finally {
-      if (candidate && candidate.handle !== descriptor.handle) await this.client.release(candidate.handle).catch(() => undefined);
+      if (adopted) await this.client.release(descriptor.handle).catch(() => undefined);
+      else if (candidate && candidate.handle !== descriptor.handle) await this.client.release(candidate.handle).catch(() => undefined);
       this.composing = false;
     }
   }
 
-  get canUndoRecipe(): boolean { return !!this.recipeHistory && !this.recipeHistory.undone && this.recipeHistory.canonical === this.canonical; }
-  get canRedoRecipe(): boolean { return !!this.recipeHistory?.undone && this.recipeHistory.canonical === this.canonical; }
+  get canUndoRecipe(): boolean { return this.editHistory.canMove(-1, this.canonical?.assembly ?? null); }
+  get canRedoRecipe(): boolean { return this.editHistory.canMove(1, this.canonical?.assembly ?? null); }
 
   /** Build on a serialized snapshot. Only a fully qualified, still-current result
    * replaces the live handle; failures never mutate the active document. */
   async composeRecipe(recipe: unknown, signal = new AbortController().signal, assertCurrent: () => void = () => {}): Promise<Omit<AssemblyComposeResult,'data_base64'>> {
     signal.throwIfAborted(); assertCurrent();
-    if (this.composing || this.mutating) throw Error('An assembly edit is already rebuilding.');
+    if (this.composing) throw Error('An assembly edit is already rebuilding.');
     const descriptor = this.descriptor, canonical = this.canonical;
     if (!descriptor || !canonical || !this.canEditInstances || !this.writable()) throw Error('Open an editable Assembly first.');
     this.composing = true;
@@ -308,7 +325,7 @@ export class CADAssemblyController {
       const result = await this.compose({data_base64:archive.data_base64, expected_revision:archive.revision,
         assembly_id:canonical.assembly.assembly_id, recipe}, signal);
       const committed = await this.replaceRecipeArchive(result.data_base64, descriptor, canonical, signal, result.revision, assertCurrent);
-      this.recipeHistory = committed === this.canonical ? {before:archive.data_base64,after:result.data_base64,canonical:committed,undone:false} : null;
+      if (committed === this.canonical) this.editHistory.record(archive.data_base64, result.data_base64, canonical.assembly, committed.assembly);
       this.publishCanonical();
       const {data_base64: _archive, ...receipt} = result;
       this.onStatus(`Verified ${Object.keys(result.ids.parts).length} Part templates and ${Object.keys(result.ids.instances).length} new instances.`, 'success');
@@ -318,12 +335,13 @@ export class CADAssemblyController {
 
   async undoRecipe(direction: -1|1, signal = new AbortController().signal, assertCurrent: () => void = () => {}): Promise<void> {
     signal.throwIfAborted(); assertCurrent();
-    if (!this.writable() || this.composing || this.mutating || !(direction === -1 ? this.canUndoRecipe : this.canRedoRecipe)) throw Error('No matching atomic Assembly edit history is available.');
-    const history = this.recipeHistory!;
+    if (!this.writable() || this.composing || !(direction === -1 ? this.canUndoRecipe : this.canRedoRecipe)) throw Error('No matching atomic Assembly edit history is available.');
+    const source = this.canonical!;
+    const archive = this.editHistory.target(direction, source.assembly);
     this.composing = true;
     try {
-      const committed = await this.replaceRecipeArchive(direction === -1 ? history.before : history.after, this.descriptor!, this.canonical!, signal, undefined, assertCurrent);
-      this.recipeHistory = committed === this.canonical ? {...history,canonical:committed,undone:direction === -1} : null;
+      const committed = await this.replaceRecipeArchive(archive, this.descriptor!, source, signal, undefined, assertCurrent);
+      if (committed === this.canonical) this.editHistory.moved(direction, source.assembly, committed.assembly);
       this.publishCanonical();
     } finally { this.composing = false; }
   }
@@ -389,43 +407,78 @@ export class CADAssemblyController {
     await this.activate(this.descriptor, ++this.operation);
   }
 
+  /** A compound UI action runs on a private controller and archive. Its helpers
+   * can inspect intermediate IDs/poses, while the live editor sees only the
+   * original state until the complete action is qualified and adopted. */
+  private async compoundEdit(work: (candidate: CADAssemblyController) => Promise<void>): Promise<void> {
+    if (this.composing) throw Error('An assembly edit is already rebuilding.');
+    const previous = this.descriptor, source = this.canonical;
+    if (!previous || !source || !this.writable()) throw Error('Open an editable Assembly first.');
+    this.composing = true;
+    let opened: AssemblyWorkspaceDescriptor | undefined, candidate: CADAssemblyController | undefined, adopted = false;
+    let status: readonly [string, "normal" | "error" | "success"] | undefined;
+    const signal = new AbortController().signal;
+    try {
+      const before = await this.client.saveWorkspace(previous.handle, source.assembly.revision, signal);
+      if (before.revision !== source.assembly.revision) throw Error('The Assembly changed before serialization.');
+      opened = await this.client.openWorkspace(before.data_base64, signal);
+      if (opened.handle === previous.handle || opened.workspace_id !== previous.workspace_id || opened.revision !== source.assembly.revision)
+        throw Error('Unexpected isolated Assembly identity.');
+      candidate = new CADAssemblyController({ client: this.client, store: new CADAssemblyWorkspaceStore(),
+        writable: () => this.writable() && this.descriptor === previous && this.canonical === source,
+        onStatus: (message, tone) => { status = [message, tone]; } });
+      candidate.isolatedUITransaction = true;
+      candidate.descriptor = { ...opened, root_assembly_id: source.assembly.assembly_id };
+      candidate.canonical = source;
+      candidate.publishCanonical();
+      candidate.store.dispatch({ type: "select-entities", ids: [...this.store.snapshot().selectedEntityIDs], mode: "range" });
+      await work(candidate);
+      const next = candidate.canonical!;
+      if (next.assembly.assembly_id !== source.assembly.assembly_id || next.assembly.workspace_id !== previous.workspace_id
+        || next.solution.status !== 'solved' || next.solution.limit_violations.length || next.assembly.issues.some(issue => issue.severity === 'error'))
+        throw Error('The complete Assembly action did not produce a solved result.');
+      const bom = next.bom.mode === source.bom.mode ? next.bom
+        : await this.client.projectBOM(opened.handle, source.assembly.assembly_id, source.bom.mode, signal);
+      this.assertRevision(next.assembly.revision, next.assembly, next.solution, bom);
+      if (bom.assembly_id !== source.assembly.assembly_id) throw Error('Unexpected isolated Assembly identity.');
+      if (liveContactSets(next.assembly).length) await this.validateContacts(next.assembly);
+      const after = await this.client.saveWorkspace(opened.handle, next.assembly.revision, signal);
+      if (after.revision !== next.assembly.revision) throw Error('The isolated Assembly changed before serialization.');
+      if (!this.writable() || this.descriptor !== previous || this.canonical !== source)
+        throw Error('The Assembly changed while editing.');
+      this.descriptor = { ...opened, root_assembly_id: source.assembly.assembly_id, revision: after.revision, graph_sha256: after.graph_sha256 };
+      this.canonical = { ...next, bom };
+      this.editHistory.record(before.data_base64, after.data_base64, source.assembly, next.assembly);
+      adopted = true;
+      this.publishCanonical(); this.publishDocument();
+      if (status) this.onStatus(...status);
+    } catch (error) {
+      this.onStatus(`Assembly action failed: ${messageFor(error)} No edit was applied.`, "error");
+      throw error;
+    } finally {
+      candidate?.dispose();
+      if (adopted) await this.client.release(previous.handle).catch(() => undefined);
+      else if (opened && opened.handle !== previous.handle) await this.client.release(opened.handle).catch(() => undefined);
+      this.composing = false;
+    }
+  }
+
   async mutate(method: AssemblyMutationMethod, params: Readonly<Record<string, unknown>>): Promise<void> {
     if (!this.writable()) throw Error('The Assembly is read-only.');
-    if (this.composing || this.mutating) throw Error('An assembly edit is already rebuilding.');
+    if (this.composing) throw Error('An assembly edit is already rebuilding.');
     const descriptor = this.descriptor;
     const revision = this.canonical?.assembly.revision;
-    const requestedBOMMode = this.canonical?.bom.mode ?? "hierarchical";
     if (!descriptor || !revision) throw new Error("No canonical Assembly workspace is open.");
-    // Contact-enabled edits are evaluated on an isolated archive. This applies
-    // equally to UI controls and agents and never leaves a hidden live mutation.
-    if (this.canonical?.assembly.contacts_enabled || (method === "set_contacts_enabled" && params.enabled === true)) {
-      return this.editAtomically(method, params, revision);
+    if (this.isolatedUITransaction) {
+      const result = await this.client.mutate(method, { ...params, assembly_id: this.canonical!.assembly.assembly_id,
+        handle: descriptor.handle, expected_revision: revision }, new AbortController().signal);
+      this.assertRevision(result.revision, result.assembly, result.solution, result.bom);
+      this.descriptor = { ...descriptor, revision: result.revision };
+      this.canonical = { assembly: result.assembly, solution: result.solution, bom: result.bom };
+      this.publishCanonical();
+      return;
     }
-    this.mutating = true;
-    try {
-    const result = await this.client.mutate(method, {
-      ...params,
-      handle: descriptor.handle,
-      expected_revision: revision,
-    });
-    let bom = result.bom;
-    if (requestedBOMMode !== result.bom.mode) {
-      try {
-        bom = await this.client.projectBOM(
-          descriptor.handle,
-          result.assembly.assembly_id,
-          requestedBOMMode,
-        );
-      } catch {
-        // The mutation committed in Core; publish its coherent fallback BOM.
-      }
-    }
-    if (this.descriptor !== descriptor) throw Error('The Assembly changed while editing.');
-    this.assertRevision(result.revision, result.assembly, result.solution, bom);
-    this.canonical = { assembly: result.assembly, solution: result.solution, bom };
-    this.publishCanonical();
-    this.publishDocument();
-    } finally { this.mutating = false; }
+    return this.editAtomically(method, params, revision);
   }
 
   async selectBOMMode(mode: "hierarchical" | "flattened"): Promise<void> {
@@ -482,6 +535,7 @@ export class CADAssemblyController {
   }
 
   async insertComponent(draft: AssemblyComponentDraft): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.insertComponent(draft));
     const normalized = normalizeAssemblyComponentDraft(draft);
     const assemblyID = this.canonical?.assembly.assembly_id;
     if (!assemblyID || !this.canEditInstances) {
@@ -537,21 +591,7 @@ export class CADAssemblyController {
       });
       this.onStatus(`Inserted ${normalized.instanceName} into the canonical Assembly.`, "success");
     } catch (error) {
-      try {
-        await this.mutate("remove_part_definition", {
-          assembly_id: assemblyID,
-          part_definition_id: partDefinitionID,
-        });
-        this.onStatus(
-          `Component insertion failed: ${messageFor(error)} The unused Part definition was removed.`,
-          "error",
-        );
-      } catch (rollbackError) {
-        this.onStatus(
-          `Component insertion failed: ${messageFor(error)} The Part definition remains because cleanup failed: ${messageFor(rollbackError)}`,
-          "error",
-        );
-      }
+      this.onStatus(`Component insertion failed: ${messageFor(error)}`, "error");
       throw error;
     }
   }
@@ -712,22 +752,29 @@ export class CADAssemblyController {
   private async replaceDefinition(definition: PartDefinitionProjection, patch: Partial<PartDefinitionProjection>): Promise<void> {
     const assemblyID = this.canonical?.assembly.assembly_id;
     if (!assemblyID) throw new Error("No canonical Assembly workspace is open.");
-    await this.mutate("update_part_definition", { assembly_id: assemblyID, part_definition: { ...definition, ...patch } });
+    const next = { ...definition, ...patch };
+    // A saved Part is owned by its assigned definition ID. Copies, extracted
+    // bodies and regenerated standard parts bring their own document identity.
+    const part = next.feature_document === undefined ? next : { ...next,
+      feature_document: { ...this.documentOf(next), documentId: next.id, name: next.name } };
+    await this.mutate("update_part_definition", { assembly_id: assemblyID, part_definition: part });
   }
-  /** Add a definition and one occurrence of it; roll the definition back if the occurrence fails. */
+  /** Add a definition and occurrence inside their caller’s isolated compound action. */
   private async addDefinitionWithInstance(definition: Record<string, unknown>, instance: Record<string, unknown>): Promise<string> {
     const assemblyID = this.canonical?.assembly.assembly_id;
     if (!assemblyID || !this.canEditInstances) throw new Error("The current Assembly workspace does not permit component insertion.");
     const before = new Set(this.canonical?.assembly.part_definitions.map(({ id }) => id) ?? []);
-    await this.mutate("add_part_definition", { assembly_id: assemblyID, part_definition: definition });
+    const { feature_document: document, ...metadata } = definition;
+    await this.mutate("add_part_definition", { assembly_id: assemblyID, part_definition: metadata });
     const added = (this.canonical?.assembly.part_definitions ?? []).map(({ id }) => id).filter((id) => !before.has(id));
     if (added.length !== 1) throw new Error("Core did not return exactly one new Part definition ID.");
-    try {
-      await this.mutate("add_instance", { assembly_id: assemblyID, instance: { parent_assembly_id: assemblyID, definition_kind: "part", definition_id: added[0], grounded: false, ...instance } });
-    } catch (error) {
-      await this.mutate("remove_part_definition", { assembly_id: assemblyID, part_definition_id: added[0] }).catch(() => undefined);
-      throw error;
+    // The codec assigns the ID. Attach geometry only after we have it; the
+    // surrounding compound action keeps this intermediate definition private.
+    if (document !== undefined) {
+      const assigned = this.canonical!.assembly.part_definitions.find(part => part.id === added[0])!;
+      await this.replaceDefinition(assigned, { feature_document: document });
     }
+    await this.mutate("add_instance", { assembly_id: assemblyID, instance: { parent_assembly_id: assemblyID, definition_kind: "part", definition_id: added[0], grounded: false, ...instance } });
     return added[0];
   }
 
@@ -749,6 +796,7 @@ export class CADAssemblyController {
 
   /** component.paste_new: an independent copy of the selected occurrence's part, placed on top of it. */
   async copySelectedInstanceIndependent(): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.copySelectedInstanceIndependent());
     const instance = this.requireEditableSelectedInstance();
     const definition = this.definitionOf(instance);
     try {
@@ -780,6 +828,7 @@ export class CADAssemblyController {
    *  per body (sketches go with the first); an existing target receives them all. Every
    *  occurrence of the source part loses the moved bodies: parts are shared definitions. */
   async moveBodiesToComponent(draft: BodiesToComponentDraft): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.moveBodiesToComponent(draft));
     const issues = bodiesToComponentDraftIssues(draft);
     if (issues.length) throw new Error(issues.join(" "));
     const canonical = this.canonical;
@@ -838,6 +887,7 @@ export class CADAssemblyController {
   }
   /** joint.as_built: a mate between two occurrences where they stand, with connectors made to fit. */
   async addAsBuiltJoint(draft: AsBuiltJointDraft): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.addAsBuiltJoint(draft));
     const issues = asBuiltJointDraftIssues(draft);
     if (issues.length) throw new Error(issues.join(" "));
     const canonical = this.canonical;
@@ -860,6 +910,7 @@ export class CADAssemblyController {
   }
   /** joint.rigid_group: the selected occurrences move together as they are (fastened to the first). */
   async addRigidGroupFromSelection(): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.addRigidGroupFromSelection());
     const canonical = this.canonical;
     if (!canonical) throw new Error("No canonical Assembly workspace is open.");
     const ids = [...this.store.snapshot().selectedEntityIDs].filter((id) => canonical.assembly.instances.some((i) => i.id === id));
@@ -886,6 +937,7 @@ export class CADAssemblyController {
 
   /** parts.insert / parts.fastener: a standard part as a new definition and one occurrence. */
   async insertStandardPart(request: StandardPartRequest, positionMillimeters: readonly [number, number, number]): Promise<void> {
+    if (!this.isolatedUITransaction) return this.compoundEdit(candidate => candidate.insertStandardPart(request, positionMillimeters));
     try {
       const document = standardPartDocument(request), label = standardPartLabel(request);
       const count = this.canonical?.assembly.instances.filter((i) => i.name.startsWith(`${label}:`)).length ?? 0;
@@ -974,6 +1026,7 @@ export class CADAssemblyController {
     this.operation += 1;
     this.descriptor = null;
     this.canonical = null;
+    this.editHistory.clear();
     this.store.setUnavailable();
     this.onDocumentChanged(null);
     if (descriptor) await this.client.release(descriptor.handle).catch(() => undefined);
@@ -1019,6 +1072,7 @@ export class CADAssemblyController {
     this.assertRevision(descriptor.revision, assembly, solution, bom);
     this.descriptor = descriptor;
     this.canonical = { assembly, solution, bom };
+    this.editHistory.clear();
     this.publishCanonical();
     this.publishDocument();
   }
@@ -1056,9 +1110,9 @@ export class CADAssemblyController {
     draft: AssemblyMateDOFEditorDraft,
   ): { readonly mate: MateProjection; readonly dof: DOFProjection } {
     const mate = this.requireEditableSelectedMate();
-    const dof = mate.dofs.length === 1 ? mate.dofs[0] : null;
+    const dof = mate.dofs.find(dof => dof.id === draft.dofID);
     if (mate.suppressed || !dof || dof.state !== "free") {
-      throw new Error("Select one active revolute or prismatic mate with a free DOF.");
+      throw new Error("Select a free coordinate on an active mate.");
     }
     if (dof.id !== draft.dofID || dof.kind !== draft.kind) {
       throw new Error("The selected mate DOF changed.");

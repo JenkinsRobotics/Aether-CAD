@@ -12,6 +12,7 @@ describe('CAD agent modeling instructions',()=>{
   it('describes the available Assembly transaction rather than Part-only proof',()=>{
     const text=cadAgentContextText('Machine','modeling',{contextKey:'assembly',tools:assemblyAgentTools,execute:async()=>{}});
     expect(text).toContain('assembly_compose');expect(text).not.toContain('aether_cad_verify');
+    expect(text).toContain('share session undo/redo');expect(text).not.toContain('Only one');
   });
 });
 it('describes drawing tools without sending Part commands into a drawing', async () => {

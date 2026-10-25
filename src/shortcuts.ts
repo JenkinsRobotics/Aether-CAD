@@ -112,3 +112,9 @@ export class ShortcutRegistry {
 }
 
 export const shortcuts = new ShortcutRegistry();
+
+/** Common document-history keys, shared by workspace-specific dispatchers. */
+export function historyShortcutDirection(event: KeyboardEvent): -1 | 1 | null {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "z") return null;
+  return event.shiftKey ? 1 : -1;
+}

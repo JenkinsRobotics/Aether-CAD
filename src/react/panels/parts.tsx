@@ -1,5 +1,6 @@
+import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 /** Parts are a flat projection of the existing body tree, not a second model. */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { AetherIcon, TreePanel, FeatureTypeIcon, Menu, featureTreeMenuItems, type TreeNode } from "@aether/ui";
 import { cadFeatureActions, cadTreeCommand } from "./feature-tree-commands";
 
@@ -56,5 +57,20 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
       }
       setMenu(null);
     }}/>} 
+  </div>;
+}
+
+
+/** Assembly occurrences come from the same canonical projection as the mate
+ * inspector. Do not count only authored Part-document body IDs here. */
+export function CADAssemblyPartsPanel() {
+  const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
+  const rows = assembly.data?.instanceRows ?? [];
+  return <div className="cad-parts-panel">
+    <TreePanel title={`Components (${rows.length})`} ariaLabel="CAD assembly components"
+      nodes={rows} rowHeight={24} showFilter={false} className="cad-parts-list"
+      selectedIDs={assembly.selectedEntityIDs}
+      onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })}
+      emptyState="Insert a component to build this assembly." />
   </div>;
 }

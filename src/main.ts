@@ -1,3 +1,4 @@
+import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
 import { toggleMeasureWindow } from "./measure/MeasureWindow";
 import { openSectionView, turnOffSectionView } from "./section/SectionViewWindow";
 import { sectionView } from "./section/section-view-store";
@@ -309,6 +310,12 @@ for(const [command,kind] of [['assembly-part-template','template'],['assembly-fr
   cadCommands.register(command,()=>openAssemblyRecipeDialog(assemblyController,kind));
 for(const [command,direction] of [['assembly-undo-recipe',-1],['assembly-redo-recipe',1]] as const)
   cadCommands.register(command,()=>void assemblyController.undoRecipe(direction).then(syncAssemblyCommands).catch(error=>setStatus(String(error),'error')));
+installAssemblyHistoryShortcuts({
+  active: () => activeWorkspaceKind === "assembly" && hostedPartEditable(),
+  canStep: direction => direction === -1 ? assemblyController.canUndoRecipe : assemblyController.canRedoRecipe,
+  step: async direction => { await assemblyController.undoRecipe(direction); syncAssemblyCommands(); },
+  onError: error => setStatus(String(error), "error"),
+});
 let matePreviewSerial = 0;
 
 function syncAssemblyCommands(): void {

@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
+const copyOnly=process.env.AETHER_ASSEMBLY_BROWSER_COPY_ONLY==='1';
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');
 await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],steps=[];
@@ -54,7 +55,7 @@ const graph=async()=>{
 const unshare=async(revoke=false)=>{await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();await button('Stop sharing editor').click();if(revoke)await page.locator('.aui-agent-connection-card').filter({has:page.getByText(connectionName,{exact:true})}).getByRole('button',{name:'Revoke',exact:true}).click();await button('Done').click();};
 try{
   await page.goto(origin+'/cad/');await page.locator('input[name="username"]').fill('editor');await page.locator('input[name="password"]').fill('account-test-password-2026');await button('Sign in').click();await page.getByText('A space for your next idea.',{exact:false}).waitFor({timeout:30000});
-  if(process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
+  if(!copyOnly&&process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
   file=await call('library/project_create',{app:'cad',name:'Assembly agent baseline',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
   const url=`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`;await page.goto(url);await page.locator('.aui-studio-document-title').filter({hasText:'Assembly agent baseline'}).waitFor({timeout:90000});
   await step('compose-and-inspect',async()=>{
@@ -74,6 +75,12 @@ try{
     await invoke('aether_cad_assembly_edit',{expected_revision:old,command_json:JSON.stringify({type:'dof-value',id:angle,value:60,unit:'deg'})},false);
     const oldValue=state;
     state=await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});assert.ok(Math.abs(await value())<1e-9);
+    state=await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});
+    assert.equal((await inspect('mates')).items.flatMap(m=>m.dofs).find(d=>d.id===angle).limit_min_rad,null);
+    state=await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});assert.equal(state.counts.instances,0);
+    assert.equal(state.can_undo,false);
+    state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});assert.equal(state.counts.instances,3);
+    state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});
     state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});assert.ok(Math.abs(await value()-Math.PI/4)<1e-9);
     // Undo, then branch to another value with the same archive counter. An
     // editor token from the earlier branch must still be refused.
@@ -150,7 +157,7 @@ try{
     await unshare(true);await button('AI advisor').click();
   });
   }
-  for (const kind of ['ball','pin_slot']) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
+  for (const kind of (copyOnly?[]:['ball','pin_slot'])) await step(`${kind}-nonzero-contact-checked-save-reopen`,async()=>{
     file=await call('library/project_create',{app:'cad',name:`Pose ${kind}`,operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
     await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
     await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});
@@ -163,15 +170,78 @@ try{
     // validator, not only the workspace's metadata projection.
     await edit({type:'contacts-enabled',enabled:true});
     for (const [i,dof] of mate.dofs.entries()) await edit({type:'dof-value',id:dof.id,value:kind==='ball'?[20,110,-40][i]:dof.kind==='rotation'?35:25,unit:dof.kind==='rotation'?'deg':'mm'});
-    const expected=(await inspect('mates')).items[0].dofs.map(d=>[d.name,d.value_rad,d.value_m]);
+    const components=page.getByRole('tree',{name:'CAD assembly components'});
+    await expect(components.getByRole('treeitem')).toHaveCount(2);
+    const coordinate=kind==='ball'?mate.dofs[0]:mate.dofs.find(d=>d.kind==='translation');
+    await page.getByRole('listbox',{name:'Canonical mates'}).getByRole('option').click();
+    await button('Mate actions').click();await page.getByRole('menuitem',{name:'Set Selected Mate Value…',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Set mate DOF value',exact:true});
+    await dialog.locator('#assembly-mate-coordinate').selectOption(coordinate.id);
+    await dialog.locator('#assembly-mate-dof-value').fill('30');await dialog.getByRole('button',{name:'Set Value',exact:true}).click();
+    await dialog.waitFor({state:'hidden'});
+    const coordinateValue=async()=>{const dof=(await inspect('mates')).items[0].dofs.find(d=>d.id===coordinate.id);return coordinate.kind==='rotation'?dof.value_rad*180/Math.PI:dof.value_m*1000;};
+    assert.ok(Math.abs(await coordinateValue()-30)<1e-8);
+    await page.locator('body').click({position:{x:1100,y:400}});await page.keyboard.press('Control+z');
+    await expect.poll(async()=>Math.abs(await coordinateValue()-(kind==='ball'?20:25)),{timeout:30000}).toBeLessThan(1e-8);
+    state=await inspect();state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});assert.ok(Math.abs(await coordinateValue()-30)<1e-8);
+    await page.getByRole('listbox',{name:'Canonical mates'}).getByRole('option').click();
+    await button('Mate actions').click();await page.getByRole('menuitem',{name:'Edit Selected Mate Limits…',exact:true}).click();
+    const limits=page.getByRole('dialog',{name:'Edit mate DOF limits',exact:true});
+    await limits.locator('#assembly-mate-coordinate').selectOption(coordinate.id);
+    await limits.getByRole('checkbox',{name:/^Enable authored limits/}).check();
+    await limits.locator('#assembly-mate-dof-minimum').fill(kind==='ball'?'-60':'0');
+    await limits.locator('#assembly-mate-dof-maximum').fill(kind==='ball'?'60':'40');
+    await limits.getByRole('button',{name:'Apply Limits',exact:true}).click();await limits.waitFor({state:'hidden'});
+    const values=dofs=>dofs.map(d=>[d.name,d.value_rad,d.value_m,d.limit_min_rad,d.limit_max_rad,d.limit_min_m,d.limit_max_m]);
+    const expected=values((await inspect('mates')).items[0].dofs);
+    const changed=(await inspect('mates')).items[0].dofs.find(d=>d.id===coordinate.id);
+    assert.ok(Math.abs((coordinate.kind==='rotation'?changed.limit_max_rad*180/Math.PI:changed.limit_max_m*1000)-(kind==='ball'?60:40))<1e-8);
     const final=await inspect();let saved;
     for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===final.source_revision)break;await page.waitForTimeout(100);}
     assert.equal(String(saved.revision),final.source_revision);assert.equal(saved.contacts_enabled,true);
     await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:`Pose ${kind}`}).waitFor({timeout:90000});await share();
-    assert.deepEqual((await inspect('mates')).items[0].dofs.map(d=>[d.name,d.value_rad,d.value_m]),expected);
+    assert.deepEqual(values((await inspect('mates')).items[0].dofs),expected);
+    assert.equal((await inspect()).can_undo,false,'Saved reopen starts a new local edit history');
     assert.equal((await inspect()).contacts_enabled,true);
     // Trigger a post-reopen validation as well, then leave the true viewport visible.
     await edit({type:'mate-update',id:mate.id,name:`Checked ${kind}`});contactsVerified=true;
+    await unshare(true);await button('AI advisor').click();
+  });
+  await step('compound-ui-copy-history-and-reopen',async()=>{
+    if(copyOnly){
+      file=await call('library/project_create',{app:'cad',name:'Copy continuity',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
+      await page.goto(`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`);
+      await page.locator('.aui-studio-document-title').filter({hasText:'Copy continuity'}).waitFor({timeout:90000});
+    }
+    await share(true);
+    if(copyOnly){
+      state=await inspect();const recipe=state.example;delete recipe.patterns;
+      recipe.instances=[{key:'base',part:'block',grounded:true},{key:'moving',part:'block',position_mm:[0,0,50]}];recipe.mates=[];
+      await invoke('aether_cad_assembly_compose',{expected_revision:state.revision,recipe_json:JSON.stringify(recipe)});
+    }
+    await edit({type:'contacts-enabled',enabled:false});
+    const before=await inspect();assert.equal(before.counts.instances,2);assert.equal(before.parts.length,1);
+    const components=page.getByRole('tree',{name:'CAD assembly components'});
+    await components.getByRole('treeitem').filter({hasText:'base'}).click();
+    await page.keyboard.press('Control+k');
+    const palette=page.getByRole('dialog',{name:'CAD commands',exact:true});
+    await palette.getByRole('combobox',{name:'Search CAD commands',exact:true}).fill('Make Independent');
+    await palette.getByRole('option').filter({hasText:'Make Independent'}).click();
+    await palette.waitFor({state:'hidden'});
+    await expect(components.getByRole('treeitem')).toHaveCount(3,{timeout:60000});
+    state=await inspect();assert.equal(state.parts.length,2);assert.equal(state.counts.instances,3);
+    state=await invoke('aether_cad_assembly_undo',{expected_revision:state.revision});
+    assert.equal(state.counts.instances,2);assert.equal(state.parts.length,1,'One undo removes both copied definition and occurrence');
+    state=await invoke('aether_cad_assembly_redo',{expected_revision:state.revision});
+    assert.equal(state.counts.instances,3);assert.equal(state.parts.length,2);
+    let saved;for(let i=0;i<120;i++){saved=await graph();if(String(saved.revision)===state.source_revision)break;await page.waitForTimeout(100);}
+    assert.equal(String(saved.revision),state.source_revision);
+    assert.equal(saved.part_definitions.length,2);
+    for(const part of saved.part_definitions)assert.equal(part.feature_document.documentId,part.id);
+    assert.deepEqual(saved.part_definitions[0].feature_document.features,saved.part_definitions[1].feature_document.features);
+    await unshare();await page.reload();await page.locator('.aui-studio-document-title').filter({hasText:copyOnly?'Copy continuity':'Pose pin_slot'}).waitFor({timeout:90000});await share();
+    const reopened=await inspect();assert.equal(reopened.counts.instances,3);assert.equal(reopened.parts.length,2);assert.equal(reopened.can_undo,false);
+    await expect(components.getByRole('treeitem')).toHaveCount(3);
     await unshare(true);await button('AI advisor').click();
   });
   assert.deepEqual(errors,[]);assert.deepEqual(legacyRPC,[],'CAD must not use Studio Animation RPC');await writeFile(join(evidence,'results.json'),JSON.stringify({status:'passed',steps,contactsVerified,errors},null,2));

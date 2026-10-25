@@ -357,3 +357,60 @@ qualification, nested editing, cam and sweep joints. The canonical format still
 requires an acyclic mate tree with at most one incoming mate per instance;
 general closed-loop assemblies remain unsupported and joint.create is marked
 partial in the tracker. Contacts remain discrete pose checks, not swept collision detection. No full parity claim is made.
+
+
+## 2026-10-24 — Qualified assembly editing continuity
+
+Assembly edits from the UI and live agents now share bounded session history
+(up to 64 steps and 64 MiB of archive text). Undo/redo restores qualified archives;
+new edits discard the redo branch. Cmd/Ctrl-Z and Shift redo use that same
+history while text fields and open authoring dialogs keep their own shortcuts.
+A BOM view change preserves history, while
+opening/refreshing/closing a workspace clears it. Failed or stale edits preserve
+both model and history. Each UI mutation now uses an isolated candidate and the
+same solve/contact gates as agents. A successful mutation adopts its already
+qualified candidate directly instead of reopening it and repeating metadata
+solve/projection requests. Authored file history and Studio versions are separate.
+Compound insertion, independent copy, body moves, as-built joints and rigid groups
+run in one private candidate and publish once. One undo restores the entire action;
+a failure during any intermediate operation leaves the original model and history
+unchanged. Read-only transitions, closing and concurrent edits are guarded.
+
+The approved shared DOF dialog now selects any free coordinate on an active mate,
+including Ball XYZ and mixed rotation/travel mates, with display-unit conversion
+and independent limits. Dependent/suppressed coordinates cannot be edited. The
+lower left panel shows canonical Assembly occurrences as Components instead of
+an empty Part-only body list; hidden/suppressed occurrences remain visible as
+such and select their canonical IDs. Original Part workspace presentation stays
+unchanged. No new shared widget design was introduced.
+
+The real copy workflow exposed an existing identity error hidden by mock clients:
+new definitions were receiving an embedded Part with its old/generated document ID.
+Geometry is now attached after the codec assigns the definition ID, inside the
+same compound action. Definition updates also preserve that ownership when
+extracting bodies or resizing standard parts. Original geometry remains unchanged.
+
+Fresh full app suite: 1,840 pass, one existing skip. Final compound-action and
+controller/history/presentation/agent/dialog checks: 71 pass; types/build pass.
+All nine final MCP/browser flows pass on the rebuilt frontend: multi-step history,
+stale/ABA refusals, relation and contact edits, save/reopen, Ball/Pin Slot UI values
+and limits, keyboard undo and agent redo, canonical component selection, and
+compound independent copy. The copy gate checks both embedded Part ownership and
+preserved feature geometry, one-step undo/redo and saved reopen. Browser errors
+and legacy /cad/rpc requests are empty. The existing eight-instance
+UI/scripted-provider recipe and Animation-client regression also pass. No real
+model inference is claimed.
+
+Earlier failures remain in evidence: a stale-import unit run, a checkbox selector
+that omitted accessible help text, and the real copy identity bug fixed above.
+The final full browser run and final 71 focused checks use fixed source. The
+native worker/codec and engine outputs are byte-identical to the prior qualified
+release (worker 75569b0425185c9d2b813dd7ffa466314d20f15a48a2884bb056fc22d1bbe3b4),
+retaining its 307 native/1,137 engine-test evidence. Source/codec/zipapp equality
+is rechecked after the build. Evidence: `.verification/baseline-2026-10-24/assembly-continuity-*`
+and `assembly-copy-identity-*`.
+
+Unlocking multiple fixed mates still needs the same compound-action grouping;
+contact-set list/edit UI remains next. Body moves between two occurrences of the
+same definition need an explicit refusal check. No installation or other app changes;
+overall baseline remains incomplete.

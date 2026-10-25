@@ -3,7 +3,7 @@ import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 import { type AssemblyMateDOFEditorDraft, assemblyMateDOFEditorDraft, assemblyMateDOFEditorIssues } from "../../cad-mate-authoring";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
 import { CADQuantityField } from "../CADQuantityField";
-import { Button, Checkbox, Dialog, FieldRow } from "@aether/ui";
+import { Button, Checkbox, Dialog, FieldRow, SelectField } from "@aether/ui";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 export function AssemblyMateDOFDialog({ presentation }: { presentation: CADPresentationSnapshot }) {
@@ -16,15 +16,20 @@ export function AssemblyMateDOFDialog({ presentation }: { presentation: CADPrese
   const limitsMode = presentation.startDialog === "edit-mate-dof-limits";
   const open = valueMode || limitsMode;
   const [draft, setDraft] = useState<AssemblyMateDOFEditorDraft | null>(null);
-  const dof = assembly.data?.selectedMateDOF ?? null;
+  const dofs = assembly.data?.selectedMateDOFs ?? (assembly.data?.selectedMateDOF ? [assembly.data.selectedMateDOF] : []);
+  const coordinateIDs = dofs.map(dof => dof.id).join("\n");
+  const selectedDOF = dofs.find(dof => dof.id === draft?.dofID);
   const close = () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: null });
 
   useEffect(() => {
-    if (open && dof) setDraft(assemblyMateDOFEditorDraft(dof));
-  }, [open, dof?.id, assembly.data?.revision]);
+    if (open) setDraft(current => {
+      const dof = dofs.find(dof => dof.id === current?.dofID) ?? dofs[0];
+      return dof ? assemblyMateDOFEditorDraft(dof) : null;
+    });
+  }, [open, coordinateIDs, assembly.data?.revision]);
 
   const mode = valueMode ? "value" : "limits";
-  const issues = draft ? assemblyMateDOFEditorIssues(draft, mode) : ["Select one editable mate DOF."];
+  const issues = draft && selectedDOF ? assemblyMateDOFEditorIssues(draft, mode) : ["Select one editable mate DOF."];
   const rotation = draft?.kind === "rotation";
   
   const step = rotation ? 1 : 0.001;
@@ -61,9 +66,16 @@ export function AssemblyMateDOFDialog({ presentation }: { presentation: CADPrese
       )}
     >
       <div className="cad-start-form">
-        {draft ? (
+        {draft && selectedDOF ? (
           <>
-            <FieldRow label="DOF"><output>{draft.name} · {rotation ? "Revolute" : "Prismatic"}</output></FieldRow>
+            <FieldRow label="Coordinate" htmlFor="assembly-mate-coordinate">
+              <SelectField id="assembly-mate-coordinate" value={draft.dofID}
+                options={dofs.map(dof => ({ value: dof.id, label: `${dof.name} · ${dof.kind === "rotation" ? "Rotation" : "Translation"}` }))}
+                onChange={event => {
+                  const dof = dofs.find(dof => dof.id === event.target.value);
+                  if (dof) setDraft(assemblyMateDOFEditorDraft(dof));
+                }} />
+            </FieldRow>
             {valueMode ? (
               <FieldRow label={rotation ? "Angle" : "Distance"} htmlFor="assembly-mate-dof-value">
                 <CADQuantityField family={rotation?"angle":"length"} canonicalFactor={rotation?Math.PI/180:1}
