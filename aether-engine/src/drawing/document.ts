@@ -18,7 +18,7 @@ export interface DrawingSourceReference {
  * Refresh explicitly replaces that snapshot with the same document's new revision. */
 export interface DrawingDocument {
   format: "aether-drawing";
-  formatVersion: 1;
+  formatVersion: 1 | 2;
   documentId: string;
   name: string;
   source: PartDocument;
@@ -35,6 +35,13 @@ export interface DrawingSheet {
   views: DrawingView[];
   annotations: DrawingAnnotation[];
 }
+export interface DrawingSection {
+  /** World X (left/right), Y (front/back), or Z (top/bottom), in model mm.
+   * Material nearest the viewer is removed. */
+  offsetMm: number;
+  /** Spacing on paper, independent of model scale. Defaults to 2 mm. */
+  hatchSpacingMm?: number;
+}
 export interface DrawingView {
   id: string;
   name: string;
@@ -45,6 +52,7 @@ export interface DrawingView {
   /** A projected view inherits its parent's scale and aligned coordinate. */
   parentId?: string;
   bodyIds?: string[];
+  section?: DrawingSection | null;
 }
 export type DrawingAnnotation = {
   id: string;
@@ -89,7 +97,7 @@ function list(value: unknown, limit: number): asserts value is unknown[] {
 
 export function validateDrawingDocument(value: unknown): asserts value is DrawingDocument {
   object(value);
-  if (value.format !== "aether-drawing" || value.formatVersion !== 1) throw Error("Unsupported Drawing file format or version.");
+  if (value.format !== "aether-drawing" || ![1, 2].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
   text(value.documentId); text(value.name); text(value.activeSheetId);
   validatePartDocument(value.source);
   if (value.sourceReference !== undefined) {
@@ -118,11 +126,19 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       if (typeof view.hiddenLines !== "boolean") throw Error("Hidden-line visibility must be a boolean.");
       if (view.parentId !== undefined) text(view.parentId);
       if (view.bodyIds !== undefined) { list(view.bodyIds, 500); view.bodyIds.forEach(text); if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies."); }
+      if (view.section != null) {
+        if (value.formatVersion !== 2) throw Error("Section views require Drawing format version 2.");
+        object(view.section);
+        if (Object.keys(view.section).some(key => !["offsetMm", "hatchSpacingMm"].includes(key))) throw Error("Unknown section property.");
+        number(view.section.offsetMm, -100000, 100000);
+        if (view.section.hatchSpacingMm !== undefined) number(view.section.hatchSpacingMm, 0.5, 10);
+        if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
+      }
       views.set(view.id as string, view as unknown as DrawingView);
     }
     for (const view of views.values()) if (view.parentId) {
       const parent = views.get(view.parentId);
-      if (!parent || parent.parentId || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
+      if (!parent || parent.parentId || parent.section || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
         throw Error("A projected view must reference a base front view on the same sheet.");
       }
     }
@@ -174,7 +190,7 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
       case "add-view": sheet.views.push(structuredClone(command.view)); break;
       case "update-view": {
         const view = sheet.views.find(v => v.id === command.viewId); if (!view) throw Error("Drawing view does not exist.");
-        if (Object.keys(command.changes).some(key => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds"].includes(key))) throw Error("Unknown drawing view property.");
+        if (Object.keys(command.changes).some(key => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section"].includes(key))) throw Error("Unknown drawing view property.");
         Object.assign(view, structuredClone(command.changes)); break;
       }
       case "remove-view": {
@@ -195,6 +211,7 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
       default: throw Error("Unknown drawing command.");
     }
   }
+  if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);
   return doc;
 }

@@ -1,11 +1,28 @@
-# Aether Drawing format 1
+# Aether Drawing formats 1 and 2
 
 `.acdrw` is a self-contained CAD Drawing document; `.acdrawing` remains accepted as an alias. Its canonical authoring
 contract is `aether-engine/src/drawing/document.ts`; the UI and headless runner
 apply the same validated commands. This does not change the Part format or the
 Studio database. Drawings use the existing Studio document storage, autosave, revision and conflict-recovery transport, with their own file identity.
 
-The JSON root contains `format: "aether-drawing"`, `formatVersion: 1`,
+## Implementation ownership
+
+| Module | Responsibility |
+| --- | --- |
+| `aether-engine/src/drawing/document.ts` | Saved intent, validation and immutable authoring commands. |
+| `aether-engine/src/kernel/drawing-section.ts` | Temporary exact cut solids and hole-clipped hatch geometry; owns their OCCT lifetime. |
+| `aether-engine/src/kernel/drawing-projection.ts` | Hidden-line projection and analytic drawing curves. |
+| `aether-engine/src/drawing/build.ts` and `export.ts` | Sheet placement/dimensions and SVG/DXF serialization. |
+| `src/drawing/` | Editor transactions/history, shared-widget authoring and canvas presentation adapters. |
+| `src/automation/drawing-agent.ts` and `drawing-commands.ts` | Live-editor and headless adapters to those same validated operations. |
+
+Tests stay beside the owning modules; `scripts/verify-drawings*.mjs` exercise
+packaged and browser workflows. Routers only compose the feature. Generated
+worker bundles are outputs of these modules, never a second implementation.
+
+## Saved document
+
+The JSON root contains `format: "aether-drawing"`, `formatVersion: 1 | 2`,
 `documentId`, `name`, an embedded `source` Part document, `activeSheetId` and
 `sheets`. An optional `sourceReference` stores `{fileId, partId?, branch?, revision?}`. The app interprets this locator through Studio permissions; the kernel never performs network reads. IDs must be unique within the drawing. Coordinates, paper dimensions
 and model dimensions use millimeters. View `scale` is paper length/model length.
@@ -40,7 +57,7 @@ or topology indices are saved in the authoring file.
 
 SVG and DXF export the active sheet in physical sheet millimeters. Hidden edges
 are dashed; the exports contain the current notes and dimension graphics.
-Sections, assembly source drawings/BOMs, PDF, arbitrary edge-attached dimensions,
+Assembly source drawings/BOMs, PDF, arbitrary edge-attached dimensions,
 title-block editing and placement by dragging are not implemented in this slice.
 
 ## Local headless commands
@@ -82,3 +99,27 @@ inspection is paged, and exports above 2 MiB use the UI download control. Tool
 exports return text; they do not publish a file. A hosted read-only revision
 refuses edits while still allowing sheet browsing and SVG/DXF export. CAD metadata operations can rename/copy the drawing and edit its properties without changing the embedded source. Real-provider inference and closed-file MCP drawing operations are
 not claimed by this implementation.
+
+
+## Principal section views (format 2)
+
+An independent front/back/left/right/top/bottom view accepts
+`section: { offsetMm: number, hatchSpacingMm?: number }`. The offset is the world
+Y coordinate for front/back, X for left/right, or Z for top/bottom, in model mm.
+The half nearest the viewer is removed; material on the far side stays. This is
+a full planar cutaway, not a viewport clipping effect. The plane must cross solid
+material. A section cannot be projected from another view or serve as a projected
+view parent. Isometric, offset/stepped cuts and parent cutting-line annotations
+are not supported yet. `section: null` converts the view back to an ordinary view.
+
+Cut geometry uses exact OCCT Boolean solids. Cap faces are intersected with
+parallel planes to form 45-degree hatch lines, clipped exactly to material and
+holes. Spacing is 0.5–10 paper mm (default 2), independent of view scale. A view
+allows at most 2,048 hatch-plane evaluations; exceeding that refuses the edit
+without changing the document. SVG, DXF and the canvas share these lines.
+
+Ordinary format-1 files remain readable and keep their version until a section
+is authored. Adding a section upgrades to format 2; it never silently downgrades
+when a section is removed. Older readers reject version 2, preserving section
+intent across release rollback. Undo may restore the earlier complete format-1
+snapshot. Metadata rename/copy retains the complete version and section data.

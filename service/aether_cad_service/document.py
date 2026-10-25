@@ -41,7 +41,7 @@ def defaults():
 def validate_drawing_header(doc):
     # Settings carry portable metadata only; the TS drawing module validates
     # authoring commands and geometry when the product opens/rebuilds the file.
-    if not isinstance(doc, dict) or doc.get("format") != "aether-drawing" or type(doc.get("formatVersion")) is not int or doc["formatVersion"] != 1:
+    if not isinstance(doc, dict) or doc.get("format") != "aether-drawing" or type(doc.get("formatVersion")) is not int or doc["formatVersion"] not in (1, 2):
         raise ValueError("Unsupported Drawing format.")
     text(doc.get("name"), 1000, True)
     text(doc.get("documentId"), 1000, True)
@@ -211,7 +211,7 @@ class CADDocument:
             "settings": settings,
             "items": self.items(),
             "unitCatalog": UNITS,
-            "featureVersion": 1 if self.drawing is not None else PART_DOCUMENT_VERSION,
+            "featureVersion": self.drawing["formatVersion"] if self.drawing is not None else PART_DOCUMENT_VERSION,
             "upgradeNeeded": bool(self.upgrade_documents()),
             "upgradeDocuments": self.upgrade_documents(),
             "deleted": [

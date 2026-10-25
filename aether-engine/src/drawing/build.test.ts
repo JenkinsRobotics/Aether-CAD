@@ -54,3 +54,28 @@ it("exports physical paper units, hidden edges and escaped text in SVG and DXF",
   expect(Math.max(...points.map(p => p[0]))).toBeCloseTo(90, 5);
   expect(() => exportDrawingSVG(built, "missing")).toThrow(/does not exist/);
 });
+
+it("rebuilds and exports section hatching with constant paper spacing and retained cut intent", async () => {
+  let doc = drawing(); doc.sheets[0].views = [doc.sheets[0].views[0]];
+  doc = applyDrawingCommand(doc, {type: "update-view", sheetId: doc.activeSheetId, viewId: "front", changes: {section: {offsetMm: 0, hatchSpacingMm: 2}}});
+  const first = await buildDrawing(doc, project);
+  expect(first.document.formatVersion).toBe(2);
+  const checkSpacing = (built: typeof first) => {
+    const v = built.sheets[0].views[0];
+    const offsets = [...new Set(v.geometry.hatch!.map(line => Number(((line.start[0] - line.start[1]) * Math.SQRT1_2 * v.view.scale).toFixed(6))))].sort((a,b) => a-b);
+    expect(offsets.length).toBeGreaterThan(3);
+    for (let i=1;i<offsets.length;i++) expect(offsets[i]-offsets[i-1]).toBeCloseTo(2,5);
+  };
+  checkSpacing(first);
+  const resized = applyDrawingCommand(doc, {type:"update-view",sheetId:doc.activeSheetId,viewId:"front",changes:{scale:1}});
+  const full = await buildDrawing(resized,project);checkSpacing(full);
+  expect(full.sheets[0].views[0].geometry.hatch!.length).toBeGreaterThan(first.sheets[0].views[0].geometry.hatch!.length);
+  const source = structuredClone(doc.source), extrude = source.features.find(f=>f.type==="extrude")!;
+  if(extrude.type!=="extrude")throw Error("Missing extrusion");extrude.distanceMillimeters=25;
+  const updated = applyDrawingCommand(doc,{type:"refresh-source",source});
+  const reopened = await buildDrawing(parseDrawingDocument(serializeDrawingDocument(updated)),project);
+  expect(reopened.sheets[0].annotations[0].text).toBe("25.00");
+  expect(reopened.sheets[0].views[0].view.section).toEqual({offsetMm:0,hatchSpacingMm:2});
+  expect(exportDrawingSVG(reopened)).toContain('data-layer="hatch"');
+  expect(exportDrawingDXF(reopened)).toContain('8\nHATCH\n');
+});

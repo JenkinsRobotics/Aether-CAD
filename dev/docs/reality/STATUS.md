@@ -465,3 +465,41 @@ No page errors or legacy /cad/rpc calls. Two initial DOM fixture attempts lacked
 the actual StudioWorkspace context; the corrected test uses the public shared
 container. Worker/codec hashes remain unchanged. Evidence:
 `.verification/baseline-2026-10-24/contextual-history-*`. No installation changes.
+
+
+## 2026-10-24 — Principal drawing sections (source qualified)
+
+Independent principal drawing views now author a cut coordinate and paper hatch
+spacing through the approved drawing dialog and the same agent command. Exact
+OCCT cut solids feed the existing hidden-line projector. Each cap face is intersected
+with parallel planes for hatching, retaining holes and disconnected material.
+No model or mesh geometry is changed. Source refresh/history/reopen and exports
+use saved cut intent. Format 2 prevents old readers from silently losing it;
+ordinary drawings remain format 1. Isometric/stepped cuts, cutting-line annotation,
+assembly sources and broader dimension/PDF gates remain.
+
+Checks pass for all six orientations, analytic circular edges, holes, invalid cuts
+and bounded hatch workloads. The full engine suite passes 1,146 tests; the app
+passes 1,856 with one existing skip. Types/build, all 308 native service tests,
+fresh-process drawing source refresh/export/reopen, headless kernel and saved
+sketch-region scripts pass. The frozen prior reader accepts format 1 and refuses
+format 2; the candidate accepts both. All 11 authenticated browser workflows pass
+(123.89 seconds), including actual section authoring, invalid-cut refusal, live
+MCP cut editing/history, source refresh, SVG/DXF export, local and Studio reopen,
+read-only browsing and metadata operations. No page errors. The actual Animation
+client load/pose/serialize/reopen regression also passes. The section screenshot
+was inspected: hatching fills material and leaves the bore clear. Two early
+geometry fixture attempts used the wrong cut operation/direction; corrected to
+CAD's existing cut contract. Evidence: `.verification/baseline-2026-10-24/drawing-sections-*`.
+No installation changes.
+
+Per Jonathan's maintainability request, the feature keeps document validation,
+section geometry/hatching, projection, export, editor UI and agent adapters in
+their owning modules. The section module owns and releases its temporary OCCT
+objects; entry points only compose it. CAD's contributor contract now records
+that structure and readable formatting as the rule for continued baseline work.
+After formatting, 14 focused engine checks and types/build pass. All 3,517
+frontend files are byte-identical to the browser-qualified output. The rebuilt
+worker passes all 308 native checks again (174.32 seconds), fresh-process drawing
+checks, old-reader refusal and pinned-codec/package equality. Its final SHA-256
+is `360daff4a45cc586fdcd8bc4f5838370d85cbd5aacc9804882150b87f7ede504`.

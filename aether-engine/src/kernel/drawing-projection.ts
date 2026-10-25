@@ -3,6 +3,7 @@ import type { TopoDS_Shape, TopAbs_ShapeEnum } from "replicad-opencascadejs";
 import type { PartDocument } from "../document/part-document";
 import { drawingViewFrame, type PartDrawingOptions, type PartDrawingProjection, type ProjectedDrawingCurve } from "../drawing/projection";
 import { evaluatePartDocument } from "./part-evaluator";
+import { withDrawingSection } from "./drawing-section";
 import { withHiddenLineProjection } from "./hidden-line";
 
 /** Projects all selected bodies together: nearer solids must occlude farther
@@ -14,24 +15,26 @@ export function projectPartDrawing(document: PartDocument, options: PartDrawingO
     const ids = options.bodyIds ?? [...bodies.keys()];
     if (!ids.length || new Set(ids).size !== ids.length) throw Error("A drawing view requires distinct exact bodies.");
     const shapes = ids.map(id => { const shape = bodies.get(id); if (!shape) throw Error(`Drawing body ${id} no longer exists.`); return shape; });
-    // Replicad consumes its inputs when assembling a compound.
-    const compound = makeCompound(shapes.map(shape => shape.clone()) as Shape3D[]);
-    try {
-      result = withHiddenLineProjection(compound, { viewNormal: normal, upDirection: up }, projected => {
-        const visible = [projected.visible, projected.visibleOutline];
-        const hidden = [projected.hidden, projected.hiddenOutline];
-        const all = [...visible, ...hidden].filter(s => s && !s.IsNull());
-        if (!all.length) throw Error("The model has no projectable edges.");
-        const oc = getOC(), box = new oc.Bnd_Box_1();
-        try {
-          // Exact curve extrema, independent of display tessellation.
-          all.forEach(shape => oc.BRepBndLib.AddOptimal(shape, box, false, false));
-          const lo = box.CornerMin(), hi = box.CornerMax();
-          try { return { visible: visible.flatMap(readCurves), hidden: hidden.flatMap(readCurves), bounds: [lo.X(), lo.Y(), hi.X(), hi.Y()], bodyIds: ids } as PartDrawingProjection; }
-          finally { lo.delete(); hi.delete(); }
-        } finally { box.delete(); }
-      });
-    } finally { compound.delete(); }
+    result = withDrawingSection(shapes, options, (sectionShapes, hatch) => {
+      // Replicad consumes its inputs when assembling a compound.
+      const compound = makeCompound(sectionShapes.map(shape => shape.clone()) as Shape3D[]);
+      try {
+        return withHiddenLineProjection(compound, { viewNormal: normal, upDirection: up }, projected => {
+          const visible = [projected.visible, projected.visibleOutline];
+          const hidden = [projected.hidden, projected.hiddenOutline];
+          const all = [...visible, ...hidden].filter(s => s && !s.IsNull());
+          if (!all.length) throw Error("The model has no projectable edges.");
+          const oc = getOC(), box = new oc.Bnd_Box_1();
+          try {
+            // Exact curve extrema, independent of display tessellation.
+            all.forEach(shape => oc.BRepBndLib.AddOptimal(shape, box, false, false));
+            const lo = box.CornerMin(), hi = box.CornerMax();
+            try { return { visible: visible.flatMap(readCurves), hidden: hidden.flatMap(readCurves), bounds: [lo.X(), lo.Y(), hi.X(), hi.Y()], bodyIds: ids, ...(options.section ? { hatch } : {}) } as PartDrawingProjection; }
+            finally { lo.delete(); hi.delete(); }
+          } finally { box.delete(); }
+        });
+      } finally { compound.delete(); }
+    });
   } });
   if (!result) throw Error("Create an exact solid before making a drawing.");
   return result;

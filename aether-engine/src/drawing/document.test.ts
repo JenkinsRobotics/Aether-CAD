@@ -49,3 +49,17 @@ it("round trips a bounded source locator without making it geometry authority", 
   }
   expect(drawing.source).toBe(original);
 });
+
+it("upgrades section intent to version 2 and refuses malformed or misleading section views", () => {
+  const drawing = createDrawingDocument(part()), sheetId = drawing.activeSheetId;
+  const section = {...base, section: {offsetMm: 0, hatchSpacingMm: 2}};
+  const next = applyDrawingCommand(drawing, {type: "add-view", sheetId, view: section});
+  expect(next.formatVersion).toBe(2); expect(drawing.formatVersion).toBe(1);
+  expect(parseDrawingDocument(serializeDrawingDocument(next))).toEqual(next);
+  expect(() => serializeDrawingDocument({...next, formatVersion: 1})).toThrow(/version 2/);
+  for (const invalid of [{...section, orientation: "isometric"}, {...section, parentId: "front"}, {...section, section: {offsetMm: NaN}}, {...section, section: {offsetMm: 0, hatchSpacingMm: 0}}]) {
+    expect(() => applyDrawingCommand(drawing, {type: "add-view", sheetId, view: invalid as DrawingView})).toThrow();
+  }
+  const removed = applyDrawingCommand(next, {type: "update-view", sheetId, viewId: base.id, changes: {section: null}});
+  expect(removed.formatVersion).toBe(2); expect(removed.sheets[0].views[0].section).toBeNull();
+});

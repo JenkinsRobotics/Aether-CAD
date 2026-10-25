@@ -6,6 +6,7 @@ export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.docume
   const { sheet, views, annotations } = sheetOf(drawing, sheetId);
   const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
   for (const view of views) {
+    for (const curve of view.geometry.hatch ?? []) elements.push(`<path data-layer="hatch" d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="0.15"/>`);
     for (const [curves, hidden] of [[view.geometry.visible, false], [view.view.hiddenLines ? view.geometry.hidden : [], true]] as const) for (const curve of curves) {
       elements.push(`<path d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="${hidden ? 0.18 : 0.3}"${hidden ? ' stroke-dasharray="3 2"' : ""}/>`);
     }
@@ -37,6 +38,7 @@ export function exportDrawingDXF(drawing: BuiltDrawing, sheetId = drawing.docume
       if (curve.kind === "arc") out.push(100, "AcDbArc", 50, (curve.ccw ? curve.start : curve.end) * 180 / Math.PI, 51, (curve.ccw ? curve.end : curve.start) * 180 / Math.PI);
     }
   }
+  for (const view of views) for (const hatch of view.geometry.hatch ?? []) line(sheetPoint(view, hatch.start), sheetPoint(view, hatch.end), false, "HATCH");
   for (const annotation of annotations) {
     annotation.lines.forEach(([a, b]) => line(a, b, false, "ANNOTATIONS"));
     text(annotation.text, annotation.positionMm);

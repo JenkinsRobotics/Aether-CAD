@@ -34,8 +34,20 @@ def test_drawing_settings_rename_copy_and_properties_preserve_source_and_sheets(
 
 def test_drawing_metadata_refuses_unsupported_versions_and_cannot_edit_source_body_properties(tmp_path):
     original = drawing()
-    for key, value in [("formatVersion", 2), ("formatVersion", True), ("source", {}), ("sheets", []), ("documentId", "")]:
+    for key, value in [("formatVersion", 3), ("formatVersion", True), ("source", {}), ("sheets", []), ("documentId", "")]:
         bad = copy.deepcopy(original)
         bad[key] = value
         assert invoke(tmp_path, "settings-read", payload(bad)) == {"error": {"kind": "invalid"}}
     assert invoke(tmp_path, "settings-edit", {**payload(original), "operation": "properties", "item_id": "part", "name": "Changed source"}) == {"error": {"kind": "invalid"}}
+
+
+def test_section_drawing_metadata_retains_new_reader_version_and_cut_intent(tmp_path):
+    original = drawing()
+    original["formatVersion"] = 2
+    original["sheets"][0]["views"] = [{"id": "section", "name": "A-A", "orientation": "top", "originMm": [100, 100], "scale": 1, "hiddenLines": False,
+                                       "section": {"offsetMm": 5, "hatchSpacingMm": 2}}]
+    result = invoke(tmp_path, "settings-edit", {**payload(original), "operation": "rename", "name": "Section drawing"})["result"]
+    document = json.loads(base64.b64decode(result["data_base64"]))
+    assert document["formatVersion"] == 2
+    assert document["sheets"] == original["sheets"]
+    assert document["source"] == original["source"]

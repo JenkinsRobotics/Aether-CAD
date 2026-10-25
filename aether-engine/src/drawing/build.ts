@@ -31,7 +31,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
     const built: BuiltDrawingSheet = { sheet, views: [], annotations: [] };
     for (const authored of sheet.views) {
       const view = resolvedDrawingView(sheet, authored);
-      const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}) };
+      const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}), ...(view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}) };
       const key = JSON.stringify(options);
       let geometry = cache.get(key);
       if (!geometry) { geometry = await project(document.source, options); cache.set(key, geometry); }

@@ -27,8 +27,8 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
   const run = async (action: () => Promise<void>) => { setError(""); try { await action(); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } };
   const command = (id: DrawingPresentationCommandID) => {
     setError("");
-    if (!editable && ["add-sheet", "add-view", "add-annotation", "rebuild-drawing"].includes(id)) { setError("This drawing is read-only."); return; }
-    if (id === "add-sheet" || id === "add-view" || id === "add-annotation") { setDraft({ kind: id === "add-sheet" ? "sheet" : id === "add-view" ? "view" : "annotation" }); return; }
+    if (!editable && ["add-sheet", "add-view", "add-section", "add-annotation", "rebuild-drawing"].includes(id)) { setError("This drawing is read-only."); return; }
+    if (id === "add-sheet" || id === "add-view" || id === "add-section" || id === "add-annotation") { setDraft({ kind: id === "add-sheet" ? "sheet" : id === "add-view" || id === "add-section" ? "view" : "annotation", section: id === "add-section" }); return; }
     if (id === "rebuild-drawing") { void run(() => drawingEditor.refresh()); return; }
     if (!built) return;
     if (id === "save-workspace") void run(() => drawingFiles.save());

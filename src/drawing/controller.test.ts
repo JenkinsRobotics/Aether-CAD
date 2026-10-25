@@ -95,3 +95,17 @@ it("allows viewing other sheets in a read-only drawing without editing saved int
   expect(editor.displayedSheetId()).toBe(first); expect(editor.serialize()).toBe(before); expect(editor.history()).toEqual(history);
   await expect(editor.execute({ type: "select-sheet", sheetId: first })).rejects.toThrow(/read-only/);
 });
+
+it("publishes section hatches through the existing drawing canvas and retains intent across history",async()=>{
+  const store = new CADDrawingWorkspaceStore();
+  const editor = new DrawingEditor(store,async()=>({...geometry,hatch:[{kind:"line" as const,start:[1,1] as [number,number],end:[3,3] as [number,number]}]}));
+  editor.configure(source);await editor.enter();
+  await editor.execute({type:"add-view",sheetId:editor.snapshot()!.document.activeSheetId,view:{...view,section:{offsetMm:0,hatchSpacingMm:2}}});
+  const projection=decodeDrawingProjection(store.snapshot().projection);
+  expect(projection.capabilities.can_project_sections).toBe(true);
+  expect(projection.sheets[0].views[0].type_id).toBe("section");
+  expect(projection.sheets[0].views[0].geometry.primitives.some(p=>p.layer_id==="hatch")).toBe(true);
+  const saved=editor.serialize();await editor.travel(-1);expect(editor.snapshot()!.document.formatVersion).toBe(1);
+  await editor.travel(1);expect(editor.serialize()).toBe(saved);
+  await editor.open(saved);expect(editor.serialize()).toBe(saved);
+});

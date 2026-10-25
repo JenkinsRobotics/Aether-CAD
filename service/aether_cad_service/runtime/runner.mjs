@@ -4587,7 +4587,7 @@ function collapsedInterval(points) {
   const sorted = [...points].sort((a2, b) => a2[axis] - b[axis]);
   return [sorted[0], sorted[sorted.length - 1]];
 }
-const dot$7 = (a2, b) => a2.reduce((s, v, i) => s + v * b[i], 0);
+const dot$8 = (a2, b) => a2.reduce((s, v, i) => s + v * b[i], 0);
 const cross$a = (a2, b) => [
   a2[1] * b[2] - a2[2] * b[1],
   a2[2] * b[0] - a2[0] * b[2],
@@ -4597,19 +4597,19 @@ function basis(frame) {
   const { originMillimeters: o, xDirection: x2, normal: n } = frame;
   if (![o, x2, n].every(
     (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite)
-  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$7(x2, n)) > 1e-6)
+  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$8(x2, n)) > 1e-6)
     throw Error("Projection needs valid orthonormal sketch frames.");
   return { o, x: x2, y: cross$a(n, x2) };
 }
 function sketchFrameMap(source, target) {
   const a2 = basis(source), b = basis(target), delta2 = a2.o.map((v, i) => v - b.o[i]);
   const m2 = [
-    dot$7(a2.x, b.x),
-    dot$7(a2.y, b.x),
-    dot$7(a2.x, b.y),
-    dot$7(a2.y, b.y)
+    dot$8(a2.x, b.x),
+    dot$8(a2.y, b.x),
+    dot$8(a2.x, b.y),
+    dot$8(a2.y, b.y)
   ];
-  const offset2 = [dot$7(delta2, b.x), dot$7(delta2, b.y)];
+  const offset2 = [dot$8(delta2, b.x), dot$8(delta2, b.y)];
   const vector2 = (p2) => [
     m2[0] * p2[0] + m2[1] * p2[1],
     m2[2] * p2[0] + m2[3] * p2[1]
@@ -4869,7 +4869,7 @@ class PierceReferenceError extends Error {
     this.name = "PierceReferenceError";
   }
 }
-const dot$6 = (a2, b) => a2.reduce((sum, value2, i) => sum + value2 * b[i], 0);
+const dot$7 = (a2, b) => a2.reduce((sum, value2, i) => sum + value2 * b[i], 0);
 const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const value = (coefficients, t) => coefficients.reduceRight((sum, n) => sum * t + n, 0);
 const unique = (values) => values.sort((a2, b) => a2 - b).filter((t, i, list2) => i === 0 || Math.abs(t - list2[i - 1]) > 8 * Number.EPSILON);
@@ -4912,7 +4912,7 @@ function pierceCurvePlane(curve, source, target) {
   const map = sketchFrameMap(source, target);
   validateSketchDrawing({ type: "drawing", contours: [curve.type === "circle" ? curve : { type: "path", start: curve.start, segments: [curve.segment] }] });
   const y2 = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v, i) => v - target.originMillimeters[i]);
-  const a2 = dot$6(source.xDirection, target.normal), b = dot$6(y2, target.normal), c2 = dot$6(delta2, target.normal);
+  const a2 = dot$7(source.xDirection, target.normal), b = dot$7(y2, target.normal), c2 = dot$7(delta2, target.normal);
   const depth = (p2) => a2 * p2[0] + b * p2[1] + c2;
   const world = (p2) => source.originMillimeters.map((v, i) => v + source.xDirection[i] * p2[0] + y2[i] * p2[1]);
   let coefficients, frame, poleDepths = [];
@@ -5469,7 +5469,7 @@ function validateFaceExtrude(feature, earlier, missingReference) {
 }
 const sub$4 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const cross$8 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const dot$5 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const unit$2 = (v, what) => {
   const l = Math.hypot(v[0], v[1], v[2]);
   if (!(l > 1e-9)) throw new Error(`${what} has no direction.`);
@@ -5497,7 +5497,7 @@ function resolveAxisLine(feature, earlier = []) {
   const direction = cross$8(a2.normal, b.normal);
   if (Math.hypot(...direction) < 1e-9) throw new Error(`${feature.name}: the two planes are parallel and do not meet.`);
   const u2 = unit$2(direction, `${feature.name}: planes`), inA = cross$8(a2.normal, u2);
-  const t = dot$5(sub$4(b.originMillimeters, a2.originMillimeters), b.normal) / dot$5(inA, b.normal);
+  const t = dot$6(sub$4(b.originMillimeters, a2.originMillimeters), b.normal) / dot$6(inA, b.normal);
   const origin = [a2.originMillimeters[0] + inA[0] * t, a2.originMillimeters[1] + inA[1] * t, a2.originMillimeters[2] + inA[2] * t];
   return { originMillimeters: origin, directionMillimeters: u2 };
 }
@@ -37250,7 +37250,7 @@ function cross$4(a2, b) {
     a2[0] * b[1] - a2[1] * b[0]
   ];
 }
-function dot$4(a2, b) {
+function dot$5(a2, b) {
   return a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 }
 function normalize(value2) {
@@ -37261,9 +37261,9 @@ function normalize(value2) {
 function connectorAxes(zInput, preferredX) {
   const zAxis = normalize(zInput);
   const projected = [
-    preferredX[0] - zAxis[0] * dot$4(preferredX, zAxis),
-    preferredX[1] - zAxis[1] * dot$4(preferredX, zAxis),
-    preferredX[2] - zAxis[2] * dot$4(preferredX, zAxis)
+    preferredX[0] - zAxis[0] * dot$5(preferredX, zAxis),
+    preferredX[1] - zAxis[1] * dot$5(preferredX, zAxis),
+    preferredX[2] - zAxis[2] * dot$5(preferredX, zAxis)
   ];
   const fallback = Math.abs(zAxis[0]) < 0.8 ? [1, 0, 0] : [0, 1, 0];
   const xAxis = normalize(
@@ -38154,7 +38154,7 @@ function throughAllDistance(bodies, origin, direction) {
   }
   return farthest + 1;
 }
-const dot$3 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const dot$4 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 function tangentChainMidpoints(body, seeds) {
   const edges = body.edges;
   try {
@@ -38169,7 +38169,7 @@ function tangentChainMidpoints(body, seeds) {
       te.delete();
       return out;
     });
-    const parallel = (a2, b) => Math.abs(dot$3(a2, b)) / Math.max(Math.hypot(...a2) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
+    const parallel = (a2, b) => Math.abs(dot$4(a2, b)) / Math.max(Math.hypot(...a2) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
     const chosen = /* @__PURE__ */ new Set();
     const queue = info.map((_2, i) => i).filter((i) => seeds.some((p2) => Math.hypot(p2[0] - info[i].mid[0], p2[1] - info[i].mid[1], p2[2] - info[i].mid[2]) < 1e-3));
     queue.forEach((i) => chosen.add(i));
@@ -38234,16 +38234,16 @@ function quadricOf(face, near) {
     if (kind === "CONE") {
       const p0 = at(0, 0), p1 = at(Math.PI, 0), p2 = at(0, 1);
       const location = scale(add$2(p0, p1), 0.5), radial = sub$3(p0, location), R = norm$2(radial), X = unit$1(radial);
-      const generatrix = sub$3(p2, p0), sin = dot$3(generatrix, X), axial = sub$3(generatrix, scale(X, sin)), cos = norm$2(axial), Z = unit$1(axial);
+      const generatrix = sub$3(p2, p0), sin = dot$4(generatrix, X), axial = sub$3(generatrix, scale(X, sin)), cos = norm$2(axial), Z = unit$1(axial);
       const tan = Math.abs(sin / cos);
       if (!(tan > 1e-9) || !Number.isFinite(tan)) throw new Error("cone faces of this shape");
       const apex = sub$3(location, scale(Z, R * cos / sin));
-      return { kind, apex, along: dot$3(sub$3(near, apex), Z) < 0 ? neg(Z) : Z, tan };
+      return { kind, apex, along: dot$4(sub$3(near, apex), Z) < 0 ? neg(Z) : Z, tan };
     }
     if (kind === "TORUS") {
       const outer = at(0, 0), opposite = at(Math.PI, 0), inner = at(0, Math.PI), top = at(0, Math.PI / 2);
       const centre = scale(add$2(outer, opposite), 0.5), X = unit$1(sub$3(outer, centre));
-      const outerRadius = dot$3(sub$3(outer, centre), X), innerRadius = dot$3(sub$3(inner, centre), X);
+      const outerRadius = dot$4(sub$3(outer, centre), X), innerRadius = dot$4(sub$3(inner, centre), X);
       const R = (outerRadius + innerRadius) / 2, r = (outerRadius - innerRadius) / 2;
       const along = unit$1(sub$3(sub$3(top, centre), scale(X, R)));
       return { kind, at: centre, along, R, r: Math.abs(r) };
@@ -38275,14 +38275,14 @@ function quadricSolid(q, length, own) {
 }
 function insideQuadric(q, p2) {
   if (q.kind === "SPHERE") return norm$2(sub$3(p2, q.at)) < q.r;
-  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$3(to, q.along), rho = norm$2(sub$3(to, scale(q.along, h)));
+  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$4(to, q.along), rho = norm$2(sub$3(to, scale(q.along, h)));
   if (q.kind === "CYLINDER") return rho < q.r;
   if (q.kind === "TORUS") return Math.hypot(rho - q.R, h) < q.r;
   return h > 0 && rho < h * q.tan;
 }
 function quadricRadial(q, p2) {
   if (q.kind === "SPHERE") return sub$3(p2, q.at);
-  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$3(to, q.along), radial = sub$3(to, scale(q.along, h));
+  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$4(to, q.along), radial = sub$3(to, scale(q.along, h));
   if (q.kind !== "TORUS") return radial;
   return sub$3(p2, add$2(q.at, scale(unit$1(radial), q.R)));
 }
@@ -38450,7 +38450,7 @@ function capFaces(prism, direction, sign) {
     if (face.geomType === "PLANE") {
       const center = deleteAfterVectorTuple(face.center);
       const normal = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-      keep = dot$3([normal[0], normal[1], normal[2]], direction) * sign > 1 - 1e-7;
+      keep = dot$4([normal[0], normal[1], normal[2]], direction) * sign > 1 - 1e-7;
     }
     if (keep) caps.push(face);
     else face.delete();
@@ -39098,7 +39098,7 @@ function evaluatePartDocument(document2, options = {}) {
                 placements.push((shape) => {
                   let moved = own(shape.clone().translate(move[0], move[1], move[2]));
                   if (feature.orientation === "path") {
-                    const axis = cross$3(start.tangent, target2.tangent), angle2 = Math.acos(Math.max(-1, Math.min(1, dot$3(start.tangent, target2.tangent)))) * 180 / Math.PI;
+                    const axis = cross$3(start.tangent, target2.tangent), angle2 = Math.acos(Math.max(-1, Math.min(1, dot$4(start.tangent, target2.tangent)))) * 180 / Math.PI;
                     if (Math.hypot(...axis) > 1e-9 && angle2 > 1e-9) moved = own(moved.rotate(angle2, target2.at, unit$1(axis)));
                   }
                   return moved;
@@ -39210,7 +39210,7 @@ function evaluatePartDocument(document2, options = {}) {
             for (const start of starts) {
               const direction = feature.direction ? (() => {
                 const d2 = unit$1(feature.direction);
-                return dot$3(d2, start.n) < 0 ? unit$1([-d2[0], -d2[1], -d2[2]]) : d2;
+                return dot$4(d2, start.n) < 0 ? unit$1([-d2[0], -d2[1], -d2[2]]) : d2;
               })() : feature.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
               const center = start.center;
               if (start === starts[0]) {
@@ -39293,7 +39293,7 @@ function evaluatePartDocument(document2, options = {}) {
               let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
               if (!isShape3D(cone)) throw new Error("The boss is not a valid solid.");
               cone = own(cone);
-              const from = [0, 0, 1], d2 = dot$3(from, outward);
+              const from = [0, 0, 1], d2 = dot$4(from, outward);
               if (d2 < 1 - 1e-9) {
                 const axis = cross$3(from, outward);
                 cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$1(axis) : [1, 0, 0]));
@@ -39377,7 +39377,7 @@ function evaluatePartDocument(document2, options = {}) {
               publish(feature, { parameter: "height", kind: "linear", originMillimeters: add$2([start[0], start[1], start[2]], along), direction: feature.shape === "groove" ? scale(n, -1) : n, label: feature.shape === "groove" ? "Groove depth" : "Lip height" });
             } else {
               const base = [...feature.pointMillimeters], n = unit$1([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))]);
-              const raw = feature.hookDirectionMillimeters, hook = unit$1(sub$3(raw, scale(n, dot$3(raw, n))));
+              const raw = feature.hookDirectionMillimeters, hook = unit$1(sub$3(raw, scale(n, dot$4(raw, n))));
               if (norm$2(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
               const across = unit$1(cross$3(n, hook));
               const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
@@ -39601,7 +39601,7 @@ function evaluatePartDocument(document2, options = {}) {
                 let fromAt = from.at;
                 if (from.normal && to.normal) {
                   const target = t.flip ? to.normal : [-to.normal[0], -to.normal[1], -to.normal[2]];
-                  const d2 = dot$3(from.normal, target), axis = cross$3(from.normal, target), l = Math.hypot(...axis);
+                  const d2 = dot$4(from.normal, target), axis = cross$3(from.normal, target), l = Math.hypot(...axis);
                   const angle2 = Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI;
                   if (angle2 > 1e-9) {
                     const about = l > 1e-9 ? unit$1(axis) : unit$1(cross$3(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
@@ -39706,7 +39706,7 @@ function evaluatePartDocument(document2, options = {}) {
                 for (const i of [...chosen]) for (const [k2, n] of keys2[i]) all.forEach((_2, j) => {
                   if (chosen.has(j)) return;
                   const match = keys2[j].find(([k22]) => k22 === k2);
-                  if (match && dot$3(n, match[1]) > Math.cos(Math.PI / 180)) chosen.add(j);
+                  if (match && dot$4(n, match[1]) > Math.cos(Math.PI / 180)) chosen.add(j);
                 });
                 all.forEach((face, i) => {
                   if (chosen.has(i) && !referenced.some((r) => r.wrapped.IsSame(face.wrapped))) referenced.push(face);
@@ -39801,7 +39801,7 @@ function evaluatePartDocument(document2, options = {}) {
                 if (face.geomType === "PLANE") {
                   const center = deleteAfterVectorTuple(face.center);
                   const outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-                  keep = Math.abs(Math.abs(dot$3([outward[0], outward[1], outward[2]], faceAxis)) - 1) < 1e-7 && Math.abs(dot$3([center[0], center[1], center[2]], faceAxis) - faceOffset) < 1e-6;
+                  keep = Math.abs(Math.abs(dot$4([outward[0], outward[1], outward[2]], faceAxis)) - 1) < 1e-7 && Math.abs(dot$4([center[0], center[1], center[2]], faceAxis) - faceOffset) < 1e-6;
                 }
                 if (keep) matches.push(face);
                 else face.delete();
@@ -39945,8 +39945,8 @@ function evaluatePartDocument(document2, options = {}) {
               try {
                 const c0 = deleteAfterVectorTuple(face0.center), n0 = unit$1([...deleteAfterVectorTuple(face0.normalAt([c0[0], c0[1], c0[2]]))]);
                 const pn = [target.zDir.x, target.zDir.y, target.zDir.z], po = [target.origin.x, target.origin.y, target.origin.z];
-                if (Math.abs(Math.abs(dot$3(n0, pn)) - 1) > 1e-6) throw new Error("Replace face needs a plane parallel to the faces.");
-                distance2 = dot$3(sub$3(po, [c0[0], c0[1], c0[2]]), n0);
+                if (Math.abs(Math.abs(dot$4(n0, pn)) - 1) > 1e-6) throw new Error("Replace face needs a plane parallel to the faces.");
+                distance2 = dot$4(sub$3(po, [c0[0], c0[1], c0[2]]), n0);
                 if (Math.abs(distance2) < 1e-6) throw new Error("The faces already lie on that plane.");
               } finally {
                 face0.delete();
@@ -39954,7 +39954,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (!t && (distance2 === void 0 || !Number.isFinite(distance2) || Math.abs(distance2) < 1e-6)) throw new Error("Offset distance must be finite and nonzero.");
             const rotateVector = (v, axis, degrees) => {
-              const u2 = unit$1(axis), th = degrees * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$3(u2, v), d2 = dot$3(u2, v);
+              const u2 = unit$1(axis), th = degrees * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$3(u2, v), d2 = dot$4(u2, v);
               return [v[0] * c2 + w2[0] * s + u2[0] * d2 * (1 - c2), v[1] * c2 + w2[1] * s + u2[1] * d2 * (1 - c2), v[2] * c2 + w2[2] * s + u2[2] * d2 * (1 - c2)];
             };
             const volumeOf = (shape) => {
@@ -40041,7 +40041,7 @@ function evaluatePartDocument(document2, options = {}) {
                   if (otherKind === "PLANE") {
                     const c2 = [...deleteAfterVectorTuple(other.center)];
                     const outward = unit$1([...deleteAfterVectorTuple(other.normalAt([c2[0], c2[1], c2[2]]))]);
-                    const side = halfSpace(c2, dot$3(sub$3(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
+                    const side = halfSpace(c2, dot$4(sub$3(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
                     surfaces.push(side);
                     sides.push(side);
                   } else if (["CYLINDER", "SPHERE", "CONE", "TORUS"].includes(otherKind)) {
@@ -40102,7 +40102,7 @@ function evaluatePartDocument(document2, options = {}) {
                         return q;
                       };
                       const handles = candidates.map((c2) => new f2.Handle_Geom_Surface_2(c2));
-                      const base = sample(handle), shifts = handles.map((h) => dot$3(sub$3(sample(h), base), normal) * Math.sign(distance2));
+                      const base = sample(handle), shifts = handles.map((h) => dot$4(sub$3(sample(h), base), normal) * Math.sign(distance2));
                       const chosen = shifts[0] >= shifts[1] ? 0 : 1;
                       insideNew = keepSideOfSurface(f2, handles[chosen], column, inside2, own, true);
                       handles.forEach((h) => h.delete());
@@ -40113,7 +40113,7 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                 } else {
                   const q = quadricOf(face, center), length = 2 * span;
-                  const convex = dot$3(normal, quadricRadial(q, center)) > 0;
+                  const convex = dot$4(normal, quadricRadial(q, center)) > 0;
                   const primitive = (shape) => {
                     const solid = quadricSolid(shape, length, own), c2 = quadricCentre(shape);
                     return convex ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c2[0], c2[1], c2[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 }));
@@ -40214,7 +40214,7 @@ function evaluatePartDocument(document2, options = {}) {
                   let side = unit$1(cross$3(n, t));
                   const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
                   c2.delete();
-                  if (dot$3(side, away) < 0) side = neg(side);
+                  if (dot$4(side, away) < 0) side = neg(side);
                   reach = scale(side, distance2);
                 }
               }
@@ -40274,7 +40274,7 @@ function evaluatePartDocument(document2, options = {}) {
               let o = unit$1(cross$3(n, tdir));
               const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
               c2.delete();
-              if (dot$3(o, away) < 0) o = neg(o);
+              if (dot$4(o, away) < 0) o = neg(o);
               if (feature.id === previewId && !previewHandles.length) {
                 publish(feature, { parameter: feature.type === "sheet-hem" ? "length" : "distance", kind: "linear", originMillimeters: mid, direction: o, label: feature.type === "sheet-hem" ? "Hem length" : "Flange length" });
                 if (feature.type === "sheet-flange") publish(feature, { parameter: "angle", kind: "angular", originMillimeters: mid, direction: tdir, label: "Flange angle" });
@@ -40300,7 +40300,7 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
               const section2 = own(pen.close());
-              const zdir = unit$1(cross$3(o, n)), from = dot$3(zdir, tdir) > 0 ? a2 : b;
+              const zdir = unit$1(cross$3(o, n)), from = dot$4(zdir, tdir) > 0 ? a2 : b;
               const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
               const piece = own(section2.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
@@ -40333,7 +40333,7 @@ function evaluatePartDocument(document2, options = {}) {
             const onFace = faces.filter((f2) => {
               const c2 = f2.center, nv2 = f2.normalAt(c2);
               const n2 = [nv2.x, nv2.y, nv2.z];
-              const dPlane = Math.abs(dot$3(n2, sub$3(p2, [c2.x, c2.y, c2.z])));
+              const dPlane = Math.abs(dot$4(n2, sub$3(p2, [c2.x, c2.y, c2.z])));
               c2.delete();
               nv2.delete();
               return dPlane < 1e-4;
@@ -40355,7 +40355,7 @@ function evaluatePartDocument(document2, options = {}) {
             const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
             if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
             const sb = strip.boundingBox.bounds;
-            const along = (pt) => dot$3(sub$3(pt, p2), tdir);
+            const along = (pt) => dot$4(sub$3(pt, p2), tdir);
             const corners2 = [];
             for (const x2 of [sb[0][0], sb[1][0]]) for (const y2 of [sb[0][1], sb[1][1]]) for (const z2 of [sb[0][2], sb[1][2]]) corners2.push([x2, y2, z2]);
             const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
@@ -40368,7 +40368,7 @@ function evaluatePartDocument(document2, options = {}) {
             pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
             const section2 = own(pen.close());
             const zdir = unit$1(cross$3(o, n));
-            const start = add$2(p2, scale(tdir, dot$3(zdir, tdir) > 0 ? s0 : s1));
+            const start = add$2(p2, scale(tdir, dot$4(zdir, tdir) > 0 ? s0 : s1));
             const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
             const bend = own(own(section2.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
             const axisOrigin = add$2(p2, scale(n, feature.inward ? r : -(t + r)));
@@ -40385,7 +40385,7 @@ function evaluatePartDocument(document2, options = {}) {
             const face = faceByReference(body, f2.face, "Perforate face");
             const c2 = [...deleteAfterVectorTuple(face.center)], n = unit$1([...deleteAfterVectorTuple(face.normalAt([c2[0], c2[1], c2[2]]))]);
             const x2 = unit$1(canonicalPlaneXDirection(n)), y2 = unit$1(cross$3(n, x2));
-            const to2 = (p22) => [dot$3(sub$3(p22, c2), x2), dot$3(sub$3(p22, c2), y2)];
+            const to2 = (p22) => [dot$4(sub$3(p22, c2), x2), dot$4(sub$3(p22, c2), y2)];
             const polygon = (w2) => {
               const pts = [];
               for (const edge of w2.edges) {
@@ -40910,7 +40910,7 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t.axisDirection;
               }
               if (feature.id === previewId) {
-                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c2, origin), axis);
+                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$4(sub$3(c2, origin), axis);
                 publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale(axis, t)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature.angleDegrees * Math.PI / 180 * (feature.reversed ? -1 : 1);
@@ -41048,7 +41048,7 @@ function evaluatePartDocument(document2, options = {}) {
                 direction = unit$1(v);
                 custom = true;
               }
-              if (custom && Math.abs(dot$3(direction, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
+              if (custom && Math.abs(dot$4(direction, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
               if (feature.operation === "cut" !== Boolean(feature.reversed)) direction = neg(direction);
               let offset2 = feature.startingOffsetMillimeters ?? 0;
               if (feature.startingReference) {
@@ -41070,9 +41070,9 @@ function evaluatePartDocument(document2, options = {}) {
                   origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
                 }
                 if (norm$2(cross$3(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
-                const alignment = dot$3(normal, direction);
+                const alignment = dot$4(normal, direction);
                 if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-                offset2 += dot$3(normal, sub$3(origin, o)) / alignment;
+                offset2 += dot$4(normal, sub$3(origin, o)) / alignment;
               }
               if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
               const draftOf = (angle2) => {
@@ -41101,7 +41101,7 @@ function evaluatePartDocument(document2, options = {}) {
                 second = { endType: mode, distance: feature.distanceMillimeters / 2, endOffset: 0, draft: primary.draft };
               }
               const drafted = Boolean(primary.draft || second?.draft);
-              if (drafted && custom && Math.abs(dot$3(direction, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
+              if (drafted && custom && Math.abs(dot$4(direction, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
               if (drafted && !shape.sections) throw new UnsupportedFeature(feature.id, "drafted thin extrusions");
               const prism = (low2, high2, dir) => {
                 if (!(high2 - low2 > 0)) throw new Error("Extrusion depths must be finite and positive.");
@@ -41138,12 +41138,12 @@ function evaluatePartDocument(document2, options = {}) {
                 return own(result2.simplify());
               };
               const axisOf = (dir) => {
-                const axis = dot$3(n, dir) < 0 ? neg(n) : n;
-                return { axis, alignment: dot$3(axis, dir), origin: dot$3(o, axis) };
+                const axis = dot$4(n, dir) < 0 ? neg(n) : n;
+                return { axis, alignment: dot$4(axis, dir), origin: dot$4(o, axis) };
               };
               const farthestAlong = (shapes, axis) => {
                 let m2 = -Infinity;
-                for (const shape2 of shapes) for (const c2 of corners(shape2.boundingBox.bounds)) m2 = Math.max(m2, dot$3(c2, axis));
+                for (const shape2 of shapes) for (const c2 of corners(shape2.boundingBox.bounds)) m2 = Math.max(m2, dot$4(c2, axis));
                 return m2;
               };
               const diagonalOf = (shape2) => {
@@ -41163,7 +41163,7 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 if (end.endType === "up-to-vertex") {
                   const { axis, alignment } = axisOf(dir);
-                  const depth = dot$3(axis, sub$3(stopPoint(end.point), o)) / alignment - end.endOffset;
+                  const depth = dot$4(axis, sub$3(stopPoint(end.point), o)) / alignment - end.endOffset;
                   if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
                   return depth;
                 }
@@ -41356,12 +41356,12 @@ function evaluatePartDocument(document2, options = {}) {
                 if (!ref.normal) throw new Error("Up to face needs a valid unit normal.");
                 const normal = unit$1(ref.normal);
                 const center = planarFaceCenter(ref.sourceFeatureId, ref.bodyId, normal, ref.faceAnchor, "Up to face", "Up to face reference is unavailable. Reselect the stopping face.");
-                const alignment = dot$3(normal, dir);
+                const alignment = dot$4(normal, dir);
                 if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
                 const planePoint = sub$3(center, scale(dir, end.endOffset));
                 const probe = prism(start, start + 1, dir);
                 let maximum = -Infinity;
-                for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$3(normal, sub$3(planePoint, corner)) / alignment);
+                for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$4(normal, sub$3(planePoint, corner)) / alignment);
                 if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
                 if (norm$2(cross$3(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
                 const full2 = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
@@ -41627,7 +41627,7 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t.axisDirection;
               }
               if (feature.id === previewId) {
-                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$3(sub$3(c2, origin), axis);
+                const c2 = sketchCentroid(feature.profileFeatureId), t = dot$4(sub$3(c2, origin), axis);
                 publish(feature, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale(axis, t)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature.angleDegrees, second = feature.secondAngleDegrees ?? 0;
@@ -41917,7 +41917,7 @@ function withHiddenLineProjection(shape, options, read) {
 }
 const add$1 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
 const sub$2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const dot$2 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const dot$3 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross$2 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const norm$1 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
 const qmul = (a2, b) => [
@@ -41960,10 +41960,10 @@ const DOF_TEMPLATES = {
 const templateDof = (kind, name) => DOF_TEMPLATES[kind]?.find((d2) => d2.name === name);
 const solvableMateKinds = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
 function dofValue(kind, axis, a2, b) {
-  if (kind === "translation") return dot$2(sub$2(b.o, a2.o), a2[axis]);
+  if (kind === "translation") return dot$3(sub$2(b.o, a2.o), a2[axis]);
   const companion = axis === "z" ? "x" : axis === "x" ? "y" : "z";
   const u2 = a2[companion], v = b[companion], n = a2[axis];
-  return Math.atan2(dot$2(cross$2(u2, v), n), dot$2(u2, v)) * 180 / Math.PI;
+  return Math.atan2(dot$3(cross$2(u2, v), n), dot$3(u2, v)) * 180 / Math.PI;
 }
 const angleGap = (value2) => ((value2 + 180) % 360 + 360) % 360 - 180;
 const inverseQ = (q) => [-q[0], -q[1], -q[2], q[3]];
@@ -41999,9 +41999,9 @@ function valueResiduals(a2, b, kind, parameters = {}, hemisphere = 1) {
 function jointResiduals(kind, a2, b, parameters = {}) {
   const d2 = sub$2(b.o, a2.o), S = ORIENTATION_SCALE;
   const coincide = () => [d2[0], d2[1], d2[2]];
-  const onAxis = () => [dot$2(d2, a2.x), dot$2(d2, a2.y)];
-  const zAligned = () => [S * dot$2(b.z, a2.x), S * dot$2(b.z, a2.y)];
-  const sameTurn = () => [S * dot$2(b.x, a2.y)];
+  const onAxis = () => [dot$3(d2, a2.x), dot$3(d2, a2.y)];
+  const zAligned = () => [S * dot$3(b.z, a2.x), S * dot$3(b.z, a2.y)];
+  const sameTurn = () => [S * dot$3(b.x, a2.y)];
   switch (kind) {
     case "fastened": {
       const e = add$1(add$1(cross$2(a2.x, b.x), cross$2(a2.y, b.y)), cross$2(a2.z, b.z));
@@ -42022,15 +42022,15 @@ function jointResiduals(kind, a2, b, parameters = {}) {
       return [S * c2[0], S * c2[1], S * c2[2]];
     }
     case "perpendicular":
-      return [S * dot$2(a2.z, b.z)];
+      return [S * dot$3(a2.z, b.z)];
     case "angle":
-      return [S * (dot$2(a2.z, b.z) - Math.cos(Number(parameters.angle_deg ?? 0) * Math.PI / 180))];
+      return [S * (dot$3(a2.z, b.z) - Math.cos(Number(parameters.angle_deg ?? 0) * Math.PI / 180))];
     // Planar: b's origin stays in a's plane and the normals align; it slides and turns in the plane.
     case "planar":
-      return [dot$2(d2, a2.z), ...zAligned()];
+      return [dot$3(d2, a2.z), ...zAligned()];
     // Pin slot: a revolute that may also slide along a's x (the slot's length).
     case "pin_slot":
-      return [dot$2(d2, a2.y), dot$2(d2, a2.z), ...zAligned()];
+      return [dot$3(d2, a2.y), dot$3(d2, a2.z), ...zAligned()];
     default:
       return [];
   }
@@ -42421,7 +42421,7 @@ function deriveCurves(bodies, options) {
 const sub$1 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const add = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
 const mul = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
-const dot$1 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const dot$2 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross$1 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const norm = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
 const unit = (a2) => {
@@ -42472,7 +42472,7 @@ function sampleEdge(edge, count) {
       const t = [d1.X(), d1.Y(), d1.Z()], s = [d2.X(), d2.Y(), d2.Z()];
       const speed = norm(t);
       const curvature = speed > 1e-12 ? norm(cross$1(t, s)) / speed ** 3 : 0;
-      const normalPart = sub$1(s, mul(t, dot$1(t, s) / Math.max(speed * speed, 1e-18)));
+      const normalPart = sub$1(s, mul(t, dot$2(t, s) / Math.max(speed * speed, 1e-18)));
       out.push({ point: [p2.X(), p2.Y(), p2.Z()], tangent: unit(t), curvature, direction: curvature > 1e-9 ? unit(normalPart) : [0, 0, 0] });
     }
     return out;
@@ -42488,7 +42488,7 @@ function sampleSurface(adaptor, u2, v, scratch) {
   const du = [scratch.d1u.X(), scratch.d1u.Y(), scratch.d1u.Z()], dv = [scratch.d1v.X(), scratch.d1v.Y(), scratch.d1v.Z()];
   const duu = [scratch.d2u.X(), scratch.d2u.Y(), scratch.d2u.Z()], dvv = [scratch.d2v.X(), scratch.d2v.Y(), scratch.d2v.Z()], duv = [scratch.d2uv.X(), scratch.d2uv.Y(), scratch.d2uv.Z()];
   const normal = unit(cross$1(du, dv));
-  return { point: [scratch.p.X(), scratch.p.Y(), scratch.p.Z()], normal, E: dot$1(du, du), F: dot$1(du, dv), G: dot$1(dv, dv), L: dot$1(duu, normal), M: dot$1(duv, normal), N: dot$1(dvv, normal), du, dv };
+  return { point: [scratch.p.X(), scratch.p.Y(), scratch.p.Z()], normal, E: dot$2(du, du), F: dot$2(du, dv), G: dot$2(dv, dv), L: dot$2(duu, normal), M: dot$2(duv, normal), N: dot$2(dvv, normal), du, dv };
 }
 function principalCurvatures(s) {
   const det = s.E * s.G - s.F * s.F;
@@ -42500,7 +42500,7 @@ function principalCurvatures(s) {
 function normalCurvature(s, w2) {
   const det = s.E * s.G - s.F * s.F;
   if (det < 1e-18) return 0;
-  const a2 = dot$1(s.du, w2), b = dot$1(s.dv, w2);
+  const a2 = dot$2(s.du, w2), b = dot$2(s.dv, w2);
   const du = (s.G * a2 - s.F * b) / det, dv = (s.E * b - s.F * a2) / det;
   const I = s.E * du * du + 2 * s.F * du * dv + s.G * dv * dv;
   return I > 1e-18 ? (s.L * du * du + 2 * s.M * du * dv + s.N * dv * dv) / I : 0;
@@ -42516,7 +42516,7 @@ function withSurface(face, run) {
     adaptor.delete();
   }
 }
-const bounds = (bodies) => {
+const bounds$1 = (bodies) => {
   let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (const body of bodies.values()) {
     const b = body.boundingBox;
@@ -42538,7 +42538,7 @@ function analyzeCurves(bodies, options) {
       if (!edges.length) throw new Error("Curvature comb needs an edge.");
       const samples2 = edges.map((e) => ({ ...e, samples: sampleEdge(e.edge, Math.max(8, Math.min(400, Math.round(options.count ?? 48)))) }));
       const maxCurvature = Math.max(1e-9, ...samples2.flatMap((e) => e.samples.map((s) => s.curvature)));
-      const scale2 = options.scale ?? bounds(bodies) * 0.1 / maxCurvature;
+      const scale2 = options.scale ?? bounds$1(bodies) * 0.1 / maxCurvature;
       for (const e of samples2) {
         const teeth = [], tips = [];
         for (const s of e.samples) {
@@ -42583,7 +42583,7 @@ function analyzeCurves(bodies, options) {
       }
       const o = overall;
       if (o) {
-        const r = Math.max(bounds(bodies) * 0.01, 0.5), [x2, y2, z2] = o.at;
+        const r = Math.max(bounds$1(bodies) * 0.01, 0.5), [x2, y2, z2] = o.at;
         curves2.push({ label: `minimum radius ${o.radius.toFixed(3)} mm`, color: threshold !== void 0 && o.radius < threshold ? "#e5484d" : "#30a46c", polylines: [[[x2 - r, y2, z2], [x2 + r, y2, z2]], [[x2, y2 - r, z2], [x2, y2 + r, z2]], [[x2, y2, z2 - r], [x2, y2, z2 + r]]] });
         measurements.push({ overall_min_radius_mm: o.radius, at_mm: o.at });
       }
@@ -42635,7 +42635,7 @@ function analyzeCurves(bodies, options) {
             n.delete();
             return unit(v);
           });
-          const angle2 = Math.acos(Math.max(-1, Math.min(1, dot$1(normals[0], normals[1])))) * 180 / Math.PI;
+          const angle2 = Math.acos(Math.max(-1, Math.min(1, dot$2(normals[0], normals[1])))) * 180 / Math.PI;
           maxAngle = Math.max(maxAngle, angle2);
           if (angle2 < 0.5) {
             const across = unit(cross$1(normals[0], s.tangent));
@@ -42662,7 +42662,7 @@ function analyzeCurves(bodies, options) {
   }
 }
 const sub = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const dot = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const dot$1 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 function round(v) {
   const r = Math.round(v * 1e7) / 1e7;
@@ -42671,10 +42671,10 @@ function round(v) {
 function meshSectionPolylines(mesh, frame) {
   const o = frame.originMillimeters, x2 = frame.xDirection, n = frame.normal, y2 = cross(n, x2);
   const v = (i) => [mesh.vertices[3 * i], mesh.vertices[3 * i + 1], mesh.vertices[3 * i + 2]];
-  const side = (p2) => dot(sub(p2, o), n);
+  const side = (p2) => dot$1(sub(p2, o), n);
   const to2D = (p2) => {
     const d2 = sub(p2, o);
-    return [round(dot(d2, x2)), round(dot(d2, y2))];
+    return [round(dot$1(d2, x2)), round(dot$1(d2, y2))];
   };
   const segments = [];
   for (let t = 0; t + 2 < mesh.triangles.length; t += 3) {
@@ -43029,6 +43029,142 @@ function drawingViewFrame(orientation) {
       throw Error("Unknown drawing orientation.");
   }
 }
+const dot = (a2, b) => a2.reduce((sum, value2, i) => sum + value2 * b[i], 0);
+function bounds(shape) {
+  const oc = getOC();
+  const box = new oc.Bnd_Box_1();
+  try {
+    oc.BRepBndLib.AddOptimal(shape.wrapped, box, false, false);
+    const lo = box.CornerMin();
+    const hi = box.CornerMax();
+    try {
+      return [[lo.X(), lo.Y(), lo.Z()], [hi.X(), hi.Y(), hi.Z()]];
+    } finally {
+      lo.delete();
+      hi.delete();
+    }
+  } finally {
+    box.delete();
+  }
+}
+function withDrawingSection(shapes, options, read) {
+  const section2 = options.section;
+  if (!section2) return read(shapes, []);
+  if (options.orientation === "isometric") throw Error("Section views require a principal orientation.");
+  const { normal, up } = drawingViewFrame(options.orientation);
+  const axis = normal.findIndex((value2) => value2 !== 0);
+  const offset2 = section2.offsetMm;
+  if (!Number.isFinite(offset2) || !Number.isFinite(section2.modelSpacingMm) || section2.modelSpacingMm <= 0) {
+    throw Error("A section needs a finite cut position and positive hatch spacing.");
+  }
+  const right = [
+    up[1] * normal[2] - up[2] * normal[1],
+    up[2] * normal[0] - up[0] * normal[2],
+    up[0] * normal[1] - up[1] * normal[0]
+  ];
+  const cutShapes = [];
+  const hatch = [];
+  let capCount = 0;
+  let hatchBudget = 2048;
+  try {
+    for (const source of shapes) {
+      const [originalLo, originalHi] = bounds(source);
+      const crosses = offset2 > originalLo[axis] + 1e-7 && offset2 < originalHi[axis] - 1e-7;
+      const lo = originalLo.map((n) => n - 1);
+      const hi = originalHi.map((n) => n + 1);
+      if (normal[axis] > 0) hi[axis] = Math.min(hi[axis], offset2);
+      else lo[axis] = Math.max(lo[axis], offset2);
+      if (lo.some((value2, i) => value2 >= hi[i])) continue;
+      const cutter = makeBaseBox(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]).translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]);
+      let cut;
+      try {
+        cut = source.intersect(cutter);
+        if (!isShape3D(cut) || measureVolume(cut) <= 1e-9) {
+          cut.delete();
+          cut = void 0;
+          continue;
+        }
+        cutShapes.push(cut);
+        cut = void 0;
+      } finally {
+        cut?.delete();
+        cutter.delete();
+      }
+      if (!crosses) continue;
+      const faces = cutShapes.at(-1).faces;
+      try {
+        for (const face of faces) {
+          const [a2, b] = bounds(face);
+          if (face.geomType !== "PLANE" || Math.abs(a2[axis] - offset2) > 1e-6 || Math.abs(b[axis] - offset2) > 1e-6) continue;
+          capCount++;
+          hatchBudget -= hatchFace(face, right, up, section2.modelSpacingMm, hatch, hatchBudget);
+        }
+      } finally {
+        faces.forEach((face) => face.delete());
+      }
+    }
+    if (!capCount || !cutShapes.length) throw Error("The section plane does not cross solid material. Choose a cut inside the model.");
+    return read(cutShapes, hatch);
+  } finally {
+    cutShapes.forEach((shape) => shape.delete());
+  }
+}
+function hatchFace(face, right, up, spacing, out, budget) {
+  const oc = getOC();
+  const [lo, hi] = bounds(face);
+  const direction = right.map((n, i) => (n - up[i]) * Math.SQRT1_2);
+  const corners2 = Array.from({ length: 8 }, (_2, mask) => lo.map((n, i) => mask & 1 << i ? hi[i] : n));
+  const distances = corners2.map((point2) => dot(point2, direction));
+  const first = Math.ceil(Math.min(...distances) / spacing);
+  const last = Math.floor(Math.max(...distances) / spacing);
+  const count = last - first + 1;
+  if (count > budget) throw Error("Section hatching exceeds 2048 lines. Reduce the view scale or increase hatch spacing.");
+  for (let index = first; index <= last; index++) {
+    const distance2 = index * spacing;
+    const origin = new oc.gp_Pnt_3(...direction.map((n) => n * distance2));
+    const normal = new oc.gp_Dir_4(...direction);
+    const plane2 = new oc.gp_Pln_3(origin, normal);
+    const operation2 = new oc.BRepAlgoAPI_Section_1();
+    const progress = new oc.Message_ProgressRange_1();
+    try {
+      operation2.Init1_1(face.wrapped);
+      operation2.Init2_2(plane2);
+      operation2.Build(progress);
+      if (!operation2.IsDone()) throw Error("The section hatch could not be computed.");
+      const shape = cast(operation2.Shape());
+      try {
+        const edges = shape.edges;
+        try {
+          for (const edge of edges) {
+            const start = edge.startPoint;
+            const end = edge.endPoint;
+            try {
+              const a2 = start.toTuple();
+              const b = end.toTuple();
+              if (Math.hypot(...a2.map((n, i) => n - b[i])) > 1e-7) {
+                out.push({ kind: "line", start: [dot(a2, right), dot(a2, up)], end: [dot(b, right), dot(b, up)] });
+              }
+            } finally {
+              start.delete();
+              end.delete();
+            }
+          }
+        } finally {
+          edges.forEach((edge) => edge.delete());
+        }
+      } finally {
+        shape.delete();
+      }
+    } finally {
+      progress.delete();
+      operation2.delete();
+      plane2.delete();
+      normal.delete();
+      origin.delete();
+    }
+  }
+  return Math.max(0, count);
+}
 function projectPartDrawing(document2, options) {
   const { normal, up } = drawingViewFrame(options.orientation);
   let result;
@@ -43040,30 +43176,32 @@ function projectPartDrawing(document2, options) {
       if (!shape) throw Error(`Drawing body ${id2} no longer exists.`);
       return shape;
     });
-    const compound = makeCompound(shapes.map((shape) => shape.clone()));
-    try {
-      result = withHiddenLineProjection(compound, { viewNormal: normal, upDirection: up }, (projected) => {
-        const visible = [projected.visible, projected.visibleOutline];
-        const hidden = [projected.hidden, projected.hiddenOutline];
-        const all = [...visible, ...hidden].filter((s) => s && !s.IsNull());
-        if (!all.length) throw Error("The model has no projectable edges.");
-        const oc = getOC(), box = new oc.Bnd_Box_1();
-        try {
-          all.forEach((shape) => oc.BRepBndLib.AddOptimal(shape, box, false, false));
-          const lo = box.CornerMin(), hi = box.CornerMax();
+    result = withDrawingSection(shapes, options, (sectionShapes, hatch) => {
+      const compound = makeCompound(sectionShapes.map((shape) => shape.clone()));
+      try {
+        return withHiddenLineProjection(compound, { viewNormal: normal, upDirection: up }, (projected) => {
+          const visible = [projected.visible, projected.visibleOutline];
+          const hidden = [projected.hidden, projected.hiddenOutline];
+          const all = [...visible, ...hidden].filter((s) => s && !s.IsNull());
+          if (!all.length) throw Error("The model has no projectable edges.");
+          const oc = getOC(), box = new oc.Bnd_Box_1();
           try {
-            return { visible: visible.flatMap(readCurves), hidden: hidden.flatMap(readCurves), bounds: [lo.X(), lo.Y(), hi.X(), hi.Y()], bodyIds: ids2 };
+            all.forEach((shape) => oc.BRepBndLib.AddOptimal(shape, box, false, false));
+            const lo = box.CornerMin(), hi = box.CornerMax();
+            try {
+              return { visible: visible.flatMap(readCurves), hidden: hidden.flatMap(readCurves), bounds: [lo.X(), lo.Y(), hi.X(), hi.Y()], bodyIds: ids2, ...options.section ? { hatch } : {} };
+            } finally {
+              lo.delete();
+              hi.delete();
+            }
           } finally {
-            lo.delete();
-            hi.delete();
+            box.delete();
           }
-        } finally {
-          box.delete();
-        }
-      });
-    } finally {
-      compound.delete();
-    }
+        });
+      } finally {
+        compound.delete();
+      }
+    });
   } });
   if (!result) throw Error("Create an exact solid before making a drawing.");
   return result;
@@ -43145,7 +43283,7 @@ function list(value2, limit) {
 }
 function validateDrawingDocument(value2) {
   object(value2);
-  if (value2.format !== "aether-drawing" || value2.formatVersion !== 1) throw Error("Unsupported Drawing file format or version.");
+  if (value2.format !== "aether-drawing" || ![1, 2].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
   text(value2.documentId);
   text(value2.name);
   text(value2.activeSheetId);
@@ -43197,11 +43335,19 @@ function validateDrawingDocument(value2) {
         view.bodyIds.forEach(text);
         if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies.");
       }
+      if (view.section != null) {
+        if (value2.formatVersion !== 2) throw Error("Section views require Drawing format version 2.");
+        object(view.section);
+        if (Object.keys(view.section).some((key) => !["offsetMm", "hatchSpacingMm"].includes(key))) throw Error("Unknown section property.");
+        number(view.section.offsetMm, -1e5, 1e5);
+        if (view.section.hatchSpacingMm !== void 0) number(view.section.hatchSpacingMm, 0.5, 10);
+        if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
+      }
       views.set(view.id, view);
     }
     for (const view of views.values()) if (view.parentId) {
       const parent = views.get(view.parentId);
-      if (!parent || parent.parentId || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
+      if (!parent || parent.parentId || parent.section || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
         throw Error("A projected view must reference a base front view on the same sheet.");
       }
     }
@@ -43274,7 +43420,7 @@ function applyDrawingCommand(source, command) {
       case "update-view": {
         const view = sheet.views.find((v) => v.id === command.viewId);
         if (!view) throw Error("Drawing view does not exist.");
-        if (Object.keys(command.changes).some((key) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds"].includes(key))) throw Error("Unknown drawing view property.");
+        if (Object.keys(command.changes).some((key) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section"].includes(key))) throw Error("Unknown drawing view property.");
         Object.assign(view, structuredClone(command.changes));
         break;
       }
@@ -43302,6 +43448,7 @@ function applyDrawingCommand(source, command) {
         throw Error("Unknown drawing command.");
     }
   }
+  if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);
   return doc;
 }
@@ -43328,7 +43475,7 @@ async function buildDrawing(input, project) {
     const built = { sheet, views: [], annotations: [] };
     for (const authored of sheet.views) {
       const view = resolvedDrawingView(sheet, authored);
-      const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {} };
+      const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {}, ...view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {} };
       const key = JSON.stringify(options);
       let geometry = cache.get(key);
       if (!geometry) {
@@ -43396,6 +43543,7 @@ function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
   const { sheet, views, annotations } = sheetOf(drawing, sheetId);
   const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
   for (const view of views) {
+    for (const curve of view.geometry.hatch ?? []) elements.push(`<path data-layer="hatch" d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="0.15"/>`);
     for (const [curves2, hidden] of [[view.geometry.visible, false], [view.view.hiddenLines ? view.geometry.hidden : [], true]]) for (const curve of curves2) {
       elements.push(`<path d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="${hidden ? 0.18 : 0.3}"${hidden ? ' stroke-dasharray="3 2"' : ""}/>`);
     }
@@ -43424,6 +43572,7 @@ function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
       if (curve.kind === "arc") out.push(100, "AcDbArc", 50, (curve.ccw ? curve.start : curve.end) * 180 / Math.PI, 51, (curve.ccw ? curve.end : curve.start) * 180 / Math.PI);
     }
   }
+  for (const view of views) for (const hatch of view.geometry.hatch ?? []) line2(sheetPoint(view, hatch.start), sheetPoint(view, hatch.end), false, "HATCH");
   for (const annotation of annotations) {
     annotation.lines.forEach(([a2, b]) => line2(a2, b, false, "ANNOTATIONS"));
     text2(annotation.text, annotation.positionMm);
@@ -43440,7 +43589,7 @@ const drawingCommandDocs = {
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
   annotations: ["note", "width", "height"],
   exports: ["svg", "dxf"],
-  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "Sections, assembly sources, edge-attached dimensions and PDF are not implemented yet."]
+  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "Assembly sources, edge-attached dimensions and PDF are not implemented yet."]
 };
 async function executeDrawingRequest(request, project) {
   if (request.phase === "drawing_docs") return drawingCommandDocs;
@@ -43466,7 +43615,7 @@ async function executeDrawingRequest(request, project) {
     source_hash: built.sourceHash,
     drawing_id: document2.documentId,
     active_sheet_id: document2.activeSheetId,
-    sheets: built.sheets.map(({ sheet, views, annotations }) => ({ id: sheet.id, name: sheet.name, size_mm: [sheet.widthMm, sheet.heightMm], projection: sheet.projection, views: views.map((v) => ({ id: v.view.id, name: v.view.name, orientation: v.view.orientation, scale: v.view.scale, origin_mm: v.view.originMm, model_bounds_mm: v.geometry.bounds, sheet_bounds_mm: v.boundsMm, body_ids: v.geometry.bodyIds, visible_curves: v.geometry.visible.length, hidden_curves: v.geometry.hidden.length })), annotations: annotations.map((a2) => ({ id: a2.id, text: a2.text, value_mm: a2.valueMm, view_id: a2.viewId })) }))
+    sheets: built.sheets.map(({ sheet, views, annotations }) => ({ id: sheet.id, name: sheet.name, size_mm: [sheet.widthMm, sheet.heightMm], projection: sheet.projection, views: views.map((v) => ({ id: v.view.id, name: v.view.name, orientation: v.view.orientation, section: v.view.section ?? null, hatch_lines: v.geometry.hatch?.length ?? 0, scale: v.view.scale, origin_mm: v.view.originMm, model_bounds_mm: v.geometry.bounds, sheet_bounds_mm: v.boundsMm, body_ids: v.geometry.bodyIds, visible_curves: v.geometry.visible.length, hidden_curves: v.geometry.hidden.length })), annotations: annotations.map((a2) => ({ id: a2.id, text: a2.text, value_mm: a2.valueMm, view_id: a2.viewId })) }))
   };
 }
 let ready;

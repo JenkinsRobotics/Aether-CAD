@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Checkbox, Dialog, FieldRow, SelectField } from "@aether/ui";
 import { drawingOrientations, type DrawingAnnotation, type DrawingCommand, type DrawingDocument, type DrawingView } from "@aether/core/drawing";
 
-export interface DrawingDialogDraft { kind: "sheet" | "view" | "annotation"; editId?: string }
+export interface DrawingDialogDraft { kind: "sheet" | "view" | "annotation"; editId?: string; section?: boolean }
 export function DrawingAuthorDialog({ draft, document, execute, onClose }: { draft: DrawingDialogDraft; document: DrawingDocument; execute: (command: DrawingCommand) => Promise<void>; onClose: () => void }) {
   const sheet = document.sheets.find(s => s.id === document.activeSheetId)!;
   const view = sheet.views.find(v => v.id === draft.editId);
@@ -13,6 +13,9 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
   const [x, setX] = useState(view?.originMm[0] ?? annotation?.positionMm[0] ?? sheet.widthMm / 2);
   const [y, setY] = useState(view?.originMm[1] ?? annotation?.positionMm[1] ?? sheet.heightMm / 2);
   const [scale, setScale] = useState(view?.scale ?? 1);
+  const [section, setSection] = useState(!!view?.section || !!draft.section);
+  const [cutOffset, setCutOffset] = useState(view?.section?.offsetMm ?? 0);
+  const [hatchSpacing, setHatchSpacing] = useState(view?.section?.hatchSpacingMm ?? 2);
   const [hidden, setHidden] = useState(view?.hiddenLines ?? true);
   const [width, setWidth] = useState(sheet.widthMm), [height, setHeight] = useState(sheet.heightMm);
   const [projection, setProjection] = useState(sheet.projection);
@@ -31,7 +34,7 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
         ? { type: "update-sheet", sheetId: id, name, widthMm: width, heightMm: height, projection }
         : { type: "add-sheet", sheet: { id, name, widthMm: width, heightMm: height, projection, views: [], annotations: [] } };
       else if (draft.kind === "view") {
-        const changes: Omit<DrawingView, "id"> = { name, orientation, originMm: [x, y], scale, hiddenLines: hidden, parentId: parentId || undefined, ...(view?.bodyIds ? { bodyIds: view.bodyIds } : {}) };
+        const changes: Omit<DrawingView, "id"> = { name, orientation, originMm: [x, y], scale, hiddenLines: hidden, section: section ? {offsetMm: cutOffset, hatchSpacingMm: hatchSpacing} : null, parentId: parentId || undefined, ...(view?.bodyIds ? { bodyIds: view.bodyIds } : {}) };
         command = draft.editId ? { type: "update-view", sheetId: sheet.id, viewId: id, changes } : { type: "add-view", sheetId: sheet.id, view: { ...changes, id } };
       } else {
         const annotation: DrawingAnnotation = kind === "note" ? { id, kind, text, positionMm: [x, y] } : { id, kind, viewId, decimals, positionMm: [x, y] };
@@ -48,9 +51,15 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
       <FieldRow label="Projection" htmlFor="drawing-projection"><SelectField id="drawing-projection" value={projection} disabled={busy} options={[{ value: "third_angle", label: "Third angle" }, { value: "first_angle", label: "First angle" }]} onChange={e => setProjection(e.target.value as typeof projection)}/></FieldRow>
     </> : <>
       {draft.kind === "view" ? <>
-        <FieldRow label="Orientation" htmlFor="drawing-orientation"><SelectField id="drawing-orientation" value={orientation} disabled={busy} options={drawingOrientations.map(value => ({ value, label: value[0].toUpperCase() + value.slice(1) }))} onChange={e => { setOrientation(e.target.value as typeof orientation); if (!view) setName(e.target.value[0].toUpperCase() + e.target.value.slice(1)); }}/></FieldRow>
-        <FieldRow label="Projected from" htmlFor="drawing-parent"><SelectField id="drawing-parent" value={parentId} disabled={busy} options={[{ value: "", label: "Independent base view" }, ...sheet.views.filter(v => v.orientation === "front" && !v.parentId && v.id !== draft.editId).map(v => ({ value: v.id, label: v.name }))]} onChange={e => setParent(e.target.value)}/></FieldRow>
+        <FieldRow label="Orientation" htmlFor="drawing-orientation"><SelectField id="drawing-orientation" value={orientation} disabled={busy} options={drawingOrientations.filter(value => !section || value !== "isometric").map(value => ({ value, label: value[0].toUpperCase() + value.slice(1) }))} onChange={e => { setOrientation(e.target.value as typeof orientation); if (!view) setName(e.target.value[0].toUpperCase() + e.target.value.slice(1)); }}/></FieldRow>
+        <FieldRow label="Projected from" htmlFor="drawing-parent"><SelectField id="drawing-parent" value={parentId} disabled={busy || section} options={[{ value: "", label: "Independent base view" }, ...sheet.views.filter(v => v.orientation === "front" && !v.section && !v.parentId && v.id !== draft.editId).map(v => ({ value: v.id, label: v.name }))]} onChange={e => setParent(e.target.value)}/></FieldRow>
         {parentId ? <p>Projected views inherit their front view's scale and alignment. Choose top, bottom, left or right.</p> : numberField("scale", "Scale ratio", scale, setScale)}
+        <Checkbox label="Section view" checked={section} disabled={busy || !!parentId || orientation === "isometric"} onChange={e => setSection(e.target.checked)}/>
+        {section && <>
+          {numberField("cut-offset", `Cut ${["top", "bottom"].includes(orientation) ? "Z" : ["left", "right"].includes(orientation) ? "X" : "Y"} (model mm)`, cutOffset, setCutOffset)}
+          {numberField("hatch-spacing", "Hatch spacing (paper mm)", hatchSpacing, setHatchSpacing)}
+          <p>Removes material nearest the viewer. Choose a cut inside the solid; holes stay clear. Principal views only.</p>
+        </>}
         <Checkbox label="Show hidden edges" checked={hidden} disabled={busy} onChange={e => setHidden(e.target.checked)}/>
       </> : <>
         <FieldRow label="Annotation" htmlFor="drawing-annotation-kind"><SelectField id="drawing-annotation-kind" value={kind} disabled={busy} options={[{ value: "note", label: "Note" }, { value: "width", label: "Overall width dimension" }, { value: "height", label: "Overall height dimension" }]} onChange={e => setKind(e.target.value as typeof kind)}/></FieldRow>

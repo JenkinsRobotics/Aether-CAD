@@ -17,7 +17,10 @@ Package-manager versions and the shared UI dependency version are separate.
    the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
    wheel from `vendor/python/`, never an editable sibling Animation checkout.
    A default pytest run skips release gates and is insufficient for qualification.
-   Drawing changes also require `node scripts/verify-drawings.mjs`. Run
+   Drawing changes also require `node scripts/verify-drawings.mjs`. Sections require
+   analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
+   source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF
+   hatch export, and a frozen format-1 reader refusing new format-2 content. Run
    `scripts/verify-drawings-browser.mjs` through Studio's disposable authenticated
    browser fixture with the candidate frontend and matching worker. It covers
    source editing, associative rebuild, keyboard history, SVG/DXF, portable file reopen, independent Studio autosave/reload, read-only revisions and live MCP drawing edits. It imports `verify-drawing-agent-browser.mjs` for the actual shared-editor broker checks.

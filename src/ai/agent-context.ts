@@ -8,7 +8,7 @@ export function cadAgentContextText(name:string, workspace:string, interaction:A
     'Use aether_cad_docs to discover exact drawing schemas. Inspect the drawing before editing; use its sheet/view/annotation IDs and expected_revision. Never invent existing IDs.',
     'Drawing coordinates and paper sizes are millimeters. Scale is paper/model; overall dimensions measure the source geometry, not page pixels. Projected views inherit the front parent view scale.',
     'Use drawing_refresh to read the saved source Part through its original file/branch link. Drawing edits never edit that source Part. Edits use normal drawing undo and autosave; export returns text and does not publish a file.',
-    'Only provided drawing tools execute here. Sections, assembly drawings/BOM, edge-attached/angular/radial dimensions and PDF are not implemented. Report failures accurately and inspect the unchanged state before retrying.',
+    'Only provided drawing tools execute here. Principal sections accept section:{offsetMm,hatchSpacingMm}; use the drawing tool contract. Stepped/isometric sections, cutting-line annotations, assembly drawings/BOM, edge-attached/angular/radial dimensions and PDF are not implemented. Report failures accurately and inspect the unchanged state before retrying.',
   ].join('\n');
   const assembly=names.has('aether_cad_assembly_compose');
   return [

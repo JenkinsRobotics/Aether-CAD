@@ -27,6 +27,8 @@ try {
   const doc = { format: 'aether-part', formatVersion: 21, documentId: randomUUID(), name: 'Drawing bracket', units: 'millimeter', features: [
     { id: 'profile', name: 'Rectangle', type: 'profile', plane: 'XY', offsetMillimeters: 0, suppressed: false, profile: { type: 'polygon', pointsMillimeters: [[-20,-10],[20,-10],[20,10],[-20,10]] } },
     { id: 'extrude', name: 'Extrude', type: 'extrude', profileFeatureId: 'profile', suppressed: false, operation: 'new', distanceMillimeters: 12 },
+    { id: 'bore', name: 'Bore', type: 'profile', plane: 'XY', offsetMillimeters: 12, suppressed: false, profile: { type: 'circle', centerMillimeters: [0,0], radiusMillimeters: 4 } },
+    { id: 'cut', name: 'Bore cut', type: 'extrude', profileFeatureId: 'bore', suppressed: false, operation: 'cut', distanceMillimeters: 12 },
   ] };
   file = await page.evaluate(async data => { const response = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!response.ok) throw Error(await response.text()); return response.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: doc.name + '.acpart', data_base64: Buffer.from(JSON.stringify(doc)).toString('base64') });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
@@ -37,6 +39,17 @@ try {
     await button('Base view').click(); await page.locator('#drawing-orientation').selectOption('top'); await page.locator('#drawing-parent').selectOption({ label: 'Front' }); await page.locator('#drawing-x').fill('80'); await page.locator('#drawing-y').fill('60'); await add();
     await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(2);
     assert.ok(await page.locator('svg[data-sheet-id] [data-primitive-id]').count() > 8);
+  });
+  await step('exact-section-view-and-invalid-cut-refusal',async()=>{
+    await button('Section view').click();await page.locator('#drawing-orientation').selectOption('top');
+    await page.locator('#drawing-name').fill('Section A-A');await page.locator('#drawing-x').fill('185');await page.locator('#drawing-y').fill('100');
+    await page.getByRole('checkbox',{name:'Section view',exact:true}).check();await page.locator('#drawing-cut-offset').fill('6');await page.locator('#drawing-hatch-spacing').fill('2');await add();
+    await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(3);
+    assert.ok(await page.locator('svg[data-sheet-id] [data-primitive-id*="/hatch/"]').count()>5);
+    await page.getByRole('treeitem',{name:/^Section A-A\b/}).first().click();await button('Edit selection').click();
+    await page.locator('#drawing-cut-offset').fill('1000');await page.getByRole('dialog').getByRole('button',{name:'Apply',exact:true}).click();
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('does not cross');await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
+    const section=await save('section.acdrawing');assert.equal(section.formatVersion,2);assert.equal(section.sheets[0].views.find(v=>v.name==='Section A-A').section.offsetMm,6);
   });
   await step('dimension-and-note', async () => {
     await button('Annotation').click(); await page.locator('#drawing-annotation-kind').selectOption('height'); await page.locator('#drawing-dimension-view').selectOption({ label: 'Front' }); await page.locator('#drawing-x').fill('115'); await page.locator('#drawing-y').fill('110'); await add();
@@ -60,11 +73,11 @@ try {
   await step('invalid-edit-keeps-drawing', async () => {
     await page.getByRole('treeitem', { name: /^Front\b/ }).first().click(); await button('Edit selection').click(); await page.locator('#drawing-scale').fill('0'); await page.getByRole('dialog').getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(page.getByRole('dialog').getByRole('alert')).toContainText('between'); await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(2);
+    await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(3);
   });
   await step('exports-and-local-reopen', async () => {
     for (const format of ['SVG', 'DXF']) {
-      await button('Export Drawing').click(); const pending = page.waitForEvent('download'); await page.getByRole('menuitem', { name: format, exact: true }).click(); const download = await pending; const path = join(evidence, 'sheet.' + format.toLowerCase()); await download.saveAs(path); const content = await readFile(path, 'utf8'); assert.ok(content.includes('24.00')); if (format === 'SVG') assert.ok(content.includes('Deburr &lt;all&gt; edges'));
+      await button('Export Drawing').click(); const pending = page.waitForEvent('download'); await page.getByRole('menuitem', { name: format, exact: true }).click(); const download = await pending; const path = join(evidence, 'sheet.' + format.toLowerCase()); await download.saveAs(path); const content = await readFile(path, 'utf8'); assert.ok(content.includes('24.00')); if (format === 'SVG') {assert.ok(content.includes('Deburr &lt;all&gt; edges'));assert.ok(content.includes('data-layer="hatch"'));}else assert.ok(content.includes('8\nHATCH\n'));
     }
     saved = await save('final.acdrawing');
     await page.reload(); await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1, { timeout: 90000 });
@@ -80,7 +93,7 @@ try {
     await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox', '0 0 210 297');
     await page.getByRole('treeitem', { name: /Sheet 1\b/ }).first().click();
     await expect(page.locator('svg[data-sheet-id]')).toHaveAttribute('viewBox', '0 0 297 210');
-    await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(2);
+    await expect(page.locator('svg[data-sheet-id] [data-view-id]')).toHaveCount(3);
   });
   await step('sheet-fits-workspace', async () => {
     for (const width of [1440, 1100]) {

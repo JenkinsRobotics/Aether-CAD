@@ -1,3 +1,14 @@
+## Maintainable feature modules — Jonathan, 2026-10-24
+
+Keep each key feature in a focused, clearly named file or directory with its
+related tests. Separate document contracts, geometry, UI presentation and agent
+adapters by responsibility; UI and agents reuse the same validated operations.
+Keep application entry points and routers as composition, not feature
+implementations. Extract cohesive helpers as a feature grows instead of building
+a single large catch-all file. Prefer readable formatting and explicit resource
+ownership over compressed statements. Generated bundles are build outputs;
+maintain and review their source modules, never hand-edit the bundles.
+
 ## Independent app releases — Jonathan, 2026-10-24
 
 This repository is the authoritative source for this app. Develop on `alpha-0.1`.
