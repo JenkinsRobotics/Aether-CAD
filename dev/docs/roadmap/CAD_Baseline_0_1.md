@@ -31,6 +31,10 @@ nested assemblies, external associativity or the remaining advanced solver scope
 
 ## Reference and starting evidence
 
+The active 0.23.0 foundation comparison and implementation sequence are in
+[SolidCraft_0_23_Foundations.md](SolidCraft_0_23_Foundations.md). Its reproducible
+inventory contains 463 commands, including 65 absent from the older tracker.
+
 The current supplied reference is SolidCraft **0.23.0**, verified in
 `reference/solidcraft-main/Cargo.toml` on 2026-10-25. The older 0.16.2 ZIP,
 archived bridge/source bundle and extracted scratch copy were removed at

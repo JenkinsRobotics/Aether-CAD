@@ -20,3 +20,20 @@ it("retains legacy grouped-body behavior", () => {
   if (feature.type === "extrude") delete feature.separateBodies;
   expect(availableBodies(resolveBodyOutputs(doc)).map(b => b.id)).toEqual(["two"]);
 });
+
+it("accepts canonical whole-part pattern identities and refuses substituted or missing copies", () => {
+  const doc = fixture();
+  const extrusion = doc.features[1];
+  if (extrusion.type === "extrude") delete extrusion.separateBodies;
+  const patterned = insertFeature(doc, { id:"pattern", name:"Body pattern", type:"pattern", suppressed:false,
+    sourceFeatureId:"e", patternType:"polar", axis:"Z", count:3, angleDegrees:360, reversed:false,
+    bodyIds:["two"], copyBodyIds:{two:"copy"} });
+  const before = serializePartDocument(patterned);
+  const resolved = resolveBodyOutputs(patterned, {pattern:["copy:1","copy:2"]});
+  expect(serializePartDocument(resolved)).toBe(before);
+  expect(availableBodies(resolved).map(body=>body.id)).toEqual(["two","copy:1","copy:2"]);
+  for (const ids of [[], ["copy:1"], ["copy:1","copy:1"], ["copy:1","foreign"]]) {
+    expect(()=>resolveBodyOutputs(patterned,{pattern:ids})).toThrow(/saved copy identities/);
+  }
+  expect(serializePartDocument(patterned)).toBe(before);
+});

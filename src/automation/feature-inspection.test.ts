@@ -1,9 +1,22 @@
 import { expect, it } from 'vitest';
 import { createRectanglePartDocument, serializePartDocument } from '@aether/core/document';
 import { inspectFeatureReferences } from './feature-inspection';
+import { prepareFeatureOperation } from '../operations/feature-operations';
 
 const fixture = () => createRectanglePartDocument('Graph', { widthMillimeters: 10, heightMillimeters: 20, depthMillimeters: 5 },
   { documentId: 'doc', sketchId: 'sketch', extrudeId: 'pad' });
+
+it('shows nested construction inputs and refuses deleting them even beyond rollback', () => {
+  const doc = fixture();
+  doc.features.push({ id: 'plane', name: 'Datum', type: 'plane', plane: 'XY', offsetMillimeters: 0, suppressed: false });
+  doc.features.push({ id: 'axis', name: 'Hinge axis', type: 'axis', suppressed: false, definition: {
+    method: 'two-planes', references: [{ kind: 'feature', featureId: 'plane' }, { kind: 'principal', plane: 'XZ' }],
+  } });
+  doc.rollbackIndex = 3;
+  expect(inspectFeatureReferences(doc, { feature_id: 'axis' }).references).toMatchObject([{ id: 'plane', exists: true }]);
+  expect(inspectFeatureReferences(doc, { feature_id: 'plane', direction: 'dependents' }).references).toMatchObject([{ id: 'axis', rolled_back: true }]);
+  expect(() => prepareFeatureOperation(doc, 'aether_cad_feature_delete', { feature_id: 'plane' })).toThrow(/axis.*depend/);
+});
 it('reports canonical inputs and direct dependents, including suppressed and rolled-back features', () => {
   const doc = fixture(); doc.features[1].suppressed = true; doc.rollbackIndex = 1;
   const before = serializePartDocument(doc);

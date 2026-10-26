@@ -8,6 +8,7 @@ import { appendSolidPrimitive, defaultPrimitiveDimensions, primitiveFields, type
 import { partAITools } from '../ai/catalog';
 import { editSketch } from './sketch-edit';
 import { modelProjectionTool } from './model-projection';
+import { validateToolArguments } from './tool-arguments';
 import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatureOperation } from '../operations/feature-operations';
 
 const number={type:'number'},string={type:'string'},boolean={type:'boolean'};
@@ -48,8 +49,7 @@ function nameValue(a:Args,fallback:string):string {
   return v;
 }
 export function validateLiveArguments(name:string,args:Args) {
-  const t=cadAgentTools.find(t=>t.name===name);
-  if(!t||!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).some(k=>!Object.hasOwn(t.inputSchema.properties as object,k)))throw Error('Unknown CAD tool or argument.');
+  validateToolArguments(cadAgentTools, name, args);
 }
 export function inspectPart(doc:PartDocument,args:Args={}) {
   const offset=numberValue(args,'offset',0),limit=numberValue(args,'limit',25,true);

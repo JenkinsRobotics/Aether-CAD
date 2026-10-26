@@ -5,6 +5,7 @@ import { exampleAssemblyRecipe } from '../assembly-recipe';
 import { knowledgeTool } from '../ai/catalog';
 import { discoverCAD } from '../ai/knowledge';
 import { prepareAssemblyEdit } from './assembly-edit';
+import { validateToolArguments } from './tool-arguments';
 
 const tool=(name:string,description:string,properties:Record<string,unknown>={},required:string[]=[]):AgentTool=>({
   name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
@@ -55,8 +56,7 @@ export function assemblyAgentInteraction(controller:CADAssemblyController, conte
   return {contextKey,tools:assemblyAgentTools,execute:async(call,signal)=>{
     const checkContext = () => { signal.throwIfAborted(); if(currentKey()!==contextKey)throw Error('The active Assembly changed.'); };
     checkContext();
-    const descriptor=assemblyAgentTools.find(tool=>tool.name===call.name);
-    if(!descriptor||!call.arguments||Array.isArray(call.arguments)||Object.keys(call.arguments).some(key=>!Object.hasOwn(descriptor.inputSchema.properties as object,key)))throw Error('Unknown Assembly tool or argument.');
+    validateToolArguments(assemblyAgentTools, call.name, call.arguments);
     if(call.name==='aether_cad_docs')return discoverCAD(assemblyAgentTools,call.arguments,'assembly');
     const projection=controller.geometryProjection;
     if(!projection)throw Error('Open an Assembly first.');

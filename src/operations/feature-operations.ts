@@ -14,7 +14,9 @@ const tool = (name: string, description: string, properties: Record<string, unkn
   name: `aether_cad_${name}`, description, inputSchema: { type: 'object', properties, required, additionalProperties: false },
 });
 const featureId = { type: 'string', maxLength: 200 };
-const json = { type: 'string', maxLength: 262144 };
+// Programs resolve step references inside objects. Publish both accepted forms
+// so discovery and execution agree; canonical validation checks their contents.
+const json = { type: ['string', 'object'], maxLength: 262144 };
 
 export const featureReadTools: AgentTool[] = [
   tool('feature_types', 'List every canonical Part feature type this editor can author (sketch, profile, extrude, revolve, sweep, loft, fillet, chamfer, shell, hole, pattern, mirror, draft, boolean, transform, plane…). Read-only.', {}),

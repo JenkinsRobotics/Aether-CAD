@@ -1,10 +1,9 @@
 import { surfaceCreatorTypes } from "./surface";
 import { patternCopyIds } from "./pattern";
-import {transformReferences} from './part-transform';
 import {offsetFaceBodies} from './offset-face';
 import {scopeConsumedBodies} from './extrusion-scope';
 import { featureReferenceErrors } from "./feature-errors";
-import { pierceDependencies } from '../sketch/reference/pierce-context';
+import { featureInputDependencies } from './feature-inputs';
 import {
   validatePartDocument,
   type PartDocument,
@@ -85,57 +84,19 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
     bodyProducers = new Map<string, string>();
   let lastBody: string | undefined;
   for (const f of doc.features) {
-    const refs: string[] = [];
-    if (f.type === "plane" && f.definition) {
-      const visit = (value: unknown): void => {
-        if (!value || typeof value !== "object") return;
-        const ref = value as Record<string, unknown>;
-        if (ref.kind === "feature") refs.push(String(ref.featureId));
-        if (["face", "point", "axis"].includes(String(ref.kind))) refs.push(bodyProducers.get(String(ref.partId)) ?? `body:${ref.partId}`);
-        Object.values(ref).forEach(visit);
-      };
-      visit(f.definition);
-    }
-    if(f.type==='transform'||f.type==='split'){
-      if(f.type==='transform')refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));
-      else if(f.plane.kind==='feature')refs.push(f.plane.featureId);else if(f.plane.kind==='face')refs.push(f.plane.sourceFeatureId);
-      refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
-      if(!f.suppressed||includeSuppressedModifiers){
-        for(const id of f.copyBodyIds?bodyIDsForFeature(doc,f):f.bodyIds)bodyProducers.set(id,f.id);
-        if(f.copyBodyIds)lastBody=bodyIDsForFeature(doc,f).at(-1);
+    const refs = featureInputDependencies(f, bodyProducers);
+    if (f.type === "transform" || f.type === "split" || (f.type === "pattern" && f.bodyIds)) {
+      // Copies do not modify their source bodies. Resolve all inputs before
+      // registering new outputs, so no copy can become its own prerequisite.
+      const outputs = f.type === "pattern" ? patternCopyIds(f)
+        : f.copyBodyIds ? bodyIDsForFeature(doc, f) : f.bodyIds;
+      if (!f.suppressed || includeSuppressedModifiers) {
+        for (const id of outputs) bodyProducers.set(id, f.id);
+        if (f.type === "pattern" || f.copyBodyIds) lastBody = outputs.at(-1) ?? lastBody;
       }
-      result.set(f.id,[...new Set(refs)]);continue;
+      result.set(f.id, [...new Set(refs)]);
+      continue;
     }
-    if (f.type === "delete-face") refs.push(...f.faces.map(face=>face.sourceFeatureId));
-    if (f.type === "pipe") refs.push(f.pathFeatureId);
-    if (f.type === "pattern" && f.bodyIds) { refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`)); if(!f.suppressed||includeSuppressedModifiers) for(const id of patternCopyIds(f)) bodyProducers.set(id,f.id); }
-    if (f.type === "remove-body") refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
-    if (f.type === "thread") refs.push(f.face.sourceFeatureId);
-    if (f.type === "boss" || f.type === "rest") refs.push(f.face.sourceFeatureId);
-    if (f.type === "bounding-solid" && f.bodyIds) refs.push(...f.bodyIds.map(id=>bodyProducers.get(id)??`body:${id}`));
-    if (f.type === "offset-face") {refs.push(...f.faces.map(face=>face.sourceFeatureId));if(f.replaceWith?.kind==="feature")refs.push(f.replaceWith.featureId);else if(f.replaceWith?.kind==="face")refs.push(f.replaceWith.sourceFeatureId);if(f.transform)refs.push(...transformReferences(f.transform).map(ref=>ref.sourceFeatureId));}
-    if (f.type === "profile" && f.support) refs.push(f.support.sourceFeatureId);
-    if(f.type==='profile') {
-      const drawing=f.profile.type==='drawing'?f.profile:f.profile.type==='projection'?f.profile.authored:undefined;
-      if(drawing)refs.push(...pierceDependencies(drawing));
-    }
-    if (f.type === "extrude" && f.startingReference && f.startingReference.kind!=="principal") refs.push(f.startingReference.sourceFeatureId);
-    if (f.type === "extrude") for(const end of [f,f.secondEnd]) if(end?.endType === "up-to-vertex" && end.endPointReference) refs.push(end.endPointReference.sourceFeatureId);
-    if (f.type === "extrude" && f.directionReference) refs.push(f.directionReference.sourceFeatureId);
-    if (f.type === "extrude") for(const end of [f,f.secondEnd]) if(end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
-    if (f.type === "boolean") refs.push(...f.toolBodyIds.map(id => bodyProducers.get(id) ?? `body:${id}`));
-    if (f.type === "split-face") { refs.push(...f.faces.map(face => face.sourceFeatureId)); if (f.plane.kind === "feature") refs.push(f.plane.featureId); else if (f.plane.kind === "face") refs.push(f.plane.sourceFeatureId); }
-    if (f.type === "boundary-fill") refs.push(...f.toolBodyIds.map(id => bodyProducers.get(id) ?? `body:${id}`));
-    if (f.type === "loft") refs.push(...f.sections.map(section => section.profileFeatureId));
-    if ("profileFeatureId" in f && f.profileFeatureId) refs.push(f.profileFeatureId);
-    if (f.type === "hole" && f.placement) refs.push(f.placement.face.sourceFeatureId);
-    if (f.type === "extrude" && f.endType === "up-to-face" && f.endReference) refs.push(f.endReference.sourceFeatureId);
-    if (f.type === "extrude" && f.secondEnd?.endType === "up-to-face" && f.secondEnd.endReference) refs.push(f.secondEnd.endReference.sourceFeatureId);
-    if (f.type === "extrude" && (f.endType === "up-to-next" || f.secondEnd?.endType === "up-to-next")) refs.push(...bodyProducers.values());
-    if (f.type === "extrude" && f.profileSelections) refs.push(...f.profileSelections.map(p => p.profileFeatureId));
-    if ("pathFeatureId" in f) refs.push(f.pathFeatureId);
-    if ("sourceFeatureId" in f) refs.push(f.sourceFeatureId);
-    if (f.type === "profile" && f.profile.type === "projection") refs.push(f.profile.sourceFeatureId);
     if (
       (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
       "operation" in f && f.operation === "new"
@@ -151,7 +112,9 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
     } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f.type)) {
       const body =
         "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
-      const targets = f.type === "offset-face" ? offsetFaceBodies(f) : f.type === "extrude" && f.targetBodyIds ? f.targetBodyIds : [body];
+      const targets = f.type === "offset-face" ? offsetFaceBodies(f)
+        : "bodyIds" in f && f.type !== "surface-thicken" ? f.bodyIds ?? []
+        : f.type === "extrude" && f.targetBodyIds ? f.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
         // A suppressed modifier leaves the preceding body available to later

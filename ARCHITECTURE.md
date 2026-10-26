@@ -42,8 +42,11 @@ viewer; per-frame depth range; demo-matched camera controls.
 Next, in order (each slice keeps tests green; coordinate claims with other lanes):
 1. Render: extract picking/selection, overlays and the frame loop from `viewer.ts`;
    render on demand (draw only when camera, scene or animation changes).
-2. Core: reject references to missing bodies/features in `validatePartDocument`
-   (today the Engine rebuild catches them later).
+2. Core: preserve repairable missing references in saved documents and report
+   their evaluated availability through the canonical dependency graph.
+   `document/feature-inputs.ts` reads explicit inputs; `feature-history.ts`
+   resolves their ordered body ownership. UI history, MCP inspection and
+   dependency guards must reuse that graph.
 3. Operations: route feature-window commits through the same operation entry
    point the agents use, and add semantic edge/face selection inputs for fillet,
    chamfer and shell.

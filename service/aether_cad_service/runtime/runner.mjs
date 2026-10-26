@@ -5096,6 +5096,101 @@ function localPierceValidation(drawing) {
   }
   return { ...drawing, constraints: drawing.constraints?.filter((c2) => c2.kind !== "pierce") };
 }
+function featureInputDependencies(feature3, bodyProducers) {
+  const inputs = /* @__PURE__ */ new Set();
+  const body = (id2) => inputs.add(bodyProducers.get(id2) ?? `body:${id2}`);
+  const reference = (value2) => {
+    if (!value2 || typeof value2 !== "object") return;
+    if (Array.isArray(value2)) {
+      value2.forEach(reference);
+      return;
+    }
+    const record = value2;
+    for (const key2 of ["sourceFeatureId", "featureId", "profileFeatureId", "pathFeatureId"]) {
+      if (typeof record[key2] === "string") inputs.add(record[key2]);
+    }
+    if (["face", "point", "axis", "surface-point"].includes(String(record.kind)) && typeof record.partId === "string") body(record.partId);
+    Object.values(record).forEach(reference);
+  };
+  if ("profileFeatureId" in feature3 && feature3.profileFeatureId) inputs.add(feature3.profileFeatureId);
+  if ("sourceFeatureId" in feature3) inputs.add(feature3.sourceFeatureId);
+  if ("pathFeatureId" in feature3) inputs.add(feature3.pathFeatureId);
+  if ("bodyIds" in feature3) feature3.bodyIds?.forEach(body);
+  if ("toolBodyIds" in feature3) feature3.toolBodyIds.forEach(body);
+  if ("definition" in feature3) reference(feature3.definition);
+  if ("transform" in feature3) reference(feature3.transform);
+  if ("axisReference" in feature3) reference(feature3.axisReference);
+  if ("faces" in feature3) reference(feature3.faces);
+  if ("face" in feature3) reference(feature3.face);
+  if ("edges" in feature3) reference(feature3.edges);
+  if ("sections" in feature3) reference(feature3.sections);
+  switch (feature3.type) {
+    case "profile": {
+      reference(feature3.support);
+      if (feature3.profile.type === "projection") inputs.add(feature3.profile.sourceFeatureId);
+      const drawing = feature3.profile.type === "drawing" ? feature3.profile : feature3.profile.type === "projection" ? feature3.profile.authored : void 0;
+      if (drawing) pierceDependencies(drawing).forEach((id2) => inputs.add(id2));
+      break;
+    }
+    case "extrude":
+      reference(feature3.profileSelections);
+      reference(feature3.startingReference);
+      reference(feature3.directionReference);
+      for (const end of [feature3, feature3.secondEnd]) {
+        if (end?.endType === "up-to-face") reference(end.endReference);
+        if (end?.endType === "up-to-vertex") reference(end.endPointReference);
+        if (end?.endType === "up-to-part" && end.endPartId) body(end.endPartId);
+        if (end?.endType === "up-to-next") bodyProducers.forEach((id2) => inputs.add(id2));
+      }
+      break;
+    case "pattern":
+      if (feature3.patternType === "linear") {
+        reference(feature3.direction);
+        reference(feature3.second?.direction);
+      }
+      break;
+    case "split":
+    case "split-face":
+    case "surface-trim":
+      reference(feature3.plane);
+      break;
+    case "mirror":
+      reference(feature3.mirrorPlane);
+      break;
+    case "offset-face":
+      reference(feature3.replaceWith);
+      break;
+    case "chamfer":
+      reference(feature3.referenceFace);
+      break;
+    case "shell":
+      reference(feature3.removedFaces);
+      break;
+    case "draft":
+      reference(feature3.neutralFace);
+      break;
+    case "loft":
+      reference(feature3.startPoint);
+      reference(feature3.endPoint);
+      break;
+    case "sweep":
+      reference(feature3.rail);
+      break;
+    case "hole":
+      reference(feature3.placement);
+      break;
+    case "sheet-fold":
+      reference(feature3.line);
+      break;
+    case "surface-blend":
+      for (const side of [feature3.from, feature3.to]) {
+        body(side.bodyId);
+        reference(side.edges);
+      }
+      break;
+  }
+  return [...inputs];
+}
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature3) {
   if (!surfaceCreatorTypes.includes(feature3.type) && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
@@ -5153,75 +5248,16 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
   const result = /* @__PURE__ */ new Map(), bodyProducers = /* @__PURE__ */ new Map();
   let lastBody;
   for (const f2 of doc.features) {
-    const refs = [];
-    if (f2.type === "plane" && f2.definition) {
-      const visit = (value2) => {
-        if (!value2 || typeof value2 !== "object") return;
-        const ref = value2;
-        if (ref.kind === "feature") refs.push(String(ref.featureId));
-        if (["face", "point", "axis"].includes(String(ref.kind))) refs.push(bodyProducers.get(String(ref.partId)) ?? `body:${ref.partId}`);
-        Object.values(ref).forEach(visit);
-      };
-      visit(f2.definition);
-    }
-    if (f2.type === "transform" || f2.type === "split") {
-      if (f2.type === "transform") refs.push(...transformReferences(f2.transform).map((ref) => ref.sourceFeatureId));
-      else if (f2.plane.kind === "feature") refs.push(f2.plane.featureId);
-      else if (f2.plane.kind === "face") refs.push(f2.plane.sourceFeatureId);
-      refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
+    const refs = featureInputDependencies(f2, bodyProducers);
+    if (f2.type === "transform" || f2.type === "split" || f2.type === "pattern" && f2.bodyIds) {
+      const outputs = f2.type === "pattern" ? patternCopyIds(f2) : f2.copyBodyIds ? bodyIDsForFeature(doc, f2) : f2.bodyIds;
       if (!f2.suppressed || includeSuppressedModifiers) {
-        for (const id2 of f2.copyBodyIds ? bodyIDsForFeature(doc, f2) : f2.bodyIds) bodyProducers.set(id2, f2.id);
-        if (f2.copyBodyIds) lastBody = bodyIDsForFeature(doc, f2).at(-1);
+        for (const id2 of outputs) bodyProducers.set(id2, f2.id);
+        if (f2.type === "pattern" || f2.copyBodyIds) lastBody = outputs.at(-1) ?? lastBody;
       }
       result.set(f2.id, [...new Set(refs)]);
       continue;
     }
-    if (f2.type === "delete-face") refs.push(...f2.faces.map((face) => face.sourceFeatureId));
-    if (f2.type === "pipe") refs.push(f2.pathFeatureId);
-    if (f2.type === "pattern" && f2.bodyIds) {
-      refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-      if (!f2.suppressed || includeSuppressedModifiers) for (const id2 of patternCopyIds(f2)) bodyProducers.set(id2, f2.id);
-    }
-    if (f2.type === "remove-body") refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f2.type === "thread") refs.push(f2.face.sourceFeatureId);
-    if (f2.type === "boss" || f2.type === "rest") refs.push(f2.face.sourceFeatureId);
-    if (f2.type === "bounding-solid" && f2.bodyIds) refs.push(...f2.bodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f2.type === "offset-face") {
-      refs.push(...f2.faces.map((face) => face.sourceFeatureId));
-      if (f2.replaceWith?.kind === "feature") refs.push(f2.replaceWith.featureId);
-      else if (f2.replaceWith?.kind === "face") refs.push(f2.replaceWith.sourceFeatureId);
-      if (f2.transform) refs.push(...transformReferences(f2.transform).map((ref) => ref.sourceFeatureId));
-    }
-    if (f2.type === "profile" && f2.support) refs.push(f2.support.sourceFeatureId);
-    if (f2.type === "profile") {
-      const drawing = f2.profile.type === "drawing" ? f2.profile : f2.profile.type === "projection" ? f2.profile.authored : void 0;
-      if (drawing) refs.push(...pierceDependencies(drawing));
-    }
-    if (f2.type === "extrude" && f2.startingReference && f2.startingReference.kind !== "principal") refs.push(f2.startingReference.sourceFeatureId);
-    if (f2.type === "extrude") {
-      for (const end of [f2, f2.secondEnd]) if (end?.endType === "up-to-vertex" && end.endPointReference) refs.push(end.endPointReference.sourceFeatureId);
-    }
-    if (f2.type === "extrude" && f2.directionReference) refs.push(f2.directionReference.sourceFeatureId);
-    if (f2.type === "extrude") {
-      for (const end of [f2, f2.secondEnd]) if (end?.endType === "up-to-part" && end.endPartId) refs.push(bodyProducers.get(end.endPartId) ?? `body:${end.endPartId}`);
-    }
-    if (f2.type === "boolean") refs.push(...f2.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f2.type === "split-face") {
-      refs.push(...f2.faces.map((face) => face.sourceFeatureId));
-      if (f2.plane.kind === "feature") refs.push(f2.plane.featureId);
-      else if (f2.plane.kind === "face") refs.push(f2.plane.sourceFeatureId);
-    }
-    if (f2.type === "boundary-fill") refs.push(...f2.toolBodyIds.map((id2) => bodyProducers.get(id2) ?? `body:${id2}`));
-    if (f2.type === "loft") refs.push(...f2.sections.map((section2) => section2.profileFeatureId));
-    if ("profileFeatureId" in f2 && f2.profileFeatureId) refs.push(f2.profileFeatureId);
-    if (f2.type === "hole" && f2.placement) refs.push(f2.placement.face.sourceFeatureId);
-    if (f2.type === "extrude" && f2.endType === "up-to-face" && f2.endReference) refs.push(f2.endReference.sourceFeatureId);
-    if (f2.type === "extrude" && f2.secondEnd?.endType === "up-to-face" && f2.secondEnd.endReference) refs.push(f2.secondEnd.endReference.sourceFeatureId);
-    if (f2.type === "extrude" && (f2.endType === "up-to-next" || f2.secondEnd?.endType === "up-to-next")) refs.push(...bodyProducers.values());
-    if (f2.type === "extrude" && f2.profileSelections) refs.push(...f2.profileSelections.map((p2) => p2.profileFeatureId));
-    if ("pathFeatureId" in f2) refs.push(f2.pathFeatureId);
-    if ("sourceFeatureId" in f2) refs.push(f2.sourceFeatureId);
-    if (f2.type === "profile" && f2.profile.type === "projection") refs.push(f2.profile.sourceFeatureId);
     if ((f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
       for (const id2 of bodyIDsForFeature(doc, f2)) {
         lastBody = id2;
@@ -5232,7 +5268,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       if (!f2.suppressed) lastBody = f2.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
     } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f2.type)) {
       const body = "targetBodyId" in f2 && f2.targetBodyId ? f2.targetBodyId : lastBody;
-      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : f2.type === "extrude" && f2.targetBodyIds ? f2.targetBodyIds : [body];
+      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : f2.type === "extrude" && f2.targetBodyIds ? f2.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
         const mergedIntoPrimary = f2.type === "extrude" && f2.operation === "add" && f2.targetBodyIds && target !== body;
@@ -7755,7 +7791,7 @@ function resolveBodyOutputs(document2, outputs = {}) {
   const next = { ...document2, features: document2.features.map((feature3) => {
     if (!expected.has(feature3.id)) return feature3;
     const ids2 = outputs[feature3.id];
-    if (feature3.type === "transform" || feature3.type === "split") {
+    if (feature3.type === "transform" || feature3.type === "split" || feature3.type === "pattern" && feature3.bodyIds) {
       const expected2 = createdBodyIDs(document2, feature3);
       if (!Array.isArray(ids2) || ids2.length !== expected2.length || new Set(ids2).size !== ids2.length || ids2.some((id2) => !expected2.includes(id2))) throw Error(`${feature3.name}: rebuild changed the saved copy identities.`);
       return feature3;
@@ -12377,6 +12413,97 @@ async function prepareModelProjection(source, args, kernel) {
     projection: { added_contours: projected.contours.length, associative: false, approximated_edges: projected.approximatedEdges, tolerance_mm: projected.toleranceMillimeters }
   };
 }
+const object$3 = (value2) => value2 !== null && typeof value2 === "object" && !Array.isArray(value2);
+const keywords = /* @__PURE__ */ new Set([
+  "type",
+  "properties",
+  "required",
+  "additionalProperties",
+  "items",
+  "enum",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "minItems",
+  "maxItems",
+  "minLength",
+  "maxLength",
+  "description",
+  "title",
+  "default",
+  "examples"
+]);
+function matchesType(value2, type) {
+  switch (type) {
+    case "object":
+      return object$3(value2);
+    case "array":
+      return Array.isArray(value2);
+    case "number":
+      return typeof value2 === "number" && Number.isFinite(value2);
+    case "integer":
+      return typeof value2 === "number" && Number.isSafeInteger(value2);
+    case "string":
+      return typeof value2 === "string";
+    case "boolean":
+      return typeof value2 === "boolean";
+    case "null":
+      return value2 === null;
+    default:
+      throw Error(`Unsupported CAD contract type: ${String(type)}.`);
+  }
+}
+function validate(value2, schema, path) {
+  for (const keyword of Object.keys(schema)) {
+    if (!keywords.has(keyword)) throw Error(`Unsupported CAD contract keyword: ${keyword}.`);
+  }
+  const fail2 = (reason) => {
+    throw Error(`${path}: ${reason}.`);
+  };
+  if (schema.type !== void 0) {
+    const types2 = Array.isArray(schema.type) ? schema.type : [schema.type];
+    if (!types2.some((type) => matchesType(value2, type))) fail2(`must be ${types2.join(" or ")}${schema.type === "boolean" ? " (true or false)" : ""}`);
+  }
+  if (Array.isArray(schema.enum) && !schema.enum.includes(value2)) fail2(`choose ${schema.enum.join(", ")}`);
+  if (typeof value2 === "number") {
+    if (!Number.isFinite(value2)) fail2("must be finite");
+    if (typeof schema.minimum === "number" && value2 < schema.minimum) fail2(`must be at least ${schema.minimum}`);
+    if (typeof schema.maximum === "number" && value2 > schema.maximum) fail2(`must be at most ${schema.maximum}`);
+    if (typeof schema.exclusiveMinimum === "number" && value2 <= schema.exclusiveMinimum) fail2(`must be greater than ${schema.exclusiveMinimum}`);
+    if (typeof schema.exclusiveMaximum === "number" && value2 >= schema.exclusiveMaximum) fail2(`must be less than ${schema.exclusiveMaximum}`);
+  }
+  if (typeof value2 === "string") {
+    const length = [...value2].length;
+    if (typeof schema.minLength === "number" && length < schema.minLength) fail2(`needs at least ${schema.minLength} characters`);
+    if (typeof schema.maxLength === "number" && length > schema.maxLength) fail2(`exceeds ${schema.maxLength} characters`);
+  }
+  if (Array.isArray(value2)) {
+    if (typeof schema.minItems === "number" && value2.length < schema.minItems) fail2(`needs at least ${schema.minItems} items`);
+    if (typeof schema.maxItems === "number" && value2.length > schema.maxItems) fail2(`allows at most ${schema.maxItems} items`);
+    if (object$3(schema.items)) value2.forEach((item, index2) => validate(item, schema.items, `${path}[${index2}]`));
+  }
+  if (object$3(value2)) {
+    const properties = object$3(schema.properties) ? schema.properties : {};
+    if (Array.isArray(schema.required)) {
+      for (const key2 of schema.required) {
+        if (typeof key2 === "string" && !Object.hasOwn(value2, key2)) fail2(`missing required ${key2}`);
+      }
+    }
+    for (const [key2, item] of Object.entries(value2)) {
+      const definition = Object.hasOwn(properties, key2) ? properties[key2] : void 0;
+      if (object$3(definition)) validate(item, definition, `${path}.${key2}`);
+      else if (schema.additionalProperties === false) fail2(`Unknown argument ${key2}`);
+      else if (object$3(schema.additionalProperties)) validate(item, schema.additionalProperties, `${path}.${key2}`);
+    }
+  }
+}
+function validateToolArguments(tools, name5, args) {
+  const descriptor = tools.find((tool2) => tool2.name === name5);
+  if (!descriptor || !object$3(args)) throw Error("Unknown CAD tool or argument.");
+  validate(args, descriptor.inputSchema, name5);
+  return descriptor;
+}
 const featureSchemas = {
   "axis": `export interface ConstructionAxisFeature {
   id: string;
@@ -13212,7 +13339,7 @@ const tool$1 = (name5, description, properties, required = []) => ({
   inputSchema: { type: "object", properties, required, additionalProperties: false }
 });
 const featureId = { type: "string", maxLength: 200 };
-const json = { type: "string", maxLength: 262144 };
+const json = { type: ["string", "object"], maxLength: 262144 };
 const featureReadTools = [
   tool$1("feature_types", "List every canonical Part feature type this editor can author (sketch, profile, extrude, revolve, sweep, loft, fillet, chamfer, shell, hole, pattern, mirror, draft, boolean, transform, plane…). Read-only.", {}),
   tool$1("feature_schema", "Return the exact TypeScript declaration of one feature type and the helper types it uses, generated from the document core. Lengths are millimeters, angles degrees. Use it before feature_add/feature_update; inspect existing features for live examples. Read-only.", { type: { type: "string", maxLength: 40 } }, ["type"])
@@ -13311,8 +13438,7 @@ function nameValue(a2, fallback) {
   return v2;
 }
 function validateLiveArguments(name5, args) {
-  const t2 = cadAgentTools.find((t22) => t22.name === name5);
-  if (!t2 || !args || typeof args !== "object" || Array.isArray(args) || Object.keys(args).some((k2) => !Object.hasOwn(t2.inputSchema.properties, k2))) throw Error("Unknown CAD tool or argument.");
+  validateToolArguments(cadAgentTools, name5, args);
 }
 function inspectPart(doc, args = {}) {
   const offset2 = numberValue(args, "offset", 0), limit = numberValue(args, "limit", 25, true);
@@ -77805,11 +77931,11 @@ var PDFDocument = (
       return subject.decodeText();
     };
     PDFDocument2.prototype.getKeywords = function() {
-      var keywords = this.getInfoDict().lookup(PDFName.Keywords);
-      if (!keywords)
+      var keywords2 = this.getInfoDict().lookup(PDFName.Keywords);
+      if (!keywords2)
         return void 0;
-      assertIsLiteralOrHexString(keywords);
-      return keywords.decodeText();
+      assertIsLiteralOrHexString(keywords2);
+      return keywords2.decodeText();
     };
     PDFDocument2.prototype.getCreator = function() {
       var creator = this.getInfoDict().lookup(PDFName.Creator);
@@ -77858,10 +77984,10 @@ var PDFDocument = (
       var key2 = PDFName.of("Subject");
       this.getInfoDict().set(key2, PDFHexString.fromText(subject));
     };
-    PDFDocument2.prototype.setKeywords = function(keywords) {
-      assertIs(keywords, "keywords", [Array]);
+    PDFDocument2.prototype.setKeywords = function(keywords2) {
+      assertIs(keywords2, "keywords", [Array]);
       var key2 = PDFName.of("Keywords");
-      this.getInfoDict().set(key2, PDFHexString.fromText(keywords.join(" ")));
+      this.getInfoDict().set(key2, PDFHexString.fromText(keywords2.join(" ")));
     };
     PDFDocument2.prototype.setCreator = function(creator) {
       assertIs(creator, "creator", ["string"]);

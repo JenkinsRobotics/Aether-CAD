@@ -4,6 +4,7 @@ import { loadDrawingFont } from "../drawing/pdf-export";
 import type { DrawingEditor } from "../drawing/controller";
 import { knowledgeTool } from "../ai/catalog";
 import { discoverCAD } from "../ai/knowledge";
+import { validateToolArguments } from './tool-arguments';
 
 const tool = (name: string, description: string, properties: Record<string, unknown> = {}, required: string[] = []): AgentTool => ({ name, description, inputSchema: { type: "object", properties, required, additionalProperties: false } });
 const revision = { expected_revision: { type: "string", description: "Exact drawing revision returned by inspect or the last successful edit." } };
@@ -34,8 +35,7 @@ export function drawingAgentInteraction(editor: DrawingEditor, contextKey: strin
   return { contextKey, tools: drawingAgentTools, execute: async (call, signal) => {
     const checkContext = () => { signal.throwIfAborted(); if (contextKey !== currentKey()) throw Error("The active Drawing changed."); };
     checkContext();
-    const descriptor = drawingAgentTools.find(tool => tool.name === call.name);
-    if (!descriptor || !call.arguments || Array.isArray(call.arguments) || Object.keys(call.arguments).some(key => !Object.hasOwn(descriptor.inputSchema.properties as object, key))) throw Error("Unknown Drawing tool or argument.");
+    validateToolArguments(drawingAgentTools, call.name, call.arguments);
     if (call.name === "aether_cad_docs") return discoverCAD(drawingAgentTools, call.arguments, "drawing");
     const before = editor.snapshot(); if (!before) throw Error("Open a Drawing first.");
     if (call.arguments.sheet_id !== undefined && typeof call.arguments.sheet_id !== "string") throw Error("sheet_id must be a string.");

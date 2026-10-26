@@ -9,7 +9,7 @@ export function resolveBodyOutputs(document: PartDocument, outputs: Record<strin
   const next = { ...document, features: document.features.map(feature => {
     if (!expected.has(feature.id)) return feature;
     const ids = outputs[feature.id];
-    if(feature.type==='transform'||feature.type==='split'){
+    if(feature.type==='transform'||feature.type==='split'||(feature.type==='pattern'&&feature.bodyIds)){
       const expected=createdBodyIDs(document,feature);
       if(!Array.isArray(ids)||ids.length!==expected.length||new Set(ids).size!==ids.length||ids.some(id=>!expected.includes(id)))throw Error(`${feature.name}: rebuild changed the saved copy identities.`);
       return feature;
