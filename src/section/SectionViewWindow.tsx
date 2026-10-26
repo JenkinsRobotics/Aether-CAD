@@ -3,7 +3,7 @@
  *  live; ✓ keeps the section, ✕ restores what was there before. */
 import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { AetherIcon, MenuButton, openFeatureWindow } from "@aether/ui";
+import { AetherIcon, Checkbox, FieldRow, Inspector, MenuButton, NumberField, openFeatureWindow } from "@aether/ui";
 import { displayQuantity, parseQuantity, unitChoice } from "@aether/core/units";
 import { cadSelection, type CADSelectionItem } from "../cad-selection-store";
 import { documentUnits } from "../document-preferences";
@@ -25,6 +25,7 @@ const bodyOf = (item: CADSelectionItem) => ({ id: item.partId, label: item.kind 
 
 export function openSectionView(): void {
   if (closeOpen) return;
+  window.dispatchEvent(new CustomEvent("aether-inspection-tool-open", { detail: "section" }));
   const before = sectionView.snapshot();
   let draft: SectionView = before ?? { plane: null, offsetMillimeters: 0, mode: "exclude", items: [] };
   let active: "planes" | "items" = draft.plane ? "items" : "planes";
@@ -36,19 +37,33 @@ export function openSectionView(): void {
     if (!closeOpen) return;
     closeOpen = null;
     unsubscribe(); cancelAnimationFrame(frame); handle.remove(); root.unmount(); win.close();
+    window.removeEventListener("keydown", escape);
+    window.removeEventListener("aether-inspection-tool-open", otherTool);
     cadSelection.dispatch({ type: "set-filter", filter: previousFilter });
     sectionView.set(keep ? (draft.plane ? draft : null) : before);
     changed();
   };
   const win = openFeatureWindow({ className: "cad-section-window", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
     title: "Section view", headerIcon: icon, acceptLabel: "Accept section view", discardLabel: "Cancel", onAccept: () => close(true), onDiscard: () => close(false) });
-  const tabs = win.tabs(["Exclude", "Include"], draft.mode === "include" ? 1 : 0);
+  const planeSection = win.section("Cutting plane");
   const planes = win.entitiesBox("Section planes");
+  planeSection.body.append(planes.element);
+  const controls = document.createElement("div");
+  planeSection.body.append(controls);
+  const scopeSection = win.section("Bodies");
+  const tabs = win.tabs(["Exclude", "Include"], draft.mode === "include" ? 1 : 0);
+  scopeSection.body.append(tabs);
   const items = win.entitiesBox("Items to exclude");
+  scopeSection.body.append(items.element);
+  const hint = document.createElement("small");
+  hint.className = "cad-section-scope-hint";
+  scopeSection.body.append(hint);
   menuHost.className = "cad-section-plane-menu";
   planes.element.append(menuHost);
 
   const update = (next: Partial<SectionView>) => { draft = { ...draft, ...next }; win.setError(null); sectionView.set(draft, true); render(); };
+  const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(false); } };
+  const otherTool = (event: Event) => { if ((event as CustomEvent).detail !== "section") close(false); };
   const focus = (field: "planes" | "items") => { active = field; render(); };
   planes.element.addEventListener("click", () => focus("planes"));
   items.element.addEventListener("click", () => focus("items"));
@@ -130,17 +145,36 @@ export function openSectionView(): void {
     planes.render(draft.plane ? [{ label: draft.plane.label, onRemove: () => { active = "planes"; update({ plane: null }); } }] : []);
     items.render(draft.items.map(item => ({ label: item.label, onRemove: () => update({ items: draft.items.filter(entry => entry.id !== item.id) }) })));
     items.element.querySelector(".aui-feature-entities-caption")!.textContent = draft.mode === "include" ? "Items to include" : "Items to exclude";
+    items.element.setAttribute("aria-label", draft.mode === "include" ? "Items to include" : "Items to exclude");
+    hint.textContent = draft.mode === "exclude" ? "All bodies are cut except those listed above." : "Only the bodies listed above are cut.";
+    win.accept.disabled = !draft.plane;
     if (cadSelection.snapshot().filter !== (active === "planes" ? "face" : "body")) pickFor();
     planes.element.dataset.active = String(active === "planes");
     items.element.dataset.active = String(active === "items");
     root.render(<>
       {createPortal(<AetherIcon name="section-view"/>, icon)}
+      {createPortal(<Inspector>
+        <FieldRow label="Offset" onReset={draft.offsetMillimeters ? () => update({ offsetMillimeters: 0 }) : undefined}>
+          <NumberField aria-label="Section offset" value={draft.offsetMillimeters / (length.factor * 1000)} unit={length.unit}
+            disabled={!draft.plane} onValueChange={value => {
+              if (value !== null) update({ offsetMillimeters: value * length.factor * 1000 });
+              else win.setError(`Enter a valid offset in ${length.unit}.`);
+            }}
+            onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}/>
+        </FieldRow>
+        <FieldRow label="Direction"><Checkbox label="Flip cut" checked={!!draft.reversed} disabled={!draft.plane}
+          onChange={event => update({ reversed: event.target.checked })}/></FieldRow>
+        <FieldRow label="Preview"><Checkbox label="Show plane" checked={draft.showPlane !== false}
+          onChange={event => update({ showPlane: event.target.checked })}/></FieldRow>
+      </Inspector>, controls)}
       {createPortal(<MenuButton label="Default section planes" items={DEFAULT_SECTION_PLANES.map(plane => ({ id: plane.label, label: `${plane.label} plane` }))}
         onSelect={id => { const plane = DEFAULT_SECTION_PLANES.find(entry => entry.label === id)!; active = "items"; update({ plane, offsetMillimeters: 0 }); }}>
         <AetherIcon name="planes-axes"/></MenuButton>, menuHost)}
     </>);
   };
   closeOpen = () => close(false);
+  window.addEventListener("keydown", escape);
+  window.addEventListener("aether-inspection-tool-open", otherTool);
   sectionView.set(draft, true);
   render(); draw(); changed();
 }

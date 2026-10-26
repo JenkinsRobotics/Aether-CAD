@@ -67,7 +67,7 @@ export class SectionLayer {
     this.clip = plane ? new THREE.Plane(new THREE.Vector3(...plane.normal), plane.constant) : null;
     this.clipped.clippingPlanes = this.clip ? [this.clip] : [];
     for (const group of groups) this.place(group);
-    this.plane.visible = Boolean(this.clip && editing && !bounds.isEmpty());
+    this.plane.visible = Boolean(this.clip && editing && view?.showPlane !== false && !bounds.isEmpty());
     if (this.clip && this.plane.visible) {
       const normal = this.clip.normal.clone().negate();
       const size = Math.max(bounds.getSize(new THREE.Vector3()).length() * 0.8, 1);

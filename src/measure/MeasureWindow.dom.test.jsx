@@ -12,6 +12,7 @@ beforeAll(async () => {
   for (const key of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'localStorage']) vi.stubGlobal(key, dom.window[key]);
   vi.stubGlobal('getComputedStyle', dom.window.getComputedStyle.bind(dom.window));
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('requestAnimationFrame', () => 0); vi.stubGlobal('cancelAnimationFrame', () => {});
   ({ toggleMeasureWindow, measureWindowOpen } = await import('./MeasureWindow'));
   ({ cadSelection } = await import('../cad-selection-store'));
   ({ applyDocumentUnits } = await import('../document-preferences'));
@@ -37,9 +38,9 @@ it('opens the standard compact window (icon, Cancel and Done), condensed until s
   expect(win.querySelector('.aui-float-panel-title').textContent).toBe('Measure');
   expect([...win.querySelectorAll('.aui-feature-commit-actions button')].map(button => button.textContent)).toEqual(['Cancel', 'Done']);
   expect(win.querySelector('.aui-feature-header-icon svg')).toBeTruthy();
-  // No results area and no hint text until something is measured.
+  // No invented results before a pick; explain the next step.
   expect(win.querySelector('[aria-label="Measurements"]')).toBeNull();
-  expect(win.querySelector('.cad-measure-results').childElementCount).toBe(0);
+  expect(win.querySelector('.cad-measure-results').textContent).toContain('Select bodies');
   expect(win.querySelector('[aria-label="Select entities to measure"]')).toBeTruthy();
   expect(picking).toBe(true);
   await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
@@ -97,4 +98,49 @@ it('shows the angle between straight edges in the chosen unit and drops it when 
   geometry = { points: [], measurements: [{ id: 'a', label: 'A', kind: 'edge', linearDirection: [1, 0, 0] }, { id: 'b', label: 'Arc', kind: 'edge', radiusMillimeters: 5 }] };
   await act(async () => window.dispatchEvent(new Event('aether-part-updated')));
   expect(results()).not.toContain('Angle between');
+});
+
+
+it('point and angle modes use exact world points, explicit units, clear, and restore the previous selection filter', async () => {
+  await choose('Measurement mode', 'Point-to-point');
+  expect(cadSelection.snapshot().filter).toBe('vertex');
+  geometry = { points: [
+    { candidateId: 'v1', partId: 'p', positionMillimeters: [25.4, 0, 0] },
+    { candidateId: 'v2', partId: 'p', positionMillimeters: [0, 0, 0] },
+    { candidateId: 'v3', partId: 'p', positionMillimeters: [0, 25.4, 0] },
+  ], measurements: [] };
+  const vertices = [1, 2, 3].map(n => ({ id: `vertex:p:v${n}`, partId: 'p', kind: 'vertex', label: `Vertex ${n}` }));
+  await select(vertices.slice(0, 2));
+  expect(results()).toContain('Point-to-point distance'); expect(results()).toContain('1.000 in');
+  expect(analyzePart).not.toHaveBeenCalled();
+  await choose('Measurement mode', '3-point angle');
+  expect(cadSelection.snapshot().items).toEqual([]);
+  await select(vertices);
+  expect(results()).toContain('90.00 deg');
+  await choose('Angle unit', 'Radian'); expect(results()).toContain('1.57 rad');
+  await act(async () => document.querySelector('[aria-label="Remove Vertex 2"]').click());
+  expect(document.querySelector('[aria-label="Measurements"]')).toBeNull();
+  expect(document.body.textContent).toContain('(2/3)');
+  await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+  expect(measureWindowOpen()).toBe(false);
+  expect(cadSelection.snapshot().filter).toBe('auto');
+  expect(document.querySelector('.cad-measure-overlay')).toBeNull();
+});
+
+it('object measurements include exact body volume, surface area, dimensions and center', async () => {
+  analyzePart.mockResolvedValue({ measurements: [{ body_id: 'p', volume_mm3: 16387.064, area_mm2: 645.16, center_mm: [12.7, 0, 0], bounds_mm: [25.4, 50.8, 25.4] }] });
+  await select([{ id: 'body:p', partId: 'p', kind: 'body', label: 'Plate' }]);
+  expect(analyzePart).toHaveBeenCalledWith(part, { kind: 'properties', bodyIds: ['p'] }, expect.anything());
+  expect(results()).toContain('1.000 in³'); expect(results()).toContain('1.000 in²');
+  expect(results()).toContain('Center X'); expect(results()).toContain('0.500 in');
+});
+
+it('a completed older request cannot replace a newer result with the same selected references', async () => {
+  const pending = [];
+  analyzePart.mockImplementation(() => new Promise(resolve => pending.push(resolve)));
+  const pair = [{ id: 'face:a:7', kind: 'face', partId: 'a', label: 'Face A', faceId: 7 }, { id: 'face:b:8', kind: 'face', partId: 'b', label: 'Face B', faceId: 8 }];
+  await select(pair); await select([]); await select(pair);
+  await act(async () => pending[1]({ measurements: [{ distance_mm: 25.4, points: [[0,0,0],[25.4,0,0]] }] }));
+  await act(async () => pending[0]({ measurements: [{ distance_mm: 50.8, points: [[0,0,0],[50.8,0,0]] }] }));
+  expect(results()).toContain('1.000 in'); expect(results()).not.toContain('2.000 in');
 });

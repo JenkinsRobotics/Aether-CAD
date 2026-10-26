@@ -3,7 +3,7 @@ import { cadWorkspace } from "../../cad-workspace-store";
 /** Inspector — the right-hand sidebar. */
 import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 import { type CADPanelPlacement } from "../../cad-presentation-store";
-import { Button, InspectorSection } from "@aether/ui";
+import { Button, InspectorActions, InspectorSection } from "@aether/ui";
 import { useState, useSyncExternalStore } from "react";
 import { findTreeNode, CADPanelPlacementMenu, ReadOnlyPropertyGrid, ReadOnlyPropertySections } from "./shared";
 
@@ -32,9 +32,11 @@ export function InspectorPanel({ placement }: { placement: CADPanelPlacement }) 
           />}
     </InspectorSection>
     <InspectorSection title="Editing and units">
+      <InspectorActions>
       <Button disabled={!editable} onClick={()=>{if(selected)cadWorkspace.dispatch({type:'item-action',id:selected.id,actionID:'edit-feature'});}}>Edit selected feature</Button>
       <Button disabled={!saved} onClick={()=>setUnitsOpen(true)}>Units and precision…</Button>
-      <p>Properties are read-only. Select a feature to edit its dimensions; center spacing is controlled by its sketch constraints or assembly mate.</p>
+      </InspectorActions>
+      <p>Select a feature to edit its dimensions. Changes preview in the model.</p>
     </InspectorSection>
     {unitsOpen && <CADDocumentSettings action="units" onClose={()=>setUnitsOpen(false)}/>}
     </>

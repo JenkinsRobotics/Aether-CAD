@@ -7,6 +7,9 @@ export interface SectionView {
   plane: SectionPlane | null;
   /** Along the plane normal from its origin; negative moves into the part. */
   offsetMillimeters: number;
+  /** Keep the opposite half without moving the cutting plane. */
+  reversed?: boolean;
+  showPlane?: boolean;
   /** Exclude: every part is cut except the listed ones. Include: only the listed ones. */
   mode: "exclude" | "include";
   items: readonly SectionItem[];
@@ -41,7 +44,7 @@ export function sectionClipPlane(view: SectionView | null): { normal: Vec3; cons
   if (!Number.isFinite(length) || length < 1e-12 || !Number.isFinite(view.offsetMillimeters)) return null;
   const n = view.plane.normal.map(value => value / length) as unknown as Vec3;
   const d = n.reduce((sum, value, axis) => sum + value * view.plane!.originMillimeters[axis], 0) + view.offsetMillimeters;
-  return { normal: [-n[0], -n[1], -n[2]], constant: d };
+  return view.reversed ? { normal: n, constant: -d } : { normal: [-n[0], -n[1], -n[2]], constant: d };
 }
 
 /** Parameter t of the point on origin + t·direction nearest a pick ray; null when

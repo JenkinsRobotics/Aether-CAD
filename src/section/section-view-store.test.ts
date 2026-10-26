@@ -27,3 +27,9 @@ it("drags along the normal: the line point nearest the pick ray", () => {
   // Looking straight down the line gives no stable parameter.
   expect(lineParameterNearestRay([0, 0, 0], [0, 0, 1], [0, 0, 50], [0, 0, -1])).toBeNull();
 });
+
+it('reverses the kept half-space without moving an offset plane', () => {
+  const view = { plane: { label: 'Top', originMillimeters: [0,0,10] as const, normal: [0,0,2] as const }, offsetMillimeters: 3, mode: 'exclude' as const, items: [] };
+  expect(sectionClipPlane(view)).toEqual({ normal: [-0,-0,-1], constant: 13 });
+  expect(sectionClipPlane({ ...view, reversed: true })).toEqual({ normal: [0,0,1], constant: -13 });
+});

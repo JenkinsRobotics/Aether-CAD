@@ -462,6 +462,14 @@ export class MateViewport {
 
   /** Exact topology candidates behind the current vertex selections, in world
    *  space. Three of these define a plane. */
+  projectMeasurementPoints(points: readonly (readonly [number, number, number])[]) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    return points.map(point => {
+      const projected = this.projectScreenPoint(new THREE.Vector3(...point));
+      return projected ? { x: projected.x + rect.left, y: projected.y + rect.top } : null;
+    });
+  }
+
   selectedPoints(): { partId: string; candidateId: string; label: string; positionMillimeters: [number, number, number] }[] {
     const picked: ReturnType<MateViewport["selectedPoints"]> = [];
     for (const item of cadSelection.snapshot().items) {

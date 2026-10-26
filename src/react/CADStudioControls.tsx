@@ -31,7 +31,7 @@ export function CADStudioViewTools({partTray}:{partTray?:{shown:boolean;onToggle
     <FloatingToolbar variant="document" ariaLabel="View tools" groups={[{id:"view",label:"View",actions:[
       {id:"fit",label:"Fit view",icon:<AetherIcon name="fit"/>,disabled:!commands["fit-view"].enabled},
       {id:"selection",label:"Selection tools",icon:<AetherIcon name="cursor"/>,pressed:!!anchor},
-      {id:"measure",label:"Measure",icon:<AetherIcon name="ruler"/>,pressed:measuring,disabled:!commands.measure.enabled},
+      {id:"measure",label:"Measure",icon:<AetherIcon name="tape-measure"/>,pressed:measuring,disabled:!commands.measure.enabled},
       {id:"section",label:"Section view",icon:<AetherIcon name="section-view"/>,pressed:sectioned||editingSection,disabled:!commands["section-view"].enabled},
       ...(partTray?[{id:"part-tray",label:"Part tray",icon:<AetherIcon name="part-manager"/>,pressed:partTray.shown}]:[]),
     ]}]} onAction={id => {

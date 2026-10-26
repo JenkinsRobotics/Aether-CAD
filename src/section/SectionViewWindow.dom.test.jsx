@@ -89,3 +89,19 @@ it('cancel restores the previous section; turn off clears it', async () => {
   await act(async () => turnOffSectionView());
   expect(sectionView.snapshot()).toBeNull();
 });
+
+
+it('the panel offset previews in document units; reversing keeps the cut in place and cancel restores it', async () => {
+  const previous = { plane: { label: 'Top', originMillimeters: [0,0,0], normal: [0,0,1] }, offsetMillimeters: 4, mode: 'exclude', items: [] };
+  sectionView.set(previous);
+  await open();
+  const offset = document.querySelector('[aria-label="Section offset"]');
+  await act(async () => { offset.value = '7.5'; offset.dispatchEvent(new Event('input', { bubbles: true })); });
+  expect(sectionView.snapshot().offsetMillimeters).toBe(7.5);
+  await act(async () => document.querySelector('.cad-section-window input[type="checkbox"]').click());
+  expect(sectionView.snapshot().reversed).toBe(true);
+  expect(sectionView.snapshot().offsetMillimeters).toBe(7.5);
+  await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+  expect(sectionView.snapshot()).toBe(previous);
+  expect(document.querySelector('.cad-section-handle')).toBeNull();
+});

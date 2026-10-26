@@ -1,5 +1,10 @@
-/* Measure: the standard compact window, sized to its content like Onshape's. */
-.cad-measure-window.aui-feature-window--compact { width:264px; }
-.cad-measure-window .aui-feature-row > span:first-child { flex:0 0 92px; }
-.cad-measure-window .aui-feature-row > .aui-feature-picker { flex:1; min-width:0; }
+/* Product-owned overlay and content layout; fields inherit shared Inspector. */
+.cad-measure-window.aui-feature-window--compact { width:300px; }
 .cad-measure-results:empty { display:none; }
+.cad-measure-hint { margin:0; color:var(--aether-color-text-dim); font-size:11px; line-height:1.5; }
+.cad-measure-overlay { position:absolute; inset:0; pointer-events:none; z-index:8; overflow:hidden; }
+.cad-measure-overlay[hidden] { display:none; }
+.cad-measure-overlay svg { width:100%; height:100%; overflow:visible; }
+.cad-measure-overlay polyline { fill:none; stroke:var(--aether-color-text); stroke-width:1.5; stroke-linecap:round; }
+.cad-measure-overlay circle { fill:var(--aether-color-accent); stroke:var(--aether-color-bg-panel); stroke-width:2.5; }
+.cad-measure-label { position:absolute; transform:translate(-50%,-50%); padding:3px 7px; border:1px solid var(--aether-color-border); border-radius:4px; color:var(--aether-color-text); background:var(--aether-color-bg-panel); font:12px/1.4 var(--aether-font-family); white-space:nowrap; }

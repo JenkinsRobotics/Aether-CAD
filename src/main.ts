@@ -1640,6 +1640,10 @@ window.addEventListener('aether-finish-edges-request',event=>{
 window.addEventListener('aether-source-edge-picking',event=>viewer.setSourceEdgePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-vertex-picking',event=>viewer.setSourceVertexPicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-measure-picking',event=>viewer.setMeasurePicking((event as CustomEvent).detail===true));
+window.addEventListener('aether-measure-project', event => {
+  const { points, respond } = (event as CustomEvent).detail;
+  respond(viewer.projectMeasurementPoints(points));
+});
 window.addEventListener('aether-source-body-picking',event=>viewer.setSourceBodyPicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-face-picking',event=>viewer.setSourceFacePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-offset-faces-request',event=>{
