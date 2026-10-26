@@ -40,9 +40,11 @@ export type CADCommandID =
   | "feature-transform"
   | "transform-translate" | "transform-rotate" | "transform-scale" | "transform-copy" | "transform-mirror" | "transform-align"
   | "feature-offset-face"
+  | "feature-replace-face"
   | "feature-face-extrude"
   | "feature-shell"
   | "feature-boolean"
+  | "feature-union" | "feature-subtract" | "feature-intersect"
   | "feature-pattern"
   | "feature-draft"
   | "feature-loft"
@@ -199,6 +201,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-sweep",
   "feature-transform", "transform-translate", "transform-rotate", "transform-scale", "transform-copy", "transform-mirror", "transform-align",
   "feature-offset-face",
+  "feature-replace-face",
   "feature-face-extrude",
   "feature-shell",
   "feature-import-step", "feature-import-cad",   "feature-sheet-base", "feature-sheet-flange", "feature-sheet-hem", "feature-sheet-fold", "feature-sheet-unfold", "feature-sheet-refold", "sheet-export-flat-dxf", "show-configurations", "timeline-copy-features", "timeline-paste-features",
@@ -207,6 +210,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-loft",
   "feature-draft",
   "feature-boolean",
+  "feature-union", "feature-subtract", "feature-intersect",
   "feature-pattern",
   "part-section",
   "part-properties",

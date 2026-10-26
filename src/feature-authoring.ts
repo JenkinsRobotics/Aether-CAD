@@ -20,6 +20,7 @@ import { openPointWindow } from "./point-window";
 import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
 import { featureEditor, featureEditors } from "./features";
+import { featureToolbarPresets, type FeatureLaunchOptions } from "./features/toolbar-presets";
 import { layoutParameterRows, type FeatureEditor, type FeatureEditorContext } from "./features/shared";
 import { unitChoice } from "@aether/core/units";
 import { documentUnits } from "./document-preferences";
@@ -95,7 +96,7 @@ const presentFeatureWindow = (
 };
 
   let finishingSketch = false;
-  const show = (type: string, existing?: PartFeature, initialOperation?: "cut", initialTransform?: "translate"|"rotate"|"scale"|"copy"|"mirror"|"align") => {
+  const show = (type: string, existing?: PartFeature, launch: FeatureLaunchOptions = {}) => {
     // Reaching for a solid feature while the sketch editor is open means the
     // sketch is done: commit it and let the feature open on the result,
     // rather than leaving both windows up over each other.
@@ -110,7 +111,7 @@ const presentFeatureWindow = (
         cancelable: true,
         detail: {complete: (success: boolean) => {
           finishingSketch = false;
-          if (success) show(type, existing, initialOperation, initialTransform);
+          if (success) show(type, existing, launch);
         }},
       });
       window.dispatchEvent(event);
@@ -148,7 +149,7 @@ const presentFeatureWindow = (
     const win = openCompactFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
       className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
-      title: type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "),
+      title: launch.title ?? (type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")),
       onAccept: () => form.requestSubmit(),
       onDiscard: () => win.close(),
     });
@@ -201,7 +202,7 @@ const presentFeatureWindow = (
     const name = field(
       "Name",
       feature?.name ??
-        (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")) + " " + (doc.features.length + 1),
+        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1),
     );
     if (type === "extrude") { name.closest("label")?.remove(); name.hidden = true; form.append(name); }
     const before = existing
@@ -229,8 +230,7 @@ const presentFeatureWindow = (
       field,
       reference,
       feature,
-      initialOperation,
-      initialTransform,
+      ...launch,
       doc,
       lengthUnitLabel: lengthUnit.unit,
       angleUnitLabel: angleUnit.unit,
@@ -569,7 +569,7 @@ const presentFeatureWindow = (
       });
     }
   });
-  for(const mode of ['translate','rotate','scale','copy','mirror','align'] as const)cadCommands.register(`transform-${mode}`,()=>show('transform',undefined,undefined,mode));
+  for(const mode of ['translate','rotate','scale','copy','mirror','align'] as const)cadCommands.register(`transform-${mode}`,()=>show('transform', undefined, { initialTransform: mode }));
   // Removing material is Extrude's "cut" operation, not a feature of its own (Onshape).
   for (const type of [
     "plane",
@@ -597,6 +597,10 @@ const presentFeatureWindow = (
   ] as readonly string[]) {
     cadCommands.register(`feature-${type}` as never, () => show(type as never));
     cadCommands.setEnabled(`feature-${type}` as never, true);
+  }
+  for (const {command, type, options} of featureToolbarPresets) {
+    cadCommands.register(command, () => show(type, undefined, options));
+    cadCommands.setEnabled(command, true);
   }
   return refresh;
 }

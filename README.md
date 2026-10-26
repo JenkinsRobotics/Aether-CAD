@@ -270,3 +270,16 @@ current drag. Each completed movement uses an ordinary validated Transform
 feature, retains selected body identities, and participates in Undo/Redo and
 save/reopen. The manipulator is hidden during other feature tools and read-only
 viewing. Assembly constraints continue to use the assembly editing tools.
+
+### Solid toolbar shortcuts
+
+Solid → Modify exposes Union, Subtract and Intersect in the Boolean menu and
+section menu; each opens the existing Boolean editor with the matching operation.
+Offset Face is under Push/Pull, and Replace Face opens its target-face replacement
+mode directly. Replace Face currently supports parallel planar targets and planes.
+Align remains in Move's menu. Fillet/Chamfer, Shell and Split Body are under Modify;
+Extrude, Revolve, Sweep, Loft, Pattern and Mirror are under Create. Sketch's Modify
+menu contains individual-edge Offset and Project.
+
+Wrap & Emboss is listed as unavailable. There is no wrapping/embossing modeling
+operation behind it yet. The toolbar and search share the same availability state.

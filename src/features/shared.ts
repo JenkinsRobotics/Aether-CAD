@@ -9,12 +9,13 @@
  *  with a "Planned" title — the gallery shows the target, this shows the truth. */
 import type { openFeatureWindow } from "@aether/ui";
 import type { PartDocument } from "@aether/core/document";
+import type { FeatureLaunchOptions } from './toolbar-presets';
 
 export type FeatureWindow = ReturnType<typeof openFeatureWindow>;
 export type Control = HTMLInputElement | HTMLSelectElement;
 export type Controls = Record<string, Control>;
 
-export interface FeatureEditorContext {
+export interface FeatureEditorContext extends FeatureLaunchOptions {
   win: FeatureWindow;
   form: HTMLFormElement;
   /** Unit-aware field factory. `(mm)`/`(degrees)` captions are rewritten to the
@@ -24,8 +25,6 @@ export interface FeatureEditorContext {
   reference: (label: string, types: string[], value?: string) => Control;
   /** The feature being edited, or undefined when adding. */
   feature: any;
-  initialOperation?: "cut";
-  initialTransform?: "translate"|"rotate"|"scale"|"copy"|"mirror"|"align";
   doc: PartDocument;
   lengthUnitLabel: string;
   angleUnitLabel: string;
