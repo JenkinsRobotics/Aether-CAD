@@ -51,6 +51,7 @@ export class StageRig {
   /** Match the modeling up-axis and light the front-facing sides as well as the top. */
   setUpAxis(axis: "y" | "z"): void {
     this.upAxis = axis;
+    this.grid.setUpAxis(axis);
     const zUp = axis === "z";
     const place = (light: THREE.Light, x: number, y: number, z: number) => light.position.set(x, zUp ? y : z, zUp ? z : -y);
     place(this.hemisphereLight, 0, 0, 1);
@@ -99,15 +100,15 @@ export class StageRig {
   }
 
   /** Size the stage to a framed model, as the demo's Frame does. */
-  frame(diagonal: number, distance: number): void { this.grid.frameStage(diagonal, distance); }
+  frame(diagonal: number, _distance: number): void { this.grid.frameStage(diagonal); }
 
-  /** Per frame, before drawing: grid fade follows the camera, and the depth range
+  /** Per frame, before drawing: grid coverage follows the view, and the depth range
    *  stays tight to what is visible. A fixed wide range (0.01–10,000 mm) leaves
    *  ~0.1 mm depth precision at normal distance, so faces, edges and floor flicker. */
   beforeRender(camera: THREE.Camera, target: THREE.Vector3, content: readonly (THREE.Object3D | null | undefined)[]): void {
     const viewDistance = camera.position.distanceTo(target);
-    this.grid.followCamera(viewDistance);
-    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+    this.grid.followCamera(camera, target);
+    if (!(camera instanceof THREE.PerspectiveCamera || camera instanceof THREE.OrthographicCamera)) return;
     this.depthBounds.makeEmpty();
     for (const root of content) if (root?.visible) this.depthBounds.expandByObject(root);
     let contentFar = 0;
@@ -115,9 +116,11 @@ export class StageRig {
       this.depthBounds.getBoundingSphere(this.depthSphere);
       contentFar = camera.position.distanceTo(this.depthSphere.center) + this.depthSphere.radius * 1.2;
     }
-    const reach = this.grid.reach();
-    const { near, far } = perspectiveDepthRange(viewDistance, contentFar, reach ? camera.position.length() + reach : 0);
-    if (Math.abs(camera.near - near) > near * 1e-3 || Math.abs(camera.far - far) > far * 1e-3) {
+    const gridFar = this.grid.reach(camera.position);
+    const { near, far } = camera instanceof THREE.PerspectiveCamera
+      ? perspectiveDepthRange(viewDistance, contentFar, gridFar)
+      : { near: -Math.max(viewDistance * 10, contentFar, gridFar), far: Math.max(viewDistance * 10, contentFar, gridFar) };
+    if (Math.abs(camera.near - near) > Math.abs(near) * 1e-3 || Math.abs(camera.far - far) > far * 1e-3) {
       camera.near = near; camera.far = far; camera.updateProjectionMatrix();
     }
   }

@@ -1,10 +1,11 @@
 import { expect, it, vi } from 'vitest';
-import { LineSegments, Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three/webgpu';
+import { Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three/webgpu';
 import { defaultCADAppearance } from '../cad-appearance-store';
 import { tintPlane, updatePlaneVisual } from '../plane-visual';
 import { resolveAppearance } from './appearance-themes';
-import { EnvironmentGrid, gridSegments, subdivideGridLines } from './environment-grid';
+import { EnvironmentGrid, gridSegments } from './environment-grid';
 import { gradientBackground } from './environment-background';
+import { HorizonGrid } from './horizon-grid';
 import { styledLines } from './styled-lines';
 
 it('separates repeated major grid lines from the axes at the requested spacing', () => {
@@ -59,19 +60,17 @@ it('renders exact gradient endpoints with a bounded texture', () => {
   expect(Array.from(bytes.slice(-4))).toEqual([0x12,0x34,0x56,255]);
 });
 
-it('renders the standard grid with native depth-tested lines and retains custom wide lines', () => {
-  const grid=new EnvironmentGrid();grid.apply(resolveAppearance(defaultCADAppearance));
-  expect(grid.children.slice(0,4).every(line=>!line.visible)).toBe(true);
-  const reference=grid.children[4];expect(reference.visible).toBe(true);
-  expect(reference.children.every(line=>line instanceof LineSegments && line.material.depthTest && line.material.toneMapped)).toBe(true);
-  grid.apply(resolveAppearance({...defaultCADAppearance,gridMinorWidthPx:3}));
-  expect(reference.visible).toBe(false);expect(grid.children[0].visible).toBe(true);
-});
-
-it('subdivides camera-crossing lines without changing endpoints, cells or axes', () => {
-  const pieces=subdivideGridLines([-50,0,0,50,0,0],10);
-  expect(pieces).toHaveLength(60);expect(pieces.slice(0,3)).toEqual([-50,0,0]);expect(pieces.slice(-3)).toEqual([50,0,0]);
-  for(let i=0;i<pieces.length;i+=6){expect(pieces.slice(i+1,i+3)).toEqual([0,0]);expect(pieces[i+3]-pieces[i]).toBeCloseTo(10);}
-  expect(subdivideGridLines([],10)).toEqual([]);
-  expect(subdivideGridLines([-100000,0,0,100000,0,0],.1)).toHaveLength(128*6);
+it('uses the same depth-tested horizon grid for thin and custom-width theme lines', () => {
+  const grid = new EnvironmentGrid(); grid.apply(resolveAppearance(defaultCADAppearance));
+  expect(grid.children.slice(0, 4).every(line => !line.visible)).toBe(true);
+  const horizon = grid.children[4] as HorizonGrid;
+  expect(horizon).toBeInstanceOf(HorizonGrid);
+  expect(horizon.visible).toBe(true);
+  expect(horizon.material.depthTest).toBe(true);
+  expect(horizon.material.depthWrite).toBe(false);
+  expect(horizon.material.toneMapped).toBe(true);
+  grid.apply(resolveAppearance({ ...defaultCADAppearance, gridMinorWidthPx: 3 }));
+  expect(horizon.visible).toBe(true); expect(grid.children[0].visible).toBe(false);
+  grid.apply(resolveAppearance({ ...defaultCADAppearance, environmentTheme: 'graphite', lightingPreset: 'studio' }));
+  expect(horizon.visible).toBe(false); expect(grid.children[0].visible).toBe(true);
 });

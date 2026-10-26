@@ -58,26 +58,26 @@ const LIGHTING = {
 } as const;
 
 /** The stage around the model — floor, grid fade, tone mapping — resolved from
- *  a shared rendering theme's data (`@aether/assets/themes/rendering/*`), exactly
- *  as the reference demo applies it. A new theme is a new data file plus one
+ *  a shared rendering theme's data (`@aether/assets/themes/rendering/*`). Grid
+ *  fades use view angles instead of the demo's distance fog. A new theme adds a
  *  STAGES entry; the viewport only applies `ResolvedAppearance.stage`. */
 export interface StageTheme {
-  /** Floor fade in grid cells from the camera, like the demo's scene fog. */
-  fog: { nearCells: number; farCells: number } | null;
+  /** Fade the grid at grazing view angles, independent of world distance. */
+  horizonFade: boolean;
   /** "shadow": transparent shadow catcher over the grid; "solid": a lit floor plane. */
   floor: "shadow" | "solid";
-  /** Size grid cells and fade to the framed model, as the demo's stage does. */
+  /** Size the initial grid cells to the framed model. */
   gridFitsModel: boolean;
   toneMapped: boolean;
 }
 type RenderingTheme = typeof studioLook;
 export function stageFromRenderingTheme(look: RenderingTheme): StageTheme {
   return {
-    fog: { nearCells: look.fog.nearMeters / look.grid.spacingMeters, farCells: look.fog.farMeters / look.grid.spacingMeters },
+    horizonFade: Boolean(look.fog),
     floor: look.shadow ? "shadow" : "solid", gridFitsModel: true, toneMapped: Boolean(look.toneMapping),
   };
 }
-const PLAIN_STAGE: StageTheme = Object.freeze({ fog: null, floor: "solid", gridFitsModel: false, toneMapped: false });
+const PLAIN_STAGE: StageTheme = Object.freeze({ horizonFade: false, floor: "solid", gridFitsModel: false, toneMapped: false });
 const STAGES: Readonly<Record<string, StageTheme>> = { "model-studio": stageFromRenderingTheme(studioLook) };
 /** The named environment theme wins; a custom look keeps its lighting preset's stage. */
 export function stageFor(appearance: Pick<CADAppearanceSnapshot, "environmentTheme" | "lightingPreset">): StageTheme {
@@ -97,7 +97,7 @@ export interface ResolvedAppearance {
   sketchStroke: number;
   planeTheme: PlaneTheme;
   stage: StageTheme;
-  grid: { fade?: { near: number; far: number }; toneMapped: boolean; spacing: number; extent: number; majorEvery: number; minorWidth: number; majorWidth: number; axisWidth: number; majorOpacity: number; axisOpacity: number; axisColor: number; xColor: number; yColor: number; zColor: number };
+  grid: { horizonFade: boolean; toneMapped: boolean; spacing: number; extent: number; majorEvery: number; minorWidth: number; majorWidth: number; axisWidth: number; majorOpacity: number; axisOpacity: number; axisColor: number; xColor: number; yColor: number; zColor: number };
   colorTransform: "standard" | "filmic";
   backgroundMode: "solid" | "gradient";
   backgroundBottom: number;
@@ -152,7 +152,7 @@ export function resolveAppearance(
   return {
     stage,
     grid: { toneMapped: stage.toneMapped,
-      fade: stage.fog ? { near: stage.fog.nearCells * finite(appearance.gridSpacingMillimeters, 25), far: stage.fog.farCells * finite(appearance.gridSpacingMillimeters, 25) } : undefined,
+      horizonFade: stage.horizonFade,
       spacing: finite(appearance.gridSpacingMillimeters, 25), extent: finite(appearance.gridExtentMillimeters, 1600),
       majorEvery: finite(appearance.gridMajorEvery, 5), minorWidth: finite(appearance.gridMinorWidthPx, 1), majorWidth: finite(appearance.gridMajorWidthPx, 1.5), axisWidth: finite(appearance.gridAxisWidthPx, 2),
       majorOpacity: opacity(appearance.gridMajorOpacityPercent, Math.min(1, gridOpacity * 1.8)), axisOpacity: opacity(appearance.gridAxisOpacityPercent, 0.85),

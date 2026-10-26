@@ -36,11 +36,11 @@ it('opens with Model Studio and resets legacy presets without leaking its custom
   expect(resolveAppearance(store.snapshot()).background).toBe(0xf2f5f7);
 });
 
-it('uses the demo grid proportions, plain thin cells and distance fade', () => {
+it('uses the demo grid proportions, plain thin cells and a horizon fade', () => {
   const grid = resolveAppearance(new CADAppearanceStore().snapshot()).grid;
   expect(grid.extent / grid.spacing).toBe(look.grid.extentMeters / look.grid.spacingMeters);
   expect(grid).toMatchObject({majorEvery:0,minorWidth:1,majorWidth:1,axisWidth:1,toneMapped:true,
-    fade:{near:look.fog.nearMeters*25,far:look.fog.farMeters*25}});
+    horizonFade:true});
 });
 
 it('upgrades the old untouched stage recipe while retaining customized grid spacing', () => {

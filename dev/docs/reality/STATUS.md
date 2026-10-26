@@ -1,5 +1,23 @@
 # Aether CAD source status
 
+## 2026-10-26 — Grid horizon correction
+
+The Model Studio ground grid fades by grazing view angle, independently of camera
+or model distance. Its procedural surface follows the visible ground through pan
+and zoom; antialiased, crossfading grid scales retain readable cells. World axes,
+theme colors, custom line widths and opaque-model occlusion remain intact. Top
+views stay clear; orthographic views use parallel rays and a matching depth range.
+Depth precision no longer depends on panning distance from the world origin.
+This applies to the shared CAD Part/Assembly viewport; no document or worker
+format changes. Aether UI's WIDGETS standard records the product-renderer contract.
+
+Qualification: focused geometry/depth tests, the full CAD unit suite and production
+build; 32 real WebGPU/WebGL render views, both palettes/projections, extreme zoom,
+Y/Z-up, panning and custom line widths; built-app wheel zoom and camera checks on
+a disposable saved Part. Evidence: `.verification/grid-horizon-2026-10-26/` and
+`.verification/baseline-2026-10-24/grid-horizon-final-2026-10-26/`. Frontend-only
+activation retains the current worker, other app selections and Studio host.
+
 ## 2026-10-25 — CAD alpha-0.1.19 installed
 
 Shared panels and foundation source `854c7dbb8cf030e088babdda23bee648b6779d49` is live with its matching
