@@ -1,8 +1,9 @@
-import { useCameraMenu } from "./camera-menu";
+import { useEnvironmentMenu } from "./environment-menu";
+import { useViewCubePreference } from "./use-view-cube-preference";
 /** Camera navigation and the viewport surface itself. */
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { StudioCameraControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
+import { EnvironmentControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { bindViewportContextGesture } from "../../viewport/context-menu-gesture";
 import { cadViewportContext } from "../../viewport/context-menu";
@@ -11,19 +12,18 @@ import { SelectionControls } from "./viewport";
 import { ViewportTools } from "./viewport";
 
 export function ViewportCameraNavigation() {
-  const menu = useCameraMenu();
+  const cube = useViewCubePreference();
+  const menu = useEnvironmentMenu(cube.visible, cube.toggle);
   const camera = useSyncExternalStore(
     cadCameraPresentation.subscribe,
     cadCameraPresentation.snapshot,
     cadCameraPresentation.snapshot,
   );
-  return (<StudioCameraControl projection={camera.projection}><ViewportNavigationCube
+  return (<EnvironmentControl items={menu.items} onSelect={menu.onSelect} navigatorVisible={cube.visible}><ViewportNavigationCube
       id="view-cube"
       appearance="studio"
       orientation={camera.orientation}
       upAxis={camera.upAxis}
-      homeMenuItems={menu.items}
-      onHomeMenuSelect={menu.onSelect}
       onSelectView={(view) =>
         cadCameraPresentation.dispatch({ type: "select-view", view })
       }
@@ -39,7 +39,7 @@ export function ViewportCameraNavigation() {
       onRoll={(quarterTurns) =>
         cadCameraPresentation.dispatch({ type: "roll", quarterTurns })
       }
-    /></StudioCameraControl>
+    /></EnvironmentControl>
   );
 }
 

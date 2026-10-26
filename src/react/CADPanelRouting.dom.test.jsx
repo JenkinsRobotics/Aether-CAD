@@ -35,14 +35,14 @@ async function click(label){const button=railButton(label);expect(button).toBeTr
 // Exiting shared panels remain painted briefly but are no longer presented or interactive.
 function isVisible(node) { return !!node && !node.closest('[hidden], [aria-hidden="true"], [inert]'); }
 it('retains the same camera navigation through sketch entry and exit', async()=>{
-  const cameraButton=container.querySelector('[aria-label="Camera view"]');
+  const cameraButton=container.querySelector('[aria-label="Environment"]');
   await act(async()=>cameraButton.click());
   const cube=document.querySelector('#view-cube');
   expect(cube).toBeTruthy();
   for(const editing of [true,false,true,false]) {
     await act(async()=>window.dispatchEvent(new window.CustomEvent('aether-sketch-mode',{detail:editing})));
     expect(document.querySelector('#view-cube')).toBe(cube);
-    expect(container.querySelector('[aria-label="Camera view"]')).toBe(cameraButton);
+    expect(container.querySelector('[aria-label="Environment"]')).toBe(cameraButton);
     expect(isVisible(cube)).toBe(true);
   }
 });
