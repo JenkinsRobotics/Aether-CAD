@@ -15,7 +15,7 @@ export const importSTEPEditor: FeatureEditor = {
     const note = document.createElement("p");
     note.textContent = "The original STEP source is saved in this feature. Add sketches and solid features to modify its geometry.";
     note.style.fontSize = "0.8rem";
-    context.win.body.append(note);
+    context.win.addHelp(note);
   },
   serialize(_values, context) {
     return { operation: "new", bodyId: context.feature.bodyId, sourceName: context.feature.sourceName, dataBase64: context.feature.dataBase64 };

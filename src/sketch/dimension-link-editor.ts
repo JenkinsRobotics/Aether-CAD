@@ -63,6 +63,7 @@ export function mountDimensionLinkEditor(
   );
   binding.write(constraint.valueOffset ?? 0);
   const explanation = document.createElement("p");
+  explanation.dataset.featureHelp = "true";
   explanation.textContent =
     "This dimension = multiplier × driver + offset. Updating its value also updates the shared driver.";
   const apply = document.createElement("button");

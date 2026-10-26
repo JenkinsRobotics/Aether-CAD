@@ -78,9 +78,13 @@ export function mountModificationPanel({
   root.append(label);
   let copyTransform: HTMLInputElement | undefined;
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Copies are independent geometry. Original constraints remain unchanged.";
   root.append(hint);
+  const selectionStatus = document.createElement("p");
+  selectionStatus.setAttribute("role", "status");
+  root.append(selectionStatus);
   const fields = document.createElement("div");
   root.append(fields);
   const errors = document.createElement("p");
@@ -323,6 +327,7 @@ export function mountModificationPanel({
         );
         hint.textContent =
           "Editing an existing fillet radius. Linked fillets update together. Apply saves the change.";
+        selectionStatus.textContent = "Editing an existing fillet";
         preview();
         return true;
       }
@@ -369,6 +374,7 @@ export function mountModificationPanel({
             lines.length === 1
               ? "First curve selected. Click the second curve; pick the side to keep."
               : "Two curves selected. Adjust the fillet radius and Apply.";
+          selectionStatus.textContent = lines.length === 1 ? "First curve selected" : "Two curves selected";
           preview();
         } catch (error) {
           report((error as Error).message);
@@ -387,6 +393,7 @@ export function mountModificationPanel({
           (c) => c.contour === Number(option.value),
         );
       hint.textContent = `${corners.length} corner${corners.length === 1 ? "" : "s"} selected. One radius controls the batch. Click more corners to include them.`;
+      selectionStatus.textContent = `${corners.length} corner${corners.length === 1 ? "" : "s"} selected`;
       inputs.get("Corner vertex")!.value = String(chosenVertex);
       preview();
       return true;
@@ -420,6 +427,7 @@ export function mountModificationPanel({
         selection.append(option);
       });
       hint.hidden = tool === "transform";
+      selectionStatus.textContent = "";
       hint.textContent =
         tool === "fillet"
           ? "Click a corner in the sketch, then set its radius. A construction point preserves the original sharp corner."

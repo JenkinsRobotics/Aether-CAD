@@ -18,7 +18,7 @@ export const faceExtrudeEditor: FeatureEditor = {
    controls.target.value=reference.bodyId;return null;
   });
   picker.setEnabled(true);
-  const note=document.createElement('p');note.className='cad-form-note';note.textContent='Positive extends the face footprint; negative removes material. Use Change face to reselect on the earlier geometry. Curved-face offsets and general face translation are not supported.';win.body.append(note);
+  const note=document.createElement('p');note.textContent='Positive extends the face footprint; negative removes material. Use Change face to reselect on the earlier geometry. Curved-face offsets and general face translation are not supported.';win.addHelp(note);
   mountExtrusionHandle(win.panel,controls,context.lengthUnitLabel,(depth,respond)=>{
    const face=picker.read();if(!face||!Number.isFinite(depth)){respond(null);return;}
    window.dispatchEvent(new CustomEvent('aether-face-extrusion-handle',{detail:{bodyId:face.bodyId,normal:face.normal,faceAnchor:face.faceAnchor,depth,respond}}));

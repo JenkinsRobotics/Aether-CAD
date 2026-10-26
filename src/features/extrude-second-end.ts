@@ -35,10 +35,10 @@ export function layoutSecondEnd(context:FeatureEditorContext,controls:Controls) 
  const partPicker=extrusionPartPicker(context,controls.secondPart,'Opposite stopping part');
  const picker=extrusionFacePicker(context,controls.secondReference,'Opposite end face');
  section.body.append(depth,picker.element,partPicker.element,pointPicker.element,offset,layoutExtrudeDraft(context,controls,true));
- const note=document.createElement('p');note.className='cad-form-note';note.textContent='The opposite end grows from the same starting plane in the reverse direction, with its own limit and draft.';section.body.append(note);
+ const note=document.createElement('p');note.textContent='The opposite end grows from the same starting plane in the reverse direction, with its own limit and draft.';win.addHelp(note);
  function sync(){
   const enabled=controls.secondEnabled.value==='true'&&!controls.endType.value.startsWith('symmetric'),type=controls.secondEndType.value;
-  section.element.hidden=controls.endType.value.startsWith('symmetric');
+  section.element.hidden=controls.endType.value.startsWith('symmetric');note.hidden=!enabled;
   depth.hidden=type!=='blind';offset.hidden=!['up-to-next','up-to-face','up-to-part','up-to-vertex'].includes(type);
   pointPicker.setEnabled(enabled&&type==='up-to-vertex');picker.setEnabled(enabled&&type==='up-to-face');partPicker.setEnabled(enabled&&type==='up-to-part');
  }

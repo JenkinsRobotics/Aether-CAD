@@ -58,6 +58,7 @@ export function mountOffsetPanel({
   label.append(input);
   root.append(label);
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Click a curve to select individual edges, or choose whole contours. Positive is left of paths and outward for circles. Selected offsets retain a shared distance and follow source edits.";
   root.append(hint);

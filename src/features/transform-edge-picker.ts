@@ -28,7 +28,7 @@ export function transformEdgePicker(context:FeatureEditorContext,control:Control
  window.addEventListener('aether-transform-edge',receive);
  let items=cadSelection.snapshot().items;
  const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===items)return;items=next;if(items.length===1&&items[0].kind==='edge')request();});
- const note=document.createElement('p');note.className='cad-form-note';note.textContent='Follows the selected straight edge and its endpoints. A deleted, curved or ambiguous edge requires reselection.';element.append(note);
+ const note=document.createElement('p');note.textContent='Follows the selected straight edge and its endpoints. A deleted, curved or ambiguous edge requires reselection.';win.addHelp(note);
  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-transform-edge',receive);lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});
  render();return{element,setEnabled:(value:boolean)=>{element.hidden=!value;if(enabled!==value){enabled=value;lifecycle.setActive(value);}activateAvailableReferencePicker();}};
 }

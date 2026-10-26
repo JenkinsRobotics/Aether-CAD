@@ -59,6 +59,7 @@ export function mountSlotPanel({
   label.append(input);
   root.append(label);
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Select line/arc edges, circular centerlines or open/closed chains. Slots share one width. Selected chains and standalone centerlines become construction geometry. Smooth chain joins retain tangency.";
   root.append(hint);

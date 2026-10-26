@@ -11,11 +11,11 @@ export function layoutExtrudeScope(context:FeatureEditorContext,controls:Control
  const allRow=document.createElement('label');allRow.className='aui-feature-row';
  const all=document.createElement('input');all.type='checkbox';all.setAttribute('aria-label','Merge with all');
  allRow.append(document.createTextNode('Merge with all'),all);win.body.append(allRow);
- const automaticHelp=document.createElement('p');automaticHelp.className='cad-form-note';win.body.append(automaticHelp);
+ const automaticHelp=document.createElement('p');win.addHelp(automaticHelp);
  all.onchange=()=>{mode.value=all.checked?'all':'selected';mode.dispatchEvent(new Event('change'));};
  const box=win.entitiesBox('Additional parts to modify');win.body.append(box.element);
  const list=document.createElement('div');box.element.append(list);
- const help=document.createElement('p');help.className='cad-form-note';help.textContent='The merged part keeps the target part’s name and appearance.';box.element.append(help);
+ const help=document.createElement('p');help.textContent='The merged part keeps the target part’s name and appearance.';win.addHelp(help);
  const selected=():string[]=>JSON.parse(controls.scope.value);
  const render=()=>{
   const merge=controls.operation.value==='add';

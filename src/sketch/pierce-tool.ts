@@ -20,6 +20,8 @@ export function mountPierceTool(o:{
  const field=(label:string)=>{const row=document.createElement('label'),select=document.createElement('select');row.append(label,select);select.setAttribute('aria-label',label);box.append(row);return select;};
  const target=field('Pierce target'),source=field('Pierce source curve'),intersection=field('Pierce intersection');
  const hint=document.createElement('p');hint.className='aui-muted';box.append(hint);
+ const instructions=document.createElement('p');instructions.dataset.featureHelp='true';
+ instructions.textContent='Select an editable point, center, control or curve. Choose a source curve and its intersection, or click an exact contact marker. Escape exits Pierce.';box.append(instructions);
  const buttons=document.createElement('div');box.append(buttons);
  const button=(label:string,run:()=>void)=>{const b=document.createElement('button');b.type='button';b.className='aui-button';b.textContent=label;b.onclick=run;buttons.append(b);return b;};
  const apply=button('Apply Pierce',()=>applySelected());button('Stop Pierce',()=>cancel());
@@ -41,7 +43,7 @@ export function mountPierceTool(o:{
   const c=currentChoice();c?.hits.forEach((hit,i)=>option(intersection,String(i),`${i+1}: (${coordinate(hit.point)})${hit.direction===0?' · tangent':''}`));
   if(previous!==''&&c?.hits[Number(previous)])intersection.value=previous;
   else if(c?.hits.length===1)intersection.value='0';
-  apply.disabled=!selected||!c||intersection.value==='';hint.textContent=prompt();renderMarkers();
+  apply.disabled=!selected||!c||intersection.value==='';hint.textContent=choices.length?'':'No earlier sketch curve crosses this plane.';hint.hidden=!!choices.length;renderMarkers();
  }
  function refresh(force=false) {
   if(!enabled)return;

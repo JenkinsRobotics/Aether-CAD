@@ -77,6 +77,7 @@ export function mountTextPanel(
   flipAboutFrame.checked = true;
   const heightSizing = mountTextHeight(root, size, renderPlacement);
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Create editable text to retain wording and font, or insert ordinary outlines. Enter adds a line below the first-line frame. Em size measures the font design space.";
   root.append(hint);

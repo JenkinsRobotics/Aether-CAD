@@ -57,6 +57,7 @@ export function mountDxfPlacement(
   parent.append(snapLabel, snapStatus);
   snapStatus.setAttribute("role", "status");
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "The source anchor lands at DXF X/Y. Rotation and scale act around that anchor.";
   parent.append(hint);

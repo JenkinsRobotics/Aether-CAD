@@ -49,7 +49,7 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
   window.addEventListener('aether-extrude-point',receive);
   let items=cadSelection.snapshot().items;
   const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===items)return;items=next;if(items.length===1&&items[0].kind==='vertex')request();});
-  const note=document.createElement('p');note.className='cad-form-note';note.textContent=noteText;element.append(note);
+  const note=document.createElement('p');note.textContent=noteText;win.addHelp(note);
   const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-extrude-point',receive);lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});
-  render();return {element,setEnabled:(value:boolean)=>{element.hidden=!value;if(enabled!==value){enabled=value;lifecycle.setActive(value);}activateAvailableReferencePicker();}};
+  render();return {element,setEnabled:(value:boolean)=>{element.hidden=!value;note.hidden=!value;if(enabled!==value){enabled=value;lifecycle.setActive(value);}activateAvailableReferencePicker();}};
 }

@@ -1,0 +1,91 @@
+/** Section and Measure against a disposable host; never writes to live user documents. */
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const { chromium, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
+const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
+assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
+await mkdir(evidence, { recursive: true });
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+page.setDefaultTimeout(15000);
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.cad-studio-view-tools') : page).getByRole('button', { name, exact: true });
+
+try {
+  await page.goto(origin + '/cad/');
+  await page.locator('input[name="username"]').fill('editor');
+  await page.locator('input[name="password"]').fill('account-test-password-2026');
+  await button('Sign in').click();
+  await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
+  await page.waitForLoadState('networkidle');
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  data.documentId = randomUUID(); data.name = 'Feature Help check';
+  const file = await page.evaluate(async ({ data, operation }) => {
+    const response = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'cad', kind: 'file', scope: 'personal', operation_id: operation, name: 'Feature Help check.acpart', data_base64: btoa(JSON.stringify(data)) }) });
+    if (!response.ok) throw Error(await response.text()); return response.json();
+  }, { data, operation: randomUUID() });
+  await page.goto(`${origin}/cad/index.html?document=${file.id}`);
+  await page.getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
+  const builtHtml = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const scripts = [...builtHtml.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
+  for (const source of scripts) {
+    const url = new URL(source, origin + '/cad/').href;
+    assert.ok(await page.locator('script[src]').evaluateAll((nodes,url)=>nodes.some(node=>node.src===url),url));
+    const response = await page.request.get(url);
+    assert.deepEqual(await response.body(), await readFile(new URL('../dist/'+source,import.meta.url)));
+  }
+  await button('Section view').click();
+  const panel = page.locator('.cad-section-window');
+  await button('Add section plane').click(); await page.getByRole('menuitem', {name:'Top plane',exact:true}).click();
+  const offset = page.getByRole('textbox',{name:'Section offset',exact:true});
+  await offset.fill('2.5');
+  await expect(panel).not.toContainText('All bodies are cut');
+  await expect(panel).not.toContainText('Enabled planes cut together');
+  const before = await panel.boundingBox();
+  await panel.getByRole('button',{name:'Help',exact:true}).click();
+  const help = page.getByRole('dialog',{name:'Section view help',exact:true});
+  await expect(help).toContainText('All bodies are cut except those in Items to exclude.');
+  assert.deepEqual(await panel.boundingBox(),before);
+  assert.equal(Number(await offset.inputValue()),2.5);
+  await page.screenshot({path:join(evidence,'section-help-dark.png')});
+  await page.keyboard.press('Escape'); await expect(help).toHaveCount(0); await expect(panel).toBeVisible();
+  await panel.getByRole('button',{name:'Include',exact:true}).click();
+  await panel.getByRole('button',{name:'Help',exact:true}).click();
+  await expect(help).toContainText('Only bodies in Items to include are cut.');
+  await help.getByRole('button',{name:'Close help',exact:true}).click(); await expect(help).toHaveCount(0);
+  await panel.getByRole('button',{name:'Help',exact:true}).click();
+  await offset.click(); await expect(help).toHaveCount(0);
+  await panel.getByRole('button',{name:'Help',exact:true}).click();
+  await page.evaluate(()=>{document.documentElement.classList.add('aether-light-theme');document.documentElement.dataset.aetherTheme='light';document.querySelectorAll('.aether-theme-model-studio').forEach(node=>node.classList.add('aether-light-theme'));});
+  await page.screenshot({path:join(evidence,'section-help-light.png')});
+  await panel.getByRole('button',{name:'Cancel',exact:true}).click();
+  await expect(help).toHaveCount(0); await expect(panel).toHaveCount(0);
+  await page.evaluate(()=>{document.documentElement.classList.remove('aether-light-theme');document.documentElement.dataset.aetherTheme='dark';document.querySelectorAll('.aether-theme-model-studio').forEach(node=>node.classList.remove('aether-light-theme'));});
+  await button('Measure').click();
+  const measure = page.locator('.cad-measure-window');
+  await expect(measure).not.toContainText('Hover');
+  await measure.getByRole('button',{name:'Help',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Measure help'})).toContainText('Point-to-point');
+  await page.keyboard.press('Escape'); await expect(measure).toBeVisible();
+  await measure.getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.getByRole('treeitem',{name:/^Extrude/}).first().dblclick();
+  const feature = page.locator('.cad-feature-dialog'); await expect(feature).toBeVisible();
+  await expect(feature.locator('.cad-form-note')).toHaveCount(0);
+  await feature.getByRole('button',{name:'Help',exact:true}).click();
+  await expect(page.locator('.aui-feature-help-popover')).toContainText('Depth');
+  assert.ok(!(await page.locator('.aui-feature-help-popover').innerText()).includes('Thickness 1'));
+  await page.screenshot({path:join(evidence,'extrude-help-dark.png')});
+  await page.keyboard.press('Escape'); await expect(feature).toBeVisible();
+  await feature.locator('[data-feature-action="discard"]').click();
+  await expect(page.locator('.aui-feature-help-popover')).toHaveCount(0);
+  assert.deepEqual(errors,[]);
+  await writeFile(join(evidence,'result.json'),JSON.stringify({passed:true,errors},null,2));
+  console.log('Built CAD Help: no inline instructions; context-aware help; stable layout and draft; Escape, Close, outside dismissal; Measure/Extrude; dark/light passed.');
+} catch(error) {
+  await page.screenshot({path:join(evidence,'failure.png')});await writeFile(join(evidence,'failure.txt'),String(error.stack));throw error;
+} finally {await browser.close();}

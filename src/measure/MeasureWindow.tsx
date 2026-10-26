@@ -39,6 +39,9 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); close(true); } };
   const otherTool = (event: Event) => { if ((event as CustomEvent).detail !== 'measure') close(); };
   const win = openCompactFeatureWindow({ className: 'cad-measure-window', viewport, title: 'Measure', icon: 'measure', acceptLabel: 'Done', onAccept: () => close(), onDiscard: () => close(true) });
+  win.addHelp('Objects: select bodies, faces, edges or vertices to measure their properties and spacing.');
+  win.addHelp('Point-to-point: pick two snap points. Hover over a face to reveal corners, midpoints and centers. Click a selected point again to remove it.');
+  win.addHelp('3-point angle: pick three snap points. The second point is the angle vertex.');
   const selection = win.section('Measurement');
   const mode = win.picker(MEASUREMENT_MODES, { ariaLabel: 'Measurement mode', onChange: () => {
     cadSelection.dispatch({ type: 'clear' });

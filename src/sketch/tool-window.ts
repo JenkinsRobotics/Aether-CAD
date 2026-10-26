@@ -10,13 +10,25 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
   const sections = new Map<Editor, { title: string; element: HTMLElement }>();
   let window: FeatureWindow | undefined;
   let active: Editor | undefined;
+  const helpNotes = new Map<HTMLElement, Comment>();
   const styleControls = () => {
+    for (const [note, placeholder] of helpNotes) {
+      if (!window?.body.contains(placeholder)) { note.remove(); helpNotes.delete(note); }
+    }
+    if (window) for (const note of window.body.querySelectorAll<HTMLElement>("[data-feature-help]")) {
+      const placeholder = document.createComment("Feature instructions are in Help");
+      note.replaceWith(placeholder);
+      helpNotes.set(note, placeholder);
+      window.addHelp(note);
+    }
     for (const button of root.querySelectorAll(".sketch-tool-fields button")) button.classList.add("aui-button");
   };
   const observer = new globalThis.window.MutationObserver(styleControls);
   observer.observe(root, { childList: true, subtree: true });
   const close = () => {
     if (active) onClose?.();
+    for (const [note, placeholder] of helpNotes) placeholder.replaceWith(note);
+    helpNotes.clear();
     if (active) sections.get(active)?.element.remove();
     window?.close(); window = undefined; active = undefined;
     refresh();

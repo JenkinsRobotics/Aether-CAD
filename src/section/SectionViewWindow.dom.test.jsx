@@ -30,6 +30,18 @@ const button = label => [...win().querySelectorAll('button')].find(button=>(butt
 const pick = items => act(async () => { cadSelection.dispatch({ type: 'replace', items }); await Promise.resolve(); });
 const open = () => act(async () => openSectionView());
 
+it('keeps scope instructions in Help and dismisses Help before the section edit', async () => {
+  await open();
+  expect(win().textContent).not.toContain('All bodies are cut');
+  await act(async () => button('Help').click());
+  expect(document.querySelector('[role="dialog"]').textContent).toContain('Items to exclude');
+  await act(async () => win().querySelectorAll('.aui-feature-tabs button')[1].click());
+  expect(document.querySelector('[role="dialog"]').textContent).toContain('Only bodies in Items to include');
+  await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(sectionEditorOpen()).toBe(true);
+});
+
 it('previews live from a picked planar face and keeps the section on accept', async () => {
   await open();
   expect(win().querySelector('.aui-float-panel-title').textContent).toBe('Section view');

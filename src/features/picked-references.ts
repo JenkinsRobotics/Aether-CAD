@@ -45,7 +45,7 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   window.addEventListener(options.replyEvent, receive);
   let selected = cadSelection.snapshot().items;
   const unsubscribe = cadSelection.subscribe(() => { const next = cadSelection.snapshot().items; if (next === selected) return; selected = next; if (next.length && next.every((item) => item.kind === options.kind)) request(); });
-  if (options.note) { const note = document.createElement("p"); note.className = "cad-form-note"; note.textContent = options.note; box.element.append(note); }
+  if (options.note) { const note = document.createElement("p");  note.textContent = options.note; win.addHelp(note); }
   const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); lifecycle.dispose(); });
   observer.observe(document.body, { childList: true, subtree: true }); render(); lifecycle.setActive(true);
   if (!feature && selected.length && selected.every((item) => item.kind === options.kind)) queueMicrotask(request);

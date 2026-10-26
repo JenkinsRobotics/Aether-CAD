@@ -38,7 +38,6 @@ export function openProjectionEditor(
     onAccept: () => saveProjection(), onDiscard: () => close(),
   });
   const { root, canvas, field, win } = presentation;
-  const sidebar = win.body;
   mountEditHistory(root, source, existing?.id);
   const name = field(
     "Projection name",
@@ -112,7 +111,7 @@ export function openProjectionEditor(
   const message = win.status;
   const note = document.createElement("p");
   note.textContent = "Source edits update projected geometry.";
-  sidebar.append(note);
+  win.addHelp(note);
   const save = win.accept, cancel = win.discard;
   let busy = false,
     candidate: PartDocument | null = null;

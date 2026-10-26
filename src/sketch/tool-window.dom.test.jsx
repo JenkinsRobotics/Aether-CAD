@@ -37,3 +37,29 @@ it('replaces sketch settings while a tool is open and restores them on Done', ()
     editor.dispose(); root.remove();
   }
 });
+
+it('keeps live instructions behind Help and restores their ownership across reopen', async () => {
+  const root = document.createElement('section'); document.body.append(root);
+  const editor = createSketchToolWindow(root, () => true, () => {});
+  const fields = editor.section('modify', 'Modify');
+  const note = document.createElement('small'); note.dataset.featureHelp = 'true';
+  note.textContent = 'Choose an edge'; fields.append(note);
+  try {
+    editor.show('modify');
+    expect(root.textContent).not.toContain('Choose an edge');
+    root.querySelector('[aria-label="Help"]').click();
+    const help = document.querySelector('[role="dialog"]');
+    expect(help.contains(note)).toBe(true);
+    note.textContent = 'Choose another edge';
+    expect(help.textContent).toContain('Choose another edge');
+    editor.close();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(fields.contains(note)).toBe(true);
+    editor.show('modify');
+    root.querySelector('[aria-label="Help"]').click();
+    expect(document.querySelector('[role="dialog"]').textContent).toContain('Choose another edge');
+    fields.replaceChildren();
+    await new Promise(setImmediate);
+    expect(document.querySelector('[role="dialog"]').textContent).not.toContain('Choose another edge');
+  } finally { editor.dispose(); root.remove(); }
+});

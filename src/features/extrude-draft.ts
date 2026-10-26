@@ -25,9 +25,9 @@ export function layoutExtrudeDraft({win,form,angleUnitLabel}: FeatureEditorConte
   const reverse=document.createElement('input');reverse.type='checkbox';reverse.setAttribute('aria-label',opposite?'Widen opposite extrusion draft':'Widen extrusion draft');reverse.checked=reverseValue.value==='true';
   reverse.onchange=()=>{reverseValue.value=String(reverse.checked);reverseValue.dispatchEvent(new Event('change'));};
   section.body.append(rowIn('Widen outward',reverse));
-  const help=document.createElement('p');help.className='cad-form-note';
+  const help=document.createElement('p');
   help.textContent='Draft narrows away from the sketch; Widen reverses it. The sketch stays neutral with a starting offset. Each end can have its own draft. Symmetric applies the same draft on both sides. The stopping face must fully terminate the tapered profile.';
-  section.body.append(help);return section.element;
+  if (!opposite) win.addHelp(help);return section.element;
 }
 export function validateExtrudeDraft(controls: Controls): string | null {
   for(const opposite of [false,true]){

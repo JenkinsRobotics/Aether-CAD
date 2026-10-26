@@ -66,7 +66,7 @@ export const extrudeEditor: FeatureEditor = {
     const pointPicker=extrusionPointPicker(context,controls.endPoint,"Stopping point");
     const partPicker=extrusionPartPicker(context,controls.endPart,"Stopping part");
     const facePicker=extrusionFacePicker(context,controls.endReference,"End face");
-    const stopHelp=document.createElement("p");stopHelp.className="cad-form-note";stopHelp.textContent="Extrude to the underlying plane or curved surface, including beyond its trimmed edges. The surface must completely stop the extrusion. Changed or ambiguous faces require reselection.";win.body.append(stopHelp);
+    const stopHelp=document.createElement("p");stopHelp.textContent="Extrude to the underlying plane or curved surface, including beyond its trimmed edges. The surface must completely stop the extrusion. Changed or ambiguous faces require reselection.";win.addHelp(stopHelp);
     const symmetric=document.createElement("input"); symmetric.type="checkbox"; symmetric.setAttribute("aria-label","Symmetric"); symmetric.checked=controls.endType.value.startsWith("symmetric");
     const symmetricRow=win.row("Symmetric",symmetric);
     symmetric.onchange=()=>{const through=controls.endType.value.includes("through-all");controls.endType.value=symmetric.checked?(through?"symmetric-through-all":"symmetric"):(through?"through-all":"blind");sync();controls.endType.dispatchEvent(new Event("change"));};

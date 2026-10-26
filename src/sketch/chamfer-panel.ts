@@ -33,6 +33,7 @@ export function mountChamferPanel({
   title.textContent = "Chamfer";
   root.append(title);
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Click a straight corner or two lines. The first distance and angle follow the first selected line.";
   root.append(hint);

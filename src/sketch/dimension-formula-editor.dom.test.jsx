@@ -175,7 +175,10 @@ it("edits the shared formula when invoked from a linked follower", async () => {
   });
   open(() => doc, apply, doc.features[0]);
   const row = querySketchControl('div[data-constraint-id="follower"]');
-  expect(row.textContent).toContain("Edits shared driver driver");
+  expect(row.textContent).not.toContain("Edits shared driver driver");
+  document.querySelector('.cad-sketch-tool-window [aria-label="Help"]').click();
+  expect(document.querySelector('.aui-feature-help-popover').textContent).toContain("Edits shared driver driver");
+  document.querySelector('[aria-label="Close help"]').click();
   expect(row.querySelector('[aria-label="radius value"]').readOnly).toBe(true);
   field("Formula for follower").value = "#size/4";
   [...row.querySelectorAll("button")]

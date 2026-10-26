@@ -24,8 +24,8 @@ export function layoutThin(context:FeatureEditorContext,controls:Controls) {
   const row=rowIn(['Thickness','Thickness 1','Thickness 2'][index],control,unitSuffix(lengthUnitLabel));group.append(row);return row;
  });
  const flip=flag('flipWall','Flip wall');
- const hint=document.createElement('p');hint.className='cad-form-note';hint.textContent='Thickness 1 is outside a closed loop, or to the right of an open curve in its sketch plane. Flip wall swaps sides. Open ends are capped flat.';group.append(hint);
- function sync(){group.hidden=controls.creationMode.value!=='thin';const middle=controls.midplane.value==='true';rows[0].hidden=!middle;rows[1].hidden=rows[2].hidden=middle;(flip.closest('.aui-feature-row') as HTMLElement).hidden=middle;}
+ const hint=document.createElement('p');hint.textContent='Thickness 1 is outside a closed loop, or to the right of an open curve in its sketch plane. Flip wall swaps sides. Open ends are capped flat.';win.addHelp(hint);
+ function sync(){group.hidden=controls.creationMode.value!=='thin';hint.hidden=group.hidden;const middle=controls.midplane.value==='true';rows[0].hidden=!middle;rows[1].hidden=rows[2].hidden=middle;(flip.closest('.aui-feature-row') as HTMLElement).hidden=middle;}
  controls.creationMode.addEventListener('change',sync);sync();
 }
 export function validateThin(controls:Controls) {

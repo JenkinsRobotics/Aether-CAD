@@ -39,7 +39,7 @@ export const offsetFaceEditor:FeatureEditor={
   window.addEventListener('aether-offset-faces',receive);
   let selected=cadSelection.snapshot().items;
   const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===selected)return;selected=next;if(next.length&&next.every(item=>item.kind==='face'))request();});
-  const note=document.createElement('p');note.className='cad-form-note';note.textContent='Select faces on one or more parts. Offset follows their surface normals. Translate and Rotate extend neighboring surfaces to meet moved planar faces; all faces of a solid can move together. Curved-face relocation, disappearing boundaries and fillet reapplication remain unavailable.';win.body.append(note);
+  const note=document.createElement('p');note.textContent='Select faces on one or more parts. Offset follows their surface normals. Translate and Rotate extend neighboring surfaces to meet moved planar faces; all faces of a solid can move together. Curved-face relocation, disappearing boundaries and fillet reapplication remain unavailable.';win.addHelp(note);
   mountNativeExtrusionHandles(win.panel,{...controls,distance:controls.offsetDistance},lengthUnitLabel,{signed:true,label:'Drag face offset'});
   const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-offset-faces',receive);lifecycle.dispose();});
   observer.observe(document.body,{childList:true,subtree:true});render();lifecycle.setActive(true);layoutFaceTransforms(context,controls);

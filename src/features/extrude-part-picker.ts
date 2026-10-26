@@ -25,6 +25,6 @@ export function extrusionPartPicker(context:FeatureEditorContext,control:Control
   set(ids[0]);
  };
  const element=document.createElement('div');element.append(row,button);
- const note=document.createElement('p');note.className='cad-form-note';note.textContent='The entire extrusion must stop against this part. Curved boundaries are supported. Missing or changed parts require repair.';element.append(note);win.body.append(element);
- return {element,setEnabled:(enabled:boolean)=>{element.hidden=!enabled;}};
+ const note=document.createElement('p');note.textContent='The entire extrusion must stop against this part. Curved boundaries are supported. Missing or changed parts require repair.';win.addHelp(note);win.body.append(element);
+ return {element,setEnabled:(enabled:boolean)=>{element.hidden=!enabled;note.hidden=!enabled;}};
 }

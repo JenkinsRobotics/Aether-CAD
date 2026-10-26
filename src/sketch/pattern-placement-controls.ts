@@ -18,6 +18,7 @@ export function mountPatternPlacementControls(
   heading.textContent = "Repeated placements";
   section.append(heading);
   const note = document.createElement("p");
+  note.dataset.featureHelp = "true";
   note.textContent =
     "These actions use saved pattern settings and apply to every source contour at the chosen position.";
   section.append(note);

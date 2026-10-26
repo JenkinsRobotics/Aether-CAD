@@ -34,6 +34,7 @@ export function mountDimensionFormulaEditor(
   input.placeholder =
     constraint.kind === 'conic-rho' ? '#ratio / 2' : constraint.kind === "angle" ? "#angle + 10 deg" : "#diameter / 2";
   label.append("Formula", input);
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     target.id !== constraint.id
       ? `Edits shared driver ${target.id}; linked dimensions update together.`

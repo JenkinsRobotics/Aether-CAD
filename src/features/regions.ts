@@ -46,9 +46,7 @@ function announceRegion(context: FeatureEditorContext, source: Controls[string],
   source.dataset.selectionLabel = sketch ? `${sketch.name} · ${selectedRegions.length > 1 ? `${selectedRegions.length} regions` : selected ? selected.label : "choose a region"}` : "";
   source.dispatchEvent(new Event("aether-selection-label"));
   const hint = regionRows.get(region)?.nextElementSibling;
-  if (hint?.classList.contains("cad-region-selection-summary")) hint.textContent = selected
-    ? `${selectedRegions.length} of ${regions.length} closed regions selected.${region instanceof window.HTMLSelectElement && region.multiple ? " Enclosed contours form holes. Ctrl/Cmd-click to select several regions." : " Only this region will be used."}`
-    : `Choose a closed region in the viewport or dropdown. Selecting the sketch does not select all its regions.`;
+  if (hint?.classList.contains("cad-region-selection-summary")) hint.textContent = `${selectedRegions.length} / ${regions.length} regions selected`;
   window.dispatchEvent(new CustomEvent("aether-region-mode", { detail: { active: true, circleMode: circleControls.has(region), legacySelections: selectedRegions.filter(r => !r.cell && r.contourId).map(r => ({featureId:source.value,contourIndex:r.contourIndex})), sourceId: source.value, contourIndex: selected?.contourIndex ?? null, contourIndices: indices, regionMode: region instanceof window.HTMLSelectElement && region.multiple } }));
 }
 
@@ -180,6 +178,7 @@ export function layoutRegion(context: FeatureEditorContext, source: Controls[str
   const hint = document.createElement("small");
   hint.className = "cad-region-selection-summary";
   row.after(hint);
+  context.win.addHelp("Choose a closed region in the viewport or dropdown. Selecting a sketch does not select all its regions. Enclosed contours form holes; Ctrl/Cmd-click selects several regions where supported.");
   announceRegion(context, source, region);
 }
 

@@ -30,8 +30,11 @@ export function mountPatternGroupEditor(
     section.setAttribute("aria-label", "Edit pattern");
     parent.append(section);
     const note = document.createElement("p");
-    note.textContent = `${draft.kind === "linear" ? draft.countFirst * draft.countSecond : draft.count} instances. Counts include the original; removing constrained instances requires resolving their dependencies first.`;
+    note.textContent = `${draft.kind === "linear" ? draft.countFirst * draft.countSecond : draft.count} instances`;
     section.append(note);
+    const help = document.createElement("p"); help.dataset.featureHelp = "true";
+    help.textContent = "Counts include the original. Resolve dependencies before removing constrained instances.";
+    section.append(help);
     const values: { input: HTMLInputElement; set: (v: number) => void }[] = [];
     const field = (name: string, value: number, set: (v: number) => void) => {
       const label = document.createElement("label"),

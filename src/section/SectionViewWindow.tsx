@@ -50,8 +50,8 @@ export function openSectionView(): void {
   const planeSection = win.section("Cutting planes");
   const planes = win.entitiesBox("Section planes");
   planeSection.body.append(planes.element);
-  const planeHint=document.createElement('small');planeHint.className='cad-section-scope-hint';
-  planeHint.textContent='Enabled planes cut together. Select a plane to adjust it.';planeSection.body.append(planeHint);
+  const planeHint=document.createElement('p');
+  planeHint.textContent='Enabled planes cut together. Select a plane to adjust it.';win.addHelp(planeHint);
   const controls = document.createElement("div");
   planeSection.body.append(controls);
   const scopeSection = win.section("Bodies");
@@ -59,9 +59,9 @@ export function openSectionView(): void {
   scopeSection.body.append(tabs);
   const items = win.entitiesBox("Items to exclude");
   scopeSection.body.append(items.element);
-  const hint = document.createElement("small");
-  hint.className = "cad-section-scope-hint";
-  scopeSection.body.append(hint);
+  const hint = document.createElement("p");
+  win.addHelp(hint);
+  win.addHelp("Add a planar face or use the plus menu for a default plane. Drag either arrow or type an offset to move the selected plane. Flip cut keeps the opposite side. Accept keeps the section; Cancel restores the previous settings.");
   menuHost.className = "cad-section-plane-menu";
   planes.element.append(menuHost);
 
@@ -115,7 +115,7 @@ export function openSectionView(): void {
     items.render(draft.items.map(item => ({ label: item.label, onRemove: () => update({ items: draft.items.filter(entry => entry.id !== item.id) }) })));
     items.element.querySelector(".aui-feature-entities-caption")!.textContent = draft.mode === "include" ? "Items to include" : "Items to exclude";
     items.element.setAttribute("aria-label", draft.mode === "include" ? "Items to include" : "Items to exclude");
-    hint.textContent = draft.mode === "exclude" ? "All bodies are cut except those listed above." : "Only the bodies listed above are cut.";
+    hint.textContent = draft.mode === "exclude" ? "All bodies are cut except those in Items to exclude." : "Only bodies in Items to include are cut.";
     win.accept.disabled = !draft.planes.length;
     if (cadSelection.snapshot().filter !== (active === "planes" ? "face" : "body")) pickFor();
     planes.element.dataset.active = String(active === "planes");

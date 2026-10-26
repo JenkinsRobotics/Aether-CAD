@@ -39,7 +39,7 @@ export function layoutExtrudeStart(context:FeatureEditorContext,c:Controls){
  c.offset.closest('label')?.remove();c.offset.setAttribute('form',form.id);
  section.body.append(rowIn('Offset',c.offset,unitSuffix(lengthUnitLabel)));
  c.offset.title='Additional signed distance along the extrusion direction. Negative offsets start before the selected reference.';
- const help=document.createElement('p');help.className='cad-form-note';help.textContent='Choose a face or datum parallel to the sketch. Depth starts there; the optional offset moves the start along the extrusion direction. Draft keeps the sketch as its neutral plane.';section.body.append(help);
+ const help=document.createElement('p');help.textContent='Choose a face or datum parallel to the sketch. Depth starts there; the optional offset moves the start along the extrusion direction. Draft keeps the sketch as its neutral plane.';win.addHelp(help);
  function sync(){const enabled=c.startEnabled.value==='true';facePicker.setEnabled(enabled&&c.startMode.value==='face');planeRow.hidden=c.startMode.value!=='plane';help.hidden=c.startMode.value==='offset';}
  c.startEnabled.addEventListener('change',sync);c.startMode.addEventListener('change',sync);sync();
 }

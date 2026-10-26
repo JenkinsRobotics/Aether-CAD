@@ -5,7 +5,8 @@ import { importVectorSVG } from './svg-import';
 import { vectorBooleanInputs, appendVectorBooleanResult } from './vector-adapter';
 export function mountVectorPanel(parent:HTMLElement,drawing:()=>SketchDrawing,selected:()=>number[],commit:(next:SketchDrawing)=>void) {
   const root=document.createElement('section');parent.append(root);
-  const note=document.createElement('p');note.textContent='Import SVG on this sketch plane at the scale below. SVG arcs become Bézier curves.';root.append(note);
+  const note=document.createElement('p');note.dataset.featureHelp = "true";
+  note.textContent='Import SVG on this sketch plane at the scale below. SVG arcs become Bézier curves.';root.append(note);
   const field=(label:string,value:string)=>{const row=document.createElement('label'),input=document.createElement('input');input.type='number';input.step='any';input.min='.000001';input.value=value;input.setAttribute('aria-label',label);row.append(label,input);root.append(row);return input;};
   const scale=field('Millimeters per SVG unit',String(25.4/96));
   const file=document.createElement('input');file.type='file';file.accept='.svg,image/svg+xml';file.setAttribute('aria-label','CAD SVG file');root.append(file);

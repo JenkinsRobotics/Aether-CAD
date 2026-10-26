@@ -132,7 +132,6 @@ export function MeasureResults({ currentPart, entities, type, lengthUnit, angleU
       ] : [output("pending", "Properties", !currentPart() ? "Open the source Part for exact body properties" : current?.error ?? "Measuring…")] });
     }
   }
-  const hint = mode === "Objects" ? (!items.length ? "Select bodies, faces, edges or vertices in the model." : !sections.length ? "Choose exact model geometry to measure." : null)
-    : validPoints ? null : `Pick ${count} snap points (${points.length}/${count}). Hover over a face to reveal corners, midpoints and centers.${mode === "3-point angle" ? " The second point is the angle vertex." : " Click a picked point again to remove it."}`;
-  return <>{hint && <p className="cad-measure-hint" role="status">{hint}</p>}{sections.length ? <PropertyGrid ariaLabel="Measurements" sections={sections}/> : null}</>;
+  const pending = mode !== "Objects" && !validPoints ? `${points.length} / ${count} points selected` : null;
+  return <>{pending && <p className="cad-measure-hint" role="status">{pending}</p>}{sections.length ? <PropertyGrid ariaLabel="Measurements" sections={sections}/> : null}</>;
 }

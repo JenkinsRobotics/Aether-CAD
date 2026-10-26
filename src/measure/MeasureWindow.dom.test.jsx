@@ -38,9 +38,13 @@ it('opens the standard compact window (icon, Cancel and Done), condensed until s
   expect(win.querySelector('.aui-float-panel-title').textContent).toBe('Measure');
   expect([...win.querySelectorAll('.aui-feature-commit-actions button')].map(button => button.textContent)).toEqual(['Cancel', 'Done']);
   expect(win.querySelector('.aui-feature-header-icon svg')).toBeTruthy();
-  // No invented results before a pick; explain the next step.
+  // Readouts remain empty until a pick; instructions belong to Help.
   expect(win.querySelector('[aria-label="Measurements"]')).toBeNull();
-  expect(win.querySelector('.cad-measure-results').textContent).toContain('Select bodies');
+  expect(win.querySelector('.cad-measure-results').textContent).toBe('');
+  await act(async () => win.querySelector('[aria-label="Help"]').click());
+  expect(document.querySelector('[aria-label="Measure help"]').textContent).toContain('select bodies');
+  expect(win.textContent).not.toContain('Hover over a face');
+  await act(async () => document.querySelector('[aria-label="Close help"]').click());
   expect(win.querySelector('[aria-label="Select entities to measure"]')).toBeTruthy();
   expect(picking).toEqual({ active: true, points: false });
   await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
@@ -120,7 +124,7 @@ it('point and angle modes use exact world points, explicit units, clear, and res
   await choose('Angle unit', 'Radian'); expect(results()).toContain('1.57 rad');
   await act(async () => document.querySelector('[aria-label="Remove Vertex 2"]').click());
   expect(document.querySelector('[aria-label="Measurements"]')).toBeNull();
-  expect(document.body.textContent).toContain('(2/3)');
+  expect(document.body.textContent).toContain('2 / 3 points selected');
   await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
   expect(measureWindowOpen()).toBe(false);
   expect(cadSelection.snapshot().filter).toBe('auto');

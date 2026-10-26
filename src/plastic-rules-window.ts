@@ -33,7 +33,7 @@ export function openPlasticRulesWindow(getDocument: () => PartDocument | null, a
   win.row("Rule", ruleSelect, activate); win.row("New rule", nameInput, fromSelect, addRule);
   win.row("Material", material); win.row("Wall (mm)", thickness); win.row("Draft (°)", draftAngle); win.row("Radius (mm)", radius); win.row("Clearance (mm)", clearance);
   win.row("Body rule", bodySelect, assignSelect, assign);
-  const note = document.createElement("p"); note.className = "cad-form-note"; note.textContent = "Boss, Rest, Lip and Snap Fit take their default draft, wall and clearance from the body's rule, else the active rule."; win.body.append(note);
+  const note = document.createElement("p"); note.className = "cad-form-note"; note.textContent = "Boss, Rest, Lip and Snap Fit take their default draft, wall and clearance from the body's rule, else the active rule."; win.addHelp(note);
   const attempt = (change: () => PartDocument) => { try { draft = change(); win.setError(null); } catch (error) { win.setError((error as Error).message); } render(); };
   const render = () => {
     const table = draft.plasticRules ?? { rules: [] };

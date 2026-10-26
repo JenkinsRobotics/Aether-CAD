@@ -26,6 +26,7 @@ export function mountTextExpression(
   formula.placeholder = 'roundToPrecision(#length/mm, 2) ~ " mm"';
   formulaRow.append("Text expression", formula);
   const hint = document.createElement("p");
+  hint.dataset.featureHelp = "true";
   hint.textContent =
     "Use #variable names and ~ to combine text. Convert lengths or angles to a unit before displaying them.";
   parent.append(row, formulaRow, hint);
