@@ -24,6 +24,7 @@ vi.mock('./panel-context-commands', () => ({useCADPanelContext: () => ({
   items:[{id:'create',label:'New sketch…'}, {id:'show',label:'Show all parts'}], run: mocks.panelCommand,
 })}));
 vi.mock('../../viewport/context-menu', () => ({cadViewportContext:{zoomTo:vi.fn(),isolate:vi.fn()}}));
+import { CADHistoryPanel } from './history';
 import { ItemsPanel } from './items';
 import { CADPartsPanel, CADAssemblyPartsPanel } from './parts';
 
@@ -101,4 +102,20 @@ it('Components shares its menu with ellipsis and uses the existing edit/remove c
   await event(row,'keydown',{key:'Delete'});
   expect(mocks.execute).toHaveBeenLastCalledWith('assembly-remove-instance');
   expect(mocks.assemblyDispatch).toHaveBeenCalledWith({type:'select-entities',ids:['component-1'],mode:'single'});
+});
+
+it('History expands without editing and uses the feature commands for row menus and F2', async () => {
+  mocks.workspace.historyItems = [{id:'history/feature/f',label:'Extrude 1',description:'Solid feature',group:'Part history'}];
+  await act(async()=>root.render(<CADHistoryPanel/>));
+  const step = [...container.querySelectorAll('button')].find(button=>button.textContent === 'Extrude 1');
+  await event(step,'click'); expect(step.getAttribute('aria-expanded')).toBe('true');
+  expect(mocks.dispatch).not.toHaveBeenCalled();
+  await event(step,'click'); expect(step.getAttribute('aria-expanded')).toBe('false');
+  await event(step,'contextmenu'); const labels = menuLabels();
+  expect(labels).toContain('Rename'); expect(labels).toContain('Edit…');
+  await event(document,'keydown',{key:'Escape'});
+  await event(button('Actions for Extrude 1'),'click'); expect(menuLabels()).toEqual(labels);
+  await event(document,'keydown',{key:'Escape'});
+  await event(step,'keydown',{key:'F2'});
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:'feature/extrude/f',actionID:'rename-feature'});
 });

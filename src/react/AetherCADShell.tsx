@@ -25,7 +25,7 @@ import { ConfigurationsPanel } from "./panels/configurations";
 import { CADViewPanel } from "./CADViewPanel";
 import { CADMetricsOverlay, CADPerformancePanel } from "./CADPerformancePanel";
 import type { CADDocumentType } from "../cad-toolbar-layouts";
-import { CADVersionsPanel } from "./CADVersionsPanel";
+import { CADHistoryPanel } from "./panels/history";
 import { auxToolbarItems, subscribeAuxToolbarItems } from "../aux-toolbar-preferences";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
@@ -342,10 +342,7 @@ export function AetherCADShell() {
     previousHistoryCollapsed.current = presentation.bottomPanelCollapsed;
   }, [suite, presentation.bottomPanelCollapsed]);
 
-  // The left rail, in the order Jonathan set (2026-10-02): Features and parts,
-  // Version control, Create version, Comments, Document notes, Reminders,
-  // AI advisor and Action items. File management lives beside the bottom tabs. History is the suite
-  // theme's only route to the rollback bar, so it keeps a seat before the end.
+  // History shares the Version control slot; product panels keep their own commands.
   const auxItems = useSyncExternalStore(subscribeAuxToolbarItems, auxToolbarItems, auxToolbarItems);
   const hostedConnection = useDocumentConnection({app:"cad",name:presentation.documentName,flush:async()=>{const {flushAutosaveNow}=await import("../host-library");await flushAutosaveNow();},saveCopy:async()=>{const {copyHostedSnapshot}=await import("../host-library");await copyHostedSnapshot();}});
   // Version snapshots use the same renderer as Drive's CAD file icons, so a
@@ -370,7 +367,7 @@ export function AetherCADShell() {
   const hasDeviceReminders=(()=>{try{return typeof location!=="undefined"&&Array.isArray(JSON.parse(localStorage.getItem(`aether-cad.reminders.${new URLSearchParams(location.search).get('document')??'draft'}`)??'null'));}catch{return false;}})();
   const leftPanels: WorkspacePanel[] = standardWorkspacePanels([
     { id: "browser", title: "Features and parts", icon: <AetherIcon name="features-parts" />, chromeless: true, content: <ItemsPanel active onShowAppearance={() => requestCADPropertyPanel("visualization")} /> },
-    { id: "versions", title: "Version control", icon: <AetherIcon name="version-control" />, content: <CADVersionsPanel documentName={presentation.documentName} /> },
+    { id: "versions", title: "Version control", icon: <AetherIcon name="version-control" />, content: null },
     { id: "create-version", title: "Create version", icon: <AetherIcon name="version-create" />, floatingHeight: "content", content: <CreateVersionPanel /> },
     { id: "comments", title: "Comments", icon: <AetherIcon name="comment" />, content: <CommentsPanel /> },
     { id: "notes", title: "Document notes", icon: <AetherIcon name="notes" />, content: <DocumentNotesPanel /> },
@@ -379,7 +376,7 @@ export function AetherCADShell() {
     { id: "tasks", title: "Action items", icon: <AetherIcon name="tasks" />, content: <ActionItemsPanel /> },
     ...(hasDeviceReminders?[{id:'device-reminders',title:'Device reminders',icon:<AetherIcon name="stopwatch"/>,content:<RemindersPanel/>}]:[]),
     ...(suite ? [{ id: "history", title: "History", icon: <CadIcon name="history" />, content: <WorkbenchBottomPanel presentation={presentation} sidebar /> }] : []),
-  ], { features: "browser" }, documentConnection).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
+  ], { features: "browser" }, documentConnection, { historyTabStorageKey: "aether-cad.history-tab", history: <CADHistoryPanel key={documentConnection?.key ?? presentation.documentName}/> }).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
   // Files (Jonathan, 2026-10-25): the bottom tray's tabs as a Fusion-style data panel.
   // The tray itself stays at the bottom; its toggle is in the right-hand view tools.
   leftPanels.push({id:"files",title:"Files",icon:<AetherIcon name="folder"/>,content:documentConnection?<CADDocumentTabs connection={documentConnection} variant="browser"/>:null});

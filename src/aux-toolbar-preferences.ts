@@ -6,7 +6,6 @@ export const AUX_TOOLBAR_ITEMS = [
   { id: "advisor", label: "AI advisor" },
   { id: "versions", label: "Version control" },
   { id: "files", label: "Files" },
-  { id: "history", label: "Feature history" },
   { id: "feature-tree", label: "Feature tree" },
 ] as const;
 export type AuxToolbarItem = typeof AUX_TOOLBAR_ITEMS[number]["id"];
@@ -18,7 +17,11 @@ const listeners = new Set<() => void>();
 function read(): readonly AuxToolbarItem[] {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(KEY) ?? "null");
-    if (Array.isArray(value)) return Object.freeze(value.filter((id): id is AuxToolbarItem => typeof id === "string" && known.has(id)));
+    if (Array.isArray(value)) {
+      // Older layouts exposed History as a fifth icon. It now shares Versions.
+      const migrated = value.map(id => id === "history" ? "versions" : id);
+      return Object.freeze([...new Set(migrated.filter((id): id is AuxToolbarItem => typeof id === "string" && known.has(id)))]);
+    }
   } catch { /* device preference only */ }
   return DEFAULT;
 }

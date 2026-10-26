@@ -5,6 +5,22 @@ import {matchingRowMenus} from './panel-menu-checks.mjs';
 export async function verifyHistoryMenus(page, expect) {
   const button = name => page.getByRole('button',{name,exact:true});
   await button('Version control').click();
+  const editing = page.getByRole('region',{name:'Editing history',exact:true});
+  await page.getByRole('radio',{name:'History',exact:true}).click();
+  const step = editing.getByRole('button',{name:/^Extrude/}).first();
+  await step.click(); await expect(step).toHaveAttribute('aria-expanded','true');
+  await step.click(); await expect(step).toHaveAttribute('aria-expanded','false');
+  const row = step.locator('..').locator('..');
+  await matchingRowMenus(page,row,row.getByRole('button',{name:/^Actions for /}));
+  page.once('dialog',dialog=>dialog.accept('Extrude history check'));
+  await step.focus(); await page.keyboard.press('F2');
+  await expect(editing.getByRole('button',{name:/^Extrude history check(?: Current step)?$/})).toBeVisible();
+  await expect(page.getByRole('treeitem',{name:/^Extrude history check/})).toBeVisible();
+  for (const mode of ['light','dark']) {
+    await page.evaluate(mode=>{document.documentElement.dataset.aetherTheme=mode;document.documentElement.classList.toggle('aether-light-theme',mode==='light');document.querySelectorAll('.aether-theme-model-studio').forEach(e=>{e.classList.toggle('aether-light-theme',mode==='light');e.classList.toggle('aether-dark-theme',mode==='dark');});},mode);
+    await editing.screenshot({path:`${process.env.AETHER_FRONTEND_EVIDENCE}/cad-${mode}-editing-history.png`});
+  }
+  await page.getByRole('radio',{name:'Version control',exact:true}).click();
   const panel = page.getByRole('region',{name:'Version control',exact:true});
   await expect(panel).toBeVisible();
   const create = async (kind,name) => {

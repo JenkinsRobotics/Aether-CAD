@@ -15,8 +15,6 @@ beforeAll(async () => {
   vi.stubGlobal('ResizeObserver',class { observe() {} disconnect() {} unobserve() {} });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
   Shell=(await import('./AetherCADShell')).AetherCADShell;
-  // These routing checks exercise History through the aux toolbar, an opt-in button (Settings › Layout).
-  (await import('../aux-toolbar-preferences')).setAuxToolbarItem('history', true);
 });
 beforeEach(async () => {
   cadPresentation.patch({partOpen:true,activePanel:'items',startScreen:'workspace',workspaceMode:'modeling',workspaceLayout:'docked',panelPlacements:{browser:'docked',inspector:'docked',bottom:'hidden'}});
@@ -50,12 +48,14 @@ it('retains the same camera navigation through sketch entry and exit', async()=>
 });
 it('keeps the pinned Feature tree beside History and Version control, which replace each other', async()=>{
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
-  await click('History');
-  expect(isVisible(container.querySelector('[aria-label="Feature history sidebar"]'))).toBe(true);
-  expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
   await click('Version control');
+  await act(async()=>[...container.querySelectorAll('[role="radio"]')].find(button=>button.textContent==='History').click());
+  expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
+  expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
+  const versionsTab=[...container.querySelectorAll('[role="radio"]')].find(button=>button.textContent==='Version control');
+  await act(async()=>versionsTab.click());
   expect(isVisible(container.querySelector('[aria-label="Versions and history"]'))).toBe(true);
-  expect(isVisible(container.querySelector('[aria-label="Feature history sidebar"]'))).toBe(false);
+  expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
   await click('Version control');
   expect(isVisible(container.querySelector('[aria-label="Versions and history"]'))).toBe(false);
@@ -78,19 +78,20 @@ it('opens Files as a left panel and moves the part tray toggle to the view tools
   expect(tray().hidden).toBe(false);
 });
 it('ribbon category changes preserve the chosen left view and right appearance is independent',async()=>{
-  await click('History');
+  await click('Version control');
+  await act(async()=>[...container.querySelectorAll('[role="radio"]')].find(button=>button.textContent==='History').click());
   for(const label of ['Solid','Surface','Manage','Output']) {
     await act(async()=>container.querySelector('[aria-label^="Tool category:"]').click());
     const tab=[...document.querySelectorAll('[role="menuitemradio"]')].find(button=>button.textContent===label);
     expect(tab).toBeTruthy();await act(async()=>tab.click());
-    expect(isVisible(container.querySelector('[aria-label="Feature history sidebar"]'))).toBe(true);
+    expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
     expect(cadPresentation.snapshot().activePanel).toBe('items');
   }
   await click('Material properties');
   const appearance=container.querySelector('[data-panel="visualization"]');
   expect(isVisible(appearance)).toBe(true);
   expect(appearance.closest('.aui-shell-side--right')).toBeTruthy();
-  expect(isVisible(container.querySelector('[aria-label="Feature history sidebar"]'))).toBe(true);
+  expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
   await click('Configurations');
   expect(isVisible(appearance)).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="configurations"]'))).toBe(true);
@@ -182,7 +183,7 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   await act(async()=>cadPresentation.patch({workspaceLayout:'expanded'}));
   // Studio zones: the aux toolbar holds only the chosen aux items (Settings › Layout);
   // the feature tree is the standard left column and never one of its buttons.
-  const left=['Comments','AI advisor','Version control',...(theme==='suite'?['History']:[])];
+  const left=['Comments','AI advisor','Version control','Files'];
   expect(container.querySelector('[aria-label="Left sidebar"] [aria-label="Part manager"]')).toBeNull();
   for(const label of ['Features and parts','Document notes','Reminders','Create version']) expect(railButton(label)).toBeUndefined();
   const right=['Properties','Configurations','Assembly','Inspect','Material properties','Rendering environment','Camera and display','Performance'];
