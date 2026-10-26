@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { verifyInspectionParity } from './browser/inspection-parity.mjs';
 const { chromium, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -65,6 +66,7 @@ try {
   const result=page.getByRole('region',{name:'Measurements'});
   await button('Top view').press('Enter');await button('Fit view').click();
   await page.mouse.move(1000,600);await page.mouse.wheel(0,650);await page.waitForTimeout(800);
+  if (!process.env.AETHER_INSPECTION_PARITY_ONLY) {
   await openCut();await bodyAt([2,10,5],true);await bodyAt([8,10,5],false);
   await button('Measure').click();await expect(section).toBeVisible();await expect(measure).toBeVisible();
   const a=await section.boundingBox(),b=await measure.boundingBox();assert.ok(b.x>=a.x+a.width+10,'new popup opens beside the section');
@@ -87,6 +89,8 @@ try {
   await section.locator('.aui-float-panel-header').click({position:{x:85,y:20}});
   await page.keyboard.press('Escape');await expect(section).toHaveCount(0);await expect(measure).toBeVisible();
   await expect(result).toContainText(/20\.0+ mm/);await measure.getByRole('button',{name:'Done',exact:true}).click();
+  }
+  await verifyInspectionParity({page,expect,button,project,evidence});
   assert.deepEqual(errors,[]);
   await writeFile(join(evidence,'result.json'),JSON.stringify({passed:true,errors},null,2));
   console.log('Built CAD: independent section and measurement windows, real snap picks, live clipped pixels, retained distance, both opening/closing orders, focus, Help/Escape, placement and themes passed.');

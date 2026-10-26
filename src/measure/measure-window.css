@@ -8,3 +8,15 @@
 .cad-measure-overlay polyline { fill:none; stroke:var(--aether-color-text); stroke-width:1.5; stroke-linecap:round; }
 .cad-measure-overlay circle { fill:var(--aether-color-accent); stroke:var(--aether-color-bg-panel); stroke-width:2.5; }
 .cad-measure-label { position:absolute; transform:translate(-50%,-50%); padding:3px 7px; border:1px solid var(--aether-color-border); border-radius:4px; color:var(--aether-color-text); background:var(--aether-color-bg-panel); font:12px/1.4 var(--aether-font-family); white-space:nowrap; }
+.cad-measure-value { display:flex; align-items:center; gap:2px; min-width:0; justify-content:flex-end; }
+.cad-measure-value output { flex:1; min-width:0; user-select:text; text-align:right; overflow-wrap:anywhere; }
+.cad-measure-value-action { width:20px; height:24px; flex:0 0 20px; padding:2px; border:0; border-radius:3px; color:var(--aether-color-text-dim); background:transparent; cursor:pointer; }
+.cad-measure-value-action svg { width:14px; height:14px; }
+.cad-measure-value-action:hover,.cad-measure-value-action[aria-pressed=true] { color:var(--aether-color-accent); background:var(--aether-color-bg-control); }
+.cad-measure-reference { display:flex; gap:4px; min-width:0; }
+.cad-measure-reference button { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cad-measure-overlay g[data-axis="0"] { --measure-line:#c94b58; }
+.cad-measure-overlay g[data-axis="1"] { --measure-line:#288357; }
+.cad-measure-overlay g[data-axis="2"] { --measure-line:#387acb; }
+.cad-measure-overlay polyline { stroke:var(--measure-line,var(--aether-color-text)); stroke-dasharray:4 3; }
+.cad-measure-overlay .cad-measure-arc { stroke-dasharray:none; }

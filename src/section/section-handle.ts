@@ -3,6 +3,8 @@ import { mountTransformManipulator } from '@aether/ui';
 import { displayQuantity, parseQuantity, unitChoice } from '@aether/core/units';
 import { documentUnits } from '../document-preferences';
 import type { SectionCut } from './section-view-store';
+import { sectionFrame, moveSectionTo, rotateSection } from './section-frame';
+import type { TransformHandleProjection } from '../viewport/transform-gizmo';
 export type SectionProjection = {
   start: {
     x: number;
@@ -13,8 +15,10 @@ export type SectionProjection = {
     y: number;
   };
   valueAt: (x: number, y: number) => number | null;
+  point?: [number, number, number];
+  rotations?: (TransformHandleProjection & { id: string; index: number } | null)[];
 };
-export function mountSectionHandle(viewport: HTMLElement, selected: () => SectionCut | null, change: (offset: number) => void, error: (message: string | null) => void) {
+export function mountSectionHandle(viewport: HTMLElement, selected: () => SectionCut | null, change: (offset: number) => void, error: (message: string | null) => void, edit?: (patch: Partial<SectionCut>) => void) {
   const units = documentUnits(), length = unitChoice(units, 'length');
   const element = document.createElement('div');
   element.className = 'cad-section-handle';
@@ -23,6 +27,7 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
   guide.setAttribute('aria-hidden', 'true');
   const line = document.createElementNS(guide.namespaceURI, 'line');
   guide.append(line);
+  const rings = document.createElementNS(guide.namespaceURI, 'g'); guide.append(rings);
   element.append(guide);
   const input = document.createElement('input');
   input.setAttribute('aria-label', `Section offset (${length.unit})`);
@@ -43,27 +48,50 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     grab: number;
     before: number;
     id: string;
+    cut: SectionCut;
+    kind: string;
+    rotation?: NonNullable<NonNullable<SectionProjection['rotations']>[number]>;
+    previous?: number;
+    angle?: number;
   } | null = null, frame = 0;
   const gizmo = mountTransformManipulator(element, {
-    onStart(_handle, event) {
+    onStart(handle, event) {
       const cut = selected(), projection = project();
       if (!cut || !projection)
         return false;
-      const at = projection.valueAt(event.clientX, event.clientY);
+      const rotation = projection.rotations?.find(ring => ring?.id === handle.id) ?? undefined;
+      const at = handle.kind === 'pivot' ? 0 : (rotation ?? projection).valueAt(event.clientX, event.clientY);
       if (at === null)
         return false;
-      drag = { projection, grab: at - cut.offsetMillimeters, before: cut.offsetMillimeters, id: cut.id };
+      drag = { projection, grab: at - cut.offsetMillimeters, before: cut.offsetMillimeters, id: cut.id, cut: structuredClone(cut), kind: handle.kind,
+        rotation, previous: at, angle: rotation ? cut.rotationDegrees?.[rotation.index] ?? 0 : 0 };
       return true;
     },
     onMove(_handle, event) {
       if (!drag || selected()?.id !== drag.id) return;
+      if (drag.kind === 'pivot') {
+        window.dispatchEvent(new CustomEvent('aether-section-pivot', { detail: { pointer: event, origin: drag.projection.point ?? sectionFrame(drag.cut).point,
+          respond: (pick: { point: [number, number, number] } | null) => { if (pick) edit?.(moveSectionTo(drag!.cut, pick.point)); } } }));
+        return;
+      }
+      if (drag.rotation) {
+        const angle = drag.rotation.valueAt(event.clientX, event.clientY);
+        if (angle === null) return;
+        drag.angle! += ((angle - drag.previous! + 540) % 360) - 180; drag.previous = angle;
+        const rotation: [number, number] = [...(drag.cut.rotationDegrees ?? [0, 0])];
+        rotation[drag.rotation.index] = event.shiftKey ? Math.round(drag.angle! / 15) * 15 : drag.angle!;
+        edit?.(rotateSection(drag.cut, rotation, drag.projection.point)); return;
+      }
       const value = drag.projection.valueAt(event.clientX, event.clientY);
       if (value !== null && Number.isFinite(value)) change(value - drag.grab);
     },
     onEnd(_handle, cancelled) {
       const previous = drag;
       drag = null;
-      if (cancelled && previous && selected()?.id === previous.id) change(previous.before);
+      window.dispatchEvent(new CustomEvent('aether-section-drag-end'));
+      if (cancelled && previous && selected()?.id === previous.id) {
+        change(previous.before); edit?.({ rotationDegrees: previous.cut.rotationDegrees, pivotMillimeters: previous.cut.pivotMillimeters });
+      }
     },
     onKey(handle, event) {
       if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key))
@@ -74,6 +102,11 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
       if (!cut)
         return;
       const direction = ['ArrowUp', 'ArrowRight'].includes(event.key) ? 1 : -1;
+      if (handle.kind === 'rotation') {
+        const angles: [number, number] = [...(cut.rotationDegrees ?? [0, 0])];
+        angles[Number(handle.id.slice(-1))] += direction * (event.shiftKey ? 15 : event.altKey ? .1 : 1);
+        edit?.(rotateSection(cut, angles, project()?.point)); return;
+      }
       const step = length.factor * 1000 * (event.shiftKey ? 10 : event.altKey ? .1 : 1);
       change(cut.offsetMillimeters + direction * (handle.id === 'negative' ? -1 : 1) * step);
     },
@@ -110,9 +143,15 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
       return;
     }
     const box = viewport.getBoundingClientRect(), x = projection.start.x - box.left, y = projection.start.y - box.top;
+    const handles: import('@aether/ui').ManipulatorHandle[] = edit ? [{ id: 'pivot', kind: 'pivot', label: 'Move section origin; snap to geometry', x, y }] : [];
+    rings.replaceChildren();
+    if (edit) for (const ring of projection.rotations ?? []) if (ring) {
+      const path = document.createElementNS(guide.namespaceURI, 'polyline');
+      path.setAttribute('points', ring.points.map(p => `${p.x-box.left},${p.y-box.top}`).join(' ')); rings.append(path);
+      handles.push({ id: ring.id, kind: 'rotation', label: `Rotate section ${ring.index ? 'Y' : 'X'}`, x: ring.x-box.left, y: ring.y-box.top });
+    }
     const dx = projection.end.x - projection.start.x, dy = projection.end.y - projection.start.y, size = Math.hypot(dx, dy);
     if (size < 3) {
-      gizmo.update([]);
       line.setAttribute('visibility', 'hidden');
     }
     else {
@@ -121,9 +160,10 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
       for (const [key, value] of Object.entries({ x1: x - ux * 29, y1: y - uy * 29, x2: x + ux * 29, y2: y + uy * 29 }))
         line.setAttribute(key, String(value));
       const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-      gizmo.update([{ id: 'positive', kind: 'axis', label: 'Move section in positive normal direction', x: x + ux * 40, y: y + uy * 40, angle },
-        { id: 'negative', kind: 'axis', label: 'Move section in negative normal direction', x: x - ux * 40, y: y - uy * 40, angle: angle + 180 }]);
+      handles.push({ id: 'positive', kind: 'axis', label: 'Move section in positive normal direction', x: x + ux * 40, y: y + uy * 40, angle },
+        { id: 'negative', kind: 'axis', label: 'Move section in negative normal direction', x: x - ux * 40, y: y - uy * 40, angle: angle + 180 });
     }
+    gizmo.update(handles);
     input.style.transform = `translate(${x - 42}px,${y + 28}px)`;
     if (document.activeElement !== input)
       input.value = `${displayQuantity(cut.offsetMillimeters / 1000, units, 'length')} ${length.unit}`;

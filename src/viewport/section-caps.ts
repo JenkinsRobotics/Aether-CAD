@@ -4,11 +4,13 @@ import { BufferGeometry, Float32BufferAttribute, Plane, ShapeUtils, Vector2, Vec
 export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Plane[]): BufferGeometry {
   const position = geometry.getAttribute('position'), index = geometry.index;
   const output: number[] = [];
+  const groups: {start:number;count:number}[] = [];
   if (!position)
     return new BufferGeometry();
   geometry.computeBoundingBox();
   const epsilon = Math.max(geometry.boundingBox!.getSize(new Vector3()).length() * 1e-7, 1e-7);
   for (const plane of planes) {
+    const start = output.length / 3;
     const vertices: Vector3[] = [];
     const buckets = new Map<string, number[]>();
     const edges = new Map<string, [number, number]>();
@@ -115,9 +117,11 @@ export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Pl
             output.push(p.x, p.y, p.z);
       }
     });
+    groups.push({start,count:output.length/3-start});
   }
   const result = new BufferGeometry();
   result.setAttribute('position', new Float32BufferAttribute(output, 3));
   result.computeVertexNormals();
+  groups.forEach(group=>result.addGroup(group.start,group.count,0));
   return result;
 }

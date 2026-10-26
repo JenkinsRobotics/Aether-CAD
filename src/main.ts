@@ -39,6 +39,7 @@ import { projectItemURL } from "./host-library";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
 import { solveAssemblyJob } from "@aether/core/kernel";
 import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
+import { assemblyMeasurementSource, configureMeasurementSources } from './measure/measurement-source';
 import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
@@ -308,6 +309,7 @@ const assemblyController = new CADAssemblyController({
   },
   onStatus: setStatus,
 });
+configureMeasurementSources(id => assemblyMeasurementSource(activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null, id, viewer.measurementPlacement(id)));
 configureAssemblyInsertion({
   projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
   editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && assemblyController.canEditInstances,
@@ -394,12 +396,17 @@ function syncAssemblyCommands(): void {
 // One section tool: the live Section view (display only, like Onshape's).
 cadCommands.register("section-view", () => openSectionView());
 cadCommands.register("part-section", () => openSectionView());
-const applySection = () => viewer.setSection(sectionView.snapshot(), sectionView.editing());
+const applySection = () => { viewer.setSection(sectionView.snapshot(), sectionView.editing()); window.dispatchEvent(new Event('aether-inspection-geometry-updated')); };
 sectionView.subscribe(applySection);
 window.addEventListener("aether-part-updated", applySection);
+window.addEventListener('aether-assembly-geometry-updated', applySection);
 window.addEventListener("cad-document-navigation", () => turnOffSectionView());
-window.addEventListener("aether-section-face", event => (event as CustomEvent).detail.respond(viewer.selectedSketchFrame()));
+window.addEventListener("aether-section-face", event => { const {item,respond} = (event as CustomEvent).detail; respond(viewer.selectedSectionFrame(item)); });
 window.addEventListener("aether-section-handle", event => { const {view, respond} = (event as CustomEvent).detail; respond(viewer.projectSectionHandle(view)); });
+window.addEventListener('aether-section-pivot', event => { const {pointer, origin, respond} = (event as CustomEvent).detail; respond(viewer.pickManipulatorPivot(pointer, origin)); });
+window.addEventListener('aether-section-drag-end', () => viewer.clearInteractionAnchors());
+window.addEventListener('aether-section-normal', event => viewer.setCameraDirection((event as CustomEvent).detail.normal));
+window.addEventListener('aether-measure-frame', event => { const {item,respond} = (event as CustomEvent).detail; respond(viewer.measurementFrame(item)); });
 for (const kind of ["interference", "properties", "clearance", "compare", "continuity", "curvature_comb", "isocurve", "minimum_radius"] as const) cadCommands.register(`part-${kind.replace("_", "-")}` as CADCommandID, () => {
   try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model), curves => viewer.setAnalysisCurves(curves), () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null)); }
   catch (error) { setStatus(error instanceof Error ? error.message : String(error), "error"); }

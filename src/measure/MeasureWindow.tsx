@@ -3,13 +3,15 @@ import { createRoot } from 'react-dom/client';
 import { openCompactFeatureWindow } from '@aether/ui';
 import { unitCatalog, unitChoice } from '@aether/core/units';
 import type { PartDocument } from '@aether/core/document';
-import { type CADSelectionFilter } from '../cad-selection-store';
+import { type CADSelectionFilter, type CADSelectionItem } from '../cad-selection-store';
 import { documentUnits } from '../document-preferences';
 import { MeasureResults, type MeasureType } from './MeasureResults';
 import { MEASUREMENT_MODES, type MeasurementMode } from './measurement-geometry';
 import { mountMeasurementOverlay } from './measurement-overlay';
 import './measure-window.css';
 import { createInspectionSession } from '../inspection/inspection-session';
+import { MEASURE_TYPES } from './measurement-report';
+import type { MeasurementFrame } from './measurement-frame';
 
 const UNIT_NAMES: Record<string, string> = { mm: 'Millimeter', cm: 'Centimeter', m: 'Meter', in: 'Inch', ft: 'Foot', deg: 'Degree', rad: 'Radian' };
 const named = (family: 'length' | 'angle') => Object.keys(unitCatalog[family].options).map(unit => UNIT_NAMES[unit] ?? unit);
@@ -41,6 +43,7 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   };
   const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented && win.isFrontmost()) { event.preventDefault(); close(true); } };
   const win = openCompactFeatureWindow({ className: 'cad-measure-window', viewport, title: 'Measure', icon: 'measure', acceptLabel: 'Done', onAccept: () => close(), onDiscard: () => close(true) });
+  win.addHelp('Hover a value to highlight its measurement; pin it to keep the annotation visible. Copy preserves full precision. Set coordinates from a selected face or anchor, then choose entities to measure in that frame. Values marked ≈ come from the display mesh.');
   win.addHelp('Objects: select bodies, faces, edges or vertices to measure their properties and spacing.');
   win.addHelp('Point-to-point: pick two snap points. Hover over a face to reveal corners, midpoints and centers. Click a selected point again to remove it.');
   win.addHelp('3-point angle: pick three snap points. The second point is the angle vertex.');
@@ -56,9 +59,11 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   const filterRow = win.row('Select', filters.element); selection.body.append(filterRow);
   const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'aui-button aui-button--flat'; clear.textContent = 'Clear selection';
   clear.onclick = () => session.selection.dispatch({ type: 'clear' }); selection.body.append(clear);
-  const display = win.section('Display');
-  const type = win.picker(['Show all', 'Minimum', 'Center'], { value: 'Show all', ariaLabel: 'Measure type', onChange: () => render() });
-  const typeRow = win.row('Distances', type.element); display.body.append(typeRow);
+  const display = win.subsection('Display', {kind:'disclosure',open:false,onToggle:open=>display.element.querySelector('button')?.setAttribute('aria-expanded',String(open))});
+  display.element.querySelector('button')?.setAttribute('aria-label','Measurement display settings');
+  display.element.querySelector('button')?.setAttribute('aria-expanded','false');
+  const type = win.picker(MEASURE_TYPES, { value: 'Show all', ariaLabel: 'Measure type', onChange: () => render() });
+  const typeRow = win.row('Show', type.element); selection.body.insertBefore(typeRow,clear);
   const units = documentUnits();
   const length = win.picker(named('length'), { value: UNIT_NAMES[unitChoice(units, 'length').unit], ariaLabel: 'Length unit', onChange: () => render() });
   const angle = win.picker(named('angle'), { value: UNIT_NAMES[unitChoice(units, 'angle').unit], ariaLabel: 'Angle unit', onChange: () => render() });
@@ -66,6 +71,22 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   display.body.append(lengthRow, angleRow);
   const host = document.createElement('div'); host.className = 'cad-measure-results'; win.body.append(host);
   const root = createRoot(host);
+  let referenceItem: CADSelectionItem | null = null;
+  const precision = win.picker(['Document','2 decimals','3 decimals','4 decimals','6 decimals','Full'], {ariaLabel:'Measurement precision',onChange:()=>render()});
+  display.body.append(win.row('Precision',precision.element));
+  const reference = document.createElement('button'); reference.type='button'; reference.className='aui-button aui-button--flat'; reference.textContent='Set from selection'; reference.setAttribute('aria-label','Set measurement reference');
+  const resetReference = document.createElement('button'); resetReference.type='button';resetReference.className='aui-button aui-button--flat';resetReference.textContent='World';resetReference.setAttribute('aria-label','Reset measurement reference');resetReference.hidden=true;
+  const referenceControls=document.createElement('div');referenceControls.className='cad-measure-reference';referenceControls.append(reference,resetReference);
+  display.body.append(win.row('Coordinates',referenceControls));
+  reference.onclick=()=>{
+    const item=session.selection.snapshot().items[0];if(!item){win.setError('Select a face, edge or anchor for the coordinate system.');return;}
+    window.dispatchEvent(new CustomEvent('aether-measure-frame',{detail:{item,respond:(frame:MeasurementFrame|null)=>{
+      if(!frame){win.setError('This selection has no reference frame.');return;}
+      referenceItem=item;reference.textContent=frame.label;reference.title=frame.label;resetReference.hidden=false;win.setError(null);render();
+    }}}));
+  };
+  resetReference.onclick=()=>{referenceItem=null;reference.textContent='Set from selection';resetReference.hidden=true;render();};
+
   const syncFilter = () => {
     const points = mode.value() !== 'Objects';
     session.selection.dispatch({ type: 'set-filter', filter: points ? 'vertex' : FILTERS[filters.value()] });
@@ -76,7 +97,7 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
     lengthRow.hidden = mode.value() === '3-point angle';
     angleRow.hidden = mode.value() === 'Point-to-point';
     root.render(<MeasureResults selection={session.selection} currentPart={currentPart} entities={entities} type={type.value() as MeasureType}
-      lengthUnit={unitFor(length.value())} angleUnit={unitFor(angle.value())} mode={mode.value() as MeasurementMode} annotate={overlay.set}/>);
+      referenceItem={referenceItem} precision={precision.value()==='Full'?'full':precision.value()==='Document'?undefined:Number.parseInt(precision.value())} lengthUnit={unitFor(length.value())} angleUnit={unitFor(angle.value())} mode={mode.value() as MeasurementMode} annotate={overlay.set}/>);
   };
   closeOpen = () => close();
   window.addEventListener('keydown', escape);

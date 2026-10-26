@@ -1,5 +1,6 @@
 /** Section view: display state only (like Onshape's), never part of the document.
  *  The viewer cuts the parts it applies to; the Section view window edits it. */
+import { sectionFrame } from './section-frame';
 export type Vec3 = readonly [number, number, number];
 export interface SectionPlane { label: string; originMillimeters: Vec3; normal: Vec3 }
 export interface SectionItem { id: string; label: string }
@@ -12,6 +13,8 @@ export interface SectionCut {
   reversed?: boolean;
   showPlane?: boolean;
   enabled?: boolean;
+  rotationDegrees?: readonly [number, number];
+  pivotMillimeters?: Vec3;
 }
 export interface SectionView {
   planes: readonly SectionCut[];
@@ -19,6 +22,7 @@ export interface SectionView {
   /** Exclude: every part is cut except the listed ones. Include: only the listed ones. */
   mode: "exclude" | "include";
   items: readonly SectionItem[];
+  hatch?: boolean;
 }
 
 let nextId = 0;
@@ -53,8 +57,9 @@ export function sectionClipPlane(view: SectionCut | null): { normal: Vec3; const
   if (!view?.plane || view.enabled === false) return null;
   const length = Math.hypot(...view.plane.normal);
   if (!Number.isFinite(length) || length < 1e-12 || !Number.isFinite(view.offsetMillimeters) || !view.plane.originMillimeters.every(Number.isFinite)) return null;
-  const n = view.plane.normal.map(value => value / length) as unknown as Vec3;
-  const d = n.reduce((sum, value, axis) => sum + value * view.plane!.originMillimeters[axis], 0) + view.offsetMillimeters;
+  if (view.rotationDegrees?.some(value => !Number.isFinite(value)) || view.pivotMillimeters?.some(value => !Number.isFinite(value))) return null;
+  const { normal: n, point } = sectionFrame(view);
+  const d = n.reduce((sum, value, axis) => sum + value * point[axis], 0);
   return view.reversed ? { normal: n, constant: -d } : { normal: [-n[0], -n[1], -n[2]], constant: d };
 }
 

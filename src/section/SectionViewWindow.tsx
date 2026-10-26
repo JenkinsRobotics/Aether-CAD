@@ -12,6 +12,7 @@ import { DEFAULT_SECTION_PLANES, sectionView, activeSectionCut, newSectionCut, t
 
 import { mountSectionHandle } from "./section-handle";
 import { createInspectionSession } from "../inspection/inspection-session";
+import { sectionFrame, rotateSection } from './section-frame';
 
 type Frame = { originMillimeters: Vec3; normal: Vec3 } | null;
 
@@ -59,16 +60,21 @@ export function openSectionView(): void {
   scopeSection.body.append(items.element);
   const hint = document.createElement("p");
   win.addHelp(hint);
-  win.addHelp("Add a planar face or use the plus menu for a default plane. Drag either arrow or type an offset to move the selected plane. Flip cut keeps the opposite side. Accept keeps the section; Cancel restores the previous settings.");
+  win.addHelp("Add a planar, cylindrical or conical face, or use the plus menu for a default plane. Drag either arrow or type an offset to move the selected plane. Drag the center to snap the plane to geometry. Rotate with the curved handles or the X/Y angle fields; hold Shift for 15° increments. Flip cut keeps the opposite side. View normal looks straight at the cut. Accept keeps the section; Cancel restores the previous settings.");
   menuHost.className = "cad-section-plane-menu";
   planes.element.append(menuHost);
 
   const update = (next: Partial<SectionView>) => { draft = { ...draft, ...next }; win.setError(null); sectionView.set(draft, true); render(); };
   const updateCut = (next: Partial<SectionCut>) => {
     const selected=activeSectionCut(draft);if(!selected)return;
+    if (next.rotationDegrees && !('pivotMillimeters' in next)) next = { ...next, ...rotateSection(selected, next.rotationDegrees) };
     update({planes:draft.planes.map(cut=>cut.id===selected.id?{...cut,...next}:cut)});
   };
-  const addCut = (plane:SectionCut['plane']) => { const cut=newSectionCut(plane);active='planes';update({planes:[...draft.planes,cut],activePlaneId:cut.id}); };
+  const addCut = (plane:SectionCut['plane']) => {
+    const cut = newSectionCut(plane);
+    window.dispatchEvent(new CustomEvent('aether-section-handle', { detail: { view: cut, respond: (projection: {point?: Vec3} | null) => { if (projection?.point) cut.pivotMillimeters = projection.point; } } }));
+    active='planes';update({planes:[...draft.planes,cut],activePlaneId:cut.id});
+  };
   const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented && win.isFrontmost()) { event.preventDefault(); close(false); } };
   const focus = (field: "planes" | "items") => { active = field; session.activate(); render(); };
   planes.element.addEventListener("click", () => focus("planes"));
@@ -84,13 +90,16 @@ export function openSectionView(): void {
     if (!picked.length || picked === handled) return;
     handled = picked;
     if (active === "planes") {
-      const face = picked.find(item => item.kind === "face");
-      let frame: Frame = null;
-      if (face) window.dispatchEvent(new CustomEvent("aether-section-face", { detail: { respond: (value: Frame) => { frame = value; } } }));
       queueMicrotask(() => session.selection.dispatch({ type: "clear" }));
-      if (!face || !frame) { win.setError("Select a planar face, or choose Top, Front or Right."); return; }
-      const { originMillimeters, normal } = frame as NonNullable<Frame>;
-      addCut({ label: face.label, originMillimeters, normal });
+      let added = false;
+      for (const face of picked.filter(item => item.kind === 'face')) {
+        let frame: Frame = null;
+        window.dispatchEvent(new CustomEvent("aether-section-face", { detail: { item: face, respond: (value: Frame) => { frame = value; } } }));
+        if (!frame) continue;
+        const { originMillimeters, normal } = frame as NonNullable<Frame>;
+        addCut({ label: face.label, originMillimeters, normal }); added = true;
+      }
+      if (!added) win.setError("Select a planar face, cylinder or cone, or choose a default plane.");
       return;
     }
     let list = [...draft.items];
@@ -101,7 +110,7 @@ export function openSectionView(): void {
 
   const units = documentUnits(), length = unitChoice(units, "length");
   const handle = mountSectionHandle(document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
-    () => activeSectionCut(draft), offsetMillimeters => updateCut({offsetMillimeters}), message => win.setError(message));
+    () => activeSectionCut(draft), offsetMillimeters => updateCut({offsetMillimeters}), message => win.setError(message), updateCut);
 
   const root = createRoot(reactHost);
   const render = () => {
@@ -129,11 +138,19 @@ export function openSectionView(): void {
             }}
             onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}/>
         </FieldRow>
+        {[0, 1].map(axis => <FieldRow key={axis} label={`Rotation ${'XY'[axis]}`} onReset={(selected?.rotationDegrees?.[axis] ?? 0) ? () => {
+          const angles: [number, number] = [...(selected?.rotationDegrees ?? [0, 0])]; angles[axis] = 0; updateCut({rotationDegrees: angles});
+        } : undefined}>
+          <NumberField aria-label={`Section rotation ${'XY'[axis]}`} value={selected?.rotationDegrees?.[axis] ?? 0} precision={2} unit="°" disabled={!selected}
+            onValueChange={value => { if(value !== null) { const angles: [number, number] = [...(selected?.rotationDegrees ?? [0, 0])]; angles[axis] = value; updateCut({rotationDegrees: angles}); } }}/>
+        </FieldRow>)}
         <FieldRow label="Cut"><Checkbox label="Enable plane" checked={!!selected && selected.enabled !== false} disabled={!selected} onChange={event => updateCut({enabled:event.target.checked})}/></FieldRow>
         <FieldRow label="Direction"><Checkbox label="Flip cut" checked={!!selected?.reversed} disabled={!selected}
           onChange={event => updateCut({ reversed: event.target.checked })}/></FieldRow>
         <FieldRow label="Preview"><Checkbox label="Show plane" disabled={!selected} checked={selected?.showPlane !== false}
           onChange={event => updateCut({ showPlane: event.target.checked })}/></FieldRow>
+        <FieldRow label="Cap"><Checkbox label="Hatching" checked={draft.hatch !== false} onChange={event => update({hatch:event.target.checked})}/></FieldRow>
+        <button type="button" className="aui-button aui-button--flat" disabled={!selected} onClick={() => { if(selected) window.dispatchEvent(new CustomEvent('aether-section-normal', {detail:sectionFrame(selected)})); }}>View normal</button>
       </Inspector>, controls)}
       {createPortal(<MenuButton label="Add section plane" items={[
         {id:'face',label:'Select a planar face'},

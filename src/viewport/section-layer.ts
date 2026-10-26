@@ -2,10 +2,13 @@
  *  fills the cut with a hatched cap and draws the section plane while editing.
  *  Display only — it never reads or changes the CAD document. */
 import * as THREE from "three/webgpu";
-import { color, float, fract, mix, screenCoordinate, step } from "three/tsl";
+import { color, float, fract, mix, screenCoordinate, step, uniform } from "three/tsl";
 import { isSectioned, sectionClipPlane, sectionClipPlanes, type SectionView } from "../section/section-view-store";
 import { styledLines } from "./styled-lines";
 import { sectionCapGeometry } from "./section-caps";
+import { sectionInspectionGeometry } from '../section/section-topology';
+import type { PartGeometryData } from '@aether/core/contracts';
+import type { AnchorPart } from './topology-anchors';
 
 /** A part's edge lines: drawn as screen-space fat lines, which GPU clipping does
  *  not cut correctly, so their segments are cut at the plane instead. */
@@ -32,10 +35,15 @@ export class SectionLayer {
   private planeCountChanged = false;
   private readonly indicators = new Map<string, THREE.Mesh>();
   private readonly cap = new THREE.MeshBasicNodeMaterial({ side: THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 });
+  private readonly hoverCap = this.cap.clone();
+  private readonly selectedCap = this.cap.clone();
+  private readonly hatch = uniform(1);
 
   constructor(private readonly modelRoot: THREE.Group, private readonly overlayRoot: THREE.Group) {
     const stripe = step(float(0.72), fract(screenCoordinate.x.add(screenCoordinate.y).div(9)));
-    this.cap.colorNode = mix(color(0xe9b37c), color(0xa8774f), stripe);
+    this.cap.colorNode = mix(color(0xe9b37c), color(0xa8774f), stripe.mul(this.hatch));
+    this.hoverCap.colorNode = mix(color(0x80d2df), color(0x4f9aa9), stripe.mul(this.hatch));
+    this.selectedCap.colorNode = mix(color(0x51b9d2), color(0x2c819c), stripe.mul(this.hatch));
     // Shadows come from what is drawn, not from the material cut away.
     this.clipped.clipShadows = true;
     this.modelRoot.add(this.clipped);
@@ -43,10 +51,11 @@ export class SectionLayer {
   }
 
   /** Called once per rendered part: adds its cap and places it by the current view. */
-  adopt(partId: string, group: THREE.Group, geometry: THREE.BufferGeometry, edges?: SectionEdges): void {
+  adopt(partId: string, group: THREE.Group, geometry: THREE.BufferGeometry, edges?: SectionEdges, source?: PartGeometryData): void {
     if (edges) group.userData.sectionEdges = { ...edges, clipped: false };
     group.userData.sectionSourceGeometry = geometry;
-    const cap = new THREE.Mesh(new THREE.BufferGeometry(), this.cap);
+    group.userData.sectionSourceData = source;
+    const cap = new THREE.Mesh(new THREE.BufferGeometry(), [this.cap, this.hoverCap, this.selectedCap]);
     cap.userData.sectionCap = true;
     cap.userData.partId = partId;
     cap.castShadow = false;
@@ -57,6 +66,7 @@ export class SectionLayer {
 
   apply(view: SectionView | null, groups: Iterable<THREE.Group>, bounds: THREE.Box3, editing: boolean): void {
     this.view = view;
+    this.hatch.value = view?.hatch === false ? 0 : 1;
     const planes = sectionClipPlanes(view);
     this.planeCountChanged = planes.length !== this.clips.length;
     this.clips = planes.map(plane => new THREE.Plane(new THREE.Vector3(...plane.normal),plane.constant));
@@ -93,6 +103,16 @@ export class SectionLayer {
   capOf(group: THREE.Group): THREE.Mesh | undefined {
     return group.children.find(child => child.userData.sectionCap && child.visible) as THREE.Mesh | undefined;
   }
+  inspectionPart(group:THREE.Group):AnchorPart & {data:PartGeometryData} | null { return group.userData.sectionInspection ?? null; }
+
+  highlight(group: THREE.Group, selected: ReadonlySet<number | undefined>, hovered?: number, whole = false): void {
+    const part = this.inspectionPart(group);
+    if (!part) return;
+    for (const face of part.surface.geometry.groups) {
+      const id = part.faceRanges.find(range => range.start === face.start)?.faceId;
+      face.materialIndex = whole || selected.has(id) ? 2 : id !== undefined && id === hovered ? 1 : 0;
+    }
+  }
 
   /** True when a pick at this point lands on material the section has cut away. */
   hides(partId: string, point: THREE.Vector3): boolean {
@@ -116,6 +136,12 @@ export class SectionLayer {
       child.visible = cut;
       child.geometry.dispose();
       child.geometry = cut ? sectionCapGeometry(group.userData.sectionSourceGeometry,localPlanes) : new THREE.BufferGeometry();
+      group.userData.sectionInspection = null;
+      if(cut && group.userData.sectionSourceData){
+        const ids=this.view?.planes.filter(plane=>sectionClipPlane(plane)).map(plane=>plane.id)??[];
+        const data=sectionInspectionGeometry(child.geometry,group.userData.sectionSourceData,ids);
+        group.userData.sectionInspection={data,group,surface:child,faceRanges:data.faceRanges,topology:new Map(data.topology.map(face=>[face.id,face]))};
+      }
     }
     const edges = group.userData.sectionEdges as (SectionEdges & { clipped: boolean }) | undefined;
     if (!edges) return;

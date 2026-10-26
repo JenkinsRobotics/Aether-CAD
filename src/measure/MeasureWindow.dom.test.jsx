@@ -29,9 +29,37 @@ afterEach(async () => { await act(async () => { if (measureWindowOpen()) toggleM
 const select = items => act(async () => cadSelection.dispatch({ type: 'replace', items }));
 const results = () => document.querySelector('[aria-label="Measurements"]').textContent;
 const choose = async (label, option) => {
+  if(document.querySelector(`[aria-label="${label}"]`).closest('.aui-feature-subsection-body')?.hidden)
+    await act(async()=>document.querySelector('[aria-label="Measurement display settings"]').click());
   await act(async () => document.querySelector(`[aria-label="${label}"]`).click());
   await act(async () => [...document.querySelectorAll('[role="option"]')].find(item => item.textContent === option).click());
 };
+
+it('copies full precision, pins XYZ overlays, and retains the reference frame while selecting other points', async () => {
+  const clipboard={writeText:vi.fn().mockResolvedValue(undefined)};
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:clipboard});
+  const reference=event=>event.detail.respond({label:'Anchor frame',origin:[10,20,0],xAxis:[0,1,0],yAxis:[-1,0,0],zAxis:[0,0,1]});
+  window.addEventListener('aether-measure-frame',reference);
+  try {
+    await choose('Measurement mode','Point-to-point');await choose('Length unit','Millimeter');
+    const points=[{id:'vertex:p:v1',partId:'p',kind:'vertex',label:'Vertex 1'},{id:'vertex:p:v2',partId:'p',kind:'vertex',label:'Vertex 2'}];
+    geometry={points:[{selectionId:points[0].id,partId:'p',candidateId:'v1',positionMillimeters:[10,20,0]},{selectionId:points[1].id,partId:'p',candidateId:'v2',positionMillimeters:[11,21,0]}],measurements:[]};
+    await select(points.slice(0,1));
+    await act(async()=>document.querySelector('[aria-label="Set measurement reference"]').click());
+    await select(points);
+    await choose('Measurement precision','2 decimals');expect(results()).toContain('1.41 mm');
+    await act(async()=>document.querySelector('[aria-label="Copy Point-to-point distance: Distance"]').click());
+    expect(clipboard.writeText).toHaveBeenCalledWith('1.4142135623731 mm');
+    const pin=document.querySelector('[aria-label="Pin Point-to-point distance: ΔY"]');
+    await act(async()=>pin.click());expect(pin.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-measure-value="Point-to-point distance: ΔY"]').textContent).toBe('-1.00 mm');
+    await act(async()=>document.querySelector('[aria-label="Reset measurement reference"]').click());
+    expect(document.querySelector('[data-measure-value="Point-to-point distance: ΔY"]').textContent).toBe('1.00 mm');
+    geometry.points[1].positionMillimeters=[12,21,0];
+    await act(async()=>window.dispatchEvent(new Event('aether-assembly-geometry-updated')));
+    expect(results()).toContain('2.24 mm');expect(pin.getAttribute('aria-pressed')).toBe('true');
+  } finally {window.removeEventListener('aether-measure-frame',reference);}
+});
 
 it('opens the standard compact window (icon, Cancel and Done), condensed until something is measured', async () => {
   const win = document.querySelector('.cad-measure-window');

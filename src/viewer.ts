@@ -21,12 +21,13 @@ import { selectedCandidateId } from "./viewport/topology-selection";
 import {anchorForPlanarFace,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
 import {pickHistoryFace} from './viewport/history-face-picking';
 import type {PlanarFaceAnchor} from '@aether/core/document';
-import { measurementsInWorld } from "./viewport/topology-measurement";
 import { extrusionAxisDepth } from "./viewport/extrusion-axis";
 import {projectTransformGizmo,type TransformGizmoRequest} from './viewport/transform-gizmo';
 import { SectionLayer } from "./viewport/section-layer";
+import { projectSection } from "./section/section-projection";
+import { inspectGeometry } from "./measure/inspection-geometry";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
-import { lineParameterNearestRay, sectionClipPlane, type SectionCut, type SectionView } from "./section/section-view-store";
+import { sectionClipPlane, type SectionCut, type SectionView } from "./section/section-view-store";
 import {changeCameraProjection, cameraAspect, setOrthographicSpan, resizeModelingCamera, type ModelingCamera, type CameraProjection} from "./viewport/camera-projection";
 import { CameraRotationMotion } from "./viewport/camera-rotation";
 import { OrientationPreviewMotion, visiblePreviewBounds } from "./viewport/orientation-preview";
@@ -235,7 +236,11 @@ export class MateViewport {
     this.anchorPointer = { clientX: event.clientX, clientY: event.clientY };
     const rect = this.renderer.domElement.getBoundingClientRect();
     const snapping = cadSnapping.snapshot();
-    const pick = this.anchorPicker.pick(this.modelRoot.visible && snapping.enabled && snapping.geometry ? [...this.parts.values()] : [], this.camera, rect,
+    const anchorParts = [...this.parts.values()].flatMap(part => {
+      const cap = this.measurePicking ? this.section.inspectionPart(part.group) : null;
+      return cap ? [part, cap] : [part];
+    });
+    const pick = this.anchorPicker.pick(this.modelRoot.visible && snapping.enabled && snapping.geometry ? anchorParts : [], this.camera, rect,
       { x: event.clientX - rect.left, y: event.clientY - rect.top }, (id, point) => this.section.hides(id, point));
     this.anchorFace = pick.face;
     this.anchorOverlay.set(pick);
@@ -621,7 +626,8 @@ export class MateViewport {
     rendered?.group.updateWorldMatrix(true, false);
     const matrix = this.historyEditing ? new THREE.Matrix4() : rendered!.group.matrixWorld;
     const candidateId = selectedCandidateId(item);
-    for (const face of data.topology) {
+    const cap = rendered ? this.section.inspectionPart(rendered.group) : null;
+    for (const face of [...data.topology,...(cap?.data.topology ?? [])]) {
       const candidate = face.candidates.find((entry) => entry.id === candidateId);
       if (candidate) return { matrix, candidate };
     }
@@ -629,20 +635,22 @@ export class MateViewport {
   }
 
   selectedTopologyMeasurements(items = cadSelection.snapshot().items) {
-    return items.flatMap(item=>{
-      if(this.historyEditing){
-        const part=this.historyModel?.parts.find(p=>p.id===item.partId);
-        const measurements=item.kind==='face'?part?.topology.find(f=>f.id===item.faceId)?.measurements:undefined;
-        return measurements?[{id:item.id,label:item.label,kind:item.kind,...measurementsInWorld(measurements,new THREE.Matrix4())}]:[];
-      }
-      const part=this.parts.get(item.partId);if(!part)return [];
-      const topology=item.kind==='face' && item.faceId!==undefined ? part.topology.get(item.faceId) : undefined;
-      const candidate=(item.kind==='edge'||item.kind==='vertex')?this.candidateFor(item)?.candidate:undefined;
-      const measurements=topology?.measurements ?? candidate?.measurements;
-      if(!measurements)return [];
-      part.group.updateWorldMatrix(true,false);
-      return [{id:item.id,label:item.label,kind:item.kind,...measurementsInWorld(measurements,part.group.matrixWorld)}];
+    return items.flatMap(item => {
+      const rendered = this.parts.get(item.partId);
+      const cap = rendered && (item.id.startsWith('section-face:') || item.id.includes(':section-section-plane-')) ? this.section.inspectionPart(rendered.group) : null;
+      const data = this.historyEditing ? this.historyModel?.parts.find(part => part.id === item.partId) : cap?.data ?? rendered?.data;
+      if (!data) return [];
+      rendered?.group.updateWorldMatrix(true, false);
+      const result = inspectGeometry(data, this.historyEditing ? new THREE.Matrix4() : rendered!.group.matrixWorld, item);
+      return result ? [result] : [];
     });
+  }
+
+  measurementPlacement(partId: string): number[] | null {
+    const part = this.parts.get(partId);
+    if (!part) return null;
+    part.group.updateWorldMatrix(true, false);
+    return part.group.matrixWorld.toArray();
   }
 
   /** Which face is selected, for features that store the reference rather than
@@ -718,8 +726,8 @@ export class MateViewport {
     return index < 0 ? 1 : index + 1;
   }
 
-  selectedSketchFrame(): import("@aether/core/sketch").SketchFrame | null {
-    const data=this.selectedFaceData();
+  selectedSketchFrame(selection?: CADSelectionItem): import("@aether/core/sketch").SketchFrame | null {
+    const data=this.selectedFaceData(selection);
     if(!data||data.topology.surfaceType!=="PLANE")return null;
     const {topology,matrix}=data;
     const candidate=planarFaceCenter(topology);
@@ -892,6 +900,7 @@ export class MateViewport {
       this.addPart(body.data,placement);this.assemblyPreviewIDs.add(body.data.id);
     }
     this.callbacks.onStateChanged();
+    window.dispatchEvent(new CustomEvent('aether-assembly-geometry-updated'));
   }
   removeAuthoredPart(id:string):void {const part=this.parts.get(id);if(part)this.removeRenderedPart(part);}
 
@@ -1288,7 +1297,7 @@ export class MateViewport {
       next.setPositions(positions.length ? Float32Array.from(positions) : [0, 0, 0, 0, 0, 0]);
       edges.geometry.dispose();
       edges.geometry = next;
-    } });
+    } }, data);
     group.updateMatrixWorld(true);
     this.parts.set(data.id, {
       data,
@@ -1415,37 +1424,36 @@ export class MateViewport {
   setSection(view: SectionView | null, editing: boolean): void {
     this.clearAnchors();
     this.section.apply(view, [...this.parts.values()].map(part => part.group), this.renderedPartBounds(undefined, true), editing);
+    this.resetFaceMaterials();
   }
 
   /** Screen geometry of the section handle: the arrow along the plane normal and
    *  the offset under the pointer. The camera is frozen so a drag stays stable. */
-  projectSectionHandle(view: SectionCut): { start: {x:number;y:number}; end: {x:number;y:number}; valueAt: (x:number,y:number)=>number|null } | null {
-    if (!view.plane || !sectionClipPlane(view)) return null;
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    if (!rect.width || !rect.height) return null;
-    const camera = this.camera.clone(); camera.updateMatrixWorld(true);
-    const normal = new THREE.Vector3(...view.plane.normal).normalize();
-    const anchor = new THREE.Vector3(...view.plane.originMillimeters);
-    // Default planes start at the world origin. Keep the arrows on the model
-    // by projecting its center onto that plane, preserving the offset's origin.
-    const bounds = this.renderedPartBounds(undefined, true);
-    if (!bounds.isEmpty()) {
-      const center = bounds.getCenter(new THREE.Vector3());
-      const distance = center.clone().sub(anchor).dot(normal);
-      anchor.copy(center).addScaledVector(normal, -distance);
-    }
-    const at = anchor.clone().addScaledVector(normal, view.offsetMillimeters);
-    const screen = (p: THREE.Vector3) => { const v = p.clone().project(camera); return { x: rect.left + (v.x + 1) * rect.width / 2, y: rect.top + (1 - v.y) * rect.height / 2, z: v.z }; };
-    const start = screen(at);
-    if (!(start.z >= -1 && start.z <= 1)) return null;
-    // A fixed on-screen arrow length, whatever the zoom.
-    const unit = screen(at.clone().add(normal)), pixels = Math.hypot(unit.x - start.x, unit.y - start.y);
-    const end = screen(at.clone().addScaledVector(normal, pixels > 1e-6 ? 70 / pixels : 0));
-    const ray = new THREE.Raycaster();
-    return { start, end, valueAt: (x, y) => {
-      ray.setFromCamera(new THREE.Vector2((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1), camera);
-      return lineParameterNearestRay(anchor.toArray(), normal.toArray(), ray.ray.origin.toArray(), ray.ray.direction.toArray());
-    } };
+  projectSectionHandle(view: SectionCut) {
+    if (!sectionClipPlane(view)) return null;
+    return projectSection(view, this.camera, this.renderer.domElement.getBoundingClientRect(), this.renderedPartBounds(undefined, true));
+  }
+
+  measurementFrame(item: CADSelectionItem) {
+    const face = item.kind === 'face' ? this.selectedFaceData(item) : null;
+    const found = face ? { candidate: planarFaceCenter(face.topology) ?? face.topology.candidates[0], matrix: face.matrix } : this.candidateFor(item);
+    if (!found?.candidate) return null;
+    const {candidate, matrix} = found;
+    return {label:item.label,origin:new THREE.Vector3(...candidate.origin).applyMatrix4(matrix).toArray(),
+      xAxis:new THREE.Vector3(...candidate.xAxis).transformDirection(matrix).toArray(),
+      yAxis:new THREE.Vector3(...candidate.yAxis).transformDirection(matrix).toArray(),
+      zAxis:new THREE.Vector3(...candidate.zAxis).transformDirection(matrix).toArray()};
+  }
+
+  selectedSectionFrame(selection?: CADSelectionItem) {
+    const planar = this.selectedSketchFrame(selection);
+    if (planar) return planar;
+    const data = this.selectedFaceData(selection);
+    if (!data || !['CYLINDER', 'CONE'].includes(data.topology.surfaceType)) return null;
+    const candidate = data.topology.candidates.find(item => item.kind === 'cylinder-axis' || item.kind === 'cone-axis');
+    if (!candidate) return null;
+    return { originMillimeters: new THREE.Vector3(...candidate.origin).applyMatrix4(data.matrix).toArray(),
+      normal: new THREE.Vector3(...candidate.zAxis).transformDirection(data.matrix).toArray() };
   }
 
   /** A ring handle for an angle about an axis, through the transform gizmo's rotate math. */
@@ -2087,10 +2095,11 @@ export class MateViewport {
     if (!hit || hit.faceIndex === undefined || hit.faceIndex === null) return null;
     const part = this.parts.get(String(hit.object.userData.partId));
     if (!part) return null;
-    // A click on a section face picks its body; it is not a face of the model.
-    if (hit.object.userData.sectionCap && !["body", "component"].includes(effectiveSelectionKind(cadSelection.snapshot()))) return null;
-    const faceId = this.faceIdForTriangle(part.faceRanges, hit.faceIndex);
-    const topology = faceId === undefined ? undefined : part.topology.get(faceId);
+    // Cap topology is inspection-only; modeling commands never receive synthetic faces.
+    const cap = hit.object.userData.sectionCap ? this.section.inspectionPart(part.group) : null;
+    if (cap && !this.measurePicking && !['body','component'].includes(effectiveSelectionKind(cadSelection.snapshot()))) return null;
+    const faceId = this.faceIdForTriangle(cap?.faceRanges ?? part.faceRanges, hit.faceIndex);
+    const topology = faceId === undefined ? undefined : (cap?.topology ?? part.topology).get(faceId);
     let kind = effectiveSelectionKind(cadSelection.snapshot());
     const rect = this.renderer.domElement.getBoundingClientRect();
     const point = {x:event.clientX-rect.left,y:event.clientY-rect.top};
@@ -2115,11 +2124,11 @@ export class MateViewport {
         part,
         faceId: topology.id,
         item: {
-          id: `face:${part.data.id}:${topology.id}`,
+          id: `${cap ? "section-face" : "face"}:${part.data.id}:${topology.id}`,
           kind: "face",
           partId: part.data.id,
           faceId: topology.id,
-          label: `Face ${this.faceOrdinal(part, topology.id)} of ${part.data.name}`,
+          label: cap ? `Section face of ${part.data.name}` : `Face ${this.faceOrdinal(part, topology.id)} of ${part.data.name}`,
           detail: topology.surfaceType,
         },
       };
@@ -2138,7 +2147,7 @@ export class MateViewport {
         partId: part.data.id,
         faceId: topology.id,
         label: candidate.label,
-        detail: kind === "edge" ? "Exact edge" : "Exact vertex",
+        detail: cap ? 'Section mesh' : kind === "edge" ? "Exact edge" : "Exact vertex",
       },
     };
   }
@@ -2426,6 +2435,8 @@ export class MateViewport {
         const faceId = part.faceRanges[index]?.faceId;
         group.materialIndex = selectsWholePart || selectedFaces.has(faceId) ? 2 : 0;
       });
+      const capHover = this.selectionHover?.part === part ? this.selectionHover.faceId : this.anchorFace?.part.data.id === part.data.id ? this.anchorFace.faceId : undefined;
+      this.section.highlight(part.group, selectedFaces, capHover, selectsWholePart);
     });
     if (this.anchorFace) {
       const part = this.parts.get(this.anchorFace.part.data.id);
