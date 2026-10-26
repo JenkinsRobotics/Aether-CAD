@@ -9,7 +9,7 @@ import { selectedTopologyAngle, type SelectedTopologyMeasurement } from "../view
 import { measureReference } from "./measure-reference";
 import { pointDistance, threePointAngle, type MeasurePoint as Vec, type MeasurementMode } from "./measurement-geometry";
 import type { MeasurementAnnotation } from "./measurement-overlay";
-type Point = { candidateId: string; partId: string; positionMillimeters: Vec };
+type Point = { selectionId?: string; candidateId: string; partId: string; positionMillimeters: Vec };
 type Distance = { distance_mm: number; points: [Vec, Vec] };
 export type MeasureType = "Show all" | "Minimum" | "Center";
 
@@ -76,7 +76,7 @@ export function MeasureResults({ currentPart, entities, type, lengthUnit, angleU
       : current?.value ? [output("distance", "Distance", lengthText(current.value.distance_mm)), ...deltas(...current.value.points)]
       : [output("distance", "Distance", !currentPart() ? "Open the source Part for exact minimum distance" : current?.error ?? "Measuring…")] });
   }
-  const pointOf = (id: string) => geometry.points.find(point => id === `vertex:${point.partId}:${point.candidateId}`)?.positionMillimeters;
+  const pointOf = (id: string) => geometry.points.find(point => id === (point.selectionId ?? `vertex:${point.partId}:${point.candidateId}`))?.positionMillimeters;
   const measured = (id: string) => geometry.measurements.find(measurement => measurement.id === id);
   const centerOf = (item: typeof items[number]) => pointOf(item.id) ?? measured(item.id)?.centerMillimeters
     ?? (physical?.key === propertiesKey ? physical.values?.find(body => body.body_id === item.partId)?.center_mm : undefined);
@@ -133,6 +133,6 @@ export function MeasureResults({ currentPart, entities, type, lengthUnit, angleU
     }
   }
   const hint = mode === "Objects" ? (!items.length ? "Select bodies, faces, edges or vertices in the model." : !sections.length ? "Choose exact model geometry to measure." : null)
-    : validPoints ? null : `Select ${count} vertices (${points.length}/${count}).${mode === "3-point angle" ? " The second point is the angle vertex." : " Click a picked vertex again to remove it."}`;
+    : validPoints ? null : `Pick ${count} snap points (${points.length}/${count}). Hover over a face to reveal corners, midpoints and centers.${mode === "3-point angle" ? " The second point is the angle vertex." : " Click a picked point again to remove it."}`;
   return <>{hint && <p className="cad-measure-hint" role="status">{hint}</p>}{sections.length ? <PropertyGrid ariaLabel="Measurements" sections={sections}/> : null}</>;
 }

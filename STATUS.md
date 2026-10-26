@@ -1,3 +1,26 @@
+### Measurement snap anchors — 2026-10-26
+
+Point-to-point and 3-point angle now use the exact topology inference shared
+with Place Mate Connector. Hovering a face highlights it and exposes screen-sized
+corner, edge midpoint, face-center and analytic circle/shaft/other curved-feature
+anchors. Picks acquire within 14 CSS pixels, including just outside silhouettes.
+The active point shows a ring and label. Hidden, section-clipped and occluded
+surface points are excluded; internal analytic centers are exposed for their own
+hovered solid, never through another component. Camera changes re-evaluate picks.
+
+Measurements resolve candidate origins through the occurrence transform. Shared
+corners have one selection identity across adjacent faces, while connector picks
+retain the chosen face's exact local frame. Inferred points are distinct from
+native edge/vertex references used by minimum-distance analysis. No document,
+engine, schema or product worker change is required. Mesh-only imports do not gain
+invented analytic topology.
+
+Verification: 1,967 app tests passed with one existing skip; 27 final focused
+checks; production build; disposable built CAD checks for face clouds, corner
+picks outside silhouettes, midpoint/center distances, angle/units/zoom, actual
+connector placement, circular centers and shaft-axis stations, cleanup and both
+themes. Browser script: `scripts/verify-measure-anchors-browser.mjs`. Worker
+manifest and runner hashes match the preceding release.
 
 ### Section, Measure, and property content — 2026-10-26
 

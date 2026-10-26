@@ -1,0 +1,4 @@
+.cad-topology-anchors { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:7; }
+.cad-topology-anchor { position:absolute; width:7px; height:7px; box-sizing:border-box; border:1px solid #fff; border-radius:50%; background:#ac80ef; transform:translate(-50%,-50%); box-shadow:0 0 0 1px #40325580; }
+.cad-topology-anchor[data-active="true"] { width:11px; height:11px; background:var(--aether-color-accent); box-shadow:0 0 0 4px color-mix(in srgb,var(--aether-color-accent) 25%,transparent); }
+.cad-topology-anchor-label { position:absolute; left:16px; top:-7px; padding:3px 6px; border:1px solid var(--aether-color-border); border-radius:4px; color:var(--aether-color-text); background:var(--aether-color-bg-panel); white-space:nowrap; font:11px/1.4 var(--aether-font-family); }

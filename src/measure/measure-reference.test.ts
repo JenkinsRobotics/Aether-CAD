@@ -10,3 +10,8 @@ it("names faces, edges, circular edges and vertices the way the engine resolves 
   // A component (assembly instance) has no single exact shape here.
   expect(measureReference({ id: "component:i", kind: "component", partId: "i", label: "Instance" })).toBeNull();
 });
+
+
+it('never treats an inferred circular center as the whole circular edge', () => {
+  expect(measureReference({ id: 'anchor:body:part:face-7-circle-0', kind: 'vertex', partId: 'body:part', label: 'Circle center' })).toBeNull();
+});

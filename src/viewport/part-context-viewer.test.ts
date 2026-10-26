@@ -1,5 +1,6 @@
 import {cadSelection} from '../cad-selection-store';
 import { SectionLayer } from './section-layer';
+import { TopologyAnchorPicker } from './topology-anchors';
 import {expect,it,vi} from 'vitest';
 import * as THREE from 'three/webgpu';
 import {FeaturePreviewLayer} from '../modeling/feature-preview-layer';
@@ -11,6 +12,7 @@ import {resolvePartDisplay} from './part-display';
 // Exercise the real picking/material methods without starting a GPU device.
 function fixture() {
   const viewer=Object.create(MateViewport.prototype);
+  viewer.anchorPicker = new TopologyAnchorPicker();
   viewer.featurePreview=new FeaturePreviewLayer();viewer.historyPreview=new FeaturePreviewLayer();
   viewer.modelRoot=new THREE.Group();viewer.section=new SectionLayer(viewer.modelRoot,new THREE.Group());viewer.parts=new Map();viewer.partDisplay=new Map();viewer.isolation=null;
   viewer.callbacks={onStateChanged:vi.fn(),onStatus:vi.fn()};

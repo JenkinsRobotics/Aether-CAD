@@ -42,7 +42,7 @@ it('opens the standard compact window (icon, Cancel and Done), condensed until s
   expect(win.querySelector('[aria-label="Measurements"]')).toBeNull();
   expect(win.querySelector('.cad-measure-results').textContent).toContain('Select bodies');
   expect(win.querySelector('[aria-label="Select entities to measure"]')).toBeTruthy();
-  expect(picking).toBe(true);
+  expect(picking).toEqual({ active: true, points: false });
   await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
   expect(win.textContent).toContain('Face 1 of Plate');
   // Removing it from the window deselects it in the model.
@@ -50,7 +50,7 @@ it('opens the standard compact window (icon, Cancel and Done), condensed until s
   expect(cadSelection.snapshot().items).toEqual([]);
   await act(async () => [...win.querySelectorAll('.aui-feature-commit-actions button')].find(b => b.textContent === 'Done').click());
   expect(document.querySelector('.cad-measure-window')).toBeNull();
-  expect(picking).toBe(false);
+  expect(picking).toEqual({ active: false, points: false });
   // Cancel closes too, and drops what was picked.
   await act(async () => toggleMeasureWindow(() => part));
   await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
@@ -143,4 +143,19 @@ it('a completed older request cannot replace a newer result with the same select
   await act(async () => pending[1]({ measurements: [{ distance_mm: 25.4, points: [[0,0,0],[25.4,0,0]] }] }));
   await act(async () => pending[0]({ measurements: [{ distance_mm: 50.8, points: [[0,0,0],[50.8,0,0]] }] }));
   expect(results()).toContain('1.000 in'); expect(results()).not.toContain('2.000 in');
+});
+
+
+it('measures inferred snap points without sending face or circular edges as minimum-distance references', async () => {
+  await choose('Measurement mode', 'Point-to-point');
+  expect(picking).toEqual({ active: true, points: true });
+  geometry = { points: [
+    { selectionId: 'anchor:p:face-1-circle-0', candidateId: 'face-1-circle-0', partId: 'p', positionMillimeters: [0, 0, 0] },
+    { selectionId: 'anchor:p:face-2-center', candidateId: 'face-2-center', partId: 'p', positionMillimeters: [0, 0, 25.4] },
+  ], measurements: [] };
+  await select(geometry.points.map(point => ({ id: point.selectionId, partId: 'p', kind: 'vertex', label: point.candidateId })));
+  expect(results()).toContain('1.000 in');
+  expect(analyzePart).not.toHaveBeenCalled();
+  await choose('Measurement mode', 'Objects');
+  expect(picking).toEqual({ active: true, points: false });
 });

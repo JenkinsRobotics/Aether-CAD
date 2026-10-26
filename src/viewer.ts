@@ -12,6 +12,8 @@ import { gradientBackground } from "./viewport/environment-background";
 import { updateSketchEnvironment } from "./sketch/environment-appearance";
 import type { PlaneTheme } from "./viewport/appearance-themes";
 import type { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
+import { TopologyAnchorPicker, anchorSelection, type AnchorFace } from './viewport/topology-anchors';
+import { TopologyAnchorOverlay } from './viewport/topology-anchor-overlay';
 import { selectedCandidateId } from "./viewport/topology-selection";
 import {anchorForPlanarFace,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
 import {pickHistoryFace} from './viewport/history-face-picking';
@@ -77,7 +79,6 @@ import { createCADCameraControls, type CADCameraControls } from "./viewport/came
 import { CSS3DObject, CSS3DRenderer } from "three/addons/renderers/CSS3DRenderer.js";
 import type { AssemblyPartRow } from "./assembly-tree";
 import {
-  connectorKindPreference,
   connectorMatrix,
   FastenedMateDraft,
   MateConnectorRegistry,
@@ -92,7 +93,6 @@ import {
   type PartGeometryData,
 } from "./aether-core";
 import {
-  createCandidateCloud,
   createConnectorGizmo,
   disposeTransientGeometry,
   type ConnectorMarker,
@@ -204,7 +204,47 @@ export class MateViewport {
   setSourceBodyPicking(active: boolean) { this.sourceGeometryPicking = active?'body':null; }
   /** While Measure is open, each click adds or removes an entity, like Onshape. */
   private measurePicking = false;
-  setMeasurePicking(active: boolean) { this.measurePicking = active; }
+  private measurePointPicking = false;
+  private readonly anchorPicker = new TopologyAnchorPicker();
+  private anchorOverlay!: TopologyAnchorOverlay;
+  private anchorFace: AnchorFace | null = null;
+  private anchorPointer: { clientX: number; clientY: number } | null = null;
+
+  setMeasurePicking(active: boolean, points = false): void {
+    if (active && this.tool !== "none") this.setTool("none");
+    this.measurePicking = active;
+    this.measurePointPicking = active && points;
+    this.clearAnchors();
+    this.selectionHover = null;
+    cadSelection.dispatch({ type: 'set-hovered', item: null });
+    this.callbacks.onHover(null);
+    this.resetFaceMaterials();
+  }
+
+  private clearAnchors(): void {
+    this.anchorPointer = null;
+    this.anchorPicker.clear();
+    this.anchorOverlay?.set(null);
+    this.anchorFace = null;
+  }
+
+  private pickAnchors(event: { clientX: number; clientY: number }) {
+    this.anchorPointer = { clientX: event.clientX, clientY: event.clientY };
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const pick = this.anchorPicker.pick(this.modelRoot.visible ? [...this.parts.values()] : [], this.camera, rect,
+      { x: event.clientX - rect.left, y: event.clientY - rect.top }, (id, point) => this.section.hides(id, point));
+    this.anchorFace = pick.face;
+    this.anchorOverlay.set(pick);
+    this.anchorOverlay.render(point => this.projectScreenPoint(point));
+    this.resetFaceMaterials();
+    return pick;
+  }
+
+  private anchorSelectionHit(event: { clientX: number; clientY: number }): SelectionHover | null {
+    const anchor = this.pickAnchors(event).snapped;
+    const part = anchor && this.parts.get(anchor.part.data.id);
+    return anchor && part ? { part, faceId: anchor.faceId, item: anchorSelection(anchor) } : null;
+  }
   private canPickSourceGeometry() { return this.sourceGeometryPicking!==null && cadSelection.snapshot().filter === this.sourceGeometryPicking; }
   private historyModel: ImportedModelData | null = null;
   setHistoryPreview(model: ImportedModelData | null, active: boolean): void {
@@ -314,6 +354,7 @@ export class MateViewport {
     });
 
 
+    this.anchorOverlay = new TopologyAnchorOverlay(this.container);
     this.stage = new StageRig(this.scene);
     this.updateWorkspaceGround();
     this.buildReferenceGeometry();
@@ -360,7 +401,9 @@ export class MateViewport {
     });
     this.renderer.domElement.addEventListener("pointerleave", (event) => {
       if (this.forwardToSketch(event)) return;
-      if (this.tool !== "none" || this.pointerDown) return;
+      if (this.pointerDown) return;
+      this.clearAnchors();
+      if (this.tool !== "none") { this.setHover(null); return; }
       this.selectionHover = null;
       cadSelection.dispatch({ type: "set-hovered", item: null });
       cadSelection.dispatch({ type: "set-box", box: null });
@@ -470,7 +513,7 @@ export class MateViewport {
     });
   }
 
-  selectedPoints(): { partId: string; candidateId: string; label: string; positionMillimeters: [number, number, number] }[] {
+  selectedPoints(): { selectionId: string; partId: string; candidateId: string; label: string; positionMillimeters: [number, number, number] }[] {
     const picked: ReturnType<MateViewport["selectedPoints"]> = [];
     for (const item of cadSelection.snapshot().items) {
       if (item.kind !== "vertex") continue;
@@ -479,6 +522,7 @@ export class MateViewport {
       const { matrix, candidate } = found;
       const origin = new THREE.Vector3(...candidate.origin).applyMatrix4(matrix);
       picked.push({
+        selectionId: item.id,
         partId: item.partId,
         candidateId: candidate.id,
         label: item.label,
@@ -726,6 +770,7 @@ export class MateViewport {
   setPartVisibility(id: string, visible: boolean): void {
     const part = this.parts.get(id);
     if (!part) return;
+    this.clearAnchors();
     part.visible = visible;
     part.group.visible = visible && (!this.isolation || this.isolation === id);
     this.updatePreviewVisibility();
@@ -748,6 +793,7 @@ export class MateViewport {
 
   isolatePart(id: string | null): void {
     if (id && !this.parts.has(id)) return;
+    this.clearAnchors();
     this.isolation = id;
     for (const [key, part] of this.parts) part.group.visible = part.visible && (!id || key === id);
     this.updatePreviewVisibility();
@@ -866,6 +912,7 @@ export class MateViewport {
   setTool(tool: AuthoringTool): void {
     this.cancelSelectionGesture();
     this.tool = tool;
+    this.clearAnchors();
     this.selectionHover = null;
     cadSelection.dispatch({ type: "set-hovered", item: null });
     cadSelection.dispatch({ type: "set-box", box: null });
@@ -1362,6 +1409,7 @@ export class MateViewport {
 
   /** Apply Section view (display only); the plane is drawn while it is being edited. */
   setSection(view: SectionView | null, editing: boolean): void {
+    this.clearAnchors();
     this.section.apply(view, [...this.parts.values()].map(part => part.group), this.renderedPartBounds(undefined, true), editing);
   }
 
@@ -1547,11 +1595,20 @@ export class MateViewport {
   }
 
   private publishCameraOrientation(): void {
+    // Re-evaluate occlusion during camera glide as well as direct pointer moves.
+    // Dots remain under the pointer while zoom settles, without leaking through
+    // geometry that has turned toward the camera.
+    if (this.anchorPointer) {
+      const pointer = this.anchorPointer;
+      if (this.tool === 'connector') this.updateCandidateHover(pointer);
+      else if (this.measurePointPicking) this.updateSelectionHover(pointer);
+    }
     const { x, y, z, w } = this.camera.quaternion;
     this.callbacks.onCameraChanged([x, y, z, w]);
   }
 
   private removeRenderedPart(part: RenderPart): void {
+    if (this.anchorFace?.part === part) this.clearAnchors();
     const relatedConnectors = this.connectorRegistry
       .list()
       .filter((connector) => connector.partId === part.data.id);
@@ -1813,6 +1870,7 @@ export class MateViewport {
     this.controls.update();
     this.stage.beforeRender(this.camera, this.controls.target, [this.modelRoot, this.featurePreview.group, this.historyPreview.group, this.orientationBox?.group]);
     this.output.render(this.camera);
+    this.anchorOverlay.render(point => this.projectScreenPoint(point));
     if (this.sketchSurface && this.cssRenderer)
       this.cssRenderer.render(this.cssScene, this.camera);
     this.sampleFrame(started, performance.now());
@@ -1865,6 +1923,7 @@ export class MateViewport {
       this.orientationHover(event);
       return;
     }
+    if (event.buttons !== 0 && this.anchorFace) { this.clearAnchors(); this.resetFaceMaterials(); }
     if (this.tool === "none") {
       if (event.buttons === 0) this.updateSelectionHover(event);
       else if ((event.buttons & 1) === 1) this.updateSelectionBox(event);
@@ -1876,27 +1935,11 @@ export class MateViewport {
     else this.updateConnectorHover();
   }
 
-  private updateCandidateHover(event: PointerEvent): void {
-    if (!this.modelRoot.visible) { this.setHover(null); return; }
-    const hit = this.raycaster.intersectObjects(
-      [...this.parts.values()].filter(part => part.group.visible).map((part) => part.surface),
-      false,
-    ).filter(hit => !this.section.hides(String(hit.object.userData.partId), hit.point))[0];
-    if (!hit || hit.faceIndex === undefined || hit.faceIndex === null) {
-      this.setHover(null);
-      return;
-    }
-    const part = this.parts.get(String(hit.object.userData.partId));
-    if (!part) return this.setHover(null);
-    const faceId = this.faceIdForTriangle(part.faceRanges, hit.faceIndex);
-    const topology = faceId === undefined ? undefined : part.topology.get(faceId);
-    if (!topology || topology.candidates.length === 0) return this.setHover(null);
-    this.setHover({
-      kind: "candidate",
-      part,
-      faceId: topology.id,
-      candidate: this.closestCandidate(topology.candidates, part.group, event),
-    });
+  private updateCandidateHover(event: { clientX: number; clientY: number }): void {
+    const pick = this.pickAnchors(event);
+    const anchor = pick.snapped;
+    const part = anchor && this.parts.get(anchor.part.data.id);
+    this.setHover(anchor && part ? { kind: 'candidate', part, faceId: anchor.faceId, candidate: anchor.candidate } : null);
   }
 
   private updateConnectorHover(): void {
@@ -1940,6 +1983,7 @@ export class MateViewport {
       return;
     }
     if (distance > 4) return;
+    if (this.tool === "connector") this.updateCandidateHover(event);
     if (!this.hover) return;
     if (this.tool === "connector" && this.hover.kind === "candidate") {
       this.createConnector(this.hover);
@@ -1961,14 +2005,14 @@ export class MateViewport {
     return hit&&filter==='body'?{...hit,item:{id:`body:${hit.item.partId}`,kind:'body' as const,partId:hit.item.partId,label:hit.partName}}:hit;
   }
 
-  private updateSelectionHover(event: PointerEvent): void {
+  private updateSelectionHover(event: { clientX: number; clientY: number }): void {
     if(this.historyEditing){
       const hit=this.historySelectionHit(event);
       cadSelection.dispatch({type:'set-hovered',item:hit?.item??null});
       this.callbacks.onHover(hit?{partName:hit.partName,label:hit.item.label,detail:hit.item.detail??'Face selection'}:null);
       return;
     }
-    const next = this.selectionHit(event);
+    const next = this.measurePointPicking ? this.anchorSelectionHit(event) : this.selectionHit(event);
     if (next?.item.id === this.selectionHover?.item.id) return;
     this.selectionHover = next;
     cadSelection.dispatch({ type: "set-hovered", item: next?.item ?? null });
@@ -2060,7 +2104,7 @@ export class MateViewport {
       if(!this.sketchPlaneSelection){cadSelection.dispatch({type:'clear'});this.callbacks.onStateChanged();return;}
       // A missed solid can still select a datum plane while repairing a sketch.
     }
-    const hit = this.selectionHit(event);
+    const hit = this.measurePointPicking ? this.anchorSelectionHit(event) : this.selectionHit(event);
     if (hit?.item.kind === "face" && hit.faceId !== undefined) this.rememberSurfaceHit(hit.part, hit.faceId);
     if(this.sketchPlaneSelection && !hit){
       this.updatePointer(event);
@@ -2176,28 +2220,6 @@ export class MateViewport {
     return faceIdForTriangle(ranges, triangleIndex);
   }
 
-  private closestCandidate(
-    candidates: ConnectorCandidate[],
-    group: THREE.Group,
-    event: {clientX:number;clientY:number},
-  ): ConnectorCandidate {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    return [...candidates].sort((left, right) => {
-      const distance = (candidate: ConnectorCandidate): number => {
-        const projected = new THREE.Vector3(...candidate.origin)
-          .applyMatrix4(group.matrixWorld)
-          .project(this.camera);
-        const x = rect.left + (projected.x + 1) * 0.5 * rect.width;
-        const y = rect.top + (1 - projected.y) * 0.5 * rect.height;
-        return Math.hypot(x - event.clientX, y - event.clientY);
-      };
-      const delta = distance(left) - distance(right);
-      return Math.abs(delta) > 5
-        ? delta
-        : connectorKindPreference(left.kind) - connectorKindPreference(right.kind);
-    })[0];
-  }
-
   private setHover(target: HoverTarget | null): void {
     const oldKey = this.hoverKey(this.hover);
     const newKey = this.hoverKey(target);
@@ -2208,7 +2230,7 @@ export class MateViewport {
     this.refreshConnectorMaterials();
     if (target?.kind === "candidate") {
       this.setFaceMaterial(target.part, target.faceId, 1);
-      this.showCandidateCloud(target);
+      this.addTransientTriad(target.part.group.matrixWorld, target.candidate);
       this.callbacks.onHover({
         partName: target.part.data.name,
         label: target.candidate.label,
@@ -2231,18 +2253,6 @@ export class MateViewport {
 
   private hoverKey(target: HoverTarget | null): string {
     return hoverKey(target);
-  }
-
-  private showCandidateCloud(target: CandidateHover): void {
-    const topology = target.part.topology.get(target.faceId);
-    if (!topology) return;
-    const cloud = createCandidateCloud(
-      topology.candidates,
-      target.part.group.matrixWorld,
-      this.markerScale,
-    );
-    this.overlayRoot.add(cloud);
-    this.addTransientTriad(target.part.group.matrixWorld, target.candidate);
   }
 
   private addTransientTriad(partWorld: THREE.Matrix4, candidate: ConnectorCandidate): void {
@@ -2362,6 +2372,10 @@ export class MateViewport {
         group.materialIndex = selectsWholePart || selectedFaces.has(faceId) ? 2 : 0;
       });
     });
+    if (this.anchorFace) {
+      const part = this.parts.get(this.anchorFace.part.data.id);
+      if (part) this.setFaceMaterial(part, this.anchorFace.faceId, 1);
+    }
     if (this.tool === "none" && this.selectionHover) {
       if (this.selectionHover.faceId !== undefined) {
         const groupIndex = this.selectionHover.part.faceRanges.findIndex(

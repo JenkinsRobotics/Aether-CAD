@@ -1359,6 +1359,7 @@ cadCommands.register("commit-part", () => {
 });
 
 function toggleTool(tool: AuthoringTool): void {
+  window.dispatchEvent(new CustomEvent("aether-inspection-tool-open", { detail: tool }));
   viewer.setTool(viewer.activeTool === tool ? "none" : tool);
   updateLists();
 }
@@ -1639,7 +1640,10 @@ window.addEventListener('aether-finish-edges-request',event=>{
 });
 window.addEventListener('aether-source-edge-picking',event=>viewer.setSourceEdgePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-vertex-picking',event=>viewer.setSourceVertexPicking((event as CustomEvent).detail===true));
-window.addEventListener('aether-measure-picking',event=>viewer.setMeasurePicking((event as CustomEvent).detail===true));
+window.addEventListener('aether-measure-picking', event => {
+  const { active, points } = (event as CustomEvent<{ active: boolean; points: boolean }>).detail;
+  viewer.setMeasurePicking(active, points);
+});
 window.addEventListener('aether-measure-project', event => {
   const { points, respond } = (event as CustomEvent).detail;
   respond(viewer.projectMeasurementPoints(points));

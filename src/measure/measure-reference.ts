@@ -6,6 +6,8 @@ import { selectedCandidateId } from "../viewport/topology-selection";
 export interface MeasureReference { body_id: string; face_id?: number; edge_index?: number; vertex?: "a" | "b" }
 
 export function measureReference(item: CADSelectionItem): MeasureReference | null {
+  // An inferred circle/face/shaft center is a point, not the whole edge.
+  if (item.id.startsWith(`anchor:${item.partId}:`)) return null;
   if (item.kind === "body") return { body_id: item.partId };
   if (item.kind === "face") return item.faceId === undefined ? null : { body_id: item.partId, face_id: item.faceId };
   const candidate = selectedCandidateId(item) ?? "";

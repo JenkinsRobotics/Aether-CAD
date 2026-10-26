@@ -30,7 +30,7 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
     if (!closeOpen) return;
     closeOpen = null;
     if (clear) cadSelection.dispatch({ type: 'clear' });
-    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: false }));
+    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active: false, points: false } }));
     cadSelection.dispatch({ type: 'set-filter', filter: previousFilter });
     window.removeEventListener('keydown', escape);
     window.removeEventListener('aether-inspection-tool-open', otherTool);
@@ -61,7 +61,11 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   display.body.append(lengthRow, angleRow);
   const host = document.createElement('div'); host.className = 'cad-measure-results'; win.body.append(host);
   const root = createRoot(host);
-  const syncFilter = () => cadSelection.dispatch({ type: 'set-filter', filter: mode.value() === 'Objects' ? FILTERS[filters.value()] : 'vertex' });
+  const syncFilter = () => {
+    const points = mode.value() !== 'Objects';
+    cadSelection.dispatch({ type: 'set-filter', filter: points ? 'vertex' : FILTERS[filters.value()] });
+    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active: true, points } }));
+  };
   const render = () => {
     const objects = mode.value() === 'Objects'; filterRow.hidden = typeRow.hidden = !objects;
     lengthRow.hidden = mode.value() === '3-point angle';
@@ -72,6 +76,5 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   closeOpen = () => close();
   window.addEventListener('keydown', escape);
   window.addEventListener('aether-inspection-tool-open', otherTool);
-  window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: true }));
   syncFilter(); render(); changed();
 }
