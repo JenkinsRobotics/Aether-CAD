@@ -19,7 +19,7 @@ export function ViewportCameraNavigation() {
     cadCameraPresentation.snapshot,
     cadCameraPresentation.snapshot,
   );
-  return (<EnvironmentControl items={menu.items} onSelect={menu.onSelect} navigatorVisible={cube.visible}><ViewportNavigationCube
+  return (<EnvironmentControl items={menu.items} onSelect={menu.onSelect} navigatorVisible={cube.visible} onNavigatorVisibleChange={cube.setVisible}><ViewportNavigationCube
       id="view-cube"
       appearance="studio"
       orientation={camera.orientation}

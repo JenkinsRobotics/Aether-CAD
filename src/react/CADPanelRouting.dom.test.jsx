@@ -46,6 +46,22 @@ it('retains the same camera navigation through sketch entry and exit', async()=>
     expect(isVisible(cube)).toBe(true);
   }
 });
+it('toggles the same view cube directly and persists visibility independently of the document', async()=>{
+  const toggle=container.querySelector('[aria-label="View cube"]');
+  const cube=container.querySelector('#view-cube');
+  expect(toggle).toBeTruthy();
+  await act(async()=>toggle.click());
+  expect(isVisible(cube)).toBe(true);
+  expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  await act(async()=>toggle.click());
+  expect(isVisible(cube)).toBe(false);
+  expect(localStorage.getItem('aether-cad.view-cube-visible')).toBe('false');
+  await act(async()=>toggle.click());
+  expect(container.querySelector('#view-cube')).toBe(cube);
+  expect(isVisible(cube)).toBe(true);
+  expect(localStorage.getItem('aether-cad.view-cube-visible')).toBe('true');
+  localStorage.removeItem('aether-cad.view-cube-visible');
+});
 it('keeps the pinned Feature tree beside History and Version control, which replace each other', async()=>{
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
   await click('Version control');
