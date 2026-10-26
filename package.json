@@ -15,11 +15,11 @@
     "test:headless": "npm run build:automation && node scripts/verify-headless-kernel.mjs"
   },
   "dependencies": {
-    "@aether/assets": "file:vendor/aether-assets-0.2.0-alpha.29.tgz",
+    "@aether/assets": "file:vendor/aether-assets-0.2.0-alpha.30.tgz",
     "@aether/core": "file:./aether-engine",
     "@aether/session": "file:vendor/aether-session-0.2.0-alpha.190.tgz",
     "@aether/sketch": "file:vendor/aether-sketch-0.2.0-alpha.4.tgz",
-    "@aether/ui": "file:vendor/aether-ui-0.2.0-alpha.215.tgz",
+    "@aether/ui": "file:vendor/aether-ui-0.2.0-alpha.216.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.180.0"

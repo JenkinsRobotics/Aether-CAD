@@ -1,5 +1,6 @@
 .cad-files-panel { height:100%; min-height:0; display:flex; flex-direction:column; }
-.cad-files-panel > .aui-tabs { flex-shrink:0; }
+.cad-files-panel-heading { margin:4px 8px 14px; }
+.cad-files-panel-scopes { margin:0 8px; }
 .cad-files-panel-content { flex:1; min-height:0; }
 .cad-files-panel-content > .aui-tab-browser { height:100%; }
 .cad-drive-browser > .aui-select-field { margin:0 12px; }

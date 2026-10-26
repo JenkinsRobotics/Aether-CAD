@@ -1,5 +1,45 @@
 # Aether CAD source status
 
+## 2026-10-25 — Shared panels and foundation contracts qualified
+
+CAD consumes immutable Aether UI alpha.216 and assets alpha.30. Files uses the
+same panel segmented control as Comments/Tasks; Comments, AI, Versions and Files
+share header typography, icons, actions and a rightmost notification bell.
+Reconnect/operation notices register there instead of moving panel contents.
+The shared standard and theme tokens live in Aether UI/WIDGETS.md; CAD supplies
+its document operations. AI uses the shared chat/sparkle icon and compact bottom
+model/connections, Agent/Ask/Plan and context controls, without the old connected
+footer. Ask/Plan advertise and execute only CAD's explicit read-only capability
+list; unknown tools remain editing-only. Context shows actual instructions and
+conversation data, not an invented token percentage.
+
+Foundation checkpoint `f951f04` separates typed feature inputs from outputs when
+building dependencies: datum-axis references are followed, while transformed and
+patterned copies do not become their own producers. Part, Assembly and Drawing
+agent entry points validate the published argument-schema subset before dispatch.
+The live browser uncovered a whole-Part pattern identity bug: copied bodies were
+incorrectly finalized as new Extrude outputs, leaving the reopened Part empty.
+Explicit-copy output validation now preserves authored IDs while refusing duplicate
+or substituted IDs. The packaged worker rebuild verifies three 500 mm³ bodies,
+suppression/restore and saved identity/geometry. SolidCraft 0.23 reference inventory
+records 463 command IDs (65 added versus the earlier inventory); this is not a
+parity score or evidence that those commands are implemented.
+
+Verification: full app 1,936 pass/one existing skip, engine 1,189 pass, packaged
+native service 318 pass. After the pattern correction, its new native test passes;
+three body-output tests and the 20-test UI/argument/read-only group pass. Types,
+full build, headless exact kernel and sketch-region checks pass. The final Hybrid
+browser passes all seven workflows: AI model/mode/context interactions, matched
+tabs, all four panel headers in both themes, disconnect/reconnect without geometry
+changes, internal Part/Assembly creation, embedded Drawing save/reopen, and Drive
+scope. Foundation browser passes dependency/refusal, suppression/history and saved
+reopen checks. Fixtures use disposable documents, never the user's open design.
+The standard modeling browser result and installation are recorded separately below.
+
+Evidence: `.verification/foundations-2026-10-25/`, plus browser outputs under
+`.verification/baseline-2026-10-24/{shared-panels-hybrid,foundation-contracts,foundation-modeling}`.
+This increment does not complete the broader CAD/reference baseline.
+
 ## 2026-10-25 — CAD alpha-0.1.18 installed: usable Part → Assembly loop
 
 Source `8b246ce39ee6eb65e1f996bd29f48fcafc74b83e` and its matching worker are live.

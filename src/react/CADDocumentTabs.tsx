@@ -1,6 +1,6 @@
 import { ASSEMBLY_PART_MIME } from "../assembly/insertion-session";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { AetherIcon, DocumentTabBrowser, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
+import { AetherIcon, DocumentTabBrowser, PanelNotice, NewFileDialog, type DocumentConnection, type DocumentElementTab } from "@aether/ui";
 import { NewDesignDialog } from "@aether/ui/new-design";
 import { CAD_DESIGN_KINDS, DESIGN_UNIT_OPTIONS } from "@aether/session/library/design-kinds";
 import { createNativeFile } from "@aether/session/library/create-native-file";
@@ -305,9 +305,9 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const controls={creation,revisionForTab:(id:string)=>revisions[id]??{label:'V1.0',title:'Working version V1.0'},tabActions:(id:string)=>tabActionItems(targetFor(id)),onTabAction:runTabAction,saveStatus,tabs,
     label:project ? "Project tabs" : "Open files",folders,onFoldersChange:updateFolders,onOrganize:()=>setOrganizing(true),onManage:() => setManaging(true),onAdd:() => setChoosing(true),onReorder:reorder,onDetach:detach};
   return <>
-    {error && <div role="alert">{error}</div>}
+    {variant !== "browser" && <PanelNotice message={error}/>}
     {variant === "browser"
-      ? <CADFilesPanel documentID={documentID} connection={connection} onDesignDragStart={event => {
+      ? <CADFilesPanel error={error} documentID={documentID} connection={connection} onDesignDragStart={event => {
           const id = (event.target as Element).closest('[data-document-tab-id]')?.getAttribute('data-document-tab-id');
           if (!id || !project?.id || !project.parts.some(part => part.id === id)) return;
           event.dataTransfer.setData(ASSEMBLY_PART_MIME, JSON.stringify({ kind: 'design-part', workspaceId: project.id, partId: id }));

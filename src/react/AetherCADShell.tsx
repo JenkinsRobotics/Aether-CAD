@@ -380,8 +380,6 @@ export function AetherCADShell() {
     ...(hasDeviceReminders?[{id:'device-reminders',title:'Device reminders',icon:<AetherIcon name="stopwatch"/>,content:<RemindersPanel/>}]:[]),
     ...(suite ? [{ id: "history", title: "History", icon: <CadIcon name="history" />, content: <WorkbenchBottomPanel presentation={presentation} sidebar /> }] : []),
   ], { features: "browser" }, documentConnection).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
-  const advisor = leftPanels.find(panel=>panel.id === "advisor");
-  if (advisor) advisor.icon = <AetherIcon name="brain"/>;
   // Files (Jonathan, 2026-10-25): the bottom tray's tabs as a Fusion-style data panel.
   // The tray itself stays at the bottom; its toggle is in the right-hand view tools.
   leftPanels.push({id:"files",title:"Files",icon:<AetherIcon name="folder"/>,content:documentConnection?<CADDocumentTabs connection={documentConnection} variant="browser"/>:null});

@@ -1,5 +1,6 @@
 /** Exercise real Hybrid persistence and Drive navigation on Studio's disposable fixture. */
 import assert from 'node:assert/strict';
+import { verifyPanelPresentation } from './browser/panel-presentation.mjs';
 import {createRequire} from 'node:module';
 import {randomUUID} from 'node:crypto';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
@@ -33,6 +34,49 @@ try{
  ]};
  source=await api('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name:'Hybrid source.acpart',data_base64:Buffer.from(JSON.stringify(data)).toString('base64')});
  await page.goto(`${origin}/cad/index.html?document=${source.id}`);await page.getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});await button('Files').click();
+ await step('agent-composer-controls',async()=>{
+  // A deterministic provider fixture exercises the composer without using a paid account.
+  let sent;
+  await page.route('**/api/agent/*',async route=>{
+   const action=new URL(route.request().url()).pathname.split('/').at(-1),data=route.request().postDataJSON();
+   let result={id:'fixture-chat',state:'completed',text:'Fixture response'};
+   if(action==='catalog')result={plugins:[{id:'fixture',name:'Fixture provider',installed:true,enabled:true,runtimeReady:true,account:{connected:true},capabilities:{chat:true}}]};
+   if(action==='models')result={id:'fixture-models',state:'running'};
+   if(action==='job'&&data.id==='fixture-models')result={id:'fixture-models',state:'completed',models:[{id:'fixture-model',name:'Fixture model'}]};
+   if(action==='chat')sent=data;
+   await route.fulfill({json:result});
+  });
+  await page.reload();await page.getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});
+  await button('AI advisor').click();const chat=page.getByRole('region',{name:'Aether Agent',exact:true});
+  await expect(button('Choose model: Account default')).toBeVisible();
+  await expect(chat).not.toContainText('· Connected');
+  await button('Choose model: Account default').click();await page.getByRole('menuitemradio',{name:'Fixture model',exact:true}).click();
+  await button('Chat mode: Agent').click();await page.getByRole('menuitemradio',{name:'Plan',exact:true}).click();
+  await chat.getByRole('textbox').fill('Inspect this bracket and plan a change.');await button('Send').click();
+  await expect.poll(()=>sent?.model).toBe('fixture-model');assert.ok(sent.context.includes('Chat mode: plan'));
+  assert.ok(sent.tools.some(tool=>tool.name==='aether_cad_inspect'));assert.ok(!sent.tools.some(tool=>tool.name==='aether_cad_extrude'));
+  await expect(chat.getByRole('log')).toContainText('Fixture response');
+  await button('Chat context').click();await expect(page.getByRole('dialog')).toContainText('Bracket');await expect(page.getByRole('dialog')).toContainText('2 messages');await button('Done').click();
+  await button('Choose model: Fixture model').click();await page.getByRole('menuitem',{name:'Add / manage connections…',exact:true}).click();await expect(page.getByRole('dialog',{name:'Agent connections'})).toBeVisible();await button('Done').click();
+  await page.setViewportSize({width:1024,height:768});
+  assert.equal(await chat.locator('.aui-agent-settings').evaluate(el=>el.scrollWidth>el.clientWidth),false);
+  await expect(chat.locator('[data-icon-missing]')).toHaveCount(0);
+  await page.screenshot({path:join(evidence,'agent-composer.png')});
+  await page.setViewportSize({width:1440,height:1000});await button('Files').click();await page.unroute('**/api/agent/*');
+ });
+ await step('shared-panel-tabs',async()=>{
+  const measure=group=>group.evaluate(el=>{const b=el.querySelector('[aria-checked=true]'),s=getComputedStyle(el),bs=getComputedStyle(b);return {width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,radius:s.borderRadius,fill:bs.backgroundColor,border:bs.borderColor,buttonHeight:b.getBoundingClientRect().height};});
+  const files=await measure(panel.getByRole('radiogroup',{name:'Files view'}));
+  await page.getByRole('toolbar',{name:'Aux toolbar'}).getByRole('button',{name:'Comments',exact:true}).click();
+  const comments=await measure(page.getByRole('radiogroup',{name:'Review tabs'}));
+  assert.deepEqual(files,comments);
+  await page.screenshot({path:join(evidence,'comments-tabs.png')});
+  await button('Files').click();
+  await panel.getByRole('radio',{name:'This design',exact:true}).focus();await page.keyboard.press('ArrowRight');
+  await expect(panel.getByRole('radio',{name:'Drive',exact:true})).toHaveAttribute('aria-checked','true');
+  await page.keyboard.press('ArrowLeft');await expect(panel.getByRole('radio',{name:'This design',exact:true})).toHaveAttribute('aria-checked','true');
+ });
+ await step('panel-themes-and-notifications',()=>verifyPanelPresentation(page,evidence));
  await step('standalone-to-hybrid',async()=>{
   await expect(panel).toContainText('Standalone part');
   await panel.getByRole('button',{name:'Design actions',exact:true}).click();await page.getByRole('menuitem',{name:'Create Hybrid design from this Part…',exact:true}).click();
@@ -63,14 +107,14 @@ try{
   await panel.locator(`[data-document-tab-id="${drawingId}"] .aui-tab-browser-row`).click();await expect(page.locator('svg[data-sheet-id]')).toBeVisible({timeout:60000});await expect(page.locator('svg[data-sheet-id]')).toContainText('Contained in Machine');
  });
  await step('drive-location-and-design-scope',async()=>{
-  await panel.getByRole('tab',{name:'Drive',exact:true}).click();await expect(panel.locator(`[data-drive-id="${design}"]`)).toBeVisible({timeout:30000});
+  await panel.getByRole('radio',{name:'Drive',exact:true}).click();await expect(panel.locator(`[data-drive-id="${design}"]`)).toBeVisible({timeout:30000});
   await expect(panel.locator(`[data-drive-id="${source.id}"]`)).toBeVisible();
   await panel.getByRole('button',{name:'Create in Drive',exact:true}).click();await page.getByRole('menuitem',{name:'New folder…',exact:true}).click();
   await page.getByRole('dialog').getByRole('textbox').fill('Project files');await page.getByRole('dialog').getByRole('button',{name:'Create',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
   await panel.getByRole('button',{name:/Project files/}).first().click();await expect(panel).toContainText('This folder is empty.');
   await panel.getByRole('button',{name:'Back to My files',exact:true}).click();await expect(panel.locator(`[data-drive-id="${design}"]`)).toBeVisible();
   await page.screenshot({path:join(evidence,'drive-location.png')});
-  await panel.getByRole('tab',{name:'This design',exact:true}).click();assert.equal(await panel.locator('[data-document-tab-id]').count(),5);
+  await panel.getByRole('radio',{name:'This design',exact:true}).click();assert.equal(await panel.locator('[data-document-tab-id]').count(),5);
   await expect(panel.locator(`[data-document-tab-id="${source.id}"]`)).toHaveCount(0);
   await page.setViewportSize({width:1024,height:768});assert.equal(await panel.evaluate(el=>el.scrollWidth>el.clientWidth),false);
  });

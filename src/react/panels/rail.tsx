@@ -16,6 +16,7 @@ import { DocumentFileManager, type DocumentConnection, type FileManagerItem } fr
 import type { AssistantMessage } from "@aether/ui/concept-widgets";
 import { cadPresentation } from "../../cad-presentation-store";
 import { cadAgentContext, cadAgentInteraction, subscribeCADAgent } from '../../automation/live-workspace';
+import { cadReadOnlyInteraction } from '../../ai/read-only-tools';
 import {cadAgentContextText} from '../../ai/agent-context';
 
 const documentID = () => (typeof location === "undefined" ? null : new URLSearchParams(location.search).get("document"));
@@ -120,7 +121,7 @@ export function AdvisorPanel({connection}: {connection?:DocumentConnection}) {
   // What the advisor is told about the document, so its answers are about this
   // part rather than parts in general.
   const productInteraction=cadAgentInteraction(agentContext);
-  const interaction=withReviewAgent(productInteraction,()=>currentConnection.current??null);
+  const interaction=cadReadOnlyInteraction(withReviewAgent(productInteraction,()=>currentConnection.current??null));
   const sharing=useLiveEditorAccess({app:'cad',documentID:documentID(),interaction:productInteraction});
   const context=cadAgentContextText(presentation.documentName,presentation.workspaceMode,interaction)+`\nCurrent selection: ${JSON.stringify(selection.items.map(({id,kind,partId,label})=>({id,kind,partId,label})))}`;
   return (

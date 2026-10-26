@@ -1,3 +1,4 @@
+import { PanelNotice } from '@aether/ui';
 import { ASSEMBLY_PART_MIME } from "../assembly/insertion-session";
 import { isPartFile } from "@aether/core/document/file-types";
 import { useEffect, useRef, useState } from 'react';
@@ -91,7 +92,7 @@ export function CADDriveBrowser({ documentID, connection }: { documentID: string
       <button aria-label={`Back to ${rootName}`} disabled={!place?.parent} onClick={() => setPlace(p => p && ({ ...p, parent: null }))}><AetherIcon name="home"/></button>
       <span>{rootName}</span>{listing.path.map(folder => <span key={folder.id}><AetherIcon name="chevron-right"/><button onClick={() => setPlace(p => p && ({ ...p, parent: folder.id }))}>{folder.name}</button></span>)}
     </nav>
-    {error && <p role="alert">{error}</p>}
+    <PanelNotice message={error}/>
     <ul className="aui-tab-browser-items">{[...listing.files].sort((a, b) => Number(b.kind === 'folder') - Number(a.kind === 'folder') || a.name.localeCompare(b.name)).map(file => <li key={file.id} data-drive-id={file.id} draggable={file.kind === 'file' && isPartFile(file.name)}
       onDragStart={event => {
         if (!isPartFile(file.name)) return;

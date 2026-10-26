@@ -65,7 +65,7 @@ it('limits This design to its current standalone document instead of every open 
  await act(async()=>root.render(<Tabs variant="browser" connection={{key:'test',name:'Bracket',flush:vi.fn()}}/>));
  expect(container.querySelector('[data-document-tab-id="test"]')).toBeTruthy();
  expect(container.querySelector('[data-document-tab-id="elsewhere"]')).toBeNull();
- expect([...container.querySelectorAll('[role="tab"]')].map(tab=>tab.textContent)).toEqual(['This design','Drive']);
+ expect([...container.querySelectorAll('[aria-label="Files view"] [role="radio"]')].map(tab=>tab.textContent)).toEqual(['This design','Drive']);
  expect(container.textContent).toContain('Standalone part');
 });
 it('lists embedded drawings and uses internal creation actions in a Hybrid design',async()=>{

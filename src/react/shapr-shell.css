@@ -861,7 +861,7 @@
 .cad-rail-panel { display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 12px; }
 .cad-rail-panel--fill { padding: 0; }
 .cad-rail-panel--fill > h2 { padding: 10px 12px 0; }
-.cad-rail-panel h2 { margin: 0; font-size: 13px; font-weight: var(--aether-font-weight-strong); }
+.cad-rail-panel > h2 { margin: 0; font-size: 13px; font-weight: var(--aether-font-weight-strong); }
 .cad-rail-dim { color: var(--aether-color-text-dim); }
 .cad-rail-ok { color: var(--aether-color-ok); }
 .cad-rail-error { color: var(--aether-color-error); }
@@ -942,6 +942,3 @@
 
 .cad-document-tray-slot { display:contents; }
 .cad-document-tray-slot[hidden] { display:none; }
-
-/* Match the shared Model Studio AI card inset inside the auxiliary tray. */
-.cad-rail-panel--agent { margin:2px -2px; width:calc(100% + 4px); height:calc(100% - 4px); }
