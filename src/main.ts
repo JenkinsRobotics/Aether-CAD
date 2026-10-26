@@ -1,3 +1,4 @@
+import { mountSelectionManipulator } from './features/selection-manipulator';
 import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "./assembly/insertion-session";
 import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
 import { toggleMeasureWindow } from "./measure/MeasureWindow";
@@ -1603,6 +1604,19 @@ configureCADAgentWorkspace({
 mountFeatureAuthoring(()=>activePartDocument,async doc=>{
  await evaluateAndShowPart(doc,"Feature history updated.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
+});
+mountSelectionManipulator({
+ viewport: viewportElement, viewer, document: () => activePartDocument,
+ editable: () => activeWorkspaceKind === 'part' && hostedPartEditable() && !cadPresentation.snapshot().loading && cadPresentation.snapshot().workspaceMode === 'modeling',
+ apply: async doc => {
+  const source=activePartDocument;
+  validatePartDocument(doc);
+  const model=await worker.evaluatePart(doc);
+  if(activePartDocument!==source || !hostedPartEditable() || activeWorkspaceKind!=='part') throw new Error('The document changed; movement was cancelled.');
+  showEvaluatedPart(doc,model,new Map(),'Transform applied.',false);
+  updateLists();
+ },
+ status: (message,error) => setStatus(message,error?'error':'normal'),
 });
 // Curves from the model (intersection, isoparametric, projection) become 3D sketch features.
 mountDerivedCurveCommands({

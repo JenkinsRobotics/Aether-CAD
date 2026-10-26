@@ -254,3 +254,19 @@ Raw interchange files in Drive must be added through Import CAD in a Part;
 direct document-tab opening is rejected so a source file cannot be overwritten
 with Part JSON. These source changes require an explicit release promotion to
 reach the installed application.
+
+### Selection manipulator
+
+Select an editable exact body in a Part document to show the shared Aether UI
+manipulator at its bounding-box center. Drag an arrow for axis movement, a white
+pad for movement in a plane, or a curved arrow for rotation. The blue pivot can
+snap to the same topology anchors used by Measure and connector placement;
+Shift-click places it on a surface or the camera plane. Moving the pivot leaves
+the geometry unchanged. Double-click it to return to the selection center.
+
+Copy makes a new body on the next movement. Shift-drag gives fine adjustment;
+arrow keys on an axis or rotation handle adjust its value. Escape cancels the
+current drag. Each completed movement uses an ordinary validated Transform
+feature, retains selected body identities, and participates in Undo/Redo and
+save/reopen. The manipulator is hidden during other feature tools and read-only
+viewing. Assembly constraints continue to use the assembly editing tools.

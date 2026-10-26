@@ -1,3 +1,5 @@
+import { projectSelectionManipulator, transformMatrix, type Point3 } from './viewport/selection-manipulator-math';
+import type { NumericPartTransform } from '@aether/core/document';
 import { TransparentViewportOutput } from './viewport/transparent-output';
 import { modelStudioCamera } from '@aether/ui';
 import { modelStudioEnvironment as studioLook } from '@aether/assets/themes/rendering/model-studio';
@@ -12,7 +14,7 @@ import { gradientBackground } from "./viewport/environment-background";
 import { updateSketchEnvironment } from "./sketch/environment-appearance";
 import type { PlaneTheme } from "./viewport/appearance-themes";
 import type { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
-import { TopologyAnchorPicker, anchorSelection, type AnchorFace } from './viewport/topology-anchors';
+import { TopologyAnchorPicker, anchorSelection, anchorWorldPoint, type AnchorFace } from './viewport/topology-anchors';
 import { TopologyAnchorOverlay } from './viewport/topology-anchor-overlay';
 import { selectedCandidateId } from "./viewport/topology-selection";
 import {anchorForPlanarFace,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
@@ -1445,6 +1447,49 @@ export class MateViewport {
   }
   projectTransformHandles(request:TransformGizmoRequest) {
     return projectTransformGizmo(this.camera,this.renderer.domElement.getBoundingClientRect(),request);
+  }
+
+  private manipulatorPreview: { group: THREE.Group; original: THREE.Matrix4; ghost?: THREE.Group }[] = [];
+  manipulatorFrame(ids: readonly string[]) {
+    if (this.tool !== 'none' || this.measurePicking || this.sketchSurface || this.sketchPlaneSelection || !this.modelRoot.visible || this.historyEditing) return null;
+    if (ids.some(id => !this.parts.get(id)?.group.visible || this.parts.get(id)?.data.geometryKind === 'mesh')) return null;
+    const bounds = this.renderedPartBounds(ids, true);
+    return bounds.isEmpty() ? null : { centerMillimeters: bounds.getCenter(new THREE.Vector3()).toArray(), radiusMillimeters: bounds.getSize(new THREE.Vector3()).length()/2 };
+  }
+  projectSelectionManipulator(pivot: Point3) {
+    return projectSelectionManipulator(this.camera, this.renderer.domElement.getBoundingClientRect(), pivot);
+  }
+  previewManipulatorTransform(ids: readonly string[], transform: NumericPartTransform, copy: boolean) {
+    if (!this.manipulatorPreview.length) for (const id of ids) {
+      const part = this.parts.get(id); if (!part) continue;
+      part.group.updateMatrix();
+      const ghost = copy ? part.group.clone(true) : undefined;
+      if (ghost) part.group.parent?.add(ghost);
+      this.manipulatorPreview.push({group: part.group, original: part.group.matrix.clone(), ghost});
+    }
+    for (const item of this.manipulatorPreview) {
+      const target = item.ghost ?? item.group;
+      transformMatrix(transform).multiply(item.original).decompose(target.position, target.quaternion, target.scale);
+      target.updateMatrixWorld(true);
+    }
+  }
+  clearManipulatorPreview() {
+    for (const item of this.manipulatorPreview) {
+      if (item.ghost) item.ghost.removeFromParent();
+      else { item.original.decompose(item.group.position, item.group.quaternion, item.group.scale); item.group.updateMatrixWorld(true); }
+    }
+    this.manipulatorPreview = [];
+  }
+  clearInteractionAnchors() { this.clearAnchors(); this.resetFaceMaterials(); }
+  pickManipulatorPivot(event: {clientX:number;clientY:number}, origin: Point3): {point:Point3;label?:string}|null {
+    const anchor = this.pickAnchors(event).snapped;
+    if (anchor) return {point:anchorWorldPoint(anchor).toArray(), label:anchor.candidate.label};
+    this.updatePointer(event);
+    const hit = this.raycaster.intersectObjects(this.pickableSurfaces(), false).find(hit => !this.section.hides(String(hit.object.userData.partId), hit.point));
+    if (hit) return {point:hit.point.toArray(),label:'surface'};
+    const normal = this.camera.getWorldDirection(new THREE.Vector3());
+    const point = this.raycaster.ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(normal,new THREE.Vector3(...origin)),new THREE.Vector3());
+    return point ? {point:point.toArray()} : null;
   }
 
   private projectAxisHandle(origin:THREE.Vector3,normal:THREE.Vector3,depth:number) {
