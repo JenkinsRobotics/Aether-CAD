@@ -23,8 +23,21 @@ export async function verifyHistoryMenus(page, expect) {
   await page.getByRole('radio',{name:'Version control',exact:true}).click();
   const panel = page.getByRole('region',{name:'Version control',exact:true});
   await expect(panel).toBeVisible();
+  await expect(panel.getByRole('button',{name:'Create branch',exact:true})).toHaveCount(0);
+  await expect(panel.getByRole('button',{name:'Merge branches',exact:true})).toHaveCount(0);
+  for (const theme of ['light','dark']) {
+    await page.evaluate(theme=>{document.documentElement.dataset.aetherTheme=theme;document.documentElement.classList.toggle('aether-light-theme',theme==='light');document.querySelectorAll('.aether-theme-model-studio').forEach(el=>{el.classList.toggle('aether-light-theme',theme==='light');el.classList.toggle('aether-dark-theme',theme==='dark');});},theme);
+    await panel.getByRole('button',{name:'Version actions',exact:true}).click();
+    await expect(page.getByRole('menuitem',{name:'Create branch',exact:true})).toBeEnabled();
+    await expect(page.getByRole('menuitem',{name:'Merge branches',exact:true})).toBeEnabled();
+    await page.screenshot({path:`${process.env.AETHER_FRONTEND_EVIDENCE}/cad-${theme}-version-actions.png`});
+    await page.keyboard.press('Escape');
+  }
   const create = async (kind,name) => {
-    await panel.getByRole('button',{name:`Create ${kind}`,exact:true}).click();
+    if (kind === 'branch') {
+      await panel.getByRole('button',{name:'Version actions',exact:true}).click();
+      await page.getByRole('menuitem',{name:'Create branch',exact:true}).click();
+    } else await panel.getByRole('button',{name:`Create ${kind}`,exact:true}).click();
     const dialog = page.getByRole('dialog',{name:new RegExp(`^Create ${kind} from`)});
     await dialog.getByRole('textbox',{name:'Name',exact:true}).fill(name);
     await dialog.getByRole('button',{name:`Create ${kind}`,exact:true}).click();
@@ -47,7 +60,8 @@ export async function verifyHistoryMenus(page, expect) {
   await expect(page.getByRole('treeitem',{name:/^Extrude fit study/})).toBeVisible();
   await create('version','Fit checkpoint');
   await checkout('Main');
-  await panel.getByRole('button',{name:'Merge branches'}).click();
+  await panel.getByRole('button',{name:'Version actions',exact:true}).click();
+  await page.getByRole('menuitem',{name:'Merge branches',exact:true}).click();
   await page.getByRole('combobox',{name:'Merge source',exact:true}).selectOption({label:'Fit study'});
   await button('Merge into Main').click();
   await expect(page.getByRole('combobox',{name:'Merge source'})).toHaveCount(0,{timeout:90000});
