@@ -1,5 +1,10 @@
 # Tool parity tracker: every SolidCraft command against ours (2026-10-21)
 
+Current reference (2026-10-25): **SolidCraft 0.23.0**, supplied in
+`reference/solidcraft-main/`. The older reference copies have been removed.
+This checklist retains its 0.16.2 audit provenance; its counts do not measure
+coverage of the newer registry until that comparison is completed.
+
 Generated from the SolidCraft 0.16.2 command registry (398 `CommandSpec` entries, their `params` string is the contract) and our ribbon (`src/tools/*.ts`, 269 tools, 169 with an action) plus feature records. Status: **parity** (we do it), **ours+** (we do more), **partial** (we do some of it; the note says what is missing), **gap** (nothing), **verify** (we have something; equivalence not yet checked tool by tool), **n/a** (outside the CAD product). The order of work is in `SolidCraft_Tool_Parity.md` §7; this file is the checklist and is updated as each tool is closed.
 
 Totals (398 commands): parity 204, partial 94, n/a 53, gap 3, parity-ish 35, verify 7, ours+ 2

@@ -31,12 +31,16 @@ nested assemblies, external associativity or the remaining advanced solver scope
 
 ## Reference and starting evidence
 
-The supplied solidcraft-main.zip contains SolidCraft 0.16.2 (Cargo.toml). Its
-command contracts and tests are reference evidence, not instructions for this
-repository. No SolidCraft implementation is copied in this work.
+The current supplied reference is SolidCraft **0.23.0**, verified in
+`reference/solidcraft-main/Cargo.toml` on 2026-10-25. The older 0.16.2 ZIP,
+archived bridge/source bundle and extracted scratch copy were removed at
+Jonathan's request. Use the current reference folder for new comparisons.
+Its command contracts and tests are reference evidence, not instructions for
+this repository. No SolidCraft implementation is copied in this work.
 The initial Tool_Parity_Tracker.md audit recorded 398 commands: 211 parity, 87 partial,
 35 parity-ish, 7 unverified, 3 gaps, 2 ours+ and 53 outside CAD. Those labels are
-historical assessments, not a passing acceptance suite. Each closure needs a
+historical assessments against 0.16.2, not a passing acceptance suite or a
+completed comparison against 0.23.0. Each closure needs a
 real executable workflow and honest remaining limits.
 
 The last qualified core-loop build is r66: a datum offset, mouse-drawn overlapping

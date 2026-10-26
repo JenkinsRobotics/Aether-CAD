@@ -1,8 +1,11 @@
 # SolidCraft tool review — what its tools do that ours do not (2026-10-21)
 
-The SolidCraft 0.16.2 snapshot is archived at
-`../AetherStudio/migration/archive/solidcraft-bridge-20261020.tar.gz`; this review restored it to
-a scratch folder and read its command registry (`crates/engine/src/cmd/*.rs`, the `.params(...)`
+This is the historical review of SolidCraft 0.16.2. That snapshot's ZIP, archive
+and scratch extraction were removed on 2026-10-25 at Jonathan's request.
+The current reference is **0.23.0** in `reference/solidcraft-main/`; use it for
+new comparisons. Findings below are not automatically claims of parity with
+that newer version. This review read the old command registry
+(`crates/engine/src/cmd/*.rs`, the `.params(...)`
 strings are its contract), `docs/features.md`, `docs/face-attachments.md`, `docs/capabilities.md`,
 `ROADMAP.md` and the egui Create Sketch dialog. Ours is read from `src/tools/*.ts` (the ribbon),
 `aether-engine/src/document/*.ts` (the feature records) and `src/sketch-workspace.ts`,
