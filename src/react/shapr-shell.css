@@ -915,7 +915,7 @@
 
 /* Model Studio uses its small camera launcher; the complete navigation cube
    and all camera actions remain available in the shared popover. */
-.cad-studio-camera-navigation { top:calc(var(--aui-studio-header-height,56px) + 82px); width:88px; height:60px; display:flex; flex-direction:column; align-items:center; gap:5px; }
+.cad-studio-camera-navigation { top:calc(var(--aui-studio-header-height,56px) + 82px); width:92px; height:55px; display:flex; flex-direction:row; align-items:flex-start; gap:12px; }
 .cad-studio-camera-button { width:40px; height:40px; flex:none; border:0; border-radius:50%; background:#292e30; color:#c2d0d6; display:grid; place-items:center; }
 .cad-studio-camera-button svg { width:24px; height:24px; }
 .cad-studio-camera-label { font-size:8px; color:#657277; text-transform:capitalize; }

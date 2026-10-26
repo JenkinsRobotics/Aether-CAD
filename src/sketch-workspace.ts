@@ -643,6 +643,7 @@ export function openSketchWorkspace(
     boxSelection.dispose();
     disposeDimensionUnits();
     recentSizing.dispose();
+    coordinates.dispose();
     modifications.close();
     constraints.dispose();
     pierce.dispose();

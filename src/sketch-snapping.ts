@@ -1,3 +1,4 @@
+import { cadSnapping } from './cad-snapping-store';
 import { sketchPointRole } from "./sketch/point-roles";
 import {
   ellipseSnapPoints,
@@ -14,6 +15,10 @@ export function snapSketchPoint(
   tolerance: number,
   grid = true,
 ): { point: SketchPoint; label: string } {
+  const preferences = cadSnapping.snapshot();
+  if (!preferences.enabled) return {point:[...raw], label:''};
+  grid = grid && preferences.grid;
+  if (!preferences.geometry) return {point:grid ? [Math.round(raw[0]),Math.round(raw[1])] : [...raw], label:grid ? 'Grid · 1 mm' : ''};
   const candidates: { point: SketchPoint; label: string }[] = [
     { point: [0, 0], label: "Origin" },
   ];

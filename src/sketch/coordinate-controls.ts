@@ -1,3 +1,4 @@
+import { mountSketchSnappingControls } from './snapping-controls';
 import { createCoordinateFields } from "@aether/ui";
 import type { SketchPoint } from "@aether/core/sketch";
 import { mountEllipticalRadiusControl } from "./elliptical-radius-control";
@@ -49,13 +50,7 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
   sides.min = "3"; sides.max = "100"; sides.step = "1"; sides.oninput = o.changed;
   const cornerRadius = numeric("Radius (mm)", "2"); cornerRadius.min = "0"; cornerRadius.oninput = o.changed;
   const slotWidth = numeric("Point slot width (mm)", "6"); slotWidth.min = "0"; slotWidth.oninput = o.changed;
-  const snapOptions = document.createElement('details'), summary = document.createElement('summary');
-  summary.textContent = 'Snapping'; snapOptions.append(summary); parent.append(snapOptions);
-  for (const [label, change] of [["Snap to geometry", o.geometrySnap], ["Snap to grid", o.gridSnap]] as const) {
-    const row = document.createElement("label"), input = document.createElement("input");
-    input.type = "checkbox"; input.checked = true; input.setAttribute("aria-label", label);
-    input.onchange = () => change(input.checked); row.append(input, label); snapOptions.append(row);
-  }
-  return { point, sides: () => Number(sides.value), cornerRadius: () => Number(cornerRadius.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
+  const disposeSnapping = mountSketchSnappingControls(parent, o);
+  return { dispose: disposeSnapping, point, sides: () => Number(sides.value), cornerRadius: () => Number(cornerRadius.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
     update: (tool: string) => { contourActions.hidden = !["line", "arc", "spline", "bezier"].includes(tool); sides.parentElement!.hidden = !tool.endsWith("polygon"); cornerRadius.parentElement!.hidden = tool !== "rounded-rectangle" && tool !== "two-tangent-circle"; slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
 }

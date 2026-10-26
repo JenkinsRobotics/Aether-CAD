@@ -5,7 +5,7 @@ import { cadPresentation } from "../../cad-presentation-store";
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 const before = cadAppearance.snapshot();
 afterEach(() => cadAppearance.dispatch({ type: "apply-saved-preset", id: "test-reset", appearance: before }));
-const choose = (id: string) => selectEnvironmentMenuItem(id, () => {});
+const choose = (id: string) => selectEnvironmentMenuItem(id);
 
 it.each(["none", "grid", "floor", "both"] as CADFloorMode[])("toggles grid and floor independently from %s", mode => {
   cadAppearance.dispatch({ type: "set-floor-mode", mode });
@@ -20,19 +20,18 @@ it.each(["none", "grid", "floor", "both"] as CADFloorMode[])("toggles grid and f
   expect(cadAppearance.snapshot().floorMode).toBe(mode);
 });
 it("routes supported rendering and visibility options to their actual owners", () => {
-  const cube = vi.fn(), camera = vi.fn(), release = cadCameraPresentation.registerActionHandler(camera);
+  const camera = vi.fn(), release = cadCameraPresentation.registerActionHandler(camera);
   try {
     for (const style of ["shaded", "shaded-edges", "wireframe", "hidden-line", "ghost", "accessibility", "zebra", "draft-analysis", "curvature-map"] as const) {
       choose(`display:${style}`);
-      const items = environmentMenuItems(cadAppearance.snapshot(), true, "perspective");
+      const items = environmentMenuItems(cadAppearance.snapshot());
       expect(cadAppearance.snapshot().displayStyle).toBe(style);
       expect(items.filter(item => item.id.startsWith("display:") && item.checked).map(item => item.id)).toEqual([`display:${style}`]);
     }
     choose("edges"); expect(cadAppearance.snapshot().edgesVisible).toBe(!before.edgesVisible);
     choose("shadows"); expect(cadAppearance.snapshot().contactShadowsVisible).toBe(!before.contactShadowsVisible);
-    selectEnvironmentMenuItem("view-cube", cube); expect(cube).toHaveBeenCalledOnce();
-    expect(environmentMenuItems(defaultCADAppearance, false, "orthographic").find(item => item.id === "view-cube")?.checked).toBe(false);
-    choose("projection:orthographic"); expect(camera).toHaveBeenCalledWith({ type: "set-projection", projection: "orthographic" });
+    expect(environmentMenuItems(defaultCADAppearance).some(item => ['view-cube','camera'].includes(item.id))).toBe(false);
+    choose("projection:orthographic"); expect(camera).not.toHaveBeenCalled();
   } finally { release(); }
 });
 

@@ -6,6 +6,7 @@ import { beforeAll,beforeEach,afterEach,afterAll,expect,it,vi } from 'vitest';
 import { createEmptyPartDocument, insertFeature, serializePartDocument, parsePartDocument } from '@aether/core/document';
 import { contourClosed } from '@aether/core/sketch';
 import { cadCommands } from './cad-command-registry';
+import { cadSnapping } from './cad-snapping-store';
 const require=createRequire(import.meta.url);
 const {JSDOM}=require('jsdom');
 let dom,open,doc,apply;
@@ -14,7 +15,7 @@ beforeAll(async()=>{
  for(const key of ['window','document','HTMLElement','CustomEvent','Event','location'])vi.stubGlobal(key,dom.window[key]);
  open=(await import('./sketch-workspace')).openSketchWorkspace;
 });
-beforeEach(()=>{document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Wheel');apply=vi.fn(async next=>{doc=next;});});
+beforeEach(()=>{cadSnapping.set({enabled:true,geometry:true,grid:true});document.body.innerHTML='<div class="cad-studio-viewport"></div>';doc=createEmptyPartDocument('Wheel');apply=vi.fn(async next=>{doc=next;});});
 afterEach(()=>{querySketchControl('.cad-sketch-workspace')?.querySelectorAll('button').forEach(b=>{if(b.dataset.featureAction==='discard')b.click();});});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const click = clickSketchControl;

@@ -1,3 +1,4 @@
+import { cadSnapping } from './cad-snapping-store';
 import { projectSelectionManipulator, transformMatrix, type Point3 } from './viewport/selection-manipulator-math';
 import type { NumericPartTransform } from '@aether/core/document';
 import { TransparentViewportOutput } from './viewport/transparent-output';
@@ -233,7 +234,8 @@ export class MateViewport {
   private pickAnchors(event: { clientX: number; clientY: number }) {
     this.anchorPointer = { clientX: event.clientX, clientY: event.clientY };
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const pick = this.anchorPicker.pick(this.modelRoot.visible ? [...this.parts.values()] : [], this.camera, rect,
+    const snapping = cadSnapping.snapshot();
+    const pick = this.anchorPicker.pick(this.modelRoot.visible && snapping.enabled && snapping.geometry ? [...this.parts.values()] : [], this.camera, rect,
       { x: event.clientX - rect.left, y: event.clientY - rect.top }, (id, point) => this.section.hides(id, point));
     this.anchorFace = pick.face;
     this.anchorOverlay.set(pick);

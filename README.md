@@ -283,3 +283,13 @@ menu contains individual-edge Offset and Project.
 
 Wrap & Emboss is listed as unavailable. There is no wrapping/embossing modeling
 operation behind it yet. The toolbar and search share the same availability state.
+
+### Independent viewport controls
+
+The view-cube icon opens the saved camera navigator with Home, standard views,
+projection and camera preferences. Environment is a separate vertical pill with
+Snapping, snapping targets, grid visibility and display/environment options.
+Cube visibility and snapping preferences persist on the device independently.
+The magnet affects sketch placement/drag snapping and 3D topology-anchor picking;
+turning it off retains the individual geometry/grid choices. Existing model
+constraints and visual grid visibility are unaffected by the snapping preference.

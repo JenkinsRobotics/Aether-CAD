@@ -1,9 +1,11 @@
+import { cadSnapping } from "../../cad-snapping-store";
+import { cameraMenuItems, selectCameraMenuItem } from "./camera-menu";
 import { useEnvironmentMenu } from "./environment-menu";
 import { useViewCubePreference } from "./use-view-cube-preference";
 /** Camera navigation and the viewport surface itself. */
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { EnvironmentControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
+import { AetherIcon, EnvironmentControl, StudioCameraControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { bindViewportContextGesture } from "../../viewport/context-menu-gesture";
 import { cadViewportContext } from "../../viewport/context-menu";
@@ -13,14 +15,17 @@ import { ViewportTools } from "./viewport";
 
 export function ViewportCameraNavigation() {
   const cube = useViewCubePreference();
-  const menu = useEnvironmentMenu(cube.visible, cube.toggle);
+  const menu = useEnvironmentMenu();
+  const snapping = useSyncExternalStore(cadSnapping.subscribe, cadSnapping.snapshot, cadSnapping.snapshot);
   const camera = useSyncExternalStore(
     cadCameraPresentation.subscribe,
     cadCameraPresentation.snapshot,
     cadCameraPresentation.snapshot,
   );
-  return (<EnvironmentControl items={menu.items} onSelect={menu.onSelect} navigatorVisible={cube.visible} onNavigatorVisibleChange={cube.setVisible}><ViewportNavigationCube
+  return (<><StudioCameraControl projection={camera.projection === "perspective" ? "Perspective" : "Orthographic"} expanded={cube.visible} onExpandedChange={cube.setVisible}><ViewportNavigationCube
       id="view-cube"
+      homeMenuItems={cameraMenuItems(camera.projection)}
+      onHomeMenuSelect={selectCameraMenuItem}
       appearance="studio"
       orientation={camera.orientation}
       upAxis={camera.upAxis}
@@ -39,7 +44,21 @@ export function ViewportCameraNavigation() {
       onRoll={(quarterTurns) =>
         cadCameraPresentation.dispatch({ type: "roll", quarterTurns })
       }
-    /></EnvironmentControl>
+    /></StudioCameraControl>
+    <EnvironmentControl actions={[
+      {id:"snap",label:"Snapping",icon:<AetherIcon name="timeline-snap"/>,pressed:snapping.enabled},
+      {id:"snap-options",label:"Snapping options",icon:<AetherIcon name="sliders"/>,items:[
+        {id:"snap-geometry",label:"Snap to geometry",kind:"checkbox",checked:snapping.geometry,disabled:!snapping.enabled},
+        {id:"snap-grid",label:"Snap to grid",kind:"checkbox",checked:snapping.grid,disabled:!snapping.enabled},
+      ]},
+      {id:"grid",label:"Show grid",icon:<AetherIcon name="grid-3"/>,pressed:["grid","both"].includes(menu.appearance.floorMode)},
+      {id:"display",label:"Display and environment",icon:<AetherIcon name="cube-transparent"/>,items:menu.items},
+    ]} onSelect={id => {
+      if(id==="snap") cadSnapping.set({enabled:!snapping.enabled});
+      else if(id==="snap-geometry") cadSnapping.set({geometry:!snapping.geometry});
+      else if(id==="snap-grid") cadSnapping.set({grid:!snapping.grid});
+      else menu.onSelect(id);
+    }}/></>
   );
 }
 
