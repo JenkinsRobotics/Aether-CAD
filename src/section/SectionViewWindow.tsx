@@ -4,14 +4,16 @@
 import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { AetherIcon, Checkbox, FieldRow, Inspector, MenuButton, NumberField, openFeatureWindow } from "@aether/ui";
-import { displayQuantity, parseQuantity, unitChoice } from "@aether/core/units";
+import { unitChoice } from "@aether/core/units";
 import { cadSelection, type CADSelectionItem } from "../cad-selection-store";
 import { documentUnits } from "../document-preferences";
 import "./section-view.css";
-import { DEFAULT_SECTION_PLANES, sectionView, type SectionView, type Vec3 } from "./section-view-store";
+import { DEFAULT_SECTION_PLANES, sectionView, activeSectionCut, newSectionCut, type SectionCut, type SectionView, type Vec3 } from "./section-view-store";
+
+import { mountSectionHandle } from "./section-handle";
 
 type Frame = { originMillimeters: Vec3; normal: Vec3 } | null;
-type Projection = { start: { x: number; y: number }; end: { x: number; y: number }; valueAt: (x: number, y: number) => number | null } | null;
+
 
 let closeOpen: (() => void) | null = null;
 const listeners = new Set<() => void>();
@@ -27,8 +29,8 @@ export function openSectionView(): void {
   if (closeOpen) return;
   window.dispatchEvent(new CustomEvent("aether-inspection-tool-open", { detail: "section" }));
   const before = sectionView.snapshot();
-  let draft: SectionView = before ?? { plane: null, offsetMillimeters: 0, mode: "exclude", items: [] };
-  let active: "planes" | "items" = draft.plane ? "items" : "planes";
+  let draft: SectionView = before ?? { planes: [], activePlaneId:null, mode: "exclude", items: [] };
+  let active: "planes" | "items" = draft.planes.length ? "items" : "planes";
   // The active field decides what a click picks: a face for the plane, a body for the lists.
   const previousFilter = cadSelection.snapshot().filter;
   const pickFor = () => cadSelection.dispatch({ type: "set-filter", filter: active === "planes" ? "face" : "body" });
@@ -36,18 +38,20 @@ export function openSectionView(): void {
   const close = (keep: boolean) => {
     if (!closeOpen) return;
     closeOpen = null;
-    unsubscribe(); cancelAnimationFrame(frame); handle.remove(); root.unmount(); win.close();
+    unsubscribe(); handle.dispose(); root.unmount(); win.close();
     window.removeEventListener("keydown", escape);
     window.removeEventListener("aether-inspection-tool-open", otherTool);
     cadSelection.dispatch({ type: "set-filter", filter: previousFilter });
-    sectionView.set(keep ? (draft.plane ? draft : null) : before);
+    sectionView.set(keep ? (draft.planes.length ? draft : null) : before);
     changed();
   };
   const win = openFeatureWindow({ className: "cad-section-window", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
     title: "Section view", headerIcon: icon, acceptLabel: "Accept section view", discardLabel: "Cancel", onAccept: () => close(true), onDiscard: () => close(false) });
-  const planeSection = win.section("Cutting plane");
+  const planeSection = win.section("Cutting planes");
   const planes = win.entitiesBox("Section planes");
   planeSection.body.append(planes.element);
+  const planeHint=document.createElement('small');planeHint.className='cad-section-scope-hint';
+  planeHint.textContent='Enabled planes cut together. Select a plane to adjust it.';planeSection.body.append(planeHint);
   const controls = document.createElement("div");
   planeSection.body.append(controls);
   const scopeSection = win.section("Bodies");
@@ -62,6 +66,11 @@ export function openSectionView(): void {
   planes.element.append(menuHost);
 
   const update = (next: Partial<SectionView>) => { draft = { ...draft, ...next }; win.setError(null); sectionView.set(draft, true); render(); };
+  const updateCut = (next: Partial<SectionCut>) => {
+    const selected=activeSectionCut(draft);if(!selected)return;
+    update({planes:draft.planes.map(cut=>cut.id===selected.id?{...cut,...next}:cut)});
+  };
+  const addCut = (plane:SectionCut['plane']) => { const cut=newSectionCut(plane);active='planes';update({planes:[...draft.planes,cut],activePlaneId:cut.id}); };
   const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(false); } };
   const otherTool = (event: Event) => { if ((event as CustomEvent).detail !== "section") close(false); };
   const focus = (field: "planes" | "items") => { active = field; render(); };
@@ -83,8 +92,7 @@ export function openSectionView(): void {
       queueMicrotask(() => cadSelection.dispatch({ type: "clear" }));
       if (!face || !frame) { win.setError("Select a planar face, or choose Top, Front or Right."); return; }
       const { originMillimeters, normal } = frame as NonNullable<Frame>;
-      active = "items";
-      update({ plane: { label: face.label, originMillimeters, normal }, offsetMillimeters: 0 });
+      addCut({ label: face.label, originMillimeters, normal });
       return;
     }
     let list = [...draft.items];
@@ -93,88 +101,52 @@ export function openSectionView(): void {
     update({ items: list });
   });
 
-  // The handle: an arrow along the plane normal, dragged in the model, and the offset box.
   const units = documentUnits(), length = unitChoice(units, "length");
-  const handle = document.createElement("div");
-  handle.className = "cad-section-handle";
-  handle.innerHTML = `<svg aria-hidden="true"><line/><circle r="7"/></svg><input aria-label="Section offset (${length.unit})" inputmode="decimal">`;
-  const viewport = document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body;
-  viewport.append(handle);
-  const line = handle.querySelector("line")!, knob = handle.querySelector("circle")!, input = handle.querySelector("input")!;
-  const origin = () => viewport.getBoundingClientRect();
-  let frame = 0, drag: { projection: NonNullable<Projection>; grab: number } | null = null;
-  const project = (): Projection => { let value: Projection = null; window.dispatchEvent(new CustomEvent("aether-section-handle", { detail: { view: draft, respond: (p: Projection) => { value = p; } } })); return value; };
-  const draw = () => {
-    frame = requestAnimationFrame(draw);
-    const projection = drag?.projection ?? project();
-    handle.hidden = !draft.plane || !projection;
-    if (!projection || !draft.plane) return;
-    const box = origin(), live = drag ? project() ?? projection : projection;
-    const [x1, y1, x2, y2] = [live.start.x - box.left, live.start.y - box.top, live.end.x - box.left, live.end.y - box.top];
-    line.setAttribute("x1", String(x1)); line.setAttribute("y1", String(y1)); line.setAttribute("x2", String(x2)); line.setAttribute("y2", String(y2));
-    knob.setAttribute("cx", String(x2)); knob.setAttribute("cy", String(y2));
-    // The offset box sits behind the handle's base, clear of the knob.
-    const along = Math.hypot(x2 - x1, y2 - y1) || 1;
-    input.style.transform = `translate(${x1 - (x2 - x1) / along * 56 - 42}px, ${y1 - (y2 - y1) / along * 56 - 11}px)`;
-    if (document.activeElement !== input) input.value = `${displayQuantity(draft.offsetMillimeters / 1000, units, "length")} ${length.unit}`;
-  };
-  knob.addEventListener("pointerdown", event => {
-    const projection = project(); if (!projection) return;
-    const value = projection.valueAt(event.clientX, event.clientY); if (value === null) return;
-    event.preventDefault(); event.stopPropagation();
-    knob.setPointerCapture(event.pointerId);
-    drag = { projection, grab: value - draft.offsetMillimeters };
-  });
-  knob.addEventListener("pointermove", event => {
-    if (!drag) return;
-    const value = drag.projection.valueAt(event.clientX, event.clientY);
-    if (value !== null && Number.isFinite(value)) update({ offsetMillimeters: value - drag.grab });
-  });
-  const release = () => { drag = null; };
-  knob.addEventListener("pointerup", release); knob.addEventListener("pointercancel", release);
-  input.addEventListener("keydown", event => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    try { update({ offsetMillimeters: parseQuantity(input.value.replace(new RegExp(`\\s*${length.unit}$`), ""), units, "length") * 1000 }); input.blur(); }
-    catch { win.setError(`Enter the offset as a number in ${length.unit}.`); }
-  });
-  input.addEventListener("blur", () => { input.value = ""; });
+  const handle = mountSectionHandle(document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
+    () => activeSectionCut(draft), offsetMillimeters => updateCut({offsetMillimeters}), message => win.setError(message));
 
   const root = createRoot(reactHost);
   const render = () => {
-    planes.render(draft.plane ? [{ label: draft.plane.label, onRemove: () => { active = "planes"; update({ plane: null }); } }] : []);
+    const selected = activeSectionCut(draft);
+    planes.render(draft.planes.map(cut => ({label:cut.plane.label, selected:cut.id===selected?.id,
+      onSelect:()=>{active='planes';update({activePlaneId:cut.id});},
+      onRemove:()=>{const remaining=draft.planes.filter(item=>item.id!==cut.id);active='planes';update({planes:remaining,activePlaneId:selected?.id===cut.id?remaining[0]?.id??null:selected?.id??null});}
+    })));
     items.render(draft.items.map(item => ({ label: item.label, onRemove: () => update({ items: draft.items.filter(entry => entry.id !== item.id) }) })));
     items.element.querySelector(".aui-feature-entities-caption")!.textContent = draft.mode === "include" ? "Items to include" : "Items to exclude";
     items.element.setAttribute("aria-label", draft.mode === "include" ? "Items to include" : "Items to exclude");
     hint.textContent = draft.mode === "exclude" ? "All bodies are cut except those listed above." : "Only the bodies listed above are cut.";
-    win.accept.disabled = !draft.plane;
+    win.accept.disabled = !draft.planes.length;
     if (cadSelection.snapshot().filter !== (active === "planes" ? "face" : "body")) pickFor();
     planes.element.dataset.active = String(active === "planes");
     items.element.dataset.active = String(active === "items");
     root.render(<>
       {createPortal(<AetherIcon name="section-view"/>, icon)}
       {createPortal(<Inspector>
-        <FieldRow label="Offset" onReset={draft.offsetMillimeters ? () => update({ offsetMillimeters: 0 }) : undefined}>
-          <NumberField aria-label="Section offset" value={draft.offsetMillimeters / (length.factor * 1000)} unit={length.unit}
-            disabled={!draft.plane} onValueChange={value => {
-              if (value !== null) update({ offsetMillimeters: value * length.factor * 1000 });
+        <FieldRow label="Offset" onReset={(selected?.offsetMillimeters ?? 0) ? () => updateCut({ offsetMillimeters: 0 }) : undefined}>
+          <NumberField aria-label="Section offset" value={(selected?.offsetMillimeters ?? 0) / (length.factor * 1000)} precision={length.decimals} unit={length.unit}
+            disabled={!selected} onValueChange={value => {
+              if (value !== null) updateCut({ offsetMillimeters: value * length.factor * 1000 });
               else win.setError(`Enter a valid offset in ${length.unit}.`);
             }}
             onKeyDown={event => { if (event.key === "Enter") event.stopPropagation(); }}/>
         </FieldRow>
-        <FieldRow label="Direction"><Checkbox label="Flip cut" checked={!!draft.reversed} disabled={!draft.plane}
-          onChange={event => update({ reversed: event.target.checked })}/></FieldRow>
-        <FieldRow label="Preview"><Checkbox label="Show plane" checked={draft.showPlane !== false}
-          onChange={event => update({ showPlane: event.target.checked })}/></FieldRow>
+        <FieldRow label="Cut"><Checkbox label="Enable plane" checked={!!selected && selected.enabled !== false} disabled={!selected} onChange={event => updateCut({enabled:event.target.checked})}/></FieldRow>
+        <FieldRow label="Direction"><Checkbox label="Flip cut" checked={!!selected?.reversed} disabled={!selected}
+          onChange={event => updateCut({ reversed: event.target.checked })}/></FieldRow>
+        <FieldRow label="Preview"><Checkbox label="Show plane" disabled={!selected} checked={selected?.showPlane !== false}
+          onChange={event => updateCut({ showPlane: event.target.checked })}/></FieldRow>
       </Inspector>, controls)}
-      {createPortal(<MenuButton label="Default section planes" items={DEFAULT_SECTION_PLANES.map(plane => ({ id: plane.label, label: `${plane.label} plane` }))}
-        onSelect={id => { const plane = DEFAULT_SECTION_PLANES.find(entry => entry.label === id)!; active = "items"; update({ plane, offsetMillimeters: 0 }); }}>
-        <AetherIcon name="planes-axes"/></MenuButton>, menuHost)}
+      {createPortal(<MenuButton label="Add section plane" items={[
+        {id:'face',label:'Select a planar face'},
+        ...DEFAULT_SECTION_PLANES.map(plane => ({ id: plane.label, label: `${plane.label} plane` })),
+      ]} onSelect={id => { if(id==='face'){focus('planes');return;} addCut(DEFAULT_SECTION_PLANES.find(entry => entry.label === id)!); }}>
+        <AetherIcon name="plus"/></MenuButton>, menuHost)}
     </>);
   };
   closeOpen = () => close(false);
   window.addEventListener("keydown", escape);
   window.addEventListener("aether-inspection-tool-open", otherTool);
   sectionView.set(draft, true);
-  render(); draw(); changed();
+  render(); changed();
 }

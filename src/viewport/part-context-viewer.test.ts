@@ -108,12 +108,12 @@ it('never picks material a section view has cut away, unless the body is exclude
  v.modelRoot.updateMatrixWorld(true);
  const top={label:'Top',originMillimeters:[0,0,0],normal:[0,0,1]} as const;
  // The section at z = 0 removes everything above it: the near body (z 1.5–2.5).
- v.setSection({plane:top,offsetMillimeters:0,mode:'exclude',items:[]},false);
+ v.setSection({planes:[{id:'top',plane:top,offsetMillimeters:0}],activePlaneId:'top',mode:'exclude',items:[]},false);
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['far']);
  // Cut through the near body at z = 2: its section face is what the click lands on.
- v.setSection({plane:top,offsetMillimeters:2,mode:'exclude',items:[]},false);
+ v.setSection({planes:[{id:'top',plane:top,offsetMillimeters:2}],activePlaneId:'top',mode:'exclude',items:[]},false);
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
- v.setSection({plane:top,offsetMillimeters:0,mode:'exclude',items:[{id:'near',label:'near'}]},false);
+ v.setSection({planes:[{id:'top',plane:top,offsetMillimeters:0}],activePlaneId:'top',mode:'exclude',items:[{id:'near',label:'near'}]},false);
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
  v.setSection(null,false);
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);

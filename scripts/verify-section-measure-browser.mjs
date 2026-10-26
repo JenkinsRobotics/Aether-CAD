@@ -74,10 +74,10 @@ try {
   await expect(page.getByRole('region', { name: 'Measurements' })).toHaveCount(0);
   await button('Done').click(); await expect(page.locator('.cad-measure-overlay')).toHaveCount(0);
   await button('Section view').click();
-  await button('Default section planes').click(); await page.getByRole('menuitem', { name: 'Top plane', exact: true }).click();
+  await button('Add section plane').click(); await page.getByRole('menuitem', { name: 'Top plane', exact: true }).click();
   const offset = page.getByRole('textbox', { name: 'Section offset', exact: true });
   await offset.fill('2.5'); await offset.press('Tab');
-  await expect(offset).toHaveValue('2.5');
+  await expect.poll(async () => Number(await offset.inputValue())).toBe(2.5);
   await page.screenshot({ path: join(evidence, 'section-offset-dark.png') });
   await page.getByRole('checkbox', { name: 'Flip cut' }).check();
   await page.screenshot({ path: join(evidence, 'section-reversed-dark.png') });
@@ -85,10 +85,10 @@ try {
   await button('Accept section view').click();
   await button('Section view').click(); await page.getByRole('menuitem', { name: 'Edit section view…', exact: true }).click();
   await expect(page.getByRole('checkbox', { name: 'Flip cut' })).toBeChecked();
-  await expect(offset).toHaveValue('2.5');
+  await expect.poll(async () => Number(await offset.inputValue())).toBe(2.5);
   await offset.fill('4'); await offset.press('Tab'); await button('Cancel').click();
   await button('Section view').click(); await page.getByRole('menuitem', { name: 'Edit section view…', exact: true }).click();
-  await expect(offset).toHaveValue('2.5');
+  await expect.poll(async () => Number(await offset.inputValue())).toBe(2.5);
   await page.evaluate(() => {
     document.documentElement.dataset.aetherTheme = 'light'; document.documentElement.classList.add('aether-light-theme');
     document.querySelectorAll('.aether-theme-model-studio').forEach(node => node.classList.add('aether-light-theme'));

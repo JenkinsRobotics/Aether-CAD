@@ -15,11 +15,12 @@ export function configureFeaturePreview(value: PreviewService | null) { service 
 export class PreviewQueue<T, R> {
   private revision = 0;
   private running = false;
-  private pending: { revision: number; value: T } | null = null;
+  private generation = 0;
+  private pending: { revision: number; generation: number; value: T } | null = null;
   private closed = false;
-  constructor(private evaluate: (value: T) => Promise<R>, private result: (value: R | null, error?: string) => void) {}
-  invalidate(clear = true) { this.revision++; this.pending = null; if (clear) this.result(null); }
-  request(value: T) { this.pending = { revision: ++this.revision, value }; void this.run(); }
+  constructor(private evaluate: (value: T) => Promise<R>, private result: (value: R | null, error?: string) => void, private options: { progressive?: (value: R) => void } = {}) {}
+  invalidate(clear = true) { this.revision++; this.pending = null; if (clear) { this.generation++; this.result(null); } }
+  request(value: T) { this.pending = { revision: ++this.revision, generation: this.generation, value }; void this.run(); }
   close() { this.closed = true; this.invalidate(); }
   private async run() {
     if (this.running || this.closed) return;
@@ -28,7 +29,12 @@ export class PreviewQueue<T, R> {
       const job = this.pending; this.pending = null;
       try {
         const value = await this.evaluate(job.value);
-        if (!this.closed && job.revision === this.revision) this.result(value);
+        // Continuous dragging must still show completed geometry while the next
+        // value is queued. Invalid drafts/cancel cross a generation boundary.
+        if (!this.closed) {
+          if (job.revision === this.revision) this.result(value);
+          else if (job.generation === this.generation) this.options.progressive?.(value);
+        }
       } catch (error) {
         if (!this.closed && job.revision === this.revision) this.result(null, error instanceof Error ? error.message : String(error));
       }
@@ -71,7 +77,9 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
     }
     else if (error) { show("Preview unavailable. Adjust the feature to continue."); onError?.(error); }
     else show(null);
-  });
+  // Intermediate geometry is visible, but handles stay pending until their
+  // axes match the latest parameters. Only the final result publishes readiness.
+  }, {progressive: model => backend.show(model)});
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let latest: PartDocument | null = null;

@@ -1,6 +1,18 @@
 import { expect, it, vi } from "vitest";
 import { PreviewQueue } from "./feature-preview";
 const tick = async () => { await Promise.resolve(); await Promise.resolve(); };
+it('live drags show completed geometry while newer values are queued, without reviving invalid drafts',async()=>{
+  const resolvers:((value:number)=>void)[]=[];
+  const show=vi.fn(),evaluate=vi.fn((_value:number)=>new Promise<number>(resolve=>resolvers.push(resolve)));
+  const ready=vi.fn((value:number|null)=>show(value));
+  const queue=new PreviewQueue(evaluate,ready,{progressive:show});
+  queue.request(10);queue.invalidate(false);queue.request(20);resolvers[0](10);await tick();
+  expect(show).toHaveBeenLastCalledWith(10); // no waiting for the user to release the handle
+  expect(ready).not.toHaveBeenCalled(); // intermediate geometry cannot start a new drag
+  queue.invalidate(false);queue.request(30);resolvers[1](20);await tick();expect(show).toHaveBeenLastCalledWith(20);
+  queue.invalidate();resolvers[2](30);await tick();expect(show).toHaveBeenLastCalledWith(null);
+  queue.request(40);queue.close();resolvers[3](40);await tick();expect(show).toHaveBeenLastCalledWith(null);
+});
 it("coalesces changes and never displays an obsolete native result", async () => {
   const resolvers: ((n: number) => void)[] = [];
   const evaluate = vi.fn((_n: number) => new Promise<number>(r => resolvers.push(r)));

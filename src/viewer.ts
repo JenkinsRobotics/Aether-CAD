@@ -26,7 +26,7 @@ import { extrusionAxisDepth } from "./viewport/extrusion-axis";
 import {projectTransformGizmo,type TransformGizmoRequest} from './viewport/transform-gizmo';
 import { SectionLayer } from "./viewport/section-layer";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
-import { lineParameterNearestRay, sectionClipPlane, type SectionView } from "./section/section-view-store";
+import { lineParameterNearestRay, sectionClipPlane, type SectionCut, type SectionView } from "./section/section-view-store";
 import {changeCameraProjection, cameraAspect, setOrthographicSpan, resizeModelingCamera, type ModelingCamera, type CameraProjection} from "./viewport/camera-projection";
 import { CameraRotationMotion } from "./viewport/camera-rotation";
 import { OrientationPreviewMotion, visiblePreviewBounds } from "./viewport/orientation-preview";
@@ -1419,13 +1419,21 @@ export class MateViewport {
 
   /** Screen geometry of the section handle: the arrow along the plane normal and
    *  the offset under the pointer. The camera is frozen so a drag stays stable. */
-  projectSectionHandle(view: SectionView): { start: {x:number;y:number}; end: {x:number;y:number}; valueAt: (x:number,y:number)=>number|null } | null {
+  projectSectionHandle(view: SectionCut): { start: {x:number;y:number}; end: {x:number;y:number}; valueAt: (x:number,y:number)=>number|null } | null {
     if (!view.plane || !sectionClipPlane(view)) return null;
     const rect = this.renderer.domElement.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
     const camera = this.camera.clone(); camera.updateMatrixWorld(true);
     const normal = new THREE.Vector3(...view.plane.normal).normalize();
     const anchor = new THREE.Vector3(...view.plane.originMillimeters);
+    // Default planes start at the world origin. Keep the arrows on the model
+    // by projecting its center onto that plane, preserving the offset's origin.
+    const bounds = this.renderedPartBounds(undefined, true);
+    if (!bounds.isEmpty()) {
+      const center = bounds.getCenter(new THREE.Vector3());
+      const distance = center.clone().sub(anchor).dot(normal);
+      anchor.copy(center).addScaledVector(normal, -distance);
+    }
     const at = anchor.clone().addScaledVector(normal, view.offsetMillimeters);
     const screen = (p: THREE.Vector3) => { const v = p.clone().project(camera); return { x: rect.left + (v.x + 1) * rect.width / 2, y: rect.top + (1 - v.y) * rect.height / 2, z: v.z }; };
     const start = screen(at);

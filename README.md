@@ -293,3 +293,17 @@ Cube visibility and snapping preferences persist on the device independently.
 The magnet affects sketch placement/drag snapping and 3D topology-anchor picking;
 turning it off retains the individual geometry/grid choices. Existing model
 constraints and visual grid visibility are unaffected by the snapping preference.
+
+### Live section planes
+
+Section view lists each cutting plane under Section planes. Add a planar face or
+a default plane with the plus menu, then select a row to adjust its offset,
+direction, enabled state and plane visibility. Enabled planes cut together;
+Include/Exclude applies to their combined cut. Edits and arrow drags render live,
+including filled cross sections with holes. The paired white arrows follow the
+plane normal through the model center; the nearby offset also accepts live input.
+Accept keeps the section; Cancel restores the previous planes and settings.
+
+Shared feature previews display completed geometry during continuous dragging
+while newer values compute. Invalid drafts and Cancel discard pending previews.
+Feature-window header Apply/Cancel backgrounds fill their complete action cells.

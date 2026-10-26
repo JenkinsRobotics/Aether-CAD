@@ -3,17 +3,28 @@
 export type Vec3 = readonly [number, number, number];
 export interface SectionPlane { label: string; originMillimeters: Vec3; normal: Vec3 }
 export interface SectionItem { id: string; label: string }
-export interface SectionView {
-  plane: SectionPlane | null;
+export interface SectionCut {
+  id: string;
+  plane: SectionPlane;
   /** Along the plane normal from its origin; negative moves into the part. */
   offsetMillimeters: number;
   /** Keep the opposite half without moving the cutting plane. */
   reversed?: boolean;
   showPlane?: boolean;
+  enabled?: boolean;
+}
+export interface SectionView {
+  planes: readonly SectionCut[];
+  activePlaneId: string | null;
   /** Exclude: every part is cut except the listed ones. Include: only the listed ones. */
   mode: "exclude" | "include";
   items: readonly SectionItem[];
 }
+
+let nextId = 0;
+export const newSectionCut = (plane: SectionPlane): SectionCut => ({id:`section-plane-${++nextId}`,plane,offsetMillimeters:0});
+export const activeSectionCut = (view: SectionView | null) => view?.planes.find(cut => cut.id === view.activePlaneId) ?? view?.planes[0] ?? null;
+export const sectionClipPlanes = (view: SectionView | null) => view?.planes.flatMap(cut => { const plane=sectionClipPlane(cut); return plane ? [plane] : []; }) ?? [];
 
 export const DEFAULT_SECTION_PLANES: readonly SectionPlane[] = [
   { label: "Top", originMillimeters: [0, 0, 0], normal: [0, 0, 1] },
@@ -38,10 +49,10 @@ export function isSectioned(view: SectionView, partId: string): boolean {
 
 /** The kept half-space as a clipping plane (normal · p + constant ≥ 0 is kept):
  *  material on the side the section normal points to is cut away. */
-export function sectionClipPlane(view: SectionView | null): { normal: Vec3; constant: number } | null {
-  if (!view?.plane) return null;
+export function sectionClipPlane(view: SectionCut | null): { normal: Vec3; constant: number } | null {
+  if (!view?.plane || view.enabled === false) return null;
   const length = Math.hypot(...view.plane.normal);
-  if (!Number.isFinite(length) || length < 1e-12 || !Number.isFinite(view.offsetMillimeters)) return null;
+  if (!Number.isFinite(length) || length < 1e-12 || !Number.isFinite(view.offsetMillimeters) || !view.plane.originMillimeters.every(Number.isFinite)) return null;
   const n = view.plane.normal.map(value => value / length) as unknown as Vec3;
   const d = n.reduce((sum, value, axis) => sum + value * view.plane!.originMillimeters[axis], 0) + view.offsetMillimeters;
   return view.reversed ? { normal: n, constant: -d } : { normal: [-n[0], -n[1], -n[2]], constant: d };

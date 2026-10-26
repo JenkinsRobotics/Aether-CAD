@@ -26,7 +26,7 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => { turnOffSectionView(); cadSelection.dispatch({ type: 'clear' }); }); });
 const win = () => document.querySelector('.cad-section-window');
-const button = label => win().querySelector(`[aria-label="${label}"]`);
+const button = label => [...win().querySelectorAll('button')].find(button=>(button.getAttribute('aria-label')??button.textContent)===label);
 const pick = items => act(async () => { cadSelection.dispatch({ type: 'replace', items }); await Promise.resolve(); });
 const open = () => act(async () => openSectionView());
 
@@ -37,15 +37,15 @@ it('previews live from a picked planar face and keeps the section on accept', as
   expect(win().querySelector('[aria-label="Section planes"]').dataset.active).toBe('true');
   expect(cadSelection.snapshot().filter).toBe('face');
   await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4 of Body 1', faceId: 4 }]);
-  // The face became the section plane, the model selection was consumed, and picks now go to items.
-  expect(sectionView.snapshot().plane).toEqual({ label: 'Face 4 of Body 1', originMillimeters: [0, 0, 10], normal: [0, 0, 1] });
+  // More face picks add planes; bodies require explicit focus on the scope field.
+  expect(sectionView.snapshot().planes[0]?.plane).toEqual({ label: 'Face 4 of Body 1', originMillimeters: [0, 0, 10], normal: [0, 0, 1] });
   expect(sectionView.editing()).toBe(true);
   expect(cadSelection.snapshot().items).toEqual([]);
-  expect(win().querySelector('[aria-label="Items to exclude"]').dataset.active).toBe('true');
-  expect(cadSelection.snapshot().filter).toBe('body');
+  expect(win().querySelector('[aria-label="Section planes"]').dataset.active).toBe('true');
+  expect(cadSelection.snapshot().filter).toBe('face');
   await act(async () => button('Accept section view').click());
   expect(win()).toBeNull();
-  expect(sectionView.snapshot().plane.label).toBe('Face 4 of Body 1');
+  expect(sectionView.snapshot().planes[0]?.plane.label).toBe('Face 4 of Body 1');
   expect(sectionView.editing()).toBe(false);
   expect(cadSelection.snapshot().filter).toBe('auto');
 });
@@ -55,16 +55,16 @@ it('rejects a curved face, and types the offset in document units', async () => 
   faceFrame = null;
   await pick([{ id: 'face:p:9', kind: 'face', partId: 'p', label: 'Face 9 of Body 1', faceId: 9 }]);
   expect(document.body.textContent).toContain('Select a planar face');
-  expect(sectionView.snapshot().plane).toBeNull();
+  expect(sectionView.snapshot().planes[0]?.plane).toBeUndefined();
   faceFrame = { originMillimeters: [0, 0, 10], normal: [0, 0, 1] };
   await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4', faceId: 4 }]);
   const offset = document.querySelector('[aria-label="Section offset (mm)"]');
   await act(async () => { offset.value = '-6.5'; offset.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
-  expect(sectionView.snapshot().offsetMillimeters).toBeCloseTo(-6.5);
+  expect(sectionView.snapshot().planes[0]?.offsetMillimeters).toBeCloseTo(-6.5);
 });
 
 it('lists bodies to exclude or include, toggling repeated picks', async () => {
-  sectionView.set({ plane: { label: 'Top', originMillimeters: [0, 0, 0], normal: [0, 0, 1] }, offsetMillimeters: 0, mode: 'exclude', items: [] });
+  sectionView.set({ planes:[{id:"test",plane: { label: 'Top', originMillimeters: [0, 0, 0], normal: [0, 0, 1] }, offsetMillimeters:0}],activePlaneId:"test",mode:"exclude",items:[] });
   await open();
   await pick([{ id: 'face:a:1', kind: 'face', partId: 'a', label: 'Face 1 of Body 1', faceId: 1 }]);
   // The viewer notifies again for hover in the same tick; the pick must count once.
@@ -78,11 +78,11 @@ it('lists bodies to exclude or include, toggling repeated picks', async () => {
 });
 
 it('cancel restores the previous section; turn off clears it', async () => {
-  const previous = { plane: { label: 'Right', originMillimeters: [0, 0, 0], normal: [1, 0, 0] }, offsetMillimeters: 3, mode: 'exclude', items: [] };
+  const previous = { planes:[{id:"test",plane: { label: 'Right', originMillimeters: [0, 0, 0], normal: [1, 0, 0] }, offsetMillimeters:3}],activePlaneId:"test",mode:"exclude",items:[] };
   sectionView.set(previous);
   await open();
   await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4', faceId: 4 }]);
-  expect(sectionView.snapshot().plane.label).toBe('Right'); // planes field was not active: the pick became an item
+  expect(sectionView.snapshot().planes[0]?.plane.label).toBe('Right'); // planes field was not active: the pick became an item
   await act(async () => button('Cancel').click());
   expect(sectionView.snapshot()).toBe(previous);
   expect(sectionEditorOpen()).toBe(false);
@@ -92,16 +92,30 @@ it('cancel restores the previous section; turn off clears it', async () => {
 
 
 it('the panel offset previews in document units; reversing keeps the cut in place and cancel restores it', async () => {
-  const previous = { plane: { label: 'Top', originMillimeters: [0,0,0], normal: [0,0,1] }, offsetMillimeters: 4, mode: 'exclude', items: [] };
+  const previous = { planes:[{id:"test",plane: { label: 'Top', originMillimeters: [0,0,0], normal: [0,0,1] }, offsetMillimeters:4}],activePlaneId:"test",mode:"exclude",items:[] };
   sectionView.set(previous);
   await open();
   const offset = document.querySelector('[aria-label="Section offset"]');
   await act(async () => { offset.value = '7.5'; offset.dispatchEvent(new Event('input', { bubbles: true })); });
-  expect(sectionView.snapshot().offsetMillimeters).toBe(7.5);
-  await act(async () => document.querySelector('.cad-section-window input[type="checkbox"]').click());
-  expect(sectionView.snapshot().reversed).toBe(true);
-  expect(sectionView.snapshot().offsetMillimeters).toBe(7.5);
+  expect(sectionView.snapshot().planes[0]?.offsetMillimeters).toBe(7.5);
+  await act(async () => [...win().querySelectorAll('label')].find(label=>label.textContent.endsWith('Flip cut')).querySelector('input').click());
+  expect(sectionView.snapshot().planes[0]?.reversed).toBe(true);
+  expect(sectionView.snapshot().planes[0]?.offsetMillimeters).toBe(7.5);
   await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
   expect(sectionView.snapshot()).toBe(previous);
   expect(document.querySelector('.cad-section-handle')).toBeNull();
+});
+
+it('lists multiple planes, edits each independently and restores the whole set on Cancel',async()=>{
+  await open();
+  await pick([{id:'face:a:1',kind:'face',partId:'a',label:'Top face',faceId:1}]);
+  faceFrame={originMillimeters:[10,0,0],normal:[1,0,0]};
+  await pick([{id:'face:a:2',kind:'face',partId:'a',label:'Right face',faceId:2}]);
+  expect(sectionView.snapshot().planes).toHaveLength(2);
+  const setOffset=async value=>act(async()=>{const input=win().querySelector('[aria-label="Section offset"]');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await setOffset('-4');await act(async()=>button('Top face').click());await setOffset('-6');
+  expect(sectionView.snapshot().planes.map(plane=>plane.offsetMillimeters)).toEqual([-6,-4]);
+  await act(async()=>button('Accept section view').click());const before=sectionView.snapshot();
+  await open();await act(async()=>button('Remove Right face').click());expect(sectionView.snapshot().planes).toHaveLength(1);
+  await act(async()=>button('Cancel').click());expect(sectionView.snapshot()).toBe(before);expect(before.planes).toHaveLength(2);
 });
