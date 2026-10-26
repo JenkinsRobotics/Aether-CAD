@@ -3,12 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { openCompactFeatureWindow } from '@aether/ui';
 import { unitCatalog, unitChoice } from '@aether/core/units';
 import type { PartDocument } from '@aether/core/document';
-import { cadSelection, type CADSelectionFilter } from '../cad-selection-store';
+import { type CADSelectionFilter } from '../cad-selection-store';
 import { documentUnits } from '../document-preferences';
 import { MeasureResults, type MeasureType } from './MeasureResults';
 import { MEASUREMENT_MODES, type MeasurementMode } from './measurement-geometry';
 import { mountMeasurementOverlay } from './measurement-overlay';
 import './measure-window.css';
+import { createInspectionSession } from '../inspection/inspection-session';
 
 const UNIT_NAMES: Record<string, string> = { mm: 'Millimeter', cm: 'Centimeter', m: 'Meter', in: 'Inch', ft: 'Foot', deg: 'Degree', rad: 'Radian' };
 const named = (family: 'length' | 'angle') => Object.keys(unitCatalog[family].options).map(unit => UNIT_NAMES[unit] ?? unit);
@@ -22,29 +23,30 @@ export const subscribeMeasureWindow = (listener: () => void) => { listeners.add(
 
 export function toggleMeasureWindow(currentPart: () => PartDocument | null): void {
   if (closeOpen) { closeOpen(); return; }
-  window.dispatchEvent(new CustomEvent('aether-inspection-tool-open', { detail: 'measure' }));
-  const previousFilter = cadSelection.snapshot().filter;
+  const session = createInspectionSession({ inheritSelection: true, changed: active => {
+    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active, points: active && mode.value() !== 'Objects' } }));
+    entities.element.dataset.active = String(active);
+  } });
+  const previousFilter = session.selection.snapshot().filter;
   const viewport = document.querySelector<HTMLElement>('.cad-studio-viewport') ?? document.body;
   const overlay = mountMeasurementOverlay(viewport);
   const close = (clear = false) => {
     if (!closeOpen) return;
     closeOpen = null;
-    if (clear) cadSelection.dispatch({ type: 'clear' });
+    if (clear) session.selection.dispatch({ type: 'clear' });
     window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active: false, points: false } }));
-    cadSelection.dispatch({ type: 'set-filter', filter: previousFilter });
+    session.dispose();
     window.removeEventListener('keydown', escape);
-    window.removeEventListener('aether-inspection-tool-open', otherTool);
     root.unmount(); overlay.dispose(); win.close(); changed();
   };
-  const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); close(true); } };
-  const otherTool = (event: Event) => { if ((event as CustomEvent).detail !== 'measure') close(); };
+  const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented && win.isFrontmost()) { event.preventDefault(); close(true); } };
   const win = openCompactFeatureWindow({ className: 'cad-measure-window', viewport, title: 'Measure', icon: 'measure', acceptLabel: 'Done', onAccept: () => close(), onDiscard: () => close(true) });
   win.addHelp('Objects: select bodies, faces, edges or vertices to measure their properties and spacing.');
   win.addHelp('Point-to-point: pick two snap points. Hover over a face to reveal corners, midpoints and centers. Click a selected point again to remove it.');
   win.addHelp('3-point angle: pick three snap points. The second point is the angle vertex.');
   const selection = win.section('Measurement');
   const mode = win.picker(MEASUREMENT_MODES, { ariaLabel: 'Measurement mode', onChange: () => {
-    cadSelection.dispatch({ type: 'clear' });
+    session.selection.dispatch({ type: 'clear' });
     syncFilter(); render();
   } });
   selection.body.append(win.row('Mode', mode.element));
@@ -53,7 +55,7 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   const filters = win.picker(Object.keys(FILTERS), { value: Object.keys(FILTERS).find(key => FILTERS[key] === previousFilter) ?? 'Automatic', ariaLabel: 'Measure selection', onChange: () => { syncFilter(); } });
   const filterRow = win.row('Select', filters.element); selection.body.append(filterRow);
   const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'aui-button aui-button--flat'; clear.textContent = 'Clear selection';
-  clear.onclick = () => cadSelection.dispatch({ type: 'clear' }); selection.body.append(clear);
+  clear.onclick = () => session.selection.dispatch({ type: 'clear' }); selection.body.append(clear);
   const display = win.section('Display');
   const type = win.picker(['Show all', 'Minimum', 'Center'], { value: 'Show all', ariaLabel: 'Measure type', onChange: () => render() });
   const typeRow = win.row('Distances', type.element); display.body.append(typeRow);
@@ -66,18 +68,19 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
   const root = createRoot(host);
   const syncFilter = () => {
     const points = mode.value() !== 'Objects';
-    cadSelection.dispatch({ type: 'set-filter', filter: points ? 'vertex' : FILTERS[filters.value()] });
-    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active: true, points } }));
+    session.selection.dispatch({ type: 'set-filter', filter: points ? 'vertex' : FILTERS[filters.value()] });
+    window.dispatchEvent(new CustomEvent('aether-measure-picking', { detail: { active: session.active(), points: session.active() && points } }));
   };
   const render = () => {
     const objects = mode.value() === 'Objects'; filterRow.hidden = typeRow.hidden = !objects;
     lengthRow.hidden = mode.value() === '3-point angle';
     angleRow.hidden = mode.value() === 'Point-to-point';
-    root.render(<MeasureResults currentPart={currentPart} entities={entities} type={type.value() as MeasureType}
+    root.render(<MeasureResults selection={session.selection} currentPart={currentPart} entities={entities} type={type.value() as MeasureType}
       lengthUnit={unitFor(length.value())} angleUnit={unitFor(angle.value())} mode={mode.value() as MeasurementMode} annotate={overlay.set}/>);
   };
   closeOpen = () => close();
   window.addEventListener('keydown', escape);
-  window.addEventListener('aether-inspection-tool-open', otherTool);
+  session.attach(win);
+  entities.element.addEventListener('click', () => session.activate());
   syncFilter(); render(); changed();
 }

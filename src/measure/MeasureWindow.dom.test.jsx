@@ -16,7 +16,7 @@ beforeAll(async () => {
   ({ toggleMeasureWindow, measureWindowOpen } = await import('./MeasureWindow'));
   ({ cadSelection } = await import('../cad-selection-store'));
   ({ applyDocumentUnits } = await import('../document-preferences'));
-  window.addEventListener('aether-plane-geometry-request', () => window.dispatchEvent(new CustomEvent('aether-plane-geometry', { detail: geometry })));
+  window.addEventListener('aether-plane-geometry-request', event => event.detail.respond(geometry));
   window.addEventListener('aether-measure-picking', event => { picking = event.detail; });
 });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });

@@ -130,6 +130,7 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
   };
   draw();
   return {
+    element,
     dispose() {
       cancelAnimationFrame(frame);
       gizmo.dispose();

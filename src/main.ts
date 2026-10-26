@@ -1629,7 +1629,12 @@ mountDerivedCurveCommands({
 // Point and edge picks for the plane methods that need them (Three point,
 // Angle). Selection already produces vertex/edge items; this hands back their
 // exact topology geometry so a feature can store the reference.
-window.addEventListener("aether-plane-geometry-request", () => {
+window.addEventListener("aether-plane-geometry-request", event => {
+  const request = (event as CustomEvent).detail;
+  if (request?.respond) {
+    request.respond({ points: viewer.selectedPoints(request.items), measurements: viewer.selectedTopologyMeasurements(request.items) });
+    return;
+  }
   window.dispatchEvent(new CustomEvent("aether-plane-geometry", {
     detail: { points: viewer.selectedPoints(), axis: viewer.selectedAxis(), surface: viewer.selectedSurfacePoint(), measurements: viewer.selectedTopologyMeasurements() },
   }));

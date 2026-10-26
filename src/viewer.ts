@@ -517,9 +517,9 @@ export class MateViewport {
     });
   }
 
-  selectedPoints(): { selectionId: string; partId: string; candidateId: string; label: string; positionMillimeters: [number, number, number] }[] {
+  selectedPoints(items = cadSelection.snapshot().items): { selectionId: string; partId: string; candidateId: string; label: string; positionMillimeters: [number, number, number] }[] {
     const picked: ReturnType<MateViewport["selectedPoints"]> = [];
-    for (const item of cadSelection.snapshot().items) {
+    for (const item of items) {
       if (item.kind !== "vertex") continue;
       const found = this.candidateFor(item);
       if (!found) continue;
@@ -628,8 +628,8 @@ export class MateViewport {
     return null;
   }
 
-  selectedTopologyMeasurements() {
-    return cadSelection.snapshot().items.flatMap(item=>{
+  selectedTopologyMeasurements(items = cadSelection.snapshot().items) {
+    return items.flatMap(item=>{
       if(this.historyEditing){
         const part=this.historyModel?.parts.find(p=>p.id===item.partId);
         const measurements=item.kind==='face'?part?.topology.find(f=>f.id===item.faceId)?.measurements:undefined;

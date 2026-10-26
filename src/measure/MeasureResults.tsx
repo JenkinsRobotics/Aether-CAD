@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { PropertyGrid, type PropertyGridSection } from "@aether/ui";
 import { displayQuantity, unitChoice, type UnitPreferences } from "@aether/core/units";
 import type { PartDocument } from "@aether/core/document";
-import { cadSelection } from "../cad-selection-store";
+import { cadSelection, type CADSelectionStore } from "../cad-selection-store";
 import { documentUnits } from "../document-preferences";
 import { analyzePart } from "../modeling/part-analysis";
 import { selectedTopologyAngle, type SelectedTopologyMeasurement } from "../viewport/topology-measurement";
@@ -13,22 +13,23 @@ type Point = { selectionId?: string; candidateId: string; partId: string; positi
 type Distance = { distance_mm: number; points: [Vec, Vec] };
 export type MeasureType = "Show all" | "Minimum" | "Center";
 
-export function MeasureResults({ currentPart, entities, type, lengthUnit, angleUnit, mode, annotate }: {
+export function MeasureResults({ currentPart, entities, type, lengthUnit, angleUnit, mode, annotate, selection = cadSelection }: {
+  selection?: Pick<CADSelectionStore, "snapshot" | "subscribe" | "dispatch">;
   currentPart: () => PartDocument | null;
   entities: { render: (rows: { label: string; onRemove: () => void }[]) => void };
   type: MeasureType; lengthUnit: string; angleUnit: string; mode: MeasurementMode; annotate: (annotation: MeasurementAnnotation | null) => void;
 }) {
-  const { items } = useSyncExternalStore(cadSelection.subscribe, cadSelection.snapshot, cadSelection.snapshot);
-  useEffect(() => entities.render(items.map(item => ({ label: item.label, onRemove: () => cadSelection.dispatch({ type: "toggle", items: [item] }) }))), [entities, items]);
+  const { items } = useSyncExternalStore(selection.subscribe, selection.snapshot, selection.snapshot);
+  useEffect(() => entities.render(items.map(item => ({ label: item.label, onRemove: () => selection.dispatch({ type: "toggle", items: [item] }) }))), [entities, items]);
   // The part rebuilds after edits: re-read geometry and re-measure.
   const [revision, setRevision] = useState(0);
   useEffect(() => { const bump = () => setRevision(value => value + 1); window.addEventListener("aether-part-updated", bump); return () => window.removeEventListener("aether-part-updated", bump); }, []);
   const [geometry, setGeometry] = useState<{ points: Point[]; measurements: SelectedTopologyMeasurement[] }>({ points: [], measurements: [] });
   useEffect(() => {
-    const receive = (event: Event) => { const detail = (event as CustomEvent).detail; setGeometry({ points: detail.points ?? [], measurements: detail.measurements ?? [] }); };
-    window.addEventListener("aether-plane-geometry", receive);
-    window.dispatchEvent(new Event("aether-plane-geometry-request"));
-    return () => window.removeEventListener("aether-plane-geometry", receive);
+    window.dispatchEvent(new CustomEvent("aether-plane-geometry-request", { detail: { items,
+      respond: (detail: { points?: Point[]; measurements?: SelectedTopologyMeasurement[] }) =>
+        setGeometry({ points: detail.points ?? [], measurements: detail.measurements ?? [] }),
+    } }));
   }, [items, revision]);
   const references = mode === "Objects" && items.length === 2 ? items.map(measureReference) : [];
   const key = JSON.stringify([references, revision, currentPart()?.documentId]);

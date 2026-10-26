@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { AetherIcon, Checkbox, FieldRow, Inspector, MenuButton, NumberField, openFeatureWindow } from "@aether/ui";
 import { unitChoice } from "@aether/core/units";
-import { cadSelection, type CADSelectionItem } from "../cad-selection-store";
+import { type CADSelectionItem } from "../cad-selection-store";
 import { documentUnits } from "../document-preferences";
 import "./section-view.css";
 import { DEFAULT_SECTION_PLANES, sectionView, activeSectionCut, newSectionCut, type SectionCut, type SectionView, type Vec3 } from "./section-view-store";
 
 import { mountSectionHandle } from "./section-handle";
+import { createInspectionSession } from "../inspection/inspection-session";
 
 type Frame = { originMillimeters: Vec3; normal: Vec3 } | null;
 
@@ -27,21 +28,18 @@ const bodyOf = (item: CADSelectionItem) => ({ id: item.partId, label: item.kind 
 
 export function openSectionView(): void {
   if (closeOpen) return;
-  window.dispatchEvent(new CustomEvent("aether-inspection-tool-open", { detail: "section" }));
   const before = sectionView.snapshot();
   let draft: SectionView = before ?? { planes: [], activePlaneId:null, mode: "exclude", items: [] };
   let active: "planes" | "items" = draft.planes.length ? "items" : "planes";
   // The active field decides what a click picks: a face for the plane, a body for the lists.
-  const previousFilter = cadSelection.snapshot().filter;
-  const pickFor = () => cadSelection.dispatch({ type: "set-filter", filter: active === "planes" ? "face" : "body" });
+  const session = createInspectionSession({ filter: active === "planes" ? "face" : "body", changed: () => { if (closeOpen) render(); } });
+  const pickFor = () => session.selection.dispatch({ type: "set-filter", filter: active === "planes" ? "face" : "body" });
   const icon = document.createElement("span"), menuHost = document.createElement("span"), reactHost = document.createElement("div");
   const close = (keep: boolean) => {
     if (!closeOpen) return;
     closeOpen = null;
-    unsubscribe(); handle.dispose(); root.unmount(); win.close();
+    unsubscribe(); handle.dispose(); root.unmount(); session.dispose(); win.close();
     window.removeEventListener("keydown", escape);
-    window.removeEventListener("aether-inspection-tool-open", otherTool);
-    cadSelection.dispatch({ type: "set-filter", filter: previousFilter });
     sectionView.set(keep ? (draft.planes.length ? draft : null) : before);
     changed();
   };
@@ -71,9 +69,8 @@ export function openSectionView(): void {
     update({planes:draft.planes.map(cut=>cut.id===selected.id?{...cut,...next}:cut)});
   };
   const addCut = (plane:SectionCut['plane']) => { const cut=newSectionCut(plane);active='planes';update({planes:[...draft.planes,cut],activePlaneId:cut.id}); };
-  const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(false); } };
-  const otherTool = (event: Event) => { if ((event as CustomEvent).detail !== "section") close(false); };
-  const focus = (field: "planes" | "items") => { active = field; render(); };
+  const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented && win.isFrontmost()) { event.preventDefault(); close(false); } };
+  const focus = (field: "planes" | "items") => { active = field; session.activate(); render(); };
   planes.element.addEventListener("click", () => focus("planes"));
   items.element.addEventListener("click", () => focus("items"));
   [...tabs.children].forEach((tab, index) => tab.addEventListener("click", () => update({ mode: index ? "include" : "exclude" })));
@@ -81,15 +78,16 @@ export function openSectionView(): void {
   // Picks in the model fill the active field, then clear the model selection.
   // One click can notify more than once (selection, then hover): handle each pick once.
   let handled: readonly CADSelectionItem[] | null = null;
-  const unsubscribe = cadSelection.subscribe(() => {
-    const picked = cadSelection.snapshot().items;
+  const unsubscribe = session.selection.subscribe(() => {
+    if (!session.active()) return;
+    const picked = session.selection.snapshot().items;
     if (!picked.length || picked === handled) return;
     handled = picked;
     if (active === "planes") {
       const face = picked.find(item => item.kind === "face");
       let frame: Frame = null;
       if (face) window.dispatchEvent(new CustomEvent("aether-section-face", { detail: { respond: (value: Frame) => { frame = value; } } }));
-      queueMicrotask(() => cadSelection.dispatch({ type: "clear" }));
+      queueMicrotask(() => session.selection.dispatch({ type: "clear" }));
       if (!face || !frame) { win.setError("Select a planar face, or choose Top, Front or Right."); return; }
       const { originMillimeters, normal } = frame as NonNullable<Frame>;
       addCut({ label: face.label, originMillimeters, normal });
@@ -97,7 +95,7 @@ export function openSectionView(): void {
     }
     let list = [...draft.items];
     for (const body of picked.map(bodyOf)) list = list.some(item => item.id === body.id) ? list.filter(item => item.id !== body.id) : [...list, body];
-    queueMicrotask(() => cadSelection.dispatch({ type: "clear" }));
+    queueMicrotask(() => session.selection.dispatch({ type: "clear" }));
     update({ items: list });
   });
 
@@ -117,9 +115,9 @@ export function openSectionView(): void {
     items.element.setAttribute("aria-label", draft.mode === "include" ? "Items to include" : "Items to exclude");
     hint.textContent = draft.mode === "exclude" ? "All bodies are cut except those in Items to exclude." : "Only bodies in Items to include are cut.";
     win.accept.disabled = !draft.planes.length;
-    if (cadSelection.snapshot().filter !== (active === "planes" ? "face" : "body")) pickFor();
-    planes.element.dataset.active = String(active === "planes");
-    items.element.dataset.active = String(active === "items");
+    if (session.selection.snapshot().filter !== (active === "planes" ? "face" : "body")) pickFor();
+    planes.element.dataset.active = String(session.active() && active === "planes");
+    items.element.dataset.active = String(session.active() && active === "items");
     root.render(<>
       {createPortal(<AetherIcon name="section-view"/>, icon)}
       {createPortal(<Inspector>
@@ -146,7 +144,9 @@ export function openSectionView(): void {
   };
   closeOpen = () => close(false);
   window.addEventListener("keydown", escape);
-  window.addEventListener("aether-inspection-tool-open", otherTool);
+  session.attach(win);
+  handle.element.addEventListener("pointerdown", () => session.activate(), true);
+  handle.element.addEventListener("focusin", () => session.activate());
   sectionView.set(draft, true);
   render(); changed();
 }
