@@ -34,6 +34,10 @@ def test_template_is_saved_once_and_instances_reuse_it():
     again, _ = prepare(workspace, workspace.root_assembly_id, spec)
     assert len(again.part_definitions) == 1
     assert len(again.instances) == 4
+    assert len(again.connector_definitions) == 1
+    origin = next(iter(again.connector_definitions.values()))
+    assert origin["name"] == "Origin" and origin["part_definition_id"] == ids["parts"]["block"]
+    assert origin["frame_part_local"]["origin_m"] == [0, 0, 0]
 
 
 def test_part_template_can_be_defined_before_placing_instances():

@@ -796,7 +796,13 @@ export class CADAssemblyController {
       const assigned = this.canonical!.assembly.part_definitions.find(part => part.id === added[0])!;
       await this.replaceDefinition(assigned, { feature_document: document });
     }
-    await this.mutate("add_instance", { assembly_id: assemblyID, instance: { parent_assembly_id: assemblyID, definition_kind: "part", definition_id: added[0], grounded: false, ...instance } });
+    await this.mutate("add_connector", { assembly_id: assemblyID, connector: {
+      part_definition_id: added[0], name: "Origin",
+      frame_part_local: {origin_m:[0,0,0],primary_axis_xyz:[0,0,1],secondary_axis_xyz:[1,0,0]},
+      provenance: {kind:"manual",label:"Part origin",stable_feature_id:null},
+    } });
+    const needsAnchor = !this.canonical!.assembly.instances.some(item => item.grounded && !item.suppressed);
+    await this.mutate("add_instance", { assembly_id: assemblyID, instance: { parent_assembly_id: assemblyID, definition_kind: "part", definition_id: added[0], grounded: needsAnchor, ...instance } });
     return added[0];
   }
 

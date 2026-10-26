@@ -462,7 +462,8 @@ describe("AetherCADShell", () => {
     expect(html).toContain('id="connector-primary-axis"');
     expect(html).toContain('id="connector-secondary-axis"');
     expect(html).toContain(">mm<");
-    expect(html).toContain("Core normalizes the two nonparallel axes");
+    expect(html).toContain('class="aui-coordinate-fields" role="group" aria-label="Origin"');
+    expect(html).toContain("The origin is relative to the Part");
     expect(html).toContain("Add Connector");
   });
 

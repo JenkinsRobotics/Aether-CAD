@@ -1054,7 +1054,8 @@ describe('atomic assembly recipe transactions', () => {
     expect(mutate).toHaveBeenNthCalledWith(3, "add_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ name: "Bracket copy", part_number: "BR-2" }) }), expect.any(AbortSignal));
     expect((mutate.mock.calls[2][1].part_definition as any).feature_document).toBeUndefined();
     expect(mutate).toHaveBeenNthCalledWith(4, "update_part_definition", expect.objectContaining({ part_definition: expect.objectContaining({ id: "part-2", feature_document: { ...doc, documentId: "part-2", name: "Bracket copy" } }) }), expect.any(AbortSignal));
-    expect(mutate).toHaveBeenNthCalledWith(5, "add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-2", name: "Bracket:1 copy" }) }), expect.any(AbortSignal));
+    expect(mutate).toHaveBeenCalledWith("add_connector", expect.objectContaining({connector:expect.objectContaining({part_definition_id:"part-2",name:"Origin"})}), expect.any(AbortSignal));
+    expect(mutate).toHaveBeenLastCalledWith("add_instance", expect.objectContaining({ instance: expect.objectContaining({ definition_id: "part-2", name: "Bracket:1 copy" }) }), expect.any(AbortSignal));
 
     await controller.moveBodiesToComponent({ sourceInstanceID: "instance-1", bodyIDs: [second], sketchIDs: [], target: "new", name: "" });
     const bossDefinition = current.part_definitions.find((p) => p.name === "Body 2")!;

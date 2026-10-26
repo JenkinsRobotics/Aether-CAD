@@ -69,6 +69,7 @@ export type CADCommandID =
   | "fastened"
   | "assembly-insert-component"
   | "assembly-part-template" | "assembly-from-json" | "assembly-linear-array" | "assembly-circular-array" | "assembly-undo-recipe" | "assembly-redo-recipe"
+  | "assembly-edit-component" | "assembly-open-component-part" | "assembly-toggle-visible"
   | "assembly-add-connector"
   | "assembly-create-mate"
   | "assembly-set-mate-dof-value"
@@ -226,6 +227,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "fastened",
   "assembly-insert-component",
   "assembly-part-template", "assembly-from-json", "assembly-linear-array", "assembly-circular-array", "assembly-undo-recipe", "assembly-redo-recipe",
+  "assembly-edit-component", "assembly-open-component-part", "assembly-toggle-visible",
   "assembly-add-connector",
   "assembly-create-mate",
   "assembly-set-mate-dof-value",

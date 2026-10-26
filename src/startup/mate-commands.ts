@@ -61,14 +61,14 @@ export function registerMateCommands(host: MateCommandHost): void {
  *  Unreachable engine means no mate is offered: a button that cannot solve is
  *  worse than a button that is plainly unavailable.
  */
-export async function syncMateAvailability(): Promise<readonly AssemblyMateKind[]> {
+export function syncMateAvailability(canMate = false, canSolve = false, supported?: readonly string[]): readonly AssemblyMateKind[] {
   // The engine solves eleven mate kinds in-process; coupled kinds are refused by design.
   const solvable: readonly AssemblyMateKind[] = solvableMateKinds as readonly AssemblyMateKind[];
   const authorable = new Set(assemblyMateTypeOptions.map((option) => option.value));
   const usable = new Set(solvable.filter((kind) => authorable.has(kind as never)));
   for (const [kind] of MATE_KINDS)
-    cadCommands.setEnabled(mateCommandID(kind), usable.has(kind));
-  cadCommands.setEnabled("assembly-solve", usable.size > 0);
+    cadCommands.setEnabled(mateCommandID(kind), canMate && usable.has(kind) && (!supported || supported.includes(kind)));
+  cadCommands.setEnabled("assembly-solve", canSolve && usable.size > 0);
   return [...usable];
 }
 

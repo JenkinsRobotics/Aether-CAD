@@ -35,7 +35,8 @@ export const assemblyBuildWorkspace: CADRibbonWorkspaceDefinition = {
       tool("assembly-pattern", "Pattern", "pattern", undefined, assemblyProducer),
       tool("assembly-cut", "Assembly Cut", "cut", undefined, assemblyProducer),
       tool("assembly-drag", "Drag with Mates", "move", undefined, assemblyProducer),
-      tool("assembly-edit", "Edit in Context", "sketch", undefined, assemblyProducer),
+      tool("assembly-placement", "Move / Rotate", "move", "assembly-edit-component"),
+      tool("assembly-edit", "Open Part", "sketch", "assembly-open-component-part"),
       tool("assembly-return", "Return", "back", "show-mates"),
     ] },
     { id: "build-instance", label: "Instance", tools: [

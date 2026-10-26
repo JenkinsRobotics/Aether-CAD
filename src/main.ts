@@ -32,6 +32,9 @@ import { sketchProfilePolylines } from "@aether/core/sketch";
 import { profileFrame, rollbackPosition, curve3dPolylines } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
+import { configureInstanceEditing, captureInstanceEdit, saveInstanceEdit, openSelectedComponentPart } from "./assembly/instance-session";
+import { instanceDraft } from "./assembly/instance-edit";
+import { projectItemURL } from "./host-library";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
 import { solveAssemblyJob } from "@aether/core/kernel";
 import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
@@ -310,6 +313,25 @@ configureAssemblyInsertion({
   insert: (recipe, signal, assertCurrent) => assemblyController.composeRecipe(recipe, signal, assertCurrent),
 });
 installAssemblyInsertionDrop(viewportElement, error => setStatus(String(error), 'error'));
+configureInstanceEditing({
+  projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+  selectedID: () => assemblyController.selectedInstance?.id ?? null,
+  editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && assemblyController.canEditInstances,
+  edit: (...args) => assemblyController.editAtomically(...args),
+  openPart: async id => {
+    if (!hostedCAD || !activeProject) throw Error('Save this Assembly in Studio before opening its source Part.');
+    await navigateDocument(projectItemURL(id, 'part'));
+  },
+});
+cadCommands.register('assembly-edit-component', () => { cadPresentation.dispatch({type:'show-start-dialog',dialog:'edit-component'}); });
+cadCommands.register('assembly-open-component-part', () => void openSelectedComponentPart().catch(error => setStatus(String(error), 'error')));
+cadCommands.register('assembly-toggle-visible', () => {
+  try {
+    const captured = captureInstanceEdit(), draft = instanceDraft(captured.instance);
+    void saveInstanceEdit(captured, {...draft, visible:!draft.visible}, new AbortController().signal).catch(error => setStatus(String(error), 'error'));
+  } catch (error) { setStatus(String(error), 'error'); }
+});
+
 const assemblyContextKey=()=>`assembly:${assemblyController.document?.workspaceID??'none'}:${assemblyController.document?.assemblyID??'none'}:${location.search}`;
 configureAssemblyAgentWorkspace({
   active:()=>activeWorkspaceKind==='assembly',contextKey:assemblyContextKey,
@@ -335,11 +357,22 @@ function syncAssemblyCommands(): void {
   cadCommands.setEnabled('assembly-redo-recipe',recipeEditable&&assemblyController.canRedoRecipe);
   const instance = assemblyController.selectedInstance;
   const mate = assemblyController.selectedMate;
-  const enabled = assemblyController.canEditSelectedInstance;
-  const mateEnabled = assemblyController.canEditSelectedMate;
+  const enabled = recipeEditable && assemblyController.canEditSelectedInstance;
+  const mateEnabled = recipeEditable && assemblyController.canEditSelectedMate;
   cadCommands.setEnabled("assembly-insert-component", recipeEditable);
+  for (const id of ['assembly-edit-component','assembly-toggle-visible','assembly-make-independent','assembly-linked-copy','assembly-part-properties','assembly-bodies-to-component','assembly-resize-standard-part'] as const)
+    cadCommands.setEnabled(id, enabled);
+  cadCommands.setEnabled('assembly-open-component-part', activeWorkspaceKind === 'assembly' && !!instance && instance.definition_kind === 'part' && !!activeProject?.parts.some(part => part.id === instance.definition_id && part.document));
+  cadCommands.setEnabled('assembly-insert-standard-part', recipeEditable);
+  cadCommands.setEnabled('assembly-as-built-joint', recipeEditable && (assemblyController.geometryProjection?.instances.filter(item => !item.suppressed).length ?? 0) >= 2);
+  cadCommands.setEnabled('assembly-reach-point', enabled);
+  cadCommands.setEnabled('assembly-rigid-group', recipeEditable && cadAssemblyWorkspace.snapshot().selectedEntityIDs.size >= 2);
+  cadCommands.setEnabled('assembly-unlock', enabled);
   cadCommands.setEnabled("assembly-add-connector", assemblyController.canAddConnector);
-  cadCommands.setEnabled("assembly-create-mate", assemblyController.canAddMate);
+  cadCommands.setEnabled("assembly-create-mate", recipeEditable && assemblyController.canAddMate);
+  syncMateAvailability(recipeEditable && assemblyController.canAddMate,
+    recipeEditable && !!assemblyController.geometryProjection?.instances.some(item => !item.suppressed),
+    assemblyController.geometryProjection?.capabilities.supported_mate_type_ids);
   cadCommands.setEnabled("assembly-set-mate-dof-value", assemblyController.canEditSelectedMateDOF);
   cadCommands.setEnabled("assembly-edit-mate-dof-limits", assemblyController.canEditSelectedMateDOF);
   cadCommands.setEnabled("assembly-create-relation", assemblyController.canAddRelation);
@@ -397,6 +430,8 @@ registerAssemblyCommands({
   resetMatePreview: () => {
     matePreviewSerial += 1;
     cadPresentation.patch({ matePreview: null });
+  },
+});
 
 // One command per mate kind, and the solve. Which kinds are offered comes
 // from the engine rather than a hard-coded list, so a mate can never reach
@@ -405,9 +440,6 @@ registerMateCommands({
   beginMate: (kind) => beginMateAuthoring(kind),
   solve: () => {
     void solveOpenAssembly();
-  },
-});
-void syncMateAvailability();
   },
 });
 cadAssemblyWorkspace.subscribe(syncAssemblyCommands);

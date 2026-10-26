@@ -1,6 +1,6 @@
 /** Thin live-editor adapter shared by the picker and Files drag/drop. */
 import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import { designInsertCandidates, insertionRecipe, type InsertPlacement, type InsertSource } from './insertion';
+import { designInsertCandidates, insertionRecipe, needsAssemblyAnchor, type InsertPlacement, type InsertSource } from './insertion';
 import { readInsertSource } from './insertion-sources';
 interface InsertionHost {
   projection(): AssemblyProjectionV1 | null;
@@ -14,6 +14,7 @@ export function currentInsertCandidates() {
   return projection ? designInsertCandidates(projection) : [];
 }
 export function assemblyInsertionAvailable() { return Boolean(host?.editable() && host.projection()); }
+export function insertionNeedsAnchor() { const projection = host?.projection(); return !!projection && needsAssemblyAnchor(projection); }
 export async function insertAssemblySource(source: InsertSource, placement: InsertPlacement,
   signal = new AbortController().signal) {
   const current = host;

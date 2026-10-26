@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AetherIcon, Button, Checkbox, CoordinateFields, Dialog, Tabs, TextField } from '@aether/ui';
 import { type CADPresentationSnapshot, cadPresentation } from '../../cad-presentation-store';
 import { CADQuantityField } from '../CADQuantityField';
-import { currentInsertCandidates, insertAssemblySource, assemblyInsertionAvailable } from '../../assembly/insertion-session';
+import { currentInsertCandidates, insertAssemblySource, assemblyInsertionAvailable, insertionNeedsAnchor } from '../../assembly/insertion-session';
 import { listInsertFiles, savedInsertCandidates, type SavedInsertFile } from '../../assembly/insertion-sources';
 import type { InsertCandidate } from '../../assembly/insertion';
 import './component.css';
@@ -19,7 +19,8 @@ function AssemblyInsertPicker() {
   const [file, setFile] = useState<SavedInsertFile | null>(null);
   const [selected, setSelected] = useState<InsertCandidate | null>(null);
   const [positionM, setPosition] = useState<[number, number, number]>([0, 0, 0]);
-  const [grounded, setGrounded] = useState(false);
+  const [grounded, setGrounded] = useState(insertionNeedsAnchor);
+  const needsAnchor = insertionNeedsAnchor();
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -90,7 +91,8 @@ function AssemblyInsertPicker() {
         <CADQuantityField family="length" id={`assembly-position-${axis.toLowerCase()}`} aria-label={`Position ${axis}`} value={positionM[index]} step={0.001}
           scrubLabel={`Position ${axis}`} onValueChange={value => { if (value !== null) setPosition(current => current.map((v, i) => i === index ? value : v) as [number, number, number]); }}/>,
       }))}/>
-      <Checkbox checked={grounded} onChange={event => setGrounded(event.target.checked)} label="Ground component"/>
+      <Checkbox checked={grounded || needsAnchor} disabled={needsAnchor} onChange={event => setGrounded(event.target.checked)} label="Ground component"/>
+      {needsAnchor && <p className="cad-form-note">The first component is grounded to anchor the Assembly.</p>}
       <p className="cad-form-note">{scope === 'design' ? 'Instances share this design’s Part. Drag a Part from Files into the viewport to insert it at the origin.' : 'Inserts an independent copy of the selected saved revision. The source design is unchanged.'}</p>
       {error && <p role="alert">{error}</p>}
     </div>

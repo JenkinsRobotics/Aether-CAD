@@ -16,6 +16,13 @@ const saved: InsertSource = { kind: 'saved-part', fileId: 'file', revision: 7, p
 const placement = { positionM: [0.025, -0.01, 0.1] as const, grounded: true };
 afterEach(() => { configureAssemblyInsertion(null); vi.clearAllMocks(); });
 describe('Assembly source insertion', () => {
+  it('anchors the first drag or picker insertion and leaves later occurrences free', () => {
+    const empty={...projection,instances:[]};
+    expect(insertionRecipe(empty,source,{...placement,grounded:false}).instances[0].grounded).toBe(true);
+    const anchored={...projection,instances:[{...projection.instances[0],grounded:true,suppressed:false}]};
+    expect(insertionRecipe(anchored,source,{...placement,grounded:false}).instances[0].grounded).toBe(false);
+    expect(insertionRecipe({...anchored,instances:[{...anchored.instances[0],suppressed:true}]},source,{...placement,grounded:false}).instances[0].grounded).toBe(true);
+  });
   it('reuses a Hybrid definition with explicit unit conversion and a unique occurrence name', () => {
     expect(insertionRecipe(projection, source, placement)).toEqual({ version: 1,
       parts: [{ key: 'source', part_id: 'part' }],

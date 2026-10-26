@@ -1,4 +1,4 @@
-import { cadCommands } from "../../cad-command-registry";
+import { cadCommands, type CADCommandID } from "../../cad-command-registry";
 import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 /** Parts are a flat projection of the existing body tree, not a second model. */
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -81,15 +81,35 @@ export function CADAssemblyPartsPanel() {
   const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
   const rows = assembly.data?.instanceRows ?? [];
   const panelMenu = useCADPanelContext(rows, "assembly");
+  const [menu, setMenu] = useState<{x:number; y:number; id:string}|null>(null);
+  const selected = (id: string) => cadAssemblyWorkspace.dispatch({type:'select-entities',ids:[id],mode:'single'});
+  const menuCommand = (id: CADCommandID, label: string, separatorBefore = false) => ({id,label,separatorBefore,disabled:!commands[id].enabled});
   return <div className="cad-parts-panel">
     <TreePanel title={`Components (${rows.length})`} ariaLabel="CAD assembly components"
       backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
       nodes={rows} rowHeight={24} showFilter={false} className="cad-parts-list"
       selectedIDs={assembly.selectedEntityIDs}
       onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-entities", ids, mode })}
+      onActivate={id => { selected(id); cadCommands.execute('assembly-edit-component'); }}
+      menuItems={() => []}
+      onContextMenu={(id, x, y) => { selected(id); setMenu({id,x,y}); }}
       headerControls={[{ id: "insert", label: "Insert Part", icon: <AetherIcon name="plus"/>,
         disabled: !canInsert,
         onClick: () => cadCommands.execute("assembly-insert-component") }]}
       emptyState={<Button disabled={!canInsert} onClick={() => cadCommands.execute("assembly-insert-component")}>Insert Part…</Button>} />
+    {menu && <Menu open ariaLabel="Component actions" anchor={{x:menu.x,y:menu.y}} items={[
+      menuCommand('assembly-edit-component','Component properties…'),
+      menuCommand('assembly-open-component-part','Open source Part'),
+      menuCommand('assembly-toggle-visible','Show / hide component',true),
+      menuCommand('assembly-toggle-grounded',commands['assembly-toggle-grounded'].active ? 'Float component' : 'Ground component'),
+      menuCommand('assembly-toggle-suppressed',commands['assembly-toggle-suppressed'].active ? 'Restore component' : 'Suppress component'),
+      menuCommand('assembly-add-connector','Add mate connector…',true),
+      menuCommand('assembly-create-mate','Create mate…'),
+      menuCommand('assembly-as-built-joint','As-built joint…'),
+      menuCommand('assembly-linked-copy','Linked copy',true),
+      menuCommand('assembly-make-independent','Independent copy'),
+      menuCommand('assembly-part-properties','Part metadata…'),
+      {...menuCommand('assembly-remove-instance','Remove component',true),danger:true},
+    ]} onClose={() => setMenu(null)} onSelect={id => { selected(menu.id); cadCommands.execute(id as CADCommandID); setMenu(null); }}/>}
   </div>;
 }

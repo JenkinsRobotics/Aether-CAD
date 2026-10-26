@@ -16,7 +16,7 @@ export type CADToolbarMode = "traditional" | "floating";
 export type CADPanelID = "browser" | "inspector" | "bottom";
 export type CADPanelPlacement = "docked" | "floating" | "hidden";
 export type CADPanelPlacements = Readonly<Record<CADPanelID, CADPanelPlacement>>;
-export type CADStartDialog = "new-workspace" | "insert-component" | "add-connector" | "create-mate" | "set-mate-dof-value" | "edit-mate-dof-limits" | "create-relation" | "create-contact-set" | "edit-contact-set" | "part-properties" | "bodies-to-component" | "as-built-joint" | "reach-point" | "insert-standard-part" | "resize-standard-part" | "import" | "export" | "preferences" | "graphics-preferences" | "help" | null;
+export type CADStartDialog = "new-workspace" | "edit-component" | "insert-component" | "add-connector" | "create-mate" | "set-mate-dof-value" | "edit-mate-dof-limits" | "create-relation" | "create-contact-set" | "edit-contact-set" | "part-properties" | "bodies-to-component" | "as-built-joint" | "reach-point" | "insert-standard-part" | "resize-standard-part" | "import" | "export" | "preferences" | "graphics-preferences" | "help" | null;
 
 export type CADMatePreviewPresentation =
   | { readonly state: "loading"; readonly message: string }

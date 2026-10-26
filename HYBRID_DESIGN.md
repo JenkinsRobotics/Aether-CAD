@@ -29,3 +29,24 @@ not introduced here. Browser tab folders/order remain device preferences.
 
 The shared Aether UI document controls receive product-scoped creation actions,
 so the plus menu and blank-space context menu use the same operation callbacks.
+
+## Part and Assembly workflow
+
+Create Parts inside **This design**, then open an Assembly and use **Insert Part**
+or drag a Part from Files onto the viewport. The first active occurrence is
+grounded automatically; later occurrences are free. Each inserted Part has an
+origin connector, so the supported mate tools are available without separately
+creating a datum. Additional connectors can locate mates away from that origin.
+
+Double-click a component, or choose **Component properties** from its right-click
+menu, to rename it, set position/XYZ rotation, ground it or change visibility.
+Each coordinate vector occupies one row using the shared UI controls. An active
+mate controls a free component's placement: change its mate coordinate or
+suppress the mate before moving it directly. Edits are validated as one atomic
+Assembly change and support undo/redo.
+
+**Open source Part** opens the component's internal Part Studio. Save/edit it and
+return to the Assembly through Files; all occurrences sharing that definition
+use the edited geometry. An external saved Part inserted from **Other designs**
+is an independent copy. Nested Assemblies and associative external design links
+remain outside this workflow.

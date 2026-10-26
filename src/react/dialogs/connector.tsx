@@ -2,7 +2,7 @@
 import { type AssemblyConnectorDraft, type ConnectorAxisID, assemblyConnectorDraftIssues, connectorAxisOptions, defaultAssemblyConnectorDraft } from "../../cad-connector-authoring";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
 import { CADQuantityField } from "../CADQuantityField";
-import { Button, Dialog, FieldRow, SelectField, TextField } from "@aether/ui";
+import { Button, CoordinateFields, Dialog, FieldRow, SelectField, TextField } from "@aether/ui";
 import { useState } from "react";
 
 export function AssemblyConnectorDialog({ presentation }: { presentation: CADPresentationSnapshot }) {
@@ -40,22 +40,17 @@ export function AssemblyConnectorDialog({ presentation }: { presentation: CADPre
         <FieldRow label="Frame label" htmlFor="connector-frame-label">
           <TextField id="connector-frame-label" value={draft.provenanceLabel} placeholder="Optional manual datum label" onChange={(event) => setDraft({ ...draft, provenanceLabel: event.target.value })} />
         </FieldRow>
-        <FieldRow label="Origin X" htmlFor="connector-origin-x">
-          <CADQuantityField family="length" id="connector-origin-x" value={draft.originM[0]} step={0.001}  scrubLabel="Origin X" onValueChange={(value) => setOrigin(0, value)} />
-        </FieldRow>
-        <FieldRow label="Origin Y" htmlFor="connector-origin-y">
-          <CADQuantityField family="length" id="connector-origin-y" value={draft.originM[1]} step={0.001}  scrubLabel="Origin Y" onValueChange={(value) => setOrigin(1, value)} />
-        </FieldRow>
-        <FieldRow label="Origin Z" htmlFor="connector-origin-z">
-          <CADQuantityField family="length" id="connector-origin-z" value={draft.originM[2]} step={0.001}  scrubLabel="Origin Z" onValueChange={(value) => setOrigin(2, value)} />
-        </FieldRow>
+        <CoordinateFields label="Origin" fields={(['X', 'Y', 'Z'] as const).map((axis, index) => ({ axis, control:
+          <CADQuantityField family="length" id={`connector-origin-${axis.toLowerCase()}`} aria-label={`Origin ${axis}`} value={draft.originM[index]} step={0.001}
+            scrubLabel={`Origin ${axis}`} onValueChange={value => setOrigin(index as 0 | 1 | 2, value)}/>,
+        }))}/>
         <FieldRow label="Primary axis" htmlFor="connector-primary-axis">
           <SelectField id="connector-primary-axis" value={draft.primaryAxis} options={connectorAxisOptions} onChange={(event) => setDraft({ ...draft, primaryAxis: event.target.value as ConnectorAxisID })} />
         </FieldRow>
         <FieldRow label="Secondary axis" htmlFor="connector-secondary-axis">
           <SelectField id="connector-secondary-axis" value={draft.secondaryAxis} options={connectorAxisOptions} onChange={(event) => setDraft({ ...draft, secondaryAxis: event.target.value as ConnectorAxisID })} />
         </FieldRow>
-        <p className="cad-form-note">The origin is Part-local in meters. Core normalizes the two nonparallel axes into the persistent right-handed connector frame.</p>
+        <p className="cad-form-note">The origin is relative to the Part. Choose two different axes to orient the connector.</p>
         {issues.length > 0 ? <p className="cad-form-note" role="alert">{issues.join(" ")}</p> : null}
       </div>
     </Dialog>

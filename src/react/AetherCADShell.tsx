@@ -45,6 +45,7 @@ import {
 } from "@aether/ui";
 import { CadIcon } from "./CadIcon";
 import { DrawingWorkspaceRoute, StartCenter, ViewportCameraNavigation, ViewportSurface } from "./chrome";
+import { AssemblyInstanceDialog } from "./dialogs/instance";
 import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog, AssemblyContactSetDialog, PartPropertiesDialog, BodiesToComponentDialog, AsBuiltJointDialog, ReachPointDialog, StandardPartDialog } from "./dialogs";
 import {
   ActionItemsPanel,
@@ -87,6 +88,9 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "rebuild-part", label: "Rebuild Part", category: "Create", keywords: ["evaluate extrude"], icon: <AetherIcon name="revolute" /> },
   { id: "connector", label: "Place Mate Connector", category: "Assembly", keywords: ["anchor frame"], icon: <AetherIcon name="keyframe" /> },
   { id: "fastened", label: "Create Fastened Mate", category: "Assembly", keywords: ["constraint fixed"], icon: "⛓" },
+  { id: "assembly-edit-component", label: "Component Properties", category: "Assembly", keywords: ["move position rotate rename placement"], icon: <AetherIcon name="sliders" /> },
+  { id: "assembly-open-component-part", label: "Open Source Part", category: "Assembly", keywords: ["edit component sketch extrude"], icon: <AetherIcon name="part" /> },
+  { id: "assembly-toggle-visible", label: "Hide or Show Component", category: "Assembly", keywords: ["visibility"], icon: <AetherIcon name="eye" /> },
   { id: "assembly-insert-component", label: "Insert Component", category: "Assembly", keywords: ["part definition instance"], icon: <AetherIcon name="plus" /> },
   { id: "assembly-add-connector", label: "Add Manual Mate Connector", category: "Assembly", keywords: ["part local frame axis"], icon: <AetherIcon name="keyframe" /> },
   { id: "assembly-create-mate", label: "Create Assembly Mate", category: "Assembly", keywords: ["preview fastened revolute prismatic"], icon: "⛓" },
@@ -548,6 +552,7 @@ export function AetherCADShell() {
         </WorkspaceShell>
       </section>
       <StartCenter presentation={presentation} />
+      <AssemblyInstanceDialog presentation={presentation} />
       <AssemblyComponentDialog presentation={presentation} />
       <AssemblyConnectorDialog presentation={presentation} />
       <AssemblyMateDialog presentation={presentation} />

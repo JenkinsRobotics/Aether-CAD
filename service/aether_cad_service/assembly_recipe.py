@@ -168,6 +168,15 @@ def prepare(workspace, assembly_id, recipe):
         draft._add_mate({"mate": {"name": label(item["key"]), "type_id": item["kind"],
                                   "endpoint_a": endpoint(item["a"]), "endpoint_b": endpoint(item["b"])}})
         remember(mates, item["key"], (set(draft.mates)-before).pop())
+    # Every inserted Part can be mated immediately. Repeated occurrences
+    # share the Part-owned datum; explicit recipe connectors remain untouched.
+    for part_id in {draft.instances[id]["definition_id"] for id in instances.values()}:
+        if not any(c["part_definition_id"] == part_id and not c.get("suppressed", False)
+                   for c in draft.connector_definitions.values()):
+            connector = draft._build_connector({"name": "Origin", "part_definition_id": part_id,
+                "frame_part_local": {"origin_m": [0, 0, 0], "primary_axis_xyz": [0, 0, 1], "secondary_axis_xyz": [1, 0, 0]},
+                "provenance": {"kind": "manual", "label": "Part origin"}}, assign=True)
+            draft.connector_definitions[connector["id"]] = connector
     if not instances and len(draft.part_definitions) == len(workspace.part_definitions):
         raise ValueError("Create at least one Part template or instance")
     if instances and not any(v["grounded"] for v in draft.instances.values() if v["parent_assembly_id"] == assembly_id):

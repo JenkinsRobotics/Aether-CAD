@@ -15,6 +15,10 @@ export interface InsertCandidate {
   unavailable?: string;
 }
 export interface InsertPlacement { positionM: readonly [number, number, number]; grounded: boolean }
+/** Establish the first active anchor automatically, including after suppression. */
+export function needsAssemblyAnchor(projection: AssemblyProjectionV1): boolean {
+  return !projection.instances.some(instance => instance.grounded && !instance.suppressed);
+}
 export function insertionPart(value: unknown): PartDocument {
   if (!value) throw Error('This Part has no local geometry to insert. Create or resolve its solid first.');
   const document = parsePartDocument(JSON.stringify(value));
@@ -60,5 +64,5 @@ export function insertionRecipe(projection: AssemblyProjectionV1, source: Insert
   let index = 1;
   while (names.has(`${stem}:${index}`)) index++;
   return { version: 1, parts: [part], instances: [{ key: `${stem}:${index}`, part: 'source',
-    position_mm: placement.positionM.map(value => value * 1000), grounded: placement.grounded }] };
+    position_mm: placement.positionM.map(value => value * 1000), grounded: placement.grounded || needsAssemblyAnchor(projection) }] };
 }
