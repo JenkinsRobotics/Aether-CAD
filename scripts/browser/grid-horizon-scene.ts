@@ -1,9 +1,10 @@
 import * as THREE from 'three/webgpu';
+import { TransparentViewportOutput } from '../../src/viewport/transparent-output';
 import { StageRig } from '../../src/viewport/stage-rig';
 import { resolveAppearance } from '../../src/viewport/appearance-themes';
 import { defaultCADAppearance } from '../../src/cad-appearance-store';
 
-const renderer = new THREE.WebGPURenderer({ antialias: true, forceWebGL: new URLSearchParams(location.search).has('webgl') });
+const renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true, forceWebGL: new URLSearchParams(location.search).has('webgl') });
 renderer.setSize(1000, 800); renderer.setPixelRatio(1);
 document.body.style.margin = '0'; document.body.append(renderer.domElement);
 await renderer.init();
@@ -13,8 +14,9 @@ const body = new THREE.Mesh(new THREE.BoxGeometry(35, 35, 15), new THREE.MeshBas
 scene.add(body); body.position.z = 7.5;
 const target = new THREE.Vector3();
 let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+const output = new TransparentViewportOutput(renderer, scene, new THREE.PerspectiveCamera());
 window.gridCheck = {
-  async render({ distance = 160, projection = 'perspective', theme = 'dark', elevation = 22, pan = 0, up = 'z', width = 1, model = false, axes = true } = {}) {
+  async render({ distance = 160, projection = 'perspective', theme = 'dark', elevation = 22, pan = 0, up = 'z', width = 1, model = false, axes = true, toneMapped = false, opaque = false } = {}) {
     stage.setUpAxis(up);
     stage.apply(resolveAppearance({ ...defaultCADAppearance,
       gridMinorColor: theme === 'dark' ? '#546068' : '#a0a4a7', gridMajorColor: theme === 'dark' ? '#63727c' : '#92999e',
@@ -22,7 +24,10 @@ window.gridCheck = {
       gridMinorWidthPx: width, floorMode: 'grid',
     }), { ...defaultCADAppearance, floorMode: 'grid' });
     stage.frame(60, 160);
-    scene.background = new THREE.Color(theme === 'dark' ? '#101112' : '#f2f5f7');
+    renderer.toneMapping = toneMapped ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+    renderer.toneMappingExposure = toneMapped ? 1.5 : 1;
+    scene.background = opaque ? new THREE.Color(theme === 'dark' ? '#101112' : '#f2f5f7') : null; renderer.setClearColor(0, 0);
+    renderer.domElement.style.backgroundColor = theme === 'dark' ? '#101112' : '#f2f5f7';
     body.visible = model;
     target.set(pan, 0, 0);
     const angle = elevation * Math.PI / 180;
@@ -31,7 +36,7 @@ window.gridCheck = {
     camera.position.set(pan + distance * Math.cos(angle) * .4, up === 'y' ? distance * Math.sin(angle) : -distance * Math.cos(angle), up === 'z' ? distance * Math.sin(angle) : -distance * Math.cos(angle));
     camera.lookAt(target); camera.updateMatrixWorld(true);
     stage.beforeRender(camera, target, [body]);
-    await renderer.renderAsync(scene, camera);
+    await output.renderAsync(camera);
     return { backend: renderer.backend.isWebGPUBackend ? 'webgpu' : 'webgl', vertices: stage.grid.children[4].geometry.attributes.position.count };
   },
 };

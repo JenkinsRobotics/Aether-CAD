@@ -8,14 +8,18 @@ and zoom; antialiased, crossfading grid scales retain readable cells. World axes
 theme colors, custom line widths and opaque-model occlusion remain intact. Top
 views stay clear; orthographic views use parallel rays and a matching depth range.
 Depth precision no longer depends on panning distance from the world origin.
+The transparent-canvas output converts straight RGB before premultiplying again,
+so fading lines retain their colors instead of washing out to white. Opaque
+model colors retain the existing output transform.
 This applies to the shared CAD Part/Assembly viewport; no document or worker
 format changes. Aether UI's WIDGETS standard records the product-renderer contract.
 
 Qualification: focused geometry/depth tests, the full CAD unit suite and production
 build; 32 real WebGPU/WebGL render views, both palettes/projections, extreme zoom,
-Y/Z-up, panning and custom line widths; built-app wheel zoom and camera checks on
+Y/Z-up, panning and custom line widths; four opaque-color comparisons across
+transparent/opaque backgrounds and tone transforms; built-app wheel zoom and camera checks on
 a disposable saved Part. Evidence: `.verification/grid-horizon-2026-10-26/` and
-`.verification/baseline-2026-10-24/grid-horizon-final-2026-10-26/`. Frontend-only
+`.verification/baseline-2026-10-24/grid-horizon-alpha-2026-10-26/`. Frontend-only
 activation retains the current worker, other app selections and Studio host.
 
 ## 2026-10-25 — CAD alpha-0.1.19 installed

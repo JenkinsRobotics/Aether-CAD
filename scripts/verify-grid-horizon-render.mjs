@@ -26,14 +26,15 @@ async function bands(page, bytes, theme) {
   const png = context.getImageData(0, 0, canvas.width, canvas.height), bg = theme === 'dark' ? [16, 17, 18] : [242, 245, 247];
   const values = [];
   for (let band = 0; band < 8; band++) {
-    let sum = 0, count = 0; const contrast = [];
+    let sum = 0, count = 0, lighter = 0; const contrast = [];
     for (let y = band * 100; y < (band + 1) * 100; y++) for (let x = 100; x < 900; x++) {
       const i = (y * png.width + x) * 4;
       const d = Math.max(...bg.map((c, k) => Math.abs(png.data[i + k] - c)));
+      if (png.data[i] > bg[0] + 2) lighter++;
       contrast.push(d); sum += d; if (d >= 3) count++;
     }
     contrast.sort((a,b) => a-b);
-    values.push({ peak: contrast[Math.floor(contrast.length * .99)], mean: sum / 80000, visible: count / 80000 });
+    values.push({ lighter, peak: contrast[Math.floor(contrast.length * .99)], mean: sum / 80000, visible: count / 80000 });
   }
   bitmap.close(); return values;
  }, { encoded: bytes.toString('base64'), theme });
@@ -51,6 +52,7 @@ try {
       const renderer = await page.evaluate(options => window.gridCheck.render(options), options);
       const bytes = await page.screenshot({ path: join(evidence, `${backend}-${theme}-${projection}-${distance}.png`) });
       const pixels = await bands(page, bytes, theme);
+      if (theme === 'light') assert.equal(pixels[6].lighter, 0, 'gray lines must not turn white on the transparent light canvas');
       assert.ok(pixels[6].visible > .01, `${backend}/${theme}/${projection}/${distance}: foreground grid must stay visible`);
       if (projection === 'perspective') assert.ok(pixels[0].peak < pixels[6].peak * .5, 'grid must fade near the horizon');
       results.push({ ...options, renderer, pixels });
@@ -65,9 +67,27 @@ try {
     await page.evaluate(options => window.gridCheck.render(options), options);
     await page.screenshot({ path: join(evidence, `${backend}-extra-${results.length}.png`) }); results.push(options);
   }
+  // Opaque model colors and depth occlusion must survive the alpha correction,
+  // including changing tone mapping on the existing output pipeline.
+  for (const toneMapped of [false, true]) {
+    const pixels = [];
+    for (const opaque of [false, true]) {
+      await page.evaluate(options => window.gridCheck.render(options), { model: true, toneMapped, opaque, width: 3 });
+      const bytes = await page.screenshot();
+      pixels.push(await page.evaluate(async encoded => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${encoded}`)).blob());
+        const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+        const context = canvas.getContext('2d'); context.drawImage(bitmap, 0, 0); bitmap.close();
+        return Array.from(context.getImageData(500, 400, 1, 1).data);
+      }, bytes.toString('base64')));
+    }
+    assert.deepEqual(pixels[0], pixels[1], 'opaque model color must be independent of the canvas background');
+    if (!toneMapped) assert.deepEqual(pixels[0], [104, 165, 198, 255], 'grid must not tint or draw over opaque geometry');
+    results.push({ backend, toneMapped, opaqueModelPixels: pixels });
+  }
   await page.close();
  }
  assert.deepEqual(errors, []);
  await writeFile(join(evidence, 'result.json'), JSON.stringify({ passed: true, results, errors }, null, 2));
- console.log(`Passed ${results.length} rendered grid views across both backends, themes and projections.`);
+ console.log(`Passed 32 grid views and 4 opaque-color comparisons across both backends, themes and projections.`);
 } finally { await browser.close(); await vite.close(); }

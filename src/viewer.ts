@@ -1,3 +1,4 @@
+import { TransparentViewportOutput } from './viewport/transparent-output';
 import { modelStudioCamera } from '@aether/ui';
 import { modelStudioEnvironment as studioLook } from '@aether/assets/themes/rendering/model-studio';
 import { createStudioReflectionMap, rotateStudioReflectionMap } from './viewport/studio-reflections';
@@ -186,6 +187,7 @@ const emptyCandidateCounts = (): Record<ConnectorKind, number> => ({
 
 export class MateViewport {
   private readonly renderer: THREE.WebGPURenderer;
+  private readonly output: TransparentViewportOutput;
   private readonly scene = new THREE.Scene();
   private readonly imageCanvases = new ImageCanvasLayer();
   setImageCanvases(canvases:import("@aether/core/document").ImageCanvas[] = []) { this.scene.add(this.imageCanvases.group); this.imageCanvases.set(canvases,this.parts); }
@@ -277,6 +279,7 @@ export class MateViewport {
     private readonly callbacks: ViewerCallbacks,
   ) {
     this.renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true });
+    this.output = new TransparentViewportOutput(this.renderer, this.scene, this.camera);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.shadowMap.enabled = true;
@@ -836,7 +839,7 @@ export class MateViewport {
 
   /** Replaces one authored Body after feature-history evaluation. */
   async capturePrintImage(): Promise<string> {
-    await this.renderer.renderAsync(this.scene, this.camera);
+    await this.output.renderAsync(this.camera);
     return this.renderer.domElement.toDataURL("image/png");
   }
 
@@ -1782,7 +1785,7 @@ export class MateViewport {
   /** Copy the product canvas in the render turn, before the GPU drawing buffer
    * may be cleared. Camera, selection and document remain unchanged. */
   captureViewport(maximumEdge=1024):HTMLCanvasElement {
-    this.renderer.render(this.scene,this.camera);
+    this.output.render(this.camera);
     const source=this.renderer.domElement;
     if(!source.width||!source.height)throw Error('The CAD viewport is not ready.');
     const edge=Math.max(1,Math.min(1024,maximumEdge));
@@ -1801,7 +1804,7 @@ export class MateViewport {
     this.cameraRotation.update(this.camera, this.controls.target, started);
     this.controls.update();
     this.stage.beforeRender(this.camera, this.controls.target, [this.modelRoot, this.featurePreview.group, this.historyPreview.group, this.orientationBox?.group]);
-    this.renderer.render(this.scene, this.camera);
+    this.output.render(this.camera);
     if (this.sketchSurface && this.cssRenderer)
       this.cssRenderer.render(this.cssScene, this.camera);
     this.sampleFrame(started, performance.now());
