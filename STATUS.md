@@ -1,3 +1,24 @@
+### Section cut boundaries and rotation orbits — 2026-10-26
+
+Section caps now require material on both sides of each closed intersection loop.
+Touching an exterior face no longer paints that original face with a false cap;
+duplicate coincident planes do not draw overlapping caps. GPU clipping retains
+the Float32 cut boundary, preventing oblique caps from clipping themselves into
+speckles. Topology and measurement coordinates remain on the mathematical plane.
+
+Rotation arrows now follow the projected dashed orbit. The full orbit accepts
+drags using the same world-space circle and ray/plane angle calculation; pivot
+position, normal arrows, Shift snapping, keyboard steps and Escape rollback are
+retained. Source review: SolidCraft's viewport section, GPU cut-depth rendering
+and gizmo ring picking in the local reference. Section view remains a reversible
+inspection cut; Split Body is the operation that changes saved model geometry.
+Curved cap measurements retain their explicit display-mesh approximation.
+
+Qualification uses analytic ray/box/half-space pixel checks on WebGPU and WebGL,
+coincident/diagonal/disconnected/hollow cap tests, and built-app ring dragging,
+pivot retention, cancellation and concurrent measurement. Evidence is in
+`.verification/section-cut-orbits-2026-10-26/`.
+
 ### Measurement snap anchors — 2026-10-26
 
 Point-to-point and 3-point angle now use the exact topology inference shared

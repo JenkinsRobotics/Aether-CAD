@@ -32,6 +32,7 @@ export class SectionLayer {
   readonly clipped = new THREE.ClippingGroup();
   private view: SectionView | null = null;
   private clips: THREE.Plane[] = [];
+  private boundaryTolerance = 1e-6;
   private planeCountChanged = false;
   private readonly indicators = new Map<string, THREE.Mesh>();
   private readonly cap = new THREE.MeshBasicNodeMaterial({ side: THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 });
@@ -70,7 +71,14 @@ export class SectionLayer {
     const planes = sectionClipPlanes(view);
     this.planeCountChanged = planes.length !== this.clips.length;
     this.clips = planes.map(plane => new THREE.Plane(new THREE.Vector3(...plane.normal),plane.constant));
-    this.clipped.clippingPlanes = this.clips;
+    // Cap vertices are Float32 and sit exactly on the mathematical cut. GPU
+    // plane evaluation must retain that boundary, including oblique cuts. A
+    // scale-aware rounding allowance prevents the cap clipping itself into
+    // speckles; CPU topology, measurements and the actual cap stay on the cut.
+    this.boundaryTolerance = Math.max(bounds.isEmpty() ? 0 : Math.max(
+      bounds.min.length(), bounds.max.length(), bounds.getSize(new THREE.Vector3()).length(),
+    ) * 1e-6, 1e-6);
+    this.clipped.clippingPlanes = this.clips.map(plane => new THREE.Plane(plane.normal.clone(), plane.constant + this.boundaryTolerance));
     for (const group of groups) this.place(group);
     this.planeCountChanged = false;
     for (const [id,indicator] of this.indicators) if (!view?.planes.some(cut => cut.id === id)) {
@@ -116,7 +124,7 @@ export class SectionLayer {
 
   /** True when a pick at this point lands on material the section has cut away. */
   hides(partId: string, point: THREE.Vector3): boolean {
-    return Boolean(this.view && isSectioned(this.view, partId) && this.clips.some(plane => plane.distanceToPoint(point) < -1e-6));
+    return Boolean(this.view && isSectioned(this.view, partId) && this.clips.some(plane => plane.distanceToPoint(point) < -this.boundaryTolerance));
   }
 
   private place(group: THREE.Group): void {

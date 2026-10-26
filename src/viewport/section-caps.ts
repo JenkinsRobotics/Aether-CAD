@@ -9,11 +9,17 @@ export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Pl
     return new BufferGeometry();
   geometry.computeBoundingBox();
   const epsilon = Math.max(geometry.boundingBox!.getSize(new Vector3()).length() * 1e-7, 1e-7);
-  for (const plane of planes) {
+  for (const [planeIndex, plane] of planes.entries()) {
     const start = output.length / 3;
+    if (planes.slice(0, planeIndex).some(other => other.normal.distanceToSquared(plane.normal) < 1e-14 && Math.abs(other.constant - plane.constant) < epsilon)) {
+      groups.push({ start, count: 0 });
+      continue;
+    }
     const vertices: Vector3[] = [];
     const buckets = new Map<string, number[]>();
     const edges = new Map<string, [number, number]>();
+    const edgeSides = new Map<string, number>();
+    const edgeKey = (a: number, b: number) => a < b ? `${a},${b}` : `${b},${a}`;
     // Weld neighboring triangle intersections before tracing the closed loops.
     const vertex = (p: Vector3) => {
       const cell = p.toArray().map(v => Math.floor(v / epsilon));
@@ -44,8 +50,12 @@ export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Pl
           points.push(triangle[k].clone().lerp(triangle[next], d / (d - e)));
       }
       const ids = [...new Set(points.map(vertex))];
-      if (ids.length === 2)
-        edges.set([...ids].sort((a, b) => a - b).join(','), [ids[0], ids[1]]);
+      if (ids.length === 2) {
+        const key = edgeKey(ids[0], ids[1]);
+        edges.set(key, [ids[0], ids[1]]);
+        const sides = (distances.some(d => d > epsilon) ? 1 : 0) | (distances.some(d => d < -epsilon) ? 2 : 0);
+        edgeSides.set(key, (edgeSides.get(key) ?? 0) | sides);
+      }
     }
     const adjacent = new Map<number, number[]>();
     for (const [a, b] of edges.values()) {
@@ -53,12 +63,12 @@ export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Pl
       adjacent.set(b, [...(adjacent.get(b) ?? []), a]);
     }
     const used = new Set<string>(), loops: number[][] = [];
-    const edgeKey = (a: number, b: number) => a < b ? `${a},${b}` : `${b},${a}`;
     for (const [a, b] of edges.values()) {
       if (used.has(edgeKey(a, b)))
         continue;
       const loop = [a];
       let previous = a, current = b;
+      let sides = edgeSides.get(edgeKey(a, b)) ?? 0;
       used.add(edgeKey(a, b));
       while (current !== a && loop.length <= edges.size) {
         loop.push(current);
@@ -66,10 +76,13 @@ export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Pl
         if (next === undefined)
           break;
         used.add(edgeKey(current, next));
+        sides |= edgeSides.get(edgeKey(current, next)) ?? 0;
         previous = current;
         current = next;
       }
-      if (current === a && loop.length >= 3)
+      // A cap closes an exposed interior, not a coincident exterior face. Test
+      // each loop independently: a mesh may contain disconnected closed shells.
+      if (current === a && loop.length >= 3 && sides === 3)
         loops.push(loop);
     }
     const normal = plane.normal;

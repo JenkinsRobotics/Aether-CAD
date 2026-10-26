@@ -42,7 +42,9 @@ try {
   }
   const project = async point => page.evaluate(point=>{let result; window.dispatchEvent(new CustomEvent('aether-measure-project',{detail:{points:[point],respond:value=>{result=value[0];}}}));return result;},point);
   const pixel = async point => {
-    const at=await project(point), bytes=await page.screenshot();
+    // Sample rendered material, excluding white DOM handles/measurement labels
+    // that can cross the probe as the cutting plane moves.
+    const at=await project(point), bytes=await page.screenshot({style:'.cad-section-handle, .cad-measure-overlay { visibility:hidden !important; }'});
     return page.evaluate(async({encoded,at})=>{const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+encoded)).blob());const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);return [...ctx.getImageData(Math.round(at.x),Math.round(at.y),1,1).data];},{encoded:bytes.toString('base64'),at});
   };
   const isBody=p=>p[0]>150&&p[1]>150&&p[2]>150;

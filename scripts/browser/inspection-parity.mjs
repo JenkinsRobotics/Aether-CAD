@@ -25,6 +25,38 @@ export async function verifyInspectionParity({page,expect,button,project,evidenc
   assert.ok(Math.hypot(centerAfter.x-centerBefore.x,centerAfter.y-centerBefore.y)<2,'rotation retains the displayed pivot after offset');
   const ring=page.getByRole('button',{name:'Rotate section Y',exact:true});
   await ring.press('ArrowRight');await expect(section.getByRole('textbox',{name:'Section rotation Y',exact:true})).toHaveValue('1.00');
+  // Drag on the dashed orbit itself, away from the arrow. Projected geometry,
+  // pointer hit testing and the angle field must agree, with no pivot drift.
+  const orbitPoints=async()=>ring.evaluate(node=>{
+    const box=node.ownerSVGElement.getBoundingClientRect();
+    return Array.from(node.points,p=>({x:p.x+box.left,y:p.y+box.top}));
+  });
+  const dragOrbit=async(cancel)=>{
+    const points=await orbitPoints(),before=await pivot.boundingBox();
+    await page.mouse.move(points[8].x,points[8].y);await page.mouse.down();
+    for(let i=9;i<=16;i++)await page.mouse.move(points[i].x,points[i].y);
+    await expect(section.getByRole('textbox',{name:'Section rotation Y',exact:true})).toHaveValue('46.00');
+    const after=await pivot.boundingBox();assert.ok(Math.hypot(after.x-before.x,after.y-before.y)<2,'orbit rotation retains pivot');
+    if(cancel){await page.keyboard.press('Escape');await expect(section.getByRole('textbox',{name:'Section rotation Y',exact:true})).toHaveValue('1.00');}
+    await page.mouse.up();
+  };
+  await dragOrbit(true);await dragOrbit(false);
+  await page.mouse.move(1300,300);await page.screenshot({path:join(evidence,'section-orbit-drag.png')});
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('aether-section-normal',{detail:{normal:[1,-1,1]}})));
+  const otherRing=page.getByRole('button',{name:'Rotate section X',exact:true});
+  await expect(otherRing).toBeVisible();
+  const oblique=await otherRing.evaluate(node=>{
+    const box=node.ownerSVGElement.getBoundingClientRect(),points=Array.from(node.points,p=>({x:p.x+box.left,y:p.y+box.top}));
+    const start=points.findIndex((p,i)=>i<55&&document.elementFromPoint(p.x,p.y)===node);
+    return points.slice(start,start+5);
+  });
+  assert.equal(oblique.length,5,'the foreshortened X orbit is directly reachable');
+  await page.mouse.move(oblique[0].x,oblique[0].y);await page.mouse.down();
+  for(const p of oblique.slice(1))await page.mouse.move(p.x,p.y);
+  await page.mouse.up();
+  await expect(section.getByRole('textbox',{name:'Section rotation X',exact:true})).toHaveValue('42.50');
+  await page.mouse.move(1300,300);await page.screenshot({path:join(evidence,'section-orbits-oblique.png')});
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('aether-section-normal',{detail:{normal:[0,0,1]}})));
   await section.getByRole('textbox',{name:'Section rotation X',exact:true}).fill('0');
   await section.getByRole('textbox',{name:'Section rotation Y',exact:true}).fill('0');
   const arrow=page.getByRole('button',{name:'Move section in positive normal direction',exact:true});

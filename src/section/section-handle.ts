@@ -5,6 +5,7 @@ import { documentUnits } from '../document-preferences';
 import type { SectionCut } from './section-view-store';
 import { sectionFrame, moveSectionTo, rotateSection } from './section-frame';
 import type { TransformHandleProjection } from '../viewport/transform-gizmo';
+import { mountSectionOrbits, type SectionOrbit } from './section-orbits';
 export type SectionProjection = {
   start: {
     x: number;
@@ -27,7 +28,6 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
   guide.setAttribute('aria-hidden', 'true');
   const line = document.createElementNS(guide.namespaceURI, 'line');
   guide.append(line);
-  const rings = document.createElementNS(guide.namespaceURI, 'g'); guide.append(rings);
   element.append(guide);
   const input = document.createElement('input');
   input.setAttribute('aria-label', `Section offset (${length.unit})`);
@@ -54,7 +54,7 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     previous?: number;
     angle?: number;
   } | null = null, frame = 0;
-  const gizmo = mountTransformManipulator(element, {
+  const callbacks: import('@aether/ui').TransformManipulatorOptions = {
     onStart(handle, event) {
       const cut = selected(), projection = project();
       if (!cut || !projection)
@@ -110,7 +110,9 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
       const step = length.factor * 1000 * (event.shiftKey ? 10 : event.altKey ? .1 : 1);
       change(cut.offsetMillimeters + direction * (handle.id === 'negative' ? -1 : 1) * step);
     },
-  });
+  };
+  const orbits = mountSectionOrbits(element, callbacks);
+  const gizmo = mountTransformManipulator(element, callbacks);
   gizmo.element.setAttribute('aria-label', 'Section plane movement');
   const applyInput = (report = false) => {
     try {
@@ -140,16 +142,12 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     element.hidden = !cut || !projection;
     if (!cut || !projection) {
       gizmo.update([]);
+      orbits.update([], viewport.getBoundingClientRect());
       return;
     }
     const box = viewport.getBoundingClientRect(), x = projection.start.x - box.left, y = projection.start.y - box.top;
     const handles: import('@aether/ui').ManipulatorHandle[] = edit ? [{ id: 'pivot', kind: 'pivot', label: 'Move section origin; snap to geometry', x, y }] : [];
-    rings.replaceChildren();
-    if (edit) for (const ring of projection.rotations ?? []) if (ring) {
-      const path = document.createElementNS(guide.namespaceURI, 'polyline');
-      path.setAttribute('points', ring.points.map(p => `${p.x-box.left},${p.y-box.top}`).join(' ')); rings.append(path);
-      handles.push({ id: ring.id, kind: 'rotation', label: `Rotate section ${ring.index ? 'Y' : 'X'}`, x: ring.x-box.left, y: ring.y-box.top });
-    }
+    orbits.update(edit ? (projection.rotations ?? []).filter((ring): ring is SectionOrbit => Boolean(ring)) : [], box);
     const dx = projection.end.x - projection.start.x, dy = projection.end.y - projection.start.y, size = Math.hypot(dx, dy);
     if (size < 3) {
       line.setAttribute('visibility', 'hidden');
@@ -174,6 +172,7 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     dispose() {
       cancelAnimationFrame(frame);
       gizmo.dispose();
+      orbits.dispose();
       element.remove();
     },
   };

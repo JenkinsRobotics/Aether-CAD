@@ -10,6 +10,8 @@ export interface TransformHandleProjection extends Point {
  /** Millimeters, degrees or factor, matching the canonical field. */
  valueAt:(x:number,y:number)=>number|null;
  cyclic?:number;
+ /** Exact projected orbit. Arrow artwork and pointer mapping use this same circle. */
+ orbit?: { angle: number; pointAt: (degrees: number) => Point };
 }
 export type TransformGizmoRequest={frame:TransformPreviewFrame;transform:NumericPartTransform;uniform:boolean;translationAxis?:[number,number,number]};
 type Rect={left:number;top:number;width:number;height:number};
@@ -46,7 +48,8 @@ export function projectTransformGizmo(camera:Camera,rect:Rect,request:TransformG
   };
   if(valueAt(end.x,end.y)===null)return [];
   const points=Array.from({length:65},(_,i)=>screen(point(i*360/64)));if(points.some(p=>!p))return [];
-  return [{key:'angle',label:'Rotate parts',color:'#387acb',...end,points:points as Point[],cyclic:360,valueAt}];
+  return [{key:'angle',label:'Rotate parts',color:'#387acb',...end,points:points as Point[],cyclic:360,valueAt,
+   orbit:{angle:t.angleDegrees,pointAt:degrees=>screen(point(degrees))!}}];
  }
  if(t.kind==='translate'&&request.translationAxis){
   const axis=new Vector3(...request.translationAxis);if(Math.abs(axis.length()-1)>1e-6)return [];

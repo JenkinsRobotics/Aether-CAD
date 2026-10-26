@@ -37,3 +37,14 @@ it("clips a part's edges while it is sectioned and restores them when the sectio
   expect(shown.at(-1)).toEqual(positions);
   expect(group.parent).toBe(root);
 });
+
+it('keeps rounded cap picks on the same boundary accepted by the GPU', () => {
+  const layer=new SectionLayer(new THREE.Group(),new THREE.Group()),group=new THREE.Group();
+  layer.adopt('p',group,new THREE.BoxGeometry(200,200,200));
+  layer.apply({planes:[{id:'z',plane:top,offsetMillimeters:0}],activePlaneId:'z',mode:'exclude',items:[]},[group],
+    new THREE.Box3(new THREE.Vector3(-100,-100,-100),new THREE.Vector3(100,100,100)),false);
+  const rounded=new THREE.Vector3(10,10,2e-6);
+  expect(layer.clipped.clippingPlanes[0].distanceToPoint(rounded)).toBeGreaterThan(0);
+  expect(layer.hides('p',rounded)).toBe(false);
+  expect(layer.hides('p',new THREE.Vector3(10,10,.01))).toBe(true);
+});
