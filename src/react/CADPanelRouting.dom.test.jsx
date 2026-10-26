@@ -218,15 +218,10 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   expect(isVisible(tree())).toBe(true);
 });
 
-/**
- * A header command. The shared CollectionActions keeps primary commands inline and
- * puts every other command behind its "More …" menu, so a test reaches one the
- * way a person does: open the tray, then pick the item.
- */
-async function footerCommand(footer, label) {
-  const more = footer.querySelector('[aria-label^="More "]');
-  if (more.getAttribute('aria-expanded') !== 'true') await act(async () => more.click());
-  return [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes(label)) ?? null;
+/** Reach row commands through the same menu a person opens on that item. */
+async function rowCommand(row, label) {
+  await act(async () => row.dispatchEvent(new dom.window.MouseEvent('contextmenu', {bubbles:true,clientX:20,clientY:20})));
+  return [...document.querySelectorAll('[role="menuitem"]')].find(el => el.querySelector('.aui-menu-label')?.textContent === label) ?? null;
 }
 
 it('uses one header for commands while row state and context actions preserve the CAD contract', async () => {
@@ -245,8 +240,8 @@ it('uses one header for commands while row state and context actions preserve th
   expect(container.querySelector('[aria-label="CAD parts"]').textContent).toContain('Body 1');
   expect(container.querySelector('[role="separator"][aria-label="Resize Features and Parts"]')).toBeTruthy();
   expect(tree.querySelector('[aria-label="Unsuppress Plane 1"]')).toBeTruthy();
-  const footer = container.querySelector('[aria-label="Feature tree controls"]');
-  await act(async () => (await footerCommand(footer, 'Move feature down')).click());
+  const selectedRow = tree.querySelector('[aria-selected="true"]');
+  await act(async () => (await rowCommand(selectedRow, 'Move down')).click());
   expect(actions).toContainEqual({type:'move-item',id:'feature/sketch/s1',targetID:'feature/plane/p1',position:'after'});
   await act(async () => tree.querySelector('[aria-label="Unsuppress Plane 1"]').click());
   expect(actions).toContainEqual({type:'item-action',id:'feature/plane/p1',actionID:'suppress-feature'});
@@ -259,7 +254,7 @@ it('uses one header for commands while row state and context actions preserve th
   unregister();
 });
 
-it('selects folders for footer commands and lets external geometry selection take over', async () => {
+it('selects folders for row commands and lets external geometry selection take over', async () => {
   const actions = [];
   const unregister = cadWorkspace.registerActionHandler(action => actions.push(action));
   const snapshot = { ...cadWorkspace.snapshot(), itemNodes: [{ id:'folder/f1', label:'Folder 1', children:[] }, {id:'feature/sketch/s1',label:'Sketch 1'}], bodyNodes:[], selectedItemIDs:new Set(['feature/sketch/s1']) };
@@ -267,8 +262,7 @@ it('selects folders for footer commands and lets external geometry selection tak
   const row = [...container.querySelectorAll('[role="treeitem"]')].find(el=>el.textContent.includes('Folder 1'));
   await act(async()=>row.click());
   expect(row.getAttribute('aria-selected')).toBe('true');
-  const footer = container.querySelector('[aria-label="Feature tree controls"]');
-  const rename = await footerCommand(footer, 'Rename item');
+  const rename = await rowCommand(row, 'Rename');
   expect(rename.disabled).toBe(false);
   await act(async()=>rename.click()); expect(actions).toContainEqual({type:'item-action',id:'folder/f1',actionID:'folder-rename'});
   await act(async()=>cadWorkspace.publish({...snapshot,selectedItemIDs:new Set()}));

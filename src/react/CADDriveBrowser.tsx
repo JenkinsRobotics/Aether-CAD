@@ -59,7 +59,7 @@ export function CADDriveBrowser({ documentID, connection }: { documentID: string
   const action = (id: string) => {
     const file = menu?.file; setMenu(null);
     if (createItems.some(item => item.id === id)) setCreating(id);
-    else if (id === 'refresh') void load();
+    else if (id === 'refresh') { if (place) void load(); else setRefresh(v => v + 1); }
     else if (id === 'open' && file) open(file);
     else if (id === 'drive') void run(async () => { await connection.flush(); location.assign(`/drive/${file ? '?file=' + encodeURIComponent(file.id) : ''}`); });
     else if (id === 'download' && file) {
@@ -68,17 +68,16 @@ export function CADDriveBrowser({ documentID, connection }: { documentID: string
   };
   const items: MenuItem[] = menu?.file ? [
     { id: 'open', label: menu.file.kind === 'folder' ? 'Open folder' : menu.file.app === 'cad' ? 'Open design' : 'Open in Drive' },
-    { id: 'drive', label: 'Details and sharing in Drive…' }, { id: 'download', label: 'Download', separatorBefore: true },
-  ] : [...createItems, { id: 'refresh', label: 'Refresh', separatorBefore: true }, { id: 'drive', label: 'Open Aether Drive' }];
+    { id: 'drive', label: 'Details and sharing in Drive…' },
+    ...(menu.file.kind === 'file' ? [{ id: 'download', label: 'Download', separatorBefore: true }] : []),
+  ] : [...createItems.map(item => ({...item, disabled: !place || busy})), { id: 'refresh', label: 'Refresh', separatorBefore: true }, { id: 'drive', label: 'Open Aether Drive' }];
   const rootName = place?.workspace ? context?.workspaces.find(w => w.id === place.workspace)?.name ?? 'Workspace' : place?.view === 'shared' ? 'Shared files' : 'My files';
   return <section className="aui-tab-browser cad-drive-browser" aria-label="Drive files" onContextMenu={event => {
-    if ((event.target as Element).closest('input,select,textarea,[role="menu"]')) return;
+    if ((event.target as Element).closest('input,select,textarea,[contenteditable],[role="menu"]')) return;
     event.preventDefault(); event.stopPropagation(); setMenu({ x: event.clientX, y: event.clientY });
   }}>
     <header className="aui-tab-browser-head"><h2>Drive</h2>
-      <MenuButton label="Create in Drive" items={createItems} onSelect={setCreating} disabled={!place || busy}><AetherIcon name="plus"/></MenuButton>
-      <IconButton label="Refresh Drive" onClick={() => place ? void load() : setRefresh(v => v + 1)}><AetherIcon name="refresh"/></IconButton>
-      <IconButton label="Open Aether Drive" onClick={() => action('drive')}><AetherIcon name="open-external"/></IconButton>
+      <MenuButton label="Create in Drive" menuClassName="aui-collection-popup" items={createItems} onSelect={setCreating} disabled={!place || busy}><AetherIcon name="plus"/></MenuButton>
     </header>
     {context && place && <SelectField aria-label="Drive location" value={place.workspace ?? `personal:${place.organization}`} onChange={event => {
       const ws = context.workspaces.find(w => w.id === event.target.value);
@@ -110,7 +109,7 @@ export function CADDriveBrowser({ documentID, connection }: { documentID: string
     {busy && <li role="status">Loading files…</li>}
     {listing.next && <li><Button disabled={busy} onClick={() => void load(true)}>Load more</Button></li>}
     </ul>
-    <Menu open={Boolean(menu)} anchor={menu} ariaLabel="Drive actions" items={items} onSelect={action} onClose={() => setMenu(null)}/>
+    <Menu className="aui-collection-popup" open={Boolean(menu)} anchor={menu} ariaLabel="Drive actions" items={items} onSelect={action} onClose={() => setMenu(null)}/>
     {creating && place && <NewFileDialog title={creating === 'folder' ? 'New Drive folder' : `New ${creating} design`} directory={[rootName, ...listing.path.map(p => p.name)].join(' / ')} onClose={() => setCreating(null)} onCreate={async name => {
       await connection.flush();
       const destination = { organization: place.organization, workspace: place.workspace, parent: place.parent };

@@ -74,5 +74,5 @@ it('lists embedded drawings and uses internal creation actions in a Hybrid desig
  expect([...container.querySelectorAll('[data-document-tab-id]')].map(tab=>tab.dataset.documentTabId)).toEqual(['p','a','d']);
  await act(async()=>container.querySelector('[aria-label="Create in this design"]').click());
  const items=[...document.querySelectorAll('[role="menuitem"]')].map(item=>item.textContent);
- expect(items).toEqual(['Create Part Studio…','Create Assembly…','Create Drawing…']);
+ expect(items).toEqual(['Create Part Studio…','Create Assembly…','Create Drawing…','New folder…','Manage and import files…']);
 });

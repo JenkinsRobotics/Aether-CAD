@@ -4,7 +4,7 @@ import { cadPresentation } from "../../cad-presentation-store";
 import { cadWorkspace } from "../../cad-workspace-store";
 import { AetherIcon, featureTreeMenuItems, TreePanel, TreePanelSplit, type TreeControl } from "@aether/ui";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { adjacentFeature, itemTreePresentation } from "./item-tree";
+import { itemTreePresentation } from "./item-tree";
 import "./items.css";
 import { cadFeatureActions, cadTreeCommand, cadHistoryCount } from "./feature-tree-commands";
 import { CADPartsPanel, CADAssemblyPartsPanel } from "./parts";
@@ -48,26 +48,14 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
       cadWorkspace.dispatch({ type: "select-item", id, ids: rows, mode });
     }
   };
-  const selected = [...selectedIDs].map((id) => findTreeNode([...nodes, ...bodies], id)).find(Boolean);
   const dispatch = (id: string, actionID: string) => { cadWorkspace.dispatch({ type: "item-action", id, actionID }); };
-  const feature = selected?.id.startsWith("feature/") && !selected.id.startsWith("feature/body/");
-  const folder = selected?.id.startsWith("folder/");
-  const previous = selected && feature ? adjacentFeature(nodes, selected.id, -1) : undefined;
-  const next = selected && feature ? adjacentFeature(nodes, selected.id, 1) : undefined;
-  const controls: TreeControl[] = [
-    { id: "folder", label: "New folder", icon: <AetherIcon name="collection-folder" />, disabled: !presentation.partOpen,
-      onClick: () => { cadWorkspace.dispatch({ type: "create-folder", memberIDs: [...selectedIDs].filter((id) => id.startsWith("feature/") && !id.startsWith("feature/body/")) }); } },
-    { id: "delete", label: folder ? "Dissolve folder" : "Delete feature", icon: <AetherIcon name="delete" />, disabled: !feature && !folder, shortcut: "Delete",
-      onClick: () => selected && dispatch(selected.id, folder ? "folder-delete" : "delete-feature") },
-    { id: "rename", label: "Rename item", icon: <AetherIcon name="notes" />, disabled: !selected || (!feature && !folder && !selected.id.startsWith("feature/body/")), shortcut: "F2",
-      onClick: () => selected && dispatch(selected.id, folder ? "folder-rename" : feature ? "rename-feature" : "body-rename") },
-    { id: "edit", label: "Edit feature", icon: <AetherIcon name="settings" />, disabled: !feature,
-      onClick: () => selected && dispatch(selected.id, "edit-feature") },
-    { id: "up", label: "Move feature up", icon: <AetherIcon name="chevron" style={{ transform: "rotate(-90deg)" }} />, disabled: !previous, separatorBefore: true,
-      onClick: () => { if (selected && previous) cadWorkspace.dispatch({ type: "move-item", id: selected.id, targetID: previous.id, position: "before" }); } },
-    { id: "down", label: "Move feature down", icon: <AetherIcon name="chevron" style={{ transform: "rotate(90deg)" }} />, disabled: !next,
-      onClick: () => { if (selected && next) cadWorkspace.dispatch({ type: "move-item", id: selected.id, targetID: next.id, position: "after" }); } },
-  ];
+  const controls: TreeControl[] = [{
+    id: "folder", label: "New folder", icon: <AetherIcon name="plus" />, disabled: !presentation.partOpen,
+    onClick: () => cadWorkspace.dispatch({
+      type: "create-folder",
+      memberIDs: [...selectedIDs].filter(id => id.startsWith("feature/") && !id.startsWith("feature/body/")),
+    }),
+  }];
   const rawNodes = [...workspace.itemNodes, ...(workspace.bodyNodes ?? [])];
   const panelMenu = useCADPanelContext(rawNodes);
   const menuActions = (id: string) => {

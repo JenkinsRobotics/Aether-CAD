@@ -24,9 +24,9 @@ export function tabActionItems(target:CADTabTarget):MenuItem[] {
   const assemblyCode=target.kind==='assembly' ? 'Assemblies use a binary archive. Show code and clipboard currently support Part Studios.' : undefined;
   const item=(id:CADTabAction,label:string,disabledReason?:string,separatorBefore=false):MenuItem=>({id,label,disabled:Boolean(disabledReason),disabledReason,separatorBefore});
   return [
-    {...item('delete','Delete',saved??readonly),danger:true},
+    {...item('delete','Delete',saved??readonly),danger:true,shortcut:'Delete'},
     item('open-browser','Open in new browser tab',saved,true),
-    item('rename','Rename',saved??readonly??linked),
+    {...item('rename','Rename',saved??readonly??linked),shortcut:'F2'},
     item('properties','Properties…',saved??(target.kind==='assembly'&&!target.itemId?'Use Document properties for an Assembly file.':undefined)),
     item('code','Show code',assemblyCode),
     item('duplicate','Duplicate',saved??(target.itemId ? readonly??(target.kind==='assembly'?'Assembly tab duplication is not supported yet.':undefined) : undefined),true),
