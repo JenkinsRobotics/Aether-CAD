@@ -1,5 +1,28 @@
 # Aether CAD source status
 
+## 2026-10-25 — CAD alpha-0.1.19 installed
+
+Shared panels and foundation source `854c7dbb8cf030e088babdda23bee648b6779d49` is live with its matching
+worker. All 3,528 frontend files and the worker match the browser-qualified
+output. Final modeling qualification passes all 16 workflows in 371.60 seconds,
+including Hole, Surface/Thicken and Sheet Metal/flat DXF, with no browser errors
+or server geometry calls. The actual Animation-client regression also passes.
+The final CSS cleanup removed only an obsolete comment/blank lines; a fresh Vite
+build is byte-identical to the qualified output.
+
+Manifest `b1c918af8b0dce83ab0e661acd6228b7dcd2eb7f2d7b111645992de72e139b69`.
+Worker `28850aa5b8f9270674ca4528457d6dbec16c40709860301abe257df1f6bfbf6a`.
+Server ready; unchanged Studio alpha-0.1.1 process 22157 and host
+`37f530ba22e4c933c2f6b9965e126d4875043cdab0948ed1ae96571f117d3378`. Map alpha-0.1.7 still loads/pings; all 3,521 package files,
+its six Pi downloads, and every other app record/configuration hash are unchanged.
+No host restart, database/network/security-setting change or push.
+
+Evidence: `.verification/foundations-2026-10-25/{stage,activate,installed}.json`
+and `verify-install.py`; UI audit snapshots `install-before-cad-shared-panels.json`
+and `install-after-cad-shared-panels.json`. Shared UI gallery alpha-0.1.3 and Map
+alpha-0.1.7 were qualified and activated independently before this CAD release.
+Broader CAD/SolidCraft parity remains incomplete.
+
 ## 2026-10-25 — Shared panels and foundation contracts qualified
 
 CAD consumes immutable Aether UI alpha.216 and assets alpha.30. Files uses the
