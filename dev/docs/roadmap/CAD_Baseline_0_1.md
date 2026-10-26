@@ -19,6 +19,16 @@ independent copies. Nested subassemblies and external associative design links
 remain open. Standard parts cover the implemented ISO families and bearings;
 this is not an import of every reference standard/library.
 
+## 2026-10-25 — Part/Assembly daily workflow delivered in alpha-0.1.18
+
+First insertion now anchors automatically and supplies a Part-origin connector;
+individual mate commands work on first use. Components expose position/rotation,
+name, visibility, grounding and source-Part editing through real controls. Five
+new browser workflows and all ten existing Assembly regressions pass, including
+shared Part edits, history, exact poses and save/reopen. See STATUS for installed
+hashes and qualification. This closes the demonstrated everyday blockers, not
+nested assemblies, external associativity or the remaining advanced solver scope.
+
 ## Reference and starting evidence
 
 The supplied solidcraft-main.zip contains SolidCraft 0.16.2 (Cargo.toml). Its

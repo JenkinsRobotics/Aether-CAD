@@ -1,5 +1,46 @@
 # Aether CAD source status
 
+## 2026-10-25 — CAD alpha-0.1.18 installed: usable Part → Assembly loop
+
+Source `8b246ce39ee6eb65e1f996bd29f48fcafc74b83e` and its matching worker are live.
+The first active insertion/Files drag automatically anchors the Assembly. Reused
+Parts get a shared origin connector when none is available, and the individual
+mate commands are registered at boot (they previously depended on opening the
+generic mate dialog first). Gates follow editable workspace/selection state.
+
+Components have a real right-click menu and double-click properties editor:
+rename, inline XYZ position/rotation, visibility and grounding. An active mate
+controls a free occurrence's placement; direct movement is refused until its
+mate is suppressed. Updates use the canonical atomic edit/history operation,
+with revision/cancellation guards. Metadata edits preserve authored rest poses;
+explicit grounding pins the current solved pose. Open source Part navigates
+through the saved Hybrid container; editing the Part updates shared occurrences.
+New code lives in focused `src/assembly/instance-*` and dialog modules. Connector
+origin controls also use the shared UI coordinate row.
+
+Qualification: 1,923 distinct CAD app tests pass across the full run and focused
+rerun (one integration test skipped). The initial full run had two outdated
+expectations for the newly created connector and revised help text; the corrected
+68-test regression passes. Engine 1,173; native packaged worker 318; app/engine
+checks and builds; headless exact kernel and region checks all pass. Five new
+actual browser workflows verify first drag, placement/rotation/history, visibility
+and reopen, source-Part editing/shared reuse, and direct revolute mating. All ten
+existing Assembly agent/edit/history/pose/copy/contact workflows also pass. The
+new test's preliminary failures were readiness timing and formatted-number
+expectations; the final numeric/asserted readiness run passes all checks. No
+browser errors. All fixtures used disposable files, not the user's documents.
+
+All 3,528 installed frontend files and worker hashes match the qualified build.
+Manifest `9e2021daefd601d32648d1bda8dc7d005c506a0c0d501f9eb93b842162d39cf7`.
+Server ready; unchanged host PID 22157 and Studio alpha-0.1.1. Map alpha-0.1.5
+loads/pings; its 3,530 package files and six Pi downloads are unchanged. All other
+apps/configuration remain unchanged. No restart, database/settings change or push.
+Evidence: `.verification/part-assembly-2026-10-25/`.
+
+This qualifies the basic reusable-Part Assembly workflow. Nested assemblies,
+associative external links, general closed-loop graphs and cam/sweep joints
+remain open; broader CAD/reference parity is not declared complete.
+
 ## 2026-10-25 — CAD alpha-0.1.17 installed: Part insertion and compact sketch editors
 
 Source `ae28e4047f54d263d432a6377f790461b759742b` and its matching worker are independently installed.
