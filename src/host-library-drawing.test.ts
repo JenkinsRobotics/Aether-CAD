@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.resetModules(); vi.useFakeTimers(); calls = [];
   files = new Map([["part", { id: "part", name: "Bracket.acpart", revision: 1, writable: true, data_base64: btoa(JSON.stringify(source)) }]]);
   dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost/cad/index.html?document=part&branch=experiment&isolated=1" });
-  for (const key of ["window", "document", "location", "history", "sessionStorage", "Event", "CustomEvent", "File", "FileReader"]) vi.stubGlobal(key, (dom.window as unknown as Record<string, unknown>)[key]);
+  for (const key of ["window", "document", "location", "history", "localStorage", "sessionStorage", "Event", "CustomEvent", "File", "FileReader"]) vi.stubGlobal(key, (dom.window as unknown as Record<string, unknown>)[key]);
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     if (url === "/api/status") return new Response(JSON.stringify({ user: { id: "operator" } }));
     const data = JSON.parse(String(init?.body)), action = url.split("/").at(-1)!; calls.push({ action, data });
@@ -66,7 +66,7 @@ it("recovers Drawing edits against their original revision and refuses a conflic
   const recovered = (await host.loadHostedFile())!;
   const reading = new Promise<string>(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(recovered); });
   await vi.runAllTimersAsync(); expect(await reading).toBe(text); host.markHostedClean();
-  await expect(host.flushAutosaveNow()).rejects.toThrow(/changed elsewhere/);
+  await expect(host.flushAutosaveNow()).rejects.toMatchObject({status:409});
   expect(files.get("drawing")!.data_base64).toBe(btoa(oldText));
   expect(readRecovery<{ revision: number }>(key)?.base.revision).toBe(1);
 });

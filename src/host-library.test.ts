@@ -11,7 +11,7 @@ const calls: { action: string; data: Record<string, unknown> }[] = [];
 beforeEach(() => {
   vi.resetModules(); vi.useFakeTimers(); calls.length = 0; revision = 1;
   dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/cad/index.html?document=part' });
-  for (const key of ['window', 'document', 'location', 'history', 'sessionStorage', 'Event', 'CustomEvent', 'File', 'FileReader'])
+  for (const key of ['window', 'document', 'location', 'history', 'localStorage', 'sessionStorage', 'Event', 'CustomEvent', 'File', 'FileReader'])
     vi.stubGlobal(key, (dom.window as unknown as Record<string, unknown>)[key]);
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/status') return new Response(JSON.stringify({ user: { id: 'operator' } }));
@@ -32,7 +32,7 @@ it('captures a Part immediately and saves it without the Save command', async ()
   await host.loadHostedFile(); host.markHostedClean();
   current = '{"name":"Part","features":["new sketch"]}'; host.markHostedDirty();
   expect(readRecovery(key)).not.toBeNull(); expect(calls.filter(c => c.action === 'save')).toHaveLength(0);
-  const unload = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(false);
+  const unload = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
   await vi.advanceTimersByTimeAsync(1200);
   expect(text).toBe(current); expect(readRecovery(key)).toBeNull();
 });
@@ -49,7 +49,7 @@ it('opens a pending recovered Part and preserves the base revision for conflict 
   await vi.runAllTimersAsync();
   const recovered = await reading;
   expect(recovered).toBe(current); host.markHostedClean();
-  await expect(host.flushAutosaveNow()).rejects.toThrow('changed elsewhere');
+  await expect(host.flushAutosaveNow()).rejects.toMatchObject({status:409});
   expect(calls.filter(c => c.action === 'save')).toHaveLength(0);
   expect(readRecovery<{ revision: number }>(key)?.base.revision).toBe(1);
 });
@@ -64,7 +64,7 @@ it('requests an Assembly archive immediately and sends it through autosave', asy
   expect(calls.some(c => c.action === 'create' && c.data.name === 'Assembly.acasm')).toBe(true);
 });
 
-it('sends mutation IDs and retains a CAD draft when a save reply is lost', async () => {
+it('retains an interrupted CAD draft and confirms an accepted save without repeating it', async () => {
   const host = await import('./host-library');
   let current = '{"name":"Part"}';
   host.configureAutosave(async () => {}, () => ({ name: 'Part.acpart', bytes: new TextEncoder().encode(current) }));
@@ -78,16 +78,19 @@ it('sends mutation IDs and retains a CAD draft when a save reply is lost', async
       writes++;
       const payload = JSON.parse(String(args[1]?.body));
       expect(payload.operation_id).toEqual(expect.any(String));
+      await original(...args); // Server accepted it; only the acknowledgement was lost.
       throw new TypeError('Reply lost after save');
     }
     return original(...args);
   });
   current = '{"name":"Part","features":["edited"]}'; host.markHostedDirty();
   await expect(host.flushAutosaveNow()).rejects.toMatchObject({ retryable: false });
+  expect(readRecovery(key)).not.toBeNull();
   window.dispatchEvent(new Event('online'));
   await vi.advanceTimersByTimeAsync(12_000);
   expect(writes).toBe(1);
-  expect(readRecovery(key)).not.toBeNull();
+  expect(readRecovery(key)).toBeNull();
+  expect(calls.filter(c=>c.action==='read').length).toBeGreaterThan(1);
 });
 
 it('keeps a project branch while opening, adding items and navigating between Parts', async () => {
@@ -121,4 +124,24 @@ it('refreshes project tabs from the matching canonical assembly without saving a
   host.syncHostedAssemblyProject({...projection,workspace_id:'another',part_definitions:[]} as any);
   expect(host.activeProject?.parts).toHaveLength(1);
   expect(vi.mocked(fetch).mock.calls.every(([url])=>!String(url).endsWith('/save'))).toBe(true);
+});
+
+it('resumes an expired-session draft after fresh verification of the same revision', async () => {
+ const host=await import('./host-library');let current='{"name":"Part"}';
+ host.configureAutosave(async()=>{},()=>({name:'Part.acpart',bytes:new TextEncoder().encode(current)}));
+ await host.loadHostedFile();host.markHostedClean();
+ const fetcher=vi.mocked(fetch), original=fetcher.getMockImplementation()!;let expired=true;
+ fetcher.mockImplementation(async(...args)=>String(args[0])==='/api/status'&&expired?new Response(JSON.stringify({user:null})):original(...args));
+ current='{"name":"Part","features":["latest"]}';host.markHostedDirty();
+ await expect(host.flushAutosaveNow()).rejects.toMatchObject({status:401});
+ expect(host.hostedSaveRecovery()!.state.backedUp).toBe(true);expired=false;
+ await host.hostedSaveRecovery()!.retry();expect(text).toBe(current);expect(host.hostedSaveRecovery()!.state.phase).toBe('saved');
+});
+it('never grants a clean stale Part the newer revision before its next edit',async()=>{
+ const host=await import('./host-library');let current='{"name":"Part"}';
+ host.configureAutosave(async()=>{},()=>({name:'Part.acpart',bytes:new TextEncoder().encode(current)}));
+ await host.loadHostedFile();host.markHostedClean();revision=2;text='{"name":"Remote part"}';
+ await host.hostedSaveRecovery()!.check();current='{"name":"Old tab edit"}';host.markHostedDirty();
+ await expect(host.flushAutosaveNow()).rejects.toMatchObject({status:409});
+ expect(text).toBe('{"name":"Remote part"}');expect(calls.filter(c=>c.action==='save')).toHaveLength(0);
 });

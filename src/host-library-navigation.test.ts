@@ -2,9 +2,9 @@
 import {beforeEach,expect,test,vi} from 'vitest';
 const request=vi.hoisted(()=>vi.fn());
 vi.mock('@aether/session/documents',()=>({documentRequest:request}));
-vi.mock('@aether/session/autosave',()=>({
-  AutosaveSession:class { dirty=false; state={durable:true}; dispose(){} subscribe(){} async flush(){} updateBase(){} pause(){} },
-  readRecovery:()=>null, recoveryKey:()=> 'test', sessionOwner:async()=> 'user',
+vi.mock('@aether/session/autosave',async importOriginal=>({
+  ...await importOriginal<typeof import('@aether/session/autosave')>(),
+  sessionOwner:async()=> 'user',
 }));
 beforeEach(()=>{
  vi.resetModules();history.replaceState(null,'','/cad/index.html?document=old');

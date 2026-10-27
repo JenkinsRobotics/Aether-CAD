@@ -1,5 +1,6 @@
+import { prepareSaveRecovery, SaveRecoveryController, downloadRecovery, type RecoverySelection } from '@aether/session/save-recovery';
 import { documentRequest } from "@aether/session/documents";
-import { AutosaveSession, readRecovery, recoveryKey, sessionOwner } from "@aether/session/autosave";
+import { AutosaveSession, SaveError, recoveryKey, sessionOwner } from "@aether/session/autosave";
 import { configureDocumentSession } from "./document-session";
 import { isPartFile, isProjectFile, isDrawingFile } from "@aether/core/document/file-types";
 import { parsePartDocument, type PartDocument } from "@aether/core/document";
@@ -135,6 +136,8 @@ let autosaveFlush: (() => Promise<void>) | null = null;
 let snapshot: (() => Snapshot | null) | null = null;
 let queue: AutosaveSession<StoredFile | null> | null = null;
 let owner = "";
+let saveRecovery: SaveRecoveryController<StoredFile | null> | null = null;
+export const hostedSaveRecovery = () => saveRecovery;
 let opening = false;
 let recovering = false;
 let capture: Promise<void> | null = null;
@@ -149,21 +152,56 @@ function fileIdentity(file: StoredFile | null): StoredFile | null {
   if (!file) return null;
   const { id, name, revision, writable } = file; return { id, name, revision, writable };
 }
-function startQueue(text = "") {
+function startQueue(text = "", selection: RecoverySelection<StoredFile | null> = { record: null, candidates: [], adopted: [] }) {
+  saveRecovery?.dispose();
   queue?.dispose();
-  queue = new AutosaveSession({ key: keyFor(active), base: fileIdentity(active), text, keyForBase: keyFor,
+  queue = new AutosaveSession({ key: keyFor(active), base: fileIdentity(active), text, keyForBase: keyFor, persistentRecovery: true,
     save: async (text, base) => {
+      if (await sessionOwner(false) !== owner) throw new SaveError('Sign in with the account that opened this design.', 401);
       active = base;
       const value: Draft = JSON.parse(text);
       await persistHostedFile(value.name, new Uint8Array(value.data));
       return fileIdentity(active);
     },
   });
+  const session = queue;
+  saveRecovery = new SaveRecoveryController({ session, selection,
+    sameBase: (a, b) => a?.id === b?.id && a?.revision === b?.revision,
+    revision: base => base?.revision,
+    verify: async () => {
+      if (await sessionOwner(false) !== owner) throw new SaveError('Sign in with the account that opened this design.', 401);
+      if (!session.base) {
+        if (session.state.phase === 'conflict' && ![401, 403].includes(session.state.status ?? 0))
+          throw Error('The first save could not be confirmed. Check My files before creating another copy.');
+        return {base: null, text};
+      }
+      const fresh = await request('read', {id: session.base.id, branch: query.get('branch') ?? undefined});
+      if (!fresh.writable || linkedPartReadOnly || query.has('revision')) throw new SaveError('This design is read only. Save a copy to keep edits.', 403);
+      return { base: fileIdentity(fresh), text: await verifiedSnapshot(fresh) };
+    },
+    copy: copyHostedSnapshot,
+    download: text => {
+      const value: Draft = text ? JSON.parse(text) : snapshot?.() ? JSON.parse(snapshotText(snapshot!()!)) : null;
+      if (!value) throw Error('Wait for the design to finish loading.');
+      downloadRecovery(new Uint8Array(value.data), value.name);
+    },
+  });
+  window.dispatchEvent(new Event('cad-save-recovery'));
   queue.subscribe(state => {
     if (queue?.dirty) dirty = true;
     else if (!capture) dirty = false;
     document.dispatchEvent(new CustomEvent("aether-save-state", { detail: state }));
   });
+}
+/** Read the same project item as the editor, without changing the active save target. */
+async function verifiedSnapshot(file: StoredFile): Promise<string> {
+  if (activePartId || activeDrawingId) {
+    const result = await request('project_read', {id:file.id, revision:file.revision, branch:query.get('branch') ?? undefined}) as StoredFile & {project:Project};
+    const item = activeDrawingId ? result.project.drawings?.find(d => d.id === activeDrawingId) : result.project.parts.find(p => p.id === activePartId);
+    if (!item?.document) throw new SaveError('This item is no longer in the saved design. Download your edits.', 404);
+    return snapshotText({name: item.name + (activeDrawingId ? '.acdrw' : '.acpart'), bytes: new TextEncoder().encode(JSON.stringify(item.document))});
+  }
+  return snapshotText({name:file.name,bytes:Uint8Array.from(atob(file.data_base64!), c => c.charCodeAt(0))});
 }
 /** Read the canonical editor snapshot without introducing another document store. */
 export function currentEditorSnapshot(): Snapshot | null { return snapshot?.() ?? null; }
@@ -187,15 +225,17 @@ export async function flushAutosaveNow() {
   else if (!value && dirty && autosaveFlush) await autosaveFlush();
   await queue?.flush();
   if (queue?.dirty) await queue.flush();
+  if (queue?.dirty) throw new Error("The design still has unsaved changes.");
 }
 /** Save the current snapshot as a new personal document, including conflict recovery. */
 export async function copyHostedSnapshot() {
   if(capture)await capture;
+  if (await sessionOwner(false) !== owner) throw new SaveError("Sign in with the account that opened this design.", 401);
   const current=snapshot?.();
   if(!current)throw new Error('Wait for the current document snapshot before making a copy.');
   let raw='';for(let i=0;i<current.bytes.length;i+=8192)raw+=String.fromCharCode(...current.bytes.subarray(i,i+8192));
   const file=await request('create',{name:current.name.replace(/(\.[^.]+)$/,' copy$1'),scope:'personal',data_base64:btoa(raw)});
-  queue?.dispose();location.assign(`/cad/index.html?document=${encodeURIComponent(file.id)}`);
+  location.assign(`/cad/index.html?document=${encodeURIComponent(file.id)}`);
 }
 export async function commitHosted(name: string, message: string) {
   if (!active) throw new Error("Open a server document to commit.");
@@ -282,12 +322,12 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
   const id = query.get("document");
   if (!hostedCAD) return null;
   opening = true;
-  owner = await sessionOwner();
+  owner = await sessionOwner(false);
   draftID = query.get("draft") ?? crypto.randomUUID();
   if (!id) {
     query.set("draft", draftID);
     history.replaceState(null, "", location.pathname + "?" + query);
-    const recovered = restoreFile(null);
+    const recovered = await restoreFile(null);
     if (!recovered) opening = false;
     return recovered;
   }
@@ -307,7 +347,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
       const drawing = activeProject.drawings?.find(item => item.id === query.get("drawing"));
       if (!drawing) throw Error("This Drawing is not present in the selected design revision.");
       activeDrawingId = drawing.id;
-      return restoreFile(new File([JSON.stringify(drawing.document)], drawing.name + ".acdrw"));
+      return restoreBytes(drawing.name + ".acdrw", new TextEncoder().encode(JSON.stringify(drawing.document)));
     }
     if (query.has("assembly") && !activeProject.assemblies.some(item => item.id === query.get("assembly"))) throw new Error("This Assembly is not present in the selected project revision.");
     if (
@@ -326,7 +366,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
     if (part?.document) {
       activePartId = part.id;
       linkedPartReadOnly = part.source?.kind === "linked";
-      return restoreFile(new File([JSON.stringify(part.document)], part.name + ".acpart"));
+      return restoreBytes(part.name + ".acpart", new TextEncoder().encode(JSON.stringify(part.document)));
     }
   }
   if (activeProject && !query.has("assembly") && activeProject.assemblies[0]) {
@@ -336,24 +376,32 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
   const bytes = Uint8Array.from(atob(active.data_base64!), (c) =>
     c.charCodeAt(0),
   );
-  return restoreFile(new File([bytes], active.name));
+  return restoreBytes(active.name, bytes);
 }
-function restoreFile(file: File | null): File | null {
-  const recovery = readRecovery<StoredFile | null>(keyFor(active));
-  startQueue();
+function restoreBytes(name: string, bytes: Uint8Array): File | null {
+  return restoreFile(new File([new Uint8Array(bytes)], name), snapshotText({name, bytes}));
+}
+function restoreFile(file: File | null, text = ''): File | null {
+  const selection = prepareSaveRecovery<StoredFile | null>(keyFor(active), text);
+  const recovery = selection.record;
+  startQueue(text, selection);
   if (!recovery) return file;
   const value: Draft = JSON.parse(recovery.text);
+  if (typeof value.name !== 'string' || !Array.isArray(value.data)) throw Error('The recovery copy could not be read. It has been retained.');
   recovering = true;
-  queue!.pause(true); // resume only after the canonical editor has opened it
-  queue!.recover(recovery, Boolean(active && active.revision !== recovery.base?.revision));
+  queue!.pause(true);
+  queue!.recover(recovery, active?.revision !== recovery.base?.revision);
+  if (active?.writable !== false && (active || !recovery.blocked || [401,403].includes(recovery.blockedStatus ?? 0)))
+    queue!.reconcile(fileIdentity(active), text, active?.revision === recovery.base?.revision);
   return new File([new Uint8Array(value.data)], value.name);
 }
 export async function saveHostedFile(name: string, bytes: Uint8Array): Promise<void> {
-  if (!queue) { owner = await sessionOwner(); draftID ||= crypto.randomUUID(); startQueue(); }
+  if (!queue) { owner = await sessionOwner(false); draftID ||= crypto.randomUUID(); startQueue(); }
   queue!.pause(false);
   queue!.write(snapshotText({ name, bytes }), !active);
   await queue!.flush();
   if (queue!.dirty) await queue!.flush();
+  if (queue!.dirty) throw Error("The design still has unsaved changes.");
 }
 async function persistHostedFile(
   name: string,

@@ -1,3 +1,4 @@
+import { CADSaveGuard } from './CADSaveGuard';
 import { CADShareDocument } from "./CADShareDocument";
 import { CADDocumentControls } from "./CADDocumentControls";
 import { CADStudioWorkspaceControls, CADStudioViewTools } from "./CADStudioControls";
@@ -515,6 +516,7 @@ export function AetherCADShell() {
         aria-hidden={presentation.startScreen !== "workspace"}
         inert={presentation.startScreen !== "workspace"}
       >
+        <CADSaveGuard />
         <WorkspaceShell
           workspaceControls={<CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} />}
           contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
