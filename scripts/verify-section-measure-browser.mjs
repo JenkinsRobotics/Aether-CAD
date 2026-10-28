@@ -66,6 +66,7 @@ try {
   await page.waitForTimeout(800);
   const after = await page.locator('.cad-measure-label').boundingBox();
   assert.ok(Math.abs(before.x-after.x)+Math.abs(before.y-after.y)>1, 'measurement label follows zoom');
+  await button('Measurement display settings').click();
   await choose('Length unit', 'Inch');
   await expect(page.locator('.cad-measure-label')).toContainText('0.787 in');
   await page.screenshot({ path: join(evidence, 'point-distance.png') });
