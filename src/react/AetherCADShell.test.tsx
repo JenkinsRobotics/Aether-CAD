@@ -88,7 +88,8 @@ describe("AetherCADShell", () => {
   it("defaults to the standard floating workspace with left history and version controls", () => {
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).toContain("chrome-suite toolbar-traditional");
-    expect(html).toContain("aui-studio-workspace");
+    expect(html).toContain('data-variant="integrated"');
+    expect(html).not.toContain("aui-studio-toolbar");
     expect(html).toContain('aria-label="CAD workspace"');
     expect(html).toContain('aria-label="Features and parts"');
     expect(html).toContain('aria-label="Version control"');
@@ -107,7 +108,8 @@ describe("AetherCADShell", () => {
       const html = renderToStaticMarkup(<AetherCADShell />);
       expect(html).toContain("chrome-classic toolbar-traditional");
       expect(html).toContain('aria-label="CAD workspace"');
-      expect(html).toContain("aui-studio-workspace");
+      expect(html).toContain('data-variant="integrated"');
+      expect(html).not.toContain("aui-studio-toolbar");
       expect(html).toContain('aria-label="Version control"');
       expect(html).toContain('aria-label="Comments"');
       expect(html).toContain('aria-label="Features and parts"');

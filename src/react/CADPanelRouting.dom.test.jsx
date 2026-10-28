@@ -97,8 +97,7 @@ it('ribbon category changes preserve the chosen left view and right appearance i
   await click('Version control');
   await act(async()=>[...container.querySelectorAll('[role="radio"]')].find(button=>button.textContent==='History').click());
   for(const label of ['Solid','Surface','Manage','Output']) {
-    await act(async()=>container.querySelector('[aria-label^="Tool category:"]').click());
-    const tab=[...document.querySelectorAll('[role="menuitemradio"]')].find(button=>button.textContent===label);
+    const tab=[...container.querySelectorAll('.aui-workspace-ribbon [role="tab"]')].find(button=>button.textContent===label);
     expect(tab).toBeTruthy();await act(async()=>tab.click());
     expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
     expect(cadPresentation.snapshot().activePanel).toBe('items');

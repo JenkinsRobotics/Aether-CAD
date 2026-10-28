@@ -162,18 +162,19 @@ describe("tool variants", () => {
   });
 });
 
-it('compact mode exposes direct modeling tools with categories and switches to sketch context', () => {
+it('compact integrated mode keeps category menus and switches to sketch context', () => {
   vi.stubGlobal('localStorage', {getItem: () => 'compact'});
   try {
     const props = {documentType:'part' as const, activeWorkspace:'solid' as const, partOpen:true, onSelectWorkspace:vi.fn(), onAction:vi.fn()};
     const html = renderToStaticMarkup(<CADTraditionalRibbon {...props} />);
-    expect(html).toContain('data-icon-strip="true"');
+    expect(html).toContain('data-variant="integrated"');
+    expect(html).not.toContain('data-icon-strip="true"');
     expect(html).toContain('aria-label="Solid"');
-    expect(html).toContain('data-tool-id="solid-extrude"');
+    expect(html).toContain('aria-label="Create tools"');
     expect(html).not.toContain('aria-label="Surface tools"');
     const sketch = renderToStaticMarkup(<CADTraditionalRibbon {...props} sketchEditing />);
     expect(sketch).toContain('aria-label="Sketch"');
-    expect(sketch).toContain('aria-label="Rectangle variants"');
+    expect(sketch).toContain('aria-label="Create tools"');
     expect(sketch).not.toContain('aria-label="Surface tools"');
   } finally { vi.unstubAllGlobals(); }
 });

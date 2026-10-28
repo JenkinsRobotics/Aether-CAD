@@ -1,5 +1,6 @@
 /** Exercise the actual toolbar shortcuts and Boolean commits on a disposable host. */
 import assert from 'node:assert/strict';
+import { verifyIntegratedToolbar } from './browser/integrated-toolbar.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -42,6 +43,8 @@ try {
   file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Toolbar operations.acpart', data_base64: Buffer.from(JSON.stringify(data)).toString('base64') });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(2, { timeout: 90000 });
+  await verifyIntegratedToolbar(page, expect, join(evidence, 'integrated-toolbar.png'));
+  steps.push('integrated toolbar, search, categories, camera/display/filter state and responsive bounds');
   await menu();
   for (const name of ['Union', 'Subtract', 'Intersect', 'Offset Face', 'Replace Face', 'Align', 'Split Body'])
     await expect(page.getByRole('menuitem', { name, exact: true })).toBeEnabled();
@@ -73,7 +76,12 @@ try {
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(1, { timeout: 30000 });
     await page.screenshot({ path: join(evidence, label.toLowerCase() + '.png') });
     if (operation !== 'intersection') {
-      await page.keyboard.press('ControlOrMeta+z');
+      const history = page.locator('.aui-integrated-toolbar-header');
+      await history.getByRole('button', {name:'Undo',exact:true}).click();
+      await expect.poll(async () => (await saved()).features.length).toBe(4);
+      await history.getByRole('button', {name:'Redo',exact:true}).click();
+      await expect.poll(async () => (await saved()).features.length).toBe(5);
+      await history.getByRole('button', {name:'Undo',exact:true}).click();
       await expect.poll(async () => (await saved()).features.length).toBe(4);
       await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(2);
     }

@@ -30,7 +30,7 @@ beforeEach(() => {
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();cadAssemblyWorkspace.setUnavailable();vi.unstubAllGlobals();});
 const render = mode => act(async()=>root.render(<AssemblyMateDOFDialog presentation={{...cadPresentation.snapshot(),startDialog:mode}}/>));
 const choose = id => act(async()=>{const select=document.querySelector('#assembly-mate-coordinate');select.value=id;select.dispatchEvent(new Event('change',{bubbles:true}));});
-const click = label => act(async()=>[...document.querySelectorAll('button')].find(button=>button.textContent===label).click());
+const click = label => act(async()=>[...document.querySelectorAll('button')].find(button=>button.textContent===label || button.getAttribute('aria-label')===label).click());
 
 it('chooses rotation or travel on the same mate with correct displayed and submitted units',async()=>{
   await render('set-mate-dof-value');
@@ -105,7 +105,7 @@ it('routes common history buttons to the active document and sketch, and respect
   const show=async(documentType,sketchEditing=false,partOpen=true)=>act(async()=>root.render(
     <StudioWorkspace><CADTraditionalRibbon documentType={documentType} sketchEditing={sketchEditing} partOpen={partOpen}
       activeWorkspace={documentType==='assembly'?'assembly-build':'solid'} onSelectWorkspace={()=>{}} onAction={()=>{}}/></StudioWorkspace>));
-  const undo=()=>[...container.querySelectorAll('button')].find(button=>button.textContent==='Undo');
+  const undo=()=>[...container.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')==='Undo');
   try {
     cadPresentation.patch({workspaceMode:'modeling'});ids.forEach(id=>cadCommands.setEnabled(id,true));
     await show('assembly',false,false);await click('Undo');await click('Redo');

@@ -41,12 +41,12 @@ it('opens the six-domain tray, executes Cone and refuses unavailable constructio
 });
 
 it('opens the feature tray from the compact toolbar',async()=>{
-  localStorage.setItem('aether-cad.ribbon-density','compact');
+  localStorage.setItem('aether-cad.integrated-ribbon-density','compact');
   const {createRoot}=await import('react-dom/client'),host=document.createElement('div');
   document.body.append(host);const root=createRoot(host);
   try {
     await act(async()=>root.render(<CADTraditionalRibbon documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()}/>));
-    await click(document.querySelector<HTMLElement>('[data-tool-id="feature-library-open"] button')!);
+    await click(button('Features'));
     expect(document.querySelector('[data-ribbon-workspace="feature-library"]')).toBeTruthy();
     expect(button('Solid tools')).toBeTruthy();
   } finally {await act(async()=>root.unmount());host.remove();localStorage.clear();}

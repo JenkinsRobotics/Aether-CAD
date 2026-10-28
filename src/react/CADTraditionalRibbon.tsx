@@ -6,7 +6,7 @@ import { toolHelpFor } from "../tools/tool-help";
 import { useState, useSyncExternalStore } from "react";
 import {
   ToolIcon, InspectionIcon, SelectionIcon, WorkspaceRibbon, WorkspaceSwitcher,
-  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonDensity, type WorkspaceRibbonTab, type WorkspaceRibbonGroup,
+  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonDensity, type WorkspaceRibbonTab,
 } from "@aether/ui";
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 import { cadCommands, isCADCommandID } from "../cad-command-registry";
@@ -27,6 +27,8 @@ import {
   type CADToolbarTab,
 } from "../cad-toolbar-layouts";
 import { useEffect } from "react";
+import { AetherIcon } from "@aether/ui";
+import { CADToolbarControls } from "./CADToolbarControls";
 
 /** The workspace switcher beside the tabs. Design, Assembly and Drawing are
  *  real workspaces and run; the rest name what Aether Studio plans and say
@@ -56,6 +58,8 @@ const WORKSPACE_ACTIONS: Record<string, CADToolActionID> = {
 
 
 export interface CADTraditionalRibbonProps {
+  onSearch?: () => void;
+  onOpenLayout?: () => void;
   suite?: boolean;
   /** Open document type; layouts refine the shared catalog per type. */
   documentType?: CADDocumentType;
@@ -77,6 +81,8 @@ export function CADTraditionalRibbon({
   partOpen,
   onSelectWorkspace,
   onAction,
+  onSearch,
+  onOpenLayout,
 }: CADTraditionalRibbonProps) {
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
   const workspaceMode = useSyncExternalStore(
@@ -90,21 +96,19 @@ export function CADTraditionalRibbon({
     cadAssemblyWorkspace.snapshot,
   );
   const [variants,setVariants]=useState<Record<string,string>>({});
-  // The tool bar's own three densities, the same menu the kit sidebar shows.
-  // CAD stored two before the consolidation; "standard" meant icons, labels and
-  // the workspace, which is what the widget calls "expanded".
+  // Keep the integrated variant’s density independent of older toolbar preferences.
   const [density, setDensity] = useState<WorkspaceRibbonDensity>(() => {
     try {
-      const stored = localStorage.getItem("aether-cad.ribbon-density");
+      const stored = localStorage.getItem("aether-cad.integrated-ribbon-density");
       if (stored === "compact" || stored === "standard" || stored === "expanded") {
-        return stored === "standard" ? "expanded" : stored;
+        return stored;
       }
     } catch { /* session-only */ }
-    return "compact";
+    return "standard";
   });
   const chooseDensity = (next: WorkspaceRibbonDensity) => {
     setDensity(next);
-    try { localStorage.setItem("aether-cad.ribbon-density", next); } catch { /* session-only */ }
+    try { localStorage.setItem("aether-cad.integrated-ribbon-density", next); } catch { /* session-only */ }
   };
   const workspace = toolbarWorkspaceFor(documentType, activeWorkspace);
   const fusionTabs = fusionTabsFor(documentType);
@@ -183,8 +187,10 @@ export function CADTraditionalRibbon({
 
   /** The button runs whichever variant the family currently means. */
   const runTool = (id: string) => {
+    if (id === 'toolbar:settings') { onAction('show-preferences'); return; }
+    if (id === 'toolbar:panels') { onOpenLayout?.(); return; }
+    if (id === 'toolbar:reset-panels') { onAction('reset-panels'); return; }
     if (id.startsWith('command:')) { const command = id.slice('command:'.length); if (isCADCommandID(command) && commands[command].enabled) cadCommands.execute(command); return; }
-    if (id === 'feature-library-open') { setDensity('standard'); setFusionTab('feature-library'); return; }
     if (id.startsWith('feature:')) {
       const tool = cadFeatureToolById(id.slice('feature:'.length));
       if (tool?.action && !availability(tool).disabled) onAction(tool.action);
@@ -220,20 +226,15 @@ export function CADTraditionalRibbon({
   const commandShortcuts = ([[historyCommands[0], "Undo", "amber"], [historyCommands[1], "Redo", "blue"], ["fit-view", "Frame", "green"]] as const)
     .map(([command, label, tone]) => ({ id: `command:${command}`, label, tone,
       disabled: !commands[command].enabled || !commands[command].registered || (command !== "fit-view" && !historyAvailable) }));
-
-  // Compact mode is a single context-aware strip, independent of the last tab.
-  // The compact tray retains category navigation and each category's commands.
-  const compactGroupsFor = (tabs: WorkspaceRibbonTab[], activeID: string): readonly WorkspaceRibbonGroup[] => {
-    const active = tabs.find(tab => tab.id === activeID) ?? tabs[0];
-    const featureTab = tabs.find(tab => tab.id === 'feature-library');
-    if (!active) return [];
-    if (!featureTab || active.id === featureTab.id) return active.groups;
-    return [...active.groups, {
-      id: 'all-features', label: 'Features',
-      tools: [{id:'feature-library-open',label:'Features',icon:<ToolIcon name="list"/>}],
-      menuItems: featureTab.groups.map(group=>({id:group.id,label:group.label,children:group.menuItems})),
-    }];
-  };
+  const integratedHeader = <CADToolbarControls history={commandShortcuts.slice(0, 2)} onHistory={runTool}/>;
+  const workspaces = workspaceModes(activeMode).map(item => ({
+    ...item, icon: <AetherIcon name={item.id === 'design' ? 'layers' : item.id === 'assembly' ? 'cube' : 'document'}/>,
+  }));
+  const toolbarOptions: MenuItem[] = [
+    { id: 'toolbar:settings', label: 'Settings…', icon: <AetherIcon name="settings"/> },
+    ...(onOpenLayout ? [{ id: 'toolbar:panels', label: 'Panel visibility and layout…', icon: <AetherIcon name="layout"/> }] : []),
+    { id: 'toolbar:reset-panels', label: 'Reset panel placements' },
+  ];
 
   if (fusionTabs) {
     const tabs: CADToolbarTab[] = sketchEditing ? [...fusionTabs, sketchContextTab()] : [...fusionTabs];
@@ -250,12 +251,12 @@ export function CADTraditionalRibbon({
     return (
       <section className={`cad-traditional-ribbon cad-fusion-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
         aria-label="Part tools" data-ribbon-workspace={active.id}>
-        <WorkspaceRibbon compactTools
-          workspaces={[]} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
-          tabs={ribbonTabs} compactGroups={compactGroupsFor(ribbonTabs, active.id)} activeTabID={active.id} onTabSelect={setFusionTab}
+        <WorkspaceRibbon variant="integrated" onSearch={onSearch} headerActions={integratedHeader} moreItems={toolbarOptions}
+          workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
+          tabs={ribbonTabs} activeTabID={active.id} onTabSelect={setFusionTab}
           onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
           density={density} onDensityChange={chooseDensity}
-          moreLabel="Tool bar options" commandShortcuts={commandShortcuts} withClassicRibbon />
+          moreLabel="Tool bar options" />
       </section>
     );
   }
@@ -275,12 +276,12 @@ export function CADTraditionalRibbon({
   return (
     <section className={`cad-traditional-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
       aria-label="Traditional CAD tools" data-ribbon-workspace={workspace.id}>
-      <WorkspaceRibbon compactTools
-        workspaces={[]} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
-        tabs={ribbonTabs} compactGroups={compactGroupsFor(ribbonTabs, workspace.id)} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
+      <WorkspaceRibbon variant="integrated" onSearch={onSearch} headerActions={integratedHeader} moreItems={toolbarOptions}
+        workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
+        tabs={ribbonTabs} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
         onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
         density={density} onDensityChange={chooseDensity}
-        moreLabel="Tool bar options" commandShortcuts={commandShortcuts} withClassicRibbon />
+        moreLabel="Tool bar options" />
     </section>
   );
 }

@@ -518,7 +518,7 @@ export function AetherCADShell() {
       >
         <CADSaveGuard />
         <WorkspaceShell
-          workspaceControls={<CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} />}
+          workspaceControls={drawingMode ? <CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} /> : undefined}
           contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
           preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
           preservePanelContent
@@ -536,6 +536,8 @@ export function AetherCADShell() {
             partOpen={presentation.partOpen}
             onSelectWorkspace={selectRibbonWorkspace}
             onAction={runRibbonAction}
+            onSearch={() => setCommandPaletteOpen(true)}
+            onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.aui-integrated-toolbar-more'))}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}
