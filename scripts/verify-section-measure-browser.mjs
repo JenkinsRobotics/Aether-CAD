@@ -18,10 +18,13 @@ const button = name => (['Measure','Section view','Fit view'].includes(name) ? p
 const options = async () => { await button('Environment options').click(); };
 
 try {
+  if(process.env.AETHER_TEST_TOKEN) await page.context().addCookies([{name:'aether_native_session',value:process.env.AETHER_TEST_TOKEN,url:origin}]);
   await page.goto(origin + '/cad/');
-  await page.locator('input[name="username"]').fill('editor');
-  await page.locator('input[name="password"]').fill('account-test-password-2026');
-  await button('Sign in').click();
+  if(!process.env.AETHER_TEST_TOKEN){
+    await page.locator('input[name="username"]').fill('editor');
+    await page.locator('input[name="password"]').fill('account-test-password-2026');
+    await button('Sign in').click();
+  }
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
   await page.waitForLoadState('networkidle');
   const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));

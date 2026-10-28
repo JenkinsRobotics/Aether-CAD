@@ -107,6 +107,11 @@ export class SectionLayer {
     }
   }
 
+  /** Recompute a moved occurrence's local cut without replacing its surface. */
+  refreshPlacement(group: THREE.Group): void {
+    if (this.clips.length) this.place(group);
+  }
+
   /** The visible section face of a part, which a click on the cut picks. */
   capOf(group: THREE.Group): THREE.Mesh | undefined {
     return group.children.find(child => child.userData.sectionCap && child.visible) as THREE.Mesh | undefined;

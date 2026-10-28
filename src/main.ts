@@ -1,3 +1,4 @@
+import { AssemblyGeometryCache } from './assembly/geometry-cache';
 import { mountSelectionManipulator } from './features/selection-manipulator';
 import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "./assembly/insertion-session";
 import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
@@ -1156,6 +1157,7 @@ cadPresentation.registerActionHandler((action) => {
 });
 
 const worker = createHostAetherCoreClient();
+const assemblyGeometry = new AssemblyGeometryCache({ evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument });
 configureEditHistory({
   evaluate: doc => worker.evaluatePart(doc),
   show: (model, active) => viewer.setHistoryPreview(model, active),
@@ -1433,6 +1435,7 @@ async function openLibraryDocument(file: File, url: URL) {
     await evaluateAndShowPart(document, `Opened ${file.name} from your server.`, true);
     activeWorkspaceKind = "part";
     ++assemblyRenderSerial;
+    assemblyGeometry.clear();
     await assemblyController.close();
     viewer.replaceAssemblyBodies([]);
     cadPresentation.patch({workspaceMode:"modeling"});
@@ -1477,23 +1480,24 @@ if (hostedCAD) {
   }).catch(error => setStatus(error instanceof Error ? error.message : String(error), "error"));
 }
 
-let assemblyRenderSerial=0;
-async function renderCanonicalAssembly():Promise<void>{
- const serial=++assemblyRenderSerial;
- const projection=assemblyController.geometryProjection;if(!projection)return;
- try{
-  const bodies=[];
-  for(const instance of projection.instances){
-   if(instance.suppressed||!instance.visible)continue;
-   const definition=projection.part_definitions.find(p=>p.id===instance.definition_id);
-   if(!definition?.feature_document)continue;
-   const doc=parsePartDocument(JSON.stringify(definition.feature_document));
-   const model=await worker.evaluatePart(doc);const transform=instance.solved_world_transform;
-   for(const body of model.parts)if(doc.bodyProperties?.[body.id]?.visible!==false)bodies.push({data:{...body,id:'assembly:'+instance.id+':'+body.id,name:instance.name+' · '+body.name},positionMillimeters:transform.position_m.map(v=>v*1000),quaternion:transform.rotation_quaternion_xyzw});
+let assemblyRenderSerial = 0;
+async function renderCanonicalAssembly(): Promise<void> {
+  const serial = ++assemblyRenderSerial;
+  const projection = assemblyController.geometryProjection;
+  if (!projection) return;
+  try {
+    const bodies = await bodiesForPlacements(projection, projection.instances.map(instance => ({
+      id: instance.id,
+      placement_mm: instance.solved_world_transform.position_m.map(v => v * 1000) as [number, number, number],
+      rotation: [...instance.solved_world_transform.rotation_quaternion_xyzw],
+    })), { evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument,
+      geometryCache: assemblyGeometry, isCurrent: () => serial === assemblyRenderSerial });
+    if (serial !== assemblyRenderSerial) return;
+    viewer.replaceAssemblyBodies(bodies);
+    viewer.frameAll();
+  } catch (error) {
+    if (serial === assemblyRenderSerial) setStatus('Assembly geometry: ' + (error as Error).message, 'error');
   }
-  if(serial!==assemblyRenderSerial)return;
-  viewer.replaceAssemblyBodies(bodies);viewer.frameAll();
- }catch(e){setStatus('Assembly geometry: '+(e as Error).message,'error');}
 }
 
 /** Solve the open assembly with the engine and show the result.
@@ -1516,6 +1520,7 @@ async function solveOpenAssembly(): Promise<void> {
       solve: async (job) => solveAssemblyJob(job),
       evaluate: (document) => worker.evaluatePart(document),
       parseDocument: (source) => parsePartDocument(source),
+      geometryCache: assemblyGeometry, isCurrent: () => serial === assemblyRenderSerial,
     });
     if (serial !== assemblyRenderSerial) return;
     viewer.replaceAssemblyBodies(result.bodies);
@@ -1538,9 +1543,10 @@ async function toggleExplodedView(): Promise<void> {
   const serial = ++assemblyRenderSerial;
   setStatus("Solving the assembly for the exploded view…");
   try {
-    const result = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) });
+    const result = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry });
     if (serial !== assemblyRenderSerial) return;
-    const bodies = await bodiesForPlacements(projection, explodedPlacements(result.solution.instances, 1), { evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) });
+    const bodies = await bodiesForPlacements(projection, explodedPlacements(result.solution.instances, 1), { evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry });
+    if (serial !== assemblyRenderSerial) return;
     viewer.replaceAssemblyBodies(bodies); viewer.frameAll(); exploded = true;
     setStatus(`Exploded view: ${bodies.length} bodies pushed from the centre. Explode again to assemble.`, "success");
   } catch (error) { setStatus(`Exploded view: ${(error as Error).message}`, "error"); }
@@ -1551,7 +1557,7 @@ cadCommands.register("assembly-check-contacts", () => {
   if (!projection) { setStatus("Open an assembly before checking contacts.", "error"); return; }
   if (!liveContactSets(projection).length) { setStatus("Contacts are off. Turn them on, or add a contact set, then check.", "error"); return; }
   setStatus("Checking contacts…");
-  void solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) })
+  void solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry })
     .then((result) => checkAssemblyContacts(projection, result.solution.instances, { parseDocument: (source) => parsePartDocument(source), checkContacts: (input) => aetherKernel().checkContacts(input) }))
     .then((overlaps) => setStatus(describeOverlaps(overlaps), overlaps.length ? "error" : "success"))
     .catch((error: unknown) => setStatus(`Contact check: ${(error as Error).message}`, "error"));
@@ -1564,7 +1570,7 @@ cadCommands.setEnabled("assembly-explode", true);
 cadCommands.register("assembly-motion-study", () => {
   const projection = assemblyController.geometryProjection;
   if (!projection) { setStatus("Open an assembly before running a motion study.", "error"); return; }
-  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source) }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"), (curves) => viewer.setAnalysisCurves(curves));
+  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"), (curves) => viewer.setAnalysisCurves(curves));
 });
 cadCommands.setEnabled("assembly-motion-study", true);
 

@@ -48,3 +48,17 @@ it('keeps rounded cap picks on the same boundary accepted by the GPU', () => {
   expect(layer.hides('p',rounded)).toBe(false);
   expect(layer.hides('p',new THREE.Vector3(10,10,.01))).toBe(true);
 });
+
+it('moves a sectioned occurrence without recreating its source mesh or leaving an old cap', () => {
+  const layer = new SectionLayer(new THREE.Group(), new THREE.Group()), group = new THREE.Group();
+  const source = new THREE.BoxGeometry(20,20,20), shown: number[][] = [];
+  layer.adopt('p',group,source,{positions:[0,0,-10,0,0,10],show:p=>shown.push(Array.from(p))});
+  layer.apply({planes:[{id:'z',plane:top,offsetMillimeters:0}],activePlaneId:'z',mode:'exclude',items:[]},[group],new THREE.Box3(),false);
+  group.position.z = 4;
+  layer.refreshPlacement(group);
+  expect(group.userData.sectionSourceGeometry).toBe(source);
+  const positions = layer.capOf(group)!.geometry.getAttribute('position');
+  expect(positions.count).toBeGreaterThan(0);
+  for(let i=0;i<positions.count;i++) expect(positions.getZ(i)+4).toBeCloseTo(0);
+  expect(shown.at(-1)).toEqual([0,0,-10,0,0,-4]);
+});

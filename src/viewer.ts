@@ -1,4 +1,6 @@
 import { cadSnapping } from './cad-snapping-store';
+import { paintSurfaceFace, setSurfaceGroups } from './viewport/surface-groups';
+import { samePartGeometry } from './viewport/assembly-geometry';
 import { projectSelectionManipulator, transformMatrix, type Point3 } from './viewport/selection-manipulator-math';
 import type { NumericPartTransform } from '@aether/core/document';
 import { TransparentViewportOutput } from './viewport/transparent-output';
@@ -892,13 +894,47 @@ export class MateViewport {
   }
 
   private assemblyPreviewIDs = new Set<string>();
+  private geometryBatch = false;
   replaceAssemblyBodies(bodies: {data:PartGeometryData;positionMillimeters:readonly number[];quaternion:readonly number[]}[]): void {
-    for(const id of this.assemblyPreviewIDs){const part=this.parts.get(id);if(part)this.removeRenderedPart(part);}
-    this.assemblyPreviewIDs.clear();
-    for(const body of bodies){
-      const placement=new THREE.Matrix4().compose(new THREE.Vector3(...body.positionMillimeters as [number,number,number]),new THREE.Quaternion(...body.quaternion as [number,number,number,number]),new THREE.Vector3(1,1,1));
-      this.addPart(body.data,placement);this.assemblyPreviewIDs.add(body.data.id);
+    const started = performance.now();
+    const nextIDs = new Set(bodies.map(body => body.data.id));
+    if (nextIDs.size !== bodies.length) throw Error('Assembly contains duplicate body identities.');
+    const invalidated = new Set<string>();
+    this.geometryBatch = true;
+    try {
+      for (const id of this.assemblyPreviewIDs) if (!nextIDs.has(id)) {
+        const part = this.parts.get(id);
+        if (part) this.removeRenderedPart(part);
+        invalidated.add(id);
+      }
+      for (const body of bodies) {
+        const placement = new THREE.Matrix4().compose(
+          new THREE.Vector3(...body.positionMillimeters as [number,number,number]),
+          new THREE.Quaternion(...body.quaternion as [number,number,number,number]), new THREE.Vector3(1,1,1));
+        const existing = this.parts.get(body.data.id);
+        if (existing && samePartGeometry(existing.data, body.data)) {
+          existing.data = body.data;
+          existing.group.name = body.data.name;
+          if (!existing.group.matrix.equals(placement)) {
+            if (this.anchorFace?.part === existing) this.clearAnchors();
+            existing.group.matrix.copy(placement);
+            existing.group.updateMatrixWorld(true);
+            this.initialMatrices.set(body.data.id, placement.clone());
+            this.section.refreshPlacement(existing.group);
+          }
+        } else {
+          if (existing) { this.removeRenderedPart(existing); invalidated.add(body.data.id); }
+          this.addPart(body.data, placement);
+        }
+      }
+      this.assemblyPreviewIDs = nextIDs;
+    } finally { this.geometryBatch = false; }
+    if (invalidated.size) {
+      if (this.selectionHover && invalidated.has(this.selectionHover.part.data.id)) this.selectionHover = null;
+      cadSelection.dispatch({ type: 'replace', items: cadSelection.snapshot().items.filter(item => !invalidated.has(item.partId)) });
     }
+    this.resetFaceMaterials();
+    this.publishGeometryMetrics(performance.now() - started);
     this.callbacks.onStateChanged();
     window.dispatchEvent(new CustomEvent('aether-assembly-geometry-updated'));
   }
@@ -1259,9 +1295,7 @@ export class MateViewport {
     geometry.setAttribute("position", new THREE.BufferAttribute(data.vertices, 3));
     geometry.setAttribute("normal", new THREE.BufferAttribute(data.normals, 3));
     geometry.setIndex(new THREE.BufferAttribute(data.triangles, 1));
-    geometry.clearGroups();
-    data.faceRanges.forEach((range) => geometry.addGroup(range.start, range.count, 0));
-    if (!data.faceRanges.length) geometry.addGroup(0, data.triangles.length, 0);
+    setSurfaceGroups(geometry, data.faceRanges, () => 0);
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
 
@@ -1689,7 +1723,7 @@ export class MateViewport {
     this.parts.delete(part.data.id);
     this.initialMatrices.delete(part.data.id);
     this.publishGeometryMetrics();
-    cadSelection.dispatch({
+    if (!this.geometryBatch) cadSelection.dispatch({
       type: "replace",
       items: cadSelection.snapshot().items.filter((item) => item.partId !== part.data.id),
     });
@@ -1963,6 +1997,7 @@ export class MateViewport {
 
   /** Publish geometry counts after parts change. */
   private publishGeometryMetrics(uploadMilliseconds?: number): void {
+    if (this.geometryBatch) return;
     let faces = 0;
     let triangles = 0;
     let edgeSegments = 0;
@@ -2416,8 +2451,7 @@ export class MateViewport {
   }
 
   private setFaceMaterial(part: RenderPart, faceId: number, materialIndex: number): void {
-    const groupIndex = part.faceRanges.findIndex((range) => range.faceId === faceId);
-    if (groupIndex >= 0) part.surface.geometry.groups[groupIndex].materialIndex = materialIndex;
+    paintSurfaceFace(part.surface.geometry, part.faceRanges, faceId, materialIndex);
   }
 
   private resetFaceMaterials(): void {
@@ -2431,29 +2465,15 @@ export class MateViewport {
           .filter((item) => item.partId === part.data.id && item.faceId !== undefined)
           .map((item) => item.faceId),
       );
-      part.surface.geometry.groups.forEach((group, index) => {
-        const faceId = part.faceRanges[index]?.faceId;
-        group.materialIndex = selectsWholePart || selectedFaces.has(faceId) ? 2 : 0;
-      });
+      const hover = this.tool === 'none' && this.selectionHover?.part === part ? this.selectionHover : null;
+      setSurfaceGroups(part.surface.geometry, part.faceRanges, faceId =>
+        selectsWholePart || selectedFaces.has(faceId) ? 2 : hover && (hover.faceId === undefined || hover.faceId === faceId) ? 1 : 0);
       const capHover = this.selectionHover?.part === part ? this.selectionHover.faceId : this.anchorFace?.part.data.id === part.data.id ? this.anchorFace.faceId : undefined;
       this.section.highlight(part.group, selectedFaces, capHover, selectsWholePart);
     });
     if (this.anchorFace) {
       const part = this.parts.get(this.anchorFace.part.data.id);
       if (part) this.setFaceMaterial(part, this.anchorFace.faceId, 1);
-    }
-    if (this.tool === "none" && this.selectionHover) {
-      if (this.selectionHover.faceId !== undefined) {
-        const groupIndex = this.selectionHover.part.faceRanges.findIndex(
-          (range) => range.faceId === this.selectionHover?.faceId,
-        );
-        const group = this.selectionHover.part.surface.geometry.groups[groupIndex];
-        if (group && group.materialIndex === 0) group.materialIndex = 1;
-      } else {
-        this.selectionHover.part.surface.geometry.groups.forEach((group) => {
-          if (group.materialIndex === 0) group.materialIndex = 1;
-        });
-      }
     }
   }
 

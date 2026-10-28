@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { describeSolve, solveAssemblyProjection } from "./assembly-solve";
+import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./assembly-solve";
+import { AssemblyGeometryCache } from '../assembly/geometry-cache';
 import { createRectanglePartDocument, serializePartDocument, parsePartDocument } from "../aether-core";
 
 const document = () => createRectanglePartDocument("Bracket", {
@@ -33,7 +34,8 @@ const deps = (over: Record<string, unknown> = {}) => ({
   })),
   evaluate: vi.fn(async () => ({
     sourceName: "Bracket", parseMilliseconds: 1,
-    parts: [{ id: "b1", name: "Body 1" }],
+    parts: [{ id: "b1", name: "Body 1", vertices: new Float32Array(9), normals: new Float32Array(9),
+      triangles: new Uint32Array([0,1,2]), edgeLines: new Float32Array(6), topology: [], faceRanges: [] }],
   } as never)),
   parseDocument: (source: string) => parsePartDocument(source),
   ...over,
@@ -55,11 +57,41 @@ describe("solving the open assembly with FreeCAD", () => {
     expect(result.bodies[0].data.name).toBe("Base · Body 1");
   });
 
-  it("builds the part once per instance, through the same evaluator a Part uses", async () => {
+  it("builds each distinct part once, through the same evaluator a Part uses", async () => {
     const dependencies = deps();
     await solveAssemblyProjection(projection(), dependencies);
-    expect(dependencies.evaluate).toHaveBeenCalledTimes(2);
+    expect(dependencies.evaluate).toHaveBeenCalledTimes(1);
     expect(dependencies.solve).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps 1000 occurrence identities while sharing geometry and invalidating only changed definitions', async () => {
+    const dependencies = deps(), cache = new AssemblyGeometryCache(dependencies);
+    const base = projection() as unknown as import('../cad-assembly-bridge').AssemblyProjectionV1;
+    const source = { ...base, instances: Array.from({length:1000}, (_, i) => ({...base.instances[0], id:`i${i}`, name:`Part ${i}`})) };
+    const placements = source.instances.map((instance,i) => ({id:instance.id,placement_mm:[i,0,0] as [number,number,number],rotation:[0,0,0,1] as [number,number,number,number]}));
+    const dependenciesWithCache = {...dependencies,geometryCache:cache};
+    const first = await bodiesForPlacements(source, placements, dependenciesWithCache);
+    expect(first).toHaveLength(1000);
+    expect(new Set(first.map(body=>body.data.id)).size).toBe(1000);
+    expect(new Set(first.map(body=>body.data.vertices)).size).toBe(1);
+    const moved = await bodiesForPlacements(structuredClone(source), placements.map(p=>({...p,placement_mm:[p.placement_mm[0],10,0]})), dependenciesWithCache);
+    expect(moved[999].positionMillimeters).toEqual([999,10,0]);
+    expect(moved[999].data.vertices).toBe(first[0].data.vertices);
+    expect(dependencies.evaluate).toHaveBeenCalledTimes(1);
+    const edit = structuredClone(source);
+    (edit.part_definitions[0].feature_document as any).features[1].distanceMillimeters = 45;
+    const changed = await bodiesForPlacements(edit, placements, dependenciesWithCache);
+    expect(dependencies.evaluate).toHaveBeenCalledTimes(2);
+    expect(changed[0].data.vertices).not.toBe(first[0].data.vertices);
+    const undone = await bodiesForPlacements(source, placements, dependenciesWithCache);
+    expect(dependencies.evaluate).toHaveBeenCalledTimes(3);
+    expect(undone[0].data.id).toBe(first[0].data.id);
+  });
+
+  it('stops obsolete preparations before another definition is submitted', async () => {
+    const dependencies = deps();
+    await bodiesForPlacements(projection(), [], {...dependencies, isCurrent: () => false});
+    expect(dependencies.evaluate).not.toHaveBeenCalled();
   });
 
   it("rejects a partial solution before evaluating or publishing any geometry", async () => {

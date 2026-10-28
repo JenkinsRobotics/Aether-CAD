@@ -58,7 +58,10 @@ const graph=async()=>{
 };
 const unshare=async(revoke=false)=>{await button('Agent connections').click();await page.getByRole('radio',{name:'MCP agents',exact:true}).click();await button('Stop sharing editor').click();if(revoke)await page.locator('.aui-agent-connection-card').filter({has:page.getByText(connectionName,{exact:true})}).getByRole('button',{name:'Revoke',exact:true}).click();await button('Done').click();};
 try{
-  await page.goto(origin+'/cad/');await page.locator('input[name="username"]').fill('editor');await page.locator('input[name="password"]').fill('account-test-password-2026');await button('Sign in').click();await page.getByText('A space for your next idea.',{exact:false}).waitFor({timeout:30000});
+  if(process.env.AETHER_TEST_TOKEN) await page.context().addCookies([{name:'aether_native_session',value:process.env.AETHER_TEST_TOKEN,url:origin}]);
+  await page.goto(origin+'/cad/');
+  if(!process.env.AETHER_TEST_TOKEN){await page.locator('input[name="username"]').fill('editor');await page.locator('input[name="password"]').fill('account-test-password-2026');await button('Sign in').click();}
+  await page.getByText('A space for your next idea.',{exact:false}).waitFor({timeout:30000});
   if(!contactOnly&&!copyOnly&&process.env.AETHER_ASSEMBLY_BROWSER_POSE_ONLY!=='1'){
   file=await call('library/project_create',{app:'cad',name:'Assembly agent baseline',operation_id:randomUUID(),packaging:'assembly',scope:'personal'});assemblyID=file.project.assemblies[0].id;
   const url=`${origin}/cad/index.html?document=${file.id}&assembly=${assemblyID}`;await page.goto(url);await page.locator('.aui-studio-document-title').filter({hasText:'Assembly agent baseline'}).waitFor({timeout:90000});

@@ -1,5 +1,25 @@
 # Aether CAD source status
 
+## 2026-10-28 — Assembly geometry reuse and viewport draw batching
+
+Assembly display now evaluates each distinct Part definition once and retains
+unchanged geometry across placement, solve, explode and motion updates. A bounded
+session cache invalidates by complete source content; changed/removed bodies
+invalidate their old selections, while moved occurrences retain GPU resources and
+refresh any active section cap. Adjacent faces with the same appearance share a
+surface draw call; face picking and individual highlights keep their original
+topology ranges. WebGPU, OCCT and the saved document format are unchanged.
+
+The real-worker/WebGPU fixture verifies 100, 1,000 and 5,000 occurrences, repeated
+and unique definitions, source edits, retained geometry and independent selection.
+With 1,000 occurrences of 10 simple definitions, the final measured first display
+is 249 ms and movement 43 ms, versus 3,104 ms and 16,765 ms before. These timings
+exclude engine startup, PDM download and mate solving. 1,000 unique definitions
+still take about four seconds to load; 5,000 occurrences render at about 13 FPS.
+Persistent evaluated caches and GPU instancing remain explicit gaps, not completed
+large-assembly parity. Full findings, reproducibility and limits:
+[Assembly performance](Assembly_Performance_2026_10_28.md).
+
 ## 2026-10-26 — Grid horizon correction
 
 The Model Studio ground grid fades by grazing view angle, independently of camera

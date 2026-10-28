@@ -13,6 +13,7 @@ import type { AssemblyJob, AssemblySolution } from "../assembly-types";
 import type { AssemblyProjectionV1 } from "../cad-assembly-bridge";
 import type { ImportedModelData } from "../domain";
 import type { PartDocument } from "../aether-core";
+import { AssemblyGeometryCache, type EvaluatedDefinition } from '../assembly/geometry-cache';
 
 export interface SolvedBody {
   data: ImportedModelData["parts"][number];
@@ -31,6 +32,9 @@ export interface AssemblySolveDependencies {
   solve(job: AssemblyJob): Promise<AssemblySolution>;
   evaluate(document: PartDocument): Promise<ImportedModelData>;
   parseDocument(source: string): PartDocument;
+  geometryCache?: AssemblyGeometryCache;
+  /** Stop obsolete renders before submitting another kernel request. */
+  isCurrent?: () => boolean;
 }
 
 export async function solveAssemblyProjection(
@@ -76,17 +80,27 @@ export function describeSolve(result: AssemblySolveResult): string {
 }
 
 /** The visible bodies of every placed instance at the given placements (millimetres, quaternions). */
-export async function bodiesForPlacements(projection: AssemblyProjectionV1, instances: AssemblySolution["instances"], deps: Pick<AssemblySolveDependencies, "evaluate" | "parseDocument">): Promise<SolvedBody[]> {
+export async function bodiesForPlacements(projection: AssemblyProjectionV1, instances: AssemblySolution["instances"], deps: Pick<AssemblySolveDependencies, "evaluate" | "parseDocument" | "geometryCache" | "isCurrent">): Promise<SolvedBody[]> {
   const placements = new Map(instances.map((i) => [i.id, i]));
+  const definitions = new Map(projection.part_definitions.map(part => [part.id, part]));
+  const cache = deps.geometryCache ?? new AssemblyGeometryCache(deps);
+  // Pin the current preparation's definitions even if the bounded session cache
+  // evicts them. Thousands of occurrences still evaluate a definition once.
+  const evaluated = new Map<string, EvaluatedDefinition>();
   const bodies: SolvedBody[] = [];
   for (const instance of projection.instances) {
+    if (deps.isCurrent?.() === false) return [];
     if (instance.suppressed || !instance.visible) continue;
     const placement = placements.get(instance.id);
     if (!placement) continue;
-    const definition = projection.part_definitions.find((part) => part.id === instance.definition_id);
+    const definition = definitions.get(instance.definition_id);
     if (!definition?.feature_document) continue;
-    const document = deps.parseDocument(JSON.stringify(definition.feature_document));
-    const model = await deps.evaluate(document);
+    let result = evaluated.get(definition.id);
+    if (!result) {
+      result = await cache.get(JSON.stringify([projection.workspace_id, definition.id]), JSON.stringify(definition.feature_document));
+      evaluated.set(definition.id, result);
+    }
+    const { document, model } = result;
     for (const body of model.parts) {
       // A body the part hides stays hidden when the part is placed.
       if (document.bodyProperties?.[body.id]?.visible === false) continue;
