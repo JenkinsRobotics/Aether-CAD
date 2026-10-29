@@ -5,7 +5,7 @@ import { useViewCubePreference } from "./use-view-cube-preference";
 /** Camera navigation and the viewport surface itself. */
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { AetherIcon, EnvironmentControl, StudioCameraControl, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
+import { AetherIcon, EnvironmentControl, StudioCameraControl, StudioViewportControls, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { bindViewportContextGesture } from "../../viewport/context-menu-gesture";
 import { cadViewportContext } from "../../viewport/context-menu";
@@ -22,7 +22,7 @@ export function ViewportCameraNavigation() {
     cadCameraPresentation.snapshot,
     cadCameraPresentation.snapshot,
   );
-  return (<><StudioCameraControl projection={camera.projection === "perspective" ? "Perspective" : "Orthographic"} expanded={cube.visible} onExpandedChange={cube.setVisible}><ViewportNavigationCube
+  return (<StudioViewportControls><StudioCameraControl projection={camera.projection === "perspective" ? "Perspective" : "Orthographic"} expanded={cube.visible} onExpandedChange={cube.setVisible}><ViewportNavigationCube
       id="view-cube"
       homeMenuItems={cameraMenuItems(camera.projection)}
       onHomeMenuSelect={selectCameraMenuItem}
@@ -58,7 +58,7 @@ export function ViewportCameraNavigation() {
       else if(id==="snap-geometry") cadSnapping.set({geometry:!snapping.geometry});
       else if(id==="snap-grid") cadSnapping.set({grid:!snapping.grid});
       else menu.onSelect(id);
-    }}/></>
+    }}/></StudioViewportControls>
   );
 }
 
