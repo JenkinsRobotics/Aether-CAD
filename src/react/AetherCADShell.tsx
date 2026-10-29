@@ -16,6 +16,7 @@ import {CAD_IMPORT_ACCEPT} from "../modeling/cad-import";
 import { CADWorkspaceLayoutPopover } from "./CADWorkspaceLayoutPopover";
 import { CADPluginsIcon, CADPluginsWindow } from "./CADPluginsWindow";
 import { CADDocumentTabs } from "./CADDocumentTabs";
+import { useFileTrayPreference } from "./chrome/use-file-tray-preference";
 import { useStudioApplications } from "@aether/session/applications";
 import { useDocumentConnection } from "@aether/session/useDocumentConnection";
 import "./CADViewportLayout.css";
@@ -333,7 +334,7 @@ export function AetherCADShell() {
 
   };
 
-  const [showFileTray, setShowFileTray] = useState(true);
+  const { visible: showFileTray, toggle: toggleFileTray } = useFileTrayPreference();
   // Per tab: the panel you work in (e.g. Version control) stays open when a
   // restore, merge, branch switch or refresh reloads the editor.
   const [panelPositions, setPanelPositions] = useState<WorkspacePanelState>(() => {
@@ -536,7 +537,7 @@ export function AetherCADShell() {
           preservePanelContent
           toolbarSpan="center"
           pinnedPanels={drawingMode ? [] : ["browser"]}
-          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:()=>setShowFileTray(value=>!value)}} /> }}
+          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:toggleFileTray}} /> }}
           style={{ height: "100%" }}
           panelState={visiblePanelState}
           onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}

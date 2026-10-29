@@ -6,6 +6,7 @@ import { cadWorkspace } from '../cad-workspace-store';
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 let root, container, Shell, unlisten, dom;
+const fileTrayPreference = 'aether-cad.file-tray-visible';
 beforeAll(async () => {
   dom = new JSDOM('<!doctype html><html><body></body></html>', {url:'http://localhost/cad/index.html', pretendToBeVisual:true});
   for (const key of ['window','document','navigator','HTMLElement','Element','Node','HTMLInputElement','Event','MouseEvent','KeyboardEvent','localStorage','location']) vi.stubGlobal(key,dom.window[key]);
@@ -17,6 +18,7 @@ beforeAll(async () => {
   Shell=(await import('./AetherCADShell')).AetherCADShell;
 });
 beforeEach(async () => {
+  localStorage.removeItem(fileTrayPreference);
   cadPresentation.patch({partOpen:true,activePanel:'items',startScreen:'workspace',workspaceMode:'modeling',workspaceLayout:'docked',panelPlacements:{browser:'docked',inspector:'docked',bottom:'hidden'}});
   unlisten=cadPresentation.registerActionHandler(action => {
     if(action.type==='set-panel-placement') cadPresentation.patch({panelPlacements:{...cadPresentation.snapshot().panelPlacements,[action.panel]:action.placement}});
@@ -28,7 +30,7 @@ beforeEach(async () => {
   const {createRoot}=await import('react-dom/client'); root=createRoot(container);
   await act(async()=>root.render(<Shell/>));
 });
-afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();});
+afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();vi.restoreAllMocks();localStorage.removeItem(fileTrayPreference);});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const railButton = label => [...container.querySelectorAll('.aui-tabbed-sidebar-tabs button, .aui-studio-aux-toolbar button')].find(b=>b.getAttribute('aria-label')===label);
 async function click(label){const button=railButton(label);expect(button).toBeTruthy();await act(async()=>button.click());}
@@ -87,11 +89,60 @@ it('opens Files as a left panel and moves the part tray toggle to the view tools
   expect(isVisible(container.querySelector('.aui-tab-browser'))).toBe(false);
   const tray=()=>container.querySelector('.cad-document-tray-slot');
   const toggle=container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]');
-  expect(toggle.getAttribute('aria-pressed')).toBe('true');
-  await act(async()=>toggle.click());
+  expect(toggle.getAttribute('aria-pressed')).toBe('false');
   expect(tray().hidden).toBe(true);
-  await act(async()=>container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]').click());
+  await act(async()=>toggle.click());
   expect(tray().hidden).toBe(false);
+  await act(async()=>container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]').click());
+  expect(tray().hidden).toBe(true);
+});
+
+async function remountShell() {
+  await act(async()=>root.render(null));
+  await act(async()=>root.render(<Shell/>));
+}
+const fileTray = () => container.querySelector('.cad-document-tray-slot');
+const fileTrayToggle = () => container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]');
+
+it('keeps the file tray closed by default and remembers explicit choices across editor remounts', async()=>{
+  expect(fileTray().hidden).toBe(true);
+  expect(localStorage.getItem(fileTrayPreference)).toBeNull();
+  for (const visible of [true, false]) {
+    await act(async()=>fileTrayToggle().click());
+    expect(fileTray().hidden).toBe(!visible);
+    expect(localStorage.getItem(fileTrayPreference)).toBe(String(visible));
+    await remountShell();
+    expect(fileTray().hidden).toBe(!visible);
+    expect(fileTrayToggle().getAttribute('aria-pressed')).toBe(String(visible));
+    await act(async()=>cadPresentation.patch({partOpen:false}));
+    await act(async()=>cadPresentation.patch({partOpen:true}));
+    await click('Files');
+    await click('Comments');
+    expect(fileTray().hidden).toBe(!visible);
+  }
+});
+
+it.each(['false', '', 'invalid'])('does not open the file tray for a stored %j value', async value=>{
+  localStorage.setItem(fileTrayPreference, value);
+  await remountShell();
+  expect(fileTray().hidden).toBe(true);
+  expect(fileTrayToggle().getAttribute('aria-pressed')).toBe('false');
+});
+
+it('defaults the file tray closed and permits manual toggling when browser storage is blocked', async()=>{
+  for (const method of ['getItem', 'setItem']) {
+    const original = dom.window.Storage.prototype[method];
+    vi.spyOn(dom.window.Storage.prototype, method).mockImplementation(function(key, ...args) {
+      if (key === fileTrayPreference) throw new Error('Storage blocked');
+      return original.call(this, key, ...args);
+    });
+  }
+  await remountShell();
+  expect(fileTray().hidden).toBe(true);
+  await act(async()=>fileTrayToggle().click());
+  expect(fileTray().hidden).toBe(false);
+  await act(async()=>fileTrayToggle().click());
+  expect(fileTray().hidden).toBe(true);
 });
 it('ribbon category changes preserve the chosen left view and right appearance is independent',async()=>{
   await click('Version control');
