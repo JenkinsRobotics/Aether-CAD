@@ -58,7 +58,7 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
     }
   };
   return <div className="cad-parts-panel">
-    <TreePanel title={`Parts (${rows.length})`} ariaLabel="CAD parts" nodes={items}
+    <TreePanel actionPlacement="header" title={`Parts (${rows.length})`} ariaLabel="CAD parts" nodes={items}
       backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
       menuItems={menuItems} onCommand={run} menuLabel="Part actions"
       className="cad-parts-list" rowHeight={24} showFilter={false}
@@ -91,7 +91,7 @@ export function CADAssemblyPartsPanel() {
       {...menuCommand('assembly-remove-instance','Remove component',true),danger:true,shortcut:'Delete'},
     ];
   return <div className="cad-parts-panel">
-    <TreePanel title={`Components (${rows.length})`} ariaLabel="CAD assembly components"
+    <TreePanel actionPlacement="header" title={`Components (${rows.length})`} ariaLabel="CAD assembly components"
       backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
       nodes={rows} rowHeight={24} showFilter={false} className="cad-parts-list"
       selectedIDs={assembly.selectedEntityIDs}

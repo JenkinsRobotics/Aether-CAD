@@ -73,6 +73,18 @@ const verifyMenus = async (rowName, backgroundSelector) => {
 };
 it('Features exposes matching row menus, background creation and safe row shortcuts', async () => {
   await act(async()=>root.render(<ItemsPanel active/>));
+  expect(container.querySelector('.aui-collection-footer')).toBeNull();
+  const headers = [...container.querySelectorAll('.aui-collection-heading')];
+  expect(headers).toHaveLength(2);
+  for (const header of headers) {
+    const buttons = [...header.querySelectorAll('button')];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].getAttribute('aria-label')).toMatch(/^Create in/);
+    expect(buttons[1].getAttribute('aria-label')).toMatch(/options$/);
+  }
+  await event(headers[0].querySelector('button'),'click');
+  await menuAction('New folder');
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'create-folder',memberIDs:['feature/extrude/f']});
   const row = await verifyMenus('Extrude 1','.cad-items-tree .aui-tree-panel-content');
   await event(row,'keydown',{key:'F2'});
   expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:'feature/extrude/f',actionID:'rename-feature'});
@@ -88,6 +100,8 @@ it('Features exposes matching row menus, background creation and safe row shortc
 it('Parts shares visibility/rename actions between its row menu and keyboard', async () => {
   await act(async()=>root.render(<CADPartsPanel nodes={[body]} selectedIDs={new Set([body.id])}
     onSelect={()=>{}} onAction={mocks.dispatch} onShowAppearance={()=>{}}/>));
+  expect(container.querySelector('.aui-collection-footer')).toBeNull();
+  expect(container.querySelectorAll('.aui-collection-heading button')).toHaveLength(2);
   const row = await verifyMenus('Body 1','.aui-tree-panel-content');
   await event(row,'contextmenu'); await menuAction('Hide');
   expect(mocks.dispatch).toHaveBeenLastCalledWith(body.id,'body-visibility');
