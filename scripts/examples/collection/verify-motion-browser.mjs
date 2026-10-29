@@ -36,8 +36,26 @@ try {
   });
   await page.waitForLoadState("networkidle");
   const checks = [];
-  for (const id of ["roadster", "airplane", "wrench"]) {
-    await page.goto(origin + "/cad/index.html?editor=1&example=" + id);
+  const records = JSON.parse(
+    await readFile(join(root, "public/examples/catalog.json"), "utf8"),
+  );
+  const cases =
+    process.env.AETHER_EXAMPLES_GROUP === "space"
+      ? records
+          .filter((r) => ["space-shuttle", "artemis-sls"].includes(r.id))
+          .flatMap((r) =>
+            r.configurations
+              .filter((c) => c.movable)
+              .map((c) => ({ id: r.id, assembly: c.id })),
+          )
+      : ["roadster", "airplane", "wrench"].map((id) => ({ id }));
+  for (const { id, assembly } of cases) {
+    await page.goto(
+      origin +
+        "/cad/index.html?editor=1&example=" +
+        id +
+        (assembly ? "&assembly=" + assembly : ""),
+    );
     await page
       .getByRole("tree", { name: "CAD assembly components" })
       .waitFor({ timeout: 90000 });

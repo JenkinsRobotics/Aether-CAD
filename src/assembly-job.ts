@@ -1,3 +1,4 @@
+import { scopeAssemblyProjection } from "./assembly/projection-scope";
 /** Turn the open assembly document into a job the assembly solver can run.
  *
  *  The projection speaks metres and connector frames; the engine speaks
@@ -70,6 +71,7 @@ function connectorPlacement(frame: ConnectorFrameProjection): {
 }
 
 export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTranslation {
+  projection = scopeAssemblyProjection(projection);
   const untranslated: AssemblyJobTranslation["untranslated"] = [];
   const note = (id: string, name: string, reason: string) =>
     untranslated.push({ id, name, reason });

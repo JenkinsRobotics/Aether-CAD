@@ -7921,6 +7921,20 @@ function prepareCommand(command, content, args) {
 function finalizeCandidate(content, outputs, frames = {}, scopes = {}) {
   return serializePartDocument(resolveExtrusionScopes(resolveSketchFrames(resolveBodyOutputs(parsePartDocument(content), outputs), frames), scopes));
 }
+function scopeAssemblyProjection(projection) {
+  const active = new Set(projection.instances.map((instance) => instance.id));
+  const elsewhere = new Set((projection.assemblies ?? []).filter((assembly) => assembly.id !== projection.assembly_id).flatMap((assembly) => assembly.root_instance_ids ?? []).filter((id2) => !active.has(id2)));
+  if (!elsewhere.size) return projection;
+  const omitted = projection.mates.filter((mate) => elsewhere.has(mate.endpoint_a.instance_id) && elsewhere.has(mate.endpoint_b.instance_id));
+  const omittedIDs = new Set(omitted.map((mate) => mate.id));
+  const omittedDOFs = new Set(omitted.flatMap((mate) => (mate.dofs ?? []).map((dof) => dof.id)));
+  return {
+    ...projection,
+    mates: projection.mates.filter((mate) => !omittedIDs.has(mate.id)),
+    relations: (projection.relations ?? []).filter((relation) => !(omittedDOFs.has(relation.driver_dof_id) && omittedDOFs.has(relation.driven_dof_id))),
+    ...projection.contact_sets ? { contact_sets: projection.contact_sets.filter((set) => !set.instance_ids.length || !set.instance_ids.every((id2) => elsewhere.has(id2))) } : {}
+  };
+}
 const REVISION = "180";
 const WebGLCoordinateSystem = 2e3;
 const WebGPUCoordinateSystem = 2001;
@@ -10647,6 +10661,7 @@ function connectorPlacement(frame) {
   };
 }
 function assemblyJobFor(projection) {
+  projection = scopeAssemblyProjection(projection);
   const untranslated = [];
   const note = (id2, name5, reason) => untranslated.push({ id: id2, name: name5, reason });
   const parts = [];

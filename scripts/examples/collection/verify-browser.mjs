@@ -7,12 +7,20 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 const records = JSON.parse(
   await readFile(join(root, "public/examples/catalog.json"), "utf8"),
 );
-const selected = records.filter(
-  (r) =>
-    !process.env.AETHER_EXAMPLES_GROUP ||
-    (process.env.AETHER_EXAMPLES_GROUP === "reference") ===
-      r.id.startsWith("reference-"),
-);
+const spaceIds = ["space-shuttle", "artemis-sls"];
+const selected = records.filter((r) => {
+  if (
+    process.env.AETHER_EXAMPLE_MODELS &&
+    !process.env.AETHER_EXAMPLE_MODELS.split(",").includes(r.id)
+  )
+    return false;
+  const group = process.env.AETHER_EXAMPLES_GROUP;
+  if (!group) return true;
+  if (group === "space") return spaceIds.includes(r.id);
+  return group === "reference"
+    ? r.id.startsWith("reference-")
+    : !r.id.startsWith("reference-") && !spaceIds.includes(r.id);
+});
 const thumbnailsOnly = process.env.AETHER_EXAMPLES_THUMBNAILS_ONLY === "1";
 const { chromium, expect } = createRequire(
   fileURLToPath(
@@ -28,7 +36,7 @@ assert.equal(new URL(origin).hostname, "127.0.0.1");
 assert.notEqual(new URL(origin).port, "8780");
 await mkdir(evidence, { recursive: true });
 const browser = await chromium.launch({ headless: true }),
-  page = await browser.newPage({ viewport: { width: 1800, height: 1150 } });
+  page = await browser.newPage({ viewport: { width: 1800, height: 960 } });
 const errors = [],
   writes = [];
 page.on("pageerror", (e) => errors.push(e.message));
@@ -110,13 +118,60 @@ try {
       path: join(evidence, example.id + "-preview.png"),
     });
     // Capture the actual CAD viewport at a closer view for the built-in gallery.
+    if (example.id === "artemis-sls") {
+      await page.mouse.move(900, 450);
+      for (let step = 0; step < 3; step++) await page.mouse.wheel(0, 150);
+      await page.waitForTimeout(500);
+    }
     await page.mouse.move(20, 20);
     await page.waitForTimeout(400);
     await page.screenshot({
       path: join(root, "public/examples", example.thumbnail),
-      clip: { x: 400, y: 260, width: 1000, height: 640 },
-      style: ".cad-studio-camera-navigation { visibility:hidden!important; }",
+      clip: { x: 400, y: 130, width: 1000, height: 620 },
+      style:
+        ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube { visibility:hidden!important; }",
     });
+    for (const configuration of example.configurations?.slice(1) ?? []) {
+      await page
+        .getByRole("combobox", { name: "Example assembly", exact: true })
+        .selectOption(configuration.id);
+      await page.waitForURL(
+        (url) => url.searchParams.get("assembly") === configuration.id,
+      );
+      await rendered();
+      if (example.id === "space-shuttle") {
+        await page.screenshot({
+          path: join(evidence, "shuttle-underside.png"),
+        });
+        await page.mouse.move(700, 450);
+        await page.mouse.down({ button: "right" });
+        await page.mouse.move(1100, 450, { steps: 25 });
+        await page.mouse.up({ button: "right" });
+        await page.waitForTimeout(800);
+      }
+      await page.screenshot({
+        path: join(
+          evidence,
+          example.id + "-" + configuration.id + "-preview.png",
+        ),
+      });
+      await page.screenshot({
+        path: join(
+          root,
+          "public/examples",
+          example.id + "-" + configuration.id + ".png",
+        ),
+        clip: { x: 400, y: 130, width: 1000, height: 620 },
+        style:
+          ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube {visibility:hidden!important;}",
+      });
+      assert.equal(
+        writes.length,
+        before,
+        "Switching configurations must remain read only",
+      );
+    }
+    const activeAssembly = new URL(page.url()).searchParams.get("assembly");
     if (thumbnailsOnly) {
       await page.goto(origin + "/cad/?examples=1");
       continue;
@@ -133,12 +188,21 @@ try {
       before + 1,
       "One explicit save must create exactly one independent copy",
     );
+    assert.equal(
+      new URL(page.url()).searchParams.get("assembly"),
+      activeAssembly,
+      "Save preserves the selected assembly",
+    );
     const id = new URL(page.url()).searchParams.get("document");
     const file = await api("read", { id });
     assert.equal(file.scope, "personal");
     assert.equal(file.name, example.name + ".acad");
     const { project } = await api("project_read", { id });
     assert.equal(project.parts.length, example.parts);
+    assert.equal(
+      project.assemblies.length,
+      example.configurations?.length ?? 1,
+    );
     for (const part of project.parts) {
       assert.ok(part.document.features.length > 0);
       assert.ok(
@@ -155,6 +219,22 @@ try {
     await expect(
       page.getByRole("complementary", { name: "Example file" }),
     ).toHaveCount(0);
+    for (const configuration of example.configurations ?? []) {
+      await page.goto(
+        origin +
+          "/cad/index.html?document=" +
+          id +
+          "&assembly=" +
+          configuration.id,
+      );
+      await rendered();
+      await page.screenshot({
+        path: join(
+          evidence,
+          example.id + "-" + configuration.id + "-saved.png",
+        ),
+      });
+    }
     await page.goto(
       origin +
         "/cad/index.html?editor=1&example=" +
@@ -182,6 +262,18 @@ try {
     await page.goto(origin + "/cad/?examples=1");
   }
   assert.deepEqual(errors, []);
+  for (const example of selected) {
+    const thumbnail = page.getByRole("img", {
+      name: example.name,
+      exact: true,
+    });
+    await thumbnail.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        thumbnail.evaluate((img) => img.complete && img.naturalWidth > 0),
+      )
+      .toBe(true);
+  }
   await page.screenshot({ path: join(evidence, "examples-gallery.png") });
   await writeFile(
     join(evidence, "result.json"),

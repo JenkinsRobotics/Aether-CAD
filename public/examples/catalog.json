@@ -102,6 +102,102 @@
     "sha256": "d58ec695f1e9e2a5cb33ef626c91e0e320c62ab83cf76d48284a6c5a91bbe221"
   },
   {
+    "id": "space-shuttle",
+    "name": "Space Shuttle — Launch and Orbiter",
+    "description": "A 1:100 display-scale Shuttle with an external tank, four-segment boosters, detailed orbiter and a separate orbital assembly with opening payload doors.",
+    "file": "space-shuttle.acad.bin",
+    "thumbnail": "space-shuttle.png",
+    "parts": 32,
+    "instances": 119,
+    "features": 85,
+    "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Launch configuration",
+        "instances": 87,
+        "mates": 86,
+        "movable": false
+      },
+      {
+        "id": "assembly-000380",
+        "name": "Orbiter — payload bay open",
+        "instances": 32,
+        "mates": 31,
+        "movable": true
+      }
+    ],
+    "sources": [
+      {
+        "title": "NASA Shuttle dimensions",
+        "url": "https://www.nasa.gov/reference/the-space-shuttle/"
+      },
+      {
+        "title": "NASA recordation drawings",
+        "url": "https://www.nasa.gov/space-shuttle-recordation/recordation-drawings/"
+      }
+    ],
+    "tags": [
+      "Loft",
+      "Revolve",
+      "Extrude",
+      "Hole Wizard",
+      "Multiple assemblies"
+    ],
+    "motion": "The orbital assembly has two revolute payload-door hinges; the launch stack is fixed.",
+    "sha256": "c916d826272e15e030d17e4f81362ccfa1636a96869d897028ea1aa15354f56f"
+  },
+  {
+    "id": "artemis-sls",
+    "name": "Artemis SLS Block 1 and Orion",
+    "description": "A 1:100 display-scale SLS Block 1 launch stack plus a separate Orion spacecraft assembly with deployed, rotating solar wings. Shared editable Parts include the capsule, service module and array panels.",
+    "file": "artemis-sls.acad.bin",
+    "thumbnail": "artemis-sls.png",
+    "parts": 34,
+    "instances": 203,
+    "features": 85,
+    "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Launch configuration",
+        "instances": 145,
+        "mates": 144,
+        "movable": false
+      },
+      {
+        "id": "assembly-000614",
+        "name": "Orion — solar arrays deployed",
+        "instances": 58,
+        "mates": 57,
+        "movable": true
+      }
+    ],
+    "sources": [
+      {
+        "title": "NASA SLS reference",
+        "url": "https://www.nasa.gov/reference/space-launch-system/"
+      },
+      {
+        "title": "NASA Orion service module",
+        "url": "https://www.nasa.gov/reference/european-service-module/"
+      },
+      {
+        "title": "ESA solar wings",
+        "url": "https://www.esa.int/Science_Exploration/Human_and_Robotic_Exploration/Orion/European_Service_Module_Power"
+      }
+    ],
+    "tags": [
+      "Revolve",
+      "Extrude",
+      "Sweep",
+      "Hole Wizard",
+      "Multiple assemblies"
+    ],
+    "motion": "Orion has four independently rotating solar-wing roots. Each wing’s three framed panels move together; the service module stays grounded.",
+    "sha256": "4f39d71c9c554b8ceba302519b237782c6877273e969e1d6de74a511f08a1c18"
+  },
+  {
     "id": "reference-bracket",
     "name": "Reference Mounting Bracket",
     "description": "SolidCraft bracket recreated as an editable Aether Part: 40 × 60 × 30 mm, 6 mm legs, an R2 edge and two real Ø8 through holes.",

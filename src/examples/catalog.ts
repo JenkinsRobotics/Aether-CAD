@@ -9,6 +9,14 @@ export interface CADExample {
   instances: number;
   features: number;
   assemblyId: string;
+  configurations?: {
+    id: string;
+    name: string;
+    instances: number;
+    mates: number;
+    movable: boolean;
+  }[];
+  sources?: { title: string; url: string }[];
   motion?: string;
   tags: string[];
   sha256: string;

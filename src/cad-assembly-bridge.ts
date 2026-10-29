@@ -1,3 +1,4 @@
+import { scopeAssemblyProjection } from "./assembly/projection-scope";
 import {
   ProjectionDecodeError,
   array,
@@ -504,7 +505,7 @@ export function decodeAssemblyProjection(value: unknown): AssemblyProjectionV1 {
   if (root.contact_sets !== undefined) validateContactSets(root.contact_sets, `${path}.contact_sets`);
   if (root.contacts_enabled !== undefined) boolean(root.contacts_enabled, `${path}.contacts_enabled`);
   validateDiagnostics(root.issues, `${path}.issues`);
-  return root as unknown as AssemblyProjectionV1;
+  return scopeAssemblyProjection(root as unknown as AssemblyProjectionV1);
 }
 
 function validateBOMRow(value: unknown, path: string): void {

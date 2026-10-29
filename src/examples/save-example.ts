@@ -2,7 +2,10 @@ import { documentRequest } from "@aether/session/documents";
 import { isStudioExampleHosted as isStudioHosted } from "./runtime";
 import { base64, readExample, type CADExample } from "./catalog";
 
-export async function saveExample(example: CADExample): Promise<string> {
+export async function saveExample(
+  example: CADExample,
+  assemblyId = example.assemblyId,
+): Promise<string> {
   const file = await readExample(example);
   if (!isStudioHosted()) {
     const url = URL.createObjectURL(file),
@@ -26,6 +29,11 @@ export async function saveExample(example: CADExample): Promise<string> {
   const url = new URL("./index.html", location.href);
   url.search = "";
   url.searchParams.set("document", saved.id);
-  url.searchParams.set("assembly", example.assemblyId);
+  url.searchParams.set(
+    "assembly",
+    example.configurations?.some((item) => item.id === assemblyId)
+      ? assemblyId
+      : example.assemblyId,
+  );
   return url.href;
 }

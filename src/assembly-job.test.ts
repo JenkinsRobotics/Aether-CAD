@@ -250,3 +250,20 @@ it("ignores unrelated unfinished Part definitions in a Hybrid", () => {
   expect(result.untranslated).toEqual([]);
   expect(result.job.parts.map(part => part.id)).toEqual(['p1']);
 });
+
+
+it('solves the active assembly when a Hybrid also contains mated launch components', () => {
+  const source = projection() as any;
+  source.assembly_id = 'orbiter';
+  source.assemblies = [{id:'orbiter',root_instance_ids:['i1','i2']},{id:'launch',root_instance_ids:['tank','booster']}];
+  source.mates.push({...source.mates[0],id:'launch-mate',endpoint_a:{instance_id:'tank',connector_definition_id:'c1'},endpoint_b:{instance_id:'booster',connector_definition_id:'c2'}});
+  const {job,complete,untranslated} = assemblyJobFor(source);
+  expect(complete).toBe(true);
+  expect(untranslated).toEqual([]);
+  expect(job.joints.map(j=>j.id)).toEqual(['m1']);
+  expect(job.instances.map(i=>i.id)).toEqual(['i1','i2']);
+  expect(solveAssemblyJob(job).status).toBe('ok');
+  // A crossing mate is an actual error and must not disappear with the other assembly.
+  source.mates[1].endpoint_b.instance_id='i2';
+  expect(assemblyJobFor(source).complete).toBe(false);
+});

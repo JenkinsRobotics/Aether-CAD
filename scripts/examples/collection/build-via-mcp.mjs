@@ -1,3 +1,4 @@
+import { buildConfigurations } from "./build-configurations.mjs";
 import { compareReference } from "./compare-reference.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -299,68 +300,8 @@ try {
       join(evidence, "comparison.json"),
       JSON.stringify(comparison, null, 2),
     );
-  const assemblyFile = await api("project_create", {
-    name: model.name,
-    packaging: "assembly",
-    scope: "personal",
-    operation_id: randomUUID(),
-  });
-  const inspected = await call("cad_assembly_inspect", {
-      app: "cad",
-      id: assemblyFile.id,
-      section: "parts",
-    }),
-    recipe = model.recipe(docs);
-  const composed = await call(
-    "cad_assembly_compose",
-    {
-      app: "cad",
-      id: assemblyFile.id,
-      expected_revision: assemblyFile.revision,
-      assembly_id: inspected.result.assembly_id,
-      recipe_json: JSON.stringify(recipe),
-    },
-    true,
-  );
-  await writeFile(
-    join(evidence, "assembly-solve.json"),
-    JSON.stringify(composed.result, null, 2),
-  );
-  const placed = [];
-  for (let offset = 0; offset < instances.length; offset += 20)
-    placed.push(
-      ...(
-        await call("cad_assembly_inspect", {
-          app: "cad",
-          id: assemblyFile.id,
-          section: "instances",
-          offset,
-        })
-      ).result.items,
-    );
-  for (const expected of recipe.instances) {
-    const actual = placed.find((i) => i.name === expected.key);
-    assert.ok(actual);
-    assert.ok(
-      Math.max(
-        ...actual.position_mm.map((x, k) =>
-          Math.abs(x - expected.position_mm[k]),
-        ),
-      ) < 1e-4,
-    );
-    assert.ok(
-      Math.abs(
-        Math.abs(
-          actual.rotation_xyzw.reduce(
-            (v, x, k) => v + x * expected.rotation_xyzw[k],
-            0,
-          ),
-        ) - 1,
-      ) < 1e-6,
-    );
-  }
-  const final = await api("read", { id: assemblyFile.id }),
-    bytes = Buffer.from(final.data_base64, "base64");
+  const {file: final, configurations} = await buildConfigurations({model, docs, api, call, evidence});
+  const bytes = Buffer.from(final.data_base64, "base64");
   await writeFile(join(root, model.name + ".acad"), bytes);
   await writeFile(
     join(evidence, "result.json"),
@@ -370,8 +311,9 @@ try {
         name: model.name,
         description: model.description,
         parts: parts.length,
-        instances: instances.length,
-        mates: instances.length - 1,
+        instances: configurations.reduce((n,c)=>n+c.instances,0),
+        mates: configurations.reduce((n,c)=>n+c.mates,0),
+        configurations,
         features: parts.reduce((n, p) => n + p.steps.length, 0),
         sha256: createHash("sha256").update(bytes).digest("hex"),
         transport: "HTTP MCP, isolated Studio account",
@@ -393,7 +335,7 @@ try {
       "/cad/index.html?document=" +
       reopened.id +
       "&assembly=" +
-      inspected.result.assembly_id,
+      configurations[0].id,
   );
   await page
     .getByRole("tree", { name: "CAD assembly components" })

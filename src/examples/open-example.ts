@@ -14,7 +14,7 @@ export async function openExample(
     base64(new Uint8Array(await file.arrayBuffer())),
   );
   try {
-    const assemblyID = query.get("assembly") ?? workspace.root_assembly_id;
+    const assemblyID = query.get("assembly") ?? example.assemblyId;
     const projection = await client.describeAssembly(
       workspace.handle,
       assemblyID,

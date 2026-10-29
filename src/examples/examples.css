@@ -148,3 +148,26 @@
 .cad-examples-main > p > a {
   color: var(--aether-color-accent);
 }
+
+.cad-example-configurations, .cad-example-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0 0 12px;
+}
+.cad-example-configurations a {
+  padding: 6px 8px;
+  border: 1px solid var(--aether-color-border);
+  border-radius: 5px;
+  font-size: 12px;
+}
+.cad-example-banner select {
+  max-width: 240px;
+  min-width: 140px;
+  color: var(--aether-color-text);
+  background: var(--aether-color-bg-control);
+  border: 1px solid var(--aether-color-border);
+  border-radius: 5px;
+  padding: 5px 7px;
+  font: inherit;
+}

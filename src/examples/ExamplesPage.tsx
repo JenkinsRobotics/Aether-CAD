@@ -110,6 +110,36 @@ export function ExamplesPage() {
                     <span key={tag}>{tag}</span>
                   ))}
                 </div>
+                {example.configurations &&
+                  example.configurations.length > 1 && (
+                    <nav
+                      className="cad-example-configurations"
+                      aria-label={`${example.name} assemblies`}
+                    >
+                      {example.configurations.map((configuration) => (
+                        <a
+                          key={configuration.id}
+                          href={`./index.html?editor=1&example=${encodeURIComponent(example.id)}&assembly=${encodeURIComponent(configuration.id)}`}
+                        >
+                          {configuration.name}
+                        </a>
+                      ))}
+                    </nav>
+                  )}
+                {example.sources && (
+                  <small className="cad-example-sources">
+                    {example.sources.map((source) => (
+                      <a
+                        key={source.url}
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {source.title}
+                      </a>
+                    ))}
+                  </small>
+                )}
                 {example.motion && (
                   <p className="cad-example-motion">{example.motion}</p>
                 )}
@@ -192,11 +222,38 @@ export function ExampleBanner() {
       <span>
         <strong>{example.name}</strong> · Example preview
       </span>
-      {example.motion && (
-        <Button onClick={() => cadCommands.execute("assembly-motion-study")}>
-          Motion study
-        </Button>
+      {example.configurations && example.configurations.length > 1 && (
+        <select
+          aria-label="Example assembly"
+          value={
+            new URLSearchParams(location.search).get("assembly") ??
+            example.assemblyId
+          }
+          onChange={(event) =>
+            location.assign(
+              `./index.html?editor=1&example=${encodeURIComponent(example.id)}&assembly=${encodeURIComponent(event.target.value)}`,
+            )
+          }
+        >
+          {example.configurations.map((configuration) => (
+            <option key={configuration.id} value={configuration.id}>
+              {configuration.name}
+            </option>
+          ))}
+        </select>
       )}
+      {example.motion &&
+        (!example.configurations ||
+          example.configurations.find(
+            (c) =>
+              c.id ===
+              (new URLSearchParams(location.search).get("assembly") ??
+                example.assemblyId),
+          )?.movable) && (
+          <Button onClick={() => cadCommands.execute("assembly-motion-study")}>
+            Motion study
+          </Button>
+        )}
       <Button onClick={() => location.assign("./?examples=1")}>
         All examples
       </Button>
@@ -207,7 +264,11 @@ export function ExampleBanner() {
           setBusy(true);
           setError("");
           try {
-            const url = await saveExample(example);
+            const url = await saveExample(
+              example,
+              new URLSearchParams(location.search).get("assembly") ??
+                example.assemblyId,
+            );
             if (url) location.assign(url);
           } catch (e) {
             setError(e instanceof Error ? e.message : String(e));
