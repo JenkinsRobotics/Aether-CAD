@@ -6793,10 +6793,17 @@ function validateBodyProperties(value2) {
   }
   if (value2.appearance !== void 0) {
     const appearance = value2.appearance;
-    if (!appearance || typeof appearance !== "object" || Array.isArray(appearance)) throw Error("Invalid body appearance.");
+    if (!appearance || typeof appearance !== "object" || Array.isArray(appearance))
+      throw Error("Invalid body appearance.");
     for (const key2 of ["color", "emissiveColor"])
-      if (appearance[key2] !== void 0 && !/^#[0-9a-f]{6}$/i.test(appearance[key2])) throw Error("Appearance colors must use six-digit hex values.");
-    for (const key2 of ["opacity", "roughness", "metalness", "emissiveIntensity"]) {
+      if (appearance[key2] !== void 0 && !/^#[0-9a-f]{6}$/i.test(appearance[key2]))
+        throw Error("Appearance colors must use six-digit hex values.");
+    for (const key2 of [
+      "opacity",
+      "roughness",
+      "metalness",
+      "emissiveIntensity"
+    ]) {
       const n = appearance[key2];
       if (n !== void 0 && (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > (key2 === "emissiveIntensity" ? 5 : 1)))
         throw Error(`Invalid body appearance ${key2}.`);
