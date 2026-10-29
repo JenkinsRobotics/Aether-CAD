@@ -87,7 +87,11 @@ export function mountAssemblyPlacementManipulator(host: Omit<PlacementHost, 'sel
     if (syncing || !assembly) return;
     const ids = [...new Set(cadSelection.snapshot().items.filter(item => ['body', 'component'].includes(item.kind))
       .flatMap(item => assembly.instances.filter(instance => item.partId.startsWith(`assembly:${instance.id}:`)).map(instance => instance.id)))];
-    if (JSON.stringify(ids) === JSON.stringify([...cadAssemblyWorkspace.snapshot().selectedEntityIDs])) return;
+    const selected = [...cadAssemblyWorkspace.snapshot().selectedEntityIDs];
+    // A render rebuild can clear the canvas selection while a mate/contact row
+    // remains selected. Only clear an occurrence selection through this adapter.
+    if (!ids.length && !selected.some(id => assembly.instances.some(instance => instance.id === id))) return;
+    if (JSON.stringify(ids) === JSON.stringify(selected)) return;
     syncing = true;
     try { cadAssemblyWorkspace.dispatch({ type: 'select-entities', ids, mode: 'range' }); }
     finally { syncing = false; }

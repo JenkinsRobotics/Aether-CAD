@@ -19,6 +19,10 @@ it('synchronizes complete occurrences without treating hover as a new selection'
   expect(cadSelection.snapshot().items).toHaveLength(0);
   cadSelection.dispatch({ type: 'set-hovered', item: { id: 'hover', kind: 'body', partId: rows[0].id, label: 'A' } });
   expect([...cadAssemblyWorkspace.snapshot().selectedEntityIDs]).toEqual(['mate']);
+  cadSelection.dispatch({ type: 'replace', items: [] });
+  expect([...cadAssemblyWorkspace.snapshot().selectedEntityIDs]).toEqual(['mate']);
   cadSelection.dispatch({ type: 'replace', items: [{ id: 'picked', kind: 'body', partId: rows[1].id, label: 'B' }] });
   expect([...cadAssemblyWorkspace.snapshot().selectedEntityIDs]).toEqual(['moving']);
+  cadSelection.dispatch({ type: 'clear' });
+  expect([...cadAssemblyWorkspace.snapshot().selectedEntityIDs]).toEqual([]);
 });
