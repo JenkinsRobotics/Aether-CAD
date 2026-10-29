@@ -1,5 +1,5 @@
 import { AssemblyGeometryCache } from './assembly/geometry-cache';
-import { mountSelectionManipulator } from './features/selection-manipulator';
+import { mountAssemblyPlacementManipulator } from './assembly/placement-manipulator';
 import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "./assembly/insertion-session";
 import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
 import { toggleMeasureWindow } from "./measure/MeasureWindow";
@@ -279,6 +279,7 @@ function setStatus(
   cadPresentation.patch({ statusMessage: message, statusTone: tone });
 }
 
+let assemblyRenderTask = Promise.resolve();
 const assemblyController = new CADAssemblyController({
   async validateContacts(projection) {
     const solved = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job),
@@ -296,7 +297,7 @@ const assemblyController = new CADAssemblyController({
     activePartDocument=null;
     window.dispatchEvent(new Event('aether-part-updated'));
     if (hostedCAD) markHostedDirty();
-    void renderCanonicalAssembly();
+    assemblyRenderTask = renderCanonicalAssembly();
     cadPresentation.patch({
       documentName: document.name,
       activePanel: "mates",
@@ -1481,6 +1482,7 @@ if (hostedCAD) {
 }
 
 let assemblyRenderSerial = 0;
+let framedAssembly: string | null = null;
 async function renderCanonicalAssembly(): Promise<void> {
   const serial = ++assemblyRenderSerial;
   const projection = assemblyController.geometryProjection;
@@ -1493,8 +1495,10 @@ async function renderCanonicalAssembly(): Promise<void> {
     })), { evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument,
       geometryCache: assemblyGeometry, isCurrent: () => serial === assemblyRenderSerial });
     if (serial !== assemblyRenderSerial) return;
+    const hadBodies = viewer.getPartRows().some(row => row.id.startsWith('assembly:'));
     viewer.replaceAssemblyBodies(bodies);
-    viewer.frameAll();
+    const frameKey = `${projection.workspace_id}:${projection.assembly_id}`;
+    if (!hadBodies || frameKey !== framedAssembly) { viewer.frameAll(); framedAssembly = frameKey; }
   } catch (error) {
     if (serial === assemblyRenderSerial) setStatus('Assembly geometry: ' + (error as Error).message, 'error');
   }
@@ -1618,18 +1622,13 @@ mountFeatureAuthoring(()=>activePartDocument,async doc=>{
  await evaluateAndShowPart(doc,"Feature history updated.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
 });
-mountSelectionManipulator({
- viewport: viewportElement, viewer, document: () => activePartDocument,
- editable: () => activeWorkspaceKind === 'part' && hostedPartEditable() && !cadPresentation.snapshot().loading && cadPresentation.snapshot().workspaceMode === 'modeling',
- apply: async doc => {
-  const source=activePartDocument;
-  validatePartDocument(doc);
-  const model=await worker.evaluatePart(doc);
-  if(activePartDocument!==source || !hostedPartEditable() || activeWorkspaceKind!=='part') throw new Error('The document changed; movement was cancelled.');
-  showEvaluatedPart(doc,model,new Map(),'Transform applied.',false);
-  updateLists();
- },
- status: (message,error) => setStatus(message,error?'error':'normal'),
+mountAssemblyPlacementManipulator({
+ viewport: viewportElement, viewer,
+ projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+ editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && !cadPresentation.snapshot().loading && !exploded,
+ edit: (params, revision, signal, assertCurrent) => assemblyController.editAtomically('update_instance', params, revision, signal, assertCurrent),
+ rendered: () => assemblyRenderTask,
+ status: (message, error) => setStatus(message, error ? 'error' : 'normal'),
 });
 // Curves from the model (intersection, isoparametric, projection) become 3D sketch features.
 mountDerivedCurveCommands({

@@ -231,10 +231,11 @@ try{
     const components=page.getByRole('tree',{name:'CAD assembly components'});
     await components.getByRole('treeitem').filter({hasText:'base'}).click();
     await page.keyboard.press('Control+k');
-    const palette=page.getByRole('dialog',{name:'CAD commands',exact:true});
-    await palette.getByRole('combobox',{name:'Search CAD commands',exact:true}).fill('Make Independent');
-    await palette.getByRole('option').filter({hasText:'Make Independent'}).click();
-    await palette.waitFor({state:'hidden'});
+    const search=page.locator('.aui-command-search input:focus');
+    await search.fill('Make Independent');
+    const results=page.getByRole('listbox').filter({visible:true});
+    await results.getByRole('option').filter({hasText:'Make Independent'}).click();
+    await results.waitFor({state:'hidden'});
     await expect(components.getByRole('treeitem')).toHaveCount(3,{timeout:60000});
     state=await inspect();assert.equal(state.parts.length,2);assert.equal(state.counts.instances,3);
     await button('Undo').click();

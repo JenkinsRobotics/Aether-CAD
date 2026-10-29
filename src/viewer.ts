@@ -899,6 +899,9 @@ export class MateViewport {
     const started = performance.now();
     const nextIDs = new Set(bodies.map(body => body.data.id));
     if (nextIDs.size !== bodies.length) throw Error('Assembly contains duplicate body identities.');
+    // A canonical upload supersedes transient placement, including edits from
+    // another actor. Later cancellation must never restore an older pose over it.
+    this.clearManipulatorPreview(false);
     const invalidated = new Set<string>();
     this.geometryBatch = true;
     try {
@@ -919,9 +922,9 @@ export class MateViewport {
             if (this.anchorFace?.part === existing) this.clearAnchors();
             existing.group.matrix.copy(placement);
             existing.group.updateMatrixWorld(true);
-            this.initialMatrices.set(body.data.id, placement.clone());
             this.section.refreshPlacement(existing.group);
           }
+          this.initialMatrices.set(body.data.id, placement.clone());
         } else {
           if (existing) { this.removeRenderedPart(existing); invalidated.add(body.data.id); }
           this.addPart(body.data, placement);
@@ -1504,7 +1507,7 @@ export class MateViewport {
   private manipulatorPreview: { group: THREE.Group; original: THREE.Matrix4; ghost?: THREE.Group }[] = [];
   manipulatorFrame(ids: readonly string[]) {
     if (this.tool !== 'none' || this.measurePicking || this.sketchSurface || this.sketchPlaneSelection || !this.modelRoot.visible || this.historyEditing) return null;
-    if (ids.some(id => !this.parts.get(id)?.group.visible || this.parts.get(id)?.data.geometryKind === 'mesh')) return null;
+    if (ids.some(id => !this.parts.get(id)?.group.visible)) return null;
     const bounds = this.renderedPartBounds(ids, true);
     return bounds.isEmpty() ? null : { centerMillimeters: bounds.getCenter(new THREE.Vector3()).toArray(), radiusMillimeters: bounds.getSize(new THREE.Vector3()).length()/2 };
   }
@@ -1514,21 +1517,28 @@ export class MateViewport {
   previewManipulatorTransform(ids: readonly string[], transform: NumericPartTransform, copy: boolean) {
     if (!this.manipulatorPreview.length) for (const id of ids) {
       const part = this.parts.get(id); if (!part) continue;
-      part.group.updateMatrix();
+      if (part.group.matrixAutoUpdate) part.group.updateMatrix();
       const ghost = copy ? part.group.clone(true) : undefined;
       if (ghost) part.group.parent?.add(ghost);
       this.manipulatorPreview.push({group: part.group, original: part.group.matrix.clone(), ghost});
     }
     for (const item of this.manipulatorPreview) {
       const target = item.ghost ?? item.group;
-      transformMatrix(transform).multiply(item.original).decompose(target.position, target.quaternion, target.scale);
+      target.matrix.copy(transformMatrix(transform).multiply(item.original));
+      target.matrix.decompose(target.position, target.quaternion, target.scale);
       target.updateMatrixWorld(true);
+      this.section.refreshPlacement(target);
     }
   }
-  clearManipulatorPreview() {
+  clearManipulatorPreview(restore = true) {
     for (const item of this.manipulatorPreview) {
       if (item.ghost) item.ghost.removeFromParent();
-      else { item.original.decompose(item.group.position, item.group.quaternion, item.group.scale); item.group.updateMatrixWorld(true); }
+      else if (restore) {
+        item.group.matrix.copy(item.original);
+        item.original.decompose(item.group.position, item.group.quaternion, item.group.scale);
+        item.group.updateMatrixWorld(true);
+        this.section.refreshPlacement(item.group);
+      }
     }
     this.manipulatorPreview = [];
   }
