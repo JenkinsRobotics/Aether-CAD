@@ -3,6 +3,7 @@ import { availableBodies, rollbackPosition } from "@aether/core/document";
 import type { PartDocument, PartFeature } from "./part-document";
 import { sketchConstraintState } from "@aether/core/sketch";
 import { sketchDefinitionState } from "./sketch-constraints";
+import { isPartPlacementAction } from "./part-history";
 
 export type PartTreeItemKind = "part-document" | PartFeature["type"] | "body";
 
@@ -98,27 +99,30 @@ function featureDetail(feature: PartFeature): string {
   return `${feature.radiusMillimeters} mm`;
 }
 
-/** Projects editable feature history into the Items browser without duplicating CAD state. */
-export function buildPartFeatureTree(document: PartDocument): PartTreeItem {
+/** All saved operations in replay order, including placement actions. */
+export function buildPartHistory(document: PartDocument): PartTreeItem[] {
   const errors = errorsForDocument(document);
+  return document.features.map((feature, index) => ({
+    id: feature.id,
+    name: feature.name,
+    kind: feature.type,
+    error: errors.get(feature.id),
+    detail: feature.suppressed
+      ? "Suppressed"
+      : index >= rollbackPosition(document) ? "Rolled back" : featureDetail(feature),
+    children: [],
+  }));
+}
+
+/** Shape-defining features and bodies; placement actions are available in History. */
+export function buildPartFeatureTree(document: PartDocument): PartTreeItem {
   return {
     id: document.documentId,
     name: document.name,
     kind: "part-document",
     detail: ".acpart",
     children: [
-      ...document.features.map((feature) => ({
-        id: feature.id,
-        name: feature.name,
-        kind: feature.type,
-        error: errors.get(feature.id),
-        detail: feature.suppressed
-          ? "Suppressed"
-          : document.features.indexOf(feature) >= rollbackPosition(document)
-            ? "Rolled back"
-            : featureDetail(feature),
-        children: [],
-      })),
+      ...buildPartHistory(document).filter((_, index) => !isPartPlacementAction(document.features[index])),
       ...availableBodies(renderableDocument(document)!).map((body) => ({
         id: body.id,
         name: body.name,

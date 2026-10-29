@@ -40,3 +40,14 @@ test("rollback indices follow actual document history even when folders reorder 
  const menu=cadFeatureActions(revolve,[folder],new Set([revolve.id]),2,true,["s1","r1"]);
  expect(cadTreeCommand(menu.find(a=>a.item.id==="rollback-here")!.request,revolve)).toEqual({type:"rollback-to",index:2});
 });
+
+test("History actions and later features keep canonical rollback positions across hidden moves", () => {
+ const move:TreeNode={...sketch,id:"feature/transform/m1",label:"Move parts"};
+ const history=[sketch,move,revolve];
+ const menu=cadFeatureActions(revolve,[sketch,revolve],new Set([revolve.id]),3,true,["s1","m1","r1"],history);
+ expect(cadTreeCommand(menu.find(a=>a.item.id==="rollback-here")!.request,revolve)).toEqual({type:"rollback-to",index:3});
+ const actionMenu=cadFeatureActions(move,[sketch,revolve],new Set([move.id]),3,true,["s1","m1","r1"],history);
+ expect(cadTreeCommand(actionMenu.find(a=>a.item.id==="rollback-here")!.request,move)).toEqual({type:"rollback-to",index:2});
+ expect(cadTreeCommand(actionMenu.find(a=>a.item.id==="suppress")!.request,move)).toEqual({type:"item-action",id:move.id,actionID:"suppress-feature"});
+ expect(actionMenu.some(a=>["move","new-folder","add-to-folder"].includes(a.request.command))).toBe(false);
+});

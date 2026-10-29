@@ -40,6 +40,7 @@ beforeEach(() => {
     {id:'suppress-feature',label:'Suppress',icon:'s'},
   ]}],bodyNodes:[],selectedItemIDs:new Set(['feature/extrude/f']),expandedItemIDs:new Set(),
     rollbackIndex:1,historyItems:[{id:'history/feature/f'}]};
+  mocks.workspace.historyNodes = [...mocks.workspace.itemNodes];
   mocks.assembly = {loadState:'ready',selectedEntityIDs:new Set(['component-1']),
     data:{instanceRows:[{id:'component-1',label:'Bracket'}]}};
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
@@ -132,4 +133,24 @@ it('History expands without editing and uses the feature commands for row menus 
   await event(document,'keydown',{key:'Escape'});
   await event(step,'keydown',{key:'F2'});
   expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:'feature/extrude/f',actionID:'rename-feature'});
+});
+
+it('placement actions stay out of Features but remain editable and suppressible in History', async () => {
+  const move={id:'feature/transform/move',label:'Move parts',actions:[
+    {id:'edit-feature',label:'Edit Move parts'}, {id:'suppress-feature',label:'Suppress Move parts'},
+  ]};
+  mocks.workspace.historyNodes.push(move);
+  mocks.workspace.historyItems=[{id:'history/feature/f',label:'Extrude 1'}, {id:'history/feature/move',label:'Move parts',description:'Placement action'}];
+  mocks.workspace.rollbackIndex=2;
+  await act(async()=>root.render(<><ItemsPanel active/><CADHistoryPanel/></>));
+  expect(container.querySelector('[aria-label="CAD features"]').textContent).not.toContain('Move parts');
+  expect(container.textContent).toContain('Features (1)');
+  await event(button('Actions for Move parts'),'click');
+  expect(menuLabels()).toContain('Edit…');
+  expect(menuLabels()).not.toContain('Show imported parts');
+  await menuAction('Suppress');
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:move.id,actionID:'suppress-feature'});
+  await event(button('Actions for Move parts'),'click');
+  await menuAction('Edit…');
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:move.id,actionID:'edit-feature'});
 });

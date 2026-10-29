@@ -13,15 +13,16 @@ export function cadFeatureItem(node: TreeNode): FeatureTreeItem {
     children: node.children?.map(cadFeatureItem),
   };
 }
-export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], selectedIDs: ReadonlySet<string>, rollbackIndex: number, partOpen: boolean, historyIDs?: readonly string[]) {
-  const all = nodes.flatMap(function flatten(row): TreeNode[] { return [row, ...(row.children ?? []).flatMap(flatten)]; });
+export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], selectedIDs: ReadonlySet<string>, rollbackIndex: number, partOpen: boolean, historyIDs?: readonly string[], historyNodes: readonly TreeNode[] = []) {
+  const visible = nodes.flatMap(function flatten(row): TreeNode[] { return [row, ...(row.children ?? []).flatMap(flatten)]; });
+  const all = [...new Map([...historyNodes, ...visible].map(row => [row.id, row])).values()];
   const item = cadFeatureItem(node);
   const selected = selectedIDs.has(node.id) ? all.filter(row => selectedIDs.has(row.id)).map(cadFeatureItem) : [item];
   let features = nodes.map(cadFeatureItem).flatMap(function history(row): FeatureTreeItem[] {
     return row.kind === "feature" || row.kind === "folder" ? [row] : (row.children ?? []).flatMap(history);
   });
   if (historyIDs) {
-    const flat = flattenFeatureItems(features);
+    const flat = all.map(cadFeatureItem);
     // Folder presentation may group non-adjacent rows; rollback follows document history.
     features = [...historyIDs.flatMap(id => flat.filter(row => row.kind === "feature" && row.id.split("/").slice(2).join("/") === id)), ...flat.filter(row => row.kind === "folder").map(row => ({...row, children:[]}))];
   }
@@ -49,6 +50,8 @@ export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], se
   return featureTreeActions(item, { selected, features, rollbackIndex,
     available, canCommand: supported })
     .filter(action => (available as readonly string[]).includes(action.request.command))
+    // A placement is edited in History; it has no row to group or reorder in Features.
+    .filter(action => visible.some(row => row.id === node.id) || !["move", "new-folder", "add-to-folder"].includes(action.request.command))
     .filter(action => action.request.command !== 'visibility' || node.actions?.some(entry => ['body-visibility', 'toggle-visibility'].includes(entry.id)));
 }
 /** No evaluator or new document mutation: dispatch the same commands as existing CAD controls. */

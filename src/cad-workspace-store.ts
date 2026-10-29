@@ -23,6 +23,8 @@ export interface CADWorkspaceSnapshot {
   selectedItemIDs: ReadonlySet<string>;
   expandedItemIDs: ReadonlySet<string>;
   historyItems: readonly ListBoxItem[];
+  /** Complete operation rows for History commands, including actions omitted from the tree. */
+  historyNodes: readonly TreeNode[];
   rollbackIndex: number;
   connectorItems: readonly ListBoxItem[];
   mateItems: readonly ListBoxItem[];
@@ -53,6 +55,7 @@ const initialSnapshot: CADWorkspaceSnapshot = Object.freeze({
   selectedItemIDs: new Set<string>(),
   expandedItemIDs: new Set<string>(),
   historyItems: [],
+  historyNodes: [],
   rollbackIndex: 0,
   connectorItems: [],
   mateItems: [],

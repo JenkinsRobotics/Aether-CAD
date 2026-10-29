@@ -1,4 +1,4 @@
-import { createFolder, createEmptyPartDocument, emptyTreeOrganization } from "@aether/core/document";
+import { availableBodies, createFolder, createEmptyPartDocument, emptyTreeOrganization } from "@aether/core/document";
 import { describe, expect, it } from "vitest";
 import {
   createRectanglePartDocument,
@@ -7,6 +7,7 @@ import {
   type MateConnector,
 } from "./aether-core";
 import { buildCADWorkspaceProjection } from "./cad-workspace-projection";
+import type { TransformFeature } from "@aether/core/document";
 
 const visibility = { origin: false, axes: false, "top-plane": true, "front-plane": false, "right-plane": false } as const;
 const candidateA: ConnectorCandidate = {
@@ -40,6 +41,29 @@ const mates: AppliedMate[] = [{
 }];
 
 describe("buildCADWorkspaceProjection", () => {
+  it("omits placement actions from Features and counts while retaining their complete History commands", () => {
+    const part = createRectanglePartDocument("Block", { widthMillimeters: 20, heightMillimeters: 20, depthMillimeters: 5 });
+    const bodyID = availableBodies(part)[0].id;
+    const move: TransformFeature = { id: "move", name: "Move parts", type: "transform", suppressed: false, bodyIds: [bodyID], transform: { kind: "translate", translationMillimeters: [30, 0, 0] } };
+    const copy = { ...move, id: "copy", name: "Copy parts", copyBodyIds: { [bodyID]: "copy-body" } };
+    const document = { ...part, features: [...part.features, move, copy, { ...move, id: "move2" }], rollbackIndex: 3 };
+    const args = [[], new Set<string>(), visibility, null, [], [], null, { faceCount: 0, candidateCount: 0 }] as const;
+    const projection = buildCADWorkspaceProjection(document, ...args, new Set(), new Set([move.id]));
+    expect(projection.itemNodes.map(row => row.label)).toEqual(["Reference Geometry", "Sketch 1", "Extrude 1", "Rollback · 3 / 5", "Copy parts"]);
+    expect(projection.historyItems.map(row => row.label)).toEqual(["Sketch 1", "Extrude 1", "Move parts", "Copy parts", "Move parts"]);
+    expect(projection.historyItems[2].description).toBe("Placement action");
+    expect(projection.historyItems[4].description).toBe("Rolled back");
+    expect(projection.historyNodes).toHaveLength(5);
+    expect(projection.historyNodes[2].actions?.map(action => action.id)).toContain("suppress-feature");
+    expect(projection.inspectorSections[0].properties.find(p => p.id === "features")?.value).toBe("3");
+    expect(projection.rollbackIndex).toBe(3);
+    expect(projection.selectedItemIDs.size).toBe(0);
+
+    const organization = createFolder(emptyTreeOrganization(), { id: "folder", name: "Base" }, [part.features[1].id, move.id]);
+    const foldered = buildCADWorkspaceProjection({ ...document, organization }, ...args);
+    expect(foldered.itemNodes.find(row => row.id === "folder/folder")?.children?.map(row => row.label)).toEqual(["Extrude 1"]);
+    expect(foldered.itemNodes.map(row => row.id).indexOf("rollback-bar")).toBeLessThan(foldered.itemNodes.map(row => row.id).indexOf("feature/transform/copy"));
+  });
   it("projects reference, authored, imported, selection, and history data", () => {
     const document = createRectanglePartDocument("Bracket", { widthMillimeters: 60, heightMillimeters: 40, depthMillimeters: 20 }, undefined, { plane: "XY", fullyDefinedSketch: false });
     const projection = buildCADWorkspaceProjection(

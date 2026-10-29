@@ -167,7 +167,7 @@ it('right-click on a feature row offers its real controls without generic or pla
   const { cadWorkspace } = await import('../cad-workspace-store');
   await act(async () => cadWorkspace.publish({
     itemNodes: [{ id: 'feature/sketch/s1', label: 'Sketch 1', actions: [{ id: 'edit-feature', label: 'Edit Sketch 1', icon: '✎' }] }],
-    selectedItemIDs: new Set(), expandedItemIDs: new Set(), historyItems: [], rollbackIndex: 0,
+    selectedItemIDs: new Set(), expandedItemIDs: new Set(), historyItems: [], historyNodes: [], rollbackIndex: 0,
     connectorItems: [], mateItems: [], problemItems: [], inspectorSections: [], selectedConnectorIDs: new Set(), partCount: 1,
   }));
   const row = [...container.querySelectorAll('.aui-tree-row')].find((el) => el.textContent.includes('Sketch 1'));
@@ -298,6 +298,7 @@ it('uses one header for commands while row state and context actions preserve th
     actions: [{ id: 'edit-feature', label: `Edit ${label}`, icon: 'e' }, { id: 'suppress-feature', label: `${suppressed ? 'Unsuppress' : 'Suppress'} ${label}`, icon: 's' }, { id: 'rollback-before', label: `Roll back before ${label}`, icon: 'r' }] });
   await act(async () => cadWorkspace.publish({ ...cadWorkspace.snapshot(),
     itemNodes: [node('feature/sketch/s1', 'Sketch 1'), node('feature/plane/p1', 'Plane 1', true), {id:'rollback-bar',label:'Rollback',variant:'divider'}],
+    historyNodes: [node('feature/sketch/s1', 'Sketch 1'), node('feature/plane/p1', 'Plane 1', true)],
     selectedItemIDs: new Set(['feature/sketch/s1']), expandedItemIDs: new Set(), historyItems:[{id:'history/feature/s1',label:'Sketch 1'},{id:'history/feature/p1',label:'Plane 1'}],
     bodyNodes: [{id:'bodies',label:'Bodies',children:[{id:'feature/body/b1',label:'Body 1',actions:[{id:'body-visibility',label:'Show Body 1',icon:'v',pinned:true}]}]}],
   }));

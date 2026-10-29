@@ -55,7 +55,8 @@ import type {
 import { rectanglePartParameters, sketchDefinitionState } from "./aether-core";
 import type { CADInspectorSection } from "./cad-workspace-store";
 import { buildAssemblyDocumentTree, type AssemblyPartRow } from "./assembly-tree";
-import { buildPartFeatureTree } from "./part-feature-tree";
+import { buildPartHistory } from "./part-feature-tree";
+import { isPartPlacementAction } from "./part-history";
 import {
   referenceGeometry,
   sketchPlaneForReference,
@@ -69,6 +70,7 @@ export interface CADWorkspaceProjection {
   selectedItemIDs: ReadonlySet<string>;
   expandedItemIDs: ReadonlySet<string>;
   historyItems: readonly ListBoxItem[];
+  historyNodes: readonly TreeNode[];
   rollbackIndex: number;
   connectorItems: readonly ListBoxItem[];
   mateItems: readonly ListBoxItem[];
@@ -95,8 +97,11 @@ export function buildCADWorkspaceProjection(
   draftSketch: { id: string; name: string; hasPlane: boolean } | null = null,
 ): CADWorkspaceProjection {
   const sketchStates = new Map((partDocument?.features ?? []).map(feature => [feature.id, sketchState(feature)]));
+  const modelingFeatures = (partDocument?.features ?? []).filter(feature => !isPartPlacementAction(feature));
+  const modelingIDs = new Set(modelingFeatures.map(feature => feature.id));
   const selected = new Set<string>();
   const bodyNodes: TreeNode[] = [];
+  const historyNodes: TreeNode[] = [];
   const expanded = new Set<string>();
   // Reference Geometry collapses like any other folder.
   if (!collapsedFolders.has("reference-folder")) expanded.add("reference-folder");
@@ -138,17 +143,13 @@ export function buildCADWorkspaceProjection(
 
   const authored: TreeNode[] = [];
   if (partDocument) {
-    const root = buildPartFeatureTree(partDocument);
+    const history = buildPartHistory(partDocument);
     const firstSketch = partDocument.features.find((feature) => feature.type === "sketch");
     const sketchUnderDefined = firstSketch ? !sketchDefinitionState(firstSketch).fullyDefined : false;
-    // Everything in a Part document is the part itself: features list flat like the native tree.
-    const features = root.children.filter(f=>f.kind!=="body").map<TreeNode>((feature) => {
+    // History owns every replay operation; the tree only displays modeling features.
+    historyNodes.push(...history.map<TreeNode>((feature) => {
       const id = `feature/${feature.kind}/${feature.id}`;
-      if(selectedFeatureIDs.has(feature.id))selected.add(id);
-      if (
-        feature.kind === "body" &&
-        selectedPartIDs.has(`${partDocument.documentId}:body-1`)
-      ) selected.add(id);
+      if (modelingIDs.has(feature.id) && selectedFeatureIDs.has(feature.id)) selected.add(id);
       return {
         id,
         label: feature.name,
@@ -160,8 +161,9 @@ export function buildCADWorkspaceProjection(
           ? sketchTreeIcon(sketchStates.get(feature.id) ?? "other")
           : treeIcon(feature.kind === "plane" ? "plane" : feature.kind === "extrude" ? "extrude" : feature.kind === "revolve" ? "revolve" : feature.kind === "mirror" ? "mirror" : feature.kind === "fillet" ? "fillet" : feature.kind === "chamfer" ? "chamfer" : "part"),
       };
-    });
-    const rowIDByFeature = new Map(root.children.filter(f=>f.kind!=="body").map(f=>[f.id,`feature/${f.kind}/${f.id}`] as const));
+    }));
+    const features = historyNodes.filter((_, index) => modelingIDs.has(partDocument.features[index].id));
+    const rowIDByFeature = new Map(features.map(row => [row.id.split('/').slice(2).join('/'), row.id]));
     const organization = partDocument.organization;
     const rowOrganization = organization ? {
       folders: organization.folders,
@@ -188,7 +190,7 @@ export function buildCADWorkspaceProjection(
     });
     // ponytail: rollback stays a top-level line; a folder straddling the boundary keeps the line after it.
     const countRows = (node: TreeNode): number => node.id.startsWith("folder/") ? (node.children ?? []).reduce((sum, child) => sum + countRows(child), 0) : node.id.startsWith("feature/") ? 1 : 0;
-    let remaining = rollbackPosition(partDocument);
+    let remaining = partDocument.features.slice(0, rollbackPosition(partDocument)).filter(feature => !isPartPlacementAction(feature)).length;
     let insertAt = foldered.length;
     for (let i = 0; i < foldered.length; i++) {
       if (remaining <= 0) { insertAt = i; break; }
@@ -242,10 +244,10 @@ export function buildCADWorkspaceProjection(
   const featureHistory: ListBoxItem[] = (partDocument?.features ?? []).map((feature) => ({
     id: `history/feature/${feature.id}`,
     label: feature.name,
-    description: feature.suppressed?"Suppressed":partDocument!.features.indexOf(feature)>=rollbackPosition(partDocument!)?"Rolled back":["sketch","profile"].includes(feature.type)?"Sketch feature":"Solid feature",
+    description: feature.suppressed?"Suppressed":partDocument!.features.indexOf(feature)>=rollbackPosition(partDocument!)?"Rolled back":isPartPlacementAction(feature)?"Placement action":["sketch","profile"].includes(feature.type)?"Sketch feature":"Solid feature",
     icon: feature.type === "sketch" || feature.type === "profile"
       ? sketchTreeIcon(sketchStates.get(feature.id) ?? "other")
-      : treeIcon(feature.type === "plane" ? "plane" : "extrude"),
+      : treeIcon(feature.type === "transform" ? "move" : feature.type === "plane" ? "plane" : "extrude"),
     group: "Part history",
   }));
   const importedHistory: ListBoxItem[] = [
@@ -305,7 +307,7 @@ export function buildCADWorkspaceProjection(
           properties: [
             { id: "name", label: "Name", value: partDocument.name },
             { id: "units", label: "Length units", value: "Millimeters", displayUnit: "length" },
-            { id: "features", label: "Features", value: String(partDocument.features.length) },
+            { id: "features", label: "Features", value: String(modelingFeatures.length) },
           ],
         },
         {
@@ -338,7 +340,7 @@ export function buildCADWorkspaceProjection(
           ],
         },
       ]
-    : partDocument ? [{id:"document",label:"Part document",badge:".acpart",properties:[{id:"name",label:"Name",value:partDocument.name},{id:"features",label:"Features",value:String(partDocument.features.length)},{id:"units",label:"Length units",value:"Millimeters",displayUnit:"length"}]}] : [];
+    : partDocument ? [{id:"document",label:"Part document",badge:".acpart",properties:[{id:"name",label:"Name",value:partDocument.name},{id:"features",label:"Features",value:String(modelingFeatures.length)},{id:"units",label:"Length units",value:"Millimeters",displayUnit:"length"}]}] : [];
 
   return {
     bodyNodes,
@@ -346,6 +348,7 @@ export function buildCADWorkspaceProjection(
     selectedItemIDs: selected,
     expandedItemIDs: expanded,
     historyItems: [...featureHistory, ...importedHistory, ...mateHistory],
+    historyNodes,
     rollbackIndex: partDocument ? rollbackPosition(partDocument) : 0,
     connectorItems,
     mateItems,

@@ -60,7 +60,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
   const panelMenu = useCADPanelContext(rawNodes);
   const menuActions = (id: string) => {
     const node = findTreeNode(rawNodes, id);
-    return node && id !== "rollback-bar" && id !== "reference-folder" ? cadFeatureActions(node, rawNodes, selectedIDs, workspace.rollbackIndex, presentation.partOpen, workspace.historyItems.filter(row => row.id.startsWith("history/feature/")).map(row => row.id.slice("history/feature/".length))) : [];
+    return node && id !== "rollback-bar" && id !== "reference-folder" ? cadFeatureActions(node, rawNodes, selectedIDs, workspace.rollbackIndex, presentation.partOpen, workspace.historyItems.filter(row => row.id.startsWith("history/feature/")).map(row => row.id.slice("history/feature/".length)), workspace.historyNodes) : [];
   };
   const extraActions = (id: string) => (findTreeNode(rawNodes, id)?.actions ?? [])
     .filter(action => ['break-link', 'folder-unnest'].includes(action.id));
