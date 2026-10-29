@@ -6,7 +6,7 @@ import { toolHelpFor } from "../tools/tool-help";
 import { useState, useSyncExternalStore } from "react";
 import {
   ToolIcon, InspectionIcon, SelectionIcon, WorkspaceRibbon, WorkspaceSwitcher,
-  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonDensity, type WorkspaceRibbonTab,
+  type CommandSearchCommand, type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonDensity, type WorkspaceRibbonTab,
 } from "@aether/ui";
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 import { cadCommands, isCADCommandID } from "../cad-command-registry";
@@ -58,7 +58,8 @@ const WORKSPACE_ACTIONS: Record<string, CADToolActionID> = {
 
 
 export interface CADTraditionalRibbonProps {
-  onSearch?: () => void;
+  searchCommands?: readonly CommandSearchCommand[];
+  onSearchSelect?: (id: string) => void;
   onOpenLayout?: () => void;
   suite?: boolean;
   /** Open document type; layouts refine the shared catalog per type. */
@@ -81,7 +82,8 @@ export function CADTraditionalRibbon({
   partOpen,
   onSelectWorkspace,
   onAction,
-  onSearch,
+  searchCommands,
+  onSearchSelect,
   onOpenLayout,
 }: CADTraditionalRibbonProps) {
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
@@ -251,7 +253,7 @@ export function CADTraditionalRibbon({
     return (
       <section className={`cad-traditional-ribbon cad-fusion-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
         aria-label="Part tools" data-ribbon-workspace={active.id}>
-        <WorkspaceRibbon variant="integrated" onSearch={onSearch} headerActions={integratedHeader} moreItems={toolbarOptions}
+        <WorkspaceRibbon variant="integrated" searchCommands={searchCommands} onSearchSelect={onSearchSelect} searchShortcut={false} headerActions={integratedHeader} moreItems={toolbarOptions}
           workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
           tabs={ribbonTabs} activeTabID={active.id} onTabSelect={setFusionTab}
           onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
@@ -276,7 +278,7 @@ export function CADTraditionalRibbon({
   return (
     <section className={`cad-traditional-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
       aria-label="Traditional CAD tools" data-ribbon-workspace={workspace.id}>
-      <WorkspaceRibbon variant="integrated" onSearch={onSearch} headerActions={integratedHeader} moreItems={toolbarOptions}
+      <WorkspaceRibbon variant="integrated" searchCommands={searchCommands} onSearchSelect={onSearchSelect} searchShortcut={false} headerActions={integratedHeader} moreItems={toolbarOptions}
         workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
         tabs={ribbonTabs} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
         onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"

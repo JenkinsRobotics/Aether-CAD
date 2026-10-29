@@ -459,8 +459,8 @@ export function CADSettingsWindow({
         </>
       ) : pane === "commands" ? (
         <>
-          <SettingsCard icon={<AetherIcon name="commands" />} title="Command palette" caption="Every command is searchable from the keyboard.">
-            <SettingsRow label="Open command palette">
+          <SettingsCard icon={<AetherIcon name="commands" />} title="Command search" caption="Every command is searchable from the keyboard.">
+            <SettingsRow label="Focus command search">
               <output>⌘K</output>
               <Button
                 onClick={() => {

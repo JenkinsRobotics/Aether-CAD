@@ -33,7 +33,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import {
   AetherIcon,
   IconButton,
-  CommandPalette,
+  CommandSearch,
   DocumentCreateDialog,
   StudioDocumentBar as DocumentBar,
   StudioModeButton,
@@ -158,6 +158,12 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "selection-next-filter", label: "Cycle Selection Filter", category: "Selection", keywords: ["next F6"], shortcut: "F6", icon: "⇥" },
 ];
 
+function focusCommandSearch() {
+  const field = document.querySelector<HTMLInputElement>('.cad-traditional-ribbon .aui-command-search input')
+    ?? document.querySelector<HTMLInputElement>('.aui-studio-header-search input');
+  field?.focus(); field?.select();
+}
+
 export function buildCADCommandPaletteCommands(
   states: Readonly<Record<CADCommandID, CADCommandState>>,
   context: Omit<CADToolContext, "commands"> = { partOpen: false, assemblyReady: false },
@@ -204,7 +210,6 @@ export function AetherCADShell() {
     try { localStorage.setItem("aether-cad.chrome.studio-v1", theme); } catch { /* Session-only preference. */ }
   };
   const suite = chromeTheme === "suite";
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [canvasOpen,setCanvasOpen]=useState<'canvas'|'decal'|null>(null);
   const [primitive,setPrimitive] = useState<SolidPrimitive|null>(null);
   const [vectorInsert,setVectorInsert] = useState<'svg'|'dxf'|null>(null);
@@ -241,9 +246,9 @@ export function AetherCADShell() {
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLocaleLowerCase() !== "k") return;
+      if (event.defaultPrevented || !(event.metaKey || event.ctrlKey) || event.key.toLocaleLowerCase() !== "k") return;
       event.preventDefault();
-      setCommandPaletteOpen(true);
+      focusCommandSearch();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -451,6 +456,12 @@ export function AetherCADShell() {
     if (presentation.activePanel !== "items") openRightPanel(presentation.activePanel);
   }, [presentation.activePanel, presentation.propertyPanelRequest]);
 
+  const searchCommands = buildCADCommandPaletteCommands(commands, { partOpen: presentation.partOpen, assemblyReady: shellAssembly.loadState === 'ready' });
+  const runSearchCommand = (id: string) => {
+    const command = searchCommands.find(item => item.id === id);
+    if (command && !command.disabled && !id.startsWith('unavailable:')) runRibbonAction(id as CADToolActionID);
+  };
+
   return (
     <main className={`shell shapr-shell studio-shell aui-studio-app chrome-${chromeTheme} toolbar-${suite ? "traditional" : presentation.toolbarMode}`}>
       {shareOpen && <CADShareDocument onClose={()=>setShareOpen(false)}/>}
@@ -469,7 +480,8 @@ export function AetherCADShell() {
       <DocumentBar
         className="cad-document-bar"
         documentName={presentation.documentName}
-        onSearch={() => setCommandPaletteOpen(true)}
+        search={<CommandSearch className="aui-studio-header-search" ariaLabel="Search CAD commands" commands={searchCommands}
+          onSelect={runSearchCommand}/> }
         defaultHeaderPins={["theme","notifications","comments","apps","share"]}
         documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
         application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
@@ -536,7 +548,8 @@ export function AetherCADShell() {
             partOpen={presentation.partOpen}
             onSelectWorkspace={selectRibbonWorkspace}
             onAction={runRibbonAction}
-            onSearch={() => setCommandPaletteOpen(true)}
+            searchCommands={searchCommands}
+            onSearchSelect={runSearchCommand}
             onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.aui-integrated-toolbar-more'))}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
@@ -571,15 +584,7 @@ export function AetherCADShell() {
         chromeTheme={chromeTheme}
         onChromeTheme={chooseChromeTheme}
         paletteCommands={buildCADCommandPaletteCommands(commands, { partOpen: presentation.partOpen, assemblyReady: shellAssembly.loadState === 'ready' })}
-        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-      />
-      <CommandPalette
-        open={commandPaletteOpen}
-        commands={buildCADCommandPaletteCommands(commands, { partOpen: presentation.partOpen, assemblyReady: shellAssembly.loadState === 'ready' })}
-        title="CAD commands"
-        placeholder="Search CAD commands"
-        onClose={() => setCommandPaletteOpen(false)}
-        onSelect={(id) => { if (!id.startsWith('unavailable:')) runRibbonAction(id as CADToolActionID); }}
+        onOpenCommandPalette={() => requestAnimationFrame(focusCommandSearch)}
       />
       {presentation.statusTone === "error" ? <CADStatusNotice message={presentation.statusMessage} onDismiss={() => cadPresentation.patch({ statusMessage: "", statusTone: "normal" })} /> :
         <span className="cad-screen-reader-status" id="status-message" role="status" aria-live="polite" aria-atomic="true">{presentation.statusMessage}</span>}
