@@ -24,7 +24,10 @@ export function CADHistoryPanel() {
     actions: nodeFor(row.id) ? featureTreeMenuItems(actionsFor(row.id))
       : [{ id: 'inspect', label: row.id.startsWith('history/mate/') ? 'Inspect mate' : 'Show imported parts', icon: <AetherIcon name="info"/> }],
   }));
-  return <HistoryPanel embedded entries={entries} emptyMessage="Create or import geometry to build history." onCommand={(id, commandID) => {
+  return <HistoryPanel embedded entries={entries} emptyMessage="Create or import geometry to build history."
+    rollbackIndex={presentation.partOpen ? workspace.rollbackIndex : undefined}
+    rollbackEntryIDs={features.map(row => row.id)} rollbackDisabled={!!presentation.loading}
+    onRollback={index => cadWorkspace.dispatch({ type: 'rollback-to', index })} onCommand={(id, commandID) => {
     if (commandID === 'inspect') { cadWorkspace.dispatch({ type: 'activate-history', id }); return; }
     const node = nodeFor(id);
     const action = actionsFor(id).find(action => action.item.id === commandID);

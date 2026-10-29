@@ -154,3 +154,27 @@ it('placement actions stay out of Features but remain editable and suppressible 
   await menuAction('Edit…');
   expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'item-action',id:move.id,actionID:'edit-feature'});
 });
+
+it('History rollback includes placement actions and dispatches the same canonical position as Features', async () => {
+  mocks.workspace.historyItems=[{id:'history/feature/f',label:'Extrude 1'},
+    {id:'history/feature/move',label:'Move parts'}, {id:'history/import/ref',label:'Reference import'}];
+  mocks.workspace.rollbackIndex=2;
+  await act(async()=>root.render(<CADHistoryPanel/>));
+  const bar=container.querySelector('[role="slider"][aria-label="History rollback"]');
+  expect(bar.getAttribute('aria-valuemax')).toBe('2');
+  await event(bar,'keydown',{key:'ArrowUp'});
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'rollback-to',index:1});
+  await event(bar,'keydown',{key:'Home'});
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'rollback-to',index:0});
+  mocks.workspace={...mocks.workspace,rollbackIndex:1};
+  await act(async()=>root.render(<CADHistoryPanel/>));
+  expect(bar.getAttribute('aria-valuenow')).toBe('1');
+  await event(bar,'keydown',{key:'End'});
+  expect(mocks.dispatch).toHaveBeenLastCalledWith({type:'rollback-to',index:2});
+  mocks.presentation={...mocks.presentation,loading:{label:'Rebuilding'}};
+  await act(async()=>root.render(<CADHistoryPanel/>));
+  expect(bar.disabled).toBe(true);
+  mocks.presentation={...mocks.presentation,partOpen:false,loading:null};
+  await act(async()=>root.render(<CADHistoryPanel/>));
+  expect(container.querySelector('[role="slider"]')).toBeNull();
+});
