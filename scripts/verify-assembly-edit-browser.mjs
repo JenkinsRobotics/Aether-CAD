@@ -233,7 +233,7 @@ try{
     await page.keyboard.press('Control+k');
     const search=page.locator('.aui-command-search input:focus');
     await search.fill('Make Independent');
-    const results=page.getByRole('listbox').filter({visible:true});
+    const results=page.getByRole('listbox',{name:'Matching commands',exact:true});
     await results.getByRole('option').filter({hasText:'Make Independent'}).click();
     await results.waitFor({state:'hidden'});
     await expect(components.getByRole('treeitem')).toHaveCount(3,{timeout:60000});
