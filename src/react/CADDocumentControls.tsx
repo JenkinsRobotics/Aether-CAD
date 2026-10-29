@@ -91,6 +91,7 @@ export function CADDocumentControls({
           { id: "commit", label: "Create version…", disabled: (!partOpen && !drawing) || Boolean(assembly) },
           { id: "recover", label: "Recover…" },
           { id: "open", label: "Open Part…" },
+          { id: "examples", label: "Open example…" },
           { id: "import", label: "Import CAD…", disabled: drawing },
           { id: "details", label: "Document details…", separatorBefore: true },
           { id: "export", label: "Export…", disabled: !partOpen },
@@ -114,6 +115,7 @@ export function CADDocumentControls({
           if (id === "commit") cadCommands.execute("commit-part");
           if (id === "recover") cadPresentation.dispatch({ type: "show-start-screen", screen: "recovery" });
           if (id === "open") cadCommands.execute("open-part");
+          if (id === "examples") location.assign('./?examples=1');
           if (id === "import") cadCommands.execute("insert-step");
           if (id === "link") void copyLink();
           if (

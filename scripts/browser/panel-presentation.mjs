@@ -17,7 +17,7 @@ export async function verifyPanelPresentation(page, evidence) {
   for (const theme of ['dark','light']) {
     await page.evaluate(theme => {document.documentElement.classList.toggle('aether-light-theme',theme==='light');document.documentElement.dataset.aetherTheme=theme;},theme);
     let expected;
-    for (const [tab,title] of [['Comments','Comments & tasks'],['AI advisor','AI chat'],['Files','Files'],['Version control','Version control']]) {
+    for (const [tab,title] of [['Comments','Comments & tasks'],['AI advisor','AI chat'],['Files','Files'],['Version control','History & versions']]) {
       await rail.getByRole('button',{name:tab,exact:true}).click();
       await header.getByRole('heading',{name:title,exact:true}).waitFor();
       const measured=await geometry();
@@ -26,6 +26,7 @@ export async function verifyPanelPresentation(page, evidence) {
       await page.screenshot({path:join(evidence,`panels-${theme}-${tab.replaceAll(' ','-')}.png`)});
     }
     const before=await geometry();
+    await sidebar.getByRole('radio',{name:'Version control',exact:true}).click();
     const search=sidebar.getByRole('searchbox');const beforeSearch=await search.boundingBox();
     // Exercise the shared session's actual offline handler; hold retries until measured.
     await page.route('**/api/status',route=>route.abort());

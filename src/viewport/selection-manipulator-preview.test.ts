@@ -52,6 +52,7 @@ it('a canonical update supersedes a drag; later cancellation cannot restore stal
   viewer.parts.get('part').data = data;
   viewer.assemblyPreviewIDs = new Set(['part']);
   viewer.initialMatrices = new Map();
+  viewer.documentPartDisplay = new Map(); viewer.partDisplay = new Map();
   viewer.resetFaceMaterials = vi.fn(); viewer.publishGeometryMetrics = vi.fn(); viewer.callbacks = { onStateChanged: vi.fn() };
   vi.stubGlobal('window', { dispatchEvent: vi.fn() });
   try {

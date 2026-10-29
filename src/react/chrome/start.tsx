@@ -38,6 +38,7 @@ export function StartCenter({ presentation }: { presentation: CADPresentationSna
             <div className="cad-home-actions">
               <Button primary onClick={() => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "new-workspace" })}>New workspace</Button>
               <Button onClick={() => enterWorkspaceAndExecute("open-part")}>Open Part</Button>
+              <Button onClick={() => location.assign('./?examples=1')}>Examples</Button>
               <Button onClick={() => cadPresentation.dispatch({ type: "open-assembly-workspace" })}>Open Assembly</Button>
               <Button onClick={() => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "import" })}>Import CAD</Button>
               <Button onClick={() => { location.href = "./index.html?demo=harness"; }}>Open harness demo</Button>

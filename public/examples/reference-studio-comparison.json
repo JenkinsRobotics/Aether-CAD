@@ -1,0 +1,72 @@
+{
+  "source": "examples/studio/stage1.json",
+  "sourceSha256": "c62ccd8b4aa3d32b46ec86be580b7e03b7c5da2cad36476907003241caccca5b",
+  "checks": [
+    {
+      "part": "shell",
+      "volume": 65805.30723760049
+    },
+    {
+      "part": "lid",
+      "volume": 25908.18530717959
+    },
+    {
+      "part": "sphere",
+      "volume": 102160.40430453529
+    },
+    {
+      "part": "puck",
+      "volume": 12666.901579274047
+    }
+  ],
+  "differences": [
+    "The 3000 mm photographic floor and lighting rig are omitted from the product assembly. Original object positions and nominal geometry are retained."
+  ],
+  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "comparisons": [
+    {
+      "part": "shell",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 65805.30723760049,
+      "actual": 65805.30723760051,
+      "absoluteError": 2.9103830456733704e-11,
+      "relativeError": 4.422717813876275e-16,
+      "tolerance": 0.06580530723760049,
+      "passed": true
+    },
+    {
+      "part": "lid",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 25908.18530717959,
+      "actual": 25908.185307179585,
+      "absoluteError": 3.637978807091713e-12,
+      "relativeError": 1.4041812515844438e-16,
+      "tolerance": 0.025908185307179588,
+      "passed": true
+    },
+    {
+      "part": "sphere",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 102160.40430453529,
+      "actual": 102160.40430453529,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.10216040430453528,
+      "passed": true
+    },
+    {
+      "part": "puck",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 12666.901579274047,
+      "actual": 12666.901579274047,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.012666901579274047,
+      "passed": true
+    }
+  ]
+}

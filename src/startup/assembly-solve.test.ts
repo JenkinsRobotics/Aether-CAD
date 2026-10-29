@@ -179,3 +179,15 @@ describe("what the status bar says about a solve", () => {
     expect(describeSolve(failed as never)).toBe("the solver did not converge");
   });
 });
+
+it('preserves saved appearances for every occurrence through a cached solve', async () => {
+ const base = projection() as unknown as import('../cad-assembly-bridge').AssemblyProjectionV1;
+ const doc = document();doc.bodyProperties={b1:{name:'Body',visible:true,appearance:{color:'#aa2244',metalness:.8},material:{name:'Aluminum',densityKgPerM3:2700}}};
+ const source={...base,part_definitions:[{...base.part_definitions[0],feature_document:JSON.parse(serializePartDocument(doc))}]};
+ const dependencies=deps();const cache=new AssemblyGeometryCache(dependencies);
+ const first=await solveAssemblyProjection(source,{...dependencies,geometryCache:cache});
+ expect(first.bodies.map(b=>b.appearance)).toEqual([{color:'#aa2244',metalness:.8},{color:'#aa2244',metalness:.8}]);
+ const second=await solveAssemblyProjection(source,{...dependencies,geometryCache:cache});
+ expect(second.bodies[1].appearance).toEqual(first.bodies[1].appearance);
+ expect(dependencies.evaluate).toHaveBeenCalledTimes(1);
+});

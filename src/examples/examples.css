@@ -1,0 +1,150 @@
+.cad-examples {
+  height: 100dvh;
+  color: var(--aether-color-text);
+}
+.cad-examples-main {
+  padding: 32px;
+  overflow: auto;
+  min-width: 0;
+  flex: 1;
+}
+.cad-examples-main > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.cad-examples-main h1 {
+  font-size: 30px;
+  margin: 6px 0 10px;
+}
+.cad-examples-main p {
+  color: var(--aether-color-text-dim);
+  line-height: 1.6;
+}
+.cad-examples-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  color: var(--aether-color-text-dim);
+}
+.cad-examples-main > header input {
+  width: 280px;
+}
+.cad-examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1600px;
+}
+.cad-examples-grid article {
+  border: 1px solid var(--aether-color-border);
+  background: var(--aether-color-bg-panel);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cad-example-image {
+  height: 230px;
+  display: block;
+  overflow: hidden;
+  background: var(--aether-color-bg-app);
+}
+.cad-example-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cad-example-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.cad-example-content h2 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+.cad-example-content p {
+  font-size: 13px;
+  margin: 6px 0 14px;
+}
+.cad-example-content small {
+  font-size: 11px;
+  color: var(--aether-color-text-dim);
+}
+.cad-example-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 16px 0 22px;
+}
+.cad-example-tags span {
+  font-size: 10px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--aether-color-bg-control);
+}
+.cad-example-content footer {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: auto;
+}
+.cad-example-banner {
+  position: fixed;
+  z-index: 35;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--aether-color-border);
+  background: var(--aether-color-bg-panel);
+  color: var(--aether-color-text);
+  border-radius: 9px;
+  font-size: 12px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 4px 16px #0003;
+}
+.cad-example-banner > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.cad-example-banner > span {
+  white-space: nowrap;
+}
+.cad-example-banner [role="alert"],
+.cad-examples-error {
+  color: var(--aether-color-error);
+  white-space: normal;
+}
+@media (max-width: 760px) {
+  .cad-examples-main {
+    padding: 18px;
+  }
+  .cad-examples-main > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .cad-examples-main > header input {
+    width: 100%;
+  }
+  .cad-example-banner {
+    flex-wrap: wrap;
+    justify-content: center;
+    min-width: 290px;
+  }
+  .cad-example-banner > span {
+    white-space: normal;
+  }
+}
+
+.cad-example-content a,
+.cad-examples-main > p > a {
+  color: var(--aether-color-accent);
+}

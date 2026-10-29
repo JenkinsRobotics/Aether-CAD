@@ -72,7 +72,7 @@ let activeDrawingId: string | null = null;
 let linkedPartReadOnly = false;
 /** Live editor automation observes the same linked/revision access as saving. */
 export function hostedPartEditable(): boolean {
-  return !hostedCAD || (!opening && !linkedPartReadOnly && active?.writable !== false && !query.has('revision'));
+  return !query.has('example') && (!hostedCAD || (!opening && !linkedPartReadOnly && active?.writable !== false && !query.has('revision')));
 }
 export async function editHostedProject(
   operation: string,
@@ -110,6 +110,7 @@ export async function createHostedDesignDrawing(drawing: DrawingDocument): Promi
   return result.drawing;
 }
 export function projectItemURL(id: string, kind: "part" | "assembly" | "drawing") {
+  if (query.has('example')) return `/cad/index.html?editor=1&example=${encodeURIComponent(query.get('example')!)}&${kind}=${encodeURIComponent(id)}`;
   return (
     "/cad/index.html?document=" +
     encodeURIComponent(active!.id) +
@@ -155,6 +156,7 @@ function fileIdentity(file: StoredFile | null): StoredFile | null {
 function startQueue(text = "", selection: RecoverySelection<StoredFile | null> = { record: null, candidates: [], adopted: [] }) {
   saveRecovery?.dispose();
   queue?.dispose();
+  if (query.has('example')) { queue = null; saveRecovery = null; dirty = false; return; }
   queue = new AutosaveSession({ key: keyFor(active), base: fileIdentity(active), text, keyForBase: keyFor, persistentRecovery: true,
     save: async (text, base) => {
       if (await sessionOwner(false) !== owner) throw new SaveError('Sign in with the account that opened this design.', 401);
@@ -249,7 +251,7 @@ export async function commitHosted(name: string, message: string) {
   });
 }
 export function markHostedDirty() {
-  if (opening) return;
+  if (opening || query.has('example')) return;
   dirty = true; captureSerial++;
   const value = snapshot?.();
   if (value && queue) { queue.write(snapshotText(value)); }
@@ -319,6 +321,17 @@ export async function switchHostedDocument(url: URL, open: (file: File, url: URL
 }
 
 export async function loadHostedFile(updateAddress = true): Promise<File | null> {
+  if (query.has('example')) {
+    saveRecovery?.dispose(); saveRecovery=null; queue?.dispose(); queue=null; dirty=false;
+    opening = true;
+    try {
+      const {openExample}=await import('./examples/open-example');
+      const loaded=await openExample(query);active=null;activeProject=loaded.project;
+      activePartId=query.get('part');activeDrawingId=null;linkedPartReadOnly=true;
+      if(updateAddress)history.replaceState(null,'',location.pathname+'?'+query);
+      return loaded.file;
+    } finally { opening=false; }
+  }
   const id = query.get("document");
   if (!hostedCAD) return null;
   opening = true;
@@ -396,6 +409,7 @@ function restoreFile(file: File | null, text = ''): File | null {
   return new File([new Uint8Array(value.data)], value.name);
 }
 export async function saveHostedFile(name: string, bytes: Uint8Array): Promise<void> {
+  if (query.has('example')) throw Error('Use Save to My files to create an editable copy of this example.');
   if (!queue) { owner = await sessionOwner(false); draftID ||= crypto.randomUUID(); startQueue(); }
   queue!.pause(false);
   queue!.write(snapshotText({ name, bytes }), !active);

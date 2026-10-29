@@ -40,6 +40,7 @@ import { projectItemURL } from "./host-library";
 import { registerAssemblyCommands } from "./startup/assembly-commands";
 import { solveAssemblyJob } from "@aether/core/kernel";
 import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
+import { documentBodyAppearance } from './viewport/document-appearance';
 import { assemblyMeasurementSource, configureMeasurementSources } from './measure/measurement-source';
 import { explodedPlacements } from "./startup/assembly-motion";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
@@ -1222,6 +1223,7 @@ function showEvaluatedPart(document:PartDocument,result:ImportedModelData,failur
     for(const row of viewer.getPartRows())if(row.sourceDocumentId===activePartDocument?.documentId)viewer.removeAuthoredPart(row.id);
     for(const body of result.parts) {
       viewer.replaceAuthoredPart(body);
+      viewer.setDocumentPartDisplay(body.id, documentBodyAppearance(document, body.id));
       if(document.bodyProperties?.[body.id]?.visible===false)viewer.setPartVisibility(body.id,false);
     }
     cadSelection.dispatch({type: "replace", items: []});

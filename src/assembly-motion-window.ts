@@ -5,6 +5,7 @@ import { motionFrames, motionFramesCSV, motionPlotSVG, motionSeries, motionTrace
 import { bodiesForPlacements, type AssemblySolveDependencies, type SolvedBody } from "./startup/assembly-solve";
 import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
 import { aetherKernel } from "./engine/aether/kernel";
+import './assembly-motion-window.css';
 
 /** Motion study (SolidCraft's motion.study / motion.export): one mate DOF driven from a
  *  start to an end value over a number of steps, every step solved in-process, played in
@@ -14,6 +15,7 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
   if (!viewport || viewport.querySelector(".cad-motion-window")) return;
   const dofs = projection.mates.flatMap((mate) => (mate.suppressed ? [] : (mate.dofs ?? []).map((dof) => ({ id: dof.id, label: `${mate.name} · ${dof.name}`, joint: mate.id, dof: dof.name, kind: dof.kind, axis: (dof.name.endsWith("_x") ? "x" : dof.name.endsWith("_y") ? "y" : "z") as "x" | "y" | "z" }))));
   let frames: MotionFrame[] = [], playing = 0;
+  let closed = false;
   const win = openCompactFeatureWindow({ viewport, className: "cad-motion-window", icon: "rotate", title: "Motion study", acceptLabel: "Export CSV", discardLabel: "Close",
     onAccept: async () => {
       if (!frames.length) { win.setError("Run the study first."); return; }
@@ -21,7 +23,15 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = "motion-study.csv"; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
       report(`Motion study exported: ${frames.length} steps.`, "success");
     },
-    onDiscard: async () => { playing++; showCurves([]); win.close(); } });
+    onDiscard: async () => {
+      closed = true; playing++; showCurves([]); win.close();
+      // A study is a preview. Restore the authored mate configuration on close.
+      try {
+        const {job} = assemblyJobFor(projection);
+        const original = await deps.solve(job);
+        if (original.status === 'ok') show(await bodiesForPlacements(projection, original.instances, deps));
+      } catch (error) { report((error as Error).message, 'error'); }
+    } });
   const dofSelect = document.createElement("select"); dofSelect.setAttribute("aria-label", "Driven degree of freedom");
   for (const d of dofs) { const o = document.createElement("option"); o.value = d.id; o.textContent = `${d.label} (${d.kind === "rotation" ? "degrees" : "mm"})`; dofSelect.append(o); }
   const from = document.createElement("input"); from.type = "number"; from.value = "0"; from.setAttribute("aria-label", "Start value");
@@ -35,9 +45,10 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
   const interference = document.createElement("input"); interference.type = "checkbox"; interference.setAttribute("aria-label", "Check interference between every pair");
   const keep = document.createElement("button"); keep.type = "button"; keep.className = "aui-button"; keep.textContent = "Keep trace (CSV)"; keep.disabled = true;
   const plot = document.createElement("div"); plot.className = "cad-motion-plot";
-  win.row("Drive", dofSelect); win.row("From", from); win.row("To", to); win.row("Steps", steps); win.row("Trace", traceSelect, keep); win.row("Plot", plotSelect); win.row("Interference", interference); win.row("", run); win.body.append(plot);
+  win.row("Drive", dofSelect); win.row("From", from); win.row("To", to); win.row("Steps", steps); win.row("Trace", traceSelect); win.row("", keep); win.row("Plot", plotSelect); win.row("Interference", interference); win.row("", run); win.body.append(plot);
   const refreshPlotOptions = () => { const chosen = dofs.find((d) => d.id === dofSelect.value); plotSelect.replaceChildren(...(chosen ? [new Option(chosen.label, `${chosen.joint}:${chosen.dof}`)] : []), ...projection.instances.filter((i) => !i.suppressed).flatMap((i) => ["x", "y", "z"].map((axis) => new Option(`${i.name} ${axis} (mm)`, `${i.id}.${axis}`)))); };
-  refreshPlotOptions(); dofSelect.onchange = refreshPlotOptions;
+  const defaultRange = () => { to.value = dofs.find(d => d.id === dofSelect.value)?.kind === 'translation' ? '10' : '90'; };
+  refreshPlotOptions(); defaultRange(); dofSelect.onchange = () => { refreshPlotOptions(); defaultRange(); };
   const drawPlot = () => { if (!frames.length) return; const label = plotSelect.selectedOptions[0]?.textContent ?? plotSelect.value; plot.innerHTML = motionPlotSVG(motionSeries(frames, plotSelect.value), label); };
   plotSelect.onchange = drawPlot;
   keep.onclick = () => {
@@ -71,10 +82,13 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
       showCurves(traced.length > 1 ? [{ label: "motion trace", color: "#3e8ef7", polylines: [traced] }] : []);
       keep.disabled = traced.length < 2;
       drawPlot();
+      if (closed) return;
       const ticket = ++playing;
       for (const frame of frames) {
         if (ticket !== playing) return;
-        show(await bodiesForPlacements(projection, frame.placements, deps));
+        const bodies = await bodiesForPlacements(projection, frame.placements, deps);
+        if (ticket !== playing || closed) return;
+        show(bodies);
         win.setNotice(`Step ${frame.step} of ${n} · ${chosen.label} = ${frame.values[`${chosen.joint}:${chosen.dof}`].toFixed(2)}`);
         await new Promise((resolve) => setTimeout(resolve, 60));
       }

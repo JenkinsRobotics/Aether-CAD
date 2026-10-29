@@ -1,0 +1,51 @@
+{
+  "source": "examples/demo/enclosure_steps.json",
+  "sourceSha256": "0030b9368aad46eee29f76731a54e28d6b8467e8f833ed16ae5add4ba6f5dc68",
+  "checks": [
+    {
+      "part": "case",
+      "bounds": [
+        80,
+        60,
+        30
+      ]
+    }
+  ],
+  "differences": [
+    "Matches the source at its initial 80 mm width, before its final 100 mm parameter demonstration.",
+    "A fitted lid is added; four boss bores use Hole Wizard. The rounded outline is authored as exact arcs before Shell."
+  ],
+  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "comparisons": [
+    {
+      "part": "case",
+      "field": "bounds X",
+      "units": "mm",
+      "expected": 80,
+      "actual": 80.01445472553795,
+      "absoluteError": 0.014454725537945023,
+      "tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "part": "case",
+      "field": "bounds Y",
+      "units": "mm",
+      "expected": 60,
+      "actual": 60.014454725537945,
+      "absoluteError": 0.014454725537945023,
+      "tolerance": 0.02,
+      "passed": true
+    },
+    {
+      "part": "case",
+      "field": "bounds Z",
+      "units": "mm",
+      "expected": 30,
+      "actual": 30.014454725537945,
+      "absoluteError": 0.014454725537945023,
+      "tolerance": 0.02,
+      "passed": true
+    }
+  ]
+}

@@ -123,6 +123,7 @@ export interface ExtrudeFeature {
 export type PartFeature = SketchFeature | ExtrudeFeature | SolidFeature;
 
 import { validateTreeOrganization, type TreeOrganization } from "./tree-organization";
+import { validateBodyProperties, type BodyProperties } from './body-properties';
 
 export interface PartDocument {
   format: typeof PART_DOCUMENT_FORMAT;
@@ -135,7 +136,7 @@ export interface PartDocument {
   rollbackIndex?: number;
   imageCanvases?: ImageCanvas[];
   sketchPresentation?: Record<string, import("./sketch-presentation").SketchPresentation>;
-  bodyProperties?: Record<string, { name: string; visible: boolean; description?: string; category?: string }>;
+  bodyProperties?: Record<string, BodyProperties>;
   /** Feature tree folders/grouping; organization only — never evaluation order. */
   organization?: TreeOrganization;
   /** Configurations: named rows of variable values and feature suppressions. */
@@ -357,14 +358,7 @@ export function validatePartDocument(
   if (document.bodyProperties !== undefined) {
     if (!document.bodyProperties || typeof document.bodyProperties !== "object")
       throw new Error("Invalid body properties.");
-    for (const value of Object.values(document.bodyProperties))
-      if (
-        !value ||
-        typeof value.name !== "string" ||
-        !value.name.trim() ||
-        typeof value.visible !== "boolean"
-      )
-        throw new Error("Bodies need a name and visibility state.");
+    for (const value of Object.values(document.bodyProperties)) validateBodyProperties(value);
   }
   const ids = new Set<string>();
   // A deleted reference is a recoverable evaluation error, not a corrupt file.

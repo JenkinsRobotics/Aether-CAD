@@ -1,0 +1,102 @@
+{
+  "source": "examples/material-finishes.json",
+  "sourceSha256": "09b5c3a7ea110a7fb740f84bf79a9ade16dc007fae8a0cc6790b0370342a65d1",
+  "checks": [
+    {
+      "part": "specimen-0",
+      "volume": 4188.790204786391
+    },
+    {
+      "part": "specimen-1",
+      "volume": 4188.790204786391
+    },
+    {
+      "part": "specimen-2",
+      "volume": 4188.790204786391
+    },
+    {
+      "part": "specimen-3",
+      "volume": 4188.790204786391
+    },
+    {
+      "part": "specimen-4",
+      "volume": 4188.790204786391
+    },
+    {
+      "part": "specimen-5",
+      "volume": 4188.790204786391
+    }
+  ],
+  "differences": [
+    "Uniform PBR finishes; no measured optical constants, grain or printed layers. Nominal densities are descriptive defaults."
+  ],
+  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "comparisons": [
+    {
+      "part": "specimen-0",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    },
+    {
+      "part": "specimen-1",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    },
+    {
+      "part": "specimen-2",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    },
+    {
+      "part": "specimen-3",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    },
+    {
+      "part": "specimen-4",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    },
+    {
+      "part": "specimen-5",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 4188.790204786391,
+      "actual": 4188.790204786391,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.0041887902047863905,
+      "passed": true
+    }
+  ]
+}

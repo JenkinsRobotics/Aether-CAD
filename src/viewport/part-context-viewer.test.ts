@@ -14,7 +14,7 @@ function fixture() {
   const viewer=Object.create(MateViewport.prototype);
   viewer.anchorPicker = new TopologyAnchorPicker();
   viewer.featurePreview=new FeaturePreviewLayer();viewer.historyPreview=new FeaturePreviewLayer();
-  viewer.modelRoot=new THREE.Group();viewer.section=new SectionLayer(viewer.modelRoot,new THREE.Group());viewer.parts=new Map();viewer.partDisplay=new Map();viewer.isolation=null;
+  viewer.modelRoot=new THREE.Group();viewer.section=new SectionLayer(viewer.modelRoot,new THREE.Group());viewer.parts=new Map();viewer.partDisplay=new Map();viewer.documentPartDisplay=new Map();viewer.isolation=null;
   viewer.callbacks={onStateChanged:vi.fn(),onStatus:vi.fn()};
   viewer.renderer={domElement:{getBoundingClientRect:()=>({left:0,top:0,width:600,height:600})}};
   viewer.camera=new THREE.PerspectiveCamera(45,1,.1,1000);viewer.camera.position.set(0,0,10);viewer.camera.lookAt(0,0,0);viewer.camera.updateMatrixWorld();
@@ -25,7 +25,7 @@ function fixture() {
     viewer.parts.set(id,{data:{id,name:id,sourceDocumentId:'doc'},visible:true,group,surface,faceRanges:[{faceId:1,start:0,count:36}],edges:{material: new THREE.LineBasicMaterial(), visible: true}});
   }
   viewer.modelRoot.updateMatrixWorld(true);
-  return viewer as Pick<MateViewport, 'contextPartsAt' | 'isolatePart' | 'isolatedPartId' | 'setPartDisplay' | 'getPartDisplay'> & {parts:Map<string,any>;modelRoot:THREE.Group;sketchSurface:unknown};
+  return viewer as Pick<MateViewport, 'contextPartsAt' | 'isolatePart' | 'isolatedPartId' | 'setPartDisplay' | 'getPartDisplay' | 'setDocumentPartDisplay'> & {parts:Map<string,any>;modelRoot:THREE.Group;sketchSurface:unknown};
 }
 it('picks each visible body once, nearest first, never hidden or previewed geometry',()=>{
  const v=fixture();expect(v.contextPartsAt(300,300).map(x=>x.partId)).toEqual(['near','far']);
@@ -117,4 +117,17 @@ it('never picks material a section view has cut away, unless the body is exclude
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
  v.setSection(null,false);
  expect(v.contextPartsAt(300,300).map((x:{partId:string})=>x.partId)).toEqual(['near','far']);
+});
+
+it('restores saved material after temporary appearance changes and accepts updated saved finishes', () => {
+ const v=fixture();
+ v.setDocumentPartDisplay('near',{color:'#aa2233',roughness:.3});
+ const material=v.parts.get('near').surface.material[0];
+ expect(material.color.getHex()).toBe(0xaa2233);
+ v.setPartDisplay('near',{color:'#2244aa'});
+ v.setDocumentPartDisplay('near',{color:'#55bb66',roughness:.7});
+ expect(material.color.getHex()).toBe(0x2244aa);
+ v.setPartDisplay('near',{});
+ expect(material.color.getHex()).toBe(0x55bb66);expect(material.roughness).toBe(.7);
+ expect(v.getPartDisplay('far')).toEqual({});
 });

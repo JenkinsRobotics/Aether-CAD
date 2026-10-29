@@ -1,0 +1,212 @@
+[
+  {
+    "id": "scifirobot",
+    "name": "Scifirobot Detailed",
+    "description": "A spherical inspection robot with two shell halves, optical assembly, cooling ducts, seals, fasteners and service covers.",
+    "file": "scifirobot.acad.bin",
+    "thumbnail": "scifirobot.png",
+    "parts": 22,
+    "instances": 64,
+    "features": 128,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Revolve",
+      "Pocket",
+      "Fillet",
+      "Chamfer"
+    ],
+    "sha256": "d11144bc2008941449864704f1cd3a142b2053fced718f2af304058b6944a9d2"
+  },
+  {
+    "id": "airplane",
+    "name": "Propeller Airplane",
+    "description": "A detailed display aircraft with lofted fuselage and airfoil wings, cockpit, separate control surfaces, propeller and landing gear.",
+    "file": "airplane.acad.bin",
+    "thumbnail": "airplane.png",
+    "parts": 15,
+    "instances": 20,
+    "features": 59,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Loft",
+      "Sweep",
+      "Extrude",
+      "Revolve",
+      "Hole Wizard",
+      "Chamfer"
+    ],
+    "motion": "Revolute propeller and landing wheels. The spinner and blades rotate together; the fuselage is grounded.",
+    "sha256": "1e879323939dd94a9e145050d9b02aec04fd56bd2a21b02ffd5ff0e748caf595"
+  },
+  {
+    "id": "wrench",
+    "name": "Adjustable Wrench",
+    "description": "A 200 mm adjustable wrench with a forged frame, sliding jaw, adjustment roller, captive shaft and grip inserts.",
+    "file": "wrench.acad.bin",
+    "thumbnail": "wrench.png",
+    "parts": 6,
+    "instances": 11,
+    "features": 41,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Pocket",
+      "Hole Wizard",
+      "Revolve",
+      "Chamfer"
+    ],
+    "motion": "Grounded frame, sliding jaw and rotating adjustment roller. Demonstrate 0–10 mm jaw travel; roller and jaw are independent.",
+    "sha256": "6d100fde560a126a496a3306924732329266c50263e54fc6525ef447df2db306"
+  },
+  {
+    "id": "roadster",
+    "name": "Studio Roadster",
+    "description": "A 320 mm sports-car study with a lofted body, separate hood and cabin, wheels with real bores, drilled brake rotors and swept exhausts.",
+    "file": "roadster.acad.bin",
+    "thumbnail": "roadster.png",
+    "parts": 16,
+    "instances": 31,
+    "features": 76,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Loft",
+      "Sweep",
+      "Extrude",
+      "Revolve",
+      "Hole Wizard",
+      "Fillet",
+      "Chamfer"
+    ],
+    "motion": "Four revolute wheel bearings; tires and brake disks rotate with their wheel. Grounded body and fastened chassis.",
+    "sha256": "b198a2f062f11bc9c8f76ff7592e3380f229c67f3760d85558cd187e19ac3333"
+  },
+  {
+    "id": "smartphone",
+    "name": "Studio Smartphone",
+    "description": "A modern 154 × 74 mm phone with a machined enclosure, display stack, camera modules, buttons, battery and circuit board.",
+    "file": "smartphone.acad.bin",
+    "thumbnail": "smartphone.png",
+    "parts": 16,
+    "instances": 21,
+    "features": 52,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Pocket",
+      "Hole Wizard",
+      "Revolve",
+      "Fillet",
+      "Chamfer"
+    ],
+    "sha256": "d58ec695f1e9e2a5cb33ef626c91e0e320c62ab83cf76d48284a6c5a91bbe221"
+  },
+  {
+    "id": "reference-bracket",
+    "name": "Reference Mounting Bracket",
+    "description": "SolidCraft bracket recreated as an editable Aether Part: 40 × 60 × 30 mm, 6 mm legs, an R2 edge and two real Ø8 through holes.",
+    "file": "reference-bracket.acad.bin",
+    "thumbnail": "reference-bracket.png",
+    "parts": 1,
+    "instances": 1,
+    "features": 5,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Fillet",
+      "Hole Wizard",
+      "Reference comparison"
+    ],
+    "reference": {
+      "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/bracket.json",
+      "comparison": "reference-bracket-comparison.json"
+    },
+    "sha256": "4d2d72489460f099735fdbe4ac0be63281123ceb9140c5af819e8e2b9f4b58ff"
+  },
+  {
+    "id": "reference-enclosure",
+    "name": "Reference Electronics Enclosure",
+    "description": "SolidCraft’s 80 × 60 × 30 mm enclosure, with a real 2 mm shell, USB wall opening and four bored screw bosses. A separate fitted lid makes it a reusable assembly.",
+    "file": "reference-enclosure.acad.bin",
+    "thumbnail": "reference-enclosure.png",
+    "parts": 2,
+    "instances": 2,
+    "features": 15,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Shell",
+      "Hole Wizard",
+      "Reference comparison"
+    ],
+    "reference": {
+      "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/demo/enclosure_steps.json",
+      "comparison": "reference-enclosure-comparison.json"
+    },
+    "sha256": "162d0fb418b906ea0acdaf67d9d02e681cb1460f5281b8fe0a6b9671876e8ee1"
+  },
+  {
+    "id": "reference-studio",
+    "name": "Reference Coating Study",
+    "description": "The four product solids from SolidCraft’s studio study, rebuilt from native sketches and revolves with their original dimensions and positions.",
+    "file": "reference-studio.acad.bin",
+    "thumbnail": "reference-studio.png",
+    "parts": 4,
+    "instances": 4,
+    "features": 8,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Extrude",
+      "Revolve",
+      "Materials",
+      "Reference comparison"
+    ],
+    "reference": {
+      "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/studio/stage1.json",
+      "comparison": "reference-studio-comparison.json"
+    },
+    "sha256": "dd7ed32dc7809fa0ab9f315689a109b3f10c6e0b4783e7e6d1010ecbc0c023cd"
+  },
+  {
+    "id": "reference-tumblers",
+    "name": "Reference Glass Tumblers",
+    "description": "The two thick glass vessels from SolidCraft’s tumbler scene, with real revolved walls and bases. Both remain individually editable Parts.",
+    "file": "reference-tumblers.acad.bin",
+    "thumbnail": "reference-tumblers.png",
+    "parts": 2,
+    "instances": 2,
+    "features": 4,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Revolve",
+      "Materials",
+      "Reference comparison"
+    ],
+    "reference": {
+      "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/studio/tumblers.json",
+      "comparison": "reference-tumblers-comparison.json"
+    },
+    "sha256": "6b8ad786f59474db67da5f704735728366dffe19a859323da7aa1755b126aa8a"
+  },
+  {
+    "id": "reference-materials",
+    "name": "Reference Material Finishes",
+    "description": "Six exact radius-10 mm spheres reproducing SolidCraft’s material specimens with saved engineering material names, densities and illustrative finishes.",
+    "file": "reference-materials.acad.bin",
+    "thumbnail": "reference-materials.png",
+    "parts": 6,
+    "instances": 6,
+    "features": 12,
+    "assemblyId": "assembly-000001",
+    "tags": [
+      "Revolve",
+      "Materials",
+      "Reference comparison"
+    ],
+    "reference": {
+      "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/material-finishes.json",
+      "comparison": "reference-materials-comparison.json"
+    },
+    "sha256": "359d0b613b1dd369d1384b8e59f97ffc36a96810e6df964700d8c3ac56633b54"
+  }
+]

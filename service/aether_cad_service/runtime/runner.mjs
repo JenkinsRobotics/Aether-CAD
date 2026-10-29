@@ -6783,6 +6783,26 @@ function validateTreeOrganization(value2) {
     }
   }
 }
+function validateBodyProperties(value2) {
+  if (!value2 || typeof value2.name !== "string" || !value2.name.trim() || typeof value2.visible !== "boolean")
+    throw Error("Bodies need a name and visibility state.");
+  if (value2.material !== void 0) {
+    const material = value2.material;
+    if (!material || typeof material.name !== "string" || !material.name.trim() || !Number.isFinite(material.densityKgPerM3) || material.densityKgPerM3 <= 0)
+      throw Error("A material needs a name and positive density in kg/m³.");
+  }
+  if (value2.appearance !== void 0) {
+    const appearance = value2.appearance;
+    if (!appearance || typeof appearance !== "object" || Array.isArray(appearance)) throw Error("Invalid body appearance.");
+    for (const key2 of ["color", "emissiveColor"])
+      if (appearance[key2] !== void 0 && !/^#[0-9a-f]{6}$/i.test(appearance[key2])) throw Error("Appearance colors must use six-digit hex values.");
+    for (const key2 of ["opacity", "roughness", "metalness", "emissiveIntensity"]) {
+      const n = appearance[key2];
+      if (n !== void 0 && (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > (key2 === "emissiveIntensity" ? 5 : 1)))
+        throw Error(`Invalid body appearance ${key2}.`);
+    }
+  }
+}
 const isSurfaceBodyMaker = (feature3) => surfaceCreatorTypes.includes(feature3.type) || feature3.type === "surface-thicken" && feature3.operation === "new" || feature3.type === "sheet-base";
 const PART_DOCUMENT_FORMAT = "aether-part";
 const LEGACY_PART_DOCUMENT_FORMAT = "open-cad-part";
@@ -6845,9 +6865,7 @@ function validatePartDocument(value2) {
   if (document2.bodyProperties !== void 0) {
     if (!document2.bodyProperties || typeof document2.bodyProperties !== "object")
       throw new Error("Invalid body properties.");
-    for (const value22 of Object.values(document2.bodyProperties))
-      if (!value22 || typeof value22.name !== "string" || !value22.name.trim() || typeof value22.visible !== "boolean")
-        throw new Error("Bodies need a name and visibility state.");
+    for (const value22 of Object.values(document2.bodyProperties)) validateBodyProperties(value22);
   }
   const ids2 = /* @__PURE__ */ new Set();
   const allIds = new Set(document2.features.map((f2) => f2?.id));

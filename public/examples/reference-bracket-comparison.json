@@ -1,0 +1,39 @@
+{
+  "source": "examples/bracket.json",
+  "sourceSha256": "79dfc10932c808dc95888c5b001bdab440f7507e0c2ddcba0502cf521241785d",
+  "checks": [
+    {
+      "part": "bracket",
+      "holeRemoval": 603.1857894892403,
+      "volume": 22385.309769726147
+    }
+  ],
+  "differences": [
+    "Hole Wizard replaces the source’s circular extrusion cuts. Coordinate system and nominal dimensions are retained."
+  ],
+  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "comparisons": [
+    {
+      "part": "bracket",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 22385.309769726147,
+      "actual": 22385.309769726147,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.022385309769726146,
+      "passed": true
+    },
+    {
+      "part": "bracket",
+      "field": "holeRemoval",
+      "units": "mm³",
+      "expected": 603.1857894892403,
+      "actual": 603.1857894892455,
+      "absoluteError": 5.229594535194337e-12,
+      "relativeError": 8.669956465026476e-15,
+      "tolerance": 0.0006031857894892403,
+      "passed": true
+    }
+  ]
+}

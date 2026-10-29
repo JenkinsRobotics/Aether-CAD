@@ -1,0 +1,9 @@
+.cad-motion-window > .aui-float-panel-body,
+.cad-motion-window .cad-motion-plot { min-width: 0; }
+.cad-motion-window .aui-feature-row { width: 100%; }
+.cad-motion-window .aui-feature-row > :is(input[type="number"], select) {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+.cad-motion-window .cad-motion-plot svg { width: 100%; height: auto; }

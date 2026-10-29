@@ -1,3 +1,4 @@
+import { ExamplesPage, ExampleBanner } from './examples/ExamplesPage';
 import "@aether/ui/tokens.css";
 import "@aether/ui/widgets.css";
 import "./style.css";
@@ -10,13 +11,17 @@ import { AetherCADShell } from "./react/AetherCADShell";
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app root");
 
+const examples = new URLSearchParams(location.search).has('examples');
+const example = new URLSearchParams(location.search).has('example');
 const harnessDemo = new URLSearchParams(location.search).get("demo") === "harness";
-if (harnessDemo) {
+if (examples) {
+  createRoot(app).render(<StrictMode><ExamplesPage /></StrictMode>);
+} else if (harnessDemo) {
   void import("./harness-demo/HarnessApp").then(({ HarnessApp }) => {
     createRoot(app).render(<StrictMode><HarnessApp /></StrictMode>);
   });
 } else {
-  flushSync(() => { createRoot(app).render(<StrictMode><AetherCADShell /></StrictMode>); });
+  flushSync(() => { createRoot(app).render(<StrictMode><AetherCADShell />{example&&<ExampleBanner/>}</StrictMode>); });
 }
 
 // The existing CAD controller binds after React commits the stable shell.
@@ -26,7 +31,7 @@ if (harnessDemo) {
 // The shell renders before the controller loads, so a controller failure
 // would otherwise look like a healthy app with an empty document. Announce
 // it instead: the tray shows the failure and the panels say why.
-if (!harnessDemo) import("./main").catch(async (error: unknown) => {
+if (!harnessDemo && !examples) import("./main").catch(async (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error("Aether CAD controller failed to start:", error);
   const { cadPresentation } = await import("./cad-presentation-store");

@@ -291,6 +291,7 @@ export class MateViewport {
   private readonly parts = new Map<string, RenderPart>();
   private readonly studioReflectionMap = createStudioReflectionMap();
   private readonly partDisplay = new Map<string, PartDisplayOverride>();
+  private readonly documentPartDisplay = new Map<string, PartDisplayOverride>();
   private isolation: string | null = null;
   private readonly constraints = new MateConstraintTracker();
   private readonly connectorRegistry = new MateConnectorRegistry();
@@ -817,16 +818,25 @@ export class MateViewport {
 
   getPartDisplay(id: string): PartDisplayOverride {
     const part = this.parts.get(id);
-    return part ? { ...this.partDisplay.get(JSON.stringify([part.data.sourceDocumentId, id])) } : {};
+    const key = JSON.stringify([part?.data.sourceDocumentId, id]);
+    return part ? { ...this.documentPartDisplay.get(key), ...this.partDisplay.get(key) } : {};
+  }
+  setDocumentPartDisplay(id: string, value: PartDisplayOverride): void {
+    const part = this.parts.get(id);
+    if (!part) return;
+    const key = JSON.stringify([part.data.sourceDocumentId, id]);
+    this.documentPartDisplay.set(key, { ...value });
+    this.setPartDisplay(id, this.partDisplay.get(key) ?? {});
   }
   setPartDisplay(id: string, value: PartDisplayOverride): void {
     const part = this.parts.get(id);
     if (!part || !this.appearance) return;
     this.partDisplay.set(JSON.stringify([part.data.sourceDocumentId, id]), { ...value });
-    const resolved = resolvePartDisplay(resolveAppearance(this.appearance, readViewportThemeOverride()), value);
+    const effective = this.getPartDisplay(id);
+    const resolved = resolvePartDisplay(resolveAppearance(this.appearance, readViewportThemeOverride()), effective);
     const policy = cadDisplayStylePolicy(this.appearance.displayStyle, this.appearance.edgesVisible);
     applySurfaceAppearance(part.surface.material as THREE.MeshStandardMaterial[], policy, resolved);
-    part.edges.visible = policy.edgesVisible && value.edgesVisible !== false;
+    part.edges.visible = policy.edgesVisible && effective.edgesVisible !== false;
     part.edges.material.color.setHex(resolved.edgeColor);
     part.edges.material.linewidth = resolved.edgeWidth;
     part.edges.material.opacity = this.appearance.displayStyle === "hidden-line" ? 1 : resolved.edgeOpacity;
@@ -895,7 +905,7 @@ export class MateViewport {
 
   private assemblyPreviewIDs = new Set<string>();
   private geometryBatch = false;
-  replaceAssemblyBodies(bodies: {data:PartGeometryData;positionMillimeters:readonly number[];quaternion:readonly number[]}[]): void {
+  replaceAssemblyBodies(bodies: {data:PartGeometryData;positionMillimeters:readonly number[];quaternion:readonly number[];appearance?:PartDisplayOverride}[]): void {
     const started = performance.now();
     const nextIDs = new Set(bodies.map(body => body.data.id));
     if (nextIDs.size !== bodies.length) throw Error('Assembly contains duplicate body identities.');
@@ -929,6 +939,7 @@ export class MateViewport {
           if (existing) { this.removeRenderedPart(existing); invalidated.add(body.data.id); }
           this.addPart(body.data, placement);
         }
+        this.setDocumentPartDisplay(body.data.id, body.appearance ?? {});
       }
       this.assemblyPreviewIDs = nextIDs;
     } finally { this.geometryBatch = false; }
@@ -1347,7 +1358,7 @@ export class MateViewport {
     });
     this.initialMatrices.set(data.id, placement.clone());
     if (this.isolation) group.visible = data.id === this.isolation;
-    this.setPartDisplay(data.id, this.getPartDisplay(data.id));
+    this.setPartDisplay(data.id, this.partDisplay.get(JSON.stringify([data.sourceDocumentId, data.id])) ?? {});
     this.publishGeometryMetrics(performance.now() - uploadStarted);
   }
 

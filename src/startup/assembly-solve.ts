@@ -14,11 +14,14 @@ import type { AssemblyProjectionV1 } from "../cad-assembly-bridge";
 import type { ImportedModelData } from "../domain";
 import type { PartDocument } from "../aether-core";
 import { AssemblyGeometryCache, type EvaluatedDefinition } from '../assembly/geometry-cache';
+import { documentBodyAppearance } from '../viewport/document-appearance';
+import type { PartDisplayOverride } from '../viewport/part-display';
 
 export interface SolvedBody {
   data: ImportedModelData["parts"][number];
   positionMillimeters: readonly number[];
   quaternion: readonly number[];
+  appearance?: PartDisplayOverride;
 }
 
 export interface AssemblySolveResult {
@@ -104,7 +107,7 @@ export async function bodiesForPlacements(projection: AssemblyProjectionV1, inst
     for (const body of model.parts) {
       // A body the part hides stays hidden when the part is placed.
       if (document.bodyProperties?.[body.id]?.visible === false) continue;
-      bodies.push({ data: { ...body, id: `assembly:${instance.id}:${body.id}`, name: `${instance.name} · ${body.name}` }, positionMillimeters: placement.placement_mm, quaternion: placement.rotation });
+      bodies.push({ data: { ...body, id: `assembly:${instance.id}:${body.id}`, name: `${instance.name} · ${body.name}` }, positionMillimeters: placement.placement_mm, quaternion: placement.rotation, appearance: documentBodyAppearance(document, body.id) });
     }
   }
   return bodies;

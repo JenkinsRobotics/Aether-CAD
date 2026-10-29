@@ -1,0 +1,42 @@
+{
+  "source": "examples/studio/tumblers.json",
+  "sourceSha256": "11011bcc1dea4e72b6aded735ff99f544ac2d6affbcda6d59961a35337c8abd1",
+  "checks": [
+    {
+      "part": "tall",
+      "volume": 150115.5071646446
+    },
+    {
+      "part": "short",
+      "volume": 149319.89882512292
+    }
+  ],
+  "differences": [
+    "Product vessels only: furniture, room and plant are excluded. Vessels are placed side by side at the assembly origin. Optical transparency is illustrative, not the source path-traced renderer."
+  ],
+  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "comparisons": [
+    {
+      "part": "tall",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 150115.5071646446,
+      "actual": 150115.5071646445,
+      "absoluteError": 8.731149137020111e-11,
+      "relativeError": 5.816287272336167e-16,
+      "tolerance": 0.15011550716464458,
+      "passed": true
+    },
+    {
+      "part": "short",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 149319.89882512292,
+      "actual": 149319.89882512292,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.14931989882512292,
+      "passed": true
+    }
+  ]
+}
