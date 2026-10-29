@@ -5,11 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const { chromium, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
+const { chromium, webkit, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const browserName = process.env.AETHER_SECTION_BROWSER ?? 'chromium';
+const browser = await (browserName === 'webkit' ? webkit : chromium).launch({ headless: true,
+  ...(browserName === 'webgpu' ? {args:['--enable-unsafe-webgpu','--use-angle=metal']} : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.setDefaultTimeout(15000);
 const errors = [];
@@ -34,7 +36,9 @@ try {
   const canvas=page.locator('canvas.viewport-canvas');
   const project=async point=>page.evaluate(point=>{let result;window.dispatchEvent(new CustomEvent('aether-measure-project',{detail:{points:[point],respond:value=>{result=value[0];}}}));return result;},point);
   const pixel=async point=>{
-    const at=await project(point),bytes=await page.screenshot();
+    // The handle sits on the section center. Inspect the rendered cut underneath,
+    // rather than accidentally classifying the blue pivot as uncut material.
+    const at=await project(point),bytes=await page.screenshot({style:'.cad-section-handle { visibility:hidden !important; }'});
     return page.evaluate(async({encoded,at})=>{const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+encoded)).blob());const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close();return [...ctx.getImageData(Math.round(at.x),Math.round(at.y),1,1).data];},{encoded:bytes.toString('base64'),at});
   };
   const isCap=p=>p[0]>p[2]+25;
@@ -68,6 +72,22 @@ try {
   await expect.poll(async()=>Number(await offset.inputValue())).toBeGreaterThan(5);
   await page.screenshot({path:join(evidence,'live-drag.png')});await page.mouse.up();
   await negative.press('ArrowRight');await offset.fill('5');
+  const pivot=button('Move section origin; snap to geometry');
+  const dragOrigin=async point=>{
+    const start=await pivot.boundingBox(),target=await project(point);
+    await page.mouse.move(start.x+start.width/2,start.y+start.height/2);await page.mouse.down();
+    await page.mouse.move(target.x,target.y,{steps:8});
+  };
+  await dragOrigin([3,14,2.5]);
+  await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(3,1);
+  await expect.poll(async()=>parseFloat(await page.getByRole('textbox',{name:'Section offset (mm)',exact:true}).inputValue())).toBeCloseTo(3,1);
+  await waitCap([1,14,2.5],true);await waitCap([4,14,2.5],false);
+  await page.screenshot({path:join(evidence,'origin-drag-live-offset.png')});
+  await page.keyboard.press('Escape');await page.mouse.up();
+  await expect.poll(async()=>Number(await offset.inputValue())).toBe(5);
+  await dragOrigin([3,14,2.5]);await page.mouse.up();
+  await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(3,1);
+  await offset.fill('5');await waitCap([4,14,2.5],true);
   await page.getByRole('checkbox',{name:'Enable plane',exact:true}).uncheck();await waitCap([8,10,2.5],true);
   await page.getByRole('checkbox',{name:'Enable plane',exact:true}).check();await waitCap([8,10,2.5],false);
   await button(faceName).click();await expect.poll(async()=>Number(await offset.inputValue())).toBe(-2.5);
@@ -86,9 +106,29 @@ try {
   await button('Top view').press('Enter');await page.waitForTimeout(450);
   await button('Cancel').click();await button('Section view').click();await page.getByRole('menuitem',{name:'Turn off section view',exact:true}).click();
   await waitCap([5,10,5],false);await expect(button('Section view')).toHaveAttribute('aria-pressed','false');
+  // A picked face away from the world origin remains the reference after a
+  // center drag. Use the top surface to drag inward from the x=10 side face.
+  await button('Home view').click();await page.waitForTimeout(450);
+  await button('Section view').click();
+  const rightFace=await project([10,10,2.5]);await page.mouse.click(rightFace.x,rightFace.y);
+  await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(1);
+  await offset.fill('-2');
+  await button('Top view').press('Enter');await page.waitForTimeout(450);
+  await dragOrigin([6,14,5]);
+  await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(-4,1);
+  await expect.poll(async()=>parseFloat(await page.getByRole('textbox',{name:'Section offset (mm)',exact:true}).inputValue())).toBeCloseTo(-4,1);
+  await page.mouse.up();
+  await button('View normal').click();await page.waitForTimeout(450);await page.mouse.move(1100,800);
+  await waitCap([6,5,3.5],true);
+  await page.screenshot({path:join(evidence,'face-origin-offset.png')});
+  await button('Accept section view').click();await waitCap([6,5,3.5],true);
+  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();
+  await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(-4,1);
+  await offset.fill('0');await waitCap([10,5,3.5],false);
+  await button('Cancel').click();await waitCap([6,5,3.5],true);
   assert.deepEqual(errors,[]);
-  await writeFile(join(evidence,'result.json'),JSON.stringify({passed:true,errors},null,2));
-  console.log('Built CAD: live face cuts, multiple planes, directional dragging, independent offsets, disable, accept/cancel/off and full-height header buttons passed.');
+  await writeFile(join(evidence,'result.json'),JSON.stringify({passed:true,browser:browserName,errors},null,2));
+  console.log('Built CAD: live face cuts, multiple planes, arrow and origin dragging, synchronized offsets, drag cancellation, disable and accept/cancel/off passed.');
 } catch(error) {
   await page.screenshot({path:join(evidence,'failure.png')});await writeFile(join(evidence,'failure.txt'),String(error.stack));throw error;
 } finally {await browser.close();}

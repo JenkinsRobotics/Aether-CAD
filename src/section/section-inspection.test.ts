@@ -7,16 +7,30 @@ import { sectionInspectionGeometry } from './section-topology';
 import { sectionCapGeometry } from '../viewport/section-caps';
 import { inspectGeometry } from '../measure/inspection-geometry';
 
-it('rotates around the displayed origin after translating, and snaps without retaining an offset', () => {
-  const cut={...newSectionCut(DEFAULT_SECTION_PLANES[0]),pivotMillimeters:[5,6,7] as const,offsetMillimeters:12};
+it('rotates around the displayed origin and measures snapped offsets from the reference face', () => {
+  const cut={...newSectionCut(DEFAULT_SECTION_PLANES[0]),pivotMillimeters:[5,6,0] as const,offsetMillimeters:12};
   const before=sectionFrame(cut).point;
   const rotated={...cut,...rotateSection(cut,[35,65])};
   expect(sectionFrame(rotated).point).toEqual(before);
   const plane=sectionClipPlane(rotated)!;
   expect(new Vector3(...plane.normal).dot(new Vector3(...before))+plane.constant).toBeCloseTo(0);
   const snapped={...rotated,...moveSectionTo(rotated,[3,4,5])};
-  expect(sectionFrame(snapped).point).toEqual([3,4,5]);expect(snapped.offsetMillimeters).toBe(0);
+  expect(new Vector3(...sectionFrame(snapped).point).distanceTo(new Vector3(3,4,5))).toBeLessThan(1e-10);
+  expect(snapped.offsetMillimeters).toBeCloseTo(new Vector3(3,4,5).dot(new Vector3(...sectionFrame(rotated).normal)));
   expect(moveSectionTo(cut,[NaN,0,0])).toEqual({});
+});
+
+it('keeps a picked side face as zero through repeated origin moves and typed offsets', () => {
+  const cut={...newSectionCut({label:'Front face',originMillimeters:[30,-15,6],normal:[0,-1,0]}),offsetMillimeters:-2};
+  const moved={...cut,...moveSectionTo(cut,[35,-4,7])};
+  expect(moved.offsetMillimeters).toBe(-11);
+  expect(moved.pivotMillimeters).toEqual([35,-15,7]);
+  expect(sectionFrame(moved).point).toEqual([35,-4,7]);
+  expect(sectionFrame({...moved,offsetMillimeters:-3}).point).toEqual([35,-12,7]);
+  const again={...moved,...moveSectionTo(moved,[25,-18,8])};
+  expect(again.offsetMillimeters).toBe(3);
+  expect(sectionFrame({...again,offsetMillimeters:0}).point).toEqual([25,-15,8]);
+  expect(again.plane).toBe(cut.plane);
 });
 it('exposes cap area, perimeter, true corners and edges, without triangle subdivision anchors', () => {
   const box=new BoxGeometry(10,20,6),cap=sectionCapGeometry(box,[new Plane(new Vector3(0,0,-1),1)]);

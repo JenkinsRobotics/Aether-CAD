@@ -7,13 +7,14 @@ export interface SectionItem { id: string; label: string }
 export interface SectionCut {
   id: string;
   plane: SectionPlane;
-  /** Along the plane normal from its origin; negative moves into the part. */
+  /** Along the current cut normal from the selected reference face's origin. */
   offsetMillimeters: number;
   /** Keep the opposite half without moving the cutting plane. */
   reversed?: boolean;
   showPlane?: boolean;
   enabled?: boolean;
   rotationDegrees?: readonly [number, number];
+  /** In-plane handle position on the zero-offset plane through the reference origin. */
   pivotMillimeters?: Vec3;
 }
 export interface SectionView {

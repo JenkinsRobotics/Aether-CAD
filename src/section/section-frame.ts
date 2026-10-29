@@ -21,19 +21,26 @@ export function sectionFrame(cut: SectionCut) {
             Vec3
         ] };
 }
-export function moveSectionTo(_cut: SectionCut, point: Vec3): Partial<SectionCut> {
+/** Keep the selected face as zero when moving the displayed origin. The pivot
+ * stores only the in-plane displacement; the normal displacement is the offset. */
+export function moveSectionTo(cut: SectionCut, point: Vec3): Partial<SectionCut> {
     if (!point.every(Number.isFinite))
         return {};
-    return { pivotMillimeters: point, offsetMillimeters: 0 };
+    const normal = new Vector3(...sectionFrame(cut).normal);
+    const target = new Vector3(...point);
+    const offsetMillimeters = target.clone().sub(new Vector3(...cut.plane.originMillimeters)).dot(normal);
+    return {
+        pivotMillimeters: target.addScaledVector(normal, -offsetMillimeters).toArray(),
+        offsetMillimeters,
+    };
 }
 /** Keep the displayed origin fixed while changing the plane's orientation. */
 export function rotateSection(cut: SectionCut, rotationDegrees: readonly [
     number,
     number
 ], pivot = sectionFrame(cut).point): Partial<SectionCut> {
-    const normal = sectionFrame({ ...cut, rotationDegrees }).normal;
     return {
         rotationDegrees,
-        pivotMillimeters: new Vector3(...pivot).addScaledVector(new Vector3(...normal), -cut.offsetMillimeters).toArray(),
+        ...moveSectionTo({ ...cut, rotationDegrees }, pivot),
     };
 }
