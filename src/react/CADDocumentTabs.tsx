@@ -6,7 +6,8 @@ import { CAD_DESIGN_KINDS, DESIGN_UNIT_OPTIONS } from "@aether/session/library/d
 import { createNativeFile } from "@aether/session/library/create-native-file";
 import { cadPresentation } from "../cad-presentation-store";
 
-import { tabActionItems, tabPartCode, tabURL, type CADTabAction, type CADTabTarget } from '../document-tab-actions';
+import { tabActionItems, tabURL, type CADTabAction, type CADTabTarget } from '../document-tab-actions';
+import { usePartThumbnails } from '../design/use-part-thumbnails';
 import { CADDocumentControls } from "./CADDocumentControls";
 import { loadDocumentMetadata } from "./CADDocumentSettings";
 import { CADTabActionDialog, type CADTabActionResult } from './CADTabActionDialog';
@@ -231,26 +232,9 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
       revision:contextual&&search.has('revision')?Number(search.get('revision')):undefined,
       linked:project?.parts.find(part=>part.id===id)?.source?.kind==='linked'};
   };
-  // Part previews for the Files panel, built on this device by the same engine.
-  // Navigation refreshes them all; a save refreshes the open part's.
-  const [thumbnails,setThumbnails]=useState<Record<string,string>>({});
   const partTabs=variant==="browser"?(project ? tabs : tabs.filter(tab=>tab.current)).filter(tab=>tab.detail==="Part Studio").map(tab=>tab.id):[];
-  const currentPart=partTabs.find(id=>tabs.find(tab=>tab.id===id)?.current);
-  const preview=(ids:string[])=>{
-    let live=true;
-    void (async()=>{
-      const {previewDocument}=await import("../preview-document");
-      // ponytail: one engine build per part; cache by document revision if projects grow large.
-      for(const id of ids){
-        const image=await tabPartCode(targetFor(id)).then(previewDocument).catch(()=>null);
-        if(!live)return;
-        if(image)setThumbnails(previous=>({...previous,[id]:image}));
-      }
-    })();
-    return()=>{live=false;};
-  };
-  useEffect(()=>partTabs.length?preview(partTabs):undefined,[partTabs.join(","),navigation,presentation.backendState]);
-  useEffect(()=>saveStatus==="Saved"&&currentPart?preview([currentPart]):undefined,[saveStatus,currentPart]);
+  const thumbnails = usePartThumbnails(partTabs.map(targetFor), project,
+    `${navigation}:${presentation.backendState}:${saveStatus === 'Saved'}`);
   const runTabAction=(id:string,action:string)=>{
     const target=targetFor(id),entry=tabActionItems(target).find(item=>item.id===action);
     if(!entry||entry.disabled)return;

@@ -59,10 +59,17 @@ export async function tabPartCode(target:CADTabTarget):Promise<string> {
   if(target.kind==='assembly')throw Error('Show code is available for Part Studios and Drawings.');
   let text:string;
   if(!target.documentId) {
-    const {currentEditorSnapshot}=await import('./host-library');
-    const snapshot=target.current&&currentEditorSnapshot();
-    if(!snapshot)throw Error('Wait for this Part to finish loading.');
-    text=new TextDecoder().decode(snapshot.bytes);
+    const {activeProject,currentEditorSnapshot}=await import('./host-library');
+    if(target.itemId) {
+      const items=target.kind==='drawing'?activeProject?.drawings:activeProject?.parts;
+      const item=items?.find(item=>item.id===target.itemId);
+      if(!item?.document)throw Error('This tab has no editable document.');
+      text=JSON.stringify(item.document);
+    } else {
+      const snapshot=target.current&&currentEditorSnapshot();
+      if(!snapshot)throw Error('Wait for this Part to finish loading.');
+      text=new TextDecoder().decode(snapshot.bytes);
+    }
   } else if(target.itemId) {
     const result=await documentRequest<{project:{parts:{id:string;document:unknown}[];drawings?:{id:string;document:unknown}[]}}>('cad','project_read',scope(target));
     const part=(target.kind==='drawing'?result.project.drawings??[]:result.project.parts).find(part=>part.id===target.itemId);

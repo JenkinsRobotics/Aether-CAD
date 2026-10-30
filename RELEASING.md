@@ -167,3 +167,9 @@ Drawing autosave/reopen, Drive navigation and scope isolation. Run
 metadata, recycle/restore and refusal by the previous released codec. Older
 installed CAD/Animation readers cannot open schema 3; they refuse rather than
 remove embedded Drawings. Do not downgrade the graph version for rollback.
+
+Design thumbnail changes also require `scripts/verify-part-thumbnails-browser.mjs`
+through the disposable host on Chromium and with `AETHER_THUMBNAIL_BROWSER=webkit`.
+All native robot Parts must have nonblank previews before opening any Part, retain
+their images through navigation/reload, and leave the main viewport rendered.
+Previewing must not save documents or fetch the container once per thumbnail.

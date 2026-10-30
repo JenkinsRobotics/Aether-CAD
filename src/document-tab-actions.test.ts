@@ -2,12 +2,12 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument } from '@aether/core/document';
 import { deleteTab, duplicateTab, editTabProperties, loadTabMetadata, prepareTabDeletion, tabActionItems, tabPartCode, tabURL, type CADTabTarget } from './document-tab-actions';
 import type { Metadata } from './react/CADDocumentSettings';
-const mocks=vi.hoisted(()=>({request:vi.fn(),recycle:vi.fn(),snapshot:vi.fn()}));
+const mocks=vi.hoisted(()=>({request:vi.fn(),recycle:vi.fn(),snapshot:vi.fn(),project:null as import('./host-library').Project|null}));
 vi.mock('@aether/session/documents',()=>({documentRequest:mocks.request,fileRecycleRequest:mocks.recycle,decodeDocument:(s:string)=>Buffer.from(s,'base64').toString()}));
-vi.mock('./host-library',()=>({currentEditorSnapshot:mocks.snapshot}));
+vi.mock('./host-library',()=>({currentEditorSnapshot:mocks.snapshot,get activeProject(){return mocks.project;}}));
 const target:CADTabTarget={id:'part-b',name:'Bracket',kind:'part',current:false,documentId:'file-b',itemId:'part-b',branch:'Design B'};
 const meta=():Metadata=>({id:'file-b',name:'Design.acad',revision:7,writable:true,scope:'personal',parent:null,deleted:[],featureVersion:3,upgradeDocuments:{},upgradeNeeded:false,updates:[],settings:{description:'',revisionManaged:true,workspaceName:'Main',workspaceDescription:'',units:{},itemQuantities:{'part-b':{mass:4}}},items:[{id:'part-b',name:'Bracket',description:'keep',category:'Metal',kind:'part'}]} as Metadata);
-beforeEach(()=>{vi.resetAllMocks();vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>meta()})));});
+beforeEach(()=>{vi.resetAllMocks();mocks.project=null;vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>meta()})));});
 it('lists the reference commands and gives truthful availability for drafts, history and unsupported storage',()=>{
  const items=tabActionItems(target);
  expect(items.map(i=>i.label)).toEqual(['Delete','Open in new browser tab','Rename','Properties…','Show code','Duplicate','Copy to clipboard']);
@@ -47,6 +47,13 @@ it('reads unsaved code from the canonical editor snapshot',async()=>{
  mocks.snapshot.mockReturnValue({bytes:new TextEncoder().encode(JSON.stringify(createEmptyPartDocument('Draft')))});
  expect(JSON.parse(await tabPartCode({...target,current:true,documentId:null,itemId:undefined})).name).toBe('Draft');
  expect(mocks.request).not.toHaveBeenCalled();
+});
+it('reads unopened example Parts from their container without borrowing the current editor',async()=>{
+ mocks.project={parts:[{id:'part-b',name:'Unopened bezel',document:createEmptyPartDocument('Unopened bezel')}],assemblies:[]};
+ mocks.snapshot.mockReturnValue({bytes:new TextEncoder().encode(JSON.stringify(createEmptyPartDocument('Unrelated open part')))});
+ expect(JSON.parse(await tabPartCode({...target,documentId:null})).name).toBe('Unopened bezel');
+ expect(mocks.snapshot).not.toHaveBeenCalled();expect(mocks.request).not.toHaveBeenCalled();
+ await expect(tabPartCode({...target,documentId:null,itemId:'missing',current:true})).rejects.toThrow('no editable document');
 });
 it('duplicates a project part from the inspected revision using the canonical add operation',async()=>{
  mocks.request.mockResolvedValueOnce({project:{parts:[{id:'part-b',document:createEmptyPartDocument('Bracket')}]}}).mockResolvedValueOnce({id:'file-b',project:{parts:[{id:'new-part'}]}});
