@@ -53,6 +53,7 @@ const REFERENCE_FOR_PLANE: Record<SketchPlane, ReferenceGeometryId> = {
 import { canonicalPlaneXDirection, principalFrame, resolveAxisLine, resolvePointPosition } from "@aether/core/document";
 import { sketchPlaneForReference } from "./reference-geometry";
 import { cadViewportMetrics } from "./cad-viewport-metrics-store";
+import { accelerateSurfacePicking } from './viewport/surface-picking';
 import { viewportRendererOptions } from './viewport/renderer-backend';
 import { constructionPlaneFrame, rollbackPosition } from "@aether/core/document";
 import type { PartDocument as PlaneDocument } from "@aether/core/document";
@@ -1321,6 +1322,7 @@ export class MateViewport {
       viewportMaterials.hoveredFace.clone(),
       viewportMaterials.selectedFace.clone(),
     ]);
+    accelerateSurfacePicking(surface);
     surface.castShadow = true;
     // Contact shadows ground the model; self-shadowing sharp CAD faces adds acne.
     surface.receiveShadow = false;

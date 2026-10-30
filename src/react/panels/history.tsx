@@ -1,11 +1,19 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { AetherIcon, FeatureTypeIcon, HistoryPanel, featureTreeMenuItems, type HistoryEntry } from '@aether/ui';
 import { cadWorkspace } from '../../cad-workspace-store';
 import { cadPresentation } from '../../cad-presentation-store';
 import { cadFeatureActions, cadTreeCommand } from './feature-tree-commands';
+import { HistoryPlaybackControls } from '../../history/HistoryPlaybackControls';
+import { historyPlayback } from '../../history/playback';
 
 /** Complete saved operations, including placement actions omitted from Features. */
 export function CADHistoryPanel() {
+  const panel=useRef<HTMLDivElement>(null);
+  const playback=useSyncExternalStore(historyPlayback.subscribe,historyPlayback.snapshot,historyPlayback.snapshot);
+  useEffect(()=>{
+    if(playback.status==='idle')return;
+    panel.current?.querySelector<HTMLElement>(`[data-history-rollback-index="${playback.index-1}"]`)?.scrollIntoView?.({block:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  },[playback.index,playback.status]);
   const workspace = useSyncExternalStore(cadWorkspace.subscribe, cadWorkspace.snapshot, cadWorkspace.snapshot);
   const presentation = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
   const nodes = workspace.historyNodes;
@@ -24,7 +32,7 @@ export function CADHistoryPanel() {
     actions: nodeFor(row.id) ? featureTreeMenuItems(actionsFor(row.id))
       : [{ id: 'inspect', label: row.id.startsWith('history/source-') ? 'Open source Part' : row.id.startsWith('history/mate/') ? 'Inspect mate' : 'Show imported parts', icon: <AetherIcon name="info"/> }],
   }));
-  return <HistoryPanel embedded entries={entries} emptyMessage="Create or import geometry to build history."
+  return <div className="cad-history-playback-panel" ref={panel}><HistoryPlaybackControls/><HistoryPanel embedded entries={entries} emptyMessage="Create or import geometry to build history."
     rollbackIndex={presentation.partOpen ? workspace.rollbackIndex : undefined}
     rollbackEntryIDs={features.map(row => row.id)} rollbackDisabled={!!presentation.loading}
     onRollback={index => cadWorkspace.dispatch({ type: 'rollback-to', index })} onCommand={(id, commandID) => {
@@ -34,5 +42,5 @@ export function CADHistoryPanel() {
     if (!node || !action || action.item.disabled) return;
     const command = cadTreeCommand(action.request, node);
     if (command) cadWorkspace.dispatch(command);
-  }}/>;
+  }}/></div>;
 }

@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import type { ListBoxItem } from "@aether/ui";
 import { cadWorkspace } from "../cad-workspace-store";
+import { historyPlayback } from '../history/playback';
+import { HistoryPlaybackControls } from '../history/HistoryPlaybackControls';
 
 /** Fusion-style feature history: a left-to-right icons-only strip with
  * rollback playback controls and a draggable rollback marker. */
@@ -11,8 +13,14 @@ export function CADHistoryTimeline({ items, rollbackIndex }: {
 }) {
   const features = items.filter((item) => item.id.startsWith("history/feature/"));
   const stripRef = useRef<HTMLDivElement>(null);
+  const playback=useSyncExternalStore(historyPlayback.subscribe,historyPlayback.snapshot,historyPlayback.snapshot);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const markerIndex = Math.max(0, Math.min(dragIndex ?? rollbackIndex, features.length));
+  useEffect(()=>{
+    if(playback.status==='idle')return;
+    const behavior=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+    stripRef.current?.querySelector<HTMLElement>(`[data-history-index="${playback.index-1}"]`)?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior});
+  },[playback.index,playback.status]);
   const step = (actionID: "rollback-start" | "rollback-back" | "rollback-forward" | "rollback-end") =>
     cadWorkspace.dispatch({ type: "item-action", id: "rollback-bar", actionID });
   const indexFromClientX = (clientX: number): number => {
@@ -74,7 +82,7 @@ export function CADHistoryTimeline({ items, rollbackIndex }: {
   });
   if (markerIndex >= features.length) slots.push(marker);
   return (
-    <div className="cad-history-timeline" aria-label="Feature history timeline">
+    <div><HistoryPlaybackControls/><div className="cad-history-timeline" aria-label="Feature history timeline">
       <div className="cad-history-controls">
         <button type="button" aria-label="Roll back to start" title="Roll back to start" disabled={markerIndex === 0} onClick={() => step("rollback-start")}>⏮</button>
         <button type="button" aria-label="Roll back one feature" title="Roll back one feature" disabled={markerIndex === 0} onClick={() => step("rollback-back")}>◀</button>
@@ -82,6 +90,6 @@ export function CADHistoryTimeline({ items, rollbackIndex }: {
         <button type="button" aria-label="Roll forward to end" title="Roll forward to end" disabled={markerIndex >= features.length} onClick={() => step("rollback-end")}>⏭</button>
       </div>
       <div ref={stripRef} className="cad-history-strip">{slots}</div>
-    </div>
+    </div></div>
   );
 }

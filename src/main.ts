@@ -11,6 +11,7 @@ import {configureImageFacePicker} from "./modeling/cad-import-service";
 import { configureDocumentNavigation, navigateDocument } from "./document-navigation";
 import { rebuildRecovering, recordFeatureErrors, renderableDocument } from "./modeling/feature-errors";
 import { configureEditHistory, editingDocument } from "./modeling/edit-history";
+import { historyPlayback } from './history/playback';
 import { supportForFace, sourceFeatureForBody } from "./modeling/sketch-support";
 import { openPartAnalysis } from "./modeling/part-analysis";
 import {configureCADImport,queueCADImport} from "./modeling/cad-import-service";
@@ -497,8 +498,14 @@ function syncRibbonAvailability(): void {
 
 // Draft feature being authored (declared before updateLists reads it).
 let draftSketch: { id: string; name: string; hasPlane: boolean; existing: boolean } | null = null;
+function canPlayHistory(): boolean {
+  const state=cadPresentation.snapshot();
+  return activeWorkspaceKind==='part' && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
+    editingDocument(activePartDocument)===activePartDocument && !document.querySelector('.cad-feature-dialog,.cad-sketch-workspace,.cad-plane-window,.cad-axis-window,.cad-point-window');
+}
 function updateLists(notifyDocumentChange = true): void {
-  const displayedDocument = editingDocument(activePartDocument);
+  historyPlayback.sync(activePartDocument, canPlayHistory());
+  const displayedDocument = historyPlayback.project(editingDocument(activePartDocument));
   const visibleDocument = renderableDocument(displayedDocument);
   viewer.setConstructionPlanes(visibleDocument);
   viewer.setRegionDocument(visibleDocument);
@@ -797,6 +804,7 @@ function selectReference(id: ReferenceGeometryId): void {
 }
 
 cadWorkspace.registerActionHandler((action) => {
+  historyPlayback.stop();
   const source = 'id' in action ? sourceFeatureTarget(action.id) : null;
   if (source) {
     if (action.type === 'toggle-item') {
@@ -1179,9 +1187,21 @@ cadPresentation.registerActionHandler((action) => {
 
 const worker = createHostAetherCoreClient();
 const assemblyGeometry = new AssemblyGeometryCache({ evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument });
+historyPlayback.configure({
+  evaluate: doc => worker.evaluatePart(doc, {transient:true}),
+  show: (model, active) => viewer.setHistoryPreview(model, active),
+  changed: () => updateLists(false),
+  presented: () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+});
+window.addEventListener('aether-feature-preview-start', () => historyPlayback.stop());
+window.addEventListener('aether-sketch-editing', () => historyPlayback.stop());
+window.addEventListener('keydown', event => { if(event.key==='Escape') historyPlayback.stop(); });
+cadPresentation.subscribe(() => {
+  historyPlayback.sync(activePartDocument,canPlayHistory());
+});
 configureEditHistory({
   evaluate: doc => worker.evaluatePart(doc),
-  show: (model, active) => viewer.setHistoryPreview(model, active),
+  show: (model, active) => { if(active) historyPlayback.stop(); viewer.setHistoryPreview(model, active); },
   changed: () => updateLists(false),
   error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
 });
@@ -1266,6 +1286,7 @@ async function evaluateAndShowPart(
   // not — the current model stays in view and the status tray shows the rebuild.
   options: { overlay?: boolean } = {},
 ): Promise<void> {
+  historyPlayback.stop();
   if (options.overlay ?? true) cadPresentation.patch({ loading: { label: "Rebuilding exact feature history", detail: document.name } });
   else setStatus(`Rebuilding ${document.name}…`);
   try {

@@ -1,0 +1,13 @@
+.cad-history-playback-panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.cad-history-playback-panel > :last-child { flex: 1; min-height: 0; }
+.cad-history-playback { padding: 8px; border-bottom: 1px solid var(--aether-color-border); font-size: 12px; flex: none; }
+.cad-history-playback-controls { display: flex; align-items: center; gap: 6px; }
+.cad-history-playback button, .cad-history-playback select { min-height: 28px; border: 1px solid var(--aether-color-border); border-radius: 5px; background: var(--aether-color-bg-control); color: inherit; padding: 3px 8px; cursor: pointer; }
+.cad-history-playback button:disabled { opacity: .45; cursor: default; }
+.cad-history-playback button:focus-visible, .cad-history-playback select:focus-visible { outline: 2px solid #448bff; outline-offset: 2px; }
+.cad-history-playback-count { margin-left: auto; font-variant-numeric: tabular-nums; opacity: .75; }
+.cad-history-playback-step { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.cad-history-playback-step strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cad-history-playback-step span, .cad-history-playback-timing { opacity: .7; white-space: nowrap; }
+.cad-history-playback progress { display: block; width: 100%; height: 3px; margin: 8px 0 5px; accent-color: #448bff; }
+.cad-history-playback p { color: #ef9393; }

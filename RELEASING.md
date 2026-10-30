@@ -65,6 +65,15 @@ Package-manager versions and the shared UI dependency version are separate.
    Chromium WebGPU or Playwright WebKit. For section CPU-work comparisons use
    `node scripts/profile-section-render.mjs build/section-performance.json`;
    these timings measure cut updates, not overall FPS.
+   History playback changes require `scripts/verify-history-playback-browser.mjs`
+   through the disposable host on Chromium and with `AETHER_HISTORY_BROWSER=webkit`.
+   Verify visible geometry at each feature, pause/resume, stop/Escape, the original
+   rollback position and unchanged saved documents with no persistence requests.
+   Playback uses transient canonical rebuilds; Build and Present timings are not
+   a GPU benchmark. Picking changes also require `node scripts/profile-picking.mjs`:
+   preserve every hit and triangle identity, including walls retained by sections.
+   `node scripts/profile-kernel-scope.mjs` compares exact scoped cut/intersection
+   geometry and timings; do not generalize this fixture to whole-model loading.
    Drawing changes also require `node scripts/verify-drawings.mjs`. Drawing sections require
    analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
    source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF

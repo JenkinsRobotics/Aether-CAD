@@ -38558,6 +38558,17 @@ function applyPatternFeature(feature3, context2) {
   tools.set(feature3.id, copies.length === 1 ? copies[0] : own(copies.slice(1).reduce((all, copy) => own(all.fuse(copy)), copies[0])));
   return currentBodyID;
 }
+function scopedRemoval(target, tool2, operation2, own) {
+  const before = measureVolume(target);
+  const a2 = target.boundingBox.bounds, b = tool2.boundingBox.bounds;
+  if ([0, 1, 2].some((axis) => a2[1][axis] < b[0][axis] - 1e-7 || b[1][axis] < a2[0][axis] - 1e-7))
+    return { shape: target, volume: before, removed: 0 };
+  const result = own(operation2 === "cut" ? target.cut(tool2) : target.intersect(tool2));
+  const after = isShape3D(result) ? measureVolume(result) : 0;
+  const removed = Math.max(0, before - after);
+  const missed = operation2 === "cut" ? removed <= 1e-9 : after <= 1e-9;
+  return missed ? { shape: target, volume: before, removed: 0 } : { shape: result, volume: after, removed };
+}
 function sketchRegionGroups(contours) {
   if (!contours.some((c2) => c2.hole))
     return contours.map((_2, solid) => ({ solid, holes: [] }));
@@ -42148,12 +42159,11 @@ function evaluatePartDocument(document2, options = {}) {
                 let removed = 0;
                 ids2.forEach((id2, index22) => {
                   const target = bodies.get(id2);
-                  const hit = volumeOf(target.intersect(tool22)) > 1e-9;
-                  const shape = hit ? own(operation2 === "cut" ? target.cut(tool22) : target.intersect(tool22)) : target;
-                  const pieces = solidsOf(shape), valid = pieces.length >= 1 && volumeOf(shape) > 1e-9;
+                  const { shape, volume, removed: removedVolume } = scopedRemoval(target, tool22, operation2, own);
+                  const pieces = solidsOf(shape), valid = pieces.length >= 1 && volume > 1e-9;
                   pieces.forEach(release$1);
                   if (!valid) throw new Error(`Extrusion leaves no valid solid in selected part ${index22 + 1}. Narrow the scope or adjust the depth.`);
-                  removed += Math.max(0, volumeOf(target) - volumeOf(shape));
+                  removed += removedVolume;
                   pending.push([id2, shape]);
                 });
                 if (operation2 === "cut" && removed < 1e-8) throw new Error("Cut removes no material from the selected parts. Check scope and direction.");

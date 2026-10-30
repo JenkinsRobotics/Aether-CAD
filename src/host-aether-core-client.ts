@@ -18,8 +18,8 @@ export class HostAetherCoreClient implements AetherCoreClient {
     return this.embedded.importSTEP(file);
   }
 
-  evaluatePart(document: PartDocument, options: { preview?: boolean } = {}): Promise<ImportedModelData> {
-    return this.display && !options.preview ? this.display.evaluatePart(document) : evaluatePart(document, options);
+  evaluatePart(document: PartDocument, options: { preview?: boolean; transient?: boolean } = {}): Promise<ImportedModelData> {
+    return this.display && !options.preview && !options.transient ? this.display.evaluatePart(document) : evaluatePart(document, options);
   }
 }
 

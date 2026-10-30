@@ -3,6 +3,7 @@ import { sub, add, scale, neg, cross, norm, unit, dot, type V3 } from "./vector"
 import { buildEdgeFinish } from "./features/edge-finish";
 import { applyBooleanFeature } from "./features/boolean";
 import { applyPatternFeature } from "./features/pattern";
+import { scopedRemoval } from './scoped-removal';
 import { sketchRegionGroups } from "../sketch/regions/groups";
 import { connectedSketchRegions, sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
 import { matchesProfileRegion, profileRegionIdentity, type ProfileRegionSelection } from "../sketch/reference/profile-region-reference";
@@ -2926,11 +2927,10 @@ export function evaluatePartDocument(
               let removed = 0;
               ids.forEach((id, index) => {
                 const target = bodies.get(id)!;
-                const hit = volumeOf(target.intersect(tool)) > 1e-9;
-                const shape = hit ? own(operation === "cut" ? target.cut(tool) : target.intersect(tool)) : target;
-                const pieces = solidsOf(shape), valid = pieces.length >= 1 && volumeOf(shape) > 1e-9; pieces.forEach(release);
+                const { shape, volume, removed: removedVolume } = scopedRemoval(target, tool, operation as 'cut' | 'intersect', own);
+                const pieces = solidsOf(shape), valid = pieces.length >= 1 && volume > 1e-9; pieces.forEach(release);
                 if (!valid) throw new Error(`Extrusion leaves no valid solid in selected part ${index + 1}. Narrow the scope or adjust the depth.`);
-                removed += Math.max(0, volumeOf(target) - volumeOf(shape));
+                removed += removedVolume;
                 pending.push([id, shape]);
               });
               if (operation === "cut" && removed < 1e-8) throw new Error("Cut removes no material from the selected parts. Check scope and direction.");

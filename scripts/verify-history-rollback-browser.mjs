@@ -64,6 +64,7 @@ try {
     if (cancel) await page.keyboard.press('Escape');
     await page.mouse.up();
   };
+  // Hosted autosave is asynchronous; use the same bounded deadline as UI actions.
   const savedIndex = async () => (await read(file.id)).rollbackIndex ?? 4;
   await step('history-bar-matches-tree', async () => {
     await expect(bar()).toHaveAttribute('aria-valuenow', '4');
@@ -74,7 +75,7 @@ try {
   });
   await step('drag-rolls-through-placement-action', async () => {
     await dragTo(3);
-    await expect.poll(savedIndex).toBe(3);
+    await expect.poll(savedIndex, { timeout: 20000 }).toBe(3);
     await expect(treeBar()).toContainText('3 / 4');
     await expect.poll(() => solidAt([25,10,5])).toBe(true);
     await expect.poll(() => solidAt([35,10,5])).toBe(false);
@@ -86,23 +87,23 @@ try {
     assert.equal(await savedIndex(),3); await expect.poll(() => solidAt([25,10,5])).toBe(true);
   });
   await step('keyboard-start-end-and-tree-sync', async () => {
-    await bar().press('Home'); await expect.poll(savedIndex).toBe(0);
+    await bar().press('Home'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(0);
     await expect(treeBar()).toContainText('0 / 4'); await expect(page.getByText('Parts (0)',{exact:true})).toBeVisible();
-    await bar().press('End'); await expect.poll(savedIndex).toBe(4);
+    await bar().press('End'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(4);
     await expect(treeBar()).toContainText('4 / 4'); await expect(page.getByText('Parts (1)',{exact:true})).toBeVisible();
-    await treeBar().press('ArrowUp'); await expect.poll(savedIndex).toBe(3);
+    await treeBar().press('ArrowUp'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(3);
     await expect(bar()).toHaveAttribute('aria-valuenow','3');
-    await bar().press('ArrowDown'); await expect.poll(savedIndex).toBe(4);
+    await bar().press('ArrowDown'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(4);
     await expect(treeBar()).toContainText('4 / 4');
   });
   await step('filter-and-save-reopen', async () => {
     const search=history().getByRole('searchbox'); await search.fill('Move parts'); await expect(bar()).toHaveCount(0);
     await search.fill(''); await expect(bar()).toHaveAttribute('aria-valuenow','4');
-    await bar().press('ArrowUp'); await expect.poll(savedIndex).toBe(3);
+    await bar().press('ArrowUp'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(3);
     await page.reload(); await features().getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});
     await expect(bar()).toHaveAttribute('aria-valuenow','3'); await expect(treeBar()).toContainText('3 / 4');
     assert.deepEqual((await read(file.id)).features,data.features);
-    await bar().press('End'); await expect.poll(savedIndex).toBe(4);
+    await bar().press('End'); await expect.poll(savedIndex, { timeout: 20000 }).toBe(4);
     await writeFile(join(evidence,'saved-part.json'),JSON.stringify(await read(file.id),null,2));
   });
   assert.deepEqual(errors, []); assert.deepEqual(legacyRPC, []);
