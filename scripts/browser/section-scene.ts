@@ -7,7 +7,22 @@ document.body.style.margin='0'; document.body.append(renderer.domElement);
 await renderer.init();
 const scene=new THREE.Scene(), root=new THREE.Group(), overlay=new THREE.Group(); scene.add(root,overlay);
 const layer=new SectionLayer(root,overlay), group=new THREE.Group(), geometry=new THREE.BoxGeometry(20,20,20);
-group.add(new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0x68a5c6})));
+// Normal, hover and selected appearances share a mesh, as in the real viewer.
+// Use the same blue for all three so the pixel oracle can classify body vs cap.
+const materials = Array.from({length:3}, () => new THREE.MeshStandardMaterial({
+ color:0x68a5c6, roughness:.4, side:THREE.DoubleSide,
+}));
+const mesh = new THREE.Mesh(geometry,materials);
+geometry.clearGroups();
+geometry.addGroup(0,geometry.index!.count,0);
+mesh.castShadow=true;
+group.add(mesh);
+renderer.shadowMap.enabled=true;
+scene.add(new THREE.AmbientLight(0xffffff,2));
+const light = new THREE.DirectionalLight(0xffffff,2);
+light.position.set(50,50,100);
+light.castShadow=true;
+scene.add(light);
 layer.adopt('box',group,geometry);
 const camera=new THREE.OrthographicCamera(-15,15,15,-15,.1,1000); camera.position.set(0,0,100); camera.lookAt(0,0,0);
 const output=new TransparentViewportOutput(renderer,scene,camera);
@@ -17,8 +32,10 @@ window.sectionCheck={async render({offset=null,second=false,reversed=false,exclu
    ...(second?[{id:'y',plane:{label:'Front',originMillimeters:[0,0,0] as const,normal:[0,1,0] as const},offsetMillimeters:0}]:[])];
  if(oblique && planes.length) planes[0].plane.normal = new THREE.Vector3(.31,-.47,1).normalize().toArray();
  layer.apply(offset===null?null:{planes,activePlaneId:'x',mode:'exclude',items:excluded?[{id:'box',label:'Box'}]:[]},[group],new THREE.Box3().setFromObject(group),false);
- // Wait for presentation as well as asynchronous pipeline creation on both backends.
- for(let i=0;i<3;i++){await output.renderAsync(camera);await new Promise(requestAnimationFrame);}
+ // Warm and revisit all three CAD face appearances. Each is drawn only once
+ // after a clipping-layout change: a stale shader must not leak even for its
+ // first frame. Keeping one material active for several frames hid this bug.
+ for(let i=0;i<3;i++){geometry.groups[0].materialIndex=i;await output.renderAsync(camera);await new Promise(requestAnimationFrame);}
  // Independent analytic ray/box/half-space oracle. It verifies the visible cut
  // and cap depth, not just that a screenshot changed after adjusting a field.
  const expected=(x:number,y:number)=>{

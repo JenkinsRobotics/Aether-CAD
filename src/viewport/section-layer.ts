@@ -140,7 +140,12 @@ export class SectionLayer {
       group.traverse(object => {
         if (!(object instanceof THREE.Mesh)) return;
         const materials = Array.isArray(object.material) ? object.material : [object.material];
-        materials.forEach(material => { material.needsUpdate = true; });
+        // Retire cached draws, including hover/selection materials that may not
+        // be visible in this frame. In three r180, needsUpdate alone can bypass
+        // the clipping-context cache check and reuse the uncut shader on the
+        // next draw. Disposal keeps the material itself and its textures usable;
+        // the renderer rebuilds its draws with the new clipping context.
+        materials.forEach(material => material.dispose());
       });
     }
     group.updateWorldMatrix(true,false);

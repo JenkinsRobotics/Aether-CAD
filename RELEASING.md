@@ -48,7 +48,15 @@ Package-manager versions and the shared UI dependency version are separate.
    curves, collapsed points/diameters and explicit spline approximation require
    independent geometry checks. Independent copies must not be reported as
    associative links; preserve the separate coplanar face-auto-projection path.
-   Drawing changes also require `node scripts/verify-drawings.mjs`. Sections require
+   Live viewport section changes require `node scripts/verify-section-render.mjs`
+   (pixel checks on WebGPU and WebGL, including cached hover/selection materials)
+   and `scripts/verify-live-section-browser.mjs` through the disposable host.
+   Also run `scripts/verify-assembly-section-browser.mjs` with
+   `AETHER_SECTION_BROWSER=webgpu` and `AETHER_SECTION_BROWSER=webkit`: the real
+   robot must lose the removed half, retain the opposite half, flip and restore
+   correctly without saving a document. A section outline or cap alone is not
+   proof that the original surfaces were clipped.
+   Drawing changes also require `node scripts/verify-drawings.mjs`. Drawing sections require
    analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
    source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF
    hatch export, and a frozen format-1 reader refusing new format-2 content. Run

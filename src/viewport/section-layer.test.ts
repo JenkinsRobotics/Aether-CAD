@@ -1,8 +1,31 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import * as THREE from "three/webgpu";
 import { clipSegments, SectionLayer } from "./section-layer";
 
 const top = { label: "Top", originMillimeters: [0, 0, 0], normal: [0, 0, 1] } as const;
+
+it('invalidates every cached face material when its clipping layout changes', () => {
+  const layer = new SectionLayer(new THREE.Group(), new THREE.Group());
+  const group = new THREE.Group(), geometry = new THREE.BoxGeometry(20, 20, 20);
+  const materials = Array.from({ length: 3 }, () => new THREE.MeshStandardMaterial());
+  const mesh = new THREE.Mesh(geometry, materials);
+  group.add(mesh);
+  layer.adopt('body', group, geometry);
+  const disposed = materials.map(material => vi.spyOn(material, 'dispose'));
+  const bounds = new THREE.Box3().setFromObject(group);
+  const view = { planes: [{ id: 'z', plane: top, offsetMillimeters: 0 }], activePlaneId: 'z', mode: 'exclude' as const, items: [] };
+  layer.apply(view, [group], bounds, false);
+  disposed.forEach(spy => expect(spy).toHaveBeenCalledTimes(1));
+  // Moving a plane only changes uniforms; keep buffers, materials and shaders.
+  layer.apply({ ...view, planes: [{ ...view.planes[0], offsetMillimeters: 3 }] }, [group], bounds, false);
+  disposed.forEach(spy => expect(spy).toHaveBeenCalledTimes(1));
+  expect(mesh.material).toBe(materials);
+  expect(mesh.geometry).toBe(geometry);
+  layer.apply({ ...view, planes: [...view.planes, { ...view.planes[0], id: 'second', offsetMillimeters: 5 }] }, [group], bounds, false);
+  disposed.forEach(spy => expect(spy).toHaveBeenCalledTimes(2));
+  layer.apply(null, [group], bounds, false);
+  disposed.forEach(spy => expect(spy).toHaveBeenCalledTimes(3));
+});
 
 it("cuts edge segments at the section plane and keeps only the remaining side", () => {
   // Keep z ≤ 0 (normal −Z, constant 0).
