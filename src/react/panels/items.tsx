@@ -41,7 +41,7 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
     const rows = ids.filter((id) => id !== "rollback-bar");
     const id = rows[0];
     if (!id) return;
-    if (id.startsWith("folder/") || id === "reference-folder" || id.startsWith("bodies/")) {
+    if (id.startsWith("source-") || id.startsWith("folder/") || id === "reference-folder" || id.startsWith("bodies/")) {
       setBranchSelection({ id, geometryKey });
     } else {
       setBranchSelection(null);
@@ -64,9 +64,10 @@ export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.
   };
   const extraActions = (id: string) => (findTreeNode(rawNodes, id)?.actions ?? [])
     .filter(action => ['break-link', 'folder-unnest'].includes(action.id));
-  const menuItems = (id: string) => [...featureTreeMenuItems(menuActions(id)),
+  const menuItems = (id: string) => id.startsWith("source-") ? [{ id: "open-source-part", label: "Open source Part" }] : [...featureTreeMenuItems(menuActions(id)),
     ...extraActions(id).map(action => ({...action, id:`row:${action.id}`, separatorBefore:true, disabled:!presentation.partOpen}))];
   const runMenu = (id: string, commandID: string) => {
+    if (id.startsWith("source-") && commandID === "open-source-part") { dispatch(id, commandID); return; }
     if (commandID.startsWith('row:') && presentation.partOpen && extraActions(id).some(action => action.id === commandID.slice(4))) {
       dispatch(id,commandID.slice(4)); return;
     }

@@ -1,3 +1,5 @@
+import { assemblySourceFeatures } from "./assembly/source-features";
+import type { AssemblyProjectionV1 } from "./cad-assembly-bridge";
 import { renderableDocument } from "./modeling/feature-errors";
 import { createElement } from "react";
 import { AetherIcon, ToolIcon, type ToolIconName } from "@aether/ui";
@@ -95,6 +97,7 @@ export function buildCADWorkspaceProjection(
   collapsedFolders: ReadonlySet<string> = new Set(),
   /** A feature created but not yet committed; invalid until it has a plane. */
   draftSketch: { id: string; name: string; hasPlane: boolean } | null = null,
+  assembly: AssemblyProjectionV1 | null = null,
 ): CADWorkspaceProjection {
   const sketchStates = new Map((partDocument?.features ?? []).map(feature => [feature.id, sketchState(feature)]));
   const modelingFeatures = (partDocument?.features ?? []).filter(feature => !isPartPlacementAction(feature));
@@ -211,7 +214,10 @@ export function buildCADWorkspaceProjection(
     bodyNodes.push({id:bodiesID,label:`Bodies (${bodies.length})`,icon:treeIcon("part"),children:bodies.map(body=>({id:`feature/body/${body.id}`,label:body.name,dimmed:!body.visible,actions:[{id:"body-visibility",label:`${body.visible?"Hide":"Show"} ${body.name}`,icon:eyeIcon(body.visible),pinned:!body.visible},{id:"body-rename",label:`Rename ${body.name}`,icon: <AetherIcon name="pencil" />}]}))});
   }
 
-  const imported = buildAssemblyDocumentTree([...importedParts]).map<TreeNode>((document) => {
+  const sources = assembly ? assemblySourceFeatures(assembly, collapsedFolders) : null;
+  sources?.expanded.forEach(id => expanded.add(id));
+  const externalParts = importedParts.filter(part => !sources?.documentIDs.has(part.sourceDocumentId));
+  const imported = buildAssemblyDocumentTree([...externalParts]).map<TreeNode>((document) => {
     const rootID = `document/${document.id}`;
     if (expandedDocuments.has(document.id)) expanded.add(rootID);
     return {
@@ -251,7 +257,7 @@ export function buildCADWorkspaceProjection(
     group: "Part history",
   }));
   const importedHistory: ListBoxItem[] = [
-    ...new Map(importedParts.map((part) => [part.sourceDocumentId, part.sourceName] as const)),
+    ...new Map(externalParts.map((part) => [part.sourceDocumentId, part.sourceName] as const)),
   ].map(([id, name]) => ({
     id: `history/document/${id}`,
     label: `Import ${name}`,
@@ -344,10 +350,10 @@ export function buildCADWorkspaceProjection(
 
   return {
     bodyNodes,
-    itemNodes: [references, ...authored, ...imported],
+    itemNodes: [references, ...authored, ...(sources?.nodes ?? []), ...imported],
     selectedItemIDs: selected,
     expandedItemIDs: expanded,
-    historyItems: [...featureHistory, ...importedHistory, ...mateHistory],
+    historyItems: [...featureHistory, ...(sources?.history ?? []), ...importedHistory, ...mateHistory],
     historyNodes,
     rollbackIndex: partDocument ? rollbackPosition(partDocument) : 0,
     connectorItems,

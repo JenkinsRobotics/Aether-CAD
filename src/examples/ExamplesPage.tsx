@@ -268,6 +268,7 @@ export function ExampleBanner() {
               example,
               new URLSearchParams(location.search).get("assembly") ??
                 example.assemblyId,
+              new URLSearchParams(location.search).get("part") ?? undefined,
             );
             if (url) location.assign(url);
           } catch (e) {

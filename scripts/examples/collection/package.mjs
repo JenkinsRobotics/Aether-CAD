@@ -1,3 +1,4 @@
+import { verifyNativeHistory } from "./native-history.mjs";
 import { compareReference } from "./compare-reference.mjs";
 import { readFile, writeFile, copyFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -36,6 +37,8 @@ for (const key of [
   const result = JSON.parse(
     await readFile(join(source, "evidence/result.json"), "utf8"),
   );
+  const history = verifyNativeHistory(join(source, model.name + ".acad"), result.configurations?.[0]?.id ?? "assembly-000001");
+  if (history.parts.length !== result.parts || history.features !== result.features) throw Error("Example native history differs from its build proof");
   const bytes = await readFile(join(source, model.name + ".acad"));
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   if (sha256 !== result.sha256)

@@ -109,6 +109,15 @@ Package-manager versions and the shared UI dependency version are separate.
    Studio's existing CAD assembly-agent regression after updating that consumer.
    Finish building before starting worker qualification: the automation build
    replaces its output directory, so tests must not read it during a rebuild.
+   Example authoring or source-history navigation changes also require
+   `node scripts/examples/collection/verify-native-history.mjs`, which inspects
+   the actual packaged archives. Run `verify-authoring-browser.mjs` from that
+   directory through the disposable authenticated browser fixture, both normally
+   and with `AETHER_EXAMPLE_AUTHOR_ONLY=1`. The first run edits a saved example
+   through the visible sketch UI and live MCP, checks exact rebuild, shared
+   undo/redo and saved reopen. The second creates native example Parts from empty
+   documents through the live editor's MCP tools and compares exact volume with
+   the shipped recipe. Existing feature names or screenshots alone are not proof.
 3. Commit the qualified source locally on `alpha-0.1`. Do not include scratch
    output, secrets or another contributor's unfinished work. Staging refuses
    tracked modifications and validates repository identity and artifact paths.

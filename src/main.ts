@@ -1,3 +1,4 @@
+import { sourceFeatureTarget } from "./assembly/source-features";
 import { AssemblyGeometryCache } from './assembly/geometry-cache';
 import { mountAssemblyPlacementManipulator } from './assembly/placement-manipulator';
 import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "./assembly/insertion-session";
@@ -551,6 +552,7 @@ function updateLists(notifyDocumentChange = true): void {
       selectedFeatureIDs,
       collapsedFolders,
       draftSketch && !draftSketch.existing ? draftSketch : null,
+      activeWorkspaceKind === "assembly" ? assemblyController.geometryProjection : null,
     ),
   );
 
@@ -795,6 +797,23 @@ function selectReference(id: ReferenceGeometryId): void {
 }
 
 cadWorkspace.registerActionHandler((action) => {
+  const source = 'id' in action ? sourceFeatureTarget(action.id) : null;
+  if (source) {
+    if (action.type === 'toggle-item') {
+      if (collapsedFolders.has(action.id)) collapsedFolders.delete(action.id);
+      else collapsedFolders.add(action.id);
+      updateLists(false);
+    } else if (action.type === 'item-action' || action.type === 'activate-history') {
+      const part = activeProject?.parts.find(part => part.id === source.partID);
+      if (part?.document) void navigateDocument(projectItemURL(source.partID, 'part')).then(() => {
+        if (source.featureID && activePartDocument?.features.some(feature => feature.id === source.featureID)) {
+          selectedFeatureIDs.clear(); selectedFeatureIDs.add(source.featureID);
+          showBrowserPanel('items'); updateLists(false);
+        }
+      }).catch(error => setStatus(String(error), 'error'));
+    }
+    return;
+  }
   if(action.type==="move-item"||action.type==="create-folder"||action.type==="rollback-to"||(action.type==="item-action"&&["edit-feature","suppress-feature","rollback-before","rollback-start","rollback-end","body-visibility","body-rename","folder-rename","folder-delete","folder-unnest","rollback-back","rollback-forward","rename-feature","delete-feature","break-link"].includes(action.actionID))){
     window.dispatchEvent(new CustomEvent('aether-feature-action',{detail:{...action,selectedFeatureIDs:[...selectedFeatureIDs]}}));return;
   }

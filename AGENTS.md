@@ -9,6 +9,18 @@ a single large catch-all file. Prefer readable formatting and explicit resource
 ownership over compressed statements. Generated bundles are build outputs;
 maintain and review their source modules, never hand-edit the bundles.
 
+## Native example authoring — Jonathan, 2026-10-29
+
+Examples intended to exercise modeling must contain the actual editable Part
+history: sketches, support planes, construction geometry, constraints/dimensions
+and downstream features appropriate to the design. AI and human edits use the
+same canonical document and validated modeling operations. Imported solids or
+meshes do not qualify as authored examples. Assembly occurrences must expose
+their real source Parts; never manufacture an Import history entry for a native
+Part. Inspect the shipped archive, then verify actual editor/agent creation,
+editing, rebuild, undo/redo and saved reopen before claiming that workflow works.
+Report any remaining gaps in dimensional or constraint coverage explicitly.
+
 ## Independent app releases — Jonathan, 2026-10-24
 
 This repository is the authoritative source for this app. Develop on `alpha-0.1`.

@@ -22,7 +22,7 @@ export function CADHistoryPanel() {
     inactive: row.description === 'Suppressed' || row.description === 'Rolled back',
     current: row.id === features[workspace.rollbackIndex - 1]?.id,
     actions: nodeFor(row.id) ? featureTreeMenuItems(actionsFor(row.id))
-      : [{ id: 'inspect', label: row.id.startsWith('history/mate/') ? 'Inspect mate' : 'Show imported parts', icon: <AetherIcon name="info"/> }],
+      : [{ id: 'inspect', label: row.id.startsWith('history/source-') ? 'Open source Part' : row.id.startsWith('history/mate/') ? 'Inspect mate' : 'Show imported parts', icon: <AetherIcon name="info"/> }],
   }));
   return <HistoryPanel embedded entries={entries} emptyMessage="Create or import geometry to build history."
     rollbackIndex={presentation.partOpen ? workspace.rollbackIndex : undefined}

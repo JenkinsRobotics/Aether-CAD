@@ -1,5 +1,5 @@
 /** Shared menu presentation adapted to CAD's existing validated command boundary. */
-import { featureTreeActions, flattenFeatureItems, type FeatureTreeItem, type FeatureTreeRequest, type TreeNode } from "@aether/ui";
+import { featureTreeActions, type FeatureTreeItem, type FeatureTreeRequest, type TreeNode } from "@aether/ui";
 import type { CADWorkspaceAction } from "../../cad-workspace-store";
 
 export function cadFeatureItem(node: TreeNode): FeatureTreeItem {
@@ -66,4 +66,6 @@ export function cadTreeCommand(request: FeatureTreeRequest, node: TreeNode): CAD
     : request.command === "delete" ? item.kind === "folder" ? "folder-delete" : "delete-feature" : undefined;
   return actionID ? { type: "item-action", id, actionID } : null;
 }
-export function cadHistoryCount(nodes: readonly TreeNode[]) { return flattenFeatureItems(nodes.map(cadFeatureItem)).filter(row => row.kind === "feature").length; }
+export function cadHistoryCount(nodes: readonly TreeNode[]): number {
+  return nodes.reduce((count, node) => count + (node.id.startsWith('source-feature/') || (node.id.startsWith('feature/') && !node.id.startsWith('feature/body/')) ? 1 : 0) + cadHistoryCount(node.children ?? []), 0);
+}
