@@ -11,6 +11,9 @@ const model = (
   await import("./models/" + (process.env.AETHER_EXAMPLE || "wrench") + ".mjs")
 ).default;
 const { parts, instances } = model;
+const selectedParts = process.env.AETHER_EXAMPLE_BUILD_PARTS?.split(",");
+const batchSize = Number(process.env.AETHER_EXAMPLE_BATCH_SIZE ?? 8);
+assert.ok(Number.isInteger(batchSize) && batchSize >= 1 && batchSize <= 8);
 const root = join(
     dirname(fileURLToPath(import.meta.url)),
     "../../../build/Example-Collection",
@@ -157,6 +160,7 @@ try {
   const docs = {},
     proofs = [];
   for (const p of parts) {
+    if (selectedParts && !selectedParts.includes(p.key)) continue;
     const path = join(root, "parts", p.name + ".acpart"),
       fingerprint = createHash("sha256")
         .update(JSON.stringify(p))
@@ -172,7 +176,7 @@ try {
         continue;
       }
     } catch {}
-    const empty = {
+    let empty = {
       format: "aether-part",
       formatVersion: 22,
       documentId: randomUUID(),
@@ -180,6 +184,18 @@ try {
       units: "millimeter",
       features: [],
     };
+    let localCandidate;
+    if (process.env.AETHER_EXAMPLE_LOCAL_PARTS === "1") {
+      localCandidate = JSON.parse(
+        await readFile(join(root, "candidate-parts", p.key + ".json"), "utf8"),
+      );
+      assert.equal(
+        localCandidate.fingerprint,
+        fingerprint,
+        "Local candidate must match this exact recipe",
+      );
+      empty = localCandidate.document;
+    }
     const file = await api("create", {
       kind: "file",
       scope: "personal",
@@ -190,11 +206,11 @@ try {
     let revision = file.revision,
       refs = {},
       offset = 0;
-    const holeChecks = [];
-    while (offset < p.steps.length) {
+    const holeChecks = localCandidate?.holeChecks ?? [];
+    while (!localCandidate && offset < p.steps.length) {
       // Verify material removal immediately around every real Hole Wizard feature.
       const hole = p.steps[offset].arguments.feature_json?.type === "hole";
-      let end = Math.min(offset + 8, p.steps.length);
+      let end = Math.min(offset + batchSize, p.steps.length);
       if (hole) end = offset + 1;
       else {
         const next = p.steps.findIndex(
@@ -294,72 +310,90 @@ try {
       "mm3",
     );
   }
-  const comparison = compareReference(model, proofs);
-  if (comparison)
-    await writeFile(
-      join(evidence, "comparison.json"),
-      JSON.stringify(comparison, null, 2),
+  if (selectedParts) {
+    assert.equal(
+      proofs.length,
+      selectedParts.length,
+      "Every requested Part must be verified",
     );
-  const {file: final, configurations} = await buildConfigurations({model, docs, api, call, evidence});
-  const bytes = Buffer.from(final.data_base64, "base64");
-  await writeFile(join(root, model.name + ".acad"), bytes);
-  await writeFile(
-    join(evidence, "result.json"),
-    JSON.stringify(
-      {
-        id: model.id,
-        name: model.name,
-        description: model.description,
-        parts: parts.length,
-        instances: configurations.reduce((n,c)=>n+c.instances,0),
-        mates: configurations.reduce((n,c)=>n+c.mates,0),
-        configurations,
-        features: parts.reduce((n, p) => n + p.steps.length, 0),
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-        transport: "HTTP MCP, isolated Studio account",
-        proofs,
-      },
-      null,
-      2,
-    ),
-  );
-  const reopened = await api("create", {
-    kind: "file",
-    scope: "personal",
-    operation_id: randomUUID(),
-    name: model.name + ".acad",
-    data_base64: final.data_base64,
-  });
-  await page.goto(
-    origin +
-      "/cad/index.html?document=" +
-      reopened.id +
-      "&assembly=" +
-      configurations[0].id,
-  );
-  await page
-    .getByRole("tree", { name: "CAD assembly components" })
-    .waitFor({ timeout: 90000 });
-  await page.waitForTimeout(9000);
-  await page
-    .locator(".cad-studio-view-tools")
-    .getByRole("button", { name: "Fit view", exact: true })
-    .click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: join(root, "reopened.png") });
-  await writeFile(
-    join(evidence, "reopened.txt"),
-    await page.locator("body").innerText(),
-  );
-  await rm(join(evidence, "failure.txt"), { force: true });
-  console.log(
-    "COMPLETE",
-    model.name,
-    parts.length,
-    "Parts",
-    instances.length,
-    "instances",
-  );
+    console.log("Selected Parts verified:", selectedParts.join(", "));
+  } else {
+    const comparison = compareReference(model, proofs);
+    if (comparison)
+      await writeFile(
+        join(evidence, "comparison.json"),
+        JSON.stringify(comparison, null, 2),
+      );
+    const { file: final, configurations } = await buildConfigurations({
+      model,
+      docs,
+      api,
+      call,
+      evidence,
+    });
+    const bytes = Buffer.from(final.data_base64, "base64");
+    await writeFile(join(root, model.name + ".acad"), bytes);
+    await writeFile(
+      join(evidence, "result.json"),
+      JSON.stringify(
+        {
+          id: model.id,
+          name: model.name,
+          description: model.description,
+          parts: parts.length,
+          instances: configurations.reduce((n, c) => n + c.instances, 0),
+          mates: configurations.reduce((n, c) => n + c.mates, 0),
+          configurations,
+          features: parts.reduce((n, p) => n + p.steps.length, 0),
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+          transport:
+            process.env.AETHER_EXAMPLE_LOCAL_PARTS === "1"
+              ? "CAD validated program adapter; HTTP MCP verification/composition in isolated Studio account"
+              : "HTTP MCP, isolated Studio account",
+          proofs,
+        },
+        null,
+        2,
+      ),
+    );
+    const reopened = await api("create", {
+      kind: "file",
+      scope: "personal",
+      operation_id: randomUUID(),
+      name: model.name + ".acad",
+      data_base64: final.data_base64,
+    });
+    await page.goto(
+      origin +
+        "/cad/index.html?document=" +
+        reopened.id +
+        "&assembly=" +
+        configurations[0].id,
+    );
+    await page
+      .getByRole("tree", { name: "CAD assembly components" })
+      .waitFor({ timeout: 90000 });
+    await page.waitForTimeout(9000);
+    await page
+      .locator(".cad-studio-view-tools")
+      .getByRole("button", { name: "Fit view", exact: true })
+      .click();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: join(root, "reopened.png") });
+    await writeFile(
+      join(evidence, "reopened.txt"),
+      await page.locator("body").innerText(),
+    );
+    await rm(join(evidence, "failure.txt"), { force: true });
+    console.log(
+      "COMPLETE",
+      model.name,
+      parts.length,
+      "Parts",
+      instances.length,
+      "instances",
+    );
+  }
 } catch (e) {
   await writeFile(join(evidence, "failure.txt"), String(e.stack));
   await page

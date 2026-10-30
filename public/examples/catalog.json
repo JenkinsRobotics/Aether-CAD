@@ -2,13 +2,22 @@
   {
     "id": "scifirobot",
     "name": "Scifirobot Detailed",
-    "description": "A spherical inspection robot with two shell halves, optical assembly, cooling ducts, seals, fasteners and service covers.",
+    "description": "A spherical inspection robot with seated radial mounts, clearance-fit interfaces, optical assemblies and parent-child component mates.",
     "file": "scifirobot.acad.bin",
     "thumbnail": "scifirobot.png",
     "parts": 22,
-    "instances": 64,
-    "features": 128,
+    "instances": 65,
+    "features": 196,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 65,
+        "mates": 64,
+        "movable": false
+      }
+    ],
     "tags": [
       "Extrude",
       "Revolve",
@@ -16,7 +25,7 @@
       "Fillet",
       "Chamfer"
     ],
-    "sha256": "d11144bc2008941449864704f1cd3a142b2053fced718f2af304058b6944a9d2"
+    "sha256": "59750732afe783630be7a7636cd566b8d309afb274ce462e8a78caf29a074be3"
   },
   {
     "id": "airplane",

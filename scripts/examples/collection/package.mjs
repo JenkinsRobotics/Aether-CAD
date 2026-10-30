@@ -6,6 +6,10 @@ import { join } from "node:path";
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const destination = join(root, "public/examples");
 await mkdir(destination, { recursive: true });
+const selection = process.env.AETHER_EXAMPLE_MODELS?.split(",");
+const previous = selection
+  ? JSON.parse(await readFile(join(destination, "catalog.json"), "utf8"))
+  : [];
 const catalog = [];
 for (const key of [
   "scifirobot",
@@ -22,6 +26,12 @@ for (const key of [
   "reference-materials",
 ]) {
   const model = (await import(`./models/${key}.mjs`)).default;
+  if (selection && !selection.includes(key)) {
+    const retained = previous.find((r) => r.id === model.id);
+    if (!retained) throw Error(`No packaged example to retain: ${key}`);
+    catalog.push(retained);
+    continue;
+  }
   const source = join(root, "build/Example-Collection", model.id);
   const result = JSON.parse(
     await readFile(join(source, "evidence/result.json"), "utf8"),
@@ -30,6 +40,21 @@ for (const key of [
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   if (sha256 !== result.sha256)
     throw Error(`Unverified artifact: ${model.name}`);
+  if (key === "scifirobot") {
+    const fit = JSON.parse(
+      await readFile(join(source, "fit/result.json"), "utf8"),
+    );
+    if (
+      fit.archive_sha256 !== sha256 ||
+      fit.overlaps.length ||
+      fit.seats.length < 60 ||
+      fit.seats.some((s) => Math.abs(s.gap_mm - s.expected_mm) >= 0.005) ||
+      fit.checked_pairs !== (result.instances * (result.instances - 1)) / 2
+    )
+      throw Error(
+        "Scifirobot requires complete exact interference and seating proof for these archive bytes",
+      );
+  }
   await writeFile(join(destination, model.id + ".acad.bin"), bytes);
   if (model.reference)
     await writeFile(

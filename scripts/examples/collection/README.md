@@ -35,6 +35,51 @@ Volume and removed-hole volume comparisons use relative tolerance 1e-6. Displaye
 
 The airplane and car are stylized engineering demonstrations, not manufacturing or flight/vehicle certification designs. The smartphone is an original generic handset study, not an Apple production design. The wrench roller and jaw have independent revolute/prismatic mates, not a screw transmission relation. The Scifirobot ducts are cooling/ventilation details.
 
+## Scifirobot mechanical interfaces
+
+The robot uses real radial mounting bosses and bored passages for its sensors and
+ducts. Its optical carrier, hub covers, rear service cover, grille, windows and
+antenna have matching shoulders, recesses and locating diameters. The equatorial
+gasket is two occurrences of one connected arc Part, separated by the hub ports.
+The nominal seal thickness occupies an authored gap, rather than overlapping the
+shells. Fasteners have actual clearance holes and seated heads; threads remain
+simplified. This is a rigid inspection-robot assembly, with fastened mates to each
+component's physical parent (window to sensor, screen to duct, cover to hub).
+
+Rebuild and qualify this example with:
+
+```sh
+AETHER_EXAMPLE=scifirobot node scripts/examples/collection/author-parts.mjs
+AETHER_EXAMPLE=scifirobot AETHER_EXAMPLE_LOCAL_PARTS=1 python3 scripts/examples/collection/run-isolated-host.py
+node scripts/examples/collection/verify-fit.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.acad'
+AETHER_EXAMPLE_MODELS=scifirobot node scripts/examples/collection/package.mjs
+```
+
+The optional in-process author uses the same `prepareSavedProgramStep`, exact
+kernel evaluation and `acceptSavedProgramStep` used by CAD's agent commands. It
+reduces repeated process startup for detailed Parts. The isolated HTTP MCP pass
+still measures each Part and composes, solves, saves and reopens the assembly.
+Candidate fingerprints must match the exact recipe; they are not distributable
+proof by themselves. `AETHER_EXAMPLE_BUILD_PARTS` and `AETHER_EXAMPLE_BATCH_SIZE`
+also allow bounded HTTP-only authoring runs. No installed user file is touched.
+
+`verify-fit.mjs` checks the saved archive, including exact B-rep validity, one
+connected solid per Part, every pair's common volume (1e-6 mm³ limit), and actual
+distance between all declared seating pairs (0.005 mm tolerance). It also moves
+the grounded datum in a copy of the solver job and requires all rigid children to
+follow. Packaging refuses missing, stale or failing fit evidence. The screenshot
+is a visual check, not the interference test. Evidence lives in
+`build/Example-Collection/scifirobot/fit/`.
+
+The 2026-10-29 interface revision retains 22 Part definitions and now uses 65
+occurrences, 64 fastened mates and 196 editable features. The previous archive
+had 81 interfering pairs. The revised saved archive passes all 2,080 pair checks
+with no overlapping volume above tolerance, all 67 seating checks, exact solid
+validity/connectivity and all 65 rigid-follow checks. The browser test also passes
+preview without a file write, explicit personal copy, saved reopen and access to
+the editable embedded Part. Original user copies are not rewritten by updating
+the built-in example.
+
 ## Original collection qualification recorded 2026-10-29
 
 - 10 native Hybrid examples: 90 embedded Part definitions, 162 assembly occurrences, 400 sketches/features.

@@ -14,7 +14,7 @@ export default {
   id: "scifirobot",
   name: "Scifirobot Detailed",
   description:
-    "A spherical inspection robot with two shell halves, optical assembly, cooling ducts, seals, fasteners and service covers.",
+    "A spherical inspection robot with seated radial mounts, clearance-fit interfaces, optical assemblies and parent-child component mates.",
   tags: ["Extrude", "Revolve", "Pocket", "Fillet", "Chamfer"],
   parts,
   instances,
