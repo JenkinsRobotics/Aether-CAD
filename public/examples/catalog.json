@@ -2,12 +2,12 @@
   {
     "id": "scifirobot",
     "name": "Scifirobot Detailed",
-    "description": "A spherical inspection robot with seated radial mounts, clearance-fit interfaces, optical assemblies and parent-child component mates.",
+    "description": "A spherical inspection robot with recessed forward-facing barrels, black sensors, stepped side panels, clearance-fit interfaces, optical assemblies and parent-child component mates.",
     "file": "scifirobot.acad.bin",
     "thumbnail": "scifirobot.png",
     "parts": 22,
     "instances": 65,
-    "features": 196,
+    "features": 224,
     "assemblyId": "assembly-000001",
     "configurations": [
       {
@@ -25,7 +25,7 @@
       "Fillet",
       "Chamfer"
     ],
-    "sha256": "59750732afe783630be7a7636cd566b8d309afb274ce462e8a78caf29a074be3"
+    "sha256": "90db960b11bcdf91d0c9c63b392d0bb8b78283998e5033b358e4d7e84cbfa9a0"
   },
   {
     "id": "airplane",

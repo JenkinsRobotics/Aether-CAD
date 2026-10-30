@@ -162,10 +162,10 @@ const make = (...a) => {
   parts.push(p);
   return p;
 };
-const alloy = "#adb8be",
-  dark = "#27343b",
+const alloy = "#c6c9c7",
+  dark = "#192125",
   rubber = "#172026",
-  glass = "#365e74",
+  glass = "#192125",
   steel = "#89969e";
 // All dimensions are mm. Pads and cuts create real mating geometry; placements
 // below use these same datums, with each child mated to its physical parent.
@@ -192,64 +192,51 @@ function product([x, y, z, w], [u, v, s, t]) {
   ];
 }
 const inverse = ([x, y, z, w]) => [-x, -y, -z, w];
-function radial(v) {
-  const n = v.map((x) => x / Math.hypot(...v));
-  const q = [-n[1], n[0], 0, 1 + n[2]],
-    l = Math.hypot(...q);
-  return { n, q: q.map((x) => x / l) };
-}
+// Preserve the concept's common forward axis (+Z in the authored frame).
+// A recessed axial seat connects each fitting to the curved shell without
+// rotating the visible barrel/sensor outward or burying intersecting bodies.
+const forwardPort = (x, y) => ({
+  n: [0, 0, 1],
+  q: [0, 0, 0, 1],
+  origin: [x, y, 0],
+});
 const sensors = [-63, 63].flatMap((x) =>
-  [-96, 96].map((y) => ({
-    name: `Sensor ${x} ${y}`,
-    ...radial([x, y, 77]),
-  })),
+  [-96, 96].map((y) => ({ name: `Sensor ${x} ${y}`, ...forwardPort(x, y) })),
 );
 const ducts = [-1, 1].flatMap((s) =>
-  [-34, 0, 34].map((y, i) => ({
+  [-24, 0, 24].map((y, i) => ({
     name: `${s < 0 ? "Left" : "Right"} cooling duct ${i + 1}`,
-    ...radial([s * 110, y, 88]),
+    ...forwardPort(s * 107, y),
   })),
 );
-const vent = radial([0, 136, -40]),
-  antenna = radial([-78, 116, -25]);
-// A port is a fused flat boss and a genuine through bore, normal to the shell.
-function mountedPad(
-  p,
-  name,
-  outer,
-  inner,
-  start,
-  end,
-  port,
-  operation = "add",
-) {
+const up = { n: [0, 1, 0], q: [-Q, 0, 0, Q] };
+const vent = { ...up, origin: [0, 0, -40] },
+  antenna = { ...up, origin: [-78, 0, -25] };
+const portPoint = (port, distance) =>
+  port.n.map((x, i) => x * distance + (port.origin?.[i] ?? 0));
+// A port is a fused flat boss with a genuine bore through the shell.
+function mountedPad(p, name, outer, inner, start, end, port, operation = "add") {
   const index = p.steps.length;
   p.ring(name, outer, inner, start, Math.abs(end - start), operation);
   p.steps[index].arguments.feature_json.frame = {
-    originMillimeters: port.n.map((x) => x * start),
+    originMillimeters: portPoint(port, start),
     xDirection: rotate(port.q, [1, 0, 0]),
     normal: port.n,
   };
-  return p;
 }
-function port(p, name, spec, outer, bore, base = 136, face = 143) {
-  mountedPad(p, name + " — mounting boss", outer, bore, base, face, spec);
-  // Start beyond the spherical envelope, including when a hub seat is recessed.
-  mountedPad(
-    p,
-    name + " — passage",
-    bore,
-    0,
-    Math.max(face + 1, 145),
-    base - 2,
-    spec,
-    "cut",
-  );
+function port(p, name, spec, outer, bore, base = 136, face = 143, pocketRadius) {
+  // Axial bosses cross the spherical wall: drill after fusing a solid pad so
+  // the bore does not produce coincident inner cylinder faces in the union.
+  mountedPad(p, name + " — mounting boss", outer, pocketRadius ? 0 : bore, base, face, spec);
+  mountedPad(p, name + " — passage", bore, 0, 160, base - 2, spec, "cut");
+  if (pocketRadius) {
+    mountedPad(p, name + " — recessed mounting seat", pocketRadius, 0, 160, face, spec, "cut");
+  }
 }
 function hemisphere(positive) {
-  const begin = positive ? Math.acos(100 / 142) : Math.PI / 2;
+  const begin = positive ? Math.acos(105 / 142) : Math.PI / 2;
   const end = positive ? Math.PI / 2 : Math.PI;
-  const innerBegin = positive ? Math.acos(100 / 139) : Math.PI / 2;
+  const innerBegin = positive ? Math.acos(105 / 139) : Math.PI / 2;
   return {
     type: "path",
     start: polar(142, begin),
@@ -273,11 +260,12 @@ const front = make(
   "01-front-shell",
   "Front shell",
   alloy,
-  "3 mm spherical wall with machined optical collar, split hub seats and radial sensor/duct mounting bosses.",
+  "3 mm spherical wall with machined optical collar, split hub seats and recessed forward-facing sensor/duct mounts.",
 );
 front
   .revolve("Front spherical wall", hemisphere(true))
-  .ring("Optical collar — flat seating face at 110", 102, 94, 99, 11, "add");
+  .ring("Optical spigot clearance through the shell", 94, 0, 110, 12, "cut")
+  .ring("Optical collar — flat seating face at 110", 97, 94.2, 104, 6, "add");
 const rear = make(
   "02-rear-shell",
   "Rear shell",
@@ -293,10 +281,11 @@ for (const shell of [front, rear]) {
     port(shell, `${s < 0 ? "Left" : "Right"} hub`, spec, 74, 69, 115, 128);
   }
 }
-for (const s of sensors) port(front, s.name, s, 16.5, 8);
-for (const d of ducts) port(front, d.name, d, 13.5, 9.3);
-port(rear, "Top grille", vent, 32.5, 26.5, 134, 143);
-port(rear, "Antenna", antenna, 9.5, 3, 136, 143);
+for (const s of sensors) port(front, s.name, s, 16.5, 8, 50, 82, 16.7);
+// The hub's internal envelope ends at Z=69; keep barrel bosses in front of it.
+for (const d of ducts) port(front, d.name, d, 11.5, 9.3, 72, 82, 11.7);
+port(rear, "Top grille", vent, 32.5, 26.5, 116, 143);
+port(rear, "Antenna", antenna, 9.5, 3, 106, 118, 9.7);
 port(rear, "Rear service", { n: [0, 0, -1], q: back }, 42, 30, 133, 145);
 // Service fastener sockets lie behind the cover, on its actual bolt circle.
 rear.pad(
@@ -350,7 +339,7 @@ seal.pad(
 make(
   "04-optical-carrier",
   "Optical carrier",
-  dark,
+  "#151a1c",
   "0.4 mm radial locating clearance, annular shoulder on the shell collar and a recessed optic seat.",
 )
   .revolve(
@@ -359,8 +348,8 @@ make(
       [72, 0],
       [93.6, 0],
       [93.6, 10],
-      [102, 10],
-      [102, 15],
+      [95, 10],
+      [95, 15],
       [69, 15],
       [69, 25.2],
       [44.5, 25.2],
@@ -378,8 +367,8 @@ make(
   alloy,
   "Front trim with counterbores deep enough for the seated screw heads.",
 )
-  .ring("Bezel annulus", 102, 96.5, 0, 7.5)
-  .ring("Inner mounting web", 98, 72, 0, 3.5, "add")
+  .ring("Bezel annulus", 95, 89.5, 0, 7.5)
+  .ring("Inner mounting web", 91, 72, 0, 3.5, "add")
   .holes("Eight fixing holes", 8, 81, 2.4, 3.5, 3.5)
   .holes("Screw head recesses", 8, 81, 3.7, 3.5, 2.5)
   .finish("Bezel face chamfer", 0.4, 7.5);
@@ -478,11 +467,12 @@ make(
   "11-hub-cover",
   "Side hub cover",
   alloy,
-  "Flanged cover with a locating spigot, six through holes and recessed cooling details.",
+  "Three-step side panel with a raised 88 mm center cap, locating spigot and six flange screws.",
 )
   .ring("Cover flange", 59, 0, 0, 4)
   .ring("Locating spigot — 0.4 mm radial clearance", 44.6, 0, -4, 4, "add")
-  .ring("Front recess", 32, 0, 4, 1.5, "cut")
+  .ring("Raised center cap", 44, 0, 4, 8, "add")
+  .ring("Front recess", 32, 0, 12, 1.5, "cut")
   .holes("Cover fixing holes", 6, 53, 2.4, 4, 4)
   .pad(
     "Radial cooling pockets",
@@ -500,11 +490,11 @@ make(
         ]),
       );
     }),
-    4,
+    12,
     1.5,
     "cut",
   )
-  .finish("Cover chamfer", 0.4, 4);
+  .finish("Cover chamfer", 0.4, 12);
 make(
   "12-hub-seal",
   "Side hub seal",
@@ -516,16 +506,17 @@ make(
 make(
   "13-cooling-duct",
   "Cooling duct",
-  steel,
-  "Short radial vent with a locating tube, mounting flange and a shouldered screen seat.",
+  "#737e80",
+  "Forward cooling barrel with a recessed flange, long open bore and a screen seated well behind the mouth.",
 )
-  .ring("Locating tube and barrel", 9, 6.2, -4, 33)
-  .ring("Mounting flange", 13, 6.2, 0, 3, "add")
-  .ring("Outlet lip", 10.5, 6.2, 25, 4, "add")
-  .ring("Screen seat", 6.3, 5.8, 25, 1, "add")
-  .ring("Barrel relief groove", 9.2, 8.3, 18, 2, "cut")
-  .holes("Flange mounting holes", 3, 10.5, 0.9, 3, 3)
-  .finish("Outlet edge break", 0.4, 29);
+  .ring("Locating tube and barrel", 9, 6.2, -4, 49)
+  .ring("Recessed mounting flange", 11, 6.2, 0, 3, "add")
+  .ring("Outlet lip", 10.5, 6.2, 41, 4, "add")
+  .ring("Recessed screen seat", 6.3, 5.8, 21, 1, "add")
+  .ring("Rear barrel relief groove", 9.2, 8.3, 30, 2, "cut")
+  .ring("Front barrel relief groove", 9.2, 8.3, 38, 2, "cut")
+  .holes("Flange mounting holes", 3, 10, 0.55, 3, 3)
+  .finish("Outlet edge break", 0.4, 45);
 make(
   "14-duct-screen",
   "Cooling duct screen",
@@ -539,7 +530,7 @@ make(
   "15-sensor-housing",
   "Auxiliary sensor housing",
   dark,
-  "Radially mounted sensor on a flat shell boss; blind window seat and cable recess.",
+  "Black forward-facing sensor in a recessed axial shell seat, with a fitted dark optical cap.",
 )
   .ring("Housing base", 15, 0, 0, 7)
   .ring("Sensor face", 12, 0, 7, 3, "add")
@@ -610,7 +601,7 @@ make(
   "19-antenna-base",
   "Antenna pedestal",
   dark,
-  "Radial pedestal on a shell boss; mast seats at the bottom of the socket.",
+  "Upright pedestal on a recessed shell seat; mast seats at the bottom of the socket.",
 )
   .ring("Base flange", 9, 0, 0, 3)
   .ring("Pedestal", 6, 0, 3, 8, "add")
@@ -724,21 +715,21 @@ for (const d of ducts) {
   add(
     d.name,
     "13-cooling-duct",
-    d.n.map((x) => x * 143),
+    portPoint(d, 82),
     d.q,
   );
   child(
     d.name.replace("cooling duct", "duct screen"),
     "14-duct-screen",
     d.name,
-    [0, 0, 26],
+    [0, 0, 22],
   );
 }
 for (const s of sensors) {
   add(
     s.name,
     "15-sensor-housing",
-    s.n.map((x) => x * 143),
+    portPoint(s, 82),
     s.q,
   );
   child(
@@ -751,7 +742,7 @@ for (const s of sensors) {
 add(
   "Top vent frame",
   "17-top-vent-frame",
-  vent.n.map((x) => x * 143),
+  portPoint(vent, 143),
   vent.q,
   "Rear shell",
 );
@@ -759,7 +750,7 @@ child("Top vent grille", "18-top-grille", "Top vent frame", [0, 0, 3]);
 add(
   "Antenna pedestal",
   "19-antenna-base",
-  antenna.n.map((x) => x * 143),
+  portPoint(antenna, 118),
   antenna.q,
   "Rear shell",
 );

@@ -37,6 +37,7 @@ assert.notEqual(new URL(origin).port, "8780");
 await mkdir(evidence, { recursive: true });
 const browser = await chromium.launch({ headless: true }),
   page = await browser.newPage({ viewport: { width: 1800, height: 960 } });
+page.setDefaultTimeout(30000);
 const errors = [],
   writes = [];
 page.on("pageerror", (e) => errors.push(e.message));
@@ -131,6 +132,19 @@ try {
       style:
         ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube { visibility:hidden!important; }",
     });
+    if (example.id === "scifirobot") {
+      for (const view of ["Front", "Right", "Top"]) {
+        // Side faces of the view cube are hidden in an orthographic front view.
+        await page.getByRole("button", { name: "Home view", exact: true }).click();
+        await page.waitForTimeout(400);
+        await page.getByRole("button", { name: view + " view", exact: true }).press("Enter");
+        await page.mouse.move(20, 20);
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: join(evidence, "scifirobot-" + view.toLowerCase() + ".png") });
+      }
+      await page.getByRole("button", { name: "Home view", exact: true }).click();
+      await page.waitForTimeout(500);
+    }
     for (const configuration of example.configurations?.slice(1) ?? []) {
       await page
         .getByRole("combobox", { name: "Example assembly", exact: true })

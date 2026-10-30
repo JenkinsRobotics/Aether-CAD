@@ -57,6 +57,17 @@ for (const key of [
       throw Error(
         "Scifirobot requires complete exact interference and seating proof for these archive bytes",
       );
+    const concept = JSON.parse(
+      await readFile(join(source, "concept/result.json"), "utf8"),
+    );
+    if (
+      concept.archive_sha256 !== sha256 ||
+      concept.checks.length !== 31 ||
+      concept.checks.some((check) => !check.passed)
+    )
+      throw Error(
+        "Scifirobot requires forward barrel/sensor orientation and finish proof for these archive bytes",
+      );
   }
   if (key === "space-shuttle") {
     const dimensions = JSON.parse(

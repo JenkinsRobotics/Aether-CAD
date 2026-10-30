@@ -37,8 +37,10 @@ The airplane and car are stylized engineering demonstrations, not manufacturing 
 
 ## Scifirobot mechanical interfaces
 
-The robot uses real radial mounting bosses and bored passages for its sensors and
-ducts. Its optical carrier, hub covers, rear service cover, grille, windows and
+The robot uses recessed axial mounting seats and bored passages for its sensors
+and ducts. All six cooling barrels and four dark sensors face forward, parallel
+to the main optic; the antenna is upright and the side covers retain their stepped
+center caps. Short internal mounting bosses clear the side hubs. Its optical carrier, hub covers, rear service cover, grille, windows and
 antenna have matching shoulders, recesses and locating diameters. The equatorial
 gasket is two occurrences of one connected arc Part, separated by the hub ports.
 The nominal seal thickness occupies an authored gap, rather than overlapping the
@@ -52,6 +54,7 @@ Rebuild and qualify this example with:
 AETHER_EXAMPLE=scifirobot node scripts/examples/collection/author-parts.mjs
 AETHER_EXAMPLE=scifirobot AETHER_EXAMPLE_LOCAL_PARTS=1 python3 scripts/examples/collection/run-isolated-host.py
 node scripts/examples/collection/verify-fit.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.acad'
+node scripts/examples/collection/verify-scifirobot-concept.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.acad'
 AETHER_EXAMPLE_MODELS=scifirobot node scripts/examples/collection/package.mjs
 ```
 
@@ -67,13 +70,16 @@ also allow bounded HTTP-only authoring runs. No installed user file is touched.
 connected solid per Part, every pair's common volume (1e-6 mm³ limit), and actual
 distance between all declared seating pairs (0.005 mm tolerance). It also moves
 the grounded datum in a copy of the solver job and requires all rigid children to
-follow. Packaging refuses missing, stale or failing fit evidence. The screenshot
+follow. The independent saved-archive concept check verifies forward axes, upright fittings,
+symmetric barrel stacks, recessed screens and dark sensor finishes. Packaging
+requires both the exact fit proof and all 31 concept checks for the archive hash. The screenshot
 is a visual check, not the interference test. Evidence lives in
 `build/Example-Collection/scifirobot/fit/`.
 
-The 2026-10-29 interface revision retains 22 Part definitions and now uses 65
-occurrences, 64 fastened mates and 196 editable features. The previous archive
-had 81 interfering pairs. The revised saved archive passes all 2,080 pair checks
+The 2026-10-29 concept/interface revision retains 22 Part definitions and uses 65
+occurrences, 64 fastened mates and 224 editable features. The original detailed
+model had 81 interfering pairs before its mechanical interface revision. The
+restored concept retains that clearance: its saved archive passes all 2,080 pair checks
 with no overlapping volume above tolerance, all 67 seating checks, exact solid
 validity/connectivity and all 65 rigid-follow checks. The browser test also passes
 preview without a file write, explicit personal copy, saved reopen and access to
