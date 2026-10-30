@@ -70,7 +70,7 @@ export function itemsInsideLasso(parts: Iterable<SelectablePart>, kind: CADSelec
       if (!hit) continue;
       const id=`${kind}:${part.data.id}${kind==='face'?`:${range.faceId}`:''}`;
       items.set(id,{id,kind,partId:part.data.id,
-        ...(kind==='face'?{faceId:range.faceId,label:`Face ${ordinal+1} of ${part.data.name}`}:{label:part.data.name})});
+        ...(kind==='face'?{faceId:range.faceId,label:`Face ${ordinal+1}`,partLabel:part.data.name}:{label:part.data.name})});
     }
   }
   return [...items.values()];

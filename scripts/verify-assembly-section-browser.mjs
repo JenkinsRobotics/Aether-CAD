@@ -14,6 +14,7 @@ const browser = await (backend === 'webkit' ? webkit : chromium).launch({
   ...(backend === 'webgpu' ? { args: ['--enable-unsafe-webgpu', '--use-angle=metal'] } : {}),
 });
 const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
+await page.addInitScript(() => localStorage.setItem('aether-cad.metrics-overlay', 'on'));
 const errors = [], checks = [], writes = [];
 page.on('pageerror', error => errors.push(error.message));
 page.on('request', request => {
@@ -51,6 +52,7 @@ try {
   await page.locator('input[name="password"]').fill('account-test-password-2026');
   await button('Sign in').click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
+  await page.waitForLoadState('networkidle');
   await page.goto(origin + '/cad/?example=scifirobot');
   await page.getByRole('tree', { name: 'CAD assembly components' }).waitFor({ timeout: 90000 });
   await page.waitForTimeout(4000);
@@ -60,6 +62,9 @@ try {
   const left = [-90, 20, 0], right = [90, 20, 0];
   await bodyAt(left, true, 'Whole assembly: left shell present');
   await bodyAt(right, true, 'Whole assembly: right shell present');
+  const pipeline = await page.locator('.cad-metrics-overlay').innerText();
+  assert.match(pipeline, backend === 'webkit' ? /WebGL2/ : /WebGPU/);
+  if (!process.env.AETHER_SECTION_FACE_FIRST) {
   // Warm the hover material before changing the clipping layout.
   await hover([90, 20, 100]);
   await page.screenshot({ path: join(evidence, 'before.png') });
@@ -92,9 +97,44 @@ try {
   await page.mouse.move(20, 20);
   await bodyAt(left, true, 'Turning section off restores left shell');
   await bodyAt(right, true, 'Turning section off restores right shell');
+  }
+  // A picked face with an inward offset must cut during editing, before Accept.
+  // This is the Safari workflow reported on the optical carrier.
+  await button('Home view').click();
+  await page.waitForTimeout(450);
+  await button('Front view').press('Enter');
+  await page.waitForTimeout(450);
+  await tool('Section view').click();
+  const face = await project([60, -125.2, 142]);
+  await page.mouse.click(face.x, face.y);
+  const planes = page.locator('[aria-label="Section planes"] .aui-feature-entity-select');
+  await expect(planes).toHaveCount(1);
+  const pickedFace = await planes.innerText();
+  assert.match(pickedFace, /^Face \d+$/, 'Picked faces use compact numbered labels');
+  await page.getByRole('textbox', { name: 'Section offset', exact: true }).fill('-79.195');
+  await button('Home view').click();
+  await page.waitForTimeout(450);
+  await button('Top view').press('Enter');
+  await page.waitForTimeout(450);
+  await page.mouse.move(20, 20);
+  await page.screenshot({ path: join(evidence, 'face-preview.png') });
+  await bodyAt([40,-100,142], false, 'Picked face preview removes front shell before Accept');
+  await bodyAt([40,80,142], true, 'Picked face preview retains rear shell');
+  await button('Home view').click();
+  await page.waitForTimeout(450);
+  await page.mouse.move(20, 20);
+  await page.screenshot({ path: join(evidence, 'face-interior.png') });
+  await button('Top view').press('Enter');
+  await page.waitForTimeout(450);
+  await page.getByRole('checkbox', { name: 'Flip cut', exact: true }).check();
+  await bodyAt([40,-100,142], true, 'Flip face preview retains front shell');
+  await bodyAt([40,80,142], false, 'Flip face preview removes rear shell');
+  await button('Cancel').click();
+  await bodyAt([40,80,142], true, 'Cancel face preview restores rear shell');
+  checks.push(`Picked reference: ${pickedFace}`);
   assert.deepEqual(errors, []);
   assert.deepEqual(writes, [], 'Section inspection must not save or modify the example');
-  await writeFile(join(evidence, 'result.json'), JSON.stringify({ passed: true, backend, checks, errors, writes }, null, 2));
+  await writeFile(join(evidence, 'result.json'), JSON.stringify({ passed: true, backend, pipeline, checks, errors, writes }, null, 2));
 } catch (error) {
   await page.screenshot({ path: join(evidence, 'failure.png') }).catch(() => {});
   await writeFile(join(evidence, 'failure.txt'), String(error.stack));

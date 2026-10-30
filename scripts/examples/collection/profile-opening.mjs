@@ -3,12 +3,14 @@ import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const { chromium } = createRequire(new URL('../../../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
+const { chromium, webkit } = createRequire(new URL('../../../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
 assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
-const browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
+const browserName = process.env.AETHER_PROFILE_BROWSER ?? 'chromium';
+const browser = await (browserName === 'webkit' ? webkit : chromium).launch({ headless: true,
+  ...(browserName === 'webkit' ? {} : {args: ['--enable-unsafe-webgpu', '--use-angle=metal']}) });
 const login = await browser.newPage();
 await login.goto(origin + '/cad/');
 await login.locator('input[name="username"]').fill('editor');
@@ -89,7 +91,9 @@ try {
       const profile = await page.evaluate(() => ({ ...window.openProfile, completed: performance.now(), resources: performance.getEntriesByType('resource').map(e => ({ name: e.name.replace(location.origin, ''), start: e.startTime, ms: e.duration, bytes: e.transferSize })) }));
       if (profiler) { await writeFile(join(evidence, `${id}-${run}-${mode}.cpuprofile`), JSON.stringify((await profiler.send('Profiler.stop')).profile)); await profiler.detach(); }
       await page.screenshot({ path: join(evidence, `${id}-${run}-${mode}.png`) });
-      results.push({ id, run, mode, expected, ...profile, requests: requests.map(({ request, ...r }) => r), errors });
+      await page.waitForTimeout(1500);
+      const rendered = await page.locator('.cad-metrics-overlay').innerText();
+      results.push({ id, run, mode, expected, browser: browserName, rendered, ...profile, requests: requests.map(({ request, ...r }) => r), errors });
       await writeFile(join(evidence, 'opening.json'), JSON.stringify(results, null, 2));
       console.log('Visible', id, mode, profile.completed, 'ms', requests.map(r => `${r.method}:${r.ms}`).join(', '));
       assert.deepEqual(errors, []);

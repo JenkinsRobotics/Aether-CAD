@@ -11,6 +11,8 @@ export interface CADSelectionItem {
   id: string;
   kind: CADSelectionKind;
   partId: string;
+  /** Body context stays separate from compact face labels. */
+  partLabel?: string;
   label: string;
   detail?: string;
   faceId?: number;

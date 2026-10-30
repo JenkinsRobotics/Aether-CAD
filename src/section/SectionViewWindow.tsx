@@ -25,7 +25,7 @@ export const subscribeSectionEditor = (listener: () => void) => { listeners.add(
 export function turnOffSectionView(): void { closeOpen?.(); sectionView.set(null); }
 
 /** The body an item belongs to, as Exclude/Include lists it. */
-const bodyOf = (item: CADSelectionItem) => ({ id: item.partId, label: item.kind === "body" ? item.label : item.label.replace(/^.* of /, "") });
+const bodyOf = (item: CADSelectionItem) => ({ id: item.partId, label: item.partLabel ?? (item.kind === "body" ? item.label : item.label.replace(/^.* of /, "")) });
 
 export function openSectionView(): void {
   if (closeOpen) return;

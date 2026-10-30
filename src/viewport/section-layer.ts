@@ -34,6 +34,8 @@ export class SectionLayer {
   private clips: THREE.Plane[] = [];
   private boundaryTolerance = 1e-6;
   private planeCountChanged = false;
+  private readonly placements = new WeakMap<THREE.Group, { source: THREE.BufferGeometry; data?: PartGeometryData;
+    position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute; index: THREE.BufferAttribute | null; key: string }>();
   private readonly indicators = new Map<string, THREE.Mesh>();
   private readonly cap = new THREE.MeshBasicNodeMaterial({ side: THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1 });
   private readonly hoverCap = this.cap.clone();
@@ -53,6 +55,7 @@ export class SectionLayer {
 
   /** Called once per rendered part: adds its cap and places it by the current view. */
   adopt(partId: string, group: THREE.Group, geometry: THREE.BufferGeometry, edges?: SectionEdges, source?: PartGeometryData): void {
+    this.placements.delete(group);
     if (edges) group.userData.sectionEdges = { ...edges, clipped: false };
     group.userData.sectionSourceGeometry = geometry;
     group.userData.sectionSourceData = source;
@@ -150,15 +153,26 @@ export class SectionLayer {
     }
     group.updateWorldMatrix(true,false);
     const localPlanes = this.clips.map(plane => plane.clone().applyMatrix4(group.matrixWorld.clone().invert()));
+    const source = group.userData.sectionSourceGeometry as THREE.BufferGeometry;
+    const data = group.userData.sectionSourceData as PartGeometryData | undefined;
+    const ids = this.view?.planes.filter(plane => sectionClipPlane(plane)).map(plane => plane.id) ?? [];
+    const position = source.getAttribute('position');
+    const positionVersion = position instanceof THREE.InterleavedBufferAttribute ? position.data.version : position?.version;
+    const key = JSON.stringify(cut ? [ids, positionVersion, source.index?.version,
+      localPlanes.map(plane => [...plane.normal.toArray(), plane.constant])] : false);
+    const previous = this.placements.get(group);
+    // Accept/Cancel, hatch, plane visibility and active-field changes do not
+    // alter the cut. Keep its GPU buffers and exact inspection topology alive.
+    if (previous?.source === source && previous.data === data && previous.position === position && previous.index === source.index && previous.key === key) return;
+    this.placements.set(group, { source, data, position, index: source.index, key });
     for (const child of group.children) if (child.userData.sectionCap && child instanceof THREE.Mesh) {
       child.visible = cut;
       child.geometry.dispose();
-      child.geometry = cut ? sectionCapGeometry(group.userData.sectionSourceGeometry,localPlanes) : new THREE.BufferGeometry();
+      child.geometry = cut ? sectionCapGeometry(source,localPlanes) : new THREE.BufferGeometry();
       group.userData.sectionInspection = null;
       if(cut && group.userData.sectionSourceData){
-        const ids=this.view?.planes.filter(plane=>sectionClipPlane(plane)).map(plane=>plane.id)??[];
-        const data=sectionInspectionGeometry(child.geometry,group.userData.sectionSourceData,ids);
-        group.userData.sectionInspection={data,group,surface:child,faceRanges:data.faceRanges,topology:new Map(data.topology.map(face=>[face.id,face]))};
+        const inspection=sectionInspectionGeometry(child.geometry,group.userData.sectionSourceData,ids);
+        group.userData.sectionInspection={data:inspection,group,surface:child,faceRanges:inspection.faceRanges,topology:new Map(inspection.topology.map(face=>[face.id,face]))};
       }
     }
     const edges = group.userData.sectionEdges as (SectionEdges & { clipped: boolean }) | undefined;

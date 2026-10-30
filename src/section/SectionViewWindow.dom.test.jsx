@@ -48,16 +48,16 @@ it('previews live from a picked planar face and keeps the section on accept', as
   expect([...win().querySelectorAll('.aui-feature-tabs button')].map(tab => tab.textContent)).toEqual(['Exclude', 'Include']);
   expect(win().querySelector('[aria-label="Section planes"]').dataset.active).toBe('true');
   expect(cadSelection.snapshot().filter).toBe('face');
-  await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4 of Body 1', faceId: 4 }]);
+  await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4', partLabel: 'Body 1', faceId: 4 }]);
   // More face picks add planes; bodies require explicit focus on the scope field.
-  expect(sectionView.snapshot().planes[0]?.plane).toEqual({ label: 'Face 4 of Body 1', originMillimeters: [0, 0, 10], normal: [0, 0, 1] });
+  expect(sectionView.snapshot().planes[0]?.plane).toEqual({ label: 'Face 4', originMillimeters: [0, 0, 10], normal: [0, 0, 1] });
   expect(sectionView.editing()).toBe(true);
   expect(cadSelection.snapshot().items).toEqual([]);
   expect(win().querySelector('[aria-label="Section planes"]').dataset.active).toBe('true');
   expect(cadSelection.snapshot().filter).toBe('face');
   await act(async () => button('Accept section view').click());
   expect(win()).toBeNull();
-  expect(sectionView.snapshot().planes[0]?.plane.label).toBe('Face 4 of Body 1');
+  expect(sectionView.snapshot().planes[0]?.plane.label).toBe('Face 4');
   expect(sectionView.editing()).toBe(false);
   expect(cadSelection.snapshot().filter).toBe('auto');
 });
@@ -78,7 +78,7 @@ it('rejects a curved face, and types the offset in document units', async () => 
 it('lists bodies to exclude or include, toggling repeated picks', async () => {
   sectionView.set({ planes:[{id:"test",plane: { label: 'Top', originMillimeters: [0, 0, 0], normal: [0, 0, 1] }, offsetMillimeters:0}],activePlaneId:"test",mode:"exclude",items:[] });
   await open();
-  await pick([{ id: 'face:a:1', kind: 'face', partId: 'a', label: 'Face 1 of Body 1', faceId: 1 }]);
+  await pick([{ id: 'face:a:1', kind: 'face', partId: 'a', label: 'Face 1', partLabel: 'Body 1', faceId: 1 }]);
   // The viewer notifies again for hover in the same tick; the pick must count once.
   await act(async () => { cadSelection.dispatch({ type: 'replace', items: [{ id: 'body:b', kind: 'body', partId: 'b', label: 'Body 2' }] }); cadSelection.dispatch({ type: 'set-hovered', item: null }); await Promise.resolve(); });
   expect(sectionView.snapshot().items).toEqual([{ id: 'a', label: 'Body 1' }, { id: 'b', label: 'Body 2' }]);

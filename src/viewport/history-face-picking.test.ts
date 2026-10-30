@@ -10,7 +10,7 @@ it('picks exact face ranges on visible earlier geometry and refuses hidden histo
  const model:ImportedModelData={sourceName:'Earlier',parseMilliseconds:0,parts:[part]};
  const layer=new FeaturePreviewLayer();layer.set(model,false);
  const ray=new Raycaster(new Vector3(.5,.5,20),new Vector3(0,0,-1));
- expect(pickHistoryFace(ray,layer.group,model)?.item).toMatchObject({id:'face:part:before:-90',partId:'part:before',faceId:-90,label:'Face 2 of Earlier part'});
+ expect(pickHistoryFace(ray,layer.group,model)?.item).toMatchObject({id:'face:part:before:-90',partId:'part:before',faceId:-90,label:'Face 2',partLabel:'Earlier part'});
  layer.group.visible=false;expect(pickHistoryFace(ray,layer.group,model)).toBeNull();
  expect(pickHistoryFace(ray,layer.group,model,undefined,true)?.item.faceId).toBe(-90);
  layer.group.visible=true;expect(pickHistoryFace(ray,layer.group,null)).toBeNull();

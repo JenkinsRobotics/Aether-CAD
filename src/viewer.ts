@@ -53,6 +53,7 @@ const REFERENCE_FOR_PLANE: Record<SketchPlane, ReferenceGeometryId> = {
 import { canonicalPlaneXDirection, principalFrame, resolveAxisLine, resolvePointPosition } from "@aether/core/document";
 import { sketchPlaneForReference } from "./reference-geometry";
 import { cadViewportMetrics } from "./cad-viewport-metrics-store";
+import { viewportRendererOptions } from './viewport/renderer-backend';
 import { constructionPlaneFrame, rollbackPosition } from "@aether/core/document";
 import type { PartDocument as PlaneDocument } from "@aether/core/document";
 import * as THREE from "three/webgpu";
@@ -330,7 +331,8 @@ export class MateViewport {
     private readonly container: HTMLElement,
     private readonly callbacks: ViewerCallbacks,
   ) {
-    this.renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true });
+    this.renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true,
+      ...viewportRendererOptions(navigator.userAgent, navigator.vendor) });
     this.output = new TransparentViewportOutput(this.renderer, this.scene, this.camera);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -431,7 +433,8 @@ export class MateViewport {
   }
 
   get backendLabel(): string {
-    return "gpu" in navigator ? "Three.js WebGPU" : "Three.js WebGL 2 fallback";
+    const backend = this.renderer.backend as unknown as { isWebGPUBackend?: boolean; isWebGLBackend?: boolean };
+    return backend.isWebGLBackend ? 'Three.js WebGL2' : backend.isWebGPUBackend ? 'Three.js WebGPU' : 'Three.js initializing';
   }
 
   get activeTool(): AuthoringTool {
@@ -665,7 +668,7 @@ export class MateViewport {
     return {
       partId: selected.partId,
       faceId: selected.faceId!,
-      label: `Face ${part.faceRanges.findIndex(r=>r.faceId===selected.faceId)+1} of ${part.name}`,
+      label: `Face ${part.faceRanges.findIndex(r=>r.faceId===selected.faceId)+1}`,
     };
   }
 
@@ -705,7 +708,7 @@ export class MateViewport {
 
   private nativeFaceReference(data:NonNullable<ReturnType<MateViewport['selectedFaceData']>>) {
     const {part,topology}=data;
-    const label=`Face ${part.faceRanges.findIndex(range=>range.faceId===topology.id)+1} of ${part.name}`;
+    const label=`Face ${part.faceRanges.findIndex(range=>range.faceId===topology.id)+1}`;
     if(topology.surfaceReference)return {bodyId:part.id,label,...structuredClone(topology.surfaceReference)};
     if(topology.surfaceType!=='PLANE')return null;
     const center=planarFaceCenter(topology),faceAnchor=anchorForPlanarFace(part.topology,topology.id);
@@ -2184,7 +2187,8 @@ export class MateViewport {
           kind: "face",
           partId: part.data.id,
           faceId: topology.id,
-          label: cap ? `Section face of ${part.data.name}` : `Face ${this.faceOrdinal(part, topology.id)} of ${part.data.name}`,
+          label: cap ? "Section face" : `Face ${this.faceOrdinal(part, topology.id)}`,
+          partLabel: part.data.name,
           detail: topology.surfaceType,
         },
       };

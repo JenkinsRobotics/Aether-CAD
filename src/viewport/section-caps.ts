@@ -1,16 +1,32 @@
 /** Display-only cross-section faces from the rendered mesh, including holes.
 * The exact CAD body is never modified. Other cuts trim each cap as well. */
-import { BufferGeometry, Float32BufferAttribute, Plane, ShapeUtils, Vector2, Vector3 } from 'three/webgpu';
+import { BufferGeometry, Float32BufferAttribute, InterleavedBufferAttribute, Plane, ShapeUtils, Vector2, Vector3, type BufferAttribute } from 'three/webgpu';
+const boundsVersions = new WeakMap<BufferGeometry, { position: BufferAttribute | InterleavedBufferAttribute; version: number }>();
 export function sectionCapGeometry(geometry: BufferGeometry, planes: readonly Plane[]): BufferGeometry {
   const position = geometry.getAttribute('position'), index = geometry.index;
   const output: number[] = [];
   const groups: {start:number;count:number}[] = [];
   if (!position)
     return new BufferGeometry();
-  geometry.computeBoundingBox();
-  const epsilon = Math.max(geometry.boundingBox!.getSize(new Vector3()).length() * 1e-7, 1e-7);
+  const version = position instanceof InterleavedBufferAttribute ? position.data.version : position.version;
+  const previousBounds = boundsVersions.get(geometry);
+  if (!geometry.boundingBox || previousBounds?.position !== position || previousBounds.version !== version) {
+    geometry.computeBoundingBox();
+    boundsVersions.set(geometry, { position, version });
+  }
+  const bounds = geometry.boundingBox!;
+  const halfSize = bounds.getSize(new Vector3()).multiplyScalar(.5);
+  const center = bounds.getCenter(new Vector3());
+  const epsilon = Math.max(halfSize.length() * 2e-7, 1e-7);
   for (const [planeIndex, plane] of planes.entries()) {
     const start = output.length / 3;
+    // Most occurrences in an assembly do not meet this plane. Reject them
+    // before walking every triangle; other planes can still cut the same body.
+    const radius = Math.abs(plane.normal.x) * halfSize.x + Math.abs(plane.normal.y) * halfSize.y + Math.abs(plane.normal.z) * halfSize.z;
+    if (Math.abs(plane.distanceToPoint(center)) > radius + epsilon) {
+      groups.push({ start, count: 0 });
+      continue;
+    }
     if (planes.slice(0, planeIndex).some(other => other.normal.distanceToSquared(plane.normal) < 1e-14 && Math.abs(other.constant - plane.constant) < epsilon)) {
       groups.push({ start, count: 0 });
       continue;

@@ -85,3 +85,41 @@ it('moves a sectioned occurrence without recreating its source mesh or leaving a
   for(let i=0;i<positions.count;i++) expect(positions.getZ(i)+4).toBeCloseTo(0);
   expect(shown.at(-1)).toEqual([0,0,-10,0,0,-4]);
 });
+
+it('retains cap and edge buffers for display-only changes, but rebuilds for new cuts and scope', () => {
+  const layer = new SectionLayer(new THREE.Group(), new THREE.Group()), group = new THREE.Group();
+  const show = vi.fn();
+  layer.adopt('body', group, new THREE.BoxGeometry(20,20,20), { positions:[0,0,-10,0,0,10], show });
+  const view = { planes:[{id:'z',plane:top,offsetMillimeters:0}],activePlaneId:'z',mode:'exclude' as const,items:[] };
+  layer.apply(view, [group], new THREE.Box3(), true);
+  const cap = layer.capOf(group)!, geometry = cap.geometry, dispose = vi.spyOn(geometry,'dispose');
+  const calls = show.mock.calls.length;
+  for (let i=0;i<5;i++) layer.apply({...view,hatch:!!(i%2),planes:view.planes.map(p=>({...p,showPlane:!!(i%2)}))}, [group],new THREE.Box3(),false);
+  expect(cap.geometry).toBe(geometry);
+  expect(dispose).not.toHaveBeenCalled();
+  expect(show).toHaveBeenCalledTimes(calls);
+  layer.apply({...view,planes:[{...view.planes[0],offsetMillimeters:3}]},[group],new THREE.Box3(),true);
+  expect(cap.geometry).not.toBe(geometry);
+  expect(dispose).toHaveBeenCalledTimes(1);
+  expect(show).toHaveBeenCalledTimes(calls+1);
+  layer.apply({...view,items:[{id:'body',label:'Body'}]},[group],new THREE.Box3(),true);
+  expect(layer.capOf(group)).toBeUndefined();
+  expect(show).toHaveBeenLastCalledWith([0,0,-10,0,0,10]);
+});
+
+it('updates a cached cap when source vertices change or their buffer is replaced', () => {
+  const layer = new SectionLayer(new THREE.Group(), new THREE.Group()), group = new THREE.Group();
+  const source = new THREE.BoxGeometry(20,20,20);
+  layer.adopt('body',group,source);
+  const view = {planes:[{id:'z',plane:top,offsetMillimeters:0}],activePlaneId:'z',mode:'exclude' as const,items:[]};
+  const apply = () => layer.apply(view,[group],new THREE.Box3(),false);
+  apply();
+  const position = source.getAttribute('position');
+  for(let i=0;i<position.count;i++) position.setZ(i,position.getZ(i)+100);
+  position.needsUpdate = true;
+  apply();
+  expect(layer.capOf(group)!.geometry.getAttribute('position').count).toBe(0);
+  source.setAttribute('position',new THREE.BoxGeometry(20,20,20).getAttribute('position'));
+  apply();
+  expect(layer.capOf(group)!.geometry.getAttribute('position').count).toBeGreaterThan(0);
+});

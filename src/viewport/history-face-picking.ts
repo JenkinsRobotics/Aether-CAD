@@ -25,5 +25,5 @@ export function pickHistoryFace(ray:Raycaster,group:Group,model:ImportedModelDat
   return {partName:part.name,item:{id:`${kind}:${part.id}:${candidate.id}`,kind,partId:part.id,faceId:face.id,label:candidate.label,detail:`Exact ${kind}`}};
  }
  return {partName:part.name,item:{id:`face:${part.id}:${face.id}`,kind:'face',partId:part.id,faceId:face.id,
-  label:`Face ${part.faceRanges.findIndex(r=>r.faceId===faceId)+1} of ${part.name}`,detail:face.surfaceType}};
+  label:`Face ${part.faceRanges.findIndex(r=>r.faceId===faceId)+1}`,partLabel:part.name,detail:face.surfaceType}};
 }

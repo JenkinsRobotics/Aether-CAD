@@ -38,3 +38,14 @@ it('retains diagonal cuts through existing edges and avoids duplicate coincident
   const p = cap.getAttribute('position');
   for (let i=0;i<p.count;i++) expect(plane.distanceToPoint(new Vector3().fromBufferAttribute(p,i))).toBeCloseTo(0);
 });
+
+it('refreshes culling bounds when vertex data moves, including a replaced position buffer', () => {
+  const box = new BoxGeometry(20,20,20), cut = new Plane(new Vector3(-1,0,0),100);
+  expect(area(sectionCapGeometry(box,[cut]))).toBe(0);
+  const position = box.getAttribute('position');
+  for(let i=0;i<position.count;i++) position.setX(i,position.getX(i)+100);
+  position.needsUpdate = true;
+  expect(area(sectionCapGeometry(box,[cut]))).toBeCloseTo(400);
+  box.setAttribute('position',new BoxGeometry(20,20,20).getAttribute('position'));
+  expect(area(sectionCapGeometry(box,[cut]))).toBe(0);
+});

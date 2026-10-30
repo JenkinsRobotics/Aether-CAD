@@ -88,7 +88,8 @@ export function itemsInsideSelectionBox(
           partId: part.data.id,
           faceId: range.faceId,
           // The id is a hash; the ordinal is what a reader can use.
-          label: `Face ${ordinal + 1} of ${part.data.name}`,
+          label: `Face ${ordinal + 1}`,
+          partLabel: part.data.name,
           detail: topology.surfaceType,
         });
       }

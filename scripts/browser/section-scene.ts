@@ -26,7 +26,26 @@ scene.add(light);
 layer.adopt('box',group,geometry);
 const camera=new THREE.OrthographicCamera(-15,15,15,-15,.1,1000); camera.position.set(0,0,100); camera.lookAt(0,0,0);
 const output=new TransparentViewportOutput(renderer,scene,camera);
-window.sectionCheck={async render({offset=null,second=false,reversed=false,excluded=false,top=false,oblique=false,tilted=false}:{offset?:number|null;second?:boolean;reversed?:boolean;excluded?:boolean;top?:boolean;oblique?:boolean;tilted?:boolean}={}) {
+window.sectionCheck={
+ benchmark() {
+  const root = new THREE.Group(), layer = new SectionLayer(root, new THREE.Group());
+  const source = new THREE.SphereGeometry(10, 64, 32), groups: THREE.Group[] = [];
+  for (let i=0;i<65;i++) {
+   const group=new THREE.Group();group.position.set((i%13-6)*25,Math.floor(i/13)*25,0);
+   layer.adopt(String(i),group,source);groups.push(group);
+  }
+  const bounds=new THREE.Box3(new THREE.Vector3(-160,-10,-10),new THREE.Vector3(160,110,10));
+  const view={planes:[{id:'x',plane:{label:'Face 4',originMillimeters:[0,0,0] as const,normal:[1,0,0] as const},offsetMillimeters:0}],activePlaneId:'x',mode:'exclude' as const,items:[]};
+  const measure=(fn:()=>void)=>{const start=performance.now();fn();return performance.now()-start;};
+  const move=[],unchanged=[];
+  for(let i=0;i<12;i++) {
+   view.planes[0].offsetMillimeters=i*.2;
+   move.push(measure(()=>layer.apply(view,groups,bounds,true)));
+   unchanged.push(measure(()=>layer.apply({...view,hatch:i%2===0},groups,bounds,false)));
+  }
+  return {bodies:groups.length,triangles:source.index!.count/3*groups.length,move,unchanged};
+ },
+ async render({offset=null,second=false,reversed=false,excluded=false,top=false,oblique=false,tilted=false}:{offset?:number|null;second?:boolean;reversed?:boolean;excluded?:boolean;top?:boolean;oblique?:boolean;tilted?:boolean}={}) {
  camera.position.set(...(tilted ? [60,-80,70] : [0,0,100]) as [number,number,number]);camera.lookAt(0,0,0);camera.updateMatrixWorld(true);
  const planes=offset===null?[]:[{id:'x',plane:{label:'Section',originMillimeters:[0,0,0] as const,normal:(top?[0,0,1]:[1,0,0]) as readonly [number,number,number]},offsetMillimeters:offset,reversed},
    ...(second?[{id:'y',plane:{label:'Front',originMillimeters:[0,0,0] as const,normal:[0,1,0] as const},offsetMillimeters:0}]:[])];
@@ -57,5 +76,5 @@ window.sectionCheck={async render({offset=null,second=false,reversed=false,exclu
  };
  const probes=[];
  for(let y=4;y<398;y+=8)for(let x=4;x<398;x+=8){const type=expected(x,y);if([[2,0],[-2,0],[0,2],[0,-2]].every(([dx,dy])=>expected(x+dx,y+dy)===type))probes.push({x,y,type});}
- return {backend:renderer.backend.isWebGPUBackend?'webgpu':'webgl',probes};
+ return {backend:renderer.backend.isWebGPUBackend?'webgpu':'webgl',clipDistances:renderer.hasFeature('clip-distances'),probes};
 }};

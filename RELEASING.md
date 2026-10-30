@@ -56,6 +56,15 @@ Package-manager versions and the shared UI dependency version are separate.
    robot must lose the removed half, retain the opposite half, flip and restore
    correctly without saving a document. A section outline or cap alone is not
    proof that the original surfaces were clipped.
+   Repeat the assembly check with `AETHER_SECTION_FACE_FIRST=1`: pick optical
+   carrier Face 4 and enter -79.195 mm before any origin-plane cut. Preview,
+   flip and cancel must work with the dialog still open. The metrics must report
+   the actual renderer backend (WebGL2 on Safari/WebKit, WebGPU on Chromium).
+   Safari currently selects the qualified WebGL2 compatibility path. Removing
+   that policy requires the same check in actual Safari WebGPU, not just
+   Chromium WebGPU or Playwright WebKit. For section CPU-work comparisons use
+   `node scripts/profile-section-render.mjs build/section-performance.json`;
+   these timings measure cut updates, not overall FPS.
    Drawing changes also require `node scripts/verify-drawings.mjs`. Drawing sections require
    analytic hole/hatch clipping and all-six-orientation checks, paper-spacing and
    source-refresh tests, actual UI/agent invalid-cut refusal/history/reopen, SVG/DXF
