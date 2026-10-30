@@ -113,37 +113,41 @@
   {
     "id": "space-shuttle",
     "name": "Space Shuttle — Launch and Orbiter",
-    "description": "A 1:100 display-scale Shuttle with an external tank, four-segment boosters, detailed orbiter and a separate orbital assembly with opening payload doors.",
+    "description": "A 1:100 Discovery display model proportioned from NASA / HAER measured drawings, with a launch stack and an orbital assembly with opening payload doors. Internal fittings are illustrative.",
     "file": "space-shuttle.acad.bin",
     "thumbnail": "space-shuttle.png",
-    "parts": 32,
-    "instances": 119,
-    "features": 85,
+    "parts": 34,
+    "instances": 123,
+    "features": 96,
     "assemblyId": "assembly-000001",
     "configurations": [
       {
         "id": "assembly-000001",
         "name": "Launch configuration",
-        "instances": 87,
-        "mates": 86,
+        "instances": 89,
+        "mates": 88,
         "movable": false
       },
       {
-        "id": "assembly-000380",
+        "id": "assembly-000390",
         "name": "Orbiter — payload bay open",
-        "instances": 32,
-        "mates": 31,
+        "instances": 34,
+        "mates": 33,
         "movable": true
       }
     ],
     "sources": [
       {
-        "title": "NASA Shuttle dimensions",
-        "url": "https://www.nasa.gov/reference/the-space-shuttle/"
+        "title": "NASA / HAER Discovery measured elevations and plan (sheets 4, 5, 7)",
+        "url": "https://www.nasa.gov/wp-content/uploads/2024/12/space-shuttle-orbiter-drawings.pdf"
       },
       {
-        "title": "NASA recordation drawings",
-        "url": "https://www.nasa.gov/space-shuttle-recordation/recordation-drawings/"
+        "title": "NASA / HAER Shuttle stack measured elevations (sheet 3)",
+        "url": "https://www.nasa.gov/wp-content/uploads/2024/12/stack-assembly-drawings.pdf"
+      },
+      {
+        "title": "NASA Shuttle component dimensions",
+        "url": "https://www.nasa.gov/reference/the-space-shuttle/"
       }
     ],
     "tags": [
@@ -154,7 +158,7 @@
       "Multiple assemblies"
     ],
     "motion": "The orbital assembly has two revolute payload-door hinges; the launch stack is fixed.",
-    "sha256": "c916d826272e15e030d17e4f81362ccfa1636a96869d897028ea1aa15354f56f"
+    "sha256": "551a9e16c9c3cee09ef20bb66eda52355d2b2b8dbd9ec758fdc0c5c5de9d6604"
   },
   {
     "id": "artemis-sls",

@@ -50,6 +50,11 @@ try {
           )
       : ["roadster", "airplane", "wrench"].map((id) => ({ id }));
   for (const { id, assembly } of cases) {
+    if (
+      process.env.AETHER_EXAMPLE_MODELS &&
+      !process.env.AETHER_EXAMPLE_MODELS.split(",").includes(id)
+    )
+      continue;
     await page.goto(
       origin +
         "/cad/index.html?editor=1&example=" +

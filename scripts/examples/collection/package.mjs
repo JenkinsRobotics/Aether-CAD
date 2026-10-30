@@ -55,6 +55,19 @@ for (const key of [
         "Scifirobot requires complete exact interference and seating proof for these archive bytes",
       );
   }
+  if (key === "space-shuttle") {
+    const dimensions = JSON.parse(
+      await readFile(join(source, "dimensions/result.json"), "utf8"),
+    );
+    if (
+      dimensions.archive_sha256 !== sha256 ||
+      dimensions.checks.length !== 15 ||
+      dimensions.checks.some((check) => !check.passed)
+    )
+      throw Error(
+        "Shuttle requires passing NASA dimension checks for these archive bytes",
+      );
+  }
   await writeFile(join(destination, model.id + ".acad.bin"), bytes);
   if (model.reference)
     await writeFile(

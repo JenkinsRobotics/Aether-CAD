@@ -101,3 +101,38 @@ Screenshots, MCP request/results, geometry proofs and browser results are retain
 - Native joint checks passed both Shuttle door hinges and all four Orion solar-wing roots. Browser Motion study playback, CSV export and restoring the authored pose passed for both spacecraft.
 - Both examples passed preview without file creation, assembly switching, one explicit personal copy per example, both saved assemblies reopening and embedded Part editing access.
 - Frontend: 339 files / 2,078 tests passed (one existing skipped test). Engine: 263 files / 1,190 tests. Native service release gates: 319 tests. Type checks, production build, headless-kernel and sketch-region checks passed. Hybrid file and both core/pose assembly browser groups passed, including contact refusal, history and saved reopen. The first concurrent pose run exceeded the fixture deadline; its independent rerun passed all four workflows in 372 seconds.
+
+### Shuttle proportions and dimension gate
+
+The Discovery example uses the measured NASA/HAER **TX-116-A** sheets 4, 5, 7
+and **TX-116-J** sheet 3, linked in its gallery sources. At 1:100, its principal
+model dimensions are: 370.4 mm overall orbiter length, **328.9 mm fuselage plus
+nose** (the swept tail is further aft), 238 mm span, 140.9 mm gear-retracted
+height, 564 mm launch height, 466.9 × 83.8 mm tank, and 457.2 × 37.1 mm
+booster envelope/case. The published runway heights include deployed gear and
+must not be used for this flight configuration. Intermediate sections, internal
+fittings, wall thicknesses and payload remain illustrative.
+
+`models/space/shuttle-dimensions.mjs` owns these design inputs and the approximate
+plan/profile stations. The tank uses bounded Bezier meridians to prevent a
+three-point arc from extending beyond its stated diameter or length. Wings use
+the measured plan's narrow leading strake and broader outer delta; the forward
+booster assembly has a cylindrical skirt and shorter nose.
+
+Run `node scripts/examples/collection/verify-shuttle-dimensions.mjs` after the
+HTTP builder. It independently checks **15 dimensions** using exact OCCT bounds
+of both reopened native assemblies, including engine bells and tail, and checks
+valid positive-volume Parts. The expected measurements are transcribed separately
+from NASA's drawings, not imported from the recipe. Packaging refuses stale or
+failed proof. Use `AETHER_DIMENSION_BASELINE=1` only to record a pre-fix comparison;
+it never bypasses the packaging gate. Native and browser motion qualifications
+still verify both payload-door hinges, rigid children and saved configuration
+switching. Browser motion accepts `AETHER_EXAMPLE_MODELS=space-shuttle` too.
+
+Reference reconciliation: the measured Discovery drawings govern the length,
+height and stack layout; generic Shuttle/Endeavour fact sheets use slightly
+different rounded envelopes. The retained nominal 8.38 m tank diameter is listed
+in NASA EP-182, *The First 25 Years*, printed page 70
+(https://files.eric.ed.gov/fulltext/ED252377.pdf). The 3.71 m booster case diameter
+is also listed by ESA
+(https://www.esa.int/Science_Exploration/Human_and_Robotic_Exploration/Space_Shuttle/Shuttle_technical_facts).

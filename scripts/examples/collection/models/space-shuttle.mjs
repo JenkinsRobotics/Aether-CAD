@@ -2,61 +2,86 @@ import {
   Model,
   polygon,
   rounded,
-  circle,
   qx,
   qz,
   radial,
   rotate,
 } from "../model-kit.mjs";
-import { finishes, bell, ogive, useParts, multiply } from "./space/common.mjs";
+import { finishes, bell, useParts, multiply } from "./space/common.mjs";
+import {
+  shuttleDimensions as d,
+  shuttleSources,
+  fuselageStations,
+  noseStations,
+  wingOutline,
+} from "./space/shuttle-dimensions.mjs";
 const m = new Model(
   "space-shuttle",
   "Space Shuttle — Launch and Orbiter",
-  "A 1:100 display-scale Shuttle with an external tank, four-segment boosters, detailed orbiter and a separate orbital assembly with opening payload doors.",
+  "A 1:100 Discovery display model proportioned from NASA / HAER measured drawings, with a launch stack and an orbital assembly with opening payload doors. Internal fittings are illustrative.",
 );
 m.tags = ["Loft", "Revolve", "Extrude", "Hole Wizard", "Multiple assemblies"];
-m.sources = [
-  {
-    title: "NASA Shuttle dimensions",
-    url: "https://www.nasa.gov/reference/the-space-shuttle/",
-  },
-  {
-    title: "NASA recordation drawings",
-    url: "https://www.nasa.gov/space-shuttle-recordation/recordation-drawings/",
-  },
-];
+m.sources = shuttleSources;
 m.configurationName = "Launch configuration";
 const tank = m
   .part("external-tank", "External tank shell", finishes.foam)
   .revolve("External tank meridian", {
     type: "path",
-    start: [0, 80],
+    start: [0, d.stackHeight - d.tankLength],
     segments: [
-      { type: "arc", middle: [33, 90], end: [41.9, 115] },
-      { type: "line", end: [41.9, 475] },
-      { type: "arc", middle: [30, 522], end: [0.3, 549] },
-      { type: "line", end: [0, 549] },
-      { type: "line", end: [0, 546] },
-      { type: "arc", middle: [28, 519], end: [39.4, 475] },
-      { type: "line", end: [39.4, 115] },
-      { type: "arc", middle: [31, 93], end: [0, 82.5] },
-      { type: "line", end: [0, 80] },
+      {
+        type: "bezier",
+        controls: [
+          [23.14, 97.1],
+          [41.9, 112.724],
+        ],
+        end: [41.9, 132],
+      },
+      { type: "line", end: [41.9, 457.2] },
+      {
+        type: "bezier",
+        controls: [
+          [41.9, 509],
+          [20, 548],
+        ],
+        end: [0.3, d.stackHeight],
+      },
+      { type: "line", end: [0, d.stackHeight] },
+      { type: "line", end: [0, d.stackHeight - 2.5] },
+      {
+        type: "bezier",
+        controls: [
+          [20, 545.5],
+          [39.4, 506.5],
+        ],
+        end: [39.4, 457.2],
+      },
+      { type: "line", end: [39.4, 132] },
+      {
+        type: "bezier",
+        controls: [
+          [39.4, 114.1],
+          [21.76, 99.6],
+        ],
+        end: [0, d.stackHeight - d.tankLength + 2.5],
+      },
+      { type: "line", end: [0, d.stackHeight - d.tankLength] },
     ],
   });
 m.place("External tank — grounded", tank);
 const intertank = m
   .part("tank-intertank", "External tank intertank band", finishes.foam)
-  .ring("Intertank band", 42.3, 41.8, 0, 35);
-m.place("Intertank band", intertank, [0, 0, 345]);
+  .ring("Intertank band", 41.9, 41.4, 0, 70);
+m.place("Intertank band", intertank, [0, 0, 360]);
 const rib = m
   .part("tank-rib", "Intertank stiffener", "aluminum")
-  .pad("Stiffener section", [rounded(1.2, 1.4, 0.3)], 0, 34);
+  .pad("Stiffener section", [rounded(1.2, 1.4, 0.3)], 0, 70);
 for (let i = 0; i < 28; i++) {
   const a = (i * Math.PI) / 14;
   m.place(
     `Intertank rib ${i + 1}`,
     rib,
-    [42.4 * Math.cos(a), 42.4 * Math.sin(a), 345],
+    [42 * Math.cos(a), 42 * Math.sin(a), 360],
     qz(a),
   );
 }
@@ -70,20 +95,21 @@ const fuselage = m
   // an unconstrained smooth interpolation overshoots the underside here.
   .loft(
     "Fuselage stations",
-    [
-      [0, rounded(53, 43, 16, 0, -2)],
-      [40, rounded(58, 49, 17)],
-      [230, rounded(54, 46, 18)],
-      [290, rounded(45, 38, 16, 0, -3)],
-      [342, rounded(27, 26, 11, 0, -10)],
-      [372.3, rounded(1.8, 2.8, 0.8, 0, -14)],
-    ],
+    fuselageStations.map(([z, w, h, r, y]) => [z, rounded(w, h, r, 0, y)]),
     "XY",
     true,
   )
   .pad(
     "Open payload bay",
-    [rounded(43, 184, 6, 0, 157)],
+    [
+      rounded(
+        d.payloadDiameter,
+        d.payloadLength,
+        4,
+        0,
+        d.doorAft + d.doorLength / 2,
+      ),
+    ],
     -45,
     48,
     "cut",
@@ -105,25 +131,24 @@ const fuselage = m
   );
 const belly = m
   .part("orbiter-belly", "Orbiter thermal belly", finishes.tile)
-  .loft("Belly thermal profile", [
-    [0, rounded(50, 8, 3, 0, -22)],
-    [60, rounded(56, 8, 3, 0, -23)],
-    [225, rounded(53, 8, 3, 0, -22.5)],
-    [300, rounded(39, 8, 3, 0, -21)],
-    [349, rounded(16, 4, 1.5, 0, -20)],
-  ]);
+  .loft(
+    "Belly thermal profile",
+    [
+      [0, rounded(28, 1, 0.4, 0, -27.5)],
+      [57.1, rounded(18, 1, 0.4, 0, -27.5)],
+      [243.155, rounded(18, 1, 0.4, 0, -27.5)],
+      [255, rounded(17.8, 1, 0.4, 0, -27.5)],
+      [268, rounded(15, 1, 0.4, 0, -27.5)],
+      [282, rounded(12, 1, 0.4, 0, -27.5)],
+      [296, rounded(8, 1, 0.4, 0, -25.5)],
+    ],
+    "XY",
+    true,
+  );
 const wings = [];
 for (const side of [-1, 1]) {
   const label = side < 0 ? "Port" : "Starboard";
-  const outline = polygon(
-    [
-      [24, 26],
-      [119, 26],
-      [119, 53],
-      [56, 157],
-      [25, 232],
-    ].map(([x, z]) => [side * x, z]),
-  );
+  const outline = polygon(wingOutline.map(([x, z]) => [side * x, z]));
   const wing = m
     .part(`wing-${side}`, `${label} delta wing`, finishes.white)
     .pad("Double-delta wing profile", [outline], 16, 4, "new", "XZ");
@@ -136,10 +161,13 @@ const fin = m.part("tail-fin", "Vertical stabilizer", finishes.white).pad(
   "Swept fin profile",
   [
     polygon([
-      [15, 18],
-      [76, 24],
-      [73, 55],
-      [18, 112],
+      [28, 57.1],
+      [112.9, -19],
+      [112.9, -41.5],
+      [105, -38],
+      [55, -12],
+      [48, 10],
+      [26, 10],
     ]),
   ],
   -1.8,
@@ -151,10 +179,10 @@ const rudder = m.part("rudder", "Split rudder outline", finishes.tile).pad(
   "Rudder trailing surface",
   [
     polygon([
-      [20, 12],
-      [76, 20],
-      [76, 24],
-      [15, 18],
+      [104, -34],
+      [108, -22],
+      [55, 16],
+      [52, -9],
     ]),
   ],
   -2,
@@ -162,47 +190,58 @@ const rudder = m.part("rudder", "Split rudder outline", finishes.tile).pad(
   "new",
   "YZ",
 );
-const nose = m
-  .part("nose-cap", "Reinforced nose cap", finishes.tile)
-  .loft("Rounded nose cap", [
-    [350, rounded(20, 19, 8, 0, -11.7)],
-    [366, rounded(8, 10, 3.5, 0, -13.6)],
-    [373, rounded(1.2, 2, 0.5, 0, -14)],
-  ]);
+const nose = m.part("nose-cap", "Reinforced nose cap", finishes.tile).loft(
+  "Blunt nose cap stations",
+  noseStations.map(([z, w, h, r, y]) => [z, rounded(w, h, r, 0, y)]),
+  "XY",
+  true,
+);
 const windows = [];
 for (const side of [-1, 1]) {
-  const glazing = m
-    .part(
-      `window-${side}`,
-      `${side < 0 ? "Port" : "Starboard"} cockpit windows`,
-      finishes.window,
-    )
-    .pad(
-      "Cockpit glazing",
+  for (const [pane, points] of [
+    [
+      "front",
       [
-        polygon(
-          [
-            [2, 291],
-            [19, 291],
-            [14, 310],
-            [2, 318],
-          ].map(([x, z]) => [side * x, z]),
-        ),
+        [1.5, 269],
+        [8.5, 269],
+        [8, 277],
+        [2, 279],
       ],
-      -17,
-      1.2,
-      "new",
-      "XZ",
-    );
-  windows.push(glazing);
+    ],
+    [
+      "side",
+      [
+        [11, 268],
+        [18, 264],
+        [18, 272],
+        [11, 276],
+      ],
+    ],
+  ]) {
+    const glazing = m
+      .part(
+        `window-${side}-${pane}`,
+        `${side < 0 ? "Port" : "Starboard"} ${pane} cockpit window`,
+        finishes.window,
+      )
+      .pad(
+        "Cockpit glazing",
+        [polygon(points.map(([x, z]) => [side * x, z]))],
+        -32,
+        0.8,
+        "new",
+        "XZ",
+      );
+    windows.push(glazing);
+  }
 }
-const nozzle = bell(m, "main-nozzle", "Orbiter main engine bell", 10.5, 24);
+const nozzle = bell(m, "main-nozzle", "Orbiter main engine bell", 11.4, 24.8);
 const oms = m
   .part("oms-pod", "Orbital maneuvering pod", finishes.white)
   .loft("OMS pod stations", [
-    [0, rounded(16, 19, 6)],
-    [24, rounded(19, 22, 7)],
-    [55, rounded(9, 10, 4)],
+    [0, rounded(25, 30, 10)],
+    [25, rounded(25, 32, 10)],
+    [52, rounded(15, 20, 7)],
   ]);
 const omsBell = bell(m, "oms-nozzle", "Orbital engine bell", 4.5, 10);
 const doorParts = [];
@@ -229,7 +268,7 @@ for (const side of [-1, 1]) {
         },
       ],
       0,
-      184,
+      d.doorLength,
     );
   const radiator = m
     .part(
@@ -239,7 +278,7 @@ for (const side of [-1, 1]) {
     )
     .pad(
       "Radiator backing",
-      [rounded(15, 174, 1.5, s * 11.5, 92)],
+      [rounded(15, d.doorLength - 10, 1.5, s * 11.5, d.doorLength / 2)],
       -12,
       1,
       "new",
@@ -249,7 +288,7 @@ for (const side of [-1, 1]) {
 }
 const hinge = m
   .part("door-hinge", "Payload door hinge pin", "steel")
-  .ring("Hinge pin", 1.1, 0, 0, 184);
+  .ring("Hinge pin", 1.1, 0, 0, d.doorLength);
 const bayRib = m.part("bay-rib", "Payload bay frame", "aluminum").pad(
   "U frame",
   [
@@ -297,13 +336,24 @@ const boosterSkirt = m
       [21, 0],
     ]),
   );
-const boosterNose = ogive(
-  m,
-  "shuttle-booster-nose",
-  "Booster forward assembly",
-  18.55,
-  100,
-);
+const boosterNose = m
+  .part(
+    "shuttle-booster-nose",
+    "Booster forward skirt and nose",
+    finishes.white,
+  )
+  .revolve("Cylindrical forward skirt and short nose", {
+    type: "path",
+    start: [0, 0],
+    segments: [
+      { type: "line", end: [18.55, 0] },
+      { type: "line", end: [18.55, 44] },
+      { type: "line", end: [4, 92] },
+      { type: "arc", middle: [2.5, 94.5], end: [0.25, 95.2] },
+      { type: "line", end: [0, 95.2] },
+      { type: "line", end: [0, 0] },
+    ],
+  });
 const boosterBell = bell(
   m,
   "shuttle-booster-nozzle",
@@ -312,14 +362,14 @@ const boosterBell = bell(
   12,
 );
 for (const side of [-1, 1]) {
-  const x = side * 63;
-  m.place(`Booster ${side} aft skirt`, boosterSkirt, [x, 0, 0]);
-  m.place(`Booster ${side} nozzle`, boosterBell, [x, 0, 10]);
+  const x = side * d.boosterOffset;
+  m.place(`Booster ${side} aft skirt`, boosterSkirt, [x, 0, 14]);
+  m.place(`Booster ${side} nozzle`, boosterBell, [x, 0, 12]);
   for (let i = 0; i < 4; i++) {
-    m.place(`Booster ${side} segment ${i + 1}`, segment, [x, 0, 32 + i * 79]);
-    m.place(`Booster ${side} joint ${i + 1}`, band, [x, 0, 32 + i * 79]);
+    m.place(`Booster ${side} segment ${i + 1}`, segment, [x, 0, 46 + i * 79]);
+    m.place(`Booster ${side} joint ${i + 1}`, band, [x, 0, 46 + i * 79]);
   }
-  m.place(`Booster ${side} nose`, boosterNose, [x, 0, 348]);
+  m.place(`Booster ${side} nose`, boosterNose, [x, 0, 362]);
   m.place(
     `Orbiter attachment ${side}`,
     mount,
@@ -348,26 +398,31 @@ function orbiter(config, shift, open) {
     [0, 14, 0],
   ].forEach((p, i) => config.place(`Main engine ${i + 1}`, nozzle, at(p)));
   for (const side of [-1, 1]) {
-    config.place(`OMS pod ${side}`, oms, at([side * 27, 14, 0]));
-    config.place(`OMS engine ${side}`, omsBell, at([side * 27, 14, 0]));
+    config.place(`OMS pod ${side}`, oms, at([side * 26, 28, 2]));
+    config.place(`OMS engine ${side}`, omsBell, at([side * 26, 28, 2]));
   }
   for (const { side, door, radiator } of doorParts) {
     const name = `${side < 0 ? "Port" : "Starboard"} payload door`,
       rotation = qz(open ? -side * 2.05 : 0);
-    config.place(name, door, at([side * 23, 0, 65]), rotation);
+    config.place(name, door, at([side * 23, 11.3, d.doorAft]), rotation);
     config.mate(name, open ? "revolute" : "fastened", "Orbiter fuselage");
     config
-      .place(name + " radiator", radiator, at([side * 23, 0, 65]), rotation)
+      .place(
+        name + " radiator",
+        radiator,
+        at([side * 23, 11.3, d.doorAft]),
+        rotation,
+      )
       .mate(name + " radiator", "fastened", name);
     config
-      .place(name + " hinge", hinge, at([side * 23, 0, 65]))
+      .place(name + " hinge", hinge, at([side * 23, 11.3, d.doorAft]))
       .mate(name + " hinge", "fastened", "Orbiter fuselage");
   }
   for (let i = 0; i < 6; i++)
     config.place(
       `Payload bay frame ${i + 1}`,
       bayRib,
-      at([0, -2, 73 + i * 32]),
+      at([0, -2, d.doorAft + 8 + i * 32]),
     );
   config.place("Science payload", payload, at([0, 11, 105]));
   config.place("Payload end cover", payloadCap, at([0, 11, 200]));
@@ -393,7 +448,7 @@ function orbiter(config, shift, open) {
       instance.rotation_xyzw = multiply(turn, instance.rotation_xyzw);
     }
 }
-orbiter(m, [0, -77, 60], false);
+orbiter(m, d.orbiterDatum, false);
 const orbit = useParts(
   new Model("orbiter", "Orbiter — payload bay open", "Orbital configuration"),
   m,
