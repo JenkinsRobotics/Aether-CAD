@@ -93,7 +93,7 @@ try {
       fileID = new URL(page.url()).searchParams.get('document');
       const deck = (await project()).parts.find(p => p.name === 'Service module equipment deck');
       partID = deck.id; sketchID = deck.document.features[0].id;
-      await page.goto(`${origin}/cad/index.html?document=${fileID}&part=${partID}`);
+      assert.equal(new URL(page.url()).searchParams.get('part'), partID, 'Saving a source Part must keep it open for editing');
       await expect(row(/^Equipment deck — sketch/)).toBeVisible({ timeout: 90000 });
       agent = await connectLiveAgent(page, origin, fileID, 'Native example collaboration');
       originalVolume = volume(await invoke('aether_cad_verify'));
