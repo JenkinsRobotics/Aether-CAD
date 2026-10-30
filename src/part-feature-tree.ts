@@ -40,7 +40,10 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "pattern") return `${feature.patternType} · ${feature.count} occurrences · ${feature.axis}`;
   if (feature.type === "draft") return `${feature.angleDegrees}° · ${feature.facePlane.plane} · ${feature.reversed ? "reverse" : "normal"}`;
   if (feature.type === "loft") return `${feature.sections.length} sections · ${feature.operation} · ${feature.ruled ? "ruled" : "smooth"}`;
-  if (feature.type === "hole") return `${feature.diameterMillimeters} mm · ${feature.cutType} · ${feature.depthType}`;
+  if (feature.type === "hole") {
+    const thread = feature.thread ? `${feature.thread.designation} ${feature.thread.tapped ? (feature.thread.modeled ? "modelled thread" : "tapped") : `${feature.thread.fit ?? "normal"} clearance`} · ` : "";
+    return `${thread}${feature.diameterMillimeters} mm · ${feature.cutType} · ${feature.depthType}`;
+  }
   if (feature.type === "import-cad") return `${feature.format.toUpperCase()} · ${feature.meshMode === "reference" ? "Mesh reference · " : ""}${feature.sourceName}`;
   if (feature.type === "import-step") return `STEP · ${feature.sourceName}`;
   if (feature.type === "sketch") {

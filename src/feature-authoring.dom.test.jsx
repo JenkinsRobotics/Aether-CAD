@@ -227,3 +227,22 @@ it("serializes revolve with axis and angle", async () => {
   });
 });
 
+
+it("authors a tapped M8 hole from the thread standards with a cap-screw counterbore", async () => {
+  seedProfile();
+  await authored("extrude", { Sketch: "profile-1", Distance: "25" });
+  const feature = await authored("hole", {
+    "Center sketch": "profile-1", "Thread profile": "ISO metric coarse", Size: "M8",
+    "Head from standard": "ISO 4762 cap screw counterbore", "Thread geometry": "modelled", "Drill point": "angled",
+  });
+  // The standard drives the diameter (tap drill) and the recess (ISO 4762 bore and head height).
+  expect(feature).toMatchObject({
+    type: "hole", diameterMillimeters: 6.8, cutType: "counterbore", counterDiameterMillimeters: 15, counterDepthMillimeters: 8,
+    drillPoint: "angled", drillPointAngleDegrees: 118,
+    thread: { standard: "iso-metric-coarse", designation: "M8", tapped: true, modeled: true },
+  });
+  expect(feature.taperAngleDegrees).toBeUndefined();
+  // Switching to a clearance hole takes the normal fit instead.
+  const clearance = await authored("hole", { "Center sketch": "profile-1", "Thread profile": "ISO metric coarse", Size: "M8", Thread: "clearance", "Clearance fit": "close" });
+  expect(clearance).toMatchObject({ diameterMillimeters: 8.4, cutType: "plain", thread: { standard: "iso-metric-coarse", designation: "M8", tapped: false, fit: "close" } });
+});

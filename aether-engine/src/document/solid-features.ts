@@ -39,7 +39,12 @@ export type {DraftFeature} from "./draft";
 import {validateLoft, type LoftFeature} from "./loft";
 export type {LoftFeature} from "./loft";
 import {validateHole, type HoleFeature} from "./hole";
-export type {HoleFeature} from "./hole";
+export type {HoleFeature, HoleThread} from "./hole";
+export {
+  HOLE_THREAD_STANDARDS, HOLE_THREAD_STANDARD_LABELS, isHoleThreadStandard, threadDesignations, threadSpecification,
+  standardHoleDiameter, capScrewCounterboreFor, countersunkScrewFor,
+  type HoleThreadStandard, type HoleClearanceFit, type ThreadSpecification, type HeadRecess,
+} from "./hole-standards";
 import { validateImportSTEP, type ImportSTEPFeature } from "./import-step";
 export type { ImportSTEPFeature } from "./import-step";
 export interface PlaneFeature {id:string;name:string;type:"plane";plane:SketchPlane;offsetMillimeters:number;suppressed:boolean;definition?:PlaneDefinition;}

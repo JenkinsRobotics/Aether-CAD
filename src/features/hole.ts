@@ -1,17 +1,34 @@
-import { sketchRegions, type SolidFaceReference } from "@aether/core/document";
+import {
+  HOLE_THREAD_STANDARDS, HOLE_THREAD_STANDARD_LABELS, capScrewCounterboreFor, countersunkScrewFor, sketchRegions,
+  standardHoleDiameter, threadDesignations, threadSpecification,
+  type HoleClearanceFit, type HoleThread, type HoleThreadStandard, type SolidFaceReference,
+} from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
 import {faceIdentity, mountPickedReferences} from './picked-references';
-import {requireSelections, layoutParameterRows, type FeatureEditor} from './shared';
+import {requireSelections, layoutParameterRows, type Control, type FeatureEditor} from './shared';
 
 /** Holes start at a circular sketch region (one, or every circle of the sketch)
  *  or at a point on a picked planar face (SolidCraft's `position` on a face),
- *  drilled into the part. */
+ *  drilled into the part. A standard thread (FreeCAD's Hole profiles) sets the
+ *  diameter: the tap drill for a tapped hole, the fit for a clearance hole. */
+const CUSTOM = 'custom';
+const standardLabel = (standard: HoleThreadStandard) => HOLE_THREAD_STANDARD_LABELS[standard];
+const standardFor = (label: string) => HOLE_THREAD_STANDARDS.find(standard => standardLabel(standard) === label);
+
+/** Sets a length field from a canonical millimetre value, in the document's display unit. */
+function setLength(control: Control, millimeters: number): void {
+  const factor = Number(control.dataset.canonicalFactor ?? 1);
+  const shown = millimeters / factor;
+  control.value = String(Number(shown.toFixed(4)));
+}
+
 export const holeEditor: FeatureEditor = {
   type: 'hole',
   controls(context) {
     const {field, reference, feature} = context;
     const source = reference('Center sketch', ['profile', 'sketch'], feature?.profileFeatureId);
     const placement = feature?.placement;
+    const thread: HoleThread | undefined = feature?.thread;
     return {
       placement: field('Placement', placement ? 'face' : 'sketch', ['sketch', 'face']),
       source, region: regionControls(context, source, 'Circular region', false, true),
@@ -20,10 +37,22 @@ export const holeEditor: FeatureEditor = {
       pointX: field('Point X (mm)', String(placement?.pointMillimeters[0] ?? 0)),
       pointY: field('Point Y (mm)', String(placement?.pointMillimeters[1] ?? 0)),
       pointZ: field('Point Z (mm)', String(placement?.pointMillimeters[2] ?? 0)),
-      cutType: field('Hole type', feature?.cutType ?? 'plain', ['plain', 'counterbore', 'countersink']),
+      profile: field('Thread profile', thread ? standardLabel(thread.standard) : CUSTOM, [CUSTOM, ...HOLE_THREAD_STANDARDS.map(standardLabel)]),
+      size: field('Size', thread?.designation ?? 'M6', thread ? threadDesignations(thread.standard) : threadDesignations('iso-metric-coarse')),
+      threaded: field('Thread', thread ? (thread.tapped ? 'tapped' : 'clearance') : 'tapped', ['tapped', 'clearance']),
+      fit: field('Clearance fit', thread?.fit ?? 'normal', ['close', 'normal', 'loose']),
+      threadModel: field('Thread geometry', thread?.modeled ? 'modelled' : 'cosmetic', ['cosmetic', 'modelled']),
+      threadHand: field('Thread hand', thread?.leftHand ? 'left' : 'right', ['right', 'left']),
+      threadDepthType: field('Thread depth', thread?.depthMillimeters !== undefined ? 'dimension' : 'whole hole', ['whole hole', 'dimension']),
+      threadDepth: field('Thread length (mm)', String(thread?.depthMillimeters ?? 8)),
+      cutType: field('Hole type', feature?.cutType ?? 'plain', ['plain', 'counterbore', 'countersink', 'counterdrill']),
+      head: field('Head from standard', 'manual', ['manual', 'ISO 4762 cap screw counterbore', 'ISO 10642 countersunk screw']),
       diameter: field('Diameter (mm)', String(feature?.diameterMillimeters ?? 6)),
       depthType: field('Depth type', feature?.depthType ?? 'blind', ['blind', 'through-all']),
       depth: field('Depth (mm)', String(feature?.depthMillimeters ?? 10)),
+      drillPoint: field('Drill point', feature?.drillPoint ?? 'flat', ['flat', 'angled']),
+      drillPointAngle: field('Drill point angle (degrees)', String(feature?.drillPointAngleDegrees ?? 118)),
+      taper: field('Taper (degrees)', String(feature?.taperAngleDegrees ?? 0)),
       counterDiameter: field('Head diameter (mm)', String(feature?.counterDiameterMillimeters ?? 10)),
       counterDepth: field('Counterbore depth (mm)', String(feature?.counterDepthMillimeters ?? 2)),
       countersinkAngle: field('Countersink angle (degrees)', String(feature?.countersinkAngleDegrees ?? 90)),
@@ -50,26 +79,71 @@ export const holeEditor: FeatureEditor = {
         }
       },
     });
+    const hide = (control: Control, hidden: boolean) => { const row = rows.get(control); if (row) row.hidden = hidden; };
+    const standard = () => standardFor(controls.profile.value);
+    const spec = () => { const s = standard(); return s ? threadSpecification(s, controls.size.value) : undefined; };
+    // The size list follows the chosen standard; the previous size is kept when the new standard has it.
+    const refillSizes = () => {
+      const s = standard(); if (!s || !(controls.size instanceof HTMLSelectElement)) return;
+      const wanted = controls.size.value;
+      controls.size.replaceChildren(...threadDesignations(s).map(designation => Object.assign(document.createElement('option'), {value: designation, textContent: designation})));
+      controls.size.value = threadDesignations(s).includes(wanted) ? wanted : threadDesignations(s)[Math.min(4, threadDesignations(s).length - 1)];
+    };
+    // A standard drives the diameter: tap drill when tapped, the fit when clearance.
+    const applyDiameter = () => {
+      const s = spec(); const input = controls.diameter as HTMLInputElement;
+      input.readOnly = Boolean(s);
+      if (s) setLength(controls.diameter, standardHoleDiameter(s, controls.threaded.value === 'tapped', controls.fit.value as HoleClearanceFit));
+    };
+    const applyHead = () => {
+      const s = spec(); if (!s || controls.head.value === 'manual') return;
+      const recess = controls.head.value.startsWith('ISO 4762') ? capScrewCounterboreFor(s) : countersunkScrewFor(s);
+      if (!recess) return;
+      controls.cutType.value = recess.depthMillimeters !== undefined ? 'counterbore' : 'countersink';
+      setLength(controls.counterDiameter, recess.diameterMillimeters);
+      if (recess.depthMillimeters !== undefined) setLength(controls.counterDepth, recess.depthMillimeters);
+      if (recess.angleDegrees !== undefined) controls.countersinkAngle.value = String(recess.angleDegrees / Number(controls.countersinkAngle.dataset.canonicalFactor ?? 1));
+    };
     const sync = () => {
       const face = controls.placement.value === 'face';
       const sourceRow = controls.source.closest<HTMLElement>('.aui-feature-row') ?? controls.source.parentElement; if (sourceRow) sourceRow.hidden = face;
       const regionRow = controls.region.closest<HTMLElement>('.aui-feature-row') ?? controls.region.parentElement; if (regionRow) regionRow.hidden = face || controls.allCircles.value === 'yes';
-      rows.get(controls.allCircles)!.hidden = face;
-      for (const key of ['pointX', 'pointY', 'pointZ']) rows.get(controls[key])!.hidden = !face;
-      for (const key of ['drillX', 'drillY', 'drillZ']) rows.get(controls[key])!.hidden = controls.drillMode.value !== 'custom';
-      rows.get(controls.direction)!.hidden = controls.drillMode.value === 'custom';
-      rows.get(controls.depth)!.hidden = controls.depthType.value !== 'blind';
-      rows.get(controls.counterDiameter)!.hidden = controls.cutType.value === 'plain';
-      rows.get(controls.counterDepth)!.hidden = controls.cutType.value !== 'counterbore';
-      rows.get(controls.countersinkAngle)!.hidden = controls.cutType.value !== 'countersink';
+      hide(controls.allCircles, face);
+      for (const key of ['pointX', 'pointY', 'pointZ']) hide(controls[key], !face);
+      for (const key of ['drillX', 'drillY', 'drillZ']) hide(controls[key], controls.drillMode.value !== 'custom');
+      hide(controls.direction, controls.drillMode.value === 'custom');
+      const threaded = Boolean(standard()), tapped = threaded && controls.threaded.value === 'tapped';
+      hide(controls.size, !threaded); hide(controls.threaded, !threaded);
+      hide(controls.fit, !threaded || tapped);
+      hide(controls.threadModel, !tapped); hide(controls.threadHand, !tapped || controls.threadModel.value !== 'modelled');
+      hide(controls.threadDepthType, !tapped); hide(controls.threadDepth, !tapped || controls.threadDepthType.value !== 'dimension');
+      hide(controls.head, !threaded || !standard()?.startsWith('iso-metric'));
+      hide(controls.depth, controls.depthType.value !== 'blind');
+      hide(controls.drillPoint, controls.depthType.value !== 'blind');
+      hide(controls.drillPointAngle, controls.depthType.value !== 'blind' || controls.drillPoint.value !== 'angled');
+      hide(controls.taper, tapped && controls.threadModel.value === 'modelled');
+      const counterbored = controls.cutType.value === 'counterbore' || controls.cutType.value === 'counterdrill';
+      const countersunk = controls.cutType.value === 'countersink' || controls.cutType.value === 'counterdrill';
+      hide(controls.counterDiameter, controls.cutType.value === 'plain');
+      hide(controls.counterDepth, !counterbored);
+      hide(controls.countersinkAngle, !countersunk);
     };
-    for (const key of ['placement', 'allCircles', 'cutType', 'depthType', 'drillMode']) controls[key].addEventListener('change', sync);
+    controls.profile.addEventListener('change', () => { refillSizes(); applyDiameter(); applyHead(); sync(); });
+    for (const key of ['size', 'threaded', 'fit']) controls[key].addEventListener('change', () => { applyDiameter(); applyHead(); });
+    controls.head.addEventListener('change', () => { applyHead(); sync(); });
+    for (const key of ['placement', 'allCircles', 'cutType', 'depthType', 'drillMode', 'threaded', 'threadModel', 'threadDepthType', 'drillPoint']) controls[key].addEventListener('change', sync);
+    applyDiameter();
     sync();
   },
   validate(controls, context) {
     const missing = requireSelections(controls, [{key:'target', noun:'a target body'}]);
     if (missing) return missing;
     if (controls.drillMode.value === 'custom' && Math.hypot(Number(controls.drillX.value), Number(controls.drillY.value), Number(controls.drillZ.value)) < 1e-9) return 'Enter a nonzero drill direction.';
+    const standard = standardFor(controls.profile.value);
+    if (standard && !threadSpecification(standard, controls.size.value)) return `Choose a ${HOLE_THREAD_STANDARD_LABELS[standard]} size.`;
+    if (standard && controls.threaded.value === 'tapped' && controls.threadDepthType.value === 'dimension' && !(Number(controls.threadDepth.value) > 0)) return 'Thread length must be positive.';
+    if (controls.depthType.value === 'blind' && controls.drillPoint.value === 'angled' && !(Number(controls.drillPointAngle.value) > 0 && Number(controls.drillPointAngle.value) < 180)) return 'Drill point angle must be between 0 and 180 degrees.';
+    if (!(Number(controls.taper.value) >= 0 && Number(controls.taper.value) < 45)) return 'Taper must be between 0 and 45 degrees.';
     if (controls.placement.value === 'face') {
       if (!JSON.parse(controls.face.value).length) return 'Pick the face to drill into.';
       if (![controls.pointX, controls.pointY, controls.pointZ].every(c => Number.isFinite(Number(c.value)))) return 'Enter a finite hole point.';
@@ -86,6 +160,16 @@ export const holeEditor: FeatureEditor = {
     const face = values.placement === 'face';
     const picked = face ? JSON.parse(values.face)[0] as SolidFaceReference & {centerMillimeters?: unknown} : undefined;
     if (picked) delete picked.centerMillimeters;
+    const standard = standardFor(values.profile);
+    const tapped = values.threaded === 'tapped';
+    const thread: HoleThread | undefined = standard ? {
+      standard, designation: values.size, tapped,
+      ...(tapped ? {} : {fit: values.fit as HoleClearanceFit}),
+      ...(tapped && values.threadModel === 'modelled' ? {modeled: true, ...(values.threadHand === 'left' ? {leftHand: true} : {})} : {}),
+      ...(tapped && values.threadDepthType === 'dimension' ? {depthMillimeters: Number(values.threadDepth)} : {}),
+    } : undefined;
+    const counterbored = values.cutType === 'counterbore' || values.cutType === 'counterdrill';
+    const countersunk = values.cutType === 'countersink' || values.cutType === 'counterdrill';
     return {
       ...(face
         ? { placement: { kind: 'face-point', face: picked, pointMillimeters: [Number(values.pointX), Number(values.pointY), Number(values.pointZ)] } }
@@ -93,8 +177,11 @@ export const holeEditor: FeatureEditor = {
       cutType: values.cutType, diameterMillimeters: Number(values.diameter),
       depthType: values.depthType, depthMillimeters: Number(values.depth),
       ...(values.cutType !== 'plain' ? {counterDiameterMillimeters: Number(values.counterDiameter)} : {}),
-      ...(values.cutType === 'counterbore' ? {counterDepthMillimeters: Number(values.counterDepth)} : {}),
-      ...(values.cutType === 'countersink' ? {countersinkAngleDegrees: Number(values.countersinkAngle)} : {}),
+      ...(counterbored ? {counterDepthMillimeters: Number(values.counterDepth)} : {}),
+      ...(countersunk ? {countersinkAngleDegrees: Number(values.countersinkAngle)} : {}),
+      ...(thread ? {thread} : {}),
+      ...(values.depthType === 'blind' && values.drillPoint === 'angled' ? {drillPoint: 'angled', drillPointAngleDegrees: Number(values.drillPointAngle)} : {}),
+      ...(Number(values.taper) > 0 && !(thread?.modeled) ? {taperAngleDegrees: Number(values.taper)} : {}),
       reversed: values.direction === 'reverse',
       ...(values.drillMode === 'custom' ? { direction: [Number(values.drillX), Number(values.drillY), Number(values.drillZ)] } : {}),
     };

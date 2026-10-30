@@ -81,7 +81,7 @@ comparison evidence yet).
 | Additive/Subtractive Pipe (orientation modes, auxiliary spine, scaling) | Sweep: perpendicular/parallel/fixed direction, end scale, guide rail; pipe feature | parity | |
 | Additive/Subtractive Helix | Coil feature | verify | no FreeCAD oracle fixture for helices |
 | Primitives (box, cylinder, sphere, cone, torus, prism, wedge, ellipsoid) | Primitive tools (box, cylinder, sphere, …), bounding solid, standard parts | verify | primitives build on the engine; add oracle fixtures |
-| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points, counterbore/countersink, cosmetic thread by designation | partial | modeled threads and tapered holes missing (`solid.thread`, `solid.hole` tracker rows) |
+| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points; counterbore/countersink/counterdrill; ISO metric coarse/fine, UNC, UNF profiles with tap-drill or clearance-fit diameters; cosmetic or modelled thread (depth, hand); drill-point angle; taper; ISO 4762 / ISO 10642 head presets | parity | closed 2026-10-30 (`hole-options.test.ts`, analytic volumes). Not offered: BSP/BSW/NPT profiles, thread class, a modelled thread on a face without a Hole; a pattern of a modelled-thread hole repeats the bore only |
 | Fillet (constant), Chamfer (equal/two distances/distance-angle) | Fillet constant and variable (end radius), G2 option, chamfer all three modes, tangent chains | ours+ | oracle 6 fillet / 3 chamfer fixtures |
 | Draft | Draft faces about a neutral plane | parity | oracle 2 fixtures |
 | Thickness (shell) | Shell inside/outside/both, open faces by reference, tangent chains | parity | oracle 8 shell fixtures; toroidal-tunnel shell refused by both |
@@ -264,7 +264,7 @@ Order by user impact, each with the evidence that closes it.
 5. Assembly BOM (table from occurrences and Part metadata; also a drawing view).
 6. Drawing dimension types (radius, diameter, angle, chain), detail and auxiliary views,
    balloons and centre marks, title-block fields.
-7. Hole: modeled threads and taper; thread profiles beyond ISO metric.
+7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30 (BSP/NPT profiles and thread class still open).
 8. Exports: glTF (Studio previews, Animation), OBJ, 3MF; IGES in/out without the lazy
    50 MB build (custom OCCT wasm, also unlocks `BRepOffset_MakeOffset` for the last
    offset-face refusals).

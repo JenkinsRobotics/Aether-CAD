@@ -12,6 +12,7 @@ import { canonicalPlaneXDirection, flipSketchFrame, principalFrame, resolvePlane
 import { bendAllowanceMillimeters, type SheetMetalRule } from "../document/sheet-metal";
 import type { ExtrusionPreviewAxis, PreviewHandle } from "../contracts/geometry";
 import { constructionPlaneFrame } from "../document/solid-features";
+import { threadSpecification, type ThreadSpecification } from "../document/hole-standards";
 import { resolveAxisLine } from "../document/construction-axes";
 import { sketchRegionOrder } from "../sketch/regions/order";
 import { solveDrawingConstraints } from "../sketch/drawing-constraints";
@@ -386,6 +387,26 @@ export function resetEvaluationCache(): void {
 }
 /** How many history steps the cache holds for a document. */
 export function cachedSteps(documentId: string): number { return steps.get(documentId)?.length ?? 0; }
+
+/** The groove of a 60° internal thread: a V section on the drilled wall swept along a helix of the
+ *  standard's pitch, starting one pitch above the surface so the thread runs out cleanly. The hole
+ *  (tap drill) is already cut; this removes the flanks out to the major diameter. */
+function helicalThreadGroove(center: V3, direction: V3, minorRadius: number, spec: ThreadSpecification, length: number, leftHand: boolean, own: <T>(shape: T) => T): Shape3D {
+  const pitch = spec.pitchMillimeters, depth = spec.majorDiameterMillimeters / 2 - minorRadius;
+  if (depth <= 1e-6) throw new Error(`A ${spec.designation} thread needs a hole drilled under ${spec.majorDiameterMillimeters} mm.`);
+  const origin: V3 = [0, 1, 2].map((i) => center[i] - direction[i] * pitch) as V3;
+  const helix = own(makeHelix(pitch, length + 2 * pitch, minorRadius, origin, direction, leftHand));
+  const first = helix.edges[0], startPoint = deleteAfterVectorTuple(first.startPoint) as V3;
+  helix.edges.forEach((edge) => edge.delete());
+  const radial = unit(sub(startPoint, origin));
+  const plane = own(new Plane(startPoint, radial, cross(radial, direction)));
+  // Half the base width of the V on the minor diameter (ISO 60° flanks), kept under the pitch.
+  const half = Math.min(depth * Math.tan(Math.PI / 6), pitch * 0.45), inset = Math.min(0.05, minorRadius / 10);
+  const section = own(draw([-inset, -half]).lineTo([depth, 0]).lineTo([-inset, half]).close().sketchOnPlane(plane));
+  const swept = genericSweep((section as unknown as { wire: import("replicad").Wire }).wire, helix, { frenet: true, transitionMode: "transformed" });
+  if (!isShape3D(swept) || measureVolume(swept) <= 1e-9) throw new Error(`The ${spec.designation} thread could not be modelled on this hole.`);
+  return own(swept);
+}
 
 /** Evaluates persisted features into an exact OCCT solid; meshes are disposable. */
 export function evaluatePartDocument(
@@ -832,13 +853,24 @@ export function evaluatePartDocument(
           }
           const positive = (value: number | undefined, label: string) => { if (!(typeof value === "number" && Number.isFinite(value) && value > 0)) throw new Error(`${label} must be positive and finite.`); return value; };
           const diameter = positive(feature.diameterMillimeters, "diameter_mm"), depth = positive(feature.depthMillimeters, "depth_mm");
+          const counterbored = feature.cutType === "counterbore" || feature.cutType === "counterdrill";
+          const countersunk = feature.cutType === "countersink" || feature.cutType === "counterdrill";
           const head = feature.cutType !== "plain" ? positive(feature.counterDiameterMillimeters, "counter_diameter_mm") : diameter;
           if (feature.cutType !== "plain" && head <= diameter) throw new Error("Head diameter must exceed the hole diameter.");
-          const headDepth = feature.cutType === "counterbore" ? positive(feature.counterDepthMillimeters, "counter_depth_mm") : 0;
-          if (feature.cutType === "counterbore" && feature.depthType === "blind" && headDepth >= depth) throw new Error("Counterbore depth must be less than the blind hole depth.");
-          const angle = feature.cutType === "countersink" ? positive(feature.countersinkAngleDegrees, "countersink_angle_deg") : 90;
+          const headDepth = counterbored ? positive(feature.counterDepthMillimeters, "counter_depth_mm") : 0;
+          if (counterbored && feature.depthType === "blind" && headDepth >= depth) throw new Error("Counterbore depth must be less than the blind hole depth.");
+          const angle = countersunk ? positive(feature.countersinkAngleDegrees, "countersink_angle_deg") : 90;
           if (angle >= 180) throw new Error("Countersink angle must be less than 180 degrees.");
-          let tool: Shape3D | undefined;
+          // FreeCAD's Hole options: a tapered wall, a drill-point cone below a blind depth,
+          // and a standard thread (tapped at the tap drill, cosmetic unless modelled).
+          const taperTangent = Math.tan((feature.taperAngleDegrees ?? 0) * Math.PI / 180);
+          const drillPointAngle = feature.drillPoint === "angled" ? positive(feature.drillPointAngleDegrees ?? 118, "drill_point_angle_deg") : undefined;
+          if (drillPointAngle !== undefined && drillPointAngle >= 180) throw new Error("Drill point angle must be less than 180 degrees.");
+          const thread = feature.thread?.tapped ? feature.thread : undefined;
+          const threadSpec = thread ? threadSpecification(thread.standard, thread.designation) : undefined;
+          if (thread && !threadSpec) throw new Error(`Unknown ${thread.standard} thread size "${thread.designation}".`);
+          if (threadSpec && diameter >= threadSpec.majorDiameterMillimeters) throw new Error(`A ${threadSpec.designation} tapped hole must be drilled under ${threadSpec.majorDiameterMillimeters} mm.`);
+          let tool: Shape3D | undefined, threadTool: Shape3D | undefined;
           for (const start of starts) {
             const direction: V3 = feature.direction ? (() => { const d = unit(feature.direction); return dot(d, start.n) < 0 ? unit([-d[0], -d[1], -d[2]]) : d; })() : feature.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
             const center = start.center;
@@ -847,11 +879,14 @@ export function evaluatePartDocument(
               publish(feature, { parameter: "diameter", kind: "linear", originMillimeters: [0, 1, 2].map((i) => center[i] + start.x[i] * feature.diameterMillimeters / 2) as V3, direction: start.x, scale: 2, label: "Hole diameter" });
             }
             const length = feature.depthType === "through-all" ? throughAllDistance([body], center, direction) : depth;
-            // Exact primitives at the start: cylinders along the drill direction, and a
-            // revolved frustum for the countersink cone.
+            const along = (offset: number): V3 => [0, 1, 2].map((i) => center[i] + direction[i] * offset) as V3;
+            // Exact primitives at the start: cylinders along the drill direction, and revolved
+            // frustums (or cones, when the lower radius is zero) whose top sits `offset` down the hole.
             const cylinder = (radius: number, extent: number) => own(makeCylinder(radius, extent, center, direction));
-            const frustum = (topRadius: number, bottomRadius: number, height: number) => {
-              const section = own(draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius, -height]).lineTo([0, -height]).close());
+            const frustum = (topRadius: number, bottomRadius: number, height: number, offset = 0) => {
+              let pen = draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius, -height]);
+              if (bottomRadius > 1e-9) pen = pen.lineTo([0, -height]);
+              const section = own(pen.close());
               let cone = own(section.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
               if (!isShape3D(cone)) throw new Error("The hole tool is not a valid solid.");
               cone = own(cone);
@@ -861,16 +896,39 @@ export function evaluatePartDocument(
                 const axis: V3 = dotDir <= -1 + 1e-9 ? [1, 0, 0] : [from[1] * direction[2] - from[2] * direction[1], from[2] * direction[0] - from[0] * direction[2], from[0] * direction[1] - from[1] * direction[0]];
                 cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, dotDir))) * 180 / Math.PI, [0, 0, 0], axis));
               }
-              return own(cone.translate(center[0], center[1], center[2]));
+              const at = along(offset);
+              return own(cone.translate(at[0], at[1], at[2]));
             };
-            let one = cylinder(diameter / 2, length);
-            if (feature.cutType === "counterbore") one = own(one.fuse(cylinder(head / 2, headDepth)));
-            if (feature.cutType === "countersink") one = own(one.fuse(frustum(head / 2, diameter / 2, (head - diameter) / 2 / Math.tan((angle / 2) * Math.PI / 180))));
+            const bottomRadius = diameter / 2 - length * taperTangent;
+            if (bottomRadius <= 1e-6) throw new Error("Hole taper closes the hole before its depth.");
+            let one = taperTangent > 0 ? frustum(diameter / 2, bottomRadius, length) : cylinder(diameter / 2, length);
+            if (counterbored) one = own(one.fuse(cylinder(head / 2, headDepth)));
+            const coneHeight = (head - diameter) / 2 / Math.tan((angle / 2) * Math.PI / 180);
+            if (feature.cutType === "countersink") one = own(one.fuse(frustum(head / 2, diameter / 2, coneHeight)));
+            if (feature.cutType === "counterdrill") one = own(one.fuse(frustum(head / 2, diameter / 2, coneHeight, headDepth)));
+            // A blind hole's drill point: the cone of the included angle under the depth (FreeCAD measures depth to the shoulder).
+            if (drillPointAngle !== undefined && feature.depthType === "blind") one = own(one.fuse(frustum(bottomRadius, 0, bottomRadius / Math.tan((drillPointAngle / 2) * Math.PI / 180), length)));
             tool = tool ? own(tool.fuse(one)) : one;
+            if (thread?.modeled && threadSpec) {
+              const groove = helicalThreadGroove(center, direction, diameter / 2, threadSpec, Math.min(thread.depthMillimeters ?? length, length), Boolean(thread.leftHand), own);
+              threadTool = threadTool ? own(threadTool.fuse(groove)) : groove;
+            }
           }
           const before = measureVolume(body);
-          const result = body.cut(tool!);
-          if (!isShape3D(result) || Math.abs(measureVolume(result) - before) < 1e-8) throw new Error("Cut removes no material. Flip direction or check the selected target and depth.");
+          let stock: Shape3D = body;
+          if (threadTool) {
+            // The groove goes in before the bore: this OCCT build cannot intersect a helical
+            // sweep with a coaxial cylinder face, while the bore cuts through the grooved
+            // wall fine. Cutting in that order gives the same solid.
+            const grooved = body.cut(threadTool);
+            if (!isShape3D(grooved) || measureVolume(grooved) >= before - 1e-8) throw new Error("The modelled thread removes no material. Check the thread depth.");
+            stock = own(grooved);
+            // ponytail: the recorded tool is the bore alone (fusing the groove in hits the same
+            // intersection failure), so a pattern of this hole repeats an untapped bore.
+          }
+          const stockVolume = threadTool ? measureVolume(stock) : before;
+          const result = stock.cut(tool!);
+          if (!isShape3D(result) || Math.abs(measureVolume(result) - stockVolume) < 1e-8) throw new Error("Cut removes no material. Flip direction or check the selected target and depth.");
           bodies.set(id, own(result));
           tools.set(feature.id, tool!);
           currentBodyID = id;
