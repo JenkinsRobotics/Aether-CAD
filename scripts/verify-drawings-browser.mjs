@@ -48,6 +48,8 @@ try {
     { id: 'cut', name: 'Bore cut', type: 'extrude', profileFeatureId: 'bore', suppressed: false, operation: 'cut', distanceMillimeters: 12 },
   ] };
   file = await page.evaluate(async data => { const response = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!response.ok) throw Error(await response.text()); return response.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: doc.name + '.acpart', data_base64: Buffer.from(JSON.stringify(doc)).toString('base64') });
+  // The part tray is closed by default and drawing mode hides its toggle; this flow creates the drawing tab from the tray.
+  await page.evaluate(() => localStorage.setItem('aether-cad.file-tray-visible', 'true'));
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await page.getByRole('treeitem', { name: /Extrude/ }).first().waitFor({ timeout: 90000 });
   await step('base-and-projected-views', async () => {
