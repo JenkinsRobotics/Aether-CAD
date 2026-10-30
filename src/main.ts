@@ -900,7 +900,7 @@ cadWorkspace.registerActionHandler((action) => {
 
 cadPresentation.registerActionHandler((action) => {
   if (action.type === "show-start-screen") {
-    if (hostedCAD && action.screen === "home") { location.assign("/cad/"); return; }
+    if (hostedCAD && action.screen === "home") { location.assign(new URL("./",location.href).href); return; }
     cadPresentation.patch({ startScreen: action.screen, startDialog: null });
     return;
   }
@@ -1282,7 +1282,7 @@ async function createBlankPart(name:string):Promise<void>{
 }
 
 cadCommands.register("new-part", () => createBlankPart(`Part ${untitledPartNumber++}`));
-cadCommands.register("open-part", () => hostedCAD ? location.assign("/cad/") : partPicker.click());
+cadCommands.register("open-part", () => hostedCAD ? location.assign(new URL("./",location.href).href) : partPicker.click());
 cadCommands.register("insert-step", () => cadPresentation.patch({startScreen:"workspace",startDialog:"import"}));
 cadCommands.register("sketch", () => { cadCommands.execute("feature-profile"); });
 

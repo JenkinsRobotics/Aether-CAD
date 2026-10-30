@@ -1,4 +1,6 @@
+import {Home} from './home/Home';
 import { ExamplesPage, ExampleBanner } from './examples/ExamplesPage';
+import {shouldShowHome} from '@aether/session/home/runtime';
 import "@aether/ui/tokens.css";
 import "@aether/ui/widgets.css";
 import "./style.css";
@@ -11,11 +13,15 @@ import { AetherCADShell } from "./react/AetherCADShell";
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app root");
 
+// A recovery link is an explicit editor route, even before its first save.
+const home = shouldShowHome(['example', 'draft']);
 const examples = new URLSearchParams(location.search).has('examples');
 const example = new URLSearchParams(location.search).has('example');
 const harnessDemo = new URLSearchParams(location.search).get("demo") === "harness";
 if (examples) {
   createRoot(app).render(<StrictMode><ExamplesPage /></StrictMode>);
+} else if (home) {
+  createRoot(app).render(<StrictMode><Home /></StrictMode>);
 } else if (harnessDemo) {
   void import("./harness-demo/HarnessApp").then(({ HarnessApp }) => {
     createRoot(app).render(<StrictMode><HarnessApp /></StrictMode>);
@@ -31,7 +37,7 @@ if (examples) {
 // The shell renders before the controller loads, so a controller failure
 // would otherwise look like a healthy app with an empty document. Announce
 // it instead: the tray shows the failure and the panels say why.
-if (!harnessDemo && !examples) import("./main").catch(async (error: unknown) => {
+if (!home && !harnessDemo && !examples) import("./main").catch(async (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error("Aether CAD controller failed to start:", error);
   const { cadPresentation } = await import("./cad-presentation-store");

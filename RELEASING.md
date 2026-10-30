@@ -9,6 +9,14 @@ Package-manager versions and the shared UI dependency version are separate.
    `AETHER_PACKAGE_CACHE`. Unpublished dependencies must be supplied by SHA-256.
    Product source must not import another repository's source files.
 2. Run `npm ci`, tests and `npm run build` from `.`.
+   Every frontend release must also pass `scripts/verify-home-browser.mjs` against
+   its built frontend (`AETHER_HOME_FRONTEND=/absolute/path/to/dist`) and through
+   Studio's disposable authenticated browser fixture. This guards `/cad/` and
+   `/cad/index.html` as app-owned homes, standalone Home, explicit document and
+   recovery-draft routes, creation, and return to Home from the editor/Examples.
+   A healthy server or successful engine test alone does not verify Home routing.
+   Include the committed home modules and pinned session SDK in each release;
+   never build a source snapshot that omits them as unrelated local changes.
    Also run the owning engine's tests/type check from `aether-engine/`. Qualify
    the rebuilt worker with `node scripts/verify-headless-kernel.mjs` and
    `node scripts/verify-sketch-regions.mjs`, then run

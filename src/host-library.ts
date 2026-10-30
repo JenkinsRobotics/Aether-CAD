@@ -1,3 +1,5 @@
+import {documentURL} from '@aether/session/home/runtime';
+import {isLocalDocument} from '@aether/session/home/runtime';
 import { prepareSaveRecovery, SaveRecoveryController, downloadRecovery, type RecoverySelection } from '@aether/session/save-recovery';
 import { documentRequest } from "@aether/session/documents";
 import { AutosaveSession, SaveError, recoveryKey, sessionOwner } from "@aether/session/autosave";
@@ -7,7 +9,7 @@ import { parsePartDocument, type PartDocument } from "@aether/core/document";
 import { parseDrawingDocument, type DrawingDocument, type DrawingSourceReference } from "@aether/core/drawing";
 import type { AssemblyProjectionV1 } from './cad-assembly-bridge';
 /** Hosted file transport only; document interpretation stays in Core. */
-export const hostedCAD = location.pathname.startsWith("/cad/");
+export const hostedCAD = (isLocalDocument() || location.pathname.startsWith("/cad/"));
 type StoredFile = {
   id: string;
   name: string;
@@ -237,7 +239,7 @@ export async function copyHostedSnapshot() {
   if(!current)throw new Error('Wait for the current document snapshot before making a copy.');
   let raw='';for(let i=0;i<current.bytes.length;i+=8192)raw+=String.fromCharCode(...current.bytes.subarray(i,i+8192));
   const file=await request('create',{name:current.name.replace(/(\.[^.]+)$/,' copy$1'),scope:'personal',data_base64:btoa(raw)});
-  location.assign(`/cad/index.html?document=${encodeURIComponent(file.id)}`);
+  location.assign(documentURL(file.id));
 }
 export async function commitHosted(name: string, message: string) {
   if (!active) throw new Error("Open a server document to commit.");
@@ -279,7 +281,8 @@ export function detachHostedFile() {
   linkedPartReadOnly = false;
   document.querySelector(".project-tabs")?.remove();
   draftID = crypto.randomUUID();
-  query = new URLSearchParams({ draft: draftID });
+  query = new URLSearchParams({ draft: draftID, editor: "" });
+  if(isLocalDocument())query.set("storage","local");
   if (new URLSearchParams(location.search).has("isolated")) query.set("isolated", "1");
   history.replaceState(null, "", location.pathname + "?" + query);
   if (owner) startQueue();
@@ -481,7 +484,7 @@ async function persistHostedFile(
       for (const key of ["part", "assembly", "drawing", "branch", "revision"]) query.delete(key);
     }
     query.set('document',active.id);query.delete('draft');query.delete('new');
-    history.replaceState(null,'',`/cad/index.html?${query}`);
+    history.replaceState(null,'',`${location.pathname}?${query}`);
     window.dispatchEvent(new Event("cad-document-saved"));
   } finally {
     saving = false;

@@ -128,3 +128,12 @@ No Python computes geometry anywhere in the product; the Python archive that rem
 agent commands and project containers (the shared workspace codec) only. The engine is the Aether
 engine, full stop; the benchmark tables in `dev/docs/roadmap/Aether_Engine_Design.md` record why.
 
+
+## Product-owned home — 2026-10-28
+
+The app owns its home-page content, actions and destinations. Use the shared
+`@aether/session/home` controller and Aether UI components for consistency; do not
+add product actions to Studio. Studio supplies server files, identity and PDM.
+Hosted pages never request local folders or install app-drawer clients. Standalone
+homes use the local-file adapter; engine availability is a separate capability.
+See `../AetherStudio/dev/rebuild/app-owned-homes/README.md` for runtime boundaries.
