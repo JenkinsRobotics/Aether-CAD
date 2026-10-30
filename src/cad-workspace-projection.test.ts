@@ -216,6 +216,20 @@ describe("under-defined sketch badge", () => {
 
   const iconOf = (row: { icon?: unknown } | undefined) => row?.icon as { props?: { className?: string } } | undefined;
 
+  it("does not add a second row for a draft sketch that is already in the history", () => {
+    const document = partWith({ type: "drawing", contours: [], constraints: [] });
+    const projection = buildCADWorkspaceProjection(
+      document as never, [], new Set(), visibility, null, [], [], null, { faceCount: 0, candidateCount: 0 }, new Set(), new Set(), new Set(),
+      { id: "s1", name: "Sketch 1", hasPlane: true },
+    );
+    expect(projection.itemNodes.filter(item => item.id === "feature/profile/s1")).toHaveLength(1);
+    const fresh = buildCADWorkspaceProjection(
+      document as never, [], new Set(), visibility, null, [], [], null, { faceCount: 0, candidateCount: 0 }, new Set(), new Set(), new Set(),
+      { id: "s2", name: "Sketch 2", hasPlane: false },
+    );
+    expect(fresh.itemNodes.find(item => item.id === "feature/profile/s2")?.badge).toBe("No plane");
+  });
+
   it("badges a sketch whose geometry is not fully constrained", () => {
     const free = partWith({
       type: "drawing",

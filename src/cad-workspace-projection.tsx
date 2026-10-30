@@ -201,7 +201,8 @@ export function buildCADWorkspaceProjection(
     }
     foldered.splice(insertAt, 0, {id:"rollback-bar",label:`Rollback · ${rollbackPosition(partDocument)} / ${partDocument.features.length}`,variant:"divider"});
     authored.push(...foldered);
-    if (draftSketch) {
+    // A sketch being edited in place is already a history row; a second row with the same key duplicates it.
+    if (draftSketch && !partDocument.features.some(feature => feature.id === draftSketch.id)) {
       authored.push({
         id: `feature/profile/${draftSketch.id}`,
         label: draftSketch.name,
