@@ -1464,9 +1464,7 @@ async function openLibraryDocument(file: File, url: URL) {
     updateLists();
   } else if (isProjectFile(file.name)) {
     const oldPart = activePartDocument;
-    await assemblyController.openFile(file);
-    const assemblyId = url.searchParams.get("assembly");
-    if (assemblyId) await assemblyController.selectProjectAssembly(assemblyId);
+    await assemblyController.openFile(file, url.searchParams.get("assembly") ?? undefined);
     if (oldPart) for (const row of viewer.getPartRows()) {
       if (row.sourceDocumentId === oldPart.documentId) viewer.removeAuthoredPart(row.id);
     }
@@ -1490,8 +1488,7 @@ if (hostedCAD) {
     viewer.setTool("none");
     mountProjectTabs();
   });
-  void worker.ready.then(async () => {
-    const file = await loadHostedFile();
+  void Promise.all([loadHostedFile(), worker.ready]).then(async ([file]) => {
     if (file) {
       await openLibraryDocument(file, new URL(location.href));
       markHostedClean(); if (activeWorkspaceKind === "drawing") await drawingEditor.enter();

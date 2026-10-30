@@ -374,15 +374,17 @@ export class CADAssemblyController {
 
   async selectProjectAssembly(id: string): Promise<void> {
     if (!this.descriptor) throw new Error("Open a project first.");
-    this.descriptor = {...this.descriptor, root_assembly_id:id};
-    await this.activate(this.descriptor, ++this.operation);
+    if (this.canonical?.assembly.assembly_id === id) return;
+    await this.activate({...this.descriptor, root_assembly_id:id}, ++this.operation);
   }
 
-  async openFile(file: Blob & { readonly name?: string }): Promise<void> {
+  async openFile(file: Blob & { readonly name?: string }, assemblyID?: string): Promise<void> {
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.length === 0) throw new Error("The selected .aether workspace is empty.");
-    await this.load(`Opening ${file.name ?? "Assembly workspace"}…`, (signal) =>
-      this.client.openWorkspace(encodeBase64(bytes), signal));
+    await this.load(`Opening ${file.name ?? "Assembly workspace"}…`, async (signal) => {
+      const descriptor = await this.client.openWorkspace(encodeBase64(bytes), signal);
+      return assemblyID ? {...descriptor, root_assembly_id: assemblyID} : descriptor;
+    });
   }
 
   async save(): Promise<void> {
@@ -1100,9 +1102,13 @@ export class CADAssemblyController {
   }
 
   private async activate(descriptor: AssemblyWorkspaceDescriptor, operation: number): Promise<void> {
-    const assembly = await this.client.describeAssembly(descriptor.handle, descriptor.root_assembly_id);
-    const solution = await this.client.solveAssembly(descriptor.handle, descriptor.root_assembly_id);
-    const bom = await this.client.projectBOM(descriptor.handle, descriptor.root_assembly_id, "hierarchical");
+    // Independent reads of the same immutable archive. Publish only after all
+    // three have passed the existing revision-coherence check.
+    const [assembly, solution, bom] = await Promise.all([
+      this.client.describeAssembly(descriptor.handle, descriptor.root_assembly_id),
+      this.client.solveAssembly(descriptor.handle, descriptor.root_assembly_id),
+      this.client.projectBOM(descriptor.handle, descriptor.root_assembly_id, "hierarchical"),
+    ]);
     if (operation !== this.operation) return;
     this.assertRevision(descriptor.revision, assembly, solution, bom);
     this.descriptor = descriptor;

@@ -180,6 +180,28 @@ function client(overrides: Partial<AssemblyControllerClient> = {}): AssemblyCont
 }
 
 describe("CADAssemblyController", () => {
+  it("opens the requested configuration once and overlaps immutable projection reads", async () => {
+    let finish!: () => void;
+    const waiting = new Promise<void>(resolve => { finish = resolve; });
+    const selected = {...assembly, assembly_id: 'configuration-2'};
+    const bridge = client({
+      describeAssembly: vi.fn(async () => { await waiting; return selected; }),
+    });
+    const changed = vi.fn();
+    const controller = new CADAssemblyController({client: bridge, store: new CADAssemblyWorkspaceStore(), onDocumentChanged: changed});
+    const opening = controller.openFile(new Blob([Uint8Array.of(1)]), 'configuration-2');
+    await vi.waitFor(() => expect(bridge.describeAssembly).toHaveBeenCalled());
+    expect(bridge.solveAssembly).toHaveBeenCalledWith(expect.any(String), 'configuration-2');
+    expect(bridge.projectBOM).toHaveBeenCalledWith(expect.any(String), 'configuration-2', 'hierarchical');
+    expect(changed).not.toHaveBeenCalled();
+    finish();
+    await opening;
+    await controller.selectProjectAssembly('configuration-2');
+    expect(bridge.describeAssembly).toHaveBeenCalledTimes(1);
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect(controller.geometryProjection?.assembly_id).toBe('configuration-2');
+    controller.dispose();
+  });
   it("reports an asynchronous server save failure instead of claiming success", async () => {
     const status = vi.fn();
     const controller = new CADAssemblyController({

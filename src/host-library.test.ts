@@ -126,6 +126,16 @@ it('refreshes project tabs from the matching canonical assembly without saving a
   expect(vi.mocked(fetch).mock.calls.every(([url])=>!String(url).endsWith('/save'))).toBe(true);
 });
 
+it('initializes example tabs from the canonical assembly without a preliminary workspace', async () => {
+  history.replaceState(null, '', '/cad/index.html?example=wrench&assembly=a');
+  const host = await import('./host-library');
+  const projection = {workspace_id: 'example-workspace', part_definitions: [{id:'p',name:'Native part',feature_document:{features:[{type:'sketch'}]},source:{kind:'authored',label:'Native part',asset_ref:null}}], assemblies:[{id:'a',name:'Selected assembly'}]};
+  host.syncHostedAssemblyProject(projection as any);
+  expect(host.activeProject?.parts[0].document).toEqual({features:[{type:'sketch'}]});
+  expect(host.activeProject?.assemblies).toEqual([{id:'a',name:'Selected assembly'}]);
+  expect(calls).toEqual([]);
+});
+
 it('resumes an expired-session draft after fresh verification of the same revision', async () => {
  const host=await import('./host-library');let current='{"name":"Part"}';
  host.configureAutosave(async()=>{},()=>({name:'Part.acpart',bytes:new TextEncoder().encode(current)}));

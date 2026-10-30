@@ -32,8 +32,8 @@ export let activeProject: Project | null = null;
 /** Refresh project tabs from the active canonical archive after an assembly
  * edit. Persistence still serializes that archive through the normal save path. */
 export function syncHostedAssemblyProject(projection: AssemblyProjectionV1): void {
-  if (!activeProject || activeProject.id !== projection.workspace_id) return;
-  activeProject = {...activeProject,
+  if (activeProject ? activeProject.id !== projection.workspace_id : !query.has('example')) return;
+  activeProject = {...activeProject, id: projection.workspace_id,
     parts:projection.part_definitions.map(part=>({id:part.id,name:part.name,document:part.feature_document,
       source:{kind:part.source.kind,label:part.source.label,asset_ref:part.source.asset_ref??undefined}})),
     assemblies:projection.assemblies.map(assembly=>({id:assembly.id,name:assembly.name})),

@@ -22,6 +22,7 @@ import { buildPartGeometry } from "./part-geometry";
 import { PART_DOCUMENT_VERSION, type PartDocument } from "../document/part-document";
 
 let initialized: Promise<void> | undefined;
+let foregroundRequested = false;
 
 async function ensureInitialized(): Promise<void> {
   if (!initialized) {
@@ -44,10 +45,9 @@ async function ensureInitialized(): Promise<void> {
   await initialized;
 }
 
-/** The first builds after loading run on the wasm baseline compiler and cold
- *  JS; a few small previews in idle slices tier the hot paths up before the
- *  user's first edit (in Node a plate preview is 3 ms warm, in the browser the
- *  first was 12–17 ms). One slice per turn, so a real request never waits. */
+/** Use spare startup time to tier up WASM, but stop as soon as real work arrives.
+ * Timers are not idle callbacks: continuing them between assembly parts delays
+ * every foreground rebuild and evicts its history from the kernel cache. */
 function warmUp(rounds = 40): void {
   const document = (depth: number, round: number) => ({
     format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, units: "millimeter", documentId: "warm-up", name: "warm-up",
@@ -60,7 +60,7 @@ function warmUp(rounds = 40): void {
   }) as unknown as PartDocument;
   let round = 0;
   const step = () => {
-    if (round >= rounds) return;
+    if (foregroundRequested || round >= rounds) return;
     try { evaluatePartDocument(document(4 + (round % 5), round), { preview: round % 4 !== 3 }); } catch { /* warm-up only */ }
     round++;
     setTimeout(step, 0);
@@ -110,6 +110,7 @@ async function evaluateWithFullBuildFallback(document: PartDocument, options: { 
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+  foregroundRequested = true;
   const request = event.data;
   try {
     if (request.type === "project-drawing") {
