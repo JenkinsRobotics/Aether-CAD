@@ -19,7 +19,9 @@ const storageState = await login.context().storageState();
 const catalog = await (await login.request.get(origin + '/cad/examples/catalog.json')).json();
 const results = [];
 try {
-  for (const id of (process.env.AETHER_PROFILE_EXAMPLES ?? 'wrench,artemis-sls,scifirobot').split(',')) {
+  const cases = (process.env.AETHER_PROFILE_EXAMPLES ?? 'wrench,artemis-sls,scifirobot').split(',');
+  for (const [caseIndex, id] of Array.from({length: Number(process.env.AETHER_PROFILE_RUNS ?? 1)}, () => cases).flat().entries()) {
+    const run = Math.floor(caseIndex / cases.length) + 1;
     const example = catalog.find(e => e.id === id);
     const assembly = example.configurations?.[id === 'artemis-sls' ? 1 : 0]?.id ?? example.assemblyId;
     const expected = example.configurations?.find(c => c.id === assembly)?.instances ?? example.instances;
@@ -51,7 +53,28 @@ try {
       };
       if (document.documentElement) observe(); else document.addEventListener('DOMContentLoaded', observe);
     });
-    for (const mode of ['cold', 'repeat']) {
+    const modes = process.env.AETHER_VALIDATE_DISPLAY_CACHE ? ['cold', 'repeat', 'obsolete-engine', 'damaged-entry', 'storage-denied'] : ['cold', 'repeat'];
+    let originalGeometry;
+    for (const mode of modes) {
+      if (mode === 'obsolete-engine' || mode === 'damaged-entry') {
+        await page.evaluate(mode => new Promise((resolve, reject) => {
+          const open = indexedDB.open('aether-cad-display-cache', 1);
+          open.onerror = () => reject(open.error);
+          open.onsuccess = () => {
+            const db = open.result, tx = db.transaction('geometry', 'readwrite'), store = tx.objectStore('geometry');
+            tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => reject(tx.error);
+            const cursor = store.openCursor(); let changed = false;
+            cursor.onsuccess = () => {
+              const row = cursor.result; if (!row) return;
+              const value = row.value;
+              if (mode === 'obsolete-engine') { value.version = 'obsolete'; row.update(value); }
+              else if (!changed && value.model.parts.length) { value.model.parts[0].vertices = [0, 1]; row.update(value); changed = true; }
+              row.continue();
+            };
+          };
+        }), mode);
+      }
+      if (mode === 'storage-denied') await page.addInitScript(() => { indexedDB.open = () => { throw Error('Test storage denial'); }; });
       const profiler = process.env.AETHER_PROFILE_CPU ? await context.newCDPSession(page) : null;
       if (profiler) { await profiler.send('Profiler.enable'); await profiler.send('Profiler.start'); }
       const requests = [], errors = [];
@@ -64,14 +87,21 @@ try {
       await page.waitForFunction(count => Number([...document.querySelectorAll('.cad-metrics-overlay > div')].find(e => e.querySelector('span')?.textContent === 'BODIES')?.querySelector('strong')?.textContent) >= count, expected, { timeout: 150000 });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const profile = await page.evaluate(() => ({ ...window.openProfile, completed: performance.now(), resources: performance.getEntriesByType('resource').map(e => ({ name: e.name.replace(location.origin, ''), start: e.startTime, ms: e.duration, bytes: e.transferSize })) }));
-      if (profiler) { await writeFile(join(evidence, `${id}-${mode}.cpuprofile`), JSON.stringify((await profiler.send('Profiler.stop')).profile)); await profiler.detach(); }
-      await page.screenshot({ path: join(evidence, `${id}-${mode}.png`) });
-      results.push({ id, mode, expected, ...profile, requests: requests.map(({ request, ...r }) => r), errors });
+      if (profiler) { await writeFile(join(evidence, `${id}-${run}-${mode}.cpuprofile`), JSON.stringify((await profiler.send('Profiler.stop')).profile)); await profiler.detach(); }
+      await page.screenshot({ path: join(evidence, `${id}-${run}-${mode}.png`) });
+      results.push({ id, run, mode, expected, ...profile, requests: requests.map(({ request, ...r }) => r), errors });
       await writeFile(join(evidence, 'opening.json'), JSON.stringify(results, null, 2));
       console.log('Visible', id, mode, profile.completed, 'ms', requests.map(r => `${r.method}:${r.ms}`).join(', '));
       assert.deepEqual(errors, []);
+      const geometry = profile.geometry.at(-1);
+      const shape = [geometry.BODIES, geometry.FACES, geometry.EDGES, geometry.TRIS];
+      if (originalGeometry) assert.deepEqual(shape, originalGeometry, 'The complete rendered geometry must survive reload/cache fallback');
+      else originalGeometry = shape;
+      const builds = profile.workers.flatMap(w => w.messages).filter(m => m.direction === 'out' && m.type === 'evaluate-part').length;
+      if (['obsolete-engine', 'storage-denied'].includes(mode)) assert.ok(builds > 0, 'Rebuild when cache cannot be trusted');
+      if (mode === 'damaged-entry') assert.equal(builds, 1, 'Rebuild only the damaged cached definition');
       if (process.env.AETHER_EXPECT_DISPLAY_CACHE && mode === 'repeat') {
-        assert.equal(profile.workers.flatMap(w => w.messages).filter(m => m.direction === 'out' && m.type === 'evaluate-part').length, 0, 'Unchanged native sources must reuse verified display geometry across reloads');
+        assert.equal(builds, 0, 'Unchanged native sources must reuse verified display geometry across reloads');
         assert.equal(requests.length, 4, 'Open only the requested configuration');
       }
       page.off('request', onRequest); page.off('response', onResponse); page.off('pageerror', onError);

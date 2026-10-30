@@ -14,7 +14,7 @@ assert.equal(new URL(origin).hostname, '127.0.0.1');
 assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
 const headed = process.env.AETHER_TIMING_HEADED === '1';
-const browser = await chromium.launch({ headless: !headed, args: headed ? ['--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--use-angle=metal'] : [] });
+const browser = await chromium.launch({ headless: !headed, args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage(), errors = [], steps = [], log = { engine: {} };
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error')
@@ -74,12 +74,10 @@ const ribbon = (name, commandId) => ({ click: async () => {
       await button.click();
       return;
     }
-    const opener = page.locator('[placeholder*="Search tools"], button:has-text("Search tools"), [aria-label*="Search tools"]').first();
-    if (await opener.isVisible().catch(() => false))
-      await opener.click();
-    else
-      await page.keyboard.press('Meta+k');
-    const box = page.getByRole('listbox', { name: 'Commands' }).locator('..').getByRole('combobox').or(page.locator('.aui-command-palette input')).first();
+    await page.keyboard.press('ControlOrMeta+k');
+    // The integrated ribbon now uses the shared inline CommandSearch. Its
+    // results open on input; focusing it does not mount the old modal palette.
+    const box = page.locator('.cad-traditional-ribbon .aui-command-search input').first();
     await box.waitFor({ timeout: 10000 });
     await box.fill(name);
     // Palette items carry the command id in their id, which tells the solid Mirror from the sketch one.
