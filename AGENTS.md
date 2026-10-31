@@ -149,6 +149,21 @@ No new FreeCAD answers are captured; the existing captured oracle fixtures stay
 as regression evidence only. The native service qualification gate is
 `AETHER_TEST_NATIVE=1`; the runner takes the operator's Node alone.
 
+## FreeCAD comparison: deliberate non-goals — proposed 2026-10-31 (confirm)
+
+Rows of `dev/docs/roadmap/FreeCAD_Comparison_2026_10_30.md` that stay open on purpose,
+so the FreeCAD reference can be archived without them:
+- A matched viewport rendering comparison (frame time, memory) against FreeCAD's Coin3D:
+  FreeCAD's viewport needs its GUI and cannot be measured headlessly; our rendering is
+  measured on its own in `dev/docs/reality/`.
+- IGES and BREP export, and offset-face cases whose neighbours are cones, tori or splines:
+  all need the full OCCT wasm build (`BRepOffset_MakeOffset`, IGES writers); revisit with
+  the custom OCCT build, not before.
+- Drawings: offset/stepped sections, clip groups, active/draft views, template files and
+  zone grids, welding/surface-finish/datum symbols, rich text and images on sheets.
+- GIF/video export from CAD (Aether Animation owns rendered output).
+- Carbon copy of a whole sketch as linked geometry (sketch projection covers the use).
+
 ## Product-owned home — 2026-10-28
 
 The app owns its home-page content, actions and destinations. Use the shared

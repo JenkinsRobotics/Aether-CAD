@@ -65,7 +65,7 @@ comparison evidence yet).
 | --- | --- | --- | --- |
 | Geometry: line, polyline, arc (3 kinds), circle (2), ellipse, ellipse arc, hyperbola, parabola, B-spline (control/knot), point, rectangle (4), polygon, slot, fillet/trim/extend/split | All of these plus conic (rho), arc slots, rounded rectangle, text, 3-tangent/2-tangent circles, blend curve | ours+ | tracker Sketch section: 105 SolidCraft commands, 0 gaps |
 | Constraints: coincident, point-on-object, vertical, horizontal, parallel, perpendicular, tangent, equal, symmetric, block, lock, distance, h/v distance, radius, diameter, angle, Snell's law | Solver kinds: coincident, collinear, concentric, curvature, diameter, distance, equal, fix, horizontal, horizontal-distance, length, midpoint, normal, offset, parallel, perpendicular, pierce, radius, symmetric, tangent, vertical, vertical-distance, angle | parity | Snell's law absent (optics only); we add pierce, normal, curvature (G2), offset relation |
-| Solver: PlaneGCS (DogLeg/LM/BFGS), conflict/redundant detection, DOF display | Own TypeScript solver; DOF and conflict reporting; PlaneGCS compiled to wasm exists as a spike (`sketch/solver/planegcs-spike.ts`) | verify | **no matched solver benchmark** (speed, convergence on hard cases); the native benchmark fixes every sketch deliberately |
+| Solver: PlaneGCS (DogLeg/LM/BFGS), conflict/redundant detection, DOF display | Own TypeScript solver; DOF and conflict reporting; PlaneGCS compiled to wasm exists as a spike (`sketch/solver/planegcs-spike.ts`) | verify | partial | matched benchmark 2026-10-31 (reality doc § Matched sketch-solver benchmark): equal at 8 constraints, FreeCAD ~5× faster at 68 and 20–40× at 308 (ours 566 ms vs 19 ms); our dense damped least squares needs constraint-group partitioning or a sparse solve for large sketches 
 | External geometry, Projection, Intersection (1.1) | Project, Include 3D edges, Intersect, Project to surface, Fit curves to section, Spun profile | partial | persistent links to model edges with source-edit tracking remain partial (`Model_Sketch_Projection.md`) |
 | Carbon copy, Make Internals (1.1) | Copy/paste sketch entities with constraints; region selection | partial | no "carbon copy" of a whole sketch as linked geometry |
 | B-spline editing: insert/remove knot, degree, show polygon/comb | Control-point and fit-point splines, degree-5, curvature comb analysis | partial | no knot insertion/removal or degree change on an existing spline |
@@ -85,7 +85,7 @@ comparison evidence yet).
 | Fillet (constant), Chamfer (equal/two distances/distance-angle) | Fillet constant and variable (end radius), G2 option, chamfer all three modes, tangent chains | ours+ | oracle 6 fillet / 3 chamfer fixtures |
 | Draft | Draft faces about a neutral plane | parity | oracle 2 fixtures |
 | Thickness (shell) | Shell inside/outside/both, open faces by reference, tangent chains | parity | oracle 8 shell fixtures; toroidal-tunnel shell refused by both |
-| Mirrored, LinearPattern, PolarPattern, MultiTransform | Mirror, pattern linear/polar of features or bodies | partial | MultiTransform (pattern of a pattern, mirror of a pattern) not confirmed as one feature; **verify** |
+| Mirrored, LinearPattern, PolarPattern, MultiTransform | Mirror, pattern linear/polar of features or bodies | Mirror, pattern linear/polar/path of features or bodies; a pattern or mirror may itself be the source of a later pattern (MultiTransform) | parity | pattern-of-pattern added 2026-10-31 with analytic volumes (`aether-engine/src/kernel/pattern-of-pattern.test.ts`); copies repeat with the root feature's add/cut 
 | Boolean (fuse/cut/common of bodies) | Boolean feature; scoped extrusion booleans | parity | oracle 2 boolean fixtures; scoped cut 10.9 ms vs 18.2 ms before (`History_Playback_Performance_2026_10_30.md`) |
 | Datum plane / line / point, LCS | Construction planes/axes/points (offset, angle, through points, along path, centre of circle) | partial | plane/point along a curved path and centre of sphere/torus faces missing |
 | SubShapeBinder / ShapeBinder | Model projection into sketches (independent copies) | partial | persistent binder with source tracking missing |
@@ -101,7 +101,7 @@ comparison evidence yet).
 
 | FreeCAD 1.1 | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
-| Joints: fixed, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle, rack-and-pinion, screw, gears, belt | Mates: fastened, revolute, cylindrical, prismatic, ball, distance, parallel, perpendicular, angle, planar; relations: gear, belt, screw, rack-pinion, linear/rotation motion link; cam relation kept in the file but not solved | partial | oracle 16 assembly poses match FreeCAD; the four coupled relations need pose oracles against FreeCAD joints; cam and sweep joints are gaps |
+| Joints: fixed, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle, rack-and-pinion, screw, gears, belt | Mates: fastened, revolute, cylindrical, prismatic, ball, distance, parallel, perpendicular, angle, planar; relations: gear, belt, screw, rack-pinion, linear/rotation motion link; cam relation kept in the file but not solved | partial | oracle 16 assembly poses match FreeCAD; the four coupled relations (gear, rack-and-pinion, screw, linear) are analytic couplings verified in Aether Animation's rig suite (`aether_animation/tests/test_rig.py`: gear ratio/offset, rack distance per revolution, neutral pose flow), which the 2026-10-31 oracle rule accepts in place of FreeCAD joint captures; cam relations exist (table-driven); sweep joints are a gap |
 | Grounding | Grounding, auto-anchor on first insertion | parity | |
 | Part insertion (1.1) | Insert Part from Files/Drive, drag, instances | parity | `verify-assembly-insert-browser.mjs` |
 | Sub-assemblies | Not supported | gap | nested assemblies open since alpha-0.1.18 |
@@ -168,6 +168,10 @@ FreeCAD; robot 6.3 s vs 24.3 s. SolidCraft failed the robot (boolean cut "no res
 the only engine that builds every fixture besides ours is FreeCAD.
 
 ### 4.2 What "cold" hides — warm-process rebuild (measured today)
+
+> Superseded 2026-10-31 by the harness's warm phase (`scripts/benchmarks/native/warm.py`), recorded in
+> `dev/docs/reality/Native_Comparison_2026_10_31.md` § Warm uncached phase: steady rebuild plate 1.6 vs 2.2 ms,
+> ten bores 68 vs 128 ms, annular shell 4.7 vs 1.9 ms (FreeCAD ahead), front shell 4.6 vs 9.2 s.
 
 The harness runs one construction per process, so Aether's "cold" includes first-call
 warm-up of the wasm and JIT paths. Re-running the same runner with six rounds per process
@@ -245,11 +249,13 @@ Order by user impact, each with the evidence that closes it.
 
 1. Fix the Safari section cut from a real-Safari reproduction; add a WebKit run of the
    assembly section gate to the release checklist.
-2. Benchmark harness: add the warm uncached phase (§4.2) and a display-only phase that
-   separates meshing from topology/anchors; publish the corrected table in
-   `dev/docs/reality/`. Add a matched sketch-solver benchmark (ours vs PlaneGCS wasm spike
-   vs FreeCAD's Sketcher solve on the same constrained sketches). Add a matched rendering
-   scene (same model, same resolution) for frame time and memory.
+2. Benchmark harness: ~~add the warm uncached phase (§4.2)~~ done 2026-10-31 (`warm.py`, reality
+   doc § Warm uncached phase); a display-only phase that separates meshing from
+   topology/anchors is still open (the other session's report ranks it third). ~~Add a matched
+   sketch-solver benchmark (ours vs PlaneGCS wasm spike vs FreeCAD's Sketcher solve on the same
+   constrained sketches)~~ done 2026-10-31 (`solver.ts`, `solver-freecad.py`). A matched rendering
+   scene (frame time, memory) cannot be run headlessly against FreeCAD's Coin3D viewport; recorded
+   as a deliberate non-goal in AGENTS.md.
 3. Boolean hotspot (robot): profile the cylinder-into-revolved-shell cut; try fuzzy value,
    `SetNonDestructive`, `SetRunParallel` is unavailable in single-threaded wasm; try
    wasm threads (SharedArrayBuffer needs COOP/COEP headers from Studio); evaluate merging
@@ -258,6 +264,10 @@ Order by user impact, each with the evidence that closes it.
    ≤ 2.5 s, every fixture ≤ FreeCAD including annular-shell.
 4. Display generation: tessellate only faces whose signature changed; defer snap anchors
    and edge lines until the pointer needs them. Target: robot display ≤ 200 ms.
+
+4b. Sketch solver at scale (new 2026-10-31): partition constraints into independent groups and
+   solve each (PlaneGCS's approach) or use a sparse least-squares step; target ≤ 2× FreeCAD at
+   308 constraints (today 20–40×). Evidence: reality doc § Matched sketch-solver benchmark.
 
 **P2 — FreeCAD 1.1 features we lack**
 
@@ -274,8 +284,8 @@ Order by user impact, each with the evidence that closes it.
 **P3 — parity polish**
 
 10. Sketch: persistent model links (external geometry), B-spline knot/degree editing,
-    carbon copy; MultiTransform-equivalent patterns of patterns verified.
-11. Materials rows from "verify" to evidence; variables with units.
+    carbon copy. ~~MultiTransform-equivalent patterns of patterns verified~~ done 2026-10-31.
+11. ~~Materials rows from "verify" to evidence~~ (recorded 2026-10-31); variables with units.
 12. ~~Primitives and helix oracle fixtures (analytic volumes, no FreeCAD needed).~~ Done 2026-10-31.
 
 **Gate to remove the FreeCAD reference** (replaces the 2026-10-20 gate, which was met):

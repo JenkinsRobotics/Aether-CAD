@@ -24,6 +24,24 @@ python3 scripts/benchmarks/native/run.py
 python3 scripts/benchmarks/native/summarize.py
 ```
 
+The warm uncached phase keeps each Aether and FreeCAD process alive for several
+rounds (`BENCH_RUNS`, default 4; cache cleared before every round) and reports
+startup, first build and steady rebuild per engine; three processes by default:
+
+```sh
+python3 scripts/benchmarks/native/warm.py
+```
+
+The matched sketch-solver benchmark solves the same constrained sketches (a
+dimensioned rectangle plus 0, 20 and 100 circles with radius and two distances)
+after a width edit, in our solver, in FreeCAD's PlaneGCS compiled to wasm, and in
+FreeCAD's own Sketcher; `BENCH_CIRCLES` and `BENCH_RUNS` change the sizes and rounds:
+
+```sh
+npx vite-node scripts/benchmarks/native/solver.ts
+/Applications/FreeCAD.app/Contents/Resources/bin/python scripts/benchmarks/native/solver-freecad.py
+```
+
 FreeCAD's Python defaults to `/Applications/FreeCAD.app/Contents/Resources/bin/python`;
 set `FREECAD_PYTHON` for another installation. It must resolve that installation's
 FreeCAD, Part, Sketcher and MeshPart modules. `BENCH_CASES` selects fixtures and

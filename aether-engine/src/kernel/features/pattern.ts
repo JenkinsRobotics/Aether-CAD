@@ -42,12 +42,16 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
   const partPattern = Boolean(feature.bodyIds);
   const source = partPattern ? undefined : history.find((f) => f.id === feature.sourceFeatureId);
   const tool = partPattern ? undefined : tools.get(feature.sourceFeatureId);
+  // A pattern of a pattern repeats the earlier copies the way their root feature was applied.
+  let root = source;
+  while (root && !("operation" in root) && "sourceFeatureId" in root) root = history.find((f) => f.id === (root as { sourceFeatureId: string }).sourceFeatureId);
+  const rootOperation = root && "operation" in root ? (root as { operation: string }).operation : undefined;
   if (!partPattern) {
-    if (!source || !tool || !("operation" in source))
+    if (!source || !tool || !rootOperation)
       throw new Error("Choose a source feature in the selected target body.");
-    if (!["extrude", "revolve"].includes(source.type))
+    if (!["extrude", "revolve", "pattern", "mirror"].includes(source.type))
       throw new Error("Choose an additive or subtractive profile feature to pattern.");
-    if (source.operation === "intersect")
+    if (rootOperation === "intersect")
       throw new UnsupportedFeature(feature.id, "patterns of intersect features");
   }
   const count = feature.count;
@@ -207,16 +211,14 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
   for (const place of placements) {
     const copy = place(tool!);
     copies.push(copy);
-    const next = (source as {
-      operation?: string;
-    }).operation === "cut" ? body.cut(copy) : body.fuse(copy);
+    const next = rootOperation === "cut" ? body.cut(copy) : body.fuse(copy);
     if (!isShape3D(next))
       throw new Error("The operation left no solid.");
     body = own(next);
   }
   bodies.set(id, body);
   currentBodyID = id;
-  // The copies together are what a mirror or later pattern of this feature repeats.
-  tools.set(feature.id, copies.length === 1 ? copies[0] : own(copies.slice(1).reduce((all, copy) => own(all.fuse(copy)), copies[0])));
+  // The original and its copies together are what a mirror or later pattern of this feature repeats (MultiTransform).
+  tools.set(feature.id, own(copies.reduce((all, copy) => own(all.fuse(copy)), tool!)));
   return currentBodyID;
 }

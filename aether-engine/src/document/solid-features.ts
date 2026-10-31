@@ -324,7 +324,7 @@ export function validateSolidFeature(
     }
   } else if (feature.type === "mirror") {
     if (
-      !missingReference(feature.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror"].includes(
+      !missingReference(feature.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror", "pattern"].includes(
         earlier.get(feature.sourceFeatureId) || "",
       )
     )

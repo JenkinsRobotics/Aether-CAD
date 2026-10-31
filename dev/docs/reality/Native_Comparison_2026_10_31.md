@@ -39,6 +39,58 @@ This reproduces the first run made by another session on 2026-10-30 at commit
 `3be5c76` (Aether 4,711 ms, FreeCAD 8,282 ms, same SolidCraft failure). Its raw
 samples are kept locally under `build/native-comparison/measured-2026-10-30/`.
 
+## Warm uncached phase — 2026-10-31
+
+`scripts/benchmarks/native/warm.py` keeps each Aether and FreeCAD process alive for four
+rounds with the replay cache cleared before every round (three processes per engine,
+`data/Warm_Phase_2026_10_31.json`). "First" is round 0 in a fresh process, as the table
+above measures it; "steady" is the median of rounds 1–3. Nothing else ran on the machine.
+
+| Fixture | Aether first ms | FreeCAD first ms | Aether steady ms | FreeCAD steady ms | Aether / FreeCAD (steady) |
+|---|---:|---:|---:|---:|---|
+| plate | 22.7 | 2.1 | **1.6** | **2.2** | 0.75× |
+| ten-bores | 144.4 | 140.9 | **68.3** | **127.8** | 0.53× |
+| annular-shell | 42.3 | 1.7 | **4.7** | **1.9** | 2.51× |
+| robot-front | 4895.2 | 11715.2 | **4558.3** | **9217.9** | 0.49× |
+
+- Aether's fixed first-construction cost (20–40 ms of WASM/JIT warm-up) is gone in
+  the steady rows: plate 1.6 ms against 2.2, ten bores 68 against 128, the front shell
+  4.6 s against 9.2 s.
+- **Annular shell is the one fixture FreeCAD wins** (4.7 ms against 1.9 ms): a two-circle
+  profile extruded into a tube. The ~3 ms is our sketch-region and face-building path
+  before the native extrude; small in absolute terms, still open.
+- Kernel startup: Aether's WASM init is 137–154 ms in Node; FreeCAD's import is
+  0.4–0.7 s on the small fixtures. The FreeCAD import measured in the front-shell
+  processes (12 s cold, 48–75 s warm) grows with the saved `.FCStd` files in the
+  measured directory and is a harness artefact, not FreeCAD's import cost; it is not
+  used in any verdict.
+
+## Matched sketch-solver benchmark — 2026-10-31
+
+`scripts/benchmarks/native/solver.ts` and `solver-freecad.py` solve the same constrained
+sketch after a width-dimension edit, six rounds alternating 60.5 and 61 mm: a dimensioned
+rectangle (closed, fixed corner, horizontal/vertical, width, height) plus a grid of circles,
+each with a radius and two distances to the corner. Ours is the damped least-squares solver
+the editor uses; FreeCAD's is its Sketcher `setDatum` (which solves) on the same geometry.
+Constraint counts differ by the four coincidences FreeCAD needs to close the rectangle.
+Raw samples: `data/Solver_Aether_2026_10_31.json`, `data/Solver_FreeCAD_2026_10_31.json`.
+
+| Sketch | Constraints (ours / FreeCAD) | Aether median ms | FreeCAD median ms | Aether / FreeCAD |
+|---|---|---:|---:|---|
+| 0 circles | 8 / 12 | 0.4 | 0.4 | 1× |
+| 20 circles | 68 / 72 | 8.1 | 1.1 | 7× |
+| 100 circles | 308 / 312 | 566.0 | 18.5 | 31× |
+
+- Equal at the size of a typical hand-drawn profile; at 68 constraints FreeCAD is already
+  several times faster and at 308 constraints 20–40×. Our solve cost grows roughly with the
+  cube of the constraint count (a dense Jacobian and no partitioning into independent
+  groups), FreeCAD's PlaneGCS partitions and uses sparse methods. This is the one solver
+  gap the comparison has found; it matters for sketches of a few hundred constraints,
+  not for the fixtures above.
+- The PlaneGCS wasm spike (`sketch/solver/planegcs-spike.ts`) returned the sketch unchanged
+  for this fixture (the width edit did not apply), so it is not measured here; it is a spike,
+  not a product path.
+
 ## Where the front shell's time goes
 
 The evaluator's optional observer (`evaluatePartDocument(…, { observe })`) times

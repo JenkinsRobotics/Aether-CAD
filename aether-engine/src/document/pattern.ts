@@ -29,7 +29,8 @@ export type PatternFeature = {
   | {patternType:'path';pathFeatureId:string;pathContourId?:string;spacingMillimeters?:number;distanceMillimeters?:number;orientation?:'identical'|'path'}
 );
 
-export const patternSourceTypes = ['extrude','revolve','sweep','loft','hole'] as const;
+/** A pattern or mirror source repeats its copies together (PartDesign MultiTransform). */
+export const patternSourceTypes = ['extrude','revolve','sweep','loft','hole','pattern','mirror'] as const;
 
 /** The copies a part pattern makes: count − 1 per row (rows multiply with a second direction). */
 export function patternCopyIds(feature: PatternFeature): string[] {
