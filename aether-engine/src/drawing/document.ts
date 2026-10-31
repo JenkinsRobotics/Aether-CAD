@@ -18,7 +18,7 @@ export interface DrawingSourceReference {
  * Refresh explicitly replaces that snapshot with the same document's new revision. */
 export interface DrawingDocument {
   format: "aether-drawing";
-  formatVersion: 1 | 2;
+  formatVersion: 1 | 2 | 3;
   documentId: string;
   name: string;
   source: PartDocument;
@@ -63,7 +63,23 @@ export type DrawingAnnotation = {
   kind: "width" | "height";
   viewId: string;
   decimals: number;
+} | {
+  /** Attached to the visible circle or arc nearest `atMm` (sheet mm) when the view
+   * is rebuilt, so the reference survives edge renumbering. Format version 3. */
+  kind: "diameter" | "radius";
+  viewId: string;
+  decimals: number;
+  atMm: DrawingPoint;
+} | {
+  /** The angle between the visible straight edges nearest `atMm` and `toMm`,
+   * measured in the sector that contains those two points. Format version 3. */
+  kind: "angle";
+  viewId: string;
+  decimals: number;
+  atMm: DrawingPoint;
+  toMm: DrawingPoint;
 });
+export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle"] as const;
 
 export type DrawingCommand =
   | { type: "add-sheet"; sheet: DrawingSheet }
@@ -97,7 +113,7 @@ function list(value: unknown, limit: number): asserts value is unknown[] {
 
 export function validateDrawingDocument(value: unknown): asserts value is DrawingDocument {
   object(value);
-  if (value.format !== "aether-drawing" || ![1, 2].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
+  if (value.format !== "aether-drawing" || ![1, 2, 3].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
   text(value.documentId); text(value.name); text(value.activeSheetId);
   validatePartDocument(value.source);
   if (value.sourceReference !== undefined) {
@@ -145,9 +161,14 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
     for (const annotation of sheet.annotations) {
       object(annotation); id(annotation.id); point(annotation.positionMm);
       if (annotation.kind === "note") text(annotation.text);
-      else if (annotation.kind === "width" || annotation.kind === "height") {
+      else if (drawingDimensionKinds.includes(annotation.kind as never)) {
         text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
+          if (value.formatVersion !== 3) throw Error("Diameter, radius and angle dimensions require Drawing format version 3.");
+          point(annotation.atMm);
+          if (annotation.kind === "angle") point(annotation.toMm);
+        }
       } else throw Error("Unsupported drawing annotation.");
     }
   }
@@ -211,7 +232,8 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
       default: throw Error("Unknown drawing command.");
     }
   }
-  if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
+  if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
+  else if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);
   return doc;
 }

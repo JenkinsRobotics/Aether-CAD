@@ -116,7 +116,7 @@ comparison evidence yet).
 | FreeCAD | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
 | Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal | partial | detail views, auxiliary views, offset sections missing |
-| Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Length and width dimensions, notes | partial | radius/diameter/angle/chain dimensions missing |
+| Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Overall width/height, diameter, radius and angle dimensions attached to the projected edge nearest a sheet pick; notes | partial | diameter/radius/angle closed 2026-10-30 (`aether-engine/src/drawing/attached-dimensions.ts`; SVG/DXF/PDF carry Ø, R, °); edge-to-edge length, 3-point angle, chain/ordinate still missing; picks are typed as sheet coordinates, not clicked in the viewport |
 | Annotations: balloons, leaders, rich text, welding, surface finish, center lines/marks, cosmetic vertices, hatch, image | Notes, hatch on sections | partial | balloons, leaders, centre marks missing |
 | BOM / spreadsheet view | None on the sheet; the Assembly BOM exports CSV | gap | needs assembly drawing sources first (`can_project_bom` is false in the drawing projection) |
 | Templates and editable title blocks | Sheet with frame | partial | **verify** title-block fields |
@@ -262,8 +262,8 @@ Order by user impact, each with the evidence that closes it.
 **P2 — FreeCAD 1.1 features we lack**
 
 5. ~~Assembly BOM (table from occurrences and Part metadata)~~ done 2026-10-30; the drawing BOM view waits on assembly drawing sources.
-6. Drawing dimension types (radius, diameter, angle, chain), detail and auxiliary views,
-   balloons and centre marks, title-block fields.
+6. Drawing dimension types (~~radius, diameter, angle~~ done 2026-10-30; chain/ordinate and edge-to-edge length open),
+   detail and auxiliary views, balloons and centre marks, title-block fields.
 7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30 (BSP/NPT profiles and thread class still open).
 8. Exports: glTF (Studio previews, Animation), OBJ, 3MF; IGES in/out without the lazy
    50 MB build (custom OCCT wasm, also unlocks `BRepOffset_MakeOffset` for the last
