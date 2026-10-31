@@ -1,0 +1,309 @@
+{
+  "date": "2026-10-31",
+  "machine": "Apple M1 Max (32 GB)",
+  "node": "v24.12.0",
+  "document": "Front shell",
+  "features": 76,
+  "edit": {
+    "featureId": "fdc7930b-812b-4e0a-b39a-39bfd38c929f",
+    "field": "offsetMillimeters",
+    "value": 1.6
+  },
+  "method": "scripts/benchmarks/native/reopen-edit.ts, five fresh Node processes; snapshot through structuredClone",
+  "median": {
+    "coldBuildMs": 5794.0,
+    "snapshotMs": 142.3,
+    "structuredCloneMs": 8.0,
+    "snapshotBytes": 28910223,
+    "distinctShapes": 76,
+    "coldEditMs": 5351.5,
+    "coldEditFeatureMs": 4825.7,
+    "coldEditDisplayMs": 483.9,
+    "restoreMs": 176.6,
+    "restoredEditMs": 485.1,
+    "restoredEditFeatureMs": 134.3,
+    "restoredEditDisplayMs": 305.4,
+    "restoreAndEditMs": 670.9,
+    "restoredSteps": 74,
+    "coldEditReplayed": 76,
+    "restoredEditReplayed": 39
+  },
+  "samples": [
+    {
+      "round": 0,
+      "cold": {
+        "totalMs": 6796.234917000001,
+        "replayed": 76,
+        "featureMs": 5963.057081,
+        "displayMs": 772.2447910000001,
+        "measures": [
+          {
+            "volume_mm3": 318197.0825278502,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "snapshotMs": 171.0609169999998,
+      "cloneMs": 9.994584000000032,
+      "snapshotBytes": 28910223,
+      "shapes": 76,
+      "coldEdit": {
+        "totalMs": 5425.413041999999,
+        "replayed": 76,
+        "featureMs": 4880.328754999993,
+        "displayMs": 502.6056660000013,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredSteps": 74,
+      "restoreMs": 185.77150000000074,
+      "restoredEdit": {
+        "totalMs": 485.1095829999995,
+        "replayed": 39,
+        "featureMs": 137.10241500000302,
+        "displayMs": 305.3694169999999,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredEditWithRestoreMs": 670.8810830000002
+    },
+    {
+      "round": 0,
+      "cold": {
+        "totalMs": 5798.8168749999995,
+        "replayed": 76,
+        "featureMs": 5063.023289,
+        "displayMs": 673.7254169999997,
+        "measures": [
+          {
+            "volume_mm3": 318197.0825278502,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "snapshotMs": 142.2909580000005,
+      "cloneMs": 7.475333999999748,
+      "snapshotBytes": 28910223,
+      "shapes": 76,
+      "coldEdit": {
+        "totalMs": 5613.649625,
+        "replayed": 76,
+        "featureMs": 4922.321663999999,
+        "displayMs": 643.7708750000002,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredSteps": 74,
+      "restoreMs": 224.24929100000008,
+      "restoredEdit": {
+        "totalMs": 528.8794170000001,
+        "replayed": 39,
+        "featureMs": 144.3442099999993,
+        "displayMs": 338.82029200000034,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredEditWithRestoreMs": 753.1287080000002
+    },
+    {
+      "round": 0,
+      "cold": {
+        "totalMs": 5793.963291,
+        "replayed": 76,
+        "featureMs": 4999.930541000001,
+        "displayMs": 734.7309580000001,
+        "measures": [
+          {
+            "volume_mm3": 318197.0825278502,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "snapshotMs": 152.15670800000044,
+      "cloneMs": 26.118790999999874,
+      "snapshotBytes": 28910223,
+      "shapes": 76,
+      "coldEdit": {
+        "totalMs": 5351.461249999999,
+        "replayed": 76,
+        "featureMs": 4825.677831999998,
+        "displayMs": 483.80816700000105,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredSteps": 74,
+      "restoreMs": 176.64791700000023,
+      "restoredEdit": {
+        "totalMs": 609.8785420000004,
+        "replayed": 39,
+        "featureMs": 127.57141699999738,
+        "displayMs": 439.13595800000076,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredEditWithRestoreMs": 786.5264590000006
+    },
+    {
+      "round": 0,
+      "cold": {
+        "totalMs": 5682.809583,
+        "replayed": 76,
+        "featureMs": 4931.605128000001,
+        "displayMs": 693.18775,
+        "measures": [
+          {
+            "volume_mm3": 318197.0825278502,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "snapshotMs": 136.08466600000065,
+      "cloneMs": 8.009625000000597,
+      "snapshotBytes": 28910223,
+      "shapes": 76,
+      "coldEdit": {
+        "totalMs": 5331.7444160000005,
+        "replayed": 76,
+        "featureMs": 4810.481044000005,
+        "displayMs": 478.60162499999933,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredSteps": 74,
+      "restoreMs": 173.12962499999958,
+      "restoredEdit": {
+        "totalMs": 471.43279099999927,
+        "replayed": 39,
+        "featureMs": 132.13491700000486,
+        "displayMs": 296.2272499999999,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredEditWithRestoreMs": 644.5624159999988
+    },
+    {
+      "round": 0,
+      "cold": {
+        "totalMs": 5620.695042,
+        "replayed": 76,
+        "featureMs": 4891.598003000003,
+        "displayMs": 671.2850420000004,
+        "measures": [
+          {
+            "volume_mm3": 318197.0825278502,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "snapshotMs": 134.56366700000035,
+      "cloneMs": 7.014375000000655,
+      "snapshotBytes": 28910223,
+      "shapes": 76,
+      "coldEdit": {
+        "totalMs": 5227.118958,
+        "replayed": 76,
+        "featureMs": 4699.390914999998,
+        "displayMs": 483.8555830000005,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredSteps": 74,
+      "restoreMs": 174.07450000000063,
+      "restoredEdit": {
+        "totalMs": 471.94304199999897,
+        "replayed": 39,
+        "featureMs": 134.2688319999943,
+        "displayMs": 292.5223330000008,
+        "measures": [
+          {
+            "volume_mm3": 316223.3369234222,
+            "face_count": 94,
+            "edge_count": 329
+          }
+        ]
+      },
+      "restoredEditWithRestoreMs": 646.0175419999996
+    }
+  ],
+  "browser": {
+    "method": "scripts/verify-replay-reopen.mjs: production bundle, headless Chromium, real IndexedDB, page reload between open and edit",
+    "features": 76,
+    "sketchesBeforeEdit": 37,
+    "summary": {
+      "coldEdit": {
+        "ms": 5234,
+        "replayed": 76
+      },
+      "open": {
+        "ms": 5205,
+        "replayed": 76
+      },
+      "reopenedEdit": {
+        "ms": 911,
+        "replayed": 39
+      },
+      "damage": {
+        "ms": 5058,
+        "replayed": 76
+      },
+      "obsolete": {
+        "ms": 5645,
+        "replayed": 76
+      },
+      "block": {
+        "ms": 5221,
+        "replayed": 76
+      }
+    }
+  }
+}

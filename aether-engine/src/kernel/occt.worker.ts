@@ -7,7 +7,8 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from "../contracts/index";
-import { evaluatePartDocument, FeatureFailure, UnsupportedFeature } from "./part-evaluator";
+import { cachedSteps, evaluatePartDocument, FeatureFailure, restoreEvaluation, snapshotEvaluation, UnsupportedFeature } from "./part-evaluator";
+import { ReplayStore } from "./replay-store";
 import { sketchSectionContours } from "./sketch-section";
 import { projectModelGeometry } from "./sketch-projection";
 import { measureDistance } from "./measure";
@@ -68,9 +69,31 @@ function warmUp(rounds = 40): void {
   setTimeout(step, 0);
 }
 
+// Exact replay steps outlive the worker, so the first edit after reopening replays only its tail.
+// Production only: Vite's fingerprinted chunk URL changes with every engine build.
+const replay = (import.meta as { env?: { PROD?: boolean } }).env?.PROD && typeof indexedDB !== "undefined"
+  ? new ReplayStore("replay-v1:" + import.meta.url) : undefined;
+const saves = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Written once the worker has been idle a moment, so a burst of edits serializes once. */
+function saveReplay(document: PartDocument): void {
+  if (!replay) return;
+  clearTimeout(saves.get(document.documentId));
+  saves.set(document.documentId, setTimeout(() => {
+    saves.delete(document.documentId);
+    try { const snapshot = snapshotEvaluation(document); if (snapshot) replay.write(document.documentId, snapshot).catch(() => undefined); }
+    catch { /* Disposable: the source document is untouched. */ }
+  }, 1500));
+}
+
 /** The full OpenCascade.js build (50 MB), fetched the first time a document needs it. */
 async function prepareFor(document: { features: unknown[] }): Promise<void> {
   await ensureInitialized();
+  const part = document as PartDocument;
+  if (replay && typeof part.documentId === "string" && !cachedSteps(part.documentId)) {
+    const snapshot = await replay.read(part.documentId).catch(() => undefined);
+    if (snapshot) restoreEvaluation(part, snapshot);
+  }
   if (!needsExtendedKernel(document as never)) return;
   await loadExtendedKernel(() => new (ocFullJS as unknown as new (options: object) => Promise<unknown>)({ locateFile: (path: string) => (path.endsWith(".wasm") ? fullWasmUrl : path) }));
 }
@@ -162,6 +185,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       request.type === "import-step"
         ? await importModel(request.sourceName, request.bytes)
         : (await prepareFor(request.document), await evaluateWithFullBuildFallback(request.document, request.options));
+    if (request.type === "evaluate-part" && !request.options?.preview) saveReplay(request.document);
     // Meshes move to the viewer; nothing is copied.
     const transfer: Transferable[] = [];
     const parts = [...model.parts, ...(model.featurePreview ? [...model.featurePreview.base, ...model.featurePreview.added, ...model.featurePreview.removed] : [])];

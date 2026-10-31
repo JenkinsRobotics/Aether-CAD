@@ -12,7 +12,9 @@ const experiments = {
 };
 if (!(variant in experiments)) throw new Error('Unknown benchmark variant');
 const experiment = experiments[variant];
+// BENCH_ENTRY=reopen-edit builds the reopen-then-edit runner instead.
+const entry = process.env.BENCH_ENTRY ?? 'aether';
 await build({plugins:experiment ? [{name:'benchmark-occt-variant',transform(code,id){if(id.endsWith('/kernel/booleans.ts')) { if (!code.includes(experiment[0])) throw new Error('Boolean instrumentation point changed'); return code.replace(experiment[0],experiment[1]); }}}] : [],configFile:false,publicDir:false,ssr:{noExternal:true},resolve:{alias:{replicad:require.resolve('replicad')}},build:{
-  ssr:'scripts/benchmarks/native/aether.ts',outDir:`build/native-comparison/aether-${variant}`,emptyOutDir:true,minify:false,
+  ssr:`scripts/benchmarks/native/${entry}.ts`,outDir:`build/native-comparison/${entry === 'aether' ? `aether-${variant}` : entry}`,emptyOutDir:true,minify:false,
   rollupOptions:{output:{inlineDynamicImports:true,entryFileNames:'run.mjs',banner:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);const __dirname=process.cwd();"}},
 }});

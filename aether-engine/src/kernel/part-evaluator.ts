@@ -322,6 +322,7 @@ import {
 import { rectangleSketchRevision } from "../sketch/index";
 import "./booleans";
 import { vertexAnchorsOf } from "./part-geometry";
+import { readBrep, writeBrep } from "./brep-bytes";
 export function release(value: unknown) {
   try {
     (value as { delete?: () => void }).delete?.();
@@ -366,7 +367,7 @@ function contourDrawing(contour: SketchContour, _featureId: string): Drawing {
 type Profiles = Map<string, { drawing?: Drawing; plane: "XY" | "XZ" | "YZ" | Plane; offset: number; regions: Region[]; cells?: Region[]; circles: Circle[]; contours: SketchContour[] }>;
 /** The engine state after one feature of a document's history, kept so the
  *  next evaluation replays only from the first feature that changed. */
-interface Step { key: string; profiles: Profiles; tools: Map<string, Shape3D>; bodies: Map<string, Shape3D>; meshes: Map<string, MeshPart>; currentBodyID?: string; outputs: Record<string, string[]>; frames: Record<string, SketchFrame>; scopes: Record<string, ExtrusionScopeResolution>; owned: unknown[] }
+interface Step { key: string; profiles: Profiles; tools: Map<string, Shape3D>; bodies: Map<string, Shape3D>; meshes: Map<string, MeshPart>; currentBodyID?: string; outputs: Record<string, string[]>; frames: Record<string, SketchFrame>; scopes: Record<string, ExtrusionScopeResolution>; owned: unknown[]; /** Read from a snapshot: exact shapes, no sketch profiles yet. */ restored?: true }
 const steps = new Map<string, Step[]>();
 const MAX_CACHED_DOCUMENTS = 3;
 /** The mesh of a shape, built once; each caller gets its own buffers to transfer. */
@@ -387,6 +388,79 @@ export function resetEvaluationCache(): void {
 }
 /** How many history steps the cache holds for a document. */
 export function cachedSteps(documentId: string): number { return steps.get(documentId)?.length ?? 0; }
+
+/** Each history step's key: its feature and every feature before it. */
+function historyKeys(document: PartDocument): string[] {
+  const keys: string[] = [];
+  document.features.slice(0, rollbackPosition(document)).reduce((previous, feature) => { const key = hashKey(previous + JSON.stringify(feature)); keys.push(key); return key; }, "");
+  return keys;
+}
+
+/** A document's replay cache as plain data, to outlive the worker. Each distinct exact shape
+ *  is stored once as binary B-rep and steps name shapes by index. Sketch profiles are not
+ *  kept: the replay after a restore re-solves sketches and adopts every other step's shapes. */
+export interface EvaluationSnapshot { source: string; shapes: Uint8Array[]; steps: SnapshotStep[] }
+interface SnapshotStep { key: string; bodies: [string, number][]; tools: [string, number][]; meshes: [string, MeshPart][]; currentBodyID?: string; outputs: Record<string, string[]>; frames: Record<string, SketchFrame>; scopes: Record<string, ExtrusionScopeResolution> }
+
+/** Shapes never change once built, so after an edit only the replayed steps' shapes are written. */
+const written = new WeakMap<Shape3D, Uint8Array>();
+/** The cached steps that match this document, or nothing when none do. */
+export function snapshotEvaluation(document: PartDocument): EvaluationSnapshot | undefined {
+  const keys = historyKeys(document), list = steps.get(document.documentId) ?? [];
+  let count = 0;
+  while (count < list.length && count < keys.length && list[count].key === keys[count]) count++;
+  if (!count) return undefined;
+  const index = new Map<Shape3D, number>(), shapes: Uint8Array[] = [];
+  const refer = (map: Map<string, Shape3D>) => [...map].map(([id, shape]): [string, number] => {
+    let at = index.get(shape);
+    if (at === undefined) {
+      let bytes = written.get(shape);
+      if (!bytes) { bytes = writeBrep(shape); written.set(shape, bytes); }
+      at = shapes.push(bytes) - 1; index.set(shape, at);
+    }
+    return [id, at];
+  });
+  return { source: JSON.stringify(document), shapes, steps: list.slice(0, count).map((step) => ({
+    key: step.key, bodies: refer(step.bodies), tools: refer(step.tools), meshes: [...step.meshes], currentBodyID: step.currentBodyID,
+    outputs: step.outputs, frames: step.frames, scopes: step.scopes })) };
+}
+
+/** Seeds an empty replay cache from a snapshot, for the steps whose features are exactly this
+ *  document's. Anything malformed or unreadable restores nothing; the next build replays fully.
+ *  Returns how many steps were restored. */
+export function restoreEvaluation(document: PartDocument, snapshot: EvaluationSnapshot): number {
+  if (steps.get(document.documentId)?.length) return 0;
+  const created: Shape3D[] = [];
+  try {
+    const saved = JSON.parse(snapshot.source) as PartDocument;
+    if (saved.documentId !== document.documentId || !Array.isArray(snapshot.steps) || !Array.isArray(snapshot.shapes)) return 0;
+    const keys = historyKeys(document), mine = document.features, theirs = saved.features.slice(0, rollbackPosition(saved));
+    let count = 0;
+    while (count < snapshot.steps.length && count < keys.length && count < theirs.length && snapshot.steps[count].key === keys[count]
+      && JSON.stringify(theirs[count]) === JSON.stringify(mine[count])) count++;
+    if (!count) return 0;
+    const read = new Map<number, Shape3D>();
+    const list = snapshot.steps.slice(0, count).map((step): Step => {
+      const owned: Shape3D[] = [];
+      const take = (pairs: [string, number][]) => new Map(pairs.map(([id, at]): [string, Shape3D] => {
+        let shape = read.get(at);
+        if (!shape) {
+          if (!(snapshot.shapes[at] instanceof Uint8Array)) throw new Error("Missing shape data.");
+          shape = readBrep(snapshot.shapes[at]); created.push(shape); owned.push(shape); read.set(at, shape);
+        }
+        return [id, shape];
+      }));
+      for (const [, mesh] of step.meshes) if (!(mesh.vertices instanceof Float32Array && mesh.normals instanceof Float32Array && mesh.triangles instanceof Uint32Array)) throw new Error("Damaged mesh data.");
+      return { key: step.key, profiles: new Map(), tools: take(step.tools), bodies: take(step.bodies), meshes: new Map(step.meshes), currentBodyID: step.currentBodyID,
+        outputs: { ...step.outputs }, frames: { ...step.frames }, scopes: { ...step.scopes }, owned, restored: true };
+    });
+    steps.set(document.documentId, list);
+    return count;
+  } catch {
+    created.forEach(release);
+    return 0;
+  }
+}
 
 /** The groove of a 60° internal thread: a V section on the drilled wall swept along a helix of the
  *  standard's pitch, starting one pitch above the surface so the thread runs out cleanly. The hole
@@ -444,8 +518,7 @@ export function evaluatePartDocument(
   const perpendicular = (d: V3): V3 => { const seed: V3 = Math.abs(d[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]; const c = cross(d, seed); const l = norm(c) || 1; return [c[0] / l, c[1] / l, c[2] / l]; };
   // Replay only from the first feature whose inputs changed: every step's state
   // is kept (shapes included) until a later evaluation diverges there.
-  const keys: string[] = [];
-  history.reduce((previous, feature) => { const key = hashKey(previous + JSON.stringify(feature)); keys.push(key); return key; }, "");
+  const keys = historyKeys(document);
   const cached = steps.get(document.documentId) ?? [];
   steps.delete(document.documentId); steps.set(document.documentId, cached);
   if (steps.size > MAX_CACHED_DOCUMENTS) { const oldest = steps.keys().next().value!; dropSteps(steps.get(oldest)!, 0); steps.delete(oldest); }
@@ -455,6 +528,11 @@ export function evaluatePartDocument(
   if (previewId !== undefined) { const at = history.findIndex((f) => f.id === previewId); if (at >= 0 && reuse > at) reuse = at; }
   // Steps past a rollback bar stay cached; only a changed feature discards what follows it.
   if (reuse < cached.length && reuse < keys.length) dropSteps(cached, reuse);
+  // Restored steps have exact shapes but no sketch profiles: replay from the first of them,
+  // re-solving sketches and adopting every other feature's saved state.
+  const thawFrom = cached.findIndex((step, index) => index < reuse && step.restored);
+  let thawed: Step[] = [], adopted = 0;
+  if (thawFrom >= 0) { dropSteps(cached, reuse); thawed = cached.splice(thawFrom); reuse = thawFrom; }
   const resume = cached[reuse - 1];
   const profiles: Profiles = new Map(resume?.profiles);
   const tools = new Map<string, Shape3D>(resume?.tools);
@@ -503,6 +581,19 @@ export function evaluatePartDocument(
       stepOwned = [];
       let failed = false;
       try {
+      const saved = thawed[index - thawFrom];
+      if (saved) {
+        stepOwned = saved.owned;
+        if (feature.suppressed || (feature.type !== "sketch" && feature.type !== "profile")) {
+          const replace = <T>(target: Map<string, T>, source: Map<string, T>) => { target.clear(); source.forEach((value, id) => target.set(id, value)); };
+          const assign = (target: Record<string, unknown>, source: Record<string, unknown>) => { for (const id of Object.keys(target)) delete target[id]; Object.assign(target, source); };
+          replace(bodies, saved.bodies); replace(tools, saved.tools); replace(meshParts, saved.meshes);
+          assign(bodyOutputs, saved.outputs); assign(sketchFrames, saved.frames); assign(scopeResolutions, saved.scopes);
+          currentBodyID = saved.currentBodyID;
+          adopted++;
+          continue;
+        }
+      }
       if (feature.suppressed || feature.type === "plane" || feature.type === "axis" || feature.type === "point" || feature.type === "thread" || feature.type === "curve3d") continue;
       try {
         if (feature.type === "sketch") {
@@ -3097,7 +3188,7 @@ export function evaluatePartDocument(
         throw new FeatureFailure(feature.id, feature.name, error instanceof Error ? error.message : typeof error === "number" ? "The kernel could not build this feature. Check its dimensions and references." : String(error));
       }
       } finally {
-        if (failed) { for (const shape of stepOwned.reverse()) release(shape); }
+        if (failed) { for (const shape of stepOwned.reverse()) release(shape); for (const step of thawed.splice(index - thawFrom + 1)) step.owned.forEach(release); }
         else cached.push({ key: keys[index], profiles: new Map(profiles), tools: new Map(tools), bodies: new Map(bodies), meshes: new Map(meshParts), currentBodyID, outputs: { ...bodyOutputs }, frames: { ...sketchFrames }, scopes: { ...scopeResolutions }, owned: stepOwned });
         options.observe?.({ phase: 'feature', id: feature.id, name: feature.name, type: feature.type, failed, milliseconds: performance.now() - featureStarted });
       }
@@ -3131,7 +3222,7 @@ export function evaluatePartDocument(
         ...[...meshParts].map(([id, mesh], index) => ({ geometryKind: "mesh" as const, id, name: names.find((b) => b.id === id)?.name ?? `Mesh ${index + 1}`, sourceDocumentId: document.documentId, sourceName: document.name, vertices: mesh.vertices, normals: mesh.normals, triangles: mesh.triangles, edgeLines: new Float32Array(0), faceRanges: [], topology: [] })),
       ],
       parseMilliseconds: performance.now() - started,
-      replayedFeatures: history.length - reuse,
+      replayedFeatures: history.length - reuse - adopted,
     };
   }
 }
