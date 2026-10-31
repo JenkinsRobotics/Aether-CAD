@@ -54,3 +54,9 @@ p=Path(sys.argv[1] if len(sys.argv)>1 else 'build/native-comparison/summary.json
 for f in out['fixtures']:
     print(f['name'],{k:round(v['phases']['cold']['solidMedianMs'],2) if 'phases' in v else v['status'] for k,v in f['engines'].items()})
 print(out['experiments'])
+# Per-feature construction medians for the robot front shell, from the same
+# five cold Aether samples (the evaluator's optional observer events).
+runs=[[e for e in next(x for x in json.loads((r/f'aether-robot-front-{i}.json').read_text())['runs'][0]['phases'] if x['phase']=='cold')['events'] if e['phase']=='feature'] for i in range(5)]
+assert all([e['id'] for e in run]==[e['id'] for e in runs[0]] and not any(e['failed'] for e in run) for run in runs)
+features=[dict(id=e['id'],name=e['name'],type=e['type'],medianMs=median(run[k]['milliseconds'] for run in runs),samplesMs=[run[k]['milliseconds'] for run in runs]) for k,e in enumerate(runs[0])]
+p.with_name('front-shell-profile.json').write_text(json.dumps(dict(features=sorted(features,key=lambda f:-f['medianMs'])),indent=2)+'\n')
