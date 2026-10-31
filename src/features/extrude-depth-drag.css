@@ -1,0 +1,4 @@
+/* Icon-only depth scrubber beside the Depth field, sized like the feature window's other icon buttons. */
+.aui-feature-window .cad-depth-drag { flex:none; display:inline-grid; place-items:center; width:26px; height:26px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--aether-color-text-dim); }
+.aui-feature-window .cad-depth-drag:hover, .aui-feature-window .cad-depth-drag:focus-visible { background:var(--aether-color-bg-hover); color:var(--aether-color-text); }
+.aui-feature-window .cad-depth-drag svg { width:14px; height:14px; }

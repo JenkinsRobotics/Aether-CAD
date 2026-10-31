@@ -8,9 +8,8 @@ export function layoutExtrudeScope(context:FeatureEditorContext,controls:Control
  const bodies=availableBodies({...doc,features:doc.features.slice(0,end),rollbackIndex:undefined});
  controls.scope.closest('label')?.remove();controls.scope.hidden=true;controls.scope.setAttribute('form',form.id);form.append(controls.scope);
  const mode=controls.scopeMode;mode.closest('label')?.remove();mode.hidden=true;mode.setAttribute('form',form.id);form.append(mode);
- const allRow=document.createElement('label');allRow.className='aui-feature-row';
- const all=document.createElement('input');all.type='checkbox';all.setAttribute('aria-label','Merge with all');
- allRow.append(document.createTextNode('Merge with all'),all);win.body.append(allRow);
+ const all=document.createElement('input');all.type='checkbox';
+ const allRow=win.row('Merge with all',all);
  const automaticHelp=document.createElement('p');win.addHelp(automaticHelp);
  all.onchange=()=>{mode.value=all.checked?'all':'selected';mode.dispatchEvent(new Event('change'));};
  const box=win.entitiesBox('Additional parts to modify');win.body.append(box.element);

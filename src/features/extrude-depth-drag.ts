@@ -1,9 +1,11 @@
 import {directionVector} from './extrude-direction';
+import dragIcon from '@aether/assets/icons/arrows-vertical.svg?raw';
+import './extrude-depth-drag.css';
 /** Scrub the existing depth field; preview/commit remain owned by the feature editor. */
 export function extrudeDepthDrag(distance: HTMLInputElement | HTMLSelectElement, reversed: HTMLInputElement | HTMLSelectElement, unit: string): HTMLButtonElement {
   const handle = document.createElement('button');
   handle.type = 'button';
-  handle.textContent = 'Drag depth';
+  handle.innerHTML = dragIcon; // icon-only, so the depth field keeps the row's width
   handle.className = 'cad-depth-drag';
   handle.setAttribute('aria-label', 'Drag extrusion depth');
   handle.title = `Drag up/down to change depth (${unit}); Shift for fine adjustment. Arrow keys adjust; Escape restores the drag.`;
