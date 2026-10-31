@@ -221,11 +221,11 @@ function Annotation({ annotation, selected, onSelect }: {
   onSelect?: (id: string) => void;
 }) {
   if (annotation.state === "suppressed") return null;
-  const label = annotation.text || annotation.measurement?.display_text || annotation.type_id.replaceAll("_", " ");
+  const label = annotation.text || annotation.measurement?.display_text || (annotation.type_id === "center_mark" ? "" : annotation.type_id.replaceAll("_", " "));
   return <g
     role={onSelect ? "button" : undefined}
     tabIndex={onSelect ? 0 : undefined}
-    aria-label={label}
+    aria-label={label || annotation.type_id.replaceAll("_", " ")}
     data-annotation-id={annotation.id}
     onClick={() => onSelect?.(annotation.id)}
     onKeyDown={(event) => selectionKeyDown(event, annotation.id, onSelect)}
@@ -234,7 +234,7 @@ function Annotation({ annotation, selected, onSelect }: {
   >
     {annotation.leader_points_sheet_mm.length > 1 ? <polyline points={annotation.leader_points_sheet_mm.map((item) => item.join(",")).join(" ")} fill="none" strokeWidth="0.25" /> : null}
     {annotation.geometry_lines_sheet_mm?.map(([a, b], index) => <line key={index} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} strokeWidth="0.2" />)}
-    <text textAnchor={annotation.text_alignment === "center" ? "middle" : "start"} x={annotation.text_origin_sheet_mm[0]} y={annotation.text_origin_sheet_mm[1]} fontSize="3.5" stroke="none">{label}</text>
+    {label && <text textAnchor={annotation.text_alignment === "center" ? "middle" : "start"} x={annotation.text_origin_sheet_mm[0]} y={annotation.text_origin_sheet_mm[1]} fontSize="3.5" stroke="none">{label}</text>}
   </g>;
 }
 

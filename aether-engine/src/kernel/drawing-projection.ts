@@ -9,7 +9,7 @@ import { withHiddenLineProjection } from "./hidden-line";
 /** Projects all selected bodies together: nearer solids must occlude farther
  * ones. Source shapes remain owned by the evaluator cache. */
 export function projectPartDrawing(document: PartDocument, options: PartDrawingOptions): PartDrawingProjection {
-  const { normal, up } = drawingViewFrame(options.orientation);
+  const { normal, up } = drawingViewFrame(options.orientation, options.direction);
   let result: PartDrawingProjection | undefined;
   evaluatePartDocument(document, { withBodies: bodies => {
     const ids = options.bodyIds ?? [...bodies.keys()];

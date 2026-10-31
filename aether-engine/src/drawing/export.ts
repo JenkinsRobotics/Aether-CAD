@@ -1,5 +1,12 @@
 import { drawingCurvePath, sheetPoint, type BuiltDrawing } from "./build";
+import type { DrawingSheet } from "./document";
 const xml = (text: string) => text.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]!));
+/** Editable title-block rows sit in a box above the footer; the fixed footer stays. */
+export function titleBlockRows(sheet: DrawingSheet): { x: number; y: number; width: number; height: number; rows: [string, string][] } | null {
+  if (!sheet.titleBlock?.length) return null;
+  const rows = sheet.titleBlock.map(row => [row.label, row.value] as [string, string]), height = 2 + 5 * rows.length;
+  return { x: sheet.widthMm - 130, y: sheet.heightMm - 18 - height, width: 120, height, rows };
+}
 const sheetOf = (drawing: BuiltDrawing, id: string) => { const sheet = drawing.sheets.find(s => s.sheet.id === id); if (!sheet) throw Error("Drawing sheet does not exist."); return sheet; };
 
 export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.document.activeSheetId): string {
@@ -14,7 +21,12 @@ export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.docume
   }
   for (const annotation of annotations) {
     for (const [a, b] of annotation.lines) elements.push(`<path d="M ${a.join(" ")} L ${b.join(" ")}" stroke="#222" stroke-width="0.2" fill="none"/>`);
-    elements.push(`<text x="${annotation.positionMm[0]}" y="${annotation.positionMm[1]}" font-size="3.5"${annotation.textAlign === "center" ? ' text-anchor="middle"' : ""}>${xml(annotation.text)}</text>`);
+    if (annotation.text) elements.push(`<text x="${annotation.positionMm[0]}" y="${annotation.positionMm[1]}" font-size="3.5"${annotation.textAlign === "center" ? ' text-anchor="middle"' : ""}>${xml(annotation.text)}</text>`);
+  }
+  const block = titleBlockRows(sheet);
+  if (block) {
+    elements.push(`<rect x="${block.x}" y="${block.y}" width="${block.width}" height="${block.height}" fill="none" stroke="#222" stroke-width="0.3"/>`);
+    block.rows.forEach(([label, value], i) => elements.push(`<text x="${block.x + 2}" y="${block.y + 4 + i * 5}" font-size="2.2" fill="#555">${xml(label)}</text>`, `<text x="${block.x + 24}" y="${block.y + 4 + i * 5}" font-size="2.8">${xml(value)}</text>`));
   }
   elements.push(`<text x="${sheet.widthMm - 12}" y="${sheet.heightMm - 14}" font-size="3.5" text-anchor="end">${xml(drawing.document.name)} · ${xml(sheet.name)} · mm · ${sheet.projection.replace("_", " ")}</text>`);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.widthMm}mm" height="${sheet.heightMm}mm" viewBox="0 0 ${sheet.widthMm} ${sheet.heightMm}" font-family="sans-serif">${elements.join("\n")}</svg>`;
@@ -48,7 +60,13 @@ export function exportDrawingDXF(drawing: BuiltDrawing, sheetId = drawing.docume
   for (const view of views) for (const hatch of view.geometry.hatch ?? []) line(sheetPoint(view, hatch.start), sheetPoint(view, hatch.end), false, "HATCH");
   for (const annotation of annotations) {
     annotation.lines.forEach(([a, b]) => line(a, b, false, "ANNOTATIONS"));
-    text(annotation.text, annotation.positionMm, annotation.textAlign);
+    if (annotation.text) text(annotation.text, annotation.positionMm, annotation.textAlign);
+  }
+  const block = titleBlockRows(sheet);
+  if (block) {
+    const corners = [[block.x, block.y], [block.x + block.width, block.y], [block.x + block.width, block.y + block.height], [block.x, block.y + block.height]];
+    corners.forEach((p, i) => line(p, corners[(i + 1) % 4], false, "SHEET"));
+    block.rows.forEach(([label, value], i) => text(`${label}: ${value}`, [block.x + 2, block.y + 4 + i * 5]));
   }
   text(`${drawing.document.name} / ${sheet.name} / mm`, [12, sheet.heightMm - 14]);
   out.push(0, "ENDSEC", 0, "EOF");

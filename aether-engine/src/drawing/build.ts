@@ -3,6 +3,7 @@ import { sha256Hex } from "../kernel/sha256";
 import { resolvedDrawingView, validateDrawingDocument, type DrawingDocument, type DrawingPoint, type DrawingSheet, type DrawingView } from "./document";
 import type { PartDrawingOptions, PartDrawingProjection, ProjectedDrawingCurve } from "./projection";
 import { attachedDimension } from "./attached-dimensions";
+import { circleChords, clipProjectionToCircle } from "./detail-view";
 
 export type DrawingProjector = (source: PartDocument, options: PartDrawingOptions) => Promise<PartDrawingProjection>;
 export interface BuiltDrawingView {
@@ -21,6 +22,8 @@ export interface BuiltDrawingAnnotation {
   /** Angle dimensions carry degrees; `valueMm` stays undefined. */
   valueDeg?: number;
   measure?: "length" | "diameter" | "radius" | "angle";
+  /** Symbol annotations carry no measurement; detail markers are generated per detail view. */
+  symbol?: "balloon" | "center-mark" | "detail-marker";
   viewId?: string;
   lines: [DrawingPoint, DrawingPoint][];
 }
@@ -34,12 +37,22 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
   const cache = new Map<string, PartDrawingProjection>();
   for (const sheet of document.sheets) {
     const built: BuiltDrawingSheet = { sheet, views: [], annotations: [] };
-    for (const authored of sheet.views) {
+    // Details are built after the views they enlarge.
+    for (const authored of [...sheet.views.filter(v => !v.detail), ...sheet.views.filter(v => v.detail)]) {
       const view = resolvedDrawingView(sheet, authored);
-      const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}), ...(view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}) };
-      const key = JSON.stringify(options);
-      let geometry = cache.get(key);
-      if (!geometry) { geometry = await project(document.source, options); cache.set(key, geometry); }
+      let geometry: PartDrawingProjection | undefined;
+      if (view.detail) {
+        const parent = built.views.find(v => v.view.id === view.detail!.parentId)!;
+        const { centerMm, radiusMm, label } = view.detail, ps = parent.view.scale;
+        const modelCenter: DrawingPoint = [(centerMm[0] - parent.translationMm[0]) / ps, (parent.translationMm[1] - centerMm[1]) / ps];
+        geometry = clipProjectionToCircle(parent.geometry, modelCenter, radiusMm / ps);
+        built.annotations.push({ id: `${view.id}/marker`, symbol: "detail-marker", viewId: parent.view.id, text: label, textAlign: "left", positionMm: [centerMm[0] + radiusMm * 0.75, centerMm[1] - radiusMm * 0.75 - 1], lines: circleChords(centerMm, radiusMm) });
+      } else {
+        const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}), ...(view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}), ...(view.direction ? { direction: view.direction } : {}) };
+        const key = JSON.stringify(options);
+        geometry = cache.get(key);
+        if (!geometry) { geometry = await project(document.source, options); cache.set(key, geometry); }
+      }
       const [x0, y0, x1, y1] = geometry.bounds, s = view.scale;
       if (!geometry.bounds.every(Number.isFinite) || x1 < x0 || y1 < y0) throw Error("Drawing projection returned invalid bounds.");
       const translationMm: DrawingPoint = [view.originMm[0] - s * (x0 + x1) / 2, view.originMm[1] + s * (y0 + y1) / 2];
@@ -48,8 +61,9 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
     }
     for (const annotation of sheet.annotations) {
       if (annotation.kind === "note") { built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] }); continue; }
+      if (annotation.kind === "balloon") { built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm)); continue; }
       const view = built.views.find(v => v.view.id === annotation.viewId)!;
-      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") { built.annotations.push(attachedDimension(annotation, view)); continue; }
+      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark") { built.annotations.push(attachedDimension(annotation, view)); continue; }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
@@ -72,6 +86,19 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
     result.sheets.push(built);
   }
   return result;
+}
+
+/** A 4 mm radius circle around the text with a leader and arrowhead to the item. */
+function balloon(id: string, text: string, center: DrawingPoint, target: DrawingPoint): BuiltDrawingAnnotation {
+  const radius = 4, d = Math.hypot(target[0] - center[0], target[1] - center[1]);
+  const lines = circleChords(center, radius);
+  if (d > radius) {
+    const u: DrawingPoint = [(target[0] - center[0]) / d, (target[1] - center[1]) / d], edge: DrawingPoint = [center[0] + u[0] * radius, center[1] + u[1] * radius];
+    const base: DrawingPoint = [target[0] - u[0] * 2, target[1] - u[1] * 2], p: DrawingPoint = [base[0] - u[1] * 0.7, base[1] + u[0] * 0.7], q: DrawingPoint = [base[0] + u[1] * 0.7, base[1] - u[0] * 0.7];
+    lines.push([edge, target], [target, p], [p, q], [q, target]);
+  }
+  // Text baseline sits 1.25 mm below the centre so 3.5 mm capitals read centred.
+  return { id, symbol: "balloon", text, textAlign: "center", positionMm: [center[0], center[1] + 1.25], lines };
 }
 
 export function sheetPoint(view: BuiltDrawingView, point: DrawingPoint): DrawingPoint {

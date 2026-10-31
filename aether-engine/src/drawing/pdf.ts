@@ -1,5 +1,6 @@
 import type { PDFFont, PDFPage, RGB } from "pdf-lib";
 import { drawingCurvePath, type BuiltDrawing, type BuiltDrawingSheet } from "./build";
+import { titleBlockRows } from "./export";
 
 export interface DrawingPDFOptions {
   /** Runtime adapter supplies the product's bundled Noto Sans font. */
@@ -69,7 +70,12 @@ export async function exportDrawingPDF(drawing: BuiltDrawing, options: DrawingPD
     }
     for (const annotation of annotations) {
       for (const [a, b] of annotation.lines) stroke(`M ${a.join(" ")} L ${b.join(" ")}`, 0.2);
-      label(annotation.text, ...annotation.positionMm, 3.5, annotation.textAlign);
+      if (annotation.text) label(annotation.text, ...annotation.positionMm, 3.5, annotation.textAlign);
+    }
+    const block = titleBlockRows(sheet);
+    if (block) {
+      stroke(`M ${block.x} ${block.y} L ${block.x + block.width} ${block.y} L ${block.x + block.width} ${block.y + block.height} L ${block.x} ${block.y + block.height} Z`, 0.3);
+      block.rows.forEach(([key, value], i) => { label(key, block.x + 2, block.y + 4 + i * 5, 2.2); label(value, block.x + 24, block.y + 4 + i * 5, 2.8); });
     }
     const footer = `${drawing.document.name} · ${sheet.name} · mm · ${sheet.projection.replace("_", " ")}`;
     checkText(footer);

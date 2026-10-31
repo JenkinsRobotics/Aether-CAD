@@ -38,7 +38,7 @@ export function withDrawingSection<T>(
 ): T {
   const section = options.section;
   if (!section) return read(shapes, []);
-  if (options.orientation === "isometric") throw Error("Section views require a principal orientation.");
+  if (options.orientation === "isometric" || options.direction) throw Error("Section views require a principal orientation.");
   const { normal, up } = drawingViewFrame(options.orientation);
   const axis = normal.findIndex(value => value !== 0);
   const offset = section.offsetMm;

@@ -1,4 +1,4 @@
-import type { DrawingOrientation, DrawingPoint, DrawingSection } from "./document";
+import type { DrawingDirection, DrawingOrientation, DrawingPoint, DrawingSection } from "./document";
 
 /** All coordinates are in view-plane mm (Y up). Approximate curves are explicitly
  * identified; dimensions use OCCT's curve bounds, never their display samples. */
@@ -14,8 +14,10 @@ export interface PartDrawingProjection {
   bodyIds: string[];
   hatch?: Extract<ProjectedDrawingCurve, { kind: "line" }>[];
 }
-export interface PartDrawingOptions { orientation: DrawingOrientation; bodyIds?: string[]; section?: DrawingSection & { modelSpacingMm: number } }
-export function drawingViewFrame(orientation: DrawingOrientation): { normal: [number, number, number]; up: [number, number, number] } {
+export interface PartDrawingOptions { orientation: DrawingOrientation; bodyIds?: string[]; section?: DrawingSection & { modelSpacingMm: number }; direction?: DrawingDirection }
+/** An explicit direction (auxiliary view) keeps world Z up on paper, or world Y when looking along Z. */
+export function drawingViewFrame(orientation: DrawingOrientation, direction?: DrawingDirection | null): { normal: [number, number, number]; up: [number, number, number] } {
+  if (direction) return { normal: [...direction], up: Math.abs(direction[2]) > 0.999 * Math.hypot(...direction) ? [0, 1, 0] : [0, 0, 1] };
   switch (orientation) {
     case "front": return { normal: [0, -1, 0], up: [0, 0, 1] };
     case "back": return { normal: [0, 1, 0], up: [0, 0, 1] };

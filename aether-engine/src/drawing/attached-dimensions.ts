@@ -4,7 +4,7 @@
 import type { DrawingAnnotation, DrawingPoint } from "./document";
 import { sheetPoint, type BuiltDrawingAnnotation, type BuiltDrawingView } from "./build";
 
-type Attached = Extract<DrawingAnnotation, { kind: "diameter" | "radius" | "angle" }>;
+type Attached = Extract<DrawingAnnotation, { kind: "diameter" | "radius" | "angle" | "center-mark" }>;
 type Segment = { a: DrawingPoint; b: DrawingPoint };
 type Round = { center: DrawingPoint; radiusMm: number; modelRadius: number };
 type Line = [DrawingPoint, DrawingPoint];
@@ -60,7 +60,7 @@ function nearestSegment(segments: Segment[], at: DrawingPoint, viewName: string)
 
 export function attachedDimension(annotation: Attached, view: BuiltDrawingView): BuiltDrawingAnnotation {
   const { rounds, segments } = sheetCurves(view);
-  const label = annotation.positionMm, name = view.view.name;
+  const label = annotation.kind === "center-mark" ? annotation.atMm : annotation.positionMm, name = view.view.name;
   if (annotation.kind === "angle") {
     const first = nearestSegment(segments, annotation.atMm, name), second = nearestSegment(segments, annotation.toMm, name);
     if (first === second) throw Error("Pick two different straight edges for an angle dimension.");
@@ -83,6 +83,10 @@ export function attachedDimension(annotation: Attached, view: BuiltDrawingView):
     return { id: annotation.id, viewId: annotation.viewId, text: `${valueDeg.toFixed(annotation.decimals)}°`, valueDeg, measure: "angle", textAlign: "center", positionMm: label, lines };
   }
   const round = nearestRound(rounds, annotation.atMm, name);
+  if (annotation.kind === "center-mark") {
+    const reach = round.radiusMm + 2, [cx, cy] = round.center;
+    return { id: annotation.id, viewId: annotation.viewId, symbol: "center-mark", text: "", textAlign: "left", positionMm: round.center, lines: [[[cx - reach, cy], [cx + reach, cy]], [[cx, cy - reach], [cx, cy + reach]]] };
+  }
   const toward = unit(sub(label, round.center)), edge = add(round.center, mul(toward, round.radiusMm));
   const outside = norm(sub(label, round.center)) > round.radiusMm + 1e-6;
   const lines: Line[] = annotation.kind === "diameter"
