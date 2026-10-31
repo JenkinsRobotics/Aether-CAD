@@ -86,6 +86,13 @@ export type DrawingAnnotation = {
   decimals: number;
   atMm: DrawingPoint;
 } | {
+  /** The model length of the visible straight edge nearest `atMm`; the dimension line
+   * runs parallel to the edge through the label. Format version 4. */
+  kind: "length";
+  viewId: string;
+  decimals: number;
+  atMm: DrawingPoint;
+} | {
   /** The angle between the visible straight edges nearest `atMm` and `toMm`,
    * measured in the sector that contains those two points. Format version 3. */
   kind: "angle";
@@ -104,7 +111,7 @@ export type DrawingAnnotation = {
   viewId: string;
   atMm: DrawingPoint;
 });
-export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle"] as const;
+export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length"] as const;
 
 export type DrawingCommand =
   | { type: "add-sheet"; sheet: DrawingSheet }
@@ -223,7 +230,8 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       else if (drawingDimensionKinds.includes(annotation.kind as never)) {
         text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
-        if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
+        if (annotation.kind === "length") { atLeast(value.formatVersion, 4, "Edge length dimensions"); point(annotation.atMm); }
+        else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
           atLeast(value.formatVersion, 3, "Diameter, radius and angle dimensions");
           point(annotation.atMm);
           if (annotation.kind === "angle") point(annotation.toMm);
@@ -292,7 +300,7 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
     }
   }
   // Each feature pins the lowest version that can hold it; older readers refuse newer files.
-  if (doc.sheets.some(sheet => sheet.titleBlock || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark"))) doc.formatVersion = 4;
+  if (doc.sheets.some(sheet => sheet.titleBlock || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
   else if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
   else if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);

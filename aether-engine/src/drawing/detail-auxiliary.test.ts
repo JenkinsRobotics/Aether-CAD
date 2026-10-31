@@ -86,6 +86,16 @@ it("draws balloons, centre marks and title-block rows through SVG and DXF", asyn
   await expect(buildDrawing(applyDrawingCommand(doc, { type: "add-annotation", sheetId: doc.activeSheetId, annotation: { id: "cm2", kind: "center-mark", viewId: "top", atMm: [0, 0], positionMm: [0, 0] } }), project)).rejects.toThrow(/within 5 mm/);
 }, 30000);
 
+it("measures the model length of the straight edge nearest a pick", async () => {
+  const doc = drawing([{ ...top, scale: 2 }], [{ id: "l", kind: "length", viewId: "top", decimals: 1, atMm: [80, 60 - 20], positionMm: [80, 30] }]);
+  const built = await buildDrawing(doc, project);
+  const length = built.sheets[0].annotations[0];
+  // The top edge of the 40 × 20 plate at 2:1 spans 80 sheet mm but measures 40 model mm.
+  expect(length).toMatchObject({ measure: "length", text: "40.0", valueMm: 40, textAlign: "center" });
+  expect([...length.lines[0]].sort((p, q) => p[0] - q[0])).toEqual([[40, 30], [120, 30]]);
+  expect(length.lines).toHaveLength(3 + 6);
+}, 30000);
+
 it("keeps a section view valid once newer annotations raise the format version", () => {
   const doc = drawing([{ ...top, orientation: "front", section: { offsetMm: 0 } }], [{ id: "b", kind: "balloon", text: "2", positionMm: [10, 10], leaderMm: [20, 20] }]);
   expect(doc.formatVersion).toBe(4);

@@ -34,7 +34,7 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
   const [viewId, setViewId] = useState(annotation && annotation.kind !== "note" && annotation.kind !== "balloon" ? annotation.viewId : sheet.views[0]?.id ?? "");
   const [decimals, setDecimals] = useState(annotation && "decimals" in annotation ? annotation.decimals : 2);
   const [leader, setLeader] = useState<[number, number]>(annotation?.kind === "balloon" ? annotation.leaderMm : [sheet.widthMm / 2, sheet.heightMm / 2]);
-  const attached = annotation && (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark") ? annotation : undefined;
+  const attached = annotation && (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") ? annotation : undefined;
   const [atX, setAtX] = useState(attached?.atMm[0] ?? sheet.widthMm / 2), [atY, setAtY] = useState(attached?.atMm[1] ?? sheet.heightMm / 2);
   const [toX, setToX] = useState(attached?.kind === "angle" ? attached.toMm[0] : sheet.widthMm / 2), [toY, setToY] = useState(attached?.kind === "angle" ? attached.toMm[1] : sheet.heightMm / 2);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
@@ -57,7 +57,7 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
           : kind === "balloon" ? { id, kind, text, positionMm: [x, y], leaderMm: leader }
           : kind === "center-mark" ? { id, kind, viewId, positionMm: [atX, atY], atMm: [atX, atY] }
           : kind === "angle" ? { id, kind, viewId, decimals, positionMm: [x, y], atMm: [atX, atY], toMm: [toX, toY] }
-          : kind === "diameter" || kind === "radius" ? { id, kind, viewId, decimals, positionMm: [x, y], atMm: [atX, atY] }
+          : kind === "diameter" || kind === "radius" || kind === "length" ? { id, kind, viewId, decimals, positionMm: [x, y], atMm: [atX, atY] }
           : { id, kind, viewId, decimals, positionMm: [x, y] };
         command = { type: draft.editId ? "update-annotation" : "add-annotation", sheetId: sheet.id, annotation };
       }
@@ -95,18 +95,19 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
         </>}
         <Checkbox label="Show hidden edges" checked={hidden} disabled={busy} onChange={e => setHidden(e.target.checked)}/>
       </> : <>
-        <FieldRow label="Annotation" htmlFor="drawing-annotation-kind"><SelectField id="drawing-annotation-kind" value={kind} disabled={busy} options={[{ value: "note", label: "Note" }, { value: "width", label: "Overall width dimension" }, { value: "height", label: "Overall height dimension" }, { value: "diameter", label: "Diameter dimension" }, { value: "radius", label: "Radius dimension" }, { value: "angle", label: "Angle dimension" }, { value: "balloon", label: "Balloon" }, { value: "center-mark", label: "Centre mark" }]} onChange={e => setKind(e.target.value as typeof kind)}/></FieldRow>
+        <FieldRow label="Annotation" htmlFor="drawing-annotation-kind"><SelectField id="drawing-annotation-kind" value={kind} disabled={busy} options={[{ value: "note", label: "Note" }, { value: "width", label: "Overall width dimension" }, { value: "height", label: "Overall height dimension" }, { value: "diameter", label: "Diameter dimension" }, { value: "radius", label: "Radius dimension" }, { value: "angle", label: "Angle dimension" }, { value: "length", label: "Edge length dimension" }, { value: "balloon", label: "Balloon" }, { value: "center-mark", label: "Centre mark" }]} onChange={e => setKind(e.target.value as typeof kind)}/></FieldRow>
         {kind === "note" || kind === "balloon" ? <>
           <FieldRow label="Text" htmlFor="drawing-note"><input id="drawing-note" value={text} disabled={busy} onChange={e => setText(e.target.value)}/></FieldRow>
           {kind === "balloon" && <>{numberField("leader-x", "Leader tip X (sheet mm)", leader[0], n => setLeader([n, leader[1]]))}{numberField("leader-y", "Leader tip Y (sheet mm)", leader[1], n => setLeader([leader[0], n]))}</>}
         </> : <>
           <FieldRow label="View" htmlFor="drawing-dimension-view"><SelectField id="drawing-dimension-view" value={viewId} disabled={busy} options={sheet.views.map(v => ({ value: v.id, label: v.name }))} onChange={e => setViewId(e.target.value)}/></FieldRow>
           {kind !== "center-mark" && numberField("decimals", "Decimal places", decimals, setDecimals)}
-          {(kind === "diameter" || kind === "radius" || kind === "angle" || kind === "center-mark") && <>
-            {numberField("at-x", kind === "angle" ? "First edge pick X (sheet mm)" : "Circle pick X (sheet mm)", atX, setAtX)}{numberField("at-y", kind === "angle" ? "First edge pick Y (sheet mm)" : "Circle pick Y (sheet mm)", atY, setAtY)}
+          {(kind === "diameter" || kind === "radius" || kind === "angle" || kind === "center-mark" || kind === "length") && <>
+            {numberField("at-x", kind === "angle" ? "First edge pick X (sheet mm)" : kind === "length" ? "Edge pick X (sheet mm)" : "Circle pick X (sheet mm)", atX, setAtX)}{numberField("at-y", kind === "angle" ? "First edge pick Y (sheet mm)" : kind === "length" ? "Edge pick Y (sheet mm)" : "Circle pick Y (sheet mm)", atY, setAtY)}
             {kind === "angle" && <>{numberField("to-x", "Second edge pick X (sheet mm)", toX, setToX)}{numberField("to-y", "Second edge pick Y (sheet mm)", toY, setToY)}</>}
           </>}
           <p>{kind === "width" || kind === "height" ? "The dimension measures the view's overall geometric extent in model millimeters. It updates when the source Part is rebuilt."
+            : kind === "length" ? "The dimension measures the model length of the straight edge nearest the pick (within 5 mm on the sheet); the dimension line passes through the label position."
             : kind === "center-mark" ? "Centre lines cross the projected circle or arc nearest the pick (within 5 mm on the sheet)."
             : kind === "angle" ? "The angle is measured between the straight edges nearest the two picks (within 5 mm on the sheet), in the sector the picks span. It updates when the source Part is rebuilt."
             : "The dimension attaches to the projected circle or arc nearest the pick (within 5 mm on the sheet) and shows the model value. It updates when the source Part is rebuilt."}</p>

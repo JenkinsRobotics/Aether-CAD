@@ -4,7 +4,7 @@
 import type { DrawingAnnotation, DrawingPoint } from "./document";
 import { sheetPoint, type BuiltDrawingAnnotation, type BuiltDrawingView } from "./build";
 
-type Attached = Extract<DrawingAnnotation, { kind: "diameter" | "radius" | "angle" | "center-mark" }>;
+type Attached = Extract<DrawingAnnotation, { kind: "diameter" | "radius" | "angle" | "center-mark" | "length" }>;
 type Segment = { a: DrawingPoint; b: DrawingPoint };
 type Round = { center: DrawingPoint; radiusMm: number; modelRadius: number };
 type Line = [DrawingPoint, DrawingPoint];
@@ -81,6 +81,15 @@ export function attachedDimension(annotation: Attached, view: BuiltDrawingView):
     for (let i = 0; i < steps; i++) lines.push([arcPoint(i), arcPoint(i + 1)]);
     lines.push(...arrowhead(arcPoint(0), unit(sub(arcPoint(1), arcPoint(0)))), ...arrowhead(arcPoint(steps), unit(sub(arcPoint(steps - 1), arcPoint(steps)))));
     return { id: annotation.id, viewId: annotation.viewId, text: `${valueDeg.toFixed(annotation.decimals)}°`, valueDeg, measure: "angle", textAlign: "center", positionMm: label, lines };
+  }
+  if (annotation.kind === "length") {
+    const edge = nearestSegment(segments, annotation.atMm, name), along = unit(sub(edge.b, edge.a)), normal = perp(along);
+    // The dimension line is the edge translated to the label's offset; extension lines reach 2 mm past it.
+    const offset = sub(label, edge.a)[0] * normal[0] + sub(label, edge.a)[1] * normal[1], side = Math.sign(offset) || 1;
+    const a = add(edge.a, mul(normal, offset)), b = add(edge.b, mul(normal, offset)), beyond = mul(normal, side * 2);
+    const lines: Line[] = [[a, b], [edge.a, add(a, beyond)], [edge.b, add(b, beyond)], ...arrowhead(a, along), ...arrowhead(b, mul(along, -1))];
+    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale;
+    return { id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: "center", positionMm: add(mul(add(a, b), 0.5), mul(normal, side * 1.5)), lines };
   }
   const round = nearestRound(rounds, annotation.atMm, name);
   if (annotation.kind === "center-mark") {

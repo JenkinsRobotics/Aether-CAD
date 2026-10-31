@@ -63,7 +63,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
       if (annotation.kind === "note") { built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] }); continue; }
       if (annotation.kind === "balloon") { built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm)); continue; }
       const view = built.views.find(v => v.view.id === annotation.viewId)!;
-      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark") { built.annotations.push(attachedDimension(annotation, view)); continue; }
+      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") { built.annotations.push(attachedDimension(annotation, view)); continue; }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
