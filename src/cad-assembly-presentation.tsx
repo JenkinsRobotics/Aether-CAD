@@ -65,6 +65,7 @@ export interface CADAssemblyPresentationProjection {
   readonly relationDOFOptions: readonly AssemblyRelationDOFOption[];
   readonly inspectorSections: readonly CADInspectorSection[];
   readonly bomRows: readonly BOMRowProjection[];
+  readonly bomTotalMassKg?: number | null;
   readonly commandAvailability: readonly AssemblyCommandAvailability[];
   readonly summary: {
     readonly instanceCount: number;
@@ -446,6 +447,7 @@ export function buildCADAssemblyPresentation(
     relationDOFOptions,
     inspectorSections: inspector(projection, solution, selectedID),
     bomRows: bom?.rows ?? [],
+    bomTotalMassKg: bom?.total_mass_kg ?? null,
     commandAvailability: [
       availability(projection, "insert-instance", projection.capabilities.can_edit_instances, "can_edit_instances", "Core does not expose instance editing."),
       availability(projection, "add-connector", projection.capabilities.can_edit_connectors, "can_edit_connectors", "Core does not expose connector editing."),

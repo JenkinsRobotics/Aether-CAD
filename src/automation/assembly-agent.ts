@@ -1,3 +1,4 @@
+import { numberedBOMRows } from '../assembly/bom-table';
 import type { AgentInteraction, AgentTool } from '@aether/ui/AgentServices';
 import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
 import type { CADAssemblyController } from '../cad-assembly-controller';
@@ -32,7 +33,7 @@ export function inspectAssembly(controller: CADAssemblyController, args: Record<
   const section = args.section ?? 'summary', offset = args.offset ?? 0;
   if (!Number.isSafeInteger(offset) || Number(offset) < 0) throw Error('Assembly offset must be a nonnegative integer.');
   const parts = p.part_definitions.map(({feature_document,...part}) => ({...part,has_geometry:!!feature_document}));
-  const sections = {parts,instances:p.instances,connectors:p.connector_definitions,mates:p.mates,relations:p.relations,contacts:p.contact_sets ?? [],bom:controller.bomProjection?.rows ?? []};
+  const sections = {parts,instances:p.instances,connectors:p.connector_definitions,mates:p.mates,relations:p.relations,contacts:p.contact_sets ?? [],bom:numberedBOMRows(controller.bomProjection?.rows ?? [])};
   const summary = {assembly_id:p.assembly_id,revision:editorRevision(p),source_revision:p.revision,can_undo:controller.canUndoRecipe,can_redo:controller.canRedoRecipe,
     capabilities:p.capabilities,contacts_enabled:p.contacts_enabled ?? false,
     counts:Object.fromEntries(Object.entries(sections).map(([name,items]) => [name,items.length]))};

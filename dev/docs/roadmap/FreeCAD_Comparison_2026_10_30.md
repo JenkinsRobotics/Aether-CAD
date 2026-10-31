@@ -106,7 +106,7 @@ comparison evidence yet).
 | Part insertion (1.1) | Insert Part from Files/Drive, drag, instances | parity | `verify-assembly-insert-browser.mjs` |
 | Sub-assemblies | Not supported | gap | nested assemblies open since alpha-0.1.18 |
 | Joint motion simulation and animation (1.1) | Motion study with keys, steps, contact sets, CSV export; Aether Animation for rendered output | partial | no GIF/video export in CAD (by design: `aether_animation`) |
-| Bill of Materials (1.1) | None | gap | |
+| Bill of Materials (1.1): Index, Name, Description, File Name, Quantity, custom columns, sub-assembly detail, export | BOM tab: item index, part number, name, description, quantity, material, mass, total mass; hierarchical or flattened; CSV export with custom property columns; agent `assembly_inspect` section `bom` | parity | closed 2026-10-30 (`src/assembly/bom-table.ts`); the comparison had missed the existing panel. Custom columns come from Part custom properties, not editable in the table |
 | Exploded views | Explode create/show | parity | |
 | Collision/contact | Contact sets with overlap refusal | ours+ | FreeCAD has no contact sets |
 | External links, update links | Studio Drive documents and versions | n/a | ownership is Studio's |
@@ -118,7 +118,7 @@ comparison evidence yet).
 | Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal | partial | detail views, auxiliary views, offset sections missing |
 | Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Length and width dimensions, notes | partial | radius/diameter/angle/chain dimensions missing |
 | Annotations: balloons, leaders, rich text, welding, surface finish, center lines/marks, cosmetic vertices, hatch, image | Notes, hatch on sections | partial | balloons, leaders, centre marks missing |
-| BOM / spreadsheet view | None | gap | |
+| BOM / spreadsheet view | None on the sheet; the Assembly BOM exports CSV | gap | needs assembly drawing sources first (`can_project_bom` is false in the drawing projection) |
 | Templates and editable title blocks | Sheet with frame | partial | **verify** title-block fields |
 | Export SVG/DXF/PDF | SVG/DXF/PDF, save/reopen, source refresh, live agent editing | parity | `verify-drawings*.mjs`, `verify-drawing-pdf.mjs` |
 
@@ -261,7 +261,7 @@ Order by user impact, each with the evidence that closes it.
 
 **P2 — FreeCAD 1.1 features we lack**
 
-5. Assembly BOM (table from occurrences and Part metadata; also a drawing view).
+5. ~~Assembly BOM (table from occurrences and Part metadata)~~ done 2026-10-30; the drawing BOM view waits on assembly drawing sources.
 6. Drawing dimension types (radius, diameter, angle, chain), detail and auxiliary views,
    balloons and centre marks, title-block fields.
 7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30 (BSP/NPT profiles and thread class still open).

@@ -1,10 +1,10 @@
 /** Mates — the assembly mate list, its actions menu and the legacy proof. */
-import { type BOMRowProjection } from "../../cad-assembly-bridge";
+import { bomCSV, numberedBOMRows, type BOMTableRow } from "../../assembly/bom-table";
 import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 import { cadCommands } from "../../cad-command-registry";
 import { cadPresentation } from "../../cad-presentation-store";
 import { cadWorkspace } from "../../cad-workspace-store";
-import { AetherIcon, InspectorSection, DataTable, type DataTableColumn, EmptyState, ErrorState, ListBox, MenuButton, type MenuItem, SegmentedControl, Tabs, TreePanel } from "@aether/ui";
+import { AetherIcon, Button, InspectorSection, DataTable, type DataTableColumn, EmptyState, ErrorState, ListBox, MenuButton, type MenuItem, SegmentedControl, Tabs, TreePanel } from "@aether/ui";
 import { useSyncExternalStore } from "react";
 import { AssemblyContactSets } from "./contact-sets";
 
@@ -119,12 +119,22 @@ const assemblyTabs = [
   { id: "bom", label: "BOM" },
 ] as const;
 
-const bomColumns: readonly DataTableColumn<BOMRowProjection>[] = [
-  { id: "part-number", header: "Part #", cell: (row) => row.part_number ?? "—", sortValue: (row) => row.part_number, sortable: true, pinned: true, width: 86 },
+const kg = (value: number | null) => value === null ? "—" : `${value.toLocaleString(undefined, { maximumFractionDigits: 3 })} kg`;
+/** FreeCAD's BOM columns: item index, part number, name, description, quantity, material and mass. */
+const bomColumns: readonly DataTableColumn<BOMTableRow>[] = [
+  { id: "item", header: "#", cell: (row) => row.item_number, sortValue: (row) => row.item_sort_key, sortable: true, pinned: true, width: 48 },
+  { id: "part-number", header: "Part #", cell: (row) => row.part_number ?? "—", sortValue: (row) => row.part_number, sortable: true, width: 86 },
   { id: "name", header: "Name", cell: (row) => row.name, sortValue: (row) => row.name, sortable: true, width: 130 },
+  { id: "description", header: "Description", cell: (row) => row.description ?? "—", sortValue: (row) => row.description, sortable: true, width: 140 },
   { id: "quantity", header: "Qty", cell: (row) => String(row.quantity), sortValue: (row) => row.quantity, sortable: true, align: "end", width: 55 },
   { id: "material", header: "Material", cell: (row) => row.material_name ?? "—", sortValue: (row) => row.material_name, sortable: true, width: 95 },
+  { id: "mass", header: "Mass", cell: (row) => kg(row.extended_mass_kg), sortValue: (row) => row.extended_mass_kg, sortable: true, align: "end", width: 80 },
 ];
+
+function exportBOMCSV(rows: readonly BOMTableRow[], totalMassKg: number | null, name: string): void {
+  const url = URL.createObjectURL(new Blob([bomCSV(rows, totalMassKg)], { type: "text/csv" }));
+  const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${name} BOM.csv`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function LegacyMateProof() {
   const workspace = useSyncExternalStore(
@@ -201,7 +211,11 @@ export function MatesPanel({ active }: { active: boolean }) {
       </>;
     }
     if (assembly.activeTab === "bom") {
+      const rows = numberedBOMRows(assembly.data.bomRows);
+      const totalMass = assembly.data.bomTotalMassKg ?? null;
+      const assemblyName = assembly.data.treeNodes[0]?.label ?? "Assembly";
       return <div className="canonical-bom-table">
+        <div className="cad-view-actions">
         <SegmentedControl
           ariaLabel="BOM structure"
           value={assembly.data.summary.bomMode ?? "hierarchical"}
@@ -214,14 +228,17 @@ export function MatesPanel({ active }: { active: boolean }) {
             mode: mode as "hierarchical" | "flattened",
           })}
         />
+        <Button disabled={rows.length === 0} onClick={() => exportBOMCSV(rows, totalMass, assemblyName)}>Export CSV</Button>
+        <small aria-label="BOM total mass">{totalMass === null ? `${rows.length} rows` : `${rows.length} rows · ${kg(totalMass)}`}</small>
+        </div>
         <DataTable
           ariaLabel="Assembly bill of materials"
-          rows={assembly.data.bomRows}
+          rows={rows}
           rowID={(row) => row.row_id}
           columns={bomColumns}
           selectedIDs={assembly.selectedBOMRowIDs}
           onSelect={(ids, mode) => cadAssemblyWorkspace.dispatch({ type: "select-bom-rows", ids, mode })}
-          filterText={(row) => `${row.part_number ?? ""} ${row.name} ${row.material_name ?? ""}`}
+          filterText={(row) => `${row.item_number} ${row.part_number ?? ""} ${row.name} ${row.description ?? ""} ${row.material_name ?? ""}`}
           emptyState="Core returned no BOM rows for this Assembly."
           virtualizeThreshold={100}
           height={430}

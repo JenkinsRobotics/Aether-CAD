@@ -306,7 +306,7 @@ Totals (398 commands): parity 204, partial 94, n/a 53, gap 3, parity-ish 35, ver
 
 | SolidCraft | Title | Their contract | Ours | Status | Missing / note |
 |---|---|---|---|---|---|
-| `assembly.bom` | Bill of Materials | component?: id or name (default the design); levels?: flat (default: every part at any depth, counted through its \          subassemblies) \| top (the componen | BOM panel | parity |  |
+| `assembly.bom` | Bill of Materials | component?: id or name (default the design); levels?: flat (default: every part at any depth, counted through its \          subassemblies) \| top (the componen | BOM panel, CSV export, agent `assembly_inspect` bom | parity | 2026-10-30: item index, description and mass columns, total mass, CSV with custom-property columns |
 | `component.activate` | Activate Component | component: id or name (0 or "root" for the design); occurrence?, path?: exact placement used to author shared geometry |  | n/a | no in-context editing: a part is edited in its own document; the assembly holds occurrences of saved parts |
 | `component.break_link` | Break Link | component: id or name of a linked component — keeps its bodies as they are and forgets the design file | Studio versions | partial | links are Studio documents; break = copy |
 | `component.capture_position` | Capture Position | keeps pending occurrence moves |  | n/a | occurrence moves commit at once (move_instance); nothing is pending |
