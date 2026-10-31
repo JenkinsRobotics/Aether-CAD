@@ -2,9 +2,17 @@ import { build } from 'vite';
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../../../aether-engine/package.json', import.meta.url));
 const variant = process.env.BENCH_VARIANT ?? (process.env.BENCH_OBB === '1' ? 'obb' : 'runner');
-if (!['runner','obb','no-history'].includes(variant)) throw new Error('Unknown benchmark variant');
-const experiment = variant === 'obb' ? 'op.SetUseOBB(true);' : variant === 'no-history' ? 'op.SetToFillHistory(false);' : '';
-await build({plugins:experiment ? [{name:'benchmark-occt-obb',transform(code,id){if(id.endsWith('/kernel/booleans.ts')) { if (!code.includes('op.SetTools(tools);')) throw new Error('Boolean instrumentation point changed'); return code.replace('op.SetTools(tools);',`op.SetTools(tools); ${experiment}`); }}}] : [],configFile:false,publicDir:false,ssr:{noExternal:true},resolve:{alias:{replicad:require.resolve('replicad')}},build:{
+// Benchmark-only edits at the OCCT boolean configuration: [anchor, replacement].
+// no-simplify drops the per-boolean face unification, to measure its share.
+const experiments = {
+  runner: null,
+  obb: ['op.SetTools(tools);', 'op.SetTools(tools); op.SetUseOBB(true);'],
+  'no-history': ['op.SetTools(tools);', 'op.SetTools(tools); op.SetToFillHistory(false);'],
+  'no-simplify': ['op.SimplifyResult(true, true, 1e-3);', ''],
+};
+if (!(variant in experiments)) throw new Error('Unknown benchmark variant');
+const experiment = experiments[variant];
+await build({plugins:experiment ? [{name:'benchmark-occt-variant',transform(code,id){if(id.endsWith('/kernel/booleans.ts')) { if (!code.includes(experiment[0])) throw new Error('Boolean instrumentation point changed'); return code.replace(experiment[0],experiment[1]); }}}] : [],configFile:false,publicDir:false,ssr:{noExternal:true},resolve:{alias:{replicad:require.resolve('replicad')}},build:{
   ssr:'scripts/benchmarks/native/aether.ts',outDir:`build/native-comparison/aether-${variant}`,emptyOutDir:true,minify:false,
   rollupOptions:{output:{inlineDynamicImports:true,entryFileNames:'run.mjs',banner:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);const __dirname=process.cwd();"}},
 }});

@@ -12,6 +12,7 @@ python3 scripts/benchmarks/native/fixtures.py
 node scripts/benchmarks/native/build-aether.mjs
 BENCH_VARIANT=obb node scripts/benchmarks/native/build-aether.mjs
 BENCH_VARIANT=no-history node scripts/benchmarks/native/build-aether.mjs
+BENCH_VARIANT=no-simplify node scripts/benchmarks/native/build-aether.mjs
 ```
 
 Build the supplied reference separately (Rust and network package access needed):
@@ -60,7 +61,9 @@ than claiming exact equality. The robot's small Aether/FreeCAD reported-volume
 difference remains an explicit limitation; no exact boolean-equivalence proof is
 claimed. Failed reference commands remain failures, with their logs retained.
 
-The OBB and no-history variants modify the **benchmark bundle only**, through a
+The OBB, no-history and no-simplify variants modify the **benchmark bundle only**, through a
 checked Vite transform at the OCCT boolean configuration. They do not change
 production defaults, tolerance, saved features or app installations. Preserve
-raw evidence under `build/native-comparison/`; the portable result is `summary.json`.
+raw evidence under `build/native-comparison/`; the portable results are `summary.json`
+and `front-shell-profile.json`, copied into `dev/docs/reality/data/` for each report
+(`dev/docs/reality/Native_Comparison_2026_10_31.md`).

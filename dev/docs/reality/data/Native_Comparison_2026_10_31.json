@@ -1,0 +1,2654 @@
+{
+  "method": "Fresh headless processes, five samples, serial execution. Construction excludes kernel import/init, file IO and final display generation. No model-cache adoption in full rebuilds.",
+  "metadata": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "cpu": "Apple M1 Max",
+    "memoryBytes": 34359738368,
+    "cadCommit": "a440e6ade9c435c4e1d913dfe2ac0ad5b6b6b3c8",
+    "sourceDirty": true,
+    "solidcraftVersion": "0.23.0",
+    "solidcraftCargoLockSha256": "065fa8b62d23bd5e9f22a05f3e6e92f36129afc05eb6a8712eb30a567b36e605",
+    "samples": [
+      {
+        "name": "aether-plate-0",
+        "exit": 0,
+        "processWallMs": 286.4724574610591
+      },
+      {
+        "name": "freecad-plate-0",
+        "exit": 0,
+        "processWallMs": 1435.5516247451305
+      },
+      {
+        "name": "solidcraft-plate-0",
+        "exit": 0,
+        "processWallMs": 11.120250448584557
+      },
+      {
+        "name": "aether-ten-bores-0",
+        "exit": 0,
+        "processWallMs": 564.2207078635693
+      },
+      {
+        "name": "freecad-ten-bores-0",
+        "exit": 0,
+        "processWallMs": 1041.0459591075778
+      },
+      {
+        "name": "solidcraft-ten-bores-0",
+        "exit": 0,
+        "processWallMs": 295.0852084904909
+      },
+      {
+        "name": "aether-annular-shell-0",
+        "exit": 0,
+        "processWallMs": 345.8887077867985
+      },
+      {
+        "name": "freecad-annular-shell-0",
+        "exit": 0,
+        "processWallMs": 396.24087512493134
+      },
+      {
+        "name": "solidcraft-annular-shell-0",
+        "exit": 0,
+        "processWallMs": 21.430582739412785
+      },
+      {
+        "name": "aether-robot-front-0",
+        "exit": 0,
+        "processWallMs": 6478.301708586514
+      },
+      {
+        "name": "freecad-robot-front-0",
+        "exit": 0,
+        "processWallMs": 26645.484416745603
+      },
+      {
+        "name": "obb-robot-front-0",
+        "exit": 0,
+        "processWallMs": 6694.908500649035
+      },
+      {
+        "name": "freecad-plate-1",
+        "exit": 0,
+        "processWallMs": 451.7192495986819
+      },
+      {
+        "name": "aether-plate-1",
+        "exit": 0,
+        "processWallMs": 292.2687092795968
+      },
+      {
+        "name": "solidcraft-plate-1",
+        "exit": 0,
+        "processWallMs": 76.92900020629168
+      },
+      {
+        "name": "freecad-ten-bores-1",
+        "exit": 0,
+        "processWallMs": 994.4796673953533
+      },
+      {
+        "name": "aether-ten-bores-1",
+        "exit": 0,
+        "processWallMs": 556.664458476007
+      },
+      {
+        "name": "solidcraft-ten-bores-1",
+        "exit": 0,
+        "processWallMs": 293.81741769611835
+      },
+      {
+        "name": "freecad-annular-shell-1",
+        "exit": 0,
+        "processWallMs": 402.6248333975673
+      },
+      {
+        "name": "aether-annular-shell-1",
+        "exit": 0,
+        "processWallMs": 341.736875474453
+      },
+      {
+        "name": "solidcraft-annular-shell-1",
+        "exit": 0,
+        "processWallMs": 18.97662505507469
+      },
+      {
+        "name": "freecad-robot-front-1",
+        "exit": 0,
+        "processWallMs": 24752.847875468433
+      },
+      {
+        "name": "aether-robot-front-1",
+        "exit": 0,
+        "processWallMs": 6309.989500790834
+      },
+      {
+        "name": "obb-robot-front-1",
+        "exit": 0,
+        "processWallMs": 6418.392792344093
+      },
+      {
+        "name": "aether-plate-2",
+        "exit": 0,
+        "processWallMs": 295.51699943840504
+      },
+      {
+        "name": "freecad-plate-2",
+        "exit": 0,
+        "processWallMs": 723.1424590572715
+      },
+      {
+        "name": "solidcraft-plate-2",
+        "exit": 0,
+        "processWallMs": 75.02529211342335
+      },
+      {
+        "name": "aether-ten-bores-2",
+        "exit": 0,
+        "processWallMs": 512.0466249063611
+      },
+      {
+        "name": "freecad-ten-bores-2",
+        "exit": 0,
+        "processWallMs": 997.2932916134596
+      },
+      {
+        "name": "solidcraft-ten-bores-2",
+        "exit": 0,
+        "processWallMs": 290.1273751631379
+      },
+      {
+        "name": "aether-annular-shell-2",
+        "exit": 0,
+        "processWallMs": 293.4138746932149
+      },
+      {
+        "name": "freecad-annular-shell-2",
+        "exit": 0,
+        "processWallMs": 402.0233750343323
+      },
+      {
+        "name": "solidcraft-annular-shell-2",
+        "exit": 0,
+        "processWallMs": 20.05691546946764
+      },
+      {
+        "name": "aether-robot-front-2",
+        "exit": 0,
+        "processWallMs": 6248.037917539477
+      },
+      {
+        "name": "freecad-robot-front-2",
+        "exit": 0,
+        "processWallMs": 25365.099041722715
+      },
+      {
+        "name": "obb-robot-front-2",
+        "exit": 0,
+        "processWallMs": 6542.632916942239
+      },
+      {
+        "name": "freecad-plate-3",
+        "exit": 0,
+        "processWallMs": 448.2038328424096
+      },
+      {
+        "name": "aether-plate-3",
+        "exit": 0,
+        "processWallMs": 290.9921668469906
+      },
+      {
+        "name": "solidcraft-plate-3",
+        "exit": 0,
+        "processWallMs": 77.88191642612219
+      },
+      {
+        "name": "freecad-ten-bores-3",
+        "exit": 0,
+        "processWallMs": 993.9867090433836
+      },
+      {
+        "name": "aether-ten-bores-3",
+        "exit": 0,
+        "processWallMs": 507.46749993413687
+      },
+      {
+        "name": "solidcraft-ten-bores-3",
+        "exit": 0,
+        "processWallMs": 292.7397917956114
+      },
+      {
+        "name": "freecad-annular-shell-3",
+        "exit": 0,
+        "processWallMs": 445.96762489527464
+      },
+      {
+        "name": "aether-annular-shell-3",
+        "exit": 0,
+        "processWallMs": 349.2698334157467
+      },
+      {
+        "name": "solidcraft-annular-shell-3",
+        "exit": 0,
+        "processWallMs": 84.04229208827019
+      },
+      {
+        "name": "freecad-robot-front-3",
+        "exit": 0,
+        "processWallMs": 63577.71124970168
+      },
+      {
+        "name": "aether-robot-front-3",
+        "exit": 0,
+        "processWallMs": 16207.402083091438
+      },
+      {
+        "name": "obb-robot-front-3",
+        "exit": 0,
+        "processWallMs": 13199.819250032306
+      },
+      {
+        "name": "aether-plate-4",
+        "exit": 0,
+        "processWallMs": 700.7419997826219
+      },
+      {
+        "name": "freecad-plate-4",
+        "exit": 0,
+        "processWallMs": 1307.6507095247507
+      },
+      {
+        "name": "solidcraft-plate-4",
+        "exit": 0,
+        "processWallMs": 130.15908282250166
+      },
+      {
+        "name": "aether-ten-bores-4",
+        "exit": 0,
+        "processWallMs": 1179.1315833106637
+      },
+      {
+        "name": "freecad-ten-bores-4",
+        "exit": 0,
+        "processWallMs": 2647.186500020325
+      },
+      {
+        "name": "solidcraft-ten-bores-4",
+        "exit": 0,
+        "processWallMs": 1385.1905837655067
+      },
+      {
+        "name": "aether-annular-shell-4",
+        "exit": 0,
+        "processWallMs": 658.501916565001
+      },
+      {
+        "name": "freecad-annular-shell-4",
+        "exit": 0,
+        "processWallMs": 965.9071657806635
+      },
+      {
+        "name": "solidcraft-annular-shell-4",
+        "exit": 0,
+        "processWallMs": 71.24795857816935
+      },
+      {
+        "name": "aether-robot-front-4",
+        "exit": 0,
+        "processWallMs": 15048.555249348283
+      },
+      {
+        "name": "freecad-robot-front-4",
+        "exit": 0,
+        "processWallMs": 28863.288333639503
+      },
+      {
+        "name": "obb-robot-front-4",
+        "exit": 0,
+        "processWallMs": 6703.166957944632
+      },
+      {
+        "name": "solidcraft-cached-edit-plate-0",
+        "exit": 0,
+        "processWallMs": 78.27258296310902
+      },
+      {
+        "name": "solidcraft-cached-edit-ten-bores-0",
+        "exit": 0,
+        "processWallMs": 133.79958365112543
+      },
+      {
+        "name": "solidcraft-cached-edit-annular-shell-0",
+        "exit": 0,
+        "processWallMs": 20.958416163921356
+      },
+      {
+        "name": "solidcraft-cached-edit-plate-1",
+        "exit": 0,
+        "processWallMs": 20.10408230125904
+      },
+      {
+        "name": "solidcraft-cached-edit-ten-bores-1",
+        "exit": 0,
+        "processWallMs": 130.86054101586342
+      },
+      {
+        "name": "solidcraft-cached-edit-annular-shell-1",
+        "exit": 0,
+        "processWallMs": 20.840374752879143
+      },
+      {
+        "name": "solidcraft-cached-edit-plate-2",
+        "exit": 0,
+        "processWallMs": 10.420584119856358
+      },
+      {
+        "name": "solidcraft-cached-edit-ten-bores-2",
+        "exit": 0,
+        "processWallMs": 129.52279206365347
+      },
+      {
+        "name": "solidcraft-cached-edit-annular-shell-2",
+        "exit": 0,
+        "processWallMs": 20.334082655608654
+      },
+      {
+        "name": "solidcraft-cached-edit-plate-3",
+        "exit": 0,
+        "processWallMs": 20.86679171770811
+      },
+      {
+        "name": "solidcraft-cached-edit-ten-bores-3",
+        "exit": 0,
+        "processWallMs": 129.84624970704317
+      },
+      {
+        "name": "solidcraft-cached-edit-annular-shell-3",
+        "exit": 0,
+        "processWallMs": 19.77812498807907
+      },
+      {
+        "name": "solidcraft-cached-edit-plate-4",
+        "exit": 0,
+        "processWallMs": 20.30174992978573
+      },
+      {
+        "name": "solidcraft-cached-edit-ten-bores-4",
+        "exit": 0,
+        "processWallMs": 128.1943330541253
+      },
+      {
+        "name": "solidcraft-cached-edit-annular-shell-4",
+        "exit": 0,
+        "processWallMs": 20.056708715856075
+      },
+      {
+        "name": "runner-pair-0",
+        "exit": 0,
+        "processWallMs": 6679.47162501514
+      },
+      {
+        "name": "no-history-pair-0",
+        "exit": 0,
+        "processWallMs": 10342.598833143711
+      },
+      {
+        "name": "no-history-pair-1",
+        "exit": 0,
+        "processWallMs": 8649.7120000422
+      },
+      {
+        "name": "runner-pair-1",
+        "exit": 0,
+        "processWallMs": 8567.69424956292
+      },
+      {
+        "name": "runner-pair-2",
+        "exit": 0,
+        "processWallMs": 8812.108292244375
+      },
+      {
+        "name": "no-history-pair-2",
+        "exit": 0,
+        "processWallMs": 6697.576249949634
+      }
+    ],
+    "failures": []
+  },
+  "reference": {
+    "version": "0.23.0",
+    "sourceSha256": "4a42f0c0e01a42a556ba93781ef6feedfb1d1ad0d26f9821498e3b74125fa021",
+    "sourceFiles": 1459,
+    "binarySha256": "487e4db412bb2dadb661ee39604b0fbdd5ffd07902d541171284ec26134222d5"
+  },
+  "fixtures": [
+    {
+      "name": "plate",
+      "sourceSha256": "75e542cb0b5f8080ecc86c56f3cd6d61a2fe34228df980141f9b5f3fdf2774a8",
+      "features": 2,
+      "engines": {
+        "aether": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 23.422916999999984,
+              "displayMedianMs": 25.273374999999987,
+              "samples": [
+                {
+                  "solidMs": 23.422916999999984,
+                  "displayMs": 25.222666000000004,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 23.93712500000001,
+                  "displayMs": 24.044791000000004,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 22.470500000000015,
+                  "displayMs": 25.273374999999987,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 22.885333000000003,
+                  "displayMs": 25.304583000000008,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 86.334833,
+                  "displayMs": 113.12150000000003,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.19274999999998954,
+              "displayMedianMs": 0.0060839999999871,
+              "samples": [
+                {
+                  "solidMs": 0.18054200000000264,
+                  "displayMs": 0.0060839999999871,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 0.17412499999997522,
+                  "displayMs": 0.005792000000013786,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 0.19274999999998954,
+                  "displayMs": 0.005875000000003183,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 0.20266700000001947,
+                  "displayMs": 0.008166999999986047,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 0.23112500000002,
+                  "displayMs": 0.013208999999960724,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 1.4424579999999878,
+              "displayMedianMs": 8.716958000000005,
+              "samples": [
+                {
+                  "solidMs": 1.4424579999999878,
+                  "displayMs": 8.826375000000013,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 1.4402089999999816,
+                  "displayMs": 8.716958000000005,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 1.4311249999999802,
+                  "displayMs": 8.318375000000003,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 1.5067090000000007,
+                  "displayMs": 8.462375000000009,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                },
+                {
+                  "solidMs": 1.7309999999999945,
+                  "displayMs": 25.892166999999972,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000,
+                    "face_count": 6,
+                    "edge_count": 12
+                  }
+                }
+              ]
+            }
+          },
+          "version": "v24.12.0",
+          "initMs": [
+            138.50500000000002,
+            136.122917,
+            133.090167,
+            131.63845899999998,
+            291.514833
+          ]
+        },
+        "freecad": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 2.1960840225219727,
+              "displayMedianMs": 0.8783750534057617,
+              "samples": [
+                {
+                  "solidMs": 2.2579574584960938,
+                  "displayMs": 0.8783750534057617,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2.0879173278808594,
+                  "displayMs": 0.7502079010009766,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2.1960840225219727,
+                  "displayMs": 0.883000373840332,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2.0641250610351562,
+                  "displayMs": 0.7628335952758789,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2.3077497482299805,
+                  "displayMs": 0.9556655883789062,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.02974987030029297,
+              "displayMedianMs": 0.7777070999145508,
+              "samples": [
+                {
+                  "solidMs": 0.047583580017089844,
+                  "displayMs": 0.7777070999145508,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.02520751953125,
+                  "displayMs": 0.7485008239746094,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.02974987030029297,
+                  "displayMs": 0.8311252593994141,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.028290748596191406,
+                  "displayMs": 0.6912918090820312,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.056792259216308594,
+                  "displayMs": 1.3515434265136719,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 60000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 1.8517093658447266,
+              "displayMedianMs": 0.7457075119018555,
+              "samples": [
+                {
+                  "solidMs": 2.0850000381469727,
+                  "displayMs": 0.7755832672119141,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.8517093658447266,
+                  "displayMs": 0.7457075119018555,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.842665672302246,
+                  "displayMs": 0.6679592132568359,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.7326669692993164,
+                  "displayMs": 0.7220840454101562,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2.3036251068115234,
+                  "displayMs": 3.649582862854004,
+                  "triangles": 12,
+                  "measures": {
+                    "volume_mm3": 66000.0,
+                    "face_count": 6,
+                    "edge_count": 12,
+                    "solids": 1
+                  }
+                }
+              ]
+            }
+          },
+          "version": [
+            "1",
+            "1",
+            "3",
+            "20260725 (Git shallow)",
+            "Unknown",
+            "2026/07/25 04:52:02",
+            "grafted,grafted",
+            "145529fe741292ff0b3977a01195bf0247425794"
+          ],
+          "initMs": [
+            1341.677499935031,
+            384.81508288532495,
+            615.8091677352786,
+            381.35483302176,
+            1141.5232084691525
+          ]
+        },
+        "solidcraft": {
+          "status": "completed",
+          "phases": {
+            "cold": {
+              "solidMedianMs": 19.984375,
+              "displayMedianMs": 1.78225,
+              "samples": [
+                {
+                  "solidMs": 1.178958,
+                  "displayMs": 0.375,
+                  "triangles": 12,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 20.826041,
+                  "displayMs": 1.78225,
+                  "triangles": 12,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 19.984375,
+                  "displayMs": 1.735958,
+                  "triangles": 12,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 19.856665999999997,
+                  "displayMs": 1.9918330000000002,
+                  "triangles": 12,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 30.510792,
+                  "displayMs": 5.8925410000000005,
+                  "triangles": 12,
+                  "recomputed": 2,
+                  "ops": []
+                }
+              ]
+            },
+            "cachedOpen": {
+              "solidMedianMs": 0.24487499999999998,
+              "displayMedianMs": 0.788209,
+              "samples": [
+                {
+                  "solidMs": 8.525166,
+                  "displayMs": 9.845667,
+                  "triangles": 12,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 11.590625000000001,
+                      "step": "op",
+                      "view_ms": 0.358292
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.043542,
+                      "step": "op",
+                      "view_ms": 0.0028339999999999997
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.22975,
+                  "displayMs": 0.788209,
+                  "triangles": 12,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 0.750833,
+                      "step": "op",
+                      "view_ms": 0.451417
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.02175,
+                      "step": "op",
+                      "view_ms": 0.001792
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.317458,
+                  "displayMs": 0.756584,
+                  "triangles": 12,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 0.6319589999999999,
+                      "step": "op",
+                      "view_ms": 0.359334
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.017249999999999998,
+                      "step": "op",
+                      "view_ms": 0.0018750000000000001
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.241292,
+                  "displayMs": 0.6268750000000001,
+                  "triangles": 12,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 0.75975,
+                      "step": "op",
+                      "view_ms": 0.235542
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.023667,
+                      "step": "op",
+                      "view_ms": 0.002209
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.24487499999999998,
+                  "displayMs": 0.946084,
+                  "triangles": 12,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 0.8686250000000001,
+                      "step": "op",
+                      "view_ms": 0.43679100000000004
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.024167,
+                      "step": "op",
+                      "view_ms": 0.0020829999999999998
+                    }
+                  ]
+                }
+              ]
+            },
+            "edit": {
+              "commandMedianMs": 0.75975
+            }
+          },
+          "measures": {
+            "area_mm2": 15200.0,
+            "bbox": {
+              "max": [
+                50.0,
+                30.0,
+                10.0
+              ],
+              "min": [
+                -50.0,
+                -30.0,
+                0.0
+              ]
+            },
+            "center_of_mass": [
+              0.0,
+              0.0,
+              5.0
+            ],
+            "closed": true,
+            "density_g_cm3": 1.29,
+            "edges": 12,
+            "face_types": {
+              "plane": 6
+            },
+            "faces": 6,
+            "kernel": {
+              "edges": 12,
+              "faces": 6,
+              "shells": 1,
+              "vertices": 8
+            },
+            "mass_g": 77.4,
+            "material": "Default",
+            "name": "Body",
+            "vertices": 8,
+            "volume_mm3": 60000.0
+          },
+          "reportedVolumeErrorMm3": 0.0
+        }
+      }
+    },
+    {
+      "name": "ten-bores",
+      "sourceSha256": "bd28faebbb046d304e49c2bd5a334c2f63a191e4d119ca23c8149c645e854963",
+      "features": 22,
+      "engines": {
+        "aether": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 144.410792,
+              "displayMedianMs": 98.58333299999998,
+              "samples": [
+                {
+                  "solidMs": 145.92208300000001,
+                  "displayMs": 106.87841700000001,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 144.410792,
+                  "displayMs": 98.58333299999998,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 136.37662500000002,
+                  "displayMs": 93.92079100000001,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 135.91766699999997,
+                  "displayMs": 91.55787500000002,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 353.247,
+                  "displayMs": 285.15820899999994,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.47600000000005593,
+              "displayMedianMs": 0.02199999999999136,
+              "samples": [
+                {
+                  "solidMs": 0.6456660000000056,
+                  "displayMs": 0.02199999999999136,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 0.41987499999999045,
+                  "displayMs": 0.023000000000024556,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 0.47600000000005593,
+                  "displayMs": 0.016667000000040844,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 0.4482079999999655,
+                  "displayMs": 0.025708000000008724,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 0.8840419999999085,
+                  "displayMs": 0.01745800000003328,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 7.936792000000025,
+              "displayMedianMs": 49.585959,
+              "samples": [
+                {
+                  "solidMs": 8.702208000000041,
+                  "displayMs": 49.585959,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 7.936792000000025,
+                  "displayMs": 51.87045899999998,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 7.390250000000037,
+                  "displayMs": 47.01887499999998,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 7.353749999999991,
+                  "displayMs": 47.46500000000003,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42
+                  }
+                },
+                {
+                  "solidMs": 46.13845900000001,
+                  "displayMs": 172.36241699999994,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42
+                  }
+                }
+              ]
+            }
+          },
+          "version": "v24.12.0",
+          "initMs": [
+            146.255708,
+            134.846834,
+            130.44804200000002,
+            130.722667,
+            192.725625
+          ]
+        },
+        "freecad": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 128.86429119110107,
+              "displayMedianMs": 23.732290267944336,
+              "samples": [
+                {
+                  "solidMs": 128.86429119110107,
+                  "displayMs": 24.156874656677246,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 130.51258373260498,
+                  "displayMs": 22.894583702087402,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 119.25570774078369,
+                  "displayMs": 22.734959602355957,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 122.59054183959961,
+                  "displayMs": 23.732290267944336,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 439.58695793151855,
+                  "displayMs": 50.849708557128906,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.10591506958007812,
+              "displayMedianMs": 23.521084785461426,
+              "samples": [
+                {
+                  "solidMs": 0.10591506958007812,
+                  "displayMs": 24.054542541503906,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.09208297729492188,
+                  "displayMs": 23.428665161132812,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.07429218292236328,
+                  "displayMs": 22.947335243225098,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.11945915222167969,
+                  "displayMs": 23.521084785461426,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.1279582977294922,
+                  "displayMs": 61.20779228210449,
+                  "triangles": 2572,
+                  "measures": {
+                    "volume_mm3": 57172.566611769216,
+                    "face_count": 16,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 19.958374977111816,
+              "displayMedianMs": 23.50370979309082,
+              "samples": [
+                {
+                  "solidMs": 19.958374977111816,
+                  "displayMs": 23.50370979309082,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 20.452834129333496,
+                  "displayMs": 22.466708183288574,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 19.77999973297119,
+                  "displayMs": 22.990583419799805,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 19.775915145874023,
+                  "displayMs": 24.20608425140381,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 40.485374450683594,
+                  "displayMs": 37.194125175476074,
+                  "triangles": 2568,
+                  "measures": {
+                    "volume_mm3": 57200.84094565151,
+                    "face_count": 17,
+                    "edge_count": 42,
+                    "solids": 1
+                  }
+                }
+              ]
+            }
+          },
+          "version": [
+            "1",
+            "1",
+            "3",
+            "20260725 (Git shallow)",
+            "Unknown",
+            "2026/07/25 04:52:02",
+            "grafted,grafted",
+            "145529fe741292ff0b3977a01195bf0247425794"
+          ],
+          "initMs": [
+            648.5019586980343,
+            615.4616242274642,
+            622.695667669177,
+            623.5623750835657,
+            1659.8805831745267
+          ]
+        },
+        "solidcraft": {
+          "status": "completed",
+          "phases": {
+            "cold": {
+              "solidMedianMs": 257.86091700000003,
+              "displayMedianMs": 4.814749999999999,
+              "samples": [
+                {
+                  "solidMs": 252.32470800000002,
+                  "displayMs": 4.87275,
+                  "triangles": 3132,
+                  "recomputed": 22,
+                  "ops": []
+                },
+                {
+                  "solidMs": 243.99641699999998,
+                  "displayMs": 4.67775,
+                  "triangles": 3132,
+                  "recomputed": 22,
+                  "ops": []
+                },
+                {
+                  "solidMs": 257.86091700000003,
+                  "displayMs": 4.814749999999999,
+                  "triangles": 3132,
+                  "recomputed": 22,
+                  "ops": []
+                },
+                {
+                  "solidMs": 259.301916,
+                  "displayMs": 4.513583,
+                  "triangles": 3132,
+                  "recomputed": 22,
+                  "ops": []
+                },
+                {
+                  "solidMs": 1301.9203340000001,
+                  "displayMs": 9.08725,
+                  "triangles": 3132,
+                  "recomputed": 22,
+                  "ops": []
+                }
+              ]
+            },
+            "cachedOpen": {
+              "solidMedianMs": 0.548166,
+              "displayMedianMs": 5.958749999999999,
+              "samples": [
+                {
+                  "solidMs": 0.548166,
+                  "displayMs": 5.758417,
+                  "triangles": 3132,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 60.402833,
+                      "step": "op",
+                      "view_ms": 4.7757499999999995
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.060542,
+                      "step": "op",
+                      "view_ms": 0.00625
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.609041,
+                  "displayMs": 5.958749999999999,
+                  "triangles": 3132,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 61.62475,
+                      "step": "op",
+                      "view_ms": 6.654584
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.06854199999999999,
+                      "step": "op",
+                      "view_ms": 0.0054589999999999994
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.50625,
+                  "displayMs": 7.517584,
+                  "triangles": 3132,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 54.512375,
+                      "step": "op",
+                      "view_ms": 4.944625
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.0605,
+                      "step": "op",
+                      "view_ms": 0.003042
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.509458,
+                  "displayMs": 7.682583,
+                  "triangles": 3132,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 94.49033299999999,
+                      "step": "op",
+                      "view_ms": 4.913458
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.06325,
+                      "step": "op",
+                      "view_ms": 0.003541
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.564083,
+                  "displayMs": 5.1910419999999995,
+                  "triangles": 3132,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 60.837375,
+                      "step": "op",
+                      "view_ms": 5.4592920000000005
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.055875,
+                      "step": "op",
+                      "view_ms": 0.004875
+                    }
+                  ]
+                }
+              ]
+            },
+            "edit": {
+              "commandMedianMs": 60.837375
+            }
+          },
+          "measures": {
+            "area_mm2": 16519.48456608905,
+            "bbox": {
+              "max": [
+                50.0,
+                30.0,
+                10.000000000000005
+              ],
+              "min": [
+                -50.0,
+                -30.00000000000001,
+                0.0
+              ]
+            },
+            "center_of_mass": [
+              1.960630908002655e-15,
+              -2.9849964119967656e-15,
+              4.999999999999998
+            ],
+            "closed": true,
+            "density_g_cm3": 1.29,
+            "edges": 32,
+            "face_types": {
+              "cylinder": 10,
+              "plane": 6
+            },
+            "faces": 16,
+            "kernel": {
+              "edges": 72,
+              "faces": 26,
+              "shells": 1,
+              "vertices": 48
+            },
+            "mass_g": 73.7532167739531,
+            "material": "Default",
+            "name": "Body",
+            "vertices": 28,
+            "volume_mm3": 57173.03625887837
+          },
+          "reportedVolumeErrorMm3": 0.4696471091810963
+        }
+      }
+    },
+    {
+      "name": "annular-shell",
+      "sourceSha256": "be82ebcca189f655d5786922b764941da85232d50a431fc74b665048dffdd998",
+      "features": 2,
+      "engines": {
+        "aether": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 42.38300000000001,
+              "displayMedianMs": 31.09858300000002,
+              "samples": [
+                {
+                  "solidMs": 40.574375,
+                  "displayMs": 30.781374999999997,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 42.29941600000001,
+                  "displayMs": 31.09858300000002,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 42.38300000000001,
+                  "displayMs": 30.4435,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 48.24795800000001,
+                  "displayMs": 34.84725,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 84.13679100000002,
+                  "displayMs": 160.51579200000003,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.22945899999999142,
+              "displayMedianMs": 0.013583999999980279,
+              "samples": [
+                {
+                  "solidMs": 0.20924999999999727,
+                  "displayMs": 0.010207999999977346,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 0.22900000000001342,
+                  "displayMs": 0.015791000000007216,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 0.22945899999999142,
+                  "displayMs": 0.010333000000002812,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 0.2511249999999734,
+                  "displayMs": 0.013583999999980279,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 0.2571249999999736,
+                  "displayMs": 0.01608299999998053,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831302,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 3.505042000000003,
+              "displayMedianMs": 18.238415999999972,
+              "samples": [
+                {
+                  "solidMs": 3.505042000000003,
+                  "displayMs": 18.238415999999972,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959515,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 3.440415999999999,
+                  "displayMs": 19.55054199999998,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959515,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 3.43587500000001,
+                  "displayMs": 16.02633399999999,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959515,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 3.8689999999999714,
+                  "displayMs": 17.680624999999964,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959515,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                },
+                {
+                  "solidMs": 3.585708000000068,
+                  "displayMs": 34.31220900000005,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959515,
+                    "face_count": 4,
+                    "edge_count": 6
+                  }
+                }
+              ]
+            }
+          },
+          "version": "v24.12.0",
+          "initMs": [
+            134.626625,
+            128.46562500000002,
+            130.688583,
+            132.586958,
+            225.622
+          ]
+        },
+        "freecad": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 1.7873344421386719,
+              "displayMedianMs": 2.375415802001953,
+              "samples": [
+                {
+                  "solidMs": 1.6678333282470703,
+                  "displayMs": 2.375415802001953,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.614166259765625,
+                  "displayMs": 2.1201677322387695,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.7873344421386719,
+                  "displayMs": 2.319499969482422,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.935791015625,
+                  "displayMs": 2.468625068664551,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 4.346792221069336,
+                  "displayMs": 5.361916542053223,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.05412483215332031,
+              "displayMedianMs": 2.3227500915527344,
+              "samples": [
+                {
+                  "solidMs": 0.055916786193847656,
+                  "displayMs": 2.3227500915527344,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.05412483215332031,
+                  "displayMs": 2.3948745727539062,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.034458160400390625,
+                  "displayMs": 2.159165382385254,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.05158424377441406,
+                  "displayMs": 2.273874282836914,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.07020854949951172,
+                  "displayMs": 2.4663753509521484,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32232.740625831262,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 1.7292499542236328,
+              "displayMedianMs": 2.299624443054199,
+              "samples": [
+                {
+                  "solidMs": 1.7292499542236328,
+                  "displayMs": 2.4362916946411133,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959512,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.7847490310668945,
+                  "displayMs": 2.299624443054199,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959512,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.5607080459594727,
+                  "displayMs": 2.2414169311523438,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959512,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.5908746719360352,
+                  "displayMs": 2.237916946411133,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959512,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.7639179229736328,
+                  "displayMs": 3.654791831970215,
+                  "triangles": 504,
+                  "measures": {
+                    "volume_mm3": 32769.95296959512,
+                    "face_count": 4,
+                    "edge_count": 6,
+                    "solids": 1
+                  }
+                }
+              ]
+            }
+          },
+          "version": [
+            "1",
+            "1",
+            "3",
+            "20260725 (Git shallow)",
+            "Unknown",
+            "2026/07/25 04:52:02",
+            "grafted,grafted",
+            "145529fe741292ff0b3977a01195bf0247425794"
+          ],
+          "initMs": [
+            339.1488753259182,
+            338.0738329142332,
+            341.7832087725401,
+            341.2239998579025,
+            793.9476249739528
+          ]
+        },
+        "solidcraft": {
+          "status": "completed",
+          "phases": {
+            "cold": {
+              "solidMedianMs": 2.59,
+              "displayMedianMs": 3.2942090000000004,
+              "samples": [
+                {
+                  "solidMs": 2.271083,
+                  "displayMs": 2.9667090000000003,
+                  "triangles": 1572,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 2.59,
+                  "displayMs": 3.2485410000000003,
+                  "triangles": 1572,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 2.3335,
+                  "displayMs": 3.2942090000000004,
+                  "triangles": 1572,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 5.5000420000000005,
+                  "displayMs": 33.146958999999995,
+                  "triangles": 1572,
+                  "recomputed": 2,
+                  "ops": []
+                },
+                {
+                  "solidMs": 11.441875000000001,
+                  "displayMs": 18.691334,
+                  "triangles": 1572,
+                  "recomputed": 2,
+                  "ops": []
+                }
+              ]
+            },
+            "cachedOpen": {
+              "solidMedianMs": 0.27391600000000005,
+              "displayMedianMs": 3.4902919999999997,
+              "samples": [
+                {
+                  "solidMs": 0.306708,
+                  "displayMs": 3.5891249999999997,
+                  "triangles": 1572,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 2.089708,
+                      "step": "op",
+                      "view_ms": 3.969208
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.046916,
+                      "step": "op",
+                      "view_ms": 0.007417
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.238375,
+                  "displayMs": 3.148,
+                  "triangles": 1572,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 1.846167,
+                      "step": "op",
+                      "view_ms": 2.507541
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.031167,
+                      "step": "op",
+                      "view_ms": 0.004084
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.29554199999999997,
+                  "displayMs": 3.202292,
+                  "triangles": 1572,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 1.750416,
+                      "step": "op",
+                      "view_ms": 4.6831249999999995
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.057791999999999996,
+                      "step": "op",
+                      "view_ms": 0.005458
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.240625,
+                  "displayMs": 3.531583,
+                  "triangles": 1572,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 1.843958,
+                      "step": "op",
+                      "view_ms": 3.224833
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.06583399999999999,
+                      "step": "op",
+                      "view_ms": 0.006292
+                    }
+                  ]
+                },
+                {
+                  "solidMs": 0.27391600000000005,
+                  "displayMs": 3.4902919999999997,
+                  "triangles": 1572,
+                  "recomputed": 0,
+                  "ops": [
+                    {
+                      "command": "timeline.edit",
+                      "ms": 2.2039999999999997,
+                      "step": "op",
+                      "view_ms": 2.4898339999999997
+                    },
+                    {
+                      "command": "edit.undo",
+                      "ms": 0.023708,
+                      "step": "op",
+                      "view_ms": 0.003625
+                    }
+                  ]
+                }
+              ]
+            },
+            "edit": {
+              "commandMedianMs": 1.846167
+            }
+          },
+          "measures": {
+            "area_mm2": 22562.190990268,
+            "bbox": {
+              "max": [
+                30.0,
+                30.000000000000007,
+                60.00000000000003
+              ],
+              "min": [
+                -30.0,
+                -30.000000000000014,
+                0.0
+              ]
+            },
+            "center_of_mass": [
+              -2.0329921214652935e-14,
+              -1.2430280408457097e-14,
+              30.000000000000004
+            ],
+            "closed": true,
+            "density_g_cm3": 1.29,
+            "edges": 4,
+            "face_types": {
+              "cylinder": 2,
+              "plane": 2
+            },
+            "faces": 4,
+            "kernel": {
+              "edges": 12,
+              "faces": 6,
+              "shells": 1,
+              "vertices": 8
+            },
+            "mass_g": 41.57554392289995,
+            "material": "Default",
+            "name": "Body",
+            "vertices": 4,
+            "volume_mm3": 32229.103816201514
+          },
+          "reportedVolumeErrorMm3": -3.6368096297628654
+        }
+      }
+    },
+    {
+      "name": "robot-front",
+      "sourceSha256": "28646148902df1c684254cac46aee25ed4d418654ed8f6842cbf0d88bf0ad888",
+      "features": 76,
+      "engines": {
+        "aether": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 4865.274833,
+              "displayMedianMs": 679.6105419999994,
+              "samples": [
+                {
+                  "solidMs": 4865.274833,
+                  "displayMs": 679.6105419999994,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 4728.735708,
+                  "displayMs": 663.1562080000003,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 4679.020125,
+                  "displayMs": 643.3688329999995,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 12652.209625,
+                  "displayMs": 1696.667458,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 12244.176292,
+                  "displayMs": 1166.5452499999992,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 1.4312920000002123,
+              "displayMedianMs": 0.06674999999995634,
+              "samples": [
+                {
+                  "solidMs": 1.4312920000002123,
+                  "displayMs": 0.08466699999917182,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 1.2826670000004015,
+                  "displayMs": 0.06304200000067794,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 1.2573330000004717,
+                  "displayMs": 0.06674999999995634,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 1.7992919999996957,
+                  "displayMs": 0.057708000000275206,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 2.1682920000002923,
+                  "displayMs": 0.21216699999968114,
+                  "triangles": 15872,
+                  "measures": {
+                    "volume_mm3": 318197.0825278502,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 130.0272500000001,
+              "displayMedianMs": 435.95629199999985,
+              "samples": [
+                {
+                  "solidMs": 130.0272500000001,
+                  "displayMs": 420.44137500000033,
+                  "triangles": 15864,
+                  "measures": {
+                    "volume_mm3": 316223.3369234222,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 117.20745799999986,
+                  "displayMs": 435.95629199999985,
+                  "triangles": 15864,
+                  "measures": {
+                    "volume_mm3": 316223.3369234222,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 115.88925000000017,
+                  "displayMs": 417.371666,
+                  "triangles": 15864,
+                  "measures": {
+                    "volume_mm3": 316223.3369234222,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 218.8131659999999,
+                  "displayMs": 969.3360420000008,
+                  "triangles": 15864,
+                  "measures": {
+                    "volume_mm3": 316223.3369234222,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                },
+                {
+                  "solidMs": 213.84229200000118,
+                  "displayMs": 818.1670830000003,
+                  "triangles": 15864,
+                  "measures": {
+                    "volume_mm3": 316223.3369234222,
+                    "face_count": 94,
+                    "edge_count": 329
+                  }
+                }
+              ]
+            }
+          },
+          "version": "v24.12.0",
+          "initMs": [
+            133.471583,
+            135.16987500000002,
+            132.975708,
+            284.76712499999996,
+            194.017542
+          ]
+        },
+        "freecad": {
+          "phases": {
+            "cold": {
+              "solidMedianMs": 9268.510541915894,
+              "displayMedianMs": 201.87187480926514,
+              "samples": [
+                {
+                  "solidMs": 9618.563625335693,
+                  "displayMs": 201.87187480926514,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 8427.876459121704,
+                  "displayMs": 200.18566513061523,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 8973.258542060852,
+                  "displayMs": 200.13829231262207,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 30399.004957199097,
+                  "displayMs": 860.9663324356079,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 9268.510541915894,
+                  "displayMs": 445.7434997558594,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "repeat": {
+              "solidMedianMs": 0.8129997253417969,
+              "displayMedianMs": 205.825834274292,
+              "samples": [
+                {
+                  "solidMs": 0.8129997253417969,
+                  "displayMs": 205.825834274292,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.2544574737548828,
+                  "displayMs": 204.78266620635986,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 0.26879215240478516,
+                  "displayMs": 205.04079246520996,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 19.731499671936035,
+                  "displayMs": 1520.027292251587,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 1.09375,
+                  "displayMs": 211.4931240081787,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 318188.90197437094,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                }
+              ]
+            },
+            "edit": {
+              "solidMedianMs": 571.4014177322388,
+              "displayMedianMs": 208.28112506866455,
+              "samples": [
+                {
+                  "solidMs": 571.4014177322388,
+                  "displayMs": 200.95404052734375,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 316214.46636838035,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 562.2969999313354,
+                  "displayMs": 210.69412517547607,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 316214.46636838035,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 568.8121662139893,
+                  "displayMs": 203.82895755767822,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 316214.46636838035,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 2644.368208885193,
+                  "displayMs": 683.0439577102661,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 316214.46636838035,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                },
+                {
+                  "solidMs": 586.2698755264282,
+                  "displayMs": 208.28112506866455,
+                  "triangles": 15940,
+                  "measures": {
+                    "volume_mm3": 316214.46636838035,
+                    "face_count": 94,
+                    "edge_count": 406,
+                    "solids": 1
+                  }
+                }
+              ]
+            }
+          },
+          "version": [
+            "1",
+            "1",
+            "3",
+            "20260725 (Git shallow)",
+            "Unknown",
+            "2026/07/25 04:52:02",
+            "grafted,grafted",
+            "145529fe741292ff0b3977a01195bf0247425794"
+          ],
+          "initMs": [
+            12862.315041013062,
+            12342.057292349637,
+            12389.19045869261,
+            16611.020125448704,
+            14841.699332930148
+          ]
+        },
+        "solidcraft": {
+          "status": "failed",
+          "feature": "Left hub \u2014 passage",
+          "featureIndex": 9,
+          "commandIndex": 34,
+          "error": "error: step 35 (solid.extrude): boolean Cut: the operation failed: no result"
+        }
+      },
+      "sourceArchiveSha256": "90db960b11bcdf91d0c9c63b392d0bb8b78283998e5033b358e4d7e84cbfa9a0",
+      "reportedVolumeDifferenceMm3": 8.18055347923655
+    }
+  ],
+  "experiments": [
+    {
+      "variant": "obb",
+      "samplesMs": [
+        4908.298625,
+        4880.928584,
+        4981.109625,
+        9749.272500000001,
+        5099.438084
+      ],
+      "medianMs": 4981.109625
+    },
+    {
+      "variant": "no-history",
+      "samplesMs": [
+        7580.615667,
+        6475.949958,
+        5058.014125
+      ],
+      "medianMs": 6475.949958
+    },
+    {
+      "variant": "history-control",
+      "samplesMs": [
+        5066.755042,
+        5830.781125,
+        6683.548167
+      ],
+      "medianMs": 5830.781125
+    },
+    {
+      "variant": "no-simplify (paired with runner, 5 alternating samples)",
+      "runner": {
+        "solidSamplesMs": [
+          6004.863208,
+          4668.153249999999,
+          4773.799791,
+          5240.678000000001,
+          5007.020041
+        ],
+        "solidMedianMs": 5007.020041,
+        "displayMedianMs": 669.362666,
+        "measures": {
+          "volume_mm3": 318197.0825278502,
+          "face_count": 94,
+          "edge_count": 329
+        },
+        "triangles": 15872
+      },
+      "no-simplify": {
+        "solidSamplesMs": [
+          4669.988582999999,
+          4770.674,
+          4980.483958999999,
+          5250.408625,
+          5509.392625
+        ],
+        "solidMedianMs": 4980.483958999999,
+        "displayMedianMs": 755.0881250000002,
+        "measures": {
+          "volume_mm3": 318188.93825060653,
+          "face_count": 149,
+          "edge_count": 481
+        },
+        "triangles": 16456
+      }
+    }
+  ]
+}
