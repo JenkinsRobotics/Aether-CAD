@@ -130,8 +130,8 @@ comparison evidence yet).
 | IGES | in/out | in via full build only | partial (not in default bundle; no export) |
 | BREP | in/out | — | gap (low value outside OCCT tooling) |
 | STL | in/out | in/out | parity |
-| OBJ / OFF / PLY | in/out | in (mesh references or faceted solids) | partial (no export) |
-| 3MF, glTF, AMF | out | — | gap (glTF matters for Studio previews and Animation) |
+| OBJ / OFF / PLY | in/out | OBJ in/out; OFF/PLY in (mesh references or faceted solids) | partial (OBJ export closed 2026-10-30; no OFF/PLY export) |
+| 3MF, glTF, AMF | out | 3MF and binary glTF out (`aether-engine/src/kernel/mesh-writers.ts`; glTF in metres, Y up) | partial (closed 2026-10-30 except AMF, which FreeCAD itself is retiring) |
 | DXF / SVG (2D) | in/out | in/out (sketch and drawings) | parity |
 | PDF (drawings) | out | out | parity |
 | Images in sketches | yes | image canvases | parity |
@@ -265,7 +265,7 @@ Order by user impact, each with the evidence that closes it.
 6. Drawing dimension types (~~radius, diameter, angle~~ done 2026-10-30; chain/ordinate and edge-to-edge length open),
    detail and auxiliary views, balloons and centre marks, title-block fields.
 7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30 (BSP/NPT profiles and thread class still open).
-8. Exports: glTF (Studio previews, Animation), OBJ, 3MF; IGES in/out without the lazy
+8. Exports: ~~glTF (Studio previews, Animation), OBJ, 3MF~~ done 2026-10-30; IGES in/out without the lazy
    50 MB build (custom OCCT wasm, also unlocks `BRepOffset_MakeOffset` for the last
    offset-face refusals).
 9. Nested assemblies; coupled relations (gear, belt, screw, rack-and-pinion) verified
