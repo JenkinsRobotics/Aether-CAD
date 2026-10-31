@@ -83,6 +83,7 @@ function validateHoleThread(feature: HoleFeature): void {
   const spec = threadSpecification(thread.standard, thread.designation);
   if (!spec) throw new Error(`Unknown ${thread.standard} thread size "${thread.designation}".`);
   if (typeof thread.tapped !== "boolean") throw new Error("Hole thread must say whether it is tapped.");
+  if (spec.tappedOnly && !thread.tapped) throw new Error(`${spec.designation} is a pipe thread and is tapped only; choose a metric or unified thread for a clearance hole.`);
   if (thread.fit !== undefined && !["close", "normal", "loose"].includes(thread.fit)) throw new Error("Hole clearance fit must be close, normal or loose.");
   for (const key of ["modeled", "leftHand"] as const) if (thread[key] !== undefined && typeof thread[key] !== "boolean") throw new Error("Invalid hole thread option.");
   if (thread.depthMillimeters !== undefined && !(Number.isFinite(thread.depthMillimeters) && thread.depthMillimeters > 0)) throw new Error("Thread depth must be positive.");

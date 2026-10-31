@@ -5,7 +5,7 @@
  *  fits; counterbores and countersinks default to ISO 4762 cap screws and
  *  ISO 10642 countersunk screws. Values are millimetres. */
 
-export type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf";
+export type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";
 export type HoleClearanceFit = "close" | "normal" | "loose";
 
 export interface ThreadSpecification {
@@ -18,6 +18,8 @@ export interface ThreadSpecification {
   /** Internal minor diameter D1 of the finished thread. */
   minorDiameterMillimeters: number;
   clearanceMillimeters: Record<HoleClearanceFit, number>;
+  /** Pipe threads seal on the thread; they have no clearance-hole use. */
+  tappedOnly?: true;
 }
 
 export const HOLE_THREAD_STANDARD_LABELS: Record<HoleThreadStandard, string> = {
@@ -25,6 +27,8 @@ export const HOLE_THREAD_STANDARD_LABELS: Record<HoleThreadStandard, string> = {
   "iso-metric-fine": "ISO metric fine",
   unc: "UNC (ASME B1.1)",
   unf: "UNF (ASME B1.1)",
+  bsp: "BSP parallel G (ISO 228)",
+  npt: "NPT taper (ASME B1.20.1)",
 };
 
 // ISO 261 coarse pitch, ISO 2306 tap drill, ISO 273 clearance (fine / medium / coarse series).
@@ -64,6 +68,18 @@ const unified: Record<"unc" | "unf", [designation: string, inches: number, tpi: 
   ],
 };
 
+// ISO 228-1 G threads: designation, major diameter (mm), threads per inch, tap drill (mm). 55° Whitworth form.
+const bsp: [designation: string, major: number, tpi: number, tapDrill: number][] = [
+  ["G1/8", 9.728, 28, 8.8], ["G1/4", 13.157, 19, 11.8], ["G3/8", 16.662, 19, 15.25], ["G1/2", 20.955, 14, 19],
+  ["G3/4", 26.441, 14, 24.5], ["G1", 33.249, 11, 30.75], ["G1 1/4", 41.91, 11, 39.5], ["G1 1/2", 47.803, 11, 45.25], ["G2", 59.614, 11, 57],
+];
+// ASME B1.20.1 NPT: designation, outside diameter (inches), threads per inch, tap drill (mm, the usual fractional drill).
+// The 1:16 taper is the Hole feature's taper angle (1.79°), set by the author; the table holds the gauge-plane sizes.
+const npt: [designation: string, inches: number, tpi: number, tapDrill: number][] = [
+  ["1/8-27", 0.405, 27, 8.73], ["1/4-18", 0.54, 18, 11.11], ["3/8-18", 0.675, 18, 14.68], ["1/2-14", 0.84, 14, 18.26],
+  ["3/4-14", 1.05, 14, 23.42], ["1-11.5", 1.315, 11.5, 29.37], ["1 1/4-11.5", 1.66, 11.5, 38.1], ["1 1/2-11.5", 1.9, 11.5, 44.05], ["2-11.5", 2.375, 11.5, 56.36],
+];
+
 const INCH = 25.4;
 const round = (value: number, decimals = 3) => Math.round(value * 10 ** decimals) / 10 ** decimals;
 /** ISO 68-1 / ASME B1.1 internal minor diameter for a 60° thread. */
@@ -93,6 +109,15 @@ const table = new Map<HoleThreadStandard, ThreadSpecification[]>([
     tapDrillMillimeters: tapDrill, minorDiameterMillimeters: minorDiameter(round(inches * INCH), round(INCH / tpi)),
     clearanceMillimeters: { close: round(close * INCH, 2), normal: round(normal * INCH, 2), loose: round(loose * INCH, 2) },
   }))] as const),
+  // ponytail: clearance columns are filled with the major diameter so the record shape holds; validation refuses clearance use.
+  ["bsp", bsp.map(([designation, major, tpi, tapDrill]) => ({
+    standard: "bsp" as const, designation, majorDiameterMillimeters: major, pitchMillimeters: round(INCH / tpi), tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: round(major - 1.2806 * INCH / tpi), clearanceMillimeters: { close: major, normal: major, loose: major }, tappedOnly: true as const,
+  }))],
+  ["npt", npt.map(([designation, inches, tpi, tapDrill]) => ({
+    standard: "npt" as const, designation, majorDiameterMillimeters: round(inches * INCH), pitchMillimeters: round(INCH / tpi), tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: minorDiameter(round(inches * INCH), round(INCH / tpi)), clearanceMillimeters: { close: round(inches * INCH), normal: round(inches * INCH), loose: round(inches * INCH) }, tappedOnly: true as const,
+  }))],
 ]);
 
 export const HOLE_THREAD_STANDARDS = [...table.keys()] as HoleThreadStandard[];

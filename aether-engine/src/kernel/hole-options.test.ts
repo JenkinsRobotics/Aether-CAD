@@ -40,6 +40,15 @@ it("drills a tapped hole at the tap drill and a clearance hole at the fit, and r
   expect(() => parsePartDocument(serializePartDocument(withHole({ thread: { standard: "unc", designation: "M8", tapped: true } })))).toThrow(/Unknown unc thread size/);
 }, 30000);
 
+it("drills pipe threads at their tap drill and refuses them as clearance holes", () => {
+  const g = withHole({ diameterMillimeters: 11.8, thread: { standard: "bsp", designation: "G1/4", tapped: true } });
+  expect(BOX_VOLUME - volume(g)).toBeCloseTo(cylinder(11.8, 12), 3);
+  const spec = threadSpecification("npt", "1/4-18")!;
+  expect(spec.majorDiameterMillimeters).toBeCloseTo(13.716, 3);
+  expect(spec.tapDrillMillimeters).toBe(11.11);
+  expect(() => parsePartDocument(serializePartDocument(withHole({ diameterMillimeters: 14, thread: { standard: "npt", designation: "1/4-18", tapped: false } })))).toThrow(/tapped only/);
+}, 30000);
+
 it("cuts a counterdrill: a counterbore whose floor is the countersink cone", () => {
   const counterdrill = withHole({ cutType: "counterdrill", counterDiameterMillimeters: 12, counterDepthMillimeters: 3, countersinkAngleDegrees: 90 });
   const coneHeight = (12 - 6.8) / 2 / Math.tan(Math.PI / 4);

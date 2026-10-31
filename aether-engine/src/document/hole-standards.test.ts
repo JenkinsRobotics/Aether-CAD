@@ -5,12 +5,13 @@ import {
 } from "./hole-standards";
 
 describe("hole standards", () => {
-  it("lists the four standards with sizes smallest first", () => {
-    expect(HOLE_THREAD_STANDARDS).toEqual(["iso-metric-coarse", "iso-metric-fine", "unc", "unf"]);
+  it("lists the six standards with sizes smallest first", () => {
+    expect(HOLE_THREAD_STANDARDS).toEqual(["iso-metric-coarse", "iso-metric-fine", "unc", "unf", "bsp", "npt"]);
+    expect(threadDesignations("bsp")[0]).toBe("G1/8");
     expect(threadDesignations("iso-metric-coarse").slice(0, 4)).toEqual(["M1.6", "M2", "M2.5", "M3"]);
     expect(threadDesignations("unc")[4]).toBe("1/4-20");
     expect(isHoleThreadStandard("unc")).toBe(true);
-    expect(isHoleThreadStandard("bsp")).toBe(false);
+    expect(isHoleThreadStandard("bsw")).toBe(false);
   });
 
   it("gives ISO tap drills and clearance fits for metric coarse threads", () => {
