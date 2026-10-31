@@ -8,9 +8,8 @@ import { AssemblyMateDOFDialog } from './dialogs/mate-dof';
 import { CADAssemblyPartsPanel } from './panels/parts';
 import { AssemblyContactSetDialog } from './dialogs/contact-set';
 import { AssemblyContactSets } from './panels/contact-sets';
-import { CADTraditionalRibbon } from './CADTraditionalRibbon';
+import { CADHeaderControls } from './CADTraditionalRibbon';
 import { cadCommands } from '../cad-command-registry';
-import { StudioWorkspace } from '@aether/ui';
 
 let root, container, unlisten, actions, projection;
 const rotation = { id:'turn', name:'rotation', kind:'rotation', state:'free', value_rad:Math.PI/4,
@@ -103,8 +102,7 @@ it('routes common history buttons to the active document and sketch, and respect
   const called=[], cleanup=ids.map(id=>cadCommands.register(id,()=>called.push(id)));
   const oldMode=cadPresentation.snapshot().workspaceMode;
   const show=async(documentType,sketchEditing=false,partOpen=true)=>act(async()=>root.render(
-    <StudioWorkspace><CADTraditionalRibbon documentType={documentType} sketchEditing={sketchEditing} partOpen={partOpen}
-      activeWorkspace={documentType==='assembly'?'assembly-build':'solid'} onSelectWorkspace={()=>{}} onAction={()=>{}}/></StudioWorkspace>));
+    <CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={partOpen}/>));
   const undo=()=>[...container.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')==='Undo');
   try {
     cadPresentation.patch({workspaceMode:'modeling'});ids.forEach(id=>cadCommands.setEnabled(id,true));

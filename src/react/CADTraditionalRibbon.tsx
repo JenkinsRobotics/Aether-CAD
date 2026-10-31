@@ -6,7 +6,7 @@ import { toolHelpFor } from "../tools/tool-help";
 import { useState, useSyncExternalStore } from "react";
 import {
   ToolIcon, InspectionIcon, SelectionIcon, WorkspaceRibbon, WorkspaceSwitcher,
-  type CommandSearchCommand, type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonDensity, type WorkspaceRibbonTab,
+  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonTab,
 } from "@aether/ui";
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 import { cadCommands, isCADCommandID } from "../cad-command-registry";
@@ -58,8 +58,9 @@ const WORKSPACE_ACTIONS: Record<string, CADToolActionID> = {
 
 
 export interface CADTraditionalRibbonProps {
-  searchCommands?: readonly CommandSearchCommand[];
-  onSearchSelect?: (id: string) => void;
+  /** Follows the workspace layout: docked draws the full-width ribbon on top,
+   *  floating the compact card above the bottom of the canvas. */
+  placement?: "docked" | "floating";
   onOpenLayout?: () => void;
   suite?: boolean;
   /** Open document type; layouts refine the shared catalog per type. */
@@ -75,6 +76,7 @@ export interface CADTraditionalRibbonProps {
 }
 
 export function CADTraditionalRibbon({
+  placement = "floating",
   suite = false,
   documentType = "project",
   sketchEditing = false,
@@ -82,8 +84,6 @@ export function CADTraditionalRibbon({
   partOpen,
   onSelectWorkspace,
   onAction,
-  searchCommands,
-  onSearchSelect,
   onOpenLayout,
 }: CADTraditionalRibbonProps) {
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
@@ -98,20 +98,6 @@ export function CADTraditionalRibbon({
     cadAssemblyWorkspace.snapshot,
   );
   const [variants,setVariants]=useState<Record<string,string>>({});
-  // Keep the integrated variant’s density independent of older toolbar preferences.
-  const [density, setDensity] = useState<WorkspaceRibbonDensity>(() => {
-    try {
-      const stored = localStorage.getItem("aether-cad.integrated-ribbon-density");
-      if (stored === "compact" || stored === "standard" || stored === "expanded") {
-        return stored;
-      }
-    } catch { /* session-only */ }
-    return "standard";
-  });
-  const chooseDensity = (next: WorkspaceRibbonDensity) => {
-    setDensity(next);
-    try { localStorage.setItem("aether-cad.integrated-ribbon-density", next); } catch { /* session-only */ }
-  };
   const workspace = toolbarWorkspaceFor(documentType, activeWorkspace);
   const fusionTabs = fusionTabsFor(documentType);
   const defaultFusionTab = fusionTabs?.find(tab => tab.id === activeWorkspace)?.id ?? fusionTabs?.[0]?.id ?? "solid";
@@ -124,12 +110,7 @@ export function CADTraditionalRibbon({
   const toolContext = { commands, partOpen, assemblyReady: assembly.loadState === 'ready' };
   const availability = (definition: CADToolDefinition) => cadToolAvailability(definition, toolContext);
 
-  // An open assembly *is* the Assembly workspace, however you got there:
-  // opening one resets workspaceMode to "modeling", so the mode alone would
-  // leave the switcher reading Design over an assembly ribbon.
-  const activeMode: CADWorkspaceMode = workspaceMode === "drawing"
-    ? "drawing"
-    : documentType === "assembly" ? "assembly" : workspaceMode;
+  const activeMode = cadActiveMode(workspaceMode, documentType);
   // The shared ribbon draws it; this app declares what the tools are, whether
   // each is available, and what it does. Anything the widget could not express
   // was added to the widget (per-tool variants), not forked here.
@@ -219,16 +200,6 @@ export function CADTraditionalRibbon({
   const WORKSPACE_IDS: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
   const selectWorkspaceMode = (id: string) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); };
 
-  // The Studio tool bar's suggested commands, right of its Command field.
-  const historyCommands = sketchEditing
-    ? ["sketch-undo", "sketch-redo"] as const
-    : activeMode === "assembly" ? ["assembly-undo-recipe", "assembly-redo-recipe"] as const
-      : ["part-undo", "part-redo"] as const;
-  const historyAvailable = activeMode !== "drawing" && (sketchEditing || (activeMode === "assembly" ? assembly.loadState === "ready" : partOpen));
-  const commandShortcuts = ([[historyCommands[0], "Undo", "amber"], [historyCommands[1], "Redo", "blue"], ["fit-view", "Frame", "green"]] as const)
-    .map(([command, label, tone]) => ({ id: `command:${command}`, label, tone,
-      disabled: !commands[command].enabled || !commands[command].registered || (command !== "fit-view" && !historyAvailable) }));
-  const integratedHeader = <CADToolbarControls history={commandShortcuts.slice(0, 2)} onHistory={runTool}/>;
   const workspaces = workspaceModes(activeMode).map(item => ({
     ...item, icon: <AetherIcon name={item.id === 'design' ? 'layers' : item.id === 'assembly' ? 'cube' : 'document'}/>,
   }));
@@ -251,13 +222,12 @@ export function CADTraditionalRibbon({
     ribbonTabs.push(cadFeatureTray(toolContext));
     const active = ribbonTabs.find(tab => tab.id === fusionTab) ?? ribbonTabs[0];
     return (
-      <section className={`cad-traditional-ribbon cad-fusion-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
+      <section className={`cad-traditional-ribbon cad-fusion-ribbon placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
         aria-label="Part tools" data-ribbon-workspace={active.id}>
-        <WorkspaceRibbon variant="integrated" searchCommands={searchCommands} onSearchSelect={onSearchSelect} searchShortcut={false} headerActions={integratedHeader} moreItems={toolbarOptions}
+        <WorkspaceRibbon variant={placement} moreItems={toolbarOptions}
           workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
           tabs={ribbonTabs} activeTabID={active.id} onTabSelect={setFusionTab}
           onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-          density={density} onDensityChange={chooseDensity}
           moreLabel="Tool bar options" />
       </section>
     );
@@ -276,13 +246,12 @@ export function CADTraditionalRibbon({
     };
   });
   return (
-    <section className={`cad-traditional-ribbon density-${density}${suite ? " cad-suite-ribbon" : ""}`}
+    <section className={`cad-traditional-ribbon placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
       aria-label="Traditional CAD tools" data-ribbon-workspace={workspace.id}>
-      <WorkspaceRibbon variant="integrated" searchCommands={searchCommands} onSearchSelect={onSearchSelect} searchShortcut={false} headerActions={integratedHeader} moreItems={toolbarOptions}
+      <WorkspaceRibbon variant={placement} moreItems={toolbarOptions}
         workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
         tabs={ribbonTabs} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
         onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-        density={density} onDensityChange={chooseDensity}
         moreLabel="Tool bar options" />
     </section>
   );
@@ -298,4 +267,31 @@ export function CADWorkspaceSwitcher({ documentType = "project", onAction }: { d
   const ids: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
   return <WorkspaceSwitcher workspaces={workspaceModes(activeMode).map((item) => ({ id: item.id, label: item.label, disabled: item.disabled, disabledReason: item.disabledReason }))}
     workspaceID={ids[activeMode]} onSelect={(id) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); }} menuClassName="aui-tool-menu" />;
+}
+
+// An open assembly *is* the Assembly workspace, however you got there:
+// opening one resets workspaceMode to "modeling", so the mode alone would
+// leave the switcher reading Design over an assembly ribbon.
+function cadActiveMode(workspaceMode: CADWorkspaceMode, documentType: CADDocumentType): CADWorkspaceMode {
+  return workspaceMode === "drawing" ? "drawing" : documentType === "assembly" ? "assembly" : workspaceMode;
+}
+
+/** Undo/redo for whatever is being edited, then the view and selection menus,
+ *  in the app header beside the search field (the ribbon only holds tools). */
+export function CADHeaderControls({ documentType = "project", sketchEditing = false, partOpen }: {
+  documentType?: CADDocumentType; sketchEditing?: boolean; partOpen: boolean;
+}) {
+  const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
+  const { workspaceMode } = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
+  const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
+  const activeMode = cadActiveMode(workspaceMode, documentType);
+  const historyCommands = sketchEditing
+    ? ["sketch-undo", "sketch-redo"] as const
+    : activeMode === "assembly" ? ["assembly-undo-recipe", "assembly-redo-recipe"] as const
+      : ["part-undo", "part-redo"] as const;
+  const historyAvailable = activeMode !== "drawing" && (sketchEditing || (activeMode === "assembly" ? assembly.loadState === "ready" : partOpen));
+  const history = ([[historyCommands[0], "Undo"], [historyCommands[1], "Redo"]] as const).map(([command, label]) => ({
+    id: command, label, disabled: !commands[command].enabled || !commands[command].registered || !historyAvailable,
+  }));
+  return <CADToolbarControls history={history} onHistory={id => { if (isCADCommandID(id) && commands[id].enabled) cadCommands.execute(id); }}/>;
 }

@@ -1095,7 +1095,7 @@ cadPresentation.registerActionHandler((action) => {
   if (action.type === "select-toolbar-mode") {
     cadPresentation.patch({ toolbarMode: action.mode });
     persistPresentationPreferences();
-    setStatus(action.mode === "traditional" ? "Traditional CAD ribbon enabled." : "Floating viewport tools enabled.");
+    setStatus(action.mode === "traditional" ? "Tool bar docked at the top." : "Tool bar floating at the bottom.");
     return;
   }
   if (action.type === "set-panel-placement") {

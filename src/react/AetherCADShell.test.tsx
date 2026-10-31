@@ -88,7 +88,7 @@ describe("AetherCADShell", () => {
   it("defaults to the standard floating workspace with left history and version controls", () => {
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).toContain("chrome-suite toolbar-traditional");
-    expect(html).toContain('data-variant="integrated"');
+    expect(html).toContain('data-variant="docked"');
     expect(html).not.toContain("aui-studio-toolbar");
     expect(html).toContain('aria-label="CAD workspace"');
     expect(html).toContain('aria-label="Features and parts"');
@@ -108,13 +108,16 @@ describe("AetherCADShell", () => {
       const html = renderToStaticMarkup(<AetherCADShell />);
       expect(html).toContain("chrome-classic toolbar-traditional");
       expect(html).toContain('aria-label="CAD workspace"');
-      expect(html).toContain('data-variant="integrated"');
+      expect(html).toContain('data-variant="docked"');
       expect(html).not.toContain("aui-studio-toolbar");
       expect(html).toContain('aria-label="Version control"');
       expect(html).toContain('aria-label="Comments"');
       expect(html).toContain('aria-label="Features and parts"');
       cadPresentation.patch({toolbarMode: "floating"});
-      expect(renderToStaticMarkup(<AetherCADShell />)).toContain("chrome-classic toolbar-floating");
+      const floating = renderToStaticMarkup(<AetherCADShell />);
+      expect(floating).toContain("chrome-classic toolbar-floating");
+      // The Commands toggle moves the tool bar: docked on top, floating card at the bottom.
+      expect(floating).toContain('data-variant="floating"');
     } finally { vi.unstubAllGlobals(); }
   });
 

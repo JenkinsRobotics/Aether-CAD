@@ -15,7 +15,7 @@ export function CADWorkspaceLayoutPopover({anchor,onClose,toolbarMode,onToolbarM
       </div>
       <label style={{display:'grid',gridTemplateColumns:'1fr 140px',alignItems:'center',gap:10}}>
         Commands
-        <SelectField aria-label="Commands presentation" value={toolbarMode} options={[{value:'traditional',label:'Top ribbon'},{value:'floating',label:'Floating tools'}]} onChange={event=>onToolbarMode(event.target.value as 'traditional'|'floating')}/>
+        <SelectField aria-label="Commands presentation" value={toolbarMode} options={[{value:'traditional',label:'Docked (top)'},{value:'floating',label:'Floating (bottom)'}]} onChange={event=>onToolbarMode(event.target.value as 'traditional'|'floating')}/>
       </label>
       {panels.map(panel=><label key={panel.id} style={{display:'grid',gridTemplateColumns:'1fr 140px',alignItems:'center',gap:10}}>
         {panel.label}

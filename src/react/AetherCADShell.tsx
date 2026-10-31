@@ -71,7 +71,7 @@ import {
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 
 
-import { CADTraditionalRibbon } from "./CADTraditionalRibbon";
+import { CADHeaderControls, CADTraditionalRibbon } from "./CADTraditionalRibbon";
 import type { CADRibbonWorkspaceID, CADToolActionID } from "../cad-tool-catalog";
 import {
   cadPresentation,
@@ -160,8 +160,7 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
 ];
 
 function focusCommandSearch() {
-  const field = document.querySelector<HTMLInputElement>('.cad-traditional-ribbon .aui-command-search input')
-    ?? document.querySelector<HTMLInputElement>('.aui-studio-header-search input');
+  const field = document.querySelector<HTMLInputElement>('.aui-studio-header-search input');
   field?.focus(); field?.select();
 }
 
@@ -413,6 +412,8 @@ export function AetherCADShell() {
     inspector: { ...panelPositions.inspector, placement: presentation.panelPlacements.inspector },
   }), [panelPositions, presentation.panelPlacements.browser, presentation.panelPlacements.inspector]);
   const drawingMode = presentation.workspaceMode === "drawing";
+  // The Commands toggle places the ribbon: docked full width on top, or the floating card at the bottom.
+  const ribbonPlacement = presentation.toolbarMode === "traditional" ? "docked" : "floating";
   // Drawing owns its sheet tree and inspector. Keep the model panels mounted
   // and retain their layout so returning to the Part restores the same workspace.
   const drawingHiddenPanels = new Set(["browser", "feature-tree", ...rightPanels.map(panel => panel.id)]);
@@ -483,6 +484,7 @@ export function AetherCADShell() {
         documentName={presentation.documentName}
         search={<CommandSearch className="aui-studio-header-search" ariaLabel="Search CAD commands" commands={searchCommands}
           onSelect={runSearchCommand}/> }
+        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/></div>}
         defaultHeaderPins={["theme","notifications","comments","apps","share"]}
         documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
         application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
@@ -503,8 +505,8 @@ export function AetherCADShell() {
                 preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
                 onChange={(preset) => cadPresentation.dispatch({ type: "select-layout", layout: preset === "floating" ? "expanded" : preset })}
                 extraItems={[
-                  { id: "toolbar-traditional", label: "Traditional ribbon", kind: "radio", checked: presentation.toolbarMode === "traditional", separatorBefore: true },
-                  { id: "toolbar-floating", label: "Floating tools", kind: "radio", checked: presentation.toolbarMode === "floating" },
+                  { id: "toolbar-traditional", label: "Tool bar docked (top)", kind: "radio", checked: presentation.toolbarMode === "traditional", separatorBefore: true },
+                  { id: "toolbar-floating", label: "Tool bar floating (bottom)", kind: "radio", checked: presentation.toolbarMode === "floating" },
                   { id: "reset-panels", label: "Reset panel placements", separatorBefore: true },
                 ]}
                 onExtraSelect={(id) => {
@@ -535,7 +537,8 @@ export function AetherCADShell() {
           contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
           preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
           preservePanelContent
-          toolbarSpan="center"
+          toolbarSpan={ribbonPlacement === "docked" ? "window" : "center"}
+          toolPosition={ribbonPlacement === "docked" ? "top" : "bottom"}
           pinnedPanels={drawingMode ? [] : ["browser"]}
           sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:toggleFileTray}} /> }}
           style={{ height: "100%" }}
@@ -549,9 +552,8 @@ export function AetherCADShell() {
             partOpen={presentation.partOpen}
             onSelectWorkspace={selectRibbonWorkspace}
             onAction={runRibbonAction}
-            searchCommands={searchCommands}
-            onSearchSelect={runSearchCommand}
-            onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.aui-integrated-toolbar-more'))}
+            placement={ribbonPlacement}
+            onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.cad-traditional-ribbon .aui-workspace-ribbon-overflow'))}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}

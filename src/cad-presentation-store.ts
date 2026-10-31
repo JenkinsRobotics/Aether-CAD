@@ -129,7 +129,7 @@ const initialSnapshot: CADPresentationSnapshot = Object.freeze({
   activePanel: "items",
   workspaceMode: "modeling",
   workspaceLayout: "expanded",
-  toolbarMode: "traditional",
+  toolbarMode: "floating",
   panelPlacements: Object.freeze({
     browser: "docked",
     inspector: "docked",

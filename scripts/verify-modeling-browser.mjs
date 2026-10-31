@@ -75,9 +75,9 @@ const ribbon = (name, commandId) => ({ click: async () => {
       return;
     }
     await page.keyboard.press('ControlOrMeta+k');
-    // The integrated ribbon now uses the shared inline CommandSearch. Its
-    // results open on input; focusing it does not mount the old modal palette.
-    const box = page.locator('.cad-traditional-ribbon .aui-command-search input').first();
+    // The header's shared inline CommandSearch. Its results open on input;
+    // focusing it does not mount the old modal palette.
+    const box = page.locator('.cad-document-bar .aui-command-search input').first();
     await box.waitFor({ timeout: 10000 });
     await box.fill(name);
     // Palette items carry the command id in their id, which tells the solid Mirror from the sketch one.

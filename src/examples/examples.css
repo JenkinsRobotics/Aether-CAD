@@ -171,3 +171,7 @@
   padding: 5px 7px;
   font: inherit;
 }
+/* Below the docked tool bar, which spans the window under the header. */
+body:has(.cad-traditional-ribbon.placement-docked) .cad-example-banner {
+  top: calc(var(--aui-studio-header-height, 56px) + var(--aui-docked-ribbon-height, 132px) + 8px);
+}

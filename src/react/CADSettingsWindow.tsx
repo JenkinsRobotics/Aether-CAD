@@ -214,8 +214,8 @@ export function CADSettingsWindow({
               {select(
                 presentation.toolbarMode,
                 [
-                  { value: "traditional", label: "Traditional ribbon" },
-                  { value: "floating", label: "Floating tools" },
+                  { value: "traditional", label: "Docked (top)" },
+                  { value: "floating", label: "Floating (bottom)" },
                 ],
                 (mode) =>
                   cadPresentation.dispatch({

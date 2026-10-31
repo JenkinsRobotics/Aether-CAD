@@ -162,12 +162,12 @@ describe("tool variants", () => {
   });
 });
 
-it('compact integrated mode keeps category menus and switches to sketch context', () => {
-  vi.stubGlobal('localStorage', {getItem: () => 'compact'});
-  try {
-    const props = {documentType:'part' as const, activeWorkspace:'solid' as const, partOpen:true, onSelectWorkspace:vi.fn(), onAction:vi.fn()};
+it('both placements keep category menus and switch to sketch context', () => {
+  const props = {documentType:'part' as const, activeWorkspace:'solid' as const, partOpen:true, onSelectWorkspace:vi.fn(), onAction:vi.fn()};
+  expect(renderToStaticMarkup(<CADTraditionalRibbon {...props} placement="docked" />)).toContain('data-variant="docked"');
+  {
     const html = renderToStaticMarkup(<CADTraditionalRibbon {...props} />);
-    expect(html).toContain('data-variant="integrated"');
+    expect(html).toContain('data-variant="floating"');
     expect(html).not.toContain('data-icon-strip="true"');
     expect(html).toContain('aria-label="Solid"');
     expect(html).toContain('aria-label="Create tools"');
@@ -176,7 +176,7 @@ it('compact integrated mode keeps category menus and switches to sketch context'
     expect(sketch).toContain('aria-label="Sketch"');
     expect(sketch).toContain('aria-label="Create tools"');
     expect(sketch).not.toContain('aria-label="Surface tools"');
-  } finally { vi.unstubAllGlobals(); }
+  }
 });
 
 

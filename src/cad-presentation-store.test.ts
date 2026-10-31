@@ -23,7 +23,7 @@ describe("CADPresentationStore", () => {
       activePanel: "items",
       workspaceMode: "modeling",
       workspaceLayout: "expanded",
-      toolbarMode: "traditional",
+      toolbarMode: "floating",
       panelPlacements: { browser: "docked", inspector: "docked", bottom: "docked" },
       startScreen: "home",
       itemFilterFocusSerial: 1,
