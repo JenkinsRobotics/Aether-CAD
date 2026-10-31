@@ -68,7 +68,7 @@ comparison evidence yet).
 | Solver: PlaneGCS (DogLeg/LM/BFGS), conflict/redundant detection, DOF display | Own TypeScript solver; DOF and conflict reporting; PlaneGCS compiled to wasm exists as a spike (`sketch/solver/planegcs-spike.ts`) | verify | partial | matched benchmark 2026-10-31 (reality doc § Matched sketch-solver benchmark): equal at 8 constraints, FreeCAD ~5× faster at 68 and 20–40× at 308 (ours 566 ms vs 19 ms); our dense damped least squares needs constraint-group partitioning or a sparse solve for large sketches 
 | External geometry, Projection, Intersection (1.1) | Project, Include 3D edges, Intersect, Project to surface, Fit curves to section, Spun profile | partial | persistent links to model edges with source-edit tracking remain partial (`Model_Sketch_Projection.md`) |
 | Carbon copy, Make Internals (1.1) | Copy/paste sketch entities with constraints; region selection | partial | no "carbon copy" of a whole sketch as linked geometry |
-| B-spline editing: insert/remove knot, degree, show polygon/comb | Control-point and fit-point splines, degree-5, curvature comb analysis | partial | no knot insertion/removal or degree change on an existing spline |
+| B-spline editing: insert/remove knot, degree, show polygon/comb | Control-point and fit-point splines, degree-5, curvature comb analysis | partial | knot insert = insert spline point; knot removal added 2026-10-31 (`sketch/operations/remove-spline-point.ts`: exact for an inserted point, least-squares merge keeping the outer tangents otherwise, the join relation dropped, other constraints on the spans refused); degree change is not representable (spans are stored as cubics, degree 5 only at creation) |
 | DXF/SVG import | DXF/SVG import, DXF export | parity | |
 
 ### 3.3 PartDesign and Part features
@@ -81,14 +81,14 @@ comparison evidence yet).
 | Additive/Subtractive Pipe (orientation modes, auxiliary spine, scaling) | Sweep: perpendicular/parallel/fixed direction, end scale, guide rail; pipe feature | parity | |
 | Additive/Subtractive Helix | Coil feature | parity | analytic self-consistency: coil volume = wire area × helix length in `aether-engine/src/kernel/part-evaluator.test.ts` ("coils a wire"); no FreeCAD capture needed |
 | Primitives (box, cylinder, sphere, cone, torus, prism, wedge, ellipsoid) | Primitive tools (box, cylinder, sphere, cone, torus), bounding solid, standard parts | partial | analytic volumes verified 2026-10-31 (`src/modeling/solid-primitives-volume.test.ts`); prism, wedge and ellipsoid are a sketch away and not offered as tools |
-| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points; counterbore/countersink/counterdrill; ISO metric coarse/fine, UNC, UNF, BSP G and NPT profiles with tap-drill or clearance-fit diameters (pipe threads tapped only); cosmetic or modelled thread (depth, hand); drill-point angle; taper; ISO 4762 / ISO 10642 head presets | parity | closed 2026-10-30 (`hole-options.test.ts`, analytic volumes). Not offered: BSP/BSW/NPT profiles, thread class, a modelled thread on a face without a Hole; a pattern of a modelled-thread hole repeats the bore only |
+| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points; counterbore/countersink/counterdrill; ISO metric coarse/fine, UNC, UNF, BSP G and NPT profiles with tap-drill or clearance-fit diameters (pipe threads tapped only); cosmetic or modelled thread (depth, hand); drill-point angle; taper; ISO 4762 / ISO 10642 head presets | parity | closed 2026-10-30 (`hole-options.test.ts`, analytic volumes). Not offered: BSP/BSW/NPT profiles, thread class, a modelled thread on a face without a Hole; a pattern of a modelled-thread hole repeats the bore only; thread class 2026-10-31 (ISO 4H–8H and 4G–8G, UN 1B–3B) on tapped holes and cosmetic threads, G classes adding the ISO 965 EI to the tapped diameter (`document/thread-class.test.ts`, `hole-standards.test.ts`); cosmetic threads now take UNC/UNF/BSP/NPT sizes |
 | Fillet (constant), Chamfer (equal/two distances/distance-angle) | Fillet constant and variable (end radius), G2 option, chamfer all three modes, tangent chains | ours+ | oracle 6 fillet / 3 chamfer fixtures |
 | Draft | Draft faces about a neutral plane | parity | oracle 2 fixtures |
 | Thickness (shell) | Shell inside/outside/both, open faces by reference, tangent chains | parity | oracle 8 shell fixtures; toroidal-tunnel shell refused by both |
 | Mirrored, LinearPattern, PolarPattern, MultiTransform | Mirror, pattern linear/polar of features or bodies | Mirror, pattern linear/polar/path of features or bodies; a pattern or mirror may itself be the source of a later pattern (MultiTransform) | parity | pattern-of-pattern added 2026-10-31 with analytic volumes (`aether-engine/src/kernel/pattern-of-pattern.test.ts`); copies repeat with the root feature's add/cut 
 | Boolean (fuse/cut/common of bodies) | Boolean feature; scoped extrusion booleans | parity | oracle 2 boolean fixtures; scoped cut 10.9 ms vs 18.2 ms before (`History_Playback_Performance_2026_10_30.md`) |
 | Datum plane / line / point, LCS | Construction planes/axes/points (offset, angle, through points, along path, centre of circle) | partial | plane/point along a curved path and centre of sphere/torus faces missing |
-| SubShapeBinder / ShapeBinder | Model projection into sketches (independent copies) | partial | persistent binder with source tracking missing |
+| SubShapeBinder / ShapeBinder | Model projection into sketches (independent copies) | parity | Shape binder feature 2026-10-31: a live copy of an earlier part or of picked faces (as a sheet), rebuilt from the source on every replay (`document/shape-binder.ts`, `kernel/shape-binder.test.ts`: volume follows the source depth, faces bind as a 1200 mm² sheet); sketch projections stay independent copies |
 | Part: Offset (2D/3D), Thickness, offsetFaces, scale (Part Transform) | Offset/Move face incl. cylindrical/spherical faces and round neighbours; non-uniform scale via full build | partial | faces whose neighbours are cones, tori or splines refused (needs `BRepOffset_MakeOffset`, custom OCCT build) |
 | Part: Defeaturing (delete face), Refine shape | Delete face; refine on booleans | parity | |
 | Part: Section / Cross-sections | Section view (live clipping with caps) and sketch Intersect | parity | **Safari defect open** (§6) |
@@ -101,7 +101,7 @@ comparison evidence yet).
 
 | FreeCAD 1.1 | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
-| Joints: fixed, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle, rack-and-pinion, screw, gears, belt | Mates: fastened, revolute, cylindrical, prismatic, ball, distance, parallel, perpendicular, angle, planar; relations: gear, belt, screw, rack-pinion, linear/rotation motion link; cam relation kept in the file but not solved | partial | oracle 16 assembly poses match FreeCAD; the four coupled relations (gear, rack-and-pinion, screw, linear) are analytic couplings verified in Aether Animation's rig suite (`aether_animation/tests/test_rig.py`: gear ratio/offset, rack distance per revolution, neutral pose flow), which the 2026-10-31 oracle rule accepts in place of FreeCAD joint captures; cam relations exist (table-driven); sweep joints are a gap |
+| Joints: fixed, revolute, cylindrical, slider, ball, distance, parallel, perpendicular, angle, rack-and-pinion, screw, gears, belt | Mates: fastened, revolute, cylindrical, prismatic, ball, distance, parallel, perpendicular, angle, planar; relations: gear, belt, screw, rack-pinion, linear/rotation motion link; cam relation kept in the file but not solved | partial | oracle 16 assembly poses match FreeCAD; the four coupled relations (gear, rack-and-pinion, screw, linear) are analytic couplings verified in Aether Animation's rig suite (`aether_animation/tests/test_rig.py`: gear ratio/offset, rack distance per revolution, neutral pose flow), which the 2026-10-31 oracle rule accepts in place of FreeCAD joint captures; cam relations exist (table-driven); a sweep (path) mate is solved in the engine 2026-10-31 (`kernel/assembly-solver.ts` `sweep`: point on a polyline in the first connector's frame, `position` arc length held; `mate-kinds.test.ts`), and the app passes a mate's `path_mm` control to the solver (`assembly-job.test.ts`); authoring and saving it wait on Aether-Animation's `JointType` vocabulary (a `sweep` kind with a position DOF template and the `path_mm` control) |
 | Grounding | Grounding, auto-anchor on first insertion | parity | |
 | Part insertion (1.1) | Insert Part from Files/Drive, drag, instances | parity | `verify-assembly-insert-browser.mjs` |
 | Sub-assemblies | Not supported | gap | nested assemblies open since alpha-0.1.18 |
@@ -115,10 +115,10 @@ comparison evidence yet).
 
 | FreeCAD | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
-| Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal, detail views (circle on a parent view, own scale, marker letter), auxiliary views (any model direction, Z up) | partial | detail and auxiliary closed 2026-10-31 (`aether-engine/src/drawing/detail-view.ts`, `detail-auxiliary.test.ts`); offset/stepped sections, clip groups and active/draft views remain non-goals |
+| Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal, detail views (circle on a parent view, own scale, marker letter), auxiliary views (any model direction, Z up) | partial | detail and auxiliary closed 2026-10-31 (`aether-engine/src/drawing/detail-view.ts`, `detail-auxiliary.test.ts`); offset/stepped sections, clip groups and active/draft views remain open |
 | Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Overall width/height, diameter, radius and angle dimensions attached to the projected edge nearest a sheet pick; notes | partial | diameter/radius/angle closed 2026-10-30 (`aether-engine/src/drawing/attached-dimensions.ts`; SVG/DXF/PDF carry Ø, R, °); edge length closed 2026-10-31 (format 4); 3-point angle, chain/ordinate still missing; picks are typed as sheet coordinates, not clicked in the viewport |
 | Annotations: balloons, leaders, rich text, welding, surface finish, center lines/marks, cosmetic vertices, hatch, image | Notes, balloons with leader, centre marks on the nearest circle/arc, hatch on sections | partial | balloons and centre marks closed 2026-10-31; welding, surface-finish and datum symbols, rich text, images remain open |
-| BOM / spreadsheet view | None on the sheet; the Assembly BOM exports CSV | gap | needs assembly drawing sources first (`can_project_bom` is false in the drawing projection) |
+| BOM / spreadsheet view | None on the sheet; the Assembly BOM exports CSV | partial | parts list (BOM table) on the sheet 2026-10-31: item, part, quantity, material of the Part's parts, in SVG/DXF/PDF and on the canvas, through the "BOM table" button and update-sheet `partsList` (`drawing/parts-list.test.ts`); assembly drawing sources still open |
 | Templates and editable title blocks | Sheet with frame, editable title-block rows per sheet (label/value, up to 12) printed in SVG/DXF/PDF and shown on the canvas | partial | rows closed 2026-10-31; no template files or zone grids |
 | Export SVG/DXF/PDF | SVG/DXF/PDF, save/reopen, source refresh, live agent editing | parity | `verify-drawings*.mjs`, `verify-drawing-pdf.mjs` |
 
@@ -254,8 +254,8 @@ Order by user impact, each with the evidence that closes it.
    topology/anchors is still open (the other session's report ranks it third). ~~Add a matched
    sketch-solver benchmark (ours vs PlaneGCS wasm spike vs FreeCAD's Sketcher solve on the same
    constrained sketches)~~ done 2026-10-31 (`solver.ts`, `solver-freecad.py`). A matched rendering
-   scene (frame time, memory) cannot be run headlessly against FreeCAD's Coin3D viewport; recorded
-   as a deliberate non-goal in AGENTS.md.
+   scene (frame time, memory) cannot be run headlessly against FreeCAD's Coin3D viewport; open
+   (a GUI-driven FreeCAD capture is the remaining way to measure it).
 3. Boolean hotspot (robot): profile the cylinder-into-revolved-shell cut; try fuzzy value,
    `SetNonDestructive`, `SetRunParallel` is unavailable in single-threaded wasm; try
    wasm threads (SharedArrayBuffer needs COOP/COEP headers from Studio); evaluate merging
@@ -283,15 +283,16 @@ Order by user impact, each with the evidence that closes it.
 
 **P3 — parity polish**
 
-10. Sketch: persistent model links (external geometry), B-spline knot/degree editing,
+10. Sketch: persistent model links (external geometry), ~~B-spline knot removal~~ done 2026-10-31,
     carbon copy. ~~MultiTransform-equivalent patterns of patterns verified~~ done 2026-10-31.
 11. ~~Materials rows from "verify" to evidence~~ (recorded 2026-10-31); variables with units.
 12. ~~Primitives and helix oracle fixtures (analytic volumes, no FreeCAD needed).~~ Done 2026-10-31.
 
 **Gate to remove the FreeCAD reference** (replaces the 2026-10-20 gate, which was met):
 
-- every row above marked gap or partial that FreeCAD 1.1 provides is closed or recorded
-  as a deliberate non-goal in AGENTS.md;
+- every row above marked gap or partial that FreeCAD 1.1 provides is closed, or nothing of
+  value remains to learn from or compare with FreeCAD on it (Jonathan, 2026-10-31: there are no
+  non-goals; the reference is archived only when nothing of value remains);
 - the corrected benchmark shows Aether ≤ FreeCAD on construction for every fixture
   (warm uncached), edit replay, and display within a stated multiple, plus the solver and
   rendering comparisons recorded;

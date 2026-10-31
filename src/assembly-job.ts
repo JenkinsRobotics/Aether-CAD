@@ -176,7 +176,11 @@ export function assemblyJobFor(projection: AssemblyProjectionV1): AssemblyJobTra
     // solver's slot belongs to its first endpoint: A = B · Tx(-travel) ·
     // Rz(-angle). Reverse endpoints and both coordinates, preserving saved intent.
     const endpoints = mate.type_id === "pin_slot" ? { a: b, b: a } : { a, b };
-    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, ...endpoints, ...(dofs.length ? { parameters: { dofs } } : {}) }];
+    // Mate controls the solver reads as parameters: a sweep mate's path (JSON [[x,y,z]…] mm in a's frame).
+    const extra: Record<string, unknown> = {};
+    for (const control of mate.controls ?? []) if (control.key === "path_mm" && typeof control.value === "string") { try { extra.path_mm = JSON.parse(control.value); } catch { note(mate.id, mate.name, "its path_mm control is not JSON"); return []; } }
+    const parameters = { ...extra, ...(dofs.length ? { dofs } : {}) };
+    return [{ id: mate.id, kind: mate.type_id as AssemblyMateKind, ...endpoints, ...(Object.keys(parameters).length ? { parameters } : {}) }];
   });
   // Relations couple two mates' DOFs: the projection names DOF ids; the solver wants the mate and the DOF's name.
   const dofOwner = new Map<string, { joint: string; dof: string; kind: "rotation" | "translation"; sign: number }>();

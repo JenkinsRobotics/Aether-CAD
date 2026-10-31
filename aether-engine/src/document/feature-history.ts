@@ -17,7 +17,7 @@ export function bodyIDForFeature(
 ): string {
   if (
     !(surfaceCreatorTypes as readonly string[]).includes(feature.type) && feature.type !== "surface-thicken" && feature.type !== "sheet-base" &&
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.bodyId
   )
     return feature.bodyId;
@@ -67,7 +67,7 @@ function stableBodies(doc: PartDocument): PartDocument {
       }
       if (feature.type === "offset-face") return feature;
       if (consumedBodyIDs(feature).length && "targetBodyId" in feature) targetBody = feature.targetBodyId;
-      if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
+      if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature).at(-1);
         return { ...feature, bodyId: bodyIDForFeature(doc, feature) };
       }
@@ -98,7 +98,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       continue;
     }
     if (
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
+      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "shape-binder" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
       "operation" in f && f.operation === "new"
     ) {
       for (const id of bodyIDsForFeature(doc, f)) { lastBody = id; bodyProducers.set(id, f.id); }
@@ -171,7 +171,7 @@ export function insertFeature(
   const next = stableBodies(doc),
     index = rollbackPosition(doc);
   if (
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.operation === "new"
   )
     feature = {

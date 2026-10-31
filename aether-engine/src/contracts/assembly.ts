@@ -3,7 +3,7 @@
 export type AssemblyMateKind =
   | "fastened" | "revolute" | "cylindrical" | "prismatic" | "ball"
   | "distance" | "parallel" | "perpendicular" | "angle"
-  | "planar" | "pin_slot"
+  | "planar" | "pin_slot" | "sweep"
   | "rack-pinion" | "screw" | "gears" | "belt";
 
 export interface AssemblyJointEnd {

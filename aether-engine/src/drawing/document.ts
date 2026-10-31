@@ -36,6 +36,9 @@ export interface DrawingSheet {
   annotations: DrawingAnnotation[];
   /** Editable title-block rows printed beside the fixed title and units. Format version 4. */
   titleBlock?: { label: string; value: string }[];
+  /** A parts list (BOM table) of the source's parts at `originMm` (top-left, sheet mm): item, part,
+   *  quantity, material; rows come from the source on every build. Format version 4. */
+  partsList?: { originMm: DrawingPoint; widthMm?: number };
 }
 export type DrawingDirection = [number, number, number];
 export interface DrawingDetail {
@@ -117,7 +120,7 @@ export type DrawingCommand =
   | { type: "add-sheet"; sheet: DrawingSheet }
   | { type: "select-sheet"; sheetId: string }
   | { type: "remove-sheet"; sheetId: string }
-  | { type: "update-sheet"; sheetId: string; name?: string; widthMm?: number; heightMm?: number; projection?: DrawingSheet["projection"]; titleBlock?: DrawingSheet["titleBlock"] }
+  | { type: "update-sheet"; sheetId: string; name?: string; widthMm?: number; heightMm?: number; projection?: DrawingSheet["projection"]; titleBlock?: DrawingSheet["titleBlock"]; partsList?: DrawingSheet["partsList"] | null }
   | { type: "add-view"; sheetId: string; view: DrawingView }
   | { type: "update-view"; sheetId: string; viewId: string; changes: Partial<Omit<DrawingView, "id">> }
   | { type: "remove-view"; sheetId: string; viewId: string }
@@ -177,6 +180,12 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       atLeast(value.formatVersion, 4, "Title-block fields");
       list(sheet.titleBlock, 12);
       for (const row of sheet.titleBlock) { object(row); text(row.label); if (typeof row.value !== "string" || row.value.length > 200) throw Error("Title-block values are strings of at most 200 characters."); if (Object.keys(row).length !== 2) throw Error("Title-block rows have a label and a value only."); }
+    }
+    if (sheet.partsList !== undefined) {
+      atLeast(value.formatVersion, 4, "Parts lists");
+      object(sheet.partsList); point(sheet.partsList.originMm);
+      if (sheet.partsList.widthMm !== undefined) number(sheet.partsList.widthMm, 40, 400);
+      if (Object.keys(sheet.partsList).some(key => !["originMm", "widthMm"].includes(key))) throw Error("Unknown parts-list field.");
     }
     totalViews += sheet.views.length;
     if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
@@ -274,7 +283,10 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
         if (doc.activeSheetId === sheet.id) doc.activeSheetId = doc.sheets[0].id;
         break;
       }
-      case "update-sheet": for (const key of ["name", "widthMm", "heightMm", "projection", "titleBlock"] as const) if (command[key] !== undefined) Object.assign(sheet, { [key]: command[key] }); break;
+      case "update-sheet":
+        for (const key of ["name", "widthMm", "heightMm", "projection", "titleBlock"] as const) if (command[key] !== undefined) Object.assign(sheet, { [key]: command[key] });
+        if (command.partsList === null) delete sheet.partsList; else if (command.partsList !== undefined) sheet.partsList = command.partsList;
+        break;
       case "add-view": sheet.views.push(structuredClone(command.view)); break;
       case "update-view": {
         const view = sheet.views.find(v => v.id === command.viewId); if (!view) throw Error("Drawing view does not exist.");
@@ -300,7 +312,7 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
     }
   }
   // Each feature pins the lowest version that can hold it; older readers refuse newer files.
-  if (doc.sheets.some(sheet => sheet.titleBlock || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
+  if (doc.sheets.some(sheet => sheet.titleBlock || sheet.partsList || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
   else if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
   else if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);

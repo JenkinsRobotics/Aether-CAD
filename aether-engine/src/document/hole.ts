@@ -1,5 +1,5 @@
 import {validateSolidFaceReference,type SolidFaceReference} from "./solid-face-reference";
-import {isHoleThreadStandard, threadSpecification, type HoleClearanceFit, type HoleThreadStandard} from "./hole-standards";
+import {isHoleThreadStandard, threadClasses, threadSpecification, type HoleClearanceFit, type HoleThreadStandard} from "./hole-standards";
 
 /** Where a hole starts: a point on a picked planar face (SolidCraft's `position` on a face). */
 export interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }
@@ -14,6 +14,8 @@ export interface HoleThread {
   tapped: boolean;
   /** Clearance fit for a hole that is not tapped; default normal. */
   fit?: HoleClearanceFit;
+  /** Tolerance class of a tapped thread ("6H", "6G", "2B"); default 6H / 2B. */
+  threadClass?: string;
   /** Cut the helical thread into the wall instead of recording it; default false. */
   modeled?: boolean;
   leftHand?: boolean;
@@ -85,6 +87,7 @@ function validateHoleThread(feature: HoleFeature): void {
   if (typeof thread.tapped !== "boolean") throw new Error("Hole thread must say whether it is tapped.");
   if (spec.tappedOnly && !thread.tapped) throw new Error(`${spec.designation} is a pipe thread and is tapped only; choose a metric or unified thread for a clearance hole.`);
   if (thread.fit !== undefined && !["close", "normal", "loose"].includes(thread.fit)) throw new Error("Hole clearance fit must be close, normal or loose.");
+  if (thread.threadClass !== undefined && !threadClasses(thread.standard).includes(thread.threadClass)) throw new Error(`Thread class must be one of ${threadClasses(thread.standard).join(", ") || "none for a pipe thread"}.`);
   for (const key of ["modeled", "leftHand"] as const) if (thread[key] !== undefined && typeof thread[key] !== "boolean") throw new Error("Invalid hole thread option.");
   if (thread.depthMillimeters !== undefined && !(Number.isFinite(thread.depthMillimeters) && thread.depthMillimeters > 0)) throw new Error("Thread depth must be positive.");
   if (thread.tapped) {

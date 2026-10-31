@@ -1,4 +1,5 @@
 import type { PartDocument } from "../document/part-document";
+import { availableBodies } from "../document/feature-history";
 import { sha256Hex } from "../kernel/sha256";
 import { resolvedDrawingView, validateDrawingDocument, type DrawingDocument, type DrawingPoint, type DrawingSheet, type DrawingView } from "./document";
 import type { PartDrawingOptions, PartDrawingProjection, ProjectedDrawingCurve } from "./projection";
@@ -27,7 +28,10 @@ export interface BuiltDrawingAnnotation {
   viewId?: string;
   lines: [DrawingPoint, DrawingPoint][];
 }
-export interface BuiltDrawingSheet { sheet: DrawingSheet; views: BuiltDrawingView[]; annotations: BuiltDrawingAnnotation[] }
+/** The parts list as built: one row per available part of the source, in tree order. */
+export interface BuiltPartsList { originMm: DrawingPoint; widthMm: number; columns: readonly string[]; rows: { key: string; bodyId: string; cells: string[] }[] }
+export const partsListColumns = ["item", "part", "quantity", "material"] as const;
+export interface BuiltDrawingSheet { sheet: DrawingSheet; views: BuiltDrawingView[]; annotations: BuiltDrawingAnnotation[]; partsList?: BuiltPartsList }
 export interface BuiltDrawing { document: DrawingDocument; revision: string; sourceHash: string; sheets: BuiltDrawingSheet[]; approximatedCurveCount: number }
 
 export async function buildDrawing(input: DrawingDocument, project: DrawingProjector): Promise<BuiltDrawing> {
@@ -82,6 +86,11 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
         lines.push([tip, p], [p, q], [q, tip]);
       }
       built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: horizontal ? "center" : "left", positionMm: horizontal ? [(x0 + x1) / 2, y - 1.5] : [x + 1.5, (y0 + y1) / 2], lines });
+    }
+    if (sheet.partsList) {
+      // Every part is one item, quantity 1: a Part drawing lists its own parts (assembly sources are not drawn yet).
+      const rows = availableBodies(document.source).map((body, i) => ({ key: body.id, bodyId: body.id, cells: [String(i + 1), body.name, "1", document.source.bodyProperties?.[body.id]?.material?.name ?? ""] }));
+      built.partsList = { originMm: sheet.partsList.originMm, widthMm: sheet.partsList.widthMm ?? 120, columns: partsListColumns, rows };
     }
     result.sheets.push(built);
   }

@@ -21,13 +21,10 @@ export const offsetFaceEditor:FeatureEditor={
   const read=():SolidFaceReference[]=>JSON.parse(field.value);
   const update=(faces:SolidFaceReference[])=>{field.value=JSON.stringify(faces);render();field.dispatchEvent(new Event('change'));};
   const render=()=>box.render(read().map((face,index)=>({label:face.label,onRemove:()=>{cadSelection.dispatch({type:'clear'});update(read().filter((_,i)=>i!==index));}})));
-  const add=document.createElement('button');add.type='button';add.className='aui-button';add.textContent='Add selected faces';add.setAttribute('aria-label','Add offset faces');box.element.append(add);
-  const clear=document.createElement('button');clear.type='button';clear.className='aui-button';clear.textContent='Clear faces';clear.onclick=()=>{cadSelection.dispatch({type:'clear'});update([]);};box.element.append(clear);
   let active=false;
   const lifecycle=referencePickerLifecycle('face',()=>win.panel.isConnected,value=>{active=value;box.element.dataset.picking=String(value);window.dispatchEvent(new CustomEvent("aether-source-face-picking",{detail:value}));});
   const request=()=>{if(!active||!win.panel.isConnected)return;window.dispatchEvent(new CustomEvent('aether-offset-faces-request',{detail:{beforeFeatureId:feature?.id}}));};
-  add.onclick=()=>{lifecycle.setActive(true);request();};
-  box.element.addEventListener('pointerdown',()=>lifecycle.setActive(true));
+  box.element.addEventListener('pointerdown',()=>{lifecycle.setActive(true);request();});
   const receive=(event:Event)=>{
    if(!active||!win.panel.isConnected)return;
    const reply=(event as CustomEvent).detail;

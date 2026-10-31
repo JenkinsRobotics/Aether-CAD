@@ -39,12 +39,11 @@ export function drawingPresentation(built: BuiltDrawing): DrawingProjectionV1 {
   const style = (id: string, dashed = false): DrawingStyleProjection => ({ id, name: id === "hidden" ? "Hidden edges" : id === "hatch" ? "Section hatching" : "Visible edges", line_weight_mm: id === "hatch" ? 0.15 : dashed ? 0.18 : 0.3, line_pattern: dashed ? "dashed" : "solid", dash_pattern_mm: dashed ? [3, 2] : [], color_rgba: [0.12, 0.14, 0.15, 1], text_height_mm: 3.5, font_family: "sans-serif", arrow_size_mm: 2, decimal_places: 2 });
   return {
     schema_version: 1, workspace_id: built.document.documentId, drawing_id: built.document.documentId, name: built.document.name, revision: built.revision, active_sheet_id: built.document.activeSheetId,
-    capabilities: { can_edit_sheets: true, supported_view_type_ids: ["base", "projected", "section", "detail", "auxiliary"], supported_annotation_type_ids: ["note", "linear_dimension", "diameter_dimension", "radial_dimension", "angular_dimension", "balloon", "center_mark"], can_project_hidden_lines: true, can_project_sections: true, can_project_bom: false, can_rebuild: true, can_save_workspace: true, export_format_ids: ["svg", "dxf", "pdf"], unavailable_reasons: [
-      { capability_id: "can_project_bom", reason: "Assembly drawings and BOM placement are not connected yet." },
+    capabilities: { can_edit_sheets: true, supported_view_type_ids: ["base", "projected", "section", "detail", "auxiliary"], supported_annotation_type_ids: ["note", "linear_dimension", "diameter_dimension", "radial_dimension", "angular_dimension", "balloon", "center_mark"], can_project_hidden_lines: true, can_project_sections: true, can_project_bom: true, can_rebuild: true, can_save_workspace: true, export_format_ids: ["svg", "dxf", "pdf"], unavailable_reasons: [
     ] },
     styles: [style("visible"), style("hidden", true), style("hatch")],
     issues: built.approximatedCurveCount ? [{ id: "curve-approximation", severity: "info", code: "display_curve_tolerance", message: `${built.approximatedCurveCount} noncircular curves use 0.01 mm display chords. Overall dimensions use geometric extrema.`, entity_ids: [], field_path: null, recoverable: false }] : [],
-    sheets: built.sheets.map(({ sheet, views, annotations }, index) => ({
+    sheets: built.sheets.map((sheetBuilt, index) => { const { sheet, views, annotations } = sheetBuilt; return ({
       id: sheet.id, name: sheet.name, index, width_mm: sheet.widthMm, height_mm: sheet.heightMm, orientation: sheet.widthMm >= sheet.heightMm ? "landscape" : "portrait", projection_standard: sheet.projection, default_scale_ratio: 1,
       border: { margin_left_mm: 10, margin_right_mm: 10, margin_top_mm: 10, margin_bottom_mm: 10, zone_rows: 0, zone_columns: 0 },
       title_block: { id: `${sheet.id}/title`, template_id: "aether-simple", origin_sheet_mm: [sheet.widthMm - 130, sheet.heightMm - 20 - 5 * (sheet.titleBlock?.length ?? 0)], width_mm: 120, height_mm: 10 + 5 * (sheet.titleBlock?.length ?? 0), fields: [
@@ -55,7 +54,11 @@ export function drawingPresentation(built: BuiltDrawing): DrawingProjectionV1 {
       views: views.map(view => viewProjection(built, view)), annotations: annotations.map(annotation => ({
         id: annotation.id, type_id: annotationTypeId(annotation), view_id: annotation.viewId ?? null, layer_id: "visible", style_id: "visible", text: annotation.text, text_origin_sheet_mm: annotation.positionMm, text_alignment: annotation.textAlign, leader_points_sheet_mm: [], geometry_lines_sheet_mm: annotation.lines, references: [],
         measurement: !annotation.measure ? null : { kind: annotation.measure, value_mm: annotation.valueMm ?? null, value_rad: annotation.valueDeg === undefined ? null : annotation.valueDeg * Math.PI / 180, tolerance_upper_mm: null, tolerance_lower_mm: null, tolerance_upper_rad: null, tolerance_lower_rad: null, display_text: annotation.text, overridden_text: false }, state: "current", diagnostic_ids: [],
-      })), bom_tables: [], layers: ["visible", "hidden", "hatch"].map(id => ({ id, name: id, visible: true, printable: true, locked: false, style_id: id })), revision: built.revision,
-    })),
+      })), bom_tables: !sheetBuilt.partsList ? [] : [{
+        id: `${sheet.id}/parts-list`, assembly_id: built.document.source.documentId, bom_revision: built.sourceHash, mode: "flattened", origin_sheet_mm: sheetBuilt.partsList.originMm, width_mm: sheetBuilt.partsList.widthMm,
+        visible_column_ids: [...sheetBuilt.partsList.columns], diagnostic_ids: [],
+        rows: sheetBuilt.partsList.rows.map(row => ({ row_key: row.key, item_number: row.cells[0], part_definition_id: row.bodyId, quantity: Number(row.cells[2]), cells: sheetBuilt.partsList!.columns.map((column, i) => ({ column_id: column, display_text: row.cells[i] })) })),
+      }], layers: ["visible", "hidden", "hatch"].map(id => ({ id, name: id, visible: true, printable: true, locked: false, style_id: id })), revision: built.revision,
+    }); }),
   };
 }

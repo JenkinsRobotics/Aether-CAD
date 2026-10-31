@@ -137,9 +137,24 @@ export function threadSpecification(standard: HoleThreadStandard, designation: s
   return (table.get(standard) ?? []).find((spec) => spec.designation.toLowerCase() === wanted);
 }
 
-/** The hole diameter FreeCAD's Hole gives a profile: the tap drill when tapped, else the clearance fit. */
-export function standardHoleDiameter(spec: ThreadSpecification, tapped: boolean, fit: HoleClearanceFit = "normal"): number {
-  return tapped ? spec.tapDrillMillimeters : spec.clearanceMillimeters[fit];
+/** Tolerance classes of an internal thread (FreeCAD's Hole "Class"): ISO 965 grades 4–8 with
+ *  fundamental deviation H (zero) or G; unified 1B–3B. Pipe threads carry none. */
+export function threadClasses(standard: HoleThreadStandard): string[] {
+  if (standard.startsWith("iso-metric")) return ["4H", "5H", "6H", "7H", "8H", "4G", "5G", "6G", "7G", "8G"];
+  if (standard === "unc" || standard === "unf") return ["1B", "2B", "3B"];
+  return [];
+}
+/** What the class adds to a tapped hole's diameter: ISO 965-1 EI = 15 + 11·P µm for G classes,
+ *  nothing for H and unified B classes (their tolerance lies above the basic minor diameter). */
+export function threadClassDeviationMillimeters(spec: ThreadSpecification, threadClass: string | undefined): number {
+  if (!threadClass || !threadClasses(spec.standard).includes(threadClass)) return 0;
+  return threadClass.endsWith("G") ? (15 + 11 * spec.pitchMillimeters) / 1000 : 0;
+}
+
+/** The hole diameter FreeCAD's Hole gives a profile: the tap drill (plus the class's fundamental
+ *  deviation) when tapped, else the clearance fit. */
+export function standardHoleDiameter(spec: ThreadSpecification, tapped: boolean, fit: HoleClearanceFit = "normal", threadClass?: string): number {
+  return tapped ? spec.tapDrillMillimeters + threadClassDeviationMillimeters(spec, threadClass) : spec.clearanceMillimeters[fit];
 }
 
 export interface HeadRecess { diameterMillimeters: number; depthMillimeters?: number; angleDegrees?: number }

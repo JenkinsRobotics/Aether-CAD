@@ -54,6 +54,7 @@ const DOF_TEMPLATES: Record<string, AssemblyJointValue[]> = {
   cylindrical: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }, { name: "translation", kind: "translation", axis: "z", value: 0 }],
   planar: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
   pin_slot: [{ name: "translation", kind: "translation", axis: "x", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  sweep: [{ name: "position", kind: "translation", axis: "x", value: 0 }],
   parallel: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "translation_z", kind: "translation", axis: "z", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
   ball: [{ name: "rotation_x", kind: "rotation", axis: "x", value: 0 }, { name: "rotation_y", kind: "rotation", axis: "y", value: 0 }, { name: "rotation_z", kind: "rotation", axis: "z", value: 0 }],
 };
@@ -61,7 +62,36 @@ const templateDof = (kind: AssemblyMateKind, name: string) => DOF_TEMPLATES[kind
 
 /** The mates the in-process solver can solve: joints the frames define alone.
  *  Rack and pinion, screw, gears and belt couple other joints' motion. */
-export const solvableMateKinds: readonly AssemblyMateKind[] = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
+export const solvableMateKinds: readonly AssemblyMateKind[] = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot", "sweep"];
+
+/** Sweep (path) mate: b's origin rides the polyline `path_mm` given in a's frame. Its one degree
+ *  of freedom, `position`, is the arc length along the path in mm; held when a dof carries it,
+ *  else b sits wherever on the path is nearest. Orientation is free (a point on a curve). */
+function sweepResiduals(a: Frame, b: Frame, parameters: Record<string, unknown>): number[] {
+  const raw = parameters.path_mm as number[][] | undefined;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.some((p) => !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite))) throw new Error("A sweep mate needs path_mm: two or more [x, y, z] points in the first connector's frame.");
+  const mul = (v: V3, k: number): V3 => [v[0] * k, v[1] * k, v[2] * k];
+  const path = raw.map((p) => add(a.o, add(mul(a.x, p[0]), add(mul(a.y, p[1]), mul(a.z, p[2])))));
+  const lengths = [0];
+  for (let i = 1; i < path.length; i++) lengths.push(lengths[i - 1] + norm(sub(path[i], path[i - 1])));
+  const held = ((parameters.dofs as AssemblyJointValue[] | undefined) ?? []).find((d) => d.name === "position");
+  let target: V3 | undefined;
+  if (held) {
+    const s = Math.min(Math.max(held.value, 0), lengths[lengths.length - 1]);
+    const i = Math.max(1, lengths.findIndex((l) => l >= s));
+    const t = lengths[i] === lengths[i - 1] ? 0 : (s - lengths[i - 1]) / (lengths[i] - lengths[i - 1]);
+    target = add(path[i - 1], mul(sub(path[i], path[i - 1]), t));
+  } else {
+    let best = Infinity;
+    for (let i = 1; i < path.length; i++) {
+      const d = sub(path[i], path[i - 1]), l2 = dot(d, d);
+      const t = l2 ? Math.min(Math.max(dot(sub(b.o, path[i - 1]), d) / l2, 0), 1) : 0;
+      const q = add(path[i - 1], mul(d, t)), dist = norm(sub(b.o, q));
+      if (dist < best) { best = dist; target = q; }
+    }
+  }
+  return sub(b.o, target!);
+}
 
 /** The residual vector of one mate between two world frames (zero when satisfied). */
 /** A degree of freedom's current value between two frames: the travel of b's origin along
@@ -105,7 +135,7 @@ function orientationResidual(target: Q, actual: Q, hemisphere: number): number[]
 /** Residuals holding authored or relation-resolved coordinates. Full ball
  * orientation avoids Euler branch ambiguity and works at gimbal lock. */
 function valueResiduals(a: OrientedFrame, b: OrientedFrame, kind: AssemblyMateKind, parameters: Record<string, unknown> = {}, hemisphere = 1): number[] {
-  const values = (parameters.dofs as AssemblyJointValue[] | undefined) ?? [];
+  const values = kind === "sweep" ? [] : (parameters.dofs as AssemblyJointValue[] | undefined) ?? [];
   const rotation = heldRotation(kind, values);
   const orientation = rotation ? orientationResidual(qmul(a.q, rotation), b.q, hemisphere) : [];
   return [...orientation, ...values.filter(dof => !rotation || dof.kind !== "rotation").map(dof => {
@@ -137,6 +167,7 @@ export function jointResiduals(kind: AssemblyMateKind, a: Frame, b: Frame, param
     case "planar": return [dot(d, a.z), ...zAligned()];
     // Pin slot: a revolute that may also slide along a's x (the slot's length).
     case "pin_slot": return [dot(d, a.y), dot(d, a.z), ...zAligned()];
+    case "sweep": return sweepResiduals(a, b, parameters);
     default: return [];
   }
 }

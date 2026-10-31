@@ -7,7 +7,7 @@
 import type { EdgeFinishEdge } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
 import type { SolidFaceReference } from "@aether/core/document";
-import type { Controls, FeatureEditor, FeatureEditorContext } from "./shared";
+import { layoutParameterRows, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
 const identity = (edge: EdgeFinishEdge) => JSON.stringify(edge.kind === "solid-edge" ? [edge.bodyId, edge.anchor.start.signature, edge.anchor.end.signature] : [edge.bodyId, edge.midpointMillimeters, edge.lengthMillimeters]);
 
@@ -24,7 +24,8 @@ const edgeFinishEditor = (type: "fillet" | "chamfer"): FeatureEditor => ({
         : { secondDistance: field("Second distance (mm)", feature?.secondDistanceMillimeters === undefined ? "" : String(feature.secondDistanceMillimeters)),
             angle: field("Angle (degrees)", feature?.angleDegrees === undefined ? "" : String(feature.angleDegrees)),
             referenceFace: field("Reference face", JSON.stringify(feature?.referenceFace ? [feature.referenceFace] : [])) }),
-      edgeScope: field("Edges", feature?.edges ? "picked" : feature?.edgePlane ? "plane" : "all", ["all", "plane", "picked"]),
+      // Picked edges by default, as every other editor starts from the selection; "all" and "plane" stay for the saved-document forms.
+      edgeScope: field("Edges", feature?.edgePlane ? "plane" : feature && !feature.edges ? "all" : "picked", ["picked", "all", "plane"]),
       edgePlane: field("Edge plane", feature?.edgePlane?.plane ?? "XY", ["XY", "XZ", "YZ"]),
       edgeOffset: field(
         "Edge plane offset (mm)",
@@ -36,6 +37,9 @@ const edgeFinishEditor = (type: "fillet" | "chamfer"): FeatureEditor => ({
   },
 
   layout(context, controls) {
+    const rows = layoutParameterRows(context, (input) => input === controls.edges || input === controls.referenceFace);
+    const sync = () => { for (const key of ["edgePlane", "edgeOffset"] as const) { const row = rows.get(controls[key]); if (row) row.hidden = controls.edgeScope.value !== "plane"; } };
+    controls.edgeScope.addEventListener("change", sync); sync();
     if (type === "chamfer") {
       const faces = mountPickedReferences<SolidFaceReference>(context, controls.referenceFace, {
         title: "Reference face (optional)", kind: "face", requestEvent: "aether-offset-faces-request", replyEvent: "aether-offset-faces", replyKey: "faces", identity: faceIdentity,

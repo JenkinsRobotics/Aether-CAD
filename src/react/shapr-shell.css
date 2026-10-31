@@ -784,16 +784,17 @@
 /* Legacy docked layouts have an unobstructed viewport edge. */
 .shapr-shell {
   --aether-feature-window-top: 116px;
-  --aether-feature-window-right: auto;
-  --aether-feature-window-left: 16px;
+  --aether-feature-window-right: 16px;
+  --aether-feature-window-left: auto;
 }
 
 /* The Studio viewport extends behind its floating tree and auxiliary cards.
    Use the shared measured clearance for every CAD feature/sketch editor.
    At narrow widths the editor can overlap a card, but must stay reachable. */
 .shapr-shell .aui-shell[data-design="studio"] .aui-feature-window {
-  --aether-feature-window-left: clamp(12px, var(--aui-workspace-inset-left, 12px), calc(100% - 324px));
-  --aether-feature-window-right: auto;
+  /* Right side, beside the camera navigation column (its width plus a gutter), like the gallery's docked editors. */
+  --aether-feature-window-left: auto;
+  --aether-feature-window-right: clamp(12px, calc(var(--aui-workspace-inset-right, 12px) + 138px), calc(100% - 324px));
   --aether-feature-window-top: max(116px, var(--aui-workspace-inset-top, 0px));
   max-width: calc(100% - 24px);
   max-height: calc(100% - var(--aether-feature-window-top) - max(16px, var(--aui-studio-tools-clearance, 0px)));

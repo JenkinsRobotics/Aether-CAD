@@ -94,6 +94,6 @@ describe("in-process assembly solver", () => {
       { id: "m1", kind: "fastened", a: { instance: "a", placement_mm: [0, 0, 20] }, b: { instance: "b" } },
       { id: "m2", kind: "fastened", a: { instance: "a", placement_mm: [0, 0, 50] }, b: { instance: "b" } }] });
     expect(contradiction.status).toBe("error"); expect(contradiction.message).toMatch(/not satisfied after solving/); expect(contradiction.instances).toEqual([]);
-    expect(solvableMateKinds).toHaveLength(11);
+    expect(solvableMateKinds).toHaveLength(12);
   });
 });

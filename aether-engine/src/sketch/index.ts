@@ -60,6 +60,7 @@ export * from "./operations/infinite";
 export * from "./operations/regular-polygon";
 export * from "./operations/chain";
 export * from "./operations/insert-spline-point";
+export * from "./operations/remove-spline-point";
 export * from "./operations/spline-handle";
 
 export * from "./operations/trim";

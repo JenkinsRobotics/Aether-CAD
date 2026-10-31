@@ -2265,6 +2265,15 @@ export function evaluatePartDocument(
           if (feature.wallMillimeters) { const inner = sweepCircle(feature.diameterMillimeters / 2 - feature.wallMillimeters); const hollow = pipe.cut(inner); if (!isShape3D(hollow)) throw new Error("Pipe wall leaves no solid."); pipe = own(hollow); }
           spine.edges.forEach((edge) => edge.delete());
           tool = pipe;
+        } else if (feature.type === "shape-binder") {
+          // Shape binder: the source part (or its picked faces, as a shell) copied as a new part on every replay.
+          const source = bodies.get(feature.sourceBodyId);
+          if (!source) throw new Error("Shape binder needs an available source part.");
+          if (feature.faces?.length) {
+            const o = getOC() as any, builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell);
+            for (const ref of feature.faces) builder.Add(shell, faceByReference(source, ref, "Shape binder face").wrapped);
+            tool = own(cast(shell) as Shape3D);
+          } else tool = own(source.clone());
         } else if (feature.type === "bounding-solid") {
           // The axis-aligned box around the chosen parts, grown by the margin.
           const chosen = feature.bodyIds ?? [...bodies.keys()];

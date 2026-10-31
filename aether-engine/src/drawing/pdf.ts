@@ -1,6 +1,6 @@
 import type { PDFFont, PDFPage, RGB } from "pdf-lib";
 import { drawingCurvePath, type BuiltDrawing, type BuiltDrawingSheet } from "./build";
-import { titleBlockRows } from "./export";
+import { partsListGrid, titleBlockRows } from "./export";
 
 export interface DrawingPDFOptions {
   /** Runtime adapter supplies the product's bundled Noto Sans font. */
@@ -71,6 +71,11 @@ export async function exportDrawingPDF(drawing: BuiltDrawing, options: DrawingPD
     for (const annotation of annotations) {
       for (const [a, b] of annotation.lines) stroke(`M ${a.join(" ")} L ${b.join(" ")}`, 0.2);
       if (annotation.text) label(annotation.text, ...annotation.positionMm, 3.5, annotation.textAlign);
+    }
+    if (built.partsList) {
+      const grid = partsListGrid(built.partsList);
+      grid.lines.forEach(([x0, y0, x1, y1]) => stroke(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
+      grid.texts.forEach(t => label(t.text, t.x, t.y, 2.8));
     }
     const block = titleBlockRows(sheet);
     if (block) {

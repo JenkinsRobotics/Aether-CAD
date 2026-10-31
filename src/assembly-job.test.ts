@@ -267,3 +267,11 @@ it('solves the active assembly when a Hybrid also contains mated launch componen
   source.mates[1].endpoint_b.instance_id='i2';
   expect(assemblyJobFor(source).complete).toBe(false);
 });
+
+it("passes a sweep mate's path control to the solver as path_mm", () => {
+  const base = projection() as never as Record<string, unknown>;
+  const mates = (base.mates as Record<string, unknown>[]).map((m) => ({ ...m, type_id: "sweep", dofs: [], controls: [{ key: "path_mm", value: "[[0,0,0],[50,0,0],[50,30,0]]" }] }));
+  const { job } = assemblyJobFor({ ...base, mates } as never);
+  expect(job.joints[0].kind).toBe("sweep");
+  expect(job.joints[0].parameters?.path_mm).toEqual([[0, 0, 0], [50, 0, 0], [50, 30, 0]]);
+});

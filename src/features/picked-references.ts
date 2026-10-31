@@ -26,13 +26,11 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   const read = (): T[] => JSON.parse(control.value || "[]");
   const update = (refs: T[]) => { control.value = JSON.stringify(refs); options.onChange?.(refs); render(); control.dispatchEvent(new Event("change")); };
   const render = () => box.render(read().map((ref, index) => ({ label: ref.label, onRemove: () => { cadSelection.dispatch({ type: "clear" }); update(read().filter((_, i) => i !== index)); } })));
-  const add = document.createElement("button"); add.type = "button"; add.className = "aui-button"; add.textContent = `Add selected ${options.kind}s`; add.setAttribute("aria-label", `Add ${options.title.toLowerCase()}`); box.element.append(add);
-  const clear = document.createElement("button"); clear.type = "button"; clear.className = "aui-button"; clear.textContent = `Clear ${options.kind}s`; clear.onclick = () => { cadSelection.dispatch({ type: "clear" }); update([]); }; box.element.append(clear);
+  // Selecting in the viewport fills the list (the subscription below); each row removes itself. No Add/Clear buttons: the gallery's editors have none.
   let active = false;
   const lifecycle = referencePickerLifecycle(options.kind, () => win.panel.isConnected, (value) => { active = value; box.element.dataset.picking = String(value); window.dispatchEvent(new CustomEvent(`aether-source-${options.kind}-picking`, { detail: value })); });
   const request = () => { if (!active || !win.panel.isConnected) return; window.dispatchEvent(new CustomEvent(options.requestEvent, { detail: { beforeFeatureId: feature?.id } })); };
-  add.onclick = () => { lifecycle.setActive(true); request(); };
-  box.element.addEventListener("pointerdown", () => lifecycle.setActive(true));
+  box.element.addEventListener("pointerdown", () => { lifecycle.setActive(true); request(); });
   const receive = (event: Event) => {
     if (!active || !win.panel.isConnected) return;
     const reply = (event as CustomEvent).detail;

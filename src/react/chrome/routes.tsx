@@ -37,6 +37,7 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
     if (!editable && ["add-sheet", "add-view", "add-section", "add-annotation", "rebuild-drawing"].includes(id)) { setError("This drawing is read-only."); return; }
     if (id === "add-sheet" || id === "add-view" || id === "add-section" || id === "add-annotation") { setDraft({ kind: id === "add-sheet" ? "sheet" : id === "add-view" || id === "add-section" ? "view" : "annotation", section: id === "add-section" }); return; }
     if (id === "rebuild-drawing") { void run(() => drawingEditor.refresh()); return; }
+    if (id === "add-bom") { if (!editable) { setError("This drawing is read-only."); return; } if (sheet) void run(() => drawingEditor.execute({ type: "update-sheet", sheetId: sheet.id, partsList: sheet.partsList ? null : { originMm: [sheet.widthMm - 130, 20] } })); return; }
     if (!built) return;
     if (id === "save-workspace") void run(() => drawingFiles.save());
     if (id === "export-svg") downloadDrawingFile(`${built.document.name}.svg`, exportDrawingSVG(built, sheet?.id), "image/svg+xml");

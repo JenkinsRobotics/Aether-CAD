@@ -50,7 +50,7 @@ export type CADCommandID =
   | "feature-loft"
   | "feature-import-step" | "feature-import-cad" | "feature-sheet-base" | "feature-sheet-flange" | "feature-sheet-hem" | "feature-sheet-fold" | "feature-sheet-unfold" | "feature-sheet-refold" | "sheet-export-flat-dxf" | "show-configurations" | "timeline-copy-features" | "timeline-paste-features"
   | "feature-surface-boundary" | "feature-surface-blend" | "feature-surface-untrim" | "feature-surface-ruled" | "feature-surface-extend" | "feature-surface-extrude" | "feature-surface-revolve" | "feature-surface-loft" | "feature-surface-patch" | "feature-surface-sweep" | "feature-surface-offset" | "feature-surface-thicken" | "feature-surface-stitch" | "feature-surface-unstitch" | "feature-surface-reverse-normal"
-  | "feature-hole" | "feature-split" | "feature-delete-face" | "feature-pipe" | "feature-bounding-solid" | "feature-thread" | "feature-coil" | "feature-remove-body" | "feature-boss" | "feature-rest"
+  | "feature-hole" | "feature-split" | "feature-delete-face" | "feature-pipe" | "feature-bounding-solid" | "feature-shape-binder" | "feature-thread" | "feature-coil" | "feature-remove-body" | "feature-boss" | "feature-rest"
   | "part-section"
   | "part-properties"
   | "part-interference" | "part-clearance" | "part-compare"
@@ -206,7 +206,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-shell",
   "feature-import-step", "feature-import-cad",   "feature-sheet-base", "feature-sheet-flange", "feature-sheet-hem", "feature-sheet-fold", "feature-sheet-unfold", "feature-sheet-refold", "sheet-export-flat-dxf", "show-configurations", "timeline-copy-features", "timeline-paste-features",
   "feature-surface-boundary", "feature-surface-blend", "feature-surface-untrim", "feature-surface-ruled", "feature-surface-extend", "feature-surface-extrude", "feature-surface-revolve", "feature-surface-loft", "feature-surface-patch", "feature-surface-sweep", "feature-surface-offset", "feature-surface-thicken", "feature-surface-stitch", "feature-surface-unstitch", "feature-surface-reverse-normal",
-  "feature-hole", "feature-split", "feature-delete-face", "feature-pipe", "feature-bounding-solid", "feature-thread", "feature-coil", "feature-remove-body", "feature-boss", "feature-rest",
+  "feature-hole", "feature-split", "feature-delete-face", "feature-pipe", "feature-bounding-solid", "feature-shape-binder", "feature-thread", "feature-coil", "feature-remove-body", "feature-boss", "feature-rest",
   "feature-loft",
   "feature-draft",
   "feature-boolean",

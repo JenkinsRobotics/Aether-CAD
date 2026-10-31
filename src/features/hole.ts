@@ -1,6 +1,6 @@
 import {
   HOLE_THREAD_STANDARDS, HOLE_THREAD_STANDARD_LABELS, capScrewCounterboreFor, countersunkScrewFor, sketchRegions,
-  standardHoleDiameter, threadDesignations, threadSpecification,
+  standardHoleDiameter, threadClasses, threadDesignations, threadSpecification,
   type HoleClearanceFit, type HoleThread, type HoleThreadStandard, type SolidFaceReference,
 } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
@@ -41,6 +41,7 @@ export const holeEditor: FeatureEditor = {
       size: field('Size', thread?.designation ?? 'M6', thread ? threadDesignations(thread.standard) : threadDesignations('iso-metric-coarse')),
       threaded: field('Thread', thread ? (thread.tapped ? 'tapped' : 'clearance') : 'tapped', ['tapped', 'clearance']),
       fit: field('Clearance fit', thread?.fit ?? 'normal', ['close', 'normal', 'loose']),
+      threadClass: field('Thread class', thread?.threadClass ?? '', ['', ...threadClasses(thread?.standard ?? 'iso-metric-coarse')]),
       threadModel: field('Thread geometry', thread?.modeled ? 'modelled' : 'cosmetic', ['cosmetic', 'modelled']),
       threadHand: field('Thread hand', thread?.leftHand ? 'left' : 'right', ['right', 'left']),
       threadDepthType: field('Thread depth', thread?.depthMillimeters !== undefined ? 'dimension' : 'whole hole', ['whole hole', 'dimension']),
@@ -88,12 +89,13 @@ export const holeEditor: FeatureEditor = {
       const wanted = controls.size.value;
       controls.size.replaceChildren(...threadDesignations(s).map(designation => Object.assign(document.createElement('option'), {value: designation, textContent: designation})));
       controls.size.value = threadDesignations(s).includes(wanted) ? wanted : threadDesignations(s)[Math.min(4, threadDesignations(s).length - 1)];
+      if (controls.threadClass instanceof HTMLSelectElement) { const cls = controls.threadClass.value; controls.threadClass.replaceChildren(...['', ...threadClasses(s)].map(value => Object.assign(document.createElement('option'), {value, textContent: value || 'default'}))); controls.threadClass.value = threadClasses(s).includes(cls) ? cls : ''; }
     };
     // A standard drives the diameter: tap drill when tapped, the fit when clearance.
     const applyDiameter = () => {
       const s = spec(); const input = controls.diameter as HTMLInputElement;
       input.readOnly = Boolean(s);
-      if (s) setLength(controls.diameter, standardHoleDiameter(s, controls.threaded.value === 'tapped', controls.fit.value as HoleClearanceFit));
+      if (s) setLength(controls.diameter, standardHoleDiameter(s, controls.threaded.value === 'tapped', controls.fit.value as HoleClearanceFit, controls.threadClass.value || undefined));
     };
     const applyHead = () => {
       const s = spec(); if (!s || controls.head.value === 'manual') return;
@@ -115,6 +117,7 @@ export const holeEditor: FeatureEditor = {
       const threaded = Boolean(standard()), tapped = threaded && controls.threaded.value === 'tapped';
       hide(controls.size, !threaded); hide(controls.threaded, !threaded);
       hide(controls.fit, !threaded || tapped);
+      hide(controls.threadClass, !tapped || !threadClasses(standard()!).length);
       hide(controls.threadModel, !tapped); hide(controls.threadHand, !tapped || controls.threadModel.value !== 'modelled');
       hide(controls.threadDepthType, !tapped); hide(controls.threadDepth, !tapped || controls.threadDepthType.value !== 'dimension');
       hide(controls.head, !threaded || !standard()?.startsWith('iso-metric'));
@@ -129,7 +132,7 @@ export const holeEditor: FeatureEditor = {
       hide(controls.countersinkAngle, !countersunk);
     };
     controls.profile.addEventListener('change', () => { refillSizes(); applyDiameter(); applyHead(); sync(); });
-    for (const key of ['size', 'threaded', 'fit']) controls[key].addEventListener('change', () => { applyDiameter(); applyHead(); });
+    for (const key of ['size', 'threaded', 'fit', 'threadClass']) controls[key].addEventListener('change', () => { applyDiameter(); applyHead(); });
     controls.head.addEventListener('change', () => { applyHead(); sync(); });
     for (const key of ['placement', 'allCircles', 'cutType', 'depthType', 'drillMode', 'threaded', 'threadModel', 'threadDepthType', 'drillPoint']) controls[key].addEventListener('change', sync);
     applyDiameter();
@@ -165,6 +168,7 @@ export const holeEditor: FeatureEditor = {
     const thread: HoleThread | undefined = standard ? {
       standard, designation: values.size, tapped,
       ...(tapped ? {} : {fit: values.fit as HoleClearanceFit}),
+      ...(tapped && values.threadClass ? {threadClass: values.threadClass} : {}),
       ...(tapped && values.threadModel === 'modelled' ? {modeled: true, ...(values.threadHand === 'left' ? {leftHand: true} : {})} : {}),
       ...(tapped && values.threadDepthType === 'dimension' ? {depthMillimeters: Number(values.threadDepth)} : {}),
     } : undefined;

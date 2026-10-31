@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   HOLE_THREAD_STANDARDS, capScrewCounterboreFor, countersunkScrewFor, isHoleThreadStandard,
-  standardHoleDiameter, threadDesignations, threadSpecification,
+  standardHoleDiameter, threadClassDeviationMillimeters, threadClasses, threadDesignations, threadSpecification,
 } from "./hole-standards";
 
 describe("hole standards", () => {
@@ -51,4 +51,16 @@ describe("hole standards", () => {
     expect(capScrewCounterboreFor(threadSpecification("iso-metric-coarse", "M2")!)).toBeUndefined();
     expect(capScrewCounterboreFor(threadSpecification("unc", "1/4-20")!)).toBeUndefined();
   });
+});
+
+it("adds the ISO 965 G fundamental deviation to a tapped diameter and nothing for H or B classes", () => {
+  const m8 = threadSpecification("iso-metric-coarse", "M8")!, quarter = threadSpecification("unc", "1/4-20")!;
+  expect(threadClasses("iso-metric-coarse")).toContain("6G");
+  expect(threadClasses("unc")).toEqual(["1B", "2B", "3B"]);
+  expect(threadClasses("npt")).toEqual([]);
+  expect(threadClassDeviationMillimeters(m8, "6G")).toBeCloseTo(0.02875, 6);
+  expect(standardHoleDiameter(m8, true, "normal", "6G")).toBeCloseTo(6.82875, 6);
+  expect(standardHoleDiameter(m8, true, "normal", "6H")).toBe(6.8);
+  expect(standardHoleDiameter(quarter, true, "normal", "2B")).toBe(quarter.tapDrillMillimeters);
+  expect(standardHoleDiameter(m8, false, "normal", "6G")).toBe(9);
 });

@@ -25,6 +25,7 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-torus", "Torus", "revolve", "create-torus"),
       tool("solid-pipe", "Pipe", "sweep", "feature-pipe"),
       tool("solid-bounding-solid", "Bounding Solid", "box", "feature-bounding-solid"),
+      tool("solid-shape-binder", "Shape Binder", "box", "feature-shape-binder"),
       tool("solid-thread", "Thread", "thread", "feature-thread"),
       tool("solid-coil", "Coil", "sweep", "feature-coil"),
       // Last of the real tools: the Create list opens downward without a height limit, so

@@ -16,6 +16,8 @@ import {validateSplit, type SplitFeature} from './split';
 import {validateDeleteFace, type DeleteFaceFeature} from './delete-face';
 import {validatePipe, type PipeFeature} from './pipe';
 import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid';
+import {validateShapeBinder, type ShapeBinderFeature} from './shape-binder';
+export type {ShapeBinderFeature} from './shape-binder';
 import {validateThread, type ThreadFeature} from './thread';
 import {validateCoil, type CoilFeature} from './coil';
 import {validateCurve3D, type Curve3DFeature} from './curve3d';
@@ -42,7 +44,7 @@ import {validateHole, type HoleFeature} from "./hole";
 export type {HoleFeature, HoleThread} from "./hole";
 export {
   HOLE_THREAD_STANDARDS, HOLE_THREAD_STANDARD_LABELS, isHoleThreadStandard, threadDesignations, threadSpecification,
-  standardHoleDiameter, capScrewCounterboreFor, countersunkScrewFor,
+  standardHoleDiameter, threadClasses, threadClassDeviationMillimeters, capScrewCounterboreFor, countersunkScrewFor,
   type HoleThreadStandard, type HoleClearanceFit, type ThreadSpecification, type HeadRecess,
 } from "./hole-standards";
 import { validateImportSTEP, type ImportSTEPFeature } from "./import-step";
@@ -174,7 +176,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ShapeBinderFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -196,6 +198,7 @@ export function validateSolidFeature(
   if (feature.type === "snap-fit") return validateSnapFit(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "remove-body") return validateRemoveBody(feature);
   if (feature.type === "bounding-solid") return validateBoundingSolid(feature);
+  if (feature.type === "shape-binder") return validateShapeBinder(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "thread") return validateThread(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "delete-face") return validateDeleteFace(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "offset-face") return validateOffsetFace(feature, earlier, missingReference);
