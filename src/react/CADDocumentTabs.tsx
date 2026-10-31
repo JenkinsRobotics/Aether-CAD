@@ -273,15 +273,15 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const creation = project ? {
     label: "Create in this design",
     items: [
-      { id: "part", label: "Create Part Studio…", disabled: designReadOnly },
-      { id: "assembly", label: "Create Assembly…", disabled: designReadOnly },
-      { id: "drawing", label: "Create Drawing…", disabled: designReadOnly || (!presentation.partOpen && kind !== "drawing"),
+      { id: "part", label: "Create Part Studio…", icon: <AetherIcon name="file-part" />, disabled: designReadOnly },
+      { id: "assembly", label: "Create Assembly…", icon: <AetherIcon name="file-assembly" />, disabled: designReadOnly },
+      { id: "drawing", label: "Create Drawing…", icon: <AetherIcon name="file-drawing" />, disabled: designReadOnly || (!presentation.partOpen && kind !== "drawing"),
         disabledReason: "Open a source Part in this design first." },
     ],
     onSelect: (kind: string) => setCreating(kind),
   } : variant === "browser" ? {
     label: "Design actions",
-    items: [{ id: "hybrid-from-part", label: "Create Hybrid design from this Part…", disabled: kind !== "part" || !presentation.partOpen,
+    items: [{ id: "hybrid-from-part", label: "Create Hybrid design from this Part…", icon: <AetherIcon name="file-project" />, disabled: kind !== "part" || !presentation.partOpen,
       disabledReason: "Open a Part to copy into a Hybrid design." }],
     onSelect: (kind: string) => setCreating(kind),
   } : undefined;
