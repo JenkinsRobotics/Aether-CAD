@@ -51,7 +51,8 @@ try {
   await page.screenshot({ path: join(evidence, 'modify-tools.png') });
   await page.keyboard.press('Escape');
   await page.keyboard.press('ControlOrMeta+k');
-  await page.locator('.aui-command-palette input').fill('Wrap & Emboss');
+  // ⌘K focuses the header's inline command search (there is no modal palette).
+  await page.locator('.cad-document-bar .aui-command-search input').fill('Wrap & Emboss');
   await expect(page.locator('[role="option"][id$="-unavailable:solid-wrap-emboss"]')).toHaveAttribute('aria-disabled', 'true');
   await page.screenshot({ path: join(evidence, 'wrap-unavailable.png') });
   await page.keyboard.press('Escape'); steps.push('toolbar entries and unavailable wrap in feature search');
