@@ -411,7 +411,7 @@ function helicalThreadGroove(center: V3, direction: V3, minorRadius: number, spe
 /** Evaluates persisted features into an exact OCCT solid; meshes are disposable. */
 export function evaluatePartDocument(
   document: PartDocument,
-  options: { preview?: boolean; withBodies?: (bodies: ReadonlyMap<string, Shape3D>) => void; withMeshes?: (meshes: ReadonlyMap<string, MeshPart>) => void } = {},
+  options: { preview?: boolean; withBodies?: (bodies: ReadonlyMap<string, Shape3D>) => void; withMeshes?: (meshes: ReadonlyMap<string, MeshPart>) => void; observe?: import('./evaluation-timing').EvaluationObserver } = {},
 ): ImportedModelData {
   validatePartDocument(document);
   const started = performance.now();
@@ -419,11 +419,19 @@ export function evaluatePartDocument(
   const sketchFrames: Record<string, SketchFrame> = {};
   const scopeResolutions: Record<string, ExtrusionScopeResolution> = {};
   const geometry = (shape: Shape3D, id: string, name: string, index: number, preview = false) => {
+    const displayStarted = options.observe ? performance.now() : 0;
     let cached = meshes.get(shape);
+    const wasCached = Boolean(cached);
     // A preview's own tool body is drawn once as an overlay: a coarser mesh, no topology, not kept.
-    if (!cached && preview) return buildPartGeometry(shape, document.documentId, document.name + ".acpart", index, { id, name, preview: true });
+    if (!cached && preview) {
+      const result = buildPartGeometry(shape, document.documentId, document.name + ".acpart", index, { id, name, preview: true });
+      options.observe?.({ phase: 'display', id, cached: false, milliseconds: performance.now() - displayStarted });
+      return result;
+    }
     if (!cached) { cached = buildPartGeometry(shape, document.documentId, document.name + ".acpart", index, { id, name }); meshes.set(shape, cached); }
-    return { ...cached, id, name, vertices: cached.vertices.slice(), normals: cached.normals.slice(), triangles: cached.triangles.slice(), edgeLines: cached.edgeLines.slice() };
+    const result = { ...cached, id, name, vertices: cached.vertices.slice(), normals: cached.normals.slice(), triangles: cached.triangles.slice(), edgeLines: cached.edgeLines.slice() };
+    options.observe?.({ phase: 'display', id, cached: wasCached, milliseconds: performance.now() - displayStarted });
+    return result;
   };
   // The feature previewed: the last unsuppressed solid feature before the rollback bar.
   const history = document.features.slice(0, rollbackPosition(document));
@@ -491,6 +499,7 @@ export function evaluatePartDocument(
   {
     for (let index = reuse; index < history.length; index++) {
       const feature = history[index];
+      const featureStarted = options.observe ? performance.now() : 0;
       stepOwned = [];
       let failed = false;
       try {
@@ -3090,6 +3099,7 @@ export function evaluatePartDocument(
       } finally {
         if (failed) { for (const shape of stepOwned.reverse()) release(shape); }
         else cached.push({ key: keys[index], profiles: new Map(profiles), tools: new Map(tools), bodies: new Map(bodies), meshes: new Map(meshParts), currentBodyID, outputs: { ...bodyOutputs }, frames: { ...sketchFrames }, scopes: { ...scopeResolutions }, owned: stepOwned });
+        options.observe?.({ phase: 'feature', id: feature.id, name: feature.name, type: feature.type, failed, milliseconds: performance.now() - featureStarted });
       }
     }
     // Preview: the design before the feature, and the feature's own material

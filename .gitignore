@@ -19,6 +19,8 @@ dist-library/
 build/
 *.egg-info/
  REFERENCE CAD/
+# Supplied comparison sources (SolidCraft for scripts/benchmarks/native); never vendored.
+reference/
 
 # SolidCraft engine build outputs (npm run build:engine)
 engine-solidcraft/target/
