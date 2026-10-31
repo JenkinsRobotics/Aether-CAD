@@ -22,10 +22,6 @@ def invoke(tmp_path, document):
             "-S",
             str(ROOT / "service/aether_cad_service/runtime/runner.pyz"),
             shutil.which("node"),
-            os.environ.get(
-                "AETHER_FREECAD_CMD",
-                "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd",
-            ),
         ],
         input=json.dumps(
             {

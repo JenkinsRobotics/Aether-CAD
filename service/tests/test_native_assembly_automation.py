@@ -15,7 +15,7 @@ from aether_cad_service.project_runtime import decode
 
 ROOT = Path(__file__).resolve().parents[2]
 NATIVE = pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1",
+    os.environ.get("AETHER_TEST_NATIVE") != "1",
     reason="Real native qualification required",
 )
 

@@ -65,8 +65,7 @@ def test_failed_source_returns_no_saved_candidate(tmp_path, change):
 def test_project_container_reopens_the_same_associative_native_part(tmp_path):
     def project(action, arguments):
         run = subprocess.run(
-            [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node"),
-             os.environ.get("AETHER_FREECAD_CMD", "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd")],
+            [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node")],
             input=json.dumps({"service": "/api/cad/project-" + action, "arguments": arguments}),
             text=True, capture_output=True, cwd=tmp_path, timeout=60, check=True,
             env={"HOME": str(tmp_path), "TMPDIR": str(tmp_path), "QT_QPA_PLATFORM": "offscreen"},

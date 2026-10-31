@@ -131,7 +131,7 @@ def test_inspect_and_edit_permission_before_worker(host):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_native_preview_edit_conflict_and_history_restore(host):
     _, call, file, grant, command = host
@@ -183,7 +183,7 @@ def test_native_preview_edit_conflict_and_history_restore(host):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_native_rejection_never_saves_and_next_command_recovers(host):
     _, call, file, grant, command = host
@@ -230,7 +230,7 @@ def test_malformed_and_bounded_requests():
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_real_mcp_http_native_edit_and_stale_revision(host):
     studio, _, file, grant, _ = host
@@ -326,7 +326,7 @@ def test_missing_runtime_and_timeout_fail_clearly(monkeypatch):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_native_agent_finalizes_attached_sketch_after_upstream_edit():
     source = json.loads(part_bytes())
@@ -379,7 +379,7 @@ def test_native_agent_finalizes_attached_sketch_after_upstream_edit():
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_agent_offset_preview_commit_and_invalid_edit_recovery():
     import math
@@ -457,7 +457,7 @@ def test_agent_offset_preview_commit_and_invalid_edit_recovery():
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_revolve_agent_preview_edit_and_invalid_recovery(host):
     import math

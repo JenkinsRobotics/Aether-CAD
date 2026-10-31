@@ -79,9 +79,9 @@ comparison evidence yet).
 | Revolution / Groove (angle, two angles, axis choices) | Revolve add/cut/new, axis from sketch line or world axis, two angles | parity | oracle 14 revolve fixtures |
 | Additive/Subtractive Loft (ruled, closed) | Loft with apex point, rails; surface loft | parity | tracker `solid.loft` partial only on SolidCraft-specific options |
 | Additive/Subtractive Pipe (orientation modes, auxiliary spine, scaling) | Sweep: perpendicular/parallel/fixed direction, end scale, guide rail; pipe feature | parity | |
-| Additive/Subtractive Helix | Coil feature | verify | no FreeCAD oracle fixture for helices |
-| Primitives (box, cylinder, sphere, cone, torus, prism, wedge, ellipsoid) | Primitive tools (box, cylinder, sphere, …), bounding solid, standard parts | verify | primitives build on the engine; add oracle fixtures |
-| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points; counterbore/countersink/counterdrill; ISO metric coarse/fine, UNC, UNF profiles with tap-drill or clearance-fit diameters; cosmetic or modelled thread (depth, hand); drill-point angle; taper; ISO 4762 / ISO 10642 head presets | parity | closed 2026-10-30 (`hole-options.test.ts`, analytic volumes). Not offered: BSP/BSW/NPT profiles, thread class, a modelled thread on a face without a Hole; a pattern of a modelled-thread hole repeats the bore only |
+| Additive/Subtractive Helix | Coil feature | parity | analytic self-consistency: coil volume = wire area × helix length in `aether-engine/src/kernel/part-evaluator.test.ts` ("coils a wire"); no FreeCAD capture needed |
+| Primitives (box, cylinder, sphere, cone, torus, prism, wedge, ellipsoid) | Primitive tools (box, cylinder, sphere, cone, torus), bounding solid, standard parts | partial | analytic volumes verified 2026-10-31 (`src/modeling/solid-primitives-volume.test.ts`); prism, wedge and ellipsoid are a sketch away and not offered as tools |
+| Hole: counterbore/countersink/counterdrill, threads (cosmetic/modeled), taper (1.1), profiles | Hole: face point or sketch points; counterbore/countersink/counterdrill; ISO metric coarse/fine, UNC, UNF, BSP G and NPT profiles with tap-drill or clearance-fit diameters (pipe threads tapped only); cosmetic or modelled thread (depth, hand); drill-point angle; taper; ISO 4762 / ISO 10642 head presets | parity | closed 2026-10-30 (`hole-options.test.ts`, analytic volumes). Not offered: BSP/BSW/NPT profiles, thread class, a modelled thread on a face without a Hole; a pattern of a modelled-thread hole repeats the bore only |
 | Fillet (constant), Chamfer (equal/two distances/distance-angle) | Fillet constant and variable (end radius), G2 option, chamfer all three modes, tangent chains | ours+ | oracle 6 fillet / 3 chamfer fixtures |
 | Draft | Draft faces about a neutral plane | parity | oracle 2 fixtures |
 | Thickness (shell) | Shell inside/outside/both, open faces by reference, tangent chains | parity | oracle 8 shell fixtures; toroidal-tunnel shell refused by both |
@@ -115,11 +115,11 @@ comparison evidence yet).
 
 | FreeCAD | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
-| Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal | partial | detail views, auxiliary views, offset sections missing |
-| Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Overall width/height, diameter, radius and angle dimensions attached to the projected edge nearest a sheet pick; notes | partial | diameter/radius/angle closed 2026-10-30 (`aether-engine/src/drawing/attached-dimensions.ts`; SVG/DXF/PDF carry Ø, R, °); edge-to-edge length, 3-point angle, chain/ordinate still missing; picks are typed as sheet coordinates, not clicked in the viewport |
-| Annotations: balloons, leaders, rich text, welding, surface finish, center lines/marks, cosmetic vertices, hatch, image | Notes, hatch on sections | partial | balloons, leaders, centre marks missing |
+| Views: projection group, section (simple/complex/offset), detail, auxiliary, active view, clip group, draft/arch views | Front/top/right/left/back/bottom/isometric, principal sections with hatching, hidden-line removal, detail views (circle on a parent view, own scale, marker letter), auxiliary views (any model direction, Z up) | partial | detail and auxiliary closed 2026-10-31 (`aether-engine/src/drawing/detail-view.ts`, `detail-auxiliary.test.ts`); offset/stepped sections, clip groups and active/draft views remain non-goals |
+| Dimensions: length, h/v, radius, diameter, angle, 3-point angle, extent, chain/coordinate (1.1 improvements) | Overall width/height, diameter, radius and angle dimensions attached to the projected edge nearest a sheet pick; notes | partial | diameter/radius/angle closed 2026-10-30 (`aether-engine/src/drawing/attached-dimensions.ts`; SVG/DXF/PDF carry Ø, R, °); edge length closed 2026-10-31 (format 4); 3-point angle, chain/ordinate still missing; picks are typed as sheet coordinates, not clicked in the viewport |
+| Annotations: balloons, leaders, rich text, welding, surface finish, center lines/marks, cosmetic vertices, hatch, image | Notes, balloons with leader, centre marks on the nearest circle/arc, hatch on sections | partial | balloons and centre marks closed 2026-10-31; welding, surface-finish and datum symbols, rich text, images remain open |
 | BOM / spreadsheet view | None on the sheet; the Assembly BOM exports CSV | gap | needs assembly drawing sources first (`can_project_bom` is false in the drawing projection) |
-| Templates and editable title blocks | Sheet with frame | partial | **verify** title-block fields |
+| Templates and editable title blocks | Sheet with frame, editable title-block rows per sheet (label/value, up to 12) printed in SVG/DXF/PDF and shown on the canvas | partial | rows closed 2026-10-31; no template files or zone grids |
 | Export SVG/DXF/PDF | SVG/DXF/PDF, save/reopen, source refresh, live agent editing | parity | `verify-drawings*.mjs`, `verify-drawing-pdf.mjs` |
 
 ### 3.6 Import and export
@@ -144,7 +144,7 @@ comparison evidence yet).
 | Transparent feature previews and draggers (1.1) | Live previews during edit, transform manipulator, section handles | parity | `verify-transform-manipulator-browser.mjs` |
 | Transform tool overhaul (1.1) | Transform feature with handles, numeric input | parity | |
 | Macro recording, Python console, FreeCADCmd headless | MCP tools, CLI, saved programs replaying the same validated operations; headless Node runner | ours+ | `scripts/verify-headless-kernel.mjs`; agent browser gates |
-| Materials system (1.0): cards with appearance and physical properties | Material panel; material card schema v1 validation; appearance | verify | tracker `material.*` rows all "verify" |
+| Materials system (1.0): cards with appearance and physical properties | Material panel; material card schema v1 validation; appearance | partial | evidence: `src/react/panels/material-properties.dom.test.jsx` (assign to selection, shared browser, save/reuse, reset), `src/cad-render-materials.test.ts` (library recipes, custom colours, storage); physical property cards validate but do not drive mass beyond density |
 | Measure tool (1.0 unified) | Measure with anchors, projected distance, section measure | parity | three measure gates |
 | Addon manager | n/a | n/a | |
 
@@ -262,9 +262,9 @@ Order by user impact, each with the evidence that closes it.
 **P2 — FreeCAD 1.1 features we lack**
 
 5. ~~Assembly BOM (table from occurrences and Part metadata)~~ done 2026-10-30; the drawing BOM view waits on assembly drawing sources.
-6. Drawing dimension types (~~radius, diameter, angle~~ done 2026-10-30; chain/ordinate and edge-to-edge length open),
-   detail and auxiliary views, balloons and centre marks, title-block fields.
-7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30 (BSP/NPT profiles and thread class still open).
+6. Drawing dimension types (~~radius, diameter, angle~~ done 2026-10-30; ~~edge length~~ 2026-10-31; chain/ordinate open),
+   ~~detail and auxiliary views, balloons and centre marks, title-block fields~~ done 2026-10-31 (format version 4).
+7. ~~Hole: modeled threads and taper; thread profiles beyond ISO metric.~~ Done 2026-10-30; BSP G and NPT tables added 2026-10-31 (tapped only, NPT taper via the taper angle); thread class (6H/2B) remains unmodelled.
 8. Exports: ~~glTF (Studio previews, Animation), OBJ, 3MF~~ done 2026-10-30; IGES in/out without the lazy
    50 MB build (custom OCCT wasm, also unlocks `BRepOffset_MakeOffset` for the last
    offset-face refusals).
@@ -276,7 +276,7 @@ Order by user impact, each with the evidence that closes it.
 10. Sketch: persistent model links (external geometry), B-spline knot/degree editing,
     carbon copy; MultiTransform-equivalent patterns of patterns verified.
 11. Materials rows from "verify" to evidence; variables with units.
-12. Primitives and helix oracle fixtures (analytic volumes, no FreeCAD needed).
+12. ~~Primitives and helix oracle fixtures (analytic volumes, no FreeCAD needed).~~ Done 2026-10-31.
 
 **Gate to remove the FreeCAD reference** (replaces the 2026-10-20 gate, which was met):
 
@@ -285,9 +285,13 @@ Order by user impact, each with the evidence that closes it.
 - the corrected benchmark shows Aether ≤ FreeCAD on construction for every fixture
   (warm uncached), edit replay, and display within a stated multiple, plus the solver and
   rendering comparisons recorded;
-- oracle truth no longer depends on capturing new FreeCAD answers: each new feature kind
-  ships with analytic or self-consistency expectations;
-- the vestigial `freecadcmd` argument and `AETHER_TEST_FREECAD` gate are gone from the
-  service runner and tests;
+- ~~oracle truth no longer depends on capturing new FreeCAD answers: each new feature kind
+  ships with analytic or self-consistency expectations~~ recorded in AGENTS.md 2026-10-31
+  (Hole options, mesh writers, attached dimensions and detail/auxiliary views already
+  follow it);
+- ~~the vestigial `freecadcmd` argument and `AETHER_TEST_FREECAD` gate are gone from the
+  service runner and tests~~ done 2026-10-31: the gate is `AETHER_TEST_NATIVE`, tests pass
+  Node alone; the worker still ignores a second argument from Studio installations that
+  configure one (`crates/server/src/products.rs` keeps `freecad` optional);
 - then `scripts/benchmarks/native/freecad.py` is archived beside the SolidCraft adapter
   and FreeCAD may be uninstalled from the Mac.

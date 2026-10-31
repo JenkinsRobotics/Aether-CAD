@@ -20,7 +20,7 @@ Package-manager versions and the shared UI dependency version are separate.
    Also run the owning engine's tests/type check from `aether-engine/`. Qualify
    the rebuilt worker with `node scripts/verify-headless-kernel.mjs` and
    `node scripts/verify-sketch-regions.mjs`, then run
-   `AETHER_TEST_FREECAD=1 <python-3.11-or-3.12> -m pytest service/tests -q`.
+   `AETHER_TEST_NATIVE=1 <python-3.11-or-3.12> -m pytest service/tests -q`.
    The historical flag enables the required native release tests; geometry uses
    the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
    wheel from `vendor/python/`, never an editable sibling Animation checkout.

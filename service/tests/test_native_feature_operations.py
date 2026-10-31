@@ -5,10 +5,10 @@ import os
 
 import pytest
 
-from test_native_program import FREECAD, empty, invoke
+from test_native_program import empty, invoke
 
 native = pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1" or not FREECAD.exists(),
+    os.environ.get("AETHER_TEST_NATIVE") != "1",
     reason="Native qualification required",
 )
 

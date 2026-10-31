@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-FREECAD = Path("/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd")
 
 
 def empty():
@@ -71,7 +70,7 @@ def program():
     }
 
 
-def invoke(tmp_path, command, content, arguments, *, freecad=FREECAD):
+def invoke(tmp_path, command, content, arguments):
     proc = subprocess.run(
         [
             sys.executable,
@@ -79,7 +78,6 @@ def invoke(tmp_path, command, content, arguments, *, freecad=FREECAD):
             "-S",
             str(ROOT / "service/aether_cad_service/runtime/runner.pyz"),
             shutil.which("node"),
-            str(freecad),
         ],
         input=json.dumps(
             {"command": command, "content": content, "arguments": arguments}
@@ -102,7 +100,7 @@ def invoke(tmp_path, command, content, arguments, *, freecad=FREECAD):
 
 def test_docs_work_without_launching_a_geometry_engine(tmp_path):
     result = invoke(
-        tmp_path, "cad.part.docs", empty(), {}, freecad=Path("/usr/bin/false")
+        tmp_path, "cad.part.docs", empty(), {}
     )
     assert "content" not in result and result["result"]["total"] == 14
     assert len(result["result"]["tools"]) == 5
@@ -110,7 +108,7 @@ def test_docs_work_without_launching_a_geometry_engine(tmp_path):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1",
+    os.environ.get("AETHER_TEST_NATIVE") != "1",
     reason="Native qualification required",
 )
 def test_program_builds_and_verifies_referenced_bore_then_reopens(tmp_path):
@@ -163,7 +161,7 @@ def test_program_builds_and_verifies_referenced_bore_then_reopens(tmp_path):
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1",
+    os.environ.get("AETHER_TEST_NATIVE") != "1",
     reason="Native qualification required",
 )
 def test_failed_later_step_returns_no_partial_document(tmp_path):
@@ -184,7 +182,6 @@ def test_invalid_programs_refused_without_geometry(tmp_path, encoded):
         "cad.part.runprogram",
         empty(),
         {"program_json": encoded},
-        freecad=Path("/usr/bin/false"),
     )
     assert "error" in result and "content" not in result
 
@@ -195,11 +192,11 @@ def test_invalid_programs_refused_without_geometry(tmp_path, encoded):
 )
 def test_verify_parameters_refused_without_geometry(tmp_path, arguments):
     result = invoke(
-        tmp_path, "cad.part.verify", empty(), arguments, freecad=Path("/usr/bin/false")
+        tmp_path, "cad.part.verify", empty(), arguments
     )
     assert "error" in result and "content" not in result
 
-@pytest.mark.skipif(os.environ.get('AETHER_TEST_FREECAD') != '1' or not FREECAD.exists(), reason='Native qualification required')
+@pytest.mark.skipif(os.environ.get('AETHER_TEST_NATIVE') != '1', reason='Native qualification required')
 def test_existing_drawing_center_keeps_feature_ids_and_rebuilds_exact_solid(tmp_path):
     source = json.loads(empty())
     source['formatVersion'] = 21
@@ -229,7 +226,7 @@ def test_existing_drawing_center_keeps_feature_ids_and_rebuilds_exact_solid(tmp_
     reopened=invoke(tmp_path,'cad.part.evaluate',result['content'],{})
     assert reopened['result']['evaluated_bodies'][0]['volume_mm3']==pytest.approx(4000)
 
-@pytest.mark.skipif(os.environ.get('AETHER_TEST_FREECAD') != '1' or not FREECAD.exists(), reason='Native qualification required')
+@pytest.mark.skipif(os.environ.get('AETHER_TEST_NATIVE') != '1', reason='Native qualification required')
 def test_existing_rectangle_driving_dimension_keeps_origin_and_rebuilds(tmp_path):
     source=json.loads(empty());source['formatVersion']=21
     source['features']=[

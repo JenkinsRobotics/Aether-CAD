@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def invoke(tmp_path, action, arguments):
     result = subprocess.run(
         [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"),
-         shutil.which("node"), os.environ.get("AETHER_FREECAD_CMD", "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd")],
+         shutil.which("node")],
         input=json.dumps({"service": "/api/cad/" + action, "arguments": arguments}),
         text=True, capture_output=True, cwd=tmp_path, timeout=45, check=False,
         env={"HOME": str(tmp_path), "TMPDIR": str(tmp_path), "QT_QPA_PLATFORM": "offscreen"},

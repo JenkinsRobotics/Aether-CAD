@@ -43,8 +43,7 @@ def spline_part(height):
 
 def invoke(tmp_path, document):
     run = subprocess.run(
-        [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node"),
-         os.environ.get("AETHER_FREECAD_CMD", "/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd")],
+        [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node")],
         input=json.dumps({"command": "cad.part.evaluate", "content": json.dumps(document), "arguments": {}}),
         text=True, capture_output=True, cwd=tmp_path, timeout=60, check=False,
         env={"HOME": str(tmp_path), "TMPDIR": str(tmp_path), "QT_QPA_PLATFORM": "offscreen"},

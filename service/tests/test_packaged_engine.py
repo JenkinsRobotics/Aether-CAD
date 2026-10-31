@@ -80,7 +80,7 @@ assert (runtime / "runner.pyz").is_file()
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_installed_agent_runtime_edits_using_packaged_native_engine(installed):
     run_installed(

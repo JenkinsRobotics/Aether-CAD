@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 def main():
-    # The host passes the operator's Node (and, from older installations, a
-    # FreeCAD path that is no longer used: geometry builds in the Node runner).
+    # The host passes the operator's Node. Studio installations configured with a
+    # FreeCAD path still pass it as a second argument; it is ignored.
     if len(sys.argv) not in (2, 3):
         raise ValueError("Operator Node path required")
     node = sys.argv[1]

@@ -88,7 +88,7 @@ def source(kind):
     return json.dumps(part)
 
 
-def invoke(tmp_path, command, content, arguments, *, freecad=None):
+def invoke(tmp_path, command, content, arguments):
     run = subprocess.run(
         [
             sys.executable,
@@ -168,7 +168,7 @@ CASES = [
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 @pytest.mark.parametrize("command,kind,arguments", CASES)
 def test_all_commands_match_legacy_native_engine(tmp_path, command, kind, arguments):
@@ -189,7 +189,7 @@ def test_all_commands_match_legacy_native_engine(tmp_path, command, kind, argume
 
 
 @pytest.mark.skipif(
-    os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Required native release gate"
+    os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_noop_and_invalid_geometry_preserve_document(tmp_path):
     content = source("plain")

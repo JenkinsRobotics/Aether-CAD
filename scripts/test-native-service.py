@@ -16,8 +16,8 @@ wheel = root / "vendor/python" / lock["wheel"]
 if hashlib.sha256(wheel.read_bytes()).hexdigest() != lock["sha256"]:
     raise ValueError("Workspace codec archive fingerprint differs")
 sys.path[:0] = [str(root / "service"), str(wheel)]
-# Historical name of the gate; current geometry is OCCT in the Node runner.
-os.environ["AETHER_TEST_FREECAD"] = "1"
+# Native qualification: the packaged Node runner builds every answer.
+os.environ["AETHER_TEST_NATIVE"] = "1"
 
 import pytest
 

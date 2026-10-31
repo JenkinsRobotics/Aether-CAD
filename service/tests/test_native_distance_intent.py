@@ -8,7 +8,7 @@ import pytest
 
 from test_native_program import invoke
 
-pytestmark = pytest.mark.skipif(os.environ.get("AETHER_TEST_FREECAD") != "1", reason="Native qualification required")
+pytestmark = pytest.mark.skipif(os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Native qualification required")
 FIXTURE = Path(__file__).parent / "fixtures/projected-distance.json"
 
 

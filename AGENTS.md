@@ -141,6 +141,14 @@ agent commands and project containers (the shared workspace codec) only. The eng
 engine, full stop; the benchmark tables in `dev/docs/roadmap/Aether_Engine_Design.md` record why.
 
 
+## Oracle truth without FreeCAD — Jonathan, 2026-10-31
+
+Every new feature kind ships with analytic or self-consistency expectations
+(closed-form volumes, areas and counts, round trips, rebuild/undo invariants).
+No new FreeCAD answers are captured; the existing captured oracle fixtures stay
+as regression evidence only. The native service qualification gate is
+`AETHER_TEST_NATIVE=1`; the runner takes the operator's Node alone.
+
 ## Product-owned home — 2026-10-28
 
 The app owns its home-page content, actions and destinations. Use the shared
