@@ -6,15 +6,12 @@ export const sketchVariantTools = [
   "ellipse",
   "elliptical-arc",
   "cubic-bezier",
-  "midpoint-line",
   "center-rectangle",
   "aligned-rectangle",
   "three-point-circle",
   "center-arc",
   "inscribed-polygon",
   "circumscribed-polygon",
-  "two-point-circle",
-  "rounded-rectangle",
   "edge-polygon",
   "center-slot",
   "overall-slot",
@@ -28,15 +25,12 @@ export const sketchVariantPointCounts: Record<SketchVariantTool, number> = {
   ellipse: 3,
   "elliptical-arc": 4,
   "cubic-bezier": 4,
-  "midpoint-line": 2,
   "center-rectangle": 2,
   "aligned-rectangle": 3,
   "three-point-circle": 3,
   "center-arc": 3,
   "inscribed-polygon": 2,
   "circumscribed-polygon": 2,
-  "two-point-circle": 2,
-  "rounded-rectangle": 2,
   "edge-polygon": 2,
   "center-slot": 2,
   "overall-slot": 2,
@@ -53,8 +47,6 @@ export function sketchVariantContour(
     clockwise?: boolean;
     secondaryRadiusMillimeters?: number;
     rememberedRadiusMillimeters?: number;
-    /** Rounded rectangle: the corner radius, less than half the shorter side. */
-    cornerRadiusMillimeters?: number;
     /** Slots: the width across the slot. */
     slotWidthMillimeters?: number;
   } = {},
@@ -115,8 +107,6 @@ export function sketchVariantContour(
       ],
     };
   }
-  if (tool === "two-point-circle")
-    return { type: "circle", center: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], radius: length / 2 };
   if (tool === "edge-polygon") {
     // The first edge is given; the polygon sits to the left of it.
     if (!Number.isInteger(sides) || sides < 3) throw new Error("Polygon needs at least 3 sides.");
@@ -129,27 +119,6 @@ export function sketchVariantContour(
       vertices.push(at);
     }
     return path(vertices);
-  }
-  if (tool === "rounded-rectangle") {
-    const r = options.cornerRadiusMillimeters ?? 0;
-    const w = Math.abs(dx), h = Math.abs(dy);
-    if (w < 1e-8 || h < 1e-8) throw new Error("Rectangle needs width and height.");
-    if (!(r > 0) || r >= Math.min(w, h) / 2) throw new Error("Corner radius must be positive and less than half the shorter side.");
-    const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]), k = r * Math.SQRT1_2;
-    return {
-      type: "path",
-      start: [x0 + r, y0],
-      segments: [
-        { type: "line", end: [x1 - r, y0] },
-        { type: "arc", middle: [x1 - r + k, y0 + r - k], end: [x1, y0 + r] },
-        { type: "line", end: [x1, y1 - r] },
-        { type: "arc", middle: [x1 - r + k, y1 - r + k], end: [x1 - r, y1] },
-        { type: "line", end: [x0 + r, y1] },
-        { type: "arc", middle: [x0 + r - k, y1 - r + k], end: [x0, y1 - r] },
-        { type: "line", end: [x0, y0 + r] },
-        { type: "arc", middle: [x0 + r - k, y0 + r - k], end: [x0 + r, y0] },
-      ],
-    };
   }
   if (tool === "center-slot" || tool === "overall-slot" || tool === "center-point-slot") {
     // A slot between two arc centres: given centre to centre, by its overall ends, or by
@@ -218,8 +187,6 @@ export function sketchVariantContour(
       ],
     };
   }
-  if (tool === "midpoint-line")
-    return path([[2 * a[0] - b[0], 2 * a[1] - b[1]], b], false);
   if (tool === "center-rectangle") {
     if (Math.abs(dx * dy) < 1e-10)
       throw new Error("Rectangle needs width and height.");

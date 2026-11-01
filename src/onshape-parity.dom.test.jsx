@@ -107,7 +107,7 @@ describe("Sketch feature", () => {
       "line", "rectangle", "center-rectangle", "aligned-rectangle",
       "circle", "three-point-circle", "arc", "center-arc", "tangent-arc",
       "ellipse", "elliptical-arc", "cubic-bezier", "fit-spline",
-      "point", "midpoint-line", "inscribed-polygon", "circumscribed-polygon", "slot",
+      "point", "inscribed-polygon", "circumscribed-polygon", "slot",
     ])
       expect(tools.has(tool), `missing sketch entity tool: ${tool}`).toBe(true);
 

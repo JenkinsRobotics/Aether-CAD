@@ -8,7 +8,6 @@ import {
   constrainSketchRectangle,
   constrainSketchEllipse,
   constrainSketchPolygon,
-  addSketchLineMidpoint,
   constrainThreePointCircle,
   addSketchArcCenter,
   addSketchEllipseCenter,
@@ -37,7 +36,6 @@ interface Settings {
   clockwise?: boolean;
   secondaryRadiusMillimeters?: number;
   rememberedRadiusMillimeters?: number;
-  cornerRadiusMillimeters?: number;
   slotWidthMillimeters?: number;
   construction: boolean;
   closeTolerance: number;
@@ -114,7 +112,6 @@ export function placeDrawingPoint(
         clockwise: settings.clockwise,
         secondaryRadiusMillimeters: settings.secondaryRadiusMillimeters,
         rememberedRadiusMillimeters: settings.rememberedRadiusMillimeters,
-        cornerRadiusMillimeters: settings.cornerRadiusMillimeters,
         slotWidthMillimeters: settings.slotWidthMillimeters,
       },
     );
@@ -153,12 +150,6 @@ export function placeDrawingPoint(
         drawing.contours.length - 1,
         points,
       );
-    if (tool === "midpoint-line")
-      drawing = addSketchLineMidpoint(drawing, {
-        contour: activePath,
-        kind: "line",
-        index: 0,
-      });
     if (tool === "center-rectangle" || tool === "aligned-rectangle")
       drawing = constrainSketchRectangle(
         drawing,

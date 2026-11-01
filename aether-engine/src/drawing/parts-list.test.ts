@@ -21,7 +21,7 @@ it("lists every part of the source with its material and prints the table", asyn
   const sheet = doc.sheets[0];
   doc = applyDrawingCommand(doc, { type: "update-sheet", sheetId: sheet.id, partsList: { originMm: [167, 20] } });
   expect(doc.formatVersion).toBe(4);
-  const built = await buildDrawing(parseDrawingDocument(serializeDrawingDocument(doc)), projectPartDrawing);
+  const built = await buildDrawing(parseDrawingDocument(serializeDrawingDocument(doc)), async (document, options) => projectPartDrawing(document, options));
   const list = built.sheets[0].partsList!;
   expect(list.widthMm).toBe(120);
   expect(list.rows.map(r => r.cells)).toEqual([["1", "Plate", "1", "AISI 304"], ["2", "Body 2", "1", ""]]);

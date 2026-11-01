@@ -7,7 +7,7 @@ import { directModificationTools, modificationTools } from "./tool-instructions"
 const tools = [
   "select", "line", "arc", "circle", "rectangle",
   "intersect", "include-edges", "fit-section", "spun-profile",
-  "two-tangent-circle", "three-tangent-circle", "control-spline", "control-spline-5",
+  "control-spline",
   ...sketchVariantTools, ...contextualDrawingTools,
   ...modificationTools, ...directModificationTools,
 ] as const;

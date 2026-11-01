@@ -62,8 +62,7 @@ import { instructions } from "./sketch/tool-instructions";
 import { renderSketchPreview } from "./sketch/preview";
 import { constructionPlaneFrame, flipSketchFrame } from "@aether/core/document";
 import { snapSketchPoint } from "./sketch-snapping";
-import { solveDrawingConstraints, setSketchRadius, type SketchContour } from "@aether/core/sketch";
-import { constrainSketchSelection } from "./sketch/constraint-selection";
+import { solveDrawingConstraints, type SketchContour } from "@aether/core/sketch";
 import { preparePierceDraft,type PierceIssue } from '@aether/core/sketch/reference/pierce-draft';
 import { stageSketchPierce } from '@aether/core/sketch/reference/pierce-authoring';
 import { mountPierceTool } from './sketch/pierce-tool';
@@ -412,10 +411,8 @@ export function openSketchWorkspace(
     activeTool = name;
     if (isCADCommandID(next)) cadCommands.setActive(next, true);
   };
-  const tangentPicks: { ref: SketchEntityRef; at: SketchPoint }[] = [];
   let changeSketchPlane: (() => void) | undefined;
   const chooseTool = (name: string, preserveSelection = false) => {
-    tangentPicks.length = 0;
     const retainedEntities = preserveSelection ? [...selectedEntities] : [];
     const retainedEntity = preserveSelection ? selectedEntity : null;
     constraints.tool.cancel();
@@ -786,7 +783,6 @@ export function openSketchWorkspace(
       bounds,
       snapLabel,
       sides: coordinates.sides(),
-      cornerRadiusMillimeters: coordinates.cornerRadius(),
       slotWidthMillimeters: coordinates.slotWidth(),
       clockwise: arcDirection.clockwise(),
       secondaryRadiusMillimeters: ellipseRadius.value(),
@@ -943,30 +939,6 @@ export function openSketchWorkspace(
       }
       return;
     }
-    if (tool === "two-tangent-circle" || tool === "three-tangent-circle") {
-      // Tangent circles (SolidCraft's 2-/3-tangent circle): pick the curves, place a
-      // circle near them and let the solver settle it against tangent relations (and
-      // the radius for the two-curve form).
-      const picked = pickSelectableSketchEntity(drawing, p);
-      if (!picked || picked.d > bounds.width / 60 || picked.ref.kind === "point") { message.textContent = "Click a curve the circle should touch."; return; }
-      const needed = tool === "two-tangent-circle" ? 2 : 3;
-      if (!tangentPicks.some((entry) => JSON.stringify(entry.ref) === JSON.stringify(picked.ref))) tangentPicks.push({ ref: picked.ref, at: p });
-      if (tangentPicks.length < needed) { message.textContent = `${tangentPicks.length} of ${needed} curves picked.`; return; }
-      try {
-        checkpoint();
-        const radius = Math.max(coordinates.cornerRadius(), 1e-3);
-        const center: SketchPoint = [tangentPicks.reduce((s, e) => s + e.at[0], 0) / needed, tangentPicks.reduce((s, e) => s + e.at[1], 0) / needed];
-        let next = structuredClone(drawing);
-        next.contours.push({ type: "circle", center, radius, ...(construction ? { construction: true } : {}) });
-        const circleRef = { contour: next.contours.length - 1, kind: "circle" as const };
-        for (const entry of tangentPicks) next = constrainSketchSelection(next, "tangent", [circleRef, entry.ref]).drawing;
-        if (needed === 2) next = setSketchRadius(next, circleRef, radius);
-        drawing = solveDrawingConstraints(next);
-        message.textContent = needed === 2 ? `Circle of radius ${radius} mm tangent to both curves.` : "Circle tangent to all three curves.";
-      } catch (error) { fail(error instanceof Error ? error.message : String(error)); }
-      tangentPicks.length = 0; pending = []; activePath = -1; render();
-      return;
-    }
     if (tool === "sketch-project-geometry") {
       const picked = pickSelectableSketchEntity(drawing, p);
       if (picked && picked.d < bounds.width / 60 && picked.ref.projectedContourId !== undefined) {
@@ -1036,7 +1008,6 @@ export function openSketchWorkspace(
           tool,
           square,
           sides: coordinates.sides(),
-          cornerRadiusMillimeters: coordinates.cornerRadius(),
           slotWidthMillimeters: coordinates.slotWidth(),
           inferQuadrants: geometrySnap,
           inferSemicircles: geometrySnap,

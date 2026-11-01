@@ -32,7 +32,6 @@ export interface PreviewState {
   clockwise?: boolean;
   secondaryRadiusMillimeters?: number;
   rememberedRadiusMillimeters?: number;
-  cornerRadiusMillimeters?: number;
   slotWidthMillimeters?: number;
   conicRho?: () => ConicRhoInput | undefined;
   effectivePoint: (point: SketchPoint) => SketchPoint;
@@ -243,7 +242,6 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
             clockwise: state.clockwise,
             secondaryRadiusMillimeters: state.secondaryRadiusMillimeters,
             rememberedRadiusMillimeters: state.rememberedRadiusMillimeters,
-            cornerRadiusMillimeters: state.cornerRadiusMillimeters,
             slotWidthMillimeters: state.slotWidthMillimeters,
           },
         );

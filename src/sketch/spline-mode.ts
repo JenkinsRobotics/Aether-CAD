@@ -4,7 +4,7 @@ import { constrainFitSpline, controlPointSpline, fitSketchSpline, type SketchCon
  *  control-point B-spline of degree 3 or 5 (SolidCraft's sketch.spline.control_point[_5]).
  *  One holder shared by the workspace, the tool, the drawing step and the preview. */
 export const splineMode: { value: "fit" | 3 | 5 } = { value: "fit" };
-export const splineToolNames = { "control-spline": 3, "control-spline-5": 5 } as const;
+export const splineToolNames = { "control-spline": 3 } as const;
 
 /** The curve the current mode makes from the points; closed joins the last point to the first. */
 export function splineContour(points: readonly SketchPoint[], closed: boolean): SketchContour {

@@ -48,9 +48,8 @@ export function mountSketchCoordinates(parent: HTMLElement, o: {
   const conicRho = mountConicRhoControl(parent, o.changed, () => o.variables?.(), o.confirmConic);
   const sides = numeric("Polygon sides", "6");
   sides.min = "3"; sides.max = "100"; sides.step = "1"; sides.oninput = o.changed;
-  const cornerRadius = numeric("Radius (mm)", "2"); cornerRadius.min = "0"; cornerRadius.oninput = o.changed;
   const slotWidth = numeric("Point slot width (mm)", "6"); slotWidth.min = "0"; slotWidth.oninput = o.changed;
   const disposeSnapping = mountSketchSnappingControls(parent, o);
-  return { dispose: disposeSnapping, point, sides: () => Number(sides.value), cornerRadius: () => Number(cornerRadius.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
-    update: (tool: string) => { contourActions.hidden = !["line", "arc", "spline", "bezier"].includes(tool); sides.parentElement!.hidden = !tool.endsWith("polygon"); cornerRadius.parentElement!.hidden = tool !== "rounded-rectangle" && tool !== "two-tangent-circle"; slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
+  return { dispose: disposeSnapping, point, sides: () => Number(sides.value), slotWidth: () => Number(slotWidth.value), ellipseRadius, arcDirection, conicRho,
+    update: (tool: string) => { contourActions.hidden = !["line", "arc", "spline", "bezier"].includes(tool); sides.parentElement!.hidden = !tool.endsWith("polygon"); slotWidth.parentElement!.hidden = !tool.endsWith("-slot"); conicRho.update(tool); } };
 }

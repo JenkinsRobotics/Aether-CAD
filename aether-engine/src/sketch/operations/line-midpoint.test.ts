@@ -1,7 +1,6 @@
 import { expect, it } from "vitest";
 import { addSketchLineMidpoint } from "./line-midpoint";
 import { dragSketchEntity } from "./drag-entity";
-import { sketchVariantContour } from "../primitives";
 import { sketchConstraintState } from "../solver/diagnostics";
 import { editDrawingDimension } from "./edit-dimension";
 
@@ -10,10 +9,8 @@ function drawing() {
     {
       type: "drawing",
       contours: [
-        sketchVariantContour("midpoint-line", [
-          [0, 0],
-          [10, 0],
-        ]),
+        // A line from (-10, 0) to (10, 0): its midpoint is the origin.
+        { type: "path", start: [-10, 0], segments: [{ type: "line", end: [10, 0] }] },
       ],
     },
     { contour: 0, kind: "line", index: 0 },

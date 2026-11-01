@@ -26,7 +26,7 @@ export function inferDrawingPlacement(
     next = inferPointSnaps(before, next, options.placedPoints);
     next = inferMidpointSnaps(before, next, options.placedPoints);
     next = inferProjectedSnaps(before, next, options.placedPoints);
-    if (options.tool === "line" || options.tool === "midpoint-line")
+    if (options.tool === "line")
       next = inferLineAlignment(before, next);
   }
   // Center attachment + an origin fix can express the same relationship twice

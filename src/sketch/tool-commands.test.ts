@@ -8,7 +8,7 @@ it("makes Include and related tools available only during sketch editing", () =>
   const commands = registerSketchToolCommands(registry, run);
   const ids = [
     "sketch-include-edges", "sketch-intersect", "sketch-fit-section",
-    "sketch-spun-profile", "sketch-two-tangent-circle", "sketch-three-tangent-circle",
+    "sketch-spun-profile",
     "sketch-line", "sketch-control-spline",
   ] as const;
   for (const id of ids) expect(registry.execute(id)).toBe(false);

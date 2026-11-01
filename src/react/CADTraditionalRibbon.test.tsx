@@ -134,7 +134,7 @@ describe("tool variants", () => {
     // A button carries the tool's name; the menu names the kind. "Inscribed
     // polygon" as a button was the variant's name doing the tool's job, and it
     // is what made the buttons uneven and the labels clip.
-    for (const tool of ["Line", "Rectangle", "Arc", "Circle", "Polygon", "Spline"])
+    for (const tool of ["Rectangle", "Arc", "Circle", "Polygon", "Spline"]) // Line has no variants since 2026-10-31 (midpoint line removed).
       expect(html, `${tool} should carry a variants caret`)
         .toContain(`aria-label="${tool} variants"`);
   });

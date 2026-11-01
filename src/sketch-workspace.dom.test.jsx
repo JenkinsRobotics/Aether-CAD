@@ -105,25 +105,21 @@ it('applies and saves concentric and radius constraints and requests default pla
 
 it('previews and saves all added drawing variants, rejects degenerate input, and reopens them',async()=>{
  open(()=>doc,apply);click('Top (XY)');
- tool('midpoint-line');point(0,0);move(10,5);
- expect(querySketchControl('.sketch-preview-layer path').getAttribute('d')).toContain('M-10,5L10,-5');
- expect(querySketchControls('.sketch-contour')).toHaveLength(0);
- point(10,5);
  tool('center-rectangle');point(30,0);point(35,4);
  tool('aligned-rectangle');point(50,0);point(54,3);point(48,4);
  tool('three-point-circle');point(70,0);point(75,5);point(80,0);
  tool('center-arc');point(90,0);point(95,0);point(90,5);
  tool('inscribed-polygon');querySketchControl('[aria-label="Polygon sides"]').value='5';point(110,0);point(115,0);
  tool('circumscribed-polygon');point(130,0);point(135,0);
- expect(querySketchControls('.sketch-contour')).toHaveLength(17);
+ expect(querySketchControls('.sketch-contour')).toHaveLength(15);
  tool('three-point-circle');point(0,20);point(1,20);point(2,20);
  expect(querySketchControl('[role="status"]').textContent).toContain('collinear');
- expect(querySketchControls('.sketch-contour')).toHaveLength(17);
+ expect(querySketchControls('.sketch-contour')).toHaveLength(15);
  click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
  const saved=parsePartDocument(serializePartDocument(doc)).features[0];
- expect(saved.profile.contours).toHaveLength(17);expect(saved.profile.contours[12].segments).toHaveLength(5);
- expect(saved.profile.constraints).toHaveLength(35);expect(saved.profile.contours.filter(c=>c.construction)).toHaveLength(10);
- open(()=>doc,apply,saved);expect(querySketchControls('.sketch-contour')).toHaveLength(17);
+ expect(saved.profile.contours).toHaveLength(15);expect(saved.profile.contours[10].segments).toHaveLength(5);
+ expect(saved.profile.constraints).toHaveLength(34);expect(saved.profile.contours.filter(c=>c.construction)).toHaveLength(9);
+ open(()=>doc,apply,saved);expect(querySketchControls('.sketch-contour')).toHaveLength(15);
 });
 it('shows ellipse and cubic curve previews and persists edited Bezier control points',async()=>{
  open(()=>doc,apply);click('Top (XY)');
@@ -483,19 +479,6 @@ it('persists regular polygon sizing constraints through editing, undo and native
  const path=profile.contours[0],a=path.start,b=path.segments[0].end,c=path.segments[1].end;
  expect((b[0]-a[0])*(c[0]-b[0])+(b[1]-a[1])*(c[1]-b[1])).toBeCloseTo(0,4);
  open(()=>doc,apply,feature);expect(querySketchControl('[aria-label="Sketch constraint state"]').textContent).toContain('3 degrees of freedom');
-});
-
-it('retains the midpoint-line center through fixed-center pointer editing and native reopen',async()=>{
- open(()=>doc,apply);click('Top (XY)');tool('midpoint-line');point(0,0);point(10,0);
- const select=(name,value)=>{const input=querySketchControl(`[aria-label="${name}"]`);input.value=value;input.dispatchEvent(new dom.window.Event('change'));};
- select('Constraint','fix');select('Entity A',JSON.stringify({contour:1,kind:'point',index:0}));click('Apply constraint');
- tool('midpoint-line');move(10,0);const svg=querySketchControl('[aria-label="2D sketch canvas"]');
- const pointer=(type,x,y)=>{const event=new dom.window.MouseEvent(type,{clientX:x,clientY:-y,bubbles:true,button:0});Object.defineProperty(event,'pointerId',{value:10});svg.dispatchEvent(event);};
- pointer('pointerdown',10,0);pointer('pointermove',14,3);pointer('pointerup',14,3);click('Undo');click('Redo');click('Finish sketch');await vi.waitFor(()=>expect(apply).toHaveBeenCalledTimes(1));
- doc=parsePartDocument(serializePartDocument(doc));const feature=doc.features[0],path=feature.profile.contours[0];
- expect(path.start[0]).toBeCloseTo(-14);expect(path.start[1]).toBeCloseTo(-3);expect(path.segments[0].end[0]).toBeCloseTo(14);expect(path.segments[0].end[1]).toBeCloseTo(3);
- expect(feature.profile.constraints.map(c=>c.kind)).toEqual(['midpoint','fix']);
- open(()=>doc,apply,feature);expect(querySketchControl('[aria-label="Sketch constraint state"]').textContent).toContain('2 degrees of freedom');
 });
 
 it('retains and edits three-point circle placement through undo and native reopen',async()=>{

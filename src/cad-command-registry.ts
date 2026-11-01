@@ -17,7 +17,7 @@ export type CADCommandID =
   | "sketch-undo"
   | "sketch-redo"
   | "sketch-finish-spline" | "sketch-remove-spline-point"
-  | "sketch-unfix" | "sketch-infinite" | "sketch-polygon-constraint" | "sketch-chain" | "sketch-finish-auto-constrain" | "sketch-auto-constrain" | "sketch-export-dxf" | "sketch-intersect" | "sketch-include-edges" | "sketch-two-tangent-circle" | "sketch-three-tangent-circle" | "sketch-change-plane" | "sketch-loose-ends"
+  | "sketch-unfix" | "sketch-infinite" | "sketch-polygon-constraint" | "sketch-chain" | "sketch-finish-auto-constrain" | "sketch-auto-constrain" | "sketch-export-dxf" | "sketch-intersect" | "sketch-include-edges" | "sketch-change-plane" | "sketch-loose-ends"
   | "sketch-coordinates"
   | "sketch-constraints"
   | "sketch-variables"
@@ -107,7 +107,7 @@ export type CADCommandID =
   | "assembly-insert-standard-part" | "assembly-resize-standard-part"
   | "sketch-auto-constrain-datum" | "assembly-unlock"
   | "sketch-intersection-curve" | "sketch-isoparametric-curve" | "sketch-project-to-surface"
-  | "sketch-blend-curve" | "sketch-blend-curve-g2" | "sketch-control-spline" | "sketch-control-spline-5" | "sketch-fit-section" | "sketch-spun-profile" | "feature-boundary-fill" | "feature-split-face" | "feature-surface-trim" | "mesh-convert" | "feature-surface-fair"
+  | "sketch-blend-curve" | "sketch-blend-curve-g2" | "sketch-control-spline" | "sketch-fit-section" | "sketch-spun-profile" | "feature-boundary-fill" | "feature-split-face" | "feature-surface-trim" | "mesh-convert" | "feature-surface-fair"
   | "fit-view"
   | "clear-mates"
   | "view-top"
@@ -182,7 +182,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "sketch-undo",
   "sketch-redo",
   "sketch-finish-spline", "sketch-remove-spline-point",
-  "sketch-unfix", "sketch-infinite", "sketch-polygon-constraint", "sketch-chain", "sketch-finish-auto-constrain", "sketch-auto-constrain", "sketch-export-dxf", "sketch-intersect", "sketch-include-edges", "sketch-two-tangent-circle", "sketch-three-tangent-circle", "sketch-change-plane", "sketch-loose-ends",
+  "sketch-unfix", "sketch-infinite", "sketch-polygon-constraint", "sketch-chain", "sketch-finish-auto-constrain", "sketch-auto-constrain", "sketch-export-dxf", "sketch-intersect", "sketch-include-edges", "sketch-change-plane", "sketch-loose-ends",
   "sketch-coordinates",
   "sketch-constraints",
   "sketch-variables",
@@ -265,7 +265,7 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "assembly-insert-standard-part", "assembly-resize-standard-part",
   "sketch-auto-constrain-datum", "assembly-unlock",
   "sketch-intersection-curve", "sketch-isoparametric-curve", "sketch-project-to-surface",
-  "sketch-blend-curve", "sketch-blend-curve-g2", "sketch-control-spline", "sketch-control-spline-5", "sketch-fit-section", "sketch-spun-profile", "feature-boundary-fill", "feature-split-face", "feature-surface-trim", "mesh-convert", "feature-surface-fair",
+  "sketch-blend-curve", "sketch-blend-curve-g2", "sketch-control-spline", "sketch-fit-section", "sketch-spun-profile", "feature-boundary-fill", "feature-split-face", "feature-surface-trim", "mesh-convert", "feature-surface-fair",
   "fit-view",
   "clear-mates",
   "view-top",

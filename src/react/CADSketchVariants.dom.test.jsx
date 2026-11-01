@@ -37,27 +37,29 @@ it('keeps a chosen solid tab during sketch edits and exposes direct sketch-to-so
 it('chooses a variant from the dropdown and retains it as the primary tool',async()=>{
  const {CADTraditionalRibbon}=await import('./CADTraditionalRibbon');
  const {createRoot}=await import('react-dom/client');
- cadCommands.register('sketch-line',()=>{});cadCommands.register('sketch-midpoint-line',()=>{});
- cadCommands.setEnabled('sketch-line',true);cadCommands.setEnabled('sketch-midpoint-line',true);
+ cadCommands.register('sketch-arc',()=>{});cadCommands.register('sketch-center-arc',()=>{});
+ cadCommands.setEnabled('sketch-arc',true);cadCommands.setEnabled('sketch-center-arc',true);
  const host=document.createElement('div');document.body.append(host);const root=createRoot(host),action=vi.fn();
  await act(async()=>root.render(<CADTraditionalRibbon activeWorkspace="sketch" sketchEditing documentName="Sketch" partOpen onSelectWorkspace={()=>{}} onAction={action} onUseFloatingTools={()=>{}}/>));
- await act(async()=>host.querySelector('[aria-label="Line variants"]').click());
- const option=[...document.querySelectorAll('[role="menuitemradio"]')].find(b=>b.textContent.includes('Midpoint line'));
+ // The previous test leaves the Solid tab chosen for sketch edits; return to the Sketch tab.
+ await act(async()=>host.querySelector('[role="tab"][aria-label="Sketch"]')?.click());
+ await act(async()=>host.querySelector('[aria-label="Arc variants"]').click());
+ const option=[...document.querySelectorAll('[role="menuitemradio"]')].find(b=>b.textContent.includes('Center point arc'));
  expect(option).toBeTruthy();await act(async()=>option.click());
- expect(action).toHaveBeenLastCalledWith('sketch-midpoint-line');
+ expect(action).toHaveBeenLastCalledWith('sketch-center-arc');
  expect(document.querySelector('[role="menu"]')).toBeNull();
- const primary=host.querySelector('[data-tool-id="sketch-line"] .aui-ribbon-tool');
- expect(primary.textContent).toContain('Midpoint line');
+ const primary=host.querySelector('[data-tool-id="sketch-arc"] .aui-ribbon-tool');
+ expect(primary.textContent).toContain('Center point arc');
  await act(async()=>primary.click());expect(action).toHaveBeenCalledTimes(2);
- await act(async()=>host.querySelector('[aria-label="Line variants"]').click());
- const original=[...document.querySelectorAll('[role="menuitemradio"]')].find(b=>b.textContent.trim()==='Line');
- await act(async()=>original.click());expect(action).toHaveBeenLastCalledWith('sketch-line');
+ await act(async()=>host.querySelector('[aria-label="Arc variants"]').click());
+ const original=[...document.querySelectorAll('[role="menuitemradio"]')].find(b=>b.textContent.trim()==='Arc');
+ await act(async()=>original.click());expect(action).toHaveBeenLastCalledWith('sketch-arc');
  await act(async()=>root.unmount());host.remove();
 });
 it('shows distinct rectangle variant artwork inside the dropdown',async()=>{
  const {CADTraditionalRibbon}=await import('./CADTraditionalRibbon');const {createRoot}=await import('react-dom/client');const host=document.createElement('div');document.body.append(host);const root=createRoot(host);
  await act(async()=>root.render(<CADTraditionalRibbon activeWorkspace="sketch" sketchEditing documentName="Sketch" partOpen onSelectWorkspace={()=>{}} onAction={()=>{}} onUseFloatingTools={()=>{}}/>));
- await act(async()=>host.querySelector('[aria-label="Rectangle variants"]').click());const options=[...document.querySelectorAll('[role="menuitemradio"]')];expect(options).toHaveLength(4);const art=options.map(o=>o.querySelector('.aui-menu-icon svg')?.innerHTML);expect(art.every(Boolean)).toBe(true);expect(new Set(art).size).toBe(3);
+ await act(async()=>host.querySelector('[aria-label="Rectangle variants"]').click());const options=[...document.querySelectorAll('[role="menuitemradio"]')];expect(options).toHaveLength(3);const art=options.map(o=>o.querySelector('.aui-menu-icon svg')?.innerHTML);expect(art.every(Boolean)).toBe(true);expect(new Set(art).size).toBe(3);
  await act(async()=>root.unmount());host.remove();
 });
 it('dispatches the illustrated tangent arc choice from the arc dropdown',async()=>{
