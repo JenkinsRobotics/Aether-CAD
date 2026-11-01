@@ -11,7 +11,12 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
     { id: "solid-create", label: "Create", tools: [
       // Fusion opens its Create list with Create Sketch, and it is the first
       // thing a new part needs. The Sketch tray itself is contextual.
-      tool("solid-sketch", "Sketch", "sketch", "sketch"),
+      // 3D Sketch is a kind of sketch; the model-curve window makes 3D sketches
+      // from faces and bodies. Both live in Sketch's dropdown (Jonathan, 2026-11-01).
+      {...tool("solid-sketch", "Sketch", "sketch", "sketch"), variants: [
+        tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
+        tool("solid-model-curves", "3D curves from model", "curve", "sketch-intersection-curve"),
+      ]},
       // Distinct creation operations are peers, not variants of Extrude.
       tool("solid-extrude", "Extrude", "extrude", "feature-extrude"),
       tool("solid-revolve", "Revolve", "revolve", "feature-revolve"),
@@ -21,13 +26,6 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-pipe", "Pipe", "sweep", "feature-pipe"),
       tool("solid-thread", "Thread", "thread", "feature-thread"),
       tool("solid-coil", "Coil", "sweep", "feature-coil"),
-      // Last of the real tools: the Create list opens downward without a height limit, so
-      // each row added above Cone pushes it toward the bottom of the window.
-      {...tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"), variants: [
-        tool("solid-intersection-curve", "Intersection curve", "curve", "sketch-intersection-curve"),
-        tool("solid-isoparametric-curve", "Isoparametric curve", "curve", "sketch-isoparametric-curve"),
-        tool("solid-project-to-surface", "Project to surface", "curve", "sketch-project-to-surface"),
-      ]},
       tool("solid-weld", "Weld", "weld", undefined, solidProducer),
     ] },
     { id: "solid-edit", label: "Modify", tools: [

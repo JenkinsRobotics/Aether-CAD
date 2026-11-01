@@ -48,7 +48,7 @@ export function openDerivedCurveWindow(mode: Mode, deps: { getDocument: () => Pa
   viewport.querySelector(".cad-derived-curve-window")?.remove();
   let found: V3[][] = [];
   const close = () => { deps.showCurves([]); win.close(); };
-  const win = openCADFeatureWindow({ viewport, className: "cad-derived-curve-window", icon: "sketch", title: titles[mode], acceptLabel: "Add curves", discardLabel: "Cancel",
+  const win = openCADFeatureWindow({ viewport, className: "cad-derived-curve-window", icon: "sketch", title: "3D curves from model", acceptLabel: "Add curves", discardLabel: "Cancel",
     onAccept: async () => {
       if (!found.length) { win.setError("Preview the curves first."); return; }
       try {
@@ -65,6 +65,12 @@ export function openDerivedCurveWindow(mode: Mode, deps: { getDocument: () => Pa
   uv.add(new Option("Along u", "u")); uv.add(new Option("Along v", "v"));
   const preview = document.createElement("button"); preview.type = "button"; preview.className = "aui-button"; preview.textContent = "Preview";
   const note = document.createElement("p"); note.className = "cad-form-note"; note.setAttribute("role", "status");
+  // One window for the three curve kinds: the kind is the first row, and changing it
+  // reopens the window on that kind (Jonathan, 2026-11-01).
+  const kind = document.createElement("select"); kind.setAttribute("aria-label", "Curve");
+  for (const [value, label] of Object.entries(titles)) kind.add(new Option(label, value, value === mode, value === mode));
+  kind.onchange = () => { close(); openDerivedCurveWindow(kind.value as Mode, deps); };
+  win.row("Curve", kind);
   if (mode === "project_curve") win.row("Sketch", sketch);
   if (mode === "isoparametric_curve") win.row("Direction", uv);
   win.row("", preview); win.body.append(note);
