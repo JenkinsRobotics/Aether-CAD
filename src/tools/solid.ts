@@ -19,8 +19,6 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-loft", "Loft", "loft", "feature-loft"),
       tool("solid-hole", "Hole", "hole", "feature-hole"),
       tool("solid-pipe", "Pipe", "sweep", "feature-pipe"),
-      tool("solid-bounding-solid", "Bounding Solid", "box", "feature-bounding-solid"),
-      tool("solid-shape-binder", "Shape Binder", "box", "feature-shape-binder"),
       tool("solid-thread", "Thread", "thread", "feature-thread"),
       tool("solid-coil", "Coil", "sweep", "feature-coil"),
       // Last of the real tools: the Create list opens downward without a height limit, so
@@ -44,11 +42,12 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
         tool("solid-boundary-fill", "Boundary Fill", "boolean", "feature-boundary-fill"),
       ]},
       tool("solid-shell", "Shell", "shell", "feature-shell"),
-      {...tool("solid-split", "Split Body", "split", "feature-split"), variants: [tool("solid-split-face", "Split Face", "split", "feature-split-face")]},
+      // Part or Face is the Split window's first row (Jonathan, 2026-11-01).
+      tool("solid-split", "Split", "split", "feature-split"),
       {...tool("solid-push-pull", "Push/Pull", "push-pull", "feature-face-extrude"), variants:[
         tool("solid-offset-face", "Offset Face", "offset", "feature-offset-face"),
       ]},
-      tool("solid-replace-face", "Replace Face", "replace-face", "feature-replace-face"),
+      // Replace Face is Offset Face's "Replace with plane" row.
       tool("solid-wrap-emboss", "Wrap & Emboss", "emboss", undefined,
         "Not available yet — wrapping sketch profiles onto faces and embossing them is not implemented."),
       tool("solid-delete-face", "Delete", "remove", "feature-delete-face"),
@@ -74,18 +73,15 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-point", "Point", "point", "construction-point-vertex"),
     ] },
     // Partial Revolve is Revolve with an angle; Thicken lives on the Surface tab.
+    // Design tabs show this group and Transform under Modify (Jonathan, 2026-11-01).
     { id: "solid-advanced", label: "Advanced Shape", tools: [
       tool("solid-draft", "Draft", "draft", "feature-draft"),
       tool("solid-pattern", "Pattern", "pattern", "feature-pattern"),
     ] },
     { id: "solid-transform", label: "Transform", tools: [
       // Moving a body is one gesture with several kinds.
-      // Copy is Move with "Copy parts"; mirroring is the Mirror feature.
-      {...tool("solid-move", "Move", "move", "transform-translate"), variants:[
-        tool("solid-rotate", "Rotate", "rotate", "transform-rotate"),
-        tool("solid-scale", "Scale", "scale", "transform-scale"),
-        tool("solid-align", "Align", "move", "transform-align"),
-      ]},
+      // Translate, rotate, scale, copy and align are the Transform window's type row.
+      tool("solid-transform", "Transform", "move", "transform-translate"),
       tool("solid-mirror", "Mirror", "mirror", "feature-mirror"),
     ] },
     ...homeWorkspace.groups,

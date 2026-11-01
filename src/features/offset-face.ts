@@ -12,7 +12,7 @@ export const offsetFaceEditor:FeatureEditor={
   handles: { distance: 'offsetDistance' },
  controls(context) {
   const rw=context.feature?.replaceWith;
-  return {faces:context.field('Offset face references',JSON.stringify(context.feature?.faces??[])),replaceMode:context.field('Replace with plane',rw || context.initialReplaceFace ? 'yes' : 'no',['no','yes']),replaceSource:context.field('Plane source',rw?.kind ?? (context.initialReplaceFace ? 'face' : 'principal'),['principal','feature','face']),replaceFace:context.field('Target face',JSON.stringify(rw?.kind==='face'?[rw]:[])),replacePlane:context.field('Replace plane',rw?.kind==='principal'?rw.plane:'XY',['XY','XZ','YZ']),replaceOffset:context.field('Replace plane offset (mm)',String(rw?.kind==='principal'?rw.offsetMillimeters:0)),replaceFeature:context.reference('Replace plane feature',['plane'],rw?.kind==='feature'?rw.featureId:undefined),...faceTransformControls(context)};
+  return {faces:context.field('Offset face references',JSON.stringify(context.feature?.faces??[])),replaceMode:context.field('Replace with plane',rw ? 'yes' : 'no',['no','yes']),replaceSource:context.field('Plane source',rw?.kind ?? 'principal',['principal','feature','face']),replaceFace:context.field('Target face',JSON.stringify(rw?.kind==='face'?[rw]:[])),replacePlane:context.field('Replace plane',rw?.kind==='principal'?rw.plane:'XY',['XY','XZ','YZ']),replaceOffset:context.field('Replace plane offset (mm)',String(rw?.kind==='principal'?rw.offsetMillimeters:0)),replaceFeature:context.reference('Replace plane feature',['plane'],rw?.kind==='feature'?rw.featureId:undefined),...faceTransformControls(context)};
  },
  layout(context,controls){
   const {win,form,feature,lengthUnitLabel}=context;

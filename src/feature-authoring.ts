@@ -96,6 +96,10 @@ const presentFeatureWindow = (
 };
 
   let finishingSketch = false;
+  const FEATURE_FAMILIES: Record<string, { label: string; kinds: Record<string, string> }> = {
+    split: { label: "Split", kinds: { part: "split", face: "split-face" } },
+    "split-face": { label: "Split", kinds: { part: "split", face: "split-face" } },
+  };
   const show = (type: string, existing?: PartFeature, launch: FeatureLaunchOptions = {}) => {
     // Reaching for a solid feature while the sketch editor is open means the
     // sketch is done: commit it and let the feature open on the result,
@@ -199,6 +203,13 @@ const presentFeatureWindow = (
       form.append(label);
       return input;
     };
+    // One feature, several kinds (Onshape's Split has Part and Face tabs): the kind
+    // is the first row, and changing it reopens the window on the sibling editor.
+    const family = FEATURE_FAMILIES[type];
+    if (family && !existing) {
+      const kind = field(family.label, Object.entries(family.kinds).find(([, t]) => t === type)![0], Object.keys(family.kinds));
+      kind.addEventListener("change", () => { win.close(); show(family.kinds[kind.value], undefined, launch); });
+    }
     const name = field(
       "Name",
       feature?.name ??
@@ -258,7 +269,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","bounding-solid","shape-binder","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["offset-face","transform","split","delete-face","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);
@@ -601,7 +612,7 @@ const presentFeatureWindow = (
     "boolean",
     // Every dialog in src/features/ is a command too: a button whose type is not
     // registered here reads "not connected" in the ribbon, which is how the surface
-    // tools (and pipe, coil, boss, rest, thread, bounding solid, remove body, split,
+    // tools (and pipe, coil, boss, rest, thread, remove body, split,
     // delete face) shipped dead until r39.
     ...featureEditors.map((editor) => editor.type),
   ] as readonly string[]) {

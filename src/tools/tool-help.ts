@@ -1,7 +1,6 @@
 import type { ToolHelpContent } from '@aether/ui';
 /** Instructional copy describes existing behavior, not roadmap features. */
 const help: Record<string,ToolHelpContent> = {
- 'feature-replace-face':{summary:'Move planar faces onto a parallel target face or plane.',steps:['Pick the faces to replace, then pick a parallel planar target face.','Alternatively choose a principal or construction plane.','Review the preview and Apply. Curved target surfaces are not supported.']},
  'feature-plane':{summary:'Create a plane parallel to another plane or planar face.',steps:['Select a plane or flat face, then set the offset in millimetres.','Apply saves the plane; Cancel leaves the Part unchanged.']},
  'construction-plane-angle':{summary:'Create a plane through a straight edge at a chosen angle.',steps:['Select a straight edge, then a plane or planar face parallel to that edge.','Set the angle and Apply. Curved edges cannot define this rotation axis.']},
  'construction-plane-mid':{summary:'Create a plane halfway between two parallel planes.',steps:['Select two parallel planes or planar faces.','Check the preview and Apply. Nonparallel references are rejected.']},

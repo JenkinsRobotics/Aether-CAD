@@ -275,7 +275,7 @@ it("preserves all six design categories while omitting unimplemented commands", 
  const framing=toolbarWorkspaceFor('part','framing');
  expect(framing.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
  expect(framing.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('show-inspect');
- expect(toolbarWorkspaceFor('part','solid').groups[0].tools.map(tool=>tool.id)).toContain('solid-mirror');
+ expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-mirror');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-draft');
 });
 
@@ -308,7 +308,7 @@ it("names and illustrates the three core inspection commands distinctly",()=>{
  ]);
 });
 
-it('connects Plastic Draft and Shell to native feature authoring',()=>{
+it('keeps only plastic-specific tools on the Plastic Modify group',()=>{
  const modify=toolbarWorkspaceFor('part','plastic').groups.find(group=>group.label==='Modify')!;
- expect(modify.tools.map(tool=>tool.action)).toEqual(['feature-draft','feature-shell','show-plastic-rules']);
+ expect(modify.tools.map(tool=>tool.action)).toEqual(['show-plastic-rules']);
 });

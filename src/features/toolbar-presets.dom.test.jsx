@@ -27,16 +27,23 @@ afterEach(async () => {
 });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 
-it('Replace Face starts with target-face replacement and Cancel preserves the document', () => {
+it('Offset Face opens on offsetting and Cancel preserves the document', () => {
   const before = structuredClone(doc);
-  cadCommands.execute('feature-replace-face');
-  expect(control('Replace with plane').value).toBe('yes');
-  expect(control('Plane source').value).toBe('face');
-  expect(document.querySelector('.cad-feature-dialog').textContent).toContain('Replace Face');
-  document.querySelector('[data-feature-action="discard"]').click();
-  expect(apply).not.toHaveBeenCalled();
-  expect(doc).toEqual(before);
   cadCommands.execute('feature-offset-face');
   expect(control('Replace with plane').value).toBe('no');
   expect(control('Face operation').value).toBe('offset');
+  document.querySelector('[data-feature-action="discard"]').click();
+  expect(apply).not.toHaveBeenCalled();
+  expect(doc).toEqual(before);
+});
+
+it('Split is one feature: its first row switches between Part and Face', async () => {
+  cadCommands.execute('feature-split');
+  expect(control('Split').value).toBe('part');
+  expect(control('Part to split')).toBeTruthy();
+  control('Split').value = 'face';
+  control('Split').dispatchEvent(new Event('change'));
+  await vi.waitFor(() => expect(control('Faces to split')).toBeTruthy());
+  expect(document.querySelectorAll('.cad-feature-dialog')).toHaveLength(1);
+  expect(control('Split').value).toBe('face');
 });

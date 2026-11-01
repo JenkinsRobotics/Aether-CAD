@@ -19,8 +19,7 @@ export const plasticWorkspace: CADRibbonWorkspaceDefinition = {
       tool("plastic-lip-groove", "Lip / Groove", "slot", "feature-lip"),
     ] },
     { id: "plastic-modify", label: "Modify", tools: [
-      tool("plastic-draft", "Draft", "draft", "feature-draft"),
-      tool("plastic-shell", "Shell", "shell", "feature-shell"),
+      // Draft and Shell are the Solid tab's features, not plastic variants (Jonathan, 2026-11-01).
       tool("plastic-rules", "Plastic Rules", "settings", "show-plastic-rules"),
     ] },
   ],

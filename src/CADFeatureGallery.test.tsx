@@ -42,10 +42,10 @@ test('search narrows the list and the viewport tab still shows the gizmo', () =>
   expect(container.textContent).toContain('Gizmo example');
 });
 
-test('Rotate and Align open Transform on their own mode', async () => {
+test('Transform opens on translate', async () => {
   mount();
   await act(() => new Promise(resolve => setTimeout(resolve))); // the default Extrude opens first
-  for (const [label, mode] of [['Rotate', 'rotate'], ['Align', 'align']] as const) {
+  for (const [label, mode] of [['Transform', 'translate']] as const) {
     await act(async () => tool(label)!.click());
     const win = document.querySelector('.aui-feature-window')!;
     expect(win).toBeTruthy();

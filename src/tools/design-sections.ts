@@ -10,11 +10,8 @@ export function withDesignSections(workspace: CADRibbonWorkspaceDefinition): CAD
   const groups = workspace.groups;
   const create = groups.filter(group => group.label === "Create").flatMap(group => group.tools);
   const modify = groups.filter(group => ["Modify", "Repair", "Finish"].includes(group.label)).flatMap(group => group.tools);
-  for (const group of groups.filter(group => ["Advanced Shape", "Transform"].includes(group.label))) {
-    for (const tool of group.tools) {
-      (tool.id === "solid-draft" || group.label === "Transform" && tool.id !== "solid-mirror" ? modify : create).push(tool);
-    }
-  }
+  // Draft, Pattern, Move and Mirror change a body that exists: Modify, not Create.
+  for (const group of groups.filter(group => ["Advanced Shape", "Transform"].includes(group.label))) modify.push(...group.tools);
   const common = (label: string, source: CADToolGroupDefinition): CADToolGroupDefinition => ({
     ...source, id: `${workspace.id}-${label.toLowerCase()}`, label,
   });

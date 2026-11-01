@@ -10,8 +10,6 @@ import {holeEditor} from "./hole";
 import {splitEditor} from "./split";
 import {deleteFaceEditor} from "./delete-face";
 import {pipeEditor} from "./pipe";
-import {boundingSolidEditor} from "./bounding-solid";
-import {shapeBinderEditor} from "./shape-binder";
 import {threadEditor} from "./thread";
 import {coilEditor} from "./coil";
 import {surfaceEditors} from "./surface";
@@ -55,8 +53,6 @@ export const featureEditors: readonly FeatureEditor[] = [
   splitEditor,
   deleteFaceEditor,
   pipeEditor,
-  boundingSolidEditor,
-  shapeBinderEditor,
   threadEditor,
   coilEditor,
   ...surfaceEditors,
