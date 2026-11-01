@@ -28,7 +28,6 @@ export type CADToolActionID = CADCommandID
   | "new-assembly"
   | "open-assembly"
   | "save-assembly"
-  | "create-box" | "create-cylinder" | "create-cone" | "create-sphere" | "create-torus"
   | "insert-canvas" | "insert-decal"
   | "insert-mcmaster"
   | "insert-vector-svg" | "insert-vector-dxf" | "insert-mesh"

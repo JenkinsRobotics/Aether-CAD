@@ -20,18 +20,23 @@ const button=(label:string)=>{
 };
 const click=async(element:HTMLElement)=>act(async()=>element.click());
 
-it('opens the six-domain tray, executes Cone and refuses unavailable construction tools',async()=>{
+it('opens the six-domain tray, executes Canvas and refuses unavailable construction tools',async()=>{
   const {createRoot}=await import('react-dom/client'),host=document.createElement('div');
   document.body.append(host);const root=createRoot(host),action=vi.fn();
   try {
     await act(async()=>root.render(<CADTraditionalRibbon documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={action}/>));
     await click(button('Features'));
     for(const domain of ['Part','Assembly','Sketch','Curve','Solid','Drawing'])expect(button(`${domain} tools`)).toBeTruthy();
+    await click(button('Part tools'));
+    await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:home-insert"]')!);
+    const canvas=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.trim()==='Canvas');
+    expect(canvas).toBeTruthy();await click(canvas!);
+    expect(action).toHaveBeenLastCalledWith('insert-canvas');
     await click(button('Solid tools'));
     await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:solid-create"]')!);
-    const cone=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.trim()==='Cone');
-    expect(cone).toBeTruthy();await click(cone!);
-    expect(action).toHaveBeenLastCalledWith('create-cone');
+    const create=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).map(item=>item.textContent?.trim());
+    expect(create).toContain('Extrude');expect(create).not.toContain('Cone'); // No premade shapes.
+    await click(Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.trim()==='Extrude')!); // Closes the menu; Extrude is disabled here.
     await click(button('Part tools'));
     await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:part-construction-gaps"]')!);
     const axis=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.includes('Work axis'));

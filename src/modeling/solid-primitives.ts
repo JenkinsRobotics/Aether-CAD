@@ -8,7 +8,8 @@ export const primitiveFields:Record<SolidPrimitive,readonly (keyof PrimitiveDime
   box:['width','length','height'],cylinder:['radius','height'],cone:['radius','height'],sphere:['radius'],torus:['radius','tubeRadius'],
 };
 
-/** Primitives are editable canonical profile + solid histories, not display meshes or a second evaluator. */
+/** Builds a profile + solid history for the assembly recipe example and tests. Not a user or agent tool:
+ *  shapes are sketched and built in the editor (Jonathan, 2026-10-31). */
 export function appendSolidPrimitive(source:PartDocument|null,kind:SolidPrimitive,dimensions:PrimitiveDimensions):PartDocument {
   if(!Object.hasOwn(primitiveFields,kind))throw Error('Unknown solid primitive.');
   for(const key of primitiveFields[kind]) if(!Number.isFinite(dimensions[key])||dimensions[key]<=0||dimensions[key]>1e6)

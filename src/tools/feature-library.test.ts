@@ -46,5 +46,6 @@ it('keeps all sixteen referenced assembly features discoverable without promisin
     expect(tools.some(tool => tool.id === id), id).toBe(true);
   expect(cadFeatureToolById('assembly-concentric')?.action).toBe('assembly-mate-cylindrical');
   expect(cadFeatureToolById('assembly-width')?.action).toBeUndefined();
-  expect(cadFeatureToolById('solid-cone')?.action).toBe('create-cone');
+  expect(cadFeatureToolById('solid-pipe')?.action).toBe('feature-pipe');
+  expect(cadFeatureToolById('solid-box')).toBeUndefined(); // No premade shapes: sketch and build them.
 });

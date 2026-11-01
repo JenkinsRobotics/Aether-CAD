@@ -31,7 +31,7 @@ it('discovers real schemas, pages results and supplies an executable example',as
   const docs=discoverCAD(cadAgentTools,{name:'aether_cad_run_program'},'part');
   expect(docs.tools).toEqual([cadAgentTools.find(t=>t.name==='aether_cad_run_program')]);
   expect((await executeProgram(createEmptyPartDocument('Part'),docs.example!.arguments.program_json,async doc=>doc)).document.features).toHaveLength(2);
-  const search=discoverCAD(cadAgentTools,{query:'cone'},'part');expect(search.tools.some(t=>t.name==='aether_cad_solid_primitive')).toBe(true);
+  const search=discoverCAD(cadAgentTools,{query:'revolve'},'part');expect(search.tools.some(t=>t.name==='aether_cad_revolve')).toBe(true);
   expect(discoverCAD(cadAgentTools,{name:'classcad_api'},'part').tools).toEqual([]);
   expect(discoverCAD(cadAgentTools,{},'part').next_offset).toBe(5);
   expect(()=>discoverCAD(cadAgentTools,{offset:-1},'part')).toThrow();

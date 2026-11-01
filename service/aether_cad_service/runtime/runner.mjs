@@ -260,7 +260,7 @@ function validateEdgeFinishEdge(ref, earlier, missing) {
   }
   if (ref.kind !== "curved-edge" || typeof ref.sourceFeatureId !== "string" || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId) || typeof ref.bodyId !== "string" || typeof ref.label !== "string" || !Array.isArray(ref.midpointMillimeters) || ref.midpointMillimeters.length !== 3 || !ref.midpointMillimeters.every(Number.isFinite) || !(ref.lengthMillimeters > 0)) throw Error("Select solid edges on an earlier feature to finish.");
 }
-const patternSourceTypes = ["extrude", "revolve", "sweep", "loft", "hole"];
+const patternSourceTypes = ["extrude", "revolve", "sweep", "loft", "hole", "pattern", "mirror"];
 function patternCopyIds(feature3) {
   if (!feature3.bodyIds || !feature3.copyBodyIds) return [];
   const copies = (feature3.patternType === "linear" && feature3.second ? feature3.count * feature3.second.count : feature3.count) - 1;
@@ -2053,14 +2053,14 @@ function symmetricResiduals(a2, b, axis, splineReversed = false) {
     "Select two points, two lines, or two circles/circular arcs, or two ellipses."
   );
 }
-const sub$6 = (a2, b) => [
+const sub$7 = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
 ];
 const cross$d = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
 function offsetCarrier(start, segment, distance2) {
   if (segment.type === "line") {
-    const v2 = sub$6(segment.end, start), length = Math.hypot(...v2);
+    const v2 = sub$7(segment.end, start), length = Math.hypot(...v2);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction2 = [v2[0] / length, v2[1] / length];
     const shift2 = (p2) => [
@@ -2092,18 +2092,18 @@ function offsetCarrier(start, segment, distance2) {
   };
 }
 function joinOffsetCarriers(a2, b, corner) {
-  if (Math.hypot(...sub$6(a2.end, b.start)) < 1e-8) return a2.end;
+  if (Math.hypot(...sub$7(a2.end, b.start)) < 1e-8) return a2.end;
   let candidates = [];
   if (a2.kind === "line" && b.kind === "line") {
     const det = cross$d(a2.direction, b.direction);
     if (Math.abs(det) < 1e-10)
       throw Error("Offset corner is parallel or reversing.");
-    const t2 = cross$d(sub$6(b.start, a2.end), b.direction) / det;
+    const t2 = cross$d(sub$7(b.start, a2.end), b.direction) / det;
     candidates = [
       [a2.end[0] + t2 * a2.direction[0], a2.end[1] + t2 * a2.direction[1]]
     ];
   } else if (a2.kind === "arc" && b.kind === "arc") {
-    const v2 = sub$6(b.center, a2.center), length = Math.hypot(...v2);
+    const v2 = sub$7(b.center, a2.center), length = Math.hypot(...v2);
     if (length < 1e-10) throw Error("Offset arcs have no unique corner.");
     const along = (a2.radius * a2.radius - b.radius * b.radius + length * length) / (2 * length), height2 = a2.radius * a2.radius - along * along;
     if (height2 >= -1e-9) {
@@ -2116,7 +2116,7 @@ function joinOffsetCarriers(a2, b, corner) {
   } else {
     const line2 = a2.kind === "line" ? a2 : b, arc = a2.kind === "arc" ? a2 : b;
     if (line2.kind !== "line" || arc.kind !== "arc") throw Error();
-    const v2 = sub$6(line2.start, arc.center), projection = v2[0] * line2.direction[0] + v2[1] * line2.direction[1], discriminant = projection * projection - (v2[0] * v2[0] + v2[1] * v2[1] - arc.radius * arc.radius);
+    const v2 = sub$7(line2.start, arc.center), projection = v2[0] * line2.direction[0] + v2[1] * line2.direction[1], discriminant = projection * projection - (v2[0] * v2[0] + v2[1] * v2[1] - arc.radius * arc.radius);
     if (discriminant >= -1e-9)
       for (const t2 of [
         -projection - Math.sqrt(Math.max(0, discriminant)),
@@ -2132,12 +2132,12 @@ function joinOffsetCarriers(a2, b, corner) {
       "Offset curves do not meet; this corner requires a topology change."
     );
   return candidates.sort(
-    (p2, q) => Math.hypot(...sub$6(p2, corner)) - Math.hypot(...sub$6(q, corner))
+    (p2, q) => Math.hypot(...sub$7(p2, corner)) - Math.hypot(...sub$7(q, corner))
   )[0];
 }
 function offsetCarrierSegment(c2, start, end) {
   if (c2.kind === "line") {
-    const v2 = sub$6(end, start);
+    const v2 = sub$7(end, start);
     if (v2[0] * c2.direction[0] + v2[1] * c2.direction[1] <= 1e-8)
       throw Error("Offset reverses or collapses an edge.");
     return { type: "line", end };
@@ -2287,8 +2287,8 @@ function lineSegmentIntersections(lineStart, lineEnd, start, segment) {
     return extent <= Math.abs(frame.sweep) + 1e-8 || Math.abs(extent - tau2) < 1e-8;
   });
 }
-const add$4 = (a2, b, scale2 = 1) => Array.from({ length: Math.max(a2.length, b.length) }, (_2, i2) => (a2[i2] ?? 0) + scale2 * (b[i2] ?? 0));
-const mul$1 = (a2, b) => {
+const add$5 = (a2, b, scale2 = 1) => Array.from({ length: Math.max(a2.length, b.length) }, (_2, i2) => (a2[i2] ?? 0) + scale2 * (b[i2] ?? 0));
+const mul$2 = (a2, b) => {
   const out = Array(a2.length + b.length - 1).fill(0);
   a2.forEach((x2, i2) => b.forEach((y2, j) => out[i2 + j] += x2 * y2));
   return out;
@@ -2322,7 +2322,7 @@ function conicParameterAtPoint(start, s, p2) {
   return t2;
 }
 function polynomialPair(first, second) {
-  const s = first.segment, origin = first.start, ax = s.control[0] - origin[0], ay = s.control[1] - origin[1], bx = s.end[0] - origin[0], by = s.end[1] - origin[1], det = ax * by - ay * bx, r = rational(second, origin), l1 = scaled(add$4(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$4(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$4(add$4(r.d, l1, -1), l2, -1), aa = scaled(mul$1(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$1(l0, l2), 4 * s.rho * s.rho), p2 = add$4(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
+  const s = first.segment, origin = first.start, ax = s.control[0] - origin[0], ay = s.control[1] - origin[1], bx = s.end[0] - origin[0], by = s.end[1] - origin[1], det = ax * by - ay * bx, r = rational(second, origin), l1 = scaled(add$5(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$5(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$5(add$5(r.d, l1, -1), l2, -1), aa = scaled(mul$2(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$2(l0, l2), 4 * s.rho * s.rho), p2 = add$5(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
   const coincident = p2.every((v2) => Math.abs(v2) < scale2 * 1e-11), ts = coincident ? [0, 1, ...polynomialRoots(l0), ...polynomialRoots(l2)] : polynomialRoots(p2.map((v2) => v2 / scale2));
   return ts.flatMap((t2) => {
     const point2 = segmentPoint(second.start, second.segment, t2), u2 = conicParameterAtPoint(origin, s, point2);
@@ -2425,7 +2425,7 @@ const squaredPolynomial = (p2) => {
   p2.forEach((a2, i2) => p2.forEach((b, j) => out[i2 + j] += a2 * b));
   return out;
 };
-const add$3 = (a2, b) => Array.from(
+const add$4 = (a2, b) => Array.from(
   { length: Math.max(a2.length, b.length) },
   (_2, i2) => (a2[i2] ?? 0) + (b[i2] ?? 0)
 );
@@ -2465,7 +2465,7 @@ function bezierConic(curve, frame) {
     3 * (p2[2][axis] - 2 * p2[1][axis] + p2[0][axis]),
     p2[3][axis] - 3 * p2[2][axis] + 3 * p2[1][axis] - p2[0][axis]
   ];
-  const polynomial = add$3(
+  const polynomial = add$4(
     squaredPolynomial(coefficients(0)),
     squaredPolynomial(coefficients(1))
   );
@@ -2483,7 +2483,7 @@ function conicConic(first, second) {
   ]);
   const u2 = [x2[0] - center[0], x2[1] - center[1]], v2 = [y2[0] - center[0], y2[1] - center[1]];
   const px2 = [center[0] + u2[0], 2 * v2[0], center[0] - u2[0]], py2 = [center[1] + u2[1], 2 * v2[1], center[1] - u2[1]];
-  const polynomial = add$3(squaredPolynomial(px2), squaredPolynomial(py2));
+  const polynomial = add$4(squaredPolynomial(px2), squaredPolynomial(py2));
   polynomial[0] -= 1;
   polynomial[2] -= 2;
   polynomial[4] -= 1;
@@ -2708,7 +2708,7 @@ function collinearLineContact(a2, b, c2, d2, tolerance2 = 1e-8) {
   return Math.max(0, Math.min(t2, u2)) <= Math.min(length, Math.max(t2, u2)) + tolerance2;
 }
 const cross$b = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
-const sub$5 = (a2, b) => [
+const sub$6 = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
 ];
@@ -2743,7 +2743,7 @@ function offsetSketchContour(source, distance2) {
     );
   const closed = contourClosed(out), points = [out.start, ...out.segments.map((s) => s.end)];
   const edges = out.segments.map((_2, i2) => {
-    const delta2 = sub$5(points[i2 + 1], points[i2]), length = Math.hypot(...delta2);
+    const delta2 = sub$6(points[i2 + 1], points[i2]), length = Math.hypot(...delta2);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction2 = [delta2[0] / length, delta2[1] / length];
     const shift = (p2) => [
@@ -2759,7 +2759,7 @@ function offsetSketchContour(source, distance2) {
         throw Error("Cannot offset a reversing corner.");
       return before.end;
     }
-    const t2 = cross$b(sub$5(after.start, before.end), after.direction) / det;
+    const t2 = cross$b(sub$6(after.start, before.end), after.direction) / det;
     return [
       before.end[0] + t2 * before.direction[0],
       before.end[1] + t2 * before.direction[1]
@@ -2772,12 +2772,12 @@ function offsetSketchContour(source, distance2) {
     result.push(join(edges[i2 - 1], edges[i2]));
   result.push(closed ? [...result[0]] : edges.at(-1).end);
   for (let i2 = 0; i2 < edges.length; i2++) {
-    const delta2 = sub$5(result[i2 + 1], result[i2]);
+    const delta2 = sub$6(result[i2 + 1], result[i2]);
     if (delta2[0] * edges[i2].direction[0] + delta2[1] * edges[i2].direction[1] <= 1e-8)
       throw Error("Offset collapses or reverses an edge.");
     for (let j = i2 + 2; j < edges.length; j++) {
       if (closed && i2 === 0 && j === edges.length - 1) continue;
-      const v2 = sub$5(result[j + 1], result[j]), det = cross$b(delta2, v2);
+      const v2 = sub$6(result[j + 1], result[j]), det = cross$b(delta2, v2);
       if (Math.abs(det) < 1e-10) {
         if (collinearLineContact(
           result[i2],
@@ -2788,7 +2788,7 @@ function offsetSketchContour(source, distance2) {
           throw Error("Offset would self-intersect.");
         continue;
       }
-      const between = sub$5(result[j], result[i2]), t2 = cross$b(between, v2) / det, u2 = cross$b(between, delta2) / det;
+      const between = sub$6(result[j], result[i2]), t2 = cross$b(between, v2) / det, u2 = cross$b(between, delta2) / det;
       if (t2 >= 0 && t2 <= 1 && u2 >= 0 && u2 <= 1)
         throw Error("Offset would self-intersect.");
     }
@@ -5193,7 +5193,7 @@ function featureInputDependencies(feature3, bodyProducers) {
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature3) {
-  if (!surfaceCreatorTypes.includes(feature3.type) && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
+  if (!surfaceCreatorTypes.includes(feature3.type) && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
     return feature3.bodyId;
   const first = doc.features.find(
     (f2) => (f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
@@ -5234,7 +5234,7 @@ function stableBodies(doc) {
       }
       if (feature3.type === "offset-face") return feature3;
       if (consumedBodyIDs(feature3).length && "targetBodyId" in feature3) targetBody = feature3.targetBodyId;
-      if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
+      if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature3).at(-1);
         return { ...feature3, bodyId: bodyIDForFeature(doc, feature3) };
       }
@@ -5258,7 +5258,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       result.set(f2.id, [...new Set(refs)]);
       continue;
     }
-    if ((f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
+    if ((f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "shape-binder" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
       for (const id2 of bodyIDsForFeature(doc, f2)) {
         lastBody = id2;
         bodyProducers.set(id2, f2.id);
@@ -5311,7 +5311,7 @@ function setFeatureSuppressed(doc, id2, suppressed) {
 }
 function insertFeature(doc, feature3) {
   const next = stableBodies(doc), index2 = rollbackPosition(doc);
-  if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
+  if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
     feature3 = {
       ...feature3,
       bodyId: feature3.bodyId ?? (doc.features.some(
@@ -5544,10 +5544,10 @@ function validateFaceExtrude(feature3, earlier, missingReference) {
   if (typeof feature3.faceLabel !== "string" || !feature3.faceLabel.trim()) throw Error("Push/Pull needs a face label.");
   if (!Number.isFinite(feature3.distanceMillimeters) || Math.abs(feature3.distanceMillimeters) < 1e-6) throw Error("Push/Pull distance must be finite and nonzero.");
 }
-const sub$4 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const cross$8 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-const unit$2 = (v2, what) => {
+const unit$3 = (v2, what) => {
   const l = Math.hypot(v2[0], v2[1], v2[2]);
   if (!(l > 1e-9)) throw new Error(`${what} has no direction.`);
   return [v2[0] / l, v2[1] / l, v2[2] / l];
@@ -5561,20 +5561,20 @@ function resolveAxisLine(feature3, earlier = []) {
     if (!target || target.type !== "plane") throw new Error(`${feature3.name}: plane references must be earlier construction planes.`);
     return resolvePlaneFrame(target, earlier.slice(0, index2));
   };
-  if (d2.method === "edge") return { originMillimeters: [...d2.axis.originMillimeters], directionMillimeters: unit$2(d2.axis.directionMillimeters, `${feature3.name}: edge`) };
+  if (d2.method === "edge") return { originMillimeters: [...d2.axis.originMillimeters], directionMillimeters: unit$3(d2.axis.directionMillimeters, `${feature3.name}: edge`) };
   if (d2.method === "two-points") {
     const [a22, b2] = d2.points.map((p2) => p2.positionMillimeters);
-    return { originMillimeters: [...a22], directionMillimeters: unit$2(sub$4(b2, a22), `${feature3.name}: the two points coincide and`) };
+    return { originMillimeters: [...a22], directionMillimeters: unit$3(sub$5(b2, a22), `${feature3.name}: the two points coincide and`) };
   }
   if (d2.method === "normal-to-plane") {
     const frame = frameOf2(d2.reference);
-    return { originMillimeters: [...d2.point.positionMillimeters], directionMillimeters: unit$2(frame.normal, `${feature3.name}: plane`) };
+    return { originMillimeters: [...d2.point.positionMillimeters], directionMillimeters: unit$3(frame.normal, `${feature3.name}: plane`) };
   }
   const [a2, b] = d2.references.map(frameOf2);
   const direction2 = cross$8(a2.normal, b.normal);
   if (Math.hypot(...direction2) < 1e-9) throw new Error(`${feature3.name}: the two planes are parallel and do not meet.`);
-  const u2 = unit$2(direction2, `${feature3.name}: planes`), inA = cross$8(a2.normal, u2);
-  const t2 = dot$6(sub$4(b.originMillimeters, a2.originMillimeters), b.normal) / dot$6(inA, b.normal);
+  const u2 = unit$3(direction2, `${feature3.name}: planes`), inA = cross$8(a2.normal, u2);
+  const t2 = dot$6(sub$5(b.originMillimeters, a2.originMillimeters), b.normal) / dot$6(inA, b.normal);
   const origin = [a2.originMillimeters[0] + inA[0] * t2, a2.originMillimeters[1] + inA[1] * t2, a2.originMillimeters[2] + inA[2] * t2];
   return { originMillimeters: origin, directionMillimeters: u2 };
 }
@@ -5708,10 +5708,202 @@ function validateBoundingSolid(feature3) {
   if (!(Number.isFinite(feature3.marginMillimeters) && feature3.marginMillimeters >= 0)) throw Error("Bounding margin must be zero or positive.");
   if (feature3.operation !== "new") throw Error("A bounding solid is always a new part.");
 }
+function validateShapeBinder(feature3, earlier, missing) {
+  if (typeof feature3.sourceBodyId !== "string" || !feature3.sourceBodyId.trim()) throw Error("Shape binder needs a source part.");
+  if (feature3.faces !== void 0) {
+    if (!Array.isArray(feature3.faces) || !feature3.faces.length || feature3.faces.length > 64) throw Error("Bind one to 64 faces, or leave faces out to bind the whole part.");
+    for (const face of feature3.faces) {
+      validateSolidFaceReference(face, earlier, missing, "Shape binder face");
+      if (face.bodyId !== feature3.sourceBodyId) throw Error("Shape binder faces must belong to the source part.");
+    }
+  }
+  if (feature3.operation !== "new") throw Error("A shape binder is always a new part.");
+}
+const metricCoarse = [
+  [1.6, 0.35, 1.25, 1.7, 1.8, 2],
+  [2, 0.4, 1.6, 2.2, 2.4, 2.6],
+  [2.5, 0.45, 2.05, 2.7, 2.9, 3.1],
+  [3, 0.5, 2.5, 3.2, 3.4, 3.6],
+  [4, 0.7, 3.3, 4.3, 4.5, 4.8],
+  [5, 0.8, 4.2, 5.3, 5.5, 5.8],
+  [6, 1, 5, 6.4, 6.6, 7],
+  [8, 1.25, 6.8, 8.4, 9, 10],
+  [10, 1.5, 8.5, 10.5, 11, 12],
+  [12, 1.75, 10.2, 13, 13.5, 14.5],
+  [14, 2, 12, 15, 15.5, 16.5],
+  [16, 2, 14, 17, 17.5, 18.5],
+  [20, 2.5, 17.5, 21, 22, 24],
+  [24, 3, 21, 25, 26, 28],
+  [30, 3.5, 26.5, 31, 33, 35],
+  [36, 4, 32, 37, 39, 42],
+  [42, 4.5, 37.5, 43, 45, 48],
+  [48, 5, 43, 50, 52, 56],
+  [56, 5.5, 50.5, 58, 62, 66],
+  [64, 6, 58, 66, 70, 74]
+];
+const metricFine = [
+  [8, 1],
+  [10, 1.25],
+  [10, 1],
+  [12, 1.5],
+  [12, 1.25],
+  [14, 1.5],
+  [16, 1.5],
+  [18, 1.5],
+  [20, 1.5],
+  [20, 2],
+  [22, 1.5],
+  [24, 2],
+  [24, 1.5],
+  [27, 2],
+  [30, 2],
+  [30, 1.5],
+  [33, 2],
+  [36, 3],
+  [36, 2],
+  [39, 3],
+  [42, 3],
+  [48, 3]
+];
+const unified = {
+  unc: [
+    ["#4-40", 0.112, 40, 2.26, 0.116, 0.1285, 0.1495],
+    ["#6-32", 0.138, 32, 2.71, 0.144, 0.1495, 0.1695],
+    ["#8-32", 0.164, 32, 3.45, 0.1695, 0.177, 0.196],
+    ["#10-24", 0.19, 24, 3.8, 0.196, 0.201, 0.221],
+    ["1/4-20", 0.25, 20, 5.11, 0.257, 0.266, 0.29],
+    ["5/16-18", 0.3125, 18, 6.53, 0.323, 0.332, 0.358],
+    ["3/8-16", 0.375, 16, 7.94, 0.386, 0.397, 0.422],
+    ["7/16-14", 0.4375, 14, 9.35, 0.453, 0.469, 0.484],
+    ["1/2-13", 0.5, 13, 10.72, 0.516, 0.531, 0.562],
+    ["5/8-11", 0.625, 11, 13.49, 0.641, 0.656, 0.688],
+    ["3/4-10", 0.75, 10, 16.67, 0.766, 0.781, 0.812],
+    ["1-8", 1, 8, 22.23, 1.016, 1.031, 1.062]
+  ],
+  unf: [
+    ["#4-48", 0.112, 48, 2.38, 0.116, 0.1285, 0.1495],
+    ["#6-40", 0.138, 40, 2.87, 0.144, 0.1495, 0.1695],
+    ["#8-36", 0.164, 36, 3.58, 0.1695, 0.177, 0.196],
+    ["#10-32", 0.19, 32, 4.04, 0.196, 0.201, 0.221],
+    ["1/4-28", 0.25, 28, 5.41, 0.257, 0.266, 0.29],
+    ["5/16-24", 0.3125, 24, 6.91, 0.323, 0.332, 0.358],
+    ["3/8-24", 0.375, 24, 8.43, 0.386, 0.397, 0.422],
+    ["7/16-20", 0.4375, 20, 9.9, 0.453, 0.469, 0.484],
+    ["1/2-20", 0.5, 20, 11.51, 0.516, 0.531, 0.562],
+    ["5/8-18", 0.625, 18, 14.5, 0.641, 0.656, 0.688],
+    ["3/4-16", 0.75, 16, 17.46, 0.766, 0.781, 0.812],
+    ["1-12", 1, 12, 23.42, 1.016, 1.031, 1.062]
+  ]
+};
+const bsp = [
+  ["G1/8", 9.728, 28, 8.8],
+  ["G1/4", 13.157, 19, 11.8],
+  ["G3/8", 16.662, 19, 15.25],
+  ["G1/2", 20.955, 14, 19],
+  ["G3/4", 26.441, 14, 24.5],
+  ["G1", 33.249, 11, 30.75],
+  ["G1 1/4", 41.91, 11, 39.5],
+  ["G1 1/2", 47.803, 11, 45.25],
+  ["G2", 59.614, 11, 57]
+];
+const npt = [
+  ["1/8-27", 0.405, 27, 8.73],
+  ["1/4-18", 0.54, 18, 11.11],
+  ["3/8-18", 0.675, 18, 14.68],
+  ["1/2-14", 0.84, 14, 18.26],
+  ["3/4-14", 1.05, 14, 23.42],
+  ["1-11.5", 1.315, 11.5, 29.37],
+  ["1 1/4-11.5", 1.66, 11.5, 38.1],
+  ["1 1/2-11.5", 1.9, 11.5, 44.05],
+  ["2-11.5", 2.375, 11.5, 56.36]
+];
+const INCH = 25.4;
+const round$1 = (value2, decimals = 3) => Math.round(value2 * 10 ** decimals) / 10 ** decimals;
+const minorDiameter = (major, pitch) => round$1(major - 1.0825 * pitch);
+const metricIntermediateClearance = {
+  18: [19, 20, 21],
+  22: [23, 24, 26],
+  27: [28, 30, 32],
+  33: [34, 36, 38],
+  39: [40, 42, 45]
+};
+const metricClearance = (size) => {
+  const row = metricCoarse.find((r) => r[0] === size);
+  if (row) return { close: row[3], normal: row[4], loose: row[5] };
+  const [close, normal, loose] = metricIntermediateClearance[size];
+  return { close, normal, loose };
+};
+const table$1 = new Map([
+  ["iso-metric-coarse", metricCoarse.map(([size, pitch, tapDrill, close, normal, loose]) => ({
+    standard: "iso-metric-coarse",
+    designation: `M${size}`,
+    majorDiameterMillimeters: size,
+    pitchMillimeters: pitch,
+    tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: minorDiameter(size, pitch),
+    clearanceMillimeters: { close, normal, loose }
+  }))],
+  ["iso-metric-fine", metricFine.map(([size, pitch]) => ({
+    standard: "iso-metric-fine",
+    designation: `M${size}x${pitch}`,
+    majorDiameterMillimeters: size,
+    pitchMillimeters: pitch,
+    tapDrillMillimeters: round$1(size - pitch, 2),
+    minorDiameterMillimeters: minorDiameter(size, pitch),
+    clearanceMillimeters: metricClearance(size)
+  }))],
+  ...["unc", "unf"].map((standard) => [standard, unified[standard].map(([designation, inches, tpi, tapDrill, close, normal, loose]) => ({
+    standard,
+    designation,
+    majorDiameterMillimeters: round$1(inches * INCH),
+    pitchMillimeters: round$1(INCH / tpi),
+    tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: minorDiameter(round$1(inches * INCH), round$1(INCH / tpi)),
+    clearanceMillimeters: { close: round$1(close * INCH, 2), normal: round$1(normal * INCH, 2), loose: round$1(loose * INCH, 2) }
+  }))]),
+  // ponytail: clearance columns are filled with the major diameter so the record shape holds; validation refuses clearance use.
+  ["bsp", bsp.map(([designation, major, tpi, tapDrill]) => ({
+    standard: "bsp",
+    designation,
+    majorDiameterMillimeters: major,
+    pitchMillimeters: round$1(INCH / tpi),
+    tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: round$1(major - 1.2806 * INCH / tpi),
+    clearanceMillimeters: { close: major, normal: major, loose: major },
+    tappedOnly: true
+  }))],
+  ["npt", npt.map(([designation, inches, tpi, tapDrill]) => ({
+    standard: "npt",
+    designation,
+    majorDiameterMillimeters: round$1(inches * INCH),
+    pitchMillimeters: round$1(INCH / tpi),
+    tapDrillMillimeters: tapDrill,
+    minorDiameterMillimeters: minorDiameter(round$1(inches * INCH), round$1(INCH / tpi)),
+    clearanceMillimeters: { close: round$1(inches * INCH), normal: round$1(inches * INCH), loose: round$1(inches * INCH) },
+    tappedOnly: true
+  }))]
+]);
+[...table$1.keys()];
+function isHoleThreadStandard(value2) {
+  return typeof value2 === "string" && table$1.has(value2);
+}
+function threadSpecification(standard, designation) {
+  const wanted = designation.trim().toLowerCase().replace(/\s+/g, "");
+  return (table$1.get(standard) ?? []).find((spec) => spec.designation.toLowerCase() === wanted);
+}
+function threadClasses(standard) {
+  if (standard.startsWith("iso-metric")) return ["4H", "5H", "6H", "7H", "8H", "4G", "5G", "6G", "7G", "8G"];
+  if (standard === "unc" || standard === "unf") return ["1B", "2B", "3B"];
+  return [];
+}
 function validateThread(feature3, earlier, missing) {
   validateSolidFaceReference(feature3.face, earlier, missing, "Thread face");
   if (feature3.face.surfaceType !== "cylinder") throw Error("A thread goes on a cylindrical face.");
-  if (typeof feature3.designation !== "string" || !/^M\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?$/i.test(feature3.designation.trim())) throw Error("Thread designation must be ISO metric, like M8 or M8x1.");
+  if (feature3.standard !== void 0) {
+    if (!isHoleThreadStandard(feature3.standard)) throw Error("Unknown thread standard.");
+    if (typeof feature3.designation !== "string" || !threadSpecification(feature3.standard, feature3.designation)) throw Error(`Unknown ${feature3.standard} thread size "${feature3.designation}".`);
+  } else if (typeof feature3.designation !== "string" || !/^M\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?$/i.test(feature3.designation.trim())) throw Error("Thread designation must be ISO metric, like M8 or M8x1.");
+  if (feature3.threadClass !== void 0 && !threadClasses(feature3.standard ?? "iso-metric-coarse").includes(feature3.threadClass)) throw Error("Unknown thread class for this standard.");
   if (feature3.lengthMillimeters !== void 0 && !(Number.isFinite(feature3.lengthMillimeters) && feature3.lengthMillimeters > 0)) throw Error("Thread length must be positive.");
   if (feature3.modeled) throw Error("Modelled threads are not provided yet; the thread is cosmetic.");
 }
@@ -5914,14 +6106,38 @@ function validateHole(feature3, earlier, missing) {
   if (feature3.direction !== void 0 && !(Array.isArray(feature3.direction) && feature3.direction.length === 3 && feature3.direction.every(Number.isFinite) && Math.hypot(...feature3.direction) > 1e-9)) throw new Error("Hole direction must be a nonzero vector.");
   if (feature3.profileContourId !== void 0 && (typeof feature3.profileContourId !== "string" || !feature3.profileContourId.trim() || feature3.profileContourId.length > 128)) throw new Error("Invalid hole contour reference.");
   if (!positive(feature3.diameterMillimeters) || !positive(feature3.depthMillimeters)) throw new Error("Hole diameter and depth must be positive.");
-  if (!["blind", "through-all"].includes(feature3.depthType) || !["plain", "counterbore", "countersink"].includes(feature3.cutType)) throw new Error("Invalid hole type.");
+  if (!["blind", "through-all"].includes(feature3.depthType) || !["plain", "counterbore", "countersink", "counterdrill"].includes(feature3.cutType)) throw new Error("Invalid hole type.");
   if (feature3.reversed !== void 0 && typeof feature3.reversed !== "boolean") throw new Error("Invalid hole direction.");
   if (feature3.cutType !== "plain" && (!positive(feature3.counterDiameterMillimeters) || feature3.counterDiameterMillimeters <= feature3.diameterMillimeters))
     throw new Error("Head diameter must exceed the hole diameter.");
-  if (feature3.cutType === "counterbore" && (!positive(feature3.counterDepthMillimeters) || feature3.depthType === "blind" && feature3.counterDepthMillimeters >= feature3.depthMillimeters))
+  if ((feature3.cutType === "counterbore" || feature3.cutType === "counterdrill") && (!positive(feature3.counterDepthMillimeters) || feature3.depthType === "blind" && feature3.counterDepthMillimeters >= feature3.depthMillimeters))
     throw new Error("Counterbore depth must be positive and less than a blind hole's depth.");
-  if (feature3.cutType === "countersink" && (!positive(feature3.countersinkAngleDegrees) || feature3.countersinkAngleDegrees >= 180))
+  if ((feature3.cutType === "countersink" || feature3.cutType === "counterdrill") && (!positive(feature3.countersinkAngleDegrees) || feature3.countersinkAngleDegrees >= 180))
     throw new Error("Countersink angle must be between 0 and 180 degrees.");
+  if (feature3.drillPoint !== void 0 && !["flat", "angled"].includes(feature3.drillPoint)) throw new Error("Invalid drill point.");
+  if (feature3.drillPointAngleDegrees !== void 0 && !(positive(feature3.drillPointAngleDegrees) && feature3.drillPointAngleDegrees < 180)) throw new Error("Drill point angle must be between 0 and 180 degrees.");
+  if (feature3.taperAngleDegrees !== void 0) {
+    if (!(typeof feature3.taperAngleDegrees === "number" && Number.isFinite(feature3.taperAngleDegrees) && feature3.taperAngleDegrees >= 0 && feature3.taperAngleDegrees < 45)) throw new Error("Hole taper must be between 0 and 45 degrees.");
+    if (feature3.depthType === "blind" && feature3.depthMillimeters * Math.tan(feature3.taperAngleDegrees * Math.PI / 180) >= feature3.diameterMillimeters / 2) throw new Error("Hole taper closes the hole before its depth.");
+  }
+  if (feature3.thread !== void 0) validateHoleThread(feature3);
+}
+function validateHoleThread(feature3) {
+  const thread = feature3.thread;
+  if (typeof thread !== "object" || thread === null || !isHoleThreadStandard(thread.standard) || typeof thread.designation !== "string") throw new Error("Hole thread needs a known standard and designation.");
+  const spec = threadSpecification(thread.standard, thread.designation);
+  if (!spec) throw new Error(`Unknown ${thread.standard} thread size "${thread.designation}".`);
+  if (typeof thread.tapped !== "boolean") throw new Error("Hole thread must say whether it is tapped.");
+  if (spec.tappedOnly && !thread.tapped) throw new Error(`${spec.designation} is a pipe thread and is tapped only; choose a metric or unified thread for a clearance hole.`);
+  if (thread.fit !== void 0 && !["close", "normal", "loose"].includes(thread.fit)) throw new Error("Hole clearance fit must be close, normal or loose.");
+  if (thread.threadClass !== void 0 && !threadClasses(thread.standard).includes(thread.threadClass)) throw new Error(`Thread class must be one of ${threadClasses(thread.standard).join(", ") || "none for a pipe thread"}.`);
+  for (const key2 of ["modeled", "leftHand"]) if (thread[key2] !== void 0 && typeof thread[key2] !== "boolean") throw new Error("Invalid hole thread option.");
+  if (thread.depthMillimeters !== void 0 && !(Number.isFinite(thread.depthMillimeters) && thread.depthMillimeters > 0)) throw new Error("Thread depth must be positive.");
+  if (thread.tapped) {
+    if (feature3.diameterMillimeters >= spec.majorDiameterMillimeters) throw new Error(`A ${spec.designation} tapped hole must be drilled under ${spec.majorDiameterMillimeters} mm.`);
+    if (thread.depthMillimeters !== void 0 && feature3.depthType === "blind" && thread.depthMillimeters > feature3.depthMillimeters) throw new Error("Thread depth cannot exceed the hole depth.");
+    if (thread.modeled && feature3.taperAngleDegrees) throw new Error("A modelled thread needs a straight (untapered) hole.");
+  } else if (thread.modeled) throw new Error("Only a tapped hole can carry a modelled thread.");
 }
 function validateImportSTEP(feature3) {
   if (feature3.operation !== "new" || typeof feature3.bodyId !== "string" || !feature3.bodyId.trim())
@@ -5951,6 +6167,7 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
   if (feature3.type === "snap-fit") return validateSnapFit(feature3, earlier, missingReference);
   if (feature3.type === "remove-body") return validateRemoveBody(feature3);
   if (feature3.type === "bounding-solid") return validateBoundingSolid(feature3);
+  if (feature3.type === "shape-binder") return validateShapeBinder(feature3, earlier, missingReference);
   if (feature3.type === "thread") return validateThread(feature3, earlier, missingReference);
   if (feature3.type === "delete-face") return validateDeleteFace(feature3, earlier, missingReference);
   if (feature3.type === "offset-face") return validateOffsetFace(feature3, earlier, missingReference);
@@ -6088,7 +6305,7 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
       }
     }
   } else if (feature3.type === "mirror") {
-    if (!missingReference(feature3.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror"].includes(
+    if (!missingReference(feature3.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror", "pattern"].includes(
       earlier.get(feature3.sourceFeatureId) || ""
     ))
       throw new Error("Mirror must reference an earlier solid feature.");
@@ -6910,7 +7127,7 @@ function validatePartDocument(value2) {
         if (bodies.has(id2)) throw Error("Copy outputs need new body identities.");
         bodies.add(id2);
       }
-    } else if ((isSurfaceBodyMaker(feature3) || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "import-step" || feature3.type === "import-cad") && "operation" in feature3 && feature3.operation === "new") {
+    } else if ((isSurfaceBodyMaker(feature3) || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && "operation" in feature3 && feature3.operation === "new") {
       const id2 = ("bodyId" in feature3 ? feature3.bodyId : void 0) ?? (bodies.size === 0 ? `${document2.documentId}:body-1` : `${document2.documentId}:body-${feature3.id}`);
       if (typeof id2 !== "string" || !id2 || bodies.has(id2))
         throw new Error("Body IDs must be unique.");
@@ -7163,7 +7380,7 @@ function reversed(curve) {
   };
   return { start: [...s.end], segment };
 }
-function samples(curve, n = 24) {
+function samples$1(curve, n = 24) {
   return Array.from({ length: n + 1 }, (_2, i2) => segmentPoint(curve.start, curve.segment, i2 / n));
 }
 const signedArea = (poly) => {
@@ -7183,7 +7400,7 @@ function contains(poly, p2) {
   }
   return inside2;
 }
-const polyline = (curves2) => curves2.flatMap((c2) => samples(c2, c2.segment.type === "line" ? 1 : 96).slice(0, -1));
+const polyline = (curves2) => curves2.flatMap((c2) => samples$1(c2, c2.segment.type === "line" ? 1 : 96).slice(0, -1));
 const toPath = (curves2) => ({ type: "path", start: [...curves2[0].start], segments: curves2.map((c2) => {
   const { id: _id, endVertexId: _vertex, ...geometry } = structuredClone(c2.segment);
   return geometry;
@@ -7204,7 +7421,7 @@ function sketchArrangement(drawing) {
   });
   if (!source.length) return [];
   let scale2 = 1;
-  for (const item of source) for (const p2 of samples(item.curve, 8)) scale2 = Math.max(scale2, Math.abs(p2[0]), Math.abs(p2[1]));
+  for (const item of source) for (const p2 of samples$1(item.curve, 8)) scale2 = Math.max(scale2, Math.abs(p2[0]), Math.abs(p2[1]));
   const tol = Math.max(1e-7, 64 * Number.EPSILON * scale2);
   const boxes = source.map(({ curve }) => {
     const s = curve.segment, points = [curve.start, s.end];
@@ -7276,7 +7493,7 @@ function sketchArrangement(drawing) {
     if (match) match.sources.push(...piece.sources.map((side) => ({ ...side, forward: match.from === piece.from ? side.forward : !side.forward })));
     else unique2.push(piece);
   }
-  let live = unique2.filter((p2) => p2.from !== p2.to || samples(p2.curve, 4).some((q) => dist(q, p2.curve.start) > tol));
+  let live = unique2.filter((p2) => p2.from !== p2.to || samples$1(p2.curve, 4).some((q) => dist(q, p2.curve.start) > tol));
   for (let changed = true; changed; ) {
     changed = false;
     const degree = /* @__PURE__ */ new Map();
@@ -10746,7 +10963,17 @@ function assemblyJobFor(projection) {
       value: (mate.type_id === "pin_slot" ? -1 : 1) * (dof.kind === "rotation" ? dof.value_rad * 180 / Math.PI : dof.value_m * METRES_TO_MM)
     }));
     const endpoints = mate.type_id === "pin_slot" ? { a: b, b: a2 } : { a: a2, b };
-    return [{ id: mate.id, kind: mate.type_id, ...endpoints, ...dofs.length ? { parameters: { dofs } } : {} }];
+    const extra = {};
+    for (const control of mate.controls ?? []) if (control.key === "path_mm" && typeof control.value === "string") {
+      try {
+        extra.path_mm = JSON.parse(control.value);
+      } catch {
+        note(mate.id, mate.name, "its path_mm control is not JSON");
+        return [];
+      }
+    }
+    const parameters2 = { ...extra, ...dofs.length ? { dofs } : {} };
+    return [{ id: mate.id, kind: mate.type_id, ...endpoints, ...Object.keys(parameters2).length ? { parameters: parameters2 } : {} }];
   });
   const dofOwner = /* @__PURE__ */ new Map();
   for (const mate of projection.mates) for (const dof of mate.dofs ?? []) dofOwner.set(dof.id, { joint: mate.id, dof: dof.name, kind: dof.kind, sign: mate.type_id === "pin_slot" ? -1 : 1 });
@@ -12308,37 +12535,6 @@ function selectAgentProfileRegions(doc, featureId2, point2, all = false) {
   }
   return selected.map((region) => stampResolvedProfileSelection(doc, feature3, region));
 }
-const primitiveNames = { box: "Box", cylinder: "Cylinder", cone: "Cone", sphere: "Sphere", torus: "Torus" };
-const defaultPrimitiveDimensions = { width: 20, length: 30, height: 10, radius: 10, tubeRadius: 3 };
-const primitiveFields = {
-  box: ["width", "length", "height"],
-  cylinder: ["radius", "height"],
-  cone: ["radius", "height"],
-  sphere: ["radius"],
-  torus: ["radius", "tubeRadius"]
-};
-function appendSolidPrimitive(source, kind, dimensions) {
-  if (!Object.hasOwn(primitiveFields, kind)) throw Error("Unknown solid primitive.");
-  for (const key2 of primitiveFields[kind]) if (!Number.isFinite(dimensions[key2]) || dimensions[key2] <= 0 || dimensions[key2] > 1e6)
-    throw Error("Dimensions must be positive and no greater than 1,000,000 mm.");
-  const { width, length, height, radius, tubeRadius } = dimensions;
-  if (kind === "torus" && tubeRadius >= radius) throw Error("The tube radius must be smaller than the major radius.");
-  const name5 = primitiveNames[kind], sketchId = crypto.randomUUID(), bodyId = crypto.randomUUID();
-  const profile = {
-    id: sketchId,
-    type: "profile",
-    name: `${name5} profile`,
-    suppressed: false,
-    plane: kind === "sphere" || kind === "torus" || kind === "cone" ? "XZ" : "XY",
-    offsetMillimeters: 0,
-    profile: kind === "box" ? { type: "polygon", pointsMillimeters: [[-width / 2, -length / 2], [width / 2, -length / 2], [width / 2, length / 2], [-width / 2, length / 2]] } : kind === "cone" ? { type: "polygon", pointsMillimeters: [[0, 0], [radius, 0], [0, height]] } : kind === "sphere" ? { type: "drawing", contours: [{ type: "path", start: [0, -radius], segments: [{ type: "arc", middle: [radius, 0], end: [0, radius] }, { type: "line", end: [0, -radius] }] }] } : { type: "circle", radiusMillimeters: kind === "torus" ? tubeRadius : radius, centerMillimeters: [kind === "torus" ? radius : 0, 0] }
-  };
-  let result = insertFeature(source ?? createEmptyPartDocument(name5), profile);
-  const common2 = { id: crypto.randomUUID(), name: name5, suppressed: false, bodyId, profileFeatureId: sketchId, operation: "new" };
-  result = insertFeature(result, kind === "sphere" || kind === "torus" || kind === "cone" ? { ...common2, type: "revolve", axis: "Z", angleDegrees: 360 } : { ...common2, type: "extrude", distanceMillimeters: height });
-  validatePartDocument(result);
-  return result;
-}
 const tool$2 = (name5, description, properties, required = []) => ({
   name: `aether_cad_${name5}`,
   description,
@@ -12810,7 +13006,7 @@ export interface CurvedEdgeReference {
 }
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
-  "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HoleFacePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  cutType: "plain" | "counterbore" | "countersink";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);',
+  "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HoleFacePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  /** Counterdrill: a counterbore whose floor is the countersink cone down to the hole. */\n  cutType: "plain" | "counterbore" | "countersink" | "counterdrill";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n  thread?: HoleThread;\n  /** A blind hole\'s bottom: flat (default) or a drill-point cone below the depth. */\n  drillPoint?: "flat" | "angled";\n  /** Included angle of the drill point; default 118°. */\n  drillPointAngleDegrees?: number;\n  /** Half-angle taper of the drilled wall, narrowing with depth. */\n  taperAngleDegrees?: number;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport interface HoleThread {\n  standard: HoleThreadStandard;\n  /** "M8", "M10x1.25", "1/4-20". */\n  designation: string;\n  tapped: boolean;\n  /** Clearance fit for a hole that is not tapped; default normal. */\n  fit?: HoleClearanceFit;\n  /** Tolerance class of a tapped thread ("6H", "6G", "2B"); default 6H / 2B. */\n  threadClass?: string;\n  /** Cut the helical thread into the wall instead of recording it; default false. */\n  modeled?: boolean;\n  leftHand?: boolean;\n  /** Thread length from the start face; default: the whole hole. */\n  depthMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type HoleClearanceFit = "close" | "normal" | "loose";',
   "import-cad": "export interface ImportCADFeature {\n  id:string; type:'import-cad'; name:string; suppressed:boolean; operation:'new';\n  bodyId:string; sourceName:string; dataBase64:string; format:CADImportFormat;\n  meshMode?:'reference'|'solid'; meshUnits?:MeshImportUnits;\n}\n\nexport type CADImportFormat = 'step' | 'iges' | 'brep' | 'stl' | 'obj' | 'ply' | 'off';\n\nexport type MeshImportUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';",
   "import-step": 'export interface ImportSTEPFeature {\n  id: string;\n  type: "import-step";\n  name: string;\n  suppressed: boolean;\n  operation: "new";\n  bodyId: string;\n  sourceName: string;\n  dataBase64: string;\n}',
   "lip": "export interface LipFeature {\n  id:string;type:'lip';name:string;suppressed:boolean;\n  targetBodyId:string;\n  face:SolidFaceReference;\n  shape:'lip'|'groove';\n  side:'inside'|'outside';\n  widthMillimeters:number;heightMillimeters:number;\n  /** Groove clearance added to the width; default: none. */\n  gapMillimeters?:number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
@@ -13116,6 +13312,7 @@ export interface SketchLineDirectionReference {
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
 }`,
+  "shape-binder": "export interface ShapeBinderFeature {\n  id:string;type:'shape-binder';name:string;suppressed:boolean;\n  sourceBodyId:string;\n  /** Picked faces to bind as a sheet; absent binds the whole solid. */\n  faces?:SolidFaceReference[];\n  operation:'new';bodyId?:string;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
   "sheet-base": 'export interface SheetBaseFeature extends SheetMetalRule {\n  id: string; type: "sheet-base"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  profileContourId?: string;\n  /** Build the plate behind the sketch instead of in front of it. */\n  reversed?: boolean;\n}\n\nexport interface SheetMetalRule {\n  thicknessMillimeters: number;\n  bendRadiusMillimeters: number;\n  kFactor: number;\n}',
   "sheet-flange": `export interface SheetFlangeFeature {
   id: string; type: "sheet-flange"; name: string; suppressed: boolean;
@@ -13357,20 +13554,7 @@ export type SketchPlane = "XY" | "XZ" | "YZ";`,
 }
 
 export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }`,
-  "thread": `export interface ThreadFeature {
-  id:string;type:'thread';name:string;suppressed:boolean;
-  face:SolidFaceReference;
-  /** ISO metric designation, e.g. "M8" or "M8x1". */
-  designation:string;
-  lengthMillimeters?:number;
-  modeled?:false;
-}
-
-export type SolidFaceReference=FaceSource & (
-  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
-);
-
-export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "thread": 'export interface ThreadFeature {\n  id:string;type:\'thread\';name:string;suppressed:boolean;\n  face:SolidFaceReference;\n  /** ISO metric designation, e.g. "M8" or "M8x1"; with `standard`, a size of that table ("1/4-20", "G1/2"). */\n  designation:string;\n  /** The Hole thread table the designation comes from; absent means free-form ISO metric. */\n  standard?:HoleThreadStandard;\n  /** Tolerance class ("6H", "6g" is external: use "6H"/"6G"/"2B" as the hole tables list). */\n  threadClass?:string;\n  lengthMillimeters?:number;\n  modeled?:false;\n}\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "transform": "export interface TransformFeature {\n id:string;type:'transform';name:string;suppressed:boolean;\n bodyIds:string[];\n transform:PartTransform;\n /** Stable output IDs for copies. Omitted for in-place transformations. */\n copyBodyIds?:Record<string,string>;\n}\n\nexport type PartTransform=NumericPartTransform\n | {kind:'translate-reference';reference:TransformVectorReference;distanceMillimeters?:number;reversed?:boolean}\n | {kind:'rotate-reference';reference:TransformVectorReference;angleDegrees:number}\n | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3}\n | {kind:'mirror';plane:MirrorPlaneReference;/** Join the image with the original instead of making a new part. */combine?:boolean}\n /** Align (SolidCraft's solid.align): move the parts so `from` meets `to`;\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type MirrorPlaneReference=\n | {kind:'principal';plane:SketchPlane;offsetMillimeters:number}\n | {kind:'feature';featureId:string}\n | ({kind:'face'}&SolidFaceReference)\n /** A straight sketch line: the plane through it along the sketch's normal. */\n | {kind:'sketch-line';sourceFeatureId:string;contourId:string;segmentId:string};\n\nexport type NumericPartTransform=\n | {kind:'translate';translationMillimeters:Vector3}\n | {kind:'rotate';axisOriginMillimeters:Vector3;axisDirection:Vector3;angleDegrees:number}\n | {kind:'scale';centerMillimeters:Vector3;scaleFactors:Vector3}\n | {kind:'copy'};\n\nexport type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};"
 };
 const tool$1 = (name5, description, properties, required = []) => ({
@@ -13453,7 +13637,6 @@ const cadAgentTools = [
   ...featureEditTools,
   tool("inspect", "Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.", { offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }),
   tool("feature_references", "Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.", { feature_id: string, direction: { type: "string", enum: ["inputs", "dependents"] }, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["feature_id"]),
-  tool("solid_primitive", "Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.", { kind: { type: "string", enum: Object.keys(primitiveFields) }, width_mm: number$1, length_mm: number$1, height_mm: number$1, radius_mm: number$1, tube_radius_mm: number$1 }, ["kind"]),
   tool("sketch_inspect", "Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.", { feature_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 25 } }, ["feature_id"]),
   tool("sketch_translate", "Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.", { feature_id: string, dx_mm: number$1, dy_mm: number$1 }, ["feature_id", "dx_mm", "dy_mm"]),
   tool("sketch_dimension", "Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.", { feature_id: string, dimension_id: string, value: number$1 }, ["feature_id", "dimension_id", "value"]),
@@ -13496,19 +13679,6 @@ function preparePartEdit(doc, name5, args) {
   if (doc.features.length >= 512) throw Error("Agent editing supports at most 512 features.");
   if (name5 === "aether_cad_sketch_translate" || name5 === "aether_cad_sketch_dimension") return editSketch(doc, name5, args);
   if (featureEditToolNames.includes(name5)) return prepareFeatureOperation(doc, name5, args);
-  if (name5 === "aether_cad_solid_primitive") {
-    if (typeof args.kind !== "string" || !Object.hasOwn(primitiveFields, args.kind)) throw Error("Choose box, cylinder, cone, sphere or torus.");
-    if (doc.features.length > 510) throw Error("A primitive requires room for two features within the 512-feature limit.");
-    const kind = args.kind;
-    const names = { width: "width_mm", length: "length_mm", height: "height_mm", radius: "radius_mm", tubeRadius: "tube_radius_mm" };
-    const required = primitiveFields[kind];
-    const allowed = /* @__PURE__ */ new Set(["kind", ...required.map((key2) => names[key2])]);
-    if (Object.keys(args).some((key2) => !allowed.has(key2))) throw Error("Only provide the dimensions used by the chosen primitive.");
-    const dimensions = { ...defaultPrimitiveDimensions };
-    for (const key2 of required) dimensions[key2] = numberValue(args, names[key2], void 0, true);
-    const document2 = appendSolidPrimitive(doc, kind, dimensions);
-    return { document: document2, featureID: document2.features.at(-1).id };
-  }
   if (name5 === "aether_cad_extrude_depth" || name5 === "aether_cad_suppress") {
     if (typeof args.feature_id !== "string") throw Error("Inspect the part for its feature ID.");
     if (name5 === "aether_cad_suppress" && typeof args.suppressed !== "boolean") throw Error("suppressed must be true or false.");
@@ -13554,7 +13724,7 @@ function preparePartEdit(doc, name5, args) {
   } else throw Error("Unknown CAD edit.");
   return { document: insertFeature(candidate, feature3), featureID: id2 };
 }
-const programToolNames = ["sketch_translate", "sketch_dimension", "solid_primitive", "sketch_rectangle", "sketch_circle", "sketch_polygon", "extrude", "revolve", "extrude_depth", "suppress", "feature_add", "feature_update", "feature_delete", "feature_move"].map((name5) => `aether_cad_${name5}`);
+const programToolNames = ["sketch_translate", "sketch_dimension", "sketch_rectangle", "sketch_circle", "sketch_polygon", "extrude", "revolve", "extrude_depth", "suppress", "feature_add", "feature_update", "feature_delete", "feature_move"].map((name5) => `aether_cad_${name5}`);
 const edits = new Set(programToolNames);
 const object$1 = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
 function fields(value2, names) {
@@ -13640,6 +13810,36 @@ function savedProgramDocs(args) {
     example: { program_json: JSON.stringify(plateProgram), expected_volume_mm3: 4e4 },
     limits: ["Tools are program steps, not separate transport endpoints.", "1–16 steps, 64 KiB program, 512 features, 4 MiB document.", "One returned candidate; Studio owns revision checking and saving. Open editors must reload.", "Native execution only; this does not provide browser-WASM parity or pixel previews."]
   };
+}
+const primitiveNames = { box: "Box", cylinder: "Cylinder", cone: "Cone", sphere: "Sphere", torus: "Torus" };
+const defaultPrimitiveDimensions = { width: 20, length: 30, height: 10, radius: 10, tubeRadius: 3 };
+const primitiveFields = {
+  box: ["width", "length", "height"],
+  cylinder: ["radius", "height"],
+  cone: ["radius", "height"],
+  sphere: ["radius"],
+  torus: ["radius", "tubeRadius"]
+};
+function appendSolidPrimitive(source, kind, dimensions) {
+  if (!Object.hasOwn(primitiveFields, kind)) throw Error("Unknown solid primitive.");
+  for (const key2 of primitiveFields[kind]) if (!Number.isFinite(dimensions[key2]) || dimensions[key2] <= 0 || dimensions[key2] > 1e6)
+    throw Error("Dimensions must be positive and no greater than 1,000,000 mm.");
+  const { width, length, height } = dimensions;
+  const name5 = primitiveNames[kind], sketchId = crypto.randomUUID(), bodyId = crypto.randomUUID();
+  const profile = {
+    id: sketchId,
+    type: "profile",
+    name: `${name5} profile`,
+    suppressed: false,
+    plane: "XY",
+    offsetMillimeters: 0,
+    profile: { type: "polygon", pointsMillimeters: [[-width / 2, -length / 2], [width / 2, -length / 2], [width / 2, length / 2], [-width / 2, length / 2]] }
+  };
+  let result = insertFeature(createEmptyPartDocument(name5), profile);
+  const common2 = { id: crypto.randomUUID(), name: name5, suppressed: false, bodyId, profileFeatureId: sketchId, operation: "new" };
+  result = insertFeature(result, { ...common2, type: "extrude", distanceMillimeters: height });
+  validatePartDocument(result);
+  return result;
 }
 function exampleAssemblyRecipe(kind = "single", partID) {
   const document2 = appendSolidPrimitive(null, "box", { ...defaultPrimitiveDimensions, width: 10, length: 10, height: 10 });
@@ -37580,13 +37780,13 @@ class FeatureFailure extends Error {
   featureName;
 }
 const dot$5 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-const sub$3 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const add$2 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const sub$4 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$3 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
 const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
 const neg = (a2) => scale$1(a2, -1);
 const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm$2 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
-const unit$1 = (a2) => scale$1(a2, 1 / norm$2(a2));
+const norm$3 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$2 = (a2) => scale$1(a2, 1 / norm$3(a2));
 function pointTuple(point2) {
   return [point2.X(), point2.Y(), point2.Z()];
 }
@@ -38239,7 +38439,7 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
         return [...found.positionMillimeters];
       };
       const a2 = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-      return scale$1(add$2(a2, b), 0.5);
+      return scale$1(add$3(a2, b), 0.5);
     }
     const target = pick.midpointMillimeters, tolerance2 = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
     const edges = body.edges;
@@ -38278,7 +38478,7 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
         return r;
       }, [0, 0, 0]);
       faces.forEach((f2) => f2.delete());
-      publish(feature3, { parameter: "radius", kind: "linear", originMillimeters: seed, direction: norm$2(inward) > 1e-9 ? unit$1(inward) : [0, 0, -1], label: feature3.type === "fillet" ? "Fillet radius" : "Chamfer size" });
+      publish(feature3, { parameter: "radius", kind: "linear", originMillimeters: seed, direction: norm$3(inward) > 1e-9 ? unit$2(inward) : [0, 0, -1], label: feature3.type === "fillet" ? "Fillet radius" : "Chamfer size" });
     }
   }
   const filter = chainPoints ? (edges) => edges.either(chainPoints.map((p2) => (f2) => f2.containsPoint(p2))) : edgePlane ? (edges) => edges.inPlane(edgePlane) : void 0;
@@ -38405,12 +38605,15 @@ function applyPatternFeature(feature3, context2) {
   const partPattern = Boolean(feature3.bodyIds);
   const source = partPattern ? void 0 : history.find((f2) => f2.id === feature3.sourceFeatureId);
   const tool2 = partPattern ? void 0 : tools.get(feature3.sourceFeatureId);
+  let root = source;
+  while (root && !("operation" in root) && "sourceFeatureId" in root) root = history.find((f2) => f2.id === root.sourceFeatureId);
+  const rootOperation = root && "operation" in root ? root.operation : void 0;
   if (!partPattern) {
-    if (!source || !tool2 || !("operation" in source))
+    if (!source || !tool2 || !rootOperation)
       throw new Error("Choose a source feature in the selected target body.");
-    if (!["extrude", "revolve"].includes(source.type))
+    if (!["extrude", "revolve", "pattern", "mirror"].includes(source.type))
       throw new Error("Choose an additive or subtractive profile feature to pattern.");
-    if (source.operation === "intersect")
+    if (rootOperation === "intersect")
       throw new UnsupportedFeature(feature3.id, "patterns of intersect features");
   }
   const count = feature3.count;
@@ -38421,7 +38624,7 @@ function applyPatternFeature(feature3, context2) {
     if (!ref)
       return principal(axis);
     if (ref.kind === "vector")
-      return unit$1(ref.direction);
+      return unit$2(ref.direction);
     const t2 = resolveTransform({ kind: "translate-reference", reference: ref, distanceMillimeters: 1 });
     return t2.translationMillimeters;
   };
@@ -38449,7 +38652,7 @@ function applyPatternFeature(feature3, context2) {
       let previous;
       for (let i2 = 0; i2 <= steps2; i2++) {
         const p2 = edge.pointAt(i2 / steps2), d2 = edge.tangentAt(i2 / steps2);
-        const at2 = [p2.x, p2.y, p2.z], tangent = unit$1([d2.x, d2.y, d2.z]);
+        const at2 = [p2.x, p2.y, p2.z], tangent = unit$2([d2.x, d2.y, d2.z]);
         p2.delete();
         d2.delete();
         if (previous)
@@ -38470,13 +38673,13 @@ function applyPatternFeature(feature3, context2) {
     };
     const start = samples2[0];
     for (let i2 = 1; i2 < count; i2++) {
-      const target2 = at(step * i2), move = sub$3(target2.at, start.at);
+      const target2 = at(step * i2), move = sub$4(target2.at, start.at);
       placements.push((shape) => {
         let moved = own(shape.clone().translate(move[0], move[1], move[2]));
         if (feature3.orientation === "path") {
           const axis = cross$4(start.tangent, target2.tangent), angle2 = Math.acos(Math.max(-1, Math.min(1, dot$5(start.tangent, target2.tangent)))) * 180 / Math.PI;
           if (Math.hypot(...axis) > 1e-9 && angle2 > 1e-9)
-            moved = own(moved.rotate(angle2, target2.at, unit$1(axis)));
+            moved = own(moved.rotate(angle2, target2.at, unit$2(axis)));
         }
         return moved;
       });
@@ -38501,7 +38704,7 @@ function applyPatternFeature(feature3, context2) {
       for (const j of rows[1]?.offsets ?? [0]) {
         if (i2 === 0 && j === 0)
           continue;
-        const move = add$2(scale$1(rows[0].direction, rows[0].step * i2), rows[1] ? scale$1(rows[1].direction, rows[1].step * j) : [0, 0, 0]);
+        const move = add$3(scale$1(rows[0].direction, rows[0].step * i2), rows[1] ? scale$1(rows[1].direction, rows[1].step * j) : [0, 0, 0]);
         placements.push((shape) => own(shape.clone().translate(move[0], move[1], move[2])));
       }
   } else {
@@ -38512,7 +38715,7 @@ function applyPatternFeature(feature3, context2) {
     let origin = [0, 0, 0], axis = principal(feature3.axis);
     if (feature3.axisReference?.kind === "vector") {
       origin = [...feature3.axisReference.origin];
-      axis = unit$1(feature3.axisReference.direction);
+      axis = unit$2(feature3.axisReference.direction);
     } else if (feature3.axisReference?.kind === "feature")
       ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
     else if (feature3.axisReference) {
@@ -38548,14 +38751,14 @@ function applyPatternFeature(feature3, context2) {
   for (const place of placements) {
     const copy = place(tool2);
     copies.push(copy);
-    const next = source.operation === "cut" ? body.cut(copy) : body.fuse(copy);
+    const next = rootOperation === "cut" ? body.cut(copy) : body.fuse(copy);
     if (!isShape3D(next))
       throw new Error("The operation left no solid.");
     body = own(next);
   }
   bodies.set(id2, body);
   currentBodyID = id2;
-  tools.set(feature3.id, copies.length === 1 ? copies[0] : own(copies.slice(1).reduce((all, copy) => own(all.fuse(copy)), copies[0])));
+  tools.set(feature3.id, own(copies.reduce((all, copy) => own(all.fuse(copy)), tool2)));
   return currentBodyID;
 }
 function scopedRemoval(target, tool2, operation2, own) {
@@ -38926,7 +39129,7 @@ function* corners(bounds2) {
 }
 const diagonalOfShape = (shape) => {
   const b = shape.boundingBox.bounds;
-  return norm$2(sub$3([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]]));
+  return norm$3(sub$4([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]]));
 };
 function quadricOf(face, near) {
   const oc = getOC(), adaptor = new oc.BRepAdaptor_Surface_2(face.wrapped, true);
@@ -38934,7 +39137,7 @@ function quadricOf(face, near) {
   try {
     if (kind === "CYLINDER") {
       const c2 = adaptor.Cylinder(), axis = c2.Axis(), l = axis.Location(), d2 = axis.Direction();
-      const q = { kind, at: [l.X(), l.Y(), l.Z()], along: unit$1([d2.X(), d2.Y(), d2.Z()]), r: c2.Radius() };
+      const q = { kind, at: [l.X(), l.Y(), l.Z()], along: unit$2([d2.X(), d2.Y(), d2.Z()]), r: c2.Radius() };
       l.delete();
       d2.delete();
       axis.delete();
@@ -38956,19 +39159,19 @@ function quadricOf(face, near) {
     };
     if (kind === "CONE") {
       const p0 = at(0, 0), p1 = at(Math.PI, 0), p2 = at(0, 1);
-      const location = scale$1(add$2(p0, p1), 0.5), radial = sub$3(p0, location), R = norm$2(radial), X2 = unit$1(radial);
-      const generatrix = sub$3(p2, p0), sin2 = dot$5(generatrix, X2), axial = sub$3(generatrix, scale$1(X2, sin2)), cos2 = norm$2(axial), Z = unit$1(axial);
+      const location = scale$1(add$3(p0, p1), 0.5), radial = sub$4(p0, location), R = norm$3(radial), X2 = unit$2(radial);
+      const generatrix = sub$4(p2, p0), sin2 = dot$5(generatrix, X2), axial = sub$4(generatrix, scale$1(X2, sin2)), cos2 = norm$3(axial), Z = unit$2(axial);
       const tan2 = Math.abs(sin2 / cos2);
       if (!(tan2 > 1e-9) || !Number.isFinite(tan2)) throw new Error("cone faces of this shape");
-      const apex = sub$3(location, scale$1(Z, R * cos2 / sin2));
-      return { kind, apex, along: dot$5(sub$3(near, apex), Z) < 0 ? neg(Z) : Z, tan: tan2 };
+      const apex = sub$4(location, scale$1(Z, R * cos2 / sin2));
+      return { kind, apex, along: dot$5(sub$4(near, apex), Z) < 0 ? neg(Z) : Z, tan: tan2 };
     }
     if (kind === "TORUS") {
       const outer = at(0, 0), opposite = at(Math.PI, 0), inner = at(0, Math.PI), top = at(0, Math.PI / 2);
-      const centre = scale$1(add$2(outer, opposite), 0.5), X2 = unit$1(sub$3(outer, centre));
-      const outerRadius = dot$5(sub$3(outer, centre), X2), innerRadius = dot$5(sub$3(inner, centre), X2);
+      const centre = scale$1(add$3(outer, opposite), 0.5), X2 = unit$2(sub$4(outer, centre));
+      const outerRadius = dot$5(sub$4(outer, centre), X2), innerRadius = dot$5(sub$4(inner, centre), X2);
       const R = (outerRadius + innerRadius) / 2, r = (outerRadius - innerRadius) / 2;
-      const along = unit$1(sub$3(sub$3(top, centre), scale$1(X2, R)));
+      const along = unit$2(sub$4(sub$4(top, centre), scale$1(X2, R)));
       return { kind, at: centre, along, R, r: Math.abs(r) };
     }
     throw new Error(`${kind.toLowerCase()} faces`);
@@ -38976,11 +39179,11 @@ function quadricOf(face, near) {
     adaptor.delete();
   }
 }
-const perpendicularTo = (u2) => unit$1(Math.abs(u2[0]) < 0.9 ? cross$4(u2, [1, 0, 0]) : cross$4(u2, [0, 1, 0]));
+const perpendicularTo = (u2) => unit$2(Math.abs(u2[0]) < 0.9 ? cross$4(u2, [1, 0, 0]) : cross$4(u2, [0, 1, 0]));
 const quadricCentre = (q) => q.kind === "CONE" ? q.apex : q.at;
 function quadricSolid(q, length, own) {
   if (q.kind === "SPHERE") return own(makeSphere(q.r).translate(q.at[0], q.at[1], q.at[2]));
-  if (q.kind === "CYLINDER") return own(makeCylinder(q.r, length, sub$3(q.at, scale$1(q.along, length / 2)), q.along));
+  if (q.kind === "CYLINDER") return own(makeCylinder(q.r, length, sub$4(q.at, scale$1(q.along, length / 2)), q.along));
   const oc = getOC();
   if (q.kind === "TORUS") {
     const origin = new oc.gp_Pnt_3(q.at[0], q.at[1], q.at[2]), direction2 = new oc.gp_Dir_4(q.along[0], q.along[1], q.along[2]), axes = new oc.gp_Ax2_3(origin, direction2);
@@ -38992,35 +39195,35 @@ function quadricSolid(q, length, own) {
     origin.delete();
     return solid;
   }
-  const base = add$2(q.apex, scale$1(q.along, length)), rim = add$2(base, scale$1(perpendicularTo(q.along), length * q.tan));
+  const base = add$3(q.apex, scale$1(q.along, length)), rim = add$3(base, scale$1(perpendicularTo(q.along), length * q.tan));
   const triangle = own(makePolygon([q.apex, base, rim]));
   return own(revolution(triangle, q.apex, q.along, 360));
 }
 function insideQuadric(q, p2) {
-  if (q.kind === "SPHERE") return norm$2(sub$3(p2, q.at)) < q.r;
-  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$5(to, q.along), rho = norm$2(sub$3(to, scale$1(q.along, h)));
+  if (q.kind === "SPHERE") return norm$3(sub$4(p2, q.at)) < q.r;
+  const centre = quadricCentre(q), to = sub$4(p2, centre), h = dot$5(to, q.along), rho = norm$3(sub$4(to, scale$1(q.along, h)));
   if (q.kind === "CYLINDER") return rho < q.r;
   if (q.kind === "TORUS") return Math.hypot(rho - q.R, h) < q.r;
   return h > 0 && rho < h * q.tan;
 }
 function quadricRadial(q, p2) {
-  if (q.kind === "SPHERE") return sub$3(p2, q.at);
-  const centre = quadricCentre(q), to = sub$3(p2, centre), h = dot$5(to, q.along), radial = sub$3(to, scale$1(q.along, h));
+  if (q.kind === "SPHERE") return sub$4(p2, q.at);
+  const centre = quadricCentre(q), to = sub$4(p2, centre), h = dot$5(to, q.along), radial = sub$4(to, scale$1(q.along, h));
   if (q.kind !== "TORUS") return radial;
-  return sub$3(p2, add$2(q.at, scale$1(unit$1(radial), q.R)));
+  return sub$4(p2, add$3(q.at, scale$1(unit$2(radial), q.R)));
 }
 function offsetQuadric(q, distance2) {
   if (q.kind === "CONE") {
     const sin2 = q.tan / Math.hypot(1, q.tan);
-    return { ...q, apex: sub$3(q.apex, scale$1(q.along, distance2 / sin2)) };
+    return { ...q, apex: sub$4(q.apex, scale$1(q.along, distance2 / sin2)) };
   }
   if (q.r + distance2 <= 1e-7) throw new Error("Offset collapses or inverts a curved face radius. Reduce the distance.");
   return { ...q, r: q.r + distance2 };
 }
 function moveQuadric(q, movePoint, moveDirection) {
   if (q.kind === "SPHERE") return { ...q, at: movePoint(q.at) };
-  if (q.kind === "CONE") return { ...q, apex: movePoint(q.apex), along: unit$1(moveDirection(q.along)) };
-  return { ...q, at: movePoint(q.at), along: unit$1(moveDirection(q.along)) };
+  if (q.kind === "CONE") return { ...q, apex: movePoint(q.apex), along: unit$2(moveDirection(q.along)) };
+  return { ...q, at: movePoint(q.at), along: unit$2(moveDirection(q.along)) };
 }
 function keepSideOf(f2, face, shape, probe, own, mustSeparate) {
   if (measureVolume(shape) <= 1e-9) return shape;
@@ -39182,7 +39385,7 @@ function capFaces(prism, direction2, sign) {
 }
 function halfSpace(point2, keep, span, own) {
   const box = makeBaseBox(2 * span, 2 * span, 2 * span);
-  const axis = cross$4([0, 0, 1], keep), sine = norm$2(axis), cosine = keep[2];
+  const axis = cross$4([0, 0, 1], keep), sine = norm$3(axis), cosine = keep[2];
   const turned = sine < 1e-9 ? cosine > 0 ? box : box.rotate(180, [0, 0, 0], [1, 0, 0]) : box.rotate(Math.atan2(sine, cosine) * 180 / Math.PI, [0, 0, 0], axis);
   return own(turned.translate(point2[0], point2[1], point2[2]));
 }
@@ -39244,6 +39447,30 @@ function hashKey(text2) {
 function dropSteps(list2, from) {
   for (const step of list2.splice(from)) for (const shape of step.owned.reverse()) release$1(shape);
 }
+function historyKeys(document2) {
+  const keys3 = [];
+  document2.features.slice(0, rollbackPosition(document2)).reduce((previous, feature3) => {
+    const key2 = hashKey(previous + JSON.stringify(feature3));
+    keys3.push(key2);
+    return key2;
+  }, "");
+  return keys3;
+}
+function helicalThreadGroove(center, direction2, minorRadius, spec, length, leftHand, own) {
+  const pitch = spec.pitchMillimeters, depth = spec.majorDiameterMillimeters / 2 - minorRadius;
+  if (depth <= 1e-6) throw new Error(`A ${spec.designation} thread needs a hole drilled under ${spec.majorDiameterMillimeters} mm.`);
+  const origin = [0, 1, 2].map((i2) => center[i2] - direction2[i2] * pitch);
+  const helix = own(makeHelix(pitch, length + 2 * pitch, minorRadius, origin, direction2, leftHand));
+  const first = helix.edges[0], startPoint = deleteAfterVectorTuple(first.startPoint);
+  helix.edges.forEach((edge) => edge.delete());
+  const radial = unit$2(sub$4(startPoint, origin));
+  const plane2 = own(new Plane(startPoint, radial, cross$4(radial, direction2)));
+  const half = Math.min(depth * Math.tan(Math.PI / 6), pitch * 0.45), inset = Math.min(0.05, minorRadius / 10);
+  const section2 = own(draw([-inset, -half]).lineTo([depth, 0]).lineTo([-inset, half]).close().sketchOnPlane(plane2));
+  const swept = genericSweep(section2.wire, helix, { frenet: true, transitionMode: "transformed" });
+  if (!isShape3D(swept) || measureVolume(swept) <= 1e-9) throw new Error(`The ${spec.designation} thread could not be modelled on this hole.`);
+  return own(swept);
+}
 function evaluatePartDocument(document2, options = {}) {
   validatePartDocument(document2);
   const started = performance.now();
@@ -39251,13 +39478,21 @@ function evaluatePartDocument(document2, options = {}) {
   const sketchFrames = {};
   const scopeResolutions = {};
   const geometry = (shape, id2, name5, index2, preview = false) => {
+    const displayStarted = options.observe ? performance.now() : 0;
     let cached2 = meshes.get(shape);
-    if (!cached2 && preview) return buildPartGeometry(shape, document2.documentId, document2.name + ".acpart", index2, { id: id2, name: name5, preview: true });
+    const wasCached = Boolean(cached2);
+    if (!cached2 && preview) {
+      const result2 = buildPartGeometry(shape, document2.documentId, document2.name + ".acpart", index2, { id: id2, name: name5, preview: true });
+      options.observe?.({ phase: "display", id: id2, cached: false, milliseconds: performance.now() - displayStarted });
+      return result2;
+    }
     if (!cached2) {
       cached2 = buildPartGeometry(shape, document2.documentId, document2.name + ".acpart", index2, { id: id2, name: name5 });
       meshes.set(shape, cached2);
     }
-    return { ...cached2, id: id2, name: name5, vertices: cached2.vertices.slice(), normals: cached2.normals.slice(), triangles: cached2.triangles.slice(), edgeLines: cached2.edgeLines.slice() };
+    const result = { ...cached2, id: id2, name: name5, vertices: cached2.vertices.slice(), normals: cached2.normals.slice(), triangles: cached2.triangles.slice(), edgeLines: cached2.edgeLines.slice() };
+    options.observe?.({ phase: "display", id: id2, cached: wasCached, milliseconds: performance.now() - displayStarted });
+    return result;
   };
   const history = document2.features.slice(0, rollbackPosition(document2));
   const last2 = history[history.length - 1];
@@ -39269,15 +39504,10 @@ function evaluatePartDocument(document2, options = {}) {
   const perpendicular = (d2) => {
     const seed = Math.abs(d2[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const c2 = cross$4(d2, seed);
-    const l = norm$2(c2) || 1;
+    const l = norm$3(c2) || 1;
     return [c2[0] / l, c2[1] / l, c2[2] / l];
   };
-  const keys3 = [];
-  history.reduce((previous, feature3) => {
-    const key2 = hashKey(previous + JSON.stringify(feature3));
-    keys3.push(key2);
-    return key2;
-  }, "");
+  const keys3 = historyKeys(document2);
   const cached = steps.get(document2.documentId) ?? [];
   steps.delete(document2.documentId);
   steps.set(document2.documentId, cached);
@@ -39293,6 +39523,13 @@ function evaluatePartDocument(document2, options = {}) {
     if (at >= 0 && reuse > at) reuse = at;
   }
   if (reuse < cached.length && reuse < keys3.length) dropSteps(cached, reuse);
+  const thawFrom = cached.findIndex((step, index2) => index2 < reuse && step.restored);
+  let thawed = [], adopted = 0;
+  if (thawFrom >= 0) {
+    dropSteps(cached, reuse);
+    thawed = cached.splice(thawFrom);
+    reuse = thawFrom;
+  }
   const resume2 = cached[reuse - 1];
   const profiles = new Map(resume2?.profiles);
   const tools = new Map(resume2?.tools);
@@ -39336,9 +39573,33 @@ function evaluatePartDocument(document2, options = {}) {
   {
     for (let index2 = reuse; index2 < history.length; index2++) {
       const feature3 = history[index2];
+      const featureStarted = options.observe ? performance.now() : 0;
       stepOwned = [];
       let failed = false;
       try {
+        const saved = thawed[index2 - thawFrom];
+        if (saved) {
+          stepOwned = saved.owned;
+          if (feature3.suppressed || feature3.type !== "sketch" && feature3.type !== "profile") {
+            const replace = (target, source) => {
+              target.clear();
+              source.forEach((value2, id2) => target.set(id2, value2));
+            };
+            const assign = (target, source) => {
+              for (const id2 of Object.keys(target)) delete target[id2];
+              Object.assign(target, source);
+            };
+            replace(bodies, saved.bodies);
+            replace(tools, saved.tools);
+            replace(meshParts, saved.meshes);
+            assign(bodyOutputs, saved.outputs);
+            assign(sketchFrames, saved.frames);
+            assign(scopeResolutions, saved.scopes);
+            currentBodyID = saved.currentBodyID;
+            adopted++;
+            continue;
+          }
+        }
         if (feature3.suppressed || feature3.type === "plane" || feature3.type === "axis" || feature3.type === "point" || feature3.type === "thread" || feature3.type === "curve3d") continue;
         try {
           if (feature3.type === "sketch") {
@@ -39385,9 +39646,9 @@ function evaluatePartDocument(document2, options = {}) {
             const translated = followNormalTranslation && anchor ? (face) => {
               if (!aligned(face) || Math.abs(measureArea(face) - anchor.areaSquareMillimeters) > Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9)) return false;
               const center = deleteAfterVectorTuple(face.center);
-              const delta2 = sub$3([...center], anchor.centerMillimeters);
+              const delta2 = sub$4([...center], anchor.centerMillimeters);
               const along = delta2[0] * normal[0] + delta2[1] * normal[1] + delta2[2] * normal[2];
-              return norm$2(sub$3(delta2, scale$1(normal, along))) <= 1e-6;
+              return norm$3(sub$4(delta2, scale$1(normal, along))) <= 1e-6;
             } : void 0;
             return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated);
           };
@@ -39397,7 +39658,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (!kinds) throw new Error(`${label} needs a supported native surface reference. Reselect the face.`);
             return uniqueFace(body, (face) => kinds.includes(face.geomType) && anchored(face, anchor), `${label} surface`, Boolean(anchor));
           };
-          const faceByReference = (body, ref, label) => ref.surfaceType ? surfaceFaceOf(body, ref.surfaceType, ref.faceAnchor, label) : planarFaceOf(body, unit$1(ref.normal), ref.faceAnchor, label);
+          const faceByReference = (body, ref, label) => ref.surfaceType ? surfaceFaceOf(body, ref.surfaceType, ref.faceAnchor, label) : planarFaceOf(body, unit$2(ref.normal), ref.faceAnchor, label);
           const planarFaceCenter = (sourceFeatureId, bodyId, normal, anchor, label, missing, followNormalTranslation = false) => {
             const body = bodyAt(sourceFeatureId, bodyId);
             if (!body) throw new Error(missing);
@@ -39415,7 +39676,7 @@ function evaluatePartDocument(document2, options = {}) {
             const frame = sketchFrameOf(sourceId), p2 = profiles.get(sourceId);
             const box = p2?.drawing ? p2.drawing.boundingBox : void 0;
             const [cx2, cy2] = box?.center ?? [0, 0];
-            const x2 = unit$1(frame.xDirection), n = unit$1(frame.normal), y2 = cross$4(n, x2);
+            const x2 = unit$2(frame.xDirection), n = unit$2(frame.normal), y2 = cross$4(n, x2);
             return [0, 1, 2].map((i2) => frame.originMillimeters[i2] + x2[i2] * cx2 + y2[i2] * cy2);
           };
           const sketchContour = (sourceId, contourId, unavailable) => {
@@ -39425,7 +39686,7 @@ function evaluatePartDocument(document2, options = {}) {
           };
           const sketchPoint = (sourceId, local2) => {
             const f2 = sketchFrameOf(sourceId), x2 = f2.xDirection, y2 = cross$4(f2.normal, x2);
-            return add$2(f2.originMillimeters, add$2(scale$1(x2, local2[0]), scale$1(y2, local2[1])));
+            return add$3(f2.originMillimeters, add$3(scale$1(x2, local2[0]), scale$1(y2, local2[1])));
           };
           const stopPoint = (ref) => {
             if (!ref) throw new Error("Select a stopping vertex.");
@@ -39499,7 +39760,7 @@ function evaluatePartDocument(document2, options = {}) {
             const index22 = document2.features.findIndex((f2) => f2.id === featureId2), axisFeature = document2.features[index22];
             if (!axisFeature || axisFeature.type !== "axis") throw new Error("Axis feature is unavailable. Reselect an axis.");
             const line2 = resolveAxisLine(axisFeature, document2.features.slice(0, index22));
-            return { origin: [...line2.originMillimeters], axis: unit$1(line2.directionMillimeters) };
+            return { origin: [...line2.originMillimeters], axis: unit$2(line2.directionMillimeters) };
           };
           const resolveTransform = (t2) => {
             if (t2.kind === "align" || t2.kind === "mirror") return t2;
@@ -39516,7 +39777,7 @@ function evaluatePartDocument(document2, options = {}) {
               end = stopPoint(ref.to);
             } else if (ref.kind === "sketch-line") [start, end] = sketchLine(ref, "Transform line is unavailable. Reselect a sketch line.");
             else throw new Error("Select a straight sketch line, solid edge or two ordered points for the transform.");
-            const vector2 = sub$3(end, start), length = norm$2(vector2);
+            const vector2 = sub$4(end, start), length = norm$3(vector2);
             if (!Number.isFinite(length) || length < 1e-9) throw new Error("Transform points must be distinct. Reselect a nonzero line or two different points.");
             const direction2 = scale$1(vector2, 1 / length);
             if (t2.kind === "rotate-reference") return { kind: "rotate", axisOriginMillimeters: start, axisDirection: direction2, angleDegrees: t2.angleDegrees };
@@ -39662,7 +39923,7 @@ function evaluatePartDocument(document2, options = {}) {
               const face = faceByReference(body, feature3.placement.face, "Hole face");
               try {
                 const center = deleteAfterVectorTuple(face.center), outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-                const n = unit$1([-outward[0], -outward[1], -outward[2]]);
+                const n = unit$2([-outward[0], -outward[1], -outward[2]]);
                 starts.push({ center: [...feature3.placement.pointMillimeters], n, x: canonicalPlaneXDirection(n) });
               } finally {
                 face.delete();
@@ -39682,17 +39943,26 @@ function evaluatePartDocument(document2, options = {}) {
               return value2;
             };
             const diameter = positive(feature3.diameterMillimeters, "diameter_mm"), depth = positive(feature3.depthMillimeters, "depth_mm");
+            const counterbored = feature3.cutType === "counterbore" || feature3.cutType === "counterdrill";
+            const countersunk = feature3.cutType === "countersink" || feature3.cutType === "counterdrill";
             const head2 = feature3.cutType !== "plain" ? positive(feature3.counterDiameterMillimeters, "counter_diameter_mm") : diameter;
             if (feature3.cutType !== "plain" && head2 <= diameter) throw new Error("Head diameter must exceed the hole diameter.");
-            const headDepth = feature3.cutType === "counterbore" ? positive(feature3.counterDepthMillimeters, "counter_depth_mm") : 0;
-            if (feature3.cutType === "counterbore" && feature3.depthType === "blind" && headDepth >= depth) throw new Error("Counterbore depth must be less than the blind hole depth.");
-            const angle2 = feature3.cutType === "countersink" ? positive(feature3.countersinkAngleDegrees, "countersink_angle_deg") : 90;
+            const headDepth = counterbored ? positive(feature3.counterDepthMillimeters, "counter_depth_mm") : 0;
+            if (counterbored && feature3.depthType === "blind" && headDepth >= depth) throw new Error("Counterbore depth must be less than the blind hole depth.");
+            const angle2 = countersunk ? positive(feature3.countersinkAngleDegrees, "countersink_angle_deg") : 90;
             if (angle2 >= 180) throw new Error("Countersink angle must be less than 180 degrees.");
-            let tool3;
+            const taperTangent = Math.tan((feature3.taperAngleDegrees ?? 0) * Math.PI / 180);
+            const drillPointAngle = feature3.drillPoint === "angled" ? positive(feature3.drillPointAngleDegrees ?? 118, "drill_point_angle_deg") : void 0;
+            if (drillPointAngle !== void 0 && drillPointAngle >= 180) throw new Error("Drill point angle must be less than 180 degrees.");
+            const thread = feature3.thread?.tapped ? feature3.thread : void 0;
+            const threadSpec = thread ? threadSpecification(thread.standard, thread.designation) : void 0;
+            if (thread && !threadSpec) throw new Error(`Unknown ${thread.standard} thread size "${thread.designation}".`);
+            if (threadSpec && diameter >= threadSpec.majorDiameterMillimeters) throw new Error(`A ${threadSpec.designation} tapped hole must be drilled under ${threadSpec.majorDiameterMillimeters} mm.`);
+            let tool3, threadTool;
             for (const start of starts) {
               const direction2 = feature3.direction ? (() => {
-                const d2 = unit$1(feature3.direction);
-                return dot$5(d2, start.n) < 0 ? unit$1([-d2[0], -d2[1], -d2[2]]) : d2;
+                const d2 = unit$2(feature3.direction);
+                return dot$5(d2, start.n) < 0 ? unit$2([-d2[0], -d2[1], -d2[2]]) : d2;
               })() : feature3.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
               const center = start.center;
               if (start === starts[0]) {
@@ -39700,9 +39970,12 @@ function evaluatePartDocument(document2, options = {}) {
                 publish(feature3, { parameter: "diameter", kind: "linear", originMillimeters: [0, 1, 2].map((i2) => center[i2] + start.x[i2] * feature3.diameterMillimeters / 2), direction: start.x, scale: 2, label: "Hole diameter" });
               }
               const length = feature3.depthType === "through-all" ? throughAllDistance([body], center, direction2) : depth;
+              const along = (offset2) => [0, 1, 2].map((i2) => center[i2] + direction2[i2] * offset2);
               const cylinder = (radius, extent) => own(makeCylinder(radius, extent, center, direction2));
-              const frustum = (topRadius, bottomRadius, height) => {
-                const section2 = own(draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius, -height]).lineTo([0, -height]).close());
+              const frustum = (topRadius, bottomRadius2, height, offset2 = 0) => {
+                let pen = draw([0, 0]).lineTo([topRadius, 0]).lineTo([bottomRadius2, -height]);
+                if (bottomRadius2 > 1e-9) pen = pen.lineTo([0, -height]);
+                const section2 = own(pen.close());
                 let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
                 if (!isShape3D(cone)) throw new Error("The hole tool is not a valid solid.");
                 cone = own(cone);
@@ -39712,16 +39985,33 @@ function evaluatePartDocument(document2, options = {}) {
                   const axis = dotDir <= -1 + 1e-9 ? [1, 0, 0] : [from[1] * direction2[2] - from[2] * direction2[1], from[2] * direction2[0] - from[0] * direction2[2], from[0] * direction2[1] - from[1] * direction2[0]];
                   cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, dotDir))) * 180 / Math.PI, [0, 0, 0], axis));
                 }
-                return own(cone.translate(center[0], center[1], center[2]));
+                const at = along(offset2);
+                return own(cone.translate(at[0], at[1], at[2]));
               };
-              let one = cylinder(diameter / 2, length);
-              if (feature3.cutType === "counterbore") one = own(one.fuse(cylinder(head2 / 2, headDepth)));
-              if (feature3.cutType === "countersink") one = own(one.fuse(frustum(head2 / 2, diameter / 2, (head2 - diameter) / 2 / Math.tan(angle2 / 2 * Math.PI / 180))));
+              const bottomRadius = diameter / 2 - length * taperTangent;
+              if (bottomRadius <= 1e-6) throw new Error("Hole taper closes the hole before its depth.");
+              let one = taperTangent > 0 ? frustum(diameter / 2, bottomRadius, length) : cylinder(diameter / 2, length);
+              if (counterbored) one = own(one.fuse(cylinder(head2 / 2, headDepth)));
+              const coneHeight = (head2 - diameter) / 2 / Math.tan(angle2 / 2 * Math.PI / 180);
+              if (feature3.cutType === "countersink") one = own(one.fuse(frustum(head2 / 2, diameter / 2, coneHeight)));
+              if (feature3.cutType === "counterdrill") one = own(one.fuse(frustum(head2 / 2, diameter / 2, coneHeight, headDepth)));
+              if (drillPointAngle !== void 0 && feature3.depthType === "blind") one = own(one.fuse(frustum(bottomRadius, 0, bottomRadius / Math.tan(drillPointAngle / 2 * Math.PI / 180), length)));
               tool3 = tool3 ? own(tool3.fuse(one)) : one;
+              if (thread?.modeled && threadSpec) {
+                const groove = helicalThreadGroove(center, direction2, diameter / 2, threadSpec, Math.min(thread.depthMillimeters ?? length, length), Boolean(thread.leftHand), own);
+                threadTool = threadTool ? own(threadTool.fuse(groove)) : groove;
+              }
             }
             const before = measureVolume(body);
-            const result = body.cut(tool3);
-            if (!isShape3D(result) || Math.abs(measureVolume(result) - before) < 1e-8) throw new Error("Cut removes no material. Flip direction or check the selected target and depth.");
+            let stock = body;
+            if (threadTool) {
+              const grooved = body.cut(threadTool);
+              if (!isShape3D(grooved) || measureVolume(grooved) >= before - 1e-8) throw new Error("The modelled thread removes no material. Check the thread depth.");
+              stock = own(grooved);
+            }
+            const stockVolume = threadTool ? measureVolume(stock) : before;
+            const result = stock.cut(tool3);
+            if (!isShape3D(result) || Math.abs(measureVolume(result) - stockVolume) < 1e-8) throw new Error("Cut removes no material. Flip direction or check the selected target and depth.");
             bodies.set(id2, own(result));
             tools.set(feature3.id, tool3);
             currentBodyID = id2;
@@ -39740,7 +40030,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (ref.kind === "sketch-line") {
               const [a2, b] = sketchLine(ref, "The plane's sketch line is unavailable. Reselect a straight sketch line.");
-              const f2 = sketchFrameOf(ref.sourceFeatureId), along = unit$1(sub$3(b, a2)), n = unit$1(cross$4(along, f2.normal));
+              const f2 = sketchFrameOf(ref.sourceFeatureId), along = unit$2(sub$4(b, a2)), n = unit$2(cross$4(along, f2.normal));
               return own(new Plane(a2, along, n));
             }
             const body = bodies.get(ref.bodyId);
@@ -39761,14 +40051,14 @@ function evaluatePartDocument(document2, options = {}) {
             try {
               const center = deleteAfterVectorTuple(face.center);
               const n = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-              outward = unit$1([n[0], n[1], n[2]]);
+              outward = unit$2([n[0], n[1], n[2]]);
               xDir = canonicalPlaneXDirection(outward);
             } finally {
               face.delete();
             }
             const base = [...feature3.pointMillimeters], height = feature3.heightMillimeters, draft = (feature3.draftDegrees ?? 0) * Math.PI / 180;
-            publish(feature3, { parameter: "height", kind: "linear", originMillimeters: add$2(base, scale$1(outward, height)), direction: outward, label: `${feature3.type === "boss" ? "Boss" : "Rest"} height` });
-            if (feature3.type === "boss") publish(feature3, { parameter: "diameter", kind: "linear", originMillimeters: add$2(base, scale$1(xDir, feature3.diameterMillimeters / 2)), direction: xDir, scale: 2, label: "Boss diameter" });
+            publish(feature3, { parameter: "height", kind: "linear", originMillimeters: add$3(base, scale$1(outward, height)), direction: outward, label: `${feature3.type === "boss" ? "Boss" : "Rest"} height` });
+            if (feature3.type === "boss") publish(feature3, { parameter: "diameter", kind: "linear", originMillimeters: add$3(base, scale$1(xDir, feature3.diameterMillimeters / 2)), direction: xDir, scale: 2, label: "Boss diameter" });
             const taper = (radius) => Math.max(radius - height * Math.tan(draft), radius * 0.05);
             const frustum = (bottomRadius, topRadius, h) => {
               const section2 = own(draw([0, 0]).lineTo([bottomRadius, 0]).lineTo([topRadius, h]).lineTo([0, h]).close());
@@ -39778,7 +40068,7 @@ function evaluatePartDocument(document2, options = {}) {
               const from = [0, 0, 1], d2 = dot$5(from, outward);
               if (d2 < 1 - 1e-9) {
                 const axis = cross$4(from, outward);
-                cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$1(axis) : [1, 0, 0]));
+                cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$2(axis) : [1, 0, 0]));
               }
               return own(cone.translate(base[0], base[1], base[2]));
             };
@@ -39787,8 +40077,8 @@ function evaluatePartDocument(document2, options = {}) {
               const r = feature3.diameterMillimeters / 2;
               tool3 = frustum(r, taper(r), height);
               if (feature3.holeDiameterMillimeters !== void 0 && feature3.holeDepthMillimeters !== void 0) {
-                const topPoint = add$2(base, scale$1(outward, height));
-                const bore = own(makeCylinder(feature3.holeDiameterMillimeters / 2, feature3.holeDepthMillimeters + 1e-3, add$2(topPoint, scale$1(outward, 1e-3)), [-outward[0], -outward[1], -outward[2]]));
+                const topPoint = add$3(base, scale$1(outward, height));
+                const bore = own(makeCylinder(feature3.holeDiameterMillimeters / 2, feature3.holeDepthMillimeters + 1e-3, add$3(topPoint, scale$1(outward, 1e-3)), [-outward[0], -outward[1], -outward[2]]));
                 const bored = tool3.cut(bore);
                 if (!isShape3D(bored)) throw new Error("The boss hole leaves no solid.");
                 tool3 = own(bored);
@@ -39797,15 +40087,15 @@ function evaluatePartDocument(document2, options = {}) {
               const r = feature3.widthMillimeters / 2;
               tool3 = frustum(r, taper(r), height);
             } else {
-              const along = feature3.alongMillimeters ? unit$1(feature3.alongMillimeters) : xDir;
-              const across = unit$1(cross$4(outward, along));
+              const along = feature3.alongMillimeters ? unit$2(feature3.alongMillimeters) : xDir;
+              const across = unit$2(cross$4(outward, along));
               const rect = (w2, l, at) => {
-                const corners2 = [[-l / 2, -w2 / 2], [l / 2, -w2 / 2], [l / 2, w2 / 2], [-l / 2, w2 / 2]].map(([a2, b]) => add$2(add$2(at, scale$1(along, a2)), scale$1(across, b)));
+                const corners2 = [[-l / 2, -w2 / 2], [l / 2, -w2 / 2], [l / 2, w2 / 2], [-l / 2, w2 / 2]].map(([a2, b]) => add$3(add$3(at, scale$1(along, a2)), scale$1(across, b)));
                 return own(assembleWire(corners2.map((p2, i2) => own(makeLine(p2, corners2[(i2 + 1) % 4])))));
               };
               const inset = height * Math.tan(draft);
               const topW = Math.max(feature3.widthMillimeters - 2 * inset, feature3.widthMillimeters * 0.05), topL = Math.max(feature3.lengthMillimeters - 2 * inset, feature3.lengthMillimeters * 0.05);
-              const lofted = loft([rect(feature3.widthMillimeters, feature3.lengthMillimeters, base), rect(topW, topL, add$2(base, scale$1(outward, height)))], { ruled: true });
+              const lofted = loft([rect(feature3.widthMillimeters, feature3.lengthMillimeters, base), rect(topW, topL, add$3(base, scale$1(outward, height)))], { ruled: true });
               if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("The rest is not a valid solid.");
               tool3 = own(lofted);
             }
@@ -39833,7 +40123,7 @@ function evaluatePartDocument(document2, options = {}) {
             };
             let tool3;
             if (feature3.type === "lip") {
-              const center = deleteAfterVectorTuple(face.center), n = unit$1([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
+              const center = deleteAfterVectorTuple(face.center), n = unit$2([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
               const outer = own(face.clone().outerWire()), inners = face.clone().innerWires();
               inners.forEach((w2) => own(w2));
               const width = feature3.widthMillimeters + (feature3.shape === "groove" ? feature3.gapMillimeters ?? 0 : 0);
@@ -39856,18 +40146,18 @@ function evaluatePartDocument(document2, options = {}) {
               if (!isShape3D(band) || measureVolume(band) <= 1e-9) throw new Error("The lip band is empty. Check the width against the rim.");
               tool3 = own(band);
               const start = deleteAfterVectorTuple(bandOuter.startPoint);
-              publish(feature3, { parameter: "height", kind: "linear", originMillimeters: add$2([start[0], start[1], start[2]], along), direction: feature3.shape === "groove" ? scale$1(n, -1) : n, label: feature3.shape === "groove" ? "Groove depth" : "Lip height" });
+              publish(feature3, { parameter: "height", kind: "linear", originMillimeters: add$3([start[0], start[1], start[2]], along), direction: feature3.shape === "groove" ? scale$1(n, -1) : n, label: feature3.shape === "groove" ? "Groove depth" : "Lip height" });
             } else {
-              const base = [...feature3.pointMillimeters], n = unit$1([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))]);
-              const raw = feature3.hookDirectionMillimeters, hook = unit$1(sub$3(raw, scale$1(n, dot$5(raw, n))));
-              if (norm$2(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
-              const across = unit$1(cross$4(n, hook));
+              const base = [...feature3.pointMillimeters], n = unit$2([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))]);
+              const raw = feature3.hookDirectionMillimeters, hook = unit$2(sub$4(raw, scale$1(n, dot$5(raw, n))));
+              if (norm$3(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
+              const across = unit$2(cross$4(n, hook));
               const { lengthMillimeters: L2, thicknessMillimeters: t2, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature3;
-              const at = (x2, y2) => add$2(add$2(add$2(base, scale$1(hook, x2)), scale$1(n, y2)), scale$1(across, -w2 / 2));
+              const at = (x2, y2) => add$3(add$3(add$3(base, scale$1(hook, x2)), scale$1(n, y2)), scale$1(across, -w2 / 2));
               const pts = [at(0, 0), at(t2, 0), at(t2, L2 - cl), at(t2 + cd, L2 - cl), at(t2, L2), at(0, L2)];
               const wire = own(assembleWire(pts.map((p2, i2) => own(makeLine(p2, pts[(i2 + 1) % pts.length])))));
               tool3 = prism(own(makeFace(wire)), scale$1(across, w2));
-              publish(feature3, { parameter: "length", kind: "linear", originMillimeters: add$2(base, scale$1(n, L2)), direction: n, label: "Arm length" });
+              publish(feature3, { parameter: "length", kind: "linear", originMillimeters: add$3(base, scale$1(n, L2)), direction: n, label: "Arm length" });
               publish(feature3, { parameter: "catchDepth", kind: "linear", originMillimeters: at(t2 + cd, L2 - cl), direction: hook, label: "Catch depth" });
             }
             const before = measureVolume(body);
@@ -40073,7 +40363,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const face = faceByReference(host, target, "Align face");
                   try {
                     const center = deleteAfterVectorTuple(face.center), n = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-                    return { at: [center[0], center[1], center[2]], normal: unit$1([n[0], n[1], n[2]]) };
+                    return { at: [center[0], center[1], center[2]], normal: unit$2([n[0], n[1], n[2]]) };
                   } finally {
                     face.delete();
                   }
@@ -40086,13 +40376,13 @@ function evaluatePartDocument(document2, options = {}) {
                   const d2 = dot$5(from.normal, target), axis = cross$4(from.normal, target), l = Math.hypot(...axis);
                   const angle2 = Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI;
                   if (angle2 > 1e-9) {
-                    const about = l > 1e-9 ? unit$1(axis) : unit$1(cross$4(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
+                    const about = l > 1e-9 ? unit$2(axis) : unit$2(cross$4(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
                     turned = own(shape.clone().rotate(angle2, from.at, about));
                     const rotated = own(turned.clone());
                     rotated.delete();
                   }
                 }
-                const move = sub$3(to.at, fromAt);
+                const move = sub$4(to.at, fromAt);
                 result = own(turned.clone().translate(move[0], move[1], move[2]));
               } else if (t2.kind === "mirror") {
                 result = own(shape.clone().mirror(mirrorPlaneOf(t2.plane)));
@@ -40131,7 +40421,7 @@ function evaluatePartDocument(document2, options = {}) {
               const f0 = body.faces[0];
               if (f0) {
                 const c2 = f0.center, nv = f0.normalAt(c2);
-                publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([-nv.x, -nv.y, -nv.z]), label: "Shell thickness" });
+                publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$2([-nv.x, -nv.y, -nv.z]), label: "Shell thickness" });
                 c2.delete();
                 nv.delete();
                 f0.delete();
@@ -40240,7 +40530,7 @@ function evaluatePartDocument(document2, options = {}) {
           if (feature3.type === "face-extrude") {
             const distance2 = feature3.distanceMillimeters;
             if (!Number.isFinite(distance2) || Math.abs(distance2) < 1e-6) throw new Error("Push/Pull distance must be finite and nonzero.");
-            const normal = unit$1(feature3.normal);
+            const normal = unit$2(feature3.normal);
             planarFaceCenter(feature3.sourceFeatureId, feature3.targetBodyId, normal, feature3.faceAnchor, "Push/Pull", "Push/Pull source body is unavailable. Repair the face reference.");
             const body = bodies.get(feature3.targetBodyId);
             if (!body) throw new Error("Push/Pull target body is unavailable.");
@@ -40300,11 +40590,11 @@ function evaluatePartDocument(document2, options = {}) {
               const center = deleteAfterVectorTuple(neutralFace.center);
               neutralPoint = [center[0], center[1], center[2]];
               const n = deleteAfterVectorTuple(neutralFace.normalAt([center[0], center[1], center[2]]));
-              neutralAxis = unit$1([-n[0], -n[1], -n[2]]);
+              neutralAxis = unit$2([-n[0], -n[1], -n[2]]);
               neutralFace.delete();
             }
             const oc = getOC();
-            const pull = feature3.pullDirection ? unit$1(feature3.pullDirection) : neutralAxis;
+            const pull = feature3.pullDirection ? unit$2(feature3.pullDirection) : neutralAxis;
             const direction2 = new oc.gp_Dir_4(pull[0], pull[1], pull[2]);
             const point2 = new oc.gp_Pnt_3(neutralPoint[0], neutralPoint[1], neutralPoint[2]);
             const neutralDir = new oc.gp_Dir_4(neutralAxis[0], neutralAxis[1], neutralAxis[2]);
@@ -40425,10 +40715,10 @@ function evaluatePartDocument(document2, options = {}) {
               if (!body0) throw new Error("Replace face needs an available solid part.");
               const face0 = faceByReference(body0, first, "Replace face");
               try {
-                const c0 = deleteAfterVectorTuple(face0.center), n0 = unit$1([...deleteAfterVectorTuple(face0.normalAt([c0[0], c0[1], c0[2]]))]);
+                const c0 = deleteAfterVectorTuple(face0.center), n0 = unit$2([...deleteAfterVectorTuple(face0.normalAt([c0[0], c0[1], c0[2]]))]);
                 const pn = [target.zDir.x, target.zDir.y, target.zDir.z], po = [target.origin.x, target.origin.y, target.origin.z];
                 if (Math.abs(Math.abs(dot$5(n0, pn)) - 1) > 1e-6) throw new Error("Replace face needs a plane parallel to the faces.");
-                distance2 = dot$5(sub$3(po, [c0[0], c0[1], c0[2]]), n0);
+                distance2 = dot$5(sub$4(po, [c0[0], c0[1], c0[2]]), n0);
                 if (Math.abs(distance2) < 1e-6) throw new Error("The faces already lie on that plane.");
               } finally {
                 face0.delete();
@@ -40436,7 +40726,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (!t2 && (distance2 === void 0 || !Number.isFinite(distance2) || Math.abs(distance2) < 1e-6)) throw new Error("Offset distance must be finite and nonzero.");
             const rotateVector = (v2, axis, degrees2) => {
-              const u2 = unit$1(axis), th = degrees2 * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$4(u2, v2), d2 = dot$5(u2, v2);
+              const u2 = unit$2(axis), th = degrees2 * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$4(u2, v2), d2 = dot$5(u2, v2);
               return [v2[0] * c2 + w2[0] * s + u2[0] * d2 * (1 - c2), v2[1] * c2 + w2[1] * s + u2[1] * d2 * (1 - c2), v2[2] * c2 + w2[2] * s + u2[2] * d2 * (1 - c2)];
             };
             const volumeOf = (shape) => {
@@ -40452,7 +40742,7 @@ function evaluatePartDocument(document2, options = {}) {
               const face = faceByReference(body, ref, "Offset faces");
               if (feature3.id === previewId && ref === feature3.faces[0]) {
                 const c2 = face.center, nv = face.normalAt(c2);
-                publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
+                publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$2([nv.x, nv.y, nv.z]), signed: true, label: "Push/Pull distance" });
                 c2.delete();
                 nv.delete();
               }
@@ -40461,17 +40751,17 @@ function evaluatePartDocument(document2, options = {}) {
                 const analytic = ["PLANE", "CYLINDER", "SPHERE", "CONE", "TORUS"].includes(kind);
                 if (!analytic && !extendedKernel()) throw new UnsupportedFeature(feature3.id, "offsets of free-form faces", true);
                 const center = kind === "PLANE" ? [...deleteAfterVectorTuple(face.center)] : [...deleteAfterVectorTuple(face.pointOnSurface(0.5, 0.5))];
-                const normal = unit$1([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
+                const normal = unit$2([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]);
                 let point2 = center, turned = normal, travel = Math.abs(distance2 ?? 0);
-                if (!t2) point2 = add$2(center, scale$1(normal, distance2));
+                if (!t2) point2 = add$3(center, scale$1(normal, distance2));
                 else if (t2.kind === "translate") {
-                  point2 = add$2(center, t2.translationMillimeters);
-                  travel = norm$2(t2.translationMillimeters);
+                  point2 = add$3(center, t2.translationMillimeters);
+                  travel = norm$3(t2.translationMillimeters);
                 } else {
                   const o = t2.axisOriginMillimeters;
-                  point2 = add$2(o, rotateVector(sub$3(center, o), t2.axisDirection, t2.angleDegrees));
-                  turned = unit$1(rotateVector(normal, t2.axisDirection, t2.angleDegrees));
-                  travel = norm$2(sub$3(point2, center)) + diagonalOfShape(body);
+                  point2 = add$3(o, rotateVector(sub$4(center, o), t2.axisDirection, t2.angleDegrees));
+                  turned = unit$2(rotateVector(normal, t2.axisDirection, t2.angleDegrees));
+                  travel = norm$3(sub$4(point2, center)) + diagonalOfShape(body);
                 }
                 const faceEdges = face.edges;
                 const span = 2 * diagonalOfShape(body) + travel + 1, step = Math.max(1e-4, diagonalOfShape(body) * 1e-4);
@@ -40509,21 +40799,21 @@ function evaluatePartDocument(document2, options = {}) {
                   const otherEdges = other.edges;
                   const shared = otherEdges.find((edge) => faceEdges.some((mine) => mine.isSame(edge)));
                   const middle = shared ? [...deleteAfterVectorTuple(shared.pointAt(0.5))] : void 0;
-                  const tangent = shared ? unit$1([...deleteAfterVectorTuple(shared.tangentAt(0.5))]) : void 0;
+                  const tangent = shared ? unit$2([...deleteAfterVectorTuple(shared.tangentAt(0.5))]) : void 0;
                   otherEdges.forEach((edge) => edge.delete());
                   if (!middle || !tangent) {
                     other.delete();
                     continue;
                   }
-                  const atEdge = unit$1([...deleteAfterVectorTuple(face.normalAt([middle[0], middle[1], middle[2]]))]);
-                  const across = unit$1(cross$4(atEdge, tangent));
-                  const inward = onFace(add$2(middle, scale$1(across, 2 * step))) ? across : neg(across);
-                  const probe = nearestOnFace(add$2(middle, scale$1(inward, 20 * step)));
+                  const atEdge = unit$2([...deleteAfterVectorTuple(face.normalAt([middle[0], middle[1], middle[2]]))]);
+                  const across = unit$2(cross$4(atEdge, tangent));
+                  const inward = onFace(add$3(middle, scale$1(across, 2 * step))) ? across : neg(across);
+                  const probe = nearestOnFace(add$3(middle, scale$1(inward, 20 * step)));
                   const otherKind = other.geomType === "CYLINDRE" ? "CYLINDER" : other.geomType;
                   if (otherKind === "PLANE") {
                     const c2 = [...deleteAfterVectorTuple(other.center)];
-                    const outward = unit$1([...deleteAfterVectorTuple(other.normalAt([c2[0], c2[1], c2[2]]))]);
-                    const side = halfSpace(c2, dot$5(sub$3(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
+                    const outward = unit$2([...deleteAfterVectorTuple(other.normalAt([c2[0], c2[1], c2[2]]))]);
+                    const side = halfSpace(c2, dot$5(sub$4(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
                     surfaces.push(side);
                     sides.push(side);
                   } else if (["CYLINDER", "SPHERE", "CONE", "TORUS"].includes(otherKind)) {
@@ -40551,7 +40841,7 @@ function evaluatePartDocument(document2, options = {}) {
                   insideNew = halfSpace(point2, neg(turned), span, own);
                 } else if (!analytic) {
                   const f2 = extendedKernel(), faceX = toExtended(face), handle = f2.BRep_Tool.Surface_2(f2.TopoDS.Face_1(faceX));
-                  const inside2 = sub$3(center, scale$1(normal, (t2 ? travel : Math.abs(distance2)) + 20 * step));
+                  const inside2 = sub$4(center, scale$1(normal, (t2 ? travel : Math.abs(distance2)) + 20 * step));
                   try {
                     insideOld = keepSideOfSurface(f2, handle, column, inside2, own, true);
                     if (t2) {
@@ -40561,13 +40851,13 @@ function evaluatePartDocument(document2, options = {}) {
                         move.SetTranslation_1(vec2);
                         vec2.delete();
                       } else {
-                        const o = t2.axisOriginMillimeters, d2 = unit$1(t2.axisDirection), origin = new f2.gp_Pnt_3(o[0], o[1], o[2]), direction2 = new f2.gp_Dir_4(d2[0], d2[1], d2[2]), axis = new f2.gp_Ax1_2(origin, direction2);
+                        const o = t2.axisOriginMillimeters, d2 = unit$2(t2.axisDirection), origin = new f2.gp_Pnt_3(o[0], o[1], o[2]), direction2 = new f2.gp_Dir_4(d2[0], d2[1], d2[2]), axis = new f2.gp_Ax1_2(origin, direction2);
                         move.SetRotation_1(axis, t2.angleDegrees * Math.PI / 180);
                         axis.delete();
                         direction2.delete();
                         origin.delete();
                       }
-                      const movedInside = t2.kind === "translate" ? add$2(inside2, t2.translationMillimeters) : add$2(t2.axisOriginMillimeters, rotateVector(sub$3(inside2, t2.axisOriginMillimeters), t2.axisDirection, t2.angleDegrees));
+                      const movedInside = t2.kind === "translate" ? add$3(inside2, t2.translationMillimeters) : add$3(t2.axisOriginMillimeters, rotateVector(sub$4(inside2, t2.axisOriginMillimeters), t2.axisDirection, t2.angleDegrees));
                       try {
                         insideNew = keepSideOfSurface(f2, handle, column, movedInside, own, true, move);
                       } finally {
@@ -40584,7 +40874,7 @@ function evaluatePartDocument(document2, options = {}) {
                         return q;
                       };
                       const handles = candidates.map((c2) => new f2.Handle_Geom_Surface_2(c2));
-                      const base = sample(handle), shifts = handles.map((h) => dot$5(sub$3(sample(h), base), normal) * Math.sign(distance2));
+                      const base = sample(handle), shifts = handles.map((h) => dot$5(sub$4(sample(h), base), normal) * Math.sign(distance2));
                       const chosen = shifts[0] >= shifts[1] ? 0 : 1;
                       insideNew = keepSideOfSurface(f2, handles[chosen], column, inside2, own, true);
                       handles.forEach((h) => h.delete());
@@ -40602,10 +40892,10 @@ function evaluatePartDocument(document2, options = {}) {
                   };
                   insideOld = primitive(q);
                   if (!t2) insideNew = primitive(offsetQuadric(q, convex ? distance2 : -distance2));
-                  else if (t2.kind === "translate") insideNew = primitive(moveQuadric(q, (p2) => add$2(p2, t2.translationMillimeters), (dir) => dir));
+                  else if (t2.kind === "translate") insideNew = primitive(moveQuadric(q, (p2) => add$3(p2, t2.translationMillimeters), (dir) => dir));
                   else {
                     const o = t2.axisOriginMillimeters;
-                    insideNew = primitive(moveQuadric(q, (p2) => add$2(o, rotateVector(sub$3(p2, o), t2.axisDirection, t2.angleDegrees)), (dir) => rotateVector(dir, t2.axisDirection, t2.angleDegrees)));
+                    insideNew = primitive(moveQuadric(q, (p2) => add$3(o, rotateVector(sub$4(p2, o), t2.axisDirection, t2.angleDegrees)), (dir) => rotateVector(dir, t2.axisDirection, t2.angleDegrees)));
                   }
                 }
                 for (const surface of surfaces) {
@@ -40662,7 +40952,7 @@ function evaluatePartDocument(document2, options = {}) {
                   if (!found) throw new Error(`${pick.label} changed or is missing. Reselect the edges for ${what}.`);
                   return [...found.positionMillimeters];
                 };
-                return scale$1(add$2(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
+                return scale$1(add$3(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
               }
               return pick.midpointMillimeters;
             });
@@ -40683,24 +40973,24 @@ function evaluatePartDocument(document2, options = {}) {
               const m2 = edge.pointAt(0.5), mid = [m2.x, m2.y, m2.z];
               m2.delete();
               let reach;
-              if (mode === "direction") reach = scale$1(unit$1(direction2), distance2);
+              if (mode === "direction") reach = scale$1(unit$2(direction2), distance2);
               else {
                 const face = new FaceFinder().containsPoint(mid).find(body)[0];
                 if (!face) throw new Error("The picked edge is not on a face of the body.");
-                const nv = face.normalAt(mid), n = unit$1([nv.x, nv.y, nv.z]);
+                const nv = face.normalAt(mid), n = unit$2([nv.x, nv.y, nv.z]);
                 nv.delete();
                 if (mode === "normal") reach = scale$1(n, distance2);
                 else {
-                  const tv = edge.tangentAt(0.5), t2 = unit$1([tv.x, tv.y, tv.z]);
+                  const tv = edge.tangentAt(0.5), t2 = unit$2([tv.x, tv.y, tv.z]);
                   tv.delete();
-                  let side = unit$1(cross$4(n, t2));
-                  const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
+                  let side = unit$2(cross$4(n, t2));
+                  const c2 = face.center, away = sub$4(mid, [c2.x, c2.y, c2.z]);
                   c2.delete();
                   if (dot$5(side, away) < 0) side = neg(side);
                   reach = scale$1(side, distance2);
                 }
               }
-              if (feature3.id === previewId && !previewHandles.some((h) => h.parameter === "distance")) publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: mid, direction: unit$1(reach), label: "Reach" });
+              if (feature3.id === previewId && !previewHandles.some((h) => h.parameter === "distance")) publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: mid, direction: unit$2(reach), label: "Reach" });
               const first = own(assembleWire([edge])), second = own(first.clone().translate(reach[0], reach[1], reach[2]));
               const maker = new o.BRepOffsetAPI_ThruSections(false, true, 1e-6);
               maker.AddWire(first.wrapped);
@@ -40746,15 +41036,15 @@ function evaluatePartDocument(document2, options = {}) {
               const en = edge.endPoint, b = [en.x, en.y, en.z];
               en.delete();
               const length = Math.hypot(b[0] - a2[0], b[1] - a2[1], b[2] - a2[2]);
-              const tdir = unit$1(sub$3(b, a2));
+              const tdir = unit$2(sub$4(b, a2));
               const faces = new FaceFinder().containsPoint(mid).find(body).filter((f2) => f2.geomType === "PLANE");
               if (!faces.length) throw new Error(`${options2.what}: the picked edge is not on a flat face of the sheet.`);
               const face = faces.reduce((big, f2) => measureArea(f2) > measureArea(big) ? f2 : big);
               const nv = face.normalAt(mid);
-              let n = unit$1([nv.x, nv.y, nv.z]);
+              let n = unit$2([nv.x, nv.y, nv.z]);
               nv.delete();
-              let o = unit$1(cross$4(n, tdir));
-              const c2 = face.center, away = sub$3(mid, [c2.x, c2.y, c2.z]);
+              let o = unit$2(cross$4(n, tdir));
+              const c2 = face.center, away = sub$4(mid, [c2.x, c2.y, c2.z]);
               c2.delete();
               if (dot$5(o, away) < 0) o = neg(o);
               if (feature3.id === previewId && !previewHandles.length) {
@@ -40782,7 +41072,7 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
               const section2 = own(pen.close());
-              const zdir = unit$1(cross$4(o, n)), from = dot$5(zdir, tdir) > 0 ? a2 : b;
+              const zdir = unit$2(cross$4(o, n)), from = dot$5(zdir, tdir) > 0 ? a2 : b;
               const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
               const piece = own(section2.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
@@ -40809,13 +41099,13 @@ function evaluatePartDocument(document2, options = {}) {
             const t2 = base.thicknessMillimeters, r = feature3.bendRadiusMillimeters ?? base.bendRadiusMillimeters, alpha = feature3.angleDegrees * Math.PI / 180;
             const ba = bendAllowanceMillimeters(feature3.angleDegrees, r, base);
             const [p2, q] = sketchLine(feature3.line, "Fold line is unavailable. Reselect a sketch line on the sheet.");
-            const tdir = unit$1(sub$3(q, p2));
-            publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: scale$1(add$2(p2, q), 0.5), direction: tdir, label: "Fold angle" });
+            const tdir = unit$2(sub$4(q, p2));
+            publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: scale$1(add$3(p2, q), 0.5), direction: tdir, label: "Fold angle" });
             const faces = body.faces.filter((f2) => f2.geomType === "PLANE");
             const onFace = faces.filter((f2) => {
               const c2 = f2.center, nv2 = f2.normalAt(c2);
               const n2 = [nv2.x, nv2.y, nv2.z];
-              const dPlane = Math.abs(dot$5(n2, sub$3(p2, [c2.x, c2.y, c2.z])));
+              const dPlane = Math.abs(dot$5(n2, sub$4(p2, [c2.x, c2.y, c2.z])));
               c2.delete();
               nv2.delete();
               return dPlane < 1e-4;
@@ -40823,9 +41113,9 @@ function evaluatePartDocument(document2, options = {}) {
             if (!onFace.length) throw new Error("The fold line must lie on a flat face of the sheet.");
             const face = onFace.reduce((big, f2) => measureArea(f2) > measureArea(big) ? f2 : big);
             const nv = face.normalAt(face.center);
-            let n = unit$1([nv.x, nv.y, nv.z]);
+            let n = unit$2([nv.x, nv.y, nv.z]);
             nv.delete();
-            let o = unit$1(cross$4(n, tdir));
+            let o = unit$2(cross$4(n, tdir));
             if (feature3.otherSide) o = neg(o);
             const bounds2 = body.boundingBox.bounds, span = 4 * Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]);
             const slab = (from, to) => {
@@ -40837,7 +41127,7 @@ function evaluatePartDocument(document2, options = {}) {
             const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
             if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
             const sb = strip.boundingBox.bounds;
-            const along = (pt) => dot$5(sub$3(pt, p2), tdir);
+            const along = (pt) => dot$5(sub$4(pt, p2), tdir);
             const corners2 = [];
             for (const x2 of [sb[0][0], sb[1][0]]) for (const y2 of [sb[0][1], sb[1][1]]) for (const z2 of [sb[0][2], sb[1][2]]) corners2.push([x2, y2, z2]);
             const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
@@ -40849,11 +41139,11 @@ function evaluatePartDocument(document2, options = {}) {
             pen.lineTo(at(r, alpha));
             pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
             const section2 = own(pen.close());
-            const zdir = unit$1(cross$4(o, n));
-            const start = add$2(p2, scale$1(tdir, dot$5(zdir, tdir) > 0 ? s0 : s1));
+            const zdir = unit$2(cross$4(o, n));
+            const start = add$3(p2, scale$1(tdir, dot$5(zdir, tdir) > 0 ? s0 : s1));
             const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
             const bend = own(own(section2.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
-            const axisOrigin = add$2(p2, scale$1(n, feature3.inward ? r : -(t2 + r)));
+            const axisOrigin = add$3(p2, scale$1(n, feature3.inward ? r : -(t2 + r)));
             const sign = feature3.inward ? 1 : -1;
             const turned = own(own(moving.translate(-o[0] * ba, -o[1] * ba, -o[2] * ba)).rotate(sign * feature3.angleDegrees, axisOrigin, tdir));
             const result = own(own(fixed.fuse(bend)).fuse(turned));
@@ -40865,9 +41155,9 @@ function evaluatePartDocument(document2, options = {}) {
           }
           const perforations = (body, f2, thickness) => {
             const face = faceByReference(body, f2.face, "Perforate face");
-            const c2 = [...deleteAfterVectorTuple(face.center)], n = unit$1([...deleteAfterVectorTuple(face.normalAt([c2[0], c2[1], c2[2]]))]);
-            const x2 = unit$1(canonicalPlaneXDirection(n)), y2 = unit$1(cross$4(n, x2));
-            const to2 = (p22) => [dot$5(sub$3(p22, c2), x2), dot$5(sub$3(p22, c2), y2)];
+            const c2 = [...deleteAfterVectorTuple(face.center)], n = unit$2([...deleteAfterVectorTuple(face.normalAt([c2[0], c2[1], c2[2]]))]);
+            const x2 = unit$2(canonicalPlaneXDirection(n)), y2 = unit$2(cross$4(n, x2));
+            const to2 = (p22) => [dot$5(sub$4(p22, c2), x2), dot$5(sub$4(p22, c2), y2)];
             const polygon = (w2) => {
               const pts = [];
               for (const edge of w2.edges) {
@@ -40907,12 +41197,12 @@ function evaluatePartDocument(document2, options = {}) {
             for (let j = 0; j <= rows; j++) for (let i2 = -1; i2 <= cols + 1; i2++) {
               const q = [startX + i2 * p2 + (f2.pattern !== "square" && j % 2 ? p2 / 2 : 0), startY + j * rowStep];
               if (!inside2(outer, q) || holes.some((h) => inside2(h, q)) || distance2(outer, q) < clear - 1e-9 || holes.some((h) => distance2(h, q) < clear - 1e-9)) continue;
-              points.push(add$2(add$2(c2, scale$1(x2, q[0])), scale$1(y2, q[1])));
+              points.push(add$3(add$3(c2, scale$1(x2, q[0])), scale$1(y2, q[1])));
               if (points.length > 5e3) throw new Error("Perforate would make more than 5000 holes. Increase the pitch.");
             }
             if (!points.length) throw new Error("No hole fits inside the margin. Reduce the margin, the diameter or the pitch.");
             const depth = thickness + 0.02;
-            return { points, tools: points.map((q) => own(makeCylinder(r, depth, add$2(q, scale$1(n, 0.01)), [-n[0], -n[1], -n[2]]))) };
+            return { points, tools: points.map((q) => own(makeCylinder(r, depth, add$3(q, scale$1(n, 0.01)), [-n[0], -n[1], -n[2]]))) };
           };
           if (feature3.type === "sheet-perforate") {
             const id2 = feature3.bodyIds[0], body = bodies.get(id2);
@@ -41100,7 +41390,7 @@ function evaluatePartDocument(document2, options = {}) {
                     owned.push(ax);
                     builder.SetMode_2(ax);
                   } else if (typeof orientation === "object") {
-                    const u2 = unit$1(orientation.direction), dir = new oc.gp_Dir_4(u2[0], u2[1], u2[2]);
+                    const u2 = unit$2(orientation.direction), dir = new oc.gp_Dir_4(u2[0], u2[1], u2[2]);
                     owned.push(dir);
                     builder.SetMode_3(dir);
                   } else builder.SetMode_1(false);
@@ -41173,7 +41463,7 @@ function evaluatePartDocument(document2, options = {}) {
             publish(feature3, { parameter: "pitch", kind: "linear", originMillimeters: [0, 1, 2].map((i2) => center[i2] + dir[i2] * feature3.pitchMillimeters), direction: dir, label: "Coil pitch" });
             publish(feature3, { parameter: "radius", kind: "linear", originMillimeters: [0, 1, 2].map((i2) => center[i2] + perpendicular(dir)[i2] * feature3.radiusMillimeters), direction: perpendicular(dir), label: "Coil radius" });
             const helix = own(makeHelix(feature3.pitchMillimeters, feature3.pitchMillimeters * feature3.turns, feature3.radiusMillimeters, center, dir, Boolean(feature3.leftHand)));
-            const first = helix.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit$1([...deleteAfterVectorTuple(first.tangentAt(0))]);
+            const first = helix.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit$2([...deleteAfterVectorTuple(first.tangentAt(0))]);
             helix.edges.forEach((edge) => edge.delete());
             const circle = own(assembleWire([own(makeCircle(feature3.wireDiameterMillimeters / 2, [start[0], start[1], start[2]], tangent))]));
             const swept = genericSweep(circle, helix, { frenet: true, transitionMode: "transformed" });
@@ -41185,7 +41475,7 @@ function evaluatePartDocument(document2, options = {}) {
             const pathId = feature3.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : void 0);
             if (pathId === void 0) throw new Error("Pipe path sketch has several curves — choose which one to use.");
             const spine = sketchWire(feature3.pathFeatureId, pathId, "Pipe path", true);
-            const first = spine.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit$1([...deleteAfterVectorTuple(first.tangentAt(0))]);
+            const first = spine.edges[0], start = deleteAfterVectorTuple(first.startPoint), tangent = unit$2([...deleteAfterVectorTuple(first.tangentAt(0))]);
             publish(feature3, { parameter: "diameter", kind: "linear", originMillimeters: [0, 1, 2].map((i2) => start[i2] + perpendicular(tangent)[i2] * feature3.diameterMillimeters / 2), direction: perpendicular(tangent), scale: 2, label: "Pipe diameter" });
             const sweepCircle = (radius) => {
               const circle = own(assembleWire([own(makeCircle(radius, [start[0], start[1], start[2]], tangent))]));
@@ -41202,6 +41492,15 @@ function evaluatePartDocument(document2, options = {}) {
             }
             spine.edges.forEach((edge) => edge.delete());
             tool22 = pipe;
+          } else if (feature3.type === "shape-binder") {
+            const source = bodies.get(feature3.sourceBodyId);
+            if (!source) throw new Error("Shape binder needs an available source part.");
+            if (feature3.faces?.length) {
+              const o = getOC(), builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
+              builder.MakeShell(shell);
+              for (const ref of feature3.faces) builder.Add(shell, faceByReference(source, ref, "Shape binder face").wrapped);
+              tool22 = own(cast(shell));
+            } else tool22 = own(source.clone());
           } else if (feature3.type === "bounding-solid") {
             const chosen = feature3.bodyIds ?? [...bodies.keys()];
             const shapes = chosen.map((id2) => bodies.get(id2)).filter((b) => Boolean(b));
@@ -41272,9 +41571,9 @@ function evaluatePartDocument(document2, options = {}) {
             } else throw new UnsupportedFeature(feature3.id, `${String(format2).toUpperCase()} imports`);
           } else if (feature3.type === "sheet-base") {
             const frame = sketchFrameOf(feature3.profileFeatureId);
-            publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: sketchCentroid(feature3.profileFeatureId), direction: scale$1(unit$1(frame.normal), feature3.reversed ? -1 : 1), label: "Sheet thickness" });
+            publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: sketchCentroid(feature3.profileFeatureId), direction: scale$1(unit$2(frame.normal), feature3.reversed ? -1 : 1), label: "Sheet thickness" });
             const face = own(makeFace(sketchWire(feature3.profileFeatureId, feature3.profileContourId, "Sheet metal base", false)));
-            const along = scale$1(unit$1(frame.normal), feature3.thicknessMillimeters * (feature3.reversed ? -1 : 1));
+            const along = scale$1(unit$2(frame.normal), feature3.thicknessMillimeters * (feature3.reversed ? -1 : 1));
             const sweep = new Vector(along);
             try {
               tool22 = own(basicFaceExtrusion(face, sweep));
@@ -41368,8 +41667,8 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature3.type === "surface-extrude") {
               const frame = sketchFrameOf(feature3.profileFeatureId);
               const d2 = feature3.distanceMillimeters * (feature3.reversed ? -1 : 1);
-              publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature3.profileFeatureId), direction: scale$1(unit$1(frame.normal), feature3.reversed ? -1 : 1), scale: feature3.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
-              const along = scale$1(unit$1(frame.normal), d2);
+              publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature3.profileFeatureId), direction: scale$1(unit$2(frame.normal), feature3.reversed ? -1 : 1), scale: feature3.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
+              const along = scale$1(unit$2(frame.normal), d2);
               const wires = curveWires(feature3.profileFeatureId, feature3.contourIds, "Surface extrude");
               tool22 = sheetArea(joined(wires.map((wire) => {
                 const start = feature3.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
@@ -41384,7 +41683,7 @@ function evaluatePartDocument(document2, options = {}) {
               let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
                 origin = [...feature3.axisReference.origin];
-                axis = unit$1(feature3.axisReference.direction);
+                axis = unit$2(feature3.axisReference.direction);
               } else if (feature3.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
               else if (feature3.axisReference) {
                 const t2 = resolveTransform({ kind: "rotate-reference", reference: feature3.axisReference, angleDegrees: 0 });
@@ -41392,8 +41691,8 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t2.axisDirection;
               }
               if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$3(c2, origin), axis);
-                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
+                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin), axis);
+                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature3.angleDegrees * Math.PI / 180 * (feature3.reversed ? -1 : 1);
               const wires = curveWires(feature3.profileFeatureId, feature3.contourIds, "Surface revolve");
@@ -41422,7 +41721,7 @@ function evaluatePartDocument(document2, options = {}) {
                 const f0 = body.faces[0];
                 if (f0) {
                   const c2 = f0.center, nv = f0.normalAt(c2);
-                  publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Offset distance" });
+                  publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$2([nv.x, nv.y, nv.z]), label: "Offset distance" });
                   c2.delete();
                   nv.delete();
                   f0.delete();
@@ -41442,7 +41741,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const f0 = sheet.faces[0];
                   if (f0) {
                     const c2 = f0.center, nv = f0.normalAt(c2);
-                    publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$1([nv.x, nv.y, nv.z]), label: "Thickness" });
+                    publish(feature3, { parameter: "thickness", kind: "linear", originMillimeters: [c2.x, c2.y, c2.z], direction: unit$2([nv.x, nv.y, nv.z]), label: "Thickness" });
                     c2.delete();
                     nv.delete();
                     f0.delete();
@@ -41494,7 +41793,7 @@ function evaluatePartDocument(document2, options = {}) {
             const sketchOf = (drawing) => own(typeof profile.plane === "string" ? own(drawing.clone()).sketchOnPlane(profile.plane, profile.offset) : own(drawing.clone()).sketchOnPlane(profile.plane));
             const frame = typeof profile.plane === "string" ? principalFrame(profile.plane, profile.offset) : { normal: [profile.plane.zDir.x, profile.plane.zDir.y, profile.plane.zDir.z], originMillimeters: [profile.plane.origin.x, profile.plane.origin.y, profile.plane.origin.z], xDirection: [profile.plane.xDir.x, profile.plane.xDir.y, profile.plane.xDir.z] };
             const basePlane = typeof profile.plane === "string" ? own(new Plane(frame.originMillimeters, frame.xDirection, frame.normal)) : profile.plane;
-            const n = unit$1(frame.normal), o = frame.originMillimeters;
+            const n = unit$2(frame.normal), o = frame.originMillimeters;
             const circleWire = (region) => {
               const circle = !region.holes?.length ? profile.circles.find((c2) => c2.key === region.key) : void 0;
               if (!circle) return void 0;
@@ -41520,14 +41819,14 @@ function evaluatePartDocument(document2, options = {}) {
                 if (feature3.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
                 const ref = feature3.directionReference;
                 const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
-                const along = sub$3(to, from);
-                if (!along.every(Number.isFinite) || norm$2(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
-                direction2 = unit$1(along);
+                const along = sub$4(to, from);
+                if (!along.every(Number.isFinite) || norm$3(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
+                direction2 = unit$2(along);
                 custom = true;
               } else if (feature3.directionVector) {
                 const v2 = feature3.directionVector;
-                if (v2.length !== 3 || !v2.every(Number.isFinite) || Math.abs(norm$2(v2) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
-                direction2 = unit$1(v2);
+                if (v2.length !== 3 || !v2.every(Number.isFinite) || Math.abs(norm$3(v2) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
+                direction2 = unit$2(v2);
                 custom = true;
               }
               if (custom && Math.abs(dot$5(direction2, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
@@ -41548,13 +41847,13 @@ function evaluatePartDocument(document2, options = {}) {
                   origin = f2.originMillimeters;
                   normal = f2.normal;
                 } else {
-                  normal = unit$1(start.normal);
+                  normal = unit$2(start.normal);
                   origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
                 }
-                if (norm$2(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
+                if (norm$3(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
                 const alignment = dot$5(normal, direction2);
                 if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-                offset2 += dot$5(normal, sub$3(origin, o)) / alignment;
+                offset2 += dot$5(normal, sub$4(origin, o)) / alignment;
               }
               if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
               const draftOf = (angle2) => {
@@ -41630,7 +41929,7 @@ function evaluatePartDocument(document2, options = {}) {
               };
               const diagonalOf = (shape2) => {
                 const b = shape2.boundingBox.bounds;
-                return norm$2(sub$3([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]]));
+                return norm$3(sub$4([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]]));
               };
               const intervalEnd = (dir, start, end) => {
                 if (end.endType === "blind") {
@@ -41645,7 +41944,7 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 if (end.endType === "up-to-vertex") {
                   const { axis, alignment } = axisOf(dir);
-                  const depth = dot$5(axis, sub$3(stopPoint(end.point), o)) / alignment - end.endOffset;
+                  const depth = dot$5(axis, sub$4(stopPoint(end.point), o)) / alignment - end.endOffset;
                   if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
                   return depth;
                 }
@@ -41673,7 +41972,7 @@ function evaluatePartDocument(document2, options = {}) {
                     }
                     const startCap2 = starts2[0], startArea2 = measureArea(startCap2), tolerance22 = Math.max(1e-9, startArea2 * 1e-9);
                     const stopCenter2 = [...deleteAfterVectorTuple(stopFace.center)], startCenter2 = [...deleteAfterVectorTuple(startCap2.center)];
-                    const span3 = Math.max(1, norm$2(sub$3(stopCenter2, startCenter2)) + diagonalOfShape(stopFace) + diagonalOf(probe3) + Math.abs(end.endOffset));
+                    const span3 = Math.max(1, norm$3(sub$4(stopCenter2, startCenter2)) + diagonalOfShape(stopFace) + diagonalOf(probe3) + Math.abs(end.endOffset));
                     const tool5 = prism(start, start + 4 * span3, dir), ends2 = capFaces(tool5, dir, 1);
                     const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
                     const faceX = toExtended(stopFace), toolX = toExtended(tool5);
@@ -41760,7 +42059,7 @@ function evaluatePartDocument(document2, options = {}) {
                   if (ref.surfaceType === "cylinder") {
                     const cylinder = adaptor.Cylinder(), axis2 = cylinder.Axis(), l = axis2.Location(), d2 = axis2.Direction();
                     axisLocation = [l.X(), l.Y(), l.Z()];
-                    axisDirection = unit$1([d2.X(), d2.Y(), d2.Z()]);
+                    axisDirection = unit$2([d2.X(), d2.Y(), d2.Z()]);
                     radius = cylinder.Radius();
                     l.delete();
                     d2.delete();
@@ -41788,12 +42087,12 @@ function evaluatePartDocument(document2, options = {}) {
                   const [firstEdge] = startCap.edges;
                   const vertex = [...deleteAfterVectorTuple(firstEdge.startPoint)];
                   firstEdge.delete();
-                  const sample = add$2(vertex, scale$1(dir, epsilon2));
-                  const fromAxis = ref.surfaceType === "cylinder" ? norm$2(cross$4(sub$3(sample, axisLocation), axisDirection)) : norm$2(sub$3(sample, axisLocation));
+                  const sample = add$3(vertex, scale$1(dir, epsilon2));
+                  const fromAxis = ref.surfaceType === "cylinder" ? norm$3(cross$4(sub$4(sample, axisLocation), axisDirection)) : norm$3(sub$4(sample, axisLocation));
                   const inside2 = fromAxis < radius;
-                  const span2 = Math.max(1, norm$2(sub$3(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
+                  const span2 = Math.max(1, norm$3(sub$4(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
                   const size = 4 * span2 + 2 * radius;
-                  const primitive = ref.surfaceType === "cylinder" ? own(makeCylinder(radius, size, sub$3(axisLocation, scale$1(axisDirection, size / 2)), axisDirection)) : own(makeSphere(radius).translate(axisLocation[0], axisLocation[1], axisLocation[2]));
+                  const primitive = ref.surfaceType === "cylinder" ? own(makeCylinder(radius, size, sub$4(axisLocation, scale$1(axisDirection, size / 2)), axisDirection)) : own(makeSphere(radius).translate(axisLocation[0], axisLocation[1], axisLocation[2]));
                   let half2 = primitive;
                   if (!inside2) {
                     const box = own(makeBaseBox(size, size, size).translate(axisLocation[0], axisLocation[1], axisLocation[2] - size / 2));
@@ -41836,19 +42135,19 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                 }
                 if (!ref.normal) throw new Error("Up to face needs a valid unit normal.");
-                const normal = unit$1(ref.normal);
+                const normal = unit$2(ref.normal);
                 const center = planarFaceCenter(ref.sourceFeatureId, ref.bodyId, normal, ref.faceAnchor, "Up to face", "Up to face reference is unavailable. Reselect the stopping face.");
                 const alignment = dot$5(normal, dir);
                 if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
-                const planePoint = sub$3(center, scale$1(dir, end.endOffset));
+                const planePoint = sub$4(center, scale$1(dir, end.endOffset));
                 const probe = prism(start, start + 1, dir);
                 let maximum = -Infinity;
-                for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$5(normal, sub$3(planePoint, corner)) / alignment);
+                for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$5(normal, sub$4(planePoint, corner)) / alignment);
                 if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-                if (norm$2(cross$4(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
+                if (norm$3(cross$4(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
                 const full2 = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
                 let span = 1;
-                for (const corner of corners(full2.boundingBox.bounds)) span = Math.max(span, norm$2(sub$3(corner, planePoint)) + 1);
+                for (const corner of corners(full2.boundingBox.bounds)) span = Math.max(span, norm$3(sub$4(corner, planePoint)) + 1);
                 const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
                 for (const cap of capFaces(probe, dir, -1)) {
                   const area = measureArea(cap);
@@ -42023,15 +42322,15 @@ function evaluatePartDocument(document2, options = {}) {
                 const start = point2(wire.startPoint), end = point2(wire.endPoint);
                 const edges = wire.edges;
                 const endTangent = (edge, at, into) => {
-                  const atStart = norm$2(sub$3(point2(edge.startPoint), at)) < 1e-7;
-                  const tangent = unit$1(point2(edge.tangentAt(atStart ? 0 : 1)));
+                  const atStart = norm$3(sub$4(point2(edge.startPoint), at)) < 1e-7;
+                  const tangent = unit$2(point2(edge.tangentAt(atStart ? 0 : 1)));
                   return atStart === into ? tangent : neg(tangent);
                 };
-                const nearest = (at) => edges.find((edge) => norm$2(sub$3(point2(edge.startPoint), at)) < 1e-7 || norm$2(sub$3(point2(edge.endPoint), at)) < 1e-7) ?? edges[0];
+                const nearest = (at) => edges.find((edge) => norm$3(sub$4(point2(edge.startPoint), at)) < 1e-7 || norm$3(sub$4(point2(edge.endPoint), at)) < 1e-7) ?? edges[0];
                 const first = endTangent(nearest(start), start, true), last22 = endTangent(nearest(end), end, false);
-                const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$2(cross$4(first, sub$3(point2(edge.endPoint), start))) < 1e-7);
+                const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$3(cross$4(first, sub$4(point2(edge.endPoint), start))) < 1e-7);
                 const offsetOpen = (distance2) => {
-                  const startTarget = add$2(start, scale$1(cross$4(first, n), distance2)), endTarget = add$2(end, scale$1(cross$4(last22, n), distance2));
+                  const startTarget = add$3(start, scale$1(cross$4(first, n), distance2)), endTarget = add$3(end, scale$1(cross$4(last22, n), distance2));
                   if (Math.abs(distance2) < 1e-12) return { wire: own(wire.clone()), start, end };
                   if (straight) {
                     const shift = scale$1(cross$4(first, n), distance2);
@@ -42054,8 +42353,8 @@ function evaluatePartDocument(document2, options = {}) {
                     }
                     if (!candidate) continue;
                     const p2 = point2(candidate.startPoint), q = point2(candidate.endPoint);
-                    const forward = norm$2(sub$3(p2, startTarget)) < tolerance2 && norm$2(sub$3(q, endTarget)) < tolerance2;
-                    const backward = norm$2(sub$3(q, startTarget)) < tolerance2 && norm$2(sub$3(p2, endTarget)) < tolerance2;
+                    const forward = norm$3(sub$4(p2, startTarget)) < tolerance2 && norm$3(sub$4(q, endTarget)) < tolerance2;
+                    const backward = norm$3(sub$4(q, startTarget)) < tolerance2 && norm$3(sub$4(p2, endTarget)) < tolerance2;
                     if (forward || backward) return { wire: own(candidate), start: forward ? p2 : q, end: forward ? q : p2 };
                     candidate.delete();
                   }
@@ -42066,11 +42365,11 @@ function evaluatePartDocument(document2, options = {}) {
                   const remaining = side.edges, ordered2 = [];
                   let at = from;
                   while (remaining.length) {
-                    const next = remaining.findIndex((edge2) => norm$2(sub$3(point2(edge2.startPoint), at)) < 1e-6 || norm$2(sub$3(point2(edge2.endPoint), at)) < 1e-6);
+                    const next = remaining.findIndex((edge2) => norm$3(sub$4(point2(edge2.startPoint), at)) < 1e-6 || norm$3(sub$4(point2(edge2.endPoint), at)) < 1e-6);
                     if (next < 0) throw new Error("The wall offset does not form a complete capped boundary.");
                     const [edge] = remaining.splice(next, 1);
                     const s0 = point2(edge.startPoint), s1 = point2(edge.endPoint);
-                    at = norm$2(sub$3(s0, at)) < 1e-6 ? s1 : s0;
+                    at = norm$3(sub$4(s0, at)) < 1e-6 ? s1 : s0;
                     ordered2.push(edge);
                   }
                   return ordered2;
@@ -42101,7 +42400,7 @@ function evaluatePartDocument(document2, options = {}) {
               let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
                 origin = [...feature3.axisReference.origin];
-                axis = unit$1(feature3.axisReference.direction);
+                axis = unit$2(feature3.axisReference.direction);
               } else if (feature3.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
               else if (feature3.axisReference) {
                 const t2 = resolveTransform({ kind: "rotate-reference", reference: feature3.axisReference, angleDegrees: 0 });
@@ -42109,8 +42408,8 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t2.axisDirection;
               }
               if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$3(c2, origin), axis);
-                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$2(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
+                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin), axis);
+                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature3.angleDegrees, second = feature3.secondAngleDegrees ?? 0;
               if (!(angle2 > 0) || second < 0 || angle2 + second > 360) throw new Error("Revolve angles must be finite, positive and total at most 360 degrees.");
@@ -42126,7 +42425,7 @@ function evaluatePartDocument(document2, options = {}) {
               return isShape3D(shape) ? own(shape).simplify() : shape;
             };
             if (feature3.type === "extrude" && feature3.id === previewId) {
-              const frame2 = sketchFrameOf(feature3.profileFeatureId), n2 = unit$1(frame2.normal), c2 = sketchCentroid(feature3.profileFeatureId);
+              const frame2 = sketchFrameOf(feature3.profileFeatureId), n2 = unit$2(frame2.normal), c2 = sketchCentroid(feature3.profileFeatureId);
               const symmetric = feature3.endType === "symmetric" || feature3.endType === "symmetric-through-all";
               previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c2, direction: n2, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature3.reversed) });
               if (feature3.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c2, direction: [-n2[0], -n2[1], -n2[2]], scale: 1, reversed: Boolean(feature3.reversed) });
@@ -42283,7 +42582,9 @@ function evaluatePartDocument(document2, options = {}) {
       } finally {
         if (failed) {
           for (const shape of stepOwned.reverse()) release$1(shape);
+          for (const step of thawed.splice(index2 - thawFrom + 1)) step.owned.forEach(release$1);
         } else cached.push({ key: keys3[index2], profiles: new Map(profiles), tools: new Map(tools), bodies: new Map(bodies), meshes: new Map(meshParts), currentBodyID, outputs: { ...bodyOutputs }, frames: { ...sketchFrames }, scopes: { ...scopeResolutions }, owned: stepOwned });
+        options.observe?.({ phase: "feature", id: feature3.id, name: feature3.name, type: feature3.type, failed, milliseconds: performance.now() - featureStarted });
       }
     }
     let featurePreview;
@@ -42313,7 +42614,7 @@ function evaluatePartDocument(document2, options = {}) {
         ...[...meshParts].map(([id2, mesh], index2) => ({ geometryKind: "mesh", id: id2, name: names.find((b) => b.id === id2)?.name ?? `Mesh ${index2 + 1}`, sourceDocumentId: document2.documentId, sourceName: document2.name, vertices: mesh.vertices, normals: mesh.normals, triangles: mesh.triangles, edgeLines: new Float32Array(0), faceRanges: [], topology: [] }))
       ],
       parseMilliseconds: performance.now() - started,
-      replayedFeatures: history.length - reuse
+      replayedFeatures: history.length - reuse - adopted
     };
   }
 }
@@ -42396,11 +42697,11 @@ function withHiddenLineProjection(shape, options, read3) {
     for (const resource of owned.reverse()) resource.delete();
   }
 }
-const add$1 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
-const sub$2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$2 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const sub$3 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const dot$3 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross$2 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm$1 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const norm$2 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
 const qmul = (a2, b) => [
   a2[3] * b[0] + a2[0] * b[3] + a2[1] * b[2] - a2[2] * b[1],
   a2[3] * b[1] - a2[0] * b[2] + a2[1] * b[3] + a2[2] * b[0],
@@ -42417,7 +42718,7 @@ const rotate = (q, v2) => {
   return [v2[0] + w2 * t2[0] + (y2 * t2[2] - z2 * t2[1]), v2[1] + w2 * t2[1] + (z2 * t2[0] - x2 * t2[2]), v2[2] + w2 * t2[2] + (x2 * t2[1] - y2 * t2[0])];
 };
 const expq = (w2) => {
-  const a2 = norm$1(w2);
+  const a2 = norm$2(w2);
   if (a2 < 1e-12) return [w2[0] / 2, w2[1] / 2, w2[2] / 2, 1];
   const s = Math.sin(a2 / 2) / a2;
   return qnorm([w2[0] * s, w2[1] * s, w2[2] * s, Math.cos(a2 / 2)]);
@@ -42426,7 +42727,7 @@ function frameOf(pose, end) {
   const local2 = end.placement_mm ? [...end.placement_mm] : [0, 0, 0];
   const rot = end.rotation ? qnorm([...end.rotation]) : [0, 0, 0, 1];
   const q = qmul(pose.q, rot);
-  return { q, o: add$1(pose.p, rotate(pose.q, local2)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
+  return { q, o: add$2(pose.p, rotate(pose.q, local2)), x: rotate(q, [1, 0, 0]), y: rotate(q, [0, 1, 0]), z: rotate(q, [0, 0, 1]) };
 }
 const ORIENTATION_SCALE = 100;
 const DOF_TEMPLATES = {
@@ -42435,13 +42736,42 @@ const DOF_TEMPLATES = {
   cylindrical: [{ name: "rotation", kind: "rotation", axis: "z", value: 0 }, { name: "translation", kind: "translation", axis: "z", value: 0 }],
   planar: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
   pin_slot: [{ name: "translation", kind: "translation", axis: "x", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
+  sweep: [{ name: "position", kind: "translation", axis: "x", value: 0 }],
   parallel: [{ name: "translation_x", kind: "translation", axis: "x", value: 0 }, { name: "translation_y", kind: "translation", axis: "y", value: 0 }, { name: "translation_z", kind: "translation", axis: "z", value: 0 }, { name: "rotation", kind: "rotation", axis: "z", value: 0 }],
   ball: [{ name: "rotation_x", kind: "rotation", axis: "x", value: 0 }, { name: "rotation_y", kind: "rotation", axis: "y", value: 0 }, { name: "rotation_z", kind: "rotation", axis: "z", value: 0 }]
 };
 const templateDof = (kind, name5) => DOF_TEMPLATES[kind]?.find((d2) => d2.name === name5);
-const solvableMateKinds = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot"];
+const solvableMateKinds = ["fastened", "revolute", "cylindrical", "prismatic", "ball", "distance", "parallel", "perpendicular", "angle", "planar", "pin_slot", "sweep"];
+function sweepResiduals(a2, b, parameters2) {
+  const raw = parameters2.path_mm;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.some((p2) => !Array.isArray(p2) || p2.length !== 3 || !p2.every(Number.isFinite))) throw new Error("A sweep mate needs path_mm: two or more [x, y, z] points in the first connector's frame.");
+  const mul2 = (v2, k2) => [v2[0] * k2, v2[1] * k2, v2[2] * k2];
+  const path = raw.map((p2) => add$2(a2.o, add$2(mul2(a2.x, p2[0]), add$2(mul2(a2.y, p2[1]), mul2(a2.z, p2[2])))));
+  const lengths2 = [0];
+  for (let i2 = 1; i2 < path.length; i2++) lengths2.push(lengths2[i2 - 1] + norm$2(sub$3(path[i2], path[i2 - 1])));
+  const held = (parameters2.dofs ?? []).find((d2) => d2.name === "position");
+  let target;
+  if (held) {
+    const s = Math.min(Math.max(held.value, 0), lengths2[lengths2.length - 1]);
+    const i2 = Math.max(1, lengths2.findIndex((l) => l >= s));
+    const t2 = lengths2[i2] === lengths2[i2 - 1] ? 0 : (s - lengths2[i2 - 1]) / (lengths2[i2] - lengths2[i2 - 1]);
+    target = add$2(path[i2 - 1], mul2(sub$3(path[i2], path[i2 - 1]), t2));
+  } else {
+    let best = Infinity;
+    for (let i2 = 1; i2 < path.length; i2++) {
+      const d2 = sub$3(path[i2], path[i2 - 1]), l2 = dot$3(d2, d2);
+      const t2 = l2 ? Math.min(Math.max(dot$3(sub$3(b.o, path[i2 - 1]), d2) / l2, 0), 1) : 0;
+      const q = add$2(path[i2 - 1], mul2(d2, t2)), dist2 = norm$2(sub$3(b.o, q));
+      if (dist2 < best) {
+        best = dist2;
+        target = q;
+      }
+    }
+  }
+  return sub$3(b.o, target);
+}
 function dofValue(kind, axis, a2, b) {
-  if (kind === "translation") return dot$3(sub$2(b.o, a2.o), a2[axis]);
+  if (kind === "translation") return dot$3(sub$3(b.o, a2.o), a2[axis]);
   const companion = axis === "z" ? "x" : axis === "x" ? "y" : "z";
   const u2 = a2[companion], v2 = b[companion], n = a2[axis];
   return Math.atan2(dot$3(cross$2(u2, v2), n), dot$3(u2, v2)) * 180 / Math.PI;
@@ -42469,7 +42799,7 @@ function orientationResidual(target, actual, hemisphere) {
   return error2.slice(0, 3).map((v2) => ORIENTATION_SCALE * scale2 * v2);
 }
 function valueResiduals(a2, b, kind, parameters2 = {}, hemisphere = 1) {
-  const values2 = parameters2.dofs ?? [];
+  const values2 = kind === "sweep" ? [] : parameters2.dofs ?? [];
   const rotation = heldRotation(kind, values2);
   const orientation = rotation ? orientationResidual(qmul(a2.q, rotation), b.q, hemisphere) : [];
   return [...orientation, ...values2.filter((dof) => !rotation || dof.kind !== "rotation").map((dof) => {
@@ -42478,14 +42808,14 @@ function valueResiduals(a2, b, kind, parameters2 = {}, hemisphere = 1) {
   })];
 }
 function jointResiduals(kind, a2, b, parameters2 = {}) {
-  const d2 = sub$2(b.o, a2.o), S = ORIENTATION_SCALE;
+  const d2 = sub$3(b.o, a2.o), S = ORIENTATION_SCALE;
   const coincide = () => [d2[0], d2[1], d2[2]];
   const onAxis = () => [dot$3(d2, a2.x), dot$3(d2, a2.y)];
   const zAligned = () => [S * dot$3(b.z, a2.x), S * dot$3(b.z, a2.y)];
   const sameTurn = () => [S * dot$3(b.x, a2.y)];
   switch (kind) {
     case "fastened": {
-      const e = add$1(add$1(cross$2(a2.x, b.x), cross$2(a2.y, b.y)), cross$2(a2.z, b.z));
+      const e = add$2(add$2(cross$2(a2.x, b.x), cross$2(a2.y, b.y)), cross$2(a2.z, b.z));
       return [...coincide(), S * e[0] / 2, S * e[1] / 2, S * e[2] / 2];
     }
     case "revolute":
@@ -42497,7 +42827,7 @@ function jointResiduals(kind, a2, b, parameters2 = {}) {
     case "ball":
       return coincide();
     case "distance":
-      return [norm$1(d2) - Number(parameters2.distance_mm ?? 0)];
+      return [norm$2(d2) - Number(parameters2.distance_mm ?? 0)];
     case "parallel": {
       const c2 = cross$2(a2.z, b.z);
       return [S * c2[0], S * c2[1], S * c2[2]];
@@ -42512,6 +42842,8 @@ function jointResiduals(kind, a2, b, parameters2 = {}) {
     // Pin slot: a revolute that may also slide along a's x (the slot's length).
     case "pin_slot":
       return [dot$3(d2, a2.y), dot$3(d2, a2.z), ...zAligned()];
+    case "sweep":
+      return sweepResiduals(a2, b, parameters2);
     default:
       return [];
   }
@@ -42649,7 +42981,7 @@ function solveAssemblyJob(job) {
             const t2 = [0, 0, 0], w2 = [0, 0, 0];
             if (axis < 3) t2[axis] = sign * h;
             else w2[axis - 3] = sign * h;
-            copy.set(id2, { p: add$1(base.p, t2), q: qnorm(qmul(expq(w2), base.q)) });
+            copy.set(id2, { p: add$2(base.p, t2), q: qnorm(qmul(expq(w2), base.q)) });
             return residuals(copy);
           };
           const plus = perturbed(1), minus = perturbed(-1);
@@ -42674,7 +43006,7 @@ function solveAssemblyJob(job) {
         free.forEach((id2, k2) => {
           const base = poses.get(id2);
           const t2 = [step[k2 * 6], step[k2 * 6 + 1], step[k2 * 6 + 2]], w2 = [step[k2 * 6 + 3], step[k2 * 6 + 4], step[k2 * 6 + 5]];
-          trial.set(id2, { p: add$1(base.p, t2), q: qnorm(qmul(expq(w2), base.q)) });
+          trial.set(id2, { p: add$2(base.p, t2), q: qnorm(qmul(expq(w2), base.q)) });
         });
         const trialResiduals = residuals(trial), trialCost = trialResiduals.reduce((s, v2) => s + v2 * v2, 0);
         if (trialCost < cost) {
@@ -42899,15 +43231,15 @@ function deriveCurves(bodies, options) {
     });
   }
 }
-const sub$1 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const add = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
-const mul = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const sub$2 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$1 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const mul$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
 const dot$2 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross$1 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
-const unit = (a2) => {
-  const n = norm(a2);
-  return n > 1e-12 ? mul(a2, 1 / n) : [0, 0, 0];
+const norm$1 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$1 = (a2) => {
+  const n = norm$1(a2);
+  return n > 1e-12 ? mul$1(a2, 1 / n) : [0, 0, 0];
 };
 function pickFaces(bodies, entities, own) {
   const wanted = entities?.filter((e) => e.face_id !== void 0 && e.edge_index === void 0) ?? [];
@@ -42951,10 +43283,10 @@ function sampleEdge(edge, count) {
     for (let i2 = 0; i2 <= count; i2++) {
       adaptor.D2(u0 + (u1 - u0) * (i2 / count), p2, d1, d2);
       const t2 = [d1.X(), d1.Y(), d1.Z()], s = [d2.X(), d2.Y(), d2.Z()];
-      const speed = norm(t2);
-      const curvature = speed > 1e-12 ? norm(cross$1(t2, s)) / speed ** 3 : 0;
-      const normalPart = sub$1(s, mul(t2, dot$2(t2, s) / Math.max(speed * speed, 1e-18)));
-      out.push({ point: [p2.X(), p2.Y(), p2.Z()], tangent: unit(t2), curvature, direction: curvature > 1e-9 ? unit(normalPart) : [0, 0, 0] });
+      const speed = norm$1(t2);
+      const curvature = speed > 1e-12 ? norm$1(cross$1(t2, s)) / speed ** 3 : 0;
+      const normalPart = sub$2(s, mul$1(t2, dot$2(t2, s) / Math.max(speed * speed, 1e-18)));
+      out.push({ point: [p2.X(), p2.Y(), p2.Z()], tangent: unit$1(t2), curvature, direction: curvature > 1e-9 ? unit$1(normalPart) : [0, 0, 0] });
     }
     return out;
   } finally {
@@ -42968,7 +43300,7 @@ function sampleSurface(adaptor, u2, v2, scratch) {
   adaptor.D2(u2, v2, scratch.p, scratch.d1u, scratch.d1v, scratch.d2u, scratch.d2v, scratch.d2uv);
   const du = [scratch.d1u.X(), scratch.d1u.Y(), scratch.d1u.Z()], dv = [scratch.d1v.X(), scratch.d1v.Y(), scratch.d1v.Z()];
   const duu = [scratch.d2u.X(), scratch.d2u.Y(), scratch.d2u.Z()], dvv = [scratch.d2v.X(), scratch.d2v.Y(), scratch.d2v.Z()], duv = [scratch.d2uv.X(), scratch.d2uv.Y(), scratch.d2uv.Z()];
-  const normal = unit(cross$1(du, dv));
+  const normal = unit$1(cross$1(du, dv));
   return { point: [scratch.p.X(), scratch.p.Y(), scratch.p.Z()], normal, E: dot$2(du, du), F: dot$2(du, dv), G: dot$2(dv, dv), L: dot$2(duu, normal), M: dot$2(duv, normal), N: dot$2(dvv, normal), du, dv };
 }
 function principalCurvatures(s) {
@@ -43005,7 +43337,7 @@ const bounds$1 = (bodies) => {
     hi = [Math.max(hi[0], b.bounds[1][0]), Math.max(hi[1], b.bounds[1][1]), Math.max(hi[2], b.bounds[1][2])];
     b.delete();
   }
-  return norm(sub$1(hi, lo)) || 1;
+  return norm$1(sub$2(hi, lo)) || 1;
 };
 function analyzeCurves(bodies, options) {
   const owned = [];
@@ -43023,7 +43355,7 @@ function analyzeCurves(bodies, options) {
       for (const e of samples2) {
         const teeth = [], tips = [];
         for (const s of e.samples) {
-          const tip = add(s.point, mul(s.direction, -s.curvature * scale2));
+          const tip = add$1(s.point, mul$1(s.direction, -s.curvature * scale2));
           teeth.push([s.point, tip]);
           tips.push(tip);
         }
@@ -43114,12 +43446,12 @@ function analyzeCurves(bodies, options) {
             const n = f2.face.normalAt([s.point[0], s.point[1], s.point[2]]);
             const v2 = [n.x, n.y, n.z];
             n.delete();
-            return unit(v2);
+            return unit$1(v2);
           });
           const angle2 = Math.acos(Math.max(-1, Math.min(1, dot$2(normals[0], normals[1])))) * 180 / Math.PI;
           maxAngle = Math.max(maxAngle, angle2);
           if (angle2 < 0.5) {
-            const across = unit(cross$1(normals[0], s.tangent));
+            const across = unit$1(cross$1(normals[0], s.tangent));
             const kappas = adjacent.map((f2) => withSurface(f2.face, (adaptor, scratch) => {
               const [u2, v2] = f2.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
               return normalCurvature(sampleSurface(adaptor, u2, v2, scratch), across);
@@ -43142,7 +43474,7 @@ function analyzeCurves(bodies, options) {
     });
   }
 }
-const sub = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const sub$1 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const dot$1 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const cross = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 function round(v2) {
@@ -43152,9 +43484,9 @@ function round(v2) {
 function meshSectionPolylines(mesh, frame) {
   const o = frame.originMillimeters, x2 = frame.xDirection, n = frame.normal, y2 = cross(n, x2);
   const v2 = (i2) => [mesh.vertices[3 * i2], mesh.vertices[3 * i2 + 1], mesh.vertices[3 * i2 + 2]];
-  const side = (p2) => dot$1(sub(p2, o), n);
+  const side = (p2) => dot$1(sub$1(p2, o), n);
   const to2D = (p2) => {
-    const d2 = sub(p2, o);
+    const d2 = sub$1(p2, o);
     return [round(dot$1(d2, x2)), round(dot$1(d2, y2))];
   };
   const segments = [];
@@ -43468,18 +43800,174 @@ function analyzePart(document2, options) {
   } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }
+const safeName = (name5) => name5.replace(/[\r\n]/g, " ").trim() || "Body";
+function meshOBJ(meshes2) {
+  const lines = ["# Aether CAD export, millimetres"];
+  let offset2 = 1;
+  for (const { name: name5, mesh } of meshes2) {
+    lines.push(`o ${safeName(name5)}`);
+    for (let i2 = 0; i2 < mesh.vertices.length; i2 += 3) lines.push(`v ${mesh.vertices[i2]} ${mesh.vertices[i2 + 1]} ${mesh.vertices[i2 + 2]}`);
+    for (let i2 = 0; i2 < mesh.triangles.length; i2 += 3) lines.push(`f ${mesh.triangles[i2] + offset2} ${mesh.triangles[i2 + 1] + offset2} ${mesh.triangles[i2 + 2] + offset2}`);
+    offset2 += mesh.vertices.length / 3;
+  }
+  return lines.join("\n") + "\n";
+}
+function meshGLB(meshes2) {
+  const chunks = [];
+  const bufferViews = [], accessors = [], gltfMeshes = [], nodes = [];
+  let byteOffset = 0;
+  const pushView = (bytes, target) => {
+    chunks.push(bytes);
+    const view2 = bufferViews.length;
+    bufferViews.push({ buffer: 0, byteOffset, byteLength: bytes.byteLength, target });
+    byteOffset += bytes.byteLength;
+    const pad = (4 - bytes.byteLength % 4) % 4;
+    if (pad) {
+      chunks.push(new Uint8Array(pad));
+      byteOffset += pad;
+    }
+    return view2;
+  };
+  for (const { name: name5, mesh } of meshes2) {
+    const count = mesh.triangles.length, normals = flatNormals(mesh);
+    const positions = new Float32Array(count * 3), normal = new Float32Array(count * 3), indices = new Uint32Array(count);
+    const min = [Infinity, Infinity, Infinity], max2 = [-Infinity, -Infinity, -Infinity];
+    for (let i2 = 0; i2 < count; i2++) {
+      const v2 = mesh.triangles[i2] * 3, n = Math.floor(i2 / 3) * 9;
+      const p2 = [mesh.vertices[v2] / 1e3, mesh.vertices[v2 + 2] / 1e3, -mesh.vertices[v2 + 1] / 1e3];
+      const nn = [normals[n], normals[n + 2], -normals[n + 1]];
+      for (let k2 = 0; k2 < 3; k2++) {
+        positions[i2 * 3 + k2] = p2[k2];
+        normal[i2 * 3 + k2] = nn[k2];
+        min[k2] = Math.min(min[k2], p2[k2]);
+        max2[k2] = Math.max(max2[k2], p2[k2]);
+      }
+      indices[i2] = i2;
+    }
+    const position = accessors.length;
+    accessors.push({ bufferView: pushView(new Uint8Array(positions.buffer), 34962), componentType: 5126, count, type: "VEC3", min, max: max2 });
+    accessors.push({ bufferView: pushView(new Uint8Array(normal.buffer), 34962), componentType: 5126, count, type: "VEC3" });
+    accessors.push({ bufferView: pushView(new Uint8Array(indices.buffer), 34963), componentType: 5125, count, type: "SCALAR" });
+    nodes.push({ name: safeName(name5), mesh: gltfMeshes.length });
+    gltfMeshes.push({ name: safeName(name5), primitives: [{ attributes: { POSITION: position, NORMAL: position + 1 }, indices: position + 2, mode: 4 }] });
+  }
+  const json2 = JSON.stringify({ asset: { version: "2.0", generator: "Aether CAD" }, scene: 0, scenes: [{ nodes: nodes.map((_2, i2) => i2) }], nodes, meshes: gltfMeshes, accessors, bufferViews, buffers: [{ byteLength: byteOffset }] });
+  const jsonBytes = new TextEncoder().encode(json2), jsonPad = (4 - jsonBytes.length % 4) % 4;
+  const total = 12 + 8 + jsonBytes.length + jsonPad + 8 + byteOffset;
+  const out = new Uint8Array(total), view = new DataView(out.buffer);
+  view.setUint32(0, 1179937895, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, total, true);
+  view.setUint32(12, jsonBytes.length + jsonPad, true);
+  view.setUint32(16, 1313821514, true);
+  out.set(jsonBytes, 20);
+  out.fill(32, 20 + jsonBytes.length, 20 + jsonBytes.length + jsonPad);
+  let at = 20 + jsonBytes.length + jsonPad;
+  view.setUint32(at, byteOffset, true);
+  view.setUint32(at + 4, 5130562, true);
+  at += 8;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return out;
+}
+const xml$1 = (text2) => text2.replace(/[&<>"]/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c2]);
+function mesh3MF(meshes2) {
+  const objects = meshes2.map(({ name: name5, mesh }, index2) => {
+    const vertices = [], triangles = [];
+    for (let i2 = 0; i2 < mesh.vertices.length; i2 += 3) vertices.push(`<vertex x="${mesh.vertices[i2]}" y="${mesh.vertices[i2 + 1]}" z="${mesh.vertices[i2 + 2]}"/>`);
+    for (let i2 = 0; i2 < mesh.triangles.length; i2 += 3) triangles.push(`<triangle v1="${mesh.triangles[i2]}" v2="${mesh.triangles[i2 + 1]}" v3="${mesh.triangles[i2 + 2]}"/>`);
+    return `<object id="${index2 + 1}" name="${xml$1(safeName(name5))}" type="model"><mesh><vertices>${vertices.join("")}</vertices><triangles>${triangles.join("")}</triangles></mesh></object>`;
+  });
+  const model = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Aether CAD</metadata><resources>${objects.join("")}</resources><build>${meshes2.map((_2, i2) => `<item objectid="${i2 + 1}"/>`).join("")}</build></model>`;
+  return storedZip([
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`],
+    ["3D/3dmodel.model", model]
+  ]);
+}
+const crcTable = new Uint32Array(256).map((_2, n) => {
+  let c2 = n;
+  for (let k2 = 0; k2 < 8; k2++) c2 = c2 & 1 ? 3988292384 ^ c2 >>> 1 : c2 >>> 1;
+  return c2 >>> 0;
+});
+function crc32(bytes) {
+  let crc = 4294967295;
+  for (const byte of bytes) crc = crcTable[(crc ^ byte) & 255] ^ crc >>> 8;
+  return (crc ^ 4294967295) >>> 0;
+}
+function storedZip(entries) {
+  const encoder = new TextEncoder(), locals = [], centrals = [];
+  let offset2 = 0;
+  for (const [name5, content] of entries) {
+    const nameBytes = encoder.encode(name5), data2 = encoder.encode(content), crc = crc32(data2);
+    const local2 = new Uint8Array(30 + nameBytes.length + data2.length), lv = new DataView(local2.buffer);
+    lv.setUint32(0, 67324752, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(8, 0, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, data2.length, true);
+    lv.setUint32(22, data2.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    local2.set(nameBytes, 30);
+    local2.set(data2, 30 + nameBytes.length);
+    const central = new Uint8Array(46 + nameBytes.length), cv = new DataView(central.buffer);
+    cv.setUint32(0, 33639248, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, data2.length, true);
+    cv.setUint32(24, data2.length, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset2, true);
+    central.set(nameBytes, 46);
+    locals.push(local2);
+    centrals.push(central);
+    offset2 += local2.length;
+  }
+  const centralSize = centrals.reduce((n, c2) => n + c2.length, 0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 101010256, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset2, true);
+  const out = new Uint8Array(offset2 + centralSize + 22);
+  let at = 0;
+  for (const part of [...locals, ...centrals, end]) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
+const FORMATS = ["step", "stl", "obj", "gltf", "3mf"];
 async function exportPart(document2, options) {
-  if (options.format !== "step" && options.format !== "stl") throw new Error("Choose STEP or STL.");
+  if (!FORMATS.includes(options.format)) throw new Error("Choose STEP, STL, OBJ, glTF or 3MF.");
   let shapes = /* @__PURE__ */ new Map();
   evaluatePartDocument(document2, { withBodies: (bodies) => {
     shapes = new Map(bodies);
   } });
   const ids2 = options.bodyIds ?? null;
   if (ids2 !== null && (!ids2.length || ids2.some((id2) => !shapes.has(id2)))) throw new Error("An export body is unavailable.");
-  const selected = [...shapes].filter(([id2]) => ids2 === null || ids2.includes(id2)).map(([, shape]) => shape);
+  const selectedEntries = [...shapes].filter(([id2]) => ids2 === null || ids2.includes(id2));
+  const selected = selectedEntries.map(([, shape]) => shape);
   if (!selected.length) throw new Error("Import or create geometry before exporting.");
   const tolerance2 = options.toleranceMillimeters ?? 0.1;
   if (!Number.isFinite(tolerance2) || tolerance2 < 1e-3 || tolerance2 > 5) throw new Error("Mesh tolerance must be between 0.001 and 5 mm.");
+  if (options.format === "obj" || options.format === "gltf" || options.format === "3mf") {
+    const names = new Map(availableBodies(document2).map((body) => [body.id, body.name]));
+    const meshes2 = selectedEntries.map(([id2, shape]) => {
+      const mesh = shape.mesh({ tolerance: tolerance2, angularTolerance: 0.35 });
+      return { name: names.get(id2) ?? id2, mesh: { vertices: Float32Array.from(mesh.vertices), triangles: Uint32Array.from(mesh.triangles) } };
+    });
+    const bytes = options.format === "obj" ? new TextEncoder().encode(meshOBJ(meshes2)) : options.format === "gltf" ? meshGLB(meshes2) : mesh3MF(meshes2);
+    if (bytes.byteLength > 64 * 1024 * 1024) throw new Error("Export exceeds the 64 MB download limit.");
+    return { format: options.format, units: "mm", body_count: selected.length, bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  }
   const whole = selected.length === 1 ? selected[0] : makeCompound(selected.map((shape) => shape.clone()));
   try {
     const blob = options.format === "step" ? whole.blobSTEP() : whole.blobSTL({ tolerance: tolerance2, angularTolerance: 0.35, binary: true });
@@ -43490,7 +43978,8 @@ async function exportPart(document2, options) {
     if (whole !== selected[0]) whole.delete();
   }
 }
-function drawingViewFrame(orientation) {
+function drawingViewFrame(orientation, direction2) {
+  if (direction2) return { normal: [...direction2], up: Math.abs(direction2[2]) > 0.999 * Math.hypot(...direction2) ? [0, 1, 0] : [0, 0, 1] };
   switch (orientation) {
     case "front":
       return { normal: [0, -1, 0], up: [0, 0, 1] };
@@ -43531,7 +44020,7 @@ function bounds(shape) {
 function withDrawingSection(shapes, options, read3) {
   const section2 = options.section;
   if (!section2) return read3(shapes, []);
-  if (options.orientation === "isometric") throw Error("Section views require a principal orientation.");
+  if (options.orientation === "isometric" || options.direction) throw Error("Section views require a principal orientation.");
   const { normal, up } = drawingViewFrame(options.orientation);
   const axis = normal.findIndex((value2) => value2 !== 0);
   const offset2 = section2.offsetMm;
@@ -43647,7 +44136,7 @@ function hatchFace(face, right, up, spacing2, out, budget) {
   return Math.max(0, count);
 }
 function projectPartDrawing(document2, options) {
-  const { normal, up } = drawingViewFrame(options.orientation);
+  const { normal, up } = drawingViewFrame(options.orientation, options.direction);
   let result;
   evaluatePartDocument(document2, { withBodies: (bodies) => {
     const ids2 = options.bodyIds ?? [...bodies.keys()];
@@ -43757,7 +44246,7 @@ function projectionFrame(frame) {
   const vector2 = (v2) => [dot$5(v2, frame.xDirection), dot$5(v2, y2)];
   return {
     vector: vector2,
-    point: (p2) => vector2(sub$3(p2, frame.originMillimeters))
+    point: (p2) => vector2(sub$4(p2, frame.originMillimeters))
   };
 }
 function projectModelEdge(edge, target, tolerance2) {
@@ -43991,6 +44480,7 @@ function projectBodyGeometry(bodies, frame, options = {}) {
   });
 }
 const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
+const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length"];
 function object(value2) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
 }
@@ -44007,9 +44497,17 @@ function point(value2) {
 function list(value2, limit) {
   if (!Array.isArray(value2) || value2.length > limit) throw Error(`Drawing list exceeds ${limit} entries or is not an array.`);
 }
+function direction$1(value2) {
+  if (!Array.isArray(value2) || value2.length !== 3) throw Error("A view direction needs three model coordinates.");
+  value2.forEach((v2) => number(v2, -1e6, 1e6));
+  if (Math.hypot(...value2) < 1e-9) throw Error("A view direction cannot be zero.");
+}
+function atLeast(value2, version2, what) {
+  if (value2 < version2) throw Error(`${what} require Drawing format version ${version2}.`);
+}
 function validateDrawingDocument(value2) {
   object(value2);
-  if (value2.format !== "aether-drawing" || ![1, 2].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
+  if (value2.format !== "aether-drawing" || ![1, 2, 3, 4].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
   text(value2.documentId);
   text(value2.name);
   text(value2.activeSheetId);
@@ -44044,6 +44542,23 @@ function validateDrawingDocument(value2) {
     if (!["first_angle", "third_angle"].includes(sheet.projection)) throw Error("Choose first-angle or third-angle projection.");
     list(sheet.views, 100);
     list(sheet.annotations, 1e3);
+    if (sheet.titleBlock !== void 0) {
+      atLeast(value2.formatVersion, 4, "Title-block fields");
+      list(sheet.titleBlock, 12);
+      for (const row of sheet.titleBlock) {
+        object(row);
+        text(row.label);
+        if (typeof row.value !== "string" || row.value.length > 200) throw Error("Title-block values are strings of at most 200 characters.");
+        if (Object.keys(row).length !== 2) throw Error("Title-block rows have a label and a value only.");
+      }
+    }
+    if (sheet.partsList !== void 0) {
+      atLeast(value2.formatVersion, 4, "Parts lists");
+      object(sheet.partsList);
+      point(sheet.partsList.originMm);
+      if (sheet.partsList.widthMm !== void 0) number(sheet.partsList.widthMm, 40, 400);
+      if (Object.keys(sheet.partsList).some((key2) => !["originMm", "widthMm"].includes(key2))) throw Error("Unknown parts-list field.");
+    }
     totalViews += sheet.views.length;
     if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
     const views = /* @__PURE__ */ new Map();
@@ -44061,8 +44576,23 @@ function validateDrawingDocument(value2) {
         view.bodyIds.forEach(text);
         if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies.");
       }
+      if (view.direction != null) {
+        atLeast(value2.formatVersion, 4, "Auxiliary views");
+        direction$1(view.direction);
+        if (view.parentId || view.section != null || view.detail != null) throw Error("An auxiliary view is an independent view without a section.");
+      }
+      if (view.detail != null) {
+        atLeast(value2.formatVersion, 4, "Detail views");
+        object(view.detail);
+        if (Object.keys(view.detail).some((key2) => !["parentId", "centerMm", "radiusMm", "label"].includes(key2))) throw Error("Unknown detail property.");
+        text(view.detail.parentId);
+        point(view.detail.centerMm);
+        number(view.detail.radiusMm, 1, 1e3);
+        text(view.detail.label);
+        if (view.parentId || view.section != null) throw Error("A detail view enlarges another view; it has no projection parent or section of its own.");
+      }
       if (view.section != null) {
-        if (value2.formatVersion !== 2) throw Error("Section views require Drawing format version 2.");
+        atLeast(value2.formatVersion, 2, "Section views");
         object(view.section);
         if (Object.keys(view.section).some((key2) => !["offsetMm", "hatchSpacingMm"].includes(key2))) throw Error("Unknown section property.");
         number(view.section.offsetMm, -1e5, 1e5);
@@ -44070,6 +44600,10 @@ function validateDrawingDocument(value2) {
         if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
       }
       views.set(view.id, view);
+    }
+    for (const view of views.values()) if (view.detail) {
+      const parent = views.get(view.detail.parentId);
+      if (!parent || parent.detail) throw Error("A detail view must reference a non-detail view on the same sheet.");
     }
     for (const view of views.values()) if (view.parentId) {
       const parent = views.get(view.parentId);
@@ -44082,11 +44616,28 @@ function validateDrawingDocument(value2) {
       id2(annotation.id);
       point(annotation.positionMm);
       if (annotation.kind === "note") text(annotation.text);
-      else if (annotation.kind === "width" || annotation.kind === "height") {
+      else if (annotation.kind === "balloon") {
+        atLeast(value2.formatVersion, 4, "Balloons");
+        text(annotation.text);
+        point(annotation.leaderMm);
+      } else if (annotation.kind === "center-mark") {
+        atLeast(value2.formatVersion, 4, "Centre marks");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The centre mark's view does not exist.");
+        point(annotation.atMm);
+      } else if (drawingDimensionKinds.includes(annotation.kind)) {
         text(annotation.viewId);
         if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6);
         if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.kind === "length") {
+          atLeast(value2.formatVersion, 4, "Edge length dimensions");
+          point(annotation.atMm);
+        } else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
+          atLeast(value2.formatVersion, 3, "Diameter, radius and angle dimensions");
+          point(annotation.atMm);
+          if (annotation.kind === "angle") point(annotation.toMm);
+        }
       } else throw Error("Unsupported drawing annotation.");
     }
   }
@@ -44138,7 +44689,9 @@ function applyDrawingCommand(source, command) {
         break;
       }
       case "update-sheet":
-        for (const key2 of ["name", "widthMm", "heightMm", "projection"]) if (command[key2] !== void 0) Object.assign(sheet, { [key2]: command[key2] });
+        for (const key2 of ["name", "widthMm", "heightMm", "projection", "titleBlock"]) if (command[key2] !== void 0) Object.assign(sheet, { [key2]: command[key2] });
+        if (command.partsList === null) delete sheet.partsList;
+        else if (command.partsList !== void 0) sheet.partsList = command.partsList;
         break;
       case "add-view":
         sheet.views.push(structuredClone(command.view));
@@ -44146,13 +44699,13 @@ function applyDrawingCommand(source, command) {
       case "update-view": {
         const view = sheet.views.find((v2) => v2.id === command.viewId);
         if (!view) throw Error("Drawing view does not exist.");
-        if (Object.keys(command.changes).some((key2) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section"].includes(key2))) throw Error("Unknown drawing view property.");
+        if (Object.keys(command.changes).some((key2) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section", "direction", "detail"].includes(key2))) throw Error("Unknown drawing view property.");
         Object.assign(view, structuredClone(command.changes));
         break;
       }
       case "remove-view": {
         if (!sheet.views.some((v2) => v2.id === command.viewId)) throw Error("Drawing view does not exist.");
-        if (sheet.views.some((v2) => v2.parentId === command.viewId) || sheet.annotations.some((a2) => a2.kind !== "note" && a2.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
+        if (sheet.views.some((v2) => v2.parentId === command.viewId || v2.detail?.parentId === command.viewId) || sheet.annotations.some((a2) => a2.kind !== "note" && a2.kind !== "balloon" && a2.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
         sheet.views = sheet.views.filter((v2) => v2.id !== command.viewId);
         break;
       }
@@ -44174,11 +44727,17 @@ function applyDrawingCommand(source, command) {
         throw Error("Unknown drawing command.");
     }
   }
-  if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
+  if (doc.sheets.some((sheet) => sheet.titleBlock || sheet.partsList || sheet.views.some((view) => view.direction || view.detail) || sheet.annotations.some((annotation) => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
+  else if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
+  else if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
   validateDrawingDocument(doc);
   return doc;
 }
 function resolvedDrawingView(sheet, view) {
+  if (view.detail) {
+    const parent2 = resolvedDrawingView(sheet, sheet.views.find((v2) => v2.id === view.detail.parentId));
+    return { ...view, orientation: parent2.orientation, bodyIds: parent2.bodyIds, section: parent2.section, direction: parent2.direction };
+  }
   if (!view.parentId) return view;
   const parent = sheet.views.find((v2) => v2.id === view.parentId);
   const vertical = view.orientation === "top" || view.orientation === "bottom";
@@ -44192,6 +44751,165 @@ function resolvedDrawingView(sheet, view) {
     originMm: vertical ? [parent.originMm[0], parent.originMm[1] + sign * distance2] : [parent.originMm[0] + sign * distance2, parent.originMm[1]]
   };
 }
+const sub = (p2, q) => [p2[0] - q[0], p2[1] - q[1]];
+const add = (p2, q) => [p2[0] + q[0], p2[1] + q[1]];
+const mul = (p2, k2) => [p2[0] * k2, p2[1] * k2];
+const norm = (p2) => Math.hypot(p2[0], p2[1]);
+const unit = (p2, fallback = [1, 0]) => {
+  const n = norm(p2);
+  return n < 1e-9 ? fallback : mul(p2, 1 / n);
+};
+const perp = (p2) => [-p2[1], p2[0]];
+function arrowhead(tip, back) {
+  const base = add(tip, mul(back, 2)), side = mul(perp(back), 0.7);
+  const p2 = add(base, side), q = sub(base, side);
+  return [[tip, p2], [p2, q], [q, tip]];
+}
+function footOnSegment(p2, { a: a2, b }) {
+  const ab = sub(b, a2), t2 = norm(ab) < 1e-9 ? 0 : Math.max(0, Math.min(1, (sub(p2, a2)[0] * ab[0] + sub(p2, a2)[1] * ab[1]) / (ab[0] ** 2 + ab[1] ** 2)));
+  return add(a2, mul(ab, t2));
+}
+function sheetCurves(view) {
+  const rounds = [], segments = [];
+  const curves2 = view.view.hiddenLines ? [...view.geometry.visible, ...view.geometry.hidden] : view.geometry.visible;
+  for (const curve of curves2) {
+    if (curve.kind === "line") segments.push({ a: sheetPoint(view, curve.start), b: sheetPoint(view, curve.end) });
+    else if (curve.kind === "circle" || curve.kind === "arc") rounds.push({ center: sheetPoint(view, curve.center), radiusMm: curve.radius * view.view.scale, modelRadius: curve.radius });
+  }
+  return { rounds, segments };
+}
+function nearestRound(rounds, at, viewName) {
+  let best, bestDistance = Infinity;
+  for (const round4 of rounds) {
+    const distance2 = Math.abs(norm(sub(at, round4.center)) - round4.radiusMm);
+    if (distance2 < bestDistance) {
+      best = round4;
+      bestDistance = distance2;
+    }
+  }
+  if (!best || bestDistance > 5) throw Error(`No circle or arc lies within 5 mm of the picked point in view ${viewName}.`);
+  return best;
+}
+function nearestSegment(segments, at, viewName) {
+  let best, bestDistance = Infinity;
+  for (const segment of segments) {
+    const distance2 = norm(sub(at, footOnSegment(at, segment)));
+    if (distance2 < bestDistance) {
+      best = segment;
+      bestDistance = distance2;
+    }
+  }
+  if (!best || bestDistance > 5) throw Error(`No straight edge lies within 5 mm of the picked point in view ${viewName}.`);
+  return best;
+}
+function attachedDimension(annotation, view) {
+  const { rounds, segments } = sheetCurves(view);
+  const label = annotation.kind === "center-mark" ? annotation.atMm : annotation.positionMm, name5 = view.view.name;
+  if (annotation.kind === "angle") {
+    const first = nearestSegment(segments, annotation.atMm, name5), second = nearestSegment(segments, annotation.toMm, name5);
+    if (first === second) throw Error("Pick two different straight edges for an angle dimension.");
+    const d1 = sub(first.b, first.a), d2 = sub(second.b, second.a), cross2 = d1[0] * d2[1] - d1[1] * d2[0];
+    if (Math.abs(cross2) < 1e-9 * Math.max(norm(d1) * norm(d2), 1e-9)) throw Error("The picked edges are parallel; an angle needs edges that meet.");
+    const ac = sub(second.a, first.a), t2 = (ac[0] * d2[1] - ac[1] * d2[0]) / cross2, vertex = add(first.a, mul(d1, t2));
+    const ray = (pick, segment, direction2) => {
+      const foot = footOnSegment(pick, segment), away = sub(foot, vertex);
+      return norm(away) < 1e-6 ? unit(norm(sub(segment.b, vertex)) > norm(sub(segment.a, vertex)) ? sub(segment.b, vertex) : sub(segment.a, vertex), unit(direction2)) : unit(away);
+    };
+    const r1 = ray(annotation.atMm, first, d1), r2 = ray(annotation.toMm, second, d2);
+    const valueDeg = Math.acos(Math.max(-1, Math.min(1, r1[0] * r2[0] + r1[1] * r2[1]))) * 180 / Math.PI;
+    const radius = Math.max(5, norm(sub(label, vertex))), sweep = Math.sign(r1[0] * r2[1] - r1[1] * r2[0]) || 1, start = Math.atan2(r1[1], r1[0]);
+    const steps2 = Math.max(8, Math.ceil(valueDeg / 5)), total = valueDeg * Math.PI / 180;
+    const arcPoint = (i2) => {
+      const angle2 = start + sweep * total * i2 / steps2;
+      return add(vertex, [radius * Math.cos(angle2), radius * Math.sin(angle2)]);
+    };
+    const lines2 = [[vertex, add(vertex, mul(r1, radius + 2))], [vertex, add(vertex, mul(r2, radius + 2))]];
+    for (let i2 = 0; i2 < steps2; i2++) lines2.push([arcPoint(i2), arcPoint(i2 + 1)]);
+    lines2.push(...arrowhead(arcPoint(0), unit(sub(arcPoint(1), arcPoint(0)))), ...arrowhead(arcPoint(steps2), unit(sub(arcPoint(steps2 - 1), arcPoint(steps2)))));
+    return { id: annotation.id, viewId: annotation.viewId, text: `${valueDeg.toFixed(annotation.decimals)}°`, valueDeg, measure: "angle", textAlign: "center", positionMm: label, lines: lines2 };
+  }
+  if (annotation.kind === "length") {
+    const edge2 = nearestSegment(segments, annotation.atMm, name5), along = unit(sub(edge2.b, edge2.a)), normal = perp(along);
+    const offset2 = sub(label, edge2.a)[0] * normal[0] + sub(label, edge2.a)[1] * normal[1], side = Math.sign(offset2) || 1;
+    const a2 = add(edge2.a, mul(normal, offset2)), b = add(edge2.b, mul(normal, offset2)), beyond = mul(normal, side * 2);
+    const lines2 = [[a2, b], [edge2.a, add(a2, beyond)], [edge2.b, add(b, beyond)], ...arrowhead(a2, along), ...arrowhead(b, mul(along, -1))];
+    const valueMm = norm(sub(edge2.b, edge2.a)) / view.view.scale;
+    return { id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: "center", positionMm: add(mul(add(a2, b), 0.5), mul(normal, side * 1.5)), lines: lines2 };
+  }
+  const round4 = nearestRound(rounds, annotation.atMm, name5);
+  if (annotation.kind === "center-mark") {
+    const reach = round4.radiusMm + 2, [cx2, cy2] = round4.center;
+    return { id: annotation.id, viewId: annotation.viewId, symbol: "center-mark", text: "", textAlign: "left", positionMm: round4.center, lines: [[[cx2 - reach, cy2], [cx2 + reach, cy2]], [[cx2, cy2 - reach], [cx2, cy2 + reach]]] };
+  }
+  const toward = unit(sub(label, round4.center)), edge = add(round4.center, mul(toward, round4.radiusMm));
+  const outside = norm(sub(label, round4.center)) > round4.radiusMm + 1e-6;
+  const lines = annotation.kind === "diameter" ? [[sub(round4.center, mul(toward, round4.radiusMm)), edge], ...arrowhead(edge, mul(toward, -1)), ...arrowhead(sub(round4.center, mul(toward, round4.radiusMm)), toward)] : [[round4.center, edge], ...arrowhead(edge, mul(toward, -1))];
+  if (outside) lines.push([edge, label]);
+  const value2 = annotation.kind === "diameter" ? 2 * round4.modelRadius : round4.modelRadius;
+  return { id: annotation.id, viewId: annotation.viewId, text: `${annotation.kind === "diameter" ? "Ø" : "R"}${value2.toFixed(annotation.decimals)}`, valueMm: value2, measure: annotation.kind, textAlign: "left", positionMm: label, lines };
+}
+const TOLERANCE_MM = 0.01;
+function clipSegment(a2, b, c2, r) {
+  const d2 = [b[0] - a2[0], b[1] - a2[1]], f2 = [a2[0] - c2[0], a2[1] - c2[1]];
+  const A = d2[0] ** 2 + d2[1] ** 2, B = 2 * (f2[0] * d2[0] + f2[1] * d2[1]), C = f2[0] ** 2 + f2[1] ** 2 - r * r;
+  if (A < 1e-18) return C <= 0 ? [a2, b] : null;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return null;
+  const s = Math.sqrt(disc), t0 = Math.max(0, (-B - s) / (2 * A)), t1 = Math.min(1, (-B + s) / (2 * A));
+  if (t1 - t0 < 1e-9) return null;
+  const at = (t2) => [a2[0] + d2[0] * t2, a2[1] + d2[1] * t2];
+  return [at(t0), at(t1)];
+}
+function samples(curve) {
+  const start = curve.kind === "circle" ? 0 : curve.start;
+  let sweep = curve.kind === "circle" ? 2 * Math.PI : ((curve.ccw ? curve.end - curve.start : curve.start - curve.end) + 2 * Math.PI) % (2 * Math.PI) || 2 * Math.PI;
+  const sign = curve.kind === "arc" && !curve.ccw ? -1 : 1;
+  const step = 2 * Math.acos(Math.max(-1, 1 - TOLERANCE_MM / curve.radius)), count = Math.max(8, Math.ceil(sweep / step));
+  const points = [];
+  for (let i2 = 0; i2 <= count; i2++) {
+    const angle2 = start + sign * sweep * i2 / count;
+    points.push([curve.center[0] + curve.radius * Math.cos(angle2), curve.center[1] + curve.radius * Math.sin(angle2)]);
+  }
+  return points;
+}
+function clipProjectionToCircle(geometry, center, radius) {
+  const inside2 = (p2) => Math.hypot(p2[0] - center[0], p2[1] - center[1]) <= radius + 1e-9;
+  const clipPolyline = (points, toleranceMm) => {
+    const out = [];
+    let run = [];
+    for (let i2 = 1; i2 < points.length; i2++) {
+      const piece = clipSegment(points[i2 - 1], points[i2], center, radius);
+      if (!piece) {
+        if (run.length > 1) out.push({ kind: "polyline", points: run, toleranceMm });
+        run = [];
+        continue;
+      }
+      if (!run.length || Math.hypot(piece[0][0] - run.at(-1)[0], piece[0][1] - run.at(-1)[1]) > 1e-9) {
+        if (run.length > 1) out.push({ kind: "polyline", points: run, toleranceMm });
+        run = [piece[0]];
+      }
+      run.push(piece[1]);
+    }
+    if (run.length > 1) out.push({ kind: "polyline", points: run, toleranceMm });
+    return out;
+  };
+  const clip2 = (curves2) => curves2.flatMap((curve) => {
+    if (curve.kind === "line") {
+      const piece = clipSegment(curve.start, curve.end, center, radius);
+      return piece ? [{ kind: "line", start: piece[0], end: piece[1] }] : [];
+    }
+    if (curve.kind === "polyline") return clipPolyline(curve.points, curve.toleranceMm);
+    const sampled = samples(curve);
+    return sampled.every(inside2) ? [curve] : clipPolyline(sampled, TOLERANCE_MM);
+  });
+  const hatch = geometry.hatch ? clip2(geometry.hatch).filter((c2) => c2.kind === "line") : void 0;
+  return { visible: clip2(geometry.visible), hidden: clip2(geometry.hidden), bodyIds: geometry.bodyIds, bounds: [center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius], ...hatch ? { hatch } : {} };
+}
+function circleChords(center, radius, count = 32) {
+  const at = (i2) => [center[0] + radius * Math.cos(2 * Math.PI * i2 / count), center[1] + radius * Math.sin(2 * Math.PI * i2 / count)];
+  return Array.from({ length: count }, (_2, i2) => [at(i2), at(i2 + 1)]);
+}
+const partsListColumns = ["item", "part", "quantity", "material"];
 async function buildDrawing(input, project) {
   const document2 = structuredClone(input);
   validateDrawingDocument(document2);
@@ -44199,14 +44917,23 @@ async function buildDrawing(input, project) {
   const cache2 = /* @__PURE__ */ new Map();
   for (const sheet of document2.sheets) {
     const built = { sheet, views: [], annotations: [] };
-    for (const authored of sheet.views) {
+    for (const authored of [...sheet.views.filter((v2) => !v2.detail), ...sheet.views.filter((v2) => v2.detail)]) {
       const view = resolvedDrawingView(sheet, authored);
-      const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {}, ...view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {} };
-      const key2 = JSON.stringify(options);
-      let geometry = cache2.get(key2);
-      if (!geometry) {
-        geometry = await project(document2.source, options);
-        cache2.set(key2, geometry);
+      let geometry;
+      if (view.detail) {
+        const parent = built.views.find((v2) => v2.view.id === view.detail.parentId);
+        const { centerMm, radiusMm, label } = view.detail, ps = parent.view.scale;
+        const modelCenter = [(centerMm[0] - parent.translationMm[0]) / ps, (parent.translationMm[1] - centerMm[1]) / ps];
+        geometry = clipProjectionToCircle(parent.geometry, modelCenter, radiusMm / ps);
+        built.annotations.push({ id: `${view.id}/marker`, symbol: "detail-marker", viewId: parent.view.id, text: label, textAlign: "left", positionMm: [centerMm[0] + radiusMm * 0.75, centerMm[1] - radiusMm * 0.75 - 1], lines: circleChords(centerMm, radiusMm) });
+      } else {
+        const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {}, ...view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}, ...view.direction ? { direction: view.direction } : {} };
+        const key2 = JSON.stringify(options);
+        geometry = cache2.get(key2);
+        if (!geometry) {
+          geometry = await project(document2.source, options);
+          cache2.set(key2, geometry);
+        }
       }
       const [x0, y0, x1, y1] = geometry.bounds, s = view.scale;
       if (!geometry.bounds.every(Number.isFinite) || x1 < x0 || y1 < y0) throw Error("Drawing projection returned invalid bounds.");
@@ -44219,7 +44946,15 @@ async function buildDrawing(input, project) {
         built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] });
         continue;
       }
+      if (annotation.kind === "balloon") {
+        built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm));
+        continue;
+      }
       const view = built.views.find((v2) => v2.view.id === annotation.viewId);
+      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") {
+        built.annotations.push(attachedDimension(annotation, view));
+        continue;
+      }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
@@ -44236,11 +44971,25 @@ async function buildDrawing(input, project) {
         const q = horizontal ? [tip[0] + direction2 * 2, tip[1] + 0.7] : [tip[0] + 0.7, tip[1] + direction2 * 2];
         lines.push([tip, p2], [p2, q], [q, tip]);
       }
-      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, textAlign: horizontal ? "center" : "left", positionMm: horizontal ? [(x0 + x1) / 2, y2 - 1.5] : [x2 + 1.5, (y0 + y1) / 2], lines });
+      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: horizontal ? "center" : "left", positionMm: horizontal ? [(x0 + x1) / 2, y2 - 1.5] : [x2 + 1.5, (y0 + y1) / 2], lines });
+    }
+    if (sheet.partsList) {
+      const rows = availableBodies(document2.source).map((body, i2) => ({ key: body.id, bodyId: body.id, cells: [String(i2 + 1), body.name, "1", document2.source.bodyProperties?.[body.id]?.material?.name ?? ""] }));
+      built.partsList = { originMm: sheet.partsList.originMm, widthMm: sheet.partsList.widthMm ?? 120, columns: partsListColumns, rows };
     }
     result.sheets.push(built);
   }
   return result;
+}
+function balloon(id2, text2, center, target) {
+  const radius = 4, d2 = Math.hypot(target[0] - center[0], target[1] - center[1]);
+  const lines = circleChords(center, radius);
+  if (d2 > radius) {
+    const u2 = [(target[0] - center[0]) / d2, (target[1] - center[1]) / d2], edge = [center[0] + u2[0] * radius, center[1] + u2[1] * radius];
+    const base = [target[0] - u2[0] * 2, target[1] - u2[1] * 2], p2 = [base[0] - u2[1] * 0.7, base[1] + u2[0] * 0.7], q = [base[0] + u2[1] * 0.7, base[1] - u2[0] * 0.7];
+    lines.push([edge, target], [target, p2], [p2, q], [q, target]);
+  }
+  return { id: id2, symbol: "balloon", text: text2, textAlign: "center", positionMm: [center[0], center[1] + 1.25], lines };
 }
 function sheetPoint(view, point2) {
   return [view.translationMm[0] + point2[0] * view.view.scale, view.translationMm[1] - point2[1] * view.view.scale];
@@ -44260,13 +45009,27 @@ function drawingCurvePath(curve, view) {
   return `M ${p2(start)} A ${r} ${r} 0 ${sweep > Math.PI ? 1 : 0} ${curve.ccw ? 0 : 1} ${p2(end)}`;
 }
 const xml = (text2) => text2.replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c2]);
+function titleBlockRows(sheet) {
+  if (!sheet.titleBlock?.length) return null;
+  const rows = sheet.titleBlock.map((row) => [row.label, row.value]), height = 2 + 5 * rows.length;
+  return { x: sheet.widthMm - 130, y: sheet.heightMm - 18 - height, width: 120, height, rows };
+}
+function partsListGrid(list2) {
+  const [x2, y2] = list2.originMm, w2 = list2.widthMm, rows = list2.rows.length + 1, h = 5 * rows, cw = w2 / list2.columns.length;
+  const lines = [[x2, y2, x2 + w2, y2], [x2 + w2, y2, x2 + w2, y2 + h], [x2 + w2, y2 + h, x2, y2 + h], [x2, y2 + h, x2, y2]];
+  for (let r = 1; r < rows; r++) lines.push([x2, y2 + 5 * r, x2 + w2, y2 + 5 * r]);
+  for (let c2 = 1; c2 < list2.columns.length; c2++) lines.push([x2 + cw * c2, y2, x2 + cw * c2, y2 + h]);
+  const texts = list2.columns.map((column, c2) => ({ x: x2 + cw * c2 + 1, y: y2 + 3.6, text: column, bold: true }));
+  list2.rows.forEach((row, r) => row.cells.forEach((cell, c2) => texts.push({ x: x2 + cw * c2 + 1, y: y2 + 5 * (r + 1) + 3.6, text: cell, bold: false })));
+  return { lines, texts };
+}
 const sheetOf = (drawing, id2) => {
   const sheet = drawing.sheets.find((s) => s.sheet.id === id2);
   if (!sheet) throw Error("Drawing sheet does not exist.");
   return sheet;
 };
 function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
-  const { sheet, views, annotations } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
   const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
   for (const view of views) {
     for (const curve of view.geometry.hatch ?? []) elements.push(`<path data-layer="hatch" d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="0.15"/>`);
@@ -44277,13 +45040,23 @@ function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
   }
   for (const annotation of annotations) {
     for (const [a2, b] of annotation.lines) elements.push(`<path d="M ${a2.join(" ")} L ${b.join(" ")}" stroke="#222" stroke-width="0.2" fill="none"/>`);
-    elements.push(`<text x="${annotation.positionMm[0]}" y="${annotation.positionMm[1]}" font-size="3.5"${annotation.textAlign === "center" ? ' text-anchor="middle"' : ""}>${xml(annotation.text)}</text>`);
+    if (annotation.text) elements.push(`<text x="${annotation.positionMm[0]}" y="${annotation.positionMm[1]}" font-size="3.5"${annotation.textAlign === "center" ? ' text-anchor="middle"' : ""}>${xml(annotation.text)}</text>`);
+  }
+  if (partsList) {
+    const grid = partsListGrid(partsList);
+    grid.lines.forEach(([x0, y0, x1, y1]) => elements.push(`<line data-layer="parts-list" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#222" stroke-width="0.25"/>`));
+    grid.texts.forEach((t2) => elements.push(`<text x="${t2.x}" y="${t2.y}" font-size="2.8"${t2.bold ? ' font-weight="700"' : ""}>${xml(t2.text)}</text>`));
+  }
+  const block = titleBlockRows(sheet);
+  if (block) {
+    elements.push(`<rect x="${block.x}" y="${block.y}" width="${block.width}" height="${block.height}" fill="none" stroke="#222" stroke-width="0.3"/>`);
+    block.rows.forEach(([label, value2], i2) => elements.push(`<text x="${block.x + 2}" y="${block.y + 4 + i2 * 5}" font-size="2.2" fill="#555">${xml(label)}</text>`, `<text x="${block.x + 24}" y="${block.y + 4 + i2 * 5}" font-size="2.8">${xml(value2)}</text>`));
   }
   elements.push(`<text x="${sheet.widthMm - 12}" y="${sheet.heightMm - 14}" font-size="3.5" text-anchor="end">${xml(drawing.document.name)} · ${xml(sheet.name)} · mm · ${sheet.projection.replace("_", " ")}</text>`);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.widthMm}mm" height="${sheet.heightMm}mm" viewBox="0 0 ${sheet.widthMm} ${sheet.heightMm}" font-family="sans-serif">${elements.join("\n")}</svg>`;
 }
 function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
-  const { sheet, views, annotations } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
   const out = [0, "SECTION", 2, "HEADER", 9, "$ACADVER", 1, "AC1015", 9, "$INSUNITS", 70, 4, 0, "ENDSEC", 0, "SECTION", 2, "TABLES", 0, "TABLE", 2, "LTYPE", 70, 2, 0, "LTYPE", 2, "CONTINUOUS", 70, 0, 3, "Solid", 72, 65, 73, 0, 40, 0, 0, "LTYPE", 2, "HIDDEN", 70, 0, 3, "Hidden", 72, 65, 73, 2, 40, 5, 49, 3, 74, 0, 49, -2, 74, 0, 0, "ENDTAB", 0, "ENDSEC", 0, "SECTION", 2, "ENTITIES"];
   const line2 = (a2, b, hidden = false, layer = hidden ? "HIDDEN" : "VISIBLE") => out.push(0, "LINE", 100, "AcDbEntity", 8, layer, 6, hidden ? "HIDDEN" : "CONTINUOUS", 100, "AcDbLine", 10, a2[0], 20, sheet.heightMm - a2[1], 30, 0, 11, b[0], 21, sheet.heightMm - b[1], 31, 0);
   const text2 = (value2, position, align = "left") => {
@@ -44325,7 +45098,18 @@ function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
   for (const view of views) for (const hatch of view.geometry.hatch ?? []) line2(sheetPoint(view, hatch.start), sheetPoint(view, hatch.end), false, "HATCH");
   for (const annotation of annotations) {
     annotation.lines.forEach(([a2, b]) => line2(a2, b, false, "ANNOTATIONS"));
-    text2(annotation.text, annotation.positionMm, annotation.textAlign);
+    if (annotation.text) text2(annotation.text, annotation.positionMm, annotation.textAlign);
+  }
+  if (partsList) {
+    const grid = partsListGrid(partsList);
+    grid.lines.forEach(([x0, y0, x1, y1]) => line2([x0, y0], [x1, y1], false, "PARTS_LIST"));
+    grid.texts.forEach((t2) => text2(t2.text, [t2.x, t2.y]));
+  }
+  const block = titleBlockRows(sheet);
+  if (block) {
+    const corners2 = [[block.x, block.y], [block.x + block.width, block.y], [block.x + block.width, block.y + block.height], [block.x, block.y + block.height]];
+    corners2.forEach((p2, i2) => line2(p2, corners2[(i2 + 1) % 4], false, "SHEET"));
+    block.rows.forEach(([label, value2], i2) => text2(`${label}: ${value2}`, [block.x + 2, block.y + 4 + i2 * 5]));
   }
   text2(`${drawing.document.name} / ${sheet.name} / mm`, [12, sheet.heightMm - 14]);
   out.push(0, "ENDSEC", 0, "EOF");
@@ -44391,7 +45175,20 @@ async function exportDrawingPDF(drawing, options) {
     }
     for (const annotation of annotations) {
       for (const [a2, b] of annotation.lines) stroke2(`M ${a2.join(" ")} L ${b.join(" ")}`, 0.2);
-      label(annotation.text, ...annotation.positionMm, 3.5, annotation.textAlign);
+      if (annotation.text) label(annotation.text, ...annotation.positionMm, 3.5, annotation.textAlign);
+    }
+    if (built.partsList) {
+      const grid = partsListGrid(built.partsList);
+      grid.lines.forEach(([x0, y0, x1, y1]) => stroke2(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
+      grid.texts.forEach((t2) => label(t2.text, t2.x, t2.y, 2.8));
+    }
+    const block = titleBlockRows(sheet);
+    if (block) {
+      stroke2(`M ${block.x} ${block.y} L ${block.x + block.width} ${block.y} L ${block.x + block.width} ${block.y + block.height} L ${block.x} ${block.y + block.height} Z`, 0.3);
+      block.rows.forEach(([key2, value2], i2) => {
+        label(key2, block.x + 2, block.y + 4 + i2 * 5, 2.2);
+        label(value2, block.x + 24, block.y + 4 + i2 * 5, 2.8);
+      });
     }
     const footer = `${drawing.document.name} · ${sheet.name} · mm · ${sheet.projection.replace("_", " ")}`;
     checkText(footer);
@@ -61424,16 +62221,16 @@ function requireCrc32() {
     }
     return table10;
   }
-  var crcTable = makeTable();
-  function crc32(crc, buf, len3, pos2) {
-    var t2 = crcTable, end = pos2 + len3;
+  var crcTable2 = makeTable();
+  function crc322(crc, buf, len3, pos2) {
+    var t2 = crcTable2, end = pos2 + len3;
     crc ^= -1;
     for (var i2 = pos2; i2 < end; i2++) {
       crc = crc >>> 8 ^ t2[(crc ^ buf[i2]) & 255];
     }
     return crc ^ -1;
   }
-  crc32_1 = crc32;
+  crc32_1 = crc322;
   return crc32_1;
 }
 var messages;
@@ -61470,7 +62267,7 @@ function requireDeflate$1() {
   var utils2 = requireCommon();
   var trees2 = requireTrees();
   var adler32 = requireAdler32();
-  var crc32 = requireCrc32();
+  var crc322 = requireCrc32();
   var msg = requireMessages();
   var Z_NO_FLUSH = 0;
   var Z_PARTIAL_FLUSH = 1;
@@ -61573,7 +62370,7 @@ function requireDeflate$1() {
     if (strm.state.wrap === 1) {
       strm.adler = adler32(strm.adler, buf, len3, start);
     } else if (strm.state.wrap === 2) {
-      strm.adler = crc32(strm.adler, buf, len3, start);
+      strm.adler = crc322(strm.adler, buf, len3, start);
     }
     strm.next_in += len3;
     strm.total_in += len3;
@@ -62215,7 +63012,7 @@ function requireDeflate$1() {
             put_byte(s, s.gzhead.extra.length >> 8 & 255);
           }
           if (s.gzhead.hcrc) {
-            strm.adler = crc32(strm.adler, s.pending_buf, s.pending, 0);
+            strm.adler = crc322(strm.adler, s.pending_buf, s.pending, 0);
           }
           s.gzindex = 0;
           s.status = EXTRA_STATE;
@@ -62252,7 +63049,7 @@ function requireDeflate$1() {
         while (s.gzindex < (s.gzhead.extra.length & 65535)) {
           if (s.pending === s.pending_buf_size) {
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             flush_pending(strm);
             beg = s.pending;
@@ -62264,7 +63061,7 @@ function requireDeflate$1() {
           s.gzindex++;
         }
         if (s.gzhead.hcrc && s.pending > beg) {
-          strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+          strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
         }
         if (s.gzindex === s.gzhead.extra.length) {
           s.gzindex = 0;
@@ -62280,7 +63077,7 @@ function requireDeflate$1() {
         do {
           if (s.pending === s.pending_buf_size) {
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             flush_pending(strm);
             beg = s.pending;
@@ -62297,7 +63094,7 @@ function requireDeflate$1() {
           put_byte(s, val);
         } while (val !== 0);
         if (s.gzhead.hcrc && s.pending > beg) {
-          strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+          strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
         }
         if (val === 0) {
           s.gzindex = 0;
@@ -62313,7 +63110,7 @@ function requireDeflate$1() {
         do {
           if (s.pending === s.pending_buf_size) {
             if (s.gzhead.hcrc && s.pending > beg) {
-              strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+              strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
             }
             flush_pending(strm);
             beg = s.pending;
@@ -62330,7 +63127,7 @@ function requireDeflate$1() {
           put_byte(s, val);
         } while (val !== 0);
         if (s.gzhead.hcrc && s.pending > beg) {
-          strm.adler = crc32(strm.adler, s.pending_buf, s.pending - beg, beg);
+          strm.adler = crc322(strm.adler, s.pending_buf, s.pending - beg, beg);
         }
         if (val === 0) {
           s.status = HCRC_STATE;
@@ -63387,7 +64184,7 @@ function requireInflate$1() {
   hasRequiredInflate$1 = 1;
   var utils2 = requireCommon();
   var adler32 = requireAdler32();
-  var crc32 = requireCrc32();
+  var crc322 = requireCrc32();
   var inflate_fast = requireInffast();
   var inflate_table = requireInftrees();
   var CODES = 0;
@@ -63690,7 +64487,7 @@ function requireInflate$1() {
               state.check = 0;
               hbuf[0] = hold & 255;
               hbuf[1] = hold >>> 8 & 255;
-              state.check = crc32(state.check, hbuf, 2, 0);
+              state.check = crc322(state.check, hbuf, 2, 0);
               hold = 0;
               bits3 = 0;
               state.mode = FLAGS;
@@ -63753,7 +64550,7 @@ function requireInflate$1() {
             if (state.flags & 512) {
               hbuf[0] = hold & 255;
               hbuf[1] = hold >>> 8 & 255;
-              state.check = crc32(state.check, hbuf, 2, 0);
+              state.check = crc322(state.check, hbuf, 2, 0);
             }
             hold = 0;
             bits3 = 0;
@@ -63776,7 +64573,7 @@ function requireInflate$1() {
               hbuf[1] = hold >>> 8 & 255;
               hbuf[2] = hold >>> 16 & 255;
               hbuf[3] = hold >>> 24 & 255;
-              state.check = crc32(state.check, hbuf, 4, 0);
+              state.check = crc322(state.check, hbuf, 4, 0);
             }
             hold = 0;
             bits3 = 0;
@@ -63798,7 +64595,7 @@ function requireInflate$1() {
             if (state.flags & 512) {
               hbuf[0] = hold & 255;
               hbuf[1] = hold >>> 8 & 255;
-              state.check = crc32(state.check, hbuf, 2, 0);
+              state.check = crc322(state.check, hbuf, 2, 0);
             }
             hold = 0;
             bits3 = 0;
@@ -63821,7 +64618,7 @@ function requireInflate$1() {
               if (state.flags & 512) {
                 hbuf[0] = hold & 255;
                 hbuf[1] = hold >>> 8 & 255;
-                state.check = crc32(state.check, hbuf, 2, 0);
+                state.check = crc322(state.check, hbuf, 2, 0);
               }
               hold = 0;
               bits3 = 0;
@@ -63854,7 +64651,7 @@ function requireInflate$1() {
                   );
                 }
                 if (state.flags & 512) {
-                  state.check = crc32(state.check, input, copy, next);
+                  state.check = crc322(state.check, input, copy, next);
                 }
                 have -= copy;
                 next += copy;
@@ -63880,7 +64677,7 @@ function requireInflate$1() {
                 }
               } while (len3 && copy < have);
               if (state.flags & 512) {
-                state.check = crc32(state.check, input, copy, next);
+                state.check = crc322(state.check, input, copy, next);
               }
               have -= copy;
               next += copy;
@@ -63906,7 +64703,7 @@ function requireInflate$1() {
                 }
               } while (len3 && copy < have);
               if (state.flags & 512) {
-                state.check = crc32(state.check, input, copy, next);
+                state.check = crc322(state.check, input, copy, next);
               }
               have -= copy;
               next += copy;
@@ -64481,7 +65278,7 @@ function requireInflate$1() {
               state.total += _out;
               if (_out) {
                 strm.adler = state.check = /*UPDATE(state.check, put - _out, _out);*/
-                state.flags ? crc32(state.check, output, _out, put - _out) : adler32(state.check, output, _out, put - _out);
+                state.flags ? crc322(state.check, output, _out, put - _out) : adler32(state.check, output, _out, put - _out);
               }
               _out = left;
               if ((state.flags ? hold : zswap32(hold)) !== state.check) {
@@ -64544,7 +65341,7 @@ function requireInflate$1() {
     state.total += _out;
     if (state.wrap && _out) {
       strm.adler = state.check = /*UPDATE(state.check, strm.next_out - _out, _out);*/
-      state.flags ? crc32(state.check, output, _out, strm.next_out - _out) : adler32(state.check, output, _out, strm.next_out - _out);
+      state.flags ? crc322(state.check, output, _out, strm.next_out - _out) : adler32(state.check, output, _out, strm.next_out - _out);
     }
     strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE ? 128 : 0) + (state.mode === LEN_ || state.mode === COPY_ ? 256 : 0);
     if ((_in === 0 && _out === 0 || flush === Z_FINISH) && ret === Z_OK) {
@@ -101023,12 +101820,12 @@ function _createClass$2(Constructor, protoProps, staticProps) {
   return Constructor;
 }
 var GlyphRun = /* @__PURE__ */ (function() {
-  function GlyphRun2(glyphs, features2, script2, language, direction$1) {
+  function GlyphRun2(glyphs, features2, script2, language, direction$12) {
     this.glyphs = glyphs;
     this.positions = null;
     this.script = script2;
     this.language = language || null;
-    this.direction = direction$1 || direction(script2);
+    this.direction = direction$12 || direction(script2);
     this.features = {};
     if (Array.isArray(features2)) {
       for (var _iterator2 = _createForOfIteratorHelperLoose$7(features2), _step2; !(_step2 = _iterator2()).done; ) {
@@ -102779,7 +103576,7 @@ var OTProcessor = /* @__PURE__ */ (function() {
     }
     return null;
   };
-  _proto.selectScript = function selectScript(script2, language, direction$1) {
+  _proto.selectScript = function selectScript(script2, language, direction$12) {
     var changed = false;
     var entry;
     if (!this.script || script2 !== this.scriptTag) {
@@ -102796,8 +103593,8 @@ var OTProcessor = /* @__PURE__ */ (function() {
       this.languageTag = null;
       changed = true;
     }
-    if (!direction$1 || direction$1 !== this.direction) {
-      this.direction = direction$1 || direction(script2);
+    if (!direction$12 || direction$12 !== this.direction) {
+      this.direction = direction$12 || direction(script2);
     }
     if (language && language.length < 4) {
       language += " ".repeat(4 - language.length);

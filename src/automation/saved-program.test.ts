@@ -10,7 +10,7 @@ it('uses the same program steps and schemas as the editor, exposing only executa
   expect(all.map(t=>t.name).sort()).toEqual([...programToolNames].sort());
   for(const t of all)expect(t).toEqual(cadAgentTools.find(x=>x.name===t.name));
   expect(savedProgramDocs({query:'undo'}).tools.map(t=>t.name)).not.toContain('aether_cad_undo');
-  expect(savedProgramDocs({query:'cone'}).tools.map(t=>t.name)).toContain('aether_cad_solid_primitive');
+  expect(savedProgramDocs({query:'revolve'}).tools.map(t=>t.name)).toContain('aether_cad_revolve');
 });
 
 it('preserves source and passes qualified identities from saved steps to the next step',()=>{

@@ -4,9 +4,7 @@ import { CADDocumentControls } from "./CADDocumentControls";
 import { CADStudioWorkspaceControls, CADStudioViewTools } from "./CADStudioControls";
 import { cadFeaturePalette } from './cad-feature-tray';
 import type { CADToolContext } from '../tools/availability';
-import {CADPrimitiveDialog} from "./CADPrimitiveDialog";
 import { CADStatusNotice } from "./CADStatusNotice";
-import type {SolidPrimitive} from "../modeling/solid-primitives";
 import {CADCanvasDialog} from "./CADCanvasDialog";
 import { CADVectorInsertDialog } from "./CADVectorInsertDialog";
 import {queueCADImport} from "../modeling/cad-import-service";
@@ -211,7 +209,6 @@ export function AetherCADShell() {
   };
   const suite = chromeTheme === "suite";
   const [canvasOpen,setCanvasOpen]=useState<'canvas'|'decal'|null>(null);
-  const [primitive,setPrimitive] = useState<SolidPrimitive|null>(null);
   const [vectorInsert,setVectorInsert] = useState<'svg'|'dxf'|null>(null);
   const [mcMasterOpen,setMcMasterOpen] = useState(false);
   const [pluginsOpen, setPluginsOpen] = useState(false);
@@ -261,7 +258,6 @@ export function AetherCADShell() {
     }
     switch (action) {
       case "insert-decal": setCanvasOpen('decal'); break;
-      case "create-box": case "create-cylinder": case "create-cone": case "create-sphere": case "create-torus": setPrimitive(action.slice(7) as SolidPrimitive); break;
       case "insert-canvas": setCanvasOpen('canvas'); break;
       case "insert-vector-svg": setVectorInsert('svg'); break;
       case "insert-vector-dxf": setVectorInsert('dxf'); break;
@@ -575,7 +571,6 @@ export function AetherCADShell() {
       <AssemblyRelationDialog presentation={presentation} /><AssemblyContactSetDialog presentation={presentation} /><PartPropertiesDialog presentation={presentation} /><BodiesToComponentDialog presentation={presentation} /><AsBuiltJointDialog presentation={presentation} /><ReachPointDialog presentation={presentation} /><StandardPartDialog presentation={presentation} />
       <ExportCenter presentation={presentation} />
       <CADCanvasDialog open={canvasOpen!==null} decal={canvasOpen==='decal'} onClose={()=>setCanvasOpen(null)} />
-      <CADPrimitiveDialog kind={primitive} onClose={()=>setPrimitive(null)} />
       <CADVectorInsertDialog format={vectorInsert} onClose={()=>setVectorInsert(null)} />
       <CADMcMasterDialog open={mcMasterOpen} onClose={()=>setMcMasterOpen(false)} />
       <CADImportDialog presentation={presentation} />

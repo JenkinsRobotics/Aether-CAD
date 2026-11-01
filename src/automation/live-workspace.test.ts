@@ -38,45 +38,22 @@ it('only a successful rebuild commits, and readonly/open dialogs are respected',
   expect(f.commit).toHaveBeenCalledOnce();
 });
 
-it('exposes all five exact primitives to agents with explicit, kind-specific dimensions',()=>{
-  expect(cadAgentTools).toHaveLength(26); // Includes validated model projection.
-  const source=createEmptyPartDocument('Primitives');
-  for(const args of [
-    {kind:'box',width_mm:12,length_mm:18,height_mm:7},
-    {kind:'cylinder',radius_mm:5,height_mm:20},
-    {kind:'cone',radius_mm:8,height_mm:24},
-    {kind:'sphere',radius_mm:10},
-    {kind:'torus',radius_mm:10,tube_radius_mm:3},
-  ]) {
-    const result=preparePartEdit(source,'aether_cad_solid_primitive',args);
-    expect(result.document.features).toHaveLength(2);
-    expect(result.document.features[1].id).toBe(result.featureID);
-    expect(availableBodies(result.document)).toHaveLength(1);
-  }
-  expect(source.features).toHaveLength(0);
-  for(const args of [
-    {kind:'cone',radius_mm:8}, {kind:'cone',radius_mm:0,height_mm:24},
-    {kind:'cone',radius_mm:8,height_mm:24,width_mm:5},
-    {kind:'torus',radius_mm:3,tube_radius_mm:5}, {kind:'triangle'},
-  ]) expect(()=>preparePartEdit(source,'aether_cad_solid_primitive',args)).toThrow();
+it('offers no premade shapes: bodies come from sketches',()=>{
+  expect(cadAgentTools).toHaveLength(25); // Includes validated model projection.
+  expect(cadAgentTools.some(t=>t.name==='aether_cad_solid_primitive')).toBe(false);
 });
 
-it('rejects primitives without room for both history features',()=>{
-  const source=createEmptyPartDocument('Full history');
-  for(let i=0;i<511;i++)source.features.push({type:'profile',id:`p${i}`,name:`Profile ${i}`,suppressed:false,plane:'XY',offsetMillimeters:0,profile:{type:'circle',centerMillimeters:[0,0],radiusMillimeters:1}});
-  expect(()=>preparePartEdit(source,'aether_cad_solid_primitive',{kind:'cone',radius_mm:8,height_mm:24})).toThrow(/two features/);
-  expect(source.features).toHaveLength(511);
-});
-
-it('commits a primitive once and allows reference inspection in a read-only Part without rebuilding',async()=>{
+it('commits a sketched body once and allows reference inspection in a read-only Part without rebuilding',async()=>{
   const f=fixture(),signal=new AbortController().signal;
-  const result=await f.editor.execute('part1',{id:'cone',name:'aether_cad_solid_primitive',arguments:{kind:'cone',radius_mm:8,height_mm:24}},signal);
+  f.workspace.evaluate=vi.fn(async (doc:PartDocument)=>({...f.model,bodyOutputs:Object.fromEntries(doc.features.filter(feature=>feature.type==='extrude').map(feature=>[feature.id,[bodyIDForFeature(doc,feature)+':solid-1']]))}));
+  const sketch=await f.editor.execute('part1',{id:'disc',name:'aether_cad_sketch_circle',arguments:{plane:'XY',center_x_mm:0,center_y_mm:0,radius_mm:8}},signal) as any;
+  const result=await f.editor.execute('part1',{id:'puck',name:'aether_cad_extrude',arguments:{profile_id:sketch.feature_ids[0],depth_mm:24,operation:'new'}},signal);
   expect(result).toMatchObject({changed:true,feature_count:2});
   const features=f.workspace.current()!.features;
   f.workspace.writable=()=>false;f.workspace.available=()=>false;
   const references=await f.editor.execute('part1',{id:'refs',name:'aether_cad_feature_references',arguments:{feature_id:features[1].id}},signal);
   expect(references).toMatchObject({topology_verified:false,total:1});
-  expect(f.workspace.evaluate).toHaveBeenCalledOnce();expect(f.commit).toHaveBeenCalledOnce();
+  expect(f.workspace.evaluate).toHaveBeenCalledTimes(2);expect(f.commit).toHaveBeenCalledTimes(2);
   await expect(f.editor.execute('wrong-part',{id:'refs',name:'aether_cad_feature_references',arguments:{feature_id:features[1].id}},signal)).rejects.toThrow(/active Part changed/);
 });
 

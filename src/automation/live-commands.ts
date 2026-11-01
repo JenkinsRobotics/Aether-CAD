@@ -4,7 +4,6 @@ import { selectAgentProfileRegions } from './sketch-selection';
 import { insertFeature, rollbackPosition, validatePartDocument, type PartDocument, type ProfileFeature, type PartFeature } from '@aether/core/document';
 import type { AgentTool } from '@aether/ui/AgentServices';
 import { prepareCommand } from './commands';
-import { appendSolidPrimitive, defaultPrimitiveDimensions, primitiveFields, type SolidPrimitive } from '../modeling/solid-primitives';
 import { partAITools } from '../ai/catalog';
 import { editSketch } from './sketch-edit';
 import { modelProjectionTool } from './model-projection';
@@ -23,7 +22,6 @@ export const cadAgentTools:AgentTool[]=[
   ...featureEditTools,
   tool('inspect','Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.',{offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}}),
   tool('feature_references','Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.',{feature_id:string,direction:{type:'string',enum:['inputs','dependents']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:50}},['feature_id']),
-  tool('solid_primitive','Create a new exact body with editable profile and solid features, using the same operation as the tool tray. Choose box (width_mm, length_mm, height_mm), cylinder or cone (radius_mm, height_mm), sphere (radius_mm), or torus (radius_mm, tube_radius_mm). All listed dimensions for the chosen kind are required; other dimensions are refused. Cone base lies on XY and its tip points in positive Z. Rebuild must succeed before committing.',{kind:{type:'string',enum:Object.keys(primitiveFields)},width_mm:number,length_mm:number,height_mm:number,radius_mm:number,tube_radius_mm:number},['kind']),
   tool('sketch_inspect','Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.',{feature_id:string,offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:25}},['feature_id']),
   tool('sketch_translate','Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.',{feature_id:string,dx_mm:number,dy_mm:number},['feature_id','dx_mm','dy_mm']),
   tool('sketch_dimension','Change an existing driving sketch dimension using the same solver as the editor. Inspect first for dimension_id; value uses mm for distances/radii or degrees for angles. Keeps dependent features and rebuilds before committing. Formula-controlled or reference-only dimensions are refused.',{feature_id:string,dimension_id:string,value:number},['feature_id','dimension_id','value']),
@@ -66,19 +64,6 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
   if(doc.features.length>=512)throw Error('Agent editing supports at most 512 features.');
   if(name==='aether_cad_sketch_translate'||name==='aether_cad_sketch_dimension')return editSketch(doc,name,args);
   if(featureEditToolNames.includes(name))return prepareFeatureOperation(doc,name,args);
-  if(name==='aether_cad_solid_primitive') {
-    if(typeof args.kind!=='string'||!Object.hasOwn(primitiveFields,args.kind))throw Error('Choose box, cylinder, cone, sphere or torus.');
-    if(doc.features.length>510)throw Error('A primitive requires room for two features within the 512-feature limit.');
-    const kind=args.kind as SolidPrimitive;
-    const names={width:'width_mm',length:'length_mm',height:'height_mm',radius:'radius_mm',tubeRadius:'tube_radius_mm'} as const;
-    const required=primitiveFields[kind];
-    const allowed=new Set<string>(['kind',...required.map(key=>names[key])]);
-    if(Object.keys(args).some(key=>!allowed.has(key)))throw Error('Only provide the dimensions used by the chosen primitive.');
-    const dimensions={...defaultPrimitiveDimensions};
-    for(const key of required)dimensions[key]=numberValue(args,names[key],undefined,true);
-    const document=appendSolidPrimitive(doc,kind,dimensions);
-    return {document,featureID:document.features.at(-1)!.id};
-  }
   if(name==='aether_cad_extrude_depth'||name==='aether_cad_suppress') {
     if(typeof args.feature_id!=='string')throw Error('Inspect the part for its feature ID.');
     if(name==='aether_cad_suppress'&&typeof args.suppressed!=='boolean')throw Error('suppressed must be true or false.');

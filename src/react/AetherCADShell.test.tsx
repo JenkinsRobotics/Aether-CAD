@@ -159,7 +159,7 @@ describe("AetherCADShell", () => {
       "assembly-toggle-grounded", "assembly-toggle-suppressed", "assembly-remove-instance",
     ]));
     expect(disconnected.find(command => command.id === 'feature-extrude')?.disabled).toBe(true);
-    expect(disconnected.find(command => command.id === 'create-cone')?.disabled).toBe(false);
+    expect(disconnected.find(command => command.id === 'insert-canvas')?.disabled).toBe(false);
     expect(disconnected.find(command => command.id === 'unavailable:solid-twist')?.disabledReason).toContain('Not implemented');
 
     const unregister = cadCommands.register("fit-view", () => {});

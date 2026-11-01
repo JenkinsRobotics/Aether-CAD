@@ -273,17 +273,19 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const creation = project ? {
     label: "Create in this design",
     items: [
+      { id: "browser:create", label: "New design…", icon: <AetherIcon name="plus" /> },
       { id: "part", label: "Create Part Studio…", icon: <AetherIcon name="file-part" />, disabled: designReadOnly },
       { id: "assembly", label: "Create Assembly…", icon: <AetherIcon name="file-assembly" />, disabled: designReadOnly },
       { id: "drawing", label: "Create Drawing…", icon: <AetherIcon name="file-drawing" />, disabled: designReadOnly || (!presentation.partOpen && kind !== "drawing"),
         disabledReason: "Open a source Part in this design first." },
     ],
-    onSelect: (kind: string) => setCreating(kind),
+    onSelect: (kind: string) => kind === "browser:create" ? setChoosing(true) : setCreating(kind),
   } : variant === "browser" ? {
     label: "Design actions",
-    items: [{ id: "hybrid-from-part", label: "Create Hybrid design from this Part…", icon: <AetherIcon name="file-project" />, disabled: kind !== "part" || !presentation.partOpen,
+    items: [{ id: "browser:create", label: "New design…", icon: <AetherIcon name="plus" /> },
+      { id: "hybrid-from-part", label: "Create Hybrid design from this Part…", icon: <AetherIcon name="file-project" />, disabled: kind !== "part" || !presentation.partOpen,
       disabledReason: "Open a Part to copy into a Hybrid design." }],
-    onSelect: (kind: string) => setCreating(kind),
+    onSelect: (kind: string) => kind === "browser:create" ? setChoosing(true) : setCreating(kind),
   } : undefined;
   const designTabs = project ? tabs : tabs.filter(tab => tab.current).map(tab => ({ ...tab, onClose: undefined }));
   const controls={creation,revisionForTab:(id:string)=>revisions[id]??{label:'V1.0',title:'Working version V1.0'},tabActions:(id:string)=>tabActionItems(targetFor(id)),onTabAction:runTabAction,saveStatus,tabs,
