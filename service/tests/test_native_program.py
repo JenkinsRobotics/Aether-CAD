@@ -102,7 +102,7 @@ def test_docs_work_without_launching_a_geometry_engine(tmp_path):
     result = invoke(
         tmp_path, "cad.part.docs", empty(), {}
     )
-    assert "content" not in result and result["result"]["total"] == 14
+    assert "content" not in result and result["result"]["total"] == 13  # solid_primitive removed 2026-10-31: shapes are sketched
     assert len(result["result"]["tools"]) == 5
     assert result["result"]["execute_with"] == "cad.part.runprogram"
 
