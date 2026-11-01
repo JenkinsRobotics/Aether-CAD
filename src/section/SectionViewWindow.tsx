@@ -3,7 +3,8 @@
  *  live; ✓ keeps the section, ✕ restores what was there before. */
 import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { AetherIcon, Checkbox, FieldRow, Inspector, MenuButton, NumberField, openFeatureWindow } from "@aether/ui";
+import { AetherIcon, Checkbox, FieldRow, Inspector, MenuButton, NumberField } from "@aether/ui";
+import { openCADFeatureWindow } from "../features/feature-window-style";
 import { unitChoice } from "@aether/core/units";
 import { type CADSelectionItem } from "../cad-selection-store";
 import { documentUnits } from "../document-preferences";
@@ -35,7 +36,7 @@ export function openSectionView(): void {
   // The active field decides what a click picks: a face for the plane, a body for the lists.
   const session = createInspectionSession({ filter: active === "planes" ? "face" : "body", changed: () => { if (closeOpen) render(); } });
   const pickFor = () => session.selection.dispatch({ type: "set-filter", filter: active === "planes" ? "face" : "body" });
-  const icon = document.createElement("span"), menuHost = document.createElement("span"), reactHost = document.createElement("div");
+  const menuHost = document.createElement("span"), reactHost = document.createElement("div");
   const close = (keep: boolean) => {
     if (!closeOpen) return;
     closeOpen = null;
@@ -44,8 +45,8 @@ export function openSectionView(): void {
     sectionView.set(keep ? (draft.planes.length ? draft : null) : before);
     changed();
   };
-  const win = openFeatureWindow({ className: "cad-section-window", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
-    title: "Section view", headerIcon: icon, acceptLabel: "Accept section view", discardLabel: "Cancel", onAccept: () => close(true), onDiscard: () => close(false) });
+  const win = openCADFeatureWindow({ className: "cad-section-window", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
+    title: "Section view", icon: "section", acceptLabel: "Accept section view", discardLabel: "Cancel", onAccept: () => close(true), onDiscard: () => close(false) });
   const planeSection = win.section("Cutting planes");
   const planes = win.entitiesBox("Section planes");
   planeSection.body.append(planes.element);
@@ -128,7 +129,6 @@ export function openSectionView(): void {
     planes.element.dataset.active = String(session.active() && active === "planes");
     items.element.dataset.active = String(session.active() && active === "items");
     root.render(<>
-      {createPortal(<AetherIcon name="section-view"/>, icon)}
       {createPortal(<Inspector>
         <FieldRow label="Offset" onReset={(selected?.offsetMillimeters ?? 0) ? () => updateCut({ offsetMillimeters: 0 }) : undefined}>
           <NumberField aria-label="Section offset" value={(selected?.offsetMillimeters ?? 0) / (length.factor * 1000)} precision={length.decimals} unit={length.unit}

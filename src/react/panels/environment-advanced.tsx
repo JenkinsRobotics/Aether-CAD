@@ -34,7 +34,6 @@ export function EnvironmentAdvanced({appearance:a,resolved:r}:{appearance:CADApp
     <InspectorSection title="Background layers" defaultOpen>
       <FieldRow label="Color transform"><SelectField aria-label="Color transform" value={r.colorTransform} options={[{value:'standard',label:'Standard — exact colors'},{value:'filmic',label:'Filmic — soft highlights'}]}
         onChange={e=>cadAppearance.dispatch({type:'set-advanced',key:'colorTransform',value:e.target.value})}/></FieldRow>
-      <p className="cad-form-note">Standard preserves background and guide colors. Filmic compresses bright surfaces and also changes the displayed background and grid colors.</p>
       <FieldRow label="Background style"><SelectField aria-label="Background style" value={r.backgroundMode} options={[{value:'solid',label:'Solid color'},{value:'gradient',label:'Vertical gradient'}]}
         onChange={e=>cadAppearance.dispatch({type:'set-advanced',key:'backgroundMode',value:e.target.value})}/></FieldRow>
       <RenderColor field="backgroundColor" label={r.backgroundMode==='gradient'?'Top color':'Background color'} value={r.background}/>
@@ -55,10 +54,8 @@ export function EnvironmentAdvanced({appearance:a,resolved:r}:{appearance:CADApp
       <Color field="gridXAxisColor" label="X axis color" value={r.grid.xColor}/>
       <Color field="gridYAxisColor" label="Y axis color" value={r.grid.yColor}/>
       <Color field="gridZAxisColor" label="Z axis color" value={r.grid.zColor}/>
-      <p className="cad-form-note">The two ground axes follow the workspace up direction: X/Y for Z-up, X/Z for Y-up.</p>
       <Level field="gridAxisOpacityPercent" label="Axis line opacity" value={r.grid.axisOpacity*100}/>
       <Level field="gridAxisWidthPx" label="Axis line thickness" value={r.grid.axisWidth} unit="px" step={.25}/>
-      <p className="cad-form-note">Opacity is absolute: 100% is fully opaque. Grid spacing changes the visual guide, not sketch snapping. The world grid uses Ground: Grid or Both; the sketch grid follows its sketch plane.</p>
     </InspectorSection>
     <InspectorSection title="Reference and sketch planes" defaultOpen>
       <Color field="planeTopColor" label="Top plane color" value={r.planeTheme.colors.top}/>
@@ -72,12 +69,10 @@ export function EnvironmentAdvanced({appearance:a,resolved:r}:{appearance:CADApp
       <Checkbox label="Show plane labels" checked={r.planeTheme.style.labelsVisible} onChange={e=>cadAppearance.dispatch({type:'set-advanced',key:'planeLabelsVisible',value:e.target.checked})}/>
       <Color field="planeLabelColor" label="Plane label color" value={r.planeTheme.style.labelColor}/>
       <Level field="planeLabelOpacityPercent" label="Plane label opacity" value={r.planeTheme.style.labelOpacity*100}/>
-      <p className="cad-form-note">Show or hide individual datums in the Features tree. The active sketch retains its own editing area.</p>
     </InspectorSection>
     <InspectorSection title="Sketch curves" defaultOpen>
       <Color field="sketchStrokeColor" label="Sketch curve color" value={r.sketchStroke}/>
       <Level field="sketchLineWidthPx" label="Sketch curve thickness" value={r.sketchLineWidth} unit="px" step={.1}/>
-      <p className="cad-form-note">Constraint-state colors remain available while editing a sketch. Model surfaces and edges are in Material properties; selection colors are in Display and quality.</p>
     </InspectorSection>
     <InspectorSection title="Lighting and surface contrast" defaultOpen>
       <Level field="exposure" label="Exposure" value={r.exposure} unit="×" step={.05}/>
@@ -96,13 +91,11 @@ export function EnvironmentAdvanced({appearance:a,resolved:r}:{appearance:CADApp
       <Color field="rimLightColor" label="Rim light color" value={r.lights.rimColor}/>
       <Level field="rimLightAzimuthDegrees" label="Rim light azimuth" value={r.lights.rimAzimuth} unit="°"/>
       <Level field="rimLightElevationDegrees" label="Rim light elevation" value={r.lights.rimElevation} unit="°"/>
-      <p className="cad-form-note">Light percentages scale the selected lighting preset. Reduce fill and ambient light for stronger surface contrast; increase them for softer shading.</p>
     </InspectorSection>
     <InspectorSection title="Floor" defaultOpen>
       <Color field="floorColor" label="Floor color" value={r.floorColor}/>
       <Level field="floorOpacityPercent" label="Floor opacity" value={r.floorOpacity*100}/>
       <Level field="floorRoughness" label="Floor roughness" value={r.floorRoughness} unit="" step={.01}/>
-      <p className="cad-form-note">Visible with Ground: Floor or Both. Contact shadows use the setting on the Presets tab.</p>
     </InspectorSection>
   </div>;
 }

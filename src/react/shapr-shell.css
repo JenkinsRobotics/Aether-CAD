@@ -962,7 +962,7 @@
 .shapr-shell .aui-feature-window { width: 264px; border-radius: 8px; }
 .shapr-shell .aui-feature-window--compact { border-radius: 8px; }
 .shapr-shell .aui-feature-window--compact > .aui-float-panel-header,
-.shapr-shell .aui-feature-window--standard > .aui-float-panel-header { min-height: 30px; gap: 8px; padding: 0 10px; font-size: 13px; }
+.shapr-shell .aui-feature-window--standard > .aui-float-panel-header { height: 30px; min-height: 30px; gap: 8px; padding: 0 0 0 10px; font-size: 13px; }
 .shapr-shell .aui-feature-window .aui-feature-header-icon > svg { width: 18px; height: 18px; }
 .shapr-shell .aui-feature-window .aui-float-panel-body { padding: 6px 10px 8px; gap: 3px; }
 .shapr-shell .aui-feature-window .aui-feature-row { min-height: 24px; gap: 6px; }
@@ -991,3 +991,12 @@
    body's scroll box (Measure › Select showed four of five choices). */
 .shapr-shell .aui-feature-window:has(.aui-feature-picker-menu:not([hidden])),
 .shapr-shell .aui-feature-window:has(.aui-feature-picker-menu:not([hidden])) > .aui-float-panel-body { overflow: visible; }
+
+/* The standard window variant paints no background in the shared package
+   (Section view looked see-through); every CAD window is opaque. */
+.shapr-shell .aui-feature-window { background: var(--aether-color-bg-panel); }
+
+/* The right rail wraps instead of scrolling its last tabs out of sight
+   (Rendering environment, Camera and display, Performance were unreachable). */
+.shapr-shell .aui-tabbed-sidebar[data-orientation="horizontal"] > .aui-tabbed-sidebar-tabs { flex-wrap: wrap; height: auto; max-height: none; overflow: visible; }
+.shapr-shell .aui-tabbed-sidebar[data-orientation="horizontal"] > .aui-tabbed-sidebar-tabs > .aui-tabbed-sidebar-tab { height: calc(var(--aui-tabbed-tray-height, 42px) - 2 * var(--aether-selection-cell-inset, 1px)); }

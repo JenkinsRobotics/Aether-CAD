@@ -86,3 +86,15 @@ it("merges coincident anchors and highlights circles and curved segments without
   expect(svg.querySelector('.sketch-relationship-highlight path').getAttribute('d')).toContain('A');
   expect(svg.querySelector('.sketch-relationship-highlight circle').getAttribute('r')).toBe('5');
 });
+
+it("draws an equal chain as one counted badge whose hover links every member", () => {
+  const drawing = { type: "drawing", contours: [line(0, 0), line(0, 20), line(0, 40), line(0, 60)], constraints: [
+    { id: "e1", kind: "equal", a: ref(0), b: ref(1) }, { id: "e2", kind: "equal", a: ref(0), b: ref(2) }, { id: "e3", kind: "equal", a: ref(0), b: ref(3) },
+  ] };
+  renderConstraintMarks(svg, drawing, bounds);
+  const marks = svg.querySelectorAll('[data-constraint-mark="equal"]');
+  expect(marks.length).toBe(1);
+  expect(marks[0].querySelector(".constraint-badge-count").textContent).toBe("4×");
+  expect(hoverConstraintMark(svg, center(marks[0]))).toBe(true);
+  expect(targets().map(r => r.contour)).toEqual([0, 1, 2, 3]);
+});

@@ -1909,19 +1909,42 @@ export class MateViewport {
     // magnifies that raster, which reads as heavy pixelation. Rasterize at a
     // higher internal resolution and scale the 3D object back down — vector
     // SVG stays crisp, input is unaffected (picking raycasts the plane).
-    const resolution = Math.min(8, 4096 / Math.max(bounds.width, bounds.height, 1));
-    s.svg.style.width = `${bounds.width * resolution}px`;
-    s.svg.style.height = `${bounds.height * resolution}px`;
-    s.object.scale.setScalar(1 / resolution);
+    this.sketchBounds = bounds;
+    this.applySketchResolution(Math.max(this.sketchResolution, Math.min(8, 4096 / Math.max(bounds.width, bounds.height, 1))));
     const cx = bounds.x + bounds.width / 2;
     const cy = bounds.y + bounds.height / 2;
     // viewBox y runs down; drawing y (up) = -viewBox y.
     s.object.position.copy(s.origin).addScaledVector(s.xDir, cx).addScaledVector(s.yDir, -cy);
   }
 
+  private sketchBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private sketchResolution = 1;
+  private applySketchResolution(resolution: number): void {
+    const s = this.sketchSurface, bounds = this.sketchBounds;
+    if (!s || !bounds) return;
+    this.sketchResolution = resolution;
+    s.svg.style.width = `${bounds.width * resolution}px`;
+    s.svg.style.height = `${bounds.height * resolution}px`;
+    s.object.scale.setScalar(1 / resolution);
+  }
+  /** The raster follows the camera: zooming in re-rasterizes the SVG at the
+   *  screen's pixels-per-millimetre so vectors never read as pixels
+   *  (Jonathan, 2026-10-31). The cap keeps the layer under 8192 px a side. */
+  private syncSketchResolution(): void {
+    const s = this.sketchSurface, bounds = this.sketchBounds;
+    if (!s || !bounds) return;
+    const a = this.sketchClientFromPoint([bounds.x, bounds.y]), b = this.sketchClientFromPoint([bounds.x + 1, bounds.y]);
+    if (!a || !b) return;
+    const needed = Math.hypot(b[0] - a[0], b[1] - a[1]) * (window.devicePixelRatio || 1);
+    const cap = 8192 / Math.max(bounds.width, bounds.height, 1);
+    const target = Math.min(cap, Math.max(1, needed));
+    if (target > this.sketchResolution * 1.25 || target < this.sketchResolution / 2) this.applySketchResolution(target);
+  }
+
   endSketchSurface(): void {
     const s = this.sketchSurface;
     if (!s) return;
+    this.sketchBounds = null; this.sketchResolution = 1;
     s.disposeInput();
     this.sketchSurface = null;
     this.cssScene.remove(s.object);
@@ -1994,8 +2017,10 @@ export class MateViewport {
     this.stage.beforeRender(this.camera, this.controls.target, [this.modelRoot, this.featurePreview.group, this.historyPreview.group, this.orientationBox?.group]);
     this.output.render(this.camera);
     this.anchorOverlay.render(point => this.projectScreenPoint(point));
-    if (this.sketchSurface && this.cssRenderer)
+    if (this.sketchSurface && this.cssRenderer) {
+      this.syncSketchResolution();
       this.cssRenderer.render(this.cssScene, this.camera);
+    }
     this.sampleFrame(started, performance.now());
   }
 

@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "../features/feature-window-style";
 import { addFeatureViewControls } from "../features/view-controls";
 import "../sketch-workspace.css";
 import "./projection-window.css";
@@ -15,7 +15,7 @@ export function createProjectionWindow(options: {
   root.className = "cad-sketch-workspace choosing-plane cad-projection-workspace";
   root.setAttribute("aria-label", "Project sketch");
   options.viewport.append(root);
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport: options.viewport,
     className: "cad-projection-window",
     icon: "sketch",

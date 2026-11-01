@@ -59,7 +59,6 @@ export function ObjectAppearanceControls({initialTarget = 'defaults', selectionR
       ]} onChange={e => {setTarget(e.target.value);setMessage('');setError('');}} /></FieldRow>
       {missing && <p role="status">Select an object in the viewport or choose one from the list.</p>}
       {targets.length > 1 && <p className="cad-form-note">{mixed?'Mixed materials. ':''}Showing {targets[0].name}. Individual adjustments change only that property on all {targets.length} selected objects.</p>}
-      <p className="cad-form-note">{defaults ? 'Default appearance is saved on this device. Part overrides take precedence.' : 'Live part appearance lasts for this session. Save a custom material below to reuse its appearance.'} These controls do not assign engineering density or BOM materials.</p>
     </InspectorSection>
     <fieldset disabled={missing} className="cad-material-fields">
       <SegmentedControl ariaLabel="Material properties tabs" value={tab} options={[{id:'materials',label:'Material'},{id:'appearance',label:'Appearance'}]} onChange={setTab}/>
@@ -79,12 +78,10 @@ export function ObjectAppearanceControls({initialTarget = 'defaults', selectionR
           <FieldRow label="Gloss"><Slider ariaLabel="Object gloss" min={0} max={100} step={1} unit="%" value={Math.round((1-r.finish.roughness)*100)} onChange={value=>change({roughness:Number((1-value/100).toFixed(2))})}/></FieldRow>
           <FieldRow label="Roughness"><Slider ariaLabel="Object roughness" min={0} max={100} step={1} unit="%" value={Number((r.finish.roughness * 100).toFixed(2))} onChange={value => change({ roughness: value / 100 })} /></FieldRow>
           <FieldRow label="Metallic"><Slider ariaLabel="Object metallic" min={0} max={100} step={1} unit="%" value={r.finish.metalness * 100} onChange={value => change({ metalness: value / 100 })} /></FieldRow>
-          <p className="cad-form-note">Gloss is the inverse of roughness. Opacity previews transparency; it does not simulate glass refraction.</p>
         </InspectorSection>
         <InspectorSection title="Self illumination">
           <FieldRow label="Color"><ColorField ariaLabel="Emission color" value={values.emissiveColor} onChange={emissiveColor=>change({emissiveColor})}/></FieldRow>
           <FieldRow label="Strength"><Slider ariaLabel="Emission strength" value={values.emissiveIntensity} min={0} max={5} step={.05} unit="×" onChange={emissiveIntensity=>change({emissiveIntensity})}/></FieldRow>
-          <p className="cad-form-note">Brightens this surface without casting light onto neighboring parts.</p>
         </InspectorSection>
         <InspectorSection title="Save custom material" defaultOpen>
           <FieldRow label="Name"><TextField aria-label="Custom material name" value={name} maxLength={80} placeholder="My brushed finish" onChange={e=>setName(e.target.value)}/></FieldRow>
@@ -97,7 +94,6 @@ export function ObjectAppearanceControls({initialTarget = 'defaults', selectionR
         <FieldRow label="Color"><ColorField ariaLabel="Object edge color" value={hex(r.edgeColor)} onChange={edgeColor => change({ edgeColor })} /></FieldRow>
         <FieldRow label="Opacity"><Slider ariaLabel="Object edge opacity" min={0} max={100} step={1} unit="%" value={appearance.displayStyle === 'hidden-line' ? 100 : r.edgeOpacity * 100} disabled={appearance.displayStyle === 'hidden-line'} onChange={value => change({ edgeOpacity: value / 100 })} /></FieldRow>
         <FieldRow label="Thickness"><Slider ariaLabel="Object edge thickness" min={.5} max={8} step={.25} unit="px" value={r.edgeWidth} onChange={edgeWidthPx => change({ edgeWidthPx })} /></FieldRow>
-        <p className="cad-form-note">Edges appear in Shaded with edges, Ghost or Hidden line. Hidden line keeps opaque edges.</p>
       </InspectorSection>}
       {!defaults && <Button onClick={() => {targets.forEach(row => cadObjectAppearance.change(row, {}, true));setMessage('Restored environment defaults.');}}>Use environment defaults</Button>}
     </fieldset>
@@ -114,11 +110,9 @@ export function RenderDisplayControls(){
     ]} onChange={e=>cadAppearance.dispatch({type:'set-display-style',style:e.target.value as CADDisplayStyle})}/></FieldRow>
     <Checkbox label="Show model edges" checked={appearance.edgesVisible} onChange={e=>cadAppearance.dispatch({type:'set-edges-visible',visible:e.target.checked})}/>
     <FieldRow label="Render scale"><Slider ariaLabel="Render resolution" min={50} max={150} step={25} unit="%" value={(appearance.renderScale??1)*100} onChange={value=>cadAppearance.dispatch({type:'set-advanced',key:'renderScale',value:value/100})}/></FieldRow>
-    <p className="cad-form-note">Higher resolution smooths edges and uses more graphics memory. Multisampling stays enabled; this does not change CAD geometry.</p>
     <Checkbox label="Studio reflections" checked={appearance.studioReflections!==false} onChange={e=>cadAppearance.dispatch({type:'set-advanced',key:'studioReflections',value:e.target.checked})}/>
     <Level field="reflectionIntensityPercent" label="Reflection intensity" value={appearance.reflectionIntensityPercent??45}/>
     <Level field="reflectionRotationDegrees" label="Reflection rotation" value={appearance.reflectionRotationDegrees??0} unit="°"/>
-    <p className="cad-form-note">Studio reflections reveal glossy and metallic finishes. Rotation moves the reflected soft lights around the model.</p>
     <Color field="selectionColor" label="Selected geometry" value={base.selectionColor}/>
     <Color field="hoverColor" label="Hovered geometry" value={base.hoverColor}/>
     <Button onClick={()=>requestCADPropertyPanel('view')}>Camera and display controls</Button>

@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "../features/feature-window-style";
 import {unitChoice, parseQuantity} from "@aether/core/units";
 import {documentUnits} from "../document-preferences";
 import {renderPhysicalProperties} from "./properties";
@@ -34,7 +34,7 @@ export function openPartAnalysis(kind: Kind, doc: PartDocument | null, show: (mo
   let closed = false, revision = 0;
   let controller: AbortController | undefined;
   const close = () => { if (closed) return; closed = true; window.removeEventListener("aether-feature-preview-start", close); revision++; controller?.abort(); show(null); showCurves([]); window.removeEventListener("aether-part-updated", close); win.close(); };
-  const win = openCompactFeatureWindow({ className: "cad-analysis-dialog", icon: "inspect", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "clearance" ? "Clearance" : kind === "compare" ? "Compare bodies" : kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : kind === "continuity" ? "Continuity" : kind === "curvature_comb" ? "Curvature comb" : kind === "isocurve" ? "Isocurves" : kind === "minimum_radius" ? "Minimum radius" : "Interference", acceptLabel: "Done", onAccept: close, onDiscard: close });
+  const win = openCADFeatureWindow({ className: "cad-analysis-dialog", icon: "inspect", viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body, title: kind === "clearance" ? "Clearance" : kind === "compare" ? "Compare bodies" : kind === "section" ? "Section view" : kind === "properties" ? "Physical properties" : kind === "continuity" ? "Continuity" : kind === "curvature_comb" ? "Curvature comb" : kind === "isocurve" ? "Isocurves" : kind === "minimum_radius" ? "Minimum radius" : "Interference", acceptLabel: "Done", onAccept: close, onDiscard: close });
   closeActive = close;
   const status = document.createElement("p"); status.className = "cad-analysis-status"; status.setAttribute("role", "status");
   const plane = document.createElement("select"); plane.setAttribute("aria-label", "Section plane");

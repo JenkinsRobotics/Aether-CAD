@@ -1,4 +1,5 @@
 import { CADPerformancePanel } from "./CADPerformancePanel";
+import { featureWindowStyle, setFeatureWindowStyle, type FeatureWindowStyle } from "../features/feature-window-style";
 import { PartAppearancePanel } from "./panels/part-appearance";
 import { Inspector } from "@aether/ui";
 import { WorkspaceOrientationSettings } from "./chrome/WorkspaceOrientationSettings";
@@ -109,8 +110,9 @@ export function CADSettingsWindow({
 }) {
   const [pane, setPane] = useState(initialPane);
   const [commandQuery, setCommandQuery] = useState("");
-  const [colorMode, setColorMode] = useState<string>(() => document.documentElement.dataset.appearance ?? "system");
+  const [colorMode, setColorMode] = useState<string>(() => (typeof document === "undefined" ? undefined : document.documentElement.dataset.appearance) ?? "system");
   const [interfaceTheme, setInterfaceTheme] = useState<string>(activeAetherTheme);
+  const [windowStyle, setWindowStyle] = useState<string>(featureWindowStyle);
   useEffect(() => {
     if (open) setPane(initialPane);
   }, [open, initialPane]);
@@ -268,6 +270,12 @@ export function CADSettingsWindow({
             <SettingsRow label="Interface theme">
               {select(interfaceTheme, aetherThemes.map((theme) => ({ value: theme.id, label: theme.name })),
                 (id) => { setAetherTheme(id); setInterfaceTheme(id); }, { ariaLabel: "Interface theme" })}
+            </SettingsRow>
+            <SettingsRow label="Feature windows" caption="Both Aether UI designs: the choice applies to every editor opened from now on.">
+              {select(windowStyle, [
+                { value: "compact", label: "Compact — title above, Cancel and Apply below" },
+                { value: "standard", label: "Standard — ✓ and ✕ in the header" },
+              ], (style) => { setFeatureWindowStyle(style as FeatureWindowStyle); setWindowStyle(style); }, { ariaLabel: "Feature window style" })}
             </SettingsRow>
             <SettingsRow label="Viewport theme" caption="Also under Viewport › Appearance › Background.">
               {select(activeAetherViewportTheme() ?? appearance.background,

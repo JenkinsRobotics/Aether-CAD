@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { mountEditHistory } from "./modeling/edit-history";
 import { createEmptyPartDocument, insertFeature, resolveAxisLine, rollbackPosition } from "@aether/core/document";
 import type { PartDocument, PartFeature, AxisDefinition, PlaneReference, PointReference, AxisReference } from "@aether/core/document";
@@ -65,7 +65,7 @@ export async function openAxisWindow(
     window.dispatchEvent(new CustomEvent("aether-sketch-plane-selection", { detail: false }));
     win.close();
   };
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport, className: "cad-plane-window", icon: "plane", title: feature.name,
     onAccept: async () => {
       if (closed || busy) return;

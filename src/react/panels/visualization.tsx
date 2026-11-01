@@ -43,10 +43,7 @@ export function VisualizationPanel({active}:{active:boolean}) {
           }}>Delete preset</Button></>}
         </div>
         {message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
-        <p className="cad-form-note">Custom presets save the environment and default object appearance in this browser on this device. Individual object overrides are separate.</p>
       </InspectorSection>
-      {appearance.environmentTheme==='fusion360' && <p className="cad-form-note">Fusion 360 inspired: white canvas, neutral gray solids, crisp edges and colored origin planes.</p>}
-      {appearance.environmentTheme==='blender' && <p className="cad-form-note">Blender inspired: charcoal canvas, neutral studio shading and colored ground axes.</p>}
       {tab!=='objects' && <RenderDisplayControls/>}
       {tab==='objects'?<ObjectAppearanceControls/>:tab==='advanced'?<EnvironmentAdvanced appearance={appearance} resolved={resolved}/>:<>
         <InspectorSection title="Background" defaultOpen><FieldRow label="Background"><SelectField aria-label="Background" value={appearance.background} options={backgrounds} onChange={e=>cadAppearance.dispatch({type:'set-background',background:e.target.value as CADBackgroundPreset})}/></FieldRow></InspectorSection>
@@ -56,7 +53,6 @@ export function VisualizationPanel({active}:{active:boolean}) {
           <FieldRow label="Ground" layout="stacked"><SegmentedControl ariaLabel="Viewport ground mode" value={appearance.floorMode} options={[{id:'none',label:'None'},{id:'grid',label:'Grid'},{id:'floor',label:'Floor'},{id:'both',label:'Both'}]} onChange={mode=>cadAppearance.dispatch({type:'set-floor-mode',mode:mode as CADFloorMode})}/></FieldRow>
           <FieldRow label="Grid opacity"><Slider ariaLabel="Grid opacity" min={0} max={100} step={1} unit="%" value={resolved.gridOpacity*100} onChange={value=>cadAppearance.dispatch({type:'set-advanced',key:'gridMinorOpacityPercent',value})}/></FieldRow>
           <Checkbox label="Contact shadows" checked={appearance.contactShadowsVisible} onChange={e=>cadAppearance.dispatch({type:'set-contact-shadows-visible',visible:e.target.checked})}/>
-          <p className="cad-form-note">Open Advanced to tune each grid layer, plane fill and outline, background gradient, lights and floor. Use Material properties for a selected part, or Defaults for unassigned objects.</p>
         </InspectorSection>
       </>}
     </div>

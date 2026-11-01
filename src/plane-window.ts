@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { mountEditHistory } from "./modeling/edit-history";
 import { createEmptyPartDocument, insertFeature, resolvePlaneFrame, rollbackPosition } from "@aether/core/document";
 import type { SketchFrame } from "@aether/core/sketch";
@@ -199,7 +199,7 @@ export async function openPlaneWindow(
     window.dispatchEvent(new CustomEvent("aether-sketch-plane-selection", { detail: false }));
     win.close();
   };
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport,
     className: "cad-plane-window", icon: "plane",
     title: feature.name,

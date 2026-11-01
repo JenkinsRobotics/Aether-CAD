@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import type { AssemblyProjectionV1 } from "./cad-assembly-bridge";
 import { assemblyJobFor } from "./assembly-job";
 import { motionFrames, motionFramesCSV, motionPlotSVG, motionSeries, motionTrace, motionTraceCSV, type MotionFrame, type MotionKey } from "./startup/assembly-motion";
@@ -16,7 +16,7 @@ export function openMotionStudyWindow(projection: AssemblyProjectionV1, deps: As
   const dofs = projection.mates.flatMap((mate) => (mate.suppressed ? [] : (mate.dofs ?? []).map((dof) => ({ id: dof.id, label: `${mate.name} · ${dof.name}`, joint: mate.id, dof: dof.name, kind: dof.kind, axis: (dof.name.endsWith("_x") ? "x" : dof.name.endsWith("_y") ? "y" : "z") as "x" | "y" | "z" }))));
   let frames: MotionFrame[] = [], playing = 0;
   let closed = false;
-  const win = openCompactFeatureWindow({ viewport, className: "cad-motion-window", icon: "rotate", title: "Motion study", acceptLabel: "Export CSV", discardLabel: "Close",
+  const win = openCADFeatureWindow({ viewport, className: "cad-motion-window", icon: "rotate", title: "Motion study", acceptLabel: "Export CSV", discardLabel: "Close",
     onAccept: async () => {
       if (!frames.length) { win.setError("Run the study first."); return; }
       const url = URL.createObjectURL(new Blob([motionFramesCSV(frames)], { type: "text/csv" }));

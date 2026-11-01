@@ -78,14 +78,40 @@ export function renderConstraintMarks(
     svg.insertBefore(highlight, layer);
   });
   displays.set(svg, { marks, hover: interaction.hover });
+  // Equal relations that share a member form one chain and draw one badge with
+  // the member count (Onshape's "7×"), not a badge on every line (Jonathan, 2026-10-31).
+  const chains = new Map<string, { id: string; participants: SketchEntityRef[] }>();
+  const chained = new Set<string>();
+  for (const constraint of drawing.constraints ?? []) {
+    if (constraint.kind !== "equal") continue;
+    const participants = constraintParticipants(constraint);
+    const key = participants.map(ref => JSON.stringify(ref)).find(k => chains.has(k));
+    const chain = key ? chains.get(key)! : { id: constraint.id, participants: [] };
+    for (const ref of participants) {
+      const k = JSON.stringify(ref);
+      if (!chains.has(k)) { chains.set(k, chain); chain.participants.push(ref); }
+    }
+    chained.add(constraint.id);
+  }
+  const rows: { id: string; kind: string; participants: SketchEntityRef[]; count?: number; anchors: SketchEntityRef[] }[] = [];
   for (const constraint of drawing.constraints ?? []) {
     if (isDimensionConstraint(constraint.kind)) continue;
-    const entry = sketchConstraintEntry(constraint.kind);
-    if (!entry) continue;
+    if (chained.has(constraint.id)) {
+      const chain = chains.get(JSON.stringify(constraintParticipants(constraint)[0]))!;
+      if (chain.id !== constraint.id) continue;
+      rows.push({ id: chain.id, kind: "equal", participants: chain.participants, count: chain.participants.length, anchors: chain.participants.slice(0, 1) });
+      continue;
+    }
     const participants = constraintParticipants(constraint);
+    rows.push({ id: constraint.id, kind: constraint.kind, participants, anchors: participants });
+  }
+  for (const constraint of rows) {
+    const entry = sketchConstraintEntry(constraint.kind as never);
+    if (!entry) continue;
+    const participants = constraint.participants;
     const relation = { id: constraint.id, label: `${entry.label} · ${participants.length} related ${participants.length === 1 ? "element" : "elements"}`, participants };
     const anchors: SketchPoint[] = [];
-    for (const ref of participants) {
+    for (const ref of constraint.anchors) {
       const geometry = constraintGeometry(drawing, ref, size * .22);
       if (!geometry) continue;
       const anchor = geometry.anchor;
@@ -106,6 +132,13 @@ export function renderConstraintMarks(
       for (const [key, value] of Object.entries({ x: x + size * .12, y: y + size * .12, width: size * .76, height: size * .76 })) icon.setAttribute(key, String(value));
       const title = document.createElementNS(ns, "title"); title.textContent = relation.label;
       group.append(title, leader, box, icon);
+      if (constraint.count && constraint.count > 2) {
+        const count = document.createElementNS(ns, "text");
+        count.setAttribute("class", "constraint-badge-count");
+        for (const [key, value] of Object.entries({ x: x + size, y: y, "font-size": size * .55 })) count.setAttribute(key, String(value));
+        count.textContent = `${constraint.count}×`;
+        group.append(count);
+      }
       interaction.bind(group, relation);
       // Clicking an annotation must never place a sketch point or start a drag.
       group.addEventListener("pointerdown", e => e.stopPropagation());

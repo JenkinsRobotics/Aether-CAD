@@ -8,3 +8,4 @@ svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active { color: var(-
 svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active .constraint-badge-box { fill: var(--aether-color-warn); stroke: var(--aether-color-warn); stroke-width: 1.5px; stroke-opacity: 1; }
 svg.cad-sketch-canvas .sketch-constraint-mark.relationship-active .constraint-leader { stroke: var(--aether-color-warn); stroke-width: 1.5px; }
 svg.cad-sketch-canvas .sketch-relationship-highlight > * { fill: none; stroke: var(--aether-color-warn); stroke-width: 4px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+svg.cad-sketch-canvas .sketch-constraint-mark .constraint-badge-count { fill: var(--aether-color-text); font-family: var(--aether-font-family); font-weight: 600; paint-order: stroke; stroke: var(--aether-color-bg-panel); stroke-width: 2px; pointer-events: none; }

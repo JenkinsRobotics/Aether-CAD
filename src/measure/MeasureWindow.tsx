@@ -1,6 +1,6 @@
 /** Display-only inspection tools. Exact values come from the CAD engine/viewer. */
 import { createRoot } from 'react-dom/client';
-import { openCompactFeatureWindow } from '@aether/ui';
+import { openCADFeatureWindow } from "../features/feature-window-style";
 import { unitCatalog, unitChoice } from '@aether/core/units';
 import type { PartDocument } from '@aether/core/document';
 import { type CADSelectionFilter, type CADSelectionItem } from '../cad-selection-store';
@@ -42,7 +42,7 @@ export function toggleMeasureWindow(currentPart: () => PartDocument | null): voi
     root.unmount(); overlay.dispose(); win.close(); changed();
   };
   const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented && win.isFrontmost()) { event.preventDefault(); close(true); } };
-  const win = openCompactFeatureWindow({ className: 'cad-measure-window', viewport, title: 'Measure', icon: 'measure', acceptLabel: 'Done', onAccept: () => close(), onDiscard: () => close(true) });
+  const win = openCADFeatureWindow({ className: 'cad-measure-window', viewport, title: 'Measure', icon: 'measure', acceptLabel: 'Done', onAccept: () => close(), onDiscard: () => close(true) });
   win.addHelp('Hover a value to highlight its measurement; pin it to keep the annotation visible. Copy preserves full precision. Set coordinates from a selected face or anchor, then choose entities to measure in that frame. Values marked ≈ come from the display mesh.');
   win.addHelp('Objects: select bodies, faces, edges or vertices to measure their properties and spacing.');
   win.addHelp('Point-to-point: pick two snap points. Hover over a face to reveal corners, midpoints and centers. Click a selected point again to remove it.');

@@ -343,10 +343,8 @@ describe("AetherCADShell", () => {
     expect(html).toContain("Contact shadows");
     expect(html).toContain('role="radiogroup"');
     expect(html).toContain('type="range"');
-    expect(html).toContain("Show OCCT-derived edge segments on every Body.");
-    expect(html).toContain("Open Advanced to tune each grid layer");
     expect(html).toContain("Blueprint");
-    expect(html).toContain("These controls do not assign engineering density or BOM materials.");
+    expect(html).not.toContain("Open Advanced to tune"); // The environment panel carries controls, not prose (2026-10-31).
   });
 
   it("projects controller presentation state into React-owned workflow surfaces", () => {

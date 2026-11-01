@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { addConfigurationColumn, addConfigurationRow, configurationColumnKey, configurationMatches, removeConfigurationColumn, removeConfigurationRow, rollbackPosition, setConfigurationValue, type ConfigurationColumn, type PartDocument } from "@aether/core/document";
 import { cadCommands } from "./cad-command-registry";
 import { activateConfiguration, previewConfiguration, removeConfigRule, setConfigRule, type ConfigRule, type RuleOperator } from "@aether/core/document";
@@ -14,7 +14,7 @@ export function openConfigurationsWindow(getDocument: () => PartDocument | null,
   if (viewport.querySelector(".cad-configurations-window")) return;
   let draft: PartDocument = structuredClone(source);
   let selectedRow = draft.configurations?.activeRow ?? draft.configurations?.rows[0]?.name ?? "";
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport, className: "cad-configurations-window", icon: "properties", title: "Configurations",
     acceptLabel: "Apply", discardLabel: "Cancel",
     onAccept: async () => { try { await apply(draft); win.close(); } catch (error) { win.setError((error as Error).message); } },

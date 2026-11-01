@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 /** Feature types whose tool artwork has another name. */
 const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "offset-face": "offset", "import-cad": "import", profile: "sketch" };
 import { mountConstructionCommands } from "./construction-commands";
@@ -146,7 +146,7 @@ const presentFeatureWindow = (
     const doc = structuredClone(source);
     const feature = existing as any;
     const form = document.createElement("form");
-    const win = openCompactFeatureWindow({
+    const win = openCADFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
       className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
       title: launch.title ?? (type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")),

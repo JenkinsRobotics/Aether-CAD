@@ -55,7 +55,7 @@ svg.cad-sketch-canvas .sketch-contour.point { stroke-width: 4px; stroke-linecap:
 svg.cad-sketch-canvas .sketch-point {
   fill: none;
   stroke: var(--cad-sketch-point);
-  stroke-width: 4px;
+  stroke-width: 6px;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
@@ -84,7 +84,7 @@ svg.cad-sketch-canvas .sketch-fillet-handle, svg.cad-sketch-canvas .sketch-offse
 svg.cad-sketch-canvas .sketch-vertex {
   fill: none;
   stroke: var(--aether-color-accent, #399cff);
-  stroke-width: 4px;
+  stroke-width: 6px;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
   pointer-events: none;

@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { PLASTIC_RULE_LIBRARY, assignPlasticRule, availableBodies, plasticRuleFor, removePlasticRule, setActivePlasticRule, setPlasticRule, type PartDocument, type PlasticRule } from "@aether/core/document";
 import { cadCommands } from "./cad-command-registry";
 
@@ -11,7 +11,7 @@ export function openPlasticRulesWindow(getDocument: () => PartDocument | null, a
   if (viewport.querySelector(".cad-plastic-rules-window")) return;
   let draft: PartDocument = structuredClone(source);
   let selected = draft.plasticRules?.active ?? draft.plasticRules?.rules[0]?.name ?? "";
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport, className: "cad-plastic-rules-window", icon: "properties", title: "Plastic rules",
     acceptLabel: "Apply", discardLabel: "Cancel",
     onAccept: async () => { try { await apply(draft); win.close(); } catch (error) { win.setError((error as Error).message); } },

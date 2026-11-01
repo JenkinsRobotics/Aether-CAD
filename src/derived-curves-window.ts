@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { insertFeature, profileFrame, rollbackPosition, type PartDocument, type PartFeature } from "@aether/core/document";
 import { sketchProfilePolylines } from "@aether/core/sketch";
 import { cadCommands } from "./cad-command-registry";
@@ -48,7 +48,7 @@ export function openDerivedCurveWindow(mode: Mode, deps: { getDocument: () => Pa
   viewport.querySelector(".cad-derived-curve-window")?.remove();
   let found: V3[][] = [];
   const close = () => { deps.showCurves([]); win.close(); };
-  const win = openCompactFeatureWindow({ viewport, className: "cad-derived-curve-window", icon: "sketch", title: titles[mode], acceptLabel: "Add curves", discardLabel: "Cancel",
+  const win = openCADFeatureWindow({ viewport, className: "cad-derived-curve-window", icon: "sketch", title: titles[mode], acceptLabel: "Add curves", discardLabel: "Cancel",
     onAccept: async () => {
       if (!found.length) { win.setError("Preview the curves first."); return; }
       try {

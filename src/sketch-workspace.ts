@@ -1,4 +1,4 @@
-import { openCompactFeatureWindow } from "@aether/ui";
+import { openCADFeatureWindow } from "./features/feature-window-style";
 import { isRectanglePlacement, squareCorner } from "./sketch/rectangle-placement";
 import { sketchRegions } from "@aether/core/document";
 import { mountVectorPanel } from "./sketch/vector-panel";
@@ -124,7 +124,7 @@ export function openSketchWorkspace(
   // of the gallery is that products pull these, never re-build them.
   let commitSketch = () => {};
   let discardSketch = () => {};
-  const win = openCompactFeatureWindow({
+  const win = openCADFeatureWindow({
     viewport,
     className: "cad-sketch-window", icon: "sketch",
     title: featureName,
