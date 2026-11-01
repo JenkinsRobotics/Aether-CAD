@@ -16,8 +16,6 @@ export const plasticWorkspace: CADRibbonWorkspaceDefinition = {
       tool("plastic-boss", "Boss", "hole", "feature-boss"),
       tool("plastic-rest", "Rest", "box", "feature-rest"),
       tool("plastic-snap-fit", "Snap Fit", "hinge", "feature-snap-fit"),
-      tool("plastic-rib", "Rib", "frame", "feature-extrude"),
-      tool("plastic-web", "Web", "grid", "feature-extrude"),
       tool("plastic-lip-groove", "Lip / Groove", "slot", "feature-lip"),
     ] },
     { id: "plastic-modify", label: "Modify", tools: [

@@ -31,7 +31,6 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
         tool("solid-project-to-surface", "Project to surface", "curve", "sketch-project-to-surface"),
       ]},
       tool("solid-weld", "Weld", "weld", undefined, solidProducer),
-      tool("solid-sheet", "Sheet", "sheet", undefined, solidProducer),
     ] },
     { id: "solid-edit", label: "Modify", tools: [
       // Every way of finishing an edge, behind one button.
@@ -40,10 +39,8 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
         tool("solid-variable-fillet", "Variable Fillet", "fillet", undefined, solidProducer),
         tool("solid-face-fillet", "Face Fillet", "fillet", undefined, solidProducer),
       ]},
+      // Union, Subtract and Intersect are the Operation field of this one editor (Jonathan, 2026-11-01).
       {...tool("solid-boolean", "Boolean", "boolean", "feature-boolean"), variants: [
-        tool("solid-union", "Union", "boolean", "feature-union"),
-        tool("solid-subtract", "Subtract", "boolean", "feature-subtract"),
-        tool("solid-intersect", "Intersect", "boolean", "feature-intersect"),
         tool("solid-boundary-fill", "Boundary Fill", "boolean", "feature-boundary-fill"),
       ]},
       tool("solid-shell", "Shell", "shell", "feature-shell"),
@@ -81,8 +78,8 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-axis-edge", "Axis Through Edge", "plane", "construction-axis-edge"),
       tool("solid-axis-two-points", "Axis Through Two Points", "plane", "construction-axis-two-points"),
       tool("solid-axis-normal", "Axis Normal to Plane", "plane", "construction-axis-normal-to-plane"),
+      // A cylinder axis is Axis Through Edge with a circular edge picked.
       tool("solid-axis-two-planes", "Axis Through Two Planes", "plane", "construction-axis-two-planes"),
-      tool("solid-axis-cylinder", "Axis Through Cylinder", "plane", "construction-axis-edge"),
       tool("solid-point-vertex", "Point At Vertex", "plane", "construction-point-vertex"),
       tool("solid-point-two-edges", "Point Through Two Edges", "plane", "construction-point-two-edges"),
       tool("solid-point-three-planes", "Point Through Three Planes", "plane", "construction-point-three-planes"),
@@ -90,23 +87,20 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-point-edge-plane", "Point At Edge And Plane", "plane", "construction-point-edge-plane"),
       tool("solid-point-along-path", "Point Along Path", "plane", "construction-point-along-path"),
     ] },
+    // Partial Revolve is Revolve with an angle; Thicken lives on the Surface tab.
     { id: "solid-advanced", label: "Advanced Shape", tools: [
-      tool("solid-partial-revolve", "Partial Revolve", "revolve", undefined, solidProducer),
       tool("solid-draft", "Draft", "draft", "feature-draft"),
-      tool("solid-thicken", "Thicken", "thicken", undefined, solidProducer),
       tool("solid-pattern", "Pattern", "pattern", "feature-pattern"),
     ] },
     { id: "solid-transform", label: "Transform", tools: [
       // Moving a body is one gesture with several kinds.
+      // Copy is Move with "Copy parts"; mirroring is the Mirror feature.
       {...tool("solid-move", "Move", "move", "transform-translate"), variants:[
-        tool("solid-copy", "Copy", "copy", "transform-copy"),
         tool("solid-rotate", "Rotate", "rotate", "transform-rotate"),
         tool("solid-scale", "Scale", "scale", "transform-scale"),
         tool("solid-align", "Align", "move", "transform-align"),
       ]},
-      {...tool("solid-mirror", "Mirror", "mirror", "feature-mirror"), variants:[
-        tool("solid-mirror-parts", "Mirror parts", "mirror", "transform-mirror"),
-      ]},
+      tool("solid-mirror", "Mirror", "mirror", "feature-mirror"),
     ] },
     ...homeWorkspace.groups,
   ],

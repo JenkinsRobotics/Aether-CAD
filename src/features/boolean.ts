@@ -3,9 +3,9 @@ import {layoutParameterRows, type FeatureEditor} from './shared';
 
 export const booleanEditor: FeatureEditor = {
   type: 'boolean',
-  controls({field, feature, initialBooleanOperation}) {
+  controls({field, feature}) {
     return {
-      operation: field('Operation', feature?.operation ?? initialBooleanOperation ?? 'union', ['union', 'cut', 'intersection']),
+      operation: field('Operation', feature?.operation ?? 'union', ['union', 'cut', 'intersection']),
       tools: field('Tool body IDs', JSON.stringify(feature?.toolBodyIds ?? [])),
       keep: field('Keep tools', feature?.keepTools ? 'yes' : 'no', ['no', 'yes']),
     };

@@ -12,7 +12,6 @@ export const meshWorkspace: CADRibbonWorkspaceDefinition = {
   label: "Mesh",
   groups: [
     { id: "mesh-create", label: "Create", tools: [
-      tool("mesh-insert", "Insert Mesh", "import", undefined, meshProducer),
       tool("mesh-tessellate", "BRep to Mesh", "wireframe", undefined, meshProducer),
     ] },
     { id: "mesh-modify", label: "Modify", tools: [

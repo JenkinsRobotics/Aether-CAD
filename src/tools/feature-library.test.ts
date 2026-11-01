@@ -38,11 +38,11 @@ it('uses the same command availability in tray and search, preserving named gaps
   } finally { cadCommands.setEnabled('feature-extrude', true); unregister(); }
 });
 
-it('keeps all sixteen referenced assembly features discoverable without promising missing solvers', () => {
+it('keeps all fifteen referenced assembly features discoverable without promising missing solvers', () => {
   const tools = cadFeatureGroups('assembly').flatMap(group => expandFeatureTools(group.tools));
   for (const id of ['assembly-part-template','assembly-insert','assembly-assembly-template','assembly-from-json',
     'assembly-ground','assembly-fixed','assembly-revolute','assembly-slider','assembly-concentric','assembly-coincident',
-    'assembly-parallel','assembly-mate-ball','assembly-gear','assembly-group','assembly-linear-pattern','assembly-circular-pattern'])
+    'assembly-parallel','assembly-mate-ball','assembly-group','assembly-linear-pattern','assembly-circular-pattern'])
     expect(tools.some(tool => tool.id === id), id).toBe(true);
   expect(cadFeatureToolById('assembly-concentric')?.action).toBe('assembly-mate-cylindrical');
   expect(cadFeatureToolById('assembly-width')?.action).toBeUndefined();

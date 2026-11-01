@@ -27,22 +27,6 @@ afterEach(async () => {
 });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 
-it.each([
-  ['feature-union', 'union'],
-  ['feature-subtract', 'cut'],
-  ['feature-intersect', 'intersection'],
-])('%s commits the requested operation through the canonical Boolean editor', async (command, operation) => {
-  cadCommands.execute(command);
-  expect(control('Operation').value).toBe(operation);
-  const checkbox = document.querySelector('input[aria-label^="Use "]');
-  checkbox.click();
-  document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
-  expect(doc.features.at(-1)).toMatchObject({ type: 'boolean', operation, keepTools: false });
-  expect(doc.features.at(-1).toolBodyIds).toHaveLength(1);
-  expect(doc.features.at(-1).targetBodyId).not.toBe(doc.features.at(-1).toolBodyIds[0]);
-});
-
 it('Replace Face starts with target-face replacement and Cancel preserves the document', () => {
   const before = structuredClone(doc);
   cadCommands.execute('feature-replace-face');

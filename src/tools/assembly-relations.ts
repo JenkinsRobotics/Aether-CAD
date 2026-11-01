@@ -16,9 +16,7 @@ export const assemblyRelationsWorkspace: CADRibbonWorkspaceDefinition = {
       tool("assembly-contact-set", "Contact set", "weld", "assembly-create-contact-set"),
       tool("assembly-contacts-toggle", "Contacts on/off", "check", "assembly-toggle-contacts"),
       tool("assembly-contacts-check", "Check contacts", "measure", "assembly-check-contacts"),
-      tool("assembly-gear", "Gears", "gears", "assembly-create-relation"),
-      tool("assembly-mate-rack-pinion", "Rack and Pinion", "rack-pinion", "assembly-create-relation"),
-      tool("assembly-mate-screw", "Screw", "thread", "assembly-create-relation"),
+      // Gear, rack-and-pinion and screw are the kind field of the Relation dialog.
       tool("assembly-mate-belt", "Belt", "belt", undefined, authoringProducer),
     ] },
   ],

@@ -62,7 +62,6 @@ describe("CAD tool catalog", () => {
       "solid-pattern",
       "assembly-revolute",
       "assembly-slider",
-      "assembly-gear",
       "assembly-interference",
       "assembly-ground",
       "assembly-suppress",

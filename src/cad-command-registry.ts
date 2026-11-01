@@ -44,7 +44,6 @@ export type CADCommandID =
   | "feature-face-extrude"
   | "feature-shell"
   | "feature-boolean"
-  | "feature-union" | "feature-subtract" | "feature-intersect"
   | "feature-pattern"
   | "feature-draft"
   | "feature-loft"
@@ -210,7 +209,6 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "feature-loft",
   "feature-draft",
   "feature-boolean",
-  "feature-union", "feature-subtract", "feature-intersect",
   "feature-pattern",
   "part-section",
   "part-properties",
