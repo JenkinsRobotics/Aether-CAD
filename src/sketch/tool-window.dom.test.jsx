@@ -25,14 +25,16 @@ it('replaces sketch settings while a tool is open and restores them on Done', ()
   try {
     editor.show('coordinates');
     expect(settings.hidden).toBe(true);
+    // Drawing tools get a strip inside the sketch, not a feature window.
     expect(root.querySelector('[aria-label="Sketch editor"]')).toBeNull();
-    editor.setTitle('coordinates', 'Rectangle');
-    expect(root.querySelector('.aui-float-panel-title').textContent).toBe('Rectangle');
-    expect(input.value).toBe('12');
-    root.querySelector('[data-feature-action="accept"]').click();
-    expect(select).toHaveBeenCalledOnce();
-    expect(settings.hidden).toBe(false);
     expect(root.querySelector('.cad-sketch-tool-window')).toBeNull();
+    expect(root.querySelector('.cad-sketch-tool-strip').contains(input)).toBe(true);
+    editor.setTitle('coordinates', 'Rectangle');
+    expect(input.value).toBe('12');
+    editor.close();
+    expect(select).not.toHaveBeenCalled();
+    expect(settings.hidden).toBe(false);
+    expect(root.querySelector('.cad-sketch-tool-strip')).toBeNull();
   } finally {
     editor.dispose(); root.remove();
   }

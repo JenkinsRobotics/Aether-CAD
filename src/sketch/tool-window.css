@@ -13,3 +13,12 @@
 .sketch-tool-fields[data-editor="coordinates"] > button { min-height:28px; }
 .sketch-tool-fields[data-editor="coordinates"] details > summary { cursor:pointer; color:var(--aether-color-text-dim); font-size:11px; }
 .sketch-tool-fields[data-editor="coordinates"] details label { margin:4px 0; }
+
+/* The drawing-tool strip: typed coordinates and dimensions beside the canvas,
+   no window chrome. Editors that are real documents (constraints, variables,
+   text, import) keep the feature window. */
+.cad-sketch-tool-strip { position: absolute; left: 24px; right: 300px; bottom: 34px; display: flex; pointer-events: auto; }
+.cad-sketch-tool-strip > .sketch-tool-fields[data-editor="coordinates"] { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 8px; border: 1px solid var(--aether-color-border); border-radius: 8px; background: color-mix(in srgb, var(--aether-color-bg-panel) 88%, transparent); }
+.cad-sketch-tool-strip .sketch-tool-fields[data-editor="coordinates"] > label { min-height: 24px; }
+.cad-sketch-tool-strip .sketch-tool-fields[data-editor="coordinates"] > button { min-height: 24px; }
+.cad-sketch-tool-strip .sketch-contour-actions > button { flex: none; }

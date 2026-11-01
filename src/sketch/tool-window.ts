@@ -9,6 +9,7 @@ type Editor = "coordinates" | "modify" | "constraints" | "variables" | "clipboar
 export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean, select: () => void, onClose?: () => void) {
   const sections = new Map<Editor, { title: string; element: HTMLElement }>();
   let window: FeatureWindow | undefined;
+  let strip: HTMLElement | undefined;
   let active: Editor | undefined;
   const helpNotes = new Map<HTMLElement, Comment>();
   const styleControls = () => {
@@ -30,7 +31,7 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
     for (const [note, placeholder] of helpNotes) placeholder.replaceWith(note);
     helpNotes.clear();
     if (active) sections.get(active)?.element.remove();
-    window?.close(); window = undefined; active = undefined;
+    window?.close(); window = undefined; strip?.remove(); strip = undefined; active = undefined;
     refresh();
   };
   const show = (id: Editor) => {
@@ -42,6 +43,16 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
     if (!section) return;
     active = id;
     refresh();
+    // Drawing tools are not features (Jonathan, 2026-10-31): their typed entry
+    // sits in a strip inside the sketch, not in a window with Done and Cancel.
+    if (id === "coordinates") {
+      strip = document.createElement("div");
+      strip.className = "cad-sketch-tool-strip";
+      strip.append(section.element);
+      root.append(strip);
+      styleControls();
+      return;
+    }
     window = openCompactFeatureWindow({
       viewport: root, className: "cad-sketch-tool-window", title: section.title, icon: "sketch", acceptLabel: "Done",
       onAccept: () => { select(); close(); }, onDiscard: () => { select(); close(); },
@@ -53,11 +64,11 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
       option.value = value; option.textContent = title; picker.append(option);
     }
     picker.value = id; picker.onchange = () => show(picker.value as Editor);
-    if (id !== "coordinates") window.body.append(picker);
+    window.body.append(picker);
     window.body.append(section.element);
     styleControls();
     // These editors already group their fields with standard disclosures.
-    if (id !== "coordinates") for (const details of section.element.querySelectorAll(":scope > details, :scope > section > details"))
+    for (const details of section.element.querySelectorAll(":scope > details, :scope > section > details"))
       (details as HTMLDetailsElement).open = true;
   };
   const commands: [CADCommandID, Editor][] = [

@@ -5,8 +5,13 @@ import { WorkspaceOrientationSettings } from "./chrome/WorkspaceOrientationSetti
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   activeAetherViewportTheme,
+  aetherThemes,
   aetherViewportThemes,
+  setAetherAppearance,
+  setAetherTheme,
   setAetherViewportTheme,
+  activeAetherTheme,
+  type AppearanceMode,
   AetherIcon,
   Button,
   SettingsCard,
@@ -104,6 +109,8 @@ export function CADSettingsWindow({
 }) {
   const [pane, setPane] = useState(initialPane);
   const [commandQuery, setCommandQuery] = useState("");
+  const [colorMode, setColorMode] = useState<string>(() => document.documentElement.dataset.appearance ?? "system");
+  const [interfaceTheme, setInterfaceTheme] = useState<string>(activeAetherTheme);
   useEffect(() => {
     if (open) setPane(initialPane);
   }, [open, initialPane]);
@@ -248,44 +255,24 @@ export function CADSettingsWindow({
         </>
       ) : pane === "ui" ? (
         <>
+          {/* The same controls as Aether Studio › Appearance & icons, so the UI pane
+              is never a locked duplicate (Jonathan, 2026-10-31). */}
           <SettingsCard icon={<AetherIcon name="sidebar" />} title="Appearance">
-            <SettingsRow label="Theme" disabled caption="Light theme requires the adaptive renderer palette.">
-              {select("dark", [
-                { value: "dark", label: "Aether Dark" },
-                { value: "light", label: "Light — unavailable" },
-              ], undefined, { ariaLabel: "Theme", disabled: true })}
+            <SettingsRow label="Color mode">
+              {select(colorMode, [
+                { value: "system", label: "System" },
+                { value: "light", label: "Light" },
+                { value: "dark", label: "Dark" },
+              ], (mode) => { setAetherAppearance(mode as AppearanceMode); setColorMode(mode); }, { ariaLabel: "Color mode" })}
             </SettingsRow>
-            <SettingsRow
-              label="Follow reduced-motion preference"
-              disabled
-              caption="Animations use the operating-system accessibility setting."
-            >
-              <input type="checkbox" className="aui-switch" aria-label="Follow reduced-motion preference" checked disabled readOnly />
+            <SettingsRow label="Interface theme">
+              {select(interfaceTheme, aetherThemes.map((theme) => ({ value: theme.id, label: theme.name })),
+                (id) => { setAetherTheme(id); setInterfaceTheme(id); }, { ariaLabel: "Interface theme" })}
             </SettingsRow>
-            <SettingsRow label="High-contrast override" disabled caption="System contrast remains respected by shared controls.">
-              <input type="checkbox" className="aui-switch" aria-label="High-contrast override" disabled />
-            </SettingsRow>
-          </SettingsCard>
-          <SettingsCard icon={<AetherIcon name="design" />} title="Design profile" caption="The shared profile updates panels, ribbons, fields, and semantic chrome together.">
-            <SettingsRow label="Design preset" disabled>
-              {select("standard", [
-                { value: "standard", label: "Standard" },
-                { value: "compact", label: "Compact" },
-                { value: "high-contrast", label: "High Contrast" },
-              ], undefined, { ariaLabel: "Design preset", disabled: true })}
-            </SettingsRow>
-            <SettingsRow label="Accent color" disabled>
-              <input type="color" aria-label="Accent color" value="#4c9dff" disabled readOnly />
-            </SettingsRow>
-            <SettingsRow label="Tool density" disabled>
-              {select("standard", [
-                { value: "compact", label: "Compact" },
-                { value: "standard", label: "Standard" },
-                { value: "expanded", label: "Expanded" },
-              ], undefined, { ariaLabel: "Tool density", disabled: true })}
-            </SettingsRow>
-            <SettingsRow label="Show workspace status bar" disabled>
-              <input type="checkbox" className="aui-switch" aria-label="Show workspace status bar" checked disabled readOnly />
+            <SettingsRow label="Viewport theme" caption="Also under Viewport › Appearance › Background.">
+              {select(activeAetherViewportTheme() ?? appearance.background,
+                aetherViewportThemes.map((theme) => ({ value: theme.id, label: theme.name })),
+                (id) => setAetherViewportTheme(id), { ariaLabel: "Viewport theme" })}
             </SettingsRow>
           </SettingsCard>
         </>

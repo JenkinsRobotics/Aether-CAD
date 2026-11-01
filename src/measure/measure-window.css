@@ -1,5 +1,4 @@
 /* Product-owned overlay and content layout; fields inherit shared Inspector. */
-.cad-measure-window.aui-feature-window--compact { width:300px; }
 .cad-measure-results:empty { display:none; }
 .cad-measure-hint { margin:0; color:var(--aether-color-text-dim); font-size:11px; line-height:1.5; }
 .cad-measure-overlay { position:absolute; inset:0; pointer-events:none; z-index:8; overflow:hidden; }

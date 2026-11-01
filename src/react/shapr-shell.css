@@ -986,3 +986,8 @@
 .shapr-shell .aui-workspace-ribbon:is([data-variant="docked"], [data-variant="floating"]) .aui-workspace-ribbon-group[data-overflowed] { visibility: visible; pointer-events: auto; }
 .shapr-shell .aui-workspace-ribbon .aui-ribbon-group-label { display: block; width: 100%; text-align: center; }
 .shapr-shell .aui-workspace-ribbon .aui-workspace-ribbon-caption { justify-content: center; text-align: center; }
+
+/* A picker's open list escapes the window instead of being clipped by the
+   body's scroll box (Measure › Select showed four of five choices). */
+.shapr-shell .aui-feature-window:has(.aui-feature-picker-menu:not([hidden])),
+.shapr-shell .aui-feature-window:has(.aui-feature-picker-menu:not([hidden])) > .aui-float-panel-body { overflow: visible; }
