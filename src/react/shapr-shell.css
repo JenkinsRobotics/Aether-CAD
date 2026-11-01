@@ -628,11 +628,10 @@
 
 /* A split tool keeps the selected variant as the primary action. */
 /* The caret is a hint, not a second button: it should not widen the tool. */
-/* The caret's hit box is the tile's whole right edge, not the 9 px glyph
-   (Jonathan, 2026-11-01): the chevron stays bottom-right, the target is tall. */
-.shapr-shell .aui-workspace-ribbon-variants.aui-menu-trigger { top: 0; right: 0; bottom: 0; width: 18px; align-items: flex-end; justify-content: center; padding: 0 0 4px; border-radius: 0 7px 7px 0; }
-.shapr-shell .aui-workspace-ribbon-tool:has(.aui-workspace-ribbon-variants) .aui-ribbon-tool { padding-right: 18px; }
-.shapr-shell .aui-workspace-ribbon-tool:has(.aui-workspace-ribbon-variants) .aui-ribbon-tool-label { padding-right: 0; }
+/* The caret's hit box is the tile's bottom-right quadrant, not the 9 px glyph
+   (Jonathan, 2026-11-01). It stays clear of the tile's centre, where a click
+   means the tool itself: narrow sketch tiles are only 36 px wide. */
+.shapr-shell .aui-workspace-ribbon-variants.aui-menu-trigger { top: 55%; right: 0; bottom: 0; width: 16px; align-items: flex-end; justify-content: center; padding: 0 0 3px; border-radius: 0 0 7px 0; }
 
 
 .cad-mock-panel { display: flex; flex-direction: column; gap: 10px; padding: 12px; font-size: 12px; color: var(--aether-color-text-dim); }
