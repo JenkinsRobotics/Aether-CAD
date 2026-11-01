@@ -85,11 +85,12 @@ const ribbon = (name, commandId) => ({ click: async () => {
   } });
 const tab = name => page.getByRole('tab', { name, exact: true }).first();
 const canvas = () => page.locator('svg[aria-label="2D sketch canvas"]');
-// Sketch points go in through the tool's Coordinates window (exact millimetres), the
-// way a user types them; the canvas is a perspective view where a click could miss.
+// Sketch points go in through the tool's coordinate strip inside the sketch (exact
+// millimetres), the way a user types them; the canvas is a perspective view where a
+// click could miss. Drawing tools have no window since 2026-10-31; Escape ends them.
 const draw = async (tool, points) => {
   await ribbon(tool).click();
-  const win = page.locator('.cad-sketch-tool-window');
+  const win = page.locator('.cad-sketch-tool-strip');
   await win.waitFor({ timeout: 30000 });
   for (const [x, y] of points) {
     await win.getByLabel('X (mm)').fill(String(x));
@@ -97,7 +98,7 @@ const draw = async (tool, points) => {
     await win.getByRole('button', { name: 'Place point' }).click();
     await page.waitForTimeout(200);
   }
-  await win.getByRole('button', { name: 'Done' }).click();
+  await page.keyboard.press('Escape');
   await expect(win).toHaveCount(0, { timeout: 10000 });
   log.sketch = (log.sketch ?? []).concat([await page.locator('body').innerText().then(t => t.match(/\d+ closed \/ \d+ open profiles/)?.[0] ?? '?')]);
 };
@@ -227,6 +228,7 @@ try {
     await ribbon('Fillet').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Target body', 'Body 1').catch(() => { });
+    await setSelect('Edges', 'all'); // Edges default to the picked set since 2026-10-31; this step rounds every edge.
     await setInput('All-edge size (mm)', 2); // larger than the shell wall, so the shell's inner fillets keep a radius
     // The radius manipulator the preview publishes shows in the viewport while the dialog is open.
     await expect(page.locator('.cad-extrusion-handle').first()).toBeVisible({ timeout: 15000 });

@@ -97,13 +97,13 @@ try {
   };
   for (const [name, id] of [['Circle', 'sketch-circle'], ['Rectangle', 'sketch-rectangle']]) {
     await choose(name, id);
-    const popup = page.locator('.cad-sketch-tool-window'); await expect(popup).toBeVisible();
-    await expect(popup.locator('.aui-float-panel-title')).toHaveText(name);
+    // Drawing tools show a strip inside the sketch, not a window (2026-10-31).
+    const popup = page.locator('.cad-sketch-tool-strip'); await expect(popup).toBeVisible();
     await expect(page.locator('.cad-sketch-window')).not.toBeVisible();
     const x = await popup.getByLabel('X (mm)', { exact: true }).boundingBox();
     const y = await popup.getByLabel('Y (mm)', { exact: true }).boundingBox();
     assert.ok(Math.abs(x.y - y.y) < 2, 'XY controls share one row');
-    const bounds = await popup.boundingBox(); assert.ok(bounds.width <= 310 && bounds.height < 360, JSON.stringify(bounds));
+    const bounds = await popup.boundingBox(); assert.ok(bounds.height < 160, JSON.stringify(bounds));
     await expect(popup.getByRole('button', { name: 'New contour', exact: true })).not.toBeVisible();
     await expect(popup.getByRole('combobox', { name: 'Sketch editor', exact: true })).toHaveCount(0);
     assert.equal(await popup.locator('details').evaluate(element => element.open), false);
@@ -114,7 +114,7 @@ try {
       await popup.getByRole('button', { name: 'Place point', exact: true }).click();
     }
   }
-  await page.locator('.cad-sketch-tool-window').getByRole('button', { name: 'Done', exact: true }).click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.cad-sketch-window')).toBeVisible();
   await page.locator('.cad-sketch-window [data-feature-action="discard"]').click();
   await expect(page.locator('.cad-sketch-window')).toHaveCount(0);
