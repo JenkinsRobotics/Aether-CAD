@@ -498,6 +498,7 @@ function syncRibbonAvailability(): void {
 
 // Draft feature being authored (declared before updateLists reads it).
 let draftSketch: { id: string; name: string; hasPlane: boolean; existing: boolean } | null = null;
+let draftFeature: { id: string; name: string; kind: string } | null = null;
 function canPlayHistory(): boolean {
   const state=cadPresentation.snapshot();
   return activeWorkspaceKind==='part' && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
@@ -560,6 +561,7 @@ function updateLists(notifyDocumentChange = true): void {
       collapsedFolders,
       draftSketch && !draftSketch.existing ? draftSketch : null,
       activeWorkspaceKind === "assembly" ? assemblyController.geometryProjection : null,
+      draftFeature,
     ),
   );
 
@@ -1755,6 +1757,10 @@ window.addEventListener("aether-sketch-editing", event => {
   const detail = (event as CustomEvent).detail as typeof draftSketch;
   draftSketch = detail;
   viewer.setEditingSketch(detail?.id ?? null);
+  updateLists();
+});
+window.addEventListener("aether-feature-editing", event => {
+  draftFeature = (event as CustomEvent).detail as typeof draftFeature;
   updateLists();
 });
 window.addEventListener("aether-sketch-mode", event => {

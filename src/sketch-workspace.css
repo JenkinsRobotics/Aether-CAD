@@ -6,7 +6,8 @@
 :root, .cad-sketch-workspace {
   --cad-sketch-geometry: #0000ff;
   --cad-sketch-grid-axis: #0000000e;
-  --cad-sketch-region: #e3e6e8;
+  /* Closed regions read as a greyed, see-through sheet (Onshape), not solid white. */
+  --cad-sketch-region: rgba(170, 178, 188, 0.32);
   --cad-sketch-constrained: #000000;
   --cad-sketch-region-invalid: rgba(224, 74, 74, 0.08);
   --cad-sketch-open: #0000ff;

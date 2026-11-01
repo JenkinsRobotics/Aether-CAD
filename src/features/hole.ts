@@ -85,11 +85,11 @@ export const holeEditor: FeatureEditor = {
     const spec = () => { const s = standard(); return s ? threadSpecification(s, controls.size.value) : undefined; };
     // The size list follows the chosen standard; the previous size is kept when the new standard has it.
     const refillSizes = () => {
-      const s = standard(); if (!s || !(controls.size instanceof HTMLSelectElement)) return;
+      const s = standard(); if (!s || !(controls.size instanceof window.HTMLSelectElement)) return;
       const wanted = controls.size.value;
       controls.size.replaceChildren(...threadDesignations(s).map(designation => Object.assign(document.createElement('option'), {value: designation, textContent: designation})));
       controls.size.value = threadDesignations(s).includes(wanted) ? wanted : threadDesignations(s)[Math.min(4, threadDesignations(s).length - 1)];
-      if (controls.threadClass instanceof HTMLSelectElement) { const cls = controls.threadClass.value; controls.threadClass.replaceChildren(...['', ...threadClasses(s)].map(value => Object.assign(document.createElement('option'), {value, textContent: value || 'default'}))); controls.threadClass.value = threadClasses(s).includes(cls) ? cls : ''; }
+      if (controls.threadClass instanceof window.HTMLSelectElement) { const cls = controls.threadClass.value; controls.threadClass.replaceChildren(...['', ...threadClasses(s)].map(value => Object.assign(document.createElement('option'), {value, textContent: value || 'default'}))); controls.threadClass.value = threadClasses(s).includes(cls) ? cls : ''; }
     };
     // A standard drives the diameter: tap drill when tapped, the fit when clearance.
     const applyDiameter = () => {

@@ -955,3 +955,34 @@
 @media (max-width: 1200px) { .cad-header-controls > [role="group"]:not(:first-child) { display: none; } }
 /* Under the docked tool bar the camera starts below it, level with the side cards. */
 .cad-studio-workspace .aui-shell:has(.aui-shell-fltoolbar .aui-workspace-ribbon[data-variant="docked"]) .cad-studio-camera-navigation { top: calc(var(--aui-studio-docked-top) + 82px); }
+
+/* Condensed feature windows (Jonathan, 2026-10-31): Onshape-dense rows, a short
+   header and 24 px fields, for every feature editor the CAD shell opens. The
+   shared package keeps its spacious defaults for other apps. */
+.shapr-shell .aui-feature-window { width: 264px; border-radius: 8px; }
+.shapr-shell .aui-feature-window--compact { border-radius: 8px; }
+.shapr-shell .aui-feature-window--compact > .aui-float-panel-header,
+.shapr-shell .aui-feature-window--standard > .aui-float-panel-header { min-height: 30px; gap: 8px; padding: 0 10px; font-size: 13px; }
+.shapr-shell .aui-feature-window .aui-feature-header-icon > svg { width: 18px; height: 18px; }
+.shapr-shell .aui-feature-window .aui-float-panel-body { padding: 6px 10px 8px; gap: 3px; }
+.shapr-shell .aui-feature-window .aui-feature-row { min-height: 24px; gap: 6px; }
+.shapr-shell .aui-feature-window :is(.aui-feature-row, .aui-feature-subsection-header):has(> input[type=checkbox]:last-child, > .aui-feature-row-control:last-child > input[type=checkbox]:only-child) { min-height: 22px; gap: 6px; }
+.shapr-shell .aui-feature-window .aui-float-panel-body :is(input[type=text], input[type=number], select, .aui-feature-picker-trigger) { min-height: 24px; height: 24px; border-radius: 5px; }
+.shapr-shell .aui-feature-window--compact .aui-feature-tabs > button { min-height: 22px; padding: 1px 8px; line-height: 18px; }
+.shapr-shell .aui-feature-window .aui-feature-entities { padding: 4px 6px; gap: 2px; border-radius: 5px; }
+.shapr-shell .aui-feature-window .aui-feature-entity { min-height: 20px; }
+.shapr-shell .aui-feature-window .aui-feature-property-section { margin-top: 2px; padding-top: 4px; }
+.shapr-shell .aui-feature-window .aui-feature-property-section > h3 { min-height: 20px; margin: 0 0 2px; }
+.shapr-shell .aui-feature-window .aui-feature-property-section-body { gap: 3px; }
+.shapr-shell .aui-feature-window .aui-feature-subsection { padding-top: 4px; }
+.shapr-shell .aui-feature-window--compact > .aui-feature-commit-actions { gap: 6px; padding: 0 8px; }
+.shapr-shell .aui-feature-window--compact > .aui-feature-commit-actions > .aui-button { min-width: 60px; min-height: 24px; padding: 2px 10px; border-radius: 5px; font-size: 12px; }
+.shapr-shell .aui-feature-window--compact .aui-feature-footer { min-height: 26px; padding: 0 6px; }
+
+/* Bottom tray (Jonathan, 2026-10-31): every group stays reachable by scrolling
+   sideways instead of being clipped, and each group's caption is centred under
+   its tools. */
+.shapr-shell .aui-workspace-ribbon-fit { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.shapr-shell .aui-workspace-ribbon:is([data-variant="docked"], [data-variant="floating"]) .aui-workspace-ribbon-group[data-overflowed] { visibility: visible; pointer-events: auto; }
+.shapr-shell .aui-workspace-ribbon .aui-ribbon-group-label { display: block; width: 100%; text-align: center; }
+.shapr-shell .aui-workspace-ribbon .aui-workspace-ribbon-caption { justify-content: center; text-align: center; }

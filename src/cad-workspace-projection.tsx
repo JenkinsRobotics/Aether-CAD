@@ -98,6 +98,7 @@ export function buildCADWorkspaceProjection(
   /** A feature created but not yet committed; invalid until it has a plane. */
   draftSketch: { id: string; name: string; hasPlane: boolean } | null = null,
   assembly: AssemblyProjectionV1 | null = null,
+  draftFeature: { id: string; name: string; kind: string } | null = null,
 ): CADWorkspaceProjection {
   const sketchStates = new Map((partDocument?.features ?? []).map(feature => [feature.id, sketchState(feature)]));
   const modelingFeatures = (partDocument?.features ?? []).filter(feature => !isPartPlacementAction(feature));
@@ -209,6 +210,15 @@ export function buildCADWorkspaceProjection(
         icon: treeIcon("sketch"),
         tone: draftSketch.hasPlane ? undefined : "error",
         badge: draftSketch.hasPlane ? "Editing" : "No plane",
+      });
+    }
+    // A feature whose window is open is already a feature: Cancel removes the row, Apply keeps it.
+    if (draftFeature && !partDocument.features.some(feature => feature.id === draftFeature.id)) {
+      authored.push({
+        id: `feature/${draftFeature.kind}/${draftFeature.id}`,
+        label: draftFeature.name,
+        icon: treeIcon(draftFeature.kind === "extrude" ? "extrude" : draftFeature.kind === "plane" ? "plane" : "part"),
+        badge: "Editing",
       });
     }
     const bodies=availableBodies(renderableDocument(partDocument)!);for(const body of bodies)if(selectedPartIDs.has(body.id))selected.add(`feature/body/${body.id}`);const bodiesID=`bodies/${partDocument.documentId}`;if(!collapsedFolders.has(bodiesID))expanded.add(bodiesID);

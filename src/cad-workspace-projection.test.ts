@@ -246,3 +246,12 @@ describe("under-defined sketch badge", () => {
     for (const row of sketchRows(circle)) expect(iconOf(row)?.props?.className ?? "").not.toContain("under-constrained");
   });
 });
+
+it('shows a feature whose window is open as an Editing row until it is applied or cancelled', () => {
+  const part = createEmptyPartDocument('Draft');
+  const args = [[], new Set<string>(), {} as any, null, [], [], null, { faceCount: 0, candidateCount: 0 }, new Set<string>(), new Set<string>(), new Set<string>(), null, null] as const;
+  const open = buildCADWorkspaceProjection(part, ...args, { id: 'draft-1', name: 'Extrude 1', kind: 'extrude' });
+  expect(open.itemNodes).toContainEqual(expect.objectContaining({ id: 'feature/extrude/draft-1', label: 'Extrude 1', badge: 'Editing' }));
+  const closed = buildCADWorkspaceProjection(part, ...args, null);
+  expect(JSON.stringify(closed.itemNodes)).not.toContain('draft-1');
+});

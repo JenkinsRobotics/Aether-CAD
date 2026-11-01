@@ -284,6 +284,16 @@ const presentFeatureWindow = (
     validate();
     const draftId = existing?.id ?? crypto.randomUUID();
     win.panel.dataset.featureId = draftId;
+    // The draft is a real feature from the moment its window opens: the tree shows
+    // it (badge "Editing") until Apply makes it history or Cancel removes it.
+    const announceDraft = (detail: { id: string; name: string; kind: string } | null) =>
+      window.dispatchEvent(new CustomEvent("aether-feature-editing", { detail }));
+    if (!existing) {
+      announceDraft({ id: draftId, name: name.value, kind: type });
+      name.addEventListener("input", () => announceDraft({ id: draftId, name: name.value, kind: type }));
+      const close = win.close;
+      win.close = () => { announceDraft(null); close(); };
+    }
     const candidateDocument = () => {
         const invalid = editor?.validate?.(controls, context);
         if (invalid) throw new Error(invalid);
