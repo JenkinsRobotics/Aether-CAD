@@ -241,10 +241,10 @@ it("starts Solid with Create and Modify without manual build commands", () => {
 });
 
 
-it("shows one Construction icon and retains the complete construction menu", () => {
+it("shows Plane, Axis and Point as the three construction features", () => {
   const section = fusionTabsFor("part").find(tab => tab.id === "solid")!.sections.find(section => section.label === "Construct")!;
-  expect(section.visible).toEqual(["solid-plane"]);
-  expect(section.menu).toEqual(["solid-plane", "solid-plane-angle", "solid-plane-mid", "solid-plane-three-point", "solid-plane-perpendicular", "solid-plane-two-edges", "solid-plane-tangent", "solid-plane-along-path", "solid-axis-edge", "solid-axis-two-points", "solid-axis-normal", "solid-axis-two-planes", "solid-point-vertex", "solid-point-two-edges", "solid-point-three-planes", "solid-point-center", "solid-point-edge-plane", "solid-point-along-path"]);
+  expect(section.visible).toEqual(["solid-plane", "solid-axis", "solid-point"]);
+  expect(section.menu).toEqual(["solid-plane", "solid-axis", "solid-point"]);
 });
 
 

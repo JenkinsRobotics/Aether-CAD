@@ -66,26 +66,12 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-isocurve", "Isocurves", "curve", "part-isocurve"),
       tool("solid-minimum-radius", "Minimum Radius", "curve", "part-minimum-radius"),
     ] },
-    { id: "solid-reference", label: "Construction", singleTool: true, tools: [
-      tool("solid-plane", "Offset Plane", "plane", "feature-plane"),
-      tool("solid-plane-angle", "Plane at Angle", "plane", "construction-plane-angle"),
-      tool("solid-plane-mid", "Midplane", "plane", "construction-plane-mid"),
-      tool("solid-plane-three-point", "Plane Through Three Points", "plane", "construction-plane-three-point"),
-      tool("solid-plane-perpendicular", "Perpendicular Plane", "plane", "construction-plane-perpendicular"),
-      tool("solid-plane-two-edges", "Plane Through Two Edges", "plane", "construction-plane-two-edges"),
-      tool("solid-plane-tangent", "Tangent Plane", "plane", "construction-plane-tangent"),
-      tool("solid-plane-along-path", "Plane Along Path", "plane", "construction-plane-along-path"),
-      tool("solid-axis-edge", "Axis Through Edge", "plane", "construction-axis-edge"),
-      tool("solid-axis-two-points", "Axis Through Two Points", "plane", "construction-axis-two-points"),
-      tool("solid-axis-normal", "Axis Normal to Plane", "plane", "construction-axis-normal-to-plane"),
-      // A cylinder axis is Axis Through Edge with a circular edge picked.
-      tool("solid-axis-two-planes", "Axis Through Two Planes", "plane", "construction-axis-two-planes"),
-      tool("solid-point-vertex", "Point At Vertex", "plane", "construction-point-vertex"),
-      tool("solid-point-two-edges", "Point Through Two Edges", "plane", "construction-point-two-edges"),
-      tool("solid-point-three-planes", "Point Through Three Planes", "plane", "construction-point-three-planes"),
-      tool("solid-point-center", "Point At Center Of Circle", "plane", "construction-point-center"),
-      tool("solid-point-edge-plane", "Point At Edge And Plane", "plane", "construction-point-edge-plane"),
-      tool("solid-point-along-path", "Point Along Path", "plane", "construction-point-along-path"),
+    // Plane, Axis and Point are three features; the construction method is the
+    // first field of each editor, not a separate button (Jonathan, 2026-11-01).
+    { id: "solid-reference", label: "Construction", tools: [
+      tool("solid-plane", "Plane", "plane", "feature-plane"),
+      tool("solid-axis", "Axis", "axis", "construction-axis-edge"),
+      tool("solid-point", "Point", "point", "construction-point-vertex"),
     ] },
     // Partial Revolve is Revolve with an angle; Thicken lives on the Surface tab.
     { id: "solid-advanced", label: "Advanced Shape", tools: [
