@@ -8,13 +8,14 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
+const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
 assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
 const headed = process.env.AETHER_TIMING_HEADED === '1';
-const browser = await chromium.launch({ headless: !headed, args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
+// AETHER_GATE_BROWSER=webkit stands in for Safari (Playwright WebKit).
+const browser = process.env.AETHER_GATE_BROWSER === 'webkit' ? await webkit.launch({ headless: !headed }) : await chromium.launch({ headless: !headed, args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage(), errors = [], steps = [], log = { engine: {} };
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error')

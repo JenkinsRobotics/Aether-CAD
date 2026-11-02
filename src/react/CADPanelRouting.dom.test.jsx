@@ -443,12 +443,18 @@ it('keeps only app-wide header icons and switches docked and floating from the h
   expect(isVisible(container.querySelector('section[aria-label="Reminders"]'))).toBe(true);
   expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
   const toggle=container.querySelector('.cad-header-placement');
+  // The header is the only layout switch (Jonathan, 2026-11-01): the tool bar carries none.
+  expect(container.querySelector('.aui-workspace-ribbon-placement')).toBeNull();
   // main.ts applies the actions; here they are recorded and applied the same way.
-  const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:{toolbarMode:action.mode}));
+  const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:action.type==='select-toolbar-mode'?{toolbarMode:action.mode}:{}));
   const flip=async()=>{const docked=cadPresentation.snapshot().workspaceLayout==='docked';dispatch.mockClear();await act(async()=>toggle.click());
     expect(dispatch.mock.calls.map(([action])=>action)).toEqual(docked?[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}]:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]);
     expect(toggle.getAttribute('aria-label')).toBe(docked?'Docked layout':'Floating layout');};
   await flip(); await flip();
+  // A hidden tree comes back with either layout: both keep it in its column.
+  await act(async()=>cadPresentation.patch({panelPlacements:{...cadPresentation.snapshot().panelPlacements,browser:'hidden'}})); dispatch.mockClear();
+  await act(async()=>toggle.click());
+  expect(dispatch.mock.calls.map(([action])=>action)).toContainEqual({type:'set-panel-placement',panel:'browser',placement:'docked'});
   dispatch.mockRestore();
 });
 

@@ -62,8 +62,6 @@ export interface CADTraditionalRibbonProps {
    *  floating the compact card above the bottom of the canvas. */
   placement?: "docked" | "floating";
   onOpenLayout?: () => void;
-  /** The tool bar's layout icon: switches the workspace between docked and floating. */
-  onPlacementChange?: (placement: "docked" | "floating") => void;
   suite?: boolean;
   /** Open document type; layouts refine the shared catalog per type. */
   documentType?: CADDocumentType;
@@ -87,7 +85,6 @@ export function CADTraditionalRibbon({
   onSelectWorkspace,
   onAction,
   onOpenLayout,
-  onPlacementChange,
 }: CADTraditionalRibbonProps) {
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
   const workspaceMode = useSyncExternalStore(
@@ -231,7 +228,7 @@ export function CADTraditionalRibbon({
           workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
           tabs={ribbonTabs} activeTabID={active.id} onTabSelect={setFusionTab}
           onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-          moreLabel="Tool bar options" onPlacementChange={onPlacementChange} />
+          moreLabel="Tool bar options" />
       </section>
     );
   }
@@ -255,7 +252,7 @@ export function CADTraditionalRibbon({
         workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
         tabs={ribbonTabs} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
         onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-        moreLabel="Tool bar options" onPlacementChange={onPlacementChange} />
+        moreLabel="Tool bar options" />
     </section>
   );
 }

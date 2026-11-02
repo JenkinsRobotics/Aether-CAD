@@ -456,6 +456,8 @@ export function AetherCADShell() {
   const switchPlacement = (placement: "docked" | "floating") => {
     cadPresentation.dispatch({ type: "select-layout", layout: placement === "docked" ? "docked" : "expanded" });
     cadPresentation.dispatch({ type: "select-toolbar-mode", mode: placement === "docked" ? "traditional" : "floating" });
+    // Both layouts keep the feature tree in its column.
+    if (presentation.panelPlacements.browser === "hidden") cadPresentation.dispatch({ type: "set-panel-placement", panel: "browser", placement: "docked" });
   };
   const searchCommands = buildCADCommandPaletteCommands(commands, { partOpen: presentation.partOpen, assemblyReady: shellAssembly.loadState === 'ready' });
   const runSearchCommand = (id: string) => {
@@ -543,7 +545,6 @@ export function AetherCADShell() {
             onAction={runRibbonAction}
             placement={ribbonPlacement}
             onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.cad-traditional-ribbon .aui-workspace-ribbon-overflow'))}
-            onPlacementChange={switchPlacement}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}

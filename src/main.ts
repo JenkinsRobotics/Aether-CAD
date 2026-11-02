@@ -1,3 +1,4 @@
+import { auxToolbarItems } from "./aux-toolbar-preferences";
 import { sourceFeatureTarget } from "./assembly/source-features";
 import { AssemblyGeometryCache } from './assembly/geometry-cache';
 import { mountAssemblyPlacementManipulator } from './assembly/placement-manipulator';
@@ -260,6 +261,10 @@ try {
   // no longer exists; carry them over with the tree back in its standard column.
   const legacy = saved ? null : parseCADPresentationPreferences(localStorage.getItem("aether-cad.presentation.studio-v1"));
   const preferences = saved ?? (legacy && { ...legacy, panelPlacements: { ...legacy.panelPlacements, browser: "docked" as const } });
+  // The tree is the standard column of both layouts (Jonathan, 2026-11-01): only the
+  // Settings › Layout tree toggle may keep it hidden across sessions.
+  if (preferences?.panelPlacements.browser === "hidden" && !auxToolbarItems().includes("feature-tree"))
+    preferences.panelPlacements = { ...preferences.panelPlacements, browser: "docked" };
   if (preferences) cadPresentation.patch(preferences);
 } catch {
   // The standalone app can run with storage disabled; session state still works.

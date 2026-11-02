@@ -6,7 +6,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ??
+const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ??
   fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const evidence = process.env.AETHER_FRONTEND_EVIDENCE ?? resolve('build/home-navigation');
 await mkdir(evidence, { recursive: true });
@@ -37,7 +37,7 @@ if (frontend) {
 }
 assert.equal(new URL(origin).hostname, '127.0.0.1', 'Use a disposable test host');
 assert.notEqual(new URL(origin).port, '8780');
-const browser = await chromium.launch({ headless: true });
+const browser = await (process.env.AETHER_GATE_BROWSER === 'webkit' ? webkit : chromium).launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.on('pageerror', error => errors.push(error.message));
