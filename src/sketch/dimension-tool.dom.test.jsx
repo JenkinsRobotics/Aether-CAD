@@ -66,6 +66,14 @@ it('picks two points and creates a driving distance', async () => {
   document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'distance', value: 25, a: { kind: 'point' }, b: { kind: 'point' } }]);
 });
+it('dimensions from the sketch origin, which stays put and survives save/reopen', async () => {
+  doc.features[0].profile.contours.shift();
+  start(); key(); pick(.3, .2); expect(panel()).toBeNull(); pick(40, 20); pick(15, 19); submit('50');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  doc = parsePartDocument(serializePartDocument(doc));
+  expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'distance', value: 50, a: { projectedContourId: 'sketch-origin', contour: -1 } }]);
+  expect(Math.hypot(...doc.features[0].profile.contours[0].center)).toBeCloseTo(50);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }

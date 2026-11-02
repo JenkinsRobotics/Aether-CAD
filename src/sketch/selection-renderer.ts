@@ -1,4 +1,5 @@
 import {
+  referencedContour,
   sketchEntityPoint,
   type SketchDrawing,
   type SketchEntityRef,
@@ -15,7 +16,8 @@ export function renderSketchSelection(
   for (const ref of Array.isArray(refs) ? refs : refs ? [refs] : []) renderEntity(svg, drawing, ref, size);
 }
 function renderEntity(svg: SVGSVGElement, drawing: SketchDrawing, ref: SketchEntityRef, size: number) {
-  const c = ref.projectedContourId === undefined ? drawing.contours[ref.contour] : drawing.projectionContext?.find(c=>c.id===ref.projectedContourId);
+  let c;
+  try { c = referencedContour(drawing, ref); } catch { return; }
   if (!c) return;
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
   group.setAttribute("class", "sketch-selection");

@@ -1,4 +1,4 @@
-import { identifySegmentReference } from "@aether/core/sketch";
+import { identifySegmentReference, SKETCH_ORIGIN_REF } from "@aether/core/sketch";
 import type { SketchDrawing, SketchPoint } from "@aether/core/sketch";
 import { pickSketchEntity } from "./picking";
 
@@ -26,6 +26,10 @@ export function pickSelectableSketchEntity(
         label: `Projected ${contour.id}: ${hit.label}`,
       };
   }
+  // The origin is a fixed point every sketch can dimension and relate to.
+  const origin = Math.hypot(point[0], point[1]);
+  if (!best || origin < best.d - 1e-7)
+    best = { ref: SKETCH_ORIGIN_REF, label: "Origin", d: origin };
   return best;
 }
 
