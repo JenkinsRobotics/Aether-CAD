@@ -258,7 +258,7 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Source feature', /^Extrude/).catch(() => { });
     await setSelect('Pattern type', 'linear').catch(() => { });
-    await setSelect('Revolve axis', 'X');
+    await setSelect('Axis', 'X').catch(() => { });
     await setInput('Occurrences', 3);
     await setInput('Spacing (mm)', 40);
     await setSelect('Target body', 'Body 1').catch(() => { });
