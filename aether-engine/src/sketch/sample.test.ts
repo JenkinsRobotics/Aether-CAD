@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines } from "./sample";
+import { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines, sketchProfileStrokes } from "./sample";
 
 describe("sketch sampling", () => {
   it("samples paths with lines and arcs ending exactly on segment endpoints", () => {
@@ -44,5 +44,15 @@ it("profile polylines can carry construction contours for faithful viewport disp
   ] } as unknown as SketchDrawing;
   expect(sketchProfilePolylines(drawing)).toHaveLength(1);
   expect(sketchProfilePolylines(drawing, { includeConstruction: true })).toHaveLength(2);
+});
+
+it("profile strokes keep construction, closure and vertices so a finished sketch renders faithfully", () => {
+  const drawing = { type: "drawing", contours: [
+    { type: "path", start: [0, 0], segments: [{ type: "line", end: [10, 0] }, { type: "line", end: [10, 5] }, { type: "line", end: [0, 0] }] },
+    { type: "path", start: [0, 8], segments: [{ type: "line", end: [10, 8] }], construction: true },
+    { type: "circle", center: [20, 0], radius: 2 },
+  ] } as unknown as SketchDrawing;
+  const strokes = sketchProfileStrokes(drawing);
+  expect(strokes.map((s) => [s.construction, s.closed, s.vertices.length])).toEqual([[false, true, 4], [true, false, 2], [false, true, 1]]);
 });
 

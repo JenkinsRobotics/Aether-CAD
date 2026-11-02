@@ -221,7 +221,7 @@ export { setDimensionExpression, regenerateDimensionExpressions } from "./operat
 export { resolveDimensionExpression } from "./solver/dimension-expressions";
 
 export { copySketchContours } from "./operations/transform";
-export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines } from "./sample";
+export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines, sketchProfileStrokes, type SketchStroke } from "./sample";
 
 export { contourNestingDepths } from "./regions/nesting";
 export { autoConstrainDrawing, autoConstrainFromDatum } from "./operations/auto-constrain";

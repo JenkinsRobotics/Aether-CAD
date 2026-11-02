@@ -13,6 +13,10 @@ import {
 import { translateRetainedTextForDrag } from "../text/drag";
 import { prepareSplineEndDrag } from "../reference/spline-end-tangents";
 /** Solve a pointer move with temporary point targets; no drag constraints are persisted. */
+/** Drag as far as the constraints allow: the full pointer delta first, then the
+ * largest feasible fraction of it, and the unchanged drawing when nothing can move
+ * (Jonathan, 2026-11-01: a free entity must follow the pointer, a bound one stays put,
+ * neither is an error). ponytail: bisection over the delta, not a weighted solve. */
 export function dragSketchEntity(
   source: SketchDrawing,
   ref: SketchEntityRef,
@@ -20,6 +24,22 @@ export function dragSketchEntity(
 ): SketchDrawing {
   if (!delta.every(Number.isFinite))
     throw new Error("Pointer movement must be finite.");
+  try { return dragSketchEntityExactly(source, ref, delta); } catch (error) {
+    if (!(error instanceof Error) || /must be finite|Select existing|Select an existing|cannot be moved/.test(error.message)) throw error;
+  }
+  let low = 0, high = 1, best: SketchDrawing | null = null;
+  for (let step = 0; step < 6; step++) {
+    const mid = (low + high) / 2;
+    try { best = dragSketchEntityExactly(source, ref, [delta[0] * mid, delta[1] * mid]); low = mid; }
+    catch { high = mid; }
+  }
+  return best ?? source;
+}
+function dragSketchEntityExactly(
+  source: SketchDrawing,
+  ref: SketchEntityRef,
+  delta: SketchPoint,
+): SketchDrawing {
   const splineDrag = prepareSplineEndDrag(source, ref);
   source = splineDrag?.drawing ?? source;
   const next = structuredClone(source);

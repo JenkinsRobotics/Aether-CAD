@@ -60,7 +60,7 @@ describe('canonical conic geometry and constraints',()=>{
  });
  it('keeps whole-entity Fix and linked rho values authoritative',()=>{
   const source=drawing(.7);source.constraints=[fixedEntityConstraint(source,ref)];
-  expect(()=>dragSketchEntity(source,{...ref,kind:'point',control:0},[1,2])).toThrow();
+  expect(dragSketchEntity(source,{...ref,kind:'point',control:0},[1,2])).toEqual(source); // a fixed entity stays put instead of erroring
   const linked=drawing(.7);linked.contours.push(structuredClone(linked.contours[0]));delete linked.contours[1].id;
   linked.constraints=[{id:'one',kind:'conic-rho',a:ref,value:.3},{id:'two',kind:'conic-rho',a:{...ref,contour:1},valueFrom:'one',valueScale:2}];
   const solved=solveDrawingConstraints(linked);expect(segment(solved).rho).toBeCloseTo(.3,6);

@@ -76,11 +76,19 @@ export function mountDimensionTool(o: Options) {
     form.onsubmit = e => {
       e.preventDefault();
       try {
-        const value = binding.read();
-        if (!(value > 0) || !Number.isFinite(value)) throw Error('Enter a positive dimension.');
-        const drawing = o.drawing();
+        const typed = binding.read();
+        if (!Number.isFinite(typed) || typed === 0) throw Error('Enter a non-zero dimension.');
+        // A negative value on a directional dimension flips its direction, as in Onshape
+        // (Jonathan, 2026-11-01); undirected dimensions stay positive.
+        const directional = ['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b;
+        if (typed < 0 && !directional) throw Error('Enter a positive dimension.');
+        const value = Math.abs(typed);
+        const flipped = typed < 0;
+        let drawing = o.drawing();
+        if (flipped && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? { ...c, a: c.b!, b: c.a } : c) };
+        const placed = flipped && !existing ? { ...candidate, a: candidate.b!, b: candidate.a } : candidate;
         const next = existing ? editDrawingDimension(drawing, existing.id, value)
-          : solveDrawingConstraints({ ...drawing, constraints: [...(drawing.constraints ?? []), { ...candidate, value }] });
+          : solveDrawingConstraints({ ...drawing, constraints: [...(drawing.constraints ?? []), { ...placed, value }] });
         o.commit(next, constraint.id, p); reset();
         o.report('Select geometry for the next dimension. Esc exits.');
       } catch (error) {

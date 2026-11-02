@@ -33,7 +33,7 @@ import { registerSketchTextCommand } from "./sketch/text-command";
 import { registerSketchImportCommand } from "./sketch/import-command";
 import { registerSketchToolCommands } from "./sketch/tool-commands";
 import { constructionPlaneFrame } from "@aether/core/document";
-import { sketchProfilePolylines } from "@aether/core/sketch";
+import { sketchProfilePolylines, sketchProfileStrokes } from "@aether/core/sketch";
 import { profileFrame, rollbackPosition, curve3dPolylines } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
@@ -529,6 +529,7 @@ function updateLists(notifyDocumentChange = true): void {
             frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
             // Faithful to the sketch: construction geometry shows too, it is what later features reference (Jonathan, 2026-11-01).
             polylines: "profile" in feature ? sketchProfilePolylines(feature.profile, { includeConstruction: true }) : [],
+            strokes: "profile" in feature ? sketchProfileStrokes(feature.profile) : [],
           }))
       : [],
   );

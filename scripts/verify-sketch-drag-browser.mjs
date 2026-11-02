@@ -158,6 +158,29 @@ try {
   console.log('DRAG ' + JSON.stringify({ points, moved, status }));
   await page.screenshot({ path: join(evidence, 'drag.png') });
   assert.ok(moved, `the dragged corner lands at 60,40: ${JSON.stringify(points)}`);
+  // Dimension the bottom edge, leave the tool, then one click selects the dimension and Delete removes it.
+  // The Dimension tool through the command search: the ribbon button sits under the sketch window at this width.
+  await page.keyboard.press('ControlOrMeta+k');
+  const box = page.locator('.cad-document-bar .aui-command-search input').first();
+  await box.waitFor({ timeout: 10000 }); await box.fill('Dimension');
+  await page.locator('[role="option"][id$="-sketch-constraint-distance"]').first().click(); await page.waitForTimeout(300);
+  const mid = await at(35, 10); await page.mouse.click(mid[0], mid[1]); await page.waitForTimeout(200);
+  const below = await at(35, -8); await page.mouse.click(below[0], below[1]); await page.waitForTimeout(300);
+  const entry = page.locator('.cad-sketch-dimension-entry input');
+  await entry.waitFor({ timeout: 10000 }); await entry.fill('50'); await entry.press('Enter'); await page.waitForTimeout(400);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  const label = page.locator('svg.cad-sketch-canvas .sketch-dimension-annotations:not(.sketch-dimension-preview) .sketch-dimension text').first();
+  await label.waitFor({ timeout: 10000 });
+  const before = await page.locator('svg.cad-sketch-canvas .sketch-dimension').count();
+  await label.click(); await page.waitForTimeout(250);
+  const selected = await page.locator('svg.cad-sketch-canvas .sketch-annotation-selected').count();
+  const editorOpen = await page.locator('.cad-sketch-dimension-entry').count();
+  assert.ok(selected >= 1, 'one click selects the dimension');
+  assert.equal(editorOpen, 0, 'one click does not open the value box');
+  await page.keyboard.press('Delete'); await page.waitForTimeout(400);
+  const after = await page.locator('svg.cad-sketch-canvas .sketch-dimension').count();
+  console.log('DIMENSION ' + JSON.stringify({ before, selected, after }));
+  assert.ok(after < before, `Delete removes the selected dimension (${before} -> ${after})`);
   await writeFile(join(evidence, 'results.json'), JSON.stringify({ passed: true, idle, drawing, hover, points }, null, 1));
 }
 catch (error) {

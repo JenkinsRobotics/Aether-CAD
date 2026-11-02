@@ -219,7 +219,7 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await page.locator('.cad-feature-dialog').getByRole('button', { name: 'New', exact: true }).click().catch(() => { });
     await setSelect('Sketch', 'Sketch 1');
-    await setSelect('Axis', 'Y').catch(() => { });
+    await setSelect('Revolve axis', 'Y');
     await setInput('Angle (deg)', 90);
     await applyDialog('revolve-new');
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(2, { timeout: 30000 });
@@ -258,7 +258,7 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Source feature', /^Extrude/).catch(() => { });
     await setSelect('Pattern type', 'linear').catch(() => { });
-    await setSelect('Axis', 'X').catch(() => { });
+    await setSelect('Revolve axis', 'X');
     await setInput('Occurrences', 3);
     await setInput('Spacing (mm)', 40);
     await setSelect('Target body', 'Body 1').catch(() => { });
@@ -309,7 +309,7 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await page.locator('.cad-feature-dialog').getByRole('button', { name: 'Remove', exact: true }).click();
     await setSelect('Sketch', 'Sketch 2');
-    await setSelect('Axis', 'X').catch(() => { });
+    await setSelect('Revolve axis', 'X');
     await setInput('Angle (deg)', 180);
     await setSelect('Target body', 'Body 1').catch(() => { });
     await applyDialog('revolve-remove');

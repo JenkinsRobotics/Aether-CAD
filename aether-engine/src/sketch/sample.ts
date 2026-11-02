@@ -1,6 +1,6 @@
 import { sketchArcGeometry } from "./arc-geometry";
 import { conicDisplayPolyline } from './reference/conic-geometry';
-import type { SketchContour, SketchDrawing, SketchPoint } from "./drawing";
+import { contourClosed, type SketchContour, type SketchDrawing, type SketchPoint } from "./drawing";
 
 /** Samples sketch geometry into mm polylines for renderer-neutral display
  * (the viewport draws finished sketches from these; no solver semantics). */
@@ -115,3 +115,23 @@ export function sketchProfilePolylines(profile: unknown, options: { includeConst
   }
   return [];
 }
+
+/** One stroke per contour, typed the way a sketch shows it: solid geometry or
+ * construction, closed or open, with the vertices a drawing dots (Jonathan, 2026-11-01:
+ * the finished sketch must render exactly what it holds). */
+export interface SketchStroke { polyline: SketchPoint[]; construction: boolean; closed: boolean; vertices: SketchPoint[] }
+export function sketchProfileStrokes(profile: unknown, options: { arcSteps?: number } = {}): SketchStroke[] {
+  if (!profile || typeof profile !== "object") return [];
+  const shape = profile as { type?: string };
+  if (shape.type === "drawing") {
+    return (profile as SketchDrawing).contours.map((contour) => ({
+      polyline: sketchContourPolyline(contour, options.arcSteps),
+      construction: Boolean(contour.construction),
+      closed: contourClosed(contour),
+      vertices: contour.type === "circle" ? [contour.center] : [contour.start, ...contour.segments.map((segment) => segment.end)],
+    }));
+  }
+  const polylines = sketchProfilePolylines(profile);
+  return polylines.map((polyline) => ({ polyline, construction: false, closed: true, vertices: shape.type === "polygon" ? polyline.slice(0, -1) : [] }));
+}
+

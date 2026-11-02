@@ -102,6 +102,14 @@ it('an angle between two lines reads positive whichever line is picked first', a
   const { dimensionValue } = await import('@aether/core/sketch');
   expect(dimensionValue(doc.features[0].profile, { ...inferred, reference: true })).toBeGreaterThan(0);
 });
+it('a negative value flips a directional dimension instead of being refused', async () => {
+  doc.features[0].profile.contours = [{ type: 'circle', center: [-20, -12], radius: 4 }];
+  start(); key(); pick(.3, .2); pick(-20, -12); pick(-10, -25);
+  submit('-30');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'horizontal-distance', value: 30 }]);
+  expect(doc.features[0].profile.contours[0].center[0]).toBeCloseTo(30);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }

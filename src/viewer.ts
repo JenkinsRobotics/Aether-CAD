@@ -58,6 +58,8 @@ import { viewportRendererOptions } from './viewport/renderer-backend';
 import { constructionPlaneFrame, rollbackPosition } from "@aether/core/document";
 import type { PartDocument as PlaneDocument } from "@aether/core/document";
 import * as THREE from "three/webgpu";
+/** A finished sketch's contour as the sketch shows it: solid or construction, closed (filled) or open, with its vertices. */
+type SketchStrokeInput = { polyline: readonly (readonly [number, number])[]; construction: boolean; closed: boolean; vertices: readonly (readonly [number, number])[] };
 // The picking arithmetic lives in ./viewport/picking-math, where it can be
 // tested without a renderer.
 import { applySurfaceAppearance } from "./viewport/surface-appearance";
@@ -1382,7 +1384,7 @@ export class MateViewport {
     if (!this.regionPicker.group.parent) this.referenceRoot.add(this.regionPicker.group);
     this.regionPicker.setDocument(document);
   }
-  private lastSketchCurves: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[] }[] = [];
+  private lastSketchCurves: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[]; strokes?: readonly SketchStrokeInput[] }[] = [];
   private applySketchCurves(): void {
     this.renderSketchCurves(this.lastSketchCurves.filter((sketch) => sketch.id !== this.editingSketchID));
   }
@@ -1423,7 +1425,7 @@ export class MateViewport {
     }
   }
   /** Finished sketches drawn as world-anchored polylines (mm, y-up in-plane). */
-  setSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[] }[]): void {
+  setSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[]; strokes?: readonly SketchStrokeInput[] }[]): void {
     this.lastSketchCurves = sketches;
     this.applySketchCurves();
   }
@@ -1586,7 +1588,7 @@ export class MateViewport {
     return {...screen,depthAt};
   }
 
-  private renderSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[] }[]): void {
+  private renderSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[]; strokes?: readonly SketchStrokeInput[] }[]): void {
     const key = JSON.stringify(sketches);
     if (key === this.sketchCurveKey) return;
     this.sketchCurveKey = key;
@@ -1601,18 +1603,39 @@ export class MateViewport {
       const normal = new THREE.Vector3(...sketch.frame.normal).normalize();
       const yDir = new THREE.Vector3().crossVectors(normal, xDir).normalize();
       const lift = normal.clone().multiplyScalar(0.05);
-      for (const polyline of sketch.polylines) {
-        if (polyline.length < 2) continue;
-        const points = polyline.map(([px, py]) =>
-          origin.clone().addScaledVector(xDir, px).addScaledVector(yDir, py).add(lift),
-        );
+      const resolved = this.appearance ? resolveAppearance(this.appearance, readViewportThemeOverride()) : null;
+      const stroke = resolved?.sketchStroke ?? 0xd7e6f5, width = resolved?.sketchLineWidth ?? 2.1;
+      const toWorld = ([px, py]: readonly [number, number]) => origin.clone().addScaledVector(xDir, px).addScaledVector(yDir, py).add(lift);
+      // The finished sketch renders what it holds (Jonathan, 2026-11-01): geometry solid,
+      // construction dashed, closed contours lightly filled, vertices dotted.
+      const strokes: readonly SketchStrokeInput[] = sketch.strokes ?? sketch.polylines.map((polyline) => ({ polyline, construction: false, closed: false, vertices: [] }));
+      const vertexPositions: number[] = [];
+      for (const item of strokes) {
+        if (item.polyline.length < 2) continue;
+        const points = item.polyline.map(toWorld);
         const segments: number[] = [];
         for (let i = 1; i < points.length; i++) segments.push(...points[i-1].toArray(), ...points[i].toArray());
-        const resolved = this.appearance ? resolveAppearance(this.appearance, readViewportThemeOverride()) : null;
-        const lines = styledLines(segments, resolved?.sketchStroke ?? 0xd7e6f5, resolved?.sketchLineWidth ?? 2.1);
+        const lines = styledLines(segments, stroke, item.construction ? Math.max(1, width - 0.6) : width, 1, item.construction ? { dashSize: 3, gapSize: 2 } : undefined);
         lines.userData.sketchId = sketch.id;
-        lines.userData.stroke = resolved?.sketchStroke ?? 0xd7e6f5;
+        lines.userData.stroke = stroke;
         this.sketchCurveGroup.add(lines);
+        if (item.closed && !item.construction && item.polyline.length >= 3) {
+          const shape = new THREE.Shape(item.polyline.map(([px, py]) => new THREE.Vector2(px, py)));
+          const geometry = new THREE.ShapeGeometry(shape);
+          geometry.applyMatrix4(new THREE.Matrix4().makeBasis(xDir, yDir, normal).setPosition(origin.clone().add(lift.clone().multiplyScalar(0.5))));
+          const fill = new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial({ color: stroke, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+          fill.userData.sketchId = sketch.id; fill.userData.fill = true;
+          this.sketchCurveGroup.add(fill);
+        }
+        for (const vertex of item.vertices) vertexPositions.push(...toWorld(vertex).toArray());
+      }
+      if (vertexPositions.length) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertexPositions, 3));
+        // ponytail: square 5 px points; WebGPU draws them 1 px until an instanced-point material is wired.
+        const dots = new THREE.Points(geometry, new THREE.PointsNodeMaterial({ color: stroke, size: 5, sizeAttenuation: false, transparent: true, depthWrite: false, toneMapped: false }));
+        dots.userData.sketchId = sketch.id; dots.userData.stroke = stroke;
+        this.sketchCurveGroup.add(dots);
       }
     }
     this.applySketchHighlight();
@@ -1625,9 +1648,11 @@ export class MateViewport {
   }
   private applySketchHighlight(): void {
     for (const child of this.sketchCurveGroup.children) {
-      const material = (child as THREE.Mesh).material as { color?: THREE.Color };
+      const material = (child as THREE.Mesh).material as { color?: THREE.Color; opacity?: number };
       if (!material?.color) continue;
-      material.color.setHex(this.highlightedSketchIDs.has(child.userData.sketchId) ? 0xffad1f : child.userData.stroke);
+      const selected = this.highlightedSketchIDs.has(child.userData.sketchId);
+      material.color.setHex(selected ? 0xffad1f : child.userData.stroke ?? material.color.getHex());
+      if (child.userData.fill) material.opacity = selected ? 0.2 : 0.12;
     }
   }
 

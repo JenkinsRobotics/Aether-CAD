@@ -72,14 +72,14 @@ describe('independent fit-spline endpoint tangents',()=>{
     expect(maxResidual(solved)).toBeLessThan(1e-6);
     expect(sketchConstraintState(solved)).toMatchObject({degreesOfFreedom:0,redundantEquations:0});
     const before=structuredClone(solved);
-    expect(()=>dragSketchEntity(solved,ref('start'),[1,2])).toThrow(/conflict|converge/);
+    expect(dragSketchEntity(solved,ref('start'),[1,2])).toEqual(solved); // over-constrained: the drag leaves it in place
     expect(solved).toEqual(before);
   });
   it('whole-curve Fix locks free tangents without false redundant equations',()=>{
     const d=dragSketchEntity(source(),ref('start'),[0,3]);
     d.constraints!.push(fixedEntityConstraint(d,{kind:'curve',contour:0,index:0,parameter:0}));
     expect(sketchConstraintState(d)).toMatchObject({state:'fully-constrained',degreesOfFreedom:0,redundantEquations:0});
-    expect(()=>dragSketchEntity(d,ref('start'),[2,1])).toThrow();
+    expect(dragSketchEntity(d,ref('start'),[2,1])).toEqual(d);
   });
   it('preserves the clamped curve and free ends when inserting a fit knot',()=>{
     const d=dragSketchEntity(source(),ref('start'),[0,3]), p=pathOf(d), s=p.segments[0];

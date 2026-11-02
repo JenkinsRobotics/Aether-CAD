@@ -83,7 +83,9 @@ export function bindSelectionDrag(o: Options) {
       if (conic?.snapped) drag.snap = { point: conic.point, constraints: [],
         guides: [{ from: conic.handle.midpoint, to: conic.point, label: 'Parabola · ρ 0.5' }] };
       const anchor = drag.ellipse?.kind==='center' && drag.ref.kind==='ellipse' ? undefined : dragAnchor(drag.before, drag.ref, drag.start);
-      if (!resizing && o.snapping?.() && !e.altKey && anchor) {
+      // A drag the constraints did not let move has nothing to snap or infer.
+      const stuck = anchor ? JSON.stringify(sketchEntityPoint(raw, anchor)) === JSON.stringify(sketchEntityPoint(drag.before, anchor)) : false;
+      if (!resizing && !stuck && o.snapping?.() && !e.altKey && anchor) {
         const snap = snapDraggedPoint(drag.before, raw, anchor, o.snapTolerance?.() ?? o.tolerance());
         const current = sketchEntityPoint(raw, anchor)!;
         if (snap.guides.length) {

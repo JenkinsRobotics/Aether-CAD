@@ -11,7 +11,7 @@ it('locks circle position and radius without hidden dimensions; preserves legacy
   const source = circle(), before = structuredClone(source), drawing = fix(source);
   expect(source).toEqual(before); expect(drawing.constraints).toHaveLength(1);
   expect(sketchConstraintState(drawing)).toMatchObject({ state: 'fully-constrained', degreesOfFreedom: 0 });
-  expect(() => dragSketchEntity(drawing, { contour: 0, kind: 'point', index: 0 }, [5,2])).toThrow();
+  expect(dragSketchEntity(drawing, { contour: 0, kind: 'point', index: 0 }, [5,2])).toEqual(drawing); // locked: the drag leaves it in place
   const sized = structuredClone(drawing); sized.constraints!.push({ id: 'radius', kind: 'radius', a: ref, value: 6 });
   expect(() => editDrawingDimension(sized, 'radius', 9)).toThrow();
   const unlocked = removeDrawingConstraint(sized, drawing.constraints![0].id);
@@ -33,7 +33,7 @@ it.each(paths)('locks every defining coordinate of $segments.0.type and detects 
   const source: SketchDrawing = { type: 'drawing', contours: [contour] };
   const drawing = fix(source, { contour: 0, kind: 'contour' });
   expect(sketchConstraintState(drawing)).toMatchObject({ state: 'fully-constrained', degreesOfFreedom: 0, redundantEquations: 0 });
-  expect(() => dragSketchEntity(drawing, { contour: 0, kind: 'point', index: 1 }, [3,2])).toThrow();
+  expect(dragSketchEntity(drawing, { contour: 0, kind: 'point', index: 1 }, [3,2])).toEqual(drawing);
   const changed = structuredClone(drawing);
   if (changed.contours[0].type !== 'path') throw Error();
   changed.contours[0].segments.push({ type: 'line', end: [20,10] });
@@ -84,7 +84,7 @@ it('fixes a whole fit spline from any picked span while retaining interpolation 
   expect(locked.constraints!.at(-1)?.a).toEqual({ contour: 0, kind: 'contour' });
   expect(sketchConstraintState(locked)).toMatchObject({ state: 'fully-constrained', redundantEquations: 0 });
   expect(blockedSketchGeometry(locked, 0)).toEqual([0,1,2]);
-  expect(() => dragSketchEntity(locked, { contour: 0, kind: 'point', index: 3 }, [2,3])).toThrow();
+  expect(dragSketchEntity(locked, { contour: 0, kind: 'point', index: 3 }, [2,3])).toEqual(locked);
 });
 it('fixes both halves of a full ellipse from one curve pick without false redundant equations', () => {
   const source = constrainSketchEllipse({ type: 'drawing', contours: [{ type: 'path', start: [8,0], segments: [
