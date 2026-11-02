@@ -35,8 +35,6 @@ import {
   CommandSearch,
   DocumentCreateDialog,
   StudioDocumentBar as DocumentBar,
-  StudioModeButton,
-  WorkspaceWindowMenu,
   StudioWorkspace as WorkspaceShell,
   standardWorkspacePanels,
   type WorkspacePanelState,
@@ -454,6 +452,11 @@ export function AetherCADShell() {
     if (presentation.activePanel !== "items") openRightPanel(presentation.activePanel);
   }, [presentation.activePanel, presentation.propertyPanelRequest]);
 
+  // Docked and floating are whole workspaces: panels and tool bar move together.
+  const switchPlacement = (placement: "docked" | "floating") => {
+    cadPresentation.dispatch({ type: "select-layout", layout: placement === "docked" ? "docked" : "expanded" });
+    cadPresentation.dispatch({ type: "select-toolbar-mode", mode: placement === "docked" ? "traditional" : "floating" });
+  };
   const searchCommands = buildCADCommandPaletteCommands(commands, { partOpen: presentation.partOpen, assemblyReady: shellAssembly.loadState === 'ready' });
   const runSearchCommand = (id: string) => {
     const command = searchCommands.find(item => item.id === id);
@@ -480,7 +483,12 @@ export function AetherCADShell() {
         documentName={presentation.documentName}
         search={<CommandSearch className="aui-studio-header-search" ariaLabel="Search CAD commands" commands={searchCommands}
           onSelect={runSearchCommand}/> }
-        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/></div>}
+        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/>
+          {/* Docked and floating are whole-app workspaces, so the switch lives in the header (Jonathan, 2026-11-01). */}
+          <button type="button" className="aui-icon-button" aria-label="Docked layout" aria-pressed={presentation.workspaceLayout === "docked"}
+            title={presentation.workspaceLayout === "docked" ? "Switch to the floating layout" : "Switch to the docked layout"}
+            onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
+            <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button></div>}
         defaultHeaderPins={["theme","notifications","comments","apps","share"]}
         documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
         application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
@@ -497,22 +505,7 @@ export function AetherCADShell() {
         viewControls={
             <div className="aui-studio-chrome-group">
               <IconButton label="Notifications" disabled title="Notifications require a connected Aether Studio account."><AetherIcon name="bell"/></IconButton>
-              <StudioModeButton
-                preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
-                onChange={(preset) => cadPresentation.dispatch({ type: "select-layout", layout: preset === "floating" ? "expanded" : preset })}
-                extraItems={[
-                  { id: "toolbar-traditional", label: "Tool bar docked (top)", kind: "radio", checked: presentation.toolbarMode === "traditional", separatorBefore: true },
-                  { id: "toolbar-floating", label: "Tool bar floating (bottom)", kind: "radio", checked: presentation.toolbarMode === "floating" },
-                  { id: "reset-panels", label: "Reset panel placements", separatorBefore: true },
-                ]}
-                onExtraSelect={(id) => {
-                  if (id === "reset-panels") cadPresentation.dispatch({ type: "reset-panel-placements" });
-                  else cadPresentation.dispatch({ type: "select-toolbar-mode", mode: id === "toolbar-traditional" ? "traditional" : "floating" });
-                }}
-              />
-              <WorkspaceWindowMenu />
               <button className="aui-menu-trigger" aria-label="Plugins" title="Plugins" onClick={() => setPluginsOpen(true)}><CADPluginsIcon/></button>
-              <button className="aui-menu-trigger" aria-label="Workspace layout" title="Workspace layout" aria-haspopup="dialog" aria-expanded={!!layoutAnchor} onClick={event=>setLayoutAnchor(layoutAnchor ? null : event.currentTarget)}><AetherIcon name="layout"/></button>
               <button className="aui-menu-trigger" aria-label="Comments" title="Comments" aria-pressed={!!studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden'} onClick={()=>studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden' ? updateStudioPanels({...studioPanelState,comments:{...studioPanelState.comments,placement:'hidden'}}) : openLeftPanel('comments')}><AetherIcon name="comment"/></button>
               <button className="aui-menu-trigger" aria-label="Reminders" title="Reminders" onClick={()=>openLeftPanel('reminders')}><AetherIcon name="stopwatch"/></button>
             </div>
@@ -550,11 +543,7 @@ export function AetherCADShell() {
             onAction={runRibbonAction}
             placement={ribbonPlacement}
             onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.cad-traditional-ribbon .aui-workspace-ribbon-overflow'))}
-            onPlacementChange={placement => {
-              // Docked and floating are whole workspaces: panels and tool bar move together.
-              cadPresentation.dispatch({ type: "select-layout", layout: placement === "docked" ? "docked" : "expanded" });
-              cadPresentation.dispatch({ type: "select-toolbar-mode", mode: placement === "docked" ? "traditional" : "floating" });
-            }}
+            onPlacementChange={switchPlacement}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}

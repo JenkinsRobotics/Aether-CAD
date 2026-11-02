@@ -420,12 +420,14 @@ it('presents real parts with shared tree controls and opens appearance from thei
   unregister();
 });
 
-it('adds pinnable support shortcuts and routes layout controls to real panels', async()=>{
+it('keeps only app-wide header icons and switches docked and floating from the header', async()=>{
   await act(async()=>container.querySelector('.aui-workspace-quick-controls [aria-label="Settings"]').click());
   const settings=document.querySelector('.aui-settings-window');
   expect(settings).toBeTruthy();
   await act(async()=>[...settings.querySelectorAll('button')].find(button=>button.textContent==='Header').click());
-  for (const label of ['Workspace layout','Comments','Reminders']) {
+  // Workspace arrangement is not an app-wide header icon; the ribbon's tool bar options own it.
+  for (const label of ['Workspace layout','Workspace mode','Windows and tabs']) expect(settings.querySelector(`[aria-label="Show ${label} in header"]`)).toBeNull();
+  for (const label of ['Comments','Reminders']) {
     const checkbox=settings.querySelector(`[aria-label="Show ${label} in header"]`);
     expect(checkbox).toBeTruthy();
     if (!checkbox.checked) await act(async()=>checkbox.click());
@@ -440,12 +442,14 @@ it('adds pinnable support shortcuts and routes layout controls to real panels', 
   await act(async()=>header.querySelector('[aria-label="Reminders"]').click());
   expect(isVisible(container.querySelector('section[aria-label="Reminders"]'))).toBe(true);
   expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
-  await act(async()=>header.querySelector('[aria-label="Workspace layout"]').click());
-  const select=document.querySelector('[aria-label="Features and parts placement"]');
-  expect(select).toBeTruthy();
-  await act(async()=>{select.value='hidden';select.dispatchEvent(new Event('change',{bubbles:true}));});
-  expect(cadPresentation.snapshot().panelPlacements.browser).toBe('hidden');
-  await act(async()=>document.querySelector('[aria-label="Close workspace layout"]').click());
+  const toggle=container.querySelector('.cad-header-controls [aria-label="Docked layout"]');
+  // main.ts applies the actions; here they are recorded and applied the same way.
+  const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:{toolbarMode:action.mode}));
+  const flip=async()=>{const docked=cadPresentation.snapshot().workspaceLayout==='docked';dispatch.mockClear();await act(async()=>toggle.click());
+    expect(dispatch.mock.calls.map(([action])=>action)).toEqual(docked?[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}]:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]);
+    expect(toggle.getAttribute('aria-pressed')).toBe(String(!docked));};
+  await flip(); await flip();
+  dispatch.mockRestore();
 });
 
 it('formats inspector quantities in document units',async()=>{
