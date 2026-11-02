@@ -29,6 +29,9 @@ export function inferDimension(drawing: SketchDrawing, refs: SketchEntityRef[], 
     const outsideY = position[1] < Math.min(p[1], q[1]) || position[1] > Math.max(p[1], q[1]);
     const kind = dy > 1e-7 && outsideX && !outsideY ? 'vertical-distance'
       : dx > 1e-7 && outsideY && !outsideX ? 'horizontal-distance' : 'distance';
+    // Signed H/V distances measure b − a: order them so a typed positive value keeps each side.
+    const axis = kind === 'horizontal-distance' ? 0 : 1;
+    if (kind !== 'distance' && q[axis] < p[axis]) return { id, kind, a: b, b: a };
     return { id, kind, a, b };
   }
   if ((aa.point && bb.line) || (aa.line && bb.point)) return { id, kind: 'distance', a, b };

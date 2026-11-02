@@ -74,6 +74,14 @@ it('dimensions from the sketch origin, which stays put and survives save/reopen'
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'distance', value: 50, a: { projectedContourId: 'sketch-origin', contour: -1 } }]);
   expect(Math.hypot(...doc.features[0].profile.contours[0].center)).toBeCloseTo(50);
 });
+it('a horizontal dimension keeps geometry left of the origin on the left', async () => {
+  doc.features[0].profile.contours = [{ type: 'circle', center: [-20, -12], radius: 4 }];
+  start(); key(); pick(.3, .2); pick(-20, -12); pick(-10, -25);
+  expect(panel().querySelector('input').value).toBe('20'); submit('50');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'horizontal-distance', value: 50 }]);
+  expect(doc.features[0].profile.contours[0].center[0]).toBeCloseTo(-50);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }
