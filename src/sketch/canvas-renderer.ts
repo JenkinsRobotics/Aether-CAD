@@ -31,7 +31,8 @@ export function renderSketchCanvas(
     return node;
   };
   svg.replaceChildren();
-  svg.setAttribute(
+  // In the 3D view the viewer sets the viewBox to the part of the plane on screen.
+  if (!svg.dataset.surfaceView) svg.setAttribute(
     "viewBox",
     `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`,
   );
@@ -52,7 +53,7 @@ export function renderSketchCanvas(
     const label = el("text", {
       x: -half * 0.96,
       y: -half * 0.9,
-      "font-size": half / 14,
+      "font-size": 5, // mm, the same as the plane labels
       class: "sketch-plane-title",
     });
     label.textContent = name;

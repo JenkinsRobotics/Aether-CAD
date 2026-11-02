@@ -130,3 +130,9 @@ it("snaps along a projected edge while preserving priority for its midpoint", ()
     "Projected midpoint",
   );
 });
+it("catches points from the wider point radius while alignment keeps its own", () => {
+  const d: SketchDrawing = { type: "drawing", contours: [] };
+  expect(snapSketchPoint([0.6, 0.5], d, undefined, 0.5, true).label).not.toBe("Origin");
+  expect(snapSketchPoint([0.6, 0.5], d, undefined, 0.5, true, 1)).toEqual({ point: [0, 0], label: "Origin" });
+  expect(snapSketchPoint([5, 0.7], d, [0, 0], 0.5, false, 1).label).toBe("");
+});

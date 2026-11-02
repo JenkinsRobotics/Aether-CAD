@@ -14,6 +14,7 @@ export function snapSketchPoint(
   anchor: SketchPoint | undefined,
   tolerance: number,
   grid = true,
+  pointTolerance = tolerance,
 ): { point: SketchPoint; label: string } {
   const preferences = cadSnapping.snapshot();
   if (!preferences.enabled) return {point:[...raw], label:''};
@@ -42,7 +43,7 @@ export function snapSketchPoint(
     candidates.push({ point: snap.point, label: snap.label });
   const distance = (p: SketchPoint) => Math.hypot(p[0] - raw[0], p[1] - raw[1]);
   const nearest = candidates
-    .filter((c) => distance(c.point) <= tolerance)
+    .filter((c) => distance(c.point) <= pointTolerance)
     .sort(
       (a, b) =>
         distance(a.point) - distance(b.point) ||

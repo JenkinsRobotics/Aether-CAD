@@ -36,7 +36,7 @@ export function createPlaneVisual(name:string,color:number,rotation:readonly [nu
       group.name = name;
       group.rotation.set(...rotation);
       group.add(surface, outline);
-      const label=new THREE.Mesh(new THREE.ShapeGeometry(labelFont.generateShapes(name.replace(" Plane",""),6)),
+      const label=new THREE.Mesh(new THREE.ShapeGeometry(labelFont.generateShapes(name.replace(" Plane",""),5)),
         new THREE.MeshBasicMaterial({color:new THREE.Color(style.labelColor ?? "#a9cfff"),opacity:style.labelOpacity ?? 1,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));
       label.userData.planeRole="label";label.position.set(-52,46,0.05);label.raycast=()=>{};label.visible=style.labelsVisible ?? true;group.add(label);
       updatePlaneVisual(group,color,style);

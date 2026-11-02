@@ -1099,9 +1099,9 @@ export class MateViewport {
     this.orientationCamera = { position:this.camera.position.clone(), target:this.controls.target.clone(), up:this.camera.up.clone(), near:this.camera.near, far:this.camera.far, orthographicSpan:this.camera instanceof THREE.OrthographicCamera ? (this.camera.top-this.camera.bottom)/this.camera.zoom : undefined };
     const bounds = visiblePreviewBounds([this.modelRoot, this.referenceRoot, this.featurePreview.group, this.historyPreview.group, this.overlayRoot]);
     if (this.sketchSurface) {
-      const { svg, origin, xDir, yDir } = this.sketchSurface;
+      const { origin, xDir, yDir } = this.sketchSurface;
       // Include the live sketch plane, its grid and labels as well as contours.
-      const r = svg.viewBox.baseVal;
+      const r = this.sketchBounds ?? { x: 0, y: 0, width: 0, height: 0 };
       for (const x of [r.x, r.x+r.width]) for (const y of [r.y, r.y+r.height])
         bounds.expandByPoint(origin.clone().addScaledVector(xDir,x).addScaledVector(yDir,-y));
     }
@@ -1878,6 +1878,8 @@ export class MateViewport {
     updateSketchEnvironment(svg);
     svg.style.pointerEvents = "none";
     svg.style.display = "block";
+    // The viewer owns the viewBox while in the world: it holds the part on screen.
+    svg.dataset.surfaceView = "1";
     const holder = document.createElement("div");
     holder.style.display = "inline-block";
     holder.append(svg);
@@ -1904,48 +1906,69 @@ export class MateViewport {
   }
 
   updateSketchSurfaceBounds(bounds: { x: number; y: number; width: number; height: number }): void {
-    const s = this.sketchSurface;
-    if (!s) return;
-    // CSS3D rasterizes the SVG at its layout size (1px = 1mm) and the camera
-    // magnifies that raster, which reads as heavy pixelation. Rasterize at a
-    // higher internal resolution and scale the 3D object back down — vector
-    // SVG stays crisp, input is unaffected (picking raycasts the plane).
+    if (!this.sketchSurface) return;
     this.sketchBounds = bounds;
-    this.applySketchResolution(Math.max(this.sketchResolution, Math.min(8, 4096 / Math.max(bounds.width, bounds.height, 1))));
-    const cx = bounds.x + bounds.width / 2;
-    const cy = bounds.y + bounds.height / 2;
-    // viewBox y runs down; drawing y (up) = -viewBox y.
-    s.object.position.copy(s.origin).addScaledVector(s.xDir, cx).addScaledVector(s.yDir, -cy);
+    this.sketchView = null;
+    this.syncSketchView();
   }
 
   private sketchBounds: { x: number; y: number; width: number; height: number } | null = null;
-  private sketchResolution = 1;
-  private applySketchResolution(resolution: number): void {
-    const s = this.sketchSurface, bounds = this.sketchBounds;
-    if (!s || !bounds) return;
-    this.sketchResolution = resolution;
-    s.svg.style.width = `${bounds.width * resolution}px`;
-    s.svg.style.height = `${bounds.height * resolution}px`;
-    s.object.scale.setScalar(1 / resolution);
+  private sketchView: { x: number; y: number; width: number; height: number; resolution: number } | null = null;
+  /** CSS3D rasterizes the SVG at its layout size, so the layer is sized `resolution`
+   *  px per mm and scaled back down; the viewBox is the part of the sketch it holds. */
+  private applySketchView(view: NonNullable<typeof this.sketchView>): void {
+    const s = this.sketchSurface!;
+    this.sketchView = view;
+    s.svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
+    s.svg.style.width = `${view.width * view.resolution}px`;
+    s.svg.style.height = `${view.height * view.resolution}px`;
+    s.object.scale.setScalar(1 / view.resolution);
+    // viewBox y runs down; drawing y (up) = -viewBox y.
+    s.object.position.copy(s.origin).addScaledVector(s.xDir, view.x + view.width / 2).addScaledVector(s.yDir, -(view.y + view.height / 2));
   }
-  /** The raster follows the camera: zooming in re-rasterizes the SVG at the
-   *  screen's pixels-per-millimetre so vectors never read as pixels
-   *  (Jonathan, 2026-10-31). The cap keeps the layer under 8192 px a side. */
-  private syncSketchResolution(): void {
+  /** The raster follows the camera at the screen's own pixels per millimetre, so
+   *  vectors never read as pixels (Jonathan, 2026-10-31/11-01). One 8192 px layer
+   *  holds the whole sketch only to ~40 px/mm; closer than that the layer holds just
+   *  the part of the plane on screen, so any zoom stays sharp and the layer stays
+   *  about screen-sized instead of reaching behind the camera. */
+  private syncSketchView(): void {
     const s = this.sketchSurface, bounds = this.sketchBounds;
     if (!s || !bounds) return;
-    const a = this.sketchClientFromPoint([bounds.x, bounds.y]), b = this.sketchClientFromPoint([bounds.x + 1, bounds.y]);
-    if (!a || !b) return;
-    const needed = Math.hypot(b[0] - a[0], b[1] - a[1]) * (window.devicePixelRatio || 1);
-    const cap = 8192 / Math.max(bounds.width, bounds.height, 1);
-    const target = Math.min(cap, Math.max(1, needed));
-    if (target > this.sketchResolution * 1.25 || target < this.sketchResolution / 2) this.applySketchResolution(target);
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = window.devicePixelRatio || 1, steps = 6;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, needed = 1;
+    for (let i = 0; i <= steps; i++) for (let j = 0; j <= steps; j++) {
+      const cx = rect.left + rect.width * i / steps, cy = rect.top + rect.height * j / steps;
+      const p = this.sketchPointFromClient(cx, cy), q = this.sketchPointFromClient(cx + 1, cy);
+      if (!p) continue;
+      minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); minY = Math.min(minY, -p[1]); maxY = Math.max(maxY, -p[1]);
+      if (q) needed = Math.max(needed, dpr / Math.max(Math.hypot(q[0] - p[0], q[1] - p[1]), 1e-6));
+    }
+    if (minX > maxX) return; // the plane is not in view
+    const cap = 8192;
+    let view: NonNullable<typeof this.sketchView>;
+    if (Math.max(bounds.width, bounds.height) * needed <= cap) view = { ...bounds, resolution: needed };
+    else {
+      // ponytail: a 7×7 sample can miss a sliver near the horizon; the 25% margin covers it.
+      const pad = Math.max(maxX - minX, maxY - minY) * .25;
+      const x = Math.max(bounds.x, minX - pad), y = Math.max(bounds.y, minY - pad);
+      const width = Math.min(bounds.x + bounds.width, maxX + pad) - x, height = Math.min(bounds.y + bounds.height, maxY + pad) - y;
+      if (width <= 0 || height <= 0) return;
+      view = { x, y, width, height, resolution: Math.min(needed, cap / Math.max(width, height)) };
+    }
+    const current = this.sketchView;
+    if (current && current.resolution >= view.resolution / 1.25 && current.resolution <= view.resolution * 2
+      && current.x <= Math.max(bounds.x, minX) && current.y <= Math.max(bounds.y, minY)
+      && current.x + current.width >= Math.min(bounds.x + bounds.width, maxX) && current.y + current.height >= Math.min(bounds.y + bounds.height, maxY)) return;
+    this.applySketchView(view);
   }
 
   endSketchSurface(): void {
     const s = this.sketchSurface;
     if (!s) return;
-    this.sketchBounds = null; this.sketchResolution = 1;
+    this.sketchBounds = null; this.sketchView = null;
+    delete s.svg.dataset.surfaceView;
     this.renderer.domElement.style.cursor = "";
     s.disposeInput();
     this.sketchSurface = null;
@@ -2021,7 +2044,7 @@ export class MateViewport {
     this.output.render(this.camera);
     this.anchorOverlay.render(point => this.projectScreenPoint(point));
     if (this.sketchSurface && this.cssRenderer) {
-      this.syncSketchResolution();
+      this.syncSketchView();
       this.cssRenderer.render(this.cssScene, this.camera);
     }
     this.sampleFrame(started, performance.now());
