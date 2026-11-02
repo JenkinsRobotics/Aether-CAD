@@ -175,8 +175,10 @@ export function layoutRegion(context: FeatureEditorContext, source: Controls[str
   row.classList.add("cad-extrude-region-row");
   regionRows.set(region, row);
   syncRegions(context, source, region);
+  // The region count is kept for the suite but never shown (Jonathan, 2026-11-02: no stray text).
   const hint = document.createElement("small");
   hint.className = "cad-region-selection-summary";
+  hint.hidden = true;
   row.after(hint);
   context.win.addHelp("Choose a closed region in the viewport or dropdown. Selecting a sketch does not select all its regions. Enclosed contours form holes; Ctrl/Cmd-click selects several regions where supported.");
   announceRegion(context, source, region);

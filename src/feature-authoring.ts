@@ -22,7 +22,10 @@ import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
 import { featureEditor, featureEditors } from "./features";
 import { featureToolbarPresets, type FeatureLaunchOptions } from "./features/toolbar-presets";
-import { layoutParameterRows, type FeatureEditor, type FeatureEditorContext } from "./features/shared";
+import { entityChips, layoutParameterRows, type FeatureEditor, type FeatureEditorContext } from "./features/shared";
+import { cadSelection } from "./cad-selection-store";
+import { cadWorkspace } from "./cad-workspace-store";
+import { sketchDirectionLines } from "./modeling/extrude-direction-reference";
 import { unitChoice } from "@aether/core/units";
 import { documentUnits } from "./document-preferences";
 import {
@@ -170,6 +173,68 @@ const presentFeatureWindow = (
     });
     win.body.append(form);
     addFeatureViewControls(win);
+    // Geometry and feature references are selection boxes, never menus (Jonathan,
+    // 2026-11-02): the list stays in the DOM for the suite and agents, the box shows the
+    // chip, and picks in the viewport or the tree fill it. A reference with a single
+    // candidate is taken silently and its box stays out of the way.
+    const pickBoxes = new Set<HTMLSelectElement>();
+    const PICK_BY_LABEL = /^(Body|Part|Part to split|Sketch line|Fold line|Plane|Mirror plane|Plane feature|Transform sketch line|Apex \(optional\) sketch point|First section|Second section|Third section \(optional\)|Section sketch|Circular region|Center sketch|Source feature|Path|Profile curves)$/;
+    // Principal planes come from the tree's Top, Front and Right rows; never taken silently.
+    const PLANE_LABEL = /^(Plane|Mirror plane|Removed face plane|Face plane|Neutral plane)$/;
+    const nativeRow = win.row;
+    win.row = (label, ...rowControls) => {
+      const first = rowControls[0];
+      if (rowControls.length === 1 && first instanceof window.HTMLSelectElement && (first.dataset.pickBox || PICK_BY_LABEL.test(label) || PLANE_LABEL.test(label))) {
+        if (PLANE_LABEL.test(label)) first.dataset.pickBox = "plane";
+        first.dataset.pickBox ||= "feature";
+        pickBoxes.add(first);
+        const box = entityChips(win, label, first, form);
+        const real = [...first.options].filter((option) => option.value !== "");
+        if (real.length === 1 && first.dataset.pickBox !== "plane") {
+          if (first.value !== real[0].value) { first.value = real[0].value; first.dispatchEvent(new Event("change")); }
+          box.element.hidden = true;
+        }
+        return box.element;
+      }
+      return nativeRow(label, ...rowControls);
+    };
+    const fillPick = (value: string) => {
+      if (!win.panel.isConnected) return;
+      const matching = [...pickBoxes].filter((select) => [...select.options].some((option) => option.value === value && option.value !== ""));
+      const target = matching.find((select) => !select.value) ?? matching[0];
+      if (!target || target.value === value) return;
+      target.value = value; target.dispatchEvent(new Event("change"));
+    };
+    const onRegion = (event: Event) => fillPick((event as CustomEvent).detail?.featureId);
+    const onCurve = (event: Event) => {
+      const picked = (event as CustomEvent).detail as { sourceFeatureId: string; contourId: string; segmentId: string };
+      const line = sketchDirectionLines(doc, feature?.id).find((item) => item.sourceFeatureId === picked.sourceFeatureId && item.contourId === picked.contourId && item.segmentId === picked.segmentId);
+      if (!line) return;
+      for (const select of pickBoxes) for (const option of select.options) {
+        try {
+          const parsed = JSON.parse(option.value.replace(/^line:/, ""));
+          if (parsed?.sourceFeatureId === line.sourceFeatureId && ((parsed.contourId === line.contourId && parsed.segmentId === line.segmentId) || (parsed.contourIndex === line.contourIndex && parsed.segmentIndex === line.segmentIndex))) { fillPick(option.value); return; }
+        } catch { /* not a line option */ }
+      }
+    };
+    const PLANE_ROWS: Record<string, string> = { "top-plane": "XY", "front-plane": "XZ", "right-plane": "YZ" };
+    const onTree = () => {
+      for (const id of cadWorkspace.snapshot().selectedItemIDs) {
+        const featureId = /^feature\/[^/]+\/(.+)$/.exec(id)?.[1];
+        if (featureId) fillPick(featureId);
+        else if (PLANE_ROWS[id]) fillPick(PLANE_ROWS[id]);
+      }
+    };
+    const onBody = () => { const items = cadSelection.snapshot().items; if (items.length === 1 && items[0].kind === "body" && items[0].partId) fillPick(items[0].partId); };
+    window.addEventListener("aether-region-picked", onRegion);
+    window.addEventListener("aether-sketch-curve-picked", onCurve);
+    const unsubscribeTree = cadWorkspace.subscribe(onTree), unsubscribeBody = cadSelection.subscribe(onBody);
+    const pickObserver = new window.MutationObserver(() => {
+      if (win.panel.isConnected) return;
+      pickObserver.disconnect(); unsubscribeTree(); unsubscribeBody();
+      window.removeEventListener("aether-region-picked", onRegion); window.removeEventListener("aether-sketch-curve-picked", onCurve);
+    });
+    pickObserver.observe(document.body, { childList: true, subtree: true });
     const lengthUnit = unitChoice(documentUnits(), "length"),
       angleUnit = unitChoice(documentUnits(), "angle");
     const field = (name: string, value: string, choices?: string[]) => {
@@ -239,6 +304,7 @@ const presentFeatureWindow = (
       Array.from(select.children).forEach((option, index) => {
         option.textContent = index === 0 ? "" : choices[index - 1].name;
       });
+      select.dataset.pickBox = "feature";
       return select;
     };
     const editor = featureEditor(type);
@@ -270,6 +336,7 @@ const presentFeatureWindow = (
     Array.from(controls.target.children).forEach(
       (o, i) => (o.textContent = bodies[i].name),
     );
+    controls.target.dataset.pickBox = "body";
     const targetVisibility = () => {
       // The window moves each control into its own row and drops the original
       // <label>, so the row has to be looked for first. `closest` is typed
