@@ -7879,7 +7879,8 @@ function sketchRegions(feature3, includeOpen = false, history) {
       sourceContourIds: boundary.sourceContourIds,
       previewContour: boundary.contour,
       closed: true,
-      label: `Region ${boundary.contourIndex + 1} · ${sources.length} connected curves`
+      // A plain name; the curve count is detail, not a title (Jonathan, 2026-11-01).
+      label: `Region ${boundary.contourIndex + 1}`
     });
   }
   return regions.filter((region) => includeOpen ? !region.sourceContourIndices : region.closed !== false);
