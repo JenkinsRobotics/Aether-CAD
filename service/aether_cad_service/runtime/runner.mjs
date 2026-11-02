@@ -753,8 +753,8 @@ function textFrameHeight(item) {
   return item.emSizeMillimeters * ratio;
 }
 function textPlacementTransform(options, scale2 = 1) {
-  const origin = options.originMillimeters ?? [0, 0], rotation = options.rotationDegrees ?? 0;
-  if (!Array.isArray(origin) || origin.length !== 2 || !origin.every(Number.isFinite) || !Number.isFinite(rotation) || !Number.isFinite(scale2) || scale2 <= 0)
+  const origin2 = options.originMillimeters ?? [0, 0], rotation = options.rotationDegrees ?? 0;
+  if (!Array.isArray(origin2) || origin2.length !== 2 || !origin2.every(Number.isFinite) || !Number.isFinite(rotation) || !Number.isFinite(scale2) || scale2 <= 0)
     throw Error("Text placement must be finite with positive scale.");
   for (const flip of [
     options.flipHorizontal,
@@ -779,8 +779,8 @@ function textPlacementTransform(options, scale2 = 1) {
     b: -sine * y2,
     c: sine * x2,
     d: cosine * y2,
-    tx: origin[0] + cosine * shiftX - sine * shiftY * handedness,
-    ty: origin[1] + sine * shiftX + cosine * shiftY * handedness
+    tx: origin2[0] + cosine * shiftX - sine * shiftY * handedness,
+    ty: origin2[1] + sine * shiftX + cosine * shiftY * handedness
   };
 }
 function textFramePlacement(options) {
@@ -984,8 +984,8 @@ function transformContour(source, t2) {
   }
   return contour;
 }
-function similarityTransform(origin, translation, angleDegrees, scale2 = 1) {
-  if (![...origin, ...translation, angleDegrees, scale2].every(Number.isFinite) || scale2 <= 0)
+function similarityTransform(origin2, translation, angleDegrees, scale2 = 1) {
+  if (![...origin2, ...translation, angleDegrees, scale2].every(Number.isFinite) || scale2 <= 0)
     throw new Error("Enter finite coordinates and a positive scale.");
   const angle2 = angleDegrees * Math.PI / 180, a2 = scale2 * Math.cos(angle2), b = -scale2 * Math.sin(angle2), c2 = -b, d2 = a2;
   return {
@@ -993,8 +993,8 @@ function similarityTransform(origin, translation, angleDegrees, scale2 = 1) {
     b,
     c: c2,
     d: d2,
-    tx: origin[0] + translation[0] - a2 * origin[0] - b * origin[1],
-    ty: origin[1] + translation[1] - c2 * origin[0] - d2 * origin[1]
+    tx: origin2[0] + translation[0] - a2 * origin2[0] - b * origin2[1],
+    ty: origin2[1] + translation[1] - c2 * origin2[0] - d2 * origin2[1]
   };
 }
 function patternInstanceCount(group) {
@@ -1212,8 +1212,11 @@ function scaledControlPoint(path, ref) {
     anchor[1] + scale2 * (control[1] - anchor[1])
   ];
 }
+const SKETCH_ORIGIN_ID = "sketch-origin";
+const origin = { type: "path", id: SKETCH_ORIGIN_ID, start: [0, 0], segments: [] };
 function referencedContour(d2, r) {
   if (r?.projectedContourId === void 0) return d2.contours[r?.contour];
+  if (r.projectedContourId === SKETCH_ORIGIN_ID && r.contour === -1) return origin;
   if (typeof r.projectedContourId !== "string" || !r.projectedContourId.trim() || r.contour !== -1) throw Error("Invalid projected constraint reference.");
   const matches = d2.projectionContext?.filter((c2) => c2.id === r.projectedContourId) ?? [];
   if (matches.length !== 1) throw Error(`Broken projected constraint reference: ${r.projectedContourId}.`);
@@ -2005,11 +2008,11 @@ function symmetricSplineResiduals(a2, b, reflect, reversed2 = false) {
 }
 function symmetricResiduals(a2, b, axis, splineReversed = false) {
   if (!axis?.line) throw Error("Select a line as the symmetry axis.");
-  const [origin, end] = axis.line, dx = end[0] - origin[0], dy = end[1] - origin[1], length = Math.hypot(dx, dy);
+  const [origin2, end] = axis.line, dx = end[0] - origin2[0], dy = end[1] - origin2[1], length = Math.hypot(dx, dy);
   if (length < 1e-10) throw Error("Symmetry axis must have nonzero length.");
   const x2 = dx / length, y2 = dy / length;
   const reflect = (p2) => {
-    const normal = (p2[1] - origin[1]) * x2 - (p2[0] - origin[0]) * y2;
+    const normal = (p2[1] - origin2[1]) * x2 - (p2[0] - origin2[0]) * y2;
     return [p2[0] + 2 * normal * y2, p2[1] - 2 * normal * x2];
   };
   const pair = (p2, q) => {
@@ -2294,19 +2297,19 @@ const mul$2 = (a2, b) => {
   return out;
 };
 const scaled = (p2, k2) => p2.map((v2) => v2 * k2);
-function rational(curve, origin) {
-  const s = curve.segment, p2 = [curve.start[0] - origin[0], curve.start[1] - origin[1]], q = [s.end[0] - origin[0], s.end[1] - origin[1]];
+function rational(curve, origin2) {
+  const s = curve.segment, p2 = [curve.start[0] - origin2[0], curve.start[1] - origin2[1]], q = [s.end[0] - origin2[0], s.end[1] - origin2[1]];
   if (s.type === "line") return { x: [p2[0], q[0] - p2[0]], y: [p2[1], q[1] - p2[1]], d: [1] };
   if (s.type === "bezier") {
     const f22 = (i2) => {
-      const a2 = s.controls[0][i2] - origin[i2], b = s.controls[1][i2] - origin[i2];
+      const a2 = s.controls[0][i2] - origin2[i2], b = s.controls[1][i2] - origin2[i2];
       return [p2[i2], 3 * (a2 - p2[i2]), 3 * (b - 2 * a2 + p2[i2]), q[i2] - 3 * b + 3 * a2 - p2[i2]];
     };
     return { x: f22(0), y: f22(1), d: [1] };
   }
   if (s.type !== "conic") throw Error("Expected a polynomial or rational quadratic curve.");
   const r = s.rho, v2 = 1 - r, f2 = (i2) => {
-    const a2 = s.control[i2] - origin[i2];
+    const a2 = s.control[i2] - origin2[i2];
     return [v2 * p2[i2], 2 * (r * a2 - v2 * p2[i2]), v2 * (p2[i2] + q[i2]) - 2 * r * a2];
   };
   return { x: f2(0), y: f2(1), d: [v2, 2 * (2 * r - 1), 2 * (1 - 2 * r)] };
@@ -2322,10 +2325,10 @@ function conicParameterAtPoint(start, s, p2) {
   return t2;
 }
 function polynomialPair(first, second) {
-  const s = first.segment, origin = first.start, ax = s.control[0] - origin[0], ay = s.control[1] - origin[1], bx = s.end[0] - origin[0], by = s.end[1] - origin[1], det = ax * by - ay * bx, r = rational(second, origin), l1 = scaled(add$5(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$5(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$5(add$5(r.d, l1, -1), l2, -1), aa = scaled(mul$2(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$2(l0, l2), 4 * s.rho * s.rho), p2 = add$5(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
+  const s = first.segment, origin2 = first.start, ax = s.control[0] - origin2[0], ay = s.control[1] - origin2[1], bx = s.end[0] - origin2[0], by = s.end[1] - origin2[1], det = ax * by - ay * bx, r = rational(second, origin2), l1 = scaled(add$5(scaled(r.x, by), scaled(r.y, -bx)), 1 / det), l2 = scaled(add$5(scaled(r.y, ax), scaled(r.x, -ay)), 1 / det), l0 = add$5(add$5(r.d, l1, -1), l2, -1), aa = scaled(mul$2(l1, l1), (1 - s.rho) ** 2), bb = scaled(mul$2(l0, l2), 4 * s.rho * s.rho), p2 = add$5(aa, bb, -1), scale2 = Math.max(...aa.map(Math.abs), ...bb.map(Math.abs), 1e-30);
   const coincident = p2.every((v2) => Math.abs(v2) < scale2 * 1e-11), ts = coincident ? [0, 1, ...polynomialRoots(l0), ...polynomialRoots(l2)] : polynomialRoots(p2.map((v2) => v2 / scale2));
   return ts.flatMap((t2) => {
-    const point2 = segmentPoint(second.start, second.segment, t2), u2 = conicParameterAtPoint(origin, s, point2);
+    const point2 = segmentPoint(second.start, second.segment, t2), u2 = conicParameterAtPoint(origin2, s, point2);
     return u2 === void 0 ? [] : [{ first: u2, second: t2, point: point2 }];
   });
 }
@@ -3799,13 +3802,13 @@ function textSimilarityCoordinates(drawing, options = {}) {
     indices.forEach((i2) => covered.add(i2));
     if (indices.some((i2) => options.fixed?.has(i2)) || options.used && !indices.some((i2) => options.used.has(i2)))
       continue;
-    const original = indices.map((i2) => structuredClone(drawing.contours[i2])), origin = [...item.originMillimeters], em = item.emSizeMillimeters, rotation = item.rotationDegrees, frameWidth = item.frameWidthMillimeters, frameIndex = drawing.contours.findIndex(
+    const original = indices.map((i2) => structuredClone(drawing.contours[i2])), origin2 = [...item.originMillimeters], em = item.emSizeMillimeters, rotation = item.rotationDegrees, frameWidth = item.frameWidthMillimeters, frameIndex = drawing.contours.findIndex(
       (c2) => c2.id === item.frameContourId
     );
     const state = item.frameContourId ? [0, 0, 0, 0, 0] : [0, 0, 0, 0];
     const render = () => {
       const scale2 = Math.exp(state[3]), degrees2 = state[2] * 180 / Math.PI, transform2 = similarityTransform(
-        origin,
+        origin2,
         [state[0], state[1]],
         degrees2,
         scale2
@@ -3813,7 +3816,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
       indices.forEach((index2, i2) => {
         drawing.contours[index2] = transformContour(original[i2], transform2);
       });
-      item.originMillimeters = [origin[0] + state[0], origin[1] + state[1]];
+      item.originMillimeters = [origin2[0] + state[0], origin2[1] + state[1]];
       item.emSizeMillimeters = em * scale2;
       item.rotationDegrees = rotation + degrees2;
       if (frameWidth !== void 0 && frameIndex >= 0) {
@@ -5575,8 +5578,8 @@ function resolveAxisLine(feature3, earlier = []) {
   if (Math.hypot(...direction2) < 1e-9) throw new Error(`${feature3.name}: the two planes are parallel and do not meet.`);
   const u2 = unit$3(direction2, `${feature3.name}: planes`), inA = cross$8(a2.normal, u2);
   const t2 = dot$6(sub$5(b.originMillimeters, a2.originMillimeters), b.normal) / dot$6(inA, b.normal);
-  const origin = [a2.originMillimeters[0] + inA[0] * t2, a2.originMillimeters[1] + inA[1] * t2, a2.originMillimeters[2] + inA[2] * t2];
-  return { originMillimeters: origin, directionMillimeters: u2 };
+  const origin2 = [a2.originMillimeters[0] + inA[0] * t2, a2.originMillimeters[1] + inA[1] * t2, a2.originMillimeters[2] + inA[2] * t2];
+  return { originMillimeters: origin2, directionMillimeters: u2 };
 }
 function validateAxisDefinition(feature3, earlierPlanes, missing = () => false) {
   const d2 = feature3.definition;
@@ -6223,8 +6226,8 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
       if (!missingReference(s.sourceFeatureId) && !earlier.has(s.sourceFeatureId) || !s.bodyId || typeof s.bodyId !== "string" || typeof s.label !== "string" || ![s.normal, s.xDirection].every((v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite) && Math.abs(Math.hypot(...v2) - 1) < 1e-6) || Math.abs(s.normal.reduce((sum2, v2, i2) => sum2 + v2 * s.xDirection[i2], 0)) > 1e-6) throw new Error("Invalid sketch face support. Reselect a planar face.");
     }
     if (feature3.frame) {
-      const { originMillimeters: origin, xDirection: x2, normal: n } = feature3.frame;
-      if (![origin, x2, n].every((v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite)) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(x2.reduce((sum2, v2, i2) => sum2 + v2 * n[i2], 0)) > 1e-6) throw new Error("Invalid sketch frame.");
+      const { originMillimeters: origin2, xDirection: x2, normal: n } = feature3.frame;
+      if (![origin2, x2, n].every((v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite)) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(x2.reduce((sum2, v2, i2) => sum2 + v2 * n[i2], 0)) > 1e-6) throw new Error("Invalid sketch frame.");
     }
     if (feature3.profile?.type === "projection") {
       if (feature3.profile.authored !== void 0) {
@@ -7385,10 +7388,10 @@ function samples$1(curve, n = 24) {
 }
 const signedArea = (poly) => {
   let a2 = 0;
-  const origin = poly[0];
+  const origin2 = poly[0];
   for (let i2 = 0; i2 < poly.length; i2++) {
     const p2 = poly[i2], q = poly[(i2 + 1) % poly.length];
-    a2 += (p2[0] - origin[0]) * (q[1] - origin[1]) - (q[0] - origin[0]) * (p2[1] - origin[1]);
+    a2 += (p2[0] - origin2[0]) * (q[1] - origin2[1]) - (q[0] - origin2[0]) * (p2[1] - origin2[1]);
   }
   return a2 / 2;
 };
@@ -10863,17 +10866,17 @@ const cross$5 = (a2, b) => [
 ];
 const dofAxis = (name5, kind) => name5.endsWith("_x") || kind === "pin_slot" && name5 === "translation" ? "x" : name5.endsWith("_y") ? "y" : "z";
 function connectorPlacement(frame) {
-  const origin = [
+  const origin2 = [
     frame.origin_m[0] * METRES_TO_MM,
     frame.origin_m[1] * METRES_TO_MM,
     frame.origin_m[2] * METRES_TO_MM
   ];
   const zAxis = [...frame.primary_axis_xyz];
   const xAxis = [...frame.secondary_axis_xyz];
-  const matrix2 = connectorMatrix({ origin, zAxis, xAxis, yAxis: cross$5(zAxis, xAxis) });
+  const matrix2 = connectorMatrix({ origin: origin2, zAxis, xAxis, yAxis: cross$5(zAxis, xAxis) });
   const rotation = new Quaternion().setFromRotationMatrix(matrix2);
   return {
-    placement_mm: origin,
+    placement_mm: origin2,
     rotation: [rotation.x, rotation.y, rotation.z, rotation.w]
   };
 }
@@ -11017,10 +11020,10 @@ function agentSketchPlacement(args) {
   if (args.plane !== void 0) throw Error("Choose plane or frame, not both.");
   const frame = args.frame;
   if (!frame || typeof frame !== "object" || Array.isArray(frame) || Object.keys(frame).some((k2) => !["origin_mm", "x_direction", "y_direction"].includes(k2))) throw Error("frame requires origin_mm, x_direction and y_direction.");
-  const f2 = frame, origin = vector(f2.origin_mm, "origin_mm"), x2 = vector(f2.x_direction, "x_direction"), y2 = vector(f2.y_direction, "y_direction");
+  const f2 = frame, origin2 = vector(f2.origin_mm, "origin_mm"), x2 = vector(f2.x_direction, "x_direction"), y2 = vector(f2.y_direction, "y_direction");
   if (Math.abs(Math.hypot(...x2) - 1) > 1e-8 || Math.abs(Math.hypot(...y2) - 1) > 1e-8 || Math.abs(x2.reduce((sum2, v2, i2) => sum2 + v2 * y2[i2], 0)) > 1e-8) throw Error("Frame axes must be perpendicular unit vectors.");
   const normal = [x2[1] * y2[2] - x2[2] * y2[1], x2[2] * y2[0] - x2[0] * y2[2], x2[0] * y2[1] - x2[1] * y2[0]];
-  const placed = origin.map((v2, i2) => v2 + offset2 * normal[i2]);
+  const placed = origin2.map((v2, i2) => v2 + offset2 * normal[i2]);
   if (placed.some((v2) => Math.abs(v2) > 1e6)) throw Error("Offset frame origin exceeds 1000000 mm.");
   return { plane: "XY", offsetMillimeters: offset2, frame: { originMillimeters: placed, xDirection: x2, normal }, ...flip ? { flip } : {} };
 }
@@ -18931,22 +18934,22 @@ const RAD2DEG = 180 / Math.PI;
 const round3 = (v2) => Math.round(v2 * 1e3) / 1e3;
 const makeAx3 = (center, dir, xDir) => {
   const oc = getOC();
-  const origin = asPnt(center);
+  const origin2 = asPnt(center);
   const direction2 = asDir(dir);
   let axis;
   if (xDir) {
     const xDirection = asDir(xDir);
-    axis = new oc.gp_Ax3_3(origin, direction2, xDirection);
+    axis = new oc.gp_Ax3_3(origin2, direction2, xDirection);
     xDirection.delete();
   } else {
-    axis = new oc.gp_Ax3_4(origin, direction2);
+    axis = new oc.gp_Ax3_4(origin2, direction2);
   }
-  origin.delete();
+  origin2.delete();
   direction2.delete();
   return axis;
 };
-function makePln(origin, dir) {
-  const orig = asPnt(origin);
+function makePln(origin2, dir) {
+  const orig = asPnt(origin2);
   const direction2 = asDir(dir);
   const oc = getOC();
   const pln = new oc.gp_Pln_3(orig, direction2);
@@ -18956,26 +18959,26 @@ function makePln(origin, dir) {
 }
 const makeAx2 = (center, dir, xDir) => {
   const oc = getOC();
-  const origin = asPnt(center);
+  const origin2 = asPnt(center);
   const direction2 = asDir(dir);
   let axis;
   if (xDir) {
     const xDirection = asDir(xDir);
-    axis = new oc.gp_Ax2_2(origin, direction2, xDirection);
+    axis = new oc.gp_Ax2_2(origin2, direction2, xDirection);
     xDirection.delete();
   } else {
-    axis = new oc.gp_Ax2_3(origin, direction2);
+    axis = new oc.gp_Ax2_3(origin2, direction2);
   }
-  origin.delete();
+  origin2.delete();
   direction2.delete();
   return axis;
 };
 const makeAx1 = (center, dir) => {
   const oc = getOC();
-  const origin = asPnt(center);
+  const origin2 = asPnt(center);
   const direction2 = asDir(dir);
-  const axis = new oc.gp_Ax1_2(origin, direction2);
-  origin.delete();
+  const axis = new oc.gp_Ax1_2(origin2, direction2);
+  origin2.delete();
   direction2.delete();
   return axis;
 };
@@ -19110,30 +19113,30 @@ class Transformation extends WrappingObj {
   }
   rotate(angle2, position = [0, 0, 0], direction2 = [0, 0, 1]) {
     const dir = asDir(direction2);
-    const origin = asPnt(position);
-    const axis = new this.oc.gp_Ax1_2(origin, dir);
+    const origin2 = asPnt(position);
+    const axis = new this.oc.gp_Ax1_2(origin2, dir);
     this.wrapped.SetRotation_1(axis, angle2 * DEG2RAD);
     axis.delete();
     dir.delete();
-    origin.delete();
+    origin2.delete();
     return this;
   }
   mirror(inputPlane = "YZ", inputOrigin) {
     const r = GCWithScope();
-    let origin;
+    let origin2;
     let direction2;
     if (typeof inputPlane === "string") {
       const plane2 = r(createNamedPlane(inputPlane, inputOrigin));
-      origin = plane2.origin;
+      origin2 = plane2.origin;
       direction2 = plane2.zDir;
     } else if (inputPlane instanceof Plane) {
-      origin = inputOrigin || inputPlane.origin;
+      origin2 = inputOrigin || inputPlane.origin;
       direction2 = inputPlane.zDir;
     } else {
-      origin = inputOrigin || [0, 0, 0];
+      origin2 = inputOrigin || [0, 0, 0];
       direction2 = inputPlane;
     }
-    const mirrorAxis = r(makeAx2(origin, direction2));
+    const mirrorAxis = r(makeAx2(origin2, direction2));
     this.wrapped.SetMirror_3(mirrorAxis);
     return this;
   }
@@ -19177,7 +19180,7 @@ class Transformation extends WrappingObj {
   }
 }
 class Plane {
-  constructor(origin, xDirection = null, normal = [0, 0, 1]) {
+  constructor(origin2, xDirection = null, normal = [0, 0, 1]) {
     this.oc = getOC();
     const zDir = new Vector(normal);
     if (zDir.Length === 0) {
@@ -19186,7 +19189,7 @@ class Plane {
     this.zDir = zDir.normalize();
     let xDir;
     if (!xDirection) {
-      const ax3 = makeAx3(origin, zDir);
+      const ax3 = makeAx3(origin2, zDir);
       xDir = new Vector(ax3.XDirection());
       ax3.delete();
     } else {
@@ -19197,7 +19200,7 @@ class Plane {
     }
     this.xDir = xDir.normalize();
     this.yDir = this.zDir.cross(this.xDir).normalize();
-    this.origin = new Vector(origin);
+    this.origin = new Vector(origin2);
   }
   delete() {
     this.localToGlobal.delete();
@@ -19337,13 +19340,13 @@ const createNamedPlane = (plane2, sourceOrigin = [0, 0, 0]) => {
   const config2 = PLANES_CONFIG[plane2];
   if (!config2)
     throw new Error(`Could not find plane ${plane2}`);
-  let origin;
+  let origin2;
   if (typeof sourceOrigin === "number") {
-    origin = config2.normal.map((v2) => v2 * sourceOrigin);
+    origin2 = config2.normal.map((v2) => v2 * sourceOrigin);
   } else {
-    origin = sourceOrigin;
+    origin2 = sourceOrigin;
   }
-  return new Plane(origin, config2.xDir, config2.normal);
+  return new Plane(origin2, config2.xDir, config2.normal);
 };
 let BoundingBox$1 = class BoundingBox extends WrappingObj {
   constructor(wrapped) {
@@ -19403,11 +19406,11 @@ let BoundingBox$1 = class BoundingBox extends WrappingObj {
     return this.wrapped.IsOut_4(other.wrapped);
   }
 };
-function makePlane(plane2 = "XY", origin = [0, 0, 0]) {
+function makePlane(plane2 = "XY", origin2 = [0, 0, 0]) {
   if (plane2 instanceof Plane) {
     return plane2.clone();
   } else {
-    return createNamedPlane(plane2, origin);
+    return createNamedPlane(plane2, origin2);
   }
 }
 function rotate$1(shape, angle2, position = [0, 0, 0], direction2 = [0, 0, 1]) {
@@ -19424,9 +19427,9 @@ function translate$1(shape, vector2) {
   transformation.delete();
   return newShape;
 }
-function mirror(shape, inputPlane, origin) {
+function mirror(shape, inputPlane, origin2) {
   const transformation = new Transformation();
-  transformation.mirror(inputPlane, origin);
+  transformation.mirror(inputPlane, origin2);
   const newShape = transformation.transform(shape);
   transformation.delete();
   return newShape;
@@ -20792,15 +20795,15 @@ const asVec3 = (v2) => {
 };
 const manifoldTransformFromTransformation = (t2) => {
   const transform2 = t2.inverted();
-  const origin = transform2.transformPoint([0, 0, 0]);
+  const origin2 = transform2.transformPoint([0, 0, 0]);
   const xPoint = transform2.transformPoint([1, 0, 0]);
   const yPoint = transform2.transformPoint([0, 1, 0]);
   const zPoint = transform2.transformPoint([0, 0, 1]);
-  const o = [origin.X(), origin.Y(), origin.Z()];
+  const o = [origin2.X(), origin2.Y(), origin2.Z()];
   const x2 = [xPoint.X() - o[0], xPoint.Y() - o[1], xPoint.Z() - o[2]];
   const y2 = [yPoint.X() - o[0], yPoint.Y() - o[1], yPoint.Z() - o[2]];
   const z2 = [zPoint.X() - o[0], zPoint.Y() - o[1], zPoint.Z() - o[2]];
-  origin.delete();
+  origin2.delete();
   xPoint.delete();
   yPoint.delete();
   zPoint.delete();
@@ -20876,9 +20879,9 @@ class MeshShape extends WrappingObj {
     const newShape = applyTransformation(this.wrapped, transform2);
     return new MeshShape(newShape);
   }
-  mirror(inputPlane, origin) {
+  mirror(inputPlane, origin2) {
     const transform2 = new Transformation();
-    transform2.mirror(inputPlane, origin);
+    transform2.mirror(inputPlane, origin2);
     const newShape = applyTransformation(this.wrapped, transform2);
     return new MeshShape(newShape);
   }
@@ -21401,8 +21404,8 @@ class EdgeFinder extends Finder3d {
    *
    * @category Filter
    */
-  inPlane(inputPlane, origin) {
-    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin);
+  inPlane(inputPlane, origin2) {
+    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin2);
     this.parallelTo(plane2);
     const firstPointInPlane = ({ element }) => {
       const point2 = element.startPoint;
@@ -21473,8 +21476,8 @@ class FaceFinder extends Finder3d {
    *
    * @category Filter
    */
-  inPlane(inputPlane, origin) {
-    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin);
+  inPlane(inputPlane, origin2) {
+    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin2);
     this.parallelTo(plane2);
     const centerInPlane = ({ element }) => {
       const point2 = element.center;
@@ -21776,8 +21779,8 @@ class Shape extends WrappingObj {
    *
    * @category Shape Transformations
    */
-  mirror(inputPlane, origin) {
-    const newShape = cast(mirror(this.wrapped, inputPlane, origin));
+  mirror(inputPlane, origin2) {
+    const newShape = cast(mirror(this.wrapped, inputPlane, origin2));
     this.delete();
     if (this.constructor !== newShape.constructor)
       throw new Error("unexpected types mismatch");
@@ -23393,11 +23396,11 @@ class Sketch {
    * Revolves the drawing on an axis (defined by its direction and an origin
    * (defaults to the sketch origin)
    */
-  revolve(revolutionAxis, { origin, angle: angle2 } = {}) {
+  revolve(revolutionAxis, { origin: origin2, angle: angle2 } = {}) {
     const face = makeFace(this.wire);
     const solid = revolution(
       face,
-      origin || this.defaultOrigin,
+      origin2 || this.defaultOrigin,
       revolutionAxis,
       angle2
     );
@@ -23419,7 +23422,7 @@ class Sketch {
     extrusionDirection,
     extrusionProfile,
     twistAngle,
-    origin
+    origin: origin2
   } = {}) {
     const [r, gc] = localGC();
     const extrusionVec = r(
@@ -23428,7 +23431,7 @@ class Sketch {
     if (extrusionProfile && !twistAngle) {
       const solid2 = complexExtrude(
         this.wire,
-        origin || this.defaultOrigin,
+        origin2 || this.defaultOrigin,
         extrusionVec,
         extrusionProfile
       );
@@ -23440,7 +23443,7 @@ class Sketch {
       const solid2 = twistExtrude(
         this.wire,
         twistAngle,
-        origin || this.defaultOrigin,
+        origin2 || this.defaultOrigin,
         extrusionVec,
         extrusionProfile
       );
@@ -23501,8 +23504,8 @@ class Sketch {
   }
 }
 class Sketcher {
-  constructor(plane2, origin) {
-    this.plane = plane2 instanceof Plane ? makePlane(plane2) : makePlane(plane2, origin);
+  constructor(plane2, origin2) {
+    this.plane = plane2 instanceof Plane ? makePlane(plane2) : makePlane(plane2, origin2);
     this.pointer = new Vector(this.plane.origin);
     this.firstPoint = new Vector(this.plane.origin);
     this.pendingEdges = [];
@@ -23866,9 +23869,9 @@ class Transformation2D extends WrappingObj {
     return transformCurves(curves2, this.wrapped);
   }
 }
-const stretchTransform2d = (ratio, direction2, origin = [0, 0]) => {
+const stretchTransform2d = (ratio, direction2, origin2 = [0, 0]) => {
   const oc = getOC();
-  const axis = axis2d(origin, direction2);
+  const axis = axis2d(origin2, direction2);
   const transform2 = new oc.gp_GTrsf2d_1();
   transform2.SetAffinity(axis, ratio);
   axis.delete();
@@ -23883,14 +23886,14 @@ const translationTransform2d = (translation) => {
   gc();
   return new Transformation2D(transform2);
 };
-const mirrorTransform2d = (centerOrDirection, origin = [0, 0], mode = "center") => {
+const mirrorTransform2d = (centerOrDirection, origin2 = [0, 0], mode = "center") => {
   const oc = getOC();
   const [r, gc] = localGC();
   const rotation = new oc.gp_Trsf2d_1();
   if (mode === "center") {
     rotation.SetMirror_1(r(pnt(centerOrDirection)));
   } else {
-    rotation.SetMirror_2(r(axis2d(origin, centerOrDirection)));
+    rotation.SetMirror_2(r(axis2d(origin2, centerOrDirection)));
   }
   const transform2 = new oc.gp_GTrsf2d_2(rotation);
   gc();
@@ -24010,8 +24013,8 @@ class Blueprint {
     this._guessedOrientation = approximateArea > 0 ? "clockwise" : "counterClockwise";
     return this._guessedOrientation;
   }
-  stretch(ratio, direction2, origin = [0, 0]) {
-    const curves2 = stretchTransform2d(ratio, direction2, origin).transformCurves(
+  stretch(ratio, direction2, origin2 = [0, 0]) {
+    const curves2 = stretchTransform2d(ratio, direction2, origin2).transformCurves(
       this.curves
     );
     return new Blueprint(curves2);
@@ -24036,16 +24039,16 @@ class Blueprint {
     );
     return new Blueprint(curves2);
   }
-  mirror(centerOrDirection, origin = [0, 0], mode = "center") {
+  mirror(centerOrDirection, origin2 = [0, 0], mode = "center") {
     const curves2 = mirrorTransform2d(
       centerOrDirection,
-      origin,
+      origin2,
       mode
     ).transformCurves(this.curves);
     return new Blueprint(curves2);
   }
-  sketchOnPlane(inputPlane, origin) {
-    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin);
+  sketchOnPlane(inputPlane, origin2) {
+    const plane2 = inputPlane instanceof Plane ? makePlane(inputPlane) : makePlane(inputPlane, origin2);
     const edges = curvesAsEdgesOnPlane(this.curves, plane2);
     const wire = assembleWire(edges);
     return new Sketch(wire, {
@@ -24078,8 +24081,8 @@ class Blueprint {
     }
     return sketch2;
   }
-  subFace(face, origin) {
-    let subFace = this.translate(face.uvCoordinates(origin || face.center)).sketchOnFace(face, "original").face();
+  subFace(face, origin2) {
+    let subFace = this.translate(face.uvCoordinates(origin2 || face.center)).sketchOnFace(face, "original").face();
     if (subFace.orientation !== face.orientation) {
       subFace = subFace.flipOrientation();
     }
@@ -24087,13 +24090,13 @@ class Blueprint {
   }
   punchHole(shape, face, {
     height = null,
-    origin = null,
+    origin: origin2 = null,
     draftAngle = 0
   } = {}) {
     const oc = getOC();
     const gc = GCWithScope();
     const foundFace = getSingleFace(face, shape);
-    const hole = this.subFace(foundFace, origin);
+    const hole = this.subFace(foundFace, origin2);
     const maker = gc(
       new oc.BRepFeat_MakeDPrism_1(
         shape.wrapped,
@@ -24186,9 +24189,9 @@ function buildCornerFunction(radius, mode) {
   return (first, second) => makeFn(first, second, radius);
 }
 class BaseSketcher2d {
-  constructor(origin = [0, 0]) {
-    this.pointer = origin;
-    this.firstPoint = origin;
+  constructor(origin2 = [0, 0]) {
+    this.pointer = origin2;
+    this.firstPoint = origin2;
     this._nextCorner = null;
     this.pendingCurves = [];
   }
@@ -24555,10 +24558,10 @@ class BaseSketcher2d {
   }
 }
 class BlueprintSketcher extends BaseSketcher2d {
-  constructor(origin = [0, 0]) {
+  constructor(origin2 = [0, 0]) {
     super();
-    this.pointer = origin;
-    this.firstPoint = origin;
+    this.pointer = origin2;
+    this.firstPoint = origin2;
     this.pendingCurves = [];
   }
   done() {
@@ -24686,7 +24689,7 @@ class CompoundSketch {
     extrusionDirection,
     extrusionProfile,
     twistAngle,
-    origin
+    origin: origin2
   } = {}) {
     const extrusionVec = new Vector(
       extrusionDirection || this.outerSketch.defaultDirection
@@ -24696,7 +24699,7 @@ class CompoundSketch {
         this.sketches,
         (sketch2) => complexExtrude(
           sketch2.wire,
-          origin || this.outerSketch.defaultOrigin,
+          origin2 || this.outerSketch.defaultOrigin,
           extrusionVec,
           extrusionProfile,
           true
@@ -24710,7 +24713,7 @@ class CompoundSketch {
         (sketch2) => twistExtrude(
           sketch2.wire,
           twistAngle,
-          origin || this.outerSketch.defaultOrigin,
+          origin2 || this.outerSketch.defaultOrigin,
           extrusionVec,
           extrusionProfile,
           true
@@ -24725,10 +24728,10 @@ class CompoundSketch {
    * Revolves the drawing on an axis (defined by its direction and an origin
    * (defaults to the sketch origin)
    */
-  revolve(revolutionAxis, { origin, angle: angle2 } = {}) {
+  revolve(revolutionAxis, { origin: origin2, angle: angle2 } = {}) {
     const solid = revolution(
       this.face(),
-      origin || this.outerSketch.defaultOrigin,
+      origin2 || this.outerSketch.defaultOrigin,
       revolutionAxis,
       angle2
     );
@@ -24773,9 +24776,9 @@ class CompoundBlueprint {
       ...this.blueprints.slice(1).map((b) => b.repr)
     ].join("\n");
   }
-  stretch(ratio, direction2, origin) {
+  stretch(ratio, direction2, origin2) {
     return new CompoundBlueprint(
-      this.blueprints.map((bp) => bp.stretch(ratio, direction2, origin))
+      this.blueprints.map((bp) => bp.stretch(ratio, direction2, origin2))
     );
   }
   rotate(angle2, center) {
@@ -24794,14 +24797,14 @@ class CompoundBlueprint {
       this.blueprints.map((bp) => bp.translate(xDistOrPoint, yDist))
     );
   }
-  mirror(centerOrDirection, origin, mode) {
+  mirror(centerOrDirection, origin2, mode) {
     return new CompoundBlueprint(
-      this.blueprints.map((bp) => bp.mirror(centerOrDirection, origin, mode))
+      this.blueprints.map((bp) => bp.mirror(centerOrDirection, origin2, mode))
     );
   }
-  sketchOnPlane(plane2, origin) {
+  sketchOnPlane(plane2, origin2) {
     const sketches = this.blueprints.map(
-      (blueprint) => blueprint.sketchOnPlane(plane2, origin)
+      (blueprint) => blueprint.sketchOnPlane(plane2, origin2)
     );
     return new CompoundSketch(sketches);
   }
@@ -24886,9 +24889,9 @@ class Blueprints {
     }
     return this._boundingBox;
   }
-  stretch(ratio, direction2, origin) {
+  stretch(ratio, direction2, origin2) {
     return new Blueprints(
-      this.blueprints.map((bp) => bp.stretch(ratio, direction2, origin))
+      this.blueprints.map((bp) => bp.stretch(ratio, direction2, origin2))
     );
   }
   rotate(angle2, center) {
@@ -24907,14 +24910,14 @@ class Blueprints {
       this.blueprints.map((bp) => bp.translate(xDistOrPoint, yDist))
     );
   }
-  mirror(centerOrDirection, origin, mode) {
+  mirror(centerOrDirection, origin2, mode) {
     return new Blueprints(
-      this.blueprints.map((bp) => bp.mirror(centerOrDirection, origin, mode))
+      this.blueprints.map((bp) => bp.mirror(centerOrDirection, origin2, mode))
     );
   }
-  sketchOnPlane(plane2, origin) {
+  sketchOnPlane(plane2, origin2) {
     return new Sketches(
-      this.blueprints.map((bp) => bp.sketchOnPlane(plane2, origin))
+      this.blueprints.map((bp) => bp.sketchOnPlane(plane2, origin2))
     );
   }
   sketchOnFace(face, scaleMode) {
@@ -37435,10 +37438,10 @@ class Drawing {
       return new BoundingBox2d();
     return this.innerShape.boundingBox;
   }
-  stretch(ratio, direction2, origin) {
+  stretch(ratio, direction2, origin2) {
     if (!this.innerShape)
       return new Drawing();
-    return new Drawing(this.innerShape.stretch(ratio, direction2, origin));
+    return new Drawing(this.innerShape.stretch(ratio, direction2, origin2));
   }
   get repr() {
     if (this.innerShape === null)
@@ -37460,10 +37463,10 @@ class Drawing {
       return new Drawing();
     return new Drawing(this.innerShape.scale(scaleFactor, center));
   }
-  mirror(centerOrDirection, origin, mode) {
+  mirror(centerOrDirection, origin2, mode) {
     if (!this.innerShape)
       return new Drawing();
-    return new Drawing(this.innerShape.mirror(centerOrDirection, origin, mode));
+    return new Drawing(this.innerShape.mirror(centerOrDirection, origin2, mode));
   }
   /**
    * Builds a new drawing by cuting another drawing into this one
@@ -37509,10 +37512,10 @@ class Drawing {
     const finder = filter && filter(new CornerFinder());
     return new Drawing(chamfer2D(this.innerShape, radius, finder));
   }
-  sketchOnPlane(inputPlane, origin) {
+  sketchOnPlane(inputPlane, origin2) {
     if (!this.innerShape)
       throw new Error("Trying to sketch an empty drawing");
-    return this.innerShape.sketchOnPlane(inputPlane, origin);
+    return this.innerShape.sketchOnPlane(inputPlane, origin2);
   }
   sketchOnFace(face, scaleMode) {
     if (!this.innerShape)
@@ -37556,10 +37559,10 @@ class Drawing {
   }
 }
 class DrawingPen extends BaseSketcher2d {
-  constructor(origin = [0, 0]) {
+  constructor(origin2 = [0, 0]) {
     super();
-    this.pointer = origin;
-    this.firstPoint = origin;
+    this.pointer = origin2;
+    this.firstPoint = origin2;
     this.pendingCurves = [];
   }
   done() {
@@ -37804,11 +37807,11 @@ function deleteAfterVectorTuple(vector2) {
     vector2.delete();
   }
 }
-function pointAlongAxis(origin, direction2, distance2) {
+function pointAlongAxis(origin2, direction2, distance2) {
   return [
-    origin[0] + direction2[0] * distance2,
-    origin[1] + direction2[1] * distance2,
-    origin[2] + direction2[2] * distance2
+    origin2[0] + direction2[0] * distance2,
+    origin2[1] + direction2[1] * distance2,
+    origin2[2] + direction2[2] * distance2
   ];
 }
 function cross$3(a2, b) {
@@ -38712,21 +38715,21 @@ function applyPatternFeature(feature3, context2) {
     if (!Number.isFinite(extent) || !(extent > 0 && extent <= 360))
       throw new Error("Pattern angle must be greater than 0 and at most 360 degrees.");
     const step = extent === 360 ? 360 / count : extent / (count - 1), sign = feature3.reversed ? -1 : 1;
-    let origin = [0, 0, 0], axis = principal(feature3.axis);
+    let origin2 = [0, 0, 0], axis = principal(feature3.axis);
     if (feature3.axisReference?.kind === "vector") {
-      origin = [...feature3.axisReference.origin];
+      origin2 = [...feature3.axisReference.origin];
       axis = unit$2(feature3.axisReference.direction);
     } else if (feature3.axisReference?.kind === "feature")
-      ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
+      ({ origin: origin2, axis } = axisFeatureLine(feature3.axisReference.featureId));
     else if (feature3.axisReference) {
       const t2 = resolveTransform({ kind: "rotate-reference", reference: feature3.axisReference, angleDegrees: 0 });
-      origin = t2.axisOriginMillimeters;
+      origin2 = t2.axisOriginMillimeters;
       axis = t2.axisDirection;
     }
-    publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: origin, direction: axis, label: "Pattern angle" });
+    publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: origin2, direction: axis, label: "Pattern angle" });
     for (const i2 of offsets(count, feature3.alignment))
       if (i2 !== 0)
-        placements.push((shape) => own(shape.clone().rotate(step * i2 * sign, origin, axis)));
+        placements.push((shape) => own(shape.clone().rotate(step * i2 * sign, origin2, axis)));
   }
   if (partPattern) {
     const ids2 = [];
@@ -38798,9 +38801,9 @@ function sketchRegionGroups(contours) {
     ];
   });
 }
-function planeToolFace(origin, normal, size) {
+function planeToolFace(origin2, normal, size) {
   const o = getOC();
-  const p2 = new o.gp_Pnt_3(...origin), d2 = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p2, d2), pln = new o.gp_Pln_2(ax);
+  const p2 = new o.gp_Pnt_3(...origin2), d2 = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p2, d2), pln = new o.gp_Pln_2(ax);
   const maker = new o.BRepBuilderAPI_MakeFace_9(pln, -size, size, -size, size);
   try {
     return cast(maker.Face());
@@ -39115,12 +39118,12 @@ function solidsOf(shape) {
   }
   return solids.length ? solids : [shape.clone()];
 }
-function throughAllDistance(bodies, origin, direction2) {
+function throughAllDistance(bodies, origin2, direction2) {
   let farthest = 0;
   for (const body of bodies) {
     const box = body.boundingBox.bounds;
     for (const x2 of [box[0][0], box[1][0]]) for (const y2 of [box[0][1], box[1][1]]) for (const z2 of [box[0][2], box[1][2]])
-      farthest = Math.max(farthest, (x2 - origin[0]) * direction2[0] + (y2 - origin[1]) * direction2[1] + (z2 - origin[2]) * direction2[2]);
+      farthest = Math.max(farthest, (x2 - origin2[0]) * direction2[0] + (y2 - origin2[1]) * direction2[1] + (z2 - origin2[2]) * direction2[2]);
   }
   return farthest + 1;
 }
@@ -39186,13 +39189,13 @@ function quadricSolid(q, length, own) {
   if (q.kind === "CYLINDER") return own(makeCylinder(q.r, length, sub$4(q.at, scale$1(q.along, length / 2)), q.along));
   const oc = getOC();
   if (q.kind === "TORUS") {
-    const origin = new oc.gp_Pnt_3(q.at[0], q.at[1], q.at[2]), direction2 = new oc.gp_Dir_4(q.along[0], q.along[1], q.along[2]), axes = new oc.gp_Ax2_3(origin, direction2);
+    const origin2 = new oc.gp_Pnt_3(q.at[0], q.at[1], q.at[2]), direction2 = new oc.gp_Dir_4(q.along[0], q.along[1], q.along[2]), axes = new oc.gp_Ax2_3(origin2, direction2);
     const maker = new oc.BRepPrimAPI_MakeTorus_5(axes, q.R, q.r);
     const solid = own(cast(maker.Shape()));
     maker.delete();
     axes.delete();
     direction2.delete();
-    origin.delete();
+    origin2.delete();
     return solid;
   }
   const base = add$3(q.apex, scale$1(q.along, length)), rim = add$3(base, scale$1(perpendicularTo(q.along), length * q.tan));
@@ -39459,11 +39462,11 @@ function historyKeys(document2) {
 function helicalThreadGroove(center, direction2, minorRadius, spec, length, leftHand, own) {
   const pitch = spec.pitchMillimeters, depth = spec.majorDiameterMillimeters / 2 - minorRadius;
   if (depth <= 1e-6) throw new Error(`A ${spec.designation} thread needs a hole drilled under ${spec.majorDiameterMillimeters} mm.`);
-  const origin = [0, 1, 2].map((i2) => center[i2] - direction2[i2] * pitch);
-  const helix = own(makeHelix(pitch, length + 2 * pitch, minorRadius, origin, direction2, leftHand));
+  const origin2 = [0, 1, 2].map((i2) => center[i2] - direction2[i2] * pitch);
+  const helix = own(makeHelix(pitch, length + 2 * pitch, minorRadius, origin2, direction2, leftHand));
   const first = helix.edges[0], startPoint = deleteAfterVectorTuple(first.startPoint);
   helix.edges.forEach((edge) => edge.delete());
-  const radial = unit$2(sub$4(startPoint, origin));
+  const radial = unit$2(sub$4(startPoint, origin2));
   const plane2 = own(new Plane(startPoint, radial, cross$4(radial, direction2)));
   const half = Math.min(depth * Math.tan(Math.PI / 6), pitch * 0.45), inset = Math.min(0.05, minorRadius / 10);
   const section2 = own(draw([-inset, -half]).lineTo([depth, 0]).lineTo([-inset, half]).close().sketchOnPlane(plane2));
@@ -40272,12 +40275,12 @@ function evaluatePartDocument(document2, options = {}) {
             const id2 = feature3.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("Trim needs an available surface body.");
             const o = getOC(), plane2 = mirrorPlaneOf(feature3.plane);
-            const origin = [plane2.origin.x, plane2.origin.y, plane2.origin.z], normal = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z];
-            const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin));
-            const side = (p2) => (p2[0] - origin[0]) * normal[0] + (p2[1] - origin[1]) * normal[1] + (p2[2] - origin[2]) * normal[2];
+            const origin2 = [plane2.origin.x, plane2.origin.y, plane2.origin.z], normal = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z];
+            const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin2));
+            const side = (p2) => (p2[0] - origin2[0]) * normal[0] + (p2[1] - origin2[1]) * normal[1] + (p2[2] - origin2[2]) * normal[2];
             const keep = side(feature3.keepPointMillimeters);
             if (Math.abs(keep) < 1e-9) throw new Error("The keep point lies on the trimming plane. Move it to the side to keep.");
-            const tool3 = own(planeToolFace(origin, normal, size));
+            const tool3 = own(planeToolFace(origin2, normal, size));
             const faces = body.faces.map((f2) => own(f2));
             const pieces = splitFacesByTool(faces, tool3).flat().map((p2) => own(p2));
             const kept = pieces.filter((p2) => {
@@ -40851,11 +40854,11 @@ function evaluatePartDocument(document2, options = {}) {
                         move.SetTranslation_1(vec2);
                         vec2.delete();
                       } else {
-                        const o = t2.axisOriginMillimeters, d2 = unit$2(t2.axisDirection), origin = new f2.gp_Pnt_3(o[0], o[1], o[2]), direction2 = new f2.gp_Dir_4(d2[0], d2[1], d2[2]), axis = new f2.gp_Ax1_2(origin, direction2);
+                        const o = t2.axisOriginMillimeters, d2 = unit$2(t2.axisDirection), origin2 = new f2.gp_Pnt_3(o[0], o[1], o[2]), direction2 = new f2.gp_Dir_4(d2[0], d2[1], d2[2]), axis = new f2.gp_Ax1_2(origin2, direction2);
                         move.SetRotation_1(axis, t2.angleDegrees * Math.PI / 180);
                         axis.delete();
                         direction2.delete();
-                        origin.delete();
+                        origin2.delete();
                       }
                       const movedInside = t2.kind === "translate" ? add$3(inside2, t2.translationMillimeters) : add$3(t2.axisOriginMillimeters, rotateVector(sub$4(inside2, t2.axisOriginMillimeters), t2.axisDirection, t2.angleDegrees));
                       try {
@@ -41680,23 +41683,23 @@ function evaluatePartDocument(document2, options = {}) {
                 }
               })));
             } else if (feature3.type === "surface-revolve") {
-              let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin = [0, 0, 0];
+              let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin2 = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
-                origin = [...feature3.axisReference.origin];
+                origin2 = [...feature3.axisReference.origin];
                 axis = unit$2(feature3.axisReference.direction);
-              } else if (feature3.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
+              } else if (feature3.axisReference?.kind === "feature") ({ origin: origin2, axis } = axisFeatureLine(feature3.axisReference.featureId));
               else if (feature3.axisReference) {
                 const t2 = resolveTransform({ kind: "rotate-reference", reference: feature3.axisReference, angleDegrees: 0 });
-                origin = t2.axisOriginMillimeters;
+                origin2 = t2.axisOriginMillimeters;
                 axis = t2.axisDirection;
               }
               if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin), axis);
-                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
+                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin2), axis);
+                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin2, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature3.angleDegrees * Math.PI / 180 * (feature3.reversed ? -1 : 1);
               const wires = curveWires(feature3.profileFeatureId, feature3.contourIds, "Surface revolve");
-              const ax = new o.gp_Ax1_2(new o.gp_Pnt_3(origin[0], origin[1], origin[2]), new o.gp_Dir_4(axis[0], axis[1], axis[2]));
+              const ax = new o.gp_Ax1_2(new o.gp_Pnt_3(origin2[0], origin2[1], origin2[2]), new o.gp_Dir_4(axis[0], axis[1], axis[2]));
               try {
                 tool22 = sheetArea(joined(wires.map((wire) => new o.BRepPrimAPI_MakeRevol_1(wire.wrapped, ax, angle2, false).Shape())));
               } finally {
@@ -41834,26 +41837,26 @@ function evaluatePartDocument(document2, options = {}) {
               let offset2 = feature3.startingOffsetMillimeters ?? 0;
               if (feature3.startingReference) {
                 const start = feature3.startingReference;
-                let origin, normal;
+                let origin2, normal;
                 if (start.kind === "principal") {
                   const f2 = principalFrame(start.plane, 0);
-                  origin = f2.originMillimeters;
+                  origin2 = f2.originMillimeters;
                   normal = f2.normal;
                 } else if (start.kind === "plane") {
                   const sourceIndex = history.findIndex((f22) => f22.id === start.sourceFeatureId);
                   const plane2 = sourceIndex >= 0 && sourceIndex < index2 ? history[sourceIndex] : void 0;
                   if (!plane2 || plane2.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
                   const f2 = resolvePlaneFrame(plane2, history.slice(0, sourceIndex));
-                  origin = f2.originMillimeters;
+                  origin2 = f2.originMillimeters;
                   normal = f2.normal;
                 } else {
                   normal = unit$2(start.normal);
-                  origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
+                  origin2 = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
                 }
                 if (norm$3(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
                 const alignment = dot$5(normal, direction2);
                 if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-                offset2 += dot$5(normal, sub$4(origin, o)) / alignment;
+                offset2 += dot$5(normal, sub$4(origin2, o)) / alignment;
               }
               if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
               const draftOf = (angle2) => {
@@ -41938,8 +41941,8 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 if (end.endType === "through-all") {
                   if (!["cut", "intersect"].includes(feature3.operation) || !bodies.size) throw new Error("Through all requires Remove or Intersect and a target body.");
-                  const { axis, alignment, origin } = axisOf(dir);
-                  const maximum = (farthestAlong(bodies.values(), axis) - origin) / alignment;
+                  const { axis, alignment, origin: origin2 } = axisOf(dir);
+                  const maximum = (farthestAlong(bodies.values(), axis) - origin2) / alignment;
                   return maximum <= start ? null : maximum + 1;
                 }
                 if (end.endType === "up-to-vertex") {
@@ -42105,8 +42108,8 @@ function evaluatePartDocument(document2, options = {}) {
                     startCap.delete();
                     throw new Error("The stopping surface crosses or lies behind the extrusion start. Adjust the start or end offset.");
                   }
-                  const { axis, alignment: alignment2, origin } = axisOf(dir);
-                  const high2 = (farthestAlong([half2], axis) - origin) / alignment2 + 1;
+                  const { axis, alignment: alignment2, origin: origin2 } = axisOf(dir);
+                  const high2 = (farthestAlong([half2], axis) - origin2) / alignment2 + 1;
                   if (!(high2 > start + epsilon2)) {
                     startCap.delete();
                     throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset.");
@@ -42165,9 +42168,9 @@ function evaluatePartDocument(document2, options = {}) {
               const toNext = (dir, low2, end) => {
                 const limits = [...bodies.values()];
                 if (!limits.length) throw new Error("Up to next requires an existing part in the extrusion direction.");
-                const { axis, alignment, origin } = axisOf(dir);
+                const { axis, alignment, origin: origin2 } = axisOf(dir);
                 const epsilon2 = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-9);
-                let reach = (farthestAlong(limits, axis) - origin) / alignment - low2;
+                let reach = (farthestAlong(limits, axis) - origin2) / alignment - low2;
                 if (!Number.isFinite(reach) || reach <= epsilon2) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
                 reach += Math.max(1, Math.max(...limits.map(diagonalOf)) * 1e-6) / alignment;
                 const probe = prism(low2 + epsilon2, low2 + epsilon2 + reach, dir);
@@ -42218,9 +42221,9 @@ function evaluatePartDocument(document2, options = {}) {
                 const limit = end.partId ? bodies.get(end.partId) : void 0;
                 if (!limit) throw new Error("The stopping part is unavailable. Reselect an earlier solid part.");
                 const stop = end.endOffset ? own(limit.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : limit;
-                const { axis, alignment, origin } = axisOf(dir);
+                const { axis, alignment, origin: origin2 } = axisOf(dir);
                 const epsilon2 = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-8);
-                const bound2 = (farthestAlong([stop], axis) - origin) / alignment + epsilon2 * 10;
+                const bound2 = (farthestAlong([stop], axis) - origin2) / alignment + epsilon2 * 10;
                 if (!Number.isFinite(bound2) || bound2 <= low2 + epsilon2) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
                 const tool3 = prism(low2, bound2, dir);
                 const starts = capFaces(tool3, dir, -1), ends = capFaces(tool3, dir, 1);
@@ -42397,29 +42400,29 @@ function evaluatePartDocument(document2, options = {}) {
             const revolve = () => {
               if (feature3.type !== "revolve") throw new Error("not a revolve");
               const sketch2 = sketchOf(requireDrawing());
-              let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin = [0, 0, 0];
+              let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin2 = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
-                origin = [...feature3.axisReference.origin];
+                origin2 = [...feature3.axisReference.origin];
                 axis = unit$2(feature3.axisReference.direction);
-              } else if (feature3.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature3.axisReference.featureId));
+              } else if (feature3.axisReference?.kind === "feature") ({ origin: origin2, axis } = axisFeatureLine(feature3.axisReference.featureId));
               else if (feature3.axisReference) {
                 const t2 = resolveTransform({ kind: "rotate-reference", reference: feature3.axisReference, angleDegrees: 0 });
-                origin = t2.axisOriginMillimeters;
+                origin2 = t2.axisOriginMillimeters;
                 axis = t2.axisDirection;
               }
               if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin), axis);
-                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
+                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$4(c2, origin2), axis);
+                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$3(origin2, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature3.angleDegrees, second = feature3.secondAngleDegrees ?? 0;
               if (!(angle2 > 0) || second < 0 || angle2 + second > 360) throw new Error("Revolve angles must be finite, positive and total at most 360 degrees.");
               if (feature3.symmetric && second) throw new Error("Symmetric revolve cannot also have a second angle.");
               const sign = feature3.reversed ? -1 : 1;
-              let shape = sketch2.revolve(axis, { origin, angle: sign * angle2 });
+              let shape = sketch2.revolve(axis, { origin: origin2, angle: sign * angle2 });
               if (isShape3D(shape) && measureVolume(shape) < 1e-6) throw new Error("Revolve profile crosses its axis. Keep the profile on one side of the axis.");
-              if (feature3.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * angle2 / 2, origin, axis);
+              if (feature3.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * angle2 / 2, origin2, axis);
               if (second && isShape3D(shape)) {
-                const other = own(sketchOf(profile.drawing ?? requireDrawing())).revolve(axis, { origin, angle: -sign * second });
+                const other = own(sketchOf(profile.drawing ?? requireDrawing())).revolve(axis, { origin: origin2, angle: -sign * second });
                 if (isShape3D(other)) shape = own(shape).fuse(own(other));
               }
               return isShape3D(shape) ? own(shape).simplify() : shape;
@@ -42677,10 +42680,10 @@ function withHiddenLineProjection(shape, options, read3) {
   try {
     const algorithm = own(new oc.HLRBRep_Algo_1());
     algorithm.Add_2(shape.wrapped, 0);
-    const origin = own(new oc.gp_Pnt_3(0, 0, 0));
+    const origin2 = own(new oc.gp_Pnt_3(0, 0, 0));
     const axis = own(new oc.gp_Dir_4(dx, dy, dz));
     const reference = own(new oc.gp_Dir_4(planeX[0], planeX[1], planeX[2]));
-    const frame = own(new oc.gp_Ax2_2(origin, axis, reference));
+    const frame = own(new oc.gp_Ax2_2(origin2, axis, reference));
     const projector = own(new oc.HLRAlgo_Projector_2(frame));
     algorithm.Projector_1(projector);
     algorithm.Update();
@@ -43641,9 +43644,9 @@ function volumeProperties(shape, about) {
   const center = [c2.X(), c2.Y(), c2.Z()];
   c2.delete();
   const mass = props.Mass();
-  const origin = about ?? center;
+  const origin2 = about ?? center;
   const moment = (d2) => {
-    const point2 = new oc.gp_Pnt_3(origin[0], origin[1], origin[2]), direction2 = new oc.gp_Dir_4(d2[0], d2[1], d2[2]);
+    const point2 = new oc.gp_Pnt_3(origin2[0], origin2[1], origin2[2]), direction2 = new oc.gp_Dir_4(d2[0], d2[1], d2[2]);
     const axis = new oc.gp_Ax1_2(point2, direction2);
     const value2 = props.MomentOfInertia(axis);
     axis.delete();
@@ -44091,9 +44094,9 @@ function hatchFace(face, right, up, spacing2, out, budget) {
   if (count > budget) throw Error("Section hatching exceeds 2048 lines. Reduce the view scale or increase hatch spacing.");
   for (let index2 = first; index2 <= last2; index2++) {
     const distance2 = index2 * spacing2;
-    const origin = new oc.gp_Pnt_3(...direction2.map((n) => n * distance2));
+    const origin2 = new oc.gp_Pnt_3(...direction2.map((n) => n * distance2));
     const normal = new oc.gp_Dir_4(...direction2);
-    const plane2 = new oc.gp_Pln_3(origin, normal);
+    const plane2 = new oc.gp_Pln_3(origin2, normal);
     const operation2 = new oc.BRepAlgoAPI_Section_1();
     const progress = new oc.Message_ProgressRange_1();
     try {
@@ -44130,7 +44133,7 @@ function hatchFace(face, right, up, spacing2, out, budget) {
       operation2.delete();
       plane2.delete();
       normal.delete();
-      origin.delete();
+      origin2.delete();
     }
   }
   return Math.max(0, count);
@@ -82869,14 +82872,14 @@ function isFunction(arg) {
 function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
-function _extend(origin, add2) {
-  if (!add2 || !isObject(add2)) return origin;
+function _extend(origin2, add2) {
+  if (!add2 || !isObject(add2)) return origin2;
   var keys3 = Object.keys(add2);
   var i2 = keys3.length;
   while (i2--) {
-    origin[keys3[i2]] = add2[keys3[i2]];
+    origin2[keys3[i2]] = add2[keys3[i2]];
   }
-  return origin;
+  return origin2;
 }
 function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
