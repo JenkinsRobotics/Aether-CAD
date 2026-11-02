@@ -1004,3 +1004,8 @@
    (Rendering environment, Camera and display, Performance were unreachable). */
 .shapr-shell .aui-tabbed-sidebar[data-orientation="horizontal"] > .aui-tabbed-sidebar-tabs { flex-wrap: wrap; height: auto; max-height: none; overflow: visible; }
 .shapr-shell .aui-tabbed-sidebar[data-orientation="horizontal"] > .aui-tabbed-sidebar-tabs > .aui-tabbed-sidebar-tab { height: calc(var(--aui-tabbed-tray-height, 42px) - 2 * var(--aether-selection-cell-inset, 1px)); }
+
+/* An invalid feature says so in red in its header name, and nowhere else: no floating
+   notices over the viewport and no red outline (Jonathan, 2026-11-01). */
+body > .aui-feature-notices { display: none; }
+.shapr-shell .aui-feature-window.invalid { border-color: var(--aether-color-border); }

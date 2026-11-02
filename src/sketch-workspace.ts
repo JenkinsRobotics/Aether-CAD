@@ -62,6 +62,7 @@ import { instructions } from "./sketch/tool-instructions";
 import { renderSketchPreview } from "./sketch/preview";
 import { constructionPlaneFrame, flipSketchFrame } from "@aether/core/document";
 import { snapSketchPoint } from "./sketch-snapping";
+import { mountLengthEntry } from "./sketch/length-entry";
 import { solveDrawingConstraints, type SketchContour } from "@aether/core/sketch";
 import { preparePierceDraft,type PierceIssue } from '@aether/core/sketch/reference/pierce-draft';
 import { stageSketchPierce } from '@aether/core/sketch/reference/pierce-authoring';
@@ -368,6 +369,8 @@ export function openSketchWorkspace(
             }), flip),
           bounds,
           connect: (bridge: SurfaceBridge) => {
+            // Browser gates draw by clicking: they ask where a sketch point is on screen.
+            (window as { __aetherSketchClientPoint?: unknown }).__aetherSketchClientPoint = (x: number, y: number) => bridge.toClient?.([x, y]) ?? null;
             surface = bridge;
             root.classList.add("in-world");
           },
@@ -658,6 +661,8 @@ export function openSketchWorkspace(
     }
     window.removeEventListener("keydown", globalKey);
     window.removeEventListener("aether-sketch-finish", finishEvent);
+    delete (window as { __aetherSketchClientPoint?: unknown }).__aetherSketchClientPoint;
+    lengthEntry.dispose();
     win.close();
     root.remove();
     window.removeEventListener("aether-sketch-tool", toolEvent);
@@ -1081,6 +1086,22 @@ export function openSketchWorkspace(
     snapLabel = snapped.label;
     return snapped.point;
   };
+  /** Shift holds a line to the nearer axis from its start (standard drawing control). */
+  const axisLocked = (p: SketchPoint | null, e: MouseEvent): SketchPoint | null => {
+    if (!p || !e.shiftKey || tool !== "line") return p;
+    const contour = drawing.contours[activePath];
+    const a = pending[0] ?? (contour?.type === "path" ? contour.segments.at(-1)?.end : undefined);
+    if (!a) return p;
+    const horizontal = Math.abs(p[0] - a[0]) >= Math.abs(p[1] - a[1]);
+    snapLabel = horizontal ? "Horizontal" : "Vertical";
+    return horizontal ? [p[0], a[1]] : [a[0], p[1]];
+  };
+  let lastClient = { x: 0, y: 0 };
+  const lengthEntry = mountLengthEntry(root, {
+    anchor: () => { const contour = drawing.contours[activePath]; return pending[0] ?? (contour?.type === "path" ? contour.segments.at(-1)?.end ?? null : null); },
+    cursor: () => cursor,
+    place: (p) => place(p, true),
+  });
   annotationSelection = mountAnnotationSelection({
     svg, enabled: () => started && !busy && activeTool === "select" && !dimensionTool.active() && !constraints.tool.active(),
     drawing: () => drawing, point: e => pointerPoint(e, false),
@@ -1225,7 +1246,8 @@ export function openSketchWorkspace(
       renderPreview();
       return;
     }
-    cursor = pointerPoint(e);
+    lastClient = { x: e.clientX, y: e.clientY };
+    cursor = axisLocked(pointerPoint(e), e);
     // Onshape reveals what constrains an entity as soon as you point at it,
     // whether or not constraint display is switched on.
     const hovered = cursor ? activeTool==='select' && !constraints.tool.active() ? pickSketchEditEntity(drawing,cursor,svg) : pickSelectableSketchEntity(drawing, cursor) : null;
@@ -1243,7 +1265,7 @@ export function openSketchWorkspace(
   svg.addEventListener("click", (e) => {
     if (boxSelection.consumeClick() || endpointGesture.consumeClick() || trimGesture.consumeClick() || selectionDrag.consumeClick()) return;
     if (activeTool === "select" && !constraints.tool.active() && hoverConstraintMark(svg, pointerPoint(e, false), true)) return;
-    const p = pointerPoint(e, !constraints.tool.active());
+    const p = axisLocked(pointerPoint(e, !constraints.tool.active()), e);
     if (p) place(p, true, e.shiftKey || e.metaKey || e.ctrlKey, e.altKey);
   });
   svg.addEventListener(
@@ -1274,6 +1296,12 @@ export function openSketchWorkspace(
     }
     if (["Delete", "Backspace"].includes(e.key) && !isTypingTarget(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault(); e.stopPropagation(); selectionActions?.remove(); return;
+    }
+    // A digit while a line, arc or circle is in progress types its length (the immediate
+    // radius box above takes the digit once a curve is finished and has prevented default).
+    if (!e.defaultPrevented && /^[0-9.]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)
+      && ((tool === "line" || tool === "arc") && (pending.length || drawing.contours[activePath]?.type === "path") || tool === "circle" && pending.length > 0)) {
+      e.preventDefault(); lengthEntry.open(e.key, lastClient); return;
     }
     if (e.key === "Escape") {
       e.preventDefault();

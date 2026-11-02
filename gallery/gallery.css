@@ -6,19 +6,23 @@ body { background: var(--aether-color-bg-shell, #252729); color: var(--aether-co
 .cad-reference-heading p { margin: 6px 0 16px; color: var(--aether-color-text-muted, #a9adb4); }
 .cad-reference-heading a { color: var(--aether-color-accent, #72a7ff); }
 .cad-reference-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
-.cad-reference-toolbar button, .cad-reference-toolbar input, .cad-feature-card > header button { font: inherit; color: inherit; background: var(--aether-color-bg-input, #303338); border: 1px solid var(--aether-color-border, #50545b); border-radius: 6px; padding: 6px 10px; }
-.cad-reference-toolbar button[aria-pressed="true"] { background: var(--aether-color-accent, #356af2); color: white; }
+.cad-reference-toolbar button, .cad-reference-toolbar input, .cad-live-styles button { font: inherit; color: var(--aether-color-text, inherit); background: var(--aether-color-bg-input, transparent); border: 1px solid var(--aether-color-border, #50545b); border-radius: 6px; padding: 6px 10px; }
+.cad-reference-toolbar button[aria-pressed="true"], .cad-live-styles button[aria-pressed="true"] { background: var(--aether-color-accent, #356af2); color: white; }
 .cad-reference-toolbar input { margin-left: auto; min-width: 180px; }
-.cad-live-editors { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.cad-live-list { display: grid; gap: 14px; max-height: calc(100vh - 160px); overflow: auto; padding-right: 4px; }
-.cad-live-list section { display: grid; gap: 2px; }
-.cad-live-list h2 { margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--aether-color-text-dim, #a9adb4); }
-.cad-live-list button { display: flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.cad-live-list button:hover { background: var(--aether-color-bg-hover, #34373c); }
-.cad-live-list button[aria-pressed="true"] { background: var(--aether-color-accent, #356af2); color: var(--aether-color-text-on-selected, #fff); }
-.cad-live-list button svg { width: 18px; height: 18px; flex: none; }
-/* The stage is the window's viewport, as in the app; it only needs room. */
-.cad-live-stage { position: relative; min-height: 640px; border: 1px dashed var(--aether-color-border, #50545b); border-radius: 10px; overflow: hidden; }
-.cad-live-stage > .feature-command-error { display: none; }
-@media (max-width: 720px) { .cad-live-editors { grid-template-columns: minmax(0, 1fr); } .cad-live-list { max-height: 240px; } }
-.cad-live-notice { margin: 24px; color: var(--aether-color-text-dim, #a9adb4); }
+.cad-live-editors { display: grid; gap: 24px; }
+.cad-live-styles { display: flex; align-items: center; gap: 8px; }
+.cad-live-styles span { margin-left: auto; color: var(--aether-color-text-dim, #a9adb4); font-size: 12px; }
+.cad-feature-section { display: grid; gap: 12px; }
+.cad-feature-section > h2 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--aether-color-text-dim, #a9adb4); }
+.cad-feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); align-items: start; gap: 20px; }
+.cad-feature-card { min-width: 0; }
+.cad-feature-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.cad-feature-card h2 { font-size: 14px; margin: 0; }
+/* Each card hosts its own live window, flowed in place rather than floating over a viewport. */
+.cad-feature-host { position: relative; min-height: 120px; }
+.cad-feature-host .aui-feature-window { position: relative; top: 0; right: auto; left: 0; bottom: auto; margin: 0; max-height: none; }
+body > .aui-feature-notices { display: none; }
+.cad-feature-host .aui-feature-window.invalid { border-color: var(--aether-color-border, #50545b); }
+.cad-feature-host > .feature-command-error { display: none; }
+.cad-feature-host .cad-sketch3d-strip { position: relative; inset: auto; }
+.cad-live-notice { margin: 0; color: var(--aether-color-text-dim, #a9adb4); font-size: 12px; }

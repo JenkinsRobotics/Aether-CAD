@@ -1,4 +1,4 @@
-import { openCADFeatureWindow } from "./features/feature-window-style";
+import { closeOpenFeatureWindows, openCADFeatureWindow } from "./features/feature-window-style";
 /** Feature types whose tool artwork has another name. */
 const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "offset-face": "offset", "import-cad": "import", profile: "sketch" };
 import { mountConstructionCommands } from "./construction-commands";
@@ -17,6 +17,7 @@ import { openSketchWorkspace } from "./sketch-workspace";
 import { openPlaneWindow } from "./plane-window";
 import { openAxisWindow } from "./axis-window";
 import { openPointWindow } from "./point-window";
+import { openSketch3DWorkspace } from "./sketch3d-workspace";
 import { openFeatureWindow } from "@aether/ui";
 import { addFeatureViewControls } from './features/view-controls';
 import { featureEditor, featureEditors } from "./features";
@@ -122,6 +123,7 @@ const presentFeatureWindow = (
       if (!event.defaultPrevented) finishingSketch = false;
       return;
     }
+    closeOpenFeatureWindows();
     if (type === "plane") {
       void openPlaneWindow(getDocument, apply, existing?.type === "plane" ? existing : undefined);
       return;
@@ -132,6 +134,10 @@ const presentFeatureWindow = (
     }
     if (type === "point") {
       void openPointWindow(getDocument, apply, existing?.type === "point" ? existing : undefined);
+      return;
+    }
+    if (type === "curve3d") {
+      openSketch3DWorkspace(existing?.type === "curve3d" ? existing : undefined);
       return;
     }
     if (type === "profile") {
@@ -284,27 +290,34 @@ const presentFeatureWindow = (
     submit.hidden = true;
     presentFeatureWindow(win, form, controls, editor, context);
     targetVisibility();
+    const draftId = existing?.id ?? crypto.randomUUID();
+    win.panel.dataset.featureId = draftId;
+    // The draft is a real feature from the moment its window opens: the tree shows
+    // it (badge "Editing") until Apply makes it history or Cancel removes it.
+    const announceDraft = (detail: { id: string; name: string; kind: string; invalid?: boolean } | null) =>
+      window.dispatchEvent(new CustomEvent("aether-feature-editing", { detail }));
+    if (!existing) {
+      announceDraft({ id: draftId, name: name.value, kind: type });
+      name.addEventListener("input", () => announceDraft({ id: draftId, name: name.value, kind: type, invalid: Boolean(win.panel.classList.contains("invalid")) }));
+      const close = win.close;
+      win.close = () => { announceDraft(null); close(); };
+    }
     // Validate live, exactly like the plane window: the accept control stays
     // disabled while the feature is incomplete, so an invalid feature can never
     // be submitted and then rejected.
-    const validate = () => win.setError(editor?.validate?.(controls, context) ?? null);
+    // The tree row turns red while the window is invalid: announced on the change only,
+    // since every announcement rebuilds the workspace lists.
+    let announcedInvalid: boolean | null = null;
+    const validate = () => {
+      const message = editor?.validate?.(controls, context) ?? null;
+      win.setError(message);
+      if (!existing && Boolean(message) !== announcedInvalid) { announcedInvalid = Boolean(message); announceDraft({ id: draftId, name: name.value, kind: type, invalid: announcedInvalid }); }
+    };
     for (const control of Object.values(controls)) {
       control.addEventListener("change", validate);
       control.addEventListener("input", validate);
     }
     validate();
-    const draftId = existing?.id ?? crypto.randomUUID();
-    win.panel.dataset.featureId = draftId;
-    // The draft is a real feature from the moment its window opens: the tree shows
-    // it (badge "Editing") until Apply makes it history or Cancel removes it.
-    const announceDraft = (detail: { id: string; name: string; kind: string } | null) =>
-      window.dispatchEvent(new CustomEvent("aether-feature-editing", { detail }));
-    if (!existing) {
-      announceDraft({ id: draftId, name: name.value, kind: type });
-      name.addEventListener("input", () => announceDraft({ id: draftId, name: name.value, kind: type }));
-      const close = win.close;
-      win.close = () => { announceDraft(null); close(); };
-    }
     const candidateDocument = () => {
         const invalid = editor?.validate?.(controls, context);
         if (invalid) throw new Error(invalid);
@@ -610,6 +623,7 @@ const presentFeatureWindow = (
     "draft",
     "pattern",
     "boolean",
+    "curve3d",
     // Every dialog in src/features/ is a command too: a button whose type is not
     // registered here reads "not connected" in the ribbon, which is how the surface
     // tools (and pipe, coil, boss, rest, thread, remove body, split,

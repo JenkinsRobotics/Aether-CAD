@@ -5,6 +5,8 @@ export function mountSketchSnappingControls(parent: HTMLElement, change: {
 }) {
   const section = document.createElement('details'), summary = document.createElement('summary');
   summary.textContent = 'Snapping'; section.append(summary); parent.append(section);
+  // Snapping is toggled from the camera menu; the strip does not repeat it (Jonathan, 2026-11-01).
+  section.hidden = true;
   const fields = (['geometry','grid'] as const).map(kind => {
     const row = document.createElement('label'), input = document.createElement('input');
     const label = kind === 'geometry' ? 'Snap to geometry' : 'Snap to grid';

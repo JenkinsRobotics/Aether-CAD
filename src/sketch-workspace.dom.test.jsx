@@ -76,7 +76,7 @@ it('previews lines, chained segments, rectangles and three-point arcs and clears
  open(()=>doc,apply);click('Top (XY)');tool('line');point(0,0);move(10,0);
  expect(querySketchControl('.sketch-preview').getAttribute('x2')).toBe('10');
  point(10,0);move(10,10);expect(querySketchControl('.sketch-preview').getAttribute('x1')).toBe('10');
- expect(querySketchControl('.sketch-preview-dimension').textContent).toContain('90.0°');
+ expect(querySketchControl('.sketch-preview-dimension').textContent).toBe('10.00');
  tool('rectangle');expect(querySketchControl('.sketch-preview-layer')).toBeNull();point(0,0);move(20,15);
  expect(querySketchControl('rect.sketch-preview').getAttribute('width')).toBe('20');
  expect(querySketchControl('.sketch-preview-dimension').textContent).toContain('20.00 × 15.00');

@@ -54,6 +54,7 @@ import { createDrawingDocument, parseDrawingDocument, serializeDrawingDocument, 
 import { isDrawingFile } from "@aether/core/document/file-types";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountDerivedCurveCommands } from "./derived-curves-window";
+import { mountSketch3DWorkspace } from "./sketch3d-workspace";
 import { mountTimelineCopy } from "./timeline-clipboard-commands";
 import {
   beginMateAuthoring,
@@ -498,7 +499,7 @@ function syncRibbonAvailability(): void {
 
 // Draft feature being authored (declared before updateLists reads it).
 let draftSketch: { id: string; name: string; hasPlane: boolean; existing: boolean } | null = null;
-let draftFeature: { id: string; name: string; kind: string } | null = null;
+let draftFeature: { id: string; name: string; kind: string; invalid?: boolean } | null = null;
 function canPlayHistory(): boolean {
   const state=cadPresentation.snapshot();
   return activeWorkspaceKind==='part' && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
@@ -1672,12 +1673,14 @@ mountAssemblyPlacementManipulator({
  status: (message, error) => setStatus(message, error ? 'error' : 'normal'),
 });
 // Curves from the model (intersection, isoparametric, projection) become 3D sketch features.
-mountDerivedCurveCommands({
+const curveDeps: Parameters<typeof mountDerivedCurveCommands>[0] = {
  getDocument: () => activePartDocument,
  apply: async doc => { await evaluateAndShowPart(doc, "Curves added as 3D sketch features.", false, { overlay: false }); if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage); },
  selection: () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null),
  showCurves: curves => viewer.setAnalysisCurves(curves),
-});
+};
+mountDerivedCurveCommands(curveDeps);
+mountSketch3DWorkspace({ ...curveDeps, pickPoint: (event, origin) => viewer.pickManipulatorPivot(event, origin) as { point: [number, number, number]; label?: string } | null });
 
 // Point and edge picks for the plane methods that need them (Three point,
 // Angle). Selection already produces vertex/edge items; this hands back their
@@ -1761,7 +1764,8 @@ window.addEventListener("aether-sketch-editing", event => {
 });
 window.addEventListener("aether-feature-editing", event => {
   draftFeature = (event as CustomEvent).detail as typeof draftFeature;
-  updateLists();
+  // A draft row is not a document change: no part-updated event, which would close the open preview.
+  updateLists(false);
 });
 window.addEventListener("aether-sketch-mode", event => {
   sketchToolCommands.setEditing(Boolean((event as CustomEvent).detail));

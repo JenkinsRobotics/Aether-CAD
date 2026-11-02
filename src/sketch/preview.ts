@@ -304,7 +304,7 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
     label =
       tool === "arc"
         ? `Arc guide · ${length.toFixed(2)} mm`
-        : `${length.toFixed(2)} mm · ${((Math.atan2(p[1] - a[1], p[0] - a[0]) * 180) / Math.PI).toFixed(1)}°`;
+        : length.toFixed(2);
   }
   add("circle", {
     cx: p[0],
@@ -312,12 +312,11 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
     r: bounds.width / 240,
     class: "sketch-preview-point",
   });
-  const text = add("text", {
-    x: p[0] + bounds.width / 80,
-    y: -p[1] - bounds.width / 80,
-    "font-size": bounds.width / 85,
-    class: "sketch-preview-dimension",
-  });
+  // The value sits in a box beside the cursor (the reference's value box), not a cloud.
+  const fontSize = bounds.width / 85, pad = fontSize * 0.45;
+  const bx = p[0] + bounds.width / 80, by = -p[1] - bounds.width / 80;
+  add("rect", { x: bx - pad, y: by - fontSize, width: label.length * fontSize * 0.62 + pad * 2, height: fontSize * 1.5, rx: fontSize * 0.2, class: "sketch-preview-dimension-box" });
+  const text = add("text", { x: bx, y: by, "font-size": fontSize, class: "sketch-preview-dimension" });
   text.textContent = label;
   // Onshape shows the constraint it is about to apply as a glyph beside the
   // cursor, not as words in the dimension readout. Committing the geometry

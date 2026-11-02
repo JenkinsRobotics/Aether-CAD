@@ -1887,6 +1887,7 @@ export class MateViewport {
     holder.style.pointerEvents = "none";
     object.setRotationFromMatrix(new THREE.Matrix4().makeBasis(xDir, yDir, normal));
     this.sketchSurface = { object, svg, origin, xDir, yDir, normal, disposeInput: bindSketchCameraInput(svg, this.renderer.domElement) };
+    this.renderer.domElement.style.cursor = "crosshair";
     this.cssScene.add(object);
     this.updateSketchSurfaceBounds(bounds);
     // The camera is never moved when a sketch opens (Jonathan, 2026-09-11):
@@ -1945,6 +1946,7 @@ export class MateViewport {
     const s = this.sketchSurface;
     if (!s) return;
     this.sketchBounds = null; this.sketchResolution = 1;
+    this.renderer.domElement.style.cursor = "";
     s.disposeInput();
     this.sketchSurface = null;
     this.cssScene.remove(s.object);

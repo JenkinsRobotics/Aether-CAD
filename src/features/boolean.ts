@@ -1,5 +1,5 @@
 import {availableBodies} from '@aether/core/document';
-import {layoutParameterRows, type FeatureEditor} from './shared';
+import {layoutParameterRows, operationTabs, type FeatureEditor} from './shared';
 
 export const booleanEditor: FeatureEditor = {
   type: 'boolean',
@@ -18,7 +18,8 @@ export const booleanEditor: FeatureEditor = {
     controls.tools.hidden = true;
     controls.tools.setAttribute('form',form.id);
     form.append(controls.tools);
-    layoutParameterRows(context);
+    // Standard anatomy: the operation tabs, then the selection box, then the parameter rows.
+    operationTabs(win, form, controls.operation, ['union', 'cut', 'intersection'], ['Union', 'Subtract', 'Intersect']);
     const box = win.entitiesBox('Tool bodies');
     const list = document.createElement('div');
     box.element.append(list);
@@ -45,6 +46,7 @@ export const booleanEditor: FeatureEditor = {
       render(); controls.tools.dispatchEvent(new Event('change'));
     });
     render();
+    layoutParameterRows(context);
   },
   validate(controls) {
     if (!controls.target.value) return 'Choose a target body.';

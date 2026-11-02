@@ -79,7 +79,8 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
     // A tool temporarily owns the editor surface. Restore the sketch settings
     // when it closes instead of stacking two windows with duplicate footers.
     const sketchWindow = root.querySelector<HTMLElement>(".cad-sketch-window");
-    if (sketchWindow) sketchWindow.hidden = Boolean(active);
+    // The sketch feature window stays up while drawing (Jonathan, 2026-11-01); only a real editor window replaces it.
+    if (sketchWindow) sketchWindow.hidden = Boolean(active) && active !== "coordinates";
     for (const [command, editor] of commands) {
       cadCommands.setEnabled(command, enabled());
       cadCommands.setActive(command, active === editor);
@@ -99,7 +100,7 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
       sections.set(id, { title, element });
       return element;
     },
-    show, close, refresh,
+    show, close, refresh, active: () => active,
     setTitle(id: Editor, title: string) {
       const section = sections.get(id); if (!section) return;
       section.title = title;

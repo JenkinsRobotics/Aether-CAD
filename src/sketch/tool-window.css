@@ -22,3 +22,5 @@
 .cad-sketch-tool-strip .sketch-tool-fields[data-editor="coordinates"] > label { min-height: 24px; }
 .cad-sketch-tool-strip .sketch-tool-fields[data-editor="coordinates"] > button { min-height: 24px; }
 .cad-sketch-tool-strip .sketch-contour-actions > button { flex: none; }
+/* A drawing tool with nothing to type shows no strip at all: a line is a point then a point. */
+.cad-sketch-tool-strip:not(:has(.sketch-tool-fields > :not([hidden]))) { display: none; }

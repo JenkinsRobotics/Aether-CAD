@@ -11,11 +11,10 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
     { id: "solid-create", label: "Create", tools: [
       // Fusion opens its Create list with Create Sketch, and it is the first
       // thing a new part needs. The Sketch tray itself is contextual.
-      // 3D Sketch is a kind of sketch; the model-curve window makes 3D sketches
-      // from faces and bodies. Both live in Sketch's dropdown (Jonathan, 2026-11-01).
+      // 3D Sketch is the sketch gesture with no plane; the model-curve tools live in
+      // its strip (Jonathan, 2026-11-01).
       {...tool("solid-sketch", "Sketch", "sketch", "sketch"), variants: [
         tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
-        tool("solid-model-curves", "3D curves from model", "curve", "sketch-intersection-curve"),
       ]},
       // Distinct creation operations are peers, not variants of Extrude.
       tool("solid-extrude", "Extrude", "extrude", "feature-extrude"),

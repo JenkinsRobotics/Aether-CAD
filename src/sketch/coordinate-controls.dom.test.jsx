@@ -18,6 +18,6 @@ it('groups XY into the shared row, keeps placement functional and hides unrelate
   expect(parent.querySelector('[aria-label="Polygon sides"]').parentElement.hidden).toBe(true);
   expect(parent.querySelector('details').open).toBe(false);
   control.update('rectangle'); expect(parent.querySelector('.sketch-contour-actions').hidden).toBe(true);
-  control.update('line'); expect(parent.querySelector('.sketch-contour-actions').hidden).toBe(false);
+  control.update('line'); expect(parent.querySelector('.sketch-contour-actions').hidden).toBe(true); // no contour buttons for people (2026-11-01)
   control.update('inscribed-polygon'); expect(parent.querySelector('[aria-label="Polygon sides"]').parentElement.hidden).toBe(false);
 });

@@ -36,7 +36,9 @@ export function clickSketchControl(label) {
   const action = windowAction && document.querySelector(`.cad-sketch-window [data-feature-action="${windowAction}"]`);
   if (action) { action.click(); return; }
   const accessibleName = label;
-  const find = () => [...document.querySelectorAll('button')].find(b => (b.textContent === label || b.getAttribute('aria-label') === accessibleName) && !b.closest('[hidden]'));
+  // Typed placement and contour controls stay in the strip hidden from people (2026-11-01); the suite still drives them.
+  const automation = /^(Place point|New contour|Close contour)$/.test(label);
+  const find = () => [...document.querySelectorAll('button')].find(b => (b.textContent === label || b.getAttribute('aria-label') === accessibleName) && (automation || !b.closest('[hidden]')));
   let button = find();
   if (!button) {
     const editor = /modification|chamfer|offset|slot/.test(label) ? 'modify' : /contour|Place point|spline|radius|ellipse size/i.test(label) ? 'coordinates'

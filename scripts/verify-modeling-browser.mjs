@@ -90,16 +90,15 @@ const canvas = () => page.locator('svg[aria-label="2D sketch canvas"]');
 // click could miss. Drawing tools have no window since 2026-10-31; Escape ends them.
 const draw = async (tool, points) => {
   await ribbon(tool).click();
-  const win = page.locator('.cad-sketch-tool-strip');
-  await win.waitFor({ timeout: 30000 });
+  await page.waitForTimeout(300);
   for (const [x, y] of points) {
-    await win.getByLabel('X (mm)').fill(String(x));
-    await win.getByLabel('Y (mm)').fill(String(y));
-    await win.getByRole('button', { name: 'Place point' }).click();
+    // Clicks where the sketch puts that point on screen; grid snapping keeps whole millimetres.
+    const at = await page.evaluate(([px, py]) => window.__aetherSketchClientPoint?.(px, py), [x, y]);
+    assert.ok(at, `sketch point ${x},${y} is not on screen`);
+    await page.mouse.click(at[0], at[1]);
     await page.waitForTimeout(200);
   }
-  await page.keyboard.press('Escape');
-  await expect(win).toHaveCount(0, { timeout: 10000 });
+  await page.keyboard.press('Escape'); // back to Select; a drawing tool shows no strip to wait for
   log.sketch = (log.sketch ?? []).concat([await page.locator('body').innerText().then(t => t.match(/\d+ closed \/ \d+ open profiles/)?.[0] ?? '?')]);
 };
 const acceptSketch = async () => { const accept = page.locator('.cad-sketch-window [data-feature-action="accept"]'); await expect(accept).toBeEnabled({ timeout: 30000 }); await accept.click(); await expect(page.locator('.cad-sketch-window')).toHaveCount(0, { timeout: 60000 }); await page.waitForTimeout(500); };
@@ -351,6 +350,27 @@ try {
     await ribbon('Flat pattern DXF', 'sheet-export-flat-dxf').click();
     await page.waitForTimeout(1500);
     await tab('Solid').click().catch(() => { });
+  });
+  await step('sketch-3d', async () => {
+    // 3D Sketch is the Sketch button's variant: a strip over the viewport, points typed or clicked.
+    await page.getByRole('button', { name: 'Sketch variants' }).click();
+    await page.locator('.aui-tool-menu').getByText('3D Sketch', { exact: true }).click();
+    const strip = page.locator('.cad-sketch3d-strip');
+    await strip.waitFor({ timeout: 15000 });
+    for (const point of ['0 0 30', '40 0 30', '40 40 50']) {
+      await strip.getByLabel('Point x y z').fill(point);
+      await strip.getByRole('button', { name: 'Add', exact: true }).click();
+    }
+    await strip.getByRole('button', { name: 'Done' }).click();
+    await expect(featureRow(/^3D Sketch 1/)).toBeVisible({ timeout: 30000 });
+    await expect(strip).toHaveCount(0);
+    // Reopening the feature brings the strip back with its points.
+    // A row's context menu carries Edit…, as the panel-context gate drives it.
+    await featureRow(/^3D Sketch 1/).click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Edit…', exact: true }).click();
+    await strip.waitFor({ timeout: 15000 });
+    await expect(strip.getByRole('status')).toContainText('3 points');
+    await strip.getByRole('button', { name: 'Cancel' }).click();
   });
   await writeFile(join(evidence, 'log.json'), JSON.stringify({ steps, errors, log }, null, 1));
   const real = errors.filter(e => !/favicon|ResizeObserver/.test(e));

@@ -24,7 +24,7 @@ it('replaces sketch settings while a tool is open and restores them on Done', ()
   input.value = '12'; fields.append(input);
   try {
     editor.show('coordinates');
-    expect(settings.hidden).toBe(true);
+    expect(settings.hidden).toBe(false); // the sketch window stays up while drawing (2026-11-01)
     // Drawing tools get a strip inside the sketch, not a feature window.
     expect(root.querySelector('[aria-label="Sketch editor"]')).toBeNull();
     expect(root.querySelector('.cad-sketch-tool-window')).toBeNull();

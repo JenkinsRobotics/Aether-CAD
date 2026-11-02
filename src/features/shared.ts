@@ -118,24 +118,28 @@ export function bodyAndOperationTabs(
     creationMode.closest("label")?.remove(); creationMode.hidden = true;
     creationMode.setAttribute("form", form.id); form.append(creationMode);
   }
-  const ops = win.tabs(
-    ["New", "Add", "Remove", "Intersect"],
-    Math.max(0, operationValues.indexOf(operation.value)),
-  );
-  const opButtons = [...ops.children] as HTMLButtonElement[];
-  opButtons.forEach((button, index) => { if (index >= operationValues.length) planned(button); });
-  opButtons.forEach((tab, index) => {
-    if (index >= operationValues.length) return;
+  operationTabs(win, form, operation, operationValues, ["New", "Add", "Remove", "Intersect"]);
+}
+
+/** One tab row driving a hidden, form-associated operation select: the gallery's
+ *  Union/Subtract/Intersect or New/Add/Remove/Intersect row. Labels past the
+ *  values the feature supports show as planned. */
+export function operationTabs(win: FeatureWindow, form: HTMLFormElement, operation: Control, values: readonly string[], labels: string[]): HTMLElement {
+  const ops = win.tabs(labels, Math.max(0, values.indexOf(operation.value)));
+  const buttons = [...ops.children] as HTMLButtonElement[];
+  buttons.forEach((tab, index) => {
+    if (index >= values.length) { planned(tab); return; }
     tab.onclick = () => {
-      operation.value = operationValues[index];
+      operation.value = values[index];
       operation.dispatchEvent(new Event("change"));
-      opButtons.forEach((other, i) => other.classList.toggle("active", i === index));
+      buttons.forEach((other, i) => other.classList.toggle("active", i === index));
     };
   });
   operation.closest("label")?.remove();
   operation.setAttribute("form", form.id);
   operation.hidden = true;
   form.append(operation);
+  return ops;
 }
 
 /** The gallery's Entities box, backed by a real `<select>` of document features:

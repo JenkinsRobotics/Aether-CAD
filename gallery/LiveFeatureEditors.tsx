@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createRectanglePartDocument, type PartDocument } from '@aether/core/document';
-import { ToolIcon } from '@aether/ui';
 import { cadCommands, isCADCommandID, type CADCommandID } from '../src/cad-command-registry';
 import { cadRibbonWorkspaces, type CADToolDefinition } from '../src/tools';
 import { mountFeatureAuthoring } from '../src/feature-authoring';
+import { mountSketch3DWorkspace } from '../src/sketch3d-workspace';
+import { featureWindowStyle, setFeatureWindowStyle, type FeatureWindowStyle } from '../src/features/feature-window-style';
 
 /** The live CAD feature windows, opened by the same commands the ribbon runs,
- *  on a sample box Part. Nothing here re-describes a window: what CAD shows is
- *  what this page shows. Apply is a no-op; the sample document never changes. */
+ *  on a sample box Part, every one in its own card so the whole set reads at a
+ *  glance in either window design. Nothing here re-describes a window: what
+ *  CAD shows is what this page shows. Apply is a no-op; the sample never changes. */
 const sample: PartDocument = createRectanglePartDocument('Sample part', { widthMillimeters: 40, heightMillimeters: 30, depthMillimeters: 20 });
 let mounted = false;
 
@@ -30,48 +32,60 @@ function sections(registered: Readonly<Record<CADCommandID, { registered: boolea
   }).filter(section => section.entries.length);
 }
 
-function closeWindows() {
-  for (const win of document.querySelectorAll<HTMLElement>('.aui-feature-window'))
-    win.querySelector<HTMLButtonElement>('[data-feature-action="discard"]')?.click();
-  document.querySelectorAll('.aui-feature-window').forEach(win => win.remove());
+/** One card: the window modules anchor to `.cad-studio-viewport`, so the card's host
+ *  carries that class only while its own command runs, and the window lands in it. */
+function FeatureCard({ entry, style }: { entry: Entry; style: FeatureWindowStyle }) {
+  const host = useRef<HTMLDivElement>(null);
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    const element = host.current!;
+    for (const other of document.querySelectorAll('.cad-studio-viewport')) other.classList.remove('cad-studio-viewport');
+    element.classList.add('cad-studio-viewport');
+    cadCommands.execute(entry.command);
+    element.classList.remove('cad-studio-viewport');
+    // Exports and paste run straight away in the app; say so rather than show an empty card.
+    const timer = setTimeout(() => setNotice(element.querySelector('.aui-feature-window, .cad-sketch3d-strip') ? '' : `${entry.label} runs without a feature window.`), 1500);
+    return () => {
+      clearTimeout(timer);
+      element.querySelector<HTMLButtonElement>('[data-feature-action="discard"]')?.click();
+      for (const button of element.querySelectorAll<HTMLButtonElement>('.cad-sketch3d-strip button')) if (button.textContent === 'Cancel') button.click();
+      element.querySelectorAll('.aui-feature-window').forEach(win => win.remove());
+    };
+  }, [entry.command, style]);
+  return <section className="cad-feature-card" aria-label={`${entry.label} editor`}>
+    <header><h2>{entry.label}</h2></header>
+    <div className="cad-feature-host" ref={host} data-style={style}>{notice && <p className="cad-live-notice" role="status">{notice}</p>}</div>
+  </section>;
 }
 
 export function LiveFeatureEditors({ search }: { search: string }) {
-  const stage = useRef<HTMLDivElement>(null);
-  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [ready, setReady] = useState(false);
-  const [open, setOpen] = useState<string>();
+  const [style, setStyle] = useState<FeatureWindowStyle>(featureWindowStyle);
   const state = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot);
   useEffect(() => {
-    // feature-authoring anchors its windows to the CAD viewport element.
-    if (!mounted) { mountFeatureAuthoring(() => sample, async () => {}); mounted = true; }
+    if (!mounted) {
+      mountFeatureAuthoring(() => sample, async () => {});
+      // The 3D sketch strip needs its viewport picks; here they return nothing.
+      mountSketch3DWorkspace({ getDocument: () => sample, apply: async () => {}, pickPoint: () => null, showCurves: () => {}, selection: () => [] });
+      mounted = true;
+    }
     setReady(true);
-    return closeWindows;
   }, []);
   const list = useMemo(() => sections(state).map(section => ({ ...section,
     entries: section.entries.filter(entry => entry.label.toLowerCase().includes(search.trim().toLowerCase())) }))
     .filter(section => section.entries.length), [state, search]);
-  const [notice, setNotice] = useState('');
-  const show = (entry: Entry) => {
-    closeWindows(); setOpen(entry.id); setNotice(''); clearTimeout(pending.current);
-    cadCommands.execute(entry.command);
-    // Exports and paste run straight away in the app; say so rather than show an empty stage.
-    pending.current = setTimeout(() => { if (!stage.current?.querySelector('.aui-feature-window')) setNotice(`${entry.label} runs without a feature window.`); }, 1500);
-  };
-  useEffect(() => { if (ready && !open) { const first = list.flatMap(section => section.entries).find(entry => entry.command === 'feature-extrude'); if (first) setTimeout(() => show(first)); } }, [ready]); // after the commit: the window renders its header synchronously // eslint-disable-line react-hooks/exhaustive-deps
   const count = list.reduce((sum, section) => sum + section.entries.length, 0);
+  const choose = (next: FeatureWindowStyle) => { setFeatureWindowStyle(next); setStyle(next); };
   return <div className="cad-live-editors">
-    <nav className="cad-live-list" aria-label={`CAD feature windows · ${count}`}>
-      {list.map(section => <section key={section.id} aria-label={section.label}>
-        <h2>{section.label}</h2>
-        {section.entries.map(entry => <button key={entry.id} type="button" aria-pressed={open === entry.id} onClick={() => show(entry)}>
-          <ToolIcon name={entry.icon} />{entry.label}</button>)}
-      </section>)}
-      {!count && <p role="status">No feature windows match “{search}”.</p>}
+    <nav className="cad-live-styles" aria-label="Feature window design">
+      {(['compact', 'standard'] as const).map(option => <button key={option} type="button" aria-pressed={style === option} onClick={() => choose(option)}>
+        {option === 'compact' ? 'Compact' : 'Standard'}</button>)}
+      <span>{count} feature windows</span>
     </nav>
-    {/* The class is the one feature-authoring looks for, so windows open here exactly as in the app. */}
-    <div className="cad-studio-viewport cad-live-stage" ref={stage} aria-label="Feature window">
-      {notice && <p className="cad-live-notice" role="status">{notice}</p>}
-    </div>
+    {ready && list.map(section => <section key={section.id} className="cad-feature-section" aria-label={section.label}>
+      <h2>{section.label}</h2>
+      <div className="cad-feature-grid">{section.entries.map(entry => <FeatureCard key={entry.id} entry={entry} style={style} />)}</div>
+    </section>)}
+    {!count && <p role="status">No feature windows match “{search}”.</p>}
   </div>;
 }

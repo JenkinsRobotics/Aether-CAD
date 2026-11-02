@@ -13,42 +13,43 @@ function mount() {
   act(() => root.render(<FeatureGallery embedded />));
 }
 afterEach(() => { act(() => root?.unmount()); container?.remove(); });
-const tool = (label: string) => [...container.querySelectorAll<HTMLButtonElement>('.cad-live-list button')].find(button => button.textContent === label);
 
-test('lists the ribbon tools that open a feature window and opens the live one', async () => {
+const card = (label: string) => container.querySelector<HTMLElement>(`section[aria-label="${label} editor"]`);
+
+test('every ribbon feature opens its live window in its own card', async () => {
   mount();
+  await act(() => new Promise(resolve => setTimeout(resolve, 50)));
   // The list comes from the ribbon catalog and the commands CAD registers, not a gallery copy.
-  for (const label of ['Extrude', 'Revolve', 'Fillet', 'Shell']) expect(tool(label)).toBeTruthy();
-  await act(async () => tool('Revolve')!.click());
-  const windows = [...document.querySelectorAll('.aui-feature-window')];
-  expect(windows).toHaveLength(1);
-  expect(windows[0].closest('.cad-live-stage')).toBeTruthy();
-  expect(windows[0].textContent).toContain('Revolve');
-  expect(tool('Revolve')!.getAttribute('aria-pressed')).toBe('true');
+  for (const label of ['Extrude', 'Revolve', 'Fillet', 'Shell', 'Transform']) {
+    expect(card(label), label).toBeTruthy();
+    expect(card(label)!.querySelector('.aui-feature-window'), label).toBeTruthy();
+  }
+  expect(card('Revolve')!.querySelector('.aui-feature-window')!.textContent).toContain('Revolve');
+  expect(card('Transform')!.querySelector<HTMLSelectElement>('select[name="Transform type"]')?.value).toBe('translate');
 });
 
-test('search narrows the list and the viewport tab still shows the gizmo', () => {
+test('search narrows the cards and the viewport tab still shows the gizmo', async () => {
   mount();
   const search = container.querySelector<HTMLInputElement>('input[type="search"]')!;
   const filter = (value: string) => act(() => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, value);
     search.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  filter('fillet');
-  expect([...container.querySelectorAll('.cad-live-list button')].every(button => /fillet/i.test(button.textContent!))).toBe(true);
-  filter('unknown');
+  await filter('fillet');
+  expect([...container.querySelectorAll('.cad-feature-card h2')].every(h => /fillet/i.test(h.textContent!))).toBe(true);
+  await filter('unknown');
   expect(container.querySelector('[role="status"]')?.textContent).toContain('No feature windows');
   act(() => [...container.querySelectorAll('button')].find(button => button.textContent === 'Viewport tools')!.click());
   expect(container.textContent).toContain('Gizmo example');
 });
 
-test('Transform opens on translate', async () => {
+test('the design switch reopens every window in the other Aether UI design', async () => {
   mount();
-  await act(() => new Promise(resolve => setTimeout(resolve))); // the default Extrude opens first
-  for (const [label, mode] of [['Transform', 'translate']] as const) {
-    await act(async () => tool(label)!.click());
-    const win = document.querySelector('.aui-feature-window')!;
-    expect(win).toBeTruthy();
-    expect(win.querySelector<HTMLSelectElement>('select[name="Transform type"]')?.value).toBe(mode);
-  }
+  await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+  expect(card('Extrude')!.querySelector('.aui-feature-window--compact')).toBeTruthy();
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Standard')!.click());
+  await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+  expect(card('Extrude')!.querySelector('.aui-feature-window--standard')).toBeTruthy();
+  expect(card('Extrude')!.querySelectorAll('.aui-feature-window')).toHaveLength(1);
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Compact')!.click());
 });

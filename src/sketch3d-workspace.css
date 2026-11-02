@@ -1,0 +1,7 @@
+/* The 3D sketch strip: the 2D sketch's in-sketch strip, over the viewport, with no plane. */
+.cad-sketch3d-strip { position: absolute; left: 320px; right: 320px; top: 60px; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 4px 8px; border: 1px solid var(--aether-color-border); border-radius: 8px; background: color-mix(in srgb, var(--aether-color-bg-panel) 88%, transparent); pointer-events: auto; font-size: 12px; }
+.cad-sketch3d-strip > button { min-height: 24px; }
+.cad-sketch3d-strip > button[aria-pressed="true"] { background: var(--aether-color-bg-selected); color: var(--aether-color-text-on-selected); }
+.cad-sketch3d-strip > input { width: 110px; min-height: 24px; padding: 0 6px; border: 1px solid var(--aether-color-border); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+.cad-sketch3d-gap { width: 6px; border-left: 1px solid var(--aether-color-border); align-self: stretch; }
+.cad-sketch3d-status { flex: 1 1 160px; color: var(--aether-color-text-dim); }

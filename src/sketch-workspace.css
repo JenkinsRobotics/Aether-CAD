@@ -72,7 +72,9 @@ svg.cad-sketch-canvas .sketch-constraint-mark rect { fill:var(--aether-color-bg-
 svg.cad-sketch-canvas .sketch-constraint-mark text { fill:var(--aether-color-accent,#399cff); font-family:system-ui; font-weight:600; stroke:none; }
 svg.cad-sketch-canvas .sketch-inference-badge { fill:var(--aether-color-bg-panel,#fff); stroke:var(--aether-color-accent,#399cff); stroke-width:.35; vector-effect:non-scaling-stroke; }
 svg.cad-sketch-canvas .sketch-inference-glyph { fill:var(--aether-color-accent,#399cff); font-family:system-ui; font-weight:700; stroke:none; dominant-baseline:middle; }
-svg.cad-sketch-canvas .sketch-preview-dimension { fill:var(--aether-color-text,#edf6ff); stroke:var(--aether-color-bg-app,#111922); stroke-width:3px; paint-order:stroke; stroke-linejoin:round; vector-effect:non-scaling-stroke; font-family:system-ui; }
+svg.cad-sketch-canvas .sketch-preview-dimension { fill:var(--aether-color-text,#edf6ff); pointer-events:none; }
+svg.cad-sketch-canvas .sketch-preview-dimension-box { fill:var(--aether-color-bg-panel,#1b2029); stroke:var(--aether-color-text-dim,#8b93a1); stroke-width:1px; vector-effect:non-scaling-stroke; pointer-events:none; }
+.cad-sketch-workspace .cad-sketch-length-entry { position:fixed; z-index:30; width:72px; padding:2px 6px; border:1px solid var(--aether-color-text-dim,#8b93a1); border-radius:3px; background:var(--aether-color-bg-panel,#1b2029); color:var(--aether-color-text,#edf6ff); font:inherit; font-size:12px; }
 .sketch-constraints { border-top:1px solid var(--aether-color-border); margin-top:16px; padding-top:8px; }
 .sketch-constraints h3 { font-size:13px; }
 
