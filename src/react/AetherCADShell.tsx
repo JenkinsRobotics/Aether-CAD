@@ -550,6 +550,11 @@ export function AetherCADShell() {
             onAction={runRibbonAction}
             placement={ribbonPlacement}
             onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.cad-traditional-ribbon .aui-workspace-ribbon-overflow'))}
+            onPlacementChange={placement => {
+              // Docked and floating are whole workspaces: panels and tool bar move together.
+              cadPresentation.dispatch({ type: "select-layout", layout: placement === "docked" ? "docked" : "expanded" });
+              cadPresentation.dispatch({ type: "select-toolbar-mode", mode: placement === "docked" ? "traditional" : "floating" });
+            }}
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}
