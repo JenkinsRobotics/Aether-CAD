@@ -80,7 +80,7 @@ export const revolveEditor: FeatureEditor = {
       const ordered = [...all.filter((line) => /Construction/.test(line.label)), ...all.filter((line) => !/Construction/.test(line.label))];
       axis.replaceChildren();
       const add = (value: string, text: string) => { const option = document.createElement("option"); option.value = value; option.textContent = text; axis.append(option); };
-      add("", "Click a sketch line or an edge");
+      add("", "");
       for (const line of ordered) add(lineKey(line), line.label.replace(/^.*? · /, ""));
       add("edge", "Picked solid edge");
       for (const name of principalAxes) add(name, `${name} axis`);

@@ -149,6 +149,9 @@ export function entityChips(win: FeatureWindow, caption: string, source: Control
   const box = win.entitiesBox(caption);
   source.closest("label")?.remove();
   source.setAttribute("form", form.id);
+  // The list stays in the DOM for the suite and agents but is never shown, and an empty
+  // box shows nothing but its caption (Jonathan, 2026-11-02): picks in the viewport fill it.
+  source.hidden = true;
   box.element.append(source);
   const render = () => {
     const selected = (source as HTMLSelectElement).selectedOptions?.[0];
@@ -157,7 +160,6 @@ export function entityChips(win: FeatureWindow, caption: string, source: Control
         ? [{ label: source.dataset.selectionLabel || selected.textContent || source.value, onRemove: () => { source.value = ""; source.dispatchEvent(new Event("change")); } }]
         : [],
     );
-    source.style.display = source.value ? "none" : "";
   };
   source.addEventListener("change", render);
   source.addEventListener("aether-selection-label", render);
