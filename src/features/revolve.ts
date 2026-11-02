@@ -51,7 +51,8 @@ export const revolveEditor: FeatureEditor = {
           (doc.features.some((f) => ["extrude", "revolve"].includes(f.type)) ? "add" : "new"),
         [...operationValues],
       ),
-      axis: field("Revolve axis", axisValue, [axisValue, "edge", ...principalAxes]),
+      // The box reads "Revolve axis"; the list inside it has its own accessible name for the suite and agents.
+      axis: field("Revolve axis choice", axisValue, [axisValue, "edge", ...principalAxes]),
       axisEdge: field("Axis edge", JSON.stringify(saved?.kind === "solid-edge" ? saved : "")),
       endType: field("End type", "blind", ["blind"]),
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 360)),
@@ -68,29 +69,47 @@ export const revolveEditor: FeatureEditor = {
     entityChips(win, "Faces and sketch regions to revolve", controls.source, form);
     layoutRegion(context, controls.source, controls.region);
 
-    // Revolve axis: the sketch's lines, a picked edge, or a principal axis.
+    // Revolve axis: a selection box like the regions box (Jonathan, 2026-11-01), filled by
+    // clicking a line of the sketch or a solid edge in the viewport; its list (the sketch's
+    // lines, construction first, then the principal axes) shows only while it is empty.
     const axis = controls.axis as HTMLSelectElement;
-    axis.closest("label")?.remove(); axis.setAttribute("form", form.id);
+    const lines = () => sketchDirectionLines(doc, feature?.id).filter((line) => line.sourceFeatureId === controls.source.value);
     const rebuildAxis = () => {
       const current = axis.value;
-      const lines = sketchDirectionLines(doc, feature?.id).filter((line) => line.sourceFeatureId === controls.source.value);
-      const ordered = [...lines.filter((line) => /Construction/.test(line.label)), ...lines.filter((line) => !/Construction/.test(line.label))];
+      const all = lines();
+      const ordered = [...all.filter((line) => /Construction/.test(line.label)), ...all.filter((line) => !/Construction/.test(line.label))];
       axis.replaceChildren();
       const add = (value: string, text: string) => { const option = document.createElement("option"); option.value = value; option.textContent = text; axis.append(option); };
+      add("", "Click a sketch line or an edge");
       for (const line of ordered) add(lineKey(line), line.label.replace(/^.*? · /, ""));
       add("edge", "Picked solid edge");
       for (const name of principalAxes) add(name, `${name} axis`);
       const keys = [...axis.options].map((option) => option.value);
-      axis.value = keys.includes(current) && current ? current : (ordered[0] ? lineKey(ordered[0]) : "Z");
-      syncAxis();
+      axis.value = keys.includes(current) && current ? current : (ordered[0] ? lineKey(ordered[0]) : "");
+      axis.dataset.selectionLabel = axis.value === "edge" ? edgeLabel() : (axis.selectedOptions[0]?.textContent ?? "");
+      axis.dispatchEvent(new Event("change"));
     };
-    const axisRow = win.row("Revolve axis", axis);
+    const edgeLabel = () => { try { return JSON.parse(controls.axisEdge.value || '""')?.label || "Solid edge"; } catch { return "Solid edge"; } };
+    entityChips(win, "Revolve axis", axis, form);
     const edgePicker = transformEdgePicker(context, controls.axisEdge);
-    const syncAxis = () => { edgePicker.setEnabled(axis.value === "edge"); };
-    axis.addEventListener("change", syncAxis);
+    edgePicker.setEnabled(true); edgePicker.element.style.display = "none";
+    controls.axisEdge.addEventListener("change", () => {
+      if (!controls.axisEdge.value) return;
+      axis.value = "edge"; axis.dataset.selectionLabel = edgeLabel(); axis.dispatchEvent(new Event("change"));
+    });
+    const curvePicked = (event: Event) => {
+      if (!win.panel.isConnected) return;
+      const picked = (event as CustomEvent).detail as { sourceFeatureId: string; contourId: string; segmentId: string };
+      const line = lines().find((item) => item.sourceFeatureId === picked.sourceFeatureId && item.contourId === picked.contourId && item.segmentId === picked.segmentId);
+      if (!line) return;
+      axis.value = lineKey(line); axis.dataset.selectionLabel = line.label.replace(/^.*? · /, ""); axis.dispatchEvent(new Event("change"));
+    };
+    window.addEventListener("aether-sketch-curve-picked", curvePicked);
+    const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); window.removeEventListener("aether-sketch-curve-picked", curvePicked); });
+    observer.observe(document.body, { childList: true, subtree: true });
+    axis.addEventListener("change", () => { if (axis.value !== "edge") axis.dataset.selectionLabel = axis.selectedOptions[0]?.textContent ?? ""; });
     controls.source.addEventListener("change", rebuildAxis);
     rebuildAxis();
-    axisRow.hidden = false;
 
     const full = document.createElement("input");
     full.type = "checkbox";

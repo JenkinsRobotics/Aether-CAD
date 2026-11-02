@@ -216,7 +216,7 @@ it("serializes revolve with axis and angle", async () => {
   seedProfile();
   const feature = await authored("revolve", {
     Sketch: "profile-1",
-    "Revolve axis": "Y",
+    "Revolve axis choice": "Y",
     "Angle": "180",
   });
   expect(feature).toMatchObject({

@@ -49,3 +49,12 @@ export function captureDistanceSides(drawing: SketchDrawing): void {
     if (value !== undefined) constraint.distanceSide = value < 0 ? -1 : 1;
   }
 }
+
+/** The side a driving line distance currently measures on (+1 right of the directed line,
+ * -1 left), or undefined when the dimension involves no line. A typed negative value flips it. */
+export function distanceSideOf(drawing: SketchDrawing, constraint: DrawingConstraint): 1 | -1 | undefined {
+  const value = spacing(drawing, constraint);
+  if (value === undefined) return undefined;
+  return constraint.distanceSide ?? (value < 0 ? -1 : 1);
+}
+

@@ -11,6 +11,8 @@ export function styledLines(positions: Float32Array | number[], color: number, w
   // Dashes are measured along the line in world units (mm), so construction lines keep their pattern at any zoom.
   const material = new Line2NodeMaterial({ color, linewidth: width, worldUnits: false, transparent: true, opacity, depthWrite: false, toneMapped: false, alphaToCoverage: true, ...(dash ? { dashed: true, dashSize: dash.dashSize, gapSize: dash.gapSize } : {}) });
   const lines = new LineSegments2(geometry, material);
+  // Dashes are measured along each segment: without the distances the pattern collapses to solid.
+  if (dash) lines.computeLineDistances();
   // Opaque CAD faces must fill depth before non-depth-writing edge strokes.
   // Otherwise opaque (100% / hidden-line) strokes can sort before the faces
   // and be painted over, leaving only the outer silhouette.

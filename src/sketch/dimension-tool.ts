@@ -1,4 +1,4 @@
-import { dimensionValue, editDrawingDimension, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
+import { dimensionValue, distanceSideOf, editDrawingDimension, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
 import { cadCommands } from '../cad-command-registry';
 import { pickSelectableSketchEntity } from './projected-picking';
 import { bindDimensionInput } from './dimension-input';
@@ -80,13 +80,17 @@ export function mountDimensionTool(o: Options) {
         if (!Number.isFinite(typed) || typed === 0) throw Error('Enter a non-zero dimension.');
         // A negative value on a directional dimension flips its direction, as in Onshape
         // (Jonathan, 2026-11-01); undirected dimensions stay positive.
-        const directional = ['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b;
+        let drawing = o.drawing();
+        // A line distance flips to the other side of the line; a signed H/V distance or
+        // angle flips its direction.
+        const side = constraint.kind === 'distance' ? distanceSideOf(drawing, { ...constraint, reference: false }) : undefined;
+        const directional = (['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b) || side !== undefined;
         if (typed < 0 && !directional) throw Error('Enter a positive dimension.');
         const value = Math.abs(typed);
         const flipped = typed < 0;
-        let drawing = o.drawing();
-        if (flipped && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? { ...c, a: c.b!, b: c.a } : c) };
-        const placed = flipped && !existing ? { ...candidate, a: candidate.b!, b: candidate.a } : candidate;
+        const flip = (c: DrawingConstraint): DrawingConstraint => side !== undefined ? { ...c, distanceSide: (-(c.distanceSide ?? side)) as 1 | -1 } : { ...c, a: c.b!, b: c.a };
+        if (flipped && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? flip(c) : c) };
+        const placed = flipped && !existing ? flip(candidate) : candidate;
         const next = existing ? editDrawingDimension(drawing, existing.id, value)
           : solveDrawingConstraints({ ...drawing, constraints: [...(drawing.constraints ?? []), { ...placed, value }] });
         o.commit(next, constraint.id, p); reset();

@@ -119,19 +119,37 @@ export function sketchProfilePolylines(profile: unknown, options: { includeConst
 /** One stroke per contour, typed the way a sketch shows it: solid geometry or
  * construction, closed or open, with the vertices a drawing dots (Jonathan, 2026-11-01:
  * the finished sketch must render exactly what it holds). */
-export interface SketchStroke { polyline: SketchPoint[]; construction: boolean; closed: boolean; vertices: SketchPoint[] }
+export interface SketchStroke {
+  polyline: SketchPoint[]; construction: boolean; closed: boolean; vertices: SketchPoint[];
+  contourId?: string;
+  /** For each polyline span i (points[i] → points[i+1]) the id of the contour segment it samples, so a viewport pick maps back to the sketch line. */
+  segmentIds: (string | undefined)[];
+}
 export function sketchProfileStrokes(profile: unknown, options: { arcSteps?: number } = {}): SketchStroke[] {
   if (!profile || typeof profile !== "object") return [];
   const shape = profile as { type?: string };
   if (shape.type === "drawing") {
-    return (profile as SketchDrawing).contours.map((contour) => ({
-      polyline: sketchContourPolyline(contour, options.arcSteps),
-      construction: Boolean(contour.construction),
-      closed: contourClosed(contour),
-      vertices: contour.type === "circle" ? [contour.center] : [contour.start, ...contour.segments.map((segment) => segment.end)],
-    }));
+    return (profile as SketchDrawing).contours.map((contour) => {
+      const polyline = sketchContourPolyline(contour, options.arcSteps);
+      const segmentIds: (string | undefined)[] = [];
+      if (contour.type === "path") {
+        // Re-sample per segment to know how many spans each one contributed.
+        for (const [index, segment] of contour.segments.entries()) {
+          const spans = segment.type === "line" ? 1 : sketchContourPolyline({ type: "path", start: index === 0 ? contour.start : contour.segments[index - 1].end, segments: [segment] } as SketchContour, options.arcSteps).length - 1;
+          for (let i = 0; i < spans; i++) segmentIds.push(segment.id);
+        }
+      } else segmentIds.push(...new Array(Math.max(0, polyline.length - 1)).fill(undefined));
+      return {
+        polyline,
+        construction: Boolean(contour.construction),
+        closed: contourClosed(contour),
+        vertices: contour.type === "circle" ? [contour.center] : [contour.start, ...contour.segments.map((segment) => segment.end)],
+        contourId: contour.id,
+        segmentIds,
+      };
+    });
   }
   const polylines = sketchProfilePolylines(profile);
-  return polylines.map((polyline) => ({ polyline, construction: false, closed: true, vertices: shape.type === "polygon" ? polyline.slice(0, -1) : [] }));
+  return polylines.map((polyline) => ({ polyline, construction: false, closed: true, vertices: shape.type === "polygon" ? polyline.slice(0, -1) : [], segmentIds: new Array(Math.max(0, polyline.length - 1)).fill(undefined) }));
 }
 

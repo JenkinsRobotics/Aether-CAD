@@ -156,10 +156,15 @@ const presentFeatureWindow = (
     const doc = structuredClone(source);
     const feature = existing as any;
     const form = document.createElement("form");
+    // The window's title is the feature's name (Jonathan, 2026-11-02): "Revolve 8" from the
+    // start, renamed by double-clicking the title; no Name row.
+    const defaultName = type === "import-cad" ? (feature?.name ?? "Edit CAD import") : feature?.name ??
+        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1);
     const win = openCADFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
       className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
-      title: launch.title ?? (type === "offset-face" ? feature?.name ?? "Move faces" : type === "import-cad" ? "Edit CAD import" : type === "face-extrude" ? (feature?.name ?? "Push/Pull") : type === "extrude" ? feature?.name ?? `Extrude ${doc.features.length + 1}` : (existing ? "Edit " : "Add ") + type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")),
+      title: defaultName,
+      onTitleChange: (value) => { name.value = value; name.dispatchEvent(new Event("input")); },
       onAccept: () => form.requestSubmit(),
       onDiscard: () => win.close(),
     });
@@ -216,12 +221,8 @@ const presentFeatureWindow = (
       const kind = field(family.label, Object.entries(family.kinds).find(([, t]) => t === type)![0], Object.keys(family.kinds));
       kind.addEventListener("change", () => { win.close(); show(family.kinds[kind.value], undefined, launch); });
     }
-    const name = field(
-      "Name",
-      feature?.name ??
-        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1),
-    );
-    if (type === "extrude") { name.closest("label")?.remove(); name.hidden = true; form.append(name); }
+    const name = field("Name", defaultName);
+    name.closest("label")?.remove(); name.hidden = true; form.append(name);
     const before = existing
       ? doc.features.slice(
           0,

@@ -1217,6 +1217,8 @@ configureEditHistory({
   changed: () => updateLists(false),
   error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
 });
+// Gates read the rendered finished sketch through this projection (verify-sketch-display-browser.mjs).
+(window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketchId: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(sketchId, [x, y]);
 configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), warm: doc => worker.evaluatePart(doc) });
 worker.ready
   .then(async () => {

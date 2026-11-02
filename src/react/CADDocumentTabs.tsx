@@ -46,7 +46,7 @@ const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
  */
 
 /** `variant="browser"` draws the same tabs, folders and controls as the left Files panel. */
-export function CADDocumentTabs({ connection, placement = "bottom", variant = "tray" }: { connection: DocumentConnection; placement?: "bottom" | "header"; variant?: "tray" | "browser" }) {
+export function CADDocumentTabs({ connection, placement = "bottom", variant = "tray", docked = false }: { connection: DocumentConnection; placement?: "bottom" | "header"; variant?: "tray" | "browser"; docked?: boolean }) {
   const [revisions,setRevisions]=useState<Record<string,{label:string;title:string}>>({});
   const [tabAction,setTabAction]=useState<{target:CADTabTarget;action:CADTabAction}|null>(null);
   const [saveStatus, setSaveStatus] = useState('');
@@ -305,7 +305,7 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
             onManage={project ? controls.onManage : undefined}
             tabs={designTabs.map(tab=>({...tab,thumbnail:thumbnails[tab.id]}))} />
         </CADFilesPanel>
-      : <CADTabStrip {...controls} leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />} placement={placement} />}
+      : <CADTabStrip {...controls} leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />} placement={placement} docked={docked} />}
     {managing && <CADFileManagerWindow tabs={tabs} project={project ? {name:projectName,linkedIds:project.parts.filter(part=>part.source?.kind==='linked').map(part=>part.id)} : null} standaloneTabs={project ? openFiles.map(file=>({id:file.id,label:file.name,detail:file.kind==='drawing'?'Drawing':file.kind==='assembly'?'Assembly':'Part Studio',icon:file.kind==='drawing'?drawingIcon:file.kind==='assembly'?assemblyIcon:partIcon,onSelect:()=>void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`)})) : []} connection={connection} onClose={() => setManaging(false)} />}
     {organizing && <CADTabFolders tabs={tabs} folders={folders} onChange={updateFolders} onClose={()=>setOrganizing(false)}/>}
     {tabAction&&<CADTabActionDialog target={tabAction.target} action={tabAction.action} flush={connection.flush} onClose={()=>setTabAction(null)} onApplied={actionApplied}/>}

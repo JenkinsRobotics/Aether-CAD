@@ -549,7 +549,7 @@ export function AetherCADShell() {
           />}
           leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
           rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}
-          bottom={<>{suite || drawingMode ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} /></div></>}
+          bottom={<>{suite || drawingMode ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} docked={presentation.workspaceLayout === "docked"} /></div></>}
         >
           <div className="cad-studio-viewport" aria-hidden={presentation.workspaceMode === "drawing"} inert={presentation.workspaceMode === "drawing"}>
             <ViewportSurface presentation={presentation} />

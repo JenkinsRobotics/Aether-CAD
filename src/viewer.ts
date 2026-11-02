@@ -59,7 +59,7 @@ import { constructionPlaneFrame, rollbackPosition } from "@aether/core/document"
 import type { PartDocument as PlaneDocument } from "@aether/core/document";
 import * as THREE from "three/webgpu";
 /** A finished sketch's contour as the sketch shows it: solid or construction, closed (filled) or open, with its vertices. */
-type SketchStrokeInput = { polyline: readonly (readonly [number, number])[]; construction: boolean; closed: boolean; vertices: readonly (readonly [number, number])[] };
+type SketchStrokeInput = { polyline: readonly (readonly [number, number])[]; construction: boolean; closed: boolean; vertices: readonly (readonly [number, number])[]; contourId?: string; segmentIds?: readonly (string | undefined)[] };
 // The picking arithmetic lives in ./viewport/picking-math, where it can be
 // tested without a renderer.
 import { applySurfaceAppearance } from "./viewport/surface-appearance";
@@ -1618,12 +1618,15 @@ export class MateViewport {
         const lines = styledLines(segments, stroke, item.construction ? Math.max(1, width - 0.6) : width, 1, item.construction ? { dashSize: 3, gapSize: 2 } : undefined);
         lines.userData.sketchId = sketch.id;
         lines.userData.stroke = stroke;
+        lines.userData.contourId = item.contourId;
+        lines.userData.segmentIds = item.segmentIds ?? [];
+        lines.userData.construction = item.construction;
         this.sketchCurveGroup.add(lines);
         if (item.closed && !item.construction && item.polyline.length >= 3) {
           const shape = new THREE.Shape(item.polyline.map(([px, py]) => new THREE.Vector2(px, py)));
           const geometry = new THREE.ShapeGeometry(shape);
           geometry.applyMatrix4(new THREE.Matrix4().makeBasis(xDir, yDir, normal).setPosition(origin.clone().add(lift.clone().multiplyScalar(0.5))));
-          const fill = new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial({ color: stroke, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+          const fill = new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial({ color: stroke, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
           fill.userData.sketchId = sketch.id; fill.userData.fill = true;
           this.sketchCurveGroup.add(fill);
         }
@@ -1652,7 +1655,7 @@ export class MateViewport {
       if (!material?.color) continue;
       const selected = this.highlightedSketchIDs.has(child.userData.sketchId);
       material.color.setHex(selected ? 0xffad1f : child.userData.stroke ?? material.color.getHex());
-      if (child.userData.fill) material.opacity = selected ? 0.2 : 0.12;
+      if (child.userData.fill) material.opacity = selected ? 0.28 : 0.18;
     }
   }
 
@@ -1941,10 +1944,20 @@ export class MateViewport {
 
   sketchClientFromPoint(point: [number, number]): [number, number] | null {
     const s = this.sketchSurface; if (!s) return null;
-    const world = s.origin.clone().addScaledVector(s.xDir, point[0]).addScaledVector(s.yDir, point[1]);
-    const projected = world.project(this.camera); if (projected.z < -1 || projected.z > 1) return null;
+    return this.clientFromWorld(s.origin.clone().addScaledVector(s.xDir, point[0]).addScaledVector(s.yDir, point[1]));
+  }
+  /** Client pixel of a world point, or null when it is outside the view. */
+  clientFromWorld(world: THREE.Vector3): [number, number] | null {
+    const projected = world.clone().project(this.camera); if (projected.z < -1 || projected.z > 1) return null;
     const rect = this.renderer.domElement.getBoundingClientRect();
     return [rect.left + (projected.x + 1) * rect.width / 2, rect.top + (1 - projected.y) * rect.height / 2];
+  }
+  /** Client pixel of a point (mm) on a finished sketch's plane; gates read the rendered sketch with it. */
+  clientFromFinishedSketchPoint(sketchId: string, point: [number, number]): [number, number] | null {
+    const sketch = this.lastSketchCurves.find((item) => item.id === sketchId); if (!sketch) return null;
+    const origin = new THREE.Vector3(...sketch.frame.originMillimeters), xDir = new THREE.Vector3(...sketch.frame.xDirection).normalize();
+    const normal = new THREE.Vector3(...sketch.frame.normal).normalize(), yDir = new THREE.Vector3().crossVectors(normal, xDir).normalize();
+    return this.clientFromWorld(origin.clone().addScaledVector(xDir, point[0]).addScaledVector(yDir, point[1]));
   }
 
   updateSketchSurfaceBounds(bounds: { x: number; y: number; width: number; height: number }): void {
@@ -2307,9 +2320,25 @@ export class MateViewport {
     };
   }
 
+  /** A click on a finished sketch's line: tells feature windows which sketch segment was picked
+   *  (Revolve axis, directions), the way region picks do. */
+  private pickSketchCurve(): boolean {
+    const previous = this.raycaster.params.Line2?.threshold;
+    (this.raycaster.params as { Line2?: { threshold: number } }).Line2 = { threshold: 6 };
+    const hits = this.raycaster.intersectObjects(this.sketchCurveGroup.children.filter((child) => child.userData.segmentIds), false);
+    (this.raycaster.params as { Line2?: { threshold: number } }).Line2 = { threshold: previous ?? 1 };
+    const hit = hits[0];
+    if (!hit) return false;
+    const data = hit.object.userData as { sketchId: string; contourId?: string; segmentIds: (string | undefined)[]; construction?: boolean };
+    const segmentId = data.segmentIds[hit.faceIndex ?? hit.index ?? 0];
+    if (!segmentId || !data.contourId) return false;
+    window.dispatchEvent(new CustomEvent("aether-sketch-curve-picked", { detail: { sourceFeatureId: data.sketchId, contourId: data.contourId, segmentId, construction: Boolean(data.construction) } }));
+    return true;
+  }
   private commitSelectionClick(event: PointerEvent): void {
     this.updatePointer(event);
     if (this.regionPicker.pick(this.raycaster)) return;
+    if (this.featurePreview.active && this.pickSketchCurve()) return;
     if (this.featurePreview.active && !this.canPickSourceGeometry()) return;
     if(this.historyEditing){
       if(!['face','edge','vertex'].includes(cadSelection.snapshot().filter)&&!this.sketchPlaneSelection&&!this.canPickSourceGeometry())return;

@@ -110,6 +110,15 @@ it('a negative value flips a directional dimension instead of being refused', as
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'horizontal-distance', value: 30 }]);
   expect(doc.features[0].profile.contours[0].center[0]).toBeCloseTo(30);
 });
+it('a negative value on a point-to-line distance moves the point to the other side of the line', async () => {
+  doc.features[0].profile.contours = [{ type: 'path', start: [0, 0], segments: [{ type: 'line', end: [40, 0] }] }, { type: 'circle', center: [20, 10], radius: 2 }];
+  start(); key(); pick(20, 0); pick(20, 10); pick(30, 5);
+  submit('-10');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'distance', value: 10 }]);
+  // Both entities are free, so the solver shares the move; the circle ends 10 below the line instead of 10 above it.
+  const profile = doc.features[0].profile; expect(profile.contours[1].center[1] - profile.contours[0].start[1]).toBeCloseTo(-10);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }
