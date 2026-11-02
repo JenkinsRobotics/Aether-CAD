@@ -147,6 +147,8 @@ export function operationTabs(win: FeatureWindow, form: HTMLFormElement, operati
  *  select so another can be picked. */
 export function entityChips(win: FeatureWindow, caption: string, source: Control, form: HTMLFormElement) {
   const box = win.entitiesBox(caption);
+  // The box and its hidden list must not share one accessible name.
+  box.element.setAttribute("aria-label", `${caption} selection`);
   source.closest("label")?.remove();
   source.setAttribute("form", form.id);
   // The list stays in the DOM for the suite and agents but is never shown, and an empty
