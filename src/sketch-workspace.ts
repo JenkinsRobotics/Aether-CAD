@@ -1063,8 +1063,9 @@ export function openSketchWorkspace(
       : (bounds.width * 8) / Math.max(svg.getBoundingClientRect().width, 800);
     // Points (origin, endpoints, centres) catch from 12 screen pixels in every direction:
     // a plane seen at an angle is foreshortened, so the longest axis sets the radius.
-    const pointTolerance = Math.max(tolerance, ...(surface ? [[12, 0], [-12, 0], [0, 12], [0, -12]].map(([dx, dy]) => {
-      const q = surface.toSketch(e.clientX + dx, e.clientY + dy);
+    const view = surface;
+    const pointTolerance = Math.max(tolerance, ...(view ? [[12, 0], [-12, 0], [0, 12], [0, -12]].map(([dx, dy]) => {
+      const q = view.toSketch(e.clientX + dx, e.clientY + dy);
       return q ? Math.hypot(q[0] - raw[0], q[1] - raw[1]) : 0;
     }) : []));
     const snapped = geometrySnap
