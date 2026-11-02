@@ -1,32 +1,28 @@
 import * as THREE from "three/webgpu";
-import { vec3 } from "three/tsl";
 
-/** Flat world-origin dot, sized in screen pixels so zoom never turns it into a ball. */
-export function createOriginMarker(): THREE.Sprite {
-  const size = 16;
-  const pixels = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const index = (y * size + x) * 4;
-      pixels.set([255, 255, 255, Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) <= size / 2 ? 255 : 0], index);
-    }
-  }
-  const texture = new THREE.DataTexture(pixels, size, size);
-  texture.needsUpdate = true;
-  // WebGPU point primitives are limited to one pixel. A point sprite honors
-  // the pixel size and supplies UVs for the round mask.
-  const marker = new THREE.Sprite(new THREE.PointsNodeMaterial({
-    positionNode: vec3(0),
-    color: 0x454b53,
-    size: 5,
-    sizeAttenuation: false,
-    map: texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
+/** The world-origin dot as geometry, not a masked point sprite (Jonathan, 2026-11-01: only
+ *  inserted images are bitmaps). It faces the camera and keeps a fixed size in screen pixels. */
+const PIXELS = 5;
+export function createOriginMarker(): THREE.Mesh {
+  const marker = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), new THREE.MeshBasicMaterial({
+    color: 0x454b53, depthTest: false, depthWrite: false, toneMapped: false,
   }));
   marker.name = "Origin";
   marker.renderOrder = 25;
   marker.visible = false;
   return marker;
+}
+
+/** Per frame: face the camera and scale to PIXELS on screen at the marker's depth. */
+export function updateOriginMarker(marker: THREE.Object3D, camera: THREE.Camera, viewportHeightPx: number): void {
+  if (!marker.visible || !viewportHeightPx) return;
+  marker.quaternion.copy(camera.quaternion);
+  let worldPerPixel: number;
+  if (camera instanceof THREE.PerspectiveCamera) {
+    const distance = marker.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position);
+    worldPerPixel = (2 * distance * Math.tan((camera.fov * Math.PI) / 360)) / viewportHeightPx;
+  } else if (camera instanceof THREE.OrthographicCamera) {
+    worldPerPixel = (camera.top - camera.bottom) / camera.zoom / viewportHeightPx;
+  } else return;
+  marker.scale.setScalar(PIXELS * worldPerPixel);
 }

@@ -27,6 +27,8 @@ export interface PreviewState {
   activePath: number;
   pending: SketchPoint[];
   bounds: { width: number };
+  /** Drawing units per ~1080 screen px: sizes cursor marks on screen, not in millimetres. */
+  screenWidth?: number;
   snapLabel: string;
   sides: number;
   clockwise?: boolean;
@@ -53,6 +55,7 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
     sides,
     effectivePoint,
   } = state;
+  const ui = state.screenWidth ?? bounds.width;
   const ns = "http://www.w3.org/2000/svg";
   const el = (tag: string, attrs: Record<string, string | number>) => {
     const node = document.createElementNS(ns, tag);
@@ -122,7 +125,7 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
     }
     return;
   }
-  if (cursor) renderSnapFeedback(svg, effectivePoint(cursor), snapLabel, bounds.width);
+  if (cursor) renderSnapFeedback(svg, effectivePoint(cursor), snapLabel, ui);
   if (tool === "fit-spline") {
     const closing =
       pending.length >= 3 &&
@@ -309,12 +312,12 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
   add("circle", {
     cx: p[0],
     cy: -p[1],
-    r: bounds.width / 240,
+    r: ui / 240,
     class: "sketch-preview-point",
   });
   // The value sits in a box beside the cursor (the reference's value box), not a cloud.
-  const fontSize = bounds.width / 85, pad = fontSize * 0.45;
-  const bx = p[0] + bounds.width / 80, by = -p[1] - bounds.width / 80;
+  const fontSize = ui / 85, pad = fontSize * 0.45;
+  const bx = p[0] + ui / 80, by = -p[1] - ui / 80;
   add("rect", { x: bx - pad, y: by - fontSize, width: label.length * fontSize * 0.62 + pad * 2, height: fontSize * 1.5, rx: fontSize * 0.2, class: "sketch-preview-dimension-box" });
   const text = add("text", { x: bx, y: by, "font-size": fontSize, class: "sketch-preview-dimension" });
   text.textContent = label;

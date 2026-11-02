@@ -34,7 +34,7 @@ import {changeCameraProjection, cameraAspect, setOrthographicSpan, resizeModelin
 import { CameraRotationMotion } from "./viewport/camera-rotation";
 import { OrientationPreviewMotion, visiblePreviewBounds } from "./viewport/orientation-preview";
 import { bindSketchCameraInput, isSketchCameraGesture } from "./viewport/sketch-surface-input";
-import { createOriginMarker } from "./viewport/origin-marker";
+import { createOriginMarker, updateOriginMarker } from "./viewport/origin-marker";
 import type { ImportedModelData } from "./domain";
 import { FeaturePreviewLayer } from "./modeling/feature-preview-layer";
 import { RegionPicker } from "./modeling/region-picker";
@@ -335,7 +335,7 @@ export class MateViewport {
     this.renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true,
       ...viewportRendererOptions(navigator.userAgent, navigator.vendor) });
     this.output = new TransparentViewportOutput(this.renderer, this.scene, this.camera);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 4));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.shadowMap.enabled = true;
     this.renderer.setAnimationLoop(() => this.render());
@@ -2016,6 +2016,7 @@ export class MateViewport {
     this.orientationMotion.update(this.camera, this.controls.target, started);
     this.cameraRotation.update(this.camera, this.controls.target, started);
     this.controls.update();
+    updateOriginMarker(this.referenceObjects.get("origin")!, this.camera, this.container.clientHeight);
     this.stage.beforeRender(this.camera, this.controls.target, [this.modelRoot, this.featurePreview.group, this.historyPreview.group, this.orientationBox?.group]);
     this.output.render(this.camera);
     this.anchorOverlay.render(point => this.projectScreenPoint(point));

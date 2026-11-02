@@ -1009,3 +1009,7 @@
    notices over the viewport and no red outline (Jonathan, 2026-11-01). */
 body > .aui-feature-notices { display: none; }
 .shapr-shell .aui-feature-window.invalid { border-color: var(--aether-color-border); }
+
+/* Tree rows carry no "…" button: right-click opens the same menu, and nothing appears on
+   hover to shove the pinned show/suppress icons sideways (Jonathan, 2026-11-01). */
+.shapr-shell .aui-tree-action[aria-label^="Options for "] { display: none; }

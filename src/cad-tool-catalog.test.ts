@@ -120,9 +120,12 @@ describe("CAD tool catalog", () => {
   });
 });
 
-it("exposes spline point insertion in the spline dropdown", () => {
-  const spline = cadRibbonWorkspace("sketch").groups.flatMap(g => g.tools).find(t => t.id === "sketch-spline");
-  expect(spline?.variants?.some(v => v.action === "sketch-insert-spline-point" && v.label === "Insert spline point")).toBe(true);
+it("keeps Spline to its constructions and puts spline point insertion under Modify", () => {
+  const groups = cadRibbonWorkspace("sketch").groups;
+  const spline = groups.flatMap(g => g.tools).find(t => t.id === "sketch-spline");
+  expect(spline?.action).toBe("sketch-fit-spline");
+  expect(spline?.variants?.map(v => v.label)).toEqual(["Control point spline", "Conic"]);
+  expect(groups.find(g => g.id === "sketch-modify")?.tools.some(t => t.action === "sketch-insert-spline-point")).toBe(true);
 });
 
 // Onshape puts relationships behind one Constrain button and dimensions behind

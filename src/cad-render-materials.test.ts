@@ -19,7 +19,7 @@ it('saves exact custom colors and finish across reload, validates and handles st
 });
 it('ignores malformed stored recipes, caps rendering allocations and compares effective material fields only',()=>{
  const store=new MaterialPresetStore({getItem:()=>JSON.stringify([{id:'custom:x',name:'Bad',values:{color:'red'}}]),setItem:()=>{}});
- expect(store.snapshot()).toEqual([]);expect(renderPixelRatio(1.5,4)).toBe(3);expect(renderPixelRatio(.1,1)).toBe(.5);expect(renderPixelRatio(NaN,NaN)).toBe(1);
+ expect(store.snapshot()).toEqual([]);expect(renderPixelRatio(1.5,4)).toBe(6);expect(renderPixelRatio(1,8)).toBe(4);expect(renderPixelRatio(.1,1)).toBe(.5);expect(renderPixelRatio(NaN,NaN)).toBe(1);
  const a=renderMaterials[0].values;expect(matchesMaterial(a,{...a,roughness:a.roughness+1e-9})).toBe(true);expect(matchesMaterial(a,{...a,metalness:.7})).toBe(false);
 });
 

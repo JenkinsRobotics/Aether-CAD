@@ -8,10 +8,6 @@ export function mountSketchWindowFields(win: FeatureWindow, options: {
   onConstraintsChange: (checked: boolean) => void;
   onExpressionsChange: (checked: boolean) => void;
   onErrorsChange: (checked: boolean) => void;
-  onProjectEdgesChange?: (checked: boolean) => void;
-  /** SolidCraft's `flip`: a half turn of the sketch plane about its x axis. */
-  onFlipChange?: (checked: boolean) => void;
-  flipped?: boolean;
 }) {
   const plane = mountSketchPlaneControls(win, options.changePlane);
   const checkbox = (label: string, checked: boolean, onChange?: (checked: boolean) => void) => {
@@ -26,7 +22,7 @@ export function mountSketchWindowFields(win: FeatureWindow, options: {
   checkbox('Show constraints', true, options.onConstraintsChange);
   checkbox('Show expressions', false, options.onExpressionsChange);
   checkbox('Show errors', true, options.onErrorsChange);
-  if (options.onProjectEdgesChange) checkbox('Project face edges on start', false, options.onProjectEdgesChange);
-  if (options.onFlipChange) checkbox('Flip sketch plane', options.flipped ?? false, options.onFlipChange);
+  // No "project face edges on start" and no "flip sketch plane" (Jonathan, 2026-11-01): projecting is the
+  // Project tool's job, and a saved flip still loads from the document.
   return plane;
 }

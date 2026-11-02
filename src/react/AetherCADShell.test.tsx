@@ -142,7 +142,7 @@ describe("AetherCADShell", () => {
     expect(disconnected.length).toBeGreaterThan(100);
     expect(new Set(disconnected.map(command => command.id)).size).toBe(disconnected.length);
     expect(disconnected.find(command => command.id === 'feature-extrude')?.category).toBe('Solid');
-    expect(disconnected.find(command => command.id === 'sketch-cubic-bezier')?.category).toBe('Curve');
+    expect(disconnected.find(command => command.id === 'sketch-fit-spline')?.category).toBe('Curve');
     expect(disconnected.map((command) => command.id)).toContain("fit-view");
     expect(disconnected.map((command) => command.id)).toEqual(expect.arrayContaining([
       "view-front", "view-back", "view-left", "view-right", "view-top", "view-bottom",

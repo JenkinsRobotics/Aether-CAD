@@ -347,9 +347,6 @@ export function openSketchWorkspace(
     );
     announceDraft(true);
     setActiveTool("select");
-    // Auto-project (SolidCraft's project_edges): a new sketch on a face starts with the
-    // face's edges as construction geometry when asked.
-    if (projectFaceEdges && support && !existing && !drawing.contours.length) queueMicrotask(() => { void modelInclude.include("edges", { construction: true }); });
     window.addEventListener("keydown", globalKey);
     win.panel.removeAttribute("data-feature-state");
     fitBoundsToContent();
@@ -735,8 +732,7 @@ export function openSketchWorkspace(
   };
   commitSketch = () => { void finish(); };
   discardSketch = () => { if (!busy) cleanup(); };
-  let projectFaceEdges = false;
-  const planeControls = mountSketchWindowFields(win, { onProjectEdgesChange: (checked) => { projectFaceEdges = checked; }, flipped: !!flip, onFlipChange: (checked) => { if (busy) return; flip = checked ? "x" : undefined; announceSurface?.(); render(); }, changePlane: (changeSketchPlane = () => {
+  const planeControls = mountSketchWindowFields(win, { changePlane: (changeSketchPlane = () => {
     if(busy)return;
     if(projected){fail('Change the projection plane in the projected sketch editor.');return;}
     if(clipboard.pending()||variablePanel.pending()){fail('Apply or cancel pending paste and variable edits before changing the sketch plane.');return;}
@@ -786,6 +782,8 @@ export function openSketchWorkspace(
       activePath,
       pending,
       bounds,
+      // Marks beside the cursor are sized on screen: 1080 drawing units ≙ 1080 px here.
+      screenWidth: surface ? (surface.scaleAt() ?? bounds.width / 800) * 1080 : bounds.width,
       snapLabel,
       sides: coordinates.sides(),
       slotWidthMillimeters: coordinates.slotWidth(),

@@ -1,4 +1,9 @@
 import * as THREE from "three";
+import { Font } from "three/examples/jsm/loaders/FontLoader.js";
+import helvetiker from "three/examples/fonts/helvetiker_regular.typeface.json";
+
+/** Plane labels are vector text, like every other element of the viewport (Jonathan, 2026-11-01). */
+const labelFont = new Font(helvetiker as never);
 import { styledLines } from "./viewport/styled-lines";
 export interface PlaneVisualStyle {
   fillOpacity?: number;
@@ -31,12 +36,9 @@ export function createPlaneVisual(name:string,color:number,rotation:readonly [nu
       group.name = name;
       group.rotation.set(...rotation);
       group.add(surface, outline);
-      const labelCanvas=document.createElement("canvas");labelCanvas.width=256;labelCanvas.height=64;
-      const context=labelCanvas.getContext("2d");
-      if(context){context.font="500 28px system-ui";context.fillStyle=style.labelColor ?? "#a9cfff";context.fillText(name.replace(" Plane",""),8,40);
-        const label=new THREE.Mesh(new THREE.PlaneGeometry(26,6.5),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas),side:THREE.DoubleSide,depthWrite:false,transparent:true}));
-        label.userData.planeRole="label";label.userData.labelCanvas=labelCanvas;label.position.set(-41,50,0.05);label.raycast=()=>{};group.add(label);
-      }
+      const label=new THREE.Mesh(new THREE.ShapeGeometry(labelFont.generateShapes(name.replace(" Plane",""),6)),
+        new THREE.MeshBasicMaterial({color:new THREE.Color(style.labelColor ?? "#a9cfff"),opacity:style.labelOpacity ?? 1,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));
+      label.userData.planeRole="label";label.position.set(-52,46,0.05);label.raycast=()=>{};label.visible=style.labelsVisible ?? true;group.add(label);
       updatePlaneVisual(group,color,style);
 return group;
 }
@@ -49,7 +51,7 @@ export function updatePlaneVisual(group: THREE.Group, color: number, style: Plan
     const role = child.userData.planeRole;
     const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial & { linewidth?: number };
     if (!role || !material) continue;
-    const baseColor = role === 'label' ? 0xffffff : color;
+    const baseColor = role === 'label' ? new THREE.Color(style.labelColor ?? '#a9cfff').getHex() : color;
     const baseOpacity = role === 'label' ? style.labelOpacity ?? 1 : role === 'border' ? style.borderOpacity ?? .55 : style.fillOpacity ?? .055;
     child.userData.baseColor = baseColor; child.userData.baseOpacity = baseOpacity;
     material.color.setHex(child.userData.planeTint ?? baseColor);
@@ -57,14 +59,7 @@ export function updatePlaneVisual(group: THREE.Group, color: number, style: Plan
     if (role === 'border') material.linewidth = style.borderWidthPx ?? 1;
     if (role === 'label') {
       child.visible = style.labelsVisible ?? true;
-      const canvas = child.userData.labelCanvas as HTMLCanvasElement;
-      const context = canvas.getContext('2d');
-      if (context && child.userData.labelColor !== style.labelColor) {
-        child.userData.labelColor = style.labelColor;
-        context.clearRect(0,0,canvas.width,canvas.height);context.font='500 28px system-ui';
-        context.fillStyle=style.labelColor ?? '#a9cfff';context.fillText(group.name.replace(' Plane',''),8,40);
-        if (material.map) material.map.needsUpdate=true;
-      }
+      if (child.userData.planeTint == null) material.color.set(style.labelColor ?? '#a9cfff');
     }
   }
   group.updateMatrixWorld(true);

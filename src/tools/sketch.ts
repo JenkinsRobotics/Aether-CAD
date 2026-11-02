@@ -14,12 +14,20 @@ export const sketchWorkspace: CADRibbonWorkspaceDefinition = {
       tool("sketch-point", "Point", "point", "sketch-point"),
       tool("sketch-line", "Line", "line", "sketch-line"),
       {...tool("sketch-arc", "Arc", "arc", "sketch-arc"), variants:[tool("sketch-center-arc", "Center point arc", "center-arc", "sketch-center-arc"), tool("sketch-tangent-arc", "Tangent arc", "tangent-arc", "sketch-tangent-arc"), tool("sketch-elliptical-arc", "Elliptical arc", "elliptical-arc", "sketch-elliptical-arc")]},
-      {...tool("sketch-spline", "Spline", "curve", "sketch-cubic-bezier"), variants:[tool("sketch-conic", "Conic", "curve", "sketch-conic"), tool("sketch-fit-spline", "Fit-point spline", "curve", "sketch-fit-spline"), tool("sketch-control-spline", "Control point spline", "curve", "sketch-control-spline"), tool("sketch-insert-spline-point", "Insert spline point", "point", "sketch-insert-spline-point"), tool("sketch-blend-curve", "Blend curve (tangent)", "curve", "sketch-blend-curve"), tool("sketch-blend-curve-g2", "Blend curve (curvature)", "curve", "sketch-blend-curve-g2")]},
+      // One Spline: through fit points by default; control points and conics are its other
+      // constructions. Bezier drawing was a control-point spline under another name
+      // (Jonathan, 2026-11-01). Insert point and Blend are operations on curves: Modify.
+      {...tool("sketch-spline", "Spline", "curve", "sketch-fit-spline"), variants:[
+        tool("sketch-control-spline", "Control point spline", "curve", "sketch-control-spline"),
+        tool("sketch-conic", "Conic", "curve", "sketch-conic"),
+      ]},
       {...tool("sketch-rectangle", "Rectangle", "rectangle", "sketch-rectangle"), variants:[tool("sketch-center-rectangle", "Center point rectangle", "center-rectangle", "sketch-center-rectangle"), tool("sketch-aligned-rectangle", "Aligned rectangle", "aligned-rectangle", "sketch-aligned-rectangle")]},
       {...tool("sketch-circle", "Circle", "circle", "sketch-circle"), variants:[tool("sketch-three-point-circle", "3 point circle", "circle-three-point", "sketch-three-point-circle"),tool("sketch-ellipse", "Ellipse", "ellipse", "sketch-ellipse")]},
       {...tool("sketch-polygon", "Polygon", "polygon", "sketch-inscribed-polygon"), variants:[tool("sketch-circumscribed-polygon", "Circumscribed polygon", "circumscribed-polygon", "sketch-circumscribed-polygon"),tool("sketch-edge-polygon", "Edge polygon", "polygon", "sketch-edge-polygon")]},
     ] },
     { id: "sketch-modify", label: "Modify", tools: [
+      tool("sketch-insert-spline-point", "Insert spline point", "point", "sketch-insert-spline-point"),
+      tool("sketch-blend-curve", "Blend curve", "curve", "sketch-blend-curve"),
       tool("sketch-mirror", "Mirror", "mirror", "sketch-mirror"),
       {...tool("sketch-linear-pattern", "Pattern", "pattern", "sketch-linear-pattern"), variants:[tool("sketch-circular-pattern", "Circular pattern", "pattern", "sketch-circular-pattern"), tool("sketch-transform", "Transform", "move", "sketch-transform")]},
       {...tool("sketch-fillet", "Fillet", "fillet", "sketch-fillet"), variants:[tool("sketch-chamfer", "Chamfer", "chamfer", "sketch-chamfer")]},
