@@ -492,6 +492,7 @@ export function AetherCADShell() {
             onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
             <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button></div>}
         defaultHeaderPins={["theme","notifications","comments","apps","share"]}
+        documentMenu={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly/>}
         documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
         application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
           onHome: event => { if (!window.location.pathname.startsWith("/cad/")) { event.preventDefault(); cadPresentation.dispatch({type: "show-start-screen", screen: "home"}); } } }}
@@ -531,7 +532,7 @@ export function AetherCADShell() {
           toolbarSpan={ribbonPlacement === "docked" ? "window" : "center"}
           toolPosition={ribbonPlacement === "docked" ? "top" : "bottom"}
           pinnedPanels={drawingMode ? [] : ["browser"]}
-          sideBottom={{ right: sketchEditing || drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:toggleFileTray}} /> }}
+          sideBottom={{ right: drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:toggleFileTray}} /> }}
           style={{ height: "100%" }}
           panelState={visiblePanelState}
           onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}

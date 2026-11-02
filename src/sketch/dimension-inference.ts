@@ -19,7 +19,11 @@ export function inferDimension(drawing: SketchDrawing, refs: SketchEntityRef[], 
   if (aa.line && bb.line) {
     const u = [aa.line[1][0] - aa.line[0][0], aa.line[1][1] - aa.line[0][1]];
     const v = [bb.line[1][0] - bb.line[0][0], bb.line[1][1] - bb.line[0][1]];
-    const parallel = Math.abs(u[0] * v[1] - u[1] * v[0]) < 1e-7 * Math.hypot(...u) * Math.hypot(...v);
+    const cross = u[0] * v[1] - u[1] * v[0];
+    const parallel = Math.abs(cross) < 1e-7 * Math.hypot(...u) * Math.hypot(...v);
+    // The angle is measured from a to b: order the lines so it reads positive and a
+    // typed positive value keeps the geometry on its side (Jonathan, 2026-11-01).
+    if (!parallel && cross < 0) return { id, kind: 'angle', a: b, b: a };
     return { id, kind: parallel ? 'distance' : 'angle', a, b };
   }
   if (aa.point && bb.point) {

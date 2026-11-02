@@ -57,7 +57,7 @@ export function mountRecentEllipse(o: Options) {
       fields.forEach((f) => {
         let v = NaN;
         try {
-          v = evaluateQuantityExpression(f.input.value);
+          v = evaluateQuantityExpression(f.input.value, { family: "length", factor: unit.factor });
         } catch {
           /* Incomplete entry. */
         }
@@ -79,7 +79,7 @@ export function mountRecentEllipse(o: Options) {
           next,
           ref,
           i === 0 ? "x" : "y",
-          raw ? evaluateQuantityExpression(raw) * (unit.factor / 0.001) : NaN,
+          raw ? evaluateQuantityExpression(raw, { family: "length", factor: unit.factor }) * (unit.factor / 0.001) : NaN,
         );
       }
       o.commit(next);

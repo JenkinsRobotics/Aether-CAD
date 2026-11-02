@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { evaluateQuantityExpression as calculate } from "./quantity-expression";
 it.each([
   ["(12 + 4) / 2", 8],
@@ -49,3 +49,20 @@ it.each([
 ])("supports shared numeric function %s", (source, value) =>
   expect(calculate(source)).toBeCloseTo(value),
 );
+
+describe("typed units convert into the field's display unit", () => {
+  const mm = { family: "length" as const, factor: 0.001 }, inch = { family: "length" as const, factor: 0.0254 }, deg = { family: "angle" as const, factor: Math.PI / 180 };
+  it("converts a typed length or angle and leaves a bare number in the display unit", () => {
+    expect(calculate("2.77 in", mm)).toBeCloseTo(70.358, 3);
+    expect(calculate("25.4 mm", inch)).toBeCloseTo(1, 9);
+    expect(calculate("2 * 1 ft + 1 in", mm)).toBeCloseTo(635, 9);
+    expect(calculate("12.5", mm)).toBe(12.5);
+    expect(calculate("pi rad", deg)).toBeCloseTo(180, 9);
+  });
+  it("refuses a unit of the wrong family and keeps units off without a display unit", () => {
+    expect(() => calculate("30 deg", mm)).toThrow(/Enter a length/);
+    expect(() => calculate("1 in", deg)).toThrow(/Enter an angle/);
+    expect(() => calculate("1 in")).toThrow();
+  });
+});
+

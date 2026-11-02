@@ -51,7 +51,6 @@ export const sketchWorkspace: CADRibbonWorkspaceDefinition = {
         tool("sketch-infinite", "Infinite line", "line", "sketch-infinite"),
         tool("sketch-polygon-constraint", "Polygon", "polygon", "sketch-polygon-constraint"),
         tool("sketch-chain", "Chain", "parallel", "sketch-chain"),
-        tool("sketch-constraints", "Constraint editor", "parallel", "sketch-constraints"),
         tool("sketch-variables", "Variables", "settings", "sketch-variables"),
         tool("sketch-clipboard", "Clipboard", "copy", "sketch-clipboard"),
       ] },

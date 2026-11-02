@@ -10,18 +10,20 @@ export function renderSketchSelection(
   svg: SVGSVGElement,
   drawing: SketchDrawing,
   refs: SketchEntityRef | SketchEntityRef[] | null,
-  size: number,
+  _size?: number,
+  /** "sketch-hover" previews the entity under the pointer in the same colour (Jonathan, 2026-11-01). */
+  className = "sketch-selection",
 ) {
-  svg.querySelectorAll(".sketch-selection").forEach(node => node.remove());
-  for (const ref of Array.isArray(refs) ? refs : refs ? [refs] : []) renderEntity(svg, drawing, ref, size);
+  svg.querySelectorAll(`.${className}`).forEach(node => node.remove());
+  for (const ref of Array.isArray(refs) ? refs : refs ? [refs] : []) renderEntity(svg, drawing, ref, className);
 }
-function renderEntity(svg: SVGSVGElement, drawing: SketchDrawing, ref: SketchEntityRef, size: number) {
+function renderEntity(svg: SVGSVGElement, drawing: SketchDrawing, ref: SketchEntityRef, className: string) {
   let c;
   try { c = referencedContour(drawing, ref); } catch { return; }
   if (!c) return;
   const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  group.setAttribute("class", "sketch-selection");
-  group.setAttribute("aria-label", "Selected sketch entity");
+  group.setAttribute("class", className);
+  group.setAttribute("aria-label", className === "sketch-hover" ? "Hovered sketch entity" : "Selected sketch entity");
   group.setAttribute("pointer-events", "none");
   group.dataset.entityKind = ref.kind;
   if (c.construction) group.dataset.construction = "true";
@@ -36,7 +38,8 @@ function renderEntity(svg: SVGSVGElement, drawing: SketchDrawing, ref: SketchEnt
   if (point) {
     node.setAttribute("cx", String(point[0]));
     node.setAttribute("cy", String(-point[1]));
-    node.setAttribute("r", String(size));
+    // Points are drawn by their non-scaling stroke, so the radius stays nominal at any zoom.
+    node.setAttribute("r", "0.001");
   } else if (c.type === "circle") {
     node.setAttribute("cx", String(c.center[0]));
     node.setAttribute("cy", String(-c.center[1]));

@@ -37,8 +37,10 @@ export function parseQuantity(
   preferences: UnitPreferences,
   family: UnitFamily,
 ): number {
-  const number = evaluateQuantityExpression(value);
+  const choice = unitChoice(preferences, family);
+  const display = family === "length" || family === "angle" ? { family, factor: choice.factor } : undefined;
+  const number = evaluateQuantityExpression(value, display);
   if (!value.trim() || !Number.isFinite(number))
     throw new Error("Enter a finite numeric quantity.");
-  return number * unitChoice(preferences, family).factor;
+  return number * choice.factor;
 }

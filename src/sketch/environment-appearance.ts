@@ -26,7 +26,9 @@ export function updateSketchEnvironment(svg: SVGSVGElement, resolved: ResolvedAp
     if (face) face.after(grid); else svg.prepend(grid);
   }
   const half = 80, spacing = resolved.sketchGridSpacing;
-  const key = `${spacing}:${resolved.grid.majorEvery}`;
+  // The sketch grid follows the viewport's own grid switch (Show grid): off there, off here (Jonathan, 2026-11-01).
+  const showGrid = ["grid", "both"].includes(cadAppearance.snapshot().floorMode);
+  const key = `${spacing}:${resolved.grid.majorEvery}:${showGrid}`;
   if (grid.dataset.key === key) return;
   grid.dataset.key = key; grid.replaceChildren();
   const count = Math.min(1000, Math.floor(half / spacing));
@@ -34,7 +36,7 @@ export function updateSketchEnvironment(svg: SVGSVGElement, resolved: ResolvedAp
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value)); grid!.append(el);
   };
-  for (let i = -count; i <= count; i++) {
+  for (let i = -count; showGrid && i <= count; i++) {
     if (!i || Math.abs(i * spacing) >= half) continue;
     const major = i % resolved.grid.majorEvery === 0;
     const attrs = { class: `sketch-grid${major ? ' sketch-grid-major' : ''}` };

@@ -14,6 +14,7 @@
   --cad-sketch-hole: #e6aa64;
   --cad-sketch-axis: #999999;
   --cad-sketch-point: #eef7ff;
+  --cad-sketch-dimension: #b7c0cc;
   --cad-sketch-preview: #66ceff;
   --cad-sketch-preview-fill: #41b7f01a;
   --cad-sketch-preview-point: #f6fbff;
@@ -35,7 +36,11 @@
    display:none (.cad-header-committed) — the ribbon owns the commands — so bare
    element rules would have repainted the widget and nothing else. */
 .cad-sketch-workspace .aui-feature-window { pointer-events:auto; }
-svg.cad-sketch-canvas { width:100%; height:100%; min-height:0; cursor:crosshair; touch-action:none; }
+/* The canvas never clips: geometry and dimensions paint past its box, and the plane
+   face draws no edge, so the sketch has no visible boundary. */
+svg.cad-sketch-canvas { width:100%; height:100%; min-height:0; cursor:default; touch-action:none; overflow:visible; }
+/* Drawing tools place points: crosshair; Select and no tool: the default pointer. */
+svg.cad-sketch-canvas:not([data-tool=""]):not([data-tool="select"]) { cursor:crosshair; }
 /* The plane is context, not content: it sits well behind the geometry drawn
    on it. Onshape does the same — the sheet barely registers, the profile is
    what you look at. */
@@ -65,7 +70,7 @@ svg.cad-sketch-canvas .sketch-point {
 svg.cad-sketch-canvas .sketch-preview-layer { pointer-events:none; }
 svg.cad-sketch-canvas .sketch-preview { stroke:var(--cad-sketch-preview); stroke-width:2px; stroke-dasharray:6 3; vector-effect:non-scaling-stroke; fill:var(--cad-sketch-preview-fill); }
 svg.cad-sketch-canvas .sketch-preview-guide { stroke:var(--cad-sketch-guide); stroke-width:1px; stroke-dasharray:3 3; vector-effect:non-scaling-stroke; }
-svg.cad-sketch-canvas .sketch-preview-point { fill:var(--cad-sketch-preview-point); stroke:var(--cad-sketch-preview-point-edge); stroke-width:1px; vector-effect:non-scaling-stroke; }
+svg.cad-sketch-canvas .sketch-preview-point { fill:none; stroke:var(--cad-sketch-preview-point-edge); stroke-width:6px; stroke-linecap:round; vector-effect:non-scaling-stroke; }
 svg.cad-sketch-canvas .sketch-hovered-constraints rect { fill:var(--aether-color-bg-panel,#fff); stroke:var(--aether-color-accent,#399cff); stroke-width:.45; vector-effect:non-scaling-stroke; }
 svg.cad-sketch-canvas .sketch-hovered-constraints text { fill:var(--aether-color-accent,#399cff); font-family:system-ui; font-weight:700; stroke:none; }
 svg.cad-sketch-canvas .sketch-constraint-mark rect { fill:var(--aether-color-bg-panel,#fff); stroke:var(--aether-color-accent,#399cff); stroke-opacity:.7; stroke-width:.3; vector-effect:non-scaling-stroke; }
@@ -92,7 +97,9 @@ svg.cad-sketch-canvas .sketch-vertex {
   pointer-events: none;
 }
 
-.sketch-constraint-state {font-weight:600;}
+/* Constraint state is shown by the feature tree's icon, never as a message in the sketch
+   window (Jonathan, 2026-11-01); the element stays for assistive technology and tests. */
+.sketch-constraint-state {position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; font-weight:600;}
 .sketch-constraint-state[data-state="fully-constrained"] {color:var(--aether-color-success,#51b887);}
 .sketch-constraint-state[data-state="over-constrained"],.sketch-constraint-state[data-state="invalid"] {color:var(--aether-color-danger,#ed7878);}
 
@@ -102,10 +109,13 @@ svg.cad-sketch-canvas[data-constraint-state="over-constrained"] .sketch-contour 
 svg.cad-sketch-canvas[data-constraint-state="fully-constrained"] .sketch-vertex { stroke:var(--cad-sketch-constrained, #000000); }
 svg.cad-sketch-canvas[data-constraint-state="over-constrained"] .sketch-vertex { stroke:var(--aether-color-danger,#ed7878); }
 
-svg.cad-sketch-canvas .sketch-dimension line { stroke:var(--aether-color-accent,#399cff); stroke-width:1; vector-effect:non-scaling-stroke; stroke-dasharray:3 2; pointer-events:none; }
+/* Dimensions read like a drawing: thin solid quiet lines with small arrowheads, the
+   value on its measure line; nothing dashed, nothing pointing at the text. */
+svg.cad-sketch-canvas .sketch-dimension line { stroke:var(--cad-sketch-dimension,#b7c0cc); stroke-width:1; vector-effect:non-scaling-stroke; pointer-events:none; }
+svg.cad-sketch-canvas .sketch-dimension line[data-dimension-extension] { stroke-opacity:.7; }
 svg.cad-sketch-canvas .sketch-dimension text { fill:var(--aether-color-text,#edf6ff); stroke:var(--aether-color-bg-app,#111922); stroke-width:3px; paint-order:stroke; stroke-linejoin:round; vector-effect:non-scaling-stroke; font-family:system-ui; cursor:pointer; pointer-events:auto; }
 svg.cad-sketch-canvas .sketch-dimension text:hover,svg.cad-sketch-canvas .sketch-dimension text:focus { fill:var(--aether-color-accent,#399cff); }
-svg.cad-sketch-canvas .sketch-dimension path { fill:none; stroke:var(--aether-color-accent,#399cff); stroke-width:1; vector-effect:non-scaling-stroke; pointer-events:none; }
+svg.cad-sketch-canvas .sketch-dimension path { fill:none; stroke:var(--cad-sketch-dimension,#b7c0cc); stroke-width:1; vector-effect:non-scaling-stroke; pointer-events:none; }
 
 /* Per-entity state overrides whole-sketch color; geometry fills and selection stay separate. */
 svg.cad-sketch-canvas .sketch-region-fill { stroke: none; }
@@ -136,7 +146,7 @@ svg.cad-sketch-canvas .sketch-modification-source-selection > * { vector-effect:
 .cad-sketch-workspace.in-world { background: transparent; pointer-events: none; }
 svg.cad-sketch-canvas { background: transparent; }
 .cad-sketch-workspace.in-world ~ * svg.cad-sketch-canvas,
-body svg.cad-sketch-canvas { cursor: crosshair; }
+body svg.cad-sketch-canvas:not([data-tool=""]):not([data-tool="select"]) { cursor: crosshair; }
 
 /* Compact floating sketch window (shared Anima Studio panel chrome). */
 
@@ -149,7 +159,7 @@ svg.cad-sketch-canvas .sketch-snap-target { fill:none; stroke:var(--aether-color
 svg.cad-sketch-canvas .sketch-snap-feedback { pointer-events:none; }
 
 /* Manual environment controls are also visible on the active sketch plane. */
-svg.cad-sketch-canvas .sketch-plane-face { fill:var(--cad-sketch-plane-color); fill-opacity:var(--cad-sketch-plane-fill-opacity); stroke:var(--cad-sketch-plane-color); stroke-opacity:var(--cad-sketch-plane-border-opacity); stroke-width:var(--cad-sketch-plane-border-width); vector-effect:non-scaling-stroke; }
+svg.cad-sketch-canvas .sketch-plane-face { fill:none; stroke:none; vector-effect:non-scaling-stroke; }
 svg.cad-sketch-canvas .sketch-plane-title { fill:var(--cad-sketch-plane-label-color); fill-opacity:var(--cad-sketch-plane-label-opacity); }
 svg.cad-sketch-canvas .sketch-grid { stroke:var(--cad-sketch-grid-color); stroke-opacity:var(--cad-sketch-grid-opacity); stroke-width:var(--cad-sketch-grid-width); vector-effect:non-scaling-stroke; }
 svg.cad-sketch-canvas .sketch-grid-major { stroke:var(--cad-sketch-grid-major-color); stroke-opacity:var(--cad-sketch-grid-major-opacity); stroke-width:var(--cad-sketch-grid-major-width); }

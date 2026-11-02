@@ -36,3 +36,13 @@ describe("sketch sampling", () => {
     expect(sketchProfilePolylines({ type: "projection" })).toEqual([]);
   });
 });
+
+it("profile polylines can carry construction contours for faithful viewport display", () => {
+  const drawing = { type: "drawing", contours: [
+    { type: "path", start: [0, 0], segments: [{ type: "line", end: [10, 0] }] },
+    { type: "path", start: [0, 5], segments: [{ type: "line", end: [10, 5] }], construction: true },
+  ] } as unknown as SketchDrawing;
+  expect(sketchProfilePolylines(drawing)).toHaveLength(1);
+  expect(sketchProfilePolylines(drawing, { includeConstruction: true })).toHaveLength(2);
+});
+

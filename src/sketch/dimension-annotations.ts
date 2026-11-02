@@ -33,7 +33,7 @@ export function renderDimensionAnnotations(
   const defs = document.createElementNS(ns, "defs"), marker = document.createElementNS(ns, "marker"), tip = document.createElementNS(ns, "path");
   marker.id = arrowID;
   for (const [key, value] of Object.entries({ viewBox: "0 0 10 10", refX: "10", refY: "5", markerWidth: String(1.4 * scale), markerHeight: String(1.4 * scale), markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" })) marker.setAttribute(key, value);
-  tip.setAttribute("d", "M0 0L10 5L0 10Z"); tip.style.fill = "var(--aether-color-text)";
+  tip.setAttribute("d", "M0 0L10 5L0 10Z"); tip.style.fill = "var(--cad-sketch-dimension, #b7c0cc)";
   marker.append(tip); defs.append(marker); layer.append(defs);
   const arrows = (node: SVGElement, both = true) => {
     node.style.markerEnd = `url(#${arrowID})`;
@@ -267,11 +267,8 @@ export function renderDimensionAnnotations(
             }),
           );
       };
-      text.addEventListener("pointerdown", (e) => e.stopPropagation());
-      text.addEventListener("click", (e) => {
-        e.stopPropagation();
-        activate();
-      });
+      // Pointer clicks belong to the canvas: one click selects the dimension, a double
+      // click opens the value box (Jonathan, 2026-11-01). Keyboard activation edits.
       text.addEventListener("keydown", (e) => {
         const key = (e as KeyboardEvent).key;
         if (key === "Enter" || key === " ") {

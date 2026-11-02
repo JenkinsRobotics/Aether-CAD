@@ -527,7 +527,8 @@ function updateLists(notifyDocumentChange = true): void {
           .map((feature) => ({
             id: feature.id,
             frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
-            polylines: "profile" in feature ? sketchProfilePolylines(feature.profile) : [],
+            // Faithful to the sketch: construction geometry shows too, it is what later features reference (Jonathan, 2026-11-01).
+            polylines: "profile" in feature ? sketchProfilePolylines(feature.profile, { includeConstruction: true }) : [],
           }))
       : [],
   );
@@ -1208,7 +1209,9 @@ cadPresentation.subscribe(() => {
   historyPlayback.sync(activePartDocument,canPlayHistory());
 });
 configureEditHistory({
-  evaluate: doc => worker.evaluatePart(doc),
+  // Features that already fail in the full rebuild (and are red in the tree) must not
+  // turn the rolled-back editing view into an error: recover past them as a rebuild does.
+  evaluate: doc => rebuildRecovering(doc, d => worker.evaluatePart(d)).then(r => r.model),
   show: (model, active) => { if(active) historyPlayback.stop(); viewer.setHistoryPreview(model, active); },
   changed: () => updateLists(false),
   error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
@@ -1628,6 +1631,11 @@ cadCommands.setEnabled("assembly-motion-study", true);
 configurePartExport(() => activePartDocument);
 cadObjectAppearance.attach(viewer);
 cadWorkspace.subscribe(cadObjectAppearance.refresh);
+// A sketch selected in the tree lights up in the viewport.
+cadWorkspace.subscribe(() => {
+  const ids = [...cadWorkspace.snapshot().selectedItemIDs].map(id => /^feature\/(?:profile|sketch)\/(.+)$/.exec(id)?.[1]).filter((id): id is string => Boolean(id));
+  viewer.setHighlightedSketches(ids);
+});
 configureViewportContext({
   viewer,
   document: () => activePartDocument,

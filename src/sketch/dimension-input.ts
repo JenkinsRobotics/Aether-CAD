@@ -19,7 +19,10 @@ export function bindDimensionInput(
     };
   };
   let current = choice();
-  const format = (canonical: number) => String(canonical / current.toCanonical);
+  // A typed unit converts into the field's unit; conic rho stays a plain ratio.
+  const display = () => current.family === "scalar" ? undefined : { family: current.family as "length" | "angle", factor: (current as { factor: number }).factor };
+  // Shown to 10 significant digits so unit conversion never leaves float noise (1.56, not 1.5600000000000003).
+  const format = (canonical: number) => String(Number((canonical / current.toCanonical).toPrecision(10)));
   const refresh = () => {
     const next = choice();
     if (
@@ -29,7 +32,7 @@ export function bindDimensionInput(
     ) {
       try {
         input.value = String(
-          (evaluateQuantityExpression(input.value) * current.toCanonical) /
+          (evaluateQuantityExpression(input.value, display()) * current.toCanonical) /
             next.toCanonical,
         );
       } catch {
@@ -38,13 +41,13 @@ export function bindDimensionInput(
       }
     }
     current = next;
-    input.title = `Value in ${current.unit}. Calculations such as 1/8, sqrt(25), or sin(pi/2) are supported. Numeric trigonometry uses radians.`;
+    input.title = `Value in ${current.unit}; a typed unit such as 1 in or 30 deg converts. Calculations such as 1/8, sqrt(25), or sin(pi/2) are supported. Numeric trigonometry uses radians.`;
     label(current.unit, format);
   };
   refresh();
   const dispose = subscribeDocumentUnits(refresh);
   return {
-    read: () => evaluateQuantityExpression(input.value) * current.toCanonical,
+    read: () => evaluateQuantityExpression(input.value, display()) * current.toCanonical,
     write: (canonical: number) => {
       input.value = format(canonical);
     },

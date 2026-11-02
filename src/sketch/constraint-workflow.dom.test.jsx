@@ -39,7 +39,8 @@ it('constrains three canvas-selected circles with one undo, preserves selection 
   pick(4,0); pick(36,0,true); pick(68,0,true); command('equal');
   expect(document.querySelector('.cad-sketch-workspace')?.textContent ?? document.body.textContent).toContain('applied to 3 selected entities');
   expectRadii([4,4,4]);
-  expect(document.querySelector('[aria-label="Use selected geometry"]').checked).toBe(true);
+  // The editor no longer opens on a constraint command; the suite reaches it through the helper.
+  expect(q('[aria-label="Use selected geometry"]').checked).toBe(true);
   expect(document.querySelectorAll('.sketch-selection circle')).toHaveLength(3);
   command('equal'); // No redundant transaction: one Undo still removes the whole batch.
   click('Undo'); expectRadii([4,6,8]); click('Redo'); expectRadii([4,4,4]);

@@ -174,7 +174,7 @@ export function renderSketchPreview(svg: SVGSVGElement, state: PreviewState) {
     point.setAttribute("class", "sketch-preview-layer sketch-preview-point");
     point.setAttribute("cx", String(previewCursor[0]));
     point.setAttribute("cy", String(-previewCursor[1]));
-    point.setAttribute("r", String(bounds.width / 180));
+    point.setAttribute("r", "0.001");
     svg.append(point);
     return;
   }

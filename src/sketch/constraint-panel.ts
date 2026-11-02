@@ -29,12 +29,13 @@ import {
   type SketchDrawing,
 } from "@aether/core/sketch";
 interface Options {
+  /** Opens the formula editor for an explicit edit request (keyboard, agents); clicks never do. */
+  reveal?: () => void;
   pierce?: ReturnType<typeof mountPierceTool>;
   removePierce?: (id:string)=>void;
   pierceIssue?: (id:string)=>string|undefined;
   parent: HTMLElement;
   startDimension?: () => void;
-  reveal?: () => void;
   selection?: () => readonly SketchEntityRef[];
   select?: (refs: readonly SketchEntityRef[]) => void;
   toolChanged?: (kind: DrawingConstraintKind | null) => void;
@@ -48,9 +49,9 @@ interface Options {
 }
 /** Constraint controls edit the canonical drawing through one undoable commit callback. */
 export function mountConstraintPanel({
+  reveal,
   pierce,removePierce,pierceIssue,
   parent,
-  reveal,
   selection,
   select: selectGeometry = () => {},
   toolChanged = () => {},
@@ -299,9 +300,9 @@ export function mountConstraintPanel({
       }
       const selected = selection?.() ?? [];
       chooseTool("select", true);
-      // Tool-first constraints work directly on the canvas. The full editor
-      // stays available from its own command without covering the pick targets.
-      if (selectedConstraintReady(name, selected) || !supportsSelectedConstraint(name)) reveal?.();
+      // Constraints are properties applied to the selection, never a window
+      // (Jonathan, 2026-11-01): a ready selection takes the constraint at once,
+      // otherwise the pick tool collects the geometry on the canvas.
       [entityA, entityB, axis].forEach((field, i) => { if (selected[i]) field.value = JSON.stringify(selected[i]); });
       details.open = true;
       kind.value = name;

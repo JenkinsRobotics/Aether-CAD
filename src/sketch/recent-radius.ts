@@ -46,7 +46,7 @@ export function mountRecentRadius(o: Options) {
     if (target && next.factor !== lengthUnit.factor) {
       let value = NaN;
       try {
-        value = evaluateQuantityExpression(input.value);
+        value = evaluateQuantityExpression(input.value, { family: "length", factor: lengthUnit.factor });
       } catch {
         /* Incomplete entry. */
       }
@@ -64,7 +64,7 @@ export function mountRecentRadius(o: Options) {
         o.drawing(),
         target,
         input.value.trim()
-          ? evaluateQuantityExpression(input.value) *
+          ? evaluateQuantityExpression(input.value, { family: "length", factor: lengthUnit.factor }) *
               (lengthUnit.factor / 0.001)
           : NaN,
       );

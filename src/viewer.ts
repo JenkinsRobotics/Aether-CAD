@@ -1609,8 +1609,25 @@ export class MateViewport {
         const segments: number[] = [];
         for (let i = 1; i < points.length; i++) segments.push(...points[i-1].toArray(), ...points[i].toArray());
         const resolved = this.appearance ? resolveAppearance(this.appearance, readViewportThemeOverride()) : null;
-        this.sketchCurveGroup.add(styledLines(segments, resolved?.sketchStroke ?? 0xd7e6f5, resolved?.sketchLineWidth ?? 2.1));
+        const lines = styledLines(segments, resolved?.sketchStroke ?? 0xd7e6f5, resolved?.sketchLineWidth ?? 2.1);
+        lines.userData.sketchId = sketch.id;
+        lines.userData.stroke = resolved?.sketchStroke ?? 0xd7e6f5;
+        this.sketchCurveGroup.add(lines);
       }
+    }
+    this.applySketchHighlight();
+  }
+  private highlightedSketchIDs = new Set<string>();
+  /** Selecting a sketch in the tree highlights its curves like selected geometry (Jonathan, 2026-11-01). */
+  setHighlightedSketches(ids: Iterable<string>): void {
+    this.highlightedSketchIDs = new Set(ids);
+    this.applySketchHighlight();
+  }
+  private applySketchHighlight(): void {
+    for (const child of this.sketchCurveGroup.children) {
+      const material = (child as THREE.Mesh).material as { color?: THREE.Color };
+      if (!material?.color) continue;
+      material.color.setHex(this.highlightedSketchIDs.has(child.userData.sketchId) ? 0xffad1f : child.userData.stroke);
     }
   }
 
@@ -1889,7 +1906,7 @@ export class MateViewport {
     holder.style.pointerEvents = "none";
     object.setRotationFromMatrix(new THREE.Matrix4().makeBasis(xDir, yDir, normal));
     this.sketchSurface = { object, svg, origin, xDir, yDir, normal, disposeInput: bindSketchCameraInput(svg, this.renderer.domElement) };
-    this.renderer.domElement.style.cursor = "crosshair";
+    this.renderer.domElement.style.cursor = "";
     this.cssScene.add(object);
     this.updateSketchSurfaceBounds(bounds);
     // The camera is never moved when a sketch opens (Jonathan, 2026-09-11):

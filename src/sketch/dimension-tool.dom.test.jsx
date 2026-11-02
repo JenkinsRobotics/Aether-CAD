@@ -82,6 +82,26 @@ it('a horizontal dimension keeps geometry left of the origin on the left', async
   expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'horizontal-distance', value: 50 }]);
   expect(doc.features[0].profile.contours[0].center[0]).toBeCloseTo(-50);
 });
+it('a typed unit converts into the document unit (2 in on a millimetre document is 50.8)', async () => {
+  doc.features[0].profile.contours = [{ type: 'circle', center: [-20, -12], radius: 4 }];
+  start(); key(); pick(.3, .2); pick(-20, -12); pick(-10, -25);
+  submit('2 in');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(doc.features[0].profile.constraints).toMatchObject([{ kind: 'horizontal-distance', value: 50.8 }]);
+});
+it('an angle between two lines reads positive whichever line is picked first', async () => {
+  // The second line runs clockwise from the first: measured a→b it would read negative.
+  doc.features[0].profile.contours = [
+    { type: 'path', start: [0, 0], segments: [{ type: 'line', end: [40, 0] }] },
+    { type: 'path', start: [0, 0], segments: [{ type: 'line', end: [40, -10] }] },
+  ];
+  const { inferDimension } = await import('./dimension-inference');
+  const refs = [{ kind: 'line', contour: 0, index: 0 }, { kind: 'line', contour: 1, index: 0 }];
+  const inferred = inferDimension(doc.features[0].profile, refs, [20, -5], 'd1');
+  expect(inferred).toMatchObject({ kind: 'angle', a: refs[1], b: refs[0] });
+  const { dimensionValue } = await import('@aether/core/sketch');
+  expect(dimensionValue(doc.features[0].profile, { ...inferred, reference: true })).toBeGreaterThan(0);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }

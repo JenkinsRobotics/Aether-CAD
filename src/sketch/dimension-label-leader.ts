@@ -11,6 +11,9 @@ export function updateDimensionLabelLeader(
   updateLinearDimensionLayout(label);
   updateCurvedDimensionLayout(label,visible);
   let line = group.querySelector<SVGLineElement>("[data-dimension-leader]");
+  // A linear dimension's label sits on its measure line, so it needs no leader; only
+  // radius, diameter and angle labels are tied to their arc (Jonathan, 2026-11-01).
+  if (group.hasAttribute("data-dimension-axis")) visible = false;
   if (!visible) {
     line?.remove();
     return;

@@ -97,6 +97,9 @@ export function mountDimensionTool(o: Options) {
     const id = target?.getAttribute('data-constraint-id') ?? label?.parentElement?.getAttribute('data-constraint-id');
     const existing = id ? o.drawing().constraints?.find(c => c.id === id && !c.reference) : undefined;
     if (existing) {
+      // In Select, a single click selects the dimension (move, delete); a double click
+      // edits it. The Dimension tool itself edits on one click (Jonathan, 2026-11-01).
+      if (!active && event.detail < 2) return;
       event.preventDefault(); event.stopImmediatePropagation();
       if (panel && editingId === existing.id) { panel.querySelector('input')?.focus(); return; }
       if (!active) begin();

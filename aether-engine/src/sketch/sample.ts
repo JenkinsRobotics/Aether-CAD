@@ -99,10 +99,10 @@ export function sketchDrawingPolylines(
 }
 
 /** Polylines for any persisted sketch profile shape (drawing/circle/polygon). */
-export function sketchProfilePolylines(profile: unknown): SketchPoint[][] {
+export function sketchProfilePolylines(profile: unknown, options: { includeConstruction?: boolean } = {}): SketchPoint[][] {
   if (!profile || typeof profile !== "object") return [];
   const shape = profile as { type?: string };
-  if (shape.type === "drawing") return sketchDrawingPolylines(profile as SketchDrawing);
+  if (shape.type === "drawing") return sketchDrawingPolylines(profile as SketchDrawing, options);
   if (shape.type === "circle") {
     const circle = profile as { centerMillimeters?: [number, number]; radiusMillimeters?: number };
     if (!circle.centerMillimeters || !circle.radiusMillimeters) return [];

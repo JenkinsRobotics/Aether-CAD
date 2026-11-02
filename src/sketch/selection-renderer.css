@@ -2,7 +2,7 @@
 
 /* Selection must read differently from both blue free geometry and black
    constrained geometry, including when the SVG lives in the CSS3D viewport. */
-svg.cad-sketch-canvas .sketch-selection > * {
+svg.cad-sketch-canvas :is(.sketch-selection, .sketch-hover) > * {
   fill: none;
   stroke: var(--cad-sketch-selection);
   stroke-width: 5px;
@@ -10,9 +10,13 @@ svg.cad-sketch-canvas .sketch-selection > * {
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
-svg.cad-sketch-canvas .sketch-selection[data-entity-kind="point"] > * {
-  fill: var(--cad-sketch-selection);
-  stroke-width: 2px;
+/* A selected point is the same 6 px dot as any point, in the selection colour:
+   nothing changes size on selection (Jonathan, 2026-11-01). */
+svg.cad-sketch-canvas :is(.sketch-selection, .sketch-hover)[data-entity-kind="point"] > * {
+  fill: none;
+  stroke-width: 6px;
 }
 
-svg.cad-sketch-canvas .sketch-selection[data-construction="true"]:not([data-entity-kind="point"]) > * { stroke-dasharray: 8 5; }
+svg.cad-sketch-canvas :is(.sketch-selection, .sketch-hover)[data-construction="true"]:not([data-entity-kind="point"]) > * { stroke-dasharray: 8 5; }
+/* Hover previews the pick in the selection colour, lighter than a real selection. */
+svg.cad-sketch-canvas .sketch-hover > * { stroke-opacity: .55; }

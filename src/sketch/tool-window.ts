@@ -72,6 +72,7 @@ export function createSketchToolWindow(root: HTMLElement, enabled: () => boolean
       (details as HTMLDetailsElement).open = true;
   };
   const commands: [CADCommandID, Editor][] = [
+    // sketch-constraints has no ribbon entry (Jonathan, 2026-11-01); it stays for the suite and agents.
     ["sketch-coordinates", "coordinates"], ["sketch-constraints", "constraints"],
     ["sketch-vector", "vector"], ["sketch-variables", "variables"], ["sketch-clipboard", "clipboard"],
   ];

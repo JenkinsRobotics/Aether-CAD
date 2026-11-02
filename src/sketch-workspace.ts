@@ -174,6 +174,8 @@ export function openSketchWorkspace(
     activePath = -1,
     busy = false;
   let cursor: SketchPoint | null = null;
+  // Picks, hovers and drags all grab within 10 screen pixels at any zoom (Jonathan, 2026-11-01).
+  const hitTolerance = () => surface ? 10 * (surface.scaleAt() ?? bounds.width / 800) : bounds.width / 60;
   let selectedEntities: SketchEntityRef[] = [];
   let selectionSignature = "";
   let selectedEntity: SketchEntityRef | null = null,
@@ -269,8 +271,12 @@ export function openSketchWorkspace(
         }
       }
     }
+    // Dimension labels sit off the geometry; the canvas must hold them too.
+    for (const p of Object.values(dimensionPositions)) if (p) pts.push(p);
     if (!pts.length) return false;
-    const pad = 25;
+    // A margin of 160 screen pixels at the current zoom, so nothing near the
+    // drawing is ever clipped by the canvas (Jonathan, 2026-11-01: the whole plane is the environment).
+    const pad = surface ? 160 * (surface.scaleAt() ?? bounds.width / 800) : 25;
     const xs = pts.map((p) => p[0]);
     const vys = pts.map((p) => -p[1]);
     const minX = Math.min(bounds.x, Math.min(...xs) - pad);
@@ -409,6 +415,8 @@ export function openSketchWorkspace(
       next = `sketch-${name}`;
     if (isCADCommandID(previous)) cadCommands.setActive(previous, false);
     activeTool = name;
+    // The crosshair belongs to placing points; Select keeps the default pointer (Jonathan, 2026-11-01).
+    svg.dataset.tool = name;
     if (isCADCommandID(next)) cadCommands.setActive(next, true);
   };
   let changeSketchPlane: (() => void) | undefined;
@@ -598,10 +606,10 @@ export function openSketchWorkspace(
     },
   });
   const constraints = mountConstraintPanel({
+    reveal: () => toolWindow.show("constraints"),
     pierce,pierceIssue:id=>pierceIssues.find(issue=>issue.id===id)?.message,
     removePierce:id=>{const next=structuredClone(drawing);next.constraints=next.constraints?.filter(c=>c.id!==id);const prepared=preparePierceDraft(draftDocument().features,featureID,next);checkpoint();drawing=prepared.drawing;pierceIssues=prepared.issues;render();},
     startDimension: () => dimensionTool.begin(),
-    reveal: () => toolWindow.show("constraints"),
     selection: () => selectedEntities,
     select: refs => {
       annotationSelection?.clear();
@@ -879,6 +887,7 @@ export function openSketchWorkspace(
     if (showConstraints) renderConstraintMarks(svg, drawing, bounds,
       surface ? 18 * (surface.scaleAt() ?? bounds.width / 800) : bounds.width / 60);
     renderHoveredConstraints(svg, drawing, hoveredEntity);
+    renderSketchSelection(svg, drawing, hoveredEntity, undefined, "sketch-hover");
     const renderProjectedBackground = (svg: SVGSVGElement, contours?: SketchContour[]) => {
       const existingGroup = svg.querySelector(".sketch-projected-background");
       if (existingGroup) existingGroup.remove();
@@ -912,7 +921,7 @@ export function openSketchWorkspace(
   function place(p: SketchPoint, inferPoints = false, extendSelection = false, square = false) {
     if (!started || busy) return;
     recentSizing.clear();
-    if (modifications.pickCorner(p, bounds.width / 60)) return;
+    if (modifications.pickCorner(p, hitTolerance())) return;
     if (isDirectModificationTool(tool)) {
       try {
         const result = directModification(
@@ -920,7 +929,7 @@ export function openSketchWorkspace(
           tool,
           p,
           pending,
-          bounds.width / 60,
+          hitTolerance(),
         );
         if (!result.drawing) {
           pending = result.pending;
@@ -944,7 +953,7 @@ export function openSketchWorkspace(
     }
     if (tool === "sketch-project-geometry") {
       const picked = pickSelectableSketchEntity(drawing, p);
-      if (picked && picked.d < bounds.width / 60 && picked.ref.projectedContourId !== undefined) {
+      if (picked && picked.d < hitTolerance() && picked.ref.projectedContourId !== undefined) {
         const bg = drawing.projectionContext?.find(c => c.id === picked.ref.projectedContourId);
         if (bg) {
           checkpoint();
@@ -962,15 +971,15 @@ export function openSketchWorkspace(
     }
     if (tool === "select") {
       if (constraints.tool.active()) {
-        if(pierce.pickPoint(p,bounds.width/60))return;
+        if(pierce.pickPoint(p,hitTolerance()))return;
         const picked = pickSelectableSketchEntity(drawing, p);
-        constraints.tool.pick(picked && picked.d < bounds.width / 60 ? picked.ref : null);
+        constraints.tool.pick(picked && picked.d < hitTolerance() ? picked.ref : null);
         return;
       }
       annotationSelection?.clear();
       if (!extendSelection) selectedEntities = [];
       const picked = pickSketchEditEntity(drawing, p, svg);
-      if (picked && picked.d < bounds.width / 60) {
+      if (picked && picked.d < hitTolerance()) {
         if (!extendSelection && JSON.stringify(selectedEntity) === JSON.stringify(picked.ref)) {
           selectedEntity = null;
           selectedEntities = [];
@@ -1218,7 +1227,8 @@ export function openSketchWorkspace(
       ? 8 * (surface.scaleAt() ?? bounds.width / 800)
       : (bounds.width * 8) / Math.max(svg.getBoundingClientRect().width, 800),
     drawing: () => drawing,
-    tolerance: () => bounds.width / 60,
+    // Grab within 8 screen pixels at any zoom, like picking and snapping.
+    tolerance: () => hitTolerance(),
     select: (ref) => {
       annotationSelection?.clear();
       selectedEntities = [ref]; selectedEntity = ref;
@@ -1256,12 +1266,15 @@ export function openSketchWorkspace(
     // Onshape reveals what constrains an entity as soon as you point at it,
     // whether or not constraint display is switched on.
     const hovered = cursor ? activeTool==='select' && !constraints.tool.active() ? pickSketchEditEntity(drawing,cursor,svg) : pickSelectableSketchEntity(drawing, cursor) : null;
-    hoveredEntity = hovered && hovered.d < bounds.width / 60 ? hovered.ref : null;
+    hoveredEntity = hovered && hovered.d < hitTolerance() ? hovered.ref : null;
     renderHoveredConstraints(svg, drawing, hoveredEntity);
+    // Hover previews the pick in the selection colour (Jonathan, 2026-11-01).
+    renderSketchSelection(svg, drawing, selectionDrag.active() ? null : hoveredEntity, undefined, "sketch-hover");
     renderPreview();
   });
   svg.addEventListener("pointerleave", () => {
     cursor = null;
+    renderSketchSelection(svg, drawing, null, undefined, "sketch-hover");
     hoveredEntity = null;
     hoverConstraintMark(svg, null);
     renderHoveredConstraints(svg, drawing, null);
