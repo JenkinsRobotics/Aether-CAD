@@ -442,12 +442,12 @@ it('keeps only app-wide header icons and switches docked and floating from the h
   await act(async()=>header.querySelector('[aria-label="Reminders"]').click());
   expect(isVisible(container.querySelector('section[aria-label="Reminders"]'))).toBe(true);
   expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
-  const toggle=container.querySelector('.cad-header-controls [aria-label="Docked layout"]');
+  const toggle=container.querySelector('.cad-header-placement');
   // main.ts applies the actions; here they are recorded and applied the same way.
   const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:{toolbarMode:action.mode}));
   const flip=async()=>{const docked=cadPresentation.snapshot().workspaceLayout==='docked';dispatch.mockClear();await act(async()=>toggle.click());
     expect(dispatch.mock.calls.map(([action])=>action)).toEqual(docked?[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}]:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]);
-    expect(toggle.getAttribute('aria-pressed')).toBe(String(!docked));};
+    expect(toggle.getAttribute('aria-label')).toBe(docked?'Docked layout':'Floating layout');};
   await flip(); await flip();
   dispatch.mockRestore();
 });

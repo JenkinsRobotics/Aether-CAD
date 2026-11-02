@@ -485,7 +485,7 @@ export function AetherCADShell() {
           onSelect={runSearchCommand}/> }
         trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/>
           {/* Docked and floating are whole-app workspaces, so the switch lives in the header (Jonathan, 2026-11-01). */}
-          <button type="button" className="aui-icon-button" aria-label="Docked layout" aria-pressed={presentation.workspaceLayout === "docked"}
+          <button type="button" className="aui-icon-button cad-header-placement" aria-label={presentation.workspaceLayout === "docked" ? "Floating layout" : "Docked layout"}
             title={presentation.workspaceLayout === "docked" ? "Switch to the floating layout" : "Switch to the docked layout"}
             onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
             <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button></div>}
