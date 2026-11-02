@@ -11,13 +11,11 @@ export const assemblyInspectWorkspace: CADRibbonWorkspaceDefinition = {
   groups: [
     { id: "inspect-review", label: "Review", tools: [
       tool("assembly-properties", "Properties", "properties", "show-mates"),
-      tool("assembly-section", "Section", "split", undefined, analysisProducer),
       tool("assembly-explode", "Explode", "move", "assembly-explode"),
       tool("assembly-material", "Material", "material", undefined, projectProducer),
     ] },
     { id: "inspect-measure", label: "Measure", tools: [
       tool("assembly-mass", "Mass & Health", "mass", undefined, analysisProducer),
-      tool("assembly-measure", "Measure", "measure", undefined, analysisProducer),
       tool("assembly-clearance", "Clearance", "measure", undefined, analysisProducer),
       tool("assembly-interference", "Interference", "split", undefined, analysisProducer),
     ] },

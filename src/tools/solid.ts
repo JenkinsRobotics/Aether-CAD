@@ -50,9 +50,9 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       tool("solid-delete-face", "Delete", "remove", "feature-delete-face"),
       tool("solid-remove-body", "Remove part", "remove", "feature-remove-body"),
     ] },
+    // Measure and Section view are the view tools beside the viewport (Jonathan, 2026-11-01):
+    // the ribbon carried a panel opener and a duplicate entry under those names, not variants.
     { id: "solid-analysis", label: "Inspection", visibleToolCount: 2, tools: [
-      tool("solid-inspect", "Measure", "measure", "show-inspect"),
-      tool("solid-section", "Section View", "split", "part-section"),
       tool("solid-interference", "Interference Analysis", "split", "part-interference"),
       tool("solid-clearance", "Clearance", "measure", "part-clearance"),
       tool("solid-compare", "Compare Bodies", "measure", "part-compare"),

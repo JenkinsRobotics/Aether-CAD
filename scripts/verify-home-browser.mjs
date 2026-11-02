@@ -45,8 +45,11 @@ try {
   await page.addInitScript(() => {
     window.showDirectoryPicker = () => { throw Error('Home requested local files without permission'); };
   });
-  await page.goto(origin + '/cad/');
+  // Sign in only on the real host. A frontend fixture needs no first visit: loading
+  // Home twice in a row cancels the first page's API fetches, which WebKit reports
+  // as page errors.
   if (!frontend) {
+    await page.goto(origin + '/cad/');
     await page.locator('input[name="username"]').fill('editor');
     await page.locator('input[name="password"]').fill('account-test-password-2026');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();

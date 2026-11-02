@@ -248,11 +248,12 @@ it("shows Plane, Axis and Point as the three construction features", () => {
 });
 
 
-it("exposes Inspect and Section while retaining the other inspection actions", () => {
+it("leaves Measure and Section view to the view tools and keeps the other inspection actions", () => {
   const section = fusionTabsFor("part").find(tab => tab.id === "solid")!.sections.find(section => section.label === "Inspect")!;
-  expect(section.visible).toEqual(["solid-inspect", "solid-section"]);
-  expect(section.menu).toEqual(["solid-inspect", "solid-section", "solid-interference", "solid-clearance", "solid-compare", "solid-properties", "solid-continuity", "solid-curvature-comb", "solid-isocurve", "solid-minimum-radius"]);
-  expect(toolbarToolById("solid-inspect")?.action).toBe("show-inspect");
+  expect(section.visible).toEqual(["solid-interference", "solid-clearance"]);
+  expect(section.menu).toEqual(["solid-interference", "solid-clearance", "solid-compare", "solid-properties", "solid-continuity", "solid-curvature-comb", "solid-isocurve", "solid-minimum-radius"]);
+  expect(toolbarToolById("solid-inspect")).toBeUndefined();
+  expect(toolbarToolById("solid-section")).toBeUndefined();
 });
 
 
@@ -274,7 +275,7 @@ it("preserves all six design categories while omitting unimplemented commands", 
  expect(toolbarWorkspaceFor('part','surface').groups[0].tools.map(tool=>tool.action)).toEqual(['feature-surface-extrude','feature-surface-revolve','feature-surface-sweep','feature-surface-loft','feature-surface-patch','feature-surface-offset','feature-surface-ruled','feature-surface-boundary','feature-surface-blend']);
  const framing=toolbarWorkspaceFor('part','framing');
  expect(framing.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
- expect(framing.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('show-inspect');
+ expect(framing.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('part-interference');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-mirror');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-draft');
 });
@@ -302,9 +303,9 @@ it("keeps extrusion, revolution, sweep and loft as peer Create tools", () => {
  expect(toolbarToolById('solid-fillet')?.variants?.map(tool=>tool.id)).toContain('solid-chamfer');
 });
 
-it("names and illustrates the three core inspection commands distinctly",()=>{
- expect(['solid-inspect','solid-section','solid-interference'].map(id=>{const tool=toolbarToolById(id)!;return [tool.label,tool.icon,tool.action];})).toEqual([
-  ['Measure','measure','show-inspect'],['Section View','split','part-section'],['Interference Analysis','split','part-interference']
+it("names and illustrates the inspection commands distinctly",()=>{
+ expect(['solid-interference','solid-clearance'].map(id=>{const tool=toolbarToolById(id)!;return [tool.label,tool.icon,tool.action];})).toEqual([
+  ['Interference Analysis','split','part-interference'],['Clearance','measure','part-clearance']
  ]);
 });
 

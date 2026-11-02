@@ -84,7 +84,7 @@ describe("CADTraditionalRibbon", () => {
       for (const category of ["Create", "Modify", "Construct", "Inspect", "Insert", "Select"])
         expect(html, `${activeWorkspace}/${category}`).toContain(`aria-label="${category} tools"`);
       expect(html).toContain('data-tool-id="solid-plane"');
-      expect(html).toContain('data-tool-id="solid-inspect"');
+      expect(html).toContain('data-tool-id="solid-interference"');
       // Surface tools are live on their own tab, Trim included since r63 (plane trims); no other tab offers them.
       if (activeWorkspace === "surface") { expect(html).toContain('data-tool-id="surface-extrude"'); expect(html).toContain('data-tool-id="surface-trim"'); }
       else expect(html).not.toContain('data-tool-id="surface-trim"');
@@ -180,11 +180,12 @@ it('both placements keep category menus and switch to sketch context', () => {
 });
 
 
-it("shows only Inspect and Section as primary Inspection tools", () => {
+it("shows Interference and Clearance as primary Inspection tools; Measure and Section view are view tools", () => {
   const html = renderToStaticMarkup(<CADTraditionalRibbon activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()} />);
-  expect(html).toContain('data-tool-id="solid-inspect"');
-  expect(html).toContain('data-tool-id="solid-section"');
+  expect(html).not.toContain('data-tool-id="solid-inspect"');
+  expect(html).not.toContain('data-tool-id="solid-section"');
+  expect(html).toContain('data-tool-id="solid-interference"');
+  expect(html).toContain('data-tool-id="solid-clearance"');
   expect(html).not.toContain('data-tool-id="solid-properties"');
-  expect(html).not.toContain('data-tool-id="solid-interference"');
   expect(html).toContain('aria-label="Inspect tools"');
 });
