@@ -948,15 +948,12 @@
 .cad-document-tray-slot { display:contents; }
 .cad-document-tray-slot[hidden] { display:none; }
 
-/* History and view menus in the header, after search (they left the tool bar
-   when it became the shared docked/floating ribbon). */
+/* Undo/redo and the docked/floating switch in the header, after search. */
 .cad-header-controls { display: flex; align-items: center; gap: 2px; flex: none; }
 .cad-header-controls > [role="group"] { display: flex; align-items: center; gap: 2px; }
-.cad-header-controls > [role="group"] + [role="group"] { margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--aether-color-border); }
 .cad-header-controls :is(.aui-icon-button, .aui-menu-trigger) { display: inline-grid; place-items: center; width: 30px; min-width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--aether-color-text-dim); }
 .cad-header-controls :is(.aui-icon-button, .aui-menu-trigger):hover:not(:disabled) { background: var(--aether-color-bg-hover); color: var(--aether-color-text); }
 .cad-header-controls svg { width: 18px; height: 18px; }
-@media (max-width: 1200px) { .cad-header-controls > [role="group"]:not(:first-child) { display: none; } }
 /* Under the docked tool bar the camera starts below it, level with the side cards. */
 .cad-studio-workspace .aui-shell:has(.aui-shell-fltoolbar .aui-workspace-ribbon[data-variant="docked"]) .cad-studio-camera-navigation { top: calc(var(--aui-studio-docked-top) + 82px); }
 
