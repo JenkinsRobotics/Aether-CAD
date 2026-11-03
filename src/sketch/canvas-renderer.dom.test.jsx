@@ -108,9 +108,9 @@ it('moves X/Y measurement lines and extension endpoints with saved labels',()=>{
  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
  const drawing={type:'drawing',contours:[{type:'path',start:[2,3],segments:[{type:'line',end:[12,13]}]}],constraints:[{id:'x',kind:'horizontal-distance',a:{kind:'point',contour:0,index:0},b:{kind:'point',contour:0,index:1},value:10},{id:'y',kind:'vertical-distance',a:{kind:'point',contour:0,index:0},b:{kind:'point',contour:0,index:1},value:10}]};
  renderSketchCanvas(svg,drawing,{x:-60,y:-40,width:120,height:80},[],{x:[7,30],y:[40,8]});
- const x=svg.querySelector('[data-constraint-id="x"] [data-dimension-measure]');expect(x.getAttribute('y1')).toBe('-28');expect(x.getAttribute('y2')).toBe('-28');expect(x.getAttribute('x1')).toBe('2');
+ const x=svg.querySelector('[data-constraint-id="x"] [data-dimension-measure]');expect(x.getAttribute('y1')).toBe('-30');expect(x.getAttribute('y2')).toBe('-30');expect(x.getAttribute('x1')).toBe('2');
  const y=svg.querySelector('[data-constraint-id="y"] [data-dimension-measure]');expect(y.getAttribute('x1')).toBe('40');expect(y.getAttribute('x2')).toBe('40');expect(y.getAttribute('y1')).toBe('-3');
- const guide=svg.querySelector('[data-constraint-id="x"] [data-dimension-extension]');expect(guide.getAttribute('y1')).toBe('-3');expect(guide.getAttribute('y2')).toBe('-28');
+ const guide=svg.querySelector('[data-constraint-id="x"] [data-dimension-extension]');expect(guide.getAttribute('y1')).toBe('-3');expect(guide.getAttribute('y2')).toBe('-32'); // extension lines run 2 units past the dimension line (Y14.5)
 });
 it('relocates diagonal length and distance guides parallel to their source geometry',()=>{
  for(const kind of ['length','distance']) {
@@ -138,7 +138,7 @@ it('orients radial guides toward manual labels and resizes angular arcs',()=>{
  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
  const drawing={type:'drawing',contours:[{type:'path',start:[0,0],segments:[{type:'line',end:[10,0]},{type:'line',end:[10,10]}]}],constraints:[{id:'a',kind:'angle',a:{kind:'line',contour:0,index:0},b:{kind:'line',contour:0,index:1},value:90}]};
  renderSketchCanvas(svg,drawing,{x:-60,y:-40,width:120,height:80},[],{a:[10,26]});
- expect(svg.querySelector('.sketch-dimension path').getAttribute('d')).toContain('A 20 20');
+ expect(svg.querySelector('.sketch-dimension path').getAttribute('d')).toContain('A 26 26');
 });
 it('keeps an arc radius guide on its visible sweep when its label moves outside',()=>{
  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');

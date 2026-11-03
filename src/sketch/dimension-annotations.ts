@@ -14,6 +14,7 @@ import {
   type SketchPoint,
 } from "@aether/core/sketch";
 import { angularDimensionLayout } from "./angular-dimension-layout";
+import { linearDimension, dimensionStyle } from "@aether/core/annotation/dimension-geometry";
 import { updateDimensionLabelLeader } from "./dimension-label-leader";
 
 /** Presentation of solved dimensions. Values and referenced geometry always
@@ -117,35 +118,21 @@ export function renderDimensionAnnotations(
           p = measurement.point;
           q = measurement.foot;
         } else continue;
-        if (c.kind === "horizontal-distance") {
-          const y = Math.max(p[1], q[1]) + 6 * scale;
-          guides.push([[...p], [p[0], y]], [[...q], [q[0], y]]);
-          p[1] = y;
-          q[1] = y;
-          prefix = "X ";
-        }
-        if (c.kind === "vertical-distance") {
-          const x = Math.max(p[0], q[0]) + 6 * scale;
-          guides.push([[...p], [x, p[1]]], [[...q], [x, q[1]]]);
-          p[0] = x;
-          q[0] = x;
-          prefix = "Y ";
-        }
+        if (c.kind === "horizontal-distance") prefix = "X ";
+        if (c.kind === "vertical-distance") prefix = "Y ";
       } else continue;
-      if (c.kind === "length" || c.kind === "distance") {
-        const dx = q[0] - p[0],
-          dy = q[1] - p[1],
-          length = Math.hypot(dx, dy);
-        if (length < 1e-10) continue;
-        const offset: SketchPoint = [
-          (-dy / length) * 6 * scale,
-          (dx / length) * 6 * scale,
-        ];
-        const a: SketchPoint = [p[0] + offset[0], p[1] + offset[1]],
-          b: SketchPoint = [q[0] + offset[0], q[1] + offset[1]];
-        guides.push([[...p], a], [[...q], b]);
-        p = a;
-        q = b;
+      // Linear dimensions: the shared engine layout (Y14.5) places the dimension line through
+      // the label, extension lines from the geometry, and the text on the line.
+      const axis = c.kind === "horizontal-distance" ? "x" : c.kind === "vertical-distance" ? "y" : ["length", "distance"].includes(c.kind) ? "aligned" : null;
+      let textAt: SketchPoint | null = null, run: [SketchPoint, SketchPoint] | undefined, outside = false;
+      if (axis) {
+        const [p0, q0] = [p, q], mid: SketchPoint = [(p0[0] + q0[0]) / 2, (p0[1] + q0[1]) / 2];
+        const dx = q0[0] - p0[0], dy = q0[1] - p0[1], len = Math.hypot(dx, dy);
+        if (axis === "aligned" && len < 1e-10) continue;
+        const fallback: SketchPoint = axis === "x" ? [mid[0], Math.max(p0[1], q0[1]) + 6 * scale] : axis === "y" ? [Math.max(p0[0], q0[0]) + 6 * scale, mid[1]] : [mid[0] - (dy / len) * 6 * scale, mid[1] + (dx / len) * 6 * scale];
+        const g = linearDimension(p0, q0, positions[c.id] ?? fallback, dimensionStyle(scale, 0), axis);
+        guides.length = 0; guides.push(...g.extensions.map(([from, to]) => [from, to] as [SketchPoint, SketchPoint]));
+        p = g.line[0]; q = g.line[1]; textAt = g.text.at; run = g.run; outside = g.outside;
       }
       const value = dimensionValue(drawing, c);
       const group = document.createElementNS(ns, "g");
@@ -189,7 +176,7 @@ export function renderDimensionAnnotations(
               ? "y"
               : "aligned",
         );
-        group.setAttribute("data-label-gap", String(2 * scale));
+        group.setAttribute("data-label-gap", "0");
       }
       layer.append(group);
       const appendLine = (
@@ -220,27 +207,19 @@ export function renderDimensionAnnotations(
         group.append(arc);
       } else appendLine(p, q);
       const text = document.createElementNS(ns, "text");
-      text.setAttribute(
-        "x",
-        String(angular ? angular.label[0] : (p[0] + q[0]) / 2),
-      );
-      text.setAttribute(
-        "y",
-        String(angular ? -angular.label[1] : -(p[1] + q[1]) / 2 - 2 * scale),
-      );
+      const at: SketchPoint = angular ? angular.label : textAt ?? [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      text.setAttribute("x", String(at[0]));
+      text.setAttribute("y", String(-at[1]));
+      text.setAttribute("dominant-baseline", "central");
       const position = positions[c.id];
-      const guide = angular
-        ? [
-            angular.center[0] + (angular.label[0] - angular.center[0]) / 1.3,
-            angular.center[1] + (angular.label[1] - angular.center[1]) / 1.3,
-          ]
-        : [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      const guide = angular ? angular.label : run ? run[0] : [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      if (axis) { group.setAttribute("data-dimension-unit", String(scale)); group.toggleAttribute("data-label-outside", outside); }
       text.setAttribute("data-guide-x", String(guide[0]));
       text.setAttribute("data-guide-y", String(-guide[1]));
       if (position) {
         text.setAttribute("data-manual-position", "");
-        text.setAttribute("x", String(position[0]));
-        text.setAttribute("y", String(-position[1]));
+        // A linear label already sits on its line at the dragged position's foot; curved labels keep the dragged point.
+        if (!axis) { text.setAttribute("x", String(position[0])); text.setAttribute("y", String(-position[1])); }
       }
       text.setAttribute("font-size", String(2 * scale));
       text.style.fontSize = `${2 * scale}px`;

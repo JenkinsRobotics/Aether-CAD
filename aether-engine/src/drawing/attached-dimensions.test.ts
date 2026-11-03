@@ -59,9 +59,11 @@ it("measures the angle between the two straight edges nearest the picks, in the 
   const [corner] = built.sheets[0].annotations;
   expect(corner).toMatchObject({ text: "90.0°", valueDeg: 90, measure: "angle", textAlign: "center" });
   expect(corner.valueMm).toBeUndefined();
-  // Both extension lines start at the shared corner (90, 112.5).
-  expect(corner.lines[0][0]).toEqual(corner.lines[1][0]);
-  expect(corner.lines[0][0][0]).toBeCloseTo(90, 5); expect(corner.lines[0][0][1]).toBeCloseTo(112.5, 5);
+  // The arc passes through the label; both extension lines run from the edges to 2 mm past it,
+  // on rays from the shared corner (90, 112.5).
+  const radius = Math.hypot(86 - 90, 109 - 112.5);
+  for (const extension of corner.lines.slice(0, 2)) expect(Math.hypot(extension[1][0] - 90, extension[1][1] - 112.5)).toBeCloseTo(radius + 2, 5);
+  expect(Math.hypot(corner.positionMm[0] - 90, corner.positionMm[1] - 112.5)).toBeCloseTo(radius, 5);
   const svg = exportDrawingSVG(built), dxf = exportDrawingDXF(built);
   expect(svg).toContain('text-anchor="middle">90.0°</text>');
   expect(dxf).toContain("\\U+00B0");

@@ -85,12 +85,12 @@ it("shares width/height label alignment across layout, SVG and DXF", async () =>
   doc.sheets[0].annotations.push({ id: "width", kind: "width", viewId: "front", positionMm: [80, 140], decimals: 2 });
   const built = await buildDrawing(doc, project);
   const [height, note, width] = built.sheets[0].annotations;
-  expect(height.textAlign).toBe("left");
-  expect(height.positionMm[0]).toBeGreaterThan(height.lines[0][0][0]);
+  // Text sits on the dimension line, centred, for width and height alike (Y14.5 unidirectional text).
+  expect(height.textAlign).toBe("center");
   expect(note.textAlign).toBe("left");
   expect(width.textAlign).toBe("center");
   const svg = exportDrawingSVG(built);
-  expect(svg).toContain('font-size="3.5">10.00</text>');
+  expect(svg).toMatch(/font-size="3.5"[^>]*text-anchor="middle">10\.00<\/text>/);
   expect(svg).toContain('font-size="3.5" text-anchor="middle">40.00</text>');
-  expect(exportDrawingDXF(built)).toContain('1\n40.00\n72\n1\n11\n80\n21\n71.5\n31\n0');
+  expect(exportDrawingDXF(built)).toContain('1\n40.00\n72\n1\n11\n80\n21\n70\n31\n0');
 });

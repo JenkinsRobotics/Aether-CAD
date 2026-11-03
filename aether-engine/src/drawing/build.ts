@@ -3,7 +3,8 @@ import { availableBodies } from "../document/feature-history";
 import { sha256Hex } from "../kernel/sha256";
 import { resolvedDrawingView, validateDrawingDocument, type DrawingDocument, type DrawingPoint, type DrawingSheet, type DrawingView } from "./document";
 import type { PartDrawingOptions, PartDrawingProjection, ProjectedDrawingCurve } from "./projection";
-import { attachedDimension } from "./attached-dimensions";
+import { attachedDimension, sheetLines, sheetStyle } from "./attached-dimensions";
+import { linearDimension } from "../annotation/dimension-geometry";
 import { circleChords, clipProjectionToCircle } from "./detail-view";
 
 export type DrawingProjector = (source: PartDocument, options: PartDrawingOptions) => Promise<PartDrawingProjection>;
@@ -71,21 +72,13 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
+      const text = valueMm.toFixed(annotation.decimals);
+      // The view's extent along one axis, dimensioned from the bounds corner nearest the label.
       const [x, y] = annotation.positionMm;
-      const a: DrawingPoint = horizontal ? [x0, y] : [x, y0], b: DrawingPoint = horizontal ? [x1, y] : [x, y1];
-      const baseline = horizontal ? (y < y0 ? y0 : y1) : (x < x0 ? x0 : x1);
-      const lines: [DrawingPoint, DrawingPoint][] = [
-        [a, b],
-        [horizontal ? [x0, baseline] : [baseline, y0], horizontal ? [x0, y + 2] : [x + 2, y0]],
-        [horizontal ? [x1, baseline] : [baseline, y1], horizontal ? [x1, y + 2] : [x + 2, y1]],
-      ];
-      // Closed arrowheads are three short line segments; lengths are paper mm.
-      for (const [tip, direction] of [[a, 1], [b, -1]] as const) {
-        const p: DrawingPoint = horizontal ? [tip[0] + direction * 2, tip[1] - 0.7] : [tip[0] - 0.7, tip[1] + direction * 2];
-        const q: DrawingPoint = horizontal ? [tip[0] + direction * 2, tip[1] + 0.7] : [tip[0] + 0.7, tip[1] + direction * 2];
-        lines.push([tip, p], [p, q], [q, tip]);
-      }
-      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: horizontal ? "center" : "left", positionMm: horizontal ? [(x0 + x1) / 2, y - 1.5] : [x + 1.5, (y0 + y1) / 2], lines });
+      const near: DrawingPoint = horizontal ? [x0, y < y0 ? y0 : y1] : [x < x0 ? x0 : x1, y0];
+      const far: DrawingPoint = horizontal ? [x1, near[1]] : [near[0], y1];
+      const graphics = linearDimension(near, far, annotation.positionMm, sheetStyle, horizontal ? "x" : "y");
+      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text) });
     }
     if (sheet.partsList) {
       // Every part is one item, quantity 1: a Part drawing lists its own parts (assembly sources are not drawn yet).

@@ -940,9 +940,8 @@ it('moves axis guides during drag and restores them on cancellation',()=>{
  doc.features.push(feature);open(()=>doc,apply,feature);move(0,0);
  const svg=querySketchControl('[aria-label="2D sketch canvas"]'),label=querySketchControl('.sketch-dimension text'),line=querySketchControl('[data-dimension-measure]');
  const original=line.getAttribute('y1');label.dispatchEvent(new dom.window.MouseEvent('pointerdown',{clientX:7,clientY:-21,bubbles:true}));move(20,40);
- // Stand-off is 2 * (viewWidth / 120) mm below the label, so it is constant on
- // screen; the mm value tracks the default view width (200 mm).
- expect(line.getAttribute('y1')).toBe(String(-(40 - 2 * (200 / 120))));
+ // The dimension line passes through the dragged label; the text sits on the line.
+ expect(line.getAttribute('y1')).toBe('-40');
  svg.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));expect(line.getAttribute('y1')).toBe(original);expect(querySketchControl('[data-dimension-leader]')).toBeNull();
 });
 it('creates a read-only reference dimension without changing sketch geometry',async()=>{

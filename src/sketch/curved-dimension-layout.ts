@@ -65,7 +65,7 @@ export function updateCurvedDimensionLayout(
   };
   let anchor: Point;
   if (data.kind === "angle") {
-    const r = Math.max(distance / 1.3, 1e-6),
+    const r = Math.max(distance, 1e-6),
       start = data.startAngle!,
       sweep = data.sweep!,
       p = at(start, r),

@@ -30,7 +30,7 @@ export function angularDimensionLayout(
   ];
   const start = at(startAngle),
     end = at(startAngle + sweep),
-    label = at(startAngle + sweep / 2, radius * 1.3);
+    label = at(startAngle + sweep / 2);
   return {
     center,
     startAngle,

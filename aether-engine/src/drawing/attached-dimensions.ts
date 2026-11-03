@@ -3,6 +3,18 @@
  *  every rebuild, so the reference needs no edge numbering. All graphics are sheet mm. */
 import type { DrawingAnnotation, DrawingPoint } from "./document";
 import { sheetPoint, type BuiltDrawingAnnotation, type BuiltDrawingView } from "./build";
+import { angularDimension, arcPolyline, arrowheadLines, dimensionStyle, linearDimension, radialDimension, splitAroundText, type DimensionGraphics } from "../annotation/dimension-geometry";
+
+/** Sheet millimetres: 2 mm arrowheads, 1 mm extension gap, 2 mm overshoot, 3.5 mm text. */
+export const sheetStyle = dimensionStyle(1);
+/** Lines of a laid-out dimension on the sheet: the dimension line split around `text`, extensions, arrows and the run to an outside label. */
+export function sheetLines(graphics: DimensionGraphics, text: string): Line[] {
+  // Horizontal text: clear its width along a flat line, its height along a steep one.
+  const [p, q] = graphics.line, steep = Math.abs(q[1] - p[1]) > Math.abs(q[0] - p[0]);
+  const halfGap = steep ? 2.5 : text.length * 1.1 + 1;
+  const line = graphics.outside ? [graphics.line] : splitAroundText(graphics.line, graphics.text.at, halfGap);
+  return [...line, ...graphics.extensions, ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle)), ...(graphics.run ? [graphics.run] : [])];
+}
 
 type Attached = Extract<DrawingAnnotation, { kind: "diameter" | "radius" | "angle" | "center-mark" | "length" }>;
 type Segment = { a: DrawingPoint; b: DrawingPoint };
@@ -14,14 +26,7 @@ const add = (p: DrawingPoint, q: DrawingPoint): DrawingPoint => [p[0] + q[0], p[
 const mul = (p: DrawingPoint, k: number): DrawingPoint => [p[0] * k, p[1] * k];
 const norm = (p: DrawingPoint) => Math.hypot(p[0], p[1]);
 const unit = (p: DrawingPoint, fallback: DrawingPoint = [1, 0]): DrawingPoint => { const n = norm(p); return n < 1e-9 ? fallback : mul(p, 1 / n); };
-const perp = (p: DrawingPoint): DrawingPoint => [-p[1], p[0]];
 
-/** Closed arrowhead at `tip`; `back` is the unit direction from the tip into the dimension line. */
-function arrowhead(tip: DrawingPoint, back: DrawingPoint): Line[] {
-  const base = add(tip, mul(back, 2)), side = mul(perp(back), 0.7);
-  const p = add(base, side), q = sub(base, side);
-  return [[tip, p], [p, q], [q, tip]];
-}
 
 function footOnSegment(p: DrawingPoint, { a, b }: Segment): DrawingPoint {
   const ab = sub(b, a), t = norm(ab) < 1e-9 ? 0 : Math.max(0, Math.min(1, (sub(p, a)[0] * ab[0] + sub(p, a)[1] * ab[1]) / (ab[0] ** 2 + ab[1] ** 2)));
@@ -74,34 +79,26 @@ export function attachedDimension(annotation: Attached, view: BuiltDrawingView):
     };
     const r1 = ray(annotation.atMm, first, d1), r2 = ray(annotation.toMm, second, d2);
     const valueDeg = Math.acos(Math.max(-1, Math.min(1, r1[0] * r2[0] + r1[1] * r2[1]))) * 180 / Math.PI;
-    const radius = Math.max(5, norm(sub(label, vertex))), sweep = Math.sign(r1[0] * r2[1] - r1[1] * r2[0]) || 1, start = Math.atan2(r1[1], r1[0]);
-    const steps = Math.max(8, Math.ceil(valueDeg / 5)), total = valueDeg * Math.PI / 180;
-    const arcPoint = (i: number): DrawingPoint => { const angle = start + sweep * total * i / steps; return add(vertex, [radius * Math.cos(angle), radius * Math.sin(angle)]); };
-    const lines: Line[] = [[vertex, add(vertex, mul(r1, radius + 2))], [vertex, add(vertex, mul(r2, radius + 2))]];
-    for (let i = 0; i < steps; i++) lines.push([arcPoint(i), arcPoint(i + 1)]);
-    lines.push(...arrowhead(arcPoint(0), unit(sub(arcPoint(1), arcPoint(0)))), ...arrowhead(arcPoint(steps), unit(sub(arcPoint(steps - 1), arcPoint(steps)))));
-    return { id: annotation.id, viewId: annotation.viewId, text: `${valueDeg.toFixed(annotation.decimals)}°`, valueDeg, measure: "angle", textAlign: "center", positionMm: label, lines };
+    const sign = (Math.sign(r1[0] * r2[1] - r1[1] * r2[0]) || 1) as 1 | -1;
+    const reach = (segment: Segment, ray: DrawingPoint): number => Math.max(0, (sub(segment.a, vertex)[0] * ray[0] + sub(segment.a, vertex)[1] * ray[1]), (sub(segment.b, vertex)[0] * ray[0] + sub(segment.b, vertex)[1] * ray[1]));
+    const graphics = angularDimension(vertex, r1, r2, sign, label, sheetStyle, [reach(first, r1), reach(second, r2)]);
+    const text = `${valueDeg.toFixed(annotation.decimals)}°`;
+    const lines: Line[] = [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))];
+    return { id: annotation.id, viewId: annotation.viewId, text, valueDeg, measure: "angle", textAlign: "center", positionMm: graphics.text.at, lines };
   }
   if (annotation.kind === "length") {
-    const edge = nearestSegment(segments, annotation.atMm, name), along = unit(sub(edge.b, edge.a)), normal = perp(along);
-    // The dimension line is the edge translated to the label's offset; extension lines reach 2 mm past it.
-    const offset = sub(label, edge.a)[0] * normal[0] + sub(label, edge.a)[1] * normal[1], side = Math.sign(offset) || 1;
-    const a = add(edge.a, mul(normal, offset)), b = add(edge.b, mul(normal, offset)), beyond = mul(normal, side * 2);
-    const lines: Line[] = [[a, b], [edge.a, add(a, beyond)], [edge.b, add(b, beyond)], ...arrowhead(a, along), ...arrowhead(b, mul(along, -1))];
-    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale;
-    return { id: annotation.id, viewId: annotation.viewId, text: valueMm.toFixed(annotation.decimals), valueMm, measure: "length", textAlign: "center", positionMm: add(mul(add(a, b), 0.5), mul(normal, side * 1.5)), lines };
+    const edge = nearestSegment(segments, annotation.atMm, name);
+    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale, text = valueMm.toFixed(annotation.decimals);
+    const graphics = linearDimension(edge.a, edge.b, label, sheetStyle);
+    return { id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text) };
   }
   const round = nearestRound(rounds, annotation.atMm, name);
   if (annotation.kind === "center-mark") {
     const reach = round.radiusMm + 2, [cx, cy] = round.center;
     return { id: annotation.id, viewId: annotation.viewId, symbol: "center-mark", text: "", textAlign: "left", positionMm: round.center, lines: [[[cx - reach, cy], [cx + reach, cy]], [[cx, cy - reach], [cx, cy + reach]]] };
   }
-  const toward = unit(sub(label, round.center)), edge = add(round.center, mul(toward, round.radiusMm));
-  const outside = norm(sub(label, round.center)) > round.radiusMm + 1e-6;
-  const lines: Line[] = annotation.kind === "diameter"
-    ? [[sub(round.center, mul(toward, round.radiusMm)), edge], ...arrowhead(edge, mul(toward, -1)), ...arrowhead(sub(round.center, mul(toward, round.radiusMm)), toward)]
-    : [[round.center, edge], ...arrowhead(edge, mul(toward, -1))];
-  if (outside) lines.push([edge, label]);
   const value = annotation.kind === "diameter" ? 2 * round.modelRadius : round.modelRadius;
-  return { id: annotation.id, viewId: annotation.viewId, text: `${annotation.kind === "diameter" ? "Ø" : "R"}${value.toFixed(annotation.decimals)}`, valueMm: value, measure: annotation.kind, textAlign: "left", positionMm: label, lines };
+  const text = `${annotation.kind === "diameter" ? "Ø" : "R"}${value.toFixed(annotation.decimals)}`;
+  const graphics = radialDimension(round.center, round.radiusMm, label, annotation.kind);
+  return { id: annotation.id, viewId: annotation.viewId, text, valueMm: value, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text) };
 }

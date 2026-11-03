@@ -39,7 +39,9 @@
     "./sketch/reference/regenerate-unavailable-sketch": "./src/sketch/reference/regenerate-unavailable-sketch.ts",
     "./sketch/reference/spline-end-tangents": "./src/sketch/reference/spline-end-tangents.ts",
     "./kernel/node": "./src/kernel/node-kernel.ts",
-    "./kernel/in-process": "./src/kernel/in-process-client.ts"
+    "./kernel/in-process": "./src/kernel/in-process-client.ts",
+    "./annotation/*": "./src/annotation/*.ts",
+    "./annotation/dimension-geometry": "./src/annotation/dimension-geometry.ts"
   },
   "scripts": {
     "check": "tsc --noEmit --pretty false",

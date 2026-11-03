@@ -92,8 +92,11 @@ it("measures the model length of the straight edge nearest a pick", async () => 
   const length = built.sheets[0].annotations[0];
   // The top edge of the 40 × 20 plate at 2:1 spans 80 sheet mm but measures 40 model mm.
   expect(length).toMatchObject({ measure: "length", text: "40.0", valueMm: 40, textAlign: "center" });
-  expect([...length.lines[0]].sort((p, q) => p[0] - q[0])).toEqual([[40, 30], [120, 30]]);
-  expect(length.lines).toHaveLength(3 + 6);
+  // The dimension line is split around the text; its two parts span the edge.
+  const parts = length.lines.filter(([p, q]) => p[1] === 30 && q[1] === 30);
+  expect(Math.min(...parts.flat().map((p) => p[0]))).toBe(40); expect(Math.max(...parts.flat().map((p) => p[0]))).toBe(120);
+  expect(length.positionMm).toEqual([80, 30]);
+  expect(length.lines).toHaveLength(2 + 2 + 6);
 }, 30000);
 
 it("keeps a section view valid once newer annotations raise the format version", () => {
