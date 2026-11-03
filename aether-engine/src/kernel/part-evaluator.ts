@@ -1786,6 +1786,15 @@ export function evaluatePartDocument(
         const pickedEdgesOf = (body: Shape3D, bodyId: string, picks: import("../document/solid-edge-reference").EdgeFinishEdge[], what: string) => {
           const anchors = [...vertexAnchorsOf(body).values()];
           const edges = body.edges;
+          // A picked face stands for every edge of that face.
+          const expanded = picks.flatMap((pick) => {
+            if (pick.kind !== "face-edges") return [pick];
+            const face = faceByReference(body, pick, what), faceEdges = face.edges;
+            const refs = faceEdges.map((edge) => { const m = edge.pointAt(0.5); const ref = { kind: "curved-edge" as const, sourceFeatureId: pick.sourceFeatureId, bodyId: pick.bodyId, label: pick.label, midpointMillimeters: [m.x, m.y, m.z] as V3, lengthMillimeters: edge.length }; m.delete(); return ref; });
+            faceEdges.forEach((edge) => edge.delete()); face.delete();
+            return refs;
+          });
+          picks = expanded;
           const midpoints = picks.map((pick): V3 => {
             if (pick.bodyId !== bodyId) throw new Error(`${pick.label} is on another body. Reselect edges on the chosen body.`);
             if (pick.kind === "solid-edge") {
@@ -1797,6 +1806,7 @@ export function evaluatePartDocument(
               };
               return scale(add(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
             }
+            if (pick.kind === "face-edges") throw new Error(`${pick.label} could not be expanded into edges.`);
             return pick.midpointMillimeters as V3;
           });
           return midpoints.map((target, index) => {

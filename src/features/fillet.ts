@@ -10,6 +10,7 @@ export const filletEditor: FeatureEditor = {
     const { field, feature } = context;
     return {
       ...edgeFinishControls(context),
+      measurement: field("Measurement", feature?.measurement ?? "radius", ["radius", "width"]),
       radius: field("Radius (mm)", String(feature?.radiusMillimeters ?? 0.5)),
       variable: field("Variable fillet", String(feature?.endRadiusMillimeters !== undefined), ["false", "true"]),
       endRadius: field("End radius (mm)", String(feature?.endRadiusMillimeters ?? feature?.radiusMillimeters ?? 0.5)),
@@ -20,9 +21,18 @@ export const filletEditor: FeatureEditor = {
     const { win, form, lengthUnitLabel } = context;
     layoutEdgeFinish(context, controls, "Entities to fillet");
     const row = (label: string, control: Controls[string]) => { control.closest("label")?.remove(); control.setAttribute("form", form.id); return win.body.appendChild(rowIn(label, control, unitSuffix(lengthUnitLabel))); };
-    row("Radius", controls.radius);
+    controls.measurement.closest("label")?.remove(); controls.measurement.hidden = true; controls.measurement.setAttribute("form", form.id); form.append(controls.measurement);
+    const measurements = { Radius: "radius", Width: "width" } as const;
+    const measurement = win.picker(Object.keys(measurements), { ariaLabel: "Measurement menu", onChange: (value) => { controls.measurement.value = measurements[value as keyof typeof measurements]; sync(); controls.measurement.dispatchEvent(new Event("change")); } });
+    measurement.setValue(controls.measurement.value === "width" ? "Width" : "Radius");
+    win.body.append(win.row("Measurement", measurement.element));
+    const size = row("Radius", controls.radius);
     const end = row("End radius", controls.endRadius);
-    const sync = () => { end.hidden = controls.variable.value !== "true"; };
+    const sync = () => {
+      end.hidden = controls.variable.value !== "true";
+      const width = controls.measurement.value === "width";
+      size.querySelector("span")!.textContent = width ? "Width" : "Radius"; end.querySelector("span")!.textContent = width ? "End width" : "End radius";
+    };
     win.body.insertBefore(checkRow(context, controls.variable, "Variable fillet", sync), end); sync();
     const note = document.createElement("p"); note.textContent = "A variable fillet runs from the radius at the edge's start to the end radius at its far end."; win.addHelp(note);
   },
@@ -36,6 +46,7 @@ export const filletEditor: FeatureEditor = {
   serialize(values) {
     return {
       radiusMillimeters: Number(values.radius),
+      ...(values.measurement === "width" ? { measurement: "width" } : {}),
       ...(values.variable === "true" ? { endRadiusMillimeters: Number(values.endRadius) } : {}),
       ...serializeEdgeFinish(values),
     };

@@ -18,6 +18,7 @@ export const chamferEditor: FeatureEditor = {
       ...edgeFinishControls(context),
       radius: field("Distance (mm)", String(feature?.radiusMillimeters ?? 0.5)),
       chamferType: field("Chamfer type", chamferType, Object.values(chamferTypes)),
+      measurement: field("Measurement", feature?.measurement ?? "offset", ["offset", "tangent"]),
       secondDistance: field("Second distance (mm)", String(feature?.secondDistanceMillimeters ?? feature?.radiusMillimeters ?? 0.5)),
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 45)),
       referenceFace: field("Reference face", JSON.stringify(feature?.referenceFace ? [feature.referenceFace] : [])),
@@ -31,6 +32,11 @@ export const chamferEditor: FeatureEditor = {
     picker.setValue(Object.keys(chamferTypes).find((key) => chamferTypes[key as keyof typeof chamferTypes] === controls.chamferType.value) ?? "Equal distance");
     win.body.append(picker.element);
     const row = (label: string, control: Controls[string], unit: string) => { control.closest("label")?.remove(); control.setAttribute("form", form.id); return win.body.appendChild(rowIn(label, control, unitSuffix(unit))); };
+    controls.measurement.closest("label")?.remove(); controls.measurement.hidden = true; controls.measurement.setAttribute("form", form.id); form.append(controls.measurement);
+    const measurements = { Offset: "offset", "Tangent distance": "tangent" } as const;
+    const measurement = win.picker(Object.keys(measurements), { ariaLabel: "Measurement menu", onChange: (value) => { controls.measurement.value = measurements[value as keyof typeof measurements]; sync(); controls.measurement.dispatchEvent(new Event("change")); } });
+    measurement.setValue(controls.measurement.value === "tangent" ? "Tangent distance" : "Offset");
+    const measurementRow = win.body.appendChild(win.row("Measurement", measurement.element));
     row("Distance", controls.radius, lengthUnitLabel);
     const second = row("Second distance", controls.secondDistance, lengthUnitLabel), angle = row("Angle", controls.angle, "deg");
     const faces = mountPickedReferences<SolidFaceReference>(context, controls.referenceFace, {
@@ -38,7 +44,7 @@ export const chamferEditor: FeatureEditor = {
       note: "The face the first distance lies on. Default: the adjacent face facing up most.",
       onChange: (picked) => { if (picked.length > 1) faces.update([picked[picked.length - 1]]); },
     });
-    const sync = () => { const mode = controls.chamferType.value; second.hidden = mode !== "two-distances"; angle.hidden = mode !== "distance-angle"; faces.element.hidden = mode === "equal"; };
+    const sync = () => { const mode = controls.chamferType.value; second.hidden = mode !== "two-distances"; angle.hidden = mode !== "distance-angle"; faces.element.hidden = mode === "equal"; measurementRow.hidden = mode !== "equal"; };
     sync();
     // Mounted last so the entities box is the active pick when the window opens (one picker at a time).
     layoutEdgeFinish(context, controls, "Entities to chamfer");
@@ -56,6 +62,7 @@ export const chamferEditor: FeatureEditor = {
     if (face) delete face.centerMillimeters;
     return {
       radiusMillimeters: Number(values.radius),
+      ...(values.chamferType === "equal" && values.measurement === "tangent" ? { measurement: "tangent" } : {}),
       ...(values.chamferType === "two-distances" ? { secondDistanceMillimeters: Number(values.secondDistance) } : {}),
       ...(values.chamferType === "distance-angle" ? { angleDegrees: Number(values.angle) } : {}),
       ...(face ? { referenceFace: face } : {}),

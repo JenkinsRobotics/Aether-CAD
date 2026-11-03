@@ -1,4 +1,5 @@
 import {validateExtrusionPointReference,type SolidVertexAnchor} from './extrusion-point-reference';
+import {validateSolidFaceReference,type SolidFaceReference} from './solid-face-reference';
 
 /** Ordered endpoint anchors plus native straight-edge membership; never an EdgeN index. */
 export interface SolidEdgeAnchor {start:SolidVertexAnchor;end:SolidVertexAnchor}
@@ -18,11 +19,14 @@ export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }
+/** A picked face stands for every edge of that face (Onshape's "Entities to fillet"). */
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 /** A pick may carry its own radius (fillet); otherwise the feature's size applies. */
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 export function validateEdgeFinishEdge(ref:EdgeFinishEdge,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean) {
  if(!ref||typeof ref!=='object')throw Error('Select solid edges to finish.');
  if(ref.radiusMillimeters!==undefined&&!(ref.radiusMillimeters>0))throw Error('Edge sizes must be positive.');
+ if(ref.kind==='face-edges'){validateSolidFaceReference(ref,earlier,missing,'Entities to finish');return;}
  if(ref.kind==='solid-edge'){validateSolidEdgeReference(ref,earlier,missing);return;}
  if(ref.kind!=='curved-edge'||typeof ref.sourceFeatureId!=='string'||(!earlier.has(ref.sourceFeatureId)&&!missing(ref.sourceFeatureId))||typeof ref.bodyId!=='string'||typeof ref.label!=='string'
   ||!Array.isArray(ref.midpointMillimeters)||ref.midpointMillimeters.length!==3||!ref.midpointMillimeters.every(Number.isFinite)||!(ref.lengthMillimeters>0)

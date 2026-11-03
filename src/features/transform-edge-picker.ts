@@ -10,15 +10,14 @@ export function transformEdgePicker(context:FeatureEditorContext,control:Control
  let enabled=false,active=false;
  const render=()=>{const ref=control.value?JSON.parse(control.value):undefined;box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
  const set=(value:string)=>{control.value=value;render();control.dispatchEvent(new Event('change'));};
- const button=document.createElement('button');button.type='button';button.className='aui-button';button.textContent='Select straight edge';button.setAttribute('aria-label','Transform edge selection');element.append(button);
- const lifecycle=referencePickerLifecycle('edge',()=>enabled&&win.panel.isConnected,value=>{active=value;button.setAttribute('aria-pressed',String(value));window.dispatchEvent(new CustomEvent('aether-source-edge-picking',{detail:value}));});
+ const lifecycle=referencePickerLifecycle('edge',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-edge-picking',{detail:value}));});
  const request=()=>{
   if(!enabled||!active||!win.panel.isConnected)return;
   const items=cadSelection.snapshot().items;
   if(items.length!==1||items[0].kind!=='edge'){win.setError('Select one straight edge on an earlier solid part.');return;}
   window.dispatchEvent(new CustomEvent('aether-transform-edge-request',{detail:{beforeFeatureId:feature?.id}}));
  };
- button.onclick=()=>{lifecycle.setActive(true);request();};element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});
+ element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});
  const receive=(event:Event)=>{
   if(!enabled||!active||!win.panel.isConnected)return;
   const result=(event as CustomEvent).detail;

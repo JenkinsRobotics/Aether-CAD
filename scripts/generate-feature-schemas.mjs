@@ -61,7 +61,8 @@ export function featureSchemas(decls) {
     }
     const body = [text, ...related].join("\n\n").slice(0, 12000);
     // `{...} & ({ type: "a" } | { type: "b" })` declares one shape for several types.
-    const tail = /&\s*\(([^)]*)\);?$/.exec(text)?.[1];
+    // Doc comments inside the union may hold parentheses; drop them before finding the group.
+    const tail = /&\s*\(([^)]*)\);?$/.exec(text.replace(/\/\*\*[\s\S]*?\*\//g, ""))?.[1];
     const variants = tail && /(^|[{;,\s])type\s*:/.test(tail) ? tail : literal[1];
     for (const type of variants.match(/["']([a-z0-9-]+)["']/g).map(value => value.slice(1, -1))) schemas[type] = body;
   }

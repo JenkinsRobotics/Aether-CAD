@@ -281,8 +281,10 @@ it("fillet and chamfer windows follow Onshape: entities box, tangent propagation
   const chamfer = await authored("chamfer", { "Edges": "all", "Chamfer type": "distance-angle", "Distance (mm)": "1", "Angle": "30" });
   expect(chamfer).toMatchObject({ type: "chamfer", radiusMillimeters: 1, angleDegrees: 30 });
   expect(chamfer.secondDistanceMillimeters).toBeUndefined();
-  const fillet = await authored("fillet", { "Edges": "all", "Radius (mm)": "2", "Variable fillet": "true", "End radius (mm)": "4" });
-  expect(fillet).toMatchObject({ type: "fillet", radiusMillimeters: 2, endRadiusMillimeters: 4 });
+  const fillet = await authored("fillet", { "Edges": "all", "Radius (mm)": "2", "Variable fillet": "true", "End radius (mm)": "4", "Measurement": "width" });
+  expect(fillet).toMatchObject({ type: "fillet", radiusMillimeters: 2, endRadiusMillimeters: 4, measurement: "width" });
+  const tangent = await authored("chamfer", { "Edges": "all", "Distance (mm)": "1", "Measurement": "tangent" });
+  expect(tangent).toMatchObject({ type: "chamfer", radiusMillimeters: 1, measurement: "tangent" });
   cadCommands.execute("feature-fillet");
   const panel = [...document.querySelectorAll(".cad-feature-dialog")].at(-1);
   for (const label of ["Entities to fillet", "Tangent propagation", "Variable fillet"]) expect(panel.querySelector(`[aria-label^="${label}"]`), label).toBeTruthy();

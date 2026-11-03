@@ -331,9 +331,9 @@ try {
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 1);
     await ribbon('Thicken', 'feature-surface-thicken').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
-    const sheet = await page.locator('.cad-feature-dialog [aria-label="Body"]').evaluate(el => [...el.options].map(o => o.textContent.trim()).pop());
-    await setSelect('Body', sheet);
-    await page.locator('.cad-feature-dialog').getByRole('button', { name: 'Add body', exact: true }).click();
+    // The sheet is picked as a user does: its row in the Parts list fills the box.
+    await page.locator('.cad-parts-list').getByRole('treeitem').last().click();
+    await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Surfaces to thicken"]')).toContainText(/\S/, { timeout: 10000 });
     await setInput('Thickness (mm)', 1);
     await applyDialog('surface-thicken');
     await expect(featureRow(/^Surface Thicken/)).toBeVisible();

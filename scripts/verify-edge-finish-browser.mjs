@@ -111,6 +111,20 @@ try {
   await apply('Chamfer');
   await featureRow(/Chamfer/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '4-chamfered.png') });
+
+  // A face is an entity too: clicking the ring's top face (away from its edges) fillets every edge of it.
+  if (await fit.isEnabled().catch(() => false)) await fit.click();
+  await page.waitForTimeout(1000);
+  await ribbon('Fillet', 'feature-fillet');
+  await dialog().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(600);
+  await clickArc(15, 0); // mid-width of the top face at the first angle clear of the window: 5 mm from either arc
+  await expect(dialog().locator('.aui-feature-entities[aria-label^="Entities to fillet"]')).toContainText(/Face of/, { timeout: 10000 });
+  await dialog().locator('[aria-label="Radius (mm)"]').fill('0.3');
+  await dialog().locator('[aria-label="Radius (mm)"]').dispatchEvent('change');
+  await page.screenshot({ path: join(evidence, '5-face-picked.png') });
+  await apply('Fillet by face');
+  await page.screenshot({ path: join(evidence, '6-face-filleted.png') });
   assert.deepEqual(errors.filter(e => !/WebGPU|GPU|favicon/i.test(e)), [], 'no page errors');
   console.log('PASS fillet and chamfer take viewport edge picks on a revolved ring');
 } finally {

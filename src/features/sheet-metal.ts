@@ -1,3 +1,4 @@
+import { edgeIdentity } from "./edge-finish";
 import { defaultSheetMetalRule, type EdgeFinishEdge } from "@aether/core/document";
 import type { SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
@@ -8,7 +9,6 @@ import { bodiesControls, bodiesLayout, bodiesValid } from "./surface";
 /** Sheet metal dialogs (SolidCraft's sheet.*): the base plate carries the rule;
  *  flanges and hems bend from picked edges; Unfold and Refold swap the body
  *  between folded and flat. */
-const edgeIdentity = (edge: EdgeFinishEdge) => JSON.stringify(edge.kind === "solid-edge" ? [edge.bodyId, edge.anchor.start.signature, edge.anchor.end.signature] : [edge.bodyId, edge.midpointMillimeters, edge.lengthMillimeters]);
 const edgesValid = (controls: Controls): string | null => (JSON.parse(controls.edges.value || "[]") as unknown[]).length ? null : "Pick the edges in the viewport.";
 const bodyOnly = (type: "sheet-unfold" | "sheet-refold", caption: string): FeatureEditor => ({
   type,

@@ -3,12 +3,13 @@
 import { cadSelection } from "../cad-selection-store";
 import type { Control, FeatureEditorContext } from "./shared";
 
-export function mountPartBox(context: FeatureEditorContext, control: Control, title: string, choices: { id: string; name: string }[], exclude: () => string = () => "", options: { single?: boolean } = {}) {
+export function mountPartBox(context: FeatureEditorContext, control: Control, title: string, choices: { id: string; name: string }[], exclude: () => string = () => "", options: { single?: boolean; scalar?: boolean } = {}) {
   const { win, form } = context;
   control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
   const box = win.entitiesBox(title);
-  const read = (): string[] => JSON.parse(control.value || "[]");
-  const update = (ids: string[]) => { control.value = JSON.stringify(ids); render(); control.dispatchEvent(new Event("change")); };
+  // `scalar`: the control holds one bare id (Extrude's stopping part), not a JSON list.
+  const read = (): string[] => options.scalar ? (control.value ? [control.value] : []) : JSON.parse(control.value || "[]");
+  const update = (ids: string[]) => { control.value = options.scalar ? (ids[0] ?? "") : JSON.stringify(ids); render(); control.dispatchEvent(new Event("change")); };
   const render = () => box.render(read().map((id) => ({ label: choices.find((body) => body.id === id)?.name ?? "Unavailable part", onRemove: () => update(read().filter((other) => other !== id)) })));
   let seen = cadSelection.snapshot().items;
   const unsubscribe = cadSelection.subscribe(() => {

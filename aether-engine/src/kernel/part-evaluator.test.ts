@@ -979,3 +979,26 @@ it('revolves up to a vertex, a part, a face or the next part, on either side', a
  expect(()=>ring({endType:'up-to-face',endReference:{sourceFeatureId:'block',bodyId:blockId,label:'Far face',normal:[0,1,0]}})).toThrow(/before the selected face/);
  expect(()=>ring({endType:'up-to-vertex',endPointReference:{kind:'sketch-point',sourceFeatureId:'pt',contourId:'up',point:'center',label:'Up'},reversed:true,angleDegrees:90})).not.toThrow();
 },60000);
+
+it('finishes a picked face as its edges, and measures a fillet by width and a chamfer by tangent distance', async () => {
+ const {createRectanglePartDocument}=await import('../document/part-document');
+ const box=createRectanglePartDocument('Face finish',{widthMillimeters:20,heightMillimeters:10,depthMillimeters:10});
+ const built=evaluatePartDocument(box).parts[0], extrudeId=box.features.find(f=>f.type==='extrude')!.id;
+ const volumeOf=(d:typeof box)=>{let v=0;evaluatePartDocument(d,{withBodies:b=>{for(const s of b.values())v=measureVolume(s as Shape3D);}});return v;};
+ const top=built.topology.flatMap(f=>f.candidates).find(c=>c.kind==='face-center'&&c.origin[2]>9.9)!;
+ const topFace={sourceFeatureId:extrudeId,bodyId:built.id,label:'Top face',normal:[0,0,1] as [number,number,number],faceAnchor:{centerMillimeters:top.origin as [number,number,number],areaSquareMillimeters:200}};
+ const topEdges=built.topology.find(f=>f.candidates.some(c=>c.id===top.id))!.candidates.filter(c=>c.kind==='edge-midpoint');
+ expect(topEdges).toHaveLength(4);
+ const edgeRefs=topEdges.map(c=>({kind:'curved-edge' as const,sourceFeatureId:extrudeId,bodyId:built.id,label:'Edge',midpointMillimeters:c.origin as [number,number,number],lengthMillimeters:c.measurements!.lengthMillimeters!}));
+ const withFillet=(edges:unknown[],extra:Record<string,unknown>={})=>({...box,features:[...box.features,{id:'f',type:'fillet' as const,name:'Fillet',suppressed:false,radiusMillimeters:1,targetBodyId:built.id,edges,...extra}]} as typeof box);
+ // The same pipeline: a face pick and its four edges picked one by one give one result.
+ expect(volumeOf(withFillet([{kind:'face-edges',...topFace}]))).toBeCloseTo(volumeOf(withFillet(edgeRefs)),6);
+ // A 1 mm radius along one 20 mm edge removes (1 − π/4) mm³ per mm; by width, √2 mm gives the same radius on a 90° edge.
+ const oneEdge=[edgeRefs.find(e=>e.lengthMillimeters>19.9)!];
+ expect(volumeOf(withFillet(oneEdge))).toBeCloseTo(2000-(1-Math.PI/4)*20,4);
+ expect(volumeOf(withFillet(oneEdge,{radiusMillimeters:Math.SQRT2,measurement:'width'}))).toBeCloseTo(2000-(1-Math.PI/4)*20,4);
+ // A chamfer of offset 1 removes 10 mm³ along that edge; a tangent distance of √2 is the same chamfer.
+ const withChamfer=(extra:Record<string,unknown>)=>({...box,features:[...box.features,{id:'c',type:'chamfer' as const,name:'Chamfer',suppressed:false,radiusMillimeters:1,targetBodyId:built.id,edges:oneEdge,...extra}]} as typeof box);
+ expect(volumeOf(withChamfer({}))).toBeCloseTo(1990,4);
+ expect(volumeOf(withChamfer({radiusMillimeters:Math.SQRT2,measurement:'tangent'}))).toBeCloseTo(1990,4);
+},60000);

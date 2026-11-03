@@ -1,4 +1,5 @@
 import { availableBodies } from "@aether/core/document";
+import { mountPartBox } from "./part-box";
 import type { FeatureEditor, FeatureEditorContext } from "./shared";
 
 /** Remove: chosen parts leave the history from this feature on. */
@@ -12,15 +13,10 @@ export const removeBodyEditor: FeatureEditor = {
     Array.from(pick.children).forEach((o, i) => (o.textContent = choices[i].name));
     return { bodies, pick };
   },
-  layout({ win, form }, controls) {
-    controls.bodies.closest("label")?.remove(); controls.bodies.hidden = true; controls.bodies.setAttribute("form", form.id); form.append(controls.bodies);
-    const box = win.entitiesBox("Parts to remove"); win.body.prepend(box.element);
-    const names = new Map(Array.from(controls.pick.children).map((o) => [(o as HTMLOptionElement).value, o.textContent ?? ""]));
-    const read = (): string[] => JSON.parse(controls.bodies.value);
-    const update = (ids: string[]) => { controls.bodies.value = JSON.stringify(ids); render(); controls.bodies.dispatchEvent(new Event("change")); };
-    const render = () => box.render(read().map((id) => ({ label: names.get(id) ?? id, onRemove: () => update(read().filter((other) => other !== id)) })));
-    const add = document.createElement("button"); add.type = "button"; add.className = "aui-button"; add.textContent = "Add part"; add.onclick = () => { const id = controls.pick.value; if (id && !read().includes(id)) update([...read(), id]); }; box.element.append(add);
-    render();
+  layout(context, controls) {
+    const { form } = context;
+    controls.pick.closest("label")?.remove(); controls.pick.hidden = true; controls.pick.setAttribute("form", form.id); form.append(controls.pick);
+    mountPartBox(context, controls.bodies, "Parts to remove", Array.from(controls.pick.children).map((o) => ({ id: (o as HTMLOptionElement).value, name: o.textContent ?? "" })));
   },
   validate(controls) { return JSON.parse(controls.bodies.value).length ? null : "Choose at least one part to remove."; },
   serialize(values) { return { bodyIds: JSON.parse(values.bodies) }; },

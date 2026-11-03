@@ -1,3 +1,5 @@
+import { mountPartBox } from "./part-box";
+import { edgeIdentity } from "./edge-finish";
 import { availableBodies, type EdgeFinishEdge, type SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
 import { bodyAndOperationTabs, entityChips, requireSelections, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
@@ -15,18 +17,10 @@ export function bodiesControls({ field, feature, doc }: FeatureEditorContext, ke
   Array.from(pick.children).forEach((o, i) => (o.textContent = choices[i].name));
   return { pick, bodies: field("Chosen bodies", JSON.stringify(feature?.[key] ?? [])) };
 }
-export function bodiesLayout({ win, form }: FeatureEditorContext, controls: Controls, caption: string, single = false): void {
-  controls.bodies.closest("label")?.remove(); controls.bodies.hidden = true; controls.bodies.setAttribute("form", form.id); form.append(controls.bodies);
-  const box = win.entitiesBox(caption); win.body.prepend(box.element);
-  const names = new Map(Array.from(controls.pick.children).map((o) => [(o as HTMLOptionElement).value, o.textContent ?? ""]));
-  const read = (): string[] => JSON.parse(controls.bodies.value);
-  const update = (ids: string[]) => { controls.bodies.value = JSON.stringify(ids); render(); controls.bodies.dispatchEvent(new Event("change")); };
-  const render = () => box.render(read().map((id) => ({ label: names.get(id) ?? id, onRemove: () => update(read().filter((other) => other !== id)) })));
-  const add = document.createElement("button"); add.type = "button"; add.className = "aui-button"; add.textContent = single ? "Use body" : "Add body";
-  add.onclick = () => { const id = controls.pick.value; if (!id) return; update(single ? [id] : read().includes(id) ? read() : [...read(), id]); };
-  // The window re-renders its parameter rows after layout, so the button lives in the entities box, as Bounding Solid does.
-  box.element.append(add);
-  render();
+export function bodiesLayout(context: FeatureEditorContext, controls: Controls, caption: string, single = false): void {
+  const { form } = context;
+  controls.pick.closest("label")?.remove(); controls.pick.hidden = true; controls.pick.setAttribute("form", form.id); form.append(controls.pick);
+  mountPartBox(context, controls.bodies, caption, Array.from(controls.pick.children).map((o) => ({ id: (o as HTMLOptionElement).value, name: o.textContent ?? "" })), () => "", { single });
 }
 export const bodiesValid = (controls: Controls, noun: string, exactly?: number): string | null => {
   const ids: string[] = JSON.parse(controls.bodies.value);
@@ -128,7 +122,6 @@ export const surfaceReverseNormalEditor: FeatureEditor = {
   validate(controls) { return bodiesValid(controls, "surface body", 1); },
   serialize(values) { return { bodyIds: JSON.parse(values.bodies) }; },
 };
-const edgeIdentity = (edge: EdgeFinishEdge) => JSON.stringify(edge.kind === "solid-edge" ? [edge.bodyId, edge.anchor.start.signature, edge.anchor.end.signature] : [edge.bodyId, edge.midpointMillimeters, edge.lengthMillimeters]);
 const edgesValid = (controls: Controls): string | null => (JSON.parse(controls.edges.value || "[]") as unknown[]).length ? null : "Pick the edges in the viewport.";
 export const surfaceRuledEditor: FeatureEditor = {
   type: "surface-ruled",

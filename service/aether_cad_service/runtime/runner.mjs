@@ -246,6 +246,24 @@ function validateExtrusionPointReference(ref, earlier, missing) {
       throw Error("Invalid stopping solid vertex anchor.");
   } else throw Error("Unsupported stopping point reference.");
 }
+function validatePlanarFaceAnchor(anchor) {
+  if (anchor === void 0) return;
+  if (!anchor || !Array.isArray(anchor.centerMillimeters) || anchor.centerMillimeters.length !== 3 || !anchor.centerMillimeters.every(Number.isFinite) || !Number.isFinite(anchor.areaSquareMillimeters) || anchor.areaSquareMillimeters <= 0)
+    throw Error("Invalid planar face anchor. Reselect the face.");
+}
+const curvedSurfaceTypes = ["cylinder", "cone", "sphere", "torus", "bspline", "bezier", "extrusion", "revolution"];
+function validateSolidFaceReference(ref, earlier, missing, label = "Face selection") {
+  if (!ref || typeof ref !== "object" || Array.isArray(ref)) throw Error(`${label} needs an earlier solid face reference.`);
+  const id2 = (value2, max2 = 256) => typeof value2 === "string" && !!value2.trim() && value2.length <= max2;
+  if (!id2(ref.sourceFeatureId) || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId) || ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(earlier.get(ref.sourceFeatureId) ?? "") || !id2(ref.bodyId) || !id2(ref.label, 512))
+    throw Error(`${label} needs an earlier solid face reference.`);
+  validatePlanarFaceAnchor(ref.faceAnchor);
+  if (ref.surfaceType !== void 0) {
+    if (!curvedSurfaceTypes.includes(ref.surfaceType) || ref.normal !== void 0) throw Error(`${label} has an invalid curved surface reference.`);
+  } else if (!Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) {
+    throw Error(`${label} needs a unit planar normal or a curved surface reference.`);
+  }
+}
 function validateSolidEdgeReference(ref, earlier, missing) {
   if (!ref.anchor) throw Error("Select a straight solid edge with valid endpoint anchors.");
   for (const anchor of [ref.anchor.start, ref.anchor.end]) validateExtrusionPointReference({ ...ref, kind: "solid-vertex", anchor }, earlier, missing);
@@ -254,6 +272,10 @@ function validateSolidEdgeReference(ref, earlier, missing) {
 function validateEdgeFinishEdge(ref, earlier, missing) {
   if (!ref || typeof ref !== "object") throw Error("Select solid edges to finish.");
   if (ref.radiusMillimeters !== void 0 && !(ref.radiusMillimeters > 0)) throw Error("Edge sizes must be positive.");
+  if (ref.kind === "face-edges") {
+    validateSolidFaceReference(ref, earlier, missing, "Entities to finish");
+    return;
+  }
   if (ref.kind === "solid-edge") {
     validateSolidEdgeReference(ref, earlier, missing);
     return;
@@ -318,24 +340,6 @@ function validatePattern(feature3, earlier, missing) {
     if (feature3.distanceMillimeters !== void 0 && !(feature3.distanceMillimeters > 0)) throw new Error("Pattern distance must be positive.");
     if (feature3.orientation !== void 0 && !["identical", "path"].includes(feature3.orientation)) throw new Error("Pattern orientation must be identical or path.");
   } else throw new Error("Unknown pattern type.");
-}
-function validatePlanarFaceAnchor(anchor) {
-  if (anchor === void 0) return;
-  if (!anchor || !Array.isArray(anchor.centerMillimeters) || anchor.centerMillimeters.length !== 3 || !anchor.centerMillimeters.every(Number.isFinite) || !Number.isFinite(anchor.areaSquareMillimeters) || anchor.areaSquareMillimeters <= 0)
-    throw Error("Invalid planar face anchor. Reselect the face.");
-}
-const curvedSurfaceTypes = ["cylinder", "cone", "sphere", "torus", "bspline", "bezier", "extrusion", "revolution"];
-function validateSolidFaceReference(ref, earlier, missing, label = "Face selection") {
-  if (!ref || typeof ref !== "object" || Array.isArray(ref)) throw Error(`${label} needs an earlier solid face reference.`);
-  const id2 = (value2, max2 = 256) => typeof value2 === "string" && !!value2.trim() && value2.length <= max2;
-  if (!id2(ref.sourceFeatureId) || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId) || ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(earlier.get(ref.sourceFeatureId) ?? "") || !id2(ref.bodyId) || !id2(ref.label, 512))
-    throw Error(`${label} needs an earlier solid face reference.`);
-  validatePlanarFaceAnchor(ref.faceAnchor);
-  if (ref.surfaceType !== void 0) {
-    if (!curvedSurfaceTypes.includes(ref.surfaceType) || ref.normal !== void 0) throw Error(`${label} has an invalid curved surface reference.`);
-  } else if (!Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) {
-    throw Error(`${label} needs a unit planar normal or a curved surface reference.`);
-  }
 }
 function validateMirrorPlane(ref, earlier, missing, label = "Mirror plane") {
   if (!ref || typeof ref !== "object") throw Error(`${label} is required.`);
@@ -6345,7 +6349,10 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     }
     if (feature3.type === "fillet") {
       if (feature3.endRadiusMillimeters !== void 0) positive(feature3.endRadiusMillimeters, "Fillet end size");
+      if (feature3.measurement !== void 0 && !["radius", "width"].includes(feature3.measurement)) throw new Error("Fillet measurement must be radius or width.");
     } else {
+      if (feature3.measurement !== void 0 && !["offset", "tangent"].includes(feature3.measurement)) throw new Error("Chamfer measurement must be offset or tangent.");
+      if (feature3.measurement === "tangent" && (feature3.secondDistanceMillimeters !== void 0 || feature3.angleDegrees !== void 0)) throw new Error("Tangent distance applies to an equal-distance chamfer.");
       if (feature3.secondDistanceMillimeters !== void 0) positive(feature3.secondDistanceMillimeters, "Chamfer second distance");
       if (feature3.angleDegrees !== void 0 && !(feature3.angleDegrees > 0 && feature3.angleDegrees < 90)) throw new Error("Chamfer angle must be between 0 and 90 degrees.");
       if (feature3.secondDistanceMillimeters !== void 0 && feature3.angleDegrees !== void 0) throw new Error("Give a chamfer a second distance or an angle, not both.");
@@ -12821,14 +12828,16 @@ export interface AxisReference {
   tangentChain?: boolean;
   suppressed: boolean;
 } & (
-  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number }
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
   | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
       /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
 );
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export type SolidFaceReference=FaceSource & (
   {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
@@ -12844,6 +12853,8 @@ export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "coil": "export interface CoilFeature {\n  id:string;type:'coil';name:string;suppressed:boolean;\n  radiusMillimeters:number;pitchMillimeters:number;turns:number;wireDiameterMillimeters:number;\n  centerMillimeters?:[number,number,number];axis?:'X'|'Y'|'Z';leftHand?:boolean;\n  operation:'new'|'add'|'cut';bodyId?:string;targetBodyId?:string;\n}",
@@ -13004,14 +13015,16 @@ export interface PlanarFaceAnchor {
   tangentChain?: boolean;
   suppressed: boolean;
 } & (
-  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number }
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
   | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
       /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
 );
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export type SolidFaceReference=FaceSource & (
   {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
@@ -13027,6 +13040,8 @@ export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
 }
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HoleFacePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  /** Counterdrill: a counterbore whose floor is the countersink cone down to the hole. */\n  cutType: "plain" | "counterbore" | "countersink" | "counterdrill";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n  thread?: HoleThread;\n  /** A blind hole\'s bottom: flat (default) or a drill-point cone below the depth. */\n  drillPoint?: "flat" | "angled";\n  /** Included angle of the drill point; default 118°. */\n  drillPointAngleDegrees?: number;\n  /** Half-angle taper of the drilled wall, narrowing with depth. */\n  taperAngleDegrees?: number;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport interface HoleThread {\n  standard: HoleThreadStandard;\n  /** "M8", "M10x1.25", "1/4-20". */\n  designation: string;\n  tapped: boolean;\n  /** Clearance fit for a hole that is not tapped; default normal. */\n  fit?: HoleClearanceFit;\n  /** Tolerance class of a tapped thread ("6H", "6G", "2B"); default 6H / 2B. */\n  threadClass?: string;\n  /** Cut the helical thread into the wall instead of recording it; default false. */\n  modeled?: boolean;\n  leftHand?: boolean;\n  /** Thread length from the start face; default: the whole hole. */\n  depthMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type HoleClearanceFit = "close" | "normal" | "loose";',
@@ -13060,6 +13075,47 @@ export type SketchPlane = "XY" | "XZ" | "YZ";
 export type SolidFaceReference=FaceSource & (
   {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
 );`,
+  "offset": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  radiusMillimeters: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "offset-face": `export interface OffsetFaceFeature {
   id:string; type:'offset-face'; name:string; suppressed:boolean;
   faces:SolidFaceReference[];
@@ -13291,6 +13347,47 @@ export type SketchPatternGroup =
     };
 
 export type PierceContext = Record<string, { source: SketchPierceReference; point: SketchPoint }>;`,
+  "radius": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  radiusMillimeters: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "remove-body": "export interface RemoveBodyFeature { id:string;type:'remove-body';name:string;suppressed:boolean;bodyIds:string[] }",
   "rest": "export interface RestFeature extends OnFace {\n  id:string;type:'rest';name:string;suppressed:boolean;\n  /** Round: the diameter. Rectangular (with a length): the width. */\n  widthMillimeters:number;lengthMillimeters?:number;heightMillimeters:number;\n  /** A rectangle's length direction (in the face); default: the face's x direction. */\n  alongMillimeters?:[number,number,number];\n}",
   "revolve": `export interface RevolveFeature {
@@ -13382,7 +13479,7 @@ export interface SolidEdgeReference {
   bendRadiusMillimeters?: number;
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13391,7 +13488,9 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "sheet-fold": 'export interface SheetFoldFeature {\n  id: string; type: "sheet-fold"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  line: SketchLineDirectionReference;\n  angleDegrees: number;\n  bendRadiusMillimeters?: number;\n  inward?: boolean;\n  otherSide?: boolean;\n}\n\nexport interface SketchLineDirectionReference {\n  kind: "sketch-line";\n  sourceFeatureId: string;\n  contourId: string;\n  segmentId: string;\n}',
   "sheet-hem": `export interface SheetHemFeature {
   id: string; type: "sheet-hem"; name: string; suppressed: boolean;
@@ -13403,7 +13502,7 @@ export interface CurvedEdgeReference {
   inward?: boolean;
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13412,7 +13511,9 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "sheet-perforate": `export interface SheetPerforateFeature {
   id: string; type: "sheet-perforate"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -13482,7 +13583,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   to: { bodyId: string; edges: EdgeFinishEdge[] };
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13491,14 +13592,16 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-boundary": `export interface SurfaceBoundaryFeature {
   id: string; type: "surface-boundary"; name: string; suppressed: boolean; operation: "new";
   bodyIds: [string];
   edges: EdgeFinishEdge[];
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13507,7 +13610,9 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-extend": `export interface SurfaceExtendFeature {
   id: string; type: "surface-extend"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -13515,7 +13620,7 @@ export interface CurvedEdgeReference {
   distanceMillimeters: number;
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13524,7 +13629,9 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-extrude": 'export interface SurfaceExtrudeFeature {\n  id: string; type: "surface-extrude"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The sketch curves to extrude (open or closed chains); every curve when absent. */\n  contourIds?: string[];\n  distanceMillimeters: number;\n  reversed?: boolean;\n  symmetric?: boolean;\n}',
   "surface-fair": 'export interface SurfaceFairFeature {\n  id: string; type: "surface-fair"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  faces?: SolidFaceReference[];\n  strength?: number;\n  toleranceMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "surface-loft": 'export interface SurfaceLoftFeature {\n  id: string; type: "surface-loft"; name: string; suppressed: boolean; operation: "new";\n  sections: { profileFeatureId: string; contourId?: string }[];\n  ruled?: boolean;\n}',
@@ -13553,7 +13660,7 @@ export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeRefer
   direction?: [number, number, number];
 }
 
-export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference)&{radiusMillimeters?:number};
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
 
 export interface SolidEdgeReference {
  kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
@@ -13562,7 +13669,9 @@ export interface SolidEdgeReference {
 export interface CurvedEdgeReference {
  kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
  midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
-}`,
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-stitch": 'export interface SurfaceStitchFeature {\n  id: string; type: "surface-stitch"; name: string; suppressed: boolean;\n  /** Sewn into the first; a solid when they close. */\n  bodyIds: string[];\n  toleranceMillimeters?: number;\n}',
   "surface-sweep": 'export interface SurfaceSweepFeature {\n  id: string; type: "surface-sweep"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  contourIds?: string[];\n  pathFeatureId: string;\n  pathContourId?: string;\n}',
   "surface-thicken": 'export interface SurfaceThickenFeature {\n  id: string; type: "surface-thicken"; name: string; suppressed: boolean;\n  bodyIds: string[];\n  thicknessMillimeters: number;\n  symmetric?: boolean;\n  operation: "new" | "add" | "cut";\n  targetBodyId?: string;\n}',
@@ -13609,8 +13718,90 @@ export type SketchPlane = "XY" | "XZ" | "YZ";`,
 }
 
 export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }`,
+  "tangent": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  radiusMillimeters: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "thread": 'export interface ThreadFeature {\n  id:string;type:\'thread\';name:string;suppressed:boolean;\n  face:SolidFaceReference;\n  /** ISO metric designation, e.g. "M8" or "M8x1"; with `standard`, a size of that table ("1/4-20", "G1/2"). */\n  designation:string;\n  /** The Hole thread table the designation comes from; absent means free-form ISO metric. */\n  standard?:HoleThreadStandard;\n  /** Tolerance class ("6H", "6g" is external: use "6H"/"6G"/"2B" as the hole tables list). */\n  threadClass?:string;\n  lengthMillimeters?:number;\n  modeled?:false;\n}\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
-  "transform": "export interface TransformFeature {\n id:string;type:'transform';name:string;suppressed:boolean;\n bodyIds:string[];\n transform:PartTransform;\n /** Stable output IDs for copies. Omitted for in-place transformations. */\n copyBodyIds?:Record<string,string>;\n}\n\nexport type PartTransform=NumericPartTransform\n | {kind:'translate-reference';reference:TransformVectorReference;distanceMillimeters?:number;reversed?:boolean}\n | {kind:'rotate-reference';reference:TransformVectorReference;angleDegrees:number}\n | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3}\n | {kind:'mirror';plane:MirrorPlaneReference;/** Join the image with the original instead of making a new part. */combine?:boolean}\n /** Align (SolidCraft's solid.align): move the parts so `from` meets `to`;\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type MirrorPlaneReference=\n | {kind:'principal';plane:SketchPlane;offsetMillimeters:number}\n | {kind:'feature';featureId:string}\n | ({kind:'face'}&SolidFaceReference)\n /** A straight sketch line: the plane through it along the sketch's normal. */\n | {kind:'sketch-line';sourceFeatureId:string;contourId:string;segmentId:string};\n\nexport type NumericPartTransform=\n | {kind:'translate';translationMillimeters:Vector3}\n | {kind:'rotate';axisOriginMillimeters:Vector3;axisDirection:Vector3;angleDegrees:number}\n | {kind:'scale';centerMillimeters:Vector3;scaleFactors:Vector3}\n | {kind:'copy'};\n\nexport type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};"
+  "transform": "export interface TransformFeature {\n id:string;type:'transform';name:string;suppressed:boolean;\n bodyIds:string[];\n transform:PartTransform;\n /** Stable output IDs for copies. Omitted for in-place transformations. */\n copyBodyIds?:Record<string,string>;\n}\n\nexport type PartTransform=NumericPartTransform\n | {kind:'translate-reference';reference:TransformVectorReference;distanceMillimeters?:number;reversed?:boolean}\n | {kind:'rotate-reference';reference:TransformVectorReference;angleDegrees:number}\n | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3}\n | {kind:'mirror';plane:MirrorPlaneReference;/** Join the image with the original instead of making a new part. */combine?:boolean}\n /** Align (SolidCraft's solid.align): move the parts so `from` meets `to`;\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type MirrorPlaneReference=\n | {kind:'principal';plane:SketchPlane;offsetMillimeters:number}\n | {kind:'feature';featureId:string}\n | ({kind:'face'}&SolidFaceReference)\n /** A straight sketch line: the plane through it along the sketch's normal. */\n | {kind:'sketch-line';sourceFeatureId:string;contourId:string;segmentId:string};\n\nexport type NumericPartTransform=\n | {kind:'translate';translationMillimeters:Vector3}\n | {kind:'rotate';axisOriginMillimeters:Vector3;axisDirection:Vector3;angleDegrees:number}\n | {kind:'scale';centerMillimeters:Vector3;scaleFactors:Vector3}\n | {kind:'copy'};\n\nexport type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};",
+  "width": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  radiusMillimeters: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`
 };
 const tool$1 = (name5, description, properties, required = []) => ({
   name: `aether_cad_${name5}`,
@@ -38480,41 +38671,72 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
       throw new Error(`Unknown edge plane ${feature3.edgePlane.plane}.`);
     return own(new Plane(scale$1(axis, feature3.edgePlane.offsetMillimeters), xDirection, axis));
   })() : void 0;
-  const pickedPoints = feature3.edges?.map((pick) => {
+  const picks = feature3.edges?.flatMap((pick) => {
     if (pick.bodyId !== bodyId)
       throw new Error(`${pick.label} is on another body. Reselect edges on the target body.`);
     const refuse = () => new Error(`${pick.label} changed or is missing. Reselect the edges to finish.`);
-    if (pick.kind === "solid-edge") {
-      const anchors = [...vertexAnchorsOf(body).values()];
-      const vertex = (anchor) => {
-        const matches = anchors.filter((a22) => a22.signature === anchor.signature);
-        const found = matches.length === 1 ? matches[0] : matches.find((a22) => a22.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a22.positionMillimeters.map((v2, i2) => v2 - anchor.positionMillimeters[i2])) < 1e-6);
-        if (!found)
-          throw refuse();
-        return [...found.positionMillimeters];
-      };
-      const a2 = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-      return scale$1(add$4(a2, b), 0.5);
-    }
-    const target = pick.midpointMillimeters, tolerance2 = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
-    const edges = body.edges;
-    try {
-      const hit = edges.find((edge) => {
-        const m22 = edge.pointAt(0.5), d2 = Math.hypot(m22.x - target[0], m22.y - target[1], m22.z - target[2]);
-        m22.delete();
-        return d2 < 1e-3 && Math.abs(edge.length - pick.lengthMillimeters) <= tolerance2;
+    if (pick.kind === "face-edges") {
+      const face = faceByReference(body, pick, "Entities to finish"), edges = face.edges;
+      const points = edges.map((edge) => {
+        const m2 = edge.pointAt(0.5), point22 = [m2.x, m2.y, m2.z];
+        m2.delete();
+        return { point: point22, size: pick.radiusMillimeters };
       });
-      if (!hit)
-        throw refuse();
-      const m2 = hit.pointAt(0.5);
-      const point2 = [m2.x, m2.y, m2.z];
-      m2.delete();
-      return point2;
-    } finally {
       edges.forEach((edge) => edge.delete());
+      face.delete();
+      if (!points.length) throw refuse();
+      return points;
     }
+    const point2 = (() => {
+      if (pick.kind === "solid-edge") {
+        const anchors = [...vertexAnchorsOf(body).values()];
+        const vertex = (anchor) => {
+          const matches = anchors.filter((a22) => a22.signature === anchor.signature);
+          const found = matches.length === 1 ? matches[0] : matches.find((a22) => a22.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a22.positionMillimeters.map((v2, i2) => v2 - anchor.positionMillimeters[i2])) < 1e-6);
+          if (!found)
+            throw refuse();
+          return [...found.positionMillimeters];
+        };
+        const a2 = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
+        return scale$1(add$4(a2, b), 0.5);
+      }
+      const target = pick.midpointMillimeters, tolerance2 = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
+      const edges = body.edges;
+      try {
+        const hit = edges.find((edge) => {
+          const m22 = edge.pointAt(0.5), d2 = Math.hypot(m22.x - target[0], m22.y - target[1], m22.z - target[2]);
+          m22.delete();
+          return d2 < 1e-3 && Math.abs(edge.length - pick.lengthMillimeters) <= tolerance2;
+        });
+        if (!hit)
+          throw refuse();
+        const m2 = hit.pointAt(0.5);
+        const point22 = [m2.x, m2.y, m2.z];
+        m2.delete();
+        return point22;
+      } finally {
+        edges.forEach((edge) => edge.delete());
+      }
+    })();
+    return [{ point: point2, size: pick.radiusMillimeters }];
   });
+  const pickedPoints = picks?.map((pick) => pick.point);
   const chainPoints = pickedPoints && feature3.tangentChain ? tangentChainMidpoints(body, pickedPoints) : pickedPoints;
+  const dihedralSine = (point2, cosine) => {
+    const faces = new FaceFinder().containsPoint(point2).find(body);
+    const normals = faces.slice(0, 2).map((face) => {
+      const n = face.normalAt(point2);
+      const v2 = [n.x, n.y, n.z];
+      n.delete();
+      return unit$3(v2);
+    });
+    faces.forEach((face) => face.delete());
+    if (normals.length < 2) return 1;
+    const beta = Math.acos(Math.max(-1, Math.min(1, dot$6(normals[0], normals[1]))));
+    const value2 = cosine ? Math.cos(beta / 2) : Math.sin(beta / 2);
+    return value2 < 1e-3 ? 1 : value2;
+  };
+  const measured = (point2, value2) => feature3.type === "fillet" ? feature3.measurement === "width" ? value2 / (2 * dihedralSine(point2, false)) : value2 : feature3.measurement === "tangent" ? value2 / (2 * dihedralSine(point2, true)) : value2;
   if (feature3.id === previewId) {
     const seed = chainPoints?.[0] ?? (() => {
       const edges = body.edges;
@@ -38541,20 +38763,28 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
   const size = feature3.radiusMillimeters;
   const filletRadius = () => {
     const end = feature3.type === "fillet" ? feature3.endRadiusMillimeters : void 0;
-    const perEdge = pickedPoints && feature3.edges.some((pick) => pick.radiusMillimeters !== void 0);
+    const perEdge = picks && (picks.some((pick) => pick.size !== void 0) || feature3.measurement === "width");
     if (!perEdge)
       return end !== void 0 ? [size, end] : size;
     return (edge) => {
-      const m2 = edge.pointAt(0.5);
-      const i2 = pickedPoints.findIndex((p2) => near(p2, m2));
+      const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
+      const i2 = picks.findIndex((pick) => near(pick.point, m2));
       const inChain = chainPoints.some((p2) => near(p2, m2));
       m2.delete();
-      return i2 >= 0 ? feature3.edges[i2].radiusMillimeters ?? size : inChain ? size : null;
+      if (i2 < 0 && !inChain) return null;
+      const own2 = i2 >= 0 ? picks[i2].size : void 0;
+      const start = measured(at, own2 ?? size);
+      return end !== void 0 && own2 === void 0 ? [start, measured(at, end)] : start;
     };
   };
   const chamferRadius = () => {
     if (feature3.type !== "chamfer" || feature3.secondDistanceMillimeters === void 0 && feature3.angleDegrees === void 0)
-      return size;
+      return feature3.measurement === "tangent" && chainPoints ? (edge) => {
+        const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
+        const hit = chainPoints.some((p2) => near(p2, m2));
+        m2.delete();
+        return hit ? measured(at, size) : null;
+      } : size;
     let reference;
     if (feature3.referenceFace)
       reference = faceByReference(body, feature3.referenceFace, "Chamfer reference face");
@@ -40998,6 +41228,20 @@ function evaluatePartDocument(document2, options = {}) {
           const pickedEdgesOf = (body, bodyId, picks, what) => {
             const anchors = [...vertexAnchorsOf(body).values()];
             const edges = body.edges;
+            const expanded = picks.flatMap((pick) => {
+              if (pick.kind !== "face-edges") return [pick];
+              const face = faceByReference(body, pick, what), faceEdges = face.edges;
+              const refs = faceEdges.map((edge) => {
+                const m2 = edge.pointAt(0.5);
+                const ref = { kind: "curved-edge", sourceFeatureId: pick.sourceFeatureId, bodyId: pick.bodyId, label: pick.label, midpointMillimeters: [m2.x, m2.y, m2.z], lengthMillimeters: edge.length };
+                m2.delete();
+                return ref;
+              });
+              faceEdges.forEach((edge) => edge.delete());
+              face.delete();
+              return refs;
+            });
+            picks = expanded;
             const midpoints = picks.map((pick) => {
               if (pick.bodyId !== bodyId) throw new Error(`${pick.label} is on another body. Reselect edges on the chosen body.`);
               if (pick.kind === "solid-edge") {
@@ -41009,6 +41253,7 @@ function evaluatePartDocument(document2, options = {}) {
                 };
                 return scale$1(add$4(vertex(pick.anchor.start), vertex(pick.anchor.end)), 0.5);
               }
+              if (pick.kind === "face-edges") throw new Error(`${pick.label} could not be expanded into edges.`);
               return pick.midpointMillimeters;
             });
             return midpoints.map((target, index22) => {

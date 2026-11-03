@@ -12,6 +12,7 @@ import { extrusionFacePicker } from "./planar-face-picker";
 import {
   bodyAndOperationTabs,
   entityChips,
+  iconButton,
   type Controls,
   type FeatureEditor,
   type FeatureEditorContext,
@@ -170,8 +171,7 @@ export const revolveEditor: FeatureEditor = {
     };
     controls.angle.closest("label")?.remove(); controls.angle.setAttribute("form", form.id);
     const angleRow = win.row("Revolve angle", controls.angle);
-    const flip = document.createElement("button"); flip.type = "button"; flip.className = "aui-icon-button"; flip.textContent = "⇄";
-    flip.setAttribute("aria-label", "Flip revolve direction"); flip.title = "Flip direction";
+    const flip = iconButton("flip-horizontal", "Flip revolve direction");
     hide(controls.reversed);
     const paintFlip = () => flip.setAttribute("aria-pressed", String(controls.reversed.value === "true"));
     flip.onclick = () => { controls.reversed.value = controls.reversed.value === "true" ? "false" : "true"; paintFlip(); controls.reversed.dispatchEvent(new Event("change")); };

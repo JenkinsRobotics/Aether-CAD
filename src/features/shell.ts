@@ -1,6 +1,6 @@
 import type { ShellOpenFace, SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
-import { checkRow, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { checkRow, iconButton, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
 /** Shell, as Onshape's: Hollow (no faces removed), the Faces to remove box, Shell thickness
  *  with its flip (inside or outside). Saved documents may still open every face in a
@@ -35,8 +35,7 @@ export const shellEditor: FeatureEditor = {
     const hollow = checkRow(context, controls.hollow, "Hollow", () => { if (controls.hollow.value === "true") { faces.update([]); controls.removeScope.value = "none"; } sync(); });
     win.body.insertBefore(hollow, faces.element);
     controls.thickness.closest("label")?.remove(); controls.thickness.setAttribute("form", form.id);
-    const flip = document.createElement("button"); flip.type = "button"; flip.className = "aui-icon-button"; flip.textContent = "⇄";
-    flip.setAttribute("aria-label", "Flip shell direction"); flip.title = "Shell outward instead of inward";
+    const flip = iconButton("flip-horizontal", "Flip shell direction");
     const paint = () => flip.setAttribute("aria-pressed", String(controls.direction.value === "outside"));
     flip.onclick = () => { controls.direction.value = controls.direction.value === "outside" ? "inside" : "outside"; paint(); controls.direction.dispatchEvent(new Event("change")); };
     paint();

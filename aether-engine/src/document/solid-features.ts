@@ -151,8 +151,10 @@ export type EdgeFinishFeature = {
   tangentChain?: boolean;
   suppressed: boolean;
 } & (
-  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number }
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
   | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
       /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
@@ -390,7 +392,10 @@ export function validateSolidFeature(
     }
     if (feature.type === "fillet") {
       if (feature.endRadiusMillimeters !== undefined) positive(feature.endRadiusMillimeters, "Fillet end size");
+      if (feature.measurement !== undefined && !["radius", "width"].includes(feature.measurement)) throw new Error("Fillet measurement must be radius or width.");
     } else {
+      if (feature.measurement !== undefined && !["offset", "tangent"].includes(feature.measurement)) throw new Error("Chamfer measurement must be offset or tangent.");
+      if (feature.measurement === "tangent" && (feature.secondDistanceMillimeters !== undefined || feature.angleDegrees !== undefined)) throw new Error("Tangent distance applies to an equal-distance chamfer.");
       if (feature.secondDistanceMillimeters !== undefined) positive(feature.secondDistanceMillimeters, "Chamfer second distance");
       if (feature.angleDegrees !== undefined && !(feature.angleDegrees > 0 && feature.angleDegrees < 90)) throw new Error("Chamfer angle must be between 0 and 90 degrees.");
       if (feature.secondDistanceMillimeters !== undefined && feature.angleDegrees !== undefined) throw new Error("Give a chamfer a second distance or an angle, not both.");

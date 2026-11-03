@@ -8,7 +8,9 @@ import type { Control, FeatureEditorContext } from "./shared";
 
 export interface PickedReferencesOptions<T> {
   title: string;
-  kind: "face" | "edge";
+  /** "entity": faces or edges, whichever the pointer is nearer; faces arrive through `faceToRef`. */
+  kind: "face" | "edge" | "entity";
+  faceToRef?: (face: { label: string }) => T;
   /** Main-thread request and reply events; the reply carries `{[replyKey]: T[]}` or `{error}`. */
   requestEvent: string;
   replyEvent: string;
@@ -28,25 +30,44 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   const render = () => box.render(read().map((ref, index) => ({ label: ref.label, onRemove: () => { cadSelection.dispatch({ type: "clear" }); update(read().filter((_, i) => i !== index)); } })));
   // Selecting in the viewport fills the list (the subscription below); each row removes itself. No Add/Clear buttons: the gallery's editors have none.
   let active = false;
-  const lifecycle = referencePickerLifecycle(options.kind, () => win.panel.isConnected, (value) => { active = value; box.element.dataset.picking = String(value); window.dispatchEvent(new CustomEvent(`aether-source-${options.kind}-picking`, { detail: value })); });
-  const request = () => { if (!active || !win.panel.isConnected) return; window.dispatchEvent(new CustomEvent(options.requestEvent, { detail: { beforeFeatureId: feature?.id } })); };
+  const entity = options.kind === "entity";
+  // Entities pick in the viewer's auto mode with edges first: an edge within reach wins, else the face.
+  let previousPriority = cadSelection.snapshot().priority;
+  const lifecycle = referencePickerLifecycle(entity ? "auto" : options.kind as "face" | "edge", () => win.panel.isConnected, (value) => {
+    active = value; box.element.dataset.picking = String(value);
+    if (entity) { if (value) { previousPriority = cadSelection.snapshot().priority; cadSelection.dispatch({ type: "set-priority", priority: "edge" }); } else if (cadSelection.snapshot().priority !== previousPriority) cadSelection.dispatch({ type: "set-priority", priority: previousPriority }); }
+    window.dispatchEvent(new CustomEvent(`aether-source-${options.kind}-picking`, { detail: value }));
+  });
+  const kindOf = (items: readonly { kind: string }[]) => items.length && items.every((item) => item.kind === items[0].kind) ? items[0].kind : null;
+  const request = () => {
+    if (!active || !win.panel.isConnected) return;
+    if (entity && kindOf(cadSelection.snapshot().items) === "face") window.dispatchEvent(new CustomEvent("aether-offset-faces-request", { detail: { beforeFeatureId: feature?.id } }));
+    else window.dispatchEvent(new CustomEvent(options.requestEvent, { detail: { beforeFeatureId: feature?.id } }));
+  };
   box.element.addEventListener("pointerdown", () => { lifecycle.setActive(true); request(); });
+  const add = (picked: T[]) => { const refs = read(), known = new Set(refs.map(options.identity)); for (const ref of picked) if (!known.has(options.identity(ref))) { refs.push(ref); known.add(options.identity(ref)); } update(refs); };
   const receive = (event: Event) => {
     if (!active || !win.panel.isConnected) return;
     const reply = (event as CustomEvent).detail;
     const picked = reply?.[options.replyKey] as T[] | undefined;
-    if (!picked?.length) { win.setError(reply?.error ?? `Select one or more ${options.kind}s.`); return; }
-    const refs = read(), known = new Set(refs.map(options.identity));
-    for (const ref of picked) if (!known.has(options.identity(ref))) { refs.push(ref); known.add(options.identity(ref)); }
-    update(refs);
+    if (!picked?.length) { win.setError(reply?.error ?? `Select one or more ${entity ? "faces or edges" : options.kind + "s"}.`); return; }
+    add(picked);
+  };
+  const receiveFaces = (event: Event) => {
+    if (!entity || !active || !win.panel.isConnected) return;
+    const faces = (event as CustomEvent).detail?.faces as { label: string }[] | undefined;
+    if (!faces?.length) { win.setError((event as CustomEvent).detail?.error ?? "Select faces or edges on an earlier solid part."); return; }
+    add(faces.map((face) => options.faceToRef!(face)));
   };
   window.addEventListener(options.replyEvent, receive);
+  if (entity) window.addEventListener("aether-offset-faces", receiveFaces);
+  const accepts = (kind: string | null) => kind !== null && (entity ? kind === "face" || kind === "edge" : kind === options.kind);
   let selected = cadSelection.snapshot().items;
-  const unsubscribe = cadSelection.subscribe(() => { const next = cadSelection.snapshot().items; if (next === selected) return; selected = next; if (next.length && next.every((item) => item.kind === options.kind)) request(); });
+  const unsubscribe = cadSelection.subscribe(() => { const next = cadSelection.snapshot().items; if (next === selected) return; selected = next; if (accepts(kindOf(next))) request(); });
   if (options.note) { const note = document.createElement("p");  note.textContent = options.note; win.addHelp(note); }
-  const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); lifecycle.dispose(); });
+  const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); window.removeEventListener("aether-offset-faces", receiveFaces); lifecycle.dispose(); });
   observer.observe(document.body, { childList: true, subtree: true }); render(); lifecycle.setActive(true);
-  if (!feature && selected.length && selected.every((item) => item.kind === options.kind)) queueMicrotask(request);
+  if (!feature && accepts(kindOf(selected))) queueMicrotask(request);
   return { read, update, element: box.element };
 }
 

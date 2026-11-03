@@ -1763,6 +1763,7 @@ window.addEventListener('aether-finish-edges-request',event=>{
   window.dispatchEvent(new CustomEvent('aether-finish-edges',{detail:edges?.length&&edges.every(e=>e!==null)?{edges}:{error:'Select edges on an earlier solid part in this document.'}}));
 });
 window.addEventListener('aether-source-edge-picking',event=>viewer.setSourceEdgePicking((event as CustomEvent).detail===true));
+window.addEventListener('aether-source-entity-picking',event=>viewer.setSourceEntityPicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-source-vertex-picking',event=>viewer.setSourceVertexPicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-measure-picking', event => {
   const { active, points } = (event as CustomEvent<{ active: boolean; points: boolean }>).detail;
@@ -1779,7 +1780,7 @@ window.addEventListener('aether-offset-faces-request',event=>{
   const faces=doc?viewer.selectedOffsetFaces(doc.documentId):null;
   const references=faces?.map(face=>{
     const sourceFeatureId=sourceFeatureForBody(doc!,face.bodyId,(event as CustomEvent).detail?.beforeFeatureId);
-    return sourceFeatureId?{...face,sourceFeatureId}:null;
+    return sourceFeatureId?{...face,sourceFeatureId,label:`Face of ${doc!.features.find(f=>f.id===sourceFeatureId)?.name??face.label}`}:null;
   });
   window.dispatchEvent(new CustomEvent('aether-offset-faces',{detail:references?.length&&references.every(ref=>ref!==null)?{faces:references}:{error:'Select native faces on earlier solid parts in this document. Rebuild or reselect unavailable faces.'}}));
 });

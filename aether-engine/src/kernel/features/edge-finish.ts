@@ -35,10 +35,19 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
   // Picked edges replace the plane pin: each is found again on the body it was
   // picked on (a straight edge by its vertex anchors, any edge by midpoint and
   // length) and the finish runs on exactly those edges, never the nearest.
-  const pickedPoints = feature.edges?.map((pick): V3 => {
+  // A picked face is every edge of that face: the same pipeline, the face just selects them.
+  const picks = feature.edges?.flatMap((pick): { point: V3; size?: number }[] => {
     if (pick.bodyId !== bodyId)
       throw new Error(`${pick.label} is on another body. Reselect edges on the target body.`);
     const refuse = () => new Error(`${pick.label} changed or is missing. Reselect the edges to finish.`);
+    if (pick.kind === "face-edges") {
+      const face = faceByReference(body, pick, "Entities to finish"), edges = face.edges;
+      const points = edges.map((edge) => { const m = edge.pointAt(0.5), point: V3 = [m.x, m.y, m.z]; m.delete(); return { point, size: pick.radiusMillimeters }; });
+      edges.forEach((edge) => edge.delete()); face.delete();
+      if (!points.length) throw refuse();
+      return points;
+    }
+    const point = ((): V3 => {
     if (pick.kind === "solid-edge") {
       const anchors = [...vertexAnchorsOf(body).values()];
       const vertex = (anchor: typeof pick.anchor.start): V3 => {
@@ -69,8 +78,26 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
     finally {
       edges.forEach((edge) => edge.delete());
     }
+    })();
+    return [{ point, size: pick.radiusMillimeters }];
   });
+  const pickedPoints = picks?.map((pick) => pick.point);
   const chainPoints = pickedPoints && feature.tangentChain ? tangentChainMidpoints(body, pickedPoints) : pickedPoints;
+  // Onshape's measurements: a fillet by the width between its tangent lines, a chamfer by the
+  // width across its face. Both convert through the dihedral angle β between the faces at the
+  // edge: radius = width / (2 sin(β/2)), offset = width / (2 cos(β/2)); a 90° edge gives √2.
+  const dihedralSine = (point: V3, cosine: boolean): number => {
+    const faces = new FaceFinder().containsPoint(point).find(body);
+    const normals = faces.slice(0, 2).map((face) => { const n = face.normalAt(point); const v: V3 = [n.x, n.y, n.z]; n.delete(); return unit(v); });
+    faces.forEach((face) => face.delete());
+    if (normals.length < 2) return 1;
+    const beta = Math.acos(Math.max(-1, Math.min(1, dot(normals[0], normals[1]))));
+    const value = cosine ? Math.cos(beta / 2) : Math.sin(beta / 2);
+    return value < 1e-3 ? 1 : value;
+  };
+  const measured = (point: V3, value: number): number => feature.type === "fillet"
+    ? (feature.measurement === "width" ? value / (2 * dihedralSine(point, false)) : value)
+    : (feature.measurement === "tangent" ? value / (2 * dihedralSine(point, true)) : value);
   if (feature.id === previewId) {
     // The size handle sits on the first finished edge and pulls into the part.
     const seed = chainPoints?.[0] ?? (() => {
@@ -104,22 +131,27 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
   const size = feature.radiusMillimeters;
   const filletRadius = (): RadiusConfig<FilletRadius> => {
     const end = feature.type === "fillet" ? feature.endRadiusMillimeters : undefined;
-    const perEdge = pickedPoints && feature.edges!.some((pick) => pick.radiusMillimeters !== undefined);
+    const perEdge = picks && (picks.some((pick) => pick.size !== undefined) || feature.measurement === "width");
     if (!perEdge)
       return end !== undefined ? [size, end] : size;
     return (edge) => {
-      const m = edge.pointAt(0.5);
-      const i = pickedPoints!.findIndex((p) => near(p, m));
+      const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z];
+      const i = picks!.findIndex((pick) => near(pick.point, m));
       const inChain = chainPoints!.some((p) => near(p, m));
       m.delete();
-      return i >= 0 ? (feature.edges![i].radiusMillimeters ?? size) : inChain ? size : null;
+      if (i < 0 && !inChain) return null;
+      const own = i >= 0 ? picks![i].size : undefined;
+      const start = measured(at, own ?? size);
+      return end !== undefined && own === undefined ? [start, measured(at, end)] : start;
     };
   };
   // An asymmetric chamfer needs the face its first leg lies on: the picked
   // reference face, else the adjacent face facing up most (SolidCraft's default).
   const chamferRadius = (): RadiusConfig<ChamferRadius> => {
     if (feature.type !== "chamfer" || (feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined))
-      return size;
+      return feature.measurement === "tangent" && chainPoints
+        ? (edge) => { const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; const hit = chainPoints.some((p) => near(p, m)); m.delete(); return hit ? measured(at, size) : null; }
+        : size;
     let reference: Face;
     if (feature.referenceFace)
       reference = faceByReference(body, feature.referenceFace, "Chamfer reference face");

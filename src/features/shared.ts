@@ -1,3 +1,7 @@
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import { createElement } from "react";
+import { AetherIcon } from "@aether/ui";
 /** Shared plumbing for the feature editors. One file per feature lives beside
  *  this one, each owning that feature's controls, its window layout, and its
  *  serialization — the three things that used to be spread across three
@@ -202,4 +206,15 @@ export function checkRow(context: FeatureEditorContext, control: Control, label:
   control.addEventListener("change", () => { box.checked = control.value === "true" || control.value === "yes"; });
   const row = win.row(label, box);
   return row;
+}
+
+/** Aether UI's glyph icon button (IconButton appearance "glyph", small) for vanilla windows:
+ *  flips, reorders and the like. The icon comes from the shared assets pack. */
+export function iconButton(icon: string, label: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button"; button.className = "aui-icon-button"; button.dataset.appearance = "glyph"; button.dataset.size = "small";
+  button.title = label; button.setAttribute("aria-label", label);
+  // Synchronous, as the window chrome renders: nothing left for React to schedule later.
+  flushSync(() => createRoot(button).render(createElement(AetherIcon, { name: icon as never })));
+  return button;
 }

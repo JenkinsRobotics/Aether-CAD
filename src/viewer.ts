@@ -207,9 +207,11 @@ export class MateViewport {
   private readonly featurePreview = new FeaturePreviewLayer();
   private readonly historyPreview = new FeaturePreviewLayer();
   private historyEditing = false;
-  private sourceGeometryPicking: 'face'|'body'|'vertex'|'edge'|null = null;
+  private sourceGeometryPicking: 'face'|'body'|'vertex'|'edge'|'entity'|null = null;
   setSourceFacePicking(active: boolean) { this.sourceGeometryPicking = active?'face':null; }
   setSourceEdgePicking(active: boolean) { this.sourceGeometryPicking = active?'edge':null; }
+  /** Faces or edges, whichever the pointer is nearer (edges within 12 px win): Fillet's entities. */
+  setSourceEntityPicking(active: boolean) { this.sourceGeometryPicking = active?'entity':null; }
   setSourceVertexPicking(active: boolean) { this.sourceGeometryPicking = active?'vertex':null; }
   setSourceBodyPicking(active: boolean) { this.sourceGeometryPicking = active?'body':null; }
   /** While Measure is open, each click adds or removes an entity, like Onshape. */
@@ -260,7 +262,7 @@ export class MateViewport {
     const part = anchor && this.parts.get(anchor.part.data.id);
     return anchor && part ? { part, faceId: anchor.faceId, item: anchorSelection(anchor) } : null;
   }
-  private canPickSourceGeometry() { return this.sourceGeometryPicking!==null && cadSelection.snapshot().filter === this.sourceGeometryPicking; }
+  private canPickSourceGeometry() { const filter = cadSelection.snapshot().filter; return this.sourceGeometryPicking!==null && (this.sourceGeometryPicking === 'entity' ? filter === 'auto' : filter === this.sourceGeometryPicking); }
   private historyModel: ImportedModelData | null = null;
   setHistoryPreview(model: ImportedModelData | null, active: boolean): void {
     if (!this.historyPreview.group.parent) this.scene.add(this.historyPreview.group);

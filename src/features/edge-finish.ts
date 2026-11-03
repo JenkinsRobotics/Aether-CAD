@@ -1,11 +1,11 @@
 /** Shared by Fillet and Chamfer (one file each): the entities box of viewport edge picks, the
  *  Tangent propagation row, the hidden edge-scope fields saved documents may still use
  *  (every edge, or every edge in a plane), and their serialization. */
-import type { EdgeFinishEdge } from "@aether/core/document";
-import { mountPickedReferences } from "./picked-references";
+import type { EdgeFinishEdge, SolidFaceReference } from "@aether/core/document";
+import { faceIdentity, mountPickedReferences } from "./picked-references";
 import { checkRow, type Controls, type FeatureEditorContext } from "./shared";
 
-const identity = (edge: EdgeFinishEdge) => JSON.stringify(edge.kind === "solid-edge" ? [edge.bodyId, edge.anchor.start.signature, edge.anchor.end.signature] : [edge.bodyId, edge.midpointMillimeters, edge.lengthMillimeters]);
+export const edgeIdentity = (edge: EdgeFinishEdge) => edge.kind === "face-edges" ? faceIdentity(edge) : JSON.stringify(edge.kind === "solid-edge" ? [edge.bodyId, edge.anchor.start.signature, edge.anchor.end.signature] : [edge.bodyId, edge.midpointMillimeters, edge.lengthMillimeters]);
 
 export function edgeFinishControls({ field, feature }: FeatureEditorContext): Controls {
   return {
@@ -29,14 +29,16 @@ export function layoutEdgeFinish(context: FeatureEditorContext, controls: Contro
     const sync = () => { plane.hidden = offset.hidden = controls.edgeScope.value !== "plane"; };
     scope.hidden = false; controls.edgeScope.addEventListener("change", sync); sync();
   }
+  // Faces and edges in one box: a face stands for every edge of that face (the kernel expands it).
   mountPickedReferences<EdgeFinishEdge>(context, controls.edges, {
-    title, kind: "edge", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity,
+    title, kind: "entity", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity: edgeIdentity,
+    faceToRef: (face) => ({ kind: "face-edges", ...(face as SolidFaceReference) }),
     onChange: (edges) => { if (edges.length) { controls.edgeScope.value = "picked"; controls.edgeScope.dispatchEvent(new Event("change")); } },
   });
 }
 
 export function validateEdgeFinish(controls: Controls, verb: string): string | null {
-  if (controls.edgeScope.value === "picked" && !JSON.parse(controls.edges.value).length) return `Select the edges to ${verb}.`;
+  if (controls.edgeScope.value === "picked" && !JSON.parse(controls.edges.value).length) return `Select the faces or edges to ${verb}.`;
   return null;
 }
 

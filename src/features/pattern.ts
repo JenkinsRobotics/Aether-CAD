@@ -1,3 +1,4 @@
+import {mountPartBox} from './part-box';
 import {patternSourceTypes,availableBodies} from '@aether/core/document';
 import {requireSelections,layoutParameterRows,entityChips,type FeatureEditor} from './shared';
 import {transformEdgePicker} from './transform-edge-picker';
@@ -45,12 +46,7 @@ export const patternEditor:FeatureEditor={
     const rows=layoutParameterRows(context,control=>control===controls.edge||control===controls.pathSketch||control===controls.parts||control===controls.copyPrefix);
     entityChips(context.win,'Path sketch',controls.pathSketch,context.form);
     for(const key of ['parts','copyPrefix']){controls[key].closest('label')?.remove();controls[key].hidden=true;controls[key].setAttribute('form',context.form.id);context.form.append(controls[key]);}
-    const box=context.win.entitiesBox('Parts to pattern');context.win.body.prepend(box.element);
-    const names=new Map(Array.from(controls.partPick.children).map(o=>[(o as HTMLOptionElement).value,o.textContent??'']));
-    const readParts=():string[]=>JSON.parse(controls.parts.value);
-    const setParts=(ids:string[])=>{controls.parts.value=JSON.stringify(ids);renderParts();controls.parts.dispatchEvent(new Event('change'));};
-    const renderParts=()=>box.render(readParts().map(id=>({label:names.get(id)??id,onRemove:()=>setParts(readParts().filter(o=>o!==id))})));
-    const addPart=document.createElement('button');addPart.type='button';addPart.className='aui-button';addPart.textContent='Add part';addPart.onclick=()=>{const id=controls.partPick.value;if(id&&!readParts().includes(id))setParts([...readParts(),id]);};box.element.append(addPart);renderParts();
+    const box=mountPartBox(context,controls.parts,'Parts to pattern',Array.from(controls.partPick.children).map(o=>({id:(o as HTMLOptionElement).value,name:o.textContent??''})));
     const edgePicker=transformEdgePicker(context,controls.edge);
     const sync=()=>{
       const linear=controls.patternType.value==='linear',isPath=controls.patternType.value==='path',source=controls.directionSource.value,parts=controls.what.value==='parts';

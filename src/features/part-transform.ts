@@ -1,3 +1,4 @@
+import {mountPartBox} from './part-box';
 import type {SolidFaceReference} from '@aether/core/document';
 import {faceIdentity,mountPickedReferences} from './picked-references';
 import {transformReferenceControls,layoutTransformReferences,transformReferenceKeys,validateTransformReferences,serializeTransformReference} from './part-transform-reference';
@@ -53,24 +54,14 @@ export const transformEditor:FeatureEditor={
   const prior={...doc,features:doc.features.slice(0,end),rollbackIndex:undefined};
   const meshes=new Set(prior.features.flatMap(f=>f.type==='import-cad'&&f.meshMode==='reference'?bodyIDsForFeature(prior,f):[]));
   const choices=availableBodies(prior).filter(b=>!meshes.has(b.id));
-  const box=win.entitiesBox('Parts to transform');win.body.prepend(box.element);const list=document.createElement('div');box.element.append(list);
-  const selected=():string[]=>JSON.parse(c.bodies.value);
-  const set=(ids:string[])=>{c.bodies.value=JSON.stringify(ids);render();c.bodies.dispatchEvent(new Event('change'));};
-  const render=()=>{list.replaceChildren();for(const body of [...choices,...selected().filter(id=>!choices.some(b=>b.id===id)).map(id=>({id,name:'Unavailable part'}))]){
-    const label=document.createElement('label');label.className='aui-feature-entity';const input=document.createElement('input');input.type='checkbox';input.checked=selected().includes(body.id);input.setAttribute('aria-label',`Transform ${body.name}`);
-    input.onchange=()=>set(input.checked?[...selected(),body.id]:selected().filter(id=>id!==body.id));label.append(input,document.createTextNode(body.name));list.append(label);
-  }};
-  let bodyPicking=false;
-  const lifecycle=referencePickerLifecycle('body',()=>win.panel.isConnected,active=>{bodyPicking=active;window.dispatchEvent(new CustomEvent('aether-source-body-picking',{detail:active}));});
-  box.element.addEventListener('pointerdown',()=>lifecycle.setActive(true));
-  let items=cadSelection.snapshot().items;
-  const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===items)return;items=next;if(!bodyPicking||!next.length)return;const ids=[...new Set(next.map(item=>item.partId))].filter(id=>choices.some(b=>b.id===id));if(ids.length)set([...new Set([...selected(),...ids])]);});
-  const clear=document.createElement('button');clear.type='button';clear.className='aui-button';clear.textContent='Clear parts';clear.onclick=()=>{cadSelection.dispatch({type:'clear'});set([]);};box.element.append(clear);
+  mountPartBox(context,c.bodies,'Parts to transform',choices);
+  const lifecycle=referencePickerLifecycle('body',()=>win.panel.isConnected,active=>{window.dispatchEvent(new CustomEvent('aether-source-body-picking',{detail:active}));});
+  const unsubscribe=()=>{};
   const note=document.createElement('p');note.textContent='Select parts in the viewport or list. Coordinates use the document origin. Copies are separate parts and follow source edits. Reference modes follow earlier sketch lines, solid edges or selected point pairs. Rotation follows the right-hand rule from the first point toward the second.';win.addHelp(note);
   const scaleNote=document.createElement('p');scaleNote.textContent='Scaling differently on each axis is unavailable for some curved parts. Use Uniform scale or edit the source dimensions if the geometry check fails.';win.addHelp(scaleNote);
   const showScaleNote=()=>{scaleNote.hidden=!['scale','scale-reference'].includes(c.mode.value)||c.uniform.value==='yes';};c.mode.addEventListener('change',showScaleNote);c.uniform.addEventListener('change',showScaleNote);showScaleNote();
   mountTransformHandles(win.panel,c,context.lengthUnitLabel,context.angleUnitLabel);
-  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});lifecycle.setActive(true);layoutTransformReferences(context,c);render();
+  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});lifecycle.setActive(true);layoutTransformReferences(context,c);
  },
  validate(c){
   if(!JSON.parse(c.bodies.value).length)return 'Select one or more solid parts.';

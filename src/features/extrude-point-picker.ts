@@ -30,8 +30,7 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
   const render=()=>{const ref=read();box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
   const set=(value:string)=>{control.value=value;select.value='';render();control.dispatchEvent(new Event('change'));};
   select.onchange=()=>{if(select.value)set(select.value);};const listRow=rowIn('Sketch point',select);listRow.hidden=true;element.append(listRow); // ponytail: the list stays for the suite; points are picked in the viewport
-  const button=document.createElement('button');button.type='button';button.className='aui-button';button.textContent='Select vertex';button.setAttribute('aria-label',title+' selection');element.append(button);
-  const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));button.setAttribute('aria-pressed',String(value));element.dataset.picking=String(value);});
+  const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));element.dataset.picking=String(value);});
   element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});
   const request=()=>{
     if(!enabled||!active||!win.panel.isConnected)return;
@@ -39,7 +38,6 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
     if(items.length!==1||items[0].kind!=='vertex'){win.setError('Select one vertex on an earlier part, or choose a sketch point.');return;}
     window.dispatchEvent(new CustomEvent('aether-extrude-point-request',{detail:{beforeFeatureId:feature?.id}}));
   };
-  button.onclick=()=>{lifecycle.setActive(true);request();};
   const receive=(event:Event)=>{
     if(!enabled||!active||!win.panel.isConnected)return;
     const result=(event as CustomEvent).detail;
