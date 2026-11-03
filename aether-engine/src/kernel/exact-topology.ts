@@ -135,8 +135,12 @@ function curveCandidates(
     adaptor.delete();
   }
 
-  // The edge itself, sampled: two points for a line, more for a curve (hover outline, proximity).
-  const samples = measurements.linearDirection ? 2 : 25;
+  // The edge itself, sampled: two points for a line; a circular edge every 4° of its sweep
+  // (a chord of a 100 mm circle then sits 0.06 mm off the arc); other curves 48 points.
+  const samples = measurements.linearDirection ? 2
+    : measurements.radiusMillimeters && measurements.lengthMillimeters
+      ? Math.min(180, Math.max(12, Math.ceil(measurements.lengthMillimeters / measurements.radiusMillimeters / (4 * Math.PI / 180)) + 1))
+      : 48;
   const polylineMillimeters = Array.from({ length: samples }, (_, i) => deleteAfterVectorTuple(edge.pointAt(i / (samples - 1)))).flatMap((p) => [p[0], p[1], p[2]]);
   candidates.push({
     id: `face-${faceId}-edge-${edgeIndex}`,

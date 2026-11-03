@@ -1019,3 +1019,14 @@ it('flips a two-distance chamfer to the other face, globally and per edge', asyn
  expect(overridden).toEqual(flipped); // a per-edge override flips that edge the same way
  expect(tilt({flipped:true,flippedEdges:[ref]})).toEqual(plain); // both together cancel
 },60000);
+
+it('samples a circular edge densely enough to pick anywhere along it', async () => {
+ const {createEmptyPartDocument}=await import('../document/part-document');
+ const doc=createEmptyPartDocument('Rim');
+ doc.features.push({id:'s',type:'profile',name:'Disc',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{type:'circle',id:'c',center:[0,0],radius:100}]}},
+  {id:'e',type:'extrude',name:'Disc',profileFeatureId:'s',distanceMillimeters:10,operation:'new',suppressed:false});
+ const rim=evaluatePartDocument(doc).parts[0].topology.flatMap(f=>f.candidates).find(c=>c.kind==='edge-midpoint'&&c.measurements?.radiusMillimeters===100)!;
+ const line=rim.polylineMillimeters!; expect(line.length/3).toBeGreaterThanOrEqual(90); // 360° / 4°
+ let worst=0; for(let i=0;i+5<line.length;i+=3){const mx=(line[i]+line[i+3])/2,my=(line[i+1]+line[i+4])/2;worst=Math.max(worst,100-Math.hypot(mx,my));}
+ expect(worst).toBeLessThan(0.1); // every chord stays within 0.1 mm of the circle
+},30000);
