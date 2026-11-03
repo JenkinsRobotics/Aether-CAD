@@ -425,8 +425,10 @@ it('keeps only app-wide header icons and switches docked and floating from the h
   const settings=document.querySelector('.aui-settings-window');
   expect(settings).toBeTruthy();
   await act(async()=>[...settings.querySelectorAll('button')].find(button=>button.textContent==='Header').click());
-  // Workspace arrangement is not an app-wide header icon; the ribbon's tool bar options own it.
-  for (const label of ['Workspace layout','Workspace mode','Windows and tabs']) expect(settings.querySelector(`[aria-label="Show ${label} in header"]`)).toBeNull();
+  // The layout switch and the Windows menu are header pin options again (Jonathan, 2026-11-02);
+  // workspace arrangement (panels) stays with the ribbon's tool bar options.
+  for (const label of ['Workspace layout','Windows and tabs']) expect(settings.querySelector(`[aria-label="Show ${label} in header"]`)).toBeTruthy();
+  expect(settings.querySelector('[aria-label="Show Workspace mode in header"]')).toBeNull();
   for (const label of ['Comments','Reminders']) {
     const checkbox=settings.querySelector(`[aria-label="Show ${label} in header"]`);
     expect(checkbox).toBeTruthy();
@@ -449,7 +451,8 @@ it('keeps only app-wide header icons and switches docked and floating from the h
   const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:action.type==='select-toolbar-mode'?{toolbarMode:action.mode}:{}));
   const flip=async()=>{const docked=cadPresentation.snapshot().workspaceLayout==='docked';dispatch.mockClear();await act(async()=>toggle.click());
     expect(dispatch.mock.calls.map(([action])=>action)).toEqual(docked?[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}]:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]);
-    expect(toggle.getAttribute('aria-label')).toBe(docked?'Docked layout':'Floating layout');};
+    // The pin keeps one name ("Workspace layout"); its title names the layout it opens.
+    expect(toggle.getAttribute('aria-label')).toBe('Workspace layout');expect(toggle.getAttribute('title')).toContain(docked?'docked':'floating');};
   await flip(); await flip();
   // A hidden tree comes back with either layout: both keep it in its column.
   await act(async()=>cadPresentation.patch({panelPlacements:{...cadPresentation.snapshot().panelPlacements,browser:'hidden'}})); dispatch.mockClear();

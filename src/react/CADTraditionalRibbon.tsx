@@ -1,4 +1,3 @@
-import { cadFeatureTray } from './cad-feature-tray';
 import { cadFeatureToolById } from '../tools/feature-library';
 import { cadToolAvailability } from '../tools/availability';
 import { selectionMenu } from "./cad-selection-menu";
@@ -34,11 +33,19 @@ import { CADToolbarControls } from "./CADToolbarControls";
  *  real workspaces and run; the rest name what Aether Studio plans and say
  *  why they are not here yet. Creating documents lives here rather than on
  *  the Design ribbon — a new Part is not a modelling operation. */
-function workspaceModes(mode: CADWorkspaceMode) {
-  return [
+type WorkspaceModeItem = { id: string; label: string; kind?: "radio"; checked?: boolean; disabled?: boolean; separatorBefore?: boolean; disabledReason?: string };
+function workspaceModes(mode: CADWorkspaceMode, documentType: CADDocumentType = "project"): WorkspaceModeItem[] {
+  // Workspaces follow the open document (Jonathan, 2026-11-02): a part is a Design workspace,
+  // an assembly file is the Assembly workspace, a drawing is Drawing; only with nothing open
+  // are all three offered, with what Studio plans beneath them.
+  const real: WorkspaceModeItem[] = [
     { id: "design", label: "Design", kind: "radio" as const, checked: mode === "modeling" },
     { id: "assembly", label: "Assembly", kind: "radio" as const, checked: mode === "assembly" },
     { id: "drawing", label: "Drawing", kind: "radio" as const, checked: mode === "drawing" },
+  ].filter((entry) => documentType === "project" || entry.id === ({ part: "design", assembly: "assembly", drawing: "drawing", project: "" } as Record<CADDocumentType, string>)[documentType]);
+  if (documentType !== "project") return real;
+  return [
+    ...real,
     { id: "generative", label: "Generative Design", disabled: true, separatorBefore: true, disabledReason: "Planned — generative studies are not implemented yet." },
     { id: "render", label: "Render", disabled: true, disabledReason: "Planned — the render workspace is not implemented yet." },
     { id: "animation", label: "Animation", disabled: true, disabledReason: "Opens in Aether Animation until suite routing is connected." },
@@ -200,7 +207,7 @@ export function CADTraditionalRibbon({
   const WORKSPACE_IDS: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
   const selectWorkspaceMode = (id: string) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); };
 
-  const workspaces = workspaceModes(activeMode).map(item => ({
+  const workspaces = workspaceModes(activeMode, documentType).map(item => ({
     ...item, icon: <AetherIcon name={item.id === 'design' ? 'layers' : item.id === 'assembly' ? 'cube' : 'document'}/>,
   }));
   const toolbarOptions: MenuItem[] = [
@@ -219,7 +226,7 @@ export function CADTraditionalRibbon({
         menuItems: sectionMenu(tab.label, section.label, section.menu),
       })),
     }));
-    ribbonTabs.push(cadFeatureTray(toolContext));
+    // No catch-all Features tab (Jonathan, 2026-11-02): every tool is listed once, on its own tab; search still reaches all of them.
     const active = ribbonTabs.find(tab => tab.id === fusionTab) ?? ribbonTabs[0];
     return (
       <section className={`cad-traditional-ribbon cad-fusion-ribbon placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
@@ -265,7 +272,7 @@ export function CADWorkspaceSwitcher({ documentType = "project", onAction }: { d
   const workspaceMode = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot).workspaceMode;
   const activeMode: CADWorkspaceMode = workspaceMode === "drawing" ? "drawing" : documentType === "assembly" ? "assembly" : workspaceMode;
   const ids: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
-  return <WorkspaceSwitcher workspaces={workspaceModes(activeMode).map((item) => ({ id: item.id, label: item.label, disabled: item.disabled, disabledReason: item.disabledReason }))}
+  return <WorkspaceSwitcher workspaces={workspaceModes(activeMode, documentType as CADDocumentType).map((item) => ({ id: item.id, label: item.label, disabled: item.disabled, disabledReason: item.disabledReason }))}
     workspaceID={ids[activeMode]} onSelect={(id) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); }} menuClassName="aui-tool-menu" />;
 }
 

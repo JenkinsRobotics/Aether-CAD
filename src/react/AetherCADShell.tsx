@@ -35,6 +35,7 @@ import {
   CommandSearch,
   DocumentCreateDialog,
   StudioDocumentBar as DocumentBar,
+  WorkspaceWindowMenu,
   StudioWorkspace as WorkspaceShell,
   standardWorkspacePanels,
   type WorkspacePanelState,
@@ -485,13 +486,8 @@ export function AetherCADShell() {
         documentName={presentation.documentName}
         search={<CommandSearch className="aui-studio-header-search" ariaLabel="Search CAD commands" commands={searchCommands}
           onSelect={runSearchCommand}/> }
-        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/>
-          {/* Docked and floating are whole-app workspaces, so the switch lives in the header (Jonathan, 2026-11-01). */}
-          <button type="button" className="aui-icon-button cad-header-placement" aria-label={presentation.workspaceLayout === "docked" ? "Floating layout" : "Docked layout"}
-            title={presentation.workspaceLayout === "docked" ? "Switch to the floating layout" : "Switch to the docked layout"}
-            onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
-            <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button></div>}
-        defaultHeaderPins={["theme","notifications","comments","apps","share"]}
+        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/></div>}
+        defaultHeaderPins={["layout","tabs","theme","notifications","comments","apps","share"]}
         documentMenu={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly/>}
         documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
         application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
@@ -507,6 +503,13 @@ export function AetherCADShell() {
         }
         viewControls={
             <div className="aui-studio-chrome-group">
+              {/* Docked and floating are whole-app workspaces, so the switch is a header pin ("layout"), beside the
+                  Windows menu ("tabs") and the app tray ("apps"); each is an option of the header's icon list (Jonathan, 2026-11-02). */}
+              <button type="button" className="aui-icon-button cad-header-placement" aria-label="Workspace layout"
+                title={presentation.workspaceLayout === "docked" ? "Switch to the floating layout" : "Switch to the docked layout"}
+                onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
+                <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button>
+              <WorkspaceWindowMenu/>
               <IconButton label="Notifications" disabled title="Notifications require a connected Aether Studio account."><AetherIcon name="bell"/></IconButton>
               <button className="aui-menu-trigger" aria-label="Plugins" title="Plugins" onClick={() => setPluginsOpen(true)}><CADPluginsIcon/></button>
               <button className="aui-menu-trigger" aria-label="Comments" title="Comments" aria-pressed={!!studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden'} onClick={()=>studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden' ? updateStudioPanels({...studioPanelState,comments:{...studioPanelState.comments,placement:'hidden'}}) : openLeftPanel('comments')}><AetherIcon name="comment"/></button>

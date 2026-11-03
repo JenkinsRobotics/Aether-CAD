@@ -152,35 +152,50 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
       return feature.measurement === "tangent" && chainPoints
         ? (edge) => { const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; const hit = chainPoints.some((p) => near(p, m)); m.delete(); return hit ? measured(at, size) : null; }
         : size;
-    let reference: Face;
-    if (feature.referenceFace)
-      reference = faceByReference(body, feature.referenceFace, "Chamfer reference face");
-    else {
-      const point = pickedPoints?.[0];
-      if (!point)
-        throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+    // The faces meeting at a point, the one facing up most first.
+    const adjacentTo = (point: V3): Face[] => {
       const adjacent = body.faces.filter((face) => {
         const edges = face.edges;
-        const hit = edges.some((edge) => {
-          const m = edge.pointAt(0.5);
-          const h = near(point, m);
-          m.delete();
-          return h;
-        });
+        const hit = edges.some((edge) => { const m = edge.pointAt(0.5); const h = near(point, m); m.delete(); return h; });
         edges.forEach((edge) => edge.delete());
         return hit;
       });
-      if (!adjacent.length)
-        throw new Error("Chamfer reference face could not be found. Pick the reference face.");
-      const up = (face: Face) => {
-        const center = deleteAfterVectorTuple(face.center);
-        return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2];
-      };
-      reference = adjacent.sort((a, b) => up(b) - up(a))[0];
+      const up = (face: Face) => { const center = deleteAfterVectorTuple(face.center); return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2]; };
+      return adjacent.sort((a, b) => up(b) - up(a));
+    };
+    const config = (reference: Face): ChamferRadius => {
+      const selectedFace = (f: FaceFinder) => f.inList([reference]);
+      return feature.angleDegrees !== undefined ? { distance: size, angle: feature.angleDegrees, selectedFace } : { distances: [size, feature.secondDistanceMillimeters!], selectedFace };
+    };
+    // Onshape's direction: the first leg lies on the reference face, or the adjacent face facing up most;
+    // the flip moves it to the other adjacent face, and Direction overrides flip single edges.
+    const overrides = feature.flippedEdges?.length ? feature.flippedEdges.flatMap((pick) => {
+      if (pick.kind === "face-edges") { const face = faceByReference(body, pick, "Direction override"), edges = face.edges; const points = edges.map((edge) => { const m = edge.pointAt(0.5), q: V3 = [m.x, m.y, m.z]; m.delete(); return q; }); edges.forEach((edge) => edge.delete()); face.delete(); return points; }
+      if (pick.kind === "solid-edge") { const a = pick.anchor.start.positionMillimeters, b = pick.anchor.end.positionMillimeters; return [scale(add(a as V3, b as V3), 0.5)]; }
+      return [pick.midpointMillimeters as V3];
+    }) : [];
+    const explicit = feature.referenceFace ? faceByReference(body, feature.referenceFace, "Chamfer reference face") : undefined;
+    if (!feature.flipped && !overrides.length) {
+      if (explicit) return config(explicit);
+      const point = pickedPoints?.[0];
+      if (!point) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+      const adjacent = adjacentTo(point);
+      if (!adjacent.length) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
       adjacent.slice(1).forEach((face) => face.delete());
+      return config(adjacent[0]);
     }
-    const selectedFace = (f: FaceFinder) => f.inList([reference]);
-    return feature.angleDegrees !== undefined ? { distance: size, angle: feature.angleDegrees, selectedFace } : { distances: [size, feature.secondDistanceMillimeters!], selectedFace };
+    return (edge) => {
+      const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; m.delete();
+      const here = { x: at[0], y: at[1], z: at[2] };
+      if (!chainPoints?.some((p) => near(p, here))) return null;
+      const adjacent = adjacentTo(at);
+      if (adjacent.length < 2) { adjacent.forEach((face) => face.delete()); return null; }
+      const flip = Boolean(feature.flipped) !== overrides.some((p) => near(p, here));
+      const first = explicit && adjacent.some((face) => face.isSame(explicit)) ? adjacent.findIndex((face) => face.isSame(explicit)) : 0;
+      const chosen = adjacent[flip ? 1 - Math.min(first, 1) : first];
+      adjacent.forEach((face) => { if (face !== chosen) face.delete(); });
+      return config(chosen);
+    };
   };
   let rounded: Shape3D;
   try {

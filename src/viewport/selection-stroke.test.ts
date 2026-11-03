@@ -13,10 +13,8 @@ it('keeps stroke previews separate so cancelling preserves existing selection',(
  store.dispatch({type:'set-stroke',stroke:stroke.snapshot()});
  store.dispatch({type:'set-stroke',stroke:null});expect(store.snapshot().items).toEqual([a]);expect(stroke.items()).toEqual([]);
 });
-it('priority activates Auto while explicit filters remain authoritative',()=>{
- const store=new CADSelectionStore();store.dispatch({type:'set-filter',filter:'vertex'});
- store.dispatch({type:'set-priority',priority:'edge'});expect(effectiveSelectionKind(store.snapshot())).toBe('edge');
- expect(store.snapshot().filter).toBe('auto');
+it('Auto is one proximity rule starting at edges; explicit filters remain authoritative',()=>{
+ const store=new CADSelectionStore();store.dispatch({type:'set-filter',filter:'vertex'});expect(effectiveSelectionKind(store.snapshot())).toBe('vertex');
  store.dispatch({type:'set-filter',filter:'face'});expect(effectiveSelectionKind(store.snapshot())).toBe('face');
  store.dispatch({type:'set-filter',filter:'auto'});expect(effectiveSelectionKind(store.snapshot())).toBe('edge');
 });

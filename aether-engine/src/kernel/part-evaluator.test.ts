@@ -1002,3 +1002,20 @@ it('finishes a picked face as its edges, and measures a fillet by width and a ch
  expect(volumeOf(withChamfer({}))).toBeCloseTo(1990,4);
  expect(volumeOf(withChamfer({radiusMillimeters:Math.SQRT2,measurement:'tangent'}))).toBeCloseTo(1990,4);
 },60000);
+
+it('flips a two-distance chamfer to the other face, globally and per edge', async () => {
+ const {createRectanglePartDocument}=await import('../document/part-document');
+ const box=createRectanglePartDocument('Chamfer flip',{widthMillimeters:20,heightMillimeters:10,depthMillimeters:10});
+ const built=evaluatePartDocument(box).parts[0], extrudeId=box.features.find(f=>f.type==='extrude')!.id;
+ const top=built.topology.flatMap(f=>f.candidates).find(c=>c.kind==='face-center'&&c.origin[2]>9.9)!;
+ const edge=built.topology.find(f=>f.candidates.some(c=>c.id===top.id))!.candidates.filter(c=>c.kind==='edge-midpoint').find(c=>c.measurements!.lengthMillimeters!>19.9)!;
+ const ref={kind:'curved-edge' as const,sourceFeatureId:extrudeId,bodyId:built.id,label:'Edge',midpointMillimeters:edge.origin as [number,number,number],lengthMillimeters:edge.measurements!.lengthMillimeters!};
+ // The chamfer face's normal: legs (1 on top, 2 down the side) tilt it one way, (2, 1) the other.
+ const tilt=(extra:Record<string,unknown>)=>{let normal:number[]=[];evaluatePartDocument({...box,features:[...box.features,{id:'c',type:'chamfer' as const,name:'Chamfer',suppressed:false,radiusMillimeters:1,secondDistanceMillimeters:2,targetBodyId:built.id,edges:[ref],...extra}]} as typeof box,{withBodies:b=>{for(const s of b.values())for(const face of (s as Shape3D).faces){if(face.geomType!=='PLANE')continue;const c=face.center,n=face.normalAt([c.x,c.y,c.z]);const v=[n.x,n.y,n.z];c.delete();n.delete();if(Math.abs(v[2])>0.05&&Math.abs(v[2])<0.95)normal=v;}}});return normal.map(v=>Math.abs(+v.toFixed(3)));};
+ const plain=tilt({}), flipped=tilt({flipped:true}), overridden=tilt({flippedEdges:[ref]});
+ // 1 along the top and 2 down the side: the chamfer plane runs through (−4, 10) and (−5, 8), normal ∝ (0, 2, −1).
+ expect(plain[2]).toBeCloseTo(1/Math.sqrt(5),2);
+ expect(flipped[2]).toBeCloseTo(2/Math.sqrt(5),2); // 2 along the top, 1 down the side
+ expect(overridden).toEqual(flipped); // a per-edge override flips that edge the same way
+ expect(tilt({flipped:true,flippedEdges:[ref]})).toEqual(plain); // both together cancel
+},60000);

@@ -231,7 +231,7 @@ try {
     await setSelect('Edges', 'all'); // Edges default to the picked set since 2026-10-31; this step rounds every edge.
     await setInput('Radius (mm)', 2); // larger than the shell wall, so the shell's inner fillets keep a radius
     // The radius manipulator the preview publishes shows in the viewport while the dialog is open.
-    await expect(page.locator('.cad-extrusion-handle').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.aui-manipulator-handle:not([hidden])').first()).toBeVisible({ timeout: 15000 });
     await applyDialog('fillet');
     await expect(featureRow(/^Fillet/)).toBeVisible();
   });

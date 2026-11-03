@@ -2,6 +2,7 @@ import {createRequire} from 'node:module';
 import {act} from 'react';
 import {afterAll,beforeAll,expect,it,vi} from 'vitest';
 import {CADTraditionalRibbon} from './CADTraditionalRibbon';
+import {cadFeaturePalette} from './cad-feature-tray';
 
 let dom:any;
 beforeAll(()=>{
@@ -13,45 +14,21 @@ beforeAll(()=>{
   vi.stubGlobal('cancelAnimationFrame',clearTimeout);
 });
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
-const button=(label:string)=>{
-  const element=Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(item=>item.getAttribute('aria-label')===label);
-  if(!element)throw Error(`Missing button: ${label}; available: ${Array.from(document.querySelectorAll('button')).map(item=>item.getAttribute('aria-label')).join(', ')}`);
-  return element;
-};
-const click=async(element:HTMLElement)=>act(async()=>element.click());
 
-it('opens the six-domain tray, executes Canvas and refuses unavailable construction tools',async()=>{
-  const {createRoot}=await import('react-dom/client'),host=document.createElement('div');
-  document.body.append(host);const root=createRoot(host),action=vi.fn();
-  try {
-    await act(async()=>root.render(<CADTraditionalRibbon documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={action}/>));
-    await click(button('Features'));
-    for(const domain of ['Part','Assembly','Sketch','Curve','Solid','Drawing'])expect(button(`${domain} tools`)).toBeTruthy();
-    await click(button('Part tools'));
-    await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:home-insert"]')!);
-    const canvas=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.trim()==='Canvas');
-    expect(canvas).toBeTruthy();await click(canvas!);
-    expect(action).toHaveBeenLastCalledWith('insert-canvas');
-    await click(button('Solid tools'));
-    await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:solid-create"]')!);
-    const create=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).map(item=>item.textContent?.trim());
-    expect(create).toContain('Extrude');expect(create).not.toContain('Cone'); // No premade shapes.
-    await click(Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.trim()==='Extrude')!); // Closes the menu; Extrude is disabled here.
-    await click(button('Part tools'));
-    await click(document.querySelector<HTMLElement>('[data-menu-item-id="feature-group:part-construction-gaps"]')!);
-    const axis=Array.from(document.querySelectorAll<HTMLElement>('[role=menuitem]')).find(item=>item.textContent?.includes('Work axis'));
-    expect((axis as HTMLButtonElement)?.disabled).toBe(true);
-    await click(axis!);expect(action).toHaveBeenCalledTimes(1);
-  } finally {await act(async()=>root.unmount());host.remove();}
-});
-
-it('opens the feature tray from the docked toolbar',async()=>{
+it('has no catch-all Features tab: a tool is listed once, on its own tab, and search still reaches every feature',async()=>{
   const {createRoot}=await import('react-dom/client'),host=document.createElement('div');
   document.body.append(host);const root=createRoot(host);
   try {
-    await act(async()=>root.render(<CADTraditionalRibbon placement="docked" documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()}/>));
-    await click(button('Features'));
-    expect(document.querySelector('[data-ribbon-workspace="feature-library"]')).toBeTruthy();
-    expect(button('Solid tools')).toBeTruthy();
+    for(const placement of ['floating','docked'] as const){
+      await act(async()=>root.render(<CADTraditionalRibbon placement={placement} documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()}/>));
+      expect(Array.from(document.querySelectorAll('button')).some(item=>item.getAttribute('aria-label')==='Features')).toBe(false);
+      expect(document.querySelector('[data-ribbon-workspace="feature-library"]')).toBeNull();
+    }
   } finally {await act(async()=>root.unmount());host.remove();}
+  const commands=cadFeaturePalette({commands:{} as never,partOpen:true,assemblyReady:false},[]);
+  const ids=commands.map(command=>command.id);
+  expect(ids).toContain('insert-canvas');
+  expect(ids).toContain('feature-extrude');
+  expect(commands.map(command=>command.label)).not.toContain('Cone'); // No premade shapes.
+  expect(new Set(ids).size).toBe(ids.length); // one entry per action
 });

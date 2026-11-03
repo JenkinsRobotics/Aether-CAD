@@ -6357,6 +6357,12 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
       if (feature3.angleDegrees !== void 0 && !(feature3.angleDegrees > 0 && feature3.angleDegrees < 90)) throw new Error("Chamfer angle must be between 0 and 90 degrees.");
       if (feature3.secondDistanceMillimeters !== void 0 && feature3.angleDegrees !== void 0) throw new Error("Give a chamfer a second distance or an angle, not both.");
       if (feature3.referenceFace !== void 0) validateSolidFaceReference(feature3.referenceFace, earlier, missingReference, "Chamfer reference face");
+      if (feature3.flipped !== void 0 && typeof feature3.flipped !== "boolean") throw new Error("Chamfer flip must be true or false.");
+      if (feature3.flippedEdges !== void 0) {
+        if (!Array.isArray(feature3.flippedEdges)) throw new Error("Chamfer direction overrides must be picked edges.");
+        for (const edge of feature3.flippedEdges) validateEdgeFinishEdge(edge, earlier, missingReference);
+      }
+      if ((feature3.flipped || feature3.flippedEdges?.length) && feature3.secondDistanceMillimeters === void 0 && feature3.angleDegrees === void 0) throw new Error("A chamfer direction applies to two distances or a distance and angle.");
     }
   } else throw new Error("Unsupported solid feature.");
 }
@@ -12834,7 +12840,9 @@ export interface AxisReference {
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -13021,7 +13029,9 @@ export interface PlanarFaceAnchor {
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -13093,7 +13103,9 @@ export type SolidFaceReference=FaceSource & (
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -13365,7 +13377,9 @@ export type PierceContext = Record<string, { source: SketchPierceReference; poin
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -13736,7 +13750,9 @@ export interface ProfileRegionReference { contourIds: string[]; inside?: string[
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -13779,7 +13795,9 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -38785,13 +38803,7 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
         m2.delete();
         return hit ? measured(at, size) : null;
       } : size;
-    let reference;
-    if (feature3.referenceFace)
-      reference = faceByReference(body, feature3.referenceFace, "Chamfer reference face");
-    else {
-      const point2 = pickedPoints?.[0];
-      if (!point2)
-        throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+    const adjacentTo = (point2) => {
       const adjacent = body.faces.filter((face) => {
         const edges = face.edges;
         const hit = edges.some((edge) => {
@@ -38803,17 +38815,62 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
         edges.forEach((edge) => edge.delete());
         return hit;
       });
-      if (!adjacent.length)
-        throw new Error("Chamfer reference face could not be found. Pick the reference face.");
       const up = (face) => {
         const center = deleteAfterVectorTuple(face.center);
         return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2];
       };
-      reference = adjacent.sort((a2, b) => up(b) - up(a2))[0];
+      return adjacent.sort((a2, b) => up(b) - up(a2));
+    };
+    const config2 = (reference) => {
+      const selectedFace = (f2) => f2.inList([reference]);
+      return feature3.angleDegrees !== void 0 ? { distance: size, angle: feature3.angleDegrees, selectedFace } : { distances: [size, feature3.secondDistanceMillimeters], selectedFace };
+    };
+    const overrides = feature3.flippedEdges?.length ? feature3.flippedEdges.flatMap((pick) => {
+      if (pick.kind === "face-edges") {
+        const face = faceByReference(body, pick, "Direction override"), edges = face.edges;
+        const points = edges.map((edge) => {
+          const m2 = edge.pointAt(0.5), q = [m2.x, m2.y, m2.z];
+          m2.delete();
+          return q;
+        });
+        edges.forEach((edge) => edge.delete());
+        face.delete();
+        return points;
+      }
+      if (pick.kind === "solid-edge") {
+        const a2 = pick.anchor.start.positionMillimeters, b = pick.anchor.end.positionMillimeters;
+        return [scale$1(add$4(a2, b), 0.5)];
+      }
+      return [pick.midpointMillimeters];
+    }) : [];
+    const explicit = feature3.referenceFace ? faceByReference(body, feature3.referenceFace, "Chamfer reference face") : void 0;
+    if (!feature3.flipped && !overrides.length) {
+      if (explicit) return config2(explicit);
+      const point2 = pickedPoints?.[0];
+      if (!point2) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+      const adjacent = adjacentTo(point2);
+      if (!adjacent.length) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
       adjacent.slice(1).forEach((face) => face.delete());
+      return config2(adjacent[0]);
     }
-    const selectedFace = (f2) => f2.inList([reference]);
-    return feature3.angleDegrees !== void 0 ? { distance: size, angle: feature3.angleDegrees, selectedFace } : { distances: [size, feature3.secondDistanceMillimeters], selectedFace };
+    return (edge) => {
+      const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
+      m2.delete();
+      const here = { x: at[0], y: at[1], z: at[2] };
+      if (!chainPoints?.some((p2) => near(p2, here))) return null;
+      const adjacent = adjacentTo(at);
+      if (adjacent.length < 2) {
+        adjacent.forEach((face) => face.delete());
+        return null;
+      }
+      const flip = Boolean(feature3.flipped) !== overrides.some((p2) => near(p2, here));
+      const first = explicit && adjacent.some((face) => face.isSame(explicit)) ? adjacent.findIndex((face) => face.isSame(explicit)) : 0;
+      const chosen = adjacent[flip ? 1 - Math.min(first, 1) : first];
+      adjacent.forEach((face) => {
+        if (face !== chosen) face.delete();
+      });
+      return config2(chosen);
+    };
   };
   let rounded;
   try {

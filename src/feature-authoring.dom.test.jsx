@@ -285,6 +285,8 @@ it("fillet and chamfer windows follow Onshape: entities box, tangent propagation
   expect(fillet).toMatchObject({ type: "fillet", radiusMillimeters: 2, endRadiusMillimeters: 4, measurement: "width" });
   const tangent = await authored("chamfer", { "Edges": "all", "Distance (mm)": "1", "Measurement": "tangent" });
   expect(tangent).toMatchObject({ type: "chamfer", radiusMillimeters: 1, measurement: "tangent" });
+  const flipped = await authored("chamfer", { "Edges": "all", "Chamfer type": "two-distances", "Distance (mm)": "1", "Second distance (mm)": "2", "Flip direction": "true" });
+  expect(flipped).toMatchObject({ type: "chamfer", radiusMillimeters: 1, secondDistanceMillimeters: 2, flipped: true });
   cadCommands.execute("feature-fillet");
   const panel = [...document.querySelectorAll(".cad-feature-dialog")].at(-1);
   for (const label of ["Entities to fillet", "Tangent propagation", "Variable fillet"]) expect(panel.querySelector(`[aria-label^="${label}"]`), label).toBeTruthy();

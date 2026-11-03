@@ -157,7 +157,9 @@ export type EdgeFinishFeature = {
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
       /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
-      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference }
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to `flipped`). */ flippedEdges?: EdgeFinishEdge[] }
 );
 export interface SweepFeature {
   id: string;
@@ -400,6 +402,12 @@ export function validateSolidFeature(
       if (feature.angleDegrees !== undefined && !(feature.angleDegrees > 0 && feature.angleDegrees < 90)) throw new Error("Chamfer angle must be between 0 and 90 degrees.");
       if (feature.secondDistanceMillimeters !== undefined && feature.angleDegrees !== undefined) throw new Error("Give a chamfer a second distance or an angle, not both.");
       if (feature.referenceFace !== undefined) validateSolidFaceReference(feature.referenceFace, earlier, missingReference, "Chamfer reference face");
+      if (feature.flipped !== undefined && typeof feature.flipped !== "boolean") throw new Error("Chamfer flip must be true or false.");
+      if (feature.flippedEdges !== undefined) {
+        if (!Array.isArray(feature.flippedEdges)) throw new Error("Chamfer direction overrides must be picked edges.");
+        for (const edge of feature.flippedEdges) validateEdgeFinishEdge(edge, earlier, missingReference);
+      }
+      if ((feature.flipped || feature.flippedEdges?.length) && feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined) throw new Error("A chamfer direction applies to two distances or a distance and angle.");
     }
   } else throw new Error("Unsupported solid feature.");
 }

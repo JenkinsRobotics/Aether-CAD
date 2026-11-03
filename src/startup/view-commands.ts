@@ -104,14 +104,6 @@ export function registerViewCommands(host: ViewCommandHost): void {
     });
     cadCommands.setActive(`selection-${mode}`, cadSelection.snapshot().dragMode === mode);
   }
-  for (const priority of ["body", "face", "edge"] as const) {
-    cadCommands.register(`selection-priority-${priority}`, () => {
-      cadSelection.dispatch({ type: "set-priority", priority });
-      for (const candidate of ["body", "face", "edge"] as const)
-        cadCommands.setActive(`selection-priority-${candidate}`, candidate === priority);
-    });
-    cadCommands.setActive(`selection-priority-${priority}`, cadSelection.snapshot().priority === priority);
-  }
   cadCommands.register("selection-clear", () => cadSelection.dispatch({ type: "clear" }));
   cadCommands.register("selection-next-filter", () => {
     const index = selectionFilters.indexOf(cadSelection.snapshot().filter);
@@ -137,5 +129,4 @@ export const viewCommandIDs: readonly CADCommandID[] = [
   "selection-next-filter",
   "selection-directional", "selection-window", "selection-crossing", "selection-clear",
   "selection-freeform", "selection-paint",
-  "selection-priority-body", "selection-priority-face", "selection-priority-edge",
 ];

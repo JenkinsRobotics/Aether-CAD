@@ -1,6 +1,5 @@
 export type CADSelectionFilter = "auto" | "component" | "body" | "face" | "edge" | "vertex";
 export type CADSelectionKind = Exclude<CADSelectionFilter, "auto">;
-export type CADSelectionPriority = "body" | "face" | "edge";
 export type CADSelectionDragMode = "directional" | "window" | "crossing" | "freeform" | "paint";
 export interface CADScreenPoint { x: number; y: number }
 export interface CADSelectionStroke { mode: "freeform" | "paint"; points: readonly CADScreenPoint[] }
@@ -36,7 +35,6 @@ export interface CADScreenRect {
 export interface CADSelectionSnapshot {
   filter: CADSelectionFilter;
   dragMode: CADSelectionDragMode;
-  priority: CADSelectionPriority;
   stroke: CADSelectionStroke | null;
   items: readonly CADSelectionItem[];
   hovered: CADSelectionItem | null;
@@ -45,7 +43,6 @@ export interface CADSelectionSnapshot {
 
 export type CADSelectionAction =
   | { type: "set-drag-mode"; mode: CADSelectionDragMode }
-  | { type: "set-priority"; priority: CADSelectionPriority }
   | { type: "set-stroke"; stroke: CADSelectionStroke | null }
   | { type: "set-filter"; filter: CADSelectionFilter }
   | { type: "set-hovered"; item: CADSelectionItem | null }
@@ -67,7 +64,6 @@ export const selectionFilters: readonly CADSelectionFilter[] = [
 export const defaultCADSelection: CADSelectionSnapshot = Object.freeze({
   filter: "auto",
   dragMode: "directional",
-  priority: "body",
   stroke: null,
   items: [],
   hovered: null,
@@ -116,8 +112,6 @@ export function reduceCADSelection(
   switch (action.type) {
     case "set-drag-mode":
       return { ...current, dragMode: action.mode, box: null, stroke: null };
-    case "set-priority":
-      return { ...current, priority: action.priority, filter: "auto", hovered: null, box: null, stroke: null };
     case "set-stroke":
       return { ...current, stroke: action.stroke };
     case "set-filter":
@@ -173,7 +167,8 @@ export function selectedPartIDs(snapshot: CADSelectionSnapshot): ReadonlySet<str
 
 export const cadSelection = new CADSelectionStore();
 
-/** Explicit filters win; Auto uses the user-selected priority. */
+/** Explicit filters win; Auto is one proximity rule (vertex, edge, then face): the viewer starts
+ *  from "edge" and steps down to the face when nothing is within reach (Jonathan, 2026-11-03). */
 export function effectiveSelectionKind(snapshot: CADSelectionSnapshot): CADSelectionKind {
-  return snapshot.filter === "auto" ? snapshot.priority : snapshot.filter;
+  return snapshot.filter === "auto" ? "edge" : snapshot.filter;
 }

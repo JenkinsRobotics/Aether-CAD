@@ -15,7 +15,7 @@ beforeEach(()=>{
  listener=e=>{requests.push(e.detail);e.detail.respond({x:100,y:100,depthAt:(_x,y)=>y});};window.addEventListener('aether-native-extrusion-handle',listener);
 });
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
-afterEach(async()=>{panel.remove();await vi.waitFor(()=>expect(document.querySelectorAll('.cad-extrusion-handle')).toHaveLength(0));});
+afterEach(async()=>{panel.remove();await vi.waitFor(()=>expect(document.querySelectorAll('.aui-manipulator-handle:not([hidden])')).toHaveLength(0));});
 it('uses the native shifted origin, pauses new drags while pending and clears failed or foreign results',async()=>{
  mountNativeExtrusionHandles(panel,controls,'mm');publish([axis()]);const button=handle('Pull extrusion depth');capture(button);
  await vi.waitFor(()=>expect(requests.at(-1)?.origin).toEqual([0,0,12]));expect(button.hidden).toBe(false);
@@ -25,11 +25,11 @@ it('uses the native shifted origin, pauses new drags while pending and clears fa
  button.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));expect(controls.distance.value).toBe('10');
  publish([axis()],false,'another-feature');await vi.waitFor(()=>expect(button.hidden).toBe(true));
  publish([axis()]);await vi.waitFor(()=>expect(button.hidden).toBe(false));publish(null);await vi.waitFor(()=>expect(button.hidden).toBe(true));
- panel.remove();await vi.waitFor(()=>expect(document.querySelectorAll('.cad-extrusion-handle')).toHaveLength(0));
+ panel.remove();await vi.waitFor(()=>expect(document.querySelectorAll('.aui-manipulator-handle:not([hidden])')).toHaveLength(0));
 });
 it('symmetric handles edit total depth at twice the axial travel',async()=>{
  mountNativeExtrusionHandles(panel,controls,'mm');publish([axis('primary','distance',.5),axis('opposite','distance',.5)]);
- const button=handle('Pull symmetric extrusion depth');capture(button);await vi.waitFor(()=>expect(button.hidden).toBe(false));expect(button.textContent).toBe('10 mm total');
+ const button=handle('Pull symmetric extrusion depth');capture(button);await vi.waitFor(()=>expect(button.hidden).toBe(false));expect(document.querySelector('.aui-manipulator-readout').value).toBe('10 mm total');
  pointer(button,'pointerdown',100);pointer(button,'pointermove',105);pointer(button,'pointerup',105);expect(controls.distance.value).toBe('20');expect(controls.second.value).toBe('3');
 });
 it('the independent opposite handle adjusts only its positive distance in display units',async()=>{

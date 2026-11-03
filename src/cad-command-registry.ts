@@ -149,7 +149,7 @@ export type CADCommandID =
   | "selection-next-filter"
   | "selection-directional" | "selection-window" | "selection-crossing" | "selection-clear"
   | "selection-freeform" | "selection-paint"
-  | "selection-priority-body" | "selection-priority-face" | "selection-priority-edge";
+;
 
 export interface CADCommandState {
   enabled: boolean;
@@ -305,7 +305,6 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "selection-next-filter",
   "selection-directional", "selection-window", "selection-crossing", "selection-clear",
   "selection-freeform", "selection-paint",
-  "selection-priority-body", "selection-priority-face", "selection-priority-edge",
 ];
 
 const cadCommandIDSet: ReadonlySet<string> = new Set(cadCommandIDs);

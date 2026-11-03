@@ -251,3 +251,37 @@ blend between two face sets is the kernel step to take first. Status: Open.
    plane, tip angle. Thread: cylinder edges, auto size, pitch, Blind / Up to next, chamfer,
    undercut, split face.
 9. Loft end conditions, guides, path; Rib; Body draft; Face blend (kernel work first).
+
+## Requirements for the next update (Jonathan, 2026-11-02, consolidated)
+
+Every item below is a requirement, not a suggestion; each is closed only with a test or a gate.
+
+1. **Every reference window, every control.** The tables above are the checklist: Fillet (Edge /
+   Full round, Measurement, Control, Asymmetric, Partial, Variable with vertices, Allow edge
+   overflow, Smooth corners), Face blend, Chamfer (Direction flip, Direction overrides),
+   Extrude, Revolve (angle offset, offset distance), Sweep (Profile control, Twist, Thin),
+   Loft (end conditions, guides, path, connections), Thicken, Enclose, Draft (both modes),
+   Body draft, Rib, Shell, Hole, External thread, Linear / Circular / Curve pattern, Mirror,
+   Boolean (Subtract offset), Split (Part / Face). Kernel gaps are named in the tables and
+   closed by kernel work, never by a control that does nothing.
+2. **One file per feature** under `src/features/`; shared pieces (part box, plane box, entity
+   box, value handles) are their own modules. Thicken and Enclose leave surface.ts; the three
+   patterns leave pattern.ts.
+3. **Selection:** one rule, as Onshape's — a vertex within 6 px, else an edge within 12 px, else
+   the face under the pointer; filters only restrict; the Selection Priority variants are deleted
+   (alpha-0.1.92). Faces, edges, vertices, sketches, planes, parts and axes pick from the
+   viewport or tree into pick boxes; no dropdowns for geometry; no buttons inside pick boxes.
+4. **One manipulator:** every adjustable value shows Aether UI's value manipulator (axis
+   arrow, rotation ribbon, guide, editable readout): extrude depth, revolve angle, fillet
+   radius, chamfer distance, shell thickness, pattern distance / angle, draft angle, hole
+   depth, section offset. Done in CAD for extrude, revolve and the preview handles; the
+   section view, pattern and draft follow.
+5. **Aether UI owns chrome:** flips are glyph icon buttons; tree and window conventions live in
+   Aether UI; header pins offer the layout switch, Windows and the app tray.
+6. **Ribbon:** a tool is listed once per workspace (shared sections on Solid only, done); the
+   catch-all Features tab is gone, search still reaches every feature (done); workspaces follow
+   the open document (done); tabs per document type come from the layouts.
+7. **Agents use the same pipeline:** every window commits the canonical feature record that
+   `feature_add` / `feature_update` validate; schemas regenerate from the document types.
+8. **Bare-minimum verification per feature:** a window serialization test, an engine test with
+   a closed-form or self-consistency expectation, and a browser gate step for viewport picks.

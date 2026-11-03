@@ -204,7 +204,7 @@ describe("selection tray", () => {
   it("exposes one Select button while retaining the real filters in its menu", () => {
     const section = fusionTabsFor("part")!.find(tab => tab.id === "solid")!.sections.find(section => section.label === "Select")!;
     expect(section.visible).toEqual(["home-select-auto"]);
-    expect(section.menu).toEqual(["home-select-auto", "selection-directional-tool", "selection-window-tool", "selection-freeform-tool", "selection-paint-tool", "selection-crossing-tool", "selection-clear-tool", "selection-priority-body-tool", "selection-priority-face-tool", "selection-priority-edge-tool", "home-select-body", "home-select-face", "home-select-edge", "home-select-vertex"]);
+    expect(section.menu).toEqual(["home-select-auto", "selection-directional-tool", "selection-window-tool", "selection-freeform-tool", "selection-paint-tool", "selection-crossing-tool", "selection-clear-tool", "home-select-body", "home-select-face", "home-select-edge", "home-select-vertex"]);
     expect(toolbarToolById("home-select-auto")?.label).toBe("Select");
   });
 });
@@ -264,18 +264,20 @@ it("offers only implemented, distinct Insert commands with two primary tools", (
   expect(section.menu.map(id => toolbarToolById(id)?.action)).toEqual(["insert-vector-svg", "insert-canvas", "insert-decal", "insert-step", "insert-mesh", "insert-mcmaster", "insert-vector-dxf"]);
 });
 
-it("preserves all six design categories while omitting unimplemented commands", () => {
+it("lists Construct, Inspect, Insert and Select once, on Solid, while omitting unimplemented commands", () => {
+ // A tool appears once per workspace (Jonathan, 2026-11-02): the shared sections live on Solid only.
  for (const id of ['solid','surface','mesh','sheet-metal','framing','plastic']) {
   const tab=fusionTabsFor('part').find(tab=>tab.id===id)!;
   const labels=tab.sections.map(section=>section.label);
-  expect(labels).toEqual(['Create','Modify','Construct','Inspect','Insert','Select']);
+  expect(labels).toEqual(id==='solid'?['Create','Modify','Construct','Inspect','Insert','Select']:['Create','Modify']);
   for(const section of tab.sections) for(const tool of toolbarMenuToolsFor(section.menu)) expect(tool.action).toBeTruthy();
  }
  expect(toolbarToolById('mesh-close-holes')).toBeUndefined();
  expect(toolbarWorkspaceFor('part','surface').groups[0].tools.map(tool=>tool.action)).toEqual(['feature-surface-extrude','feature-surface-revolve','feature-surface-sweep','feature-surface-loft','feature-surface-patch','feature-surface-offset','feature-surface-ruled','feature-surface-boundary','feature-surface-blend']);
- const framing=toolbarWorkspaceFor('part','framing');
- expect(framing.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
- expect(framing.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('part-interference');
+ const solid=toolbarWorkspaceFor('part','solid');
+ expect(solid.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
+ expect(toolbarWorkspaceFor('part','framing').groups.find(group=>group.label==='Construct')).toBeUndefined();
+ expect(solid.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('part-interference');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-mirror');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-draft');
 });

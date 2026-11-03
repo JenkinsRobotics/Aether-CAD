@@ -1,28 +1,9 @@
-import { ToolIcon, type CommandPaletteCommand, type MenuItem, type WorkspaceRibbonTab } from '@aether/ui';
+import { ToolIcon, type CommandPaletteCommand } from '@aether/ui';
 import { cadFeatureDomains, cadFeatureGroups, expandFeatureTools } from '../tools/feature-library';
 import { cadToolAvailability, type CADToolContext } from '../tools/availability';
-import type { CADToolDefinition } from '../tools/shared';
 
-export function cadFeatureTray(context: CADToolContext): WorkspaceRibbonTab {
-  const itemFor=(definition:CADToolDefinition):MenuItem=>{
-    const state=cadToolAvailability(definition,context);
-    const item:MenuItem={id:`feature:${definition.id}`,label:definition.label,icon:<ToolIcon name={definition.icon}/>,disabled:state.disabled,disabledReason:state.reason};
-    if(!definition.variants?.length)return item;
-    return {id:`feature-family:${definition.id}`,label:definition.label,icon:item.icon,
-      children:[item,...definition.variants.map(itemFor)]};
-  };
-  return { id: 'feature-library', label: 'Features', groups: cadFeatureDomains.map(domain => {
-    const groups = cadFeatureGroups(domain.id);
-    const items: MenuItem[] = groups.map(group => ({id:`feature-group:${group.id}`,label:group.label,
-      children:group.tools.map(itemFor)}));
-    const first = groups.flatMap(group => expandFeatureTools(group.tools)).find(tool => tool.action);
-    const state = first && cadToolAvailability(first, context);
-    return { id: `feature-${domain.id}`, label: domain.label, menuItems: items,
-      tools: first ? [{ id: `feature:${first.id}`, label: first.label, icon: <ToolIcon name={domain.icon}/>, disabled: state?.disabled, disabledReason: state?.reason }] : [] };
-  }) };
-}
-
-/** Search is a projection of the tray; aliases sharing an action remain keywords. */
+/** Command search lists every feature by domain (there is no catch-all Features tab: a tool is
+ *  listed once, on its own ribbon tab); aliases sharing an action remain keywords. */
 export function cadFeaturePalette(context: CADToolContext, existing: readonly CommandPaletteCommand[]): CommandPaletteCommand[] {
   const result = new Map<string, CommandPaletteCommand>();
   for (const domain of cadFeatureDomains) for (const group of cadFeatureGroups(domain.id)) {

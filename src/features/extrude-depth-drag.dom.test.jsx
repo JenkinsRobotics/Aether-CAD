@@ -32,23 +32,23 @@ it('maps the viewport handle through the viewer axis and cleans up when the edit
   window.addEventListener('aether-extrusion-handle',respond);
   try{
     mountExtrusionHandle(panel,controls,'in');
-    await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle')?.textContent).toBe('1 in'));
-    const button=document.querySelector('.cad-extrusion-handle');capture(button);
+    await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-readout')?.value).toBe('1 in'));
+    const button=document.querySelector('.aui-manipulator-handle:not([hidden])');capture(button);
     pointer(button,'pointerdown',100);pointer(button,'pointermove',125.4);pointer(button,'pointerup',125.4);
     expect(Number(controls.distance.value)).toBeCloseTo(2);
-    panel.remove();await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle')).toBeNull());
+    panel.remove();await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-handle:not([hidden])')).toBeNull());
   }finally{panel.remove();window.removeEventListener('aether-extrusion-handle',respond);}
 });
 it('supports signed face depth through the same drag handle and restores on cancellation',async()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"><div id="face-panel"></div></div>';
  const panel=document.querySelector('#face-panel');const distance=control('5');distance.dataset.canonicalFactor='1';
  mountExtrusionHandle(panel,{distance},'mm',(_depth,respond)=>respond({x:100,y:100,depthAt:(_x,y)=>y}));
- await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle')?.textContent).toBe('5 mm'));
- const handle=document.querySelector('.cad-extrusion-handle');capture(handle);
+ await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-readout')?.value).toBe('5 mm'));
+ const handle=document.querySelector('.aui-manipulator-handle:not([hidden])');capture(handle);
  pointer(handle,'pointerdown',100);pointer(handle,'pointermove',90);
  expect(distance.value).toBe('-5');
  pointer(handle,'pointercancel',90);expect(distance.value).toBe('5');
- panel.remove();await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle')).toBeNull());
+ panel.remove();await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-handle:not([hidden])')).toBeNull());
 });
 
 it('places and drags Remove into the sketch plane, including reversal and cancellation',async()=>{
@@ -61,7 +61,7 @@ it('places and drags Remove into the sketch plane, including reversal and cancel
  try {
   mountExtrusionHandle(panel,controls,'mm');
   await vi.waitFor(()=>expect(depths.at(-1)).toBe(-10));
-  const handle=document.querySelector('.cad-extrusion-handle');capture(handle);
+  const handle=document.querySelector('.aui-manipulator-handle:not([hidden])');capture(handle);
   pointer(handle,'pointerdown',100);pointer(handle,'pointermove',95);
   expect(controls.distance.value).toBe('15');expect(controls.reversed.value).toBe('false');
   pointer(handle,'pointermove',120);
@@ -77,7 +77,7 @@ it('projects the handle along a normalized custom direction and hides it for inv
  const panel=document.querySelector('#direction-panel');const controls={distance:control('10'),reversed:control('false'),selections:control('[{"featureId":"sketch"}]'),endType:control('blind'),offset:control('0'),second:control('0'),directionMode:control('custom'),directionX:control('3'),directionY:control('0'),directionZ:control('4')};
  const vectors=[];const respond=event=>{vectors.push(event.detail.directionVector);event.detail.respond({x:100,y:100,depthAt:(_x,y)=>y});};window.addEventListener('aether-extrusion-handle',respond);
  try{mountExtrusionHandle(panel,controls,'mm');await vi.waitFor(()=>expect(vectors.at(-1)).toEqual([.6,0,.8]));
-  const handle=document.querySelector('.cad-extrusion-handle');capture(handle);pointer(handle,'pointerdown',100);pointer(handle,'pointermove',105);pointer(handle,'pointerup',105);expect(controls.distance.value).toBe('15');
+  const handle=document.querySelector('.aui-manipulator-handle:not([hidden])');capture(handle);pointer(handle,'pointerdown',100);pointer(handle,'pointermove',105);pointer(handle,'pointerup',105);expect(controls.distance.value).toBe('15');
   controls.directionZ.value='0';controls.directionX.value='0';await vi.waitFor(()=>expect(handle.hidden).toBe(true));
  }finally{panel.remove();window.removeEventListener('aether-extrusion-handle',respond);}
 });
@@ -87,7 +87,7 @@ it('updates the handle to the selected sketch line and hides it when the line is
  const vectors=[];const respond=event=>{vectors.push(event.detail.directionVector);event.detail.respond({x:100,y:100,depthAt:(_x,y)=>y});};window.addEventListener('aether-extrusion-handle',respond);
  try{mountExtrusionHandle(panel,controls,'mm');await vi.waitFor(()=>expect(vectors.at(-1)).toEqual([.6,0,.8]));
   controls.directionReferenceVector.value='[0.8,0,0.6]';await vi.waitFor(()=>expect(vectors.at(-1)).toEqual([.8,0,.6]));
-  const handle=document.querySelector('.cad-extrusion-handle');capture(handle);pointer(handle,'pointerdown',100);pointer(handle,'pointermove',105);pointer(handle,'pointerup',105);expect(controls.distance.value).toBe('15');
+  const handle=document.querySelector('.aui-manipulator-handle:not([hidden])');capture(handle);pointer(handle,'pointerdown',100);pointer(handle,'pointermove',105);pointer(handle,'pointerup',105);expect(controls.distance.value).toBe('15');
   controls.directionReferenceVector.value='';await vi.waitFor(()=>expect(handle.hidden).toBe(true));
  }finally{panel.remove();window.removeEventListener('aether-extrusion-handle',respond);}
 });
@@ -95,7 +95,7 @@ it('hides the sketch-origin handle for referenced starts and restores it after d
  document.body.innerHTML='<div class="cad-studio-viewport"><div id="start-panel"></div></div>';
  const panel=document.querySelector('#start-panel');const controls={distance:control('10'),reversed:control('false'),selections:control('[{"featureId":"sketch"}]'),endType:control('blind'),offset:control('2'),second:control('0'),startEnabled:control('true'),startMode:control('face')};
  const respond=event=>event.detail.respond({x:100,y:100,depthAt:(_x,y)=>y});window.addEventListener('aether-extrusion-handle',respond);
- try{mountExtrusionHandle(panel,controls,'mm');await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle').hidden).toBe(true));
-  controls.startEnabled.value='false';await vi.waitFor(()=>expect(document.querySelector('.cad-extrusion-handle').hidden).toBe(false));
+ try{mountExtrusionHandle(panel,controls,'mm');await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-handle:not([hidden])')).toBeNull());
+  controls.startEnabled.value='false';await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-handle:not([hidden])')).toBeTruthy());
  }finally{panel.remove();window.removeEventListener('aether-extrusion-handle',respond);}
 });

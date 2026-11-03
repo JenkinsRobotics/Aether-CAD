@@ -77,14 +77,16 @@ describe("CADTraditionalRibbon", () => {
     expect(sketching).toContain('data-ribbon-workspace="sketch-context"');
   });
 
-  it("keeps the six category menus on every design tab without inventing runnable tools", () => {
+  it("keeps Create and Modify on every design tab and the shared sections on Solid alone", () => {
+    const solid = renderToStaticMarkup(<CADTraditionalRibbon documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()} />);
+    for (const category of ["Create", "Modify", "Construct", "Inspect", "Insert", "Select"]) expect(solid, `solid/${category}`).toContain(`aria-label="${category} tools"`);
     for (const activeWorkspace of ["surface", "mesh", "sheet-metal", "framing", "plastic"] as const) {
       const html = renderToStaticMarkup(<CADTraditionalRibbon documentType="part"
         activeWorkspace={activeWorkspace} partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()} />);
-      for (const category of ["Create", "Modify", "Construct", "Inspect", "Insert", "Select"])
-        expect(html, `${activeWorkspace}/${category}`).toContain(`aria-label="${category} tools"`);
-      expect(html).toContain('data-tool-id="solid-plane"');
-      expect(html).toContain('data-tool-id="solid-interference"');
+      for (const category of ["Create", "Modify"]) expect(html, `${activeWorkspace}/${category}`).toContain(`aria-label="${category} tools"`);
+      // A tool is listed once per workspace: Construct and Inspect belong to Solid.
+      expect(html).not.toContain('data-tool-id="solid-plane"');
+      expect(html).not.toContain('data-tool-id="solid-interference"');
       // Surface tools are live on their own tab, Trim included since r63 (plane trims); no other tab offers them.
       if (activeWorkspace === "surface") { expect(html).toContain('data-tool-id="surface-extrude"'); expect(html).toContain('data-tool-id="surface-trim"'); }
       else expect(html).not.toContain('data-tool-id="surface-trim"');

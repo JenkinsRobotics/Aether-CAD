@@ -754,11 +754,9 @@ const selectionCommands = {
 } as const;
 const syncSelectionPresentation = (): void => {
   viewer.refreshSelectionAppearance();
-  const {filter:activeFilter,dragMode,priority} = cadSelection.snapshot();
+  const {filter:activeFilter,dragMode} = cadSelection.snapshot();
   for (const mode of ["directional","window","crossing","freeform","paint"] as const)
     cadCommands.setActive(`selection-${mode}`,dragMode===mode);
-  for (const value of ["body","face","edge"] as const)
-    cadCommands.setActive(`selection-priority-${value}`,priority===value);
   Object.entries(selectionCommands).forEach(([filter, command]) => {
     cadCommands.setActive(command, activeFilter === filter);
   });

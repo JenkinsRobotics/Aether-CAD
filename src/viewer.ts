@@ -1517,7 +1517,7 @@ export class MateViewport {
   projectAngleHandle(origin:readonly number[],axis:readonly number[],angleDegrees:number,start?:readonly number[]) {
     if(origin.length!==3||axis.length!==3||![...origin,...axis,angleDegrees].every(Number.isFinite))return null;
     const ring=projectAngleRing(this.camera,this.renderer.domElement.getBoundingClientRect(),new THREE.Vector3(...origin),new THREE.Vector3(...axis),angleDegrees,start&&start.length===3&&start.every(Number.isFinite)?new THREE.Vector3(...start):undefined);
-    return ring?{x:ring.x,y:ring.y,points:ring.points,arc:ring.arc,tangent:ring.tangent,valueAt:ring.valueAt}:null;
+    return ring?{x:ring.x,y:ring.y,points:ring.points,arc:ring.arc,tangent:ring.tangent,valueAt:ring.valueAt,pointAt:ring.pointAt}:null;
   }
   projectTransformHandles(request:TransformGizmoRequest) {
     return projectTransformGizmo(this.camera,this.renderer.domElement.getBoundingClientRect(),request);
@@ -2274,8 +2274,13 @@ export class MateViewport {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const point = {x:event.clientX-rect.left,y:event.clientY-rect.top};
     const distance = (candidate:ConnectorCandidate)=>selectionCandidateDistance(candidate,part.group.matrixWorld,point,p=>this.projectScreenPoint(p));
-    if (kind === "edge" && cadSelection.snapshot().filter === "auto" && topology &&
-      !topology.candidates.some(candidate=>candidate.kind==='edge-midpoint'&&distance(candidate)<=12)) kind='face';
+    // One selection rule (Jonathan, 2026-11-03), as Onshape's: a vertex within reach, else an
+    // edge within reach, else the face under the pointer. Filters restrict; nothing reorders.
+    if (cadSelection.snapshot().filter === "auto" && topology) {
+      if (topology.candidates.some(candidate => candidate.kind === 'vertex' && distance(candidate) <= 6)) kind = 'vertex';
+      else if (topology.candidates.some(candidate => candidate.kind === 'edge-midpoint' && distance(candidate) <= 12)) kind = 'edge';
+      else if (kind === 'edge' || kind === 'vertex') kind = 'face';
+    }
     if (kind === "component" || kind === "body") {
       return {
         part,

@@ -1,9 +1,6 @@
 import { expect, it } from 'vitest';
-import type { MenuItem } from '@aether/ui';
-
-const descendants = (items: readonly MenuItem[]): MenuItem[] => items.flatMap(item => [item, ...descendants(item.children ?? [])]);
 import { cadFeatureDomains, cadFeatureGroups, cadFeatureToolById, expandFeatureTools } from './feature-library';
-import { cadFeaturePalette, cadFeatureTray } from '../react/cad-feature-tray';
+import { cadFeaturePalette } from '../react/cad-feature-tray';
 import { cadCommands } from '../cad-command-registry';
 
 it('keeps the six domains reachable and expands hidden variants into search without duplicate actions', () => {
@@ -14,23 +11,19 @@ it('keeps the six domains reachable and expands hidden variants into search with
   expect(palette.find(command => command.id === 'feature-chamfer')?.category).toBe('Solid');
   expect(palette.find(command => command.id === 'sketch-tangent-arc')?.category).toBe('Curve');
   expect(palette.find(command => command.id === 'show-export')).toBeUndefined();
-  const tray = cadFeatureTray(context);
-  expect(tray.groups.map(group => group.label)).toEqual(cadFeatureDomains.map(domain => domain.label));
   for (const domain of cadFeatureDomains) for (const group of cadFeatureGroups(domain.id)) for (const tool of expandFeatureTools(group.tools)) {
     expect(cadFeatureToolById(tool.id)).toBe(tool);
     if (!tool.action) expect(tool.unavailableReason?.length).toBeGreaterThan(20);
   }
 });
 
-it('uses the same command availability in tray and search, preserving named gaps', () => {
+it('search follows command availability, preserving named gaps', () => {
   const unregister = cadCommands.register('feature-extrude', () => {});
   try {
     for (const enabled of [true, false]) {
       cadCommands.setEnabled('feature-extrude', enabled);
       const context = { commands: cadCommands.snapshot(), partOpen: true, assemblyReady: false };
       const palette = cadFeaturePalette(context, []);
-      const item = descendants(cadFeatureTray(context).groups.flatMap(group => group.menuItems ?? [])).find(item => item.id === 'feature:solid-extrude');
-      expect(item?.disabled).toBe(!enabled);
       expect(palette.find(command => command.id === 'feature-extrude')?.disabled).toBe(!enabled);
       expect(palette.find(command => command.id === 'unavailable:assembly-assembly-template')?.disabled).toBe(true);
       expect(palette.find(command => command.id === 'assembly-from-json')?.disabled).toBe(true);

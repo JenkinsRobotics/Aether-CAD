@@ -1,10 +1,10 @@
 /** Chamfer, as Onshape's: Entities to chamfer, Tangent propagation, the chamfer type (equal
  *  distance, two distances, distance and angle) with its rows and an optional reference face.
  *  Edge picking and the saved-document scopes live in edge-finish.ts. */
-import type { SolidFaceReference } from "@aether/core/document";
-import { edgeFinishControls, layoutEdgeFinish, serializeEdgeFinish, validateEdgeFinish } from "./edge-finish";
+import type { EdgeFinishEdge, SolidFaceReference } from "@aether/core/document";
+import { edgeFinishControls, edgeIdentity, layoutEdgeFinish, serializeEdgeFinish, validateEdgeFinish } from "./edge-finish";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
-import { rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { iconButton, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
 const chamferTypes = { "Equal distance": "equal", "Two distances": "two-distances", "Distance and angle": "distance-angle" } as const;
 
@@ -22,6 +22,8 @@ export const chamferEditor: FeatureEditor = {
       secondDistance: field("Second distance (mm)", String(feature?.secondDistanceMillimeters ?? feature?.radiusMillimeters ?? 0.5)),
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 45)),
       referenceFace: field("Reference face", JSON.stringify(feature?.referenceFace ? [feature.referenceFace] : [])),
+      flipped: field("Flip direction", String(feature?.flipped ?? false), ["false", "true"]),
+      overrides: field("Direction override edges", JSON.stringify(feature?.flippedEdges ?? [])),
     };
   },
 
@@ -37,14 +39,24 @@ export const chamferEditor: FeatureEditor = {
     const measurement = win.picker(Object.keys(measurements), { ariaLabel: "Measurement menu", onChange: (value) => { controls.measurement.value = measurements[value as keyof typeof measurements]; sync(); controls.measurement.dispatchEvent(new Event("change")); } });
     measurement.setValue(controls.measurement.value === "tangent" ? "Tangent distance" : "Offset");
     const measurementRow = win.body.appendChild(win.row("Measurement", measurement.element));
-    row("Distance", controls.radius, lengthUnitLabel);
+    const distance = row("Distance", controls.radius, lengthUnitLabel);
+    // Onshape's direction flip: the first leg moves to the other adjacent face on every edge.
+    controls.flipped.closest("label")?.remove(); controls.flipped.hidden = true; controls.flipped.setAttribute("form", form.id); form.append(controls.flipped);
+    const flip = iconButton("flip-horizontal", "Flip chamfer direction");
+    const paintFlip = () => flip.setAttribute("aria-pressed", controls.flipped.value);
+    flip.onclick = () => { controls.flipped.value = controls.flipped.value === "true" ? "false" : "true"; paintFlip(); controls.flipped.dispatchEvent(new Event("change")); };
+    paintFlip(); distance.querySelector(".aui-feature-row-control")?.append(flip);
     const second = row("Second distance", controls.secondDistance, lengthUnitLabel), angle = row("Angle", controls.angle, "deg");
     const faces = mountPickedReferences<SolidFaceReference>(context, controls.referenceFace, {
       title: "Reference face (optional)", kind: "face", requestEvent: "aether-offset-faces-request", replyEvent: "aether-offset-faces", replyKey: "faces", identity: faceIdentity,
       note: "The face the first distance lies on. Default: the adjacent face facing up most.",
       onChange: (picked) => { if (picked.length > 1) faces.update([picked[picked.length - 1]]); },
     });
-    const sync = () => { const mode = controls.chamferType.value; second.hidden = mode !== "two-distances"; angle.hidden = mode !== "distance-angle"; faces.element.hidden = mode === "equal"; measurementRow.hidden = mode !== "equal"; };
+    // Direction overrides: picked edges whose first leg goes the other way.
+    const overrides = mountPickedReferences<EdgeFinishEdge>(context, controls.overrides, {
+      title: "Direction overrides", kind: "edge", requestEvent: "aether-finish-edges-request", replyEvent: "aether-finish-edges", replyKey: "edges", identity: edgeIdentity,
+    });
+    const sync = () => { const mode = controls.chamferType.value, directed = mode !== "equal"; second.hidden = mode !== "two-distances"; angle.hidden = mode !== "distance-angle"; faces.element.hidden = !directed; flip.hidden = !directed; overrides.element.hidden = !directed; measurementRow.hidden = directed; };
     sync();
     // Mounted last so the entities box is the active pick when the window opens (one picker at a time).
     layoutEdgeFinish(context, controls, "Entities to chamfer");
@@ -66,6 +78,8 @@ export const chamferEditor: FeatureEditor = {
       ...(values.chamferType === "two-distances" ? { secondDistanceMillimeters: Number(values.secondDistance) } : {}),
       ...(values.chamferType === "distance-angle" ? { angleDegrees: Number(values.angle) } : {}),
       ...(face ? { referenceFace: face } : {}),
+      ...(values.chamferType !== "equal" && values.flipped === "true" ? { flipped: true } : {}),
+      ...(values.chamferType !== "equal" && JSON.parse(values.overrides || "[]").length ? { flippedEdges: JSON.parse(values.overrides) } : {}),
       ...serializeEdgeFinish(values),
     };
   },

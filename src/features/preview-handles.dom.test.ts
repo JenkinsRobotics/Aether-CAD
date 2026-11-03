@@ -17,10 +17,10 @@ it("mounts feature handles and removes them when their panel closes", async () =
     { parameter: "angle", kind: "angular", originMillimeters: [0, 0, 0], direction: [0, 1, 0] },
     { parameter: "ghost", kind: "linear", originMillimeters: [0, 0, 0], direction: [1, 0, 0] },
   ] } } }));
-  expect(document.querySelectorAll(".cad-extrusion-handle")).toHaveLength(1); // radius → size; ghost has no control
-  expect(document.querySelectorAll(".cad-angle-handle")).toHaveLength(1);
+  expect(document.querySelectorAll('.aui-manipulator-handle:not([hidden])[data-kind="axis"]')).toHaveLength(1); // radius → size; ghost has no control
+  expect(document.querySelectorAll('.aui-manipulator-handle:not([hidden])[data-kind="rotation"]')).toHaveLength(1);
   panel.remove();
   // Let the real disposal observers run while their owning window still exists.
   await Promise.resolve();
-  expect(document.querySelectorAll(".cad-extrusion-handle, .cad-angle-handle")).toHaveLength(0);
+  expect(document.querySelectorAll(".aui-manipulator-handle:not([hidden])")).toHaveLength(0);
 });

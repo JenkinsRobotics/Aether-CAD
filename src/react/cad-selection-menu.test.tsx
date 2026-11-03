@@ -12,9 +12,8 @@ it('organizes supported methods and filters while preserving all command identit
 });
 it('leaves other tool menus untouched',()=>{const items=[{id:'solid-extrude',label:'Extrude'}];expect(selectionMenu(items)).toEqual(items);});
 
-it('provides Freeform, Paint and a separate Priority submenu',()=>{
- const ids=['home-select-auto','selection-window-tool','selection-freeform-tool','selection-paint-tool','selection-priority-body-tool','selection-priority-face-tool','selection-priority-edge-tool'];
- const menu=selectionMenu(ids.map(id=>({id,label:id.includes('priority')?id.split('-')[2]:id})));
- expect(menu.map(item=>item.id)).toEqual(['home-select-auto','selection-window-tool','selection-freeform-tool','selection-paint-tool','selection-priority-menu']);
- expect(menu.at(-1)?.children?.map(item=>item.id)).toEqual(ids.slice(4));
+it('provides Freeform and Paint and no selection priority: one proximity rule, as Onshape',()=>{
+ const ids=['home-select-auto','selection-window-tool','selection-freeform-tool','selection-paint-tool'];
+ const menu=selectionMenu(ids.map(id=>({id,label:id})));
+ expect(menu.map(item=>item.id)).toEqual(ids);
 });

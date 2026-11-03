@@ -31,11 +31,9 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   // Selecting in the viewport fills the list (the subscription below); each row removes itself. No Add/Clear buttons: the gallery's editors have none.
   let active = false;
   const entity = options.kind === "entity";
-  // Entities pick in the viewer's auto mode with edges first: an edge within reach wins, else the face.
-  let previousPriority = cadSelection.snapshot().priority;
+  // Entities pick in the viewer's one rule (auto): a vertex or edge within reach, else the face.
   const lifecycle = referencePickerLifecycle(entity ? "auto" : options.kind as "face" | "edge", () => win.panel.isConnected, (value) => {
     active = value; box.element.dataset.picking = String(value);
-    if (entity) { if (value) { previousPriority = cadSelection.snapshot().priority; cadSelection.dispatch({ type: "set-priority", priority: "edge" }); } else if (cadSelection.snapshot().priority !== previousPriority) cadSelection.dispatch({ type: "set-priority", priority: previousPriority }); }
     window.dispatchEvent(new CustomEvent(`aether-source-${options.kind}-picking`, { detail: value }));
   });
   const kindOf = (items: readonly { kind: string }[]) => items.length && items.every((item) => item.kind === items[0].kind) ? items[0].kind : null;
