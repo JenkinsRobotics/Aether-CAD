@@ -5,7 +5,7 @@ import re
 
 from aether_animation.aether_project import edit_project
 
-from .document import CADDocument
+from .document import CADDocument, linked_part, parse_source_ref, source_ref
 from .project_runtime import MAX_BYTES, decode
 
 
@@ -30,24 +30,19 @@ def execute(path, data):
                 raise ValueError("Choose linked Parts to update")
             for part_id in chosen:
                 part = doc.workspace and doc.workspace.part_definitions.get(part_id)
-                match = re.fullmatch(r"library:([^@]+)@(\d+)", part and part["source"].get("asset_ref", "") or "")
+                parsed = parse_source_ref(part and part["source"].get("asset_ref", ""))
                 source = resolved.get(part_id)
-                if not match or not isinstance(source, dict):
+                if not parsed or not isinstance(source, dict):
                     raise ValueError("Choose a linked Part")
-                source_ref = source.get("source_ref", "")
-                if not re.fullmatch(r"library:" + re.escape(match[1]) + r"@[1-9]\d*", source_ref):
+                fresh = parse_source_ref(source.get("source_ref", ""))
+                if not fresh or fresh[0] != parsed[0] or fresh[1] < 1:
                     raise ValueError("Link source identity changed")
                 raw_source = source.get("data_base64")
                 if not isinstance(raw_source, str) or len(raw_source) > MAX_BYTES * 4 // 3:
                     raise ValueError("Invalid link source")
-                source_bytes = base64.b64decode(raw_source, validate=True)
-                if source_bytes.startswith(b"PK"):
-                    raise ValueError("Link source must be a standalone Part")
-                source_doc = CADDocument(source_bytes)
-                if source_doc.part is None:
-                    raise ValueError("Link source must be a standalone Part")
-                edit_project(doc.workspace, "update_link", {"part_id": part_id, "document": source_doc.part,
-                    "source_label": source["source_label"], "source_ref": source_ref})
+                linked = linked_part(CADDocument(base64.b64decode(raw_source, validate=True)), parsed[2])
+                edit_project(doc.workspace, "update_link", {"part_id": part_id, "document": linked["feature_document"],
+                    "source_label": source["source_label"], "source_ref": source_ref(fresh[0], fresh[1], parsed[2])})
         elif operation != "move":
             doc.edit("rename" if operation == "copy" else operation, data)
         raw = doc.bytes()
@@ -59,10 +54,9 @@ def execute(path, data):
     result["linked_sources"] = []
     if doc.workspace:
         for part in doc.workspace.part_definitions.values():
-            ref = part.get("source", {}).get("asset_ref", "")
-            match = re.fullmatch(r"library:([^@]+)@(\d+)", ref or "")
-            if match:
-                result["linked_sources"].append({"part_id": part["id"], "name": part["name"], "current": int(match[2]), "source_id": match[1]})
+            parsed = parse_source_ref(part.get("source", {}).get("asset_ref", ""))
+            if parsed:
+                result["linked_sources"].append({"part_id": part["id"], "name": part["name"], "current": parsed[1], "source_id": parsed[0]})
     if path.endswith("-edit"):
         result["data_base64"] = base64.b64encode(raw).decode("ascii")
     return result

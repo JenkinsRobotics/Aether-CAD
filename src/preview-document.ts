@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { parsePartDocument } from '@aether/core/document';
+import { readAetherCADText } from './document/aethercad-archive';
 import { evaluatePart } from './engine/evaluate-part';
 import { createPreviewScene } from './preview-scene';
 import { createPreviewCache } from './preview-cache';
@@ -24,7 +25,10 @@ function thumbnailRenderer() {
 }
 
 async function renderDocument(content: string): Promise<string | null> {
-  const document = parsePartDocument(content);
+  // The library preview hands the document over as text; a Drawing-only document has no solid to show.
+  const part = readAetherCADText(content).graph.part_definitions.find((item) => item.feature_document);
+  if (!part) return null;
+  const document = parsePartDocument(JSON.stringify(part.feature_document));
   if (!document.features.length) return null;
   const model = await evaluatePart(document);
   const result = createPreviewScene(model.parts.filter(part => document.bodyProperties?.[part.id]?.visible !== false));

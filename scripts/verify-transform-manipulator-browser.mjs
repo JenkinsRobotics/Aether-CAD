@@ -7,6 +7,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connectLiveAgent } from './browser/live-agent.mjs';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, webkit, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -20,8 +21,9 @@ const request = (action, data) => page.evaluate(async ({ action, data }) => {
   const response = await fetch('/api/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   if (!response.ok) throw Error(await response.text()); return response.json();
 }, { action, data });
-const read = async id => Buffer.from((await request('library/read', { app: 'cad', id })).data_base64, 'base64');
-const graph = async id => JSON.parse(execFileSync('python3', ['-c', 'import sys,io,zipfile; z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.read("state/graph.json").decode())'], { input: await read(id), encoding: 'utf8' }));
+const read = async id => tabDocumentOf((await request('library/read', { app: 'cad', id })).data_base64);
+const stored = async id => Buffer.from((await request('library/read', { app: 'cad', id })).data_base64, 'base64');
+const graph = async id => JSON.parse(execFileSync('python3', ['-c', 'import sys,io,zipfile; z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.read("state/graph.json").decode())'], { input: await stored(id), encoding: 'utf8' }));
 const handle = id => page.locator(`.cad-selection-manipulator [data-transform-handle="${id}"]`);
 const center = async id => { const b = await handle(id).boundingBox(); assert.ok(b); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
 const project = points => page.evaluate(points => { let result; window.dispatchEvent(new CustomEvent('aether-measure-project', { detail: { points, respond: value => result = value } })); return result; }, points);
@@ -43,11 +45,11 @@ let agent;
 try {
   await page.goto(origin + '/cad/'); await page.locator('input[name="username"]').fill('editor'); await page.locator('input[name="password"]').fill('account-test-password-2026'); await button('Sign in').click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 }); await page.waitForLoadState('networkidle');
-  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   data.formatVersion = 22; data.documentId = randomUUID(); data.name = 'Origin-constrained block';
   const contour = { type: 'path', start: [0, 0], segments: [ { type: 'line', end: [20, 0] }, { type: 'line', end: [20, 20] }, { type: 'line', end: [0, 20] }, { type: 'line', end: [0, 0] } ] };
   data.features[0].profile = { type: 'drawing', contours: [contour], constraints: [{ id: 'fixed-outline', kind: 'fix', a: { contour: 0, kind: 'contour' }, fixedGeometry: structuredClone(contour) }] };
-  const file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Fixed part.acpart', data_base64: Buffer.from(JSON.stringify(data)).toString('base64') });
+  const file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Fixed part.aethercad', data_base64: partDocumentBase64(data) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`); await page.getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
   await step('part-stays-at-modeled-coordinates', async () => {
     await fit(); await page.locator('.cad-parts-list').getByRole('treeitem').first().click();
@@ -55,10 +57,10 @@ try {
     const [at] = await project([[10, 10, 5]]);
     await page.mouse.move(at.x, at.y); await page.mouse.down(); await page.mouse.move(at.x + 65, at.y + 20, { steps: 8 }); await page.mouse.up();
     await expect(handle('pivot')).toBeHidden();
-    assert.deepEqual(JSON.parse((await read(file.id)).toString()).features, data.features);
+    assert.deepEqual((await read(file.id)).features, data.features);
     assert.equal(isSolid(await pixel([10, 10, 5])), true);
     await page.reload(); await page.getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
-    assert.deepEqual(JSON.parse((await read(file.id)).toString()).features, data.features);
+    assert.deepEqual((await read(file.id)).features, data.features);
   });
   const assembly = await request('library/project_create', { app: 'cad', name: 'Placement qualification', operation_id: randomUUID(), packaging: 'assembly', scope: 'personal' });
   const url = `${origin}/cad/index.html?document=${assembly.id}&assembly=${assembly.project.assemblies[0].id}`;

@@ -54,7 +54,7 @@ export function StartCenter({ presentation }: { presentation: CADPresentationSna
           </section>
           <section className="cad-home-section cad-home-recent" aria-label="Recent workspaces">
             <header><div><strong>Recent workspaces</strong><small>Local recent history</small></div></header>
-            <EmptyState compact title="No recent workspaces" description="Open a native .acpart or .acad workspace and it will be available during this session." icon="◇" />
+            <EmptyState compact title="No recent workspaces" description="Open a .aethercad document and it will be available during this session." icon="◇" />
           </section>
           <Button className="cad-recovery-link" onClick={() => cadPresentation.dispatch({ type: "show-start-screen", screen: "recovery" })}>Open Recovery</Button>
         </div>
@@ -71,7 +71,7 @@ export function StartCenter({ presentation }: { presentation: CADPresentationSna
           <FieldRow label="Type" htmlFor="new-workspace-type"><SelectField id="new-workspace-type" value={workspaceType} options={[{ value: "part", label: "Part" }, { value: "assembly", label: "Assembly" }, { value: "drawing", label: "Drawing — unavailable", disabled: true }]} onChange={(event) => setWorkspaceType(event.target.value as "part" | "assembly")} /></FieldRow>
           <FieldRow label="Template" htmlFor="new-part-template"><SelectField id="new-part-template" value={workspaceType === "assembly" ? "empty-assembly" : "empty-part"} options={workspaceType === "assembly" ? [{ value: "empty-assembly", label: "Empty Assembly" }] : [{ value: "empty-part", label: "Empty Part — add sketches and features" }]} disabled /></FieldRow>
           <FieldRow label="Units" htmlFor="new-part-units"><SelectField id="new-part-units" value="millimeters" options={[{ value: "millimeters", label: "Millimeters (mm)" }]} disabled /></FieldRow>
-          <p className="cad-form-note">{workspaceType === "assembly" ? "The native .acad workspace keeps Core-owned instances, connectors, mates, DOF, relations, solve state, and derived BOM." : "Start with an empty Part. Add sketch profiles, revolve or extrude them, then edit the feature tree and bodies. Geometry is rebuilt by Aether Core through OCCT."}</p>
+          <p className="cad-form-note">{workspaceType === "assembly" ? "The document keeps Core-owned instances, connectors, mates, DOF, relations, solve state, and derived BOM." : "Start with an empty Part. Add sketch profiles, revolve or extrude them, then edit the feature tree and bodies. Geometry is rebuilt by Aether Core through OCCT."}</p>
         </div>
       </Dialog>
 

@@ -92,7 +92,7 @@ try {
     await dialog.getByRole('textbox').fill('Home routing part');
     await dialog.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await page.getByText('Home routing part.acpart', { exact: true }).first().dblclick();
+    await page.getByText('Home routing part.aethercad', { exact: true }).first().dblclick();
     await expect(page.locator('#viewport')).toBeVisible({ timeout: 60000 });
     assert.ok(new URL(page.url()).searchParams.get('document'));
     await page.getByRole('link', { name: 'Aether CAD home', exact: true }).click();

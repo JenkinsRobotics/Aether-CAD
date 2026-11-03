@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');await mkdir(evidence,{recursive:true});
@@ -28,19 +29,19 @@ try{
  const document={format:'aether-part',formatVersion:22,documentId:randomUUID(),name:'Bracket',units:'millimeter',features:[
  {id:'profile',name:'Rectangle',type:'profile',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'polygon',pointsMillimeters:[[-20,-10],[20,-10],[20,10],[-20,10]]}},
  {id:'extrude',name:'Extrude',type:'extrude',profileFeatureId:'profile',suppressed:false,operation:'new',distanceMillimeters:12}]};
- const source=await api('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name:'Assembly baseline.acpart',data_base64:Buffer.from(JSON.stringify(document)).toString('base64')});
+ const source=await api('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name: 'Assembly baseline.aethercad', data_base64: partDocumentBase64(document)});
  await page.goto(`${origin}/cad/index.html?document=${source.id}`);await page.getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});await button('Files').click();
- await files.getByRole('button',{name:'Design actions',exact:true}).click();await page.getByRole('menuitem',{name:'Create Hybrid design from this Part…',exact:true}).click();
- await page.getByRole('dialog').getByRole('textbox').fill('Part Assembly acceptance');await page.getByRole('dialog').getByRole('button',{name:'Create',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0,{timeout:60000});await expect(files).toContainText('Main Assembly');
- design=new URL(page.url()).searchParams.get('document');const project=(await api('library/project_read',{app:'cad',id:design})).project;partId=project.parts[0].id;assemblyId=project.assemblies[0].id;
+ // One document type: the saved Part Studio and its Main Assembly are tabs of the same document.
+ await expect(files).toContainText('Main Assembly');
+ design=source.id;const project=(await api('library/project_read',{app:'cad',id:design})).project;partId=project.parts[0].id;assemblyId=project.assemblies[0].id;
  await page.goto(`${origin}/cad/index.html?document=${design}&assembly=${assemblyId}`);await expect(components()).toBeVisible({timeout:90000});if(!await files.isVisible())await button('Files').click();
  await step('first-drag-inserts-and-anchors',async()=>{
-  await expect(components().getByRole('button',{name:'Insert Part',exact:true})).toBeEnabled({timeout:90000});
+  await page.getByRole('button',{name:'Mate actions',exact:true}).click();await expect(page.getByRole('menuitem',{name:'Insert Component…',exact:true})).toBeEnabled({timeout:90000});await page.keyboard.press('Escape');
   await files.locator(`[data-document-tab-id="${partId}"]`).dragTo(page.locator('#viewport'),{targetPosition:{x:680,y:420}});
   await saved(g=>g.instances.length===1);const g=await graph();assert.equal(g.instances[0].grounded,true);assert.equal(g.connector_definitions.length,1);assert.equal(g.connector_definitions[0].name,'Origin');await expect(row('Bracket:1')).toBeVisible();
  });
  await step('insert-second-component-and-edit-placement',async()=>{
-  await components().getByRole('button',{name:'Insert Part',exact:true}).click();await dialog('Insert parts').getByRole('button',{name:'Bracket Part Studio',exact:true}).click();await page.locator('#assembly-position-x').fill('60');await dialog('Insert parts').getByRole('button',{name:'Insert Part',exact:true}).click();await expect(dialog('Insert parts')).toHaveCount(0,{timeout:90000});await saved(g=>g.instances.length===2);
+  await page.getByRole('button',{name:'Mate actions',exact:true}).click();await page.getByRole('menuitem',{name:'Insert Component…',exact:true}).click();await dialog('Insert parts').getByRole('button',{name:'Bracket Part Studio',exact:true}).click();await page.locator('#assembly-position-x').fill('60');await dialog('Insert parts').getByRole('button',{name:'Insert Part',exact:true}).click();await expect(dialog('Insert parts')).toHaveCount(0,{timeout:90000});await saved(g=>g.instances.length===2);
   await context('Bracket:2','Component properties…');await dialog('Component properties').getByLabel('Name',{exact:true}).fill('Arm');await dialog('Component properties').getByLabel('Position Y',{exact:true}).fill('25');await dialog('Component properties').getByLabel('Rotation Z',{exact:true}).fill('30');
   const boxes=await Promise.all(['X','Y','Z'].map(axis=>dialog('Component properties').getByLabel('Position '+axis,{exact:true}).boundingBox()));assert.ok(boxes.every(b=>Math.abs(b.y-boxes[0].y)<2));
   await page.screenshot({path:join(evidence,'component-properties.png')});await dialog('Component properties').getByRole('button',{name:'Apply',exact:true}).click();await expect(dialog('Component properties')).toHaveCount(0,{timeout:90000});await saved(g=>g.instances.some(i=>i.name==='Arm'));
@@ -49,7 +50,7 @@ try{
  });
  await step('visibility-and-saved-reopen',async()=>{
   await context('Arm','Show / hide component');await saved(g=>g.instances.find(i=>i.name==='Arm').visible===false);await context('Arm','Show / hide component');await saved(g=>g.instances.find(i=>i.name==='Arm').visible===true);
-  await page.reload();await expect(row('Arm')).toBeVisible({timeout:90000});await expect(components().getByRole('button',{name:'Insert Part',exact:true})).toBeEnabled({timeout:90000});await row('Arm').dblclick();await expect.poll(async()=>Number(await dialog('Component properties').getByLabel('Position Y',{exact:true}).inputValue())).toBe(25);await dialog('Component properties').getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.reload();await expect(row('Arm')).toBeVisible({timeout:90000});await page.getByRole('button',{name:'Mate actions',exact:true}).click();await expect(page.getByRole('menuitem',{name:'Insert Component…',exact:true})).toBeEnabled({timeout:90000});await page.keyboard.press('Escape');await row('Arm').dblclick();await expect.poll(async()=>Number(await dialog('Component properties').getByLabel('Position Y',{exact:true}).inputValue())).toBe(25);await dialog('Component properties').getByRole('button',{name:'Cancel',exact:true}).click();
  });
  await step('edit-source-part-and-reuse-updated-geometry',async()=>{
   await context('Arm','Open source Part');await page.getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});assert.equal(new URL(page.url()).searchParams.get('part'),partId);

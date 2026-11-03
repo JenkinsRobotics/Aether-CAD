@@ -9,7 +9,7 @@ from aether_animation.aether_workspace import AetherWorkspaceError
 
 from core.host.state import Problem
 
-from .document import CADDocument
+from .document import CADDocument, linked_part, parse_source_ref, source_ref
 
 
 def dispatch(library, action, user, row, data):
@@ -31,17 +31,16 @@ def dispatch(library, action, user, row, data):
             updates = []
             if doc.workspace:
                 for part in doc.workspace.part_definitions.values():
-                    ref = part.get("source", {}).get("asset_ref", "")
-                    match = re.fullmatch(r"library:([^@]+)@(\d+)", ref or "")
-                    if not match:
+                    parsed = parse_source_ref(part.get("source", {}).get("asset_ref", ""))
+                    if not parsed:
                         continue
                     try:
-                        source = library.entry(user["id"], row["app"], match[1])
+                        source = library.entry(user["id"], row["app"], parsed[0])
                         updates.append(
                             {
                                 "part_id": part["id"],
                                 "name": part["name"],
-                                "current": int(match[2]),
+                                "current": int(parsed[1]),
                                 "latest": source["revision"],
                                 "available": True,
                             }
@@ -51,7 +50,7 @@ def dispatch(library, action, user, row, data):
                             {
                                 "part_id": part["id"],
                                 "name": part["name"],
-                                "current": int(match[2]),
+                                "current": int(parsed[1]),
                                 "available": False,
                             }
                         )
@@ -106,22 +105,19 @@ def dispatch(library, action, user, row, data):
                     raise ValueError("Choose linked Parts to update.")
                 for part_id in chosen:
                     part = doc.workspace.part_definitions.get(part_id)
-                    ref = part and part["source"].get("asset_ref", "")
-                    match = re.fullmatch(r"library:([^@]+)@(\d+)", ref or "")
-                    if not match:
+                    parsed = parse_source_ref(part and part["source"].get("asset_ref", ""))
+                    if not parsed:
                         raise ValueError("Choose a linked Part.")
-                    source = library.entry(user["id"], row["app"], match[1])
-                    source_doc = CADDocument(source["content"])
-                    if source_doc.part is None:
-                        raise ValueError("Link source must be a standalone Part.")
+                    source = library.entry(user["id"], row["app"], parsed[0])
+                    linked = linked_part(CADDocument(source["content"]), parsed[2])
                     edit_project(
                         doc.workspace,
                         "update_link",
                         {
                             "part_id": part_id,
-                            "document": source_doc.part,
+                            "document": linked["feature_document"],
                             "source_label": source["name"],
-                            "source_ref": f"library:{source['id']}@{source['revision']}",
+                            "source_ref": source_ref(source["id"], source["revision"], parsed[2]),
                         },
                     )
         else:
@@ -143,4 +139,4 @@ def dispatch(library, action, user, row, data):
 
 
 def extension(name):
-    return "." + name.rsplit(".", 1)[-1] if "." in name else ".acad"
+    return "." + name.rsplit(".", 1)[-1] if "." in name else ".aethercad"

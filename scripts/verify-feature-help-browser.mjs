@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -23,12 +24,12 @@ try {
   await button('Sign in').click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
   await page.waitForLoadState('networkidle');
-  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   data.documentId = randomUUID(); data.name = 'Feature Help check';
-  const file = await page.evaluate(async ({ data, operation }) => {
-    const response = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'cad', kind: 'file', scope: 'personal', operation_id: operation, name: 'Feature Help check.acpart', data_base64: btoa(JSON.stringify(data)) }) });
+  const file = await page.evaluate(async ({ encoded, operation }) => {
+    const response = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'cad', kind: 'file', scope: 'personal', operation_id: operation, name: 'Feature Help check.aethercad', data_base64: encoded }) });
     if (!response.ok) throw Error(await response.text()); return response.json();
-  }, { data, operation: randomUUID() });
+  }, { encoded: partDocumentBase64(data), operation: randomUUID() });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await page.getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
   const builtHtml = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');

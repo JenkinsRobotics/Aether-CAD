@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN ?? process.argv[2];
 assert.ok(origin, 'usage: verify-edge-finish-browser.mjs <origin>');
@@ -59,7 +60,7 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
   await page.waitForLoadState('networkidle');
-  const file = await page.evaluate(async (data) => { const r = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Edge finish.acpart', data_base64: Buffer.from(JSON.stringify(doc)).toString('base64') });
+  const file = await page.evaluate(async (data) => { const r = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!r.ok) throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Edge finish.aethercad', data_base64: partDocumentBase64(doc) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await featureRow(/Revolve 1/).waitFor({ timeout: 90000 });
   await page.waitForTimeout(2500);

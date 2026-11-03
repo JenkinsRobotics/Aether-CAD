@@ -236,12 +236,12 @@ describe("CADAssemblyController", () => {
     const bridge = client();
     const saveFile = vi.fn();
     const controller = new CADAssemblyController({ client: bridge, store, saveFile });
-    const file = Object.assign(new Blob([Uint8Array.from([1, 2, 3])]), { name: "drive.aether" });
+    const file = Object.assign(new Blob([Uint8Array.from([1, 2, 3])]), { name: "drive.aethercad" });
 
     await controller.openFile(file);
     expect(bridge.openWorkspace).toHaveBeenCalledWith("AQID", expect.any(AbortSignal));
     await controller.save();
-    expect(saveFile).toHaveBeenCalledWith("Drive Module.acasm", new TextEncoder().encode(JSON.stringify({ revision: "1" })));
+    expect(saveFile).toHaveBeenCalledWith("Drive Module.aethercad", new TextEncoder().encode(JSON.stringify({ revision: "1" })));
   });
 
   it("refuses mixed Core revisions without publishing partial data", async () => {

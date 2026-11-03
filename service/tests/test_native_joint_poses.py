@@ -21,7 +21,7 @@ def workspace_with_mate(kind, rotated):
     workspace = AetherWorkspace.new(1)
     mutate(workspace, "add_part_definition", part_definition={"name": "P", "source": {"kind": "authored", "label": "P"}})
     part_id = next(iter(workspace.part_definitions))
-    document = json.loads((ROOT / "examples/Train-Cart-Wheel.acpart").read_text())
+    document = json.loads((ROOT / "examples/Train-Cart-Wheel.part.json").read_text())
     document["documentId"] = part_id
     mutate(workspace, "update_part_definition", part_definition={**workspace.part_definitions[part_id], "feature_document": document})
     for name in ("A", "B", "C"):

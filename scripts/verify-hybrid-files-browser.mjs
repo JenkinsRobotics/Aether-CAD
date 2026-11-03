@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const {chromium,expect}=createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');
@@ -32,7 +33,7 @@ try{
   {id:'profile',name:'Rectangle',type:'profile',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'polygon',pointsMillimeters:[[-20,-10],[20,-10],[20,10],[-20,10]]}},
   {id:'extrude',name:'Extrude',type:'extrude',profileFeatureId:'profile',suppressed:false,operation:'new',distanceMillimeters:12},
  ]};
- source=await api('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name:'Hybrid source.acpart',data_base64:Buffer.from(JSON.stringify(data)).toString('base64')});
+ source=await api('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name: 'Hybrid source.aethercad', data_base64: partDocumentBase64(data)});
  await page.goto(`${origin}/cad/index.html?document=${source.id}`);await page.getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});await button('Files').click();
  await step('agent-composer-controls',async()=>{
   // A deterministic provider fixture exercises the composer without using a paid account.
@@ -77,15 +78,12 @@ try{
   await page.keyboard.press('ArrowLeft');await expect(panel.getByRole('radio',{name:'This design',exact:true})).toHaveAttribute('aria-checked','true');
  });
  await step('panel-themes-and-notifications',()=>verifyPanelPresentation(page,evidence));
- await step('standalone-to-hybrid',async()=>{
-  await expect(panel).toContainText('Standalone part');
-  await panel.getByRole('button',{name:'Design actions',exact:true}).click();await page.getByRole('menuitem',{name:'Create Hybrid design from this Part…',exact:true}).click();
-  await page.getByRole('dialog').getByRole('textbox').fill('Machine');await page.getByRole('dialog').getByRole('button',{name:'Create',exact:true}).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0,{timeout:60000});await expect(panel).toContainText('Main Assembly');
-  design=new URL(page.url()).searchParams.get('document');assert.notEqual(design,source.id);
+ await step('document-holds-part-and-assembly',async()=>{
+  // One document type: the saved Part Studio and its Main Assembly are tabs of the same document.
+  await expect(panel).toContainText('Part Studio');await expect(panel).toContainText('Main Assembly');
+  design=source.id;
   const result=await api('library/project_read',{app:'cad',id:design});partId=result.project.parts[0].id;
   assert.equal(result.project.parts[0].document.features.length,data.features.length);
-  assert.equal((await api('library/read',{app:'cad',id:source.id})).revision,source.revision);
  });
  await step('internal-part-and-assembly',async()=>{
   await create('Create Part Studio…','Internal bracket');assert.equal(new URL(page.url()).searchParams.get('document'),design);

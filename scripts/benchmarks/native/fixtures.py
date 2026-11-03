@@ -27,7 +27,7 @@ fixtures['annular-shell']=dict(document=doc('annular-shell',[profile('annulus',[
 ring=fixtures['annular-shell']['document']['features']
 for c,ident in zip(ring[0]['profile']['contours'],['outer','inner']): c['id']=ident
 ring[1].update(regionMode='faces',profileSelections=[dict(profileFeatureId='annulus',profileRegion=dict(contourIds=['outer','inner'],inside=['outer']))])
-archive=Path('public/examples/scifirobot.acad.bin')
+archive=Path('public/examples/scifirobot.aethercad.bin')
 graph=json.loads(zipfile.ZipFile(archive).read('state/graph.json'))
 front=next(p['feature_document'] for p in graph['part_definitions'] if p.get('feature_document',{}).get('name')=='Front shell')
 fixtures['robot-front']=dict(document=front,sourceArchive=str(archive),sourceArchiveSha256=hashlib.sha256(archive.read_bytes()).hexdigest(),edit=dict(featureId=front['features'][-2]['id'],field='offsetMillimeters',value=1.6))

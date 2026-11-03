@@ -10,6 +10,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
+
+from documents import part_archive, part_of
 from aether_cad_service.automation import execute, worker
 from aether_cad_service.service import CADService
 from core.host.products import Products
@@ -18,7 +20,11 @@ from core.host.state import Problem
 
 
 def part_bytes():
-    return json.dumps(
+    return part_archive(part_json())
+
+
+def part_json():
+    return (
         {
             "format": "aether-part",
             "formatVersion": 3,
@@ -49,7 +55,7 @@ def part_bytes():
                 },
             ],
         }
-    ).encode()
+    )
 
 
 def test_invalid_assembly_archive_is_a_product_validation_error():
@@ -79,7 +85,7 @@ def host(tmp_path):
         "/api/library/create",
         {
             "app": "cad",
-            "name": "Agent.acpart",
+            "name": "Agent.aethercad",
             "data_base64": base64.b64encode(part_bytes()).decode(),
         },
     )
@@ -187,7 +193,7 @@ def test_native_preview_edit_conflict_and_history_restore(host):
 )
 def test_native_rejection_never_saves_and_next_command_recovers(host):
     _, call, file, grant, command = host
-    source = json.loads(part_bytes())
+    source = part_json()
     source["features"][-1].update(operation="intersect", targetBodyId="missing")
     call(
         "/api/library/save",
@@ -195,7 +201,7 @@ def test_native_rejection_never_saves_and_next_command_recovers(host):
             "app": "cad",
             "id": file["id"],
             "expected_revision": 1,
-            "data_base64": base64.b64encode(json.dumps(source).encode()).decode(),
+            "data_base64": base64.b64encode(part_archive(source)).decode(),
         },
     )
     token = grant(can_write=True, can_edit_content=True)
@@ -329,7 +335,7 @@ def test_missing_runtime_and_timeout_fail_clearly(monkeypatch):
     os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Required native release gate"
 )
 def test_native_agent_finalizes_attached_sketch_after_upstream_edit():
-    source = json.loads(part_bytes())
+    source = part_json()
     source["features"][1]["bodyId"] = "block"
     source["features"].append(
         {
@@ -363,10 +369,10 @@ def test_native_agent_finalizes_attached_sketch_after_upstream_edit():
         result = execute(
             service,
             "cad.extrude.setdepth",
-            json.dumps(source).encode(),
+            part_archive(source),
             {"feature_id": "pad", "depth_mm": 8},
         )
-        saved = json.loads(result["content"])
+        saved = part_of(result["content"])
         assert saved["features"][-1]["frame"]["originMillimeters"][2] == pytest.approx(
             8
         )
@@ -384,7 +390,7 @@ def test_native_agent_finalizes_attached_sketch_after_upstream_edit():
 def test_agent_offset_preview_commit_and_invalid_edit_recovery():
     import math
 
-    source = json.loads(part_bytes())
+    source = part_json()
     source["features"][0]["offsetMillimeters"] = 10
     source["features"][1].update(bodyId="limit", distanceMillimeters=3)
     source["features"].extend(
@@ -415,7 +421,7 @@ def test_agent_offset_preview_commit_and_invalid_edit_recovery():
             },
         ]
     )
-    content = json.dumps(source).encode()
+    content = part_archive(source)
     service = CADService()
     try:
         preview = execute(
@@ -435,7 +441,7 @@ def test_agent_offset_preview_commit_and_invalid_edit_recovery():
             {"feature_id": "post", "end_offset_mm": -2},
         )
         assert (
-            json.loads(edited["content"])["features"][-1]["endOffsetMillimeters"] == -2
+            part_of(edited["content"])["features"][-1]["endOffsetMillimeters"] == -2
         )
         assert edited["result"]["evaluated_bodies"][-1]["volume_mm3"] == pytest.approx(
             math.pi * 4 * 12
@@ -463,7 +469,7 @@ def test_revolve_agent_preview_edit_and_invalid_recovery(host):
     import math
 
     _, call, file, grant, command = host
-    source = json.loads(part_bytes())
+    source = part_json()
     source["features"][0]["profile"]["pointsMillimeters"] = [
         [5, 2],
         [25, 2],
@@ -487,7 +493,7 @@ def test_revolve_agent_preview_edit_and_invalid_recovery(host):
             "app": "cad",
             "id": file["id"],
             "expected_revision": 1,
-            "data_base64": base64.b64encode(json.dumps(source).encode()).decode(),
+            "data_base64": base64.b64encode(part_archive(source)).decode(),
         },
     )
     token = grant(can_write=True, can_edit_content=True)

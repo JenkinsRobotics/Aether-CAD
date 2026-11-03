@@ -1,8 +1,6 @@
-import {
-  PART_FILE_EXTENSION,
-  serializePartDocument,
-  type PartDocument,
-} from "@aether/core/document";
+import { AETHER_CAD_EXTENSION } from "@aether/core/document/file-types";
+import type { PartDocument } from "@aether/core/document";
+import { partGraph, writeAetherCAD } from "./document/aethercad-archive";
 
 export { parsePartDocument, serializePartDocument } from "@aether/core/document";
 
@@ -13,15 +11,16 @@ function safeFileStem(name: string): string {
   );
 }
 
+/** Save the Part Studio as a `.aethercad` document on the local machine. */
 export async function savePartDocument(
   partDocument: PartDocument,
 ): Promise<string> {
-  const contents = serializePartDocument(partDocument);
-  const suggestedName = `${safeFileStem(partDocument.name)}${PART_FILE_EXTENSION}`;
+  const contents = writeAetherCAD(partGraph(partDocument));
+  const suggestedName = `${safeFileStem(partDocument.name)}${AETHER_CAD_EXTENSION}`;
   const pickerWindow = window as Window & {
     showSaveFilePicker?: (options: unknown) => Promise<{
       createWritable(): Promise<{
-        write(data: string): Promise<void>;
+        write(data: Uint8Array): Promise<void>;
         close(): Promise<void>;
       }>;
     }>;
@@ -31,8 +30,8 @@ export async function savePartDocument(
       suggestedName,
       types: [
         {
-          description: "Aether CAD Part",
-          accept: { "application/json": [PART_FILE_EXTENSION] },
+          description: "Aether CAD document",
+          accept: { "application/vnd.aether.workspace+zip": [AETHER_CAD_EXTENSION] },
         },
       ],
     });
@@ -43,7 +42,7 @@ export async function savePartDocument(
   }
 
   const url = URL.createObjectURL(
-    new Blob([contents], { type: "application/json;charset=utf-8" }),
+    new Blob([contents], { type: "application/vnd.aether.workspace+zip" }),
   );
   const anchor = document.createElement("a");
   anchor.href = url;

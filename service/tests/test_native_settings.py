@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from aether_cad_service.document import UNITS, CADDocument
 from aether_cad_service.part_format import PART_DOCUMENT_VERSION
+from documents import part_archive
 from test_native_browser import invoke
 from test_native_projects import created
 
@@ -42,13 +43,13 @@ def test_isolated_settings_match_existing_codec(tmp_path, operation, data):
 
 def test_standalone_parts_and_original_example_are_read_without_changes(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    original = (root / "examples/Train-Cart-Wheel.acad").read_bytes()
+    original = (root / "examples/Train-Cart-Wheel.aethercad").read_bytes()
     part = json.dumps({"format": "aether-part", "formatVersion": 3, "documentId": "fixture", "name": "Wheel", "features": []}).encode()
     for raw in (original, part):
         read = invoke(tmp_path, "settings-read", {"data_base64": base64.b64encode(raw).decode()})["result"]
         for key, value in CADDocument(raw).projection().items():
             assert read[key] == value
-    assert (root / "examples/Train-Cart-Wheel.acad").read_bytes() == original
+    assert (root / "examples/Train-Cart-Wheel.aethercad").read_bytes() == original
 
 
 def test_units_resource_is_exactly_the_pinned_shared_asset():
@@ -91,7 +92,7 @@ def test_link_refresh_matches_canonical_and_rejects_wrong_sources(tmp_path):
     original["data_base64"] = base64.b64encode(canonical.bytes()).decode()
     key = list(canonical.workspace.part_definitions)[-1]
     new = {**old, "name": "Revised wheel"}
-    source = {"data_base64": base64.b64encode(json.dumps(new).encode()).decode(), "source_label": "New", "source_ref": "library:source@2"}
+    source = {"data_base64": base64.b64encode(part_archive(new)).decode(), "source_label": "New", "source_ref": "library:source@2"}
     request = {**original, "operation": "update", "parts": [key], "resolved_sources": {key: source}}
     expected = CADDocument(base64.b64decode(original["data_base64"]))
     edit_project(expected.workspace, "update_link", {"part_id": key, "document": new, "source_label": "New", "source_ref": "library:source@2"})

@@ -61,7 +61,7 @@ describe("AetherCADShell", () => {
   it("keeps every live CAD command in the React-owned shell", () => {
     const html = renderToStaticMarkup(<AetherCADShell />);
     for (const id of [
-      "part-picker",
+      "document-picker",
       "step-picker",
       "parts-list",
       "history-list",
@@ -296,7 +296,7 @@ describe("AetherCADShell", () => {
     expect(html).toContain('aria-label="Drawing workspace navigation"');
     expect(html).toContain("← 3D model");
     expect(html).toContain("Open or create a drawing");
-    expect(html).toContain("Open a Part to create its drawing, or open a saved .acdrawing file.");
+    expect(html).toContain("Open a Part to create its drawing, or open a document that holds one.");
     expect(html).toContain("New from Part");
     expect(html).toContain('id="viewport"');
     expect(html).not.toContain('data-drawing-command="add-sheet"');
@@ -432,7 +432,7 @@ describe("AetherCADShell", () => {
     // rather than listing them as unavailable. It used to explain why they
     // could not be produced; asserting that text again would be asserting a
     // mock that no longer exists.
-    expect(html).toContain("Aether editable Part (.acpart)");
+    expect(html).toContain("Aether CAD document (.aethercad)");
     expect(html).toContain("STEP — exact solid (.step)");
     expect(html).toContain("STL — manufacturing mesh (.stl)");
     // Native is the default format, so the primary action saves rather than

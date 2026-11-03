@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
@@ -127,7 +128,7 @@ try {
   await page.waitForLoadState('networkidle');
   const doc = { format: 'aether-part', formatVersion: 21, documentId: randomUUID(), name: 'Tools qualification', units: 'millimeter', features: [] };
   const file = await page.evaluate(async (data) => { const r = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!r.ok)
-    throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Tools qualification.acpart', data_base64: Buffer.from(JSON.stringify(doc)).toString('base64') });
+    throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Tools qualification.aethercad', data_base64: partDocumentBase64(doc) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await featureRow(/Default geometry/).waitFor({ timeout: 90000 });
   await page.waitForTimeout(2500);
@@ -285,12 +286,12 @@ try {
     await expect.poll(async () => {
       const stored = await page.evaluate(async (id) => { const r = await fetch('/api/library/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'cad', id }) }); if (!r.ok)
         throw Error(await r.text()); return r.json(); }, file.id);
-      content = Buffer.from(stored.data_base64, 'base64').toString('utf8');
+      content = JSON.stringify(tabDocumentOf(stored.data_base64));
       return JSON.parse(content).features.length;
     }, { timeout: 30000 }).toBe(count);
     await writeFile(join(evidence, name), content);
   };
-  await saveFixture('before-hole.acpart', 12);
+  await saveFixture('before-hole.part.json', 12);
   await step('hole', async () => {
     await ribbon('Hole', 'feature-hole').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
@@ -304,7 +305,7 @@ try {
     await setSelect('Direction', 'normal');
     await applyDialog('hole');
     await expect(featureRow(/^Hole/)).toBeVisible();
-    await saveFixture('with-hole.acpart', 13);
+    await saveFixture('with-hole.part.json', 13);
   });
   // Last: a 360° revolve cut leaves toroidal faces that OCCT (FreeCAD too) cannot shell or fillet.
   await step('revolve-remove', async () => {

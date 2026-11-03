@@ -4,7 +4,7 @@ import { parsePartDocument } from "@aether/core/document";
 export const drawingCommandDocs = {
   phase: "drawing",
   operations: ["create", "mutate", "inspect", "export"],
-  content: "create: serialized .acpart; other operations: serialized .acdrawing. Returned content is a complete local drawing including its source snapshot.",
+  content: "create: the source Part document JSON; other operations: the Drawing document JSON. Returned content is a complete drawing including its source snapshot.",
   command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "update-annotation", "remove-annotation", "refresh-source"],
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
   annotations: ["note", "width", "height"],

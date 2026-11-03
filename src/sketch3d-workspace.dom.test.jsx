@@ -14,7 +14,7 @@ beforeAll(async () => {
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 
 it('draws a line from clicks and a typed point, and Done writes one curve3d feature', async () => {
-  const doc = parsePartDocument(readFileSync(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const doc = parsePartDocument(readFileSync(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   const picks = [[0, 0, 0], [50, 0, 0]];
   const apply = vi.fn(async () => {});
   const shown = [];

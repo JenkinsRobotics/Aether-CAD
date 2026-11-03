@@ -6,6 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connectLiveAgent } from './browser/live-agent.mjs';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -22,7 +23,7 @@ const request = (action, data) => page.evaluate(async ({ action, data }) => {
   const response = await fetch('/api/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   if (!response.ok) throw Error(await response.text()); return response.json();
 }, { action, data });
-const read = async id => JSON.parse(Buffer.from((await request('library/read', { app: 'cad', id })).data_base64, 'base64'));
+const read = async id => tabDocumentOf((await request('library/read', { app: 'cad', id })).data_base64);
 let file, agent, geometryVisits = 0;
 const openGeometry = async () => {
   await row(/^Clearance/).dblclick();
@@ -52,7 +53,7 @@ try {
   await page.waitForLoadState('networkidle');
   const document = JSON.parse(await readFile(new URL('../service/tests/fixtures/projected-distance.json', import.meta.url), 'utf8'));
   document.documentId = randomUUID();
-  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Distance intent.acpart', data_base64: Buffer.from(JSON.stringify(document)).toString('base64') });
+  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Distance intent.aethercad', data_base64: partDocumentBase64(document) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await row(/^Clearance/).waitFor({ timeout: 90000 });
   await step('ui-dimension-edit-undo-redo', async () => {
@@ -92,7 +93,7 @@ try {
     assert.equal(saved.formatVersion, 22);
     assert.equal(saved.features[1].profile.authored.projectionContext, undefined);
     assert.equal(saved.features[1].profile.sourceFeatureId, 'source');
-    await writeFile(join(evidence, 'distance-intent.acpart'), JSON.stringify(saved));
+    await writeFile(join(evidence, 'distance-intent.part.json'), JSON.stringify(saved));
     await page.reload(); await row(/^Clearance/).waitFor({ timeout: 90000 });
     await openGeometry(); await expect.poll(circleY).toBeCloseTo(13, 5);
     await closeGeometry();

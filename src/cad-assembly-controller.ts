@@ -111,7 +111,7 @@ function decodeBase64(value: string): Uint8Array {
 
 function archiveFileName(name: string): string {
   const stem = name.trim().replace(/[\\/:*?"<>|]+/g, "-") || "Untitled Assembly";
-  return /\.(acad|acasm)$/i.test(stem) ? stem : `${stem.replace(/\.aether$/i, "")}.acasm`;
+  return /\.aethercad$/i.test(stem) ? stem : `${stem}.aethercad`;
 }
 
 function downloadFile(fileName: string, bytes: Uint8Array): void {
@@ -380,7 +380,7 @@ export class CADAssemblyController {
 
   async openFile(file: Blob & { readonly name?: string }, assemblyID?: string): Promise<void> {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (bytes.length === 0) throw new Error("The selected .aether workspace is empty.");
+    if (bytes.length === 0) throw new Error("The selected document is empty.");
     await this.load(`Opening ${file.name ?? "Assembly workspace"}…`, async (signal) => {
       const descriptor = await this.client.openWorkspace(encodeBase64(bytes), signal);
       return assemblyID ? {...descriptor, root_assembly_id: assemblyID} : descriptor;

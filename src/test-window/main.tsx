@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { PART_FILE_EXTENSION } from "@aether/core/document";
+import { AETHER_CAD_EXTENSION } from "@aether/core/document/file-types";
 import { createRoot } from "react-dom/client";
 import { Button, ViewportNavigationCube } from "@aether/ui";
 import { MateViewport } from "../viewer";
@@ -112,7 +112,7 @@ function TestWindow() {
   };
   const pause = () => { controller.pause(); setOrbit(false); };
   return <main className="cad-test" aria-label="CAD native test window">
-    <header className="cad-test-title"><span className="cad-test-mark" aria-hidden="true" /><strong>Aether CAD</strong><span className="cad-test-file">sprocket{PART_FILE_EXTENSION}</span><span className="cad-test-tag">TEST WINDOW</span></header>
+    <header className="cad-test-title"><span className="cad-test-mark" aria-hidden="true" /><strong>Aether CAD</strong><span className="cad-test-file">sprocket{AETHER_CAD_EXTENSION}</span><span className="cad-test-tag">TEST WINDOW</span></header>
     <nav className="cad-test-toolbar" aria-label="Playback and view">
       <Button onClick={() => busy ? pause() : controller.play()}>{busy ? "Pause" : "Play build"}</Button>
       <Button title="Previous feature" disabled={state.stage === 0} onClick={() => controller.setStage(state.stage - 1)}>Previous</Button>

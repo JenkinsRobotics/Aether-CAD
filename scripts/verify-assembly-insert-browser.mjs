@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile, appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -27,18 +28,21 @@ const graph = async () => {
  return JSON.parse(execFileSync('python3', ['-c', 'import sys,io,zipfile; z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.read("state/graph.json").decode())'], { input: Buffer.from(saved.data_base64, 'base64'), encoding: 'utf8' }));
 };
 const count = async n => expect.poll(async () => (await graph()).instances.length, { timeout: 90000 }).toBe(n);
-const openInsert = async () => { await page.locator('.cad-parts-panel').getByRole('button', { name: 'Insert Part', exact: true }).click(); await expect(dialog()).toBeVisible(); };
+// Insertion lives in the Mates panel menu since the shared panel menus (ffd319d).
+const openInsert = async () => { await page.getByRole('button', { name: 'Mate actions', exact: true }).click(); await page.getByRole('menuitem', { name: 'Insert Component…', exact: true }).click(); await expect(dialog()).toBeVisible(); };
 try {
  await page.goto(origin + '/cad/'); await page.locator('input[name="username"]').fill('editor'); await page.locator('input[name="password"]').fill('account-test-password-2026'); await button('Sign in').click(); await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 }); await page.waitForLoadState('networkidle');
  const document = { format: 'aether-part', formatVersion: 22, documentId: randomUUID(), name: 'Bracket', units: 'millimeter', features: [
   { id: 'profile', name: 'Rectangle', type: 'profile', plane: 'XY', offsetMillimeters: 0, suppressed: false, profile: { type: 'polygon', pointsMillimeters: [[-20,-10],[20,-10],[20,10],[-20,10]] } },
   { id: 'extrude', name: 'Extrude', type: 'extrude', profileFeatureId: 'profile', suppressed: false, operation: 'new', distanceMillimeters: 12 },
  ] };
- source = await api('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Source bracket.acpart', data_base64: Buffer.from(JSON.stringify(document)).toString('base64') });
+ source = await api('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Source bracket.aethercad', data_base64: partDocumentBase64(document) });
+ // A second document stands in for "another design" to copy a Part Studio from.
+ const other = await api('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Other bracket.aethercad', data_base64: partDocumentBase64({ ...document, documentId: randomUUID() }) });
  await page.goto(`${origin}/cad/index.html?document=${source.id}`); await page.getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 }); await button('Files').click();
- await panel.getByRole('button', { name: 'Design actions', exact: true }).click(); await page.getByRole('menuitem', { name: 'Create Hybrid design from this Part…', exact: true }).click();
- await page.getByRole('dialog').getByRole('textbox').fill('Insertion fixture'); await page.getByRole('dialog').getByRole('button', { name: 'Create', exact: true }).click(); await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 60000 }); await expect(panel).toContainText('Main Assembly');
- design = new URL(page.url()).searchParams.get('document'); const projected = await api('library/project_read', { app: 'cad', id: design }); partId = projected.project.parts[0].id; assemblyId = projected.project.assemblies[0].id;
+ // One document type: the saved Part Studio and its Main Assembly are tabs of the same document.
+ await expect(panel).toContainText('Main Assembly');
+ design = source.id; const projected = await api('library/project_read', { app: 'cad', id: design }); partId = projected.project.parts[0].id; assemblyId = projected.project.assemblies[0].id;
  // Keep an unrelated empty Part in the container: it must not poison the solve.
  await panel.getByRole('button', { name: 'Create in this design', exact: true }).click();
  await page.getByRole('menuitem', { name: 'Create Part Studio…', exact: true }).click();
@@ -63,16 +67,16 @@ try {
  });
  await step('copy-from-other-design-and-save-reopen', async () => {
   await openInsert(); await dialog().getByRole('tab', { name: 'Other designs', exact: true }).click();
-  await dialog().getByRole('button', { name: /Source bracket.acpart/ }).click(); await dialog().getByRole('button', { name: 'Bracket Part Studio', exact: true }).click();
+  await dialog().getByRole('button', { name: /Other bracket.aethercad/ }).click(); await dialog().getByRole('button', { name: 'Bracket Part Studio', exact: true }).click();
   await page.locator('#assembly-position-y').fill('40'); await dialog().getByRole('button', { name: 'Insert Part', exact: true }).click(); await expect(dialog()).toHaveCount(0, { timeout: 90000 }); await count(3);
   const value = await graph(); assert.equal(value.part_definitions.length, 3); assert.notEqual(value.instances[2].definition_id, partId); assert.equal(value.instances[2].rest_transform.position_m[1], .04);
   const copy = value.part_definitions.find(part => part.id === value.instances[2].definition_id); assert.equal(copy.feature_document.features.length, 2);
-  assert.equal((await api('library/read', { app: 'cad', id: source.id })).revision, source.revision);
+  assert.equal((await api('library/read', { app: 'cad', id: other.id })).revision, other.revision);
   await page.reload(); await expect(page.locator('.cad-parts-panel')).toContainText('Bracket:3', { timeout: 90000 }); await count(3);
  });
  await step('insert-part-from-saved-hybrid', async () => {
   await openInsert(); await dialog().getByRole('tab', { name: 'Other designs', exact: true }).click();
-  await dialog().getByRole('button', { name: /Insertion fixture.acad/ }).click();
+  await dialog().getByRole('button', { name: /Source bracket.aethercad/ }).click();
   await expect(dialog().getByRole('button', { name: /Main Assembly/ })).toBeDisabled();
   await dialog().getByRole('button', { name: 'Bracket Part Studio', exact: true }).first().click();
   await page.locator('#assembly-position-z').fill('25'); await dialog().getByRole('button', { name: 'Insert Part', exact: true }).click(); await expect(dialog()).toHaveCount(0, { timeout: 90000 }); await count(4);
@@ -118,7 +122,7 @@ try {
   await expect(page.locator('.cad-sketch-window')).toBeVisible();
   await page.locator('.cad-sketch-window [data-feature-action="discard"]').click();
   await expect(page.locator('.cad-sketch-window')).toHaveCount(0);
-  assert.equal((await api('library/read', { app: 'cad', id: source.id })).revision, source.revision);
+  assert.equal((await api('library/read', { app: 'cad', id: other.id })).revision, other.revision);
  });
  assert.deepEqual(errors, []); await writeFile(join(evidence, 'result.json'), JSON.stringify({ steps, errors, design, source: source.id }, null, 2)); console.log('Assembly insertion passed: ' + steps.length + ' real browser workflows');
 } catch (error) { await page.screenshot({ path: join(evidence, 'failure.png') }); await writeFile(join(evidence, 'failure.json'), JSON.stringify({ error: String(error), errors, steps, url: page.url() }, null, 2)); throw error; }

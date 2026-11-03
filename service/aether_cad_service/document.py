@@ -2,6 +2,7 @@
 
 import copy
 import json
+import re
 import math
 from importlib.resources import files
 
@@ -49,6 +50,29 @@ def validate_drawing_header(doc):
     if not isinstance(doc.get("sheets"), list) or not 1 <= len(doc["sheets"]) <= 100:
         raise ValueError("Invalid Drawing sheets.")
     validate_part_header(doc.get("source"))
+
+
+SOURCE_REF = re.compile(r"library:([^@#]+)@(\d+)(?:#([^#]+))?")
+
+
+def parse_source_ref(ref):
+    """`library:<file>@<revision>[#<part>]` -> (file_id, revision, part_id) or None."""
+    match = SOURCE_REF.fullmatch(ref or "")
+    return (match[1], int(match[2]), match[3]) if match else None
+
+
+def source_ref(file_id, revision, part_id=None):
+    return f"library:{file_id}@{revision}" + (f"#{part_id}" if part_id else "")
+
+
+def linked_part(source_doc, part_id=None):
+    """The Part Studio a link points at inside a source document: the named one,
+    or the only one the document holds."""
+    parts = [p for p in source_doc.workspace.part_definitions.values() if p.get("feature_document")] if source_doc.workspace else []
+    chosen = [p for p in parts if p["id"] == part_id] if part_id else parts
+    if len(chosen) != 1:
+        raise ValueError("Name the Part Studio to link (source_part_id)." if parts else "The source document has no Part Studio.")
+    return chosen[0]
 
 
 class CADDocument:

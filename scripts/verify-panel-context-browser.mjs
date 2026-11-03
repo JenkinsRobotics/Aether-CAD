@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
@@ -27,7 +28,7 @@ const request = (action,data) => page.evaluate(async ({action,data}) => {
   const response = await fetch('/api/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
   if(!response.ok)throw Error(await response.text());return response.json();
 },{action,data});
-const read = async id => JSON.parse(Buffer.from((await request('library/read',{app:'cad',id})).data_base64,'base64'));
+const read = async id => tabDocumentOf((await request('library/read',{app:'cad',id})).data_base64);
 const background = async locator => {
   const box = await locator.boundingBox(); assert.ok(box);
   await locator.click({button:'right',position:{x:Math.min(10,box.width/2),y:box.height-12}});
@@ -46,9 +47,9 @@ try {
   await button('Sign in').click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0,{timeout:30000});
   await page.waitForLoadState('networkidle');
-  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart',import.meta.url),'utf8'));
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json',import.meta.url),'utf8'));
   data.documentId=randomUUID(); data.name='Panel menus check';
-  file=await request('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name:'Panel menus check.acpart',data_base64:Buffer.from(JSON.stringify(data)).toString('base64')});
+  file=await request('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name: 'Panel menus check.aethercad', data_base64: partDocumentBase64(data)});
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await row(/^Extrude/).waitFor({timeout:90000});
   await step('files-row-and-background-actions', async()=>{

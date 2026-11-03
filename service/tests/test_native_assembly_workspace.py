@@ -46,7 +46,7 @@ def test_contacts_crud_save_reopen_with_cad_owned_codec(tmp_path):
     contact_id = state["result"]["assembly"]["contact_sets"][0]["id"]
     state = edit(tmp_path, state["archive"], "set_contacts_enabled", enabled=True)
     raw = base64.b64decode(state["archive"]["data_base64"])
-    saved = tmp_path / "contacts.acasm"
+    saved = tmp_path / "contacts.aethercad"
     saved.write_bytes(raw)
     old_wheel = Path(__file__).resolve().parents[2] / "vendor/python/aether_animation-0.1.0-19-py3-none-any.whl"
     old = subprocess.run([sys.executable, "-I", "-S", "-c",

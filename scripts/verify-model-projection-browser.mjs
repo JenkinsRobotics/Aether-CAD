@@ -6,6 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connectLiveAgent } from './browser/live-agent.mjs';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -22,7 +23,7 @@ const request = (action, data) => page.evaluate(async ({ action, data }) => {
   const response = await fetch('/api/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   if (!response.ok) throw Error(await response.text()); return response.json();
 }, { action, data });
-const read = async id => JSON.parse(Buffer.from((await request('library/read', { app: 'cad', id })).data_base64, 'base64'));
+const read = async id => tabDocumentOf((await request('library/read', { app: 'cad', id })).data_base64);
 const palette = async id => {
   await page.keyboard.press('ControlOrMeta+k');
   await page.getByRole('listbox', { name: 'Commands' }).locator('..').getByRole('combobox').or(page.locator('.aui-command-palette input')).first().fill('Include 3D edges');
@@ -41,7 +42,7 @@ try {
     { id: 'extrude', name: 'Source extrusion', type: 'extrude', profileFeatureId: 'Source circle', distanceMillimeters: 10, operation: 'new', suppressed: false },
     profile('Offset sketch', 25, { type: 'drawing', contours: [] }),
   ] };
-  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Model projection.acpart', data_base64: Buffer.from(JSON.stringify(document)).toString('base64') });
+  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Model projection.aethercad', data_base64: partDocumentBase64(document) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await row(/^Offset sketch/).waitFor({ timeout: 90000 });
   await step('ui-project-displaced-model', async () => {
@@ -74,7 +75,7 @@ try {
     const result = await agent.invoke('aether_cad_extrude', { profile_id: 'Offset sketch', profile_point_mm: [3, 4], depth_mm: 5, operation: 'new' });
     assert.equal(result.body_count, 2);
     await expect.poll(async () => (await read(file.id)).features.length, { timeout: 30000 }).toBe(4);
-    const saved = await read(file.id); await writeFile(join(evidence, 'projected.acpart'), JSON.stringify(saved));
+    const saved = await read(file.id); await writeFile(join(evidence, 'projected.part.json'), JSON.stringify(saved));
     await agent.dispose(); agent = undefined;
     await page.reload(); await expect(row(/^Offset sketch/)).toBeVisible({ timeout: 90000 });
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(2, { timeout: 30000 });

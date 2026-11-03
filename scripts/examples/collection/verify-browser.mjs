@@ -210,7 +210,7 @@ try {
     const id = new URL(page.url()).searchParams.get("document");
     const file = await api("read", { id });
     assert.equal(file.scope, "personal");
-    assert.equal(file.name, example.name + ".acad");
+    assert.equal(file.name, example.name + ".aethercad");
     const { project } = await api("project_read", { id });
     assert.equal(project.parts.length, example.parts);
     assert.equal(

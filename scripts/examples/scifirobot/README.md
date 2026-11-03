@@ -12,7 +12,7 @@ From Aether-CAD (the Aether engine runs in Node; nothing else to install):
 node scripts/examples/scifirobot/regenerate.mjs /absolute/export/directory
 ```
 
-`author.ts` validates the native `.acpart`. `export.ts` evaluates the full document and
+`author.ts` validates the Part document JSON (`Scifirobot.part.json`). `export.ts` evaluates the full document and
 every individual body tip with the Aether engine. It refuses failed features, empty/invalid
 body outputs or nonpositive volumes. `generated/proof.json` keeps the 66 solid tips FreeCAD
 measured when the example was authored; `aether-engine/src/kernel/scifirobot-proof.test.ts`

@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
@@ -126,7 +127,7 @@ try {
   await page.waitForLoadState('networkidle');
   const doc = { format: 'aether-part', formatVersion: 21, documentId: randomUUID(), name: 'Tools qualification', units: 'millimeter', features: [] };
   const file = await page.evaluate(async (data) => { const r = await fetch('/api/library/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) }); if (!r.ok)
-    throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Tools qualification.acpart', data_base64: Buffer.from(JSON.stringify(doc)).toString('base64') });
+    throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Tools qualification.aethercad', data_base64: partDocumentBase64(doc) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await featureRow(/Default geometry/).waitFor({ timeout: 90000 });
   await page.waitForTimeout(2500);

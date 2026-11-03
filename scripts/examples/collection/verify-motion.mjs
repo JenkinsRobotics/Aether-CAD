@@ -57,7 +57,7 @@ for (const name of process.env.AETHER_EXAMPLE_MODELS?.split(",") ?? [
   ]) {
     if (!configuration.movable) continue;
     const graph = readAssemblyProjection(
-      join(folder, model.name + ".acad"),
+      join(folder, model.name + ".aethercad"),
       configuration.id,
     );
     const translated = run({ phase: "assembly", projection: graph });

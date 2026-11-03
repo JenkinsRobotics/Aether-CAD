@@ -29,7 +29,7 @@ def test_edits_match_canonical_project_operations(tmp_path, operation):
     a = created(tmp_path)
     workspace = AetherWorkspace.from_bytes(base64.b64decode(a["data_base64"]))
     doc = {"format": "aether-part", "formatVersion": 3, "name": "Linked", "features": []}
-    args = {"name": "Added", "part_id": a["project"]["parts"][0]["id"], "assembly_id": a["project"]["assemblies"][0]["id"], "document": doc, "source_ref": "library:source@1", "source_label": "Source.acpart"}
+    args = {"name": "Added", "part_id": a["project"]["parts"][0]["id"], "assembly_id": a["project"]["assemblies"][0]["id"], "document": doc, "source_ref": "library:source@1", "source_label": "Source.part.json"}
     if operation == "update_link":
         edit_project(workspace, "link_part", args)
         args["part_id"] = list(workspace.part_definitions)[-1]

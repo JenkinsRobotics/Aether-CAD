@@ -3,7 +3,7 @@
   "app": "cad",
   "runtime": "python",
   "entry": "runner.pyz",
-  "sha256": "b90ee5ca69dbb6b7e25de45339b648860cb4aab97d0de8c922ffde00e2c6d264",
+  "sha256": "6c0dff5208d91f2164a21dd65e1c93f810ee72de1f8307988503a423f34b03a0",
   "services": [
     "/api/cad/geometry",
     "/api/cad/export",
@@ -22,7 +22,7 @@
     {
       "id": "cad.revolve.preview",
       "title": "Preview revolve extents",
-      "description": "Evaluate saved revolve direction and angles without saving. Angles are degrees; symmetric centers the primary angle and requires zero opposite angle. Total sweep cannot exceed 360 degrees.",
+      "description": "Evaluate saved revolve direction and angles without saving. Angles are degrees; symmetric centers the primary angle and requires zero opposite angle. Total sweep cannot exceed 360 degrees. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -59,6 +59,11 @@
           },
           "reversed": {
             "type": "boolean"
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -83,7 +88,7 @@
     {
       "id": "cad.revolve.setextent",
       "title": "Change revolve extents",
-      "description": "Change saved revolve angles/direction after native validation. Same extent limits as preview. Requires latest revision and creates recoverable history; open editors must reload.",
+      "description": "Change saved revolve angles/direction after native validation. Same extent limits as preview. Requires latest revision and creates recoverable history; open editors must reload. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -124,6 +129,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -149,7 +159,7 @@
     {
       "id": "cad.part.inspect",
       "title": "Inspect CAD part",
-      "description": "Read saved part features, stable body identities and editable extrusion parameters. No unsaved editor state.",
+      "description": "Read saved part features, stable body identities and editable extrusion parameters. No unsaved editor state. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -162,6 +172,11 @@
             ]
           },
           "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "part_id": {
             "type": "string",
             "minLength": 1,
             "maxLength": 128
@@ -184,7 +199,7 @@
     {
       "id": "cad.part.evaluate",
       "title": "Evaluate CAD part",
-      "description": "Rebuild saved visible history with the Aether engine and return body volumes and topology counts. No pixel preview, export or save.",
+      "description": "Rebuild saved visible history with the Aether engine and return body volumes and topology counts. No pixel preview, export or save. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -197,6 +212,11 @@
             ]
           },
           "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "part_id": {
             "type": "string",
             "minLength": 1,
             "maxLength": 128
@@ -219,7 +239,7 @@
     {
       "id": "cad.part.topology",
       "title": "Inspect CAD body faces",
-      "description": "Read a page of exact native face references and snap candidates for one saved body. Coordinates are millimeters. Bind references to the returned document revision; inspect again after edits.",
+      "description": "Read a page of exact native face references and snap candidates for one saved body. Coordinates are millimeters. Bind references to the returned document revision; inspect again after edits. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -245,6 +265,11 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 100000
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -265,7 +290,7 @@
     {
       "id": "cad.extrude.preview",
       "title": "Preview extrusion depth",
-      "description": "Evaluate a proposed depth in millimeters through the full native history without saving. Blind/symmetric Extrude only; not a pixel image.",
+      "description": "Evaluate a proposed depth in millimeters through the full native history without saving. Blind/symmetric Extrude only; not a pixel image. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -291,6 +316,11 @@
             "type": "number",
             "minimum": 1e-06,
             "maximum": 1000000
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -312,7 +342,7 @@
     {
       "id": "cad.extrude.setdepth",
       "title": "Change extrusion depth",
-      "description": "Change a saved Blind/symmetric extrusion depth in millimeters after full native validation. Requires latest revision; creates recoverable file history. Open editors must reload.",
+      "description": "Change a saved Blind/symmetric extrusion depth in millimeters after full native validation. Requires latest revision; creates recoverable file history. Open editors must reload. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -342,6 +372,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -364,7 +399,7 @@
     {
       "id": "cad.extrude.previewoffset",
       "title": "Preview extrusion end offset",
-      "description": "Preview a signed millimeter offset for Up-to-next, Up-to-face, Up-to-part or Up-to-vertex without saving. Positive stops short; negative extends beyond the stopping boundary. Uses current native geometry.",
+      "description": "Preview a signed millimeter offset for Up-to-next, Up-to-face, Up-to-part or Up-to-vertex without saving. Positive stops short; negative extends beyond the stopping boundary. Uses current native geometry. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -390,6 +425,11 @@
             "type": "number",
             "minimum": -1000000,
             "maximum": 1000000
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -411,7 +451,7 @@
     {
       "id": "cad.extrude.setoffset",
       "title": "Change extrusion end offset",
-      "description": "Change a saved Up-to-next, Up-to-face, Up-to-part or Up-to-vertex extrusion offset after native validation. Positive stops short; negative extends beyond the stopping boundary. Requires latest revision and creates file history.",
+      "description": "Change a saved Up-to-next, Up-to-face, Up-to-part or Up-to-vertex extrusion offset after native validation. Positive stops short; negative extends beyond the stopping boundary. Requires latest revision and creates file history. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -441,6 +481,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -463,7 +508,7 @@
     {
       "id": "cad.feature.suppress",
       "title": "Suppress or restore CAD feature",
-      "description": "Use CAD's dependency-aware suppression or restoration, then validate the complete native result before saving. Creates file history; open editors must reload.",
+      "description": "Use CAD's dependency-aware suppression or restoration, then validate the complete native result before saving. Creates file history; open editors must reload. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -497,6 +542,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -519,7 +569,7 @@
     {
       "id": "cad.feature.move",
       "title": "Reorder CAD feature",
-      "description": "Move a feature one history position (-1 up, 1 down). Dependency-invalid or native-invalid order is refused. Latest revision required; creates file history.",
+      "description": "Move a feature one history position (-1 up, 1 down). Dependency-invalid or native-invalid order is refused. Latest revision required; creates file history. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -551,6 +601,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -573,7 +628,7 @@
     {
       "id": "cad.part.docs",
       "title": "Discover CAD program operations",
-      "description": "Discover the real saved-file program steps, schemas and an executable plate example. These steps reuse editor operations; no native geometry or document changes.",
+      "description": "Discover the real saved-file program steps, schemas and an executable plate example. These steps reuse editor operations; no native geometry or document changes. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -596,6 +651,11 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 1000
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -615,7 +675,7 @@
     {
       "id": "cad.part.runprogram",
       "title": "Run CAD modeling program",
-      "description": "Run a version-1 JSON program of 1\u201316 existing editor commands. Native rebuild resolves references after each step; only the complete candidate saves as one revision. 64 KiB program, 512 features, 4 MiB document, bounded execution. Latest revision required; open editors must reload. Use cad.part.docs for supported steps.",
+      "description": "Run a version-1 JSON program of 1\u201316 existing editor commands. Native rebuild resolves references after each step; only the complete candidate saves as one revision. 64 KiB program, 512 features, 4 MiB document, bounded execution. Latest revision required; open editors must reload. Use cad.part.docs for supported steps. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -638,6 +698,11 @@
           "expected_revision": {
             "type": "integer",
             "minimum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -659,7 +724,7 @@
     {
       "id": "cad.part.verify",
       "title": "Verify exact CAD properties",
-      "description": "Read exact solid volume, area, center, bounds and optional density-based mass/inertia. Uses saved history without editing. Refuses invalid geometry and reference meshes; no pixel preview.",
+      "description": "Read exact solid volume, area, center, bounds and optional density-based mass/inertia. Uses saved history without editing. Refuses invalid geometry and reference meshes; no pixel preview. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -683,6 +748,11 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 512
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -847,7 +917,7 @@
     {
       "id": "cad.sketch.inspect",
       "title": "Inspect existing CAD sketch",
-      "description": "Inspect saved sketch coordinates, constraints, dimensions and dependents before editing it with cad.part.runprogram. Paginated; local millimeters.",
+      "description": "Inspect saved sketch coordinates, constraints, dimensions and dependents before editing it with cad.part.runprogram. Paginated; local millimeters. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -877,6 +947,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 25
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         },
         "required": [
@@ -897,7 +972,7 @@
     {
       "id": "cad.sketch.includemodel",
       "title": "Include model geometry in sketch",
-      "description": "Project selected model boundaries or vertices onto an editable sketch as independent copies, not associative links. Use current cad.part.topology face/edge IDs in entities_json: [{body_id,face_id?,edge_index?,vertex?:a|b}]. Omitted selection includes all earlier exact body boundaries. Analytic curves stay exact; other edges are reported with tolerance_mm. Rebuild succeeds before returning a candidate; latest revision required and open editors must reload.",
+      "description": "Project selected model boundaries or vertices onto an editable sketch as independent copies, not associative links. Use current cad.part.topology face/edge IDs in entities_json: [{body_id,face_id?,edge_index?,vertex?:a|b}]. Omitted selection includes all earlier exact body boundaries. Analytic curves stay exact; other edges are reported with tolerance_mm. Rebuild succeeds before returning a candidate; latest revision required and open editors must reload. part_id names the Part Studio inside the document; optional when it holds exactly one.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -940,6 +1015,11 @@
             "type": "number",
             "minimum": 1e-05,
             "maximum": 1
+          },
+          "part_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         }
       },
@@ -953,8 +1033,24 @@
     }
   ],
   "binary_commands": [
+    "cad.revolve.preview",
+    "cad.revolve.setextent",
+    "cad.part.inspect",
+    "cad.part.evaluate",
+    "cad.part.topology",
+    "cad.extrude.preview",
+    "cad.extrude.setdepth",
+    "cad.extrude.previewoffset",
+    "cad.extrude.setoffset",
+    "cad.feature.suppress",
+    "cad.feature.move",
+    "cad.part.docs",
+    "cad.part.runprogram",
+    "cad.part.verify",
     "cad.assembly.inspect",
     "cad.assembly.preview",
-    "cad.assembly.compose"
+    "cad.assembly.compose",
+    "cad.sketch.inspect",
+    "cad.sketch.includemodel"
   ]
 }

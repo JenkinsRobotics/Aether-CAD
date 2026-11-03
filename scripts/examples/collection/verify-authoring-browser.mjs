@@ -5,6 +5,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { connectLiveAgent } from '../../browser/live-agent.mjs';
 import model from './models/artemis-sls.mjs';
+import { partDocumentBase64, tabDocumentOf } from '../../browser/document-fixture.mjs';
 
 const { chromium, expect } = createRequire(new URL('../../../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
@@ -50,8 +51,8 @@ try {
       const part = model.parts.find(p => p.key === key || (key === 'solar-frame' && p.name === 'Solar wing panel frame'));
       assert.ok(part, key);
       await step('live-author-' + key, async () => {
-        const file = await api('create', { kind: 'file', scope: 'personal', operation_id: randomUUID(), name: part.name + '.acpart',
-          data_base64: Buffer.from(JSON.stringify({ format: 'aether-part', formatVersion: 22, documentId: randomUUID(), name: part.name, units: 'millimeter', features: [] })).toString('base64') });
+        const file = await api('create', { kind: 'file', scope: 'personal', operation_id: randomUUID(), name: part.name + '.aethercad',
+          data_base64: partDocumentBase64({ format: 'aether-part', formatVersion: 22, documentId: randomUUID(), name: part.name, units: 'millimeter', features: [] }) });
         await page.goto(`${origin}/cad/index.html?document=${file.id}`);
         await expect(tree()).toBeVisible({ timeout: 90000 });
         agent = await connectLiveAgent(page, origin, file.id, 'Example author ' + key);
@@ -63,13 +64,13 @@ try {
         const expectedVolume = volume(expected.verification);
         assert.ok(Math.abs(volume(proof) - expectedVolume) <= expectedVolume * 1e-6, 'Live authored solid must match the shipped recipe');
         assert.equal((await invoke('aether_cad_inspect')).total_features, part.steps.length);
-        await expect.poll(async () => JSON.parse(Buffer.from((await api('read', { id: file.id })).data_base64, 'base64')).features.length, { timeout: 30000 }).toBe(part.steps.length);
+        await expect.poll(async () => tabDocumentOf((await api('read', { id: file.id })).data_base64).features.length, { timeout: 30000 }).toBe(part.steps.length);
         await agent.dispose(); agent = null;
         await page.reload();
         await expect(row(new RegExp('^' + part.steps[0].arguments.feature_json.name))).toBeVisible({ timeout: 90000 });
-        const saved = JSON.parse(Buffer.from((await api('read', { id: file.id })).data_base64, 'base64'));
+        const saved = tabDocumentOf((await api('read', { id: file.id })).data_base64);
         assert.ok(saved.features.every(f => !f.type.startsWith('import')));
-        await writeFile(join(evidence, key + '.acpart'), JSON.stringify(saved, null, 2));
+        await writeFile(join(evidence, key + '.part.json'), JSON.stringify(saved, null, 2));
       });
     }
   } else {
@@ -130,7 +131,7 @@ try {
       await page.goto(`${origin}/cad/index.html?document=${fileID}&assembly=${assemblyID}`);
       await expect(row(/^Equipment deck — sketch/)).toBeVisible({ timeout: 90000 });
       assert.equal((await source()).features[0].profile.constraints.find(c => c.id === 'diameter-0').value, 39.2);
-      await writeFile(join(evidence, 'edited-deck.acpart'), JSON.stringify(await source(), null, 2));
+      await writeFile(join(evidence, 'edited-deck.part.json'), JSON.stringify(await source(), null, 2));
     });
   }
   assert.deepEqual(errors, []);

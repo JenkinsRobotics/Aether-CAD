@@ -11,7 +11,7 @@ const report = JSON.parse(
   readFileSync(resolve(folder, "evidence/result.json")),
 );
 const archive = resolve(
-  process.argv[2] ?? `${folder}/Space Shuttle — Launch and Orbiter.acad`,
+  process.argv[2] ?? `${folder}/Space Shuttle — Launch and Orbiter.aethercad`,
 );
 const out = resolve(process.argv[3] ?? `${folder}/dimensions`);
 mkdirSync(out, { recursive: true });

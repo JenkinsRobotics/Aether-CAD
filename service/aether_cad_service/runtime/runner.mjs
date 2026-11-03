@@ -7358,6 +7358,7 @@ function editProfileDimension(document2, featureId2, dimensionId2, value2) {
   validatePartDocument(next);
   return next;
 }
+const AETHER_CAD_EXTENSION = ".aethercad";
 const metric = ["M3", "M4", "M5", "M6", "M8", "M10", "M12"];
 const zip$1 = (keys3, rows) => Object.fromEntries(metric.map((m2, i2) => [m2, Object.fromEntries(keys3.map((k2, j) => [k2, rows[i2][j]]))]));
 Object.freeze({
@@ -38592,7 +38593,7 @@ function buildPartGeometry(shape, sourceDocumentId, sourceName, partIndex, optio
       `${sourceName} Part ${partIndex + 1} edge tessellation: ${errorDescription(error2)}`
     );
   }
-  const stem = sourceName.replace(/\.(step|stp|cadpart)$/i, "");
+  const stem = sourceName.replace(/\.(step|stp|aethercad)$/i, "");
   return {
     id: options.id ?? `${sourceDocumentId}:body-${partIndex + 1}`,
     name: options.name ?? `${stem} · Part ${partIndex + 1}`,
@@ -39827,12 +39828,12 @@ function evaluatePartDocument(document2, options = {}) {
     let cached2 = meshes.get(shape);
     const wasCached = Boolean(cached2);
     if (!cached2 && preview) {
-      const result2 = buildPartGeometry(shape, document2.documentId, document2.name + ".acpart", index2, { id: id2, name: name5, preview: true });
+      const result2 = buildPartGeometry(shape, document2.documentId, document2.name + AETHER_CAD_EXTENSION, index2, { id: id2, name: name5, preview: true });
       options.observe?.({ phase: "display", id: id2, cached: false, milliseconds: performance.now() - displayStarted });
       return result2;
     }
     if (!cached2) {
-      cached2 = buildPartGeometry(shape, document2.documentId, document2.name + ".acpart", index2, { id: id2, name: name5 });
+      cached2 = buildPartGeometry(shape, document2.documentId, document2.name + AETHER_CAD_EXTENSION, index2, { id: id2, name: name5 });
       meshes.set(shape, cached2);
     }
     const result = { ...cached2, id: id2, name: name5, vertices: cached2.vertices.slice(), normals: cached2.normals.slice(), triangles: cached2.triangles.slice(), edgeLines: cached2.edgeLines.slice() };
@@ -43012,7 +43013,7 @@ function evaluatePartDocument(document2, options = {}) {
     options.withMeshes?.(meshParts);
     const names = availableBodies(document2);
     return {
-      sourceName: document2.name + ".acpart",
+      sourceName: document2.name + AETHER_CAD_EXTENSION,
       ...Object.keys(bodyOutputs).length ? { bodyOutputs } : {},
       ...previewId && previewHandles.length ? { previewHandles, previewFeatureId: previewId } : {},
       ...Object.keys(sketchFrames).length ? { sketchFrames } : {},
@@ -45736,7 +45737,7 @@ async function drawingExportResult(drawing, request, loadFont) {
 const drawingCommandDocs = {
   phase: "drawing",
   operations: ["create", "mutate", "inspect", "export"],
-  content: "create: serialized .acpart; other operations: serialized .acdrawing. Returned content is a complete local drawing including its source snapshot.",
+  content: "create: the source Part document JSON; other operations: the Drawing document JSON. Returned content is a complete drawing including its source snapshot.",
   command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "update-annotation", "remove-annotation", "refresh-source"],
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
   annotations: ["note", "width", "height"],

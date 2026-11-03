@@ -13,7 +13,7 @@ FIXTURES = json.loads(
 
 @pytest.mark.parametrize("case", FIXTURES, ids=lambda case: case["name"])
 def test_curvature_gesture_reopens_with_exact_native_volume(tmp_path, case):
-    path = tmp_path / (case["name"] + ".acpart")
+    path = tmp_path / (case["name"] + ".part.json")
     content = json.dumps(case["document"])
     path.write_text(content)
     document = json.loads(path.read_text())

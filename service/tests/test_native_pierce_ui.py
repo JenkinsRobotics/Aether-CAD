@@ -18,7 +18,7 @@ def refused(error):
 
 @pytest.mark.parametrize('case', CASES, ids=lambda c: c['name'])
 def test_interactively_authored_pierce_file_rebuilds(tmp_path, case):
-    path = tmp_path / (case['name'] + '.acpart')
+    path = tmp_path / (case['name'] + '.part.json')
     content = json.dumps(case['document'])
     path.write_text(content)
     result = bodies(invoke(tmp_path, json.loads(path.read_text())))

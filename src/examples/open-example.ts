@@ -1,6 +1,7 @@
 import { AssemblyBridgeClient } from "../cad-assembly-bridge";
 import type { Project } from "../host-library";
 import { cadExample, readExample, base64 } from "./catalog";
+import { tabArchive } from "../document/aethercad-archive";
 
 /** Read a packaged Hybrid into an ephemeral workspace. This never creates a
  * Studio file; only the explicit Save copy action enters the user's library. */
@@ -43,7 +44,7 @@ export async function openExample(
       if (!part?.document) throw Error("This example Part is not available.");
       return {
         project,
-        file: new File([JSON.stringify(part.document)], part.name + ".acpart"),
+        file: new File([tabArchive(part.document as { documentId: string; name: string }, "part").bytes], part.name + ".aethercad"),
       };
     }
     query.set("assembly", assemblyID);

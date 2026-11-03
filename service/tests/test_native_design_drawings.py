@@ -39,7 +39,7 @@ def test_embedded_drawing_roundtrip_metadata_recycle_and_other_edits(tmp_path):
     assert final['parts']==projected['parts']
     # The shipped previous codec must refuse the new graph, never drop drawings.
     old = Path(__file__).parents[2]/'vendor/python/aether_animation-0.1.0-22-py3-none-any.whl'
-    archive = tmp_path/'hybrid.acad';archive.write_bytes(base64.b64decode(restored['data_base64']))
+    archive = tmp_path/'hybrid.aethercad';archive.write_bytes(base64.b64decode(restored['data_base64']))
     script='import sys;sys.path.insert(0,sys.argv[1]);from aether_animation.aether_workspace import AetherWorkspace;AetherWorkspace.from_bytes(open(sys.argv[2],"rb").read())'
     result=subprocess.run([sys.executable,'-I','-S','-c',script,str(old),str(archive)],capture_output=True,text=True)
     assert result.returncode != 0 and 'unsupported semantic graph version' in result.stderr

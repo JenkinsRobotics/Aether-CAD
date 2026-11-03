@@ -10,7 +10,7 @@ import { readAssemblyProjection } from "./read-assembly-projection.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const archive = resolve(
-  process.argv[2] ?? "public/examples/scifirobot.acad.bin",
+  process.argv[2] ?? "public/examples/scifirobot.aethercad.bin",
 );
 const out = resolve(
   process.argv[3] ?? "build/Example-Collection/scifirobot/fit",

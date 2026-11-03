@@ -1,6 +1,6 @@
 import { PanelNotice } from '@aether/ui';
 import { ASSEMBLY_PART_MIME } from "../assembly/insertion-session";
-import { isPartFile } from "@aether/core/document/file-types";
+import { isAetherCADFile } from "@aether/core/document/file-types";
 import { useEffect, useRef, useState } from 'react';
 import { AetherIcon, Button, FileIcon, IconButton, Menu, MenuButton, NewFileDialog, SelectField, type DocumentConnection, type MenuItem } from '@aether/ui';
 import { driveRequest, editorURL, fileIcon, fileType, type DriveContext, type DriveFile } from '@aether/session/library/drive-api';
@@ -92,9 +92,9 @@ export function CADDriveBrowser({ documentID, connection }: { documentID: string
       <span>{rootName}</span>{listing.path.map(folder => <span key={folder.id}><AetherIcon name="chevron-right"/><button onClick={() => setPlace(p => p && ({ ...p, parent: folder.id }))}>{folder.name}</button></span>)}
     </nav>
     <PanelNotice message={error}/>
-    <ul className="aui-tab-browser-items">{[...listing.files].sort((a, b) => Number(b.kind === 'folder') - Number(a.kind === 'folder') || a.name.localeCompare(b.name)).map(file => <li key={file.id} data-drive-id={file.id} draggable={file.kind === 'file' && isPartFile(file.name)}
+    <ul className="aui-tab-browser-items">{[...listing.files].sort((a, b) => Number(b.kind === 'folder') - Number(a.kind === 'folder') || a.name.localeCompare(b.name)).map(file => <li key={file.id} data-drive-id={file.id} draggable={file.kind === 'file' && isAetherCADFile(file.name)}
       onDragStart={event => {
-        if (!isPartFile(file.name)) return;
+        if (!isAetherCADFile(file.name)) return;
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData(ASSEMBLY_PART_MIME, JSON.stringify({ kind: 'saved-part', fileId: file.id, revision: file.revision }));
       }} data-current={file.id === documentID || undefined}

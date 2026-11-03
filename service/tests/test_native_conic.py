@@ -19,7 +19,7 @@ AUTHORED = json.loads((Path(__file__).parent / "fixtures/conic-authored.json").r
 
 @pytest.mark.parametrize("case", AUTHORED, ids=lambda c: c["name"])
 def test_authored_saved_conic_reopens_with_native_volume(tmp_path, case):
-    path = tmp_path / (case["name"] + ".acpart")
+    path = tmp_path / (case["name"] + ".part.json")
     path.write_text(json.dumps(case["document"]))
     document = json.loads(path.read_text())
     assert document["formatVersion"] == 20

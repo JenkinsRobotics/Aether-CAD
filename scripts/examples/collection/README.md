@@ -1,6 +1,6 @@
 # Native CAD example collection
 
-These examples are native Aether Hybrid `.acad` documents. Their embedded Parts contain editable sketches and features, and their Assemblies contain occurrences and mates. They are not display meshes.
+These examples are native `.aethercad` documents. Their embedded Parts contain editable sketches and features, and their Assemblies contain occurrences and mates. They are not display meshes.
 
 ## Rebuild and qualification
 
@@ -53,8 +53,8 @@ Rebuild and qualify this example with:
 ```sh
 AETHER_EXAMPLE=scifirobot node scripts/examples/collection/author-parts.mjs
 AETHER_EXAMPLE=scifirobot AETHER_EXAMPLE_LOCAL_PARTS=1 python3 scripts/examples/collection/run-isolated-host.py
-node scripts/examples/collection/verify-fit.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.acad'
-node scripts/examples/collection/verify-scifirobot-concept.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.acad'
+node scripts/examples/collection/verify-fit.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.aethercad'
+node scripts/examples/collection/verify-scifirobot-concept.mjs 'build/Example-Collection/scifirobot/Scifirobot Detailed.aethercad'
 AETHER_EXAMPLE_MODELS=scifirobot node scripts/examples/collection/package.mjs
 ```
 

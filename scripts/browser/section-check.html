@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- Manual section-clipping check for a real browser (Safari, Chrome): open through the dev server. -->
+<meta charset="utf-8"><title>Section check</title>
+<style>body{margin:0;background:#101112;color:#eee;font:14px/1.4 -apple-system,sans-serif}#out{padding:12px;white-space:pre-wrap}canvas{display:block;margin:0 12px}</style>
+<div id="out">Loading renderer…</div>
+<script type="module" src="/scripts/browser/section-scene.ts"></script>
+<script type="module">
+const out=document.getElementById('out');
+const wait=()=>new Promise(r=>{const t=setInterval(()=>{if(window.sectionCheck){clearInterval(t);r();}},50);});
+await wait();
+try{
+ const info=await window.sectionCheck.render({offset:0});
+ out.textContent=`EXPECTED: the LEFT half of a blue box, the right half cut away.\n`+
+  `backend: ${info.backend}  clip-distances: ${info.clipDistances}\nWebGPU available: ${'gpu' in navigator}\n${navigator.userAgent}`;
+}catch(e){out.textContent='ERROR '+(e&&e.stack||e);}
+</script>

@@ -23,7 +23,7 @@ NATIVE = pytest.mark.skipif(
 def source():
     workspace = new_project("Saved assembly")
     part = json.loads(
-        (ROOT / "service/tests/fixtures/automation-part.acpart").read_text()
+        (ROOT / "service/tests/fixtures/automation-part.part.json").read_text()
     )
     edit_project(workspace, "add_part", {"name": "Keep this Part", "document": part})
     return workspace.to_bytes()[0]
@@ -161,7 +161,7 @@ def test_geometry_failure_returns_no_candidate(tmp_path):
     content = source()
     recipe = invoke(tmp_path, "cad.assembly.inspect", content)["result"]["example"]
     part = json.loads(
-        (ROOT / "service/tests/fixtures/automation-part.acpart").read_text()
+        (ROOT / "service/tests/fixtures/automation-part.part.json").read_text()
     )
     part["features"][1]["distanceMillimeters"] = 0
     recipe["parts"] = [{"key": "block", "name": "Invalid", "document": part}]
@@ -190,7 +190,7 @@ def test_bad_inspection_is_refused(tmp_path, args):
 
 @pytest.mark.parametrize(
     "command,encoding",
-    [("cad.assembly.inspect", "utf8"), ("cad.part.inspect", "base64")],
+    [("cad.assembly.inspect", "utf8"), ("cad.part.inspect", "utf8")],
 )
 def test_encoding_cannot_be_switched_by_a_request(tmp_path, command, encoding):
     assert "error" in invoke(tmp_path, command, source(), encoding=encoding)

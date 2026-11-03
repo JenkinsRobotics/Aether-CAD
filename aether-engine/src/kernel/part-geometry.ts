@@ -73,7 +73,7 @@ export function buildPartGeometry(
       `${sourceName} Part ${partIndex + 1} edge tessellation: ${errorDescription(error)}`,
     );
   }
-  const stem = sourceName.replace(/\.(step|stp|cadpart)$/i, "");
+  const stem = sourceName.replace(/\.(step|stp|aethercad)$/i, "");
   return {
     id: options.id ?? `${sourceDocumentId}:body-${partIndex + 1}`,
     name: options.name ?? `${stem} · Part ${partIndex + 1}`,

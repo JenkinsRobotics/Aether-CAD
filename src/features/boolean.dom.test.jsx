@@ -11,7 +11,7 @@ let dom, doc, apply;
 beforeAll(async () => {
   dom = new JSDOM('<!doctype html><body><div class="cad-studio-viewport"></div></body>', { url: 'http://localhost/cad/' });
   for (const key of ['window', 'document', 'HTMLElement', 'CustomEvent', 'Event', 'location']) vi.stubGlobal(key, dom.window[key]);
-  doc = parsePartDocument(readFileSync(new URL('../../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  doc = parsePartDocument(readFileSync(new URL('../../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   doc.features.push({ ...doc.features[1], id: 'second-pad', name: 'Second body' });
   apply = vi.fn(async (next) => { doc = next; });
   (await import('../feature-authoring')).mountFeatureAuthoring(() => doc, apply);

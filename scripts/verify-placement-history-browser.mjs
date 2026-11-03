@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, webkit, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
@@ -18,7 +19,7 @@ const request = (action, data) => page.evaluate(async ({ action, data }) => {
   const response = await fetch('/api/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
   if (!response.ok) throw Error(await response.text()); return response.json();
 }, { action, data });
-const read = async id => JSON.parse(Buffer.from((await request('library/read', { app: 'cad', id })).data_base64, 'base64').toString());
+const read = async id => tabDocumentOf((await request('library/read', { app: 'cad', id })).data_base64);
 const button = name => page.getByRole('button', { name, exact: true });
 const features = () => page.locator('[aria-label="CAD features"]');
 const history = () => page.locator('[aria-label="Editing history"]');
@@ -42,10 +43,10 @@ const step = async (name, run) => { console.log('Begin ' + name); await run(); s
 try {
   await page.goto(origin + '/cad/'); await page.locator('input[name="username"]').fill('editor'); await page.locator('input[name="password"]').fill('account-test-password-2026'); await button('Sign in').click();
   await page.waitForURL(url => url.pathname === '/cad/');
-  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   data.formatVersion = 22; data.documentId = randomUUID(); data.name = 'Legacy moved block';
   data.features.push(...[20, 10].map((distance, index) => ({ id: 'move-' + index, name: 'Move parts ' + (index + 1), type: 'transform', suppressed: false, bodyIds: [data.documentId + ':body-1'], transform: { kind: 'translate', translationMillimeters: [distance, 0, 0] } })));
-  const file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Legacy moves.acpart', data_base64: Buffer.from(JSON.stringify(data)).toString('base64') });
+  const file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Legacy moves.aethercad', data_base64: partDocumentBase64(data) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`); await features().getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
   await button('Version control').click(); await page.getByRole('radio', { name: 'History', exact: true }).click();
   await page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true }).click(); await button('Top view').press('Enter');

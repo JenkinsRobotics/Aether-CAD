@@ -1,6 +1,6 @@
 /** Saved-source access never changes the active editor or writes the source. */
-import { documentRequest, decodeDocument } from '@aether/session/documents';
-import { isPartFile, isProjectFile } from '@aether/core/document/file-types';
+import { documentRequest } from '@aether/session/documents';
+import { isAetherCADFile } from '@aether/core/document/file-types';
 import { insertionPart, type InsertCandidate, type InsertSource } from './insertion';
 import type { Project } from '../host-library';
 export interface SavedInsertFile { id: string; name: string; revision: number; data_base64?: string }
@@ -8,7 +8,7 @@ export async function listInsertFiles(): Promise<SavedInsertFile[]> {
   const groups = await Promise.all(['personal', 'workspace'].map(view =>
     documentRequest<{ files: SavedInsertFile[] }>('cad', 'list', { query: '.', view })));
   return [...new Map(groups.flatMap(group => group.files)
-    .filter(file => isPartFile(file.name) || isProjectFile(file.name))
+    .filter(file => isAetherCADFile(file.name))
     .map(file => [file.id, file])).values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 export async function savedInsertCandidates(fileId: string, revision: number, branch?: string): Promise<InsertCandidate[]> {
@@ -21,11 +21,7 @@ export async function savedInsertCandidates(fileId: string, revision: number, br
     catch (error) { result.unavailable = error instanceof Error ? error.message : String(error); }
     return result;
   };
-  if (isPartFile(file.name) && file.data_base64) {
-    const document = JSON.parse(decodeDocument(file.data_base64));
-    return [candidate(fileId, document.name, document)];
-  }
-  if (!isProjectFile(file.name)) throw Error('Choose a Part or Hybrid design.');
+  if (!isAetherCADFile(file.name)) throw Error('Choose an Aether CAD document.');
   const { project } = await documentRequest<{ project: Project }>('cad', 'project_read', { id: fileId, revision, branch });
   return [
     ...project.parts.map(part => candidate(part.id, part.name, part.document, part.id)),

@@ -318,7 +318,7 @@ export function buildCADWorkspaceProjection(
         {
           id: "document",
           label: "Part document",
-          badge: ".acpart",
+          badge: "Part Studio",
           properties: [
             { id: "name", label: "Name", value: partDocument.name },
             { id: "units", label: "Length units", value: "Millimeters", displayUnit: "length" },
@@ -355,7 +355,7 @@ export function buildCADWorkspaceProjection(
           ],
         },
       ]
-    : partDocument ? [{id:"document",label:"Part document",badge:".acpart",properties:[{id:"name",label:"Name",value:partDocument.name},{id:"features",label:"Features",value:String(modelingFeatures.length)},{id:"units",label:"Length units",value:"Millimeters",displayUnit:"length"}]}] : [];
+    : partDocument ? [{id:"document",label:"Part document",badge:"Part Studio",properties:[{id:"name",label:"Name",value:partDocument.name},{id:"features",label:"Features",value:String(modelingFeatures.length)},{id:"units",label:"Length units",value:"Millimeters",displayUnit:"length"}]}] : [];
 
   return {
     bodyNodes,

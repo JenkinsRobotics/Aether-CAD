@@ -15,7 +15,7 @@ await build({ configFile: false, logLevel: 'warn', worker: { format: 'es' }, bas
 const server = await preview({ configFile: false, build: { outDir }, preview: { host: '127.0.0.1', port: 0 } });
 const url = `${server.resolvedUrls.local[0]}scripts/browser/replay-reopen.html`;
 
-const graph = JSON.parse(execFileSync('unzip', ['-p', 'public/examples/scifirobot.acad.bin', 'state/graph.json'], { maxBuffer: 1 << 28 }));
+const graph = JSON.parse(execFileSync('unzip', ['-p', 'public/examples/scifirobot.aethercad.bin', 'state/graph.json'], { maxBuffer: 1 << 28 }));
 const front = graph.part_definitions.find(p => p.feature_document?.name === 'Front shell').feature_document;
 const edited = structuredClone(front);
 edited.features.at(-2).offsetMillimeters = 1.6; // the gasket plane, as in the native comparison

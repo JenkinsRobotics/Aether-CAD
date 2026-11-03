@@ -35,14 +35,15 @@ import { CADToolbarControls } from "./CADToolbarControls";
  *  the Design ribbon — a new Part is not a modelling operation. */
 type WorkspaceModeItem = { id: string; label: string; kind?: "radio"; checked?: boolean; disabled?: boolean; separatorBefore?: boolean; disabledReason?: string };
 function workspaceModes(mode: CADWorkspaceMode, documentType: CADDocumentType = "project"): WorkspaceModeItem[] {
-  // Workspaces follow the open document (Jonathan, 2026-11-02): a part is a Design workspace,
-  // an assembly file is the Assembly workspace, a drawing is Drawing; only with nothing open
-  // are all three offered, with what Studio plans beneath them.
+  // One document type (Jonathan, 2026-11-03): a .aethercad document holds Part Studios,
+  // Assemblies and Drawings as tabs, so Design, Assembly and Drawing are always offered;
+  // the ribbon tabs still follow the tab that is open. Only with nothing open are the
+  // planned Studio workspaces listed beneath them.
   const real: WorkspaceModeItem[] = [
     { id: "design", label: "Design", kind: "radio" as const, checked: mode === "modeling" },
     { id: "assembly", label: "Assembly", kind: "radio" as const, checked: mode === "assembly" },
     { id: "drawing", label: "Drawing", kind: "radio" as const, checked: mode === "drawing" },
-  ].filter((entry) => documentType === "project" || entry.id === ({ part: "design", assembly: "assembly", drawing: "drawing", project: "" } as Record<CADDocumentType, string>)[documentType]);
+  ];
   if (documentType !== "project") return real;
   return [
     ...real,

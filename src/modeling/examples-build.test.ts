@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { evaluatePart } from "../engine/evaluate-part";
 import { parsePartDocument } from "@aether/core/document";
 
-const examples = ["examples/Train-Cart-Wheel.acpart", "examples/Bracket.cadpart"];
+const examples = ["examples/Train-Cart-Wheel.part.json", "examples/Bracket.part.json"];
 
 describe("example documents", () => {
   for (const path of examples) {

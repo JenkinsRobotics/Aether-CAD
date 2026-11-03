@@ -15,7 +15,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   document.body.innerHTML = '<div class="cad-studio-viewport"></div>';
-  doc = parsePartDocument(readFileSync(new URL('../../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  doc = parsePartDocument(readFileSync(new URL('../../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   doc.features.push({ ...doc.features[1], id: 'second-pad', name: 'Second body' });
   apply = vi.fn(async next => { doc = next; });
   mount(() => doc, apply);

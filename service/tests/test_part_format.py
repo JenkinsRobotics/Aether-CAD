@@ -105,7 +105,7 @@ def test_new_project_tabs_and_saved_current_features_reopen(tmp_path):
     from aether_animation.aether_workspace import AetherWorkspace
     original = created(tmp_path)
     source = part(PART_DOCUMENT_VERSION)
-    source["features"] = json.loads((ROOT / "service/tests/fixtures/automation-part.acpart").read_text())["features"]
+    source["features"] = json.loads((ROOT / "service/tests/fixtures/automation-part.part.json").read_text())["features"]
     source["features"][1].update(directionVector=[0.6, 0, 0.8], secondEnd={"endType": "blind", "distanceMillimeters": 2})
     args = {**original, "operation": "save_part", "part_id": original["project"]["parts"][0]["id"], "document": source}
     saved = invoke(tmp_path, "project-edit", args)["result"]
@@ -159,7 +159,7 @@ def test_packaged_line_direction_rebuilds_and_survives_project_roundtrip(tmp_pat
 
 def test_packaged_automation_migrates_only_on_actual_edit_and_preserves_geometry(tmp_path):
     from test_native_automation import invoke as automate
-    source = json.loads((ROOT / "service/tests/fixtures/automation-part.acpart").read_text())
+    source = json.loads((ROOT / "service/tests/fixtures/automation-part.part.json").read_text())
     source["features"][1].update(directionVector=[0.6, 0, 0.8], bodyId="solid")
     original = json.dumps(source)
     noop = automate(tmp_path, "cad.extrude.setdepth", original, {"feature_id": "pad", "depth_mm": 5})

@@ -11,7 +11,7 @@ FIXTURES = json.loads((Path(__file__).parent / "fixtures/ellipse-manipulation.js
 
 @pytest.mark.parametrize("case", FIXTURES, ids=lambda c: c["name"])
 def test_edited_exact_ellipse_survives_disk_and_native_rebuild(tmp_path, case):
-    path = tmp_path / f"{case['name']}.acpart"
+    path = tmp_path / f"{case['name']}.part.json"
     content = json.dumps(case["document"])
     path.write_text(content)
     first = bodies(invoke(tmp_path, json.loads(path.read_text())))

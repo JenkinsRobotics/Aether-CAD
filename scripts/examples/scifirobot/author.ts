@@ -75,6 +75,6 @@ for(const feature of features){const label=feature.type==='profile'?'Sketch':fea
 const document:PartDocument={format:'aether-part',formatVersion:PART_DOCUMENT_VERSION,documentId:'scifirobot-feature-study',name:'Scifirobot',units:'millimeter',features,bodyProperties:Object.fromEntries(bodies.map(b=>[b.id,{name:b.name,visible:true,color:b.color}]))};
 validatePartDocument(document);
 const output=resolve(process.argv[2]??'scripts/examples/scifirobot/generated');mkdirSync(output,{recursive:true});
-writeFileSync(`${output}/Scifirobot.acpart`,JSON.stringify(document,null,2));
+writeFileSync(`${output}/Scifirobot.part.json`,JSON.stringify(document,null,2));
 writeFileSync(`${output}/presentation.json`,JSON.stringify({bodies,features:features.map(f=>({id:f.id,label:f.name,type:f.type==='profile'?'sketch':f.type,bodyID:ownership[f.id]}))}));
 console.log(`${features.length} authored features; ${bodies.length} individual bodies`);

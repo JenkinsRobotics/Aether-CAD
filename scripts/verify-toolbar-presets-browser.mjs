@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const { chromium, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
@@ -24,7 +25,7 @@ const request = (action, data) => page.evaluate(async ({ action, data }) => {
   return response.json();
 }, { action, data });
 let file;
-const saved = async () => JSON.parse(Buffer.from((await request('library/read', { app: 'cad', id: file.id })).data_base64, 'base64'));
+const saved = async () => tabDocumentOf((await request('library/read', { app: 'cad', id: file.id })).data_base64);
 const dialog = () => page.locator('.cad-feature-dialog');
 const cancel = () => dialog().locator('[data-feature-action="discard"]').click();
 const menu = () => page.locator('button[aria-label="Modify tools"]:visible').first().click();
@@ -36,11 +37,11 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
   await page.waitForLoadState('networkidle');
-  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const data = JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   data.documentId = randomUUID(); data.name = 'Toolbar operations check';
   data.features.push({ ...structuredClone(data.features[0]), id: 'profile-2', name: 'Second profile', profile: { type: 'polygon', pointsMillimeters: [[5, 0], [15, 0], [15, 20], [5, 20]] } },
     { ...data.features[1], id: 'pad-2', name: 'Second body', profileFeatureId: 'profile-2' });
-  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Toolbar operations.acpart', data_base64: Buffer.from(JSON.stringify(data)).toString('base64') });
+  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Toolbar operations.aethercad', data_base64: partDocumentBase64(data) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(2, { timeout: 90000 });
   await verifyToolbarPlacement(page, expect, join(evidence, 'toolbar.png'));

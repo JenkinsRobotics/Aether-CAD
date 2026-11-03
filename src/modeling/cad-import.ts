@@ -8,7 +8,7 @@ export function importFormat(name:string):CADImportFormat {
   if(found)return found[0] as CADImportFormat;
   if(['sldprt','sldasm','slddrw','x_t','x_b','sat','sab','ipt','iam','catpart','catproduct','prt','asm'].includes(extension??''))throw Error(`${name}: this native CAD format needs a translator. Export STEP (.step or .stp) from the source CAD application, then import it here.`);
   if(['svg','dxf'].includes(extension??''))throw Error(`${name}: use Sketch → Import SVG/DXF to import 2D profiles.`);
-  if(['acpart','cadpart','acad','acasm','aether'].includes(extension??''))throw Error(`${name}: use Open Part or Open Assembly for an Aether document.`);
+  if(extension==='aethercad')throw Error(`${name}: use Open document for an Aether CAD document.`);
   throw Error(`${name}: unsupported format. Choose STEP, IGES, BREP, STL, OBJ, PLY or OFF.`);
 }
 export {isMeshImportFormat};

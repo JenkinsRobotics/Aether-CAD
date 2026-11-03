@@ -35,7 +35,6 @@ export const LEGACY_PART_DOCUMENT_FORMAT = "open-cad-part" as const;
 // Geometry-affecting schema additions must advance this boundary: older readers
 // must refuse the document rather than silently rebuild a different solid.
 export const PART_DOCUMENT_VERSION = partFormat.current;
-export const PART_FILE_EXTENSION = ".acpart" as const;
 
 export interface SketchLineDirectionReference {
   kind: "sketch-line";

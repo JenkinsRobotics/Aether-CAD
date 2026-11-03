@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import {randomUUID} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 const {chromium,webkit,expect}=createRequire(new URL('../../AetherStudio/core/files/package.json',import.meta.url))('@playwright/test');
 const origin=process.env.AETHER_TEST_ORIGIN,evidence=process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname,'127.0.0.1');assert.notEqual(new URL(origin).port,'8780');
@@ -17,7 +18,7 @@ const request=(action,data)=>page.evaluate(async({action,data})=>{
   const response=await fetch('/api/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});
   if(!response.ok)throw Error(await response.text());return response.json();
 },{action,data});
-const read=async id=>JSON.parse(Buffer.from((await request('library/read',{app:'cad',id})).data_base64,'base64').toString());
+const read=async id=>tabDocumentOf((await request('library/read',{app:'cad',id})).data_base64);
 const solidAt=async point=>{
   const [at]=await page.evaluate(point=>{let value;window.dispatchEvent(new CustomEvent('aether-measure-project',{detail:{points:[point],respond:v=>value=v}}));return value;},point);
   assert.ok(at.x>610&&at.x<1080&&at.y>360&&at.y<760,JSON.stringify(at));
@@ -34,10 +35,10 @@ try{
   await expect(page.locator('input[name="password"]')).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'Get started',exact:true})).toBeVisible();
   await page.waitForLoadState('networkidle');
-  const source=JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.acpart',import.meta.url),'utf8'));
+  const source=JSON.parse(await readFile(new URL('../service/tests/fixtures/automation-part.part.json',import.meta.url),'utf8'));
   source.formatVersion=22;source.documentId=randomUUID();source.name='History playback qualification';source.rollbackIndex=3;
   source.features.push(...[20,10].map((distance,i)=>({id:'move-'+i,name:'Move '+(i+1),type:'transform',suppressed:false,bodyIds:[source.documentId+':body-1'],transform:{kind:'translate',translationMillimeters:[distance,0,0]}})));
-  const file=await request('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name:'Playback.acpart',data_base64:Buffer.from(JSON.stringify(source)).toString('base64')});
+  const file=await request('library/create',{app:'cad',kind:'file',scope:'personal',operation_id:randomUUID(),name: 'Playback.aethercad', data_base64: partDocumentBase64(source)});
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await page.locator('[aria-label="CAD features"]').getByRole('treeitem',{name:/^Extrude/}).first().waitFor({timeout:90000});
   await button('Version control').click();await page.getByRole('radio',{name:'History',exact:true}).click();

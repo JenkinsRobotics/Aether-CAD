@@ -67,7 +67,7 @@ for (const [selection, message] of [
 const invalid = structuredClone(document);
 invalid.sheets[0].annotations[1].text = '\u{10FFFF}';
 run({ phase: 'drawing', operation: 'export', content: JSON.stringify(invalid), format: 'pdf' }, /font does not contain/);
-writeFileSync(resolve(evidence, 'sleeve.acdrawing'), content);
+writeFileSync(resolve(evidence, 'sleeve.drawing.json'), content);
 assert.deepEqual(run({ phase: 'drawing', operation: 'inspect', content }).sheets, inspected.sheets);
 const results = { status: 'passed', fresh_processes: processes, single_selected_all_sheets: true, invalid_exports_refused: true, drawing_unchanged: true };
 writeFileSync(resolve(evidence, 'results.json'), JSON.stringify(results, null, 2));

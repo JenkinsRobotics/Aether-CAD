@@ -52,7 +52,8 @@ import { drawingEditor } from "./drawing/controller";
 import { activeProject, createHostedDesignDrawing } from "./host-library";
 import { configureDrawingFiles, downloadDrawingFile } from "./drawing/files";
 import { createDrawingDocument, parseDrawingDocument, serializeDrawingDocument, type DrawingDocument } from "@aether/core/drawing";
-import { isDrawingFile } from "@aether/core/document/file-types";
+import { AETHER_CAD_EXTENSION, isAetherCADFile } from "@aether/core/document/file-types";
+import { partGraph, readAetherCAD, tabArchive, writeAetherCAD } from "./document/aethercad-archive";
 import { openMotionStudyWindow } from "./assembly-motion-window";
 import { mountDerivedCurveCommands } from "./derived-curves-window";
 import { mountSketch3DWorkspace } from "./sketch3d-workspace";
@@ -66,7 +67,7 @@ import { unitChoice } from "@aether/core/units";
 import { documentUnits, subscribeDocumentUnits } from "./document-preferences";
 import { configureDocumentPrint } from "./document-print";
 import {mountFeatureAuthoring,mountProjectTabs} from "./feature-authoring";
-import {createEmptyPartDocument,isPartFile,isProjectFile,validatePartDocument} from "@aether/core/document";
+import {createEmptyPartDocument,validatePartDocument} from "@aether/core/document";
 import "./style.css";
 import {
   createRectanglePartDocument,
@@ -78,7 +79,7 @@ import {
   type SketchPlane,
 } from "./aether-core";
 import { createHostAetherCoreClient } from "./host-aether-core-client";
-import { savePartDocument, serializePartDocument } from "./part-file";
+import { savePartDocument } from "./part-file";
 import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave, flushAutosaveNow, hostedSourceReference, hostedSourceURL, readHostedSource } from "./host-library";
 import {
   sketchPlaneForReference,
@@ -112,8 +113,7 @@ if (!app.querySelector(".shapr-shell")) throw new Error("React CAD shell did not
 
 const viewportElement = document.querySelector<HTMLElement>("#viewport")!;
 const picker = document.querySelector<HTMLInputElement>("#step-picker")!;
-const partPicker = document.querySelector<HTMLInputElement>("#part-picker")!;
-const assemblyPicker = document.querySelector<HTMLInputElement>("#assembly-picker")!;
+const documentPicker = document.querySelector<HTMLInputElement>("#document-picker")!;
 const partNameInput = document.querySelector<HTMLInputElement>("#part-name") ?? { value: "Part 1" };
 const partWidthInput = document.querySelector<HTMLInputElement>("#part-width") ?? { value: "60" };
 const partHeightInput = document.querySelector<HTMLInputElement>("#part-height") ?? { value: "40" };
@@ -157,12 +157,12 @@ configureDrawingAgentWorkspace({
   interaction: key => drawingAgentInteraction(drawingEditor, key, () => activeWorkspaceKind === "drawing" ? drawingContextKey() : "inactive-drawing"),
 });
 function drawingSnapshot() {
-  return { name: `${drawingEditor.snapshot()!.document.name}.acdrw`, bytes: new TextEncoder().encode(drawingEditor.serialize()) };
+  return tabArchive(drawingEditor.snapshot()!.document, "drawing");
 }
 async function saveDrawing(): Promise<void> {
   const value = drawingSnapshot();
   if (hostedCAD) await saveHostedFile(value.name, value.bytes);
-  else downloadDrawingFile(value.name, drawingEditor.serialize());
+  else downloadDrawingFile(value.name, value.bytes, "application/vnd.aether.workspace+zip");
 }
 function rememberDrawing(): void {
   const drawing = drawingEditor.snapshot()?.document;
@@ -187,7 +187,9 @@ async function newDrawing(file?: File, name?: string): Promise<void> {
     let text: string;
     if (file) {
       if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
-      text = await file.text();
+      const entry = readAetherCAD(new Uint8Array(await file.arrayBuffer())).graph.drawings?.[0];
+      if (!entry) throw Error("This document has no Drawing.");
+      text = JSON.stringify(entry.document);
     } else {
       const old = drawingEditor.snapshot()?.document;
       const source = activeWorkspaceKind === "drawing" ? old?.source : activeWorkspaceKind === "part" ? activePartDocument : null;
@@ -204,6 +206,9 @@ async function newDrawing(file?: File, name?: string): Promise<void> {
       await drawingEditor.open(serializeDrawingDocument(contained));
     } else if (hostedCAD) detachHostedFile();
     presentDrawing();
+    // The document navigation event fired while the Part tab was still current; remember the
+    // Drawing tab now so returning from the 3D model reopens it instead of creating another.
+    rememberDrawing();
     if (hostedCAD) markHostedDirty();
   });
 }
@@ -1079,7 +1084,7 @@ cadPresentation.registerActionHandler((action) => {
     return;
   }
   if (action.type === "open-assembly-workspace") {
-    assemblyPicker.click();
+    documentPicker.click();
     return;
   }
   if (action.type === "save-assembly-workspace") {
@@ -1241,7 +1246,7 @@ worker.ready
       backendLabel: `${viewer.backendLabel} · ${label}`,
       backendState: "ready",
     });
-    setStatus("Create a Part, open an .acpart file, or import CAD geometry.");
+    setStatus("Create a Part, open a .aethercad document, or import CAD geometry.");
   })
   .catch((error: unknown) => {
     cadPresentation.patch({ backendState: "failed" });
@@ -1349,12 +1354,12 @@ async function createBlankPart(name:string):Promise<void>{
   if(hostedCAD){await flushAutosaveNow();detachHostedFile();}activeWorkspaceKind='part';cadPresentation.patch({startScreen:'workspace',startDialog:null,workspaceMode:'modeling'});
   const doc=createEmptyPartDocument(name);await evaluateAndShowPart(doc,'Created an empty Part. Add a sketch profile to begin.');
   if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
-  if(hostedCAD){await saveHostedFile(doc.name+'.acpart',new TextEncoder().encode(serializePartDocument(doc)));setStatus('Created '+doc.name+' on your server. Add a sketch profile to begin.','success');}
+  if(hostedCAD){await saveHostedFile(doc.name+AETHER_CAD_EXTENSION,writeAetherCAD(partGraph(doc)));setStatus('Created '+doc.name+' on your server. Add a sketch profile to begin.','success');}
  }catch(e){setStatus((e as Error).message,'error');}
 }
 
 cadCommands.register("new-part", () => createBlankPart(`Part ${untitledPartNumber++}`));
-cadCommands.register("open-part", () => hostedCAD ? location.assign(new URL("./",location.href).href) : partPicker.click());
+cadCommands.register("open-part", () => hostedCAD ? location.assign(new URL("./",location.href).href) : documentPicker.click());
 cadCommands.register("insert-step", () => cadPresentation.patch({startScreen:"workspace",startDialog:"import"}));
 cadCommands.register("sketch", () => { cadCommands.execute("feature-profile"); });
 
@@ -1377,32 +1382,17 @@ cadCommands.register("rebuild-part", async () => {
   }
 });
 
-partPicker.addEventListener("change", async () => {
-  const file = partPicker.files?.[0];
+documentPicker.addEventListener("change", async () => {
+  const file = documentPicker.files?.[0];
   if (!file) return;
   try {
-    const document = parsePartDocument(await file.text());
     if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); }
-    activeWorkspaceKind = "part";
-    cadPresentation.patch({ workspaceMode: "modeling" });
-    await evaluateAndShowPart(document, `Opened ${file.name}.`);
+    await openLibraryDocument(file, new URL(location.href));
+    if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), "error");
   } finally {
-    partPicker.value = "";
-  }
-});
-
-assemblyPicker.addEventListener("change", async () => {
-  const file = assemblyPicker.files?.[0];
-  if (!file) return;
-  try {
-    if (hostedCAD) await flushAutosaveNow();
-    await assemblyController.openFile(file);
-  } catch {
-    // The controller publishes the typed Core error to the shared status surface.
-  } finally {
-    assemblyPicker.value = "";
+    documentPicker.value = "";
   }
 });
 
@@ -1415,22 +1405,22 @@ if (hostedCAD) configureAutosave(async () => {
     if (activeWorkspaceKind === "drawing") { await saveDrawing(); return; }
     if (activeWorkspaceKind === "assembly") { await assemblyController.save(); return; }
     if (!activePartDocument) return;
-    await saveHostedFile(`${activePartDocument.name}.acpart`, new TextEncoder().encode(serializePartDocument(activePartDocument)));
+    const archive = tabArchive(activePartDocument, "part");
+    await saveHostedFile(archive.name, archive.bytes);
     document.dispatchEvent(new CustomEvent("aether-save-state", {detail:{phase:"saved",durable:true}}));
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), "error");
     throw error;
   }
 }, () => activeWorkspaceKind === "drawing" && drawingEditor.snapshot() ? drawingSnapshot() : activePartDocument && activeWorkspaceKind === "part"
-  ? { name: `${activePartDocument.name}.acpart`, bytes: new TextEncoder().encode(serializePartDocument(activePartDocument)) } : null);
+  ? tabArchive(activePartDocument, "part") : null);
 cadCommands.register("save-part", async () => {
   // Save persists the working state (VS Code ⌘S); it never prompts. Commits
   // are the separate, deliberate checkpoints.
   if (activeWorkspaceKind === "drawing") { await saveDrawing().catch(error => setStatus(String(error), "error")); return; }
   if (!activePartDocument) return;
   try {
-    const fileName = `${activePartDocument.name}.acpart`;
-    if (hostedCAD) await saveHostedFile(fileName, new TextEncoder().encode(serializePartDocument(activePartDocument)));
+    if (hostedCAD) { const archive = tabArchive(activePartDocument, "part"); await saveHostedFile(archive.name, archive.bytes); }
     else await savePartDocument(activePartDocument);
     document.dispatchEvent(new CustomEvent("aether-save-state", {detail:{phase:hostedCAD ? "saved" : "downloaded",durable:true,message:hostedCAD ? "Saved" : "Downloaded"}}));
   } catch (error) {
@@ -1502,11 +1492,22 @@ updateLists();
 async function openLibraryDocument(file: File, url: URL) {
   if (sketchEditor?.active) throw new Error("Finish or cancel the active sketch before switching tabs.");
   cadPresentation.patch({ startScreen: "workspace", startDialog: null });
-  if (isDrawingFile(file.name)) {
-    await drawingEditor.open(await file.text());
+  if (!isAetherCADFile(file.name)) {
+    if ((()=>{try{importFormat(file.name);return true;}catch{return false;}})())
+      throw new Error("Create or open a document, then use Import CAD to add this file. Mesh files require explicit source units before import.");
+    throw new Error("This file type cannot be opened in CAD.");
+  }
+  // One file type; the tab to show comes from what the document holds.
+  const opened = readAetherCAD(new Uint8Array(await file.arrayBuffer()));
+  const drawing = opened.graph.drawings?.[0];
+  const part = opened.graph.part_definitions.find((item) => item.feature_document);
+  // An Assembly tab is asked for by address; otherwise the document's kind picks the tab.
+  const wantsAssembly = url.searchParams.has("assembly");
+  if (!wantsAssembly && opened.kind === "drawing" && drawing) {
+    await drawingEditor.open(JSON.stringify(drawing.document));
     presentDrawing(); rememberDrawing();
-  } else if (isPartFile(file.name)) {
-    const document = parsePartDocument(await file.text());
+  } else if (!wantsAssembly && opened.kind === "part" && part) {
+    const document = parsePartDocument(JSON.stringify(part.feature_document));
     await evaluateAndShowPart(document, `Opened ${file.name} from your server.`, true);
     activeWorkspaceKind = "part";
     ++assemblyRenderSerial;
@@ -1515,16 +1516,14 @@ async function openLibraryDocument(file: File, url: URL) {
     viewer.replaceAssemblyBodies([]);
     cadPresentation.patch({workspaceMode:"modeling"});
     updateLists();
-  } else if (isProjectFile(file.name)) {
+  } else {
     const oldPart = activePartDocument;
     await assemblyController.openFile(file, url.searchParams.get("assembly") ?? undefined);
     if (oldPart) for (const row of viewer.getPartRows()) {
       if (row.sourceDocumentId === oldPart.documentId) viewer.removeAuthoredPart(row.id);
     }
     updateLists();
-  } else if ((()=>{try{importFormat(file.name);return true;}catch{return false;}})()) {
-    throw new Error("Create or open a Part, then use Import CAD to add this file. Mesh files require explicit source units before import.");
-  } else throw new Error("This file type cannot be opened in CAD.");
+  }
 }
 if (hostedCAD) {
   window.addEventListener("cad-document-navigation-error", event => setStatus((event as CustomEvent<string>).detail, "error"));

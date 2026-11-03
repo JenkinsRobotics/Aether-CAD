@@ -15,15 +15,17 @@ export async function verifyToolbarPlacement(page, expect, screenshot) {
   const search = page.getByRole('combobox', {name:'Search CAD commands',exact:true});
   await search.fill('Wireframe');
   await page.getByRole('option', {name:/Wireframe/}).click();
-  await expect(header.getByRole('button', {name:'Display style',exact:true}).locator('[data-icon="cube-transparent"]')).toHaveCount(1);
-  await header.getByRole('button', {name:'Display style',exact:true}).click();
+  // Display style lives in the viewport's environment control since the header pins rework (alpha-0.1.93).
+  await page.getByRole('button', {name:'Environment',exact:true}).click();
+  const display = page.getByRole('button', {name:'Display and environment',exact:true});
+  await display.click();
+  await expect(page.getByRole('menuitemradio', {name:'Wireframe',exact:true})).toHaveAttribute('aria-checked','true');
   await page.getByRole('menuitemradio', {name:'Shaded',exact:true}).click();
-  await expect(header.getByRole('button', {name:'Display style',exact:true}).locator('[data-icon="display"]')).toHaveCount(1);
-  await header.getByRole('button', {name:'Camera views',exact:true}).click();
-  await page.getByRole('menuitemradio', {name:'Orthographic',exact:true}).click();
-  await header.getByRole('button', {name:'Camera views',exact:true}).click();
-  await expect(page.getByRole('menuitemradio', {name:'Orthographic',exact:true})).toHaveAttribute('aria-checked','true');
-  await page.getByRole('menuitemradio', {name:'Perspective',exact:true}).click();
+  await display.click();
+  await expect(page.getByRole('menuitemradio', {name:'Shaded',exact:true})).toHaveAttribute('aria-checked','true');
+  await page.keyboard.press('Escape');
+  // The view cube control states the projection; switching it is a camera command, not a header button.
+  await expect(page.locator('.aui-studio-camera-projection')).toHaveText(/Perspective|Orthographic/);
   await expect(header.getByRole('button', {name:'Undo',exact:true})).toHaveCount(1);
 
   for (const [mode, variant] of [['traditional', 'docked'], ['floating', 'floating']]) {

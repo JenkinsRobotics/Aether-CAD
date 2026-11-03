@@ -6,6 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connectLiveAgent } from './browser/live-agent.mjs';
+import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
 
 const { chromium, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ??
   fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
@@ -29,7 +30,7 @@ const step = async (name, action) => {
   await page.screenshot({ path: join(evidence, name + '.png') }); console.log('Passed ' + name);
 };
 let agent, file;
-const read = async () => JSON.parse(Buffer.from((await request('library/read', { app: 'cad', id: file.id })).data_base64, 'base64'));
+const read = async () => tabDocumentOf((await request('library/read', { app: 'cad', id: file.id })).data_base64);
 const parts = () => page.locator('.cad-parts-list').getByRole('treeitem');
 const row = name => page.getByRole('treeitem', { name: new RegExp('^' + name) }).first();
 try {
@@ -46,7 +47,7 @@ try {
     { id: 'axis', name: 'Polar axis', type: 'axis', suppressed: false, definition: { method: 'two-planes', references: [{ kind: 'feature', featureId: 'plane' }, { kind: 'principal', plane: 'XZ' }] } },
     { id: 'pattern', name: 'Body pattern', type: 'pattern', suppressed: false, sourceFeatureId: 'pad', patternType: 'polar', axis: 'Z', axisReference: { kind: 'feature', featureId: 'axis' }, count: 3, angleDegrees: 360, reversed: false, bodyIds: ['base'], copyBodyIds: { base: 'copy' } },
   ] };
-  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Foundations.acpart', data_base64: Buffer.from(JSON.stringify(document)).toString('base64') });
+  file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Foundations.aethercad', data_base64: partDocumentBase64(document) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await row('Body pattern').waitFor({ timeout: 90000 });
   await expect(parts()).toHaveCount(3, { timeout: 90000 });
@@ -86,7 +87,7 @@ try {
     const saved = await read();
     assert.deepEqual(saved.features.map(f => f.id), document.features.map(f => f.id));
     assert.deepEqual(saved.features.at(-1).copyBodyIds, { base: 'copy' });
-    await writeFile(join(evidence, 'foundations.acpart'), JSON.stringify(saved));
+    await writeFile(join(evidence, 'foundations.part.json'), JSON.stringify(saved));
     await page.reload();
     await expect(parts()).toHaveCount(3, { timeout: 90000 });
   });

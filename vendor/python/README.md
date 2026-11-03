@@ -1,5 +1,16 @@
 # CAD workspace codec dependency
 
+2026-11-03: immutable build `0.1.0-25` (Animation commit `2d61599`) lets a document hold
+every Part version CAD still reads (1..22, including the v1 `open-cad-part` header), so the
+one-time store conversion can wrap any saved Part file and CAD migrates features on read.
+`codec25-provenance.json` records the module hashes.
+
+2026-11-03: immutable build `0.1.0-24` adopts the derived document kind from Animation
+commit `6be7a86`: `AetherWorkspace.kind` (part, assembly, drawing or mixed), written to
+`manifest.json` as `kind` beside `app: "cad"`, and carried by the project projection.
+No file schema or version changes; older archives read unchanged and gain a kind on
+their next save. `codec24-provenance.json` records the module hashes.
+
 2026-10-24: immutable build `0.1.0-21` adopts canonical tree grounding and
 relation dependency evaluation from Animation commit
 `855619103608f0c6edd79e29141af30dde39db60`. All five runtime modules match that

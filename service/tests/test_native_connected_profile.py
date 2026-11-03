@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from documents import part_text, request_content
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -48,13 +49,13 @@ def joined_part(height=10):
 def invoke(tmp_path, document, command="cad.part.evaluate", arguments=None):
     run = subprocess.run(
         [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node")],
-        input=json.dumps({"command": command, "content": json.dumps(document), "arguments": arguments or {}}),
+        input=json.dumps({"command": command, "content": request_content(document), "content_encoding": "base64", "arguments": arguments or {}}),
         text=True, capture_output=True, cwd=tmp_path, timeout=60, check=False,
         env={"HOME": str(tmp_path), "TMPDIR": str(tmp_path), "QT_QPA_PLATFORM": "offscreen"},
     )
     assert run.returncode == 0, run.stderr
     assert not run.stderr
-    return json.loads(run.stdout)
+    return part_text(json.loads(run.stdout))
 
 
 def bodies(response):
@@ -65,7 +66,7 @@ def bodies(response):
 @pytest.mark.parametrize("height", [10, 15])
 def test_saved_joined_spline_reopens_reorders_and_rebuilds_exact_volume(tmp_path, height):
     document = joined_part(height)
-    path = tmp_path / "joined.acpart"
+    path = tmp_path / "joined.part.json"
     path.write_text(json.dumps(document))
     first = bodies(invoke(tmp_path, json.loads(path.read_text())))
     # Integral of h*x*(20-x)/100 from0 to20, times6mm depth.
@@ -129,7 +130,7 @@ def test_all_solid_profile_consumers_rebuild_saved_groups(tmp_path, kind):
         solid.pop("profileRegion")
         solid.update(ruled=False, sections=[selection, {**selection, "profileFeatureId": "top"}])
     part["features"].append(solid)
-    path = tmp_path / f"{kind}.acpart"
+    path = tmp_path / f"{kind}.part.json"
     path.write_text(json.dumps(part))
     result = bodies(invoke(tmp_path, json.loads(path.read_text())))
     assert len(result) == 1

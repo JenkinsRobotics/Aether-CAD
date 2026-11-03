@@ -4,7 +4,8 @@ import { prepareSaveRecovery, SaveRecoveryController, downloadRecovery, type Rec
 import { documentRequest } from "@aether/session/documents";
 import { AutosaveSession, SaveError, recoveryKey, sessionOwner } from "@aether/session/autosave";
 import { configureDocumentSession } from "./document-session";
-import { isPartFile, isProjectFile, isDrawingFile } from "@aether/core/document/file-types";
+import { isAetherCADFile, type DocumentKind } from "@aether/core/document/file-types";
+import { readAetherCAD, tabArchive } from "./document/aethercad-archive";
 import { parsePartDocument, type PartDocument } from "@aether/core/document";
 import { parseDrawingDocument, type DrawingDocument, type DrawingSourceReference } from "@aether/core/drawing";
 import type { AssemblyProjectionV1 } from './cad-assembly-bridge';
@@ -19,6 +20,7 @@ type StoredFile = {
 };
 export type Project = {
   id?: string;
+  kind?: DocumentKind;
   parts: {
     id: string;
     name: string;
@@ -43,7 +45,7 @@ export function syncHostedAssemblyProject(projection: AssemblyProjectionV1): voi
 export function hostedDocumentName(): string | null { return active?.name ?? null; }
 /** Capture a source locator without changing the active editor/save target. */
 export function hostedSourceReference(): DrawingSourceReference | undefined {
-  if (!active || (!activePartId && !isPartFile(active.name))) return undefined;
+  if (!active || !activePartId) return undefined;
   return { fileId: active.id, ...(activePartId ? { partId: activePartId } : {}),
     ...(query.has("branch") ? { branch: query.get("branch")! } : {}),
     ...(query.has("revision") ? { revision: Number(query.get("revision")) } : {}) };
@@ -60,14 +62,15 @@ export async function readHostedSource(ref: DrawingSourceReference): Promise<Par
     id: ref.fileId, branch: ref.branch, ...(ref.revision === undefined ? {} : { revision: ref.revision }),
   });
   if (ref.partId) {
-    if (!isProjectFile(file.name)) throw Error("The drawing source is no longer a project.");
     const result = await request("project_read", { id: ref.fileId, revision: file.revision, branch: ref.branch }) as StoredFile & { project: Project };
     const part = result.project.parts.find(part => part.id === ref.partId);
     if (!part?.document) throw Error("The drawing's source Part is no longer present in this project.");
     return parsePartDocument(JSON.stringify(part.document));
   }
-  if (!isPartFile(file.name) || !file.data_base64) throw Error("The drawing source is not a saved Part.");
-  return parsePartDocument(new TextDecoder().decode(Uint8Array.from(atob(file.data_base64), c => c.charCodeAt(0))));
+  if (!file.data_base64) throw Error("The drawing source is not a saved document.");
+  const part = readAetherCAD(Uint8Array.from(atob(file.data_base64), c => c.charCodeAt(0))).graph.part_definitions.find(item => item.feature_document);
+  if (!part) throw Error("The drawing source document has no Part Studio.");
+  return parsePartDocument(JSON.stringify(part.feature_document));
 }
 let activePartId: string | null = null;
 let activeDrawingId: string | null = null;
@@ -203,7 +206,7 @@ async function verifiedSnapshot(file: StoredFile): Promise<string> {
     const result = await request('project_read', {id:file.id, revision:file.revision, branch:query.get('branch') ?? undefined}) as StoredFile & {project:Project};
     const item = activeDrawingId ? result.project.drawings?.find(d => d.id === activeDrawingId) : result.project.parts.find(p => p.id === activePartId);
     if (!item?.document) throw new SaveError('This item is no longer in the saved design. Download your edits.', 404);
-    return snapshotText({name: item.name + (activeDrawingId ? '.acdrw' : '.acpart'), bytes: new TextEncoder().encode(JSON.stringify(item.document))});
+    return snapshotText(tabArchive(item.document as { documentId: string; name: string }, activeDrawingId ? 'drawing' : 'part'));
   }
   return snapshotText({name:file.name,bytes:Uint8Array.from(atob(file.data_base64!), c => c.charCodeAt(0))});
 }
@@ -352,7 +355,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
     ...(query.has("revision") ? { revision: Number(query.get("revision")) } : {}),
     branch: query.get("branch") ?? undefined,
   });
-  if (isProjectFile(active.name)) {
+  if (isAetherCADFile(active.name)) {
     const result = (await request("project_read", {
       id,
       revision: active.revision,
@@ -363,7 +366,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
       const drawing = activeProject.drawings?.find(item => item.id === query.get("drawing"));
       if (!drawing) throw Error("This Drawing is not present in the selected design revision.");
       activeDrawingId = drawing.id;
-      return restoreBytes(drawing.name + ".acdrw", new TextEncoder().encode(JSON.stringify(drawing.document)));
+      return restoreArchive(tabArchive(drawing.document as { documentId: string; name: string }, "drawing"));
     }
     if (query.has("assembly") && !activeProject.assemblies.some(item => item.id === query.get("assembly"))) throw new Error("This Assembly is not present in the selected project revision.");
     if (
@@ -375,15 +378,23 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
       );
     const part =
       query.has("assembly") ||
-      (/\.acasm$/i.test(active.name) && !query.has("part"))
+      (activeProject.kind === "assembly" && !query.has("part"))
         ? null
         : (activeProject.parts.find((p) => p.id === query.get("part")) ??
           activeProject.parts.find((p) => p.document));
     if (part?.document) {
       activePartId = part.id;
       linkedPartReadOnly = part.source?.kind === "linked";
-      return restoreBytes(part.name + ".acpart", new TextEncoder().encode(JSON.stringify(part.document)));
+      return restoreArchive(tabArchive(part.document as { documentId: string; name: string }, "part"));
     }
+  }
+  // A document that holds only Drawings opens on its first Drawing, not on the empty assembly.
+  if (activeProject && !query.has("assembly") && activeProject.kind === "drawing" && activeProject.drawings?.[0]) {
+    const drawing = activeProject.drawings[0];
+    activeDrawingId = drawing.id;
+    query.set("drawing", drawing.id);
+    if (updateAddress) history.replaceState(null, "", location.pathname + "?" + query);
+    return restoreArchive(tabArchive(drawing.document as { documentId: string; name: string }, "drawing"));
   }
   if (activeProject && !query.has("assembly") && activeProject.assemblies[0]) {
     query.set("assembly", activeProject.assemblies[0].id);
@@ -394,6 +405,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
   );
   return restoreBytes(active.name, bytes);
 }
+function restoreArchive(archive: { name: string; bytes: Uint8Array }): File | null { return restoreBytes(archive.name, archive.bytes); }
 function restoreBytes(name: string, bytes: Uint8Array): File | null {
   return restoreFile(new File([new Uint8Array(bytes)], name), snapshotText({name, bytes}));
 }
@@ -427,15 +439,15 @@ async function persistHostedFile(
   if (saving) throw new Error("A save is already in progress.");
   saving = true;
   try {
-    if (activeDrawingId && active && isDrawingFile(name)) {
+    if (activeDrawingId && active) {
       if (query.has("revision")) throw Error("This design revision is read-only.");
       const { persistDesignDrawing } = await import("./design/hosted-drawings");
       const result = await persistDesignDrawing(active, query.get("branch") ?? undefined,
-        parseDrawingDocument(new TextDecoder().decode(bytes)), activeDrawingId);
+        parseDrawingDocument(JSON.stringify(readAetherCAD(bytes).graph.drawings?.[0]?.document)), activeDrawingId);
       active = result.file; activeProject = result.project;
       return;
     }
-    if (activePartId && active && isPartFile(name)) {
+    if (activePartId && active) {
       if (!active.writable || linkedPartReadOnly)
         throw new Error(
           "This Part is read-only. Edit the original source or create a standalone copy.",
@@ -446,7 +458,7 @@ async function persistHostedFile(
         branch: query.get("branch") ?? undefined,
         operation: "save_part",
         part_id: activePartId,
-        document: JSON.parse(new TextDecoder().decode(bytes)),
+        document: readAetherCAD(bytes).graph.part_definitions[0]?.feature_document,
       })) as StoredFile & { project: Project };
       active = result;
       activeProject = result.project;
@@ -458,10 +470,7 @@ async function persistHostedFile(
     const data_base64 = btoa(binary);
     const sameType =
       active &&
-      ((isPartFile(active.name) && isPartFile(name)) ||
-        (isProjectFile(active.name) && isProjectFile(name)) ||
-        (isDrawingFile(active.name) && isDrawingFile(name)) ||
-        active.name.split(".").at(-1) === name.split(".").at(-1));
+      active.name.split(".").at(-1)?.toLowerCase() === name.split(".").at(-1)?.toLowerCase();
     if (active && sameType) {
       if (!active.writable)
         throw new Error(
@@ -510,7 +519,7 @@ export async function listHostedParts(): Promise<
     ...new Map(
       groups
         .flat()
-        .filter((f) => isPartFile(f.name))
+        .filter((f) => isAetherCADFile(f.name))
         .map((f) => [f.id, f]),
     ).values(),
   ];
@@ -518,7 +527,9 @@ export async function listHostedParts(): Promise<
 
 export async function updateHostedLink(partId: string) {
   const part = activeProject?.parts.find((p) => p.id === partId);
-  const match = part?.source?.asset_ref?.match(/^library:([a-f0-9]+)@(\d+)$/);
+  // library:<file>@<revision>[#<part studio>] — the suffix names the tab inside a
+  // source document that holds several Part Studios.
+  const match = part?.source?.asset_ref?.match(/^library:([a-f0-9]+)@(\d+)(?:#([^#]+))?$/);
   if (!part || !match)
     throw new Error("The original server source is unavailable.");
   const source = await request("read", { id: match[1] });
@@ -528,5 +539,6 @@ export async function updateHostedLink(partId: string) {
     part_id: partId,
     source_id: source.id,
     source_revision: source.revision,
+    ...(match[3] ? { source_part_id: match[3] } : {}),
   });
 }

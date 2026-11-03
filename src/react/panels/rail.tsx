@@ -141,14 +141,7 @@ export function AdvisorPanel({connection}: {connection?:DocumentConnection}) {
  * 2026-10-03, "I don't care about date, I care about part type, name, and
  * version."
  */
-const KIND_LABEL: Record<string, string> = {
-  acpart: "Part Studio",
-  acasm: "Assembly",
-  acad: "Project",
-  acdrw: "Drawing",
-  acdrawing: "Drawing",
-};
-const documentKind = (name: string) => KIND_LABEL[name.split(".").pop()?.toLowerCase() ?? ""] ?? "Document";
+const KIND_LABEL: Record<string, string> = { part: "Part Studio", assembly: "Assembly", drawing: "Drawing", mixed: "Document" };
 
 /**
  * Both halves of what Jonathan asked for (2026-10-03): Onshape's tab manager,
@@ -158,7 +151,9 @@ const documentKind = (name: string) => KIND_LABEL[name.split(".").pop()?.toLower
  */
 export function PartManagerPanel({ connection, onOpened }: { connection: DocumentConnection; onOpened?: () => void }) {
   const presentation = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
-  const [project, setProject] = useState<{ parts: { id: string; name: string }[]; assemblies: { id: string; name: string }[] } | null>(null);
+  const [project, setProject] = useState<{ kind?: string; parts: { id: string; name: string }[]; assemblies: { id: string; name: string }[] } | null>(null);
+  // One file type: the label comes from what the open document holds.
+  const documentKind = (name: string) => /\.aethercad$/i.test(name) ? KIND_LABEL[project?.kind ?? "mixed"] : "File";
   const search = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
   const documentID = search.get("document");
   const activeID = search.get("part") ?? search.get("assembly") ?? documentID;

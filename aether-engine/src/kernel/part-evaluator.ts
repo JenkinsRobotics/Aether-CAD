@@ -1,3 +1,4 @@
+import { AETHER_CAD_EXTENSION } from "../document/file-types";
 import { UnsupportedFeature, FeatureFailure } from "./feature-errors";
 import { sub, add, scale, neg, cross, norm, unit, dot, type V3 } from "./vector";
 import { buildEdgeFinish } from "./features/edge-finish";
@@ -498,11 +499,11 @@ export function evaluatePartDocument(
     const wasCached = Boolean(cached);
     // A preview's own tool body is drawn once as an overlay: a coarser mesh, no topology, not kept.
     if (!cached && preview) {
-      const result = buildPartGeometry(shape, document.documentId, document.name + ".acpart", index, { id, name, preview: true });
+      const result = buildPartGeometry(shape, document.documentId, document.name + AETHER_CAD_EXTENSION, index, { id, name, preview: true });
       options.observe?.({ phase: 'display', id, cached: false, milliseconds: performance.now() - displayStarted });
       return result;
     }
-    if (!cached) { cached = buildPartGeometry(shape, document.documentId, document.name + ".acpart", index, { id, name }); meshes.set(shape, cached); }
+    if (!cached) { cached = buildPartGeometry(shape, document.documentId, document.name + AETHER_CAD_EXTENSION, index, { id, name }); meshes.set(shape, cached); }
     const result = { ...cached, id, name, vertices: cached.vertices.slice(), normals: cached.normals.slice(), triangles: cached.triangles.slice(), edgeLines: cached.edgeLines.slice() };
     options.observe?.({ phase: 'display', id, cached: wasCached, milliseconds: performance.now() - displayStarted });
     return result;
@@ -3285,7 +3286,7 @@ export function evaluatePartDocument(
     options.withMeshes?.(meshParts);
     const names = availableBodies(document);
     return {
-      sourceName: document.name + ".acpart",
+      sourceName: document.name + AETHER_CAD_EXTENSION,
       ...(Object.keys(bodyOutputs).length ? { bodyOutputs } : {}),
       ...(previewId && previewHandles.length ? { previewHandles, previewFeatureId: previewId } : {}),
       ...(Object.keys(sketchFrames).length ? { sketchFrames } : {}),

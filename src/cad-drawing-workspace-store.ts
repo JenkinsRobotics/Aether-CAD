@@ -44,7 +44,7 @@ function selected(
   return next;
 }
 
-const defaultMessage = "Open a Part to create its drawing, or open a saved .acdrawing file.";
+const defaultMessage = "Open a Part to create its drawing, or open a document that holds one.";
 
 const initialSnapshot: CADDrawingWorkspaceSnapshot = Object.freeze({
   loadState: "unavailable",

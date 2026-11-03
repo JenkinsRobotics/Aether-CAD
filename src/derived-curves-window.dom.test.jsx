@@ -14,7 +14,7 @@ beforeAll(async () => {
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 
 it('is one window whose Curve row switches the kind', async () => {
-  const doc = parsePartDocument(readFileSync(new URL('../service/tests/fixtures/automation-part.acpart', import.meta.url), 'utf8'));
+  const doc = parsePartDocument(readFileSync(new URL('../service/tests/fixtures/automation-part.part.json', import.meta.url), 'utf8'));
   const deps = { getDocument: () => doc, apply: async () => {}, selection: () => [], showCurves: () => {} };
   open('intersection_curve', deps);
   const kind = () => document.querySelector('.cad-derived-curve-window select[aria-label="Curve"]');

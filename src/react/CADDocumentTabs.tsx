@@ -136,15 +136,6 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const inProject = (kind: string) => Boolean(project) && ["part", "assembly", "drawing"].includes(kind);
   const create = async (kind: string, name: string) => {
     await connection.flush();
-    if (kind === "hybrid-from-part") {
-      const { currentEditorSnapshot } = await import("../host-library");
-      const { parsePartDocument } = await import("@aether/core/document");
-      const { createDesignFromPart } = await import("../design/create-from-part");
-      const snapshot = currentEditorSnapshot();
-      if (!snapshot) throw Error("Wait for this Part to finish loading.");
-      await navigateDocument(await createDesignFromPart(name, parsePartDocument(new TextDecoder().decode(snapshot.bytes)), documentID));
-      return;
-    }
     if (kind === "drawing") { await drawingFiles.create(name); await drawingFiles.save(); return; }
     if (inProject(kind) && (kind === "part" || kind === "assembly")) {
       const { editHostedProject, projectItemURL } = await import("../host-library");
@@ -160,7 +151,7 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
     {choosing && <NewDesignDialog kinds={CAD_DESIGN_KINDS.map(item => item.id === "drawing" ? { ...item, unavailable: presentation.partOpen || kind === "drawing" ? undefined : "Open a source Part to create its drawing." } : item)} learnMoreHref="https://github.com/aether-studio"
       units={{ label: "Unit System", value: units, onChange: setUnits, options: DESIGN_UNIT_OPTIONS }}
       onClose={() => setChoosing(false)} onCreate={(kind) => { setChoosing(false); setCreating(kind); }} />}
-    {creating && <NewFileDialog title={creating === "hybrid-from-part" ? "Create Hybrid design from this Part" : `New ${creating}`} directory={inProject(creating) ? projectName : "My files"}
+    {creating && <NewFileDialog title={`New ${creating}`} directory={inProject(creating) ? projectName : "My files"}
       onClose={() => setCreating(null)} onCreate={(name) => create(creating, name)} />}
   </>;
 
@@ -282,9 +273,7 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
     onSelect: (kind: string) => kind === "browser:create" ? setChoosing(true) : setCreating(kind),
   } : variant === "browser" ? {
     label: "Design actions",
-    items: [{ id: "browser:create", label: "New design…", icon: <AetherIcon name="plus" /> },
-      { id: "hybrid-from-part", label: "Create Hybrid design from this Part…", icon: <AetherIcon name="file-project" />, disabled: kind !== "part" || !presentation.partOpen,
-      disabledReason: "Open a Part to copy into a Hybrid design." }],
+    items: [{ id: "browser:create", label: "New design…", icon: <AetherIcon name="plus" /> }],
     onSelect: (kind: string) => kind === "browser:create" ? setChoosing(true) : setCreating(kind),
   } : undefined;
   const designTabs = project ? tabs : tabs.filter(tab => tab.current).map(tab => ({ ...tab, onClose: undefined }));

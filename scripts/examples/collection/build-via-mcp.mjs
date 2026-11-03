@@ -161,7 +161,7 @@ try {
     proofs = [];
   for (const p of parts) {
     if (selectedParts && !selectedParts.includes(p.key)) continue;
-    const path = join(root, "parts", p.name + ".acpart"),
+    const path = join(root, "parts", p.name + ".part.json"),
       fingerprint = createHash("sha256")
         .update(JSON.stringify(p))
         .digest("hex");
@@ -200,7 +200,7 @@ try {
       kind: "file",
       scope: "personal",
       operation_id: randomUUID(),
-      name: p.name + ".acpart",
+      name: p.name + ".aethercad",
       data_base64: Buffer.from(JSON.stringify(empty)).toString("base64"),
     });
     let revision = file.revision,
@@ -332,7 +332,7 @@ try {
       evidence,
     });
     const bytes = Buffer.from(final.data_base64, "base64");
-    await writeFile(join(root, model.name + ".acad"), bytes);
+    await writeFile(join(root, model.name + ".aethercad"), bytes);
     await writeFile(
       join(evidence, "result.json"),
       JSON.stringify(
@@ -360,7 +360,7 @@ try {
       kind: "file",
       scope: "personal",
       operation_id: randomUUID(),
-      name: model.name + ".acad",
+      name: model.name + ".aethercad",
       data_base64: final.data_base64,
     });
     await page.goto(

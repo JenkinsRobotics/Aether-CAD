@@ -61,7 +61,7 @@ async function partPickerNode() {
   const document = await send("DOM.getDocument", { depth: -1 });
   const result = await send("DOM.querySelector", {
     nodeId: document.root.nodeId,
-    selector: "#part-picker",
+    selector: "#document-picker",
   });
   return result.nodeId;
 }
@@ -144,7 +144,7 @@ if (testingPartAuthoring) {
     })()`,
   });
   await wait(800);
-  const savedPartPath = `${downloadPath}/Long-Bracket.cadpart`;
+  const savedPartPath = `${downloadPath}/Long-Bracket.aethercad`;
   const savedPartDocument = JSON.parse(await readFile(savedPartPath, "utf8"));
   if (
     savedPartDocument.format !== "aether-part" ||

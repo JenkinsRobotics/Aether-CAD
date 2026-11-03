@@ -37,9 +37,9 @@ for (const key of [
   const result = JSON.parse(
     await readFile(join(source, "evidence/result.json"), "utf8"),
   );
-  const history = verifyNativeHistory(join(source, model.name + ".acad"), result.configurations?.[0]?.id ?? "assembly-000001");
+  const history = verifyNativeHistory(join(source, model.name + ".aethercad"), result.configurations?.[0]?.id ?? "assembly-000001");
   if (history.parts.length !== result.parts || history.features !== result.features) throw Error("Example native history differs from its build proof");
-  const bytes = await readFile(join(source, model.name + ".acad"));
+  const bytes = await readFile(join(source, model.name + ".aethercad"));
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   if (sha256 !== result.sha256)
     throw Error(`Unverified artifact: ${model.name}`);
@@ -82,7 +82,7 @@ for (const key of [
         "Shuttle requires passing NASA dimension checks for these archive bytes",
       );
   }
-  await writeFile(join(destination, model.id + ".acad.bin"), bytes);
+  await writeFile(join(destination, model.id + ".aethercad.bin"), bytes);
   if (model.reference)
     await writeFile(
       join(destination, model.id + "-comparison.json"),
@@ -92,7 +92,7 @@ for (const key of [
     id: model.id,
     name: model.name,
     description: model.description,
-    file: model.id + ".acad.bin",
+    file: model.id + ".aethercad.bin",
     thumbnail: model.id + ".png",
     parts: result.parts,
     instances: result.instances,

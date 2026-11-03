@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from documents import part_text, request_content
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -44,13 +45,13 @@ def spline_part(height):
 def invoke(tmp_path, document):
     run = subprocess.run(
         [sys.executable, "-I", "-S", str(ROOT / "service/aether_cad_service/runtime/runner.pyz"), shutil.which("node")],
-        input=json.dumps({"command": "cad.part.evaluate", "content": json.dumps(document), "arguments": {}}),
+        input=json.dumps({"command": "cad.part.evaluate", "content": request_content(document), "content_encoding": "base64", "arguments": {}}),
         text=True, capture_output=True, cwd=tmp_path, timeout=60, check=False,
         env={"HOME": str(tmp_path), "TMPDIR": str(tmp_path), "QT_QPA_PLATFORM": "offscreen"},
     )
     assert run.returncode == 0, run.stderr
     assert not run.stderr
-    result = json.loads(run.stdout)
+    result = part_text(json.loads(run.stdout))
     assert "error" not in result, result
     return result
 
@@ -58,7 +59,7 @@ def invoke(tmp_path, document):
 @pytest.mark.parametrize("height", [10, 15])
 def test_native_end_tangent_spline_retains_exact_curve_after_disk_reopen(tmp_path, height):
     document = spline_part(height)
-    path = tmp_path / "clamped-spline.acpart"
+    path = tmp_path / "clamped-spline.part.json"
     content = json.dumps(document)
     path.write_text(content)
     result = invoke(tmp_path, json.loads(path.read_text()))

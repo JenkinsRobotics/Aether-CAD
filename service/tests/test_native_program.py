@@ -1,5 +1,6 @@
 """Real isolated packaged programs and proof, without importing the Studio host."""
 
+import base64
 import json
 import math
 import os
@@ -12,10 +13,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
+from documents import part_of, part_text, request_content
+
 
 def empty():
     source = json.loads(
-        (ROOT / "service/tests/fixtures/automation-part.acpart").read_text()
+        (ROOT / "service/tests/fixtures/automation-part.part.json").read_text()
     )
     source["features"] = []
     return json.dumps(source)
@@ -80,7 +83,7 @@ def invoke(tmp_path, command, content, arguments):
             shutil.which("node"),
         ],
         input=json.dumps(
-            {"command": command, "content": content, "arguments": arguments}
+            {"command": command, "content": request_content(content), "content_encoding": "base64", "arguments": arguments}
         ),
         text=True,
         capture_output=True,
@@ -95,7 +98,7 @@ def invoke(tmp_path, command, content, arguments):
     )
     assert proc.returncode == 0, proc.stderr
     assert not proc.stderr
-    return json.loads(proc.stdout)
+    return part_text(json.loads(proc.stdout))
 
 
 def test_docs_work_without_launching_a_geometry_engine(tmp_path):
@@ -117,9 +120,9 @@ def test_program_builds_and_verifies_referenced_bore_then_reopens(tmp_path):
         tmp_path, "cad.part.runprogram", source, {"program_json": json.dumps(program())}
     )
     assert "error" not in result, result
-    assert len(json.loads(source)["features"]) == 0
+    assert len(part_of(source)["features"]) == 0
     assert result["result"]["steps_completed"] == 4
-    assert len(json.loads(result["content"])["features"]) == 4
+    assert len(part_of(result["content"])["features"]) == 4
     expected = 40000 - 250 * math.pi
     assert result["result"]["evaluated_bodies"][0]["volume_mm3"] == pytest.approx(
         expected

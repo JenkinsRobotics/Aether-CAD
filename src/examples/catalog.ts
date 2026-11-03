@@ -47,7 +47,7 @@ export async function readExample(example: CADExample): Promise<File> {
     throw Error(
       "The example failed its integrity check. Reload CAD before trying again.",
     );
-  return new File([bytes], example.name + ".acad", {
+  return new File([bytes], example.name + ".aethercad", {
     type: "application/vnd.aether.workspace+zip",
   });
 }

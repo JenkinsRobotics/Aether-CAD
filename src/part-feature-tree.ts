@@ -124,7 +124,7 @@ export function buildPartFeatureTree(document: PartDocument): PartTreeItem {
     id: document.documentId,
     name: document.name,
     kind: "part-document",
-    detail: ".acpart",
+    detail: "Part Studio",
     children: [
       ...buildPartHistory(document).filter((_, index) => !isPartPlacementAction(document.features[index])),
       ...availableBodies(renderableDocument(document)!).map((body) => ({

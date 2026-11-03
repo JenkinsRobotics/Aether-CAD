@@ -6,6 +6,7 @@ import { Button } from "@aether/ui";
 import { exportDrawingDXF, exportDrawingSVG } from "@aether/core/drawing";
 import { drawingEditor } from "../../drawing/controller";
 import { drawingFiles, downloadDrawingFile } from "../../drawing/files";
+import { tabArchive } from "../../document/aethercad-archive";
 import { drawingPDF } from "../../drawing/pdf-export";
 import { DrawingAuthorDialog, type DrawingDialogDraft } from "../../drawing/DrawingAuthorDialog";
 import type { DrawingPresentationCommandID } from "../../cad-drawing-presentation";
@@ -75,9 +76,9 @@ export function DrawingWorkspaceRoute({ active }: { active: boolean }) {
       <Button disabled={!editable || !history.canRedo || history.busy} onClick={() => void run(() => drawingEditor.travel(1))}>Redo</Button>
       <Button disabled={!editable || !selectedKind || history.busy} onClick={() => { if (selectedKind) setDraft({ kind: selectedKind, editId: selectedId }); }}>Edit selection</Button>
       <Button disabled={!editable || !selectedKind || history.busy} onClick={() => { if (!sheet || !selectedId || !selectedKind) return; void run(() => drawingEditor.execute(selectedKind === "sheet" ? { type: "remove-sheet", sheetId: sheet.id } : selectedKind === "view" ? { type: "remove-view", sheetId: sheet.id, viewId: selectedId } : { type: "remove-annotation", sheetId: sheet.id, annotationId: selectedId })); }}>Delete</Button>
-      <Button disabled={!built || history.busy} onClick={() => { if (built) downloadDrawingFile(`${built.document.name}.acdrw`, drawingEditor.serialize()); }}>Download drawing</Button>
+      <Button disabled={!built || history.busy} onClick={() => { if (built) { const archive = tabArchive(built.document, 'drawing'); downloadDrawingFile(archive.name, archive.bytes, 'application/vnd.aether.workspace+zip'); } }}>Download drawing</Button>
       {!editable && built && <span>Read-only drawing</span>}
-      <input ref={fileInput} type="file" accept=".acdrw,.acdrawing,application/json" hidden onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void run(() => drawingFiles.open(file)); }}/>
+      <input ref={fileInput} type="file" accept=".aethercad" hidden onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void run(() => drawingFiles.open(file)); }}/>
       {error && <span role="alert">{error}</span>}
     </div>
     <DrawingWorkspace

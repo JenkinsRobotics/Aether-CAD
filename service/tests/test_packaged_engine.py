@@ -88,16 +88,21 @@ def test_installed_agent_runtime_edits_using_packaged_native_engine(installed):
         """
 import json
 from aether_cad_service.automation import execute
-source = json.dumps({"format":"aether-part","formatVersion":3,"documentId":"installed","name":"Installed","units":"millimeter","features":[
+from aether_animation.aether_project import edit_project, new_project
+from aether_animation.aether_workspace import AetherWorkspace
+document = {"format":"aether-part","formatVersion":3,"documentId":"installed","name":"Installed","units":"millimeter","features":[
     {"id":"s","name":"Sketch","type":"profile","plane":"XY","offsetMillimeters":0,"suppressed":False,
      "profile":{"type":"polygon","pointsMillimeters":[[0,0],[10,0],[10,20],[0,20]]}},
     {"id":"pad","name":"Extrude","type":"extrude","profileFeatureId":"s","distanceMillimeters":5,"operation":"new","suppressed":False}
-]}).encode()
+]}
+workspace = new_project("Installed"); edit_project(workspace, "add_part", {"name": "Installed", "document": document})
+source = workspace.to_bytes()[0]
 product = service.CADService()
 try:
     result = execute(product, 'cad.extrude.setdepth', source, {'feature_id':'pad','depth_mm':8})
     assert abs(result['result']['evaluated_bodies'][0]['volume_mm3'] - 1600) < 0.001
-    assert json.loads(result['content'])['features'][1]['distanceMillimeters'] == 8
+    saved = next(iter(AetherWorkspace.from_bytes(result['content']).part_definitions.values()))['feature_document']
+    assert saved['features'][1]['distanceMillimeters'] == 8
 finally:
     for engine in product.engines.values(): engine.close()
 """,

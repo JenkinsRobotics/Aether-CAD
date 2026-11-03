@@ -33,3 +33,18 @@ and `.acasm` stop existing; every current file is converted once, nothing is imp
 
 Evidence per step: engine/app unit tests, `AETHER_TEST_NATIVE=1` service suite, the browser gates on
 the disposable host, and a round trip of a converted store copy before the live conversion.
+
+## Status — 2026-11-03
+
+Done in alpha-0.1.95: steps 1–4 (codec build 25; engine and app on `.aethercad`; agents take
+`part_id`; Studio source edits in the shared checkout, uncommitted for the Studio owner's
+review; one `cad` type in Aether UI alpha.273). Step 5 is implemented as
+`aether-native-host convert-cad-documents` (dry run) / `convert-cad-documents-apply`; the live
+run waits for Jonathan: backup, stop the host, dry-run counts, apply, restart, spot-check.
+
+Open: Studio's session pins Aether UI alpha.172, so Drive labels show the new type only after
+it is re-vendored there; Drive listings show one "CAD document" icon (the kind is inside the
+file; a listing that peeks at the manifest can show Part/Assembly/Drawing icons later); the
+library preview receives documents as text (`readAetherCADText`), to be replaced by a bytes
+contract; `service/aether_cad_service/document.py` still carries the standalone-JSON branches
+(`CADDocument.part`/`drawing`) that no stored file reaches any more.

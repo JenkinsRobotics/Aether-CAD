@@ -3,7 +3,7 @@
 This is developer tooling, outside the product runtime. It constructs editable
 sketch/extrude/revolve histories in Aether, SolidCraft 0.23.0 and FreeCAD 1.1.3.
 No imported solids stand in for authored features. The robot front Part comes
-from `public/examples/scifirobot.acad.bin`; it is never rewritten by a benchmark.
+from `public/examples/scifirobot.aethercad.bin`; it is never rewritten by a benchmark.
 
 From the CAD repository, with dependencies installed:
 

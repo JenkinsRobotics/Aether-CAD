@@ -2,6 +2,7 @@
  * this separate lets the presentation use the same route in local previews. */
 import { drawingEditor } from "./controller";
 import { cadPresentation } from "../cad-presentation-store";
+import { readAetherCAD, tabArchive } from "../document/aethercad-archive";
 export function downloadDrawingFile(name: string, content: string | Uint8Array, type = "application/json"): void {
   const bytes = typeof content === "string" ? content : Uint8Array.from(content).buffer;
   const url = URL.createObjectURL(new Blob([bytes], { type })), link = document.createElement("a");
@@ -15,8 +16,13 @@ export interface DrawingFileActions {
 }
 let actions: DrawingFileActions = {
   create: () => drawingEditor.create(),
-  open: async file => { if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB."); await drawingEditor.open(await file.text()); },
-  save: async () => downloadDrawingFile(`${drawingEditor.snapshot()!.document.name}.acdrw`, drawingEditor.serialize()),
+  open: async file => {
+    if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
+    const entry = readAetherCAD(new Uint8Array(await file.arrayBuffer())).graph.drawings?.[0];
+    if (!entry) throw Error("This document has no Drawing.");
+    await drawingEditor.open(JSON.stringify(entry.document));
+  },
+  save: async () => { const archive = tabArchive(drawingEditor.snapshot()!.document, "drawing"); downloadDrawingFile(archive.name, archive.bytes, "application/vnd.aether.workspace+zip"); },
   leave: async () => { cadPresentation.dispatch({ type: "select-workspace-mode", mode: "modeling" }); },
 };
 export function configureDrawingFiles(next: DrawingFileActions): void { actions = next; }

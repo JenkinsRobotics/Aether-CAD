@@ -254,6 +254,16 @@ blend between two face sets is the kernel step to take first. Status: Open.
 
 ## Requirements for the next update (Jonathan, 2026-11-02, consolidated)
 
+### Open after alpha-0.1.95 (2026-11-03)
+- Section view: dragging the foreshortened X orbit from an oblique camera (normal 1,-1,1) leaves Rotation X
+  unchanged (`verify-concurrent-inspection-browser`, `inspection-parity.mjs`); the Y orbit drag works. Not
+  touched by the document-format change; the hook `aether-section-normal` still fires.
+- Three browser gates still assert controls from before the header, panel and ribbon reworks and need
+  rewriting against the current UI: `verify-toolbar-presets-browser` (the "Modify tools" menu no longer
+  lists Union/Subtract/Intersect as menu items), `verify-assembly-insert-browser` (the command palette
+  input selector), `verify-part-assembly-browser` (the component context menu). Their document-format
+  steps already pass up to those points.
+
 Every item below is a requirement, not a suggestion; each is closed only with a test or a gate.
 
 1. **Every reference window, every control.** The tables above are the checklist: Fillet (Edge /

@@ -8,13 +8,15 @@ def dispatch(library, action, user, data, row=None):
     uid, app = user["id"], data["app"]
     if action == "project_create":
         from aether_animation.aether_project import new_project, edit_project
+        from .project_runtime import new_part_document
 
         workspace = new_project(self.name(data.get("name")))
         packaging = data.get("packaging", "project")
         if packaging not in ("project", "assembly"):
-            raise Problem(400, "Choose a project or standalone Assembly.")
+            raise Problem(400, "Choose a Part or an Assembly document.")
         if packaging == "project":
-            edit_project(workspace, "add_part", {"name": "Part 1"})
+            # Part 1 starts at the current feature version, as the CAD worker creates it.
+            edit_project(workspace, "add_part", {"name": "Part 1", "document": new_part_document()})
         content, _ = workspace.to_bytes()
         return self.dispatch(
             "create",
@@ -22,7 +24,7 @@ def dispatch(library, action, user, data, row=None):
             {
                 **data,
                 "name": workspace.name
-                + (".acasm" if packaging == "assembly" else ".acad"),
+                + ".aethercad",
                 "data_base64": base64.b64encode(content).decode(),
             },
         )
@@ -54,21 +56,22 @@ def dispatch(library, action, user, data, row=None):
                         source["id"], data.get("source_revision")
                     )
                     try:
-                        document = json.loads(snapshot["content"])
-                    except (ValueError, UnicodeDecodeError):
-                        raise Problem(
-                            400, "Select a standalone Part file."
-                        ) from None
-                    if (
-                        not isinstance(document, dict)
-                        or document.get("format") != "aether-part"
-                    ):
-                        raise Problem(400, "Select a native Part file.")
+                        parts = [p for p in AetherWorkspace.from_bytes(snapshot["content"]).part_definitions.values() if p.get("feature_document")]
+                    except AetherWorkspaceError:
+                        raise Problem(400, "Select an Aether CAD document.") from None
+                    wanted = data.get("source_part_id")
+                    chosen = [p for p in parts if p["id"] == wanted] if wanted else parts
+                    if len(chosen) != 1:
+                        raise Problem(400, "Name the Part Studio to link with source_part_id." if parts else "The source document has no Part Studio.")
+                    document = chosen[0]["feature_document"]
+                    if document.get("format") != "aether-part":
+                        raise Problem(400, "Select a native Part Studio.")
+                    from .document import source_ref
                     data = {
                         **data,
                         "document": document,
                         "source_label": snapshot["name"],
-                        "source_ref": f"library:{source['id']}@{snapshot['revision']}",
+                        "source_ref": source_ref(source["id"], snapshot["revision"], wanted),
                     }
                 edit_project(workspace, data.get("operation"), data)
                 content, _ = workspace.to_bytes()

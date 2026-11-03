@@ -13,7 +13,7 @@ CASES = json.loads((FOLDER / 'pierce-topology-documents.json').read_text()) + js
 @pytest.mark.parametrize('case', CASES, ids=lambda c: c['name'])
 def test_split_and_trim_saved_pierce_rebuilds(tmp_path, case):
     content = json.dumps(case['document'])
-    path = tmp_path / (case['name'] + '.acpart')
+    path = tmp_path / (case['name'] + '.part.json')
     path.write_text(content)
     response = bodies(invoke(tmp_path, json.loads(path.read_text())))
     if case['name'] == 'circle-split':

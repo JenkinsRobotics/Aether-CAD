@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { readAssemblyProjection } from "./read-assembly-projection.mjs";
 
-const archive = resolve(process.argv[2] ?? "public/examples/scifirobot.acad.bin");
+const archive = resolve(process.argv[2] ?? "public/examples/scifirobot.aethercad.bin");
 const out = resolve(process.argv[3] ?? "build/Example-Collection/scifirobot/concept");
 const graph = readAssemblyProjection(archive, "assembly-000001");
 const checks = [];

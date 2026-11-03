@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from documents import part_text, request_content
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,7 +27,8 @@ def invoke(tmp_path, document):
         input=json.dumps(
             {
                 "command": "cad.part.evaluate",
-                "content": json.dumps(document),
+                "content": request_content(document),
+                "content_encoding": "base64",
                 "arguments": {},
             }
         ),
@@ -43,7 +45,7 @@ def invoke(tmp_path, document):
     )
     assert run.returncode == 0, run.stderr
     assert not run.stderr
-    return json.loads(run.stdout)
+    return part_text(json.loads(run.stdout))
 
 
 @pytest.mark.parametrize(
@@ -51,7 +53,7 @@ def invoke(tmp_path, document):
 )
 def test_packaged_fixed_sketch_reopens_and_builds_exact_solid(tmp_path, shape, reverse):
     doc = json.loads(
-        (ROOT / "service/tests/fixtures/automation-part.acpart").read_text()
+        (ROOT / "service/tests/fixtures/automation-part.part.json").read_text()
     )
     doc["formatVersion"] = 14
     if shape == "circle":
@@ -96,7 +98,7 @@ def test_packaged_fixed_sketch_reopens_and_builds_exact_solid(tmp_path, shape, r
     }
     doc["features"][0]["profile"] = drawing
     content = json.dumps(doc)
-    path = tmp_path / "fixed.acpart"
+    path = tmp_path / "fixed.part.json"
     path.write_text(content)
     first = invoke(tmp_path, json.loads(path.read_text()))
     assert "error" not in first, first

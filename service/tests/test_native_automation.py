@@ -1,6 +1,7 @@
 """Installed zipapp uses real CAD semantics with no Studio/Python site imports."""
 
 import hashlib
+import base64
 import json
 import os
 import shutil
@@ -15,7 +16,9 @@ from aether_cad_service.service import CADService
 
 ROOT = Path(__file__).resolve().parents[1] / "aether_cad_service"
 RUNTIME = ROOT / "runtime"
-FIXTURE = Path(__file__).with_name("fixtures") / "automation-part.acpart"
+from documents import part_archive, part_of, part_text, request_content
+
+FIXTURE = Path(__file__).with_name("fixtures") / "automation-part.part.json"
 
 
 def source(kind):
@@ -98,7 +101,7 @@ def invoke(tmp_path, command, content, arguments):
             shutil.which("node"),
         ],
         input=json.dumps(
-            {"command": command, "content": content, "arguments": arguments}
+            {"command": command, "content": request_content(content), "content_encoding": "base64", "arguments": arguments}
         ),
         text=True,
         capture_output=True,
@@ -113,7 +116,7 @@ def invoke(tmp_path, command, content, arguments):
     )
     assert run.returncode == 0, run.stderr
     assert not run.stderr
-    return json.loads(run.stdout)
+    return part_text(json.loads(run.stdout))
 
 
 def test_bundle_is_self_contained_and_catalog_matches_legacy():
@@ -177,14 +180,14 @@ def test_all_commands_match_legacy_native_engine(tmp_path, command, kind, argume
     assert "error" not in actual, actual
     service = CADService()
     try:
-        expected = execute(service, "cad." + command, content.encode(), arguments)
+        expected = execute(service, "cad." + command, part_archive(json.loads(content)), arguments)
     finally:
         for engine in service.engines.values():
             engine.close()
     actual["result"].pop("build_seconds", None)
     expected["result"].pop("build_seconds", None)
     if "content" in expected:
-        expected["content"] = expected["content"].decode()
+        expected["content"] = json.dumps(part_of(expected["content"]))
     assert actual == expected
 
 

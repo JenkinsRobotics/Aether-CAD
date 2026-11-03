@@ -31,6 +31,6 @@ def test_pattern_copy_ids_survive_suppression_restoration_and_reopen(tmp_path):
     assert [f["id"] for f in hidden["features"] if f["suppressed"]] == ["plane", "axis", "pattern"]
     restored = invoke(tmp_path, hidden, "cad.feature.suppress", {"feature_id": "pattern", "action": "unsuppress"})
     assert bodies(restored) == first
-    saved = tmp_path / "Pattern.acpart"
+    saved = tmp_path / "Pattern.part.json"
     saved.write_text(restored["content"])
     assert bodies(invoke(tmp_path, json.loads(saved.read_text()))) == first

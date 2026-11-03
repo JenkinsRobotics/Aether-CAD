@@ -92,14 +92,12 @@ def execute(service, command_id, content, arguments, *, node=None):
             raise CommandError(
                 400, "The Assembly archive or recipe is invalid. No changes were saved."
             ) from None
-    try:
-        text = content.decode("utf-8")
-    except UnicodeError:
-        raise CommandError(400, "Choose a saved .acpart document.") from None
+    workspace, part = part_studio(content, arguments.get("part_id"))
+    text = json.dumps(part["feature_document"])
     if command_id == "cad.part.runprogram":
         from .program_runtime import execute_program
 
-        return execute_program(service, text, arguments, node=node)
+        return repack(execute_program(service, text, arguments, node=node), workspace, part)
     prepared = worker(
         {"command": command_id, "content": text, "arguments": arguments}, node=node
     )
@@ -141,6 +139,36 @@ def execute(service, command_id, content, arguments, *, node=None):
                 413, "The edited part exceeds the automation document limit."
             )
         response["content"] = encoded
+    return repack(response, workspace, part)
+
+
+def part_studio(content, part_id):
+    """The Part Studio a command works on, inside a saved .aethercad document."""
+    from aether_animation.aether_workspace import AetherWorkspace, AetherWorkspaceError
+
+    try:
+        workspace = AetherWorkspace.from_bytes(content)
+    except (AetherWorkspaceError, zipfile.BadZipFile, ValueError):
+        raise CommandError(400, "Choose a saved Aether CAD document.") from None
+    parts = [p for p in workspace.part_definitions.values() if p.get("feature_document")]
+    if part_id:
+        part = next((p for p in parts if p["id"] == part_id), None)
+        if part is None:
+            raise CommandError(404, "No Part Studio with that part_id in this document.")
+        return workspace, part
+    if len(parts) == 1:
+        return workspace, parts[0]
+    if not parts:
+        raise CommandError(400, "This document has no Part Studio.")
+    raise CommandError(400, "This document has several Part Studios; pass part_id: "
+                       + ", ".join(f"{p['name']} ({p['id']})" for p in parts))
+
+
+def repack(response, workspace, part):
+    """An edited Part Studio goes back into its document; the document is what is saved."""
+    if "content" in response:
+        part["feature_document"] = json.loads(response["content"].decode("utf-8"))
+        response["content"] = workspace.to_bytes()[0]
     return response
 
 

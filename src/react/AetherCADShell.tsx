@@ -79,8 +79,8 @@ import {
 
 const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disabledReason">[] = [
   { id: "new-part", label: "New Part", category: "File", keywords: ["create workspace"], shortcut: "⌘N", recent: true, icon: <AetherIcon name="plus" /> },
-  { id: "open-part", label: "Open Part", category: "File", keywords: ["load cadpart"], shortcut: "⌘O", icon: <AetherIcon name="open-external" /> },
-  { id: "save-part", label: "Save Part", category: "File", keywords: ["write cadpart"], shortcut: "⌘S", recent: true, icon: <AetherIcon name="import" /> },
+  { id: "open-part", label: "Open document", category: "File", keywords: ["load aethercad"], shortcut: "⌘O", icon: <AetherIcon name="open-external" /> },
+  { id: "save-part", label: "Save document", category: "File", keywords: ["write aethercad"], shortcut: "⌘S", recent: true, icon: <AetherIcon name="import" /> },
   { id: "commit-part", label: "Create version", category: "File", keywords: ["commit checkpoint version name message"], recent: true, icon: <AetherIcon name="circle-filled" /> },
   { id: "insert-step", label: "Import CAD", category: "Insert", keywords: ["import step stp iges brep stl obj ply off mesh geometry"], icon: <AetherIcon name="export" /> },
   { id: "sketch", label: "Create Sketch", category: "Create", keywords: ["plane profile"], shortcut: "R", icon: <AetherIcon name="sketch" /> },
@@ -492,8 +492,7 @@ export function AetherCADShell() {
           <>
             
             {/* Application and workspace controls. Document controls live with the bottom tabs. */}
-            <input id="part-picker" type="file" accept=".acpart,.cadpart,application/json" hidden />
-            <input id="assembly-picker" type="file" accept=".acad,.acasm,.aether,application/vnd.acad.workspace+zip,application/zip" hidden />
+            <input id="document-picker" type="file" accept=".aethercad,application/vnd.aether.workspace+zip" hidden />
             <input id="step-picker" type="file" accept={CAD_IMPORT_ACCEPT} multiple hidden />
           </>
         }
