@@ -48,3 +48,7 @@ file; a listing that peeks at the manifest can show Part/Assembly/Drawing icons 
 library preview receives documents as text (`readAetherCADText`), to be replaced by a bytes
 contract; `service/aether_cad_service/document.py` still carries the standalone-JSON branches
 (`CADDocument.part`/`drawing`) that no stored file reaches any more.
+
+Release: alpha-0.1.95 (commit 251caf6) is staged; the host refuses to activate it because the agent
+command contracts changed (binary document content, `part_id`), which the app-update route forbids.
+The Studio owner deploys it as a new baseline together with the store conversion.
