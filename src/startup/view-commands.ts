@@ -60,9 +60,9 @@ const GROUND: readonly (readonly [CADCommandID, CADFloorMode])[] = [
 ];
 
 const FILTERS: readonly (readonly [CADCommandID, CADSelectionFilter])[] = [
+  // One selection rule (Jonathan, 2026-11-03): no body/face/edge/vertex filters; Auto picks by
+  // proximity. Component remains for assemblies, where a click means the occurrence.
   ["selection-auto", "auto"], ["selection-component", "component"],
-  ["selection-body", "body"], ["selection-face", "face"],
-  ["selection-edge", "edge"], ["selection-vertex", "vertex"],
 ];
 
 export function registerViewCommands(host: ViewCommandHost): void {

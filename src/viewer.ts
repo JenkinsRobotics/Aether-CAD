@@ -13,6 +13,7 @@ import {selectionCandidateDistance} from "./viewport/selection-proximity";
 import {ImageCanvasLayer} from "./viewport/image-canvases";
 import { StageRig } from "./viewport/stage-rig";
 import { styledLines } from "./viewport/styled-lines";
+import { resolveSelection } from "./viewport/selection-rule";
 import { gradientBackground } from "./viewport/environment-background";
 import { updateSketchEnvironment } from "./sketch/environment-appearance";
 import type { PlaneTheme } from "./viewport/appearance-themes";
@@ -1394,6 +1395,9 @@ export class MateViewport {
   private spaceCurveGroup = new THREE.Group();
   private spaceCurveKey = "";
   private analysisCurveGroup = new THREE.Group();
+  /** Hovered and selected edges, outlined from the engine's sampled polylines (one rule:
+   *  what is highlighted is what a click selects). Rebuilt whenever the hover or selection changes. */
+  private edgeOutline?: LineSegments2;
   /** Analysis overlays (continuity, combs, isocurves): coloured world polylines, replaced whole. */
   setAnalysisCurves(curves: readonly { color: string; polylines: readonly (readonly [number, number, number])[][] }[]): void {
     for (const child of [...this.analysisCurveGroup.children]) {
@@ -2270,17 +2274,10 @@ export class MateViewport {
     if (cap && !this.measurePicking && !['body','component'].includes(effectiveSelectionKind(cadSelection.snapshot()))) return null;
     const faceId = this.faceIdForTriangle(cap?.faceRanges ?? part.faceRanges, hit.faceIndex);
     const topology = faceId === undefined ? undefined : (cap?.topology ?? part.topology).get(faceId);
-    let kind = effectiveSelectionKind(cadSelection.snapshot());
+    const kind = effectiveSelectionKind(cadSelection.snapshot());
     const rect = this.renderer.domElement.getBoundingClientRect();
     const point = {x:event.clientX-rect.left,y:event.clientY-rect.top};
     const distance = (candidate:ConnectorCandidate)=>selectionCandidateDistance(candidate,part.group.matrixWorld,point,p=>this.projectScreenPoint(p));
-    // One selection rule (Jonathan, 2026-11-03), as Onshape's: a vertex within reach, else an
-    // edge within reach, else the face under the pointer. Filters restrict; nothing reorders.
-    if (cadSelection.snapshot().filter === "auto" && topology) {
-      if (topology.candidates.some(candidate => candidate.kind === 'vertex' && distance(candidate) <= 6)) kind = 'vertex';
-      else if (topology.candidates.some(candidate => candidate.kind === 'edge-midpoint' && distance(candidate) <= 12)) kind = 'edge';
-      else if (kind === 'edge' || kind === 'vertex') kind = 'face';
-    }
     if (kind === "component" || kind === "body") {
       return {
         part,
@@ -2294,7 +2291,10 @@ export class MateViewport {
       };
     }
     if (!topology) return null;
-    if (kind === "face") {
+    // The selection rule (viewport/selection-rule.ts): what hover shows is what a click selects.
+    const target = resolveSelection(cadSelection.snapshot().filter, topology.candidates, distance);
+    if (!target) return null;
+    if (target.kind === "face") {
       return {
         part,
         faceId: topology.id,
@@ -2309,21 +2309,17 @@ export class MateViewport {
         },
       };
     }
-    const candidateKind = kind === "edge" ? "edge-midpoint" : "vertex";
-    const candidates = topology.candidates.filter((candidate) => candidate.kind === candidateKind);
-    if (candidates.length === 0) return null;
-    const candidate = candidates.sort((a,b)=>distance(a)-distance(b))[0];
-    if (distance(candidate)>12) return null;
+    const { candidate } = target;
     return {
       part,
       faceId: topology.id,
       item: {
-        id: `${kind}:${part.data.id}:${candidate.id}`,
-        kind,
+        id: `${target.kind}:${part.data.id}:${candidate.id}`,
+        kind: target.kind,
         partId: part.data.id,
         faceId: topology.id,
         label: candidate.label,
-        detail: cap ? 'Section mesh' : kind === "edge" ? "Exact edge" : "Exact vertex",
+        detail: cap ? 'Section mesh' : target.kind === "edge" ? "Exact edge" : "Exact vertex",
       },
     };
   }
@@ -2615,16 +2611,18 @@ export class MateViewport {
 
   private resetFaceMaterials(): void {
     const selection = cadSelection.snapshot().items;
+    this.outlineEdges([...(this.selectionHover && this.tool === 'none' ? [this.selectionHover.item] : []), ...selection].filter((item) => item.kind === 'edge'));
     this.parts.forEach((part) => {
       const selectsWholePart = selection.some(
         (item) => item.partId === part.data.id && (item.kind === "component" || item.kind === "body"),
       );
       const selectedFaces = new Set(
         selection
-          .filter((item) => item.partId === part.data.id && item.faceId !== undefined)
+          .filter((item) => item.partId === part.data.id && item.kind === 'face' && item.faceId !== undefined)
           .map((item) => item.faceId),
       );
-      const hover = this.tool === 'none' && this.selectionHover?.part === part ? this.selectionHover : null;
+      // A face lights up only when the pointer is on the face; an edge or vertex outlines itself.
+      const hover = this.tool === 'none' && this.selectionHover?.part === part && this.selectionHover.item.kind === 'face' ? this.selectionHover : null;
       setSurfaceGroups(part.surface.geometry, part.faceRanges, faceId =>
         selectsWholePart || selectedFaces.has(faceId) ? 2 : hover && (hover.faceId === undefined || hover.faceId === faceId) ? 1 : 0);
       const capHover = this.selectionHover?.part === part ? this.selectionHover.faceId : this.anchorFace?.part.data.id === part.data.id ? this.anchorFace.faceId : undefined;
@@ -2634,6 +2632,28 @@ export class MateViewport {
       const part = this.parts.get(this.anchorFace.part.data.id);
       if (part) this.setFaceMaterial(part, this.anchorFace.faceId, 1);
     }
+  }
+
+  /** Draw the outline for these edge items (their candidates carry sampled polylines). */
+  private outlineEdges(items: readonly CADSelectionItem[]): void {
+    if (!items.length && !this.edgeOutline) return;
+    const outline = this.edgeOutline ??= styledLines([], 0x38b56b, 3);
+    const positions: number[] = [];
+    for (const item of items) {
+      const found = this.candidateFor(item);
+      const line = found?.candidate.polylineMillimeters;
+      if (!found || !line || line.length < 6) continue;
+      const points: THREE.Vector3[] = [];
+      for (let i = 0; i + 2 < line.length; i += 3) points.push(new THREE.Vector3(line[i], line[i + 1], line[i + 2]).applyMatrix4(found.matrix));
+      for (let i = 1; i < points.length; i++) positions.push(points[i - 1].x, points[i - 1].y, points[i - 1].z, points[i].x, points[i].y, points[i].z);
+    }
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(positions.length ? positions : [0, 0, 0, 0, 0, 0]);
+    if (!positions.length) geometry.instanceCount = 0;
+    outline.geometry.dispose();
+    outline.geometry = geometry;
+    outline.visible = positions.length > 0;
+    if (!outline.parent) { outline.renderOrder = 6; (outline.material as THREE.Material).depthTest = false; this.referenceRoot.add(outline); }
   }
 
   private setConnectorMaterial(id: string, material: THREE.Material): void {

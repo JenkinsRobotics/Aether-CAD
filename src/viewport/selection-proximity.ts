@@ -14,6 +14,17 @@ export function selectionCandidateDistance(candidate:ConnectorCandidate,matrix:T
     const t=length?Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/length)):0;
     return Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);
   }
+  if(candidate.kind==='edge-midpoint'&&candidate.polylineMillimeters&&candidate.polylineMillimeters.length>=6) {
+    // The engine's sampled polyline: the pointer's distance to the edge itself, for any curve.
+    const line=candidate.polylineMillimeters;let best=Infinity,previous:{x:number;y:number}|null=null;
+    for(let i=0;i+2<line.length;i+=3){
+      const q=project(new THREE.Vector3(line[i],line[i+1],line[i+2]).applyMatrix4(matrix));
+      if(!q)return Infinity;
+      if(previous){const dx=q.x-previous.x,dy=q.y-previous.y,length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((point.x-previous.x)*dx+(point.y-previous.y)*dy)/length)):0;best=Math.min(best,Math.hypot(point.x-previous.x-t*dx,point.y-previous.y-t*dy));}
+      previous=q;
+    }
+    return best;
+  }
   if(candidate.kind==='edge-midpoint'&&m?.centerMillimeters&&m.axisDirection&&m.radiusMillimeters&&m.lengthMillimeters) {
     // A circular arc: the pointer's distance to the arc itself (sampled), not to its midpoint,
     // so a revolved rim picks anywhere along it (Jonathan, 2026-11-02).

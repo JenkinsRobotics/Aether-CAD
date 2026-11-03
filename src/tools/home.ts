@@ -23,10 +23,6 @@ export const homeWorkspace: CADRibbonWorkspaceDefinition = {
       tool("selection-crossing-tool", "Crossing Selection", "select", "selection-crossing"),
       tool("selection-clear-tool", "Clear Selection", "select", "selection-clear"),
       tool("home-select-component", "Component", "assembly", "selection-component"),
-      tool("home-select-body", "Body", "part", "selection-body"),
-      tool("home-select-face", "Face", "face", "selection-face"),
-      tool("home-select-edge", "Edge", "edge", "selection-edge"),
-      tool("home-select-vertex", "Vertex", "vertex", "selection-vertex"),
     ] },
   ],
 };

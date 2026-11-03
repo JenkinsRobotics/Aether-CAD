@@ -747,10 +747,6 @@ cadAppearance.registerApplyHandler((appearance) => {
 const selectionCommands = {
   auto: "selection-auto",
   component: "selection-component",
-  body: "selection-body",
-  face: "selection-face",
-  edge: "selection-edge",
-  vertex: "selection-vertex",
 } as const;
 const syncSelectionPresentation = (): void => {
   viewer.refreshSelectionAppearance();
@@ -1229,6 +1225,8 @@ configureEditHistory({
 (window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketch: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(activePartDocument?.features.find(f => f.name === sketch)?.id ?? sketch, [x, y]);
 // Gates set a standard view so geometry picks land where they expect (verify-edge-finish-browser.mjs).
 (window as unknown as { __aetherSetView?: unknown }).__aetherSetView = (view: StandardCameraView) => cadCameraPresentation.dispatch({ type: "select-view", view });
+// Gates read what the pointer hovers (verify-region-pick-browser.mjs).
+(window as unknown as { __aetherHover?: unknown }).__aetherHover = () => { const item = cadSelection.snapshot().hovered; return item ? { kind: item.kind, label: item.label } : null; };
 // Gates read the selection (kind and label) to explain a pick that did not fill a box.
 (window as unknown as { __aetherSelection?: unknown }).__aetherSelection = () => cadSelection.snapshot().items.map(item => `${item.kind}:${item.label}`);
 // Gates click world points through this projection (verify-edge-finish-browser.mjs).

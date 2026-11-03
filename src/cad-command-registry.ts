@@ -142,10 +142,6 @@ export type CADCommandID =
   | "reset-appearance"
   | "selection-auto"
   | "selection-component"
-  | "selection-body"
-  | "selection-face"
-  | "selection-edge"
-  | "selection-vertex"
   | "selection-next-filter"
   | "selection-directional" | "selection-window" | "selection-crossing" | "selection-clear"
   | "selection-freeform" | "selection-paint"
@@ -298,10 +294,6 @@ export const cadCommandIDs: readonly CADCommandID[] = [
   "reset-appearance",
   "selection-auto",
   "selection-component",
-  "selection-body",
-  "selection-face",
-  "selection-edge",
-  "selection-vertex",
   "selection-next-filter",
   "selection-directional", "selection-window", "selection-crossing", "selection-clear",
   "selection-freeform", "selection-paint",

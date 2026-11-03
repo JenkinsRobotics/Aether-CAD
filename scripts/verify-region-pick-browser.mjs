@@ -76,6 +76,20 @@ try {
   await apply('Extrude');
   await featureRow(/Extrude/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '2-extruded.png') });
+  // Hovering the body is one proximity rule (Jonathan, 2026-11-03): an edge within reach outlines
+  // itself, a face lights up, and a sweep of moves must not slow down over time.
+  {
+    const box = await page.locator('.cad-studio-viewport canvas').first().boundingBox();
+    const sweep = async (count) => { const start = Date.now(); for (let i = 0; i < count; i++) { await page.mouse.move(box.x + box.width * (0.3 + 0.4 * ((i * 7) % 23) / 23), box.y + box.height * (0.3 + 0.4 * ((i * 11) % 19) / 19)); } return (Date.now() - start) / count; };
+    const first = await sweep(60), later = await sweep(60);
+    assert.ok(later < Math.max(first * 3, 40), `hover slowed from ${first.toFixed(1)} ms to ${later.toFixed(1)} ms per move`);
+    const edgeSeen = await page.evaluate(() => new Promise((resolve) => {
+      const tried = new Set(); const canvas = document.querySelector('.cad-studio-viewport canvas'); const rect = canvas.getBoundingClientRect();
+      let n = 0; const step = () => { n++; if (n > 400) return resolve(false); const x = rect.left + rect.width * (0.2 + 0.6 * ((n * 13) % 97) / 97), y = rect.top + rect.height * (0.2 + 0.6 * ((n * 29) % 89) / 89);
+        canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, pointerId: 1, pointerType: 'mouse' }));
+        if (window.__aetherHover?.()?.kind === 'edge') return resolve(true); requestAnimationFrame(step); }; step(); }));
+    assert.ok(edgeSeen, 'moving across the body hovers an edge somewhere');
+  }
   // Bodies hide and show from the Parts list (Jonathan, 2026-11-02): the eye shows on hover,
   // hides the body in the viewport, and stays pinned on the row until it shows the body again.
   const partRow = page.locator('.cad-parts-list').getByRole('treeitem').first();

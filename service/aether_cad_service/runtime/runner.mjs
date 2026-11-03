@@ -38240,12 +38240,15 @@ function curveCandidates(faceId, edge, faceFrame, edgeIndex) {
   } finally {
     adaptor.delete();
   }
+  const samples2 = measurements.linearDirection ? 2 : 25;
+  const polylineMillimeters = Array.from({ length: samples2 }, (_2, i2) => deleteAfterVectorTuple(edge.pointAt(i2 / (samples2 - 1)))).flatMap((p2) => [p2[0], p2[1], p2[2]]);
   candidates.push({
     id: `face-${faceId}-edge-${edgeIndex}`,
     faceId,
     kind: "edge-midpoint",
     label: `Edge ${edgeIndex + 1} midpoint`,
     measurements,
+    polylineMillimeters,
     origin: deleteAfterVectorTuple(edge.pointAt(0.5)),
     ...frameAtEdge(edge, 0.5, faceFrame)
   });

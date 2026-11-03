@@ -33,6 +33,8 @@ export interface TopologyMeasurements {
 }
 
 export interface ConnectorCandidate extends ConnectorFrameData {
+  /** Edge midpoints: points sampled along the edge (x y z …), for hover outlines and proximity. */
+  polylineMillimeters?: number[];
   edgeAnchor?: import("../document/solid-edge-reference").SolidEdgeAnchor;
   vertexAnchor?: import("../document/extrusion-point-reference").SolidVertexAnchor;
   measurements?: TopologyMeasurements;

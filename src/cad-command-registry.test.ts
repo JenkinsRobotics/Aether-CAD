@@ -32,7 +32,8 @@ describe("CADCommandRegistry", () => {
     expect(isCADCommandID("assembly-toggle-grounded")).toBe(true);
     expect(isCADCommandID("assembly-toggle-suppressed")).toBe(true);
     expect(isCADCommandID("assembly-remove-instance")).toBe(true);
-    expect(isCADCommandID("selection-vertex")).toBe(true);
+    expect(isCADCommandID("selection-auto")).toBe(true);
+    expect(isCADCommandID("selection-vertex")).toBe(false); // filters are gone: one proximity rule
     expect(isCADCommandID("not-a-command")).toBe(false);
   });
 

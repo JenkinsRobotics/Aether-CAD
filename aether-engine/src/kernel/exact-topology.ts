@@ -135,12 +135,16 @@ function curveCandidates(
     adaptor.delete();
   }
 
+  // The edge itself, sampled: two points for a line, more for a curve (hover outline, proximity).
+  const samples = measurements.linearDirection ? 2 : 25;
+  const polylineMillimeters = Array.from({ length: samples }, (_, i) => deleteAfterVectorTuple(edge.pointAt(i / (samples - 1)))).flatMap((p) => [p[0], p[1], p[2]]);
   candidates.push({
     id: `face-${faceId}-edge-${edgeIndex}`,
     faceId,
     kind: "edge-midpoint",
     label: `Edge ${edgeIndex + 1} midpoint`,
     measurements,
+    polylineMillimeters,
     origin: deleteAfterVectorTuple(edge.pointAt(0.5)),
     ...frameAtEdge(edge, 0.5, faceFrame),
   });

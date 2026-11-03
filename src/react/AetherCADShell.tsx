@@ -149,10 +149,6 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
   { id: "reset-appearance", label: "Reset Viewport Appearance", category: "Appearance", keywords: ["defaults display scene"], icon: "↶" },
   { id: "selection-auto", label: "Selection Filter: Auto", category: "Selection", keywords: ["pick any"], recent: true, icon: "↖" },
   { id: "selection-component", label: "Selection Filter: Component", category: "Selection", keywords: ["occurrence assembly"], icon: "▦" },
-  { id: "selection-body", label: "Selection Filter: Body", category: "Selection", keywords: ["solid"], icon: <AetherIcon name="keyframe" /> },
-  { id: "selection-face", label: "Selection Filter: Face", category: "Selection", keywords: ["surface topology"], icon: "▱" },
-  { id: "selection-edge", label: "Selection Filter: Edge", category: "Selection", keywords: ["curve topology"], icon: "╱" },
-  { id: "selection-vertex", label: "Selection Filter: Vertex", category: "Selection", keywords: ["point topology"], icon: "·" },
   { id: "selection-next-filter", label: "Cycle Selection Filter", category: "Selection", keywords: ["next F6"], shortcut: "F6", icon: "⇥" },
 ];
 

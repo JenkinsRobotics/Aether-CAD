@@ -195,7 +195,6 @@ describe("both presentations honour the layout", () => {
     // Reading the raw tray instead of the resolved workspace put assembly
     // tools on a Part document's Home tab.
     expect(fusionIDs).not.toContain("home-select-component");
-    expect(fusionIDs).toContain("home-select-body");
   });
 });
 
@@ -204,7 +203,7 @@ describe("selection tray", () => {
   it("exposes one Select button while retaining the real filters in its menu", () => {
     const section = fusionTabsFor("part")!.find(tab => tab.id === "solid")!.sections.find(section => section.label === "Select")!;
     expect(section.visible).toEqual(["home-select-auto"]);
-    expect(section.menu).toEqual(["home-select-auto", "selection-directional-tool", "selection-window-tool", "selection-freeform-tool", "selection-paint-tool", "selection-crossing-tool", "selection-clear-tool", "home-select-body", "home-select-face", "home-select-edge", "home-select-vertex"]);
+    expect(section.menu).toEqual(["home-select-auto", "selection-directional-tool", "selection-window-tool", "selection-freeform-tool", "selection-paint-tool", "selection-crossing-tool", "selection-clear-tool"]);
     expect(toolbarToolById("home-select-auto")?.label).toBe("Select");
   });
 });

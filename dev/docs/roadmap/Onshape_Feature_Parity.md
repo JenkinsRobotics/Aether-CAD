@@ -285,3 +285,14 @@ Every item below is a requirement, not a suggestion; each is closed only with a 
    `feature_add` / `feature_update` validate; schemas regenerate from the document types.
 8. **Bare-minimum verification per feature:** a window serialization test, an engine test with
    a closed-form or self-consistency expectation, and a browser gate step for viewport picks.
+
+## Selection (alpha-0.1.93)
+
+One rule, no modes: the select tool resolves by proximity to the hit point — a vertex within
+6 px, else an edge within 12 px (distance to the engine's sampled polyline), else the face under
+the pointer. Hovered and selected edges draw an outline; a face lights up only when the pointer
+is on the face. The Selection Priority and the body / face / edge / vertex Selection Filters are
+deleted (tools, commands, palette entries, help, store action). Component remains for
+assemblies. Open: snapping to vertices and anchor points in sketch-on-face flows; the reported
+slowdown while hovering and reselecting over time — the region-pick gate now times a hover
+sweep twice and fails if the second pass is 3× slower, so a regression shows in the fixture.
