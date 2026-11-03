@@ -18,6 +18,43 @@ type Rect={left:number;top:number;width:number;height:number};
 const axes=[new Vector3(1,0,0),new Vector3(0,1,0),new Vector3(0,0,1)];
 const letters=['X','Y','Z'],colors=['#c94b58','#288357','#387acb'];
 
+export interface AngleRingProjection extends Point {
+ /** The full ring, then the swept arc from zero to the angle, in screen pixels. */
+ points:Point[];arc:Point[];
+ /** Screen direction of travel at the end of the sweep, degrees clockwise from +x. */
+ tangent:number;
+ valueAt:(x:number,y:number)=>number|null;pointAt:(degrees:number)=>Point;
+}
+/** A ring about `axis` through `origin`: a screen lever's radius, or through `start`, which also
+ *  sets where the angle is zero (a revolve's profile). `valueAt` maps the pointer to degrees. */
+export function projectAngleRing(camera:Camera,rect:Rect,origin:Vector3,axis:Vector3,angleDegrees:number,start?:Vector3):AngleRingProjection|null {
+ if(rect.width<=0||rect.height<=0||Math.abs(axis.length()-1)>1e-6||!Number.isFinite(angleDegrees))return null;
+ const frozen=camera.clone();frozen.updateMatrixWorld(true);
+ const screen=(point:Vector3):Point|null=>{const p=point.clone().project(frozen);return [p.x,p.y,p.z].every(Number.isFinite)&&p.z>=-1&&p.z<=1?{x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2}:null;};
+ const rayAt=(x:number,y:number)=>{const ray=new Raycaster();ray.setFromCamera(new Vector2((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1),frozen);return ray.ray;};
+ const centre=screen(origin);if(!centre)return null;
+ const pixelsPerMM=Math.max(...axes.map(a=>{const p=screen(origin.clone().add(a));return p?Math.hypot(p.x-centre.x,p.y-centre.y):0;}));if(!Number.isFinite(pixelsPerMM)||pixelsPerMM<1e-9)return null;
+ const lever=78/pixelsPerMM;
+ const radial=start?start.clone().sub(origin).addScaledVector(axis,-axis.dot(start.clone().sub(origin))):null;
+ const seed=radial&&radial.length()>1e-6?radial:axes.reduce((a,b)=>Math.abs(a.dot(axis))<=Math.abs(b.dot(axis))?a:b);
+ const radius=radial&&radial.length()>1e-6?radial.length():lever;
+ const u=seed.clone().addScaledVector(axis,-seed.dot(axis)).normalize(),v=new Vector3().crossVectors(axis,u);
+ const point=(degrees:number)=>origin.clone().addScaledVector(u,radius*Math.cos(degrees*Math.PI/180)).addScaledVector(v,radius*Math.sin(degrees*Math.PI/180));
+ const end=screen(point(angleDegrees));if(!end)return null;
+ const plane=new Plane(axis,-axis.dot(origin));
+ const valueAt=(x:number,y:number)=>{
+  const ray=rayAt(x,y);if(Math.abs(ray.direction.dot(axis))<.05)return null;
+  const hit=ray.intersectPlane(plane,new Vector3());if(!hit)return null;
+  const d=hit.sub(origin);if(d.length()<radius*.02)return null;
+  return Math.atan2(d.dot(v),d.dot(u))*180/Math.PI;
+ };
+ if(valueAt(end.x,end.y)===null)return null;
+ const points=Array.from({length:65},(_,i)=>screen(point(i*360/64)));if(points.some(p=>!p))return null;
+ const steps=Math.max(2,Math.ceil(Math.abs(angleDegrees)/4)),arc=Array.from({length:steps+1},(_,i)=>screen(point(angleDegrees*i/steps)));if(arc.some(p=>!p))return null;
+ const ahead=screen(point(angleDegrees+Math.sign(angleDegrees||1)*2))??end;
+ return {...end,points:points as Point[],arc:arc as Point[],tangent:Math.atan2(ahead.y-end.y,ahead.x-end.x)*180/Math.PI,valueAt,pointAt:degrees=>screen(point(degrees))!};
+}
+
 /** Camera-only interaction math; native preview owns the solid and anchor. */
 export function projectTransformGizmo(camera:Camera,rect:Rect,request:TransformGizmoRequest):TransformHandleProjection[] {
  if(rect.width<=0||rect.height<=0)return [];
@@ -34,22 +71,9 @@ export function projectTransformGizmo(camera:Camera,rect:Rect,request:TransformG
  const pixelsPerMM=Math.max(...lengths);if(!Number.isFinite(pixelsPerMM)||pixelsPerMM<1e-9)return [];
  const lever=78/pixelsPerMM;
  if(t.kind==='rotate'){
-  const axis=new Vector3(...t.axisDirection);if(Math.abs(axis.length()-1)>1e-6||!Number.isFinite(t.angleDegrees))return [];
-  const seed=axes.reduce((a,b)=>Math.abs(a.dot(axis))<=Math.abs(b.dot(axis))?a:b);
-  const u=seed.clone().addScaledVector(axis,-seed.dot(axis)).normalize(),v=new Vector3().crossVectors(axis,u);
-  const point=(degrees:number)=>origin.clone().addScaledVector(u,lever*Math.cos(degrees*Math.PI/180)).addScaledVector(v,lever*Math.sin(degrees*Math.PI/180));
-  const end=screen(point(t.angleDegrees));if(!end)return [];
-  const plane=new Plane(axis,-axis.dot(origin));
-  const valueAt=(x:number,y:number)=>{
-   const ray=rayAt(x,y);if(Math.abs(ray.direction.dot(axis))<.05)return null;
-   const hit=ray.intersectPlane(plane,new Vector3());if(!hit)return null;
-   const d=hit.sub(origin);if(d.length()<lever*.02)return null;
-   return Math.atan2(d.dot(v),d.dot(u))*180/Math.PI;
-  };
-  if(valueAt(end.x,end.y)===null)return [];
-  const points=Array.from({length:65},(_,i)=>screen(point(i*360/64)));if(points.some(p=>!p))return [];
-  return [{key:'angle',label:'Rotate parts',color:'#387acb',...end,points:points as Point[],cyclic:360,valueAt,
-   orbit:{angle:t.angleDegrees,pointAt:degrees=>screen(point(degrees))!}}];
+  const ring=projectAngleRing(frozen,rect,origin,new Vector3(...t.axisDirection),t.angleDegrees);if(!ring)return [];
+  return [{key:'angle',label:'Rotate parts',color:'#387acb',x:ring.x,y:ring.y,points:ring.points,cyclic:360,valueAt:ring.valueAt,
+   orbit:{angle:t.angleDegrees,pointAt:ring.pointAt}}];
  }
  if(t.kind==='translate'&&request.translationAxis){
   const axis=new Vector3(...request.translationAxis);if(Math.abs(axis.length()-1)>1e-6)return [];

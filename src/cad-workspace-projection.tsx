@@ -138,7 +138,6 @@ export function buildCADWorkspaceProjection(
             id: "toggle-visibility",
             label: `${referenceVisibility[item.id] ? "Hide" : "Show"} ${item.label}`,
             icon: eyeIcon(referenceVisibility[item.id]),
-            pinned: !referenceVisibility[item.id],
           },
         ],
       };
@@ -160,7 +159,7 @@ export function buildCADWorkspaceProjection(
         tone: feature.error ? "error" : undefined,
         badge: feature.error ? "Error" : feature.detail === "Suppressed" || feature.detail === "Rolled back" ? feature.detail : sketchUnderDefined && feature.id === firstSketch?.id ? "Under-defined" : undefined,
         dimmed: feature.detail === "Suppressed" || feature.detail === "Rolled back",
-        actions:[{id:"edit-feature",label:`Edit ${feature.name}`,icon: <AetherIcon name="pencil" />},...(feature.kind === "profile" || feature.kind === "sketch" ? [{id:"sketch-visibility",label:`${partDocument.sketchPresentation?.[feature.id]?.hidden?"Show":"Hide"} ${feature.name}`,icon:eyeIcon(!partDocument.sketchPresentation?.[feature.id]?.hidden),pinned:!!partDocument.sketchPresentation?.[feature.id]?.hidden}] : []),{id:"suppress-feature",label:`${feature.detail === "Suppressed"?"Unsuppress":"Suppress"} ${feature.name}`,icon:feature.detail === "Suppressed"?"▶":"Ⅱ"},{id:"rollback-before",label:`Roll back before ${feature.name}`,icon:"↥"},...(partDocument.features.some((f) => f.id === feature.id && f.type === "profile" && f.profile.type === "projection") ? [{id:"break-link",label:`Break link of ${feature.name}`,icon:"⛓"}] : [])],
+        actions:[{id:"edit-feature",label:`Edit ${feature.name}`,icon: <AetherIcon name="pencil" />},...(feature.kind === "profile" || feature.kind === "sketch" ? [{id:"sketch-visibility",label:`${partDocument.sketchPresentation?.[feature.id]?.hidden?"Show":"Hide"} ${feature.name}`,icon:eyeIcon(!partDocument.sketchPresentation?.[feature.id]?.hidden)}] : []),{id:"suppress-feature",label:`${feature.detail === "Suppressed"?"Unsuppress":"Suppress"} ${feature.name}`,icon:feature.detail === "Suppressed"?"▶":"Ⅱ"},{id:"rollback-before",label:`Roll back before ${feature.name}`,icon:"↥"},...(partDocument.features.some((f) => f.id === feature.id && f.type === "profile" && f.profile.type === "projection") ? [{id:"break-link",label:`Break link of ${feature.name}`,icon:"⛓"}] : [])],
         icon: feature.error ? createElement("span", { className: "cad-tree-icon", title: feature.error }, treeIcon(feature.kind === "profile" || feature.kind === "sketch" ? "sketch" : feature.kind === "extrude" ? "extrude" : feature.kind === "plane" ? "plane" : "part"), createElement("span", { className: "cad-tree-icon-badge cad-tree-icon-badge--over-constrained" }, "!")) : feature.kind === "sketch" || feature.kind === "profile"
           ? sketchTreeIcon(sketchStates.get(feature.id) ?? "other")
           : treeIcon(feature.kind === "plane" ? "plane" : feature.kind === "extrude" ? "extrude" : feature.kind === "revolve" ? "revolve" : feature.kind === "mirror" ? "mirror" : feature.kind === "fillet" ? "fillet" : feature.kind === "chamfer" ? "chamfer" : "part"),
@@ -222,7 +221,7 @@ export function buildCADWorkspaceProjection(
       });
     }
     const bodies=availableBodies(renderableDocument(partDocument)!);for(const body of bodies)if(selectedPartIDs.has(body.id))selected.add(`feature/body/${body.id}`);const bodiesID=`bodies/${partDocument.documentId}`;if(!collapsedFolders.has(bodiesID))expanded.add(bodiesID);
-    bodyNodes.push({id:bodiesID,label:`Bodies (${bodies.length})`,icon:treeIcon("part"),children:bodies.map(body=>({id:`feature/body/${body.id}`,label:body.name,dimmed:!body.visible,actions:[{id:"body-visibility",label:`${body.visible?"Hide":"Show"} ${body.name}`,icon:eyeIcon(body.visible),pinned:!body.visible},{id:"body-rename",label:`Rename ${body.name}`,icon: <AetherIcon name="pencil" />}]}))});
+    bodyNodes.push({id:bodiesID,label:`Bodies (${bodies.length})`,icon:treeIcon("part"),children:bodies.map(body=>({id:`feature/body/${body.id}`,label:body.name,dimmed:!body.visible,actions:[{id:"body-visibility",label:`${body.visible?"Hide":"Show"} ${body.name}`,icon:eyeIcon(body.visible)},{id:"body-rename",label:`Rename ${body.name}`,icon: <AetherIcon name="pencil" />}]}))});
   }
 
   const sources = assembly ? assemblySourceFeatures(assembly, collapsedFolders) : null;
@@ -250,7 +249,6 @@ export function buildCADWorkspaceProjection(
               id: "toggle-visibility",
               label: `${part.visible ? "Hide" : "Show"} ${part.name}`,
               icon: eyeIcon(part.visible),
-              pinned: !part.visible,
             },
           ],
         };

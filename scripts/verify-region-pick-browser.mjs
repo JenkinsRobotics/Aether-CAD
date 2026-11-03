@@ -76,6 +76,26 @@ try {
   await apply('Extrude');
   await featureRow(/Extrude/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '2-extruded.png') });
+  // Bodies hide and show from the Parts list (Jonathan, 2026-11-02): the eye shows on hover,
+  // hides the body in the viewport, and stays pinned on the row until it shows the body again.
+  const partRow = page.locator('.cad-parts-list').getByRole('treeitem').first();
+  await partRow.waitFor({ timeout: 10000 });
+  await partRow.hover();
+  await expect(partRow.getByRole('button', { name: /^Hide / })).toBeVisible({ timeout: 5000 });
+  await page.screenshot({ path: join(evidence, '2a-part-hover-eye.png') });
+  await partRow.getByRole('button', { name: /^Hide / }).click();
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(800);
+  assert.deepEqual(await page.evaluate(() => window.__aetherPartVisibility?.()), [false], 'the body is hidden in the viewport');
+  await expect(partRow).toHaveClass(/aui-tree-row--dimmed/, { timeout: 10000 }); // hidden rows grey out; the eye returns on hover
+  await page.screenshot({ path: join(evidence, '2b-part-hidden.png') });
+  await partRow.hover();
+  await expect(partRow.getByRole('button', { name: /^Show / })).toBeVisible({ timeout: 10000 });
+  await partRow.getByRole('button', { name: /^Show / }).click();
+  await page.mouse.move(5, 5);
+  await partRow.hover();
+  await expect(partRow.getByRole('button', { name: /^Hide / })).toBeVisible({ timeout: 10000 });
+  assert.deepEqual(await page.evaluate(() => window.__aetherPartVisibility?.()), [true], 'the body shows again');
   // The consumed sketch is hidden and its menu offers Show.
   await featureRow(/Sketch 1/).click({ button: 'right' });
   await expect(page.getByRole('menuitem', { name: /^Show/ }).first()).toBeVisible({ timeout: 10000 });

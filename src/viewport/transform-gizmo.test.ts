@@ -1,6 +1,6 @@
 import{expect,it}from'vitest';
 import{OrthographicCamera,PerspectiveCamera,Vector3}from'three/webgpu';
-import{projectTransformGizmo}from'./transform-gizmo';
+import{projectAngleRing,projectTransformGizmo}from'./transform-gizmo';
 const rect={left:100,top:50,width:900,height:700},frame={centerMillimeters:[8,2,4] as [number,number,number],radiusMillimeters:15};
 function camera(kind:string){const c=kind==='perspective'?new PerspectiveCamera(42,900/700,.1,10000):new OrthographicCamera(-80,80,60,-60,.1,10000);c.position.set(100,-130,160);c.up.set(0,0,1);c.lookAt(0,0,0);c.updateMatrixWorld(true);return c;}
 function screen(c:ReturnType<typeof camera>,v:Vector3){const p=v.clone().project(c);return{x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2};}
@@ -39,4 +39,17 @@ it.each(['perspective','orthographic'])('recovers signed distance along a select
  const c=camera(kind),axis=new Vector3(.6,.8,0),translation=axis.clone().multiplyScalar(-12),origin=new Vector3(...frame.centerMillimeters).add(translation);
  const [h]=projectTransformGizmo(c,rect,{frame,transform:{kind:'translate',translationMillimeters:translation.toArray()},uniform:true,translationAxis:axis.toArray()});
  expect(h.key).toBe('distance');for(const delta of[-30,5,17]){const p=screen(c,origin.clone().addScaledVector(axis,delta));expect(h.valueAt(p.x,p.y)).toBeCloseTo(delta,8);}
+});
+
+it('rings through a start point: zero at the start, the arc swept to the angle, the arrow tangent to it',()=>{
+ const c=camera('orthographic');c.position.set(0,0,100);c.up.set(0,1,0);c.lookAt(0,0,0);c.updateMatrixWorld(true);
+ const ring=projectAngleRing(c,rect,new Vector3(0,0,0),new Vector3(0,0,1),90,new Vector3(20,0,5))!;
+ expect(ring).toBeTruthy();
+ const start=screen(c,new Vector3(20,0,0)),end=screen(c,new Vector3(0,20,0));
+ expect(ring.valueAt(start.x,start.y)).toBeCloseTo(0,7);expect(ring.valueAt(end.x,end.y)).toBeCloseTo(90,7);
+ expect(ring.x).toBeCloseTo(end.x,6);expect(ring.y).toBeCloseTo(end.y,6);
+ expect(ring.arc[0].x).toBeCloseTo(start.x,6);expect(ring.arc.at(-1)!.y).toBeCloseTo(end.y,6);
+ expect(ring.points.length).toBe(65);
+ // At 90° the sweep travels towards −x on screen (counter-clockwise seen from +z).
+ expect(Math.abs(Math.abs(ring.tangent)-180)).toBeLessThan(3);
 });

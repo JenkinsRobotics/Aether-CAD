@@ -951,3 +951,31 @@ it("flips a sketch plane: the normal and default extrude direction reverse, the 
   expect(bounds(plate("y"))).toEqual([-10, 0, -4, 0, 5, 0]);
 }, 30000);
 
+
+it('revolves up to a vertex, a part, a face or the next part, on either side', async () => {
+ const {createEmptyPartDocument}=await import('../document/part-document');
+ const doc=createEmptyPartDocument('Revolve limits');
+ // A block at y ≥ 8 across the ring's path, and a ring profile r ∈ [10, 20], z ∈ [0, 10] about Z.
+ doc.features.push(
+  {id:'bs',type:'profile',name:'Block sketch',plane:'XY',offsetMillimeters:-5,suppressed:false,profile:{type:'drawing',contours:[{type:'path',id:'b',start:[-5,8],segments:[{type:'line',end:[30,8]},{type:'line',end:[30,40]},{type:'line',end:[-5,40]},{type:'line',end:[-5,8]}]}]}},
+  {id:'block',type:'extrude',name:'Block',profileFeatureId:'bs',distanceMillimeters:20,operation:'new',suppressed:false},
+  {id:'pt',type:'profile',name:'Stop points',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{type:'circle',id:'up',center:[0,15],radius:1},{type:'circle',id:'down',center:[0,-15],radius:1}]}},
+  {id:'rs',type:'profile',name:'Ring sketch',plane:'XZ',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{type:'path',id:'r',start:[10,0],segments:[{type:'line',end:[20,0]},{type:'line',end:[20,10]},{type:'line',end:[10,10]},{type:'line',end:[10,0]}]}]}});
+ const bodies=(d:typeof doc)=>{const out:Record<string,number>={};evaluatePartDocument(d,{withBodies:b=>{for(const [id,s] of b)out[id]=measureVolume(s as Shape3D);}});return out;};
+ const blockId=Object.keys(bodies(doc))[0];
+ const ring=(end:Record<string,unknown>)=>{const d={...doc,features:[...doc.features,{id:'rev',type:'revolve' as const,name:'Ring',suppressed:false,profileFeatureId:'rs',axis:'Z' as const,angleDegrees:90,operation:'new' as const,...end}]};const v=bodies(d);return v[Object.keys(v).find(id=>id!==blockId)!];};
+ // The ring meets the block's y = 8 face where r·sin θ = 8: volume = 10 ∫₁₀²⁰ r·asin(8/r) dr (Simpson).
+ let integral=0;const n=200,h=10/n;for(let i=0;i<=n;i++){const r=10+i*h;integral+=(i===0||i===n?1:i%2?4:2)*r*Math.asin(8/r);}integral*=h/3;
+ const toBlock=10*integral;
+ expect(ring({endType:'up-to-part',endPartId:blockId})).toBeCloseTo(toBlock,1);
+ expect(ring({endType:'up-to-next'})).toBeCloseTo(toBlock,1);
+ expect(ring({endType:'up-to-face',endReference:{sourceFeatureId:'block',bodyId:blockId,label:'Near face',normal:[0,-1,0]}})).toBeCloseTo(toBlock,1);
+ // A quarter turn to the point at (0, 15); the opposite side turns the other way to (0, −15).
+ const quarter=Math.PI*(400-100)*10/4;
+ expect(ring({endType:'up-to-vertex',endPointReference:{kind:'sketch-point',sourceFeatureId:'pt',contourId:'up',point:'center',label:'Up'}})).toBeCloseTo(quarter,1);
+ expect(ring({endType:'up-to-part',endPartId:blockId,secondEnd:{endType:'up-to-vertex',endPointReference:{kind:'sketch-point',sourceFeatureId:'pt',contourId:'down',point:'center',label:'Down'}}})).toBeCloseTo(toBlock+quarter,1);
+ expect(ring({angleDegrees:45,secondEnd:{endType:'blind',angleDegrees:45}})).toBeCloseTo(quarter,1);
+ // Nothing to meet: the far face of the block is behind the profile when reversed.
+ expect(()=>ring({endType:'up-to-face',endReference:{sourceFeatureId:'block',bodyId:blockId,label:'Far face',normal:[0,1,0]}})).toThrow(/before the selected face/);
+ expect(()=>ring({endType:'up-to-vertex',endPointReference:{kind:'sketch-point',sourceFeatureId:'pt',contourId:'up',point:'center',label:'Up'},reversed:true,angleDegrees:90})).not.toThrow();
+},60000);

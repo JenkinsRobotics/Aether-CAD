@@ -1,4 +1,6 @@
 import { validateDistanceSideMetadata } from "../sketch/solver/distance-side";
+import { validateExtrusionFaceReference, type ExtrusionFaceReference } from "./extrusion-face-reference";
+import { validateExtrusionPointReference, type ExtrusionPointReference } from "./extrusion-point-reference";
 import {validateTransform,validateTransformVectorReference,type TransformFeature,type TransformVectorReference} from './part-transform';
 export type {TransformFeature} from './part-transform';
 import {validateOffsetFace,type OffsetFaceFeature} from './offset-face';
@@ -88,6 +90,15 @@ export interface ProfileFeature {
       }
     | { type: "polygon"; pointsMillimeters: [number, number][] };
 }
+export const revolveEndTypes = ["blind", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"] as const;
+export type RevolveEndType = typeof revolveEndTypes[number];
+export interface RevolveEnd {
+  endType: RevolveEndType;
+  angleDegrees?: number;
+  endReference?: ExtrusionFaceReference;
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
+}
 export interface RevolveFeature {
   id: string;
   type: "revolve";
@@ -99,9 +110,17 @@ export interface RevolveFeature {
   /** Replaces `axis` (through the origin) when present: a line, a picked straight edge, or a sketch line. */
   axisReference?: {kind:'vector';origin:[number,number,number];direction:[number,number,number]} | {kind:'feature';featureId:string} | TransformVectorReference;
   angleDegrees: number;
+  /** Where the sweep stops (Onshape's end types); Blind sweeps `angleDegrees`. */
+  endType?: RevolveEndType;
+  endReference?: ExtrusionFaceReference;
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
   symmetric?: boolean;
   reversed?: boolean;
+  /** Blind opposite sweep of older documents; `secondEnd` replaces it. */
   secondAngleDegrees?: number;
+  /** The opposite side with its own end type. */
+  secondEnd?: RevolveEnd;
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
@@ -296,6 +315,23 @@ export function validateSolidFeature(
     const second = feature.secondAngleDegrees ?? 0;
     if (!Number.isFinite(second) || second < 0 || feature.angleDegrees + second > 360 || (feature.symmetric && second > 0))
       throw new Error("Revolve angles must total at most 360 degrees; symmetric cannot have a second angle.");
+    const ends: { end: RevolveEnd; label: string }[] = [{ end: { ...feature, endType: feature.endType ?? "blind" }, label: "Revolve" }];
+    if (feature.secondEnd !== undefined) {
+      if (!feature.secondEnd || typeof feature.secondEnd !== "object" || Array.isArray(feature.secondEnd) || second > 0) throw new Error("Invalid revolve second end.");
+      ends.push({ end: feature.secondEnd, label: "Second end" });
+      if (feature.secondEnd.endType === "blind") positive(feature.secondEnd.angleDegrees ?? NaN, "Second end angle");
+      if (feature.secondEnd.endType === "blind" && (feature.endType ?? "blind") === "blind" && feature.angleDegrees + (feature.secondEnd.angleDegrees ?? 0) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
+    }
+    if (feature.symmetric && (feature.secondEnd || (feature.endType ?? "blind") !== "blind")) throw new Error("Symmetric revolve needs a Blind end and no second end.");
+    for (const { end, label } of ends) {
+      if (!revolveEndTypes.includes(end.endType)) throw new Error(`Invalid ${label.toLowerCase()} type.`);
+      if (end.endType === "up-to-part" && (typeof end.endPartId !== "string" || !end.endPartId.trim() || end.endPartId.length > 256)) throw new Error(`${label}: Up to part needs a stable stopping part identity.`);
+      if (end.endPartId !== undefined && end.endType !== "up-to-part") throw new Error(`${label}: a stopping part requires Up to part.`);
+      if (end.endType === "up-to-vertex") validateExtrusionPointReference(end.endPointReference, earlier, missingReference);
+      if (end.endPointReference !== undefined && end.endType !== "up-to-vertex") throw new Error(`${label}: a stopping point requires Up to vertex.`);
+      if (end.endType === "up-to-face") validateExtrusionFaceReference(end.endReference, earlier, missingReference);
+      if (end.endReference !== undefined && end.endType !== "up-to-face") throw new Error(`${label}: a stopping face requires Up to face.`);
+    }
     if (
       feature.angleDegrees > 360 ||
       !["X", "Y", "Z"].includes(feature.axis) ||

@@ -3,6 +3,9 @@ import { sketchRegions, rollbackPosition } from "@aether/core/document";
 import { cadWorkspace } from "../cad-workspace-store";
 import { transformEdgePicker } from "./transform-edge-picker";
 import { sketchDirectionLines } from "../modeling/extrude-direction-reference";
+import { extrusionPointPicker, serializeExtrusionPoint } from "./extrude-point-picker";
+import { extrusionPartPicker } from "./extrude-part-picker";
+import { extrusionFacePicker } from "./planar-face-picker";
 /** Revolve feature editor — window layout, controls, and serialization.
  *  Layout mirrors `core/ui/gallery/features/revolve.ts`: body/boolean tabs, a
  *  regions box, an axis box, then the Full-revolve toggle. */
@@ -29,6 +32,8 @@ function setDegrees(control: Controls[string], value: number) {
 const operationValues = ["new", "add", "cut"] as const;
 
 const principalAxes = ["X", "Y", "Z"] as const;
+const endTypes = ["blind", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"] as const;
+const endLabels = { Blind: "blind", "Up to next": "up-to-next", "Up to face": "up-to-face", "Up to part": "up-to-part", "Up to vertex": "up-to-vertex" } as const;
 const lineKey = (line: { sourceFeatureId: string; contourId?: string; segmentId?: string }) =>
   `line:${JSON.stringify({ kind: "sketch-line", sourceFeatureId: line.sourceFeatureId, contourId: line.contourId, segmentId: line.segmentId })}`;
 
@@ -55,12 +60,20 @@ export const revolveEditor: FeatureEditor = {
       // The box reads "Revolve axis"; the list inside it has its own accessible name for the suite and agents.
       axis: field("Revolve axis choice", axisValue, [axisValue, "edge", ...principalAxes]),
       axisEdge: field("Axis edge", JSON.stringify(saved?.kind === "solid-edge" ? saved : "")),
-      endType: field("End type", "blind", ["blind"]),
+      // Each end stops Blind at its angle or at the next part, a face, a part or a vertex (Onshape).
+      endType: field("End condition", feature?.endType ?? "blind", [...endTypes]),
+      endPoint: field("Stopping point", feature?.endPointReference ? JSON.stringify(feature.endPointReference) : ""),
+      endPart: field("Stopping part identity", feature?.endPartId ?? ""),
+      endReference: field("Stopping face", feature?.endReference ? JSON.stringify(feature.endReference) : ""),
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 360)),
       symmetric: field("Symmetric", String(feature?.symmetric ?? false), ["false", "true"]),
       reversed: field("Reverse direction", String(feature?.reversed ?? false), ["false", "true"]),
-      secondEnd: field("Second end position", String((feature?.secondAngleDegrees ?? 0) > 0), ["false", "true"]),
-      second: field("Opposite angle (degrees)", String(feature?.secondAngleDegrees ?? 0)),
+      secondEnd: field("Second end position", String(Boolean(feature?.secondEnd || feature?.secondAngleDegrees)), ["false", "true"]),
+      secondEndType: field("Opposite end condition", feature?.secondEnd?.endType ?? "blind", [...endTypes]),
+      secondPoint: field("Opposite stopping point", feature?.secondEnd?.endPointReference ? JSON.stringify(feature.secondEnd.endPointReference) : ""),
+      secondPart: field("Opposite stopping part identity", feature?.secondEnd?.endPartId ?? ""),
+      secondReference: field("Opposite stopping face", feature?.secondEnd?.endReference ? JSON.stringify(feature.secondEnd.endReference) : ""),
+      second: field("Opposite angle (degrees)", String(feature?.secondEnd?.angleDegrees ?? feature?.secondAngleDegrees ?? 90)),
     };
   },
 
@@ -134,42 +147,55 @@ export const revolveEditor: FeatureEditor = {
     full.setAttribute("aria-label", "Full revolve");
     win.row("Full revolve", full);
 
-    // Not a full revolve: Onshape's end type, angle with a flip, symmetric and a second end.
+    // Not a full revolve: each end has Onshape's end type with its angle or its stopping
+    // face, part or point; the first end also flips, and Blind ends can be symmetric.
     const options = document.createElement("div"); options.className = "cad-revolve-options"; win.body.append(options);
-    controls.endType.closest("label")?.remove(); controls.endType.setAttribute("form", form.id);
-    for (const option of (controls.endType as HTMLSelectElement).options) option.textContent = "Blind";
-    options.append(win.row("End type", controls.endType));
+    const hide = (control: Controls[string]) => { control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control); };
+    const layoutEnd = (into: HTMLElement, type: Controls[string], angleRow: HTMLElement, point: Controls[string], part: Controls[string], face: Controls[string], opposite: boolean, beside?: HTMLElement) => {
+      hide(type);
+      const prefix = opposite ? "Opposite " : "", label = (text: string) => prefix + (opposite ? text.toLowerCase() : text);
+      const picker = win.picker(Object.keys(endLabels), { ariaLabel: label("End type"), onChange: (value) => { type.value = endLabels[value as keyof typeof endLabels]; sync(); type.dispatchEvent(new Event("change")); } });
+      picker.setValue(Object.keys(endLabels).find((key) => endLabels[key as keyof typeof endLabels] === type.value) ?? "Blind");
+      const pointPicker = extrusionPointPicker(context, point, label("Stopping point"), "Stops at the plane through this point and the axis. Changed or ambiguous vertices require reselection.");
+      const partPicker = extrusionPartPicker(context, part, label("Stopping part"));
+      const facePicker = extrusionFacePicker(context, face, label("Stopping face"));
+      // The end type and, for the first end, the flip sit on one row like Onshape's.
+      const head = document.createElement("div"); head.className = "cad-revolve-end"; head.append(picker.element, ...(beside ? [beside] : []));
+      into.append(head, angleRow, facePicker.element, partPicker.element, pointPicker.element);
+      return (enabled: boolean) => {
+        const mode = type.value;
+        angleRow.hidden = mode !== "blind";
+        pointPicker.setEnabled(enabled && mode === "up-to-vertex"); partPicker.setEnabled(enabled && mode === "up-to-part"); facePicker.setEnabled(enabled && mode === "up-to-face");
+      };
+    };
     controls.angle.closest("label")?.remove(); controls.angle.setAttribute("form", form.id);
-    const angleRow = win.row("Revolve angle", controls.angle); options.append(angleRow);
+    const angleRow = win.row("Revolve angle", controls.angle);
     const flip = document.createElement("button"); flip.type = "button"; flip.className = "aui-icon-button"; flip.textContent = "⇄";
     flip.setAttribute("aria-label", "Flip revolve direction"); flip.title = "Flip direction";
-    angleRow.append(flip);
-    controls.reversed.closest("label")?.remove(); controls.reversed.hidden = true; controls.reversed.setAttribute("form", form.id); form.append(controls.reversed);
+    hide(controls.reversed);
     const paintFlip = () => flip.setAttribute("aria-pressed", String(controls.reversed.value === "true"));
     flip.onclick = () => { controls.reversed.value = controls.reversed.value === "true" ? "false" : "true"; paintFlip(); controls.reversed.dispatchEvent(new Event("change")); };
     paintFlip();
-    const checkRow = (key: string, label: string) => {
-      const control = controls[key]; control.closest("label")?.remove();
-      control.hidden = true; control.setAttribute("form", form.id); form.append(control);
-      const check = document.createElement("input"); check.type = "checkbox";
-      check.setAttribute("aria-label", label); check.checked = control.value === "true";
-      const row = win.row(label, check); options.append(row);
-      check.onchange = () => { control.value = String(check.checked); sync(); control.dispatchEvent(new Event("change")); };
-      return check;
-    };
-    checkRow("symmetric", "Symmetric");
-    const secondEnd = checkRow("secondEnd", "Second end position");
+    const syncFirst = layoutEnd(options, controls.endType, angleRow, controls.endPoint, controls.endPart, controls.endReference, false, flip);
+    hide(controls.symmetric);
+    const symmetric = document.createElement("input"); symmetric.type = "checkbox"; symmetric.setAttribute("aria-label", "Symmetric"); symmetric.checked = controls.symmetric.value === "true";
+    const symmetricRow = win.row("Symmetric", symmetric); options.append(symmetricRow);
+    symmetric.onchange = () => { controls.symmetric.value = String(symmetric.checked); sync(); controls.symmetric.dispatchEvent(new Event("change")); };
+    hide(controls.secondEnd);
+    const secondSection = win.subsection("Second end position", { kind: "checkbox", open: controls.secondEnd.value === "true", onToggle: (value) => { controls.secondEnd.value = String(value); sync(); controls.secondEnd.dispatchEvent(new Event("change")); } });
+    options.append(secondSection.element);
     controls.second.closest("label")?.remove(); controls.second.setAttribute("form", form.id);
-    const secondRow = win.row("Second end angle", controls.second); options.append(secondRow);
-    full.checked = Math.abs(degrees(controls.angle) - 360) < 1e-9;
+    const syncSecond = layoutEnd(secondSection.body, controls.secondEndType, win.row("Opposite angle", controls.second), controls.secondPoint, controls.secondPart, controls.secondReference, true);
+    full.checked = controls.endType.value === "blind" && Math.abs(degrees(controls.angle) - 360) < 1e-9;
     function sync() {
       options.hidden = full.checked;
-      secondRow.hidden = controls.symmetric.value === "true" || !secondEnd.checked;
-      secondEnd.disabled = controls.symmetric.value === "true";
+      const blind = controls.endType.value === "blind", second = controls.secondEnd.value === "true" && controls.symmetric.value !== "true";
+      symmetricRow.hidden = !blind || controls.secondEnd.value === "true";
+      secondSection.element.hidden = controls.symmetric.value === "true";
+      syncFirst(!full.checked); syncSecond(!full.checked && second);
     }
-    controls.symmetric.addEventListener("change", sync);
     full.onchange = () => {
-      if (full.checked) { setDegrees(controls.angle, 360); setDegrees(controls.second, 0); }
+      if (full.checked) { setDegrees(controls.angle, 360); controls.endType.value = "blind"; }
       else if (degrees(controls.angle) === 360) setDegrees(controls.angle, 90);
       sync(); controls.angle.dispatchEvent(new Event("change"));
     };
@@ -177,10 +203,21 @@ export const revolveEditor: FeatureEditor = {
   },
 
   validate(controls, context) {
-    const angle = degrees(controls.angle);
-    const second = controls.symmetric.value === "true" || controls.secondEnd.value !== "true" ? 0 : degrees(controls.second);
-    if (!controls.angle.value.trim() || !Number.isFinite(angle) || angle <= 0 || !Number.isFinite(second) || second < 0 || angle + second > 360)
-      return "Enter positive revolve angles totaling at most 360 degrees.";
+    const end = (type: string, angle: number, point: string, part: string, face: string, label: string) => {
+      if (type === "blind" && (!Number.isFinite(angle) || angle <= 0 || angle > 360)) return `Enter a positive ${label}angle of at most 360 degrees.`;
+      if (type === "up-to-vertex" && !point) return `Select the ${label}stopping point.`;
+      if (type === "up-to-part" && !part) return `Select the ${label}stopping part.`;
+      if (type === "up-to-face" && !face) return `Select the ${label}stopping face.`;
+      return null;
+    };
+    const first = end(controls.endType.value, degrees(controls.angle), controls.endPoint.value, controls.endPart.value, controls.endReference.value, "");
+    if (first) return first;
+    const hasSecond = controls.secondEnd.value === "true" && controls.symmetric.value !== "true";
+    if (hasSecond) {
+      const second = end(controls.secondEndType.value, degrees(controls.second), controls.secondPoint.value, controls.secondPart.value, controls.secondReference.value, "opposite ");
+      if (second) return second;
+      if (controls.endType.value === "blind" && controls.secondEndType.value === "blind" && degrees(controls.angle) + degrees(controls.second) > 360) return "Revolve angles must total at most 360 degrees.";
+    }
     const sketch = context.doc.features.find(feature => feature.id === controls.source.value);
     if (sketch && (!sketchRegions(sketch, false, context.doc.features).length || !controls.region.value)) return "Choose a closed sketch region.";
     if (controls.axis.value === "edge" && !controls.axisEdge.value) return "Pick a straight edge as the revolve axis.";
@@ -189,10 +226,16 @@ export const revolveEditor: FeatureEditor = {
   },
 
   serialize(values, context) {
-    const second = values.symmetric === "true" || values.secondEnd !== "true" ? 0 : Number(values.second);
     const axisReference = values.axis.startsWith("line:") ? JSON.parse(values.axis.slice(5))
       : values.axis.startsWith("axis:") ? { kind: "feature", featureId: values.axis.slice(5) }
       : values.axis === "edge" && values.axisEdge ? JSON.parse(values.axisEdge) : undefined;
+    const stop = (type: string, point: string, part: string, face: string) => ({
+      ...(type === "up-to-vertex" ? { endPointReference: serializeExtrusionPoint(point, context) } : {}),
+      ...(type === "up-to-part" ? { endPartId: part } : {}),
+      ...(type === "up-to-face" ? { endReference: JSON.parse(face) } : {}),
+    });
+    const blind = values.endType === "blind", full = blind && Number(values.angle) >= 360;
+    const symmetric = blind && !full && values.symmetric === "true";
     return {
       ...(axisReference ? { axisReference } : {}),
       profileFeatureId: values.source,
@@ -200,9 +243,14 @@ export const revolveEditor: FeatureEditor = {
       operation: values.operation,
       axis: (principalAxes as readonly string[]).includes(values.axis) ? values.axis : "Z",
       angleDegrees: Number(values.angle),
-      ...(Number(values.angle) < 360 && values.symmetric === "true" ? {symmetric:true} : {}),
-      ...(Number(values.angle) < 360 && values.reversed === "true" ? {reversed:true} : {}),
-      ...(Number(values.angle) < 360 && second > 0 ? {secondAngleDegrees:second} : {}),
+      ...(blind ? {} : { endType: values.endType, ...stop(values.endType, values.endPoint, values.endPart, values.endReference) }),
+      ...(symmetric ? { symmetric: true } : {}),
+      ...(!full && values.reversed === "true" ? { reversed: true } : {}),
+      ...(!full && !symmetric && values.secondEnd === "true" ? { secondEnd: {
+        endType: values.secondEndType,
+        ...(values.secondEndType === "blind" ? { angleDegrees: Number(values.second) } : {}),
+        ...stop(values.secondEndType, values.secondPoint, values.secondPart, values.secondReference),
+      } } : {}),
     };
   },
 };

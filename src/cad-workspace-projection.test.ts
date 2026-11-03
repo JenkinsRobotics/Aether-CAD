@@ -89,9 +89,12 @@ describe("buildCADWorkspaceProjection", () => {
     expect(sketchRow?.tone).toBeUndefined();
     const hiddenPlane = projection.itemNodes[0].children?.find((node) => node.id === "reference/front-plane");
     expect(hiddenPlane?.badge).toBeUndefined();
-    expect(hiddenPlane?.actions?.[0]).toMatchObject({ id: "toggle-visibility", pinned: true });
+    // Hidden rows grey out; the eye is a hover control, never pinned (Onshape).
+    expect(hiddenPlane?.actions?.[0]).toMatchObject({ id: "toggle-visibility" });
+    expect(hiddenPlane?.actions?.[0].pinned).toBeUndefined();
+    expect(hiddenPlane?.dimmed).toBe(true);
     const visiblePlane = projection.itemNodes[0].children?.find((node) => node.id === "reference/top-plane");
-    expect(visiblePlane?.actions?.[0].pinned).toBe(false);
+    expect(visiblePlane?.actions?.[0].pinned).toBeUndefined();
     expect(projection.historyItems.map((item) => item.group)).toContain("Assembly");
     expect(projection.rollbackIndex).toBe(2);
     expect(projection.connectorItems[0].label).toBe("Connector 1");

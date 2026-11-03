@@ -9,9 +9,9 @@
       "url": "https://github.com/JenkinsRobotics/Aether-CAD/releases/download/v0.1.0-alpha.1/415e31e86ec1-aether-sketch-0.2.0-alpha.4.tgz"
     },
     {
-      "path": "vendor/aether-ui-0.2.0-alpha.268.tgz",
-      "sha256": "fe5cda1586dc39842d723257ce81ad5a373eda51dfb6143b33dd9b3f4b2fba16",
-      "bytes": 530232,
+      "path": "vendor/aether-ui-0.2.0-alpha.270.tgz",
+      "sha256": "8ba75a62ab37dfb28759da369cafe05c8349d82cfc68645920afab36d6e09919",
+      "bytes": 530235,
       "url": null
     },
     {

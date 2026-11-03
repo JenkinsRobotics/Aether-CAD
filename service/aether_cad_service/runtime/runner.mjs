@@ -6154,6 +6154,7 @@ function validateImportSTEP(feature3) {
 function constructionPlaneFrame(plane2, earlier = []) {
   return resolvePlaneFrame(plane2, earlier);
 }
+const revolveEndTypes = ["blind", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"];
 const isShellFaceReference = (face) => "sourceFeatureId" in face;
 function validateSolidFeature(feature3, earlier, missingReference = () => false) {
   if (feature3.type === "transform") return validateTransform(feature3, earlier, missingReference);
@@ -6284,6 +6285,23 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     const second = feature3.secondAngleDegrees ?? 0;
     if (!Number.isFinite(second) || second < 0 || feature3.angleDegrees + second > 360 || feature3.symmetric && second > 0)
       throw new Error("Revolve angles must total at most 360 degrees; symmetric cannot have a second angle.");
+    const ends = [{ end: { ...feature3, endType: feature3.endType ?? "blind" }, label: "Revolve" }];
+    if (feature3.secondEnd !== void 0) {
+      if (!feature3.secondEnd || typeof feature3.secondEnd !== "object" || Array.isArray(feature3.secondEnd) || second > 0) throw new Error("Invalid revolve second end.");
+      ends.push({ end: feature3.secondEnd, label: "Second end" });
+      if (feature3.secondEnd.endType === "blind") positive(feature3.secondEnd.angleDegrees ?? NaN, "Second end angle");
+      if (feature3.secondEnd.endType === "blind" && (feature3.endType ?? "blind") === "blind" && feature3.angleDegrees + (feature3.secondEnd.angleDegrees ?? 0) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
+    }
+    if (feature3.symmetric && (feature3.secondEnd || (feature3.endType ?? "blind") !== "blind")) throw new Error("Symmetric revolve needs a Blind end and no second end.");
+    for (const { end, label } of ends) {
+      if (!revolveEndTypes.includes(end.endType)) throw new Error(`Invalid ${label.toLowerCase()} type.`);
+      if (end.endType === "up-to-part" && (typeof end.endPartId !== "string" || !end.endPartId.trim() || end.endPartId.length > 256)) throw new Error(`${label}: Up to part needs a stable stopping part identity.`);
+      if (end.endPartId !== void 0 && end.endType !== "up-to-part") throw new Error(`${label}: a stopping part requires Up to part.`);
+      if (end.endType === "up-to-vertex") validateExtrusionPointReference(end.endPointReference, earlier, missingReference);
+      if (end.endPointReference !== void 0 && end.endType !== "up-to-vertex") throw new Error(`${label}: a stopping point requires Up to vertex.`);
+      if (end.endType === "up-to-face") validateExtrusionFaceReference(end.endReference, earlier, missingReference);
+      if (end.endReference !== void 0 && end.endType !== "up-to-face") throw new Error(`${label}: a stopping face requires Up to face.`);
+    }
     if (feature3.angleDegrees > 360 || !["X", "Y", "Z"].includes(feature3.axis) || !["new", "add", "cut"].includes(feature3.operation))
       throw new Error("Invalid revolve settings.");
   } else if (feature3.type === "sweep") {
@@ -8095,9 +8113,10 @@ function prepareCommand(command, content, args) {
       if (feature3.type !== "revolve" || feature3.suppressed) throw Error("Select an unsuppressed Revolve feature.");
       if (typeof args.angle_deg !== "number" || !Number.isFinite(args.angle_deg) || typeof args.second_angle_deg !== "number" || !Number.isFinite(args.second_angle_deg) || typeof args.symmetric !== "boolean" || typeof args.reversed !== "boolean")
         throw Error("Specify the angle, opposite angle, symmetric and reverse settings.");
-      if (feature3.angleDegrees !== args.angle_deg || (feature3.secondAngleDegrees ?? 0) !== args.second_angle_deg || (feature3.symmetric ?? false) !== args.symmetric || (feature3.reversed ?? false) !== args.reversed) {
+      if (feature3.angleDegrees !== args.angle_deg || (feature3.secondAngleDegrees ?? feature3.secondEnd?.angleDegrees ?? 0) !== args.second_angle_deg || feature3.secondEnd?.endType || (feature3.symmetric ?? false) !== args.symmetric || (feature3.reversed ?? false) !== args.reversed) {
         const updated = { ...feature3, angleDegrees: args.angle_deg };
         delete updated.secondAngleDegrees;
+        delete updated.secondEnd;
         delete updated.symmetric;
         delete updated.reversed;
         if (args.second_angle_deg) updated.secondAngleDegrees = args.second_angle_deg;
@@ -13285,18 +13304,24 @@ export type PierceContext = Record<string, { source: SketchPierceReference; poin
   /** Replaces \`axis\` (through the origin) when present: a line, a picked straight edge, or a sketch line. */
   axisReference?: {kind:'vector';origin:[number,number,number];direction:[number,number,number]} | {kind:'feature';featureId:string} | TransformVectorReference;
   angleDegrees: number;
+  /** Where the sweep stops (Onshape's end types); Blind sweeps \`angleDegrees\`. */
+  endType?: RevolveEndType;
+  endReference?: ExtrusionFaceReference;
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
   symmetric?: boolean;
   reversed?: boolean;
+  /** Blind opposite sweep of older documents; \`secondEnd\` replaces it. */
   secondAngleDegrees?: number;
+  /** The opposite side with its own end type. */
+  secondEnd?: RevolveEnd;
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
   suppressed: boolean;
 }
 
-export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};
-
-export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }
+export type ExtrusionFaceReference=SolidFaceReference;
 
 export type ExtrusionPointReference = {
   kind: 'sketch-point'; sourceFeatureId: string; contourId: string;
@@ -13305,6 +13330,32 @@ export type ExtrusionPointReference = {
   kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;
   anchor: SolidVertexAnchor; label: string;
 };
+
+export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};
+
+export type RevolveEndType = typeof revolveEndTypes[number];
+
+export interface RevolveEnd {
+  endType: RevolveEndType;
+  angleDegrees?: number;
+  endReference?: ExtrusionFaceReference;
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
+}
+
+export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export interface SolidVertexAnchor {
+  positionMillimeters: [number, number, number];
+  signature: string;
+  /** Refusal guard against symmetric corner permutations, not a selector. */
+  incidence: string;
+  shapeFingerprint: string;
+}
 
 export interface SketchLineDirectionReference {
   kind: "sketch-line";
@@ -42400,7 +42451,6 @@ function evaluatePartDocument(document2, options = {}) {
             };
             const revolve = () => {
               if (feature3.type !== "revolve") throw new Error("not a revolve");
-              const sketch2 = sketchOf(requireDrawing());
               let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin2 = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
                 origin2 = [...feature3.axisReference.origin];
@@ -42411,19 +42461,71 @@ function evaluatePartDocument(document2, options = {}) {
                 origin2 = t2.axisOriginMillimeters;
                 axis = t2.axisDirection;
               }
-              if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$6(sub$5(c2, origin2), axis);
-                publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$4(origin2, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
-              }
-              const angle2 = feature3.angleDegrees, second = feature3.secondAngleDegrees ?? 0;
-              if (!(angle2 > 0) || second < 0 || angle2 + second > 360) throw new Error("Revolve angles must be finite, positive and total at most 360 degrees.");
-              if (feature3.symmetric && second) throw new Error("Symmetric revolve cannot also have a second angle.");
+              const primary = { endType: feature3.endType ?? "blind", angle: feature3.angleDegrees, face: feature3.endReference, partId: feature3.endPartId, point: feature3.endPointReference };
+              const second = feature3.secondEnd ? { endType: feature3.secondEnd.endType, angle: feature3.secondEnd.angleDegrees, face: feature3.secondEnd.endReference, partId: feature3.secondEnd.endPartId, point: feature3.secondEnd.endPointReference } : feature3.secondAngleDegrees ? { endType: "blind", angle: feature3.secondAngleDegrees } : void 0;
+              if (feature3.symmetric && (second || primary.endType !== "blind")) throw new Error("Symmetric revolve needs a Blind end and no second end.");
+              const blind = (end) => {
+                const a2 = end.angle ?? NaN;
+                if (!(a2 > 0) || a2 > 360) throw new Error("Revolve angles must be finite, positive and at most 360 degrees.");
+                return a2;
+              };
+              if (primary.endType === "blind" && second?.endType === "blind" && blind(primary) + blind(second) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
               const sign = feature3.reversed ? -1 : 1;
-              let shape = sketch2.revolve(axis, { origin: origin2, angle: sign * angle2 });
-              if (isShape3D(shape) && measureVolume(shape) < 1e-6) throw new Error("Revolve profile crosses its axis. Keep the profile on one side of the axis.");
-              if (feature3.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * angle2 / 2, origin2, axis);
+              if (feature3.id === previewId) {
+                const c2 = sketchCentroid(feature3.profileFeatureId), foot = add$4(origin2, scale$1(axis, dot$6(sub$5(c2, origin2), axis)));
+                const ring = (parameter2, side, label) => publish(feature3, { parameter: parameter2, kind: "angular", originMillimeters: foot, direction: scale$1(axis, side), startMillimeters: c2, label });
+                if (primary.endType === "blind") ring("angle", sign, "Revolve angle");
+                if (second?.endType === "blind") ring("second", -sign, "Opposite angle");
+              }
+              const turn = (angle2) => {
+                const shape2 = sketchOf(requireDrawing()).revolve(axis, { origin: origin2, angle: angle2 });
+                if (isShape3D(shape2) && measureVolume(shape2) < 1e-6) throw new Error("Revolve profile crosses its axis. Keep the profile on one side of the axis.");
+                return shape2;
+              };
+              const radial = (p2) => {
+                const d2 = sub$5(p2, origin2);
+                return sub$5(d2, scale$1(axis, dot$6(d2, axis)));
+              };
+              const sweep = (end, side) => {
+                if (end.endType === "blind") return turn(side * blind(end));
+                if (end.endType === "up-to-vertex") {
+                  const a2 = radial(sketchCentroid(feature3.profileFeatureId)), b = radial(stopPoint(end.point));
+                  if (norm$4(b) < 1e-9) throw new Error("The stopping point lies on the revolve axis. Pick another point.");
+                  const angle2 = (side * Math.atan2(dot$6(cross$4(a2, b), axis), dot$6(a2, b)) * 180 / Math.PI % 360 + 360) % 360;
+                  if (angle2 < 1e-6) throw new Error("The stopping point lies in the profile's plane. Flip direction or pick another point.");
+                  return turn(side * angle2);
+                }
+                const limits = end.endType === "up-to-part" ? [end.partId ? bodies.get(end.partId) : void 0] : end.endType === "up-to-face" ? [end.face && bodyAt(end.face.sourceFeatureId, end.face.bodyId)] : [...bodies.values()];
+                if (!limits.length || limits.some((limit) => !limit)) throw new Error(end.endType === "up-to-next" ? "Up to next requires an earlier part." : "The stopping part is unavailable. Reselect an earlier solid part or face.");
+                const stop = limits.slice(1).reduce((all, limit) => own(all.fuse(limit)), limits[0]);
+                const full2 = turn(side * 359.99);
+                if (!isShape3D(full2)) throw new Error("Feature did not produce a solid.");
+                own(full2);
+                const profileSketch = sketchOf(requireDrawing());
+                const starts = "face" in profileSketch ? [own(profileSketch.face())] : own(profileSketch.faces()).faces.map(own);
+                const area = (faces, of) => faces.reduce((sum2, face) => sum2 + commonArea(face, of), 0);
+                const startArea = starts.reduce((sum2, face) => sum2 + measureArea(face), 0), tolerance2 = Math.max(1e-8, startArea * 1e-8);
+                const turned = (degrees2) => starts.map((face) => own(own(face.clone()).rotate(degrees2, origin2, axis)));
+                const overlap = area(turned(side * 1e-3), stop), inside2 = Math.abs(overlap - startArea) <= tolerance2;
+                if (!inside2 && overlap > tolerance2) throw new Error("The stop crosses the profile. Keep the profile on one side of it.");
+                const pieces = solidsOf(own(inside2 ? full2.intersect(stop) : full2.cut(stop)));
+                const touching = pieces.filter((piece) => area(starts, piece) > tolerance2), result2 = touching.length === 1 ? touching[0] : void 0;
+                for (const piece of pieces) if (piece !== result2) release$1(piece);
+                if (!result2 || Math.abs(area(starts, result2) - startArea) > tolerance2) throw new Error("The stop does not leave the whole profile connected to the revolve.");
+                own(result2);
+                if (measureVolume(full2) - measureVolume(result2) <= tolerance2) throw new Error("Nothing stops the revolve in this direction. Flip direction or choose another limit.");
+                if (area(turned(side * 359.99), result2) > tolerance2) throw new Error("The limit does not completely stop the revolve before it comes round. Choose another limit.");
+                if (end.endType === "up-to-face") {
+                  const face = faceByReference(stop, end.face, "Up to face"), contact = commonArea(face, result2);
+                  face.delete();
+                  if (contact <= tolerance2) throw new Error("The revolve meets its part before the selected face. Choose the face it reaches first.");
+                }
+                return result2;
+              };
+              let shape = sweep(primary, sign);
+              if (feature3.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * blind(primary) / 2, origin2, axis);
               if (second && isShape3D(shape)) {
-                const other = own(sketchOf(profile.drawing ?? requireDrawing())).revolve(axis, { origin: origin2, angle: -sign * second });
+                const other = sweep(second, -sign);
                 if (isShape3D(other)) shape = own(shape).fuse(own(other));
               }
               return isShape3D(shape) ? own(shape).simplify() : shape;

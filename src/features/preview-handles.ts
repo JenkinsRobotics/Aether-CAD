@@ -6,7 +6,7 @@ import type { Controls } from './shared';
  *  PreviewHandle): a linear handle per length or size, an angular ring per angle,
  *  each dragging the dialog's own control so preview, validation and commit keep
  *  one owner. The handles arrive with each preview and move with it. */
-export type AngleProjection = { x: number; y: number; points: { x: number; y: number }[]; valueAt: (x: number, y: number) => number | null };
+export type AngleProjection = { x: number; y: number; points: { x: number; y: number }[]; arc?: { x: number; y: number }[]; tangent?: number; valueAt: (x: number, y: number) => number | null };
 
 export function mountPreviewHandles(panel: HTMLElement, controls: Controls, units: { length: string; angle: string }, map: Record<string, string> = {}) {
   let handles: PreviewHandle[] = [], ready = false;
@@ -41,33 +41,43 @@ export function mountPreviewHandles(panel: HTMLElement, controls: Controls, unit
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-/** A ring about the handle's axis; dragging turns the control's angle by the pointer's sweep. */
+/** A ring about the handle's axis through its zero point, the swept arc on it and an arrow at the
+ *  end of the sweep (Onshape's revolve manipulator); dragging the arrow turns the control's angle by
+ *  the pointer's sweep and shows the value while it moves. */
 export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, unit: string, handle: () => PreviewHandle | undefined, ready: () => boolean, label: string) {
   const viewport = document.querySelector<HTMLElement>('.cad-studio-viewport');
   if (!viewport || !window.requestAnimationFrame) return;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   Object.assign(svg.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', zIndex: '7' }); svg.setAttribute('aria-hidden', 'true');
-  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', '#387acb'); ring.setAttribute('stroke-width', '2'); ring.style.display = 'none'; svg.append(ring);
+  const line = (width: string, opacity: string) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#387acb'); el.setAttribute('stroke-width', width); el.setAttribute('stroke-opacity', opacity); el.style.display = 'none'; svg.append(el); return el; };
+  const ring = line('1', '0.35'), arc = line('2', '1');
   const button = document.createElement('button'); button.type = 'button'; button.className = 'cad-angle-handle'; button.hidden = true; button.setAttribute('aria-label', label);
   button.title = 'Drag around the axis to turn. Shift for fine adjustment; Escape restores the drag.';
-  Object.assign(button.style, { position: 'absolute', zIndex: '8', touchAction: 'none', cursor: 'grab', transform: 'translate(-50%, -50%)', border: '1px solid #6ba7e0', borderRadius: '14px', background: '#2672b6', color: 'white', padding: '2px 8px', fontSize: '12px' });
-  viewport.append(svg, button);
+  Object.assign(button.style, { position: 'absolute', zIndex: '8', touchAction: 'none', cursor: 'grab', width: '22px', height: '22px', padding: '0', border: '0', background: 'transparent', color: '#2672b6', display: 'grid', placeItems: 'center' });
+  button.innerHTML = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M3 3 L19 11 L3 19 Z" fill="currentColor" stroke="white" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  const value = document.createElement('span'); value.className = 'cad-angle-handle-value'; value.hidden = true;
+  Object.assign(value.style, { position: 'absolute', zIndex: '8', pointerEvents: 'none', transform: 'translate(12px, -50%)', borderRadius: '14px', background: '#2672b6', color: 'white', padding: '2px 8px', fontSize: '12px', whiteSpace: 'nowrap' });
+  viewport.append(svg, button, value);
   const factor = Number(control.dataset.canonicalFactor ?? 1);
   const read = () => Number(control.value) * factor;
   let projection: AngleProjection | null = null, frame = 0;
   let drag: { id: number; previous: number; value: number; original: string; projection: AngleProjection } | undefined;
   const set = (degrees: number) => { if (!Number.isFinite(degrees)) return; control.value = String(Number((degrees / factor).toPrecision(8))); control.dispatchEvent(new Event('input')); };
   const update = () => {
-    if (!panel.isConnected) { cancel(true); svg.remove(); button.remove(); return; }
+    if (!panel.isConnected) { cancel(true); svg.remove(); button.remove(); value.remove(); return; }
     const live = handle(); projection = null;
-    if (live && Number.isFinite(read())) window.dispatchEvent(new CustomEvent('aether-native-angle-handle', { detail: { origin: live.originMillimeters, axis: live.direction, angle: read(), respond: (p: AngleProjection | null) => { projection = p; } } }));
-    const p = drag?.projection ?? projection;
-    button.hidden = !p; ring.style.display = p ? '' : 'none'; button.disabled = !drag && !ready();
-    if (p) {
-      const rect = viewport.getBoundingClientRect();
-      button.style.left = `${p.x - rect.left}px`; button.style.top = `${p.y - rect.top}px`;
-      const text = `${label} · ${control.value} ${unit}`; if (button.textContent !== text) button.textContent = text;
-      ring.setAttribute('points', p.points.map((q) => `${q.x - rect.left},${q.y - rect.top}`).join(' '));
+    if (live && Number.isFinite(read())) window.dispatchEvent(new CustomEvent('aether-native-angle-handle', { detail: { origin: live.originMillimeters, axis: live.direction, angle: read(), start: live.startMillimeters, respond: (p: AngleProjection | null) => { projection = p; } } }));
+    // While dragging, the ring stays where the drag began but the arrow follows the live angle.
+    const p = drag?.projection ?? projection, live2 = projection ?? p;
+    button.hidden = !p; value.hidden = !drag || !p; ring.style.display = p ? '' : 'none'; arc.style.display = p?.arc ? '' : 'none'; button.disabled = !drag && !ready();
+    if (p && live2) {
+      const rect = viewport.getBoundingClientRect(), at = (q: { x: number; y: number }) => `${q.x - rect.left},${q.y - rect.top}`;
+      button.style.left = `${live2.x - rect.left}px`; button.style.top = `${live2.y - rect.top}px`;
+      button.style.transform = `translate(-50%, -50%) rotate(${live2.tangent ?? 0}deg)`;
+      value.style.left = `${live2.x - rect.left}px`; value.style.top = `${live2.y - rect.top}px`;
+      const text = `${label} · ${control.value} ${unit}`; if (value.textContent !== text) value.textContent = text;
+      ring.setAttribute('points', p.points.map(at).join(' '));
+      if (live2.arc) arc.setAttribute('points', live2.arc.map(at).join(' '));
     }
     frame = window.requestAnimationFrame(update);
   };
@@ -99,7 +109,7 @@ export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, 
     if (event.key === 'Escape' && drag) { event.preventDefault(); event.stopPropagation(); cancel(true); return; }
     if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && ready()) { event.preventDefault(); event.stopPropagation(); set(read() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 15)); control.dispatchEvent(new Event('change')); }
   });
-  const observer = new window.MutationObserver(() => { if (!panel.isConnected) { window.cancelAnimationFrame(frame); cancel(true); svg.remove(); button.remove(); observer.disconnect(); } });
+  const observer = new window.MutationObserver(() => { if (!panel.isConnected) { window.cancelAnimationFrame(frame); cancel(true); svg.remove(); button.remove(); value.remove(); observer.disconnect(); } });
   observer.observe(document.body, { childList: true, subtree: true });
   frame = window.requestAnimationFrame(update);
 }

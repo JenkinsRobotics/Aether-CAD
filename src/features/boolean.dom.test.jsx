@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { parsePartDocument } from '@aether/core/document';
 import { cadCommands } from '../cad-command-registry';
+import { cadSelection } from '../cad-selection-store';
+import { availableBodies } from '@aether/core/document';
 
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, doc, apply;
@@ -29,7 +31,10 @@ it('Boolean opens on Union/Subtract/Intersect tabs with the tool bodies right un
   expect(order.indexOf('aui-feature-entities')).toBeLessThan(order.findIndex((c) => c === 'aui-feature-row'));
   [...win.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Subtract').click();
   expect(win.querySelector('select[aria-label="Operation"]').value).toBe('cut');
-  win.querySelector('input[aria-label^="Use "]').click();
+  // Picking a part in the viewport fills the Tools box; the target is excluded.
+  const tool = availableBodies(doc).find((body) => body.id !== win.querySelector('[aria-label="Target body"]').value);
+  cadSelection.dispatch({ type: 'replace', items: [{ id: 'pick', kind: 'face', partId: tool.id, label: 'Face' }] });
+  expect(win.querySelector('.aui-feature-entities[aria-label^="Tools"]').textContent).toContain(tool.name);
   win.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(doc.features.at(-1)).toMatchObject({ type: 'boolean', operation: 'cut' });

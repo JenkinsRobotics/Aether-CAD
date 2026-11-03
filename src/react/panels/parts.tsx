@@ -28,7 +28,7 @@ export function CADPartsPanel({ nodes, selectedIDs, onSelect, onAction, onShowAp
     dimmed: row.dimmed,
     disabled: row.disabled,
     actions: (row.actions ?? []).map(action => ({ ...action,
-      state: action.id === "body-visibility", pinned: action.id === "body-visibility" && !!row.dimmed,
+      state: action.id === "body-visibility",
     })),
   }));
   const actionsFor = (id: string) => {

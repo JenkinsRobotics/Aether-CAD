@@ -191,3 +191,15 @@ export function layoutParameterRows(
   }
   return rows;
 }
+
+/** A checkbox row bound to a hidden yes/no or true/false field, as Onshape's option rows. */
+export function checkRow(context: FeatureEditorContext, control: Control, label: string, onChange?: () => void): HTMLElement {
+  const { win, form } = context;
+  control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
+  const yes = control.value === "yes" || control.value === "no";
+  const box = document.createElement("input"); box.type = "checkbox"; box.setAttribute("aria-label", label); box.checked = control.value === "true" || control.value === "yes";
+  box.onchange = () => { control.value = yes ? (box.checked ? "yes" : "no") : String(box.checked); onChange?.(); control.dispatchEvent(new Event("change")); };
+  control.addEventListener("change", () => { box.checked = control.value === "true" || control.value === "yes"; });
+  const row = win.row(label, box);
+  return row;
+}

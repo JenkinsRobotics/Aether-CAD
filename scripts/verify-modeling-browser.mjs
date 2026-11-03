@@ -229,7 +229,7 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Target body', 'Body 1').catch(() => { });
     await setSelect('Edges', 'all'); // Edges default to the picked set since 2026-10-31; this step rounds every edge.
-    await setInput('All-edge size (mm)', 2); // larger than the shell wall, so the shell's inner fillets keep a radius
+    await setInput('Radius (mm)', 2); // larger than the shell wall, so the shell's inner fillets keep a radius
     // The radius manipulator the preview publishes shows in the viewport while the dialog is open.
     await expect(page.locator('.cad-extrusion-handle').first()).toBeVisible({ timeout: 15000 });
     await applyDialog('fillet');
@@ -239,6 +239,7 @@ try {
     await ribbon('Shell').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Target body', 'Body 1').catch(() => { });
+    await page.locator('.cad-feature-dialog input[aria-label="Hollow"]').check(); // a closed shell: no faces removed
     await setInput('Thickness (mm)', 1.5);
     await applyDialog('shell');
     await expect(featureRow(/^Shell/)).toBeVisible();
@@ -247,7 +248,9 @@ try {
     await ribbon('Mirror', 'feature-mirror').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Feature', /^Extrude/);
-    await setSelect('Mirror plane', 'YZ').catch(() => { });
+    // The mirror plane is picked in the tree, as a user does.
+    await featureRow(/Right Plane/).click();
+    await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Mirror plane"]')).toContainText(/Right Plane/, { timeout: 10000 });
     await setSelect('Operation', 'add').catch(() => { });
     await setSelect('Target body', 'Body 1').catch(() => { });
     await applyDialog('mirror-add');

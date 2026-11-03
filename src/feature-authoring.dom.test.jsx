@@ -257,3 +257,53 @@ it("authors a tapped M8 hole from the thread standards with a cap-screw counterb
   const clearance = await authored("hole", { "Center sketch": "profile-1", "Thread profile": "ISO metric coarse", Size: "M8", Thread: "clearance", "Clearance fit": "close" });
   expect(clearance).toMatchObject({ diameterMillimeters: 8.4, cutType: "plain", thread: { standard: "iso-metric-coarse", designation: "M8", tapped: false, fit: "close" } });
 });
+
+it("revolve ends stop at the next part on either side, with the angle only for Blind", async () => {
+  seedProfile();
+  const toNext = await authored("revolve", { Sketch: "profile-1", "Revolve axis choice": "Y", "Angle": "90", "End condition": "up-to-next" });
+  expect(toNext).toMatchObject({ type: "revolve", endType: "up-to-next", angleDegrees: 90 });
+  expect(toNext.secondEnd).toBeUndefined();
+  const both = await authored("revolve", { Sketch: "profile-1", "Revolve axis choice": "Y", "Angle": "90", "Second end position": "true", "Opposite end condition": "up-to-next" });
+  expect(both).toMatchObject({ type: "revolve", angleDegrees: 90, secondEnd: { endType: "up-to-next" } });
+  expect(both.endType).toBeUndefined();
+  const blindBoth = await authored("revolve", { Sketch: "profile-1", "Revolve axis choice": "Y", "Angle": "90", "Second end position": "true", "Opposite angle": "45" });
+  expect(blindBoth).toMatchObject({ secondEnd: { endType: "blind", angleDegrees: 45 } });
+  // Each end offers the same choices and pick boxes.
+  cadCommands.execute("feature-revolve");
+  const panel = [...document.querySelectorAll(".cad-feature-dialog")].at(-1);
+  for (const label of ["End type", "Stopping part", "Stopping face", "Opposite end type", "Opposite stopping part", "Opposite stopping face"])
+    expect(panel.querySelector(`[aria-label="${label}"]`), label).toBeTruthy();
+});
+
+it("fillet and chamfer windows follow Onshape: entities box, tangent propagation, size rows by chamfer type", async () => {
+  seedProfile();
+  doc.features.push({ id: "box-1", type: "extrude", name: "Extrude 1", profileFeatureId: "profile-1", distanceMillimeters: 5, operation: "new", suppressed: false });
+  const chamfer = await authored("chamfer", { "Edges": "all", "Chamfer type": "distance-angle", "Distance (mm)": "1", "Angle": "30" });
+  expect(chamfer).toMatchObject({ type: "chamfer", radiusMillimeters: 1, angleDegrees: 30 });
+  expect(chamfer.secondDistanceMillimeters).toBeUndefined();
+  const fillet = await authored("fillet", { "Edges": "all", "Radius (mm)": "2", "Variable fillet": "true", "End radius (mm)": "4" });
+  expect(fillet).toMatchObject({ type: "fillet", radiusMillimeters: 2, endRadiusMillimeters: 4 });
+  cadCommands.execute("feature-fillet");
+  const panel = [...document.querySelectorAll(".cad-feature-dialog")].at(-1);
+  for (const label of ["Entities to fillet", "Tangent propagation", "Variable fillet"]) expect(panel.querySelector(`[aria-label^="${label}"]`), label).toBeTruthy();
+  expect(panel.querySelector('[aria-label="Edges"]').closest(".aui-feature-row")).toBeNull();
+});
+
+it("mirror and split take one plane box: a tree plane, a plane feature, a face or a sketch line", async () => {
+  seedProfile();
+  doc.features.push({ id: "box-2", type: "extrude", name: "Extrude 2", profileFeatureId: "profile-1", distanceMillimeters: 5, operation: "new", suppressed: false });
+  // A tree click on Right Plane reaches the open window as the sketch-plane pick.
+  cadCommands.execute("feature-mirror");
+  window.dispatchEvent(new CustomEvent("aether-sketch-plane", { detail: "YZ" }));
+  const openPanel = [...document.querySelectorAll(".cad-feature-dialog")].at(-1);
+  expect(openPanel.querySelector('.aui-feature-entities[aria-label^="Mirror plane"]').textContent).toContain("Right Plane");
+  for (const cancel of document.querySelectorAll('[aria-label="Cancel"]')) cancel.click();
+  const mirrored = await authored("mirror", { Feature: "box-2", "Mirror plane reference": JSON.stringify({ kind: "principal", plane: "YZ", offsetMillimeters: 0 }) });
+  expect(mirrored).toMatchObject({ type: "mirror", sourceFeatureId: "box-2", plane: "YZ", offsetMillimeters: 0, operation: "add" });
+  expect(mirrored.mirrorPlane).toBeUndefined();
+  const { availableBodies } = await import("@aether/core/document");
+  const body = availableBodies(doc)[0];
+  const split = await authored("split", { "Part to split identity": JSON.stringify([body.id]), "Split plane reference": JSON.stringify({ kind: "principal", plane: "XZ", offsetMillimeters: 2 }), "Keep both sides": "true" });
+  expect(split).toMatchObject({ type: "split", bodyIds: [body.id], plane: { kind: "principal", plane: "XZ", offsetMillimeters: 2 }, keep: "both" });
+  expect(split.copyBodyIds[body.id]).toBeTruthy();
+});

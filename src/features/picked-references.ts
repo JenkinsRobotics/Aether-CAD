@@ -47,7 +47,7 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); lifecycle.dispose(); });
   observer.observe(document.body, { childList: true, subtree: true }); render(); lifecycle.setActive(true);
   if (!feature && selected.length && selected.every((item) => item.kind === options.kind)) queueMicrotask(request);
-  return { read, update };
+  return { read, update, element: box.element };
 }
 
 export const faceIdentity = (face: { sourceFeatureId: string; bodyId: string; normal?: unknown; surfaceType?: unknown; faceAnchor?: unknown }) => JSON.stringify([face.sourceFeatureId, face.bodyId, face.normal, face.surfaceType, face.faceAnchor]);

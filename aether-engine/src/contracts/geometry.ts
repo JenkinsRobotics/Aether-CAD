@@ -92,6 +92,8 @@ export interface PreviewHandle {
   scale?: number;
   /** Linear: the control may go negative (a push as well as a pull). */
   signed?: boolean;
+  /** Angular: the point where the angle is zero; the ring passes through it. */
+  startMillimeters?: [number, number, number];
   label?: string;
 }
 export interface TransformPreviewFrame {

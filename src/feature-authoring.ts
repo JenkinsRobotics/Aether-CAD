@@ -223,17 +223,19 @@ const presentFeatureWindow = (
       for (const id of cadWorkspace.snapshot().selectedItemIDs) {
         const featureId = /^feature\/[^/]+\/(.+)$/.exec(id)?.[1];
         if (featureId) fillPick(featureId);
-        else if (PLANE_ROWS[id]) fillPick(PLANE_ROWS[id]);
+        else if (PLANE_ROWS[id.replace(/^reference\//, "")]) fillPick(PLANE_ROWS[id.replace(/^reference\//, "")]);
       }
     };
     const onBody = () => { const items = cadSelection.snapshot().items; if (items.length === 1 && items[0].kind === "body" && items[0].partId) fillPick(items[0].partId); };
+    const onPlane = (event: Event) => { const plane = (event as CustomEvent).detail; if (typeof plane === "string") fillPick(plane); };
     window.addEventListener("aether-region-picked", onRegion);
     window.addEventListener("aether-sketch-curve-picked", onCurve);
+    window.addEventListener("aether-sketch-plane", onPlane);
     const unsubscribeTree = cadWorkspace.subscribe(onTree), unsubscribeBody = cadSelection.subscribe(onBody);
     const pickObserver = new window.MutationObserver(() => {
       if (win.panel.isConnected) return;
       pickObserver.disconnect(); unsubscribeTree(); unsubscribeBody();
-      window.removeEventListener("aether-region-picked", onRegion); window.removeEventListener("aether-sketch-curve-picked", onCurve);
+      window.removeEventListener("aether-region-picked", onRegion); window.removeEventListener("aether-sketch-curve-picked", onCurve); window.removeEventListener("aether-sketch-plane", onPlane);
     });
     pickObserver.observe(document.body, { childList: true, subtree: true });
     const lengthUnit = unitChoice(documentUnits(), "length"),
@@ -458,51 +460,6 @@ const presentFeatureWindow = (
         submit.disabled = false;
       }
     };
-    if (existing && type !== "extrude") {
-      button(
-        "Move earlier",
-        async () => {
-          try {
-            await apply(moveFeature(source, existing.id, -1));
-            win.close();
-          } catch (e) {
-            alert.textContent = (e as Error).message;
-          }
-        },
-        form,
-      );
-      button(
-        "Move later",
-        async () => {
-          try {
-            await apply(moveFeature(source, existing.id, 1));
-            win.close();
-          } catch (e) {
-            alert.textContent = (e as Error).message;
-          }
-        },
-        form,
-      );
-      button(
-        "Delete feature",
-        async () => {
-          const affected = dependentFeatures(source, existing.id);
-          if (
-            !confirm(
-              `Delete ${existing.name}${affected.size > 1 ? ` and ${affected.size - 1} dependent features` : ""}?`,
-            )
-          )
-            return;
-          try {
-            await apply(removeFeature(source, existing.id));
-            win.close();
-          } catch (e) {
-            alert.textContent = (e as Error).message;
-          }
-        },
-        form,
-      );
-    }
 
   };
   let busy = false;

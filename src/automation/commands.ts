@@ -29,9 +29,9 @@ export function prepareCommand(command: string, content: string, args: Arguments
       if (feature.type !== 'revolve' || feature.suppressed) throw Error('Select an unsuppressed Revolve feature.');
       if (typeof args.angle_deg !== 'number' || !Number.isFinite(args.angle_deg) || typeof args.second_angle_deg !== 'number' || !Number.isFinite(args.second_angle_deg) || typeof args.symmetric !== 'boolean' || typeof args.reversed !== 'boolean')
         throw Error('Specify the angle, opposite angle, symmetric and reverse settings.');
-      if (feature.angleDegrees !== args.angle_deg || (feature.secondAngleDegrees ?? 0) !== args.second_angle_deg || (feature.symmetric ?? false) !== args.symmetric || (feature.reversed ?? false) !== args.reversed) {
+      if (feature.angleDegrees !== args.angle_deg || (feature.secondAngleDegrees ?? feature.secondEnd?.angleDegrees ?? 0) !== args.second_angle_deg || feature.secondEnd?.endType || (feature.symmetric ?? false) !== args.symmetric || (feature.reversed ?? false) !== args.reversed) {
         const updated = {...feature, angleDegrees:args.angle_deg};
-        delete updated.secondAngleDegrees; delete updated.symmetric; delete updated.reversed;
+        delete updated.secondAngleDegrees; delete updated.secondEnd; delete updated.symmetric; delete updated.reversed;
         if (args.second_angle_deg) updated.secondAngleDegrees = args.second_angle_deg;
         if (args.symmetric) updated.symmetric = true;
         if (args.reversed) updated.reversed = true;

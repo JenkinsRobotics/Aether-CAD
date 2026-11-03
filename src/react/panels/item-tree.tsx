@@ -40,7 +40,7 @@ export function itemTreePresentation(nodes: readonly TreeNode[]): TreeNode[] {
     ],
     icon: node.id === "reference-folder" ? <AetherIcon name="planes-axes" /> : node.id.startsWith("document/") ? <AetherIcon name="collection-folder" /> : node.icon === "◇" ? <AetherIcon name="cube" /> : svgStatusArtwork(node.icon, node.id.startsWith("feature/") ? node.id.split("/")[1] : undefined) ?? (node.id.startsWith("feature/body/") ? <AetherIcon name="cube" /> : undefined),
     actions: node.actions?.map((action) => ({ ...action,
-      state: action.id === "body-visibility" || action.id === "toggle-visibility",
+      state: ["body-visibility", "sketch-visibility", "toggle-visibility"].includes(action.id),
       pinned: action.pinned || (action.id === "suppress-feature" && node.badge === "Suppressed"),
       icon: action.id === "suppress-feature" ? <AetherIcon name="pause" />
         : action.id.startsWith("rollback") ? <AetherIcon name="history" />

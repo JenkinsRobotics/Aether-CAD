@@ -104,6 +104,7 @@ import { CADAssemblyController } from "./cad-assembly-controller";
 import { cadAssemblyWorkspace } from "./cad-assembly-workspace-store";
 import { readWorkspaceUpAxis, saveWorkspaceUpAxis } from "./viewport/workspace-orientation";
 import { cadCameraPresentation } from "./cad-camera-presentation-store";
+import type { StandardCameraView } from "./camera-view";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app root");
@@ -639,7 +640,7 @@ window.addEventListener('aether-native-extrusion-handle',event=>{
 });
 window.addEventListener('aether-native-angle-handle',event=>{
   const request=(event as CustomEvent).detail;
-  request.respond(viewer.projectAngleHandle(request.origin,request.axis,request.angle));
+  request.respond(viewer.projectAngleHandle(request.origin,request.axis,request.angle,request.start));
 });
 window.addEventListener('aether-transform-handles',event=>{
   const request=(event as CustomEvent).detail;
@@ -797,9 +798,9 @@ function toggleReferenceVisibility(id: ReferenceGeometryId): void {
 
 function selectReference(id: ReferenceGeometryId): void {
   const plane = sketchPlaneForReference(id);
-  // A principal plane picked while a sketch is choosing its plane, or while a
-  // construction-plane window is open, is that pick — not a visibility toggle.
-  if (plane && document.querySelector(".cad-sketch-workspace.choosing-plane, .cad-plane-window")) {
+  // A principal plane picked while a sketch is choosing its plane, or while any feature
+  // window is open (Mirror plane, Entity to split with, …), is that pick — not a visibility toggle.
+  if (plane && document.querySelector(".cad-sketch-workspace.choosing-plane, .cad-plane-window, .cad-feature-dialog")) {
     window.dispatchEvent(new CustomEvent("aether-sketch-plane", { detail: plane }));
     return;
   }
@@ -1228,6 +1229,14 @@ configureEditHistory({
 });
 // Gates read the rendered finished sketch through this projection (verify-sketch-display-browser.mjs).
 (window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketch: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(activePartDocument?.features.find(f => f.name === sketch)?.id ?? sketch, [x, y]);
+// Gates set a standard view so geometry picks land where they expect (verify-edge-finish-browser.mjs).
+(window as unknown as { __aetherSetView?: unknown }).__aetherSetView = (view: StandardCameraView) => cadCameraPresentation.dispatch({ type: "select-view", view });
+// Gates read the selection (kind and label) to explain a pick that did not fill a box.
+(window as unknown as { __aetherSelection?: unknown }).__aetherSelection = () => cadSelection.snapshot().items.map(item => `${item.kind}:${item.label}`);
+// Gates click world points through this projection (verify-edge-finish-browser.mjs).
+(window as unknown as { __aetherClientPoint?: unknown }).__aetherClientPoint = (x: number, y: number, z: number) => viewer.clientFromPoint([x, y, z]);
+// Gates read which bodies the viewport shows (verify-region-pick-browser.mjs).
+(window as unknown as { __aetherPartVisibility?: unknown }).__aetherPartVisibility = () => viewer.getPartRows().map(row => row.visible);
 configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), warm: doc => worker.evaluatePart(doc) });
 worker.ready
   .then(async () => {
@@ -1749,7 +1758,8 @@ window.addEventListener('aether-transform-edge-request',event=>{
 window.addEventListener('aether-finish-edges-request',event=>{
   const doc=activePartDocument;
   const picked=doc?viewer.selectedFinishEdges(doc.documentId):null;
-  const edges=picked?.map(edge=>{const sourceFeatureId=sourceFeatureForBody(doc!,edge.bodyId,(event as CustomEvent).detail?.beforeFeatureId);return sourceFeatureId?{...edge,sourceFeatureId}:null;});
+  // Picks read like Onshape's: "Edge of Revolve 1", the feature that made the body.
+  const edges=picked?.map(edge=>{const sourceFeatureId=sourceFeatureForBody(doc!,edge.bodyId,(event as CustomEvent).detail?.beforeFeatureId);return sourceFeatureId?{...edge,sourceFeatureId,label:`Edge of ${doc!.features.find(f=>f.id===sourceFeatureId)?.name??edge.label}`}:null;});
   window.dispatchEvent(new CustomEvent('aether-finish-edges',{detail:edges?.length&&edges.every(e=>e!==null)?{edges}:{error:'Select edges on an earlier solid part in this document.'}}));
 });
 window.addEventListener('aether-source-edge-picking',event=>viewer.setSourceEdgePicking((event as CustomEvent).detail===true));

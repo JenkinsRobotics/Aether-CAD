@@ -14,3 +14,11 @@ it('uses point distance for vertices and ignores clipped candidates',()=>{
  expect(selectionCandidateDistance(vertex,new THREE.Matrix4(),{x:3,y:4},project)).toBe(5);
  expect(selectionCandidateDistance(edge,new THREE.Matrix4(),{x:0,y:0},()=>null)).toBe(Infinity);
 });
+it('measures distance along a circular arc, not only to its midpoint',()=>{
+ // A quarter arc of radius 100 about Z, centred at the origin, from +x to +y: midpoint at 45°.
+ const arc={...edge,origin:[100*Math.SQRT1_2,100*Math.SQRT1_2,0],measurements:{centerMillimeters:[0,0,0],axisDirection:[0,0,1],radiusMillimeters:100,lengthMillimeters:Math.PI*50}} as ConnectorCandidate;
+ expect(selectionCandidateDistance(arc,new THREE.Matrix4(),{x:100,y:3},project)).toBeLessThan(4); // near its start
+ expect(selectionCandidateDistance(arc,new THREE.Matrix4(),{x:3,y:100},project)).toBeLessThan(4); // near its end
+ expect(selectionCandidateDistance(arc,new THREE.Matrix4(),{x:0,y:0},project)).toBeCloseTo(100,0); // the centre is a radius away
+ expect(selectionCandidateDistance(arc,new THREE.Matrix4(),{x:-100,y:0},project)).toBeGreaterThan(100); // the far side is not part of the arc
+});
