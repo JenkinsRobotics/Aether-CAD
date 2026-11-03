@@ -1,5 +1,6 @@
 import { regionControls, layoutRegion, selectedRegion } from "./regions";
-import { sketchRegions } from "@aether/core/document";
+import { sketchRegions, rollbackPosition } from "@aether/core/document";
+import { cadWorkspace } from "../cad-workspace-store";
 import { transformEdgePicker } from "./transform-edge-picker";
 import { sketchDirectionLines } from "../modeling/extrude-direction-reference";
 /** Revolve feature editor — window layout, controls, and serialization.
@@ -72,20 +73,28 @@ export const revolveEditor: FeatureEditor = {
     // Revolve axis: a selection box like the regions box (Jonathan, 2026-11-01), filled by
     // clicking a line of the sketch or a solid edge in the viewport; its list (the sketch's
     // lines, construction first, then the principal axes) shows only while it is empty.
+    // Any line of any earlier sketch, any earlier construction Axis feature, a solid edge or a
+    // principal axis can be the revolve axis (Jonathan, 2026-11-02). The source sketch's first
+    // construction line is the default; everything else is picked in the viewport or the tree.
     const axis = controls.axis as HTMLSelectElement;
-    const lines = () => sketchDirectionLines(doc, feature?.id).filter((line) => line.sourceFeatureId === controls.source.value);
+    const lines = () => sketchDirectionLines(doc, feature?.id);
+    const earlierAxes = () => {
+      const end = feature ? doc.features.findIndex((f) => f.id === feature.id) : rollbackPosition(doc);
+      return doc.features.slice(0, Math.max(0, end)).filter((f) => f.type === "axis" && !f.suppressed);
+    };
     const rebuildAxis = () => {
       const current = axis.value;
       const all = lines();
-      const ordered = [...all.filter((line) => /Construction/.test(line.label)), ...all.filter((line) => !/Construction/.test(line.label))];
+      const defaultLine = all.find((line) => line.sourceFeatureId === controls.source.value && doc.features.find((f) => f.id === line.sourceFeatureId && f.type === "profile" && f.profile.type === "drawing" && f.profile.contours[line.contourIndex]?.construction));
       axis.replaceChildren();
       const add = (value: string, text: string) => { const option = document.createElement("option"); option.value = value; option.textContent = text; axis.append(option); };
       add("", "");
-      for (const line of ordered) add(lineKey(line), line.label.replace(/^.*? · /, ""));
+      for (const line of all) add(lineKey(line), line.label);
+      for (const item of earlierAxes()) add(`axis:${item.id}`, item.name);
       add("edge", "Picked solid edge");
       for (const name of principalAxes) add(name, `${name} axis`);
       const keys = [...axis.options].map((option) => option.value);
-      axis.value = keys.includes(current) && current ? current : (ordered[0] ? lineKey(ordered[0]) : "");
+      axis.value = keys.includes(current) && current ? current : (defaultLine ? lineKey(defaultLine) : "");
       axis.dataset.selectionLabel = axis.value === "edge" ? edgeLabel() : (axis.selectedOptions[0]?.textContent ?? "");
       axis.dispatchEvent(new Event("change"));
     };
@@ -102,10 +111,18 @@ export const revolveEditor: FeatureEditor = {
       const picked = (event as CustomEvent).detail as { sourceFeatureId: string; contourId: string; segmentId: string };
       const line = lines().find((item) => item.sourceFeatureId === picked.sourceFeatureId && item.contourId === picked.contourId && item.segmentId === picked.segmentId);
       if (!line) return;
-      axis.value = lineKey(line); axis.dataset.selectionLabel = line.label.replace(/^.*? · /, ""); axis.dispatchEvent(new Event("change"));
+      axis.value = lineKey(line); axis.dataset.selectionLabel = line.label; axis.dispatchEvent(new Event("change"));
     };
     window.addEventListener("aether-sketch-curve-picked", curvePicked);
-    const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); window.removeEventListener("aether-sketch-curve-picked", curvePicked); });
+    // A construction Axis feature picked in the tree.
+    const unsubscribeTree = cadWorkspace.subscribe(() => {
+      if (!win.panel.isConnected) return;
+      for (const id of cadWorkspace.snapshot().selectedItemIDs) {
+        const picked = /^feature\/axis\/(.+)$/.exec(id)?.[1];
+        if (picked && [...axis.options].some((option) => option.value === `axis:${picked}`) && axis.value !== `axis:${picked}`) { axis.value = `axis:${picked}`; axis.dispatchEvent(new Event("change")); }
+      }
+    });
+    const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribeTree(); window.removeEventListener("aether-sketch-curve-picked", curvePicked); });
     observer.observe(document.body, { childList: true, subtree: true });
     axis.addEventListener("change", () => { if (axis.value !== "edge") axis.dataset.selectionLabel = axis.selectedOptions[0]?.textContent ?? ""; });
     controls.source.addEventListener("change", rebuildAxis);
@@ -173,6 +190,7 @@ export const revolveEditor: FeatureEditor = {
   serialize(values, context) {
     const second = values.symmetric === "true" || values.secondEnd !== "true" ? 0 : Number(values.second);
     const axisReference = values.axis.startsWith("line:") ? JSON.parse(values.axis.slice(5))
+      : values.axis.startsWith("axis:") ? { kind: "feature", featureId: values.axis.slice(5) }
       : values.axis === "edge" && values.axisEdge ? JSON.parse(values.axisEdge) : undefined;
     return {
       ...(axisReference ? { axisReference } : {}),

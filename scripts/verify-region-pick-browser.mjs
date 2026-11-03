@@ -132,6 +132,21 @@ try {
   await apply('Revolve about a drawn line');
   await featureRow(/Revolve 5|Revolve/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '6-drawn-sketch-revolved.png') });
+
+  // A line of another, earlier sketch is a valid axis too: Sketch 2's rectangle about Sketch 1's
+  // construction line that pokes past the L (clear of the rectangle).
+  if (await fit.isEnabled().catch(() => false)) await fit.click();
+  await page.waitForTimeout(1200);
+  await ribbon('Revolve');
+  await dialog().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(600);
+  await click2(-40, 0);
+  await expect(dialog().locator('.aui-feature-entities[aria-label^="Faces and sketch regions to revolve"]')).toContainText(/Sketch 2 · Region/, { timeout: 10000 });
+  await clickAt(...rot([60, 20]));
+  await expect(dialog().locator('.aui-feature-entities[aria-label^="Revolve axis"]')).toContainText(/Sketch 1 · Line/, { timeout: 10000 });
+  await page.screenshot({ path: join(evidence, '7-other-sketch-axis-picked.png') });
+  await apply('Revolve about another sketch\'s line');
+  await page.screenshot({ path: join(evidence, '8-other-sketch-revolved.png') });
   const fatal = errors.filter(e => !/favicon|ResizeObserver/.test(e));
   assert.deepEqual(fatal, [], 'console errors: ' + fatal.join(' | '));
   await writeFile(join(evidence, 'results.json'), JSON.stringify({ passed: true }, null, 1));

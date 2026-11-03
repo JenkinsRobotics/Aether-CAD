@@ -228,6 +228,17 @@ it("serializes revolve with axis and angle", async () => {
 });
 
 
+it("revolves about a line of an earlier sketch and about a construction Axis feature", async () => {
+  doc = insertFeature(doc, { id: "guide", type: "profile", name: "Guide", plane: "XY", offsetMillimeters: 0, suppressed: false,
+    profile: { type: "drawing", contours: [{ id: "g", type: "path", start: [-30, -10], segments: [{ id: "g1", type: "line", end: [-30, 40] }], construction: true }] } });
+  seedProfile();
+  doc.features.splice(doc.features.length - 1, 0, { id: "axis-1", type: "axis", name: "Axis 1", suppressed: false, definition: { method: "edge", axis: { kind: "axis", originMillimeters: [-30, 0, 0], directionMillimeters: [0, 1, 0] } } });
+  const byLine = await authored("revolve", { Sketch: "profile-1", "Revolve axis choice": `line:${JSON.stringify({ kind: "sketch-line", sourceFeatureId: "guide", contourId: "g", segmentId: "g1" })}` });
+  expect(byLine).toMatchObject({ type: "revolve", axisReference: { kind: "sketch-line", sourceFeatureId: "guide", contourId: "g", segmentId: "g1" } });
+  const byAxis = await authored("revolve", { Sketch: "profile-1", "Revolve axis choice": "axis:axis-1" });
+  expect(byAxis).toMatchObject({ type: "revolve", axisReference: { kind: "feature", featureId: "axis-1" } });
+});
+
 it("authors a tapped M8 hole from the thread standards with a cap-screw counterbore", async () => {
   seedProfile();
   await authored("extrude", { Sketch: "profile-1", Distance: "25" });
