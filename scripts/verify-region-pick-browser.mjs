@@ -89,11 +89,49 @@ try {
   await expect(dialog().locator('.aui-feature-entities[aria-label^="Faces and sketch regions to revolve"]')).toContainText(/Region/, { timeout: 10000 });
   await clickAt(...rot([-30, 30]));
   const axisBox = dialog().locator('.aui-feature-entities[aria-label^="Revolve axis"]');
-  await expect(axisBox).toContainText(/Construction line/, { timeout: 10000 });
+  await expect(axisBox).toContainText(/Line/, { timeout: 10000 });
   await page.screenshot({ path: join(evidence, '3-revolve-axis-picked.png') });
   await apply('Revolve');
   await featureRow(/Revolve/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '4-revolved.png') });
+
+  // Sketch 2 is drawn with the sketch tools, as a user does: a rectangle and a separate line
+  // beside it. Its lines get identities on commit, so the line can be a revolve axis.
+  if (await fit.isEnabled().catch(() => false)) await fit.click();
+  await page.waitForTimeout(800);
+  await ribbon('Sketch');
+  await page.locator('.cad-sketch-workspace.choosing-plane').waitFor({ timeout: 30000 });
+  await featureRow(/Front Plane/).click();
+  await page.locator('.cad-sketch-window').waitFor({ timeout: 30000 });
+  await page.waitForTimeout(500);
+  const draw = async (tool, points) => {
+    await ribbon(tool); await page.waitForTimeout(300);
+    for (const [x, y] of points) { const at2 = await page.evaluate(([px, py]) => window.__aetherSketchClientPoint?.(px, py), [x, y]); assert.ok(at2, `sketch point ${x},${y} is on screen`); await page.mouse.click(at2[0], at2[1]); await page.waitForTimeout(200); }
+    await page.keyboard.press('Escape');
+  };
+  await draw('Rectangle', [[-60, -15], [-20, 15]]);
+  await draw('Line', [[-80, -30], [-80, 30]]);
+  const acceptSketch = page.locator('.cad-sketch-window [data-feature-action="accept"]');
+  await expect(acceptSketch).toBeEnabled({ timeout: 30000 });
+  await acceptSketch.click();
+  await expect(page.locator('.cad-sketch-window')).toHaveCount(0, { timeout: 60000 });
+  await featureRow(/Sketch 2/).waitFor({ timeout: 30000 });
+  await page.waitForTimeout(800);
+  if (await fit.isEnabled().catch(() => false)) await fit.click();
+  await page.waitForTimeout(1200);
+  await ribbon('Revolve');
+  await dialog().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(600);
+  const at2 = async (x, y) => { const p = await page.evaluate(([name, px, py]) => window.__aetherFinishedSketchClientPoint?.(name, px, py), ['Sketch 2', x, y]); assert.ok(p, `Sketch 2 point ${x},${y} is on screen`); return p; };
+  const click2 = async (x, y) => { const [cx, cy] = await at2(x, y); await page.mouse.click(cx, cy); await page.waitForTimeout(600); };
+  await click2(-40, 0);
+  await expect(dialog().locator('.aui-feature-entities[aria-label^="Faces and sketch regions to revolve"]')).toContainText(/Region/, { timeout: 10000 });
+  await click2(-80, 10);
+  await expect(dialog().locator('.aui-feature-entities[aria-label^="Revolve axis"]')).toContainText(/Line/, { timeout: 10000 });
+  await page.screenshot({ path: join(evidence, '5-drawn-sketch-axis-picked.png') });
+  await apply('Revolve about a drawn line');
+  await featureRow(/Revolve 5|Revolve/).waitFor({ timeout: 30000 });
+  await page.screenshot({ path: join(evidence, '6-drawn-sketch-revolved.png') });
   const fatal = errors.filter(e => !/favicon|ResizeObserver/.test(e));
   assert.deepEqual(fatal, [], 'console errors: ' + fatal.join(' | '));
   await writeFile(join(evidence, 'results.json'), JSON.stringify({ passed: true }, null, 1));

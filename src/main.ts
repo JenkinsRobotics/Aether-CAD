@@ -34,7 +34,7 @@ import { registerSketchImportCommand } from "./sketch/import-command";
 import { registerSketchToolCommands } from "./sketch/tool-commands";
 import { constructionPlaneFrame } from "@aether/core/document";
 import { sketchProfilePolylines, sketchProfileStrokes } from "@aether/core/sketch";
-import { profileFrame, rollbackPosition, curve3dPolylines } from "@aether/core/document";
+import { profileFrame, rollbackPosition, curve3dPolylines, identifyDocumentSketches } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
 import { configureInstanceEditing, captureInstanceEdit, saveInstanceEdit, openSelectedComponentPart } from "./assembly/instance-session";
@@ -1218,7 +1218,7 @@ configureEditHistory({
   error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
 });
 // Gates read the rendered finished sketch through this projection (verify-sketch-display-browser.mjs).
-(window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketchId: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(sketchId, [x, y]);
+(window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketch: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(activePartDocument?.features.find(f => f.name === sketch)?.id ?? sketch, [x, y]);
 configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), warm: doc => worker.evaluatePart(doc) });
 worker.ready
   .then(async () => {
@@ -1306,6 +1306,9 @@ async function evaluateAndShowPart(
   else setStatus(`Rebuilding ${document.name}…`);
   try {
     validatePartDocument(document);
+    // Every drawn contour and segment carries an identity before the engine and the viewer see
+    // it, so any line, point or region can be referenced by a later feature.
+    identifyDocumentSketches(document);
     const shouldFrame = activePartDocument?.documentId !== document.documentId || !viewer.getPartRows().some(row => row.sourceDocumentId === document.documentId);
     const { model: result, failures, document: resolved } = await rebuildRecovering(document, doc => worker.evaluatePart(doc));
     document.features = resolved.features;

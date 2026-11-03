@@ -64,7 +64,7 @@ export function sketchRegions(feature: PartFeature, includeOpen = false, history
     const label = `Region ${index + 1}`;
     if (contour.type === "circle") {
       if (!(Number.isFinite(contour.radius) && contour.radius > 0)) return;
-      regions.push({ engineId, contourId: contour.id, contourIndex: index, label: `${label} · circle`, circle: true });
+      regions.push({ engineId, contourId: contour.id, contourIndex: index, label, circle: true });
       return;
     }
     const segments = contour.segments ?? [];
@@ -73,8 +73,7 @@ export function sketchRegions(feature: PartFeature, includeOpen = false, history
     if (segments.some((segment) => segment.type === "arc" && !Array.isArray(segment.middle))) return;
     const end = segments[segments.length - 1].end;
     const closed = Math.hypot(end[0] - contour.start[0], end[1] - contour.start[1]) < 1e-6;
-    const straight = closed && segments.every((segment) => segment.type === "line") && segments.length >= 3;
-    regions.push({ engineId, contourId: contour.id, contourIndex: index, closed, label: straight ? `${label} · ${segments.length} sides` : `${label} · ${closed ? "curved" : "open path"}` });
+    regions.push({ engineId, contourId: contour.id, contourIndex: index, closed, label: closed ? label : label.replace(/^Region/, "Curve") });
   });
   for (const boundary of faces) {
     if (boundary.sourceContourIndices.length < 2) continue;

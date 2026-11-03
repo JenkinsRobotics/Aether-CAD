@@ -8,6 +8,7 @@ export function sketchDirectionLines(doc:PartDocument, beforeFeatureId?:string) 
     if(feature.type!=='profile'||feature.suppressed||feature.profile.type==='projection')return [];
     try {
       const drawing=resolveProfileDrawing(doc.features,feature.id);
+      let lineNumber=0; // Lines are numbered through the sketch: "Sketch 1 · Line 3", construction included.
       return drawing.contours.flatMap((contour,contourIndex)=>{
         if(contour.type!=='path')return [];
         let start:SketchPoint=contour.start;
@@ -15,7 +16,7 @@ export function sketchDirectionLines(doc:PartDocument, beforeFeatureId?:string) 
           const a=start;start=segment.end;
           if(segment.type!=='line'||Math.hypot(segment.end[0]-a[0],segment.end[1]-a[1])<1e-9)return [];
           return [{sourceFeatureId:feature.id,contourIndex,segmentIndex,contourId:contour.id,segmentId:segment.id,
-            label:`${feature.name} · ${contour.construction?'Construction line':'Line'} ${contourIndex+1}.${segmentIndex+1}`,
+            label:`${feature.name} · Line ${++lineNumber}`,
             start:a,end:segment.end,frame:profileSketchFrame(feature),support:feature.support}];
         });
       });

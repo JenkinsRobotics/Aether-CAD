@@ -26,7 +26,7 @@ it('uses the authored frame for the preview handle',()=>{
  const doc=model(),guide=doc.features[0] as any;
  guide.frame={originMillimeters:[50,60,70],normal:[1,0,0],xDirection:[0,1,0]};
  expect(directionLineVector(resolveSketchDirection(doc,ref,'e'))).toEqual([0,.6,.8]);
- expect(sketchDirectionLines(doc,'e').map(l=>l.label)).toContain('Guide · Construction line 1.1');
+ expect(sketchDirectionLines(doc,'e').map(l=>l.label)).toContain('Guide · Line 1');
 });
 it('keeps a missing direction source loadable for repair, but validates wrong and future references',()=>{
  const doc=model();doc.features.shift();expect(parsePartDocument(serializePartDocument(doc))).toEqual(doc);

@@ -26,7 +26,7 @@ export { projectSketchDrawing } from "../sketch/projection/drawing";
 export { referenceProfileContour } from "./profile-contour-reference";
 // Feature editors stamp a contour id when the user picks a region to build
 // on; without it the pick can only be an index, which reordering breaks.
-export { identifySketchContour } from "./identify-sketch-contour";
+export { identifySketchContour, identifyDocumentSketches } from "./identify-sketch-contour";
 export { identifyProfileContours } from "./profile-contour-identities";
 
 export { updatePartDocumentVariables } from "./update-variables";

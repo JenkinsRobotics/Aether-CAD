@@ -55,7 +55,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       const label=box.element.querySelector('.aui-feature-entities-caption');
       if(label)label.textContent=caption;
     }
-    box?.render(picks.map(p => ({label: `${curves()?`Curve ${p.contourIndex + 1}`:regions(p.featureId).find(r=>r.contourIndex===p.contourIndex)?.label ?? "Missing region"} of ${sketches.find(f => f.id === p.featureId)?.name ?? "sketch"}`, onRemove: () => update(picks.filter(other => key(other) !== key(p)))})));
+    box?.render(picks.map(p => ({label: `${sketches.find(f => f.id === p.featureId)?.name ?? "Sketch"} · ${curves()?`Curve ${p.contourIndex + 1}`:regions(p.featureId).find(r=>r.contourIndex===p.contourIndex)?.label ?? "Missing region"}`, onRemove: () => update(picks.filter(other => key(other) !== key(p)))})));
     window.dispatchEvent(new CustomEvent("aether-region-mode", {detail: {active:pickingActive, curveMode:curves(), regionMode: feature?.regionMode === "faces" || !feature || selections.value !== selections.dataset.initial, selections:picks, legacySelections:picks.filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex && r.contourId && !r.cell)), allowedSourceIds:sketches.map(f=>f.id)}}));
   };
   pickingModes.set(selections,active=>{pickingActive=active;render();});
