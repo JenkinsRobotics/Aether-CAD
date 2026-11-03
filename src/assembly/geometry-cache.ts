@@ -1,4 +1,4 @@
-import type { ImportedModelData } from '../domain';
+import type { ImportedModelData } from '@aether/core/contracts';
 import type { PartDocument } from '../aether-core';
 
 export interface AssemblyGeometryDependencies {

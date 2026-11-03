@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { createRectanglePartDocument } from '../part-document';
-import type { ImportedModelData } from '../domain';
+import { createRectanglePartDocument } from '@aether/core/document';
+import type { ImportedModelData } from '@aether/core/contracts';
 import { HistoryPlayback } from './playback';
 const model=(name='frame'):ImportedModelData=>({sourceName:name,parts:[],parseMilliseconds:12});
 const tick=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};

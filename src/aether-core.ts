@@ -5,9 +5,8 @@
  * importing CAD semantics from this facade so extracting the implementation
  * later changes module locations, not behavior or document meaning.
  */
-import type { ImportedModelData } from "./domain";
-import type { PartDocument } from "./part-document";
-import { OCCTWorkerClient } from "@aether/core/kernel";
+import type { ImportedModelData } from "@aether/core/contracts";
+import type { PartDocument } from "@aether/core/document";
 
 export type {
   AppliedMate,
@@ -59,7 +58,3 @@ export interface AetherCoreClient {
   evaluatePart(document: PartDocument): Promise<ImportedModelData>;
 }
 
-/** Embedded adapter used until Aether Core becomes its own package/process. */
-export function createEmbeddedAetherCoreClient(): AetherCoreClient {
-  return new OCCTWorkerClient();
-}

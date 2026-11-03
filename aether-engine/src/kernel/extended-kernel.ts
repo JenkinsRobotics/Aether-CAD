@@ -12,7 +12,6 @@ let full: FullOC | undefined;
 let counter = 0;
 
 export function extendedKernel(): FullOC | undefined { return full; }
-export function setExtendedKernel(oc: FullOC): void { full = oc; }
 
 /** The surface kinds the stock build cannot bound a half-space with. */
 export const extendedStopSurfaces = ["cone", "torus", "bspline", "bezier", "extrusion", "revolution"];

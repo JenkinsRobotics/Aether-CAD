@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRectanglePartDocument } from "./part-document";
+import { createRectanglePartDocument } from "@aether/core/document";
 import { buildPartFeatureTree } from "./part-feature-tree";
 
 describe("Part feature tree", () => {

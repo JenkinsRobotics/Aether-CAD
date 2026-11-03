@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { evaluatePart } from "../engine/evaluate-part";
 import { anchorForPlanarFace } from "../viewport/planar-face-reference";
 import { supportForFace } from "./sketch-support";
-import { PART_DOCUMENT_VERSION, type PartDocument } from "../part-document";
+import { PART_DOCUMENT_VERSION, type PartDocument } from "@aether/core/document";
 
 const plate: PartDocument = {
   format: "aether-part", formatVersion: PART_DOCUMENT_VERSION, documentId: "plate", name: "Part 1", units: "millimeter",

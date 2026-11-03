@@ -119,6 +119,17 @@ it('a negative value on a point-to-line distance moves the point to the other si
   // Both entities are free, so the solver shares the move; the circle ends 10 below the line instead of 10 above it.
   const profile = doc.features[0].profile; expect(profile.contours[1].center[1] - profile.contours[0].start[1]).toBeCloseTo(-10);
 });
+it('a negative point-to-point distance sends the second point to the other side of the first', async () => {
+  doc.features[0].profile.contours = [{ type: 'path', start: [0, 0], segments: [{ type: 'line', end: [40, 0] }] }, { type: 'circle', center: [20, 10], radius: 2 }];
+  start(); key(); pick(0, 0); pick(20, 10); pick(25, 15);
+  submit('-10');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  const profile = doc.features[0].profile;
+  expect(profile.constraints).toMatchObject([{ kind: 'distance', value: 10 }]);
+  // The circle centre was 10 away toward (+x, +y); it now sits 10 away on the opposite side.
+  const [cx, cy] = profile.contours[1].center, [sx, sy] = profile.contours[0].start;
+  expect(Math.hypot(cx - sx, cy - sy)).toBeCloseTo(10); expect(cx - sx).toBeLessThan(0); expect(cy - sy).toBeLessThan(0);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }

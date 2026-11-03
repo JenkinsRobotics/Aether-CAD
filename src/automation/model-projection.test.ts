@@ -3,7 +3,7 @@ import { createEmptyPartDocument, serializePartDocument, type ProfileFeature, ty
 import type { SketchFrame, ModelProjectionOptions } from "@aether/core/sketch";
 import { prepareModelProjection } from "./model-projection";
 import { CADAgentEditor, type CADAgentWorkspace } from "./live-workspace";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 
 function fixture() {
   const document = createEmptyPartDocument("Projection");

@@ -4,7 +4,7 @@ import {
   rectangleSketchRevision,
   reviseCenterRectangleSketch,
   sketchDefinitionState,
-} from "./sketch-constraints";
+} from "@aether/core/sketch";
 
 describe("center rectangle sketch constraints", () => {
   it("starts origin-anchored but under-defined until width and height are dimensioned", () => {

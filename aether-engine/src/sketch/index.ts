@@ -186,7 +186,7 @@ export { patternSourceContour } from "./solver/pattern-source";
 
 export { patternSourceEntities } from "./solver/pattern-source";
 
-export { projectedSketchEntities } from "./solver/entities";
+export { projectedSketchEntities, sketchEntityPoint } from "./solver/entities";
 export { SKETCH_ORIGIN_ID, SKETCH_ORIGIN_REF, referencedContour } from "./solver/projected-context";
 export * from "./operations/projected-snaps";
 

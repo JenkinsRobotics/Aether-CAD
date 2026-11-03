@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PartDocument } from "@aether/core/document";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import { CADTestController, geometrySignature } from "./controller";
 import { createSprocketDocument, defaultSprocketParameters, reopenTestDocument, stageDocument } from "./sprocket";
 

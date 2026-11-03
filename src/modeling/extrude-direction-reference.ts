@@ -33,7 +33,3 @@ export function directionLineVector(line:ReturnType<typeof sketchDirectionLines>
   const vector=x.map((v,i)=>v*dx+y[i]*dy),length=Math.hypot(...vector);
   return vector.map(v=>v/length) as [number,number,number];
 }
-export function nativeSketchDirection(doc:PartDocument, ref:SketchLineDirectionReference, beforeFeatureId:string) {
-  const line=resolveSketchDirection(doc,ref,beforeFeatureId);
-  return {kind:'sketch-line',local_vector:[line.end[0]-line.start[0],line.end[1]-line.start[1]],frame:line.frame,...(line.support?{support:line.support}:{})};
-}

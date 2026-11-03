@@ -1,5 +1,5 @@
 import type { PartDocument } from "@aether/core/document";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 
 type HistoryService = {
   evaluate(document: PartDocument): Promise<ImportedModelData>;

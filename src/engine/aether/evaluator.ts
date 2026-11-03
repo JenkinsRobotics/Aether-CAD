@@ -3,7 +3,7 @@
  *  as transferred buffers. */
 import { availableBodies } from "@aether/core/document";
 import type { AnalysisOptions, ExportOptions, ImportedModelData, MeasureEntity } from "@aether/core/contracts";
-import type { PartDocument } from "../../part-document";
+import type { PartDocument } from "@aether/core/document";
 import { FeatureBuildError } from "../../modeling/feature-errors";
 import { resolveBodyOutputs } from "../../modeling/body-outputs";
 import { resolveSketchFrames } from "../../modeling/sketch-support";

@@ -104,8 +104,7 @@ it("rejects incompatible fixed text drags atomically", async () => {
     },
   ];
   const before = structuredClone(source);
-  expect(() =>
-    dragSketchEntity(source, { contour: 2, kind: "point", index: 0 }, [4, 5]),
-  ).toThrow();
+  // An anchored point cannot move: the drag returns the drawing unchanged.
+  expect(dragSketchEntity(source, { contour: 2, kind: "point", index: 0 }, [4, 5])).toEqual(before);
   expect(source).toEqual(before);
 });

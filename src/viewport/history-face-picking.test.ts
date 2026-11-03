@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {Raycaster,Vector3} from 'three/webgpu';
-import type {ImportedModelData,PartGeometryData} from '../domain';
+import type {ImportedModelData,PartGeometryData} from '@aether/core/contracts';
 import {FeaturePreviewLayer} from '../modeling/feature-preview-layer';
 import type {ConnectorCandidate} from '../aether-core';
 import {pickHistoryFace} from './history-face-picking';

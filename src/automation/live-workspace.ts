@@ -1,7 +1,7 @@
 import {resolveExtrusionScopes} from '../modeling/extrusion-scope-resolution';
 import { serializePartDocument, type PartDocument } from '@aether/core/document';
 import type { AgentInteraction, AgentToolCall } from '@aether/ui/AgentServices';
-import type { ImportedModelData } from '../domain';
+import type { ImportedModelData } from '@aether/core/contracts';
 import { resolveBodyOutputs } from '../modeling/body-outputs';
 import { resolveSketchFrames } from '../modeling/sketch-support';
 import { cadAgentTools, inspectPart, preparePartEdit, validateLiveArguments } from './live-commands';

@@ -56,9 +56,7 @@ it("releases then freezes a contact at its solved parameter without moving saved
     b: { parameter: expect.closeTo(0.75), sliding: false },
   });
   expect(sketchConstraintState(fixed).degreesOfFreedom).toBe(0);
-  expect(() =>
-    dragSketchEntity(fixed, { kind: "point", contour: 1, index: 0 }, [0.2, 0]),
-  ).toThrow();
+  expect(dragSketchEntity(fixed, { kind: "point", contour: 1, index: 0 }, [0.2, 0])).toEqual(fixed);
   expect(d.constraints!.at(-1)!.b!.sliding).toBeUndefined();
 });
 it("rejects non-contact selections without mutating input", () => {

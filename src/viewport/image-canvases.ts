@@ -1,5 +1,5 @@
 import {decalGeometry} from "./decal-geometry";
-import type {PartGeometryData} from "../domain";
+import type {PartGeometryData} from "@aether/core/contracts";
 import * as THREE from 'three';
 import {principalFrame,type ImageCanvas} from '@aether/core/document';
 export class ImageCanvasLayer {

@@ -82,18 +82,7 @@ export function planned<T extends HTMLElement>(control: T): T {
   return control;
 }
 
-export function plannedCheckbox(): HTMLInputElement {
-  const box = document.createElement("input");
-  box.type = "checkbox";
-  return planned(box);
-}
 
-export function textInput(value: string): HTMLInputElement {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = value;
-  return input;
-}
 
 /** Body-type and boolean-operation tab rows. Every solid feature in the gallery
  *  opens with these two, in this order. `operation` is the live control; the
@@ -193,7 +182,8 @@ export function layoutParameterRows(
     const input=label.querySelector<HTMLInputElement|HTMLSelectElement>('input,select');
     if(!input || custom?.(input))continue;
     let caption=(label.firstChild?.textContent ?? input.getAttribute('aria-label') ?? '').trim();
-    const match=caption.match(/\(([^)]+)\)\s*$/);
+    // Only a unit in the trailing parenthesis becomes a suffix; "(optional)" is part of the caption.
+    const match=caption.match(/\((mm|cm|m|in|ft|deg|rad|°|%)\)\s*$/i);
     if(match)caption=caption.slice(0,match.index).trim();
     input.setAttribute('form',form.id);
     rows.set(input,win.row(caption,input,...(match ? [unitSuffix(match[1])] : [])));

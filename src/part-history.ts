@@ -1,4 +1,4 @@
-import type { PartFeature } from "./part-document";
+import type { PartFeature } from "@aether/core/document";
 
 /** Placement changes remain in replay/history, but do not define a new shape.
  * Copies, mirrors and scales still belong in the modeling feature tree. */

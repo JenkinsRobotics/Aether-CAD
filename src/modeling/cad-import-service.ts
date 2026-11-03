@@ -1,5 +1,5 @@
 import {serializePartDocument,type PartDocument} from '@aether/core/document';
-import type {ImportedModelData} from '../domain';
+import type {ImportedModelData} from '@aether/core/contracts';
 import {appendCAD,type CADImportOptions} from './cad-import';
 import {cadPresentation} from '../cad-presentation-store';
 

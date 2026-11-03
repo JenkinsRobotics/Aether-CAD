@@ -3,7 +3,7 @@ import {unitChoice, parseQuantity} from "@aether/core/units";
 import {documentUnits} from "../document-preferences";
 import {renderPhysicalProperties} from "./properties";
 import { availableBodies, type PartDocument } from "@aether/core/document";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import { onEngine } from "../engine/evaluate-part";
 import { analyzeOnAether, measureOnAether } from "../engine/aether/evaluator";
 import type { MeasureReference } from "../measure/measure-reference";

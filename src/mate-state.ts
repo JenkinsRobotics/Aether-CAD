@@ -1,4 +1,4 @@
-import type { ConnectorCandidate, MateConnector } from "./domain";
+import type { ConnectorCandidate, MateConnector } from "@aether/core/contracts";
 
 export interface ConstraintDecision {
   allowed: boolean;

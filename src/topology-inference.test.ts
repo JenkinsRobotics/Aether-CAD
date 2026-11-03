@@ -3,7 +3,7 @@ import {
   connectorKindPreference,
   cylinderAxisStations,
   sameOrigin,
-} from "./topology-inference";
+} from "@aether/core/geometry";
 
 describe("cylinder connector inference", () => {
   it("returns both trimmed ends and the exact axis center", () => {

@@ -1,5 +1,5 @@
-import type { PartDocument } from '../part-document';
-import type { ImportedModelData } from '../domain';
+import type { PartDocument } from '@aether/core/document';
+import type { ImportedModelData } from '@aether/core/contracts';
 
 export interface PlaybackSnapshot {
   status: 'idle' | 'playing' | 'paused' | 'complete' | 'error';

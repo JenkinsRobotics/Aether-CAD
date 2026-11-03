@@ -1,5 +1,4 @@
 import * as THREE from "three/webgpu";
-import { connectorMatrix, type ConnectorCandidate } from "./aether-core";
 import { viewportMaterials } from "./viewport-appearance";
 
 export interface ConnectorMarker {
@@ -49,53 +48,6 @@ export function createConnectorGizmo(
     });
   });
   return { root, hitTarget };
-}
-
-/**
- * Creates inexpensive, face-aligned 2D snap nodes for one exact B-Rep face.
- * Instancing keeps the candidate cloud to two draw calls regardless of count.
- */
-export function createCandidateCloud(
-  candidates: ConnectorCandidate[],
-  partWorld: THREE.Matrix4,
-  markerScale: number,
-): THREE.Group {
-  const cloud = new THREE.Group();
-  cloud.userData.transient = true;
-  cloud.matrixAutoUpdate = false;
-  cloud.matrix.copy(partWorld);
-
-  const outlines = new THREE.InstancedMesh(
-    new THREE.CircleGeometry(markerScale * 0.045, 16),
-    viewportMaterials.candidateOutline,
-    candidates.length,
-  );
-  const dots = new THREE.InstancedMesh(
-    new THREE.CircleGeometry(markerScale * 0.03, 16),
-    viewportMaterials.candidateDot,
-    candidates.length,
-  );
-  candidates.forEach((candidate, index) => {
-    const frame = connectorMatrix(candidate);
-    outlines.setMatrixAt(
-      index,
-      frame.clone().multiply(
-        new THREE.Matrix4().makeTranslation(0, 0, markerScale * 0.002),
-      ),
-    );
-    dots.setMatrixAt(
-      index,
-      frame.clone().multiply(
-        new THREE.Matrix4().makeTranslation(0, 0, markerScale * 0.003),
-      ),
-    );
-  });
-  outlines.instanceMatrix.needsUpdate = true;
-  dots.instanceMatrix.needsUpdate = true;
-  outlines.renderOrder = 100;
-  dots.renderOrder = 101;
-  cloud.add(outlines, dots);
-  return cloud;
 }
 
 export function disposeTransientGeometry(root: THREE.Object3D): void {

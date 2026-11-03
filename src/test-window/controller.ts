@@ -1,5 +1,5 @@
 import type { PartDocument } from "@aether/core/document";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import { createSprocketDocument, defaultSprocketParameters, reopenTestDocument, stageDocument, type HistoryStage, type SprocketParameters } from "./sprocket";
 
 export type NativePartEvaluator = (document: PartDocument) => Promise<ImportedModelData>;

@@ -173,6 +173,8 @@ export function layoutRegion(context: FeatureEditorContext, source: Controls[str
   region.setAttribute("form", context.form.id);
   const row = context.win.row("Region", region);
   row.classList.add("cad-extrude-region-row");
+  // The region list stays for the suite and agents; regions are picked in the viewport, never from a menu.
+  row.hidden = true;
   regionRows.set(region, row);
   syncRegions(context, source, region);
   // The region count is kept for the suite but never shown (Jonathan, 2026-11-02: no stray text).
@@ -180,7 +182,7 @@ export function layoutRegion(context: FeatureEditorContext, source: Controls[str
   hint.className = "cad-region-selection-summary";
   hint.hidden = true;
   row.after(hint);
-  context.win.addHelp("Choose a closed region in the viewport or dropdown. Selecting a sketch does not select all its regions. Enclosed contours form holes; Ctrl/Cmd-click selects several regions where supported.");
+  context.win.addHelp("Click a closed region in the viewport. Selecting a sketch does not select all its regions. Enclosed contours form holes; Ctrl/Cmd-click selects several regions where supported.");
   announceRegion(context, source, region);
 }
 

@@ -31,6 +31,7 @@ export class RegionPicker {
       this.rebuild();
     });
   }
+  isActive(): boolean { return this.active; }
   setDocument(document: PartDocument | null) {
     this.document = document;
     this.rebuild();

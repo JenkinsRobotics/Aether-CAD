@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { AetherIcon } from "@aether/ui";
-import type { SketchPlane } from "./part-document";
+import type { SketchPlane } from "@aether/core/document";
 
 export type ReferenceGeometryId = "origin" | "axes" | "top-plane" | "front-plane" | "right-plane";
 

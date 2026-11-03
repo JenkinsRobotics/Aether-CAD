@@ -22,16 +22,6 @@ export function CADPanelPlacementMenu({ panel, label, placement }: { panel: CADP
   />;
 }
 
-export function countTreeMatches(nodes: readonly TreeNode[], filter: string): number {
-  const query = filter.trim().toLocaleLowerCase();
-  let count = 0;
-  const visit = (items: readonly TreeNode[]) => items.forEach((item) => {
-    if (!query || `${item.label} ${item.badge ?? ""}`.toLocaleLowerCase().includes(query)) count += 1;
-    if (item.children) visit(item.children);
-  });
-  visit(nodes);
-  return count;
-}
 
 /* ponytail: static mockups — greyed-out until each workflow gets real host backing. */
 
@@ -86,13 +76,6 @@ export function ReadOnlyPropertySections({
     />;
 }
 
-export const unavailableInspectionTools = [
-  {
-    id: "curvature",
-    label: "Curvature",
-    description: "Surface continuity and curvature evaluation are not exposed by the Core bridge yet.",
-  },
-] as const;
 
 /** A command as a primary button. Two panels drive commands this way, so it
  *  sits here rather than in the shell it was lifted out of. */

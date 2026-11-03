@@ -15,7 +15,6 @@ import { renderDimensionAnnotations } from "./dimension-annotations";
 /** The sketch plane square: half-width in millimetres, centred on the frame
  * origin. Larger than the 110 mm datum planes so it frames them. */
 export const SKETCH_PLANE_HALF_MILLIMETRES = 80;
-export const SKETCH_GRID_MILLIMETRES = 10;
 export function renderSketchCanvas(
   svg: SVGSVGElement,
   drawing: SketchDrawing,

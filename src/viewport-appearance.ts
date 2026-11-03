@@ -110,11 +110,3 @@ export const viewportMaterials = {
   }),
 } as const;
 
-export function createPartEdgeMaterial(): THREE.LineBasicMaterial {
-  return new THREE.LineBasicMaterial({
-    color: 0x14242d,
-    transparent: true,
-    opacity: 0.55,
-    depthWrite: false,
-  });
-}

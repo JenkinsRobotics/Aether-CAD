@@ -2,7 +2,7 @@
  *  engine, in the worker (or in-process under Node). A feature the engine does
  *  not support is the user's error against that feature, never a silent fallback. */
 import type { ImportedModelData } from "@aether/core/contracts";
-import type { PartDocument } from "../part-document";
+import type { PartDocument } from "@aether/core/document";
 import { FeatureBuildError } from "../modeling/feature-errors";
 import { evaluateAetherPart } from "./aether/evaluator";
 import { EngineUnsupported } from "./unsupported";

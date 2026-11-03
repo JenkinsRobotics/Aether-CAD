@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Matrix4, Vector3 } from "three";
-import type { ConnectorFrameData } from "./domain";
+import type { ConnectorFrameData } from "@aether/core/contracts";
 import { connectorMatrix, matrixAlmostEqual, solveFastenedMate } from "./math";
 
 const frame = (

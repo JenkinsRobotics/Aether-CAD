@@ -1,6 +1,6 @@
 import {resolveExtrusionScopes} from './extrusion-scope-resolution';
 import { featureReferenceErrors, type PartDocument } from '@aether/core/document';
-import type { ImportedModelData } from '../domain';
+import type { ImportedModelData } from '@aether/core/contracts';
 import { resolveSketchFrames } from './sketch-support';
 import { resolveBodyOutputs } from './body-outputs';
 

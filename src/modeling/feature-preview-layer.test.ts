@@ -2,7 +2,7 @@ import {visiblePreviewBounds} from '../viewport/orientation-preview';
 import {expect,it,vi} from 'vitest';
 import {Mesh} from 'three/webgpu';
 import {FeaturePreviewLayer,previewColors} from './feature-preview-layer';
-import type {ImportedModelData,PartGeometryData} from '../domain';
+import type {ImportedModelData,PartGeometryData} from '@aether/core/contracts';
 const part=(id:string):PartGeometryData=>({id,name:id,sourceDocumentId:'preview',sourceName:'Preview',vertices:new Float32Array([0,0,0,1,0,0,0,1,0]),normals:new Float32Array([0,0,1,0,0,1,0,0,1]),triangles:new Uint32Array([0,1,2]),edgeLines:new Float32Array([0,0,0,1,0,0]),faceRanges:[],topology:[]});
 const model:ImportedModelData={sourceName:'Part',parseMilliseconds:0,parts:[part('real')],featurePreview:{base:[part('preview:base:target'),part('preview:base:other')],added:[part('preview:added:target')],removed:[part('preview:removed:target')]}};
 it('draws blue addition and red removal volumes, ghosting only the cut target',()=>{

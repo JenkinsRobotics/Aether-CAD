@@ -1,8 +1,8 @@
 import { errorsForDocument, renderableDocument } from "./modeling/feature-errors";
 import { availableBodies, rollbackPosition } from "@aether/core/document";
-import type { PartDocument, PartFeature } from "./part-document";
+import type { PartDocument, PartFeature } from "@aether/core/document";
 import { sketchConstraintState } from "@aether/core/sketch";
-import { sketchDefinitionState } from "./sketch-constraints";
+import { sketchDefinitionState } from "@aether/core/sketch";
 import { isPartPlacementAction } from "./part-history";
 
 export type PartTreeItemKind = "part-document" | PartFeature["type"] | "body";

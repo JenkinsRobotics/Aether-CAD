@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {createEmptyPartDocument,availableBodies,bodyIDForFeature,type PartDocument} from '@aether/core/document';
 import {cadAgentTools,preparePartEdit} from './live-commands';
 import {CADAgentEditor,type CADAgentWorkspace} from './live-workspace';
-import type {ImportedModelData} from '../domain';
+import type {ImportedModelData} from '@aether/core/contracts';
 import {plateProgram} from '../ai/program';
 
 it('creates native-compatible sketch and extrusion definitions with explicit units and stable references',()=>{

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import type {FaceTopologyData} from '../domain';
+import type {FaceTopologyData} from '@aether/core/contracts';
 import {anchorForPlanarFace,planarFaceCandidates} from './planar-face-reference';
 const face=(id:number,center:[number,number,number],area=100):FaceTopologyData=>({id,surfaceType:'PLANE',measurements:{areaSquareMillimeters:area},candidates:[{id:`face-${id}-center`,faceId:id,kind:'face-center',label:'Center',origin:center,zAxis:[0,0,1],xAxis:[1,0,0],yAxis:[0,1,0]}]});
 

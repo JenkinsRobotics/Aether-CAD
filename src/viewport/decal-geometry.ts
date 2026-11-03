@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {canonicalPlaneXDirection,type ImageCanvas} from '@aether/core/document';
-import type {PartGeometryData} from '../domain';
+import type {PartGeometryData} from '@aether/core/contracts';
 import {planarFaceCandidates} from './planar-face-reference';
 /** Clip actual face triangles to the decal rectangle. Holes remain holes. */
 export function decalGeometry(canvas:ImageCanvas,part:PartGeometryData):THREE.BufferGeometry|null{

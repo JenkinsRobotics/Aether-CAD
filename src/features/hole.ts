@@ -109,7 +109,8 @@ export const holeEditor: FeatureEditor = {
     const sync = () => {
       const face = controls.placement.value === 'face';
       const sourceRow = controls.source.closest<HTMLElement>('.aui-feature-row') ?? controls.source.parentElement; if (sourceRow) sourceRow.hidden = face;
-      const regionRow = controls.region.closest<HTMLElement>('.aui-feature-row') ?? controls.region.parentElement; if (regionRow) regionRow.hidden = face || controls.allCircles.value === 'yes';
+      // The circular region is picked in the viewport; its list row stays hidden (Jonathan, 2026-11-02).
+      const regionRow = controls.region.closest<HTMLElement>('.aui-feature-row') ?? controls.region.parentElement; if (regionRow) regionRow.hidden = true;
       hide(controls.allCircles, face);
       for (const key of ['pointX', 'pointY', 'pointZ']) hide(controls[key], !face);
       for (const key of ['drillX', 'drillY', 'drillZ']) hide(controls[key], controls.drillMode.value !== 'custom');

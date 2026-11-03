@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { CachedDisplayEvaluator, type DisplayStorage } from './display-cache';
-import type { PartDocument } from '../part-document';
-import type { ImportedModelData } from '../domain';
+import type { PartDocument } from '@aether/core/document';
+import type { ImportedModelData } from '@aether/core/contracts';
 const document = (depth = 5) => ({documentId: 'part', features: [{type: 'extrude', distanceMillimeters: depth}]}) as PartDocument;
 const mesh = () => ({parts: [{id: 'body', vertices: new Float32Array(9), normals: new Float32Array(9), triangles: new Uint32Array([0,1,2]), edgeLines: new Float32Array(6), topology: [], faceRanges: []}]}) as unknown as ImportedModelData;
 const storage = () => {

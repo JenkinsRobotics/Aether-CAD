@@ -5,8 +5,8 @@ import {
   rectanglePartParameters,
   reviseRectanglePartDocument,
   validatePartDocument,
-} from "./part-document";
-import { sketchDefinitionState } from "./sketch-constraints";
+} from "@aether/core/document";
+import { sketchDefinitionState } from "@aether/core/sketch";
 import { parsePartDocument, serializePartDocument } from "./part-file";
 
 const ids = {

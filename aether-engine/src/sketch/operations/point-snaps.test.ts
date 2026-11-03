@@ -47,9 +47,7 @@ it("anchors new origin points without constraining off-target or existing points
       point: [0, 0],
     },
   ]);
-  expect(() =>
-    dragSketchEntity(next, { kind: "point", contour: 1, index: 0 }, [1, 0]),
-  ).toThrow();
+  expect(dragSketchEntity(next, { kind: "point", contour: 1, index: 0 }, [1, 0])).toEqual(next);
 });
 it("does not duplicate closed endpoints or existing inferred relationships", () => {
   const before = source(),

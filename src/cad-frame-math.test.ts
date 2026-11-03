@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectorAxes, pointAlongAxis } from "./cad-frame-math";
+import { connectorAxes, pointAlongAxis } from "@aether/core/geometry";
 
 describe("connectorAxes", () => {
   it("creates the expected right-handed frame", () => {

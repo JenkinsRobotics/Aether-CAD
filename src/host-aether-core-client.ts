@@ -1,5 +1,5 @@
-import type { ImportedModelData } from "./domain";
-import type { PartDocument } from "./part-document";
+import type { ImportedModelData } from "@aether/core/contracts";
+import type { PartDocument } from "@aether/core/document";
 import { aetherKernel } from "./engine/aether/kernel";
 import type { AetherCoreClient } from "./aether-core";
 import { evaluatePart } from "./engine/evaluate-part";

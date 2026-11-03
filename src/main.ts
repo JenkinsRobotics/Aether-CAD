@@ -17,7 +17,7 @@ import { supportForFace, sourceFeatureForBody } from "./modeling/sketch-support"
 import { openPartAnalysis } from "./modeling/part-analysis";
 import {configureCADImport,queueCADImport} from "./modeling/cad-import-service";
 import {importFormat} from "./modeling/cad-import";
-import type {ImportedModelData} from "./domain";
+import type {ImportedModelData} from "@aether/core/contracts";
 import { configureFeaturePreview } from "./modeling/feature-preview";
 import { configurePartExport } from "./modeling/part-export";
 import { configureViewportContext } from "./viewport/context-menu";
@@ -1288,7 +1288,8 @@ function showEvaluatedPart(document:PartDocument,result:ImportedModelData,failur
     if (shouldFrame && result.parts.length) viewer.frameAll();
     setStatus(
       failures.size ? `${failures.size} feature${failures.size === 1 ? "" : "s"} could not be rebuilt. ${[...failures.values()][0]}` : `${successMessage} Rebuilt ${rollbackPosition(document)} history entries in ${result.parseMilliseconds.toFixed(1)} ms${result.replayedFeatures !== undefined ? ` (${result.replayedFeatures} replayed)` : ""}.`,
-      failures.size ? "error" : "success",
+      // Failures show on their tree rows; the status line says so without a toast.
+      "success",
     );
 }
 

@@ -9,6 +9,7 @@ import { mountConfigurationCommands } from "./configurations-window";
 import { mountTimelinePaste } from "./timeline-clipboard-commands";
 import { mountPreviewHandles } from "./features/preview-handles";
 import { mountEditHistory, featurePreviewDocument } from "./modeling/edit-history";
+import { errorsForDocument } from "./modeling/feature-errors";
 import { mountFeaturePreview } from "./modeling/feature-preview";
 import { openProjectionEditor } from "./sketch/projection-editor";
 import { assignItems, canNestFolder, createFolder, deleteFolder, emptyTreeOrganization, moveFolder, renameFolder } from "@aether/core/document";
@@ -423,7 +424,16 @@ const presentFeatureWindow = (
     // Every feature's draggable parameters get a viewport handle from the preview's
     // published manipulators; editors that mount their own (extrude, push/pull, transform) opt out.
     if (editor && editor.handles !== false) mountPreviewHandles(win.panel, controls, { length: lengthUnit.unit, angle: angleUnit.unit }, editor.handles ?? {});
-    const preview = mountFeaturePreview(win.body, () => featurePreviewDocument(candidateDocument(), existing?.id), message => win.setError(message), () => candidateDocument(), message => win.setNotice?.(message));
+    // Features already broken in the document (a deleted body, a lost reference) are left
+    // out of the preview, as the rebuild leaves them out; only this feature's own error
+    // reaches the window (Jonathan, 2026-11-02: a broken feature elsewhere blocked every preview).
+    const previewDocument = () => {
+      const candidate = candidateDocument();
+      const broken = errorsForDocument(source);
+      broken.delete(draftId); if (existing) broken.delete(existing.id);
+      return featurePreviewDocument(broken.size ? { ...candidate, features: candidate.features.map(f => broken.has(f.id) ? { ...f, suppressed: true } : f) } : candidate, existing?.id);
+    };
+    const preview = mountFeaturePreview(win.body, previewDocument, message => win.setError(message), () => candidateDocument(), message => win.setNotice?.(message));
     for (const control of [...Object.values(controls), name]) {
       control.addEventListener("input", preview.update);
       control.addEventListener("change", preview.update);

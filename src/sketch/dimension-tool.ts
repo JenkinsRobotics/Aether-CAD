@@ -1,4 +1,4 @@
-import { dimensionValue, distanceSideOf, editDrawingDimension, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
+import { dimensionValue, distanceSideOf, dragSketchEntity, editDrawingDimension, sketchEntityPoint, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
 import { cadCommands } from '../cad-command-registry';
 import { pickSelectableSketchEntity } from './projected-picking';
 import { bindDimensionInput } from './dimension-input';
@@ -84,10 +84,20 @@ export function mountDimensionTool(o: Options) {
         // A line distance flips to the other side of the line; a signed H/V distance or
         // angle flips its direction.
         const side = constraint.kind === 'distance' ? distanceSideOf(drawing, { ...constraint, reference: false }) : undefined;
-        const directional = (['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b) || side !== undefined;
+        // Point-to-point: the second point crosses to the other side of the first along the dimension.
+        const points = constraint.kind === 'distance' && side === undefined && constraint.b ? [sketchEntityPoint(drawing, constraint.a), sketchEntityPoint(drawing, constraint.b)] : [];
+        const pair = points.length === 2 && points.every(Boolean);
+        const directional = (['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b) || side !== undefined || pair;
         if (typed < 0 && !directional) throw Error('Enter a positive dimension.');
         const value = Math.abs(typed);
         const flipped = typed < 0;
+        if (flipped && pair) {
+          const [pa, pb] = points as SketchPoint[];
+          const length = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) || 1, unit = [(pb[0] - pa[0]) / length, (pb[1] - pa[1]) / length];
+          const moved = dragSketchEntity(drawing, constraint.b!, [pa[0] - unit[0] * value - pb[0], pa[1] - unit[1] * value - pb[1]]);
+          // The second point is bound: the first crosses instead.
+          drawing = moved !== drawing ? moved : dragSketchEntity(drawing, constraint.a, [pb[0] + unit[0] * value - pa[0], pb[1] + unit[1] * value - pa[1]]);
+        }
         const flip = (c: DrawingConstraint): DrawingConstraint => side !== undefined ? { ...c, distanceSide: (-(c.distanceSide ?? side)) as 1 | -1 } : { ...c, a: c.b!, b: c.a };
         if (flipped && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? flip(c) : c) };
         const placed = flipped && !existing ? flip(candidate) : candidate;

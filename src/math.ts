@@ -4,7 +4,7 @@ import {
   solveFastenedMateTransform,
   transformsAlmostEqual,
 } from "@aether/core/assembly";
-import type { ConnectorFrameData } from "./domain";
+import type { ConnectorFrameData } from "@aether/core/contracts";
 
 export function connectorMatrix(frame: ConnectorFrameData): Matrix4 {
   return new Matrix4().fromArray(connectorTransform(frame));

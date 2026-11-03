@@ -1,4 +1,4 @@
-import type {ConnectorCandidate, FaceTopologyData} from '../domain';
+import type {ConnectorCandidate, FaceTopologyData} from '@aether/core/contracts';
 import type {PlanarFaceAnchor} from '@aether/core/document';
 import {connectorAxes} from '@aether/core/geometry';
 

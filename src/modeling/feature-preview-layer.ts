@@ -1,5 +1,5 @@
 import * as THREE from "three/webgpu";
-import type { ImportedModelData, PartGeometryData } from "../domain";
+import type { ImportedModelData, PartGeometryData } from "@aether/core/contracts";
 
 export const previewColors = { added: 0x419de6, removed: 0xe34e56, base: 0xb4bbc3 };
 /** Temporary exact geometry. Only the earlier-history layer permits face picking;

@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 import { createRectanglePartDocument } from "@aether/core/document";
 import { EditHistory, featurePreviewDocument } from "./edit-history";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 const model = (name: string): ImportedModelData => ({ parts: [], sourceName: name, parseMilliseconds: 0 });
 const tick = async () => { await Promise.resolve(); await Promise.resolve(); };
 const document = () => createRectanglePartDocument("Part",{widthMillimeters:20,heightMillimeters:20,depthMillimeters:10});

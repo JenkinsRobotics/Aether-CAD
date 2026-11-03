@@ -11,7 +11,7 @@
 import { assemblyJobFor } from "../assembly-job";
 import type { AssemblyJob, AssemblySolution } from "../assembly-types";
 import type { AssemblyProjectionV1 } from "../cad-assembly-bridge";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import type { PartDocument } from "../aether-core";
 import { AssemblyGeometryCache, type EvaluatedDefinition } from '../assembly/geometry-cache';
 import { documentBodyAppearance } from '../viewport/document-appearance';

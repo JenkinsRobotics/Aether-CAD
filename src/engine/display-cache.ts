@@ -1,5 +1,5 @@
-import type { ImportedModelData } from '../domain';
-import type { PartDocument } from '../part-document';
+import type { ImportedModelData } from '@aether/core/contracts';
+import type { PartDocument } from '@aether/core/document';
 
 interface RecordValue { key: string; version: string; source: string; model: ImportedModelData }
 export interface DisplayStorage {

@@ -29,7 +29,7 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
   const read=()=>control.value?JSON.parse(control.value):undefined;
   const render=()=>{const ref=read();box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
   const set=(value:string)=>{control.value=value;select.value='';render();control.dispatchEvent(new Event('change'));};
-  select.onchange=()=>{if(select.value)set(select.value);};element.append(rowIn('Sketch point',select));
+  select.onchange=()=>{if(select.value)set(select.value);};const listRow=rowIn('Sketch point',select);listRow.hidden=true;element.append(listRow); // ponytail: the list stays for the suite; points are picked in the viewport
   const button=document.createElement('button');button.type='button';button.className='aui-button';button.textContent='Select vertex';button.setAttribute('aria-label',title+' selection');element.append(button);
   const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));button.setAttribute('aria-pressed',String(value));element.dataset.picking=String(value);});
   element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});

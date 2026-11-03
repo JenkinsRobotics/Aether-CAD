@@ -35,7 +35,7 @@ import { CameraRotationMotion } from "./viewport/camera-rotation";
 import { OrientationPreviewMotion, visiblePreviewBounds } from "./viewport/orientation-preview";
 import { bindSketchCameraInput, isSketchCameraGesture } from "./viewport/sketch-surface-input";
 import { createOriginMarker, updateOriginMarker } from "./viewport/origin-marker";
-import type { ImportedModelData } from "./domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import { FeaturePreviewLayer } from "./modeling/feature-preview-layer";
 import { RegionPicker } from "./modeling/region-picker";
 import { createPlaneVisual, tintPlane, updatePlaneVisual } from "./plane-visual";
@@ -2337,8 +2337,10 @@ export class MateViewport {
   }
   private commitSelectionClick(event: PointerEvent): void {
     this.updatePointer(event);
+    // A feature window is open (regions or a preview showing): a sketch line under the
+    // pointer wins over the region it borders, as edges do over faces.
+    if ((this.regionPicker.isActive() || this.featurePreview.active) && this.pickSketchCurve()) return;
     if (this.regionPicker.pick(this.raycaster)) return;
-    if (this.featurePreview.active && this.pickSketchCurve()) return;
     if (this.featurePreview.active && !this.canPickSourceGeometry()) return;
     if(this.historyEditing){
       if(!['face','edge','vertex'].includes(cadSelection.snapshot().filter)&&!this.sketchPlaneSelection&&!this.canPickSourceGeometry())return;

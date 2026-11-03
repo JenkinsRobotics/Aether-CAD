@@ -1,6 +1,6 @@
 import { flipSketchFrame, profileSketchFrame, rollbackPosition, validatePartDocument, type PartDocument, type ProfileFeature } from "@aether/core/document";
 import { validateModelProjection, type ModelProjectionOptions, type SketchDrawing } from "@aether/core/sketch";
-import type { ImportedModelData } from "../domain";
+import type { ImportedModelData } from "@aether/core/contracts";
 import type { AgentTool } from "@aether/ui/AgentServices";
 import { appendModelContours, modelBeforeSketch, type ModelIncludeKernel } from "../sketch/model-include";
 import { resolveSketchFrames } from "../modeling/sketch-support";

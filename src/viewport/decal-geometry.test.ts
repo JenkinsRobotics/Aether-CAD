@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {decalGeometry} from './decal-geometry';
-import type {PartGeometryData} from '../domain';
+import type {PartGeometryData} from '@aether/core/contracts';
 import type {ImageCanvas} from '@aether/core/document';
 const part={vertices:new Float32Array([-10,-10,0,10,-10,0,10,10,0,-10,10,0]),triangles:new Uint32Array([0,1,2,0,2,3]),faceRanges:[{faceId:1,start:0,count:6}],topology:[{id:1,surfaceType:'PLANE',candidates:[{id:'center',kind:'face-center',origin:[0,0,0],zAxis:[0,0,1]}]}]} as unknown as PartGeometryData;
 const canvas:ImageCanvas={id:'image',name:'Image',dataUrl:'data:image/png;base64,YQ==',plane:'XY',widthMillimeters:8,heightMillimeters:4,xMillimeters:0,yMillimeters:0,offsetMillimeters:0,rotationDegrees:0,opacity:1,visible:true,face:{bodyId:'body',normal:[0,0,1]}};

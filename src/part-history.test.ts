@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PartTransform, TransformFeature } from "@aether/core/document";
 import { isPartPlacementAction } from "./part-history";
-import { createRectanglePartDocument } from "./part-document";
+import { createRectanglePartDocument } from "@aether/core/document";
 import { buildPartFeatureTree, buildPartHistory } from "./part-feature-tree";
 
 const move: TransformFeature = { id: "move", name: "Move parts", type: "transform", suppressed: false, bodyIds: ["b"], transform: { kind: "translate", translationMillimeters: [10, 0, 0] } };

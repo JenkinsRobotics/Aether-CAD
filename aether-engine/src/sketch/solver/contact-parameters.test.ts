@@ -89,9 +89,10 @@ it("allows inward movement from either endpoint and rejects motion outside the f
     expect(next.constraints!.at(-1)!.b!.parameter).toBeCloseTo(0.5);
   }
   const source = fixture();
-  expect(() =>
-    dragSketchEntity(source, { kind: "point", contour: 1, index: 0 }, [4, 0]),
-  ).toThrow();
+  // Past the curve's end the drag goes as far as the finite curve allows and no further.
+  const clamped = dragSketchEntity(source, { kind: "point", contour: 1, index: 0 }, [4, 0]);
+  expect(clamped.constraints!.at(-1)!.b!.parameter).toBeGreaterThan(0.25);
+  expect(clamped.constraints!.at(-1)!.b!.parameter).toBeLessThanOrEqual(1);
   expect(source.constraints!.at(-1)!.b!.parameter).toBe(0.25);
 });
 it("rejects malformed sliding flags even on otherwise satisfied drawings", () => {

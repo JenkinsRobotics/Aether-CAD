@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ConnectorCandidate } from "./domain";
+import type { ConnectorCandidate } from "@aether/core/contracts";
 import {
   FastenedMateDraft,
   MateConnectorRegistry,

@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {serializePartDocument,validatePartDocument} from '@aether/core/document';
 import {appendCAD,importFormat,CAD_IMPORT_ACCEPT} from './cad-import';
 import {configureCADImport,importCADFiles,queueCADImport,importFilesSnapshot,clearImportFiles} from './cad-import-service';
-import type {ImportedModelData} from '../domain';
+import type {ImportedModelData} from '@aether/core/contracts';
 const options={meshUnits:'in',meshMode:'reference'} as const;
 const file=(name='mesh.STL')=>new File(['fixture'],name);
 const model={parts:[],parseMilliseconds:1} as unknown as ImportedModelData;

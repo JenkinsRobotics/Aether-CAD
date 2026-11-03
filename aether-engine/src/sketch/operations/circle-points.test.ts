@@ -80,9 +80,7 @@ it("fully defines a circle when all three placement points are fixed", () => {
     state: "fully-constrained",
     degreesOfFreedom: 0,
   });
-  expect(() =>
-    dragSketchEntity(d, { contour: 2, kind: "point", index: 0 }, [0, 2]),
-  ).toThrow();
+  expect(dragSketchEntity(d, { contour: 2, kind: "point", index: 0 }, [0, 2])).toEqual(d);
 });
 it("rejects collinear or mismatched placement without changing existing geometry", () => {
   const source = {
