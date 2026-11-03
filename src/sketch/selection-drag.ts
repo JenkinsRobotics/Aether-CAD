@@ -17,6 +17,8 @@ interface Options {
   point: (e: MouseEvent) => SketchPoint | null;
   drawing: () => SketchDrawing;
   tolerance: () => number;
+  /** What is highlighted under the pointer; a press grabs it (see pointer-target.ts). */
+  hovered?: () => ReturnType<typeof pickSketchEditEntity> | null;
   snapping?: () => boolean;
   snapTolerance?: () => number;
   preview: (d: SketchDrawing) => void;
@@ -41,11 +43,15 @@ export function bindSelectionDrag(o: Options) {
       | undefined,
     consume = false;
   o.svg.addEventListener("pointerdown", (e) => {
+    // Safari does not focus a clicked SVG: without focus, Delete and the other sketch keys
+    // never reach the workspace (Jonathan, 2026-11-02: "click and delete… not being removed").
+    if (o.svg.ownerDocument.activeElement !== o.svg) o.svg.focus?.({ preventScroll: true });
     if (e.button !== 0 || !o.enabled()) return;
     const p = o.point(e);
     if (!p) return;
-    const pick = pickSketchEditEntity(o.drawing(), p, o.svg);
-    if (!pick || pick.d > o.tolerance() || pick.ref.projectedContourId!==undefined) return;
+    const found = pickSketchEditEntity(o.drawing(), p, o.svg);
+    const pick = found && found.d <= o.tolerance() ? found : o.hovered?.() ?? undefined;
+    if (!pick || pick.ref.projectedContourId!==undefined) return;
     const before = structuredClone(o.drawing());
     drag = {
       id: e.pointerId,

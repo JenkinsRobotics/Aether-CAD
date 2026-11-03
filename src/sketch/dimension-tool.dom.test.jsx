@@ -130,6 +130,19 @@ it('a negative point-to-point distance sends the second point to the other side 
   const [cx, cy] = profile.contours[1].center, [sx, sy] = profile.contours[0].start;
   expect(Math.hypot(cx - sx, cy - sy)).toBeCloseTo(10); expect(cx - sx).toBeLessThan(0); expect(cy - sy).toBeLessThan(0);
 });
+it('a negative line-to-line distance moves the second line to the other side of the first', async () => {
+  doc.features[0].profile.contours = [{ type: 'path', start: [0, 0], segments: [{ type: 'line', end: [40, 0] }] }, { type: 'path', start: [0, 10], segments: [{ type: 'line', end: [40, 10] }] }];
+  start(); key(); pick(20, 0); pick(20, 10); pick(50, 5);
+  submit('-10');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  const c = doc.features[0].profile.contours; expect(c[1].start[1] - c[0].start[1]).toBeCloseTo(-10); expect(c[1].segments[0].end[1] - c[0].segments[0].end[1]).toBeCloseTo(-10);
+});
+it('a negative line length flips the line through its start', async () => {
+  start(); key(); pick(10, 0); pick(10, -10);
+  submit('-20');
+  document.querySelector('.cad-sketch-window [data-feature-action="accept"]').click(); await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  const c = doc.features[0].profile.contours[0]; expect(Math.hypot(c.segments[0].end[0] - c.start[0], c.segments[0].end[1] - c.start[1])).toBeCloseTo(20); expect(c.segments[0].end[0]).toBeLessThan(c.start[0]);
+});
 it('keeps typing/modifier/repeat/composition events out of the tool and stops listening after sketch close', () => {
   start();
   for (const tag of ['input', 'textarea', 'select']) { const field = document.createElement(tag); document.body.append(field); key(field); expect(svg.dataset.dimensionTool).toBeUndefined(); }

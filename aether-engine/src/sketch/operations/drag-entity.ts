@@ -27,13 +27,26 @@ export function dragSketchEntity(
   try { return dragSketchEntityExactly(source, ref, delta); } catch (error) {
     if (!(error instanceof Error) || /must be finite|Select existing|Select an existing|cannot be moved/.test(error.message)) throw error;
   }
-  let low = 0, high = 1, best: SketchDrawing | null = null;
-  for (let step = 0; step < 6; step++) {
-    const mid = (low + high) / 2;
-    try { best = dragSketchEntityExactly(source, ref, [delta[0] * mid, delta[1] * mid]); low = mid; }
-    catch { high = mid; }
-  }
-  return best ?? source;
+  const along = (direction: SketchPoint): { drawing: SketchDrawing; fraction: number } | null => {
+    try { return { drawing: dragSketchEntityExactly(source, ref, direction), fraction: 1 }; } catch { /* bisect below */ }
+    let low = 0, high = 1, best: SketchDrawing | null = null;
+    for (let step = 0; step < 6; step++) {
+      const mid = (low + high) / 2;
+      try { best = dragSketchEntityExactly(source, ref, [direction[0] * mid, direction[1] * mid]); low = mid; }
+      catch { high = mid; }
+    }
+    return best ? { drawing: best, fraction: low } : null;
+  };
+  // The full delta first; then, when the constraints forbid that direction (a horizontal line's
+  // free end dragged diagonally), the larger feasible axis component, so the point still follows
+  // the pointer as far as the sketch allows (Jonathan, 2026-11-02).
+  const whole = along(delta);
+  if (whole?.fraction === 1) return whole.drawing;
+  const candidates = [whole, along([delta[0], 0]), along([0, delta[1]])]
+    .map((item, i) => item && { ...item, reach: item.fraction * (i === 0 ? Math.hypot(...delta) : Math.abs(delta[i - 1])) })
+    .filter((item): item is NonNullable<typeof item> => !!item && item.reach > 1e-9)
+    .sort((a, b) => b.reach - a.reach);
+  return candidates[0]?.drawing ?? source;
 }
 function dragSketchEntityExactly(
   source: SketchDrawing,

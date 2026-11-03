@@ -180,6 +180,13 @@ export function renderSketchCanvas(
         previous = segment.end;
       }
     }
+  drawing.contours.forEach((c, index) => {
+    const dot = (p: readonly [number, number]) => el("circle", { cx: p[0], cy: -p[1], r: 0.001, class: "sketch-vertex", "data-contour-index": index, "pointer-events": "none" });
+    if (c.type === "circle") { dot(c.center); return; }
+    if (c.type !== "path") return;
+    dot(c.start);
+    for (const segment of c.segments) dot(segment.end);
+  });
   renderGeometryConstraintColors(svg, drawing);
   renderEllipseManipulators(svg, drawing, bounds.width);
   renderConicManipulators(svg, drawing);

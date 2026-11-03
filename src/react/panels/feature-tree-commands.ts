@@ -5,7 +5,7 @@ import type { CADWorkspaceAction } from "../../cad-workspace-store";
 export function cadFeatureItem(node: TreeNode): FeatureTreeItem {
   const body = node.id.startsWith("feature/body/") || node.id.startsWith("part/");
   const kind = body ? "part" : node.id.startsWith("folder/") ? "folder" : node.id.startsWith("feature/") ? "feature" : "reference";
-  const visibility = node.actions?.find(action => ["body-visibility", "toggle-visibility"].includes(action.id));
+  const visibility = node.actions?.find(action => ["body-visibility", "sketch-visibility", "toggle-visibility"].includes(action.id));
   return { id: node.id, label: node.label, kind,
     type: kind === "folder" ? "folder" : body ? "part" : kind === "feature" ? node.id.split("/")[1] : node.id.endsWith("origin") ? "point" : "plane",
     hidden: visibility ? /^Show\b/.test(visibility.label) : false,
@@ -37,7 +37,7 @@ export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], se
       case "rename": return item.kind === "part" ? has("body-rename") : item.kind === "feature" || item.kind === "folder";
       case "edit": return has("edit-feature");
       case "suppress": return has("suppress-feature");
-      case "visibility": return has("body-visibility") || has("toggle-visibility") || "Visibility is not available for this entity yet.";
+      case "visibility": return has("body-visibility") || has("sketch-visibility") || has("toggle-visibility") || "Visibility is not available for this entity yet.";
       case "rollback": return item.kind === "feature";
       case "move": return item.kind === "feature";
       case "add-to-folder": return item.kind === "feature" && request.targetID !== item.id;
@@ -52,7 +52,7 @@ export function cadFeatureActions(node: TreeNode, nodes: readonly TreeNode[], se
     .filter(action => (available as readonly string[]).includes(action.request.command))
     // A placement is edited in History; it has no row to group or reorder in Features.
     .filter(action => visible.some(row => row.id === node.id) || !["move", "new-folder", "add-to-folder"].includes(action.request.command))
-    .filter(action => action.request.command !== 'visibility' || node.actions?.some(entry => ['body-visibility', 'toggle-visibility'].includes(entry.id)));
+    .filter(action => action.request.command !== 'visibility' || node.actions?.some(entry => ['body-visibility', 'sketch-visibility', 'toggle-visibility'].includes(entry.id)));
 }
 /** No evaluator or new document mutation: dispatch the same commands as existing CAD controls. */
 export function cadTreeCommand(request: FeatureTreeRequest, node: TreeNode): CADWorkspaceAction | null {
@@ -62,7 +62,7 @@ export function cadTreeCommand(request: FeatureTreeRequest, node: TreeNode): CAD
   if ((request.command === "move" || request.command === "add-to-folder") && request.targetID) return { type: "move-item", id, targetID: request.targetID, position: request.command === "add-to-folder" ? "inside" : request.position ?? "before" };
   const actionID = request.command === "rename" ? item.kind === "folder" ? "folder-rename" : item.kind === "part" ? "body-rename" : "rename-feature"
     : request.command === "edit" ? "edit-feature" : request.command === "suppress" ? "suppress-feature"
-    : request.command === "visibility" ? node.actions?.find(action => ["body-visibility", "toggle-visibility"].includes(action.id))?.id
+    : request.command === "visibility" ? node.actions?.find(action => ["body-visibility", "sketch-visibility", "toggle-visibility"].includes(action.id))?.id
     : request.command === "delete" ? item.kind === "folder" ? "folder-delete" : "delete-feature" : undefined;
   return actionID ? { type: "item-action", id, actionID } : null;
 }

@@ -214,7 +214,7 @@ const presentFeatureWindow = (
       for (const select of pickBoxes) for (const option of select.options) {
         try {
           const parsed = JSON.parse(option.value.replace(/^line:/, ""));
-          if (parsed?.sourceFeatureId === line.sourceFeatureId && ((parsed.contourId === line.contourId && parsed.segmentId === line.segmentId) || (parsed.contourIndex === line.contourIndex && parsed.segmentIndex === line.segmentIndex))) { fillPick(option.value); return; }
+          if (parsed?.sourceFeatureId === line.sourceFeatureId && ((parsed.contourId === line.contourId && parsed.segmentId === line.segmentId) || (parsed.contourIndex === line.contourIndex && parsed.segmentIndex === line.segmentIndex))) { fillPick(option.value); event.preventDefault(); return; }
         } catch { /* not a line option */ }
       }
     };
@@ -654,6 +654,10 @@ const presentFeatureWindow = (
     }
     else if (action.actionID === "rollback-end")
       void change({ ...doc, rollbackIndex: undefined });
+    else if (action.actionID === "sketch-visibility") {
+      if (!doc.features.some((f) => f.id === id)) return;
+      void change({ ...doc, sketchPresentation: { ...doc.sketchPresentation, [id]: { dimensionLabelPositionsMillimeters: {}, ...doc.sketchPresentation?.[id], hidden: !doc.sketchPresentation?.[id]?.hidden } } });
+    }
     else if (
       action.actionID === "body-visibility" ||
       action.actionID === "body-rename"

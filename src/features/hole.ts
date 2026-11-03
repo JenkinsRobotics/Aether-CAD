@@ -5,7 +5,7 @@ import {
 } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
 import {faceIdentity, mountPickedReferences} from './picked-references';
-import {requireSelections, layoutParameterRows, type Control, type FeatureEditor} from './shared';
+import {requireSelections, layoutParameterRows, entityChips, type Control, type FeatureEditor} from './shared';
 
 /** Holes start at a circular sketch region (one, or every circle of the sketch)
  *  or at a point on a picked planar face (SolidCraft's `position` on a face),
@@ -69,6 +69,8 @@ export const holeEditor: FeatureEditor = {
       layoutRegion(context, controls.source, controls.region);
       return true;
     });
+    // The picked circle shows as a chip; the list behind it stays hidden.
+    const regionBox = entityChips(context.win, 'Circular region', controls.region, context.form);
     const faces = mountPickedReferences<SolidFaceReference & {centerMillimeters?: [number, number, number]}>(context, controls.face, {
       title: 'Hole face', kind: 'face', requestEvent: 'aether-offset-faces-request', replyEvent: 'aether-offset-faces', replyKey: 'faces', identity: faceIdentity,
       note: 'Pick the planar face to drill into; the point defaults to its centre.',
@@ -111,6 +113,7 @@ export const holeEditor: FeatureEditor = {
       const sourceRow = controls.source.closest<HTMLElement>('.aui-feature-row') ?? controls.source.parentElement; if (sourceRow) sourceRow.hidden = face;
       // The circular region is picked in the viewport; its list row stays hidden (Jonathan, 2026-11-02).
       const regionRow = controls.region.closest<HTMLElement>('.aui-feature-row') ?? controls.region.parentElement; if (regionRow) regionRow.hidden = true;
+      regionBox.element.hidden = face || controls.allCircles.value === 'yes';
       hide(controls.allCircles, face);
       for (const key of ['pointX', 'pointY', 'pointZ']) hide(controls[key], !face);
       for (const key of ['drillX', 'drillY', 'drillZ']) hide(controls[key], controls.drillMode.value !== 'custom');

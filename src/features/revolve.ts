@@ -112,6 +112,7 @@ export const revolveEditor: FeatureEditor = {
       const line = lines().find((item) => item.sourceFeatureId === picked.sourceFeatureId && item.contourId === picked.contourId && item.segmentId === picked.segmentId);
       if (!line) return;
       axis.value = lineKey(line); axis.dataset.selectionLabel = line.label; axis.dispatchEvent(new Event("change"));
+      event.preventDefault();
     };
     window.addEventListener("aether-sketch-curve-picked", curvePicked);
     // A construction Axis feature picked in the tree.

@@ -2332,8 +2332,8 @@ export class MateViewport {
     const data = hit.object.userData as { sketchId: string; contourId?: string; segmentIds: (string | undefined)[]; construction?: boolean };
     const segmentId = data.segmentIds[hit.faceIndex ?? hit.index ?? 0];
     if (!segmentId || !data.contourId) return false;
-    window.dispatchEvent(new CustomEvent("aether-sketch-curve-picked", { detail: { sourceFeatureId: data.sketchId, contourId: data.contourId, segmentId, construction: Boolean(data.construction) } }));
-    return true;
+    // Handled (preventDefault) by a window that filled a box from it; otherwise the click goes on to regions.
+    return !window.dispatchEvent(new CustomEvent("aether-sketch-curve-picked", { cancelable: true, detail: { sourceFeatureId: data.sketchId, contourId: data.contourId, segmentId, construction: Boolean(data.construction) } }));
   }
   private commitSelectionClick(event: PointerEvent): void {
     this.updatePointer(event);

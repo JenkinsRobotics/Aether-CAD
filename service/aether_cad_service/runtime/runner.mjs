@@ -5511,6 +5511,7 @@ function validateSketchPresentation(value2) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2))
     throw Error("Invalid sketch presentation metadata.");
   for (const item of Object.values(value2)) {
+    if (item?.hidden !== void 0 && typeof item.hidden !== "boolean") throw Error("Sketch hidden flag must be a boolean.");
     const positions = item?.dimensionLabelPositionsMillimeters;
     if (!positions || typeof positions !== "object" || Array.isArray(positions))
       throw Error("Invalid dimension label positions.");

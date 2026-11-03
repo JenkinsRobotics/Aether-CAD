@@ -76,6 +76,10 @@ try {
   await apply('Extrude');
   await featureRow(/Extrude/).waitFor({ timeout: 30000 });
   await page.screenshot({ path: join(evidence, '2-extruded.png') });
+  // The consumed sketch is hidden and its menu offers Show.
+  await featureRow(/Sketch 1/).click({ button: 'right' });
+  await expect(page.getByRole('menuitem', { name: /^Show/ }).first()).toBeVisible({ timeout: 10000 });
+  await page.keyboard.press('Escape');
 
   // Revolve the bar cell about the construction line beside it, picked in the viewport.
   if (await fit.isEnabled().catch(() => false)) await fit.click();

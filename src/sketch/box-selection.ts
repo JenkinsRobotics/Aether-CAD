@@ -34,7 +34,7 @@ export function sketchEntitiesInBox(drawing: SketchDrawing, project: Project, re
   }
   return found;
 }
-export function bindSketchBoxSelection(o: { svg: SVGSVGElement; enabled(): boolean; drawing(): SketchDrawing; point(e: MouseEvent): SketchPoint | null; project: Project; tolerance(): number; select(refs: SketchEntityRef[], add: boolean): void; preview?(refs: SketchEntityRef[] | null, add: boolean): void }) {
+export function bindSketchBoxSelection(o: { svg: SVGSVGElement; enabled(): boolean; drawing(): SketchDrawing; point(e: MouseEvent): SketchPoint | null; project: Project; tolerance(): number; hovered?(): unknown; select(refs: SketchEntityRef[], add: boolean): void; preview?(refs: SketchEntityRef[] | null, add: boolean): void }) {
   let drag: { id: number; x: number; y: number; moved: boolean } | undefined, overlay: HTMLDivElement | undefined, consume = false;
   const cancel = () => { const wasMoved = drag?.moved; drag = undefined; overlay?.remove(); overlay = undefined; if (wasMoved) o.preview?.(null, false); };
   const candidates = (e: PointerEvent) => {
@@ -47,6 +47,7 @@ export function bindSketchBoxSelection(o: { svg: SVGSVGElement; enabled(): boole
     if ((e.target as Element)?.closest?.('.sketch-dimension, [data-constraint-mark]')) return;
     if ([...o.svg.querySelectorAll('.sketch-dimension text')].some(node => { const r = node.getBoundingClientRect(); return r.width > 0 && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; })) return;
     const p = o.point(e); if (!p) return;
+    if (o.hovered?.()) return;
     const hit = pickSketchEditEntity(o.drawing(), p, o.svg); if (hit && hit.d <= o.tolerance()) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
   };

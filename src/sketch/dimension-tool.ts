@@ -1,4 +1,4 @@
-import { dimensionValue, distanceSideOf, dragSketchEntity, editDrawingDimension, sketchEntityPoint, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
+import { dimensionValue, distanceSideOf, dragSketchEntity, editDrawingDimension, resolveSketchEntity, sketchEntityPoint, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
 import { cadCommands } from '../cad-command-registry';
 import { pickSelectableSketchEntity } from './projected-picking';
 import { bindDimensionInput } from './dimension-input';
@@ -84,23 +84,36 @@ export function mountDimensionTool(o: Options) {
         // A line distance flips to the other side of the line; a signed H/V distance or
         // angle flips its direction.
         const side = constraint.kind === 'distance' ? distanceSideOf(drawing, { ...constraint, reference: false }) : undefined;
-        // Point-to-point: the second point crosses to the other side of the first along the dimension.
-        const points = constraint.kind === 'distance' && side === undefined && constraint.b ? [sketchEntityPoint(drawing, constraint.a), sketchEntityPoint(drawing, constraint.b)] : [];
-        const pair = points.length === 2 && points.every(Boolean);
+        // Any other distance, and a line length, flips by mirroring the second entity across
+        // the first along the dimension (Jonathan, 2026-11-02: "-1 should work"); only radius
+        // and diameter stay positive.
+        const anchor = (ref: SketchEntityRef | undefined): SketchPoint | undefined => {
+          if (!ref) return;
+          try { const r = resolveSketchEntity(drawing, ref) as { point?: SketchPoint; line?: [SketchPoint, SketchPoint] }; return r.point ?? (r.line ? [(r.line[0][0] + r.line[1][0]) / 2, (r.line[0][1] + r.line[1][1]) / 2] : sketchEntityPoint(drawing, ref)); } catch { return sketchEntityPoint(drawing, ref); }
+        };
+        const lineEnd = (ref: SketchEntityRef, end: 0 | 1): SketchEntityRef => ({ contour: ref.contour, kind: 'point', index: (ref.index ?? 0) + end });
+        const mirror: [SketchEntityRef, SketchEntityRef] | null = side !== undefined ? null
+          : constraint.kind === 'distance' && constraint.b ? [constraint.a, constraint.b]
+          : constraint.kind === 'length' && constraint.a.kind === 'line' ? [lineEnd(constraint.a, 0), lineEnd(constraint.a, 1)] : null;
+        const anchors = mirror ? [anchor(mirror[0]), anchor(mirror[1])] : [];
+        const pair = anchors.length === 2 && anchors.every(Boolean);
         const directional = (['horizontal-distance', 'vertical-distance', 'angle'].includes(constraint.kind) && constraint.b) || side !== undefined || pair;
         if (typed < 0 && !directional) throw Error('Enter a positive dimension.');
         const value = Math.abs(typed);
         const flipped = typed < 0;
-        if (flipped && pair) {
-          const [pa, pb] = points as SketchPoint[];
+        if (flipped && pair && mirror) {
+          const [pa, pb] = anchors as SketchPoint[];
           const length = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]) || 1, unit = [(pb[0] - pa[0]) / length, (pb[1] - pa[1]) / length];
-          const moved = dragSketchEntity(drawing, constraint.b!, [pa[0] - unit[0] * value - pb[0], pa[1] - unit[1] * value - pb[1]]);
-          // The second point is bound: the first crosses instead.
-          drawing = moved !== drawing ? moved : dragSketchEntity(drawing, constraint.a, [pb[0] + unit[0] * value - pa[0], pb[1] + unit[1] * value - pa[1]]);
+          const moved = dragSketchEntity(drawing, mirror[1], [pa[0] - unit[0] * value - pb[0], pa[1] - unit[1] * value - pb[1]]);
+          // The second entity is bound: the first crosses instead.
+          const next = moved !== drawing ? moved : dragSketchEntity(drawing, mirror[0], [pb[0] + unit[0] * value - pa[0], pb[1] + unit[1] * value - pa[1]]);
+          if (next === drawing) throw Error('Neither side can move: the dimension cannot flip.');
+          drawing = next;
         }
         const flip = (c: DrawingConstraint): DrawingConstraint => side !== undefined ? { ...c, distanceSide: (-(c.distanceSide ?? side)) as 1 | -1 } : { ...c, a: c.b!, b: c.a };
-        if (flipped && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? flip(c) : c) };
-        const placed = flipped && !existing ? flip(candidate) : candidate;
+        const swap = flipped && !pair;
+        if (swap && existing) drawing = { ...drawing, constraints: drawing.constraints?.map(c => c.id === existing.id ? flip(c) : c) };
+        const placed = swap && !existing ? flip(candidate) : candidate;
         const next = existing ? editDrawingDimension(drawing, existing.id, value)
           : solveDrawingConstraints({ ...drawing, constraints: [...(drawing.constraints ?? []), { ...placed, value }] });
         o.commit(next, constraint.id, p); reset();

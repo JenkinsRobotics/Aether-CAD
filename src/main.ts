@@ -34,7 +34,7 @@ import { registerSketchImportCommand } from "./sketch/import-command";
 import { registerSketchToolCommands } from "./sketch/tool-commands";
 import { constructionPlaneFrame } from "@aether/core/document";
 import { sketchProfilePolylines, sketchProfileStrokes } from "@aether/core/sketch";
-import { profileFrame, rollbackPosition, curve3dPolylines, identifyDocumentSketches } from "@aether/core/document";
+import { profileFrame, rollbackPosition, curve3dPolylines, identifyDocumentSketches, featureDependencies } from "@aether/core/document";
 import { sketchConstraintCommandKinds } from "./cad-command-registry";
 import { registerViewCommands } from "./startup/view-commands";
 import { configureInstanceEditing, captureInstanceEdit, saveInstanceEdit, openSelectedComponentPart } from "./assembly/instance-session";
@@ -510,6 +510,15 @@ function canPlayHistory(): boolean {
   return activeWorkspaceKind==='part' && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
     editingDocument(activePartDocument)===activePartDocument && !document.querySelector('.cad-feature-dialog,.cad-sketch-workspace,.cad-plane-window,.cad-axis-window,.cad-point-window');
 }
+// A feature window that picks sketch geometry shows every sketch while it is open, hidden ones
+// included (Onshape): the consumed sketch's regions and lines stay clickable for the next feature.
+let revealHiddenSketches = false;
+window.addEventListener("aether-region-mode", (event) => {
+  const next = Boolean((event as CustomEvent).detail?.active);
+  if (next === revealHiddenSketches) return;
+  revealHiddenSketches = next;
+  updateLists(false);
+});
 function updateLists(notifyDocumentChange = true): void {
   historyPlayback.sync(activePartDocument, canPlayHistory());
   const displayedDocument = historyPlayback.project(editingDocument(activePartDocument));
@@ -523,7 +532,7 @@ function updateLists(notifyDocumentChange = true): void {
     visibleDocument
       ? visibleDocument.features
           .slice(0, rollbackPosition(visibleDocument))
-          .filter((feature) => (feature.type === "sketch" || feature.type === "profile") && !feature.suppressed)
+          .filter((feature) => (feature.type === "sketch" || feature.type === "profile") && !feature.suppressed && (revealHiddenSketches || !visibleDocument.sketchPresentation?.[feature.id]?.hidden))
           .map((feature) => ({
             id: feature.id,
             frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
@@ -832,7 +841,7 @@ cadWorkspace.registerActionHandler((action) => {
     }
     return;
   }
-  if(action.type==="move-item"||action.type==="create-folder"||action.type==="rollback-to"||(action.type==="item-action"&&["edit-feature","suppress-feature","rollback-before","rollback-start","rollback-end","body-visibility","body-rename","folder-rename","folder-delete","folder-unnest","rollback-back","rollback-forward","rename-feature","delete-feature","break-link"].includes(action.actionID))){
+  if(action.type==="move-item"||action.type==="create-folder"||action.type==="rollback-to"||(action.type==="item-action"&&["edit-feature","suppress-feature","rollback-before","rollback-start","rollback-end","body-visibility","sketch-visibility","body-rename","folder-rename","folder-delete","folder-unnest","rollback-back","rollback-forward","rename-feature","delete-feature","break-link"].includes(action.actionID))){
     window.dispatchEvent(new CustomEvent('aether-feature-action',{detail:{...action,selectedFeatureIDs:[...selectedFeatureIDs]}}));return;
   }
 
@@ -1289,7 +1298,7 @@ function showEvaluatedPart(document:PartDocument,result:ImportedModelData,failur
     setStatus(
       failures.size ? `${failures.size} feature${failures.size === 1 ? "" : "s"} could not be rebuilt. ${[...failures.values()][0]}` : `${successMessage} Rebuilt ${rollbackPosition(document)} history entries in ${result.parseMilliseconds.toFixed(1)} ms${result.replayedFeatures !== undefined ? ` (${result.replayedFeatures} replayed)` : ""}.`,
       // Failures show on their tree rows; the status line says so without a toast.
-      "success",
+      failures.size ? "normal" : "success",
     );
 }
 
@@ -1681,6 +1690,16 @@ configureCADAgentWorkspace({
 });
 
 mountFeatureAuthoring(()=>activePartDocument,async doc=>{
+ // A sketch is hidden once a new feature consumes it (Onshape); the tree's Show brings it back.
+ const before=new Set(activePartDocument?.features.map(f=>f.id)??[]);
+ const dependencies=featureDependencies(doc);
+ for(const feature of doc.features){
+  if(before.has(feature.id))continue;
+  for(const id of dependencies.get(feature.id)??[]){
+   if(["plane","axis","point","profile","sketch","curve3d"].includes(feature.type)||doc.features.find(f=>f.id===id)?.type!=="profile")continue;
+   doc.sketchPresentation={...doc.sketchPresentation,[id]:{dimensionLabelPositionsMillimeters:{},...doc.sketchPresentation?.[id],hidden:true}};
+  }
+ }
  await evaluateAndShowPart(doc,"Feature history updated.",false,{overlay:false});
  if(activePartDocument!==doc)throw new Error(cadPresentation.snapshot().statusMessage);
 });

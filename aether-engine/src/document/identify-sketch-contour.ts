@@ -20,9 +20,11 @@ export function identifySketchContour(
 /** Every contour and segment of every drawn sketch carries an identity, so lines, points and
  *  regions can be referenced by later features (Jonathan, 2026-11-02: a drawn construction line
  *  with no segment id could not be a revolve axis). Sketches already identified are untouched. */
-export function identifyDocumentSketches(document: { features: readonly unknown[] }, createId: () => string = () => crypto.randomUUID()): void {
-  for (const feature of document.features as { type?: string; profile?: { type?: string; contours?: SketchContour[] } }[]) {
+export function identifyDocumentSketches(document: { features: readonly unknown[] }): void {
+  for (const feature of document.features as { id: string; type?: string; profile?: { type?: string; contours?: SketchContour[] } }[]) {
     if (feature.type !== "profile" || feature.profile?.type !== "drawing") continue;
-    for (const contour of feature.profile.contours ?? []) identifySketchContour(contour, createId);
+    // Deterministic ids (sketch, contour position, running number): an undo snapshot taken
+    // before stamping re-stamps to the same ids, so references made afterwards still resolve.
+    (feature.profile.contours ?? []).forEach((contour, index) => { let n = 0; identifySketchContour(contour, () => `${feature.id}-c${index}-${n++}`); });
   }
 }

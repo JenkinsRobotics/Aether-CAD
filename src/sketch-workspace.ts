@@ -26,7 +26,7 @@ import { mountTextPanel } from "./sketch/text-panel";
 import { bindDimensionLabelUnits } from "./sketch/dimension-label-units";
 import { snapSemicircle, snapEllipticalArcGuide } from "@aether/core/sketch";
 import { pickSelectableSketchEntity, selectPickedReference } from "./sketch/projected-picking";
-import {pickSketchEditEntity} from './sketch/edit-picking';
+import { createPointerTarget } from './sketch/pointer-target';
 import { projectionAuthoring, backgroundSnappingContext } from "./sketch/projection-authoring";
 import { isDirectModificationTool } from "./sketch/tool-instructions";
 import { mountSelectionConstraintStatus } from "./sketch/selection-constraint-status";
@@ -229,6 +229,7 @@ export function openSketchWorkspace(
   const svg = document.createElementNS(ns, "svg");
   svg.setAttribute("aria-label", "2D sketch canvas");
   svg.setAttribute("tabindex", "0");
+  const pointerTarget = createPointerTarget({ svg, drawing: () => drawing, tolerance: () => hitTolerance(), editing: () => activeTool === "select" && !constraints.tool.active() });
   svg.classList.add("cad-sketch-canvas");
   // The renderer draws the Onshape-style plane card and needs the sketch name;
   // carried on the element so it survives being reparented into the CSS3D layer.
@@ -717,7 +718,7 @@ export function openSketchWorkspace(
         const next = await updatePartDocumentVariables(workingSource(), variables, feature);
         if (draftSnapshot !== JSON.stringify({drawing,variables,dimensionPositions,plane,frame,support,offsetMillimeters,flip,sourceProfiles}) || variablePanel.pending() || clipboard.pending()) throw Error("The sketch changed while preparing it. Review and finish again.");
         if (getDocument() !== source) throw Error("The document changed while preparing the sketch. Cancel and reopen.");
-        next.sketchPresentation = {...source.sketchPresentation, [feature.id]: {dimensionLabelPositionsMillimeters: Object.fromEntries(Object.entries(dimensionPositions).filter(([id])=>drawing.constraints?.some(c=>c.id===id)))}};
+        next.sketchPresentation = {...source.sketchPresentation, [feature.id]: {...source.sketchPresentation?.[feature.id], dimensionLabelPositionsMillimeters: Object.fromEntries(Object.entries(dimensionPositions).filter(([id])=>drawing.constraints?.some(c=>c.id===id)))}};
         const curves = sketchRegions(feature, true, next.features);
         const closed = sketchRegions(feature, false, next.features);
         const regions = closed.length ? closed : curves;
@@ -978,7 +979,8 @@ export function openSketchWorkspace(
       }
       annotationSelection?.clear();
       if (!extendSelection) selectedEntities = [];
-      const picked = pickSketchEditEntity(drawing, p, svg);
+      // The highlighted entity is the one a click selects.
+      const picked = pointerTarget.update(p);
       if (picked && picked.d < hitTolerance()) {
         if (!extendSelection && JSON.stringify(selectedEntity) === JSON.stringify(picked.ref)) {
           selectedEntity = null;
@@ -1127,7 +1129,7 @@ export function openSketchWorkspace(
   const dimensionTool = mountDimensionTool({
     svg, enabled: () => started && !busy && !constraints.tool.active(), drawing: () => drawing,
     point: e => pointerPoint(e, false),
-    tolerance: () => surface ? 8 * (surface.scaleAt() ?? bounds.width / 800) : bounds.width / 100,
+    tolerance: () => hitTolerance(),
     chooseTool,
     selected: () => selectedEntities.length ? selectedEntities : selectedEntity ? [selectedEntity] : [],
     select: refs => { selectedEntities = [...refs]; selectedEntity = refs[0] ?? null; renderSelection(); },
@@ -1140,7 +1142,9 @@ export function openSketchWorkspace(
   const boxSelection = bindSketchBoxSelection({
     svg, enabled: () => started && !busy && activeTool === "select" && !dimensionTool.active() && !constraints.tool.active(),
     drawing: () => drawing, point: e => pointerPoint(e, false),
-    tolerance: () => surface ? 8 * (surface.scaleAt() ?? bounds.width / 800) : bounds.width / 100,
+    tolerance: () => hitTolerance(),
+    // What is highlighted is what a press grabs: a box never starts over a hovered entity.
+    hovered: () => pointerTarget.current(),
     project: point => {
       if (surface?.toClient) return surface.toClient(point);
       const matrix = svg.getScreenCTM(); if (!matrix) return null;
@@ -1227,8 +1231,10 @@ export function openSketchWorkspace(
       ? 8 * (surface.scaleAt() ?? bounds.width / 800)
       : (bounds.width * 8) / Math.max(svg.getBoundingClientRect().width, 800),
     drawing: () => drawing,
-    // Grab within 8 screen pixels at any zoom, like picking and snapping.
     tolerance: () => hitTolerance(),
+    // The hovered entity is the one a press grabs (Jonathan, 2026-11-02: hover, select and
+    // drag are one thing).
+    hovered: () => pointerTarget.current(),
     select: (ref) => {
       annotationSelection?.clear();
       selectedEntities = [ref]; selectedEntity = ref;
@@ -1256,7 +1262,7 @@ export function openSketchWorkspace(
     if (endpointGesture.active() || trimGesture.active() || selectionDrag.active()) return;
     if (activeTool === "select" && hoverConstraintMark(svg, pointerPoint(e, false))) {
       cursor = null;
-      hoveredEntity = null;
+      hoveredEntity = null; pointerTarget.clear();
       renderHoveredConstraints(svg, drawing, null);
       renderPreview();
       return;
@@ -1265,15 +1271,15 @@ export function openSketchWorkspace(
     cursor = axisLocked(pointerPoint(e), e);
     // Onshape reveals what constrains an entity as soon as you point at it,
     // whether or not constraint display is switched on.
-    const hovered = cursor ? activeTool==='select' && !constraints.tool.active() ? pickSketchEditEntity(drawing,cursor,svg) : pickSelectableSketchEntity(drawing, cursor) : null;
-    hoveredEntity = hovered && hovered.d < hitTolerance() ? hovered.ref : null;
+    pointerTarget.update(cursor);
+    hoveredEntity = pointerTarget.ref();
     renderHoveredConstraints(svg, drawing, hoveredEntity);
     // Hover previews the pick in the selection colour (Jonathan, 2026-11-01).
     renderSketchSelection(svg, drawing, selectionDrag.active() ? null : hoveredEntity, undefined, "sketch-hover");
     renderPreview();
   });
   svg.addEventListener("pointerleave", () => {
-    cursor = null;
+    cursor = null; pointerTarget.clear();
     renderSketchSelection(svg, drawing, null, undefined, "sketch-hover");
     hoveredEntity = null;
     hoverConstraintMark(svg, null);
