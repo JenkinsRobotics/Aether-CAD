@@ -31,8 +31,10 @@ function addUniqueCandidate(
 ): void {
   // One visible node represents one exact location. Analytic axis/center
   // candidates are inserted before coincident boundary descriptions.
-  const duplicateIndex = candidates.findIndex((existing) =>
-    sameOrigin(existing.origin, candidate.origin),
+  // Edges are curves, not nodes: every edge keeps its own candidate even when its
+  // midpoint lands on another candidate's origin, or it could never be picked.
+  const duplicateIndex = candidate.kind === "edge-midpoint" ? -1 : candidates.findIndex((existing) =>
+    existing.kind !== "edge-midpoint" && sameOrigin(existing.origin, candidate.origin),
   );
   if (duplicateIndex < 0) {
     candidates.push(candidate);
@@ -127,10 +129,10 @@ function curveCandidates(
         ellipse.delete();
       }
     }
-  } catch (error) {
-    throw new Error(
-      `face ${faceId} edge ${edgeIndex + 1} analytic curve: ${errorDescription(error)}`,
-    );
+  } catch {
+    // An edge the analytic inspection cannot describe (a boolean's trimmed or
+    // approximated curve) still has its sampled polyline and vertices below;
+    // selection must reach every edge, measurements may be partial.
   } finally {
     adaptor.delete();
   }
@@ -142,6 +144,9 @@ function curveCandidates(
       ? Math.min(180, Math.max(12, Math.ceil(measurements.lengthMillimeters / measurements.radiusMillimeters / (4 * Math.PI / 180)) + 1))
       : 48;
   const polylineMillimeters = Array.from({ length: samples }, (_, i) => deleteAfterVectorTuple(edge.pointAt(i / (samples - 1)))).flatMap((p) => [p[0], p[1], p[2]]);
+  if (polylineMillimeters.some((value) => !Number.isFinite(value))) {
+    throw new Error(`face ${faceId} edge ${edgeIndex + 1}: the curve cannot be sampled`);
+  }
   candidates.push({
     id: `face-${faceId}-edge-${edgeIndex}`,
     faceId,

@@ -38146,8 +38146,8 @@ function errorDescription$1(error2) {
   return String(error2);
 }
 function addUniqueCandidate(candidates, candidate) {
-  const duplicateIndex = candidates.findIndex(
-    (existing2) => sameOrigin(existing2.origin, candidate.origin)
+  const duplicateIndex = candidate.kind === "edge-midpoint" ? -1 : candidates.findIndex(
+    (existing2) => existing2.kind !== "edge-midpoint" && sameOrigin(existing2.origin, candidate.origin)
   );
   if (duplicateIndex < 0) {
     candidates.push(candidate);
@@ -38234,15 +38234,15 @@ function curveCandidates(faceId, edge, faceFrame, edgeIndex) {
         ellipse2.delete();
       }
     }
-  } catch (error2) {
-    throw new Error(
-      `face ${faceId} edge ${edgeIndex + 1} analytic curve: ${errorDescription$1(error2)}`
-    );
+  } catch {
   } finally {
     adaptor.delete();
   }
   const samples2 = measurements.linearDirection ? 2 : measurements.radiusMillimeters && measurements.lengthMillimeters ? Math.min(180, Math.max(12, Math.ceil(measurements.lengthMillimeters / measurements.radiusMillimeters / (4 * Math.PI / 180)) + 1)) : 48;
   const polylineMillimeters = Array.from({ length: samples2 }, (_2, i2) => deleteAfterVectorTuple(edge.pointAt(i2 / (samples2 - 1)))).flatMap((p2) => [p2[0], p2[1], p2[2]]);
+  if (polylineMillimeters.some((value2) => !Number.isFinite(value2))) {
+    throw new Error(`face ${faceId} edge ${edgeIndex + 1}: the curve cannot be sampled`);
+  }
   candidates.push({
     id: `face-${faceId}-edge-${edgeIndex}`,
     faceId,

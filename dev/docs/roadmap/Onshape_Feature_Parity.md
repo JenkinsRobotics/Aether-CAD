@@ -298,6 +298,15 @@ Every item below is a requirement, not a suggestion; each is closed only with a 
 
 ## Selection (alpha-0.1.93)
 
+- alpha-0.1.96: an edge with sampled points behind the camera's near plane (a large rim while zoomed in
+  close) was unpickable because one unprojectable sample made the whole edge's distance infinite; the
+  distance now skips those samples, and straight edges are sampled too. The engine also keeps a pick
+  candidate for every edge even when its analytic inspection fails or its midpoint coincides with another
+  node (`part-evaluator.test.ts`: every edge of every face has a candidate).
+  Gate note: `verify-modeling-browser` failed once at the Sheet Base step (Hole 13 and Revolve 14
+  reported "Cut removes no material" on a full-timeline replay) and passed on an immediate rerun of the
+  same build; the replay nondeterminism is open.
+
 One rule, no modes: the select tool resolves by proximity to the hit point — a vertex within
 6 px, else an edge within 12 px (distance to the engine's sampled polyline), else the face under
 the pointer. Hovered and selected edges draw an outline; a face lights up only when the pointer

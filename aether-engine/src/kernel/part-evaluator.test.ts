@@ -1030,3 +1030,26 @@ it('samples a circular edge densely enough to pick anywhere along it', async () 
  let worst=0; for(let i=0;i+5<line.length;i+=3){const mx=(line[i]+line[i+3])/2,my=(line[i+1]+line[i+4])/2;worst=Math.max(worst,100-Math.hypot(mx,my));}
  expect(worst).toBeLessThan(0.1); // every chord stays within 0.1 mm of the circle
 },30000);
+
+it('lists a pick candidate for every edge of every face, including edges a boolean trimmed', async () => {
+ // A stepped block with a round boss: the boss meets the top face and the step face on
+ // trimmed circular edges. Every topological edge must be selectable (Jonathan, 2026-11-03).
+ const {createEmptyPartDocument}=await import('../document/part-document');
+ const doc=createEmptyPartDocument('Stepped boss');
+ doc.features.push(
+  {id:'base-s',type:'profile',name:'Base',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'polygon',pointsMillimeters:[[0,0],[80,0],[80,50],[0,50]]}},
+  {id:'base',type:'extrude',name:'Base',profileFeatureId:'base-s',distanceMillimeters:20,operation:'new',bodyId:'body',suppressed:false},
+  {id:'step-s',type:'profile',name:'Step',plane:'XY',offsetMillimeters:20,suppressed:false,profile:{type:'polygon',pointsMillimeters:[[40,-5],[90,-5],[90,55],[40,55]]}},
+  {id:'step',type:'extrude',name:'Step',profileFeatureId:'step-s',distanceMillimeters:8,reversed:true,operation:'cut',targetBodyId:'body',suppressed:false},
+  {id:'boss-s',type:'profile',name:'Boss',plane:'XY',offsetMillimeters:12,suppressed:false,profile:{type:'drawing',contours:[{type:'circle',id:'c',center:[40,25],radius:15}]}},
+  {id:'boss',type:'extrude',name:'Boss',profileFeatureId:'boss-s',distanceMillimeters:30,operation:'add',targetBodyId:'body',suppressed:false});
+ let edges=0, faces=0;
+ const result=evaluatePartDocument(doc,{withBodies:(bodies)=>{for(const body of bodies.values()){for(const face of body.faces){faces++;edges+=face.edges.length;}}}});
+ expect(result.parts.length).toBe(1);
+ const topology=result.parts[0].topology;
+ expect(topology.length).toBe(faces);
+ const edgeCandidates=topology.flatMap(f=>f.candidates.filter(c=>c.kind==='edge-midpoint'));
+ expect(edgeCandidates.length).toBe(edges);
+ for(const candidate of edgeCandidates) expect((candidate.polylineMillimeters?.length??0)>=6).toBe(true);
+ expect(topology.every(f=>f.surfaceType!=='UNAVAILABLE')).toBe(true);
+},60000);
