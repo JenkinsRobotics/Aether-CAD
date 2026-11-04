@@ -47,6 +47,31 @@ and [Fillet](https://cad.onshape.com/help/Content/PartStudio/fillet.htm). Onshap
 second-end draft controls and partial/variable fillet controls remain explicit
 requirements, not optional cosmetic additions.
 
+## Extrude release blockers — 2026-11-04
+
+The shared-control/selection update is installed as CAD **alpha-0.1.99** with
+matching worker and UI gallery **alpha-0.1.36** (shared package alpha.275).
+That update does **not** sign off the entire Extrude feature. Continue this
+feature before granting release-ready status to Revolve, Chamfer or Fillet.
+
+| Reference control | Current implementation | Qualification still required |
+| --- | --- | --- |
+| Solid / Surface / Thin | Solid and Thin in Extrude; separate native Surface Extrude operation; unified Surface tab disabled | Integrate the Surface workflow and qualify its complete extent/operation matrix. |
+| New / Add / Remove / Intersect | Native body operations and explicit/all merge scopes | Selected multi-body scope, disjoint regions and failure recovery across the full extent matrix. |
+| Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
+| Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |
+| Up to next / face / part / vertex / Through all | Native stopping operations and validation | Drafted stopping combinations and curved/partial termination cases; matching end-offset handles. |
+| Direction | Sketch normal, sketch-line reference and manual unit vector | Additional axis/mate-connector selection parity; drafted oblique direction is currently refused. |
+| Starting offset / entity | Blind signed offset or parallel principal/feature/face reference; shared linear offset handle | Complete reference changes, reverse/second-end combinations and interactive cancellation coverage. |
+| Draft / opposite draft | Native taper for supported closed regions, separate end angles | Thin plus Draft is currently refused; draft-angle handles and all stopping-limit combinations remain open. |
+| Thin thickness 1/2, Mid plane, Flip wall | Native closed/open curve walls with numeric controls | Corresponding thickness handles; draft and complex termination coverage. |
+| Live preview / accept / cancel / reopen | Actual native mesh checks for oblique two-ended extrusion; unit-aware readout; saved reopen | Full matrix above must verify resulting geometry, editable history and identical UI/agent behavior. |
+
+This inventory distinguishes an exposed control from a qualified operation.
+Unsupported combinations must retain explicit validation until a native
+implementation and geometry-level regression are present. A disabled tab or
+an error message is not completion of its reference requirement.
+
 ## Fillet (`src/features/fillet.ts`, `aether-engine/src/kernel/features/edge-finish.ts`)
 
 | Onshape control | Ours | Status |
