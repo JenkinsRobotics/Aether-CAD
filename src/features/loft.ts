@@ -1,7 +1,8 @@
 import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/sketch/reference/profile-region-reference';
 import { sketchRegions } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
-import {bodyAndOperationTabs, planned, rowIn, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {bodyAndOperationTabs, entityChips, planned, rowIn, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {mountSketchPointsBox} from './sketch-points-box';
 import {availableBodies} from '@aether/core/document';
 import {mountPartBox} from './part-box';
 import {extrusionPointPicker, serializeExtrusionPoint} from './extrude-point-picker';
@@ -28,6 +29,9 @@ export const loftEditor: FeatureEditor = {
       operation:context.field('Operation',context.feature?.operation ?? 'new',['new','add','cut']),
       ruled:context.field('Surface',context.feature?.ruled ? 'ruled' : 'smooth',['smooth','ruled']),
       endPoint:context.field('Apex',context.feature?.endPoint&&context.feature.endPoint.kind!=='point'?JSON.stringify(context.feature.endPoint):''),
+      pathOn:context.field('Path',context.feature?.path?'yes':'no',['no','yes']),
+      path:context.reference('Path sketch',['sketch','profile','curve3d'],context.feature?.path?.pathFeatureId),
+      connections:context.field('Connection points',JSON.stringify((context.feature?.connections??[]).flat())),
       mergeScope:context.field('Merge scope part',JSON.stringify(context.feature?.targetBodyId?[context.feature.targetBodyId]:availableBodies(context.doc).at(-1)?[availableBodies(context.doc).at(-1)!.id]:[])),
     };
   },
@@ -35,10 +39,8 @@ export const loftEditor: FeatureEditor = {
     const {win,form} = context;
     bodyAndOperationTabs(win,form,controls.operation,['new','add','cut']);
     const apex=extrusionPointPicker(context,controls.endPoint,'Apex (optional)','The loft runs to this point after its last section. A changed or ambiguous vertex requires reselection.');apex.setEnabled(true);
-    controls.sections.closest('label')?.remove();
-    controls.sections.hidden = true;
-    controls.sections.setAttribute('form',form.id);
-    form.append(controls.sections);
+    const hide=(control:Controls[string])=>{control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);};
+    hide(controls.sections);
     controls.source.closest('label')?.remove();
     controls.source.setAttribute('form',form.id);
     win.row('Section sketch',controls.source);
@@ -113,8 +115,14 @@ export const loftEditor: FeatureEditor = {
     gapRow('Start profile condition',conditionGap);gapRow('End profile condition',conditionGap);
     const gapSection=(label:string,reason:string,fields:string[])=>{const section=win.subsection(label,{kind:'checkbox',open:false});for(const name of fields){const box=win.entitiesBox(name);box.render([]);section.body.append(box.element);}planned(section.element,reason);win.body.append(section.element);};
     gapSection('Guides and continuity','Not available in this kernel: guide curves with continuity are a recorded gap.',['Guides']);
-    gapSection('Path','Not available in this kernel: a centreline path with a section count is a recorded gap.',['Path']);
-    gapSection('Connections','Not available in this kernel: vertex or edge connections between profiles are a recorded gap.',['Vertices or edges']);
+    // Path: the sections swept along a curve of an earlier sketch.
+    for(const key of ['pathOn'])hide(controls[key]);
+    const pathSection=win.subsection('Path',{kind:'checkbox',open:controls.pathOn.value==='yes',onToggle:(open)=>{controls.pathOn.value=open?'yes':'no';controls.pathOn.dispatchEvent(new Event('change'));}});
+    const pathChips=entityChips(win,'Path',controls.path,form);pathSection.body.append(pathChips.element);win.body.append(pathSection.element);
+    // Connections: one sketch point per section, in section order (several sets: N points each).
+    const connections=win.subsection('Connections',{kind:'checkbox',open:JSON.parse(controls.connections.value||'[]').length>0,onToggle:(open)=>{if(!open){controls.connections.value='[]';controls.connections.dispatchEvent(new Event('change'));}}});
+    const points=mountSketchPointsBox(context,controls.connections,'Vertices to connect');
+    connections.body.append(points.element);win.body.append(connections.element);
     const iso=document.createElement('input');iso.type='checkbox';iso.setAttribute('aria-label','Show isocurves');const isoRow=rowIn('Show isocurves',iso);planned(isoRow,'Not available in this kernel: an isocurve overlay is a recorded gap.');win.body.append(isoRow);
     const {doc,feature}=context;
     const end=feature?doc.features.findIndex(f=>f.id===feature.id):doc.rollbackIndex??doc.features.length;
@@ -129,11 +137,16 @@ export const loftEditor: FeatureEditor = {
     if (sections.length<2) return 'Add at least two closed sketch sections in loft order.';
     if (sections.some(section=>{const region=regionFor(context,section); return !region || region.closed===false;})) return 'A loft section is unavailable. Remove it and choose a closed sketch region.';
     if (controls.operation.value!=='new' && !JSON.parse(controls.mergeScope.value||'[]').length) return 'Select the merge scope part.';
+    if (controls.pathOn.value==='yes'){ if(!controls.path.value) return 'Choose the path sketch.'; if(controls.ruled.value==='ruled'||controls.endPoint.value) return 'A loft along a path is smooth through closed sections, without an apex.'; }
+    const connected=JSON.parse(controls.connections.value||'[]').length;
+    if (connected && connected % sections.length) return `Connections take one sketch point per section: ${sections.length} points per connection, in section order.`;
     return null;
   },
   serialize(values,context) {
     const sections: Section[]=JSON.parse(values.sections);
-    return {operation:values.operation,...(values.operation!=='new'?{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]}:{}),ruled:values.ruled==='ruled',...(values.endPoint?{endPoint:serializeExtrusionPoint(values.endPoint,context)}:{}),sections:stampProfileSelections(context, sections.map(section=>{
+    const connected=(JSON.parse(values.connections||'[]') as unknown[]).map((ref)=>serializeExtrusionPoint(JSON.stringify(ref),context));
+    const perSet=sections.length,connections=connected.length?Array.from({length:connected.length/perSet},(_,i)=>connected.slice(i*perSet,(i+1)*perSet)):undefined;
+    return {operation:values.operation,...(values.operation!=='new'?{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]}:{}),ruled:values.ruled==='ruled',...(values.endPoint?{endPoint:serializeExtrusionPoint(values.endPoint,context)}:{}),...(values.pathOn==='yes'?{path:{pathFeatureId:values.path}}:{}),...(connections?{connections}:{}),sections:stampProfileSelections(context, sections.map(section=>{
       const profile=context.doc.features.find(f=>f.id===section.profileFeatureId);
       const region=regionFor(context,section);
       if (!profile || !region) throw Error('A selected loft section is no longer available.');

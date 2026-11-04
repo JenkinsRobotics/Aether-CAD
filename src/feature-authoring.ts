@@ -163,7 +163,7 @@ const presentFeatureWindow = (
     // The window's title is the feature's name (Jonathan, 2026-11-02): "Revolve 8" from the
     // start, renamed by double-clicking the title; no Name row.
     const defaultName = type === "import-cad" ? (feature?.name ?? "Edit CAD import") : feature?.name ??
-        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1);
+        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type === "boundary-fill" ? "Enclose" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1);
     const win = openCADFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
       className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
@@ -346,7 +346,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["fillet","chamfer","boolean","mirror","hole","pattern","draft","sweep","loft","offset-face","transform","split","delete-face","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-thicken","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["fillet","chamfer","boolean","mirror","hole","pattern","draft","rib","sweep","loft","offset-face","transform","split","delete-face","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-thicken","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);
@@ -421,6 +421,8 @@ const presentFeatureWindow = (
         if (["fillet","chamfer"].includes(type) && next.edges?.length) next.targetBodyId = next.edges[0].bodyId;
         if (type === "fillet" && next.filletType === "full-round" && next.sideFace) next.targetBodyId = next.sideFace.bodyId;
         if (type === "draft" && next.faces?.length) next.targetBodyId = next.faces[0].bodyId;
+        if (type === "draft" && next.partingEdges?.length) next.targetBodyId = next.partingEdges[0].bodyId;
+        if (type === "thread" && next.face) next.targetBodyId = next.face.bodyId;
         const candidate = structuredClone(doc);
         if (existing) candidate.features[candidate.features.findIndex(f => f.id === existing.id)] = next;
         return existing ? candidate : insertFeature(candidate, next);

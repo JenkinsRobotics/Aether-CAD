@@ -30,14 +30,14 @@ export function bodyIDForFeature(
     : `${doc.documentId}:body-${feature.id}`;
 }
 export function bodyIDsForFeature(doc: PartDocument, feature: PartFeature): string[] {
-  if(feature.type==="transform"||feature.type==="split")return feature.copyBodyIds?feature.bodyIds.map(id=>feature.copyBodyIds![id]):[];
+  if(feature.type==="transform"||feature.type==="split"||(feature.type==="mirror"&&feature.bodyIds))return feature.copyBodyIds?feature.bodyIds!.map(id=>feature.copyBodyIds![id]):[];
   if(feature.type==="pattern"&&feature.bodyIds)return patternCopyIds(feature);
   return (feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs)
     ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
 }
 /** Bodies created by this feature, separate from bodies modified in place. */
 export function createdBodyIDs(doc:PartDocument,feature:PartFeature):string[] {
- return ((feature.type==='transform'||feature.type==='split')&&feature.copyBodyIds)||(feature.type==='pattern'&&feature.bodyIds) ? bodyIDsForFeature(doc,feature) :
+ return ((feature.type==='transform'||feature.type==='split'||feature.type==='mirror')&&feature.copyBodyIds)||(feature.type==='pattern'&&feature.bodyIds) ? bodyIDsForFeature(doc,feature) :
   'operation' in feature&&feature.operation==='new' ? bodyIDsForFeature(doc,feature) : [];
 }
 /** Current output identities absorbed by a feature; original producers persist. */
@@ -45,6 +45,8 @@ export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.suppressed) return [];
   if ((feature.type==="extrude"||feature.type==="revolve") && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
+  if (feature.type === "surface-thicken" && feature.keepTools === false) return feature.bodyIds;
+  if (feature.type === "split" && feature.keepTools === false && feature.tool) return [feature.tool.bodyId];
   if (feature.type === "boundary-fill" && feature.removeTools) return feature.toolBodyIds;
   if (feature.type === "remove-body") return feature.bodyIds;
   if (feature.type === "surface-stitch") return feature.bodyIds.slice(1);
@@ -61,10 +63,11 @@ function stableBodies(doc: PartDocument): PartDocument {
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
         return feature;
       }
-      if(feature.type==="transform"||feature.type==="split"){
+      if(feature.type==="transform"||feature.type==="split"||(feature.type==="mirror"&&feature.bodyIds)){
         if(!feature.suppressed&&feature.copyBodyIds)targetBody=bodyIDsForFeature(doc,feature).at(-1);
         return feature;
       }
+      if(feature.type==="mirror"&&feature.operation==="new"){ if(!feature.suppressed)targetBody=bodyIDForFeature(doc,feature); return feature; }
       if (feature.type === "offset-face") return feature;
       if (consumedBodyIDs(feature).length && "targetBodyId" in feature) targetBody = feature.targetBodyId;
       if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
@@ -73,7 +76,7 @@ function stableBodies(doc: PartDocument): PartDocument {
       }
       // Pin legacy implicit targets before removing/reordering their producer.
       // Otherwise the same operation could silently switch to another body.
-      if (!["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(feature.type) && targetBody)
+      if (!["profile", "sketch", "plane", "axis", "point", "curve3d"].includes(feature.type) && targetBody)
         return { ...feature, targetBodyId: ("targetBodyId" in feature && feature.targetBodyId) || targetBody };
       return feature;
     }),
@@ -85,11 +88,11 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
   let lastBody: string | undefined;
   for (const f of doc.features) {
     const refs = featureInputDependencies(f, bodyProducers);
-    if (f.type === "transform" || f.type === "split" || (f.type === "pattern" && f.bodyIds)) {
+    if (f.type === "transform" || f.type === "split" || ((f.type === "pattern" || f.type === "mirror") && f.bodyIds && !("resultOperation" in f && f.resultOperation) && !(f.type === "mirror" && f.operation !== "new"))) {
       // Copies do not modify their source bodies. Resolve all inputs before
       // registering new outputs, so no copy can become its own prerequisite.
       const outputs = f.type === "pattern" ? patternCopyIds(f)
-        : f.copyBodyIds ? bodyIDsForFeature(doc, f) : f.bodyIds;
+        : f.copyBodyIds ? bodyIDsForFeature(doc, f) : f.bodyIds!;
       if (!f.suppressed || includeSuppressedModifiers) {
         for (const id of outputs) bodyProducers.set(id, f.id);
         if (f.type === "pattern" || f.copyBodyIds) lastBody = outputs.at(-1) ?? lastBody;
@@ -98,7 +101,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       continue;
     }
     if (
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "shape-binder" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
+      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "mirror" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "shape-binder" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
       "operation" in f && f.operation === "new"
     ) {
       for (const id of bodyIDsForFeature(doc, f)) { lastBody = id; bodyProducers.set(id, f.id); }
@@ -109,7 +112,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       // checked against actual native availability during evaluation.
       if(!f.suppressed||includeSuppressedModifiers)for(const id of bodyProducers.keys())bodyProducers.set(id,f.id);
       if(!f.suppressed)lastBody=f.scopeResolution?.groups.at(-1)?.bodyId??lastBody;
-    } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f.type)) {
+    } else if (!["sketch", "profile", "plane", "axis", "point", "curve3d"].includes(f.type)) {
       const body =
         "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
       const targets = f.type === "offset-face" ? offsetFaceBodies(f)

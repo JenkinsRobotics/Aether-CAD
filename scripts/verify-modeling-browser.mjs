@@ -335,7 +335,8 @@ try {
     await setInput('Thickness 1 (mm)', 1);
     await applyDialog('surface-thicken');
     await expect(featureRow(/^Surface Thicken/)).toBeVisible();
-    await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 2);
+    // Keep tools is off by default (Onshape's): the sheet is consumed, so the solid replaces it.
+    await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 1);
     await tab('Solid').click().catch(() => { });
   });
   await step('sheet-metal-base-and-flat-dxf', async () => {

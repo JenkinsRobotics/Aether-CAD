@@ -56,7 +56,7 @@ export function extrudeDepthDrag(distance: HTMLInputElement | HTMLSelectElement,
 
 export type AxisProjection = {x:number;y:number;depthAt:(x:number,y:number)=>number|null};
 type HandleOptions = {
-  valueMode?: 'signed'|'magnitude'|'positive';
+  valueMode?: 'signed'|'magnitude'|'positive'|'nonnegative';
   label?: string;
   ready?: ()=>boolean;
   enabled?: ()=>boolean;
@@ -91,7 +91,7 @@ export function mountExtrusionHandle(panel: HTMLElement, controls: Record<string
   let drag:{start:number;axis:number;projection:AxisProjection;value:string;reverse:string}|undefined;
   const change=(mm:number)=>{
     if(!Number.isFinite(mm))return;
-    const depth=valueMode==='signed'?mm:Math.max(valueMode==='positive'?mm:Math.abs(mm),0.000001);
+    const depth=valueMode==='signed'?mm:valueMode==='nonnegative'?Math.max(mm,0):Math.max(valueMode==='positive'?mm:Math.abs(mm),0.000001);
     distance.value=String(Number((depth/factor).toPrecision(8)));
     if(valueMode==='magnitude'){reversed.value=String(mm*operationDirection()<0);reversed.dispatchEvent(new Event('change'));}
     distance.dispatchEvent(new Event('input'));
@@ -125,6 +125,7 @@ export function mountExtrusionHandle(panel: HTMLElement, controls: Record<string
         const value=evaluateQuantityExpression(text,{family:'length',factor:factor/1000});
         if(!text.trim()||!Number.isFinite(value))throw new Error('Invalid length');
         if(valueMode==='positive'&&value<=0)return 'Enter a positive length.';
+        if(valueMode==='nonnegative'&&value<0)return 'Enter a nonnegative length.';
         change(value*factor*direction());distance.dispatchEvent(new Event('change'));
       } catch { return 'Enter a valid length or expression, such as 10 mm or 1/2 in.'; }
     },

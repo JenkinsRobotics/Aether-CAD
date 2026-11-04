@@ -32,8 +32,9 @@ it('anchors the top of a pocket even when its floor center is represented by a c
 
 it('references a curved face by its surface type, centre and area, and a plane by its normal',()=>{
  const cylinder:FaceTopologyData={id:3,surfaceType:'CYLINDER',measurements:{centerMillimeters:[1,2,3],areaSquareMillimeters:50,radiusMillimeters:5},candidates:[]};
- expect(nativeFaceReference([cylinder],cylinder)).toEqual({surfaceType:'cylinder',faceAnchor:{centerMillimeters:[1,2,3],areaSquareMillimeters:50}});
- expect(nativeFaceReference([cylinder],{...cylinder,surfaceType:'TORUS'})?.surfaceType).toBe('torus');
+ // A cylinder also carries its radius (a thread reads its size from it); other surfaces do not.
+ expect(nativeFaceReference([cylinder],cylinder)).toEqual({surfaceType:'cylinder',faceAnchor:{centerMillimeters:[1,2,3],areaSquareMillimeters:50},radiusMillimeters:5});
+ expect(nativeFaceReference([cylinder],{...cylinder,surfaceType:'TORUS'})).toEqual({surfaceType:'torus',faceAnchor:{centerMillimeters:[1,2,3],areaSquareMillimeters:50}});
  expect(nativeFaceReference([cylinder],{...cylinder,measurements:{centerMillimeters:[1,2,3]}})).toBeNull();
  expect(nativeFaceReference([cylinder],{...cylinder,surfaceType:'UNAVAILABLE'})).toBeNull();
  const plane=face(10,[2.5,10,15]);

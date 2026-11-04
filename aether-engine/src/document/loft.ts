@@ -13,6 +13,10 @@ export interface LoftFeature {
   /** Apex before the first section / after the last (SolidCraft's point sections). */
   startPoint?: LoftApex;
   endPoint?: LoftApex;
+  /** Onshape's Path: the sections are swept along this curve of an earlier sketch (OCCT's pipe shell through several profiles). */
+  path?: { pathFeatureId: string; pathContourId?: string };
+  /** Onshape's Connections: one sketch point per section, in section order; each section's boundary starts at its point so the vertices pair up. */
+  connections?: ExtrusionPointReference[][];
   operation: 'new' | 'add' | 'cut';
   ruled: boolean;
   bodyId?: string;
@@ -40,4 +44,15 @@ export function validateLoft(feature: LoftFeature, earlier: Map<string,string>, 
   }
   if (!['new','add','cut'].includes(feature.operation) || typeof feature.ruled !== 'boolean')
     throw new Error('Invalid loft operation or surface mode.');
+  if (feature.path !== undefined) {
+    if (typeof feature.path.pathFeatureId !== 'string' || (!missing(feature.path.pathFeatureId) && !['sketch','profile','curve3d'].includes(earlier.get(feature.path.pathFeatureId) ?? ''))) throw new Error('Loft path needs a curve of an earlier sketch.');
+    if (apexes.length || feature.ruled) throw new Error('A loft along a path takes closed sections only, smooth, without an apex.');
+  }
+  if (feature.connections !== undefined) {
+    if (!Array.isArray(feature.connections) || !feature.connections.length) throw new Error('Loft connections need at least one set of points.');
+    for (const set of feature.connections) {
+      if (!Array.isArray(set) || set.length !== feature.sections.length) throw new Error('Each loft connection needs one sketch point per section, in section order.');
+      for (const point of set) validateExtrusionPointReference(point, earlier, missing as (id: string) => boolean);
+    }
+  }
 }

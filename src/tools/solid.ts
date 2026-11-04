@@ -36,7 +36,7 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
       ]},
       // Union, Subtract and Intersect are the Operation field of this one editor (Jonathan, 2026-11-01).
       {...tool("solid-boolean", "Boolean", "boolean", "feature-boolean"), variants: [
-        tool("solid-boundary-fill", "Boundary Fill", "boolean", "feature-boundary-fill"),
+        tool("solid-boundary-fill", "Enclose", "boolean", "feature-boundary-fill"),
       ]},
       tool("solid-shell", "Shell", "shell", "feature-shell"),
       // Part or Face is the Split window's first row (Jonathan, 2026-11-01).
@@ -73,6 +73,7 @@ export const solidWorkspace: CADRibbonWorkspaceDefinition = {
     // Design tabs show this group and Transform under Modify (Jonathan, 2026-11-01).
     { id: "solid-advanced", label: "Advanced Shape", tools: [
       tool("solid-draft", "Draft", "draft", "feature-draft"),
+      tool("solid-rib", "Rib", "extrude", "feature-rib"),
       tool("solid-pattern", "Pattern", "pattern", "feature-pattern"),
     ] },
     { id: "solid-transform", label: "Transform", tools: [

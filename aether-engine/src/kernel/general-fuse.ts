@@ -31,3 +31,16 @@ export function splitFacesByTool(faces: readonly Face[], tool: AnyShape): Face[]
     });
   } finally { progress.delete(); fuse.delete(); args.delete(); }
 }
+/** A solid split by a face (or any shape) with the general fuse: the result compound, whose solids
+ *  are the pieces. The caller owns it. */
+export function splitShapeByTool(shape: AnyShape, tool: AnyShape): AnyShape {
+  const o = getOC() as any;
+  const args = new o.TopTools_ListOfShape_1();
+  args.Append_1(shape.wrapped); args.Append_1(tool.wrapped);
+  const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
+  try {
+    fuse.SetArguments(args); fuse.Build(progress);
+    if (!fuse.IsDone()) throw new Error("The part could not be split by that face.");
+    return cast(fuse.Shape());
+  } finally { progress.delete(); fuse.delete(); args.delete(); }
+}

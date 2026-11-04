@@ -3,17 +3,20 @@
  *  result, Entities to pattern, then for Linear the Direction box and flip, Distance, Instance
  *  count, Centered and the Second direction; for Circular the Axis of pattern box and flip, Angle,
  *  Instance count, Equal spacing and Centered; then Skip instances, Reapply features and Merge
- *  scope. A feature pattern repeats its feature's own result; a part pattern makes new parts.
- *  Face patterns, Skip instances and Reapply features are present and disabled with the gap named
- *  (ledger: Patterns). The curve pattern keeps its path rows under the Curve tab. */
+ *  scope. A feature pattern repeats its feature's own result; a part pattern makes new parts, or
+ *  adds, removes or intersects its copies with the merge scope part. The direction (or axis) comes
+ *  from the principal axes, a picked straight edge or a picked face (planar for a direction,
+ *  cylindrical or conical for an axis). Skip instances takes instance numbers. Face patterns and
+ *  Reapply features are present and disabled with the gap named (ledger: Patterns). The curve
+ *  pattern keeps its path rows under the Curve tab. */
 import {mountPartBox} from './part-box';
-import {patternSourceTypes,availableBodies} from '@aether/core/document';
+import {patternSourceTypes,availableBodies,type SolidFaceReference} from '@aether/core/document';
+import {faceIdentity,mountPickedReferences} from './picked-references';
 import {requireSelections,layoutParameterRows,entityChips,planned,iconButton,rowIn,checkRow,type Controls,type FeatureEditor,type FeatureEditorContext} from './shared';
 import {transformEdgePicker} from './transform-edge-picker';
 
 const faceGap='Not available in this kernel: patterning faces of a part is a recorded gap (pattern the feature or the part).';
-const resultGap='A feature pattern repeats its feature\'s own result (add or remove); a part pattern makes new parts. Choosing another result here is a recorded gap.';
-const skipGap='Not available in this kernel: skipping instances is a recorded gap.';
+const resultGap='A feature pattern repeats its feature\'s own result (add or remove), as Onshape\'s; Add, Remove and Intersect apply to part patterns.';
 const reapplyGap='Not available in this kernel: regenerating each instance\'s feature references is a recorded gap.';
 
 export const patternEditor:FeatureEditor={
@@ -36,7 +39,10 @@ export const patternEditor:FeatureEditor={
       pathSpacing:field('Spacing along path (mm)',String(path?.spacingMillimeters ?? 10)),
       pathDistance:field('Overall distance (mm)',String(path?.distanceMillimeters ?? 30)),
       pathOrientation:field('Orientation',path?.orientation ?? 'identical',['identical','path']),
-      directionSource:field('Direction source',dir?.kind==='vector'?'vector':dir?.kind==='solid-edge'?'edge':axisRef?.kind==='solid-edge'?'edge':'axis',['axis','vector','edge']),
+      directionSource:field('Direction source',dir?.kind==='vector'?'vector':dir?.kind==='solid-edge'||axisRef?.kind==='solid-edge'?'edge':dir?.kind==='face'||axisRef?.kind==='face'?'face':'axis',['axis','vector','edge','face']),
+      directionFace:field('Direction face',JSON.stringify(dir?.kind==='face'?[dir]:axisRef?.kind==='face'?[axisRef]:[])),
+      result:field('Result',feature?.resultOperation??'new',['new','add','cut','intersect']),
+      skip:field('Skipped instances',(feature?.skipInstances??[]).join(', ')),
       axis:field('Axis',feature?.axis ?? 'X',['X','Y','Z']),
       vectorX:field('Direction X',vec(dir?.kind==='vector'?dir.direction:undefined,0,1)),vectorY:field('Direction Y',vec(dir?.kind==='vector'?dir.direction:undefined,1)),vectorZ:field('Direction Z',vec(dir?.kind==='vector'?dir.direction:undefined,2)),
       edge:field('Direction edge',JSON.stringify(dir?.kind==='solid-edge'?dir:axisRef?.kind==='solid-edge'?axisRef:'')),
@@ -59,7 +65,7 @@ export const patternEditor:FeatureEditor={
     const {win,form,lengthUnitLabel,angleUnitLabel}=context;
     const rows=layoutParameterRows(context,control=>![controls.pathSketch,controls.pathMode,controls.pathSpacing,controls.pathDistance,controls.pathOrientation,controls.axis,controls.vectorX,controls.vectorY,controls.vectorZ].includes(control));
     const hide=(control:Controls[string])=>{control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);};
-    for(const key of ['what','parts','partNames','copyPrefix','source','patternType','edge','count','spacing','angle','equalSpacing','direction','centered','useSecond','secondAxis','secondCount','secondSpacing','secondDirection','secondCentered','mergeScope','directionSource'])hide(controls[key]);
+    for(const key of ['what','parts','partNames','copyPrefix','source','patternType','edge','count','spacing','angle','equalSpacing','direction','centered','useSecond','secondAxis','secondCount','secondSpacing','secondDirection','secondCentered','mergeScope','directionSource','result','skip'])hide(controls[key]);
     const row=(label:string,control:Controls[string],unit?:string)=>{control.closest('label')?.remove();control.setAttribute('form',form.id);const r=unit?rowIn(label,control,Object.assign(document.createElement('span'),{className:'aui-feature-unit',textContent:unit})):rowIn(label,control);win.body.append(r);return r;};
     const check=(control:Controls[string],label:string)=>checkRow(context,control,label);
     // Pattern type: Linear / Circular / Curve as the window's first tabs (Onshape opens them as three tools).
@@ -68,8 +74,9 @@ export const patternEditor:FeatureEditor={
     // Part / Feature / Face, then the result.
     const whats=win.tabs(['Part','Feature','Face'],controls.what.value==='parts'?0:1);
     [...whats.children].forEach((tab,index)=>{if(index===2){planned(tab as HTMLButtonElement,faceGap);return;}(tab as HTMLButtonElement).onclick=()=>{controls.what.value=index===0?'parts':'feature';[...whats.children].forEach((o,i)=>o.classList.toggle('active',i===index));sync();controls.what.dispatchEvent(new Event('change'));};});
-    const results=win.tabs(['New','Add','Remove','Intersect'],0);
-    [...results.children].forEach((tab,index)=>{if(index>0)planned(tab as HTMLButtonElement,resultGap);});
+    const resultValues=['new','add','cut','intersect'];
+    const results=win.tabs(['New','Add','Remove','Intersect'],Math.max(0,resultValues.indexOf(controls.result.value)));
+    [...results.children].forEach((tab,index)=>{(tab as HTMLButtonElement).onclick=()=>{if(controls.what.value!=='parts')return;controls.result.value=resultValues[index];[...results.children].forEach((o,i)=>o.classList.toggle('active',i===index));sync();controls.result.dispatchEvent(new Event('change'));};});
     win.body.append(kinds,whats,results);
     // Entities to pattern: parts picked in the viewport, or the feature from the list.
     const choices=JSON.parse(controls.partNames.value) as {id:string;name:string}[];
@@ -84,7 +91,11 @@ export const patternEditor:FeatureEditor={
     paintFlip();directionRow.querySelector('.aui-feature-row-control')?.append(flip);
     const edgePicker=transformEdgePicker(context,controls.edge);
     controls.edge.addEventListener('change',()=>{if(controls.edge.value){controls.directionSource.value='edge';controls.directionSource.dispatchEvent(new Event('change'));}});
-    controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
+    // A picked face: a planar face's normal is a direction; a cylindrical or conical face's axis is the axis of pattern.
+    const faces=mountPickedReferences<SolidFaceReference>(context,controls.directionFace,{title:'Direction face',kind:'face',requestEvent:'aether-offset-faces-request',replyEvent:'aether-offset-faces',replyKey:'faces',identity:faceIdentity,
+      onChange:picked=>{if(picked.length>1){faces.update([picked[picked.length-1]]);return;}if(picked.length){controls.directionSource.value='face';controls.directionSource.dispatchEvent(new Event('change'));}}});
+    edgePicker.element.after(faces.element);
+    controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value==='face'&&!JSON.parse(controls.directionFace.value||'[]').length)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
     const spacingRow=row('Distance',controls.spacing,lengthUnitLabel);
     const angleRow=row('Angle',controls.angle,angleUnitLabel);
     row('Instance count',controls.count);
@@ -103,8 +114,9 @@ export const patternEditor:FeatureEditor={
     secondCentered.onchange=()=>{controls.secondCentered.value=String(secondCentered.checked);controls.secondCentered.dispatchEvent(new Event('change'));};
     second.body.append(rowIn('Centered',secondCentered));
     win.body.append(second.element);
-    // Skip instances and Reapply features are gaps, present and named.
-    const skip=win.subsection('Skip instances',{kind:'checkbox',open:false});const skipped=win.entitiesBox('Skipped instances');skipped.render([]);skip.body.append(skipped.element);planned(skip.element,skipGap);win.body.append(skip.element);
+    // Skip instances: instance numbers (2…n in placement order; 1 is the original). Reapply features is a gap, present and named.
+    const skip=win.subsection('Skip instances',{kind:'checkbox',open:Boolean(controls.skip.value.trim()),onToggle:(open)=>{if(!open){controls.skip.value='';controls.skip.dispatchEvent(new Event('change'));}}});
+    controls.skip.closest('label')?.remove();controls.skip.setAttribute('form',form.id);(controls.skip as HTMLInputElement).placeholder='2, 4';skip.body.append(rowIn('Skipped instances',controls.skip));win.body.append(skip.element);
     const reapply=document.createElement('input');reapply.type='checkbox';reapply.setAttribute('aria-label','Reapply features');const reapplyRow=rowIn('Reapply features',reapply);planned(reapplyRow,reapplyGap);win.body.append(reapplyRow);
     // Merge scope: the part a feature pattern modifies.
     const scope=mountPartBox(context,controls.mergeScope,'Merge scope',choices,()=>'',{single:true});
@@ -123,7 +135,11 @@ export const patternEditor:FeatureEditor={
     const sync=()=>{
       const linear=controls.patternType.value==='linear',polar=controls.patternType.value==='polar',isPath=controls.patternType.value==='path',parts=controls.what.value==='parts',source=controls.directionSource.value;
       box.element.hidden=!parts;sourceRow.hidden=parts;
-      [...results.children].forEach((tab,i)=>tab.classList.toggle('active',i===0));
+      // A feature pattern has Onshape's one result (its feature's own); the other tabs apply to parts.
+      if(!parts)controls.result.value='new';
+      [...results.children].forEach((tab,i)=>{tab.classList.toggle('active',i===resultValues.indexOf(controls.result.value));if(i>0)planned(tab as HTMLButtonElement,resultGap);if(parts&&i>0){tab.removeAttribute('disabled');tab.removeAttribute('aria-disabled');tab.removeAttribute('title');}});
+      faces.element.hidden=isPath;const caption=faces.element.querySelector('.aui-feature-entities-caption');if(caption)caption.textContent=polar?'Axis face (cylindrical)':'Direction face (planar)';
+      scope.element.hidden=parts?controls.result.value==='new':false;
       directionRow.hidden=isPath;directionRow.querySelector('span')!.textContent=polar?'Axis of pattern':'Direction';
       spacingRow.hidden=!linear;angleRow.hidden=!polar;equalRow.hidden=!polar;
       second.element.hidden=!linear;
@@ -143,6 +159,9 @@ export const patternEditor:FeatureEditor={
     if(controls.patternType.value==='linear'&&!(Number(controls.spacing.value)>0))return 'Enter a positive distance.';
     if(controls.patternType.value==='polar'&&!(Number(controls.angle.value)>0))return 'Enter a positive angle.';
     if(controls.directionSource.value==='edge'&&!controls.edge.value)return 'Pick a straight edge for the pattern direction.';
+    if(controls.directionSource.value==='face'&&!JSON.parse(controls.directionFace.value||'[]').length)return 'Pick a face for the pattern direction.';
+    if(controls.skip.value.trim()&&controls.skip.value.split(/[\s,]+/).filter(Boolean).some(n=>!(Number.isInteger(Number(n))&&Number(n)>=2)))return 'Skipped instances are instance numbers from 2 up, such as 2, 4.';
+    if(parts&&controls.result.value!=='new'&&!JSON.parse(controls.mergeScope.value||'[]').length)return 'Select the merge scope part.';
     if(controls.directionSource.value==='vector'&&Math.hypot(Number(controls.vectorX.value),Number(controls.vectorY.value),Number(controls.vectorZ.value))<1e-9)return 'Enter a nonzero direction.';
     if(controls.useSecond.value==='yes'&&(!(Number(controls.secondCount.value)>=2)||!(Number(controls.secondSpacing.value)>0)))return 'Enter a positive second distance and an instance count of at least 2.';
     if(!parts&&!JSON.parse(controls.mergeScope.value||'[]').length)return 'Select the merge scope part.';
@@ -152,13 +171,17 @@ export const patternEditor:FeatureEditor={
     const parts=values.what==='parts'?(JSON.parse(values.parts||'[]') as string[]):undefined;
     const partFields=parts?{bodyIds:parts,copyBodyIds:Object.fromEntries(parts.map((id,i)=>[id,`${values.copyPrefix}-${i+1}`]))}:{};
     const linear=values.patternType==='linear',source=values.directionSource,count=Number(values.count);
-    const picked=source==='edge'&&values.edge?JSON.parse(values.edge):undefined;
+    const face=source==='face'?JSON.parse(values.directionFace||'[]')[0] as (SolidFaceReference&{centerMillimeters?:unknown})|undefined:undefined;
+    if(face)delete face.centerMillimeters;
+    const picked=source==='edge'&&values.edge?JSON.parse(values.edge):face?{kind:'face',...face}:undefined;
     const vector=source==='vector'?{kind:'vector' as const,direction:[Number(values.vectorX),Number(values.vectorY),Number(values.vectorZ)] as [number,number,number]}:undefined;
-    const target=parts?{}:{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]};
-    if(values.patternType==='path')return {sourceFeatureId:values.source,...partFields,...target,patternType:'path',axis:values.axis,count,reversed:false,pathFeatureId:values.pathSketch,...(values.pathMode==='distance'?{distanceMillimeters:Number(values.pathDistance)}:{spacingMillimeters:Number(values.pathSpacing)}),...(values.pathOrientation==='path'?{orientation:'path'}:{})};
+    const result=parts&&values.result!=='new'?{resultOperation:values.result,targetBodyId:JSON.parse(values.mergeScope||'[]')[0]}:{};
+    const skip=values.skip.trim()?{skipInstances:[...new Set(values.skip.split(/[\s,]+/).filter(Boolean).map(Number))].sort((a,b)=>a-b)}:{};
+    const target=parts?result:{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]};
+    if(values.patternType==='path')return {sourceFeatureId:values.source,...partFields,...target,...skip,patternType:'path',axis:values.axis,count,reversed:false,pathFeatureId:values.pathSketch,...(values.pathMode==='distance'?{distanceMillimeters:Number(values.pathDistance)}:{spacingMillimeters:Number(values.pathSpacing)}),...(values.pathOrientation==='path'?{orientation:'path'}:{})};
     // Onshape's Equal spacing off: the angle is between instances; the document stores the total extent.
     const angle=values.equalSpacing==='true'?Number(values.angle):Math.min(360,Number(values.angle)*(count-1));
-    return {sourceFeatureId:values.source,...partFields,...target,patternType:values.patternType,axis:values.axis,count,reversed:values.direction==='reverse',
+    return {sourceFeatureId:values.source,...partFields,...target,...skip,patternType:values.patternType,axis:values.axis,count,reversed:values.direction==='reverse',
       ...(values.centered==='true'?{alignment:'center'}:{}),
       ...(linear
         ?{spacingMillimeters:Number(values.spacing),...(vector?{direction:vector}:picked?{direction:picked}:{}),

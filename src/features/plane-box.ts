@@ -11,7 +11,7 @@ import type { Control, FeatureEditorContext } from "./shared";
 
 const PLANE_ROWS: Record<string, { plane: "XY" | "XZ" | "YZ"; label: string }> = { "top-plane": { plane: "XY", label: "Top Plane" }, "front-plane": { plane: "XZ", label: "Front Plane" }, "right-plane": { plane: "YZ", label: "Right Plane" } };
 
-export function mountPlaneBox(context: FeatureEditorContext, control: Control, title: string, options: { sketchLines?: boolean } = {}) {
+export function mountPlaneBox(context: FeatureEditorContext, control: Control, title: string, options: { sketchLines?: boolean; /** Curved faces too (Split's splitting face), not only planar ones. */ anyFace?: boolean } = {}) {
   const { win, form, doc, feature } = context;
   control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
   const box = win.entitiesBox(title); win.body.append(box.element);
@@ -30,7 +30,9 @@ export function mountPlaneBox(context: FeatureEditorContext, control: Control, t
   const receiveFace = (event: Event) => {
     if (!active || !connected()) return;
     const face = ((event as CustomEvent).detail?.faces as SolidFaceReference[] | undefined)?.[0];
-    if (face) set({ kind: "face", ...face });
+    if (!face) return;
+    if (face.surfaceType && !options.anyFace) { win.setError("Pick a planar face for the plane."); return; }
+    set({ kind: "face", ...face });
   };
   window.addEventListener("aether-offset-faces", receiveFace);
   let seen = cadSelection.snapshot().items;

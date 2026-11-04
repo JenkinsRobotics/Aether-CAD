@@ -38,6 +38,16 @@ it("Hole opens on Metric / Inch and Simple / Counterbore / Countersink with Onsh
   expect(win.querySelector('[aria-label="Diameter (mm)"]').readOnly).toBe(true);
   type.value = 'pem'; type.dispatchEvent(new Event('change'));
   await vi.waitFor(() => expect(win.textContent).toMatch(/PEM/));
+  // Pipe taps: a tapered pipe tap is an NPT thread with its taper, a straight one BSP parallel.
+  type.value = 'tapped'; type.dispatchEvent(new Event('change'));
+  const tap = win.querySelector('select[aria-label="Tap type"]');
+  tap.value = 'tapered-pipe'; tap.dispatchEvent(new Event('change'));
+  expect(win.querySelector('select[aria-label="Standard"]').value).toMatch(/NPT/);
+  expect(Number(win.querySelector('[aria-label^="Taper"]').value)).toBeCloseTo(1.79, 1);
+  tap.value = 'straight-pipe'; tap.dispatchEvent(new Event('change'));
+  expect(win.querySelector('select[aria-label="Standard"]').value).toMatch(/BSP/);
+  expect(Number(win.querySelector('[aria-label^="Taper"]').value)).toBe(0);
+  tap.value = 'straight'; tap.dispatchEvent(new Event('change'));
   // Placing a hole at a sketch point and applying stores Onshape's placement.
   type.value = 'drilled'; type.dispatchEvent(new Event('change'));
   const list = win.querySelector('select[aria-label="Sketch points to place holes sketch point"]');

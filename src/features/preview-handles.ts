@@ -36,7 +36,7 @@ export function mountPreviewHandles(panel: HTMLElement, controls: Controls, unit
         const scale = live.scale ?? 1;
         window.dispatchEvent(new CustomEvent('aether-native-extrusion-handle', { detail: { origin: live.originMillimeters, direction: live.direction, depth: depth / scale,
           respond: (projection: AxisProjection | null) => respond(projection ? { ...projection, depthAt: (x, y) => { const value = projection.depthAt(x, y); return value === null ? null : value * scale; } } : null) } }));
-      }, { valueMode: handle.signed ? 'signed' : 'positive', label: handle.label ?? handle.parameter, ready: () => ready, formatLabel: (value, suffix) => `${handle.label ?? handle.parameter} · ${value} ${suffix}` });
+      }, { valueMode: handle.signed ? 'signed' : handle.nonnegative ? 'nonnegative' : 'positive', label: handle.label ?? handle.parameter, ready: () => ready, formatLabel: (value, suffix) => `${handle.label ?? handle.parameter} · ${value} ${suffix}` });
     } else mountAngleHandle(panel, control, units.angle, () => current(handle.parameter), () => ready, handle.label ?? 'Angle');
   };
   panel.addEventListener('aether-feature-preview-state', receive);
@@ -54,7 +54,7 @@ export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, 
   const project = (): AngularProjection | null => {
     const live = handle(); if (!live || !Number.isFinite(read())) return null;
     let projection: AngularProjection | null = null;
-    window.dispatchEvent(new CustomEvent('aether-native-angle-handle', { detail: { origin: live.originMillimeters, axis: live.direction, angle: read(), start: live.startMillimeters, respond: (p: AngularProjection | null) => { projection = p; } } }));
+    window.dispatchEvent(new CustomEvent('aether-native-angle-handle', { detail: { origin: live.originMillimeters, axis: live.direction, angle: read(), start: live.startMillimeters, screenRadius: live.screenRadius, respond: (p: AngularProjection | null) => { projection = p; } } }));
     return projection ? { ...(projection as AngularProjection), angle: read() } : null;
   };
   let drag: { previous: number; value: number; original: string; projection: AngularProjection } | undefined;
@@ -79,7 +79,12 @@ export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, 
       control.dispatchEvent(new Event('change'));
     },
     key(event) {
-      if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && ready()) { event.preventDefault(); event.stopPropagation(); set(read() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 15)); control.dispatchEvent(new Event('change')); }
+      if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && ready()) {
+        event.preventDefault(); event.stopPropagation();
+        const step = handle()?.stepDegrees ?? 15;
+        set(read() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? Math.min(step / 10, 1) : step));
+        control.dispatchEvent(new Event('change'));
+      }
     },
     commit(text) {
       try {

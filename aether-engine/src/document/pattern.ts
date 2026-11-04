@@ -1,9 +1,10 @@
 import {validateSolidEdgeReference,type SolidEdgeReference} from './solid-edge-reference';
+import {validateSolidFaceReference,type SolidFaceReference} from './solid-face-reference';
 
-/** A pattern direction beyond the principal axes: a fixed vector, or a picked straight edge. */
-export type PatternDirection={kind:'vector';direction:[number,number,number]}|SolidEdgeReference;
-/** A polar axis beyond the principal axes: a fixed line, or a picked straight edge. */
-export type PatternAxis={kind:'vector';origin:[number,number,number];direction:[number,number,number]}|{kind:'feature';featureId:string}|SolidEdgeReference;
+/** A pattern direction beyond the principal axes: a fixed vector, a picked straight edge, or a picked planar face (its normal). */
+export type PatternDirection={kind:'vector';direction:[number,number,number]}|SolidEdgeReference|({kind:'face'}&SolidFaceReference);
+/** A polar axis beyond the principal axes: a fixed line, a picked straight edge, or a picked cylindrical or conical face (its axis). */
+export type PatternAxis={kind:'vector';origin:[number,number,number];direction:[number,number,number]}|{kind:'feature';featureId:string}|SolidEdgeReference|({kind:'face'}&SolidFaceReference);
 
 /** Repeated native additive/subtractive feature intent, not copied meshes. */
 export type PatternFeature = {
@@ -20,6 +21,10 @@ export type PatternFeature = {
   reversed: boolean;
   /** Where the original sits in the row: first (right, the default), middle, or last. */
   alignment?: 'left' | 'center' | 'right';
+  /** Onshape's Skip instances: instance numbers left out, 2…n in placement order (1 is the original). */
+  skipInstances?: number[];
+  /** A part pattern's result beyond New: its copies added to, removed from or intersected with the merge scope part. */
+  resultOperation?: 'add' | 'cut' | 'intersect';
   targetBodyId?: string;
 } & (
   | {patternType:'linear';spacingMillimeters:number;
@@ -34,9 +39,10 @@ export const patternSourceTypes = ['extrude','revolve','sweep','loft','hole','pa
 
 /** The copies a part pattern makes: count − 1 per row (rows multiply with a second direction). */
 export function patternCopyIds(feature: PatternFeature): string[] {
-  if (!feature.bodyIds || !feature.copyBodyIds) return [];
+  if (!feature.bodyIds || !feature.copyBodyIds || feature.resultOperation) return [];
   const copies = (feature.patternType === 'linear' && feature.second ? feature.count * feature.second.count : feature.count) - 1;
-  return feature.bodyIds.flatMap((id) => Array.from({ length: copies }, (_, i) => `${feature.copyBodyIds![id]}:${i + 1}`));
+  const skipped = new Set(feature.skipInstances ?? []);
+  return feature.bodyIds.flatMap((id) => Array.from({ length: copies }, (_, i) => i + 1).filter((i) => !skipped.has(i + 1)).map((i) => `${feature.copyBodyIds![id]}:${i}`));
 }
 
 export function validatePattern(feature:PatternFeature,earlier:Map<string,string>,missing:(id:unknown)=>boolean):void {
@@ -49,12 +55,15 @@ export function validatePattern(feature:PatternFeature,earlier:Map<string,string
   if (!Number.isInteger(feature.count) || feature.count < 2) throw new Error('Pattern needs at least two occurrences, including the original.');
   if (!['X','Y','Z'].includes(feature.axis) || typeof feature.reversed!=='boolean') throw new Error('Invalid pattern axis or direction.');
   if (feature.alignment !== undefined && !['left','center','right'].includes(feature.alignment)) throw new Error('Pattern alignment must be left, center or right.');
+  if (feature.skipInstances !== undefined && (!Array.isArray(feature.skipInstances) || feature.skipInstances.some((n) => !Number.isInteger(n) || n < 2))) throw new Error('Skipped instances are instance numbers from 2 up.');
+  if (feature.resultOperation !== undefined && (!feature.bodyIds || !['add','cut','intersect'].includes(feature.resultOperation) || typeof feature.targetBodyId !== 'string')) throw new Error('A part pattern result of Add, Remove or Intersect needs a merge scope part.');
   const unit=(v:unknown)=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite)&&Math.hypot(...(v as number[]))>1e-9;
   const direction=(ref:PatternDirection|undefined,label:string)=>{
     if(ref===undefined)return;
     if(ref.kind==='vector'){if(!unit(ref.direction))throw new Error(`${label} needs a nonzero direction.`);return;}
     if(ref.kind==='solid-edge'){validateSolidEdgeReference(ref,earlier,missing);return;}
-    throw new Error(`${label} must be a vector or a straight solid edge.`);
+    if(ref.kind==='face'){validateSolidFaceReference(ref,earlier,missing,label);if(ref.surfaceType)throw new Error(`${label} by a face needs a planar face.`);return;}
+    throw new Error(`${label} must be a vector, a straight solid edge or a planar face.`);
   };
   if (feature.patternType === 'linear') {
     if (!Number.isFinite(feature.spacingMillimeters) || feature.spacingMillimeters<=0) throw new Error('Pattern spacing must be positive.');
@@ -73,7 +82,8 @@ export function validatePattern(feature:PatternFeature,earlier:Map<string,string
       if(a.kind==='vector'){if(!Array.isArray(a.origin)||a.origin.length!==3||!a.origin.every(Number.isFinite)||!unit(a.direction))throw new Error('Pattern axis needs a finite origin and a nonzero direction.');}
       else if(a.kind==='solid-edge')validateSolidEdgeReference(a,earlier,missing);
       else if(a.kind==='feature'){if(typeof a.featureId!=='string'||(!missing(a.featureId)&&earlier.get(a.featureId)!=='axis'))throw new Error('Pattern axis must be an earlier axis feature.');}
-      else throw new Error('Pattern axis must be a line, an axis feature or a straight solid edge.');
+      else if(a.kind==='face'){validateSolidFaceReference(a,earlier,missing,'Pattern axis');if(a.surfaceType!=='cylinder'&&a.surfaceType!=='cone')throw new Error('Pattern axis by a face needs a cylindrical or conical face.');}
+      else throw new Error('Pattern axis must be a line, an axis feature, a straight solid edge or a cylindrical face.');
     }
     if (!Number.isFinite(feature.angleDegrees) || feature.angleDegrees<=0 || feature.angleDegrees>360) throw new Error('Pattern angle must be greater than 0 and at most 360 degrees.');
   } else if (feature.patternType === 'path') {

@@ -40,6 +40,8 @@ import {validatePattern, type PatternFeature} from "./pattern";
 export {patternSourceTypes, type PatternFeature} from "./pattern";
 import {validateDraft, type DraftFeature} from "./draft";
 export type {DraftFeature} from "./draft";
+import {validateRib, type RibFeature} from "./rib";
+export type {RibFeature} from "./rib";
 import {validateLoft, type LoftFeature} from "./loft";
 export type {LoftFeature} from "./loft";
 import {validateHole, type HoleFeature} from "./hole";
@@ -98,6 +100,8 @@ export interface RevolveEnd {
   endReference?: ExtrusionFaceReference;
   endPartId?: string;
   endPointReference?: ExtrusionPointReference;
+  /** Onshape's Offset for the Up-to end types: the sweep stops this far short of the entity (negative: beyond it). */
+  endOffsetMillimeters?: number;
 }
 export interface RevolveFeature {
   id: string;
@@ -115,6 +119,7 @@ export interface RevolveFeature {
   endReference?: ExtrusionFaceReference;
   endPartId?: string;
   endPointReference?: ExtrusionPointReference;
+  endOffsetMillimeters?: number;
   symmetric?: boolean;
   reversed?: boolean;
   /** Blind opposite sweep of older documents; `secondEnd` replaces it. */
@@ -134,12 +139,17 @@ export interface MirrorFeature {
   id: string;
   type: "mirror";
   name: string;
-  sourceFeatureId: string;
+  /** The feature whose result is mirrored (Onshape's Feature mirror); absent for a Part mirror. */
+  sourceFeatureId?: string;
+  /** Onshape's Part mirror: these parts' images. New gives each image the recorded copy identity;
+   *  Add, Remove and Intersect meet the merge scope part (`targetBodyId`). */
+  bodyIds?: string[];
+  copyBodyIds?: Record<string, string>;
   plane: SketchPlane;
   offsetMillimeters: number;
   /** A plane feature or picked face as the mirror plane; when present it replaces plane + offset. */
   mirrorPlane?: MirrorPlaneReference;
-  operation: "add" | "cut";
+  operation: "new" | "add" | "cut" | "intersect";
   targetBodyId?: string;
   suppressed: boolean;
 }
@@ -157,6 +167,7 @@ export type EdgeFinishFeature = {
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
@@ -185,6 +196,13 @@ export interface SweepFeature {
   endScale?: number;
   /** A guide rail: a curve of another sketch the profile's edge follows. */
   rail?: { pathFeatureId: string; pathContourId?: string };
+  /** Onshape's Opposite direction on the path: the path runs from its other end, which is where the
+   *  scale (and twist) laws start; a profile on the path sweeps the same solid either way. */
+  reversedPath?: boolean;
+  /** Onshape's Twist: the profile turns about the path by this many turns from start to end (negative: the other way). */
+  twist?: { turns: number };
+  /** Onshape's Thin sweep: a wall around one closed profile curve (thickness 1 outside, 2 inside; mid plane splits one thickness). */
+  thin?: { thickness1Millimeters: number; thickness2Millimeters: number; midplane?: boolean; midplaneThicknessMillimeters?: number; flipped?: boolean };
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
@@ -208,7 +226,7 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ShapeBinderFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = RibFeature | SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ShapeBinderFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
@@ -238,6 +256,7 @@ export function validateSolidFeature(
   if (feature.type === "boolean") return validateBoolean(feature);
   if (feature.type === "pattern") { validatePattern(feature, earlier, missingReference); return; }
   if (feature.type === "draft") { validateDraft(feature, earlier, missingReference); return; }
+  if (feature.type === "rib") { validateRib(feature, earlier, missingReference as (id: string) => boolean); return; }
   if (feature.type === "loft") { validateLoft(feature, earlier, missingReference); return; }
   if (feature.type === "hole") { validateHole(feature, earlier, missingReference); return; }
   if (feature.type === "import-cad") { validateImportCAD(feature); return; }
@@ -344,6 +363,7 @@ export function validateSolidFeature(
       if (end.endPointReference !== undefined && end.endType !== "up-to-vertex") throw new Error(`${label}: a stopping point requires Up to vertex.`);
       if (end.endType === "up-to-face") validateExtrusionFaceReference(end.endReference, earlier, missingReference);
       if (end.endReference !== undefined && end.endType !== "up-to-face") throw new Error(`${label}: a stopping face requires Up to face.`);
+      if (end.endOffsetMillimeters !== undefined && (!Number.isFinite(end.endOffsetMillimeters) || end.endType === "blind")) throw new Error(`${label}: an end offset is a finite distance on an Up-to end.`);
     }
     if (
       feature.angleDegrees > 360 ||
@@ -361,6 +381,14 @@ export function validateSolidFeature(
       throw new Error("Sweep must reference an earlier sketch profile.");
     if (!missingReference(feature.pathFeatureId) && !["profile", "sketch", "curve3d"].includes(earlier.get(feature.pathFeatureId) || ""))
       throw new Error("Sweep must reference an earlier sketch path or 3D sketch.");
+    if (feature.reversedPath !== undefined && typeof feature.reversedPath !== "boolean") throw new Error("Invalid sweep path direction.");
+    if (feature.twist !== undefined && (!Number.isFinite(feature.twist.turns) || feature.twist.turns === 0 || Math.abs(feature.twist.turns) > 100)) throw new Error("Sweep twist needs a nonzero number of turns (up to 100).");
+    if (feature.twist && feature.rail) throw new Error("A sweep takes a twist or a guide rail, not both.");
+    if (feature.thin !== undefined) {
+      const t = feature.thin, finite = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0;
+      if (t.midplane ? !(finite(t.midplaneThicknessMillimeters) && t.midplaneThicknessMillimeters! > 0) : !(finite(t.thickness1Millimeters) && finite(t.thickness2Millimeters) && t.thickness1Millimeters + t.thickness2Millimeters > 0)) throw new Error("Thin sweep needs a positive total wall thickness.");
+      if (feature.profileRegion) throw new Error("A thin sweep takes one closed sketch curve, not a region of several.");
+    }
     if (!["new", "add", "cut"].includes(feature.operation))
       throw new Error("Invalid sweep settings.");
   } else if (feature.type === "shell") {
@@ -375,16 +403,16 @@ export function validateSolidFeature(
       }
     }
   } else if (feature.type === "mirror") {
-    if (
-      !missingReference(feature.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror", "pattern"].includes(
-        earlier.get(feature.sourceFeatureId) || "",
-      )
-    )
+    if (feature.bodyIds !== undefined) {
+      if (!Array.isArray(feature.bodyIds) || !feature.bodyIds.length || !feature.bodyIds.every((id) => typeof id === "string" && id.trim())) throw new Error("Choose the parts to mirror.");
+      if (feature.operation === "new" ? !feature.copyBodyIds || feature.bodyIds.some((id) => typeof feature.copyBodyIds![id] !== "string") : typeof feature.targetBodyId !== "string") throw new Error(feature.operation === "new" ? "A part mirror needs a new identity for each image." : "A part mirror that adds, removes or intersects needs a merge scope part.");
+    } else if (feature.copyBodyIds !== undefined) throw new Error("Copy identities belong to a part mirror.");
+    else if (typeof feature.sourceFeatureId !== "string" || (!missingReference(feature.sourceFeatureId) && !["extrude", "revolve", "sweep", "mirror", "pattern"].includes(earlier.get(feature.sourceFeatureId) || "")))
       throw new Error("Mirror must reference an earlier solid feature.");
     if (
       !["XY", "XZ", "YZ"].includes(feature.plane) ||
       !Number.isFinite(feature.offsetMillimeters) ||
-      !["add", "cut"].includes(feature.operation)
+      !["new", "add", "cut", "intersect"].includes(feature.operation)
     )
       throw new Error("Invalid mirror settings.");
     if (feature.mirrorPlane !== undefined) validateMirrorPlane(feature.mirrorPlane, earlier, missingReference);
@@ -411,6 +439,10 @@ export function validateSolidFeature(
     if (feature.type === "fillet") {
       if (feature.endRadiusMillimeters !== undefined) positive(feature.endRadiusMillimeters, "Fillet end size");
       if (feature.measurement !== undefined && !["radius", "width"].includes(feature.measurement)) throw new Error("Fillet measurement must be radius or width.");
+      if (feature.points !== undefined) {
+        if (!Array.isArray(feature.points) || !feature.points.length || !feature.edges) throw new Error("Points on the edge need picked edges and at least one point.");
+        for (const point of feature.points) { if (!(point.position > 0 && point.position < 1)) throw new Error("A point on the edge sits strictly between its ends (0 to 1)."); positive(point.radiusMillimeters, "Point radius"); }
+      }
     } else {
       if (feature.measurement !== undefined && !["offset", "tangent"].includes(feature.measurement)) throw new Error("Chamfer measurement must be offset or tangent.");
       if (feature.measurement === "tangent" && (feature.secondDistanceMillimeters !== undefined || feature.angleDegrees !== undefined)) throw new Error("Tangent distance applies to an equal-distance chamfer.");

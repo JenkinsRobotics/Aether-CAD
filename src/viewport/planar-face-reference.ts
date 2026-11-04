@@ -55,5 +55,6 @@ export function nativeFaceReference(topology:readonly FaceTopologyData[],face:Fa
  }
  const surfaceType=curvedSurfaceTypeOf[face.surfaceType],center=face.measurements?.centerMillimeters,area=face.measurements?.areaSquareMillimeters;
  if(!surfaceType||!center||!(area!==undefined&&area>0))return null;
- return {surfaceType,faceAnchor:{centerMillimeters:[...center] as [number,number,number],areaSquareMillimeters:area}};
+ const radius=face.measurements?.radiusMillimeters;
+ return {surfaceType,faceAnchor:{centerMillimeters:[...center] as [number,number,number],areaSquareMillimeters:area},...(surfaceType==='cylinder'&&radius!==undefined&&radius>0?{radiusMillimeters:radius}:{})};
 }

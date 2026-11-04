@@ -14,8 +14,8 @@ import {
   bodyAndOperationTabs,
   entityChips,
   iconButton,
-  planned,
   rowIn,
+  unitSuffix,
   type Controls,
   type FeatureEditor,
   type FeatureEditorContext,
@@ -72,6 +72,9 @@ export const revolveEditor: FeatureEditor = {
       angle: field("Angle (degrees)", String(feature?.angleDegrees ?? 360)),
       symmetric: field("Symmetric", String(feature?.symmetric ?? false), ["false", "true"]),
       reversed: field("Reverse direction", String(feature?.reversed ?? false), ["false", "true"]),
+      offsetOn: field("Offset", feature?.endOffsetMillimeters ? "yes" : "no", ["no", "yes"]),
+      endOffset: field("Offset distance (mm)", String(Math.abs(feature?.endOffsetMillimeters ?? 1))),
+      offsetFlip: field("Flip offset", (feature?.endOffsetMillimeters ?? 0) < 0 ? "yes" : "no", ["no", "yes"]),
       secondEnd: field("Second end position", String(Boolean(feature?.secondEnd || feature?.secondAngleDegrees)), ["false", "true"]),
       secondEndType: field("Opposite end condition", feature?.secondEnd?.endType ?? "blind", [...endTypes]),
       secondPoint: field("Opposite stopping point", feature?.secondEnd?.endPointReference ? JSON.stringify(feature.secondEnd.endPointReference) : ""),
@@ -193,12 +196,16 @@ export const revolveEditor: FeatureEditor = {
     options.append(secondSection.element);
     controls.second.closest("label")?.remove(); controls.second.setAttribute("form", form.id);
     const syncSecond = layoutEnd(secondSection.body, controls.secondEndType, win.row("Opposite angle", controls.second), controls.secondPoint, controls.secondPart, controls.secondReference, true);
-    // Onshape's Offset for the Up-to end types: present, disabled, the kernel gap named.
-    const offsetGap = "Not available in this kernel: a revolve cannot yet stop short of its end entity by an offset (recorded gap).";
-    const offset = win.subsection("Offset", { kind: "checkbox", open: false });
-    const offsetInput = document.createElement("input"); offsetInput.type = "text"; offsetInput.setAttribute("aria-label", "Offset distance");
-    offset.body.append(rowIn("Offset distance", offsetInput), rowIn("Flip offset", iconButton("flip-horizontal", "Flip offset")));
-    planned(offset.element, offsetGap); options.append(offset.element);
+    // Onshape's Offset for the Up-to end types: the sweep stops this far short of its entity (flipped: beyond it).
+    hide(controls.offsetOn); hide(controls.offsetFlip);
+    const offset = win.subsection("Offset", { kind: "checkbox", open: controls.offsetOn.value === "yes", onToggle: (open) => { controls.offsetOn.value = open ? "yes" : "no"; controls.offsetOn.dispatchEvent(new Event("change")); } });
+    controls.endOffset.closest("label")?.remove(); controls.endOffset.setAttribute("form", form.id);
+    const offsetFlip = iconButton("flip-horizontal", "Flip offset");
+    const paintOffsetFlip = () => offsetFlip.setAttribute("aria-pressed", String(controls.offsetFlip.value === "yes"));
+    offsetFlip.onclick = () => { controls.offsetFlip.value = controls.offsetFlip.value === "yes" ? "no" : "yes"; paintOffsetFlip(); controls.offsetFlip.dispatchEvent(new Event("change")); };
+    paintOffsetFlip();
+    offset.body.append(rowIn("Offset distance", controls.endOffset, unitSuffix(context.lengthUnitLabel), offsetFlip));
+    options.append(offset.element);
     layoutExtrudeScope(context, controls);
     full.checked = controls.endType.value === "blind" && Math.abs(degrees(controls.angle) - 360) < 1e-9;
     function sync() {
@@ -206,7 +213,7 @@ export const revolveEditor: FeatureEditor = {
       const blind = controls.endType.value === "blind", second = controls.secondEnd.value === "true" && controls.symmetric.value !== "true";
       symmetricRow.hidden = !blind || controls.secondEnd.value === "true";
       secondSection.element.hidden = controls.symmetric.value === "true";
-      offset.element.hidden = blind && controls.secondEndType.value === "blind";
+      offset.element.hidden = blind;
       syncFirst(!full.checked); syncSecond(!full.checked && second);
     }
     full.onchange = () => {
@@ -237,6 +244,7 @@ export const revolveEditor: FeatureEditor = {
     if (sketch && (!sketchRegions(sketch, false, context.doc.features).length || !controls.region.value)) return "Choose a closed sketch region.";
     if (controls.axis.value === "edge" && !controls.axisEdge.value) return "Pick a straight edge as the revolve axis.";
     if (!controls.axis.value) return "Choose a revolve axis.";
+    if (controls.endType.value !== "blind" && controls.offsetOn.value === "yes" && !(Number(controls.endOffset.value) > 0)) return "Enter a positive offset distance.";
     return requireSelections(controls, [{ key: "source", noun: "a sketch region to revolve" }]);
   },
 
@@ -260,7 +268,7 @@ export const revolveEditor: FeatureEditor = {
       ...(values.scopeMode !== "all" && ["add", "cut"].includes(values.operation) && JSON.parse(values.scope || "[]").length ? { targetBodyIds: [values.target, ...JSON.parse(values.scope)] } : {}),
       axis: (principalAxes as readonly string[]).includes(values.axis) ? values.axis : "Z",
       angleDegrees: Number(values.angle),
-      ...(blind ? {} : { endType: values.endType, ...stop(values.endType, values.endPoint, values.endPart, values.endReference) }),
+      ...(blind ? {} : { endType: values.endType, ...stop(values.endType, values.endPoint, values.endPart, values.endReference), ...(values.offsetOn === "yes" ? { endOffsetMillimeters: Number(values.endOffset) * (values.offsetFlip === "yes" ? -1 : 1) } : {}) }),
       ...(symmetric ? { symmetric: true } : {}),
       ...(!full && values.reversed === "true" ? { reversed: true } : {}),
       ...(!full && !symmetric && values.secondEnd === "true" ? { secondEnd: {

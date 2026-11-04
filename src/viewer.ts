@@ -1514,9 +1514,9 @@ export class MateViewport {
   }
 
   /** A ring handle for an angle about an axis, through the transform gizmo's rotate math. */
-  projectAngleHandle(origin:readonly number[],axis:readonly number[],angleDegrees:number,start?:readonly number[]) {
+  projectAngleHandle(origin:readonly number[],axis:readonly number[],angleDegrees:number,start?:readonly number[],screenRadius=false) {
     if(origin.length!==3||axis.length!==3||![...origin,...axis,angleDegrees].every(Number.isFinite))return null;
-    const ring=projectAngleRing(this.camera,this.renderer.domElement.getBoundingClientRect(),new THREE.Vector3(...origin),new THREE.Vector3(...axis),angleDegrees,start&&start.length===3&&start.every(Number.isFinite)?new THREE.Vector3(...start):undefined);
+    const ring=projectAngleRing(this.camera,this.renderer.domElement.getBoundingClientRect(),new THREE.Vector3(...origin),new THREE.Vector3(...axis),angleDegrees,start&&start.length===3&&start.every(Number.isFinite)?new THREE.Vector3(...start):undefined,screenRadius);
     return ring?{x:ring.x,y:ring.y,points:ring.points,arc:ring.arc,tangent:ring.tangent,valueAt:ring.valueAt,pointAt:ring.pointAt}:null;
   }
   projectTransformHandles(request:TransformGizmoRequest) {

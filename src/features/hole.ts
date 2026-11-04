@@ -3,8 +3,7 @@
  *  standard, size, fit and thread class, Diameter, Start plane, Termination (Blind / Up to next /
  *  Up to entity / Through all with the flip), the counterbore, countersink and tapped depths, and
  *  the Tip angle style. Controls this kernel cannot honour are present and refuse with the gap
- *  named: PEM fasteners, pipe taps, Start from part / selected plane and the Up-to terminations
- *  (ledger: Hole). Aether's own options (modelled thread, hand, taper, drill direction, head from
+ *  named: PEM fasteners (ledger: Hole). Pipe taps are BSP parallel or NPT taper threads. Aether's own options (modelled thread, hand, taper, drill direction, head from
  *  standard) sit in a closed disclosure at the end. Holes of saved documents placed on a circular
  *  sketch region or a face point keep their boxes. */
 import {
@@ -15,6 +14,8 @@ import {
 import { availableBodies } from "@aether/core/document";
 import { layoutRegion, regionControls, stampProfileSelections } from "./regions";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
+import { mountPlaneBox } from "./plane-box";
+import { extrusionFacePicker } from "./planar-face-picker";
 import { mountPartBox } from "./part-box";
 import { mountSketchPointsBox } from "./sketch-points-box";
 import { serializeExtrusionPoint } from "./extrude-point-picker";
@@ -25,9 +26,6 @@ const standardLabel = (standard: HoleThreadStandard) => HOLE_THREAD_STANDARD_LAB
 const standardFor = (label: string) => HOLE_THREAD_STANDARDS.find((standard) => standardLabel(standard) === label);
 const metric = (standard: HoleThreadStandard) => standard.startsWith("iso-metric") || standard === "bsp";
 const pemGap = "Not available in this kernel: PEM® self-clinching fastener holes are a recorded gap.";
-const pipeGap = "Not available in this kernel: pipe taps through the Hole type are a recorded gap (BSP and NPT threads are available as a tapped Standard).";
-const startGap = "Not available in this kernel: a hole starts at its sketch plane; Start from part and Start from selected plane are a recorded gap.";
-const terminationGap = "Not available in this kernel: Up to next and Up to entity terminations are a recorded gap (Blind and Through all are available).";
 
 /** Sets a length field from a canonical millimetre value, in the document's display unit. */
 function setLength(control: Control, millimeters: number): void {
@@ -71,8 +69,10 @@ export const holeEditor: FeatureEditor = {
       cutType: field("Hole style", feature?.cutType ?? "plain", ["plain", "counterbore", "countersink", "counterdrill"]),
       head: field("Head from standard", "manual", ["manual", "ISO 4762 cap screw counterbore", "ISO 10642 countersunk screw"]),
       diameter: field("Diameter (mm)", String(feature?.diameterMillimeters ?? 6)),
-      startPlane: field("Start plane", "sketch", ["part", "sketch", "selected"]),
-      depthType: field("Termination", feature?.depthType ?? "blind", ["blind", "up-to-next", "up-to-entity", "through-all"]),
+      startPlane: field("Start plane", feature?.startFrom === "part" ? "part" : feature?.startFrom ? "selected" : "sketch", ["part", "sketch", "selected"]),
+      startPlaneRef: field("Start plane reference", typeof feature?.startFrom === "object" ? JSON.stringify(feature.startFrom.plane) : ""),
+      depthType: field("Termination", feature?.depthType === "up-to-face" ? "up-to-entity" : feature?.depthType ?? "blind", ["blind", "up-to-next", "up-to-entity", "through-all"]),
+      endReference: field("Stopping face", feature?.endReference ? JSON.stringify(feature.endReference) : ""),
       depth: field("Depth (mm)", String(feature?.depthMillimeters ?? 10)),
       tipStyle: field("Tip angle style", tip, ["118", "135", "flat", "custom"]),
       drillPointAngle: field("Tip angle (degrees)", String(feature?.drillPointAngleDegrees ?? 118)),
@@ -141,8 +141,10 @@ export const holeEditor: FeatureEditor = {
     const classValue = row("Class", controls.threadClass);
     row("Diameter", controls.diameter, lengthUnitLabel);
     picker("Start plane", controls.startPlane, { "Start from part": "part", "Start from sketch plane": "sketch", "Start from selected plane": "selected" }, "Start plane menu");
-    // Termination and its flip.
+    const startBox = mountPlaneBox(context, controls.startPlaneRef, "Start plane");
+    // Termination and its flip; Up to entity takes a stopping face.
     const terminationRow = picker("Termination", controls.depthType, { Blind: "blind", "Up to next": "up-to-next", "Up to entity": "up-to-entity", "Through all": "through-all" }, "Termination menu");
+    const stopFace = extrusionFacePicker(context, controls.endReference, "Up to face");
     const flip = iconButton("flip-horizontal", "Opposite direction");
     const paintFlip = () => flip.setAttribute("aria-pressed", String(controls.direction.value === "reverse"));
     flip.onclick = () => { controls.direction.value = controls.direction.value === "reverse" ? "normal" : "reverse"; paintFlip(); controls.direction.dispatchEvent(new Event("change")); };
@@ -195,10 +197,16 @@ export const holeEditor: FeatureEditor = {
     };
     // Drilled has no standard; Clearance and Tapped take the family of the Metric / Inch tab.
     const familyChanged = () => {
-      const type = controls.holeType.value;
+      const type = controls.holeType.value, tap = controls.tapType.value;
       if (type === "drilled" || type === "pem") { controls.profile.value = CUSTOM; }
+      else if (type === "tapped" && tap !== "straight") {
+        // Pipe taps: a straight pipe tap is BSP parallel (G), a tapered one NPT with its 1°47' taper.
+        controls.profile.value = standardLabel(tap === "tapered-pipe" ? "npt" : "bsp");
+        controls.taper.value = tap === "tapered-pipe" ? String(1.7899 / Number(controls.taper.dataset.canonicalFactor ?? 1)) : "0";
+        controls.threaded.value = "tapped";
+      }
       else {
-        const family = controls.units.value === "inch" ? ["unc", "unf", "npt"] : ["iso-metric-coarse", "iso-metric-fine", "bsp"];
+        const family = controls.units.value === "inch" ? ["unc", "unf"] : ["iso-metric-coarse", "iso-metric-fine"];
         if (!family.includes(standard() ?? "")) controls.profile.value = standardLabel(family[0] as HoleThreadStandard);
         controls.threaded.value = type === "tapped" ? "tapped" : "clearance";
       }
@@ -213,6 +221,7 @@ export const holeEditor: FeatureEditor = {
       tapRow.hidden = !tapped; standardRow.hidden = !threaded; sizeRow.hidden = !threaded; fitRow.hidden = type !== "clearance";
       classRow.hidden = !tapped || !threadClasses(standard() ?? "iso-metric-coarse").length; classValue.hidden = classRow.hidden || controls.threadClassOn.value !== "true";
       depthRow.hidden = !blind; boreDiameter.hidden = controls.cutType.value === "plain"; boreDepth.hidden = !counterbored; sinkAngle.hidden = !countersunk;
+      startBox.element.hidden = controls.startPlane.value !== "selected"; stopFace.setEnabled(controls.depthType.value === "up-to-entity");
       boreDiameter.querySelector("span")!.textContent = countersunk && !counterbored ? "Countersink diameter" : "Counterbore diameter";
       tapThroughRow.hidden = !tapped || controls.depthType.value !== "through-all"; tapThrough.checked = controls.threadDepthType.value === "whole hole";
       tapDepth.hidden = !tapped || (controls.depthType.value === "through-all" && controls.threadDepthType.value === "whole hole") || (blind && controls.threadDepthType.value === "whole hole" && false);
@@ -224,17 +233,16 @@ export const holeEditor: FeatureEditor = {
     controls.profile.addEventListener("change", () => { refillSizes(); applyDiameter(); applyHead(); sync(); });
     for (const key of ["size", "fit", "threadClass", "threadClassOn"]) controls[key].addEventListener("change", () => { applyDiameter(); applyHead(); sync(); });
     controls.head.addEventListener("change", () => { applyHead(); sync(); });
-    for (const key of ["holeType", "units"]) controls[key].addEventListener("change", () => { familyChanged(); sync(); });
-    for (const key of ["placement", "allCircles", "threadDepthType", "threadModel", "drillMode", "tipStyle", "depthType", "cutType"]) controls[key].addEventListener("change", sync);
+    for (const key of ["holeType", "units", "tapType"]) controls[key].addEventListener("change", () => { familyChanged(); sync(); });
+    for (const key of ["placement", "allCircles", "threadDepthType", "threadModel", "drillMode", "tipStyle", "depthType", "cutType", "startPlane"]) controls[key].addEventListener("change", sync);
     familyChanged(); sync();
   },
 
   validate(controls, context) {
     const type = controls.holeType.value;
     if (type === "pem") return pemGap;
-    if (type === "tapped" && controls.tapType.value !== "straight") return pipeGap;
-    if (controls.startPlane.value !== "sketch") return startGap;
-    if (!["blind", "through-all"].includes(controls.depthType.value)) return terminationGap;
+    if (controls.startPlane.value === "selected" && !controls.startPlaneRef.value) return "Pick the start plane: a plane in the tree or a planar face.";
+    if (controls.depthType.value === "up-to-entity" && !controls.endReference.value) return "Pick the face the holes stop at.";
     if (!JSON.parse(controls.mergeScope.value || "[]").length) return "Select the merge scope part.";
     if (controls.drillMode.value === "custom" && Math.hypot(Number(controls.drillX.value), Number(controls.drillY.value), Number(controls.drillZ.value)) < 1e-9) return "Enter a nonzero drill direction.";
     const standard = standardFor(controls.profile.value);
@@ -278,7 +286,9 @@ export const holeEditor: FeatureEditor = {
         : values.allCircles === "yes" ? { profileFeatureId: values.source, allCircles: true } : stampProfileSelections(context, [{ featureId: values.source, contourIndex: Number(values.region) }], true)[0]),
       targetBodyId: JSON.parse(values.mergeScope || "[]")[0],
       cutType: values.cutType, diameterMillimeters: Number(values.diameter),
-      depthType: values.depthType, depthMillimeters: Number(values.depth),
+      depthType: values.depthType === "up-to-entity" ? "up-to-face" : values.depthType, depthMillimeters: Number(values.depth),
+      ...(values.depthType === "up-to-entity" ? { endReference: JSON.parse(values.endReference) } : {}),
+      ...(values.startPlane === "part" ? { startFrom: "part" } : values.startPlane === "selected" ? { startFrom: { kind: "plane", plane: (() => { const ref = JSON.parse(values.startPlaneRef); if (ref.kind === "face") delete ref.centerMillimeters; return ref; })() } } : {}),
       ...(values.cutType !== "plain" ? { counterDiameterMillimeters: Number(values.counterDiameter) } : {}),
       ...(counterbored ? { counterDepthMillimeters: Number(values.counterDepth) } : {}),
       ...(countersunk ? { countersinkAngleDegrees: Number(values.countersinkAngle) } : {}),

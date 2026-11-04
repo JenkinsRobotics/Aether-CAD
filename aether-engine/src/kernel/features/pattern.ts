@@ -1,4 +1,6 @@
-import { isShape3D, type Shape3D, type Wire } from "replicad";
+import { isShape3D, type Face, type Shape3D, type Wire } from "replicad";
+import { deleteAfterVectorTuple } from "../../geometry/index";
+import { quadricOf } from "../part-evaluator";
 import type { PartFeature } from "../../document/index";
 import type { PartTransform } from "../../document/part-transform";
 import type { PreviewHandle } from "../../contracts/geometry";
@@ -29,11 +31,12 @@ export interface PatternContext {
     origin: V3;
     axis: V3;
   };
+  faceByReference: (body: Shape3D, reference: { normal?: V3 | number[]; surfaceType?: string; faceAnchor?: { centerMillimeters: number[]; areaSquareMillimeters: number } }, label: string) => Face;
 }
 /** Repeats the authored source tool or whole bodies, retaining source identity,
  * output identities and preview handles. The caller owns atomic cache commit. */
 export function applyPatternFeature(feature: PatternFeature, context: PatternContext): string | undefined {
-  const { history, bodies, tools, bodyOutputs, own, previewId, publish, resolveTransform, pathSource, sketchWire, axisFeatureLine } = context;
+  const { history, bodies, tools, bodyOutputs, own, previewId, publish, resolveTransform, pathSource, sketchWire, axisFeatureLine, faceByReference } = context;
   let { currentBodyID } = context;
   // PartDesign patterns: the source feature's own tool, repeated along a
   // body axis (count includes the original) and applied the way the
@@ -65,6 +68,17 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
       return principal(axis);
     if (ref.kind === "vector")
       return unit(ref.direction);
+    if (ref.kind === "face") {
+      // A picked planar face: its outward normal is the direction.
+      const host = bodies.get(ref.bodyId);
+      if (!host) throw new Error("The pattern direction's face is on an unavailable part. Reselect it.");
+      const face = faceByReference(host, ref, "Pattern direction");
+      try {
+        if (face.geomType !== "PLANE") throw new Error("A pattern direction by a face needs a planar face.");
+        const c = deleteAfterVectorTuple(face.center);
+        return unit([...deleteAfterVectorTuple(face.normalAt([c[0], c[1], c[2]]))] as V3);
+      } finally { face.delete(); }
+    }
     const t = resolveTransform({ kind: "translate-reference", reference: ref, distanceMillimeters: 1 });
     return (t as {
       translationMillimeters: V3;
@@ -174,6 +188,19 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
     }
     else if (feature.axisReference?.kind === "feature")
       ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
+    else if (feature.axisReference?.kind === "face") {
+      // A picked cylindrical or conical face: the pattern turns about its axis.
+      const host = bodies.get(feature.axisReference.bodyId);
+      if (!host) throw new Error("The pattern axis face is on an unavailable part. Reselect it.");
+      const face = faceByReference(host, feature.axisReference, "Pattern axis");
+      try {
+        const near = [...deleteAfterVectorTuple(face.pointOnSurface(0.5, 0.5))] as V3;
+        const q = quadricOf(face, near);
+        if (q.kind === "CYLINDER") { origin = q.at; axis = q.along; }
+        else if (q.kind === "CONE") { origin = q.apex; axis = q.along; }
+        else throw new Error("A pattern axis by a face needs a cylindrical or conical face.");
+      } finally { face.delete(); }
+    }
     else if (feature.axisReference) {
       const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as {
         axisOriginMillimeters: V3;
@@ -187,7 +214,29 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
       if (i !== 0)
         placements.push((shape) => own(shape.clone().rotate(step * i * sign, origin, axis)));
   }
+  // Onshape's Skip instances: instance numbers (2…n) left out of the row; their identities are not taken.
+  const skipped = new Set(feature.skipInstances ?? []);
+  if (skipped.size && placements.length && placements.every((_, index) => skipped.has(index + 2))) throw new Error("Every instance is skipped. Keep at least one.");
   if (partPattern) {
+    if (feature.resultOperation) {
+      // Add / Remove / Intersect: each placement of each chosen part meets the merge scope part; no new parts.
+      const scopeId = feature.targetBodyId!, scope = bodies.get(scopeId);
+      if (!scope) throw new Error("Select the merge scope part for the pattern's result.");
+      let body: Shape3D = scope;
+      for (const bodyId of feature.bodyIds!) {
+        const shape = bodies.get(bodyId);
+        if (!shape) throw new Error("A part to pattern is unavailable.");
+        placements.forEach((place, index) => {
+          if (skipped.has(index + 2)) return;
+          const copy = place(shape);
+          const next = feature.resultOperation === "cut" ? body.cut(copy) : feature.resultOperation === "intersect" ? body.intersect(copy) : body.fuse(copy);
+          if (!isShape3D(next)) throw new Error("The pattern's result left no solid.");
+          body = own(next);
+        });
+      }
+      bodies.set(scopeId, body);
+      return scopeId;
+    }
     // Whole parts: every placement of every chosen part becomes a new part.
     const ids: string[] = [];
     for (const bodyId of feature.bodyIds!) {
@@ -195,6 +244,7 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
       if (!shape)
         throw new Error("A part to pattern is unavailable.");
       placements.forEach((place, index) => {
+        if (skipped.has(index + 2)) return;
         const copyId = `${feature.copyBodyIds![bodyId]}:${index + 1}`;
         if (bodies.has(copyId))
           throw new Error("Duplicate output body identity.");
@@ -208,7 +258,8 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
   }
   let body: Shape3D = target;
   const copies: Shape3D[] = [];
-  for (const place of placements) {
+  for (const [index, place] of placements.entries()) {
+    if (skipped.has(index + 2)) continue;
     const copy = place(tool!);
     copies.push(copy);
     const next = rootOperation === "cut" ? body.cut(copy) : body.fuse(copy);

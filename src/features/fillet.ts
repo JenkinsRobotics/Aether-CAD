@@ -31,6 +31,7 @@ export const filletEditor: FeatureEditor = {
       radius: field("Radius (mm)", String(feature?.radiusMillimeters ?? 0.5)),
       variable: field("Variable fillet", String(feature?.endRadiusMillimeters !== undefined), ["false", "true"]),
       endRadius: field("End radius (mm)", String(feature?.endRadiusMillimeters ?? feature?.radiusMillimeters ?? 0.5)),
+      points: field("Points on edge", JSON.stringify(feature?.type === "fillet" ? feature.points ?? [] : [])),
       sideFace: field("Side face", JSON.stringify(feature?.sideFace ? [feature.sideFace] : [])),
       oppositeSideFace: field("Opposite side face", JSON.stringify(feature?.oppositeSideFace ? [feature.oppositeSideFace] : [])),
       replacedFaces: field("Faces to replace", JSON.stringify(feature?.replacedFaces ?? [])),
@@ -81,8 +82,25 @@ export const filletEditor: FeatureEditor = {
     hide(controls.variable);
     const variable = win.subsection("Variable fillet", { kind: "checkbox", open: controls.variable.value === "true", onToggle: (open) => { controls.variable.value = String(open); sync(); controls.variable.dispatchEvent(new Event("change")); } });
     const end = row("End radius", controls.endRadius);
-    const addPoint = planned(Object.assign(document.createElement("button"), { type: "button", textContent: "Add point on edge" }), pointsGap);
-    variable.body.append(end, rowIn("Points on edge", addPoint), gapCheck("Smooth transition", pointsGap));
+    // Points on the edge: (position along the edge, radius) rows, the same law on every picked edge.
+    hide(controls.points);
+    const pointsList = document.createElement("div"); pointsList.className = "cad-fillet-points";
+    const readPoints = (): { position: number; radiusMillimeters: number }[] => JSON.parse(controls.points.value || "[]");
+    const writePoints = (points: { position: number; radiusMillimeters: number }[]) => { controls.points.value = JSON.stringify(points); renderPoints(); controls.points.dispatchEvent(new Event("change")); };
+    const renderPoints = () => {
+      pointsList.replaceChildren(...readPoints().map((point, index) => {
+        const position = document.createElement("input"); position.type = "text"; position.value = String(point.position); position.setAttribute("aria-label", `Point ${index + 1} position`);
+        const radius = document.createElement("input"); radius.type = "text"; radius.value = String(point.radiusMillimeters); radius.setAttribute("aria-label", `Point ${index + 1} radius`);
+        const update = () => { const points = readPoints(); points[index] = { position: Number(position.value), radiusMillimeters: Number(radius.value) }; controls.points.value = JSON.stringify(points); controls.points.dispatchEvent(new Event("change")); };
+        position.onchange = update; radius.onchange = update;
+        const remove = iconButton("close", `Remove point ${index + 1}`); remove.onclick = () => writePoints(readPoints().filter((_, i) => i !== index));
+        return rowIn(`Point ${index + 1} (0…1, ${lengthUnitLabel})`, position, radius, remove);
+      }));
+    };
+    const addPoint = Object.assign(document.createElement("button"), { type: "button", className: "aui-button", textContent: "Add point on edge" });
+    addPoint.onclick = () => { const points = readPoints(); writePoints([...points, { position: Math.round((points.length + 1) / (points.length + 2) * 100) / 100, radiusMillimeters: Number(controls.radius.value) || 1 }]); };
+    renderPoints();
+    variable.body.append(end, pointsList, rowIn("Points on edge", addPoint), gapCheck("Smooth transition", pointsGap));
     edge.append(variable.element);
     // Allow edge overflow is always on in this kernel; the edges to keep are a gap.
     const overflow = win.subsection("Allow edge overflow", { kind: "checkbox", open: true });
@@ -141,6 +159,7 @@ export const filletEditor: FeatureEditor = {
     if (controls.control.value !== "distance") return circularOnly;
     if (!(Number(controls.radius.value) > 0)) return "Enter a positive radius.";
     if (controls.variable.value === "true" && !(Number(controls.endRadius.value) > 0)) return "Enter a positive end radius.";
+    if (controls.variable.value === "true") for (const point of JSON.parse(controls.points.value || "[]") as { position: number; radiusMillimeters: number }[]) if (!(point.position > 0 && point.position < 1) || !(point.radiusMillimeters > 0)) return "Each point on the edge needs a position between 0 and 1 and a positive radius.";
     return validateEdgeFinish(controls, "fillet");
   },
 
@@ -152,7 +171,7 @@ export const filletEditor: FeatureEditor = {
     return {
       radiusMillimeters: Number(values.radius),
       ...(values.measurement === "width" ? { measurement: "width" } : {}),
-      ...(values.variable === "true" ? { endRadiusMillimeters: Number(values.endRadius) } : {}),
+      ...(values.variable === "true" ? { endRadiusMillimeters: Number(values.endRadius), ...(JSON.parse(values.points || "[]").length ? { points: JSON.parse(values.points) } : {}) } : {}),
       ...serializeEdgeFinish(values),
     };
   },

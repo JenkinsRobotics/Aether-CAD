@@ -89,12 +89,18 @@ export interface PreviewHandle {
   kind: "linear" | "angular";
   originMillimeters: [number, number, number];
   direction: [number, number, number];
-  /** Linear: control value per millimetre dragged (0.5 for a symmetric extent). */
+  /** Linear: control value per millimetre dragged (2 for total mid-plane thickness). */
   scale?: number;
   /** Linear: the control may go negative (a push as well as a pull). */
   signed?: boolean;
+  /** Linear: zero is valid (for one side of a thin wall). */
+  nonnegative?: boolean;
   /** Angular: the point where the angle is zero; the ring passes through it. */
   startMillimeters?: [number, number, number];
+  /** Angular keyboard step in degrees; fine adjustment uses one tenth, capped at 1°. */
+  stepDegrees?: number;
+  /** Angular: use a consistent screen-sized ring, retaining the start direction. */
+  screenRadius?: boolean;
   label?: string;
 }
 export interface TransformPreviewFrame {

@@ -20,7 +20,8 @@ it('keeps a revolve ribbon at its actual angle and accepts complete angle expres
     valueAt: (x, y) => Math.atan2(y - 100, x - 100) * 180 / Math.PI });
   window.addEventListener('aether-native-angle-handle', respond);
   try {
-    mountAngleHandle(panel, control, 'deg', () => ({ parameter: 'angle', kind: 'angular', originMillimeters: [0, 0, 0], direction: [0, 0, 1] }), () => ready, 'Revolve angle');
+    const handle = { parameter: 'angle', kind: 'angular', originMillimeters: [0, 0, 0], direction: [0, 0, 1] };
+    mountAngleHandle(panel, control, 'deg', () => handle, () => ready, 'Revolve angle');
     const hit = document.querySelector('.aui-manipulator-orbit-hit');
     const arrow = document.querySelector('.aui-manipulator-orbit-arrow');
     expect(arrow.getAttribute('points').split(' ').map(p => Number(p.split(',')[1])).every(y => y > 130)).toBe(true);
@@ -32,8 +33,13 @@ it('keeps a revolve ribbon at its actual angle and accepts complete angle expres
     expect(Number(control.value)).toBeCloseTo(90);
     input.focus(); input.value = '45 invalid'; input.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(Number(control.value)).toBeCloseTo(90); expect(input.validity.valid).toBe(false);
+    handle.stepDegrees = 1; control.value = '3';
+    hit.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(Number(control.value)).toBeCloseTo(4);
+    hit.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true, bubbles: true }));
+    expect(Number(control.value)).toBeCloseTo(3.9);
     ready = false; await vi.waitFor(() => expect(hit.getAttribute('aria-disabled')).toBe('true'));
     hit.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-    expect(Number(control.value)).toBeCloseTo(90);
+    expect(Number(control.value)).toBeCloseTo(3.9);
   } finally { panel.remove(); window.removeEventListener('aether-native-angle-handle', respond); }
 });

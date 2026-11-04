@@ -2,7 +2,8 @@ import { availableBodies } from "@aether/core/document";
 import { mountPartBox } from "./part-box";
 import { regionControls, layoutRegion, selectedRegion } from "./regions";
 import { sketchRegions } from "@aether/core/document";
-import { bodyAndOperationTabs, entityChips, iconButton, layoutParameterRows, planned, requireSelections, rowIn, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { bodyAndOperationTabs, entityChips, iconButton, layoutParameterRows, planned, requireSelections, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { layoutThin, serializeThin, thinControls, validateThin } from "./extrude-thin";
 
 const operationValues = ["new", "add", "cut"] as const;
 
@@ -13,9 +14,16 @@ export const sweepEditor: FeatureEditor = {
     const { field, reference, feature, doc } = context;
     const profile = reference("Sketch Profile", ["sketch", "profile"], feature?.profileFeatureId);
     return {
+      ...thinControls(context),
       profile,
       region: regionControls(context, profile),
       path: reference("Sweep Path", ["sketch", "profile", "curve3d"], feature?.pathFeatureId),
+      pathReversed: field("Path opposite direction", feature?.reversedPath ? "true" : "false", ["false", "true"]),
+      twistOn: field("Twist", feature?.twist ? "yes" : "no", ["no", "yes"]),
+      twistBy: field("Twist by", "turns", ["turns", "angle"]),
+      twistTurns: field("Turns", String(Math.abs(feature?.twist?.turns ?? 1))),
+      twistAngle: field("Twist angle (degrees)", String(Math.abs(feature?.twist?.turns ?? 0.25) * 360)),
+      twistReversed: field("Opposite twist direction", (feature?.twist?.turns ?? 0) < 0 ? "true" : "false", ["false", "true"]),
       orientation: field("Orientation", typeof feature?.orientation === "object" ? "direction" : feature?.orientation ?? "perpendicular", ["perpendicular", "parallel", "lock-faces", "direction"]),
       upX: field("Up direction X", String(typeof feature?.orientation === "object" ? feature.orientation.direction[0] : 0)),
       upY: field("Up direction Y", String(typeof feature?.orientation === "object" ? feature.orientation.direction[1] : 0)),
@@ -34,33 +42,46 @@ export const sweepEditor: FeatureEditor = {
 
   layout(context: FeatureEditorContext, controls: Controls) {
     const { win, form, doc, feature } = context;
-    bodyAndOperationTabs(win, form, controls.operation, operationValues);
+    bodyAndOperationTabs(win, form, controls.operation, operationValues, controls.creationMode);
     entityChips(win, "Faces and sketch regions to sweep", controls.profile, form);
     layoutRegion(context, controls.profile, controls.region);
     const path = entityChips(win, "Sweep path", controls.path, form);
-    // Onshape's Opposite direction beside the path: a sweep starting from the path's other end is a gap.
-    const pathFlip = planned(iconButton("flip-horizontal", "Opposite direction"), "Not available in this kernel: starting the sweep from the path's other end is a recorded gap.");
-    path.element.append(pathFlip);
-    const rows = layoutParameterRows(context, (control) => control === controls.rail || control === controls.orientation || control === controls.endScale);
     const hide = (control: Controls[string]) => { control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control); };
+    hide(controls.pathReversed);
+    // Onshape's Opposite direction beside the path: the sweep runs from the path's other end.
+    const pathFlip = iconButton("flip-horizontal", "Opposite direction");
+    const paintPath = () => pathFlip.setAttribute("aria-pressed", controls.pathReversed.value);
+    pathFlip.onclick = () => { controls.pathReversed.value = controls.pathReversed.value === "true" ? "false" : "true"; paintPath(); controls.pathReversed.dispatchEvent(new Event("change")); };
+    paintPath(); path.element.append(pathFlip);
+    const rows = layoutParameterRows(context, (control) => control === controls.rail || control === controls.orientation || control === controls.endScale);
     hide(controls.orientation); hide(controls.endScale);
     // Profile control: None (square to the path) / Keep profile orientation (as drawn) / Lock profile faces (gap) / Lock profile direction (a fixed up direction).
     const modes = { None: "perpendicular", "Keep profile orientation": "parallel", "Lock profile faces": "lock-faces", "Lock profile direction": "direction" } as const;
     const picker = win.picker(Object.keys(modes), { ariaLabel: "Profile control menu", onChange: (text) => { controls.orientation.value = modes[text as keyof typeof modes]; sync(); controls.orientation.dispatchEvent(new Event("change")); } });
     picker.setValue(Object.keys(modes).find((key) => modes[key as keyof typeof modes] === controls.orientation.value) ?? "None");
     win.body.append(rowIn("Profile control", picker.element));
-    // Twist is a kernel gap: present and disabled.
-    const twist = win.subsection("Twist", { kind: "checkbox", open: false });
-    const text = (label: string) => { const input = document.createElement("input"); input.type = "text"; input.setAttribute("aria-label", label); return input; };
+    // Twist: the profile turns about the path by turns or an angle over the whole path.
+    for (const key of ["twistOn", "twistBy", "twistReversed"]) hide(controls[key]);
+    const twist = win.subsection("Twist", { kind: "checkbox", open: controls.twistOn.value === "yes", onToggle: (open) => { controls.twistOn.value = open ? "yes" : "no"; controls.twistOn.dispatchEvent(new Event("change")); } });
     const check = (label: string) => { const input = document.createElement("input"); input.type = "checkbox"; input.setAttribute("aria-label", label); return input; };
-    twist.body.append(rowIn("Twist by", text("Twist by")), rowIn("Turns", text("Turns")), rowIn("Opposite direction", check("Opposite twist direction")), rowIn("Extend to full path", check("Extend to full path")));
-    planned(twist.element, "Not available in this kernel: twisting the profile along the path (turns, angle or pitch) is a recorded gap.");
+    const byLabels = { Turns: "turns", Angle: "angle" } as const;
+    const by = win.picker(Object.keys(byLabels), { ariaLabel: "Twist by menu", onChange: (text) => { controls.twistBy.value = byLabels[text as keyof typeof byLabels]; syncTwist(); controls.twistBy.dispatchEvent(new Event("change")); } });
+    by.setValue("Turns");
+    for (const key of ["twistTurns", "twistAngle"]) { controls[key].closest("label")?.remove(); controls[key].setAttribute("form", form.id); }
+    const turnsRow = rowIn("Turns", controls.twistTurns), angleRow = rowIn("Angle", controls.twistAngle, unitSuffix(context.angleUnitLabel));
+    const twistFlip = check("Opposite twist direction"); twistFlip.checked = controls.twistReversed.value === "true";
+    twistFlip.onchange = () => { controls.twistReversed.value = String(twistFlip.checked); controls.twistReversed.dispatchEvent(new Event("change")); };
+    twist.body.append(rowIn("Twist by", by.element), turnsRow, angleRow, rowIn("Opposite direction", twistFlip));
+    const syncTwist = () => { turnsRow.hidden = controls.twistBy.value !== "turns"; angleRow.hidden = controls.twistBy.value !== "angle"; };
+    syncTwist();
     win.body.append(twist.element);
     // Scale: the profile's size at the end of the path.
     const scale = win.subsection("Scale", { kind: "checkbox", open: Math.abs(Number(controls.endScale.value) - 1) > 1e-9, onToggle: (open) => { if (!open) { controls.endScale.value = "1"; controls.endScale.dispatchEvent(new Event("change")); } } });
     scale.body.append(rowIn("Scale factor", controls.endScale));
     win.body.append(scale.element);
-    const trim = check("Trim ends"); win.body.append(planned(rowIn("Trim ends", trim), "Not available in this kernel: trimming a thin sweep's ends at the path is a recorded gap (thin sweeps are a gap)."));
+    // Thin: the wall thicknesses (Extrude's rows); Trim ends stays a named gap.
+    layoutThin(context, controls);
+    const trim = check("Trim ends"); win.body.append(planned(rowIn("Trim ends", trim), "Not available in this kernel: trimming a thin sweep's ends square to the path is a recorded gap."));
     // Merge scope: the part the sweep adds to or removes from.
     const end = feature ? doc.features.findIndex((f) => f.id === feature.id) : doc.rollbackIndex ?? doc.features.length;
     const bodies = availableBodies({ ...doc, features: doc.features.slice(0, end), rollbackIndex: undefined });
@@ -89,6 +110,12 @@ export const sweepEditor: FeatureEditor = {
     if (controls.operation.value !== "new" && !JSON.parse(controls.mergeScope.value || "[]").length) return "Select the merge scope part.";
     if (controls.orientation.value === "direction" && Math.hypot(Number(controls.upX.value), Number(controls.upY.value), Number(controls.upZ.value)) < 1e-9) return "Enter a nonzero up direction.";
     if (controls.rail.value && controls.rail.value === controls.path.value) return "Choose a rail sketch other than the path.";
+    const thin = validateThin(controls); if (thin) return thin;
+    if (controls.twistOn.value === "yes") {
+      const turns = controls.twistBy.value === "angle" ? Number(controls.twistAngle.value) / 360 : Number(controls.twistTurns.value);
+      if (!(turns > 0 && turns <= 100)) return "Enter a positive twist (up to 100 turns).";
+      if (controls.rail.value) return "A sweep takes a twist or a guide rail, not both.";
+    }
     return requireSelections(controls, [
       { key: "profile", noun: "a sketch profile" },
       { key: "path", noun: "a sweep path" },
@@ -103,6 +130,9 @@ export const sweepEditor: FeatureEditor = {
       ...(values.orientation === "parallel" ? { orientation: "parallel" } : values.orientation === "direction" ? { orientation: { kind: "direction", direction: [Number(values.upX), Number(values.upY), Number(values.upZ)] } } : {}),
       ...(Math.abs(Number(values.endScale) - 1) > 1e-9 ? { endScale: Number(values.endScale) } : {}),
       ...(values.rail ? { rail: { pathFeatureId: values.rail } } : {}),
+      ...(values.pathReversed === "true" ? { reversedPath: true } : {}),
+      ...(values.twistOn === "yes" ? { twist: { turns: (values.twistBy === "angle" ? Number(values.twistAngle) / 360 : Number(values.twistTurns)) * (values.twistReversed === "true" ? -1 : 1) } } : {}),
+      ...serializeThin(values),
       operation: values.operation,
       ...(values.operation !== "new" ? { targetBodyId: JSON.parse(values.mergeScope || "[]")[0] } : {}),
     };

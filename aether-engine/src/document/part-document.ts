@@ -414,7 +414,7 @@ export function validatePartDocument(
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");
         bodies.add(output);
       }
-    } else if (!["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(feature.type)) {
+    } else if (!["profile", "sketch", "plane", "axis", "point", "curve3d"].includes(feature.type)) {
       if (!bodies.size && feature.type!=="offset-face" && !("targetBodyId" in feature && feature.targetBodyId))
         throw new Error(
           `${feature.name} needs an earlier body-producing feature.`,

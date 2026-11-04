@@ -1,5 +1,5 @@
-import { FaceFinder, Plane, type Face, type Shape3D, type EdgeFinder, type RadiusConfig, type FilletRadius, type ChamferRadius } from "replicad";
-import type { PartFeature } from "../../document/index";
+import { cast, FaceFinder, getOC, isShape3D, Plane, type Face, type Shape3D, type EdgeFinder, type RadiusConfig, type FilletRadius, type ChamferRadius } from "replicad";
+import type { EdgeFinishEdge, PartFeature } from "../../document/index";
 import type { PreviewHandle } from "../../contracts/geometry";
 import { deleteAfterVectorTuple } from "../../geometry/index";
 import { vertexAnchorsOf } from "../part-geometry";
@@ -18,28 +18,14 @@ export interface EdgeFinishContext {
   }, handle: PreviewHandle) => void;
   faceByReference: (body: Shape3D, reference: FaceReference, label: string) => Face;
 }
-/** Produces one exact finish. The caller owns the returned shape and retains
- * the source body. Temporary planes are retained by the evaluation step. */
-export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body: Shape3D, context: EdgeFinishContext): Shape3D {
-  const { own, previewId, publish, faceByReference } = context;
-  // An edge plane pins one world coordinate to the offset (FreeCAD's
-  // `_edges_in_plane`: XY pins z, XZ pins y, YZ pins x), which saved documents
-  // rely on; replicad's named XZ plane would pin y to the opposite sign.
-  const edgePlane = feature.edgePlane ? (() => {
-    const axis = ({ XY: [0, 0, 1], XZ: [0, 1, 0], YZ: [1, 0, 0] } as Record<string, V3>)[feature.edgePlane.plane];
-    const xDirection = ({ XY: [1, 0, 0], XZ: [1, 0, 0], YZ: [0, 1, 0] } as Record<string, V3>)[feature.edgePlane.plane];
-    if (!axis)
-      throw new Error(`Unknown edge plane ${feature.edgePlane.plane}.`);
-    return own(new Plane(scale(axis, feature.edgePlane.offsetMillimeters), xDirection, axis));
-  })() : undefined;
-  // Picked edges replace the plane pin: each is found again on the body it was
-  // picked on (a straight edge by its vertex anchors, any edge by midpoint and
-  // length) and the finish runs on exactly those edges, never the nearest.
-  // A picked face is every edge of that face: the same pipeline, the face just selects them.
-  const picks = feature.edges?.flatMap((pick): { point: V3; size?: number }[] => {
+/** The midpoint of every picked edge, found again on the body: a straight edge by its vertex
+ *  anchors, any edge by midpoint and length, a picked face by every edge of that face. Shared by
+ *  the finishes and the parting-line draft. */
+export function pickedEdgePoints(edges: readonly EdgeFinishEdge[], bodyId: string, body: Shape3D, faceByReference: EdgeFinishContext["faceByReference"], verb: string): { point: V3; size?: number }[] {
+  return edges.flatMap((pick): { point: V3; size?: number }[] => {
     if (pick.bodyId !== bodyId)
       throw new Error(`${pick.label} is on another body. Reselect edges on the target body.`);
-    const refuse = () => new Error(`${pick.label} changed or is missing. Reselect the edges to finish.`);
+    const refuse = () => new Error(`${pick.label} changed or is missing. Reselect the edges to ${verb}.`);
     if (pick.kind === "face-edges") {
       const face = faceByReference(body, pick, "Entities to finish"), edges = face.edges;
       const points = edges.map((edge) => { const m = edge.pointAt(0.5), point: V3 = [m.x, m.y, m.z]; m.delete(); return { point, size: pick.radiusMillimeters }; });
@@ -81,6 +67,26 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
     })();
     return [{ point, size: pick.radiusMillimeters }];
   });
+}
+/** Produces one exact finish. The caller owns the returned shape and retains
+ * the source body. Temporary planes are retained by the evaluation step. */
+export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body: Shape3D, context: EdgeFinishContext): Shape3D {
+  const { own, previewId, publish, faceByReference } = context;
+  // An edge plane pins one world coordinate to the offset (FreeCAD's
+  // `_edges_in_plane`: XY pins z, XZ pins y, YZ pins x), which saved documents
+  // rely on; replicad's named XZ plane would pin y to the opposite sign.
+  const edgePlane = feature.edgePlane ? (() => {
+    const axis = ({ XY: [0, 0, 1], XZ: [0, 1, 0], YZ: [1, 0, 0] } as Record<string, V3>)[feature.edgePlane.plane];
+    const xDirection = ({ XY: [1, 0, 0], XZ: [1, 0, 0], YZ: [0, 1, 0] } as Record<string, V3>)[feature.edgePlane.plane];
+    if (!axis)
+      throw new Error(`Unknown edge plane ${feature.edgePlane.plane}.`);
+    return own(new Plane(scale(axis, feature.edgePlane.offsetMillimeters), xDirection, axis));
+  })() : undefined;
+  // Picked edges replace the plane pin: each is found again on the body it was
+  // picked on (a straight edge by its vertex anchors, any edge by midpoint and
+  // length) and the finish runs on exactly those edges, never the nearest.
+  // A picked face is every edge of that face: the same pipeline, the face just selects them.
+  const picks = feature.edges && pickedEdgePoints(feature.edges, bodyId, body, faceByReference, "finish");
   const pickedPoints = picks?.map((pick) => pick.point);
   const chainPoints = pickedPoints && feature.tangentChain ? tangentChainMidpoints(body, pickedPoints) : pickedPoints;
   // Onshape's measurements: a fillet by the width between its tangent lines, a chamfer by the
@@ -145,6 +151,29 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
       return end !== undefined && own === undefined ? [start, measured(at, end)] : start;
     };
   };
+  // Onshape's points on the edge: OCCT's fillet takes a (position, radius) law per edge, here the
+  // same law on every picked edge: the size at the start, the points in order, the end radius at the end.
+  const filletThroughPoints = (): Shape3D => {
+    if (feature.type !== "fillet" || !chainPoints) throw new Error("A fillet through points on the edge needs picked edges.");
+    const oc = getOC(), law = [{ position: 0, radiusMillimeters: size }, ...feature.points!.slice().sort((a, b) => a.position - b.position), { position: 1, radiusMillimeters: feature.endRadiusMillimeters ?? size }];
+    const builder = new oc.BRepFilletAPI_MakeFillet(body.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational as never), progress = new oc.Message_ProgressRange_1();
+    const temps: { delete(): void }[] = [], edges = body.edges;
+    try {
+      let added = 0;
+      for (const edge of edges) {
+        const m = edge.pointAt(0.5), hit = chainPoints.some((p) => near(p, m)); m.delete();
+        if (!hit) continue;
+        const table = new oc.TColgp_Array1OfPnt2d_2(1, law.length); temps.push(table);
+        law.forEach((row, index) => { const p = new oc.gp_Pnt2d_3(row.position, row.radiusMillimeters); temps.push(p); table.SetValue(index + 1, p); });
+        builder.Add_5(table, edge.wrapped); added++;
+      }
+      if (!added) throw new Error("Could not fillet, no edge was selected");
+      builder.Build(progress);
+      const made = cast(builder.Shape());
+      if (!isShape3D(made)) { made.delete(); throw new Error("Fillet through points did not produce a solid."); }
+      return made;
+    } finally { edges.forEach((edge) => edge.delete()); temps.reverse().forEach((t) => t.delete()); builder.delete(); progress.delete(); }
+  };
   // An asymmetric chamfer needs the face its first leg lies on: the picked
   // reference face, else the adjacent face facing up most (SolidCraft's default).
   const chamferRadius = (): RadiusConfig<ChamferRadius> => {
@@ -199,7 +228,7 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
   };
   let rounded: Shape3D;
   try {
-    rounded = feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
+    rounded = feature.type === "fillet" && feature.points?.length ? filletThroughPoints() : feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
   }
   catch (error) {
     throw new Error(`${feature.type === "fillet" ? "Fillet" : "Chamfer"} did not produce a valid solid. Reduce the size or choose fewer edges.`, { cause: error });

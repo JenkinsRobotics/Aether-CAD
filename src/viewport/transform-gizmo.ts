@@ -27,7 +27,7 @@ export interface AngleRingProjection extends Point {
 }
 /** A ring about `axis` through `origin`: a screen lever's radius, or through `start`, which also
  *  sets where the angle is zero (a revolve's profile). `valueAt` maps the pointer to degrees. */
-export function projectAngleRing(camera:Camera,rect:Rect,origin:Vector3,axis:Vector3,angleDegrees:number,start?:Vector3):AngleRingProjection|null {
+export function projectAngleRing(camera:Camera,rect:Rect,origin:Vector3,axis:Vector3,angleDegrees:number,start?:Vector3,screenRadius=false):AngleRingProjection|null {
  if(rect.width<=0||rect.height<=0||Math.abs(axis.length()-1)>1e-6||!Number.isFinite(angleDegrees))return null;
  const frozen=camera.clone();frozen.updateMatrixWorld(true);
  const screen=(point:Vector3):Point|null=>{const p=point.clone().project(frozen);return [p.x,p.y,p.z].every(Number.isFinite)&&p.z>=-1&&p.z<=1?{x:rect.left+(p.x+1)*rect.width/2,y:rect.top+(1-p.y)*rect.height/2}:null;};
@@ -37,7 +37,7 @@ export function projectAngleRing(camera:Camera,rect:Rect,origin:Vector3,axis:Vec
  const lever=78/pixelsPerMM;
  const radial=start?start.clone().sub(origin).addScaledVector(axis,-axis.dot(start.clone().sub(origin))):null;
  const seed=radial&&radial.length()>1e-6?radial:axes.reduce((a,b)=>Math.abs(a.dot(axis))<=Math.abs(b.dot(axis))?a:b);
- const radius=radial&&radial.length()>1e-6?radial.length():lever;
+ const radius=!screenRadius&&radial&&radial.length()>1e-6?radial.length():lever;
  const u=seed.clone().addScaledVector(axis,-seed.dot(axis)).normalize(),v=new Vector3().crossVectors(axis,u);
  const point=(degrees:number)=>origin.clone().addScaledVector(u,radius*Math.cos(degrees*Math.PI/180)).addScaledVector(v,radius*Math.sin(degrees*Math.PI/180));
  const end=screen(point(angleDegrees));if(!end)return null;

@@ -8,6 +8,9 @@ export interface BooleanFeature {
   targetBodyId: string;
   toolBodyIds: string[];
   keepTools: boolean;
+  /** Onshape's Subtract offset (Offset all): the tools grow by this before cutting, leaving a gap of
+   *  that width around them; negative shrinks them. */
+  offsetMillimeters?: number;
 }
 
 export function validateBoolean(feature: BooleanFeature): void {
@@ -21,4 +24,5 @@ export function validateBoolean(feature: BooleanFeature): void {
       || new Set(feature.toolBodyIds).size !== feature.toolBodyIds.length)
     throw new Error('Choose distinct tool bodies different from the target.');
   if (typeof feature.keepTools !== 'boolean') throw new Error('Invalid Keep tools setting.');
+  if (feature.offsetMillimeters !== undefined && (feature.operation !== 'cut' || !Number.isFinite(feature.offsetMillimeters))) throw new Error('A boolean offset is a finite distance on Subtract.');
 }

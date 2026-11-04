@@ -28,9 +28,12 @@ export function layoutTransformReferences(context:FeatureEditorContext,c:Control
  const from=extrusionPointPicker(context,c.fromPoint,'Transform from point',note),to=extrusionPointPicker(context,c.toPoint,'Transform to point',note),center=extrusionPointPicker(context,c.centerPoint,'Scale about point',note);
  const row=(key:string)=>c[key].closest<HTMLElement>('.aui-feature-row')??c[key].parentElement;
  const render=()=>{
-  const vector=c.mode.value==='translate-reference'||c.mode.value==='rotate-reference',move=c.mode.value==='translate-reference';
+  // Translate by line moves by the line's own length; Translate by distance along it by the typed distance.
+  // A window with its own Translate by distance mode (Transform) hides Specify distance; Move faces keeps it.
+  const byDistance=c.mode.value==='translate-distance',offersDistanceMode=[...(c.mode as HTMLSelectElement).options].some(o=>o.value==='translate-distance');
+  const vector=c.mode.value==='translate-reference'||c.mode.value==='rotate-reference'||byDistance,move=c.mode.value==='translate-reference'||byDistance;
   for(const key of ['referenceMode','referenceLine','useDistance','distance','reverseReference']){
-   const show=key==='referenceMode'?vector:key==='referenceLine'?vector&&c.referenceMode.value==='line':key==='distance'?move&&c.useDistance.value==='yes':move;
+   const show=key==='referenceMode'?vector:key==='referenceLine'?vector&&c.referenceMode.value==='line':key==='distance'?(byDistance||(move&&!offersDistanceMode&&c.useDistance.value==='yes')):key==='useDistance'?move&&!offersDistanceMode:move;
    const el=row(key);if(el)el.hidden=!show;
   }
   edge.setEnabled(vector&&c.referenceMode.value==='edge');
@@ -41,11 +44,11 @@ export function layoutTransformReferences(context:FeatureEditorContext,c:Control
 export function validateTransformReferences(c:Controls):string|null {
  const mode=c.mode.value;
  if(mode==='scale-reference')return c.centerPoint.value?null:'Select a scale center point.';
- if(mode!=='translate-reference'&&mode!=='rotate-reference')return null;
+ if(mode!=='translate-reference'&&mode!=='rotate-reference'&&mode!=='translate-distance')return null;
  if(c.referenceMode.value==='edge'&&!c.referenceEdge.value)return 'Select a straight edge on an earlier solid part.';
  if(c.referenceMode.value==='line'&&!c.referenceLine.value)return 'Choose a straight line in an earlier sketch.';
  if(c.referenceMode.value==='points'&&(!c.fromPoint.value||!c.toPoint.value))return 'Choose the ordered From and To points.';
- if(mode==='translate-reference'&&c.useDistance.value==='yes'&&(!c.distance.value.trim()||!Number.isFinite(Number(c.distance.value))))return 'Enter a finite translation distance.';
+ if((mode==='translate-distance'||(mode==='translate-reference'&&c.useDistance.value==='yes'))&&(!c.distance.value.trim()||!Number.isFinite(Number(c.distance.value))))return 'Enter a finite translation distance.';
  return null;
 }
 export function serializeTransformReference(v:Record<string,string>,context:FeatureEditorContext):TransformVectorReference {

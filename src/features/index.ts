@@ -5,6 +5,7 @@ import {faceExtrudeEditor} from "./face-extrude";
 import {booleanEditor} from "./boolean";
 import {patternEditor} from "./pattern";
 import {draftEditor} from "./draft";
+import { ribEditor } from "./rib";
 import {loftEditor} from "./loft";
 import {holeEditor} from "./hole";
 import {splitEditor} from "./split";
@@ -62,6 +63,7 @@ export const featureEditors: readonly FeatureEditor[] = [
   restEditor,
   loftEditor,
   draftEditor,
+  ribEditor,
   patternEditor,
   booleanEditor,
   lipEditor,

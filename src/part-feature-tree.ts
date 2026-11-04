@@ -31,15 +31,16 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "pipe") return `Ø${feature.diameterMillimeters} mm${feature.wallMillimeters ? ` · ${feature.wallMillimeters} mm wall` : ""}`;
   if (feature.type === "bounding-solid") return `${feature.marginMillimeters} mm margin`;
   if (feature.type === "shape-binder") return feature.faces?.length ? `${feature.faces.length} faces of ${feature.sourceBodyId}` : `copy of ${feature.sourceBodyId}`;
-  if (feature.type === "thread") return `${feature.designation}${feature.threadClass ? ` ${feature.threadClass}` : ""} cosmetic`;
+  if (feature.type === "thread") return `${feature.designation}${feature.threadClass ? ` ${feature.threadClass}` : ""} cosmetic${feature.chamfer ? " · chamfer" : ""}${feature.undercut ? " · undercut" : ""}${feature.splitFace ? " · split face" : ""}`;
   if (feature.type === "curve3d") return feature.kind === "point" ? "3D point" : `3D ${feature.kind} · ${feature.pointsMillimeters.length} points`;
-  if (feature.type === "split") return `keep ${feature.keep} · ${feature.plane.kind === "principal" ? feature.plane.plane : feature.plane.kind}`;
+  if (feature.type === "split") return `keep ${feature.keep} · ${feature.plane ? (feature.plane.kind === "principal" ? feature.plane.plane : feature.plane.kind) : feature.tool?.label ?? "face"}`;
   if (feature.type === "delete-face") return `${feature.faces.length} faces removed`;
   if (feature.type === "offset-face") return feature.replaceWith ? `replace ${feature.faces.length} faces` : `${feature.distanceMillimeters} mm · ${feature.faces.length} faces`;
   if (feature.type === "face-extrude") return `${feature.distanceMillimeters} mm · ${feature.faceLabel}`;
   if (feature.type === "boolean") return `${feature.operation} · ${feature.toolBodyIds.length} tools${feature.keepTools ? " · keep tools" : ""}`;
   if (feature.type === "pattern") return `${feature.patternType} · ${feature.count} occurrences · ${feature.axis}`;
-  if (feature.type === "draft") return `${feature.angleDegrees}° · ${feature.facePlane.plane} · ${feature.reversed ? "reverse" : "normal"}`;
+  if (feature.type === "rib") return `${feature.thicknessMillimeters} mm · normal to sketch${feature.reversed ? " · reversed" : ""}`;
+  if (feature.type === "draft") return `${feature.angleDegrees}° · ${feature.mode === "parting-line" ? `parting line · ${feature.partingEdges?.length ?? 0} edge${feature.partingEdges?.length === 1 ? "" : "s"}` : feature.neutralFace?.label ?? feature.facePlane?.plane ?? "faces"} · ${feature.reversed ? "reverse" : "normal"}`;
   if (feature.type === "loft") return `${feature.sections.length} sections · ${feature.operation} · ${feature.ruled ? "ruled" : "smooth"}`;
   if (feature.type === "hole") {
     const thread = feature.thread ? `${feature.thread.designation} ${feature.thread.tapped ? (feature.thread.modeled ? "modelled thread" : "tapped") : `${feature.thread.fit ?? "normal"} clearance`} · ` : "";

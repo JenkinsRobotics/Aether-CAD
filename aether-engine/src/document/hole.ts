@@ -2,6 +2,8 @@ import {validateSolidFaceReference,type SolidFaceReference} from "./solid-face-r
 import {isHoleThreadStandard, threadClasses, threadSpecification, type HoleClearanceFit, type HoleThreadStandard} from "./hole-standards";
 
 import {validateExtrusionPointReference, type ExtrusionPointReference} from "./extrusion-point-reference";
+import {validateExtrusionFaceReference, type ExtrusionFaceReference} from "./extrusion-face-reference";
+import {validateMirrorPlane, type MirrorPlaneReference} from "./mirror-plane";
 
 /** Where a hole starts: a point on a picked planar face (SolidCraft's `position` on a face). */
 export interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }
@@ -41,7 +43,11 @@ export interface HoleFeature {
   direction?: [number, number, number];
   /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */
   diameterMillimeters: number; depthMillimeters: number;
-  depthType: "blind" | "through-all";
+  /** Onshape's Termination: Blind by `depthMillimeters`, Up to next (through the first wall), Up to entity (`endReference`), Through all. */
+  depthType: "blind" | "through-all" | "up-to-next" | "up-to-face";
+  endReference?: ExtrusionFaceReference;
+  /** Onshape's Start plane: the hole starts where its axis first meets the part, or on a selected plane; default the sketch plane. */
+  startFrom?: "part" | { kind: "plane"; plane: MirrorPlaneReference };
   /** Counterdrill: a counterbore whose floor is the countersink cone down to the hole. */
   cutType: "plain" | "counterbore" | "countersink" | "counterdrill";
   counterDiameterMillimeters?: number; counterDepthMillimeters?: number;
@@ -75,7 +81,13 @@ export function validateHole(feature: HoleFeature, earlier: Map<string, string>,
   if (feature.direction !== undefined && !(Array.isArray(feature.direction) && feature.direction.length === 3 && feature.direction.every(Number.isFinite) && Math.hypot(...feature.direction) > 1e-9)) throw new Error("Hole direction must be a nonzero vector.");
   if (feature.profileContourId !== undefined && (typeof feature.profileContourId !== "string" || !feature.profileContourId.trim() || feature.profileContourId.length > 128)) throw new Error("Invalid hole contour reference.");
   if (!positive(feature.diameterMillimeters) || !positive(feature.depthMillimeters)) throw new Error("Hole diameter and depth must be positive.");
-  if (!["blind", "through-all"].includes(feature.depthType) || !["plain", "counterbore", "countersink", "counterdrill"].includes(feature.cutType)) throw new Error("Invalid hole type.");
+  if (!["blind", "through-all", "up-to-next", "up-to-face"].includes(feature.depthType) || !["plain", "counterbore", "countersink", "counterdrill"].includes(feature.cutType)) throw new Error("Invalid hole type.");
+  if (feature.depthType === "up-to-face") validateExtrusionFaceReference(feature.endReference, earlier, missing as (id: string) => boolean);
+  else if (feature.endReference !== undefined) throw new Error("A stopping face belongs to an Up to entity hole.");
+  if (feature.startFrom !== undefined && feature.startFrom !== "part") {
+    if (typeof feature.startFrom !== "object" || feature.startFrom.kind !== "plane") throw new Error("Hole start must be the part or a plane.");
+    validateMirrorPlane(feature.startFrom.plane, earlier, missing as (id: string) => boolean, "Hole start plane");
+  }
   if (feature.reversed !== undefined && typeof feature.reversed !== "boolean") throw new Error("Invalid hole direction.");
   if (feature.cutType !== "plain" && (!positive(feature.counterDiameterMillimeters) || feature.counterDiameterMillimeters! <= feature.diameterMillimeters))
     throw new Error("Head diameter must exceed the hole diameter.");

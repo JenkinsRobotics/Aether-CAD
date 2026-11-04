@@ -3,7 +3,7 @@ import {validatePlanarFaceAnchor,type PlanarFaceAnchor} from './planar-face-anch
 export const curvedSurfaceTypes=['cylinder','cone','sphere','torus','bspline','bezier','extrusion','revolution'] as const;
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];
 export type CurvedSurfaceAnchor={surfaceType:CurvedSurfaceType;faceAnchor?:PlanarFaceAnchor};
-interface FaceSource {sourceFeatureId:string;bodyId:string;label:string;faceAnchor?:PlanarFaceAnchor}
+interface FaceSource {sourceFeatureId:string;bodyId:string;label:string;faceAnchor?:PlanarFaceAnchor;/** A cylindrical face's radius, for sizes read from the face (a thread). */radiusMillimeters?:number}
 export type SolidFaceReference=FaceSource & (
   {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
 );
@@ -16,6 +16,7 @@ export function validateSolidFaceReference(ref:SolidFaceReference|undefined,
       ['profile','sketch','plane','axis','point','thread','curve3d'].includes(earlier.get(ref.sourceFeatureId)??'')||!id(ref.bodyId)||!id(ref.label,512))
     throw Error(`${label} needs an earlier solid face reference.`);
   validatePlanarFaceAnchor(ref.faceAnchor);
+  if(ref.radiusMillimeters!==undefined&&!(typeof ref.radiusMillimeters==='number'&&Number.isFinite(ref.radiusMillimeters)&&ref.radiusMillimeters>0))throw Error(`${label} has an invalid radius.`);
   if(ref.surfaceType!==undefined){
     if(!curvedSurfaceTypes.includes(ref.surfaceType)||ref.normal!==undefined)throw Error(`${label} has an invalid curved surface reference.`);
   }else if(!Array.isArray(ref.normal)||ref.normal.length!==3||!ref.normal.every(Number.isFinite)||Math.abs(Math.hypot(...ref.normal)-1)>1e-6){

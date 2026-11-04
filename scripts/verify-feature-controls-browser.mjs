@@ -90,6 +90,45 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude: native anchor, secondary readout, explicit units, save and reopen');
 
+  const thin = base('Native thin draft controls');
+  thin.features = [sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]), {
+    id: 'e', type: 'extrude', name: 'Extrude 1', suppressed: false, profileFeatureId: 's', profileContourId: 'outline', operation: 'new',
+    distanceMillimeters: 10, draftAngleDegrees: 3, thin: { thickness1Millimeters: 2, thickness2Millimeters: 1 },
+  }];
+  const thinFile = await open(thin);
+  await page.evaluate(() => window.__aetherSetView?.('isometric')); await row(/^Extrude 1/).dblclick();
+  const draftRing = page.getByRole('button', { name: 'Draft angle', exact: true });
+  await draftRing.focus(); await expect(draftRing).toHaveAttribute('aria-disabled', 'false', { timeout: 45000 });
+  await draftRing.press('ArrowUp');
+  await expect(dialog().locator('[aria-label^="Draft angle ("]')).toHaveValue('4');
+  const thickness = page.getByRole('button', { name: 'Wall thickness 1', exact: true });
+  await thickness.focus(); await expect(thickness).toBeEnabled({ timeout: 45000 }); await thickness.press('ArrowUp');
+  await expect(dialog().locator('[aria-label="Thickness 1 (mm)"]')).toHaveValue('3');
+  const inside = page.getByRole('button', { name: 'Wall thickness 2', exact: true });
+  await inside.focus(); await expect(inside).toBeEnabled({ timeout: 45000 }); await inside.press('ArrowDown');
+  await expect(dialog().locator('[aria-label="Thickness 2 (mm)"]')).toHaveValue('0');
+  const wallReadout = page.locator('.aui-manipulator-readout[aria-label="Wall thickness 2"]');
+  await expect(wallReadout).toBeEnabled({ timeout: 45000 });
+  await wallReadout.fill('-1 mm'); await wallReadout.press('Enter');
+  await expect(dialog().locator('[aria-label="Thickness 2 (mm)"]')).toHaveValue('0');
+  await wallReadout.fill('0 mm'); await wallReadout.press('Enter');
+  await expect.poll(() => page.evaluate(() => {
+    const model = window.__qualificationPreview; if (!model) return null;
+    let y = Infinity;
+    for (const part of (model.featurePreview?.added ?? model.parts)) for (let i=0;i<part.vertices.length;i+=3) {
+      if (Math.abs(part.vertices[i+2] - 10) < .00001) y=Math.min(y,part.vertices[i+1]);
+    }
+    return Number(y.toFixed(4));
+  }), { timeout: 45000 }).toBe(Number((-3 + 10 * Math.tan(4 * Math.PI / 180)).toFixed(4)));
+  await page.screenshot({ path: join(evidence, 'extrude-thin-draft-controls.png') });
+  await accept();
+  await expect.poll(async () => (await stored(thinFile.id)).features.at(-1).thin.thickness1Millimeters, { timeout: 30000 }).toBe(3);
+  await page.reload(); await row(/^Extrude 1/).dblclick();
+  await expect.poll(async () => Number(await dialog().locator('[aria-label^="Draft angle ("]').inputValue())).toBe(4);
+  await expect.poll(async () => Number(await dialog().locator('[aria-label="Thickness 2 (mm)"]').inputValue())).toBe(0);
+  await dialog().locator('[data-feature-action="discard"]').click();
+  results.push('Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen');
+
   const shaft = () => {
     const doc = base('Stepped native shaft');
     doc.features = [sketch('s', 'XZ', [[10, 0], [20, 0], [20, 10], [15, 10], [15, 25], [10, 25]]),

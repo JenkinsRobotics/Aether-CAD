@@ -645,7 +645,7 @@ window.addEventListener('aether-native-extrusion-handle',event=>{
 });
 window.addEventListener('aether-native-angle-handle',event=>{
   const request=(event as CustomEvent).detail;
-  request.respond(viewer.projectAngleHandle(request.origin,request.axis,request.angle,request.start));
+  request.respond(viewer.projectAngleHandle(request.origin,request.axis,request.angle,request.start,request.screenRadius));
 });
 window.addEventListener('aether-transform-handles',event=>{
   const request=(event as CustomEvent).detail;

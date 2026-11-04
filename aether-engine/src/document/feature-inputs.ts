@@ -27,7 +27,7 @@ export function featureInputDependencies(
   };
 
   if ('profileFeatureId' in feature && feature.profileFeatureId) inputs.add(feature.profileFeatureId);
-  if ('sourceFeatureId' in feature) inputs.add(feature.sourceFeatureId);
+  if ('sourceFeatureId' in feature && feature.sourceFeatureId) inputs.add(feature.sourceFeatureId);
   if ('pathFeatureId' in feature) inputs.add(feature.pathFeatureId);
   if ('bodyIds' in feature) feature.bodyIds?.forEach(body);
   if ('toolBodyIds' in feature) feature.toolBodyIds.forEach(body);
@@ -64,16 +64,18 @@ export function featureInputDependencies(
         reference(feature.direction);
         reference(feature.second?.direction);
       }
+      if (feature.patternType === 'polar') reference(feature.axisReference);
       break;
-    case 'split': case 'split-face': case 'surface-trim': reference(feature.plane); break;
+    case 'split': reference(feature.plane); reference(feature.tool); break;
+    case 'split-face': case 'surface-trim': reference(feature.plane); break;
     case 'mirror': reference(feature.mirrorPlane); break;
     case 'offset-face': reference(feature.replaceWith); break;
     case 'chamfer': reference(feature.referenceFace); break;
     case 'shell': reference(feature.removedFaces); break;
-    case 'draft': reference(feature.neutralFace); break;
-    case 'loft': reference(feature.startPoint); reference(feature.endPoint); break;
+    case 'draft': reference(feature.neutralFace); reference(feature.pullPlane); reference(feature.partingEdges); break;
+    case 'loft': reference(feature.startPoint); reference(feature.endPoint); reference(feature.path); reference(feature.connections); break;
     case 'sweep': reference(feature.rail); break;
-    case 'hole': reference(feature.placement); break;
+    case 'hole': reference(feature.placement); reference(feature.endReference); if (typeof feature.startFrom === 'object') reference(feature.startFrom.plane); break;
     case 'sheet-fold': reference(feature.line); break;
     case 'surface-blend':
       for (const side of [feature.from, feature.to]) { body(side.bodyId); reference(side.edges); }

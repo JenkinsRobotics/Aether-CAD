@@ -1,38 +1,49 @@
+/** Enclose (Boundary Fill), as Onshape's (help: PartStudio/enclose.htm): New / Add / Remove /
+ *  Intersect, Entities (the parts and surfaces that bound the region), Keep tools and the Merge
+ *  scope. This kernel fills the cells the tools cut space into, one picked point per cell; Onshape
+ *  finds the enclosed region itself, which is a recorded gap, so the Cell points row stays. */
 import { availableBodies } from "@aether/core/document";
 import { parsePoints3D } from "./curve3d";
-import type { FeatureEditor } from "./shared";
+import { mountPartBox } from "./part-box";
+import { checkRow, operationTabs, rowIn, type FeatureEditor } from "./shared";
 
-/** Boundary Fill: tool bodies cut space into cells; a point inside each picked cell fills it. */
 export const boundaryFillEditor: FeatureEditor = {
   type: "boundary-fill",
   handles: false,
-  controls({ field, feature }) {
+  controls({ field, feature, doc }) {
     return {
       operation: field("Operation", feature?.operation ?? "new", ["new", "add", "cut", "intersect"]),
       tools: field("Tool body IDs", JSON.stringify(feature?.toolBodyIds ?? [])),
       cells: field("Cell points (x y z; …) mm", feature ? feature.cellPointsMillimeters.map((p: number[]) => p.join(" ")).join("; ") : ""),
-      remove: field("Remove tools", feature?.removeTools ? "yes" : "no", ["no", "yes"]),
+      keep: field("Keep tools", feature ? (feature.removeTools ? "false" : "true") : "false", ["false", "true"]),
+      mergeScope: field("Merge scope part", JSON.stringify(feature?.targetBodyId ? [feature.targetBodyId] : availableBodies(doc).at(-1) ? [availableBodies(doc).at(-1)!.id] : [])),
     };
   },
-  layout({ doc, feature, form, win }, controls) {
+  layout(context, controls) {
+    const { doc, feature, form, win } = context;
     const end = feature ? doc.features.findIndex((f) => f.id === feature.id) : doc.rollbackIndex ?? doc.features.length;
     const bodies = availableBodies({ ...doc, features: doc.features.slice(0, end), rollbackIndex: undefined });
-    controls.tools.closest("label")?.remove(); controls.tools.hidden = true; controls.tools.setAttribute("form", form.id); form.append(controls.tools);
-    const box = win.entitiesBox("Tool bodies"), list = document.createElement("div"); box.element.append(list); win.body.prepend(box.element);
-    const selected = (): string[] => JSON.parse(controls.tools.value);
-    for (const body of bodies) {
-      const label = document.createElement("label"); label.className = "aui-feature-entity";
-      const input = document.createElement("input"); input.type = "checkbox"; input.checked = selected().includes(body.id); input.setAttribute("aria-label", `Use ${body.name} as a boundary`);
-      input.onchange = () => { controls.tools.value = JSON.stringify(input.checked ? [...selected(), body.id] : selected().filter((id) => id !== body.id)); controls.tools.dispatchEvent(new Event("change")); };
-      label.append(input, document.createTextNode(body.name)); list.append(label);
-    }
+    operationTabs(win, form, controls.operation, ["new", "add", "cut", "intersect"], ["New", "Add", "Remove", "Intersect"]);
+    const entities = mountPartBox(context, controls.tools, "Entities", bodies);
+    win.body.append(entities.element);
+    controls.cells.closest("label")?.remove(); controls.cells.setAttribute("form", form.id);
+    win.body.append(rowIn("Cell points (x y z; …)", controls.cells));
+    const note = document.createElement("p"); note.textContent = "A point inside each enclosed region to fill, in document millimetres. Onshape finds the enclosed region itself: a recorded gap."; win.addHelp(note);
+    checkRow(context, controls.keep, "Keep tools");
+    const scope = mountPartBox(context, controls.mergeScope, "Merge scope", bodies, () => "", { single: true });
+    win.body.append(scope.element);
+    controls.mergeScope.addEventListener("change", () => { const id = JSON.parse(controls.mergeScope.value || "[]")[0]; if (id) { controls.target.value = id; controls.target.dispatchEvent(new Event("change")); } });
+    const sync = () => { scope.element.hidden = controls.operation.value === "new"; };
+    controls.operation.addEventListener("change", sync); sync();
+    entities.element.dispatchEvent(new Event("pointerdown"));
   },
   validate(controls) {
-    if (!(JSON.parse(controls.tools.value) as string[]).length) return "Choose the tool bodies that bound the cells.";
-    try { if (!parsePoints3D(controls.cells.value).length) return "Enter a point inside each cell to fill."; } catch (error) { return (error as Error).message; }
+    if (!(JSON.parse(controls.tools.value) as string[]).length) return "Select the parts and surfaces that enclose the region.";
+    try { if (!parsePoints3D(controls.cells.value).length) return "Enter a point inside each enclosed region to fill."; } catch (error) { return (error as Error).message; }
+    if (controls.operation.value !== "new" && !JSON.parse(controls.mergeScope.value || "[]").length) return "Select the merge scope part.";
     return null;
   },
   serialize(values) {
-    return { operation: values.operation, toolBodyIds: JSON.parse(values.tools), cellPointsMillimeters: parsePoints3D(values.cells), ...(values.remove === "yes" ? { removeTools: true } : {}) };
+    return { operation: values.operation, toolBodyIds: JSON.parse(values.tools), cellPointsMillimeters: parsePoints3D(values.cells), ...(values.keep === "true" ? {} : { removeTools: true }), ...(values.operation !== "new" ? { targetBodyId: JSON.parse(values.mergeScope || "[]")[0] } : {}) };
   },
 };

@@ -83,8 +83,14 @@ export const extrudeEditor: FeatureEditor = {
     function sync(){const mode=controls.endType.value;pointPicker.setEnabled(mode==="up-to-vertex");partPicker.setEnabled(mode==="up-to-part");stopHelp.hidden=mode!=="up-to-face";facePicker.setEnabled(mode==="up-to-face");setExtrudeProfilePicking(controls,!(controls.startEnabled.value==="true"&&controls.startMode.value==="face")&&!["up-to-face","up-to-part","up-to-vertex"].includes(mode)&&!( !mode.startsWith("symmetric")&&controls.secondEnabled.value==="true"&&["up-to-face","up-to-part","up-to-vertex"].includes(controls.secondEndType.value)));endOffset.hidden=!["up-to-next","up-to-face","up-to-part","up-to-vertex"].includes(mode);depth.hidden=mode!=="blind"&&mode!=="symmetric";symmetricRow.hidden=!["blind","symmetric","through-all","symmetric-through-all"].includes(mode);symmetric.checked=mode.startsWith("symmetric");}
     for(const control of [controls.endType,controls.secondEnabled,controls.secondEndType,controls.startEnabled,controls.startMode])control.addEventListener("change",sync);sync();
     mountNativeExtrusionHandles(win.panel,controls,lengthUnitLabel);
-    mountPreviewHandles(win.panel,controls,{length:lengthUnitLabel,angle:context.angleUnitLabel},{}, {
+    mountPreviewHandles(win.panel,controls,{length:lengthUnitLabel,angle:context.angleUnitLabel},{oppositeDraftAngle:'draftAngle'}, {
       offset:()=>controls.startEnabled.value==='true',
+      draftAngle:()=>controls.draftEnabled.value==='true',
+      oppositeDraftAngle:()=>controls.draftEnabled.value==='true'&&controls.endType.value==='symmetric',
+      secondDraftAngle:()=>controls.secondEnabled.value==='true'&&controls.secondDraftEnabled.value==='true'&&!controls.endType.value.startsWith('symmetric'),
+      thickness1:()=>controls.creationMode.value==='thin'&&controls.midplane.value!=='true',
+      thickness2:()=>controls.creationMode.value==='thin'&&controls.midplane.value!=='true',
+      midThickness:()=>controls.creationMode.value==='thin'&&controls.midplane.value==='true',
     });
   },
   validate(controls) {

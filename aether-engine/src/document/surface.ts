@@ -59,7 +59,11 @@ export interface SurfaceThickenFeature {
   id: string; type: "surface-thicken"; name: string; suppressed: boolean;
   bodyIds: string[];
   thicknessMillimeters: number;
+  /** Onshape's Thickness 2: the other side's own amount (not with Mid plane). */
+  secondThicknessMillimeters?: number;
   symmetric?: boolean;
+  /** Onshape's Keep tools: false consumes the sheets; absent (older records) keeps them. */
+  keepTools?: boolean;
   operation: "new" | "add" | "cut";
   targetBodyId?: string;
 }
@@ -219,6 +223,8 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
     case "surface-thicken":
       ids(feature.bodyIds, "Thicken");
       if (!finite(feature.thicknessMillimeters) || feature.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
+      if (feature.secondThicknessMillimeters !== undefined && (!finite(feature.secondThicknessMillimeters) || feature.secondThicknessMillimeters <= 0 || feature.symmetric)) throw new Error("Thickness 2 must be positive, and not with Mid plane.");
+      if (feature.keepTools !== undefined && typeof feature.keepTools !== "boolean") throw new Error("Keep tools must be true or false.");
       if (!["new", "add", "cut"].includes(feature.operation)) throw new Error("Thicken makes a new body, adds or cuts.");
       return;
     case "surface-stitch":

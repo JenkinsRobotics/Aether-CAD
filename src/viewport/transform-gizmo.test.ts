@@ -53,3 +53,13 @@ it('rings through a start point: zero at the start, the arc swept to the angle, 
  // At 90° the sweep travels towards −x on screen (counter-clockwise seen from +z).
  expect(Math.abs(Math.abs(ring.tangent)-180)).toBeLessThan(3);
 });
+
+it('keeps a compact draft ring independent of feature depth while preserving its true rotation plane',()=>{
+ const c=camera('orthographic'),origin=new Vector3(0,0,0),axis=new Vector3(1,0,0);
+ const small=projectAngleRing(c,rect,origin,axis,4,new Vector3(0,0,1),true)!;
+ const deep=projectAngleRing(c,rect,origin,axis,4,new Vector3(0,0,1000),true)!;
+ expect(small.points).toEqual(deep.points);
+ expect(small.valueAt(small.x,small.y)).toBeCloseTo(4,7);
+ const centre=screen(c,origin);
+ expect(Math.max(...small.points.map(p=>Math.hypot(p.x-centre.x,p.y-centre.y)))).toBeLessThan(100);
+});
