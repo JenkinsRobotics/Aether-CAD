@@ -8,7 +8,12 @@ import { openCompactFeatureWindow, openFeatureWindow, ToolIcon, toolIconNames, t
 export type FeatureWindowStyle = "compact" | "standard";
 const KEY = "aether-cad.feature-window-style";
 
+/** A page-local preview of one style (the Aether UI gallery's toggle) that never touches the saved choice. */
+let preview: FeatureWindowStyle | null = null;
+export function previewFeatureWindowStyle(style: FeatureWindowStyle | null): void { preview = style; }
+
 export function featureWindowStyle(): FeatureWindowStyle {
+  if (preview) return preview;
   try { return localStorage.getItem(KEY) === "standard" ? "standard" : "compact"; } catch { return "compact"; }
 }
 export function setFeatureWindowStyle(style: FeatureWindowStyle): void {

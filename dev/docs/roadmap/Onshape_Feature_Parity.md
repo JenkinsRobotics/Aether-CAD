@@ -306,6 +306,15 @@ Every item below is a requirement, not a suggestion; each is closed only with a 
   Gate note: `verify-modeling-browser` failed once at the Sheet Base step (Hole 13 and Revolve 14
   reported "Cut removes no material" on a full-timeline replay) and passed on an immediate rerun of the
   same build; the replay nondeterminism is open.
+- alpha-0.1.97: Fillet and Chamfer accept picked curved faces (cylinder, cone, sphere, torus and the
+  free-form kinds) as Onshape's "Face of Revolve 1": the viewer references a non-planar face by its
+  surface type, centre and area (`viewport/planar-face-reference.ts` `nativeFaceReference`), which the
+  evaluator already resolved; before, only planar faces produced a reference and every curved-face pick
+  was refused as "Select native faces on earlier solid parts". Their Target body box is gone: the body
+  is the picked entities' body, as Onshape's. The chamfer types already match (Equal distance, Two
+  distances, Distance and angle; Offset or Tangent distance; flip; direction overrides); the Measurement
+  row now sits above the type, as Onshape's. Gap: Onshape offers Tangent distance for every chamfer
+  type; ours only for Equal distance (`solid-features.ts` refuses it with a second distance or angle).
 
 One rule, no modes: the select tool resolves by proximity to the hit point — a vertex within
 6 px, else an edge within 12 px (distance to the engine's sampled polyline), else the face under

@@ -32,13 +32,13 @@ export const chamferEditor: FeatureEditor = {
     controls.chamferType.closest("label")?.remove(); controls.chamferType.hidden = true; controls.chamferType.setAttribute("form", form.id); form.append(controls.chamferType);
     const picker = win.picker(Object.keys(chamferTypes), { ariaLabel: "Chamfer type menu", onChange: (value) => { controls.chamferType.value = chamferTypes[value as keyof typeof chamferTypes]; sync(); controls.chamferType.dispatchEvent(new Event("change")); } });
     picker.setValue(Object.keys(chamferTypes).find((key) => chamferTypes[key as keyof typeof chamferTypes] === controls.chamferType.value) ?? "Equal distance");
-    win.body.append(picker.element);
     const row = (label: string, control: Controls[string], unit: string) => { control.closest("label")?.remove(); control.setAttribute("form", form.id); return win.body.appendChild(rowIn(label, control, unitSuffix(unit))); };
     controls.measurement.closest("label")?.remove(); controls.measurement.hidden = true; controls.measurement.setAttribute("form", form.id); form.append(controls.measurement);
     const measurements = { Offset: "offset", "Tangent distance": "tangent" } as const;
     const measurement = win.picker(Object.keys(measurements), { ariaLabel: "Measurement menu", onChange: (value) => { controls.measurement.value = measurements[value as keyof typeof measurements]; sync(); controls.measurement.dispatchEvent(new Event("change")); } });
     measurement.setValue(controls.measurement.value === "tangent" ? "Tangent distance" : "Offset");
     const measurementRow = win.body.appendChild(win.row("Measurement", measurement.element));
+    win.body.append(picker.element);
     const distance = row("Distance", controls.radius, lengthUnitLabel);
     // Onshape's direction flip: the first leg moves to the other adjacent face on every edge.
     controls.flipped.closest("label")?.remove(); controls.flipped.hidden = true; controls.flipped.setAttribute("form", form.id); form.append(controls.flipped);

@@ -4,7 +4,7 @@ import { cadCommands, isCADCommandID, type CADCommandID } from '../src/cad-comma
 import { cadRibbonWorkspaces, type CADToolDefinition } from '../src/tools';
 import { mountFeatureAuthoring } from '../src/feature-authoring';
 import { mountSketch3DWorkspace } from '../src/sketch3d-workspace';
-import { featureWindowStyle, setFeatureWindowStyle, type FeatureWindowStyle } from '../src/features/feature-window-style';
+import { featureWindowStyle, previewFeatureWindowStyle, type FeatureWindowStyle } from '../src/features/feature-window-style';
 
 /** The live CAD feature windows, opened by the same commands the ribbon runs,
  *  on a sample box Part, every one in its own card so the whole set reads at a
@@ -75,7 +75,8 @@ export function LiveFeatureEditors({ search }: { search: string }) {
     entries: section.entries.filter(entry => entry.label.toLowerCase().includes(search.trim().toLowerCase())) }))
     .filter(section => section.entries.length), [state, search]);
   const count = list.reduce((sum, section) => sum + section.entries.length, 0);
-  const choose = (next: FeatureWindowStyle) => { setFeatureWindowStyle(next); setStyle(next); };
+  // The gallery previews a style on this page only; the product's saved choice stays in Settings.
+  const choose = (next: FeatureWindowStyle) => { previewFeatureWindowStyle(next); setStyle(next); };
   return <div className="cad-live-editors">
     <nav className="cad-live-styles" aria-label="Feature window design">
       {(['compact', 'standard'] as const).map(option => <button key={option} type="button" aria-pressed={style === option} onClick={() => choose(option)}>

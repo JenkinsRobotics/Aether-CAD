@@ -70,7 +70,8 @@ it("recovers Drawing edits against their original revision and refuses a conflic
   const drawing = createDrawingDocument(source), oldBytes = tabArchive(drawing, "drawing").bytes; drawing.name = "Recovered drawing";
   const bytes = tabArchive(drawing, "drawing").bytes;
   files.set("drawing", { id: "drawing", name: "Bracket Drawing.aethercad", revision: 2, writable: true, data_base64: b64(oldBytes) });
-  const key = recoveryKey("cad", "operator", "drawing:::");
+  // The scope names the open Drawing tab, so a recovery belongs to the tab it was taken from.
+  const key = recoveryKey("cad", "operator", `drawing:${drawing.documentId}::`);
   sessionStorage.setItem(key, JSON.stringify({ text: JSON.stringify({ name: "Bracket Drawing.aethercad", data: Array.from(bytes) }), base: { id: "drawing", name: "Bracket Drawing.aethercad", revision: 1, writable: true } }));
   const host = await import("./host-library");
   host.configureAutosave(async () => {}, () => tabArchive(drawing, "drawing"));

@@ -45,7 +45,6 @@ export interface ConnectorCandidate extends ConnectorFrameData {
 }
 
 export interface FaceTopologyData {
-  surfaceReference?: import("../document/extrusion-face-reference").CurvedSurfaceAnchor;
   measurements?: TopologyMeasurements;
   id: number;
   surfaceType: string;

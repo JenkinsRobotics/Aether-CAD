@@ -346,7 +346,7 @@ const presentFeatureWindow = (
       // Element, which carries no `hidden`.
       const row = (controls.target.closest(".aui-feature-row") ??
         controls.target.parentElement) as HTMLElement | null;
-      if (row) row.hidden = ["offset-face","transform","split","delete-face","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
+      if (row) row.hidden = ["fillet","chamfer","offset-face","transform","split","delete-face","thread","axis","point","curve3d","remove-body","boss","rest","lip","snap-fit","split-face","sheet-base","sheet-flange","sheet-hem","sheet-fold","sheet-unfold","sheet-refold","sheet-perforate","surface-fair","surface-trim","surface-boundary","surface-blend","surface-untrim","surface-ruled","surface-extend","surface-extrude","surface-revolve","surface-loft","surface-patch","surface-sweep","surface-offset","surface-stitch","surface-unstitch","surface-reverse-normal"].includes(type) || controls.operation?.value === "new" || controls.scopeMode?.value === "all";
     };
     controls.operation?.addEventListener("change", targetVisibility);
     controls.scopeMode?.addEventListener("change", targetVisibility);
@@ -417,6 +417,8 @@ const presentFeatureWindow = (
         if (feature?.bodyId) next.bodyId = feature.bodyId;
         if (!["offset-face","transform"].includes(type) && values.target && values.operation !== "new" && next.scopeMode!=="all")
           next.targetBodyId = values.target;
+        // Fillet and Chamfer name no body (Onshape): the picked entities' body is the target.
+        if (["fillet","chamfer"].includes(type) && next.edges?.length) next.targetBodyId = next.edges[0].bodyId;
         const candidate = structuredClone(doc);
         if (existing) candidate.features[candidate.features.findIndex(f => f.id === existing.id)] = next;
         return existing ? candidate : insertFeature(candidate, next);

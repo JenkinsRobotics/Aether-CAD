@@ -1,5 +1,5 @@
 import type {ConnectorCandidate, FaceTopologyData} from '@aether/core/contracts';
-import type {PlanarFaceAnchor} from '@aether/core/document';
+import type {CurvedSurfaceType,PlanarFaceAnchor,SolidFaceReference} from '@aether/core/document';
 import {connectorAxes} from '@aether/core/geometry';
 
 /** Connector markers are deduplicated for display. A circle center can replace
@@ -36,4 +36,24 @@ export function anchorForPlanarFace(topology:readonly FaceTopologyData[],faceId:
  if(area===undefined||!Number.isFinite(area)||area<=0)return null;
  const anchor:PlanarFaceAnchor={centerMillimeters:[...center.origin],areaSquareMillimeters:area};
  return planarFaceCandidates(topology,center.zAxis,anchor).length===1?anchor:null;
+}
+
+/** Engine surface names → the document's curved surface types (the evaluator's surfaceKinds). */
+const curvedSurfaceTypeOf:Record<string,CurvedSurfaceType>={CYLINDER:'cylinder',CYLINDRE:'cylinder',CONE:'cone',SPHERE:'sphere',TORUS:'torus',BSPLINE_SURFACE:'bspline',BEZIER_SURFACE:'bezier',EXTRUSION_SURFACE:'extrusion',REVOLUTION_SURFACE:'revolution'};
+
+export type NativeFaceReference=Omit<SolidFaceReference,'sourceFeatureId'|'bodyId'|'label'>&{centerMillimeters?:[number,number,number]};
+
+/** A picked face as the document references it: a planar face by its normal, with an anchor when
+ *  other planar faces share that normal; any other face by its surface type with its centre and
+ *  area. The evaluator matches either on the body as it was at the source feature. Null when the
+ *  face cannot be told apart (or, for a plane, was not measured). */
+export function nativeFaceReference(topology:readonly FaceTopologyData[],face:FaceTopologyData):NativeFaceReference|null {
+ if(face.surfaceType==='PLANE'){
+  const center=planarFaceCenter(face),faceAnchor=anchorForPlanarFace(topology,face.id);
+  if(!center||faceAnchor===null)return null;
+  return {normal:[...center.zAxis] as [number,number,number],...(faceAnchor?{faceAnchor}:{}),centerMillimeters:[...center.origin] as [number,number,number]};
+ }
+ const surfaceType=curvedSurfaceTypeOf[face.surfaceType],center=face.measurements?.centerMillimeters,area=face.measurements?.areaSquareMillimeters;
+ if(!surfaceType||!center||!(area!==undefined&&area>0))return null;
+ return {surfaceType,faceAnchor:{centerMillimeters:[...center] as [number,number,number],areaSquareMillimeters:area}};
 }

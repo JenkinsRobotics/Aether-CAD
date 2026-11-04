@@ -1053,3 +1053,23 @@ it('lists a pick candidate for every edge of every face, including edges a boole
  for(const candidate of edgeCandidates) expect((candidate.polylineMillimeters?.length??0)>=6).toBe(true);
  expect(topology.every(f=>f.surfaceType!=='UNAVAILABLE')).toBe(true);
 },60000);
+
+it('fillets a picked curved face by its surface reference, the same as picking its edges', async () => {
+ // A stepped profile revolved 180° (Jonathan's wheel, 2026-11-03): the outer cylinder face is
+ // picked as a face; its reference is the surface type with the face's centre and area.
+ const {createEmptyPartDocument}=await import('../document/part-document');
+ const doc=createEmptyPartDocument('Half revolve');
+ doc.features.push(
+  {id:'p',type:'profile',name:'Profile',plane:'XZ',offsetMillimeters:0,suppressed:false,profile:{type:'polygon',pointsMillimeters:[[10,0],[60,0],[60,20],[40,20],[40,50],[10,50]]}},
+  {id:'rev',type:'revolve',name:'Revolve',suppressed:false,profileFeatureId:'p',axis:'Z',angleDegrees:180,operation:'new',bodyId:'body'} as any);
+ const built=evaluatePartDocument(doc).parts[0];
+ const outer=built.topology.find(f=>f.surfaceType==='CYLINDER'&&Math.abs(f.measurements!.radiusMillimeters!-60)<1e-6)!;
+ const volumeOf=(d:typeof doc)=>{let v=0;evaluatePartDocument(d,{withBodies:b=>{for(const s of b.values())v=measureVolume(s as Shape3D);}});return v;};
+ const withFillet=(edges:unknown[])=>({...doc,features:[...doc.features,{id:'f',type:'fillet' as const,name:'Fillet',suppressed:false,radiusMillimeters:2,targetBodyId:built.id,edges}]} as typeof doc);
+ const face={kind:'face-edges' as const,sourceFeatureId:'rev',bodyId:built.id,label:'Face of Revolve',surfaceType:'cylinder' as const,faceAnchor:{centerMillimeters:outer.measurements!.centerMillimeters as [number,number,number],areaSquareMillimeters:outer.measurements!.areaSquareMillimeters!}};
+ const edges=outer.candidates.filter(c=>c.kind==='edge-midpoint').map(c=>({kind:'curved-edge' as const,sourceFeatureId:'rev',bodyId:built.id,label:'Edge',midpointMillimeters:c.origin as [number,number,number],lengthMillimeters:c.measurements!.lengthMillimeters!}));
+ expect(edges).toHaveLength(4);
+ const byFace=volumeOf(withFillet([face]));
+ expect(byFace).toBeLessThan(volumeOf(doc));
+ expect(byFace).toBeCloseTo(volumeOf(withFillet(edges)),6);
+},60000);

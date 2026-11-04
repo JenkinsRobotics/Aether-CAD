@@ -21,7 +21,7 @@ import type { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { TopologyAnchorPicker, anchorSelection, anchorWorldPoint, type AnchorFace } from './viewport/topology-anchors';
 import { TopologyAnchorOverlay } from './viewport/topology-anchor-overlay';
 import { selectedCandidateId } from "./viewport/topology-selection";
-import {anchorForPlanarFace,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
+import {anchorForPlanarFace,nativeFaceReference,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
 import {pickHistoryFace} from './viewport/history-face-picking';
 import type {PlanarFaceAnchor} from '@aether/core/document';
 import { extrusionAxisDepth } from "./viewport/extrusion-axis";
@@ -714,12 +714,8 @@ export class MateViewport {
 
   private nativeFaceReference(data:NonNullable<ReturnType<MateViewport['selectedFaceData']>>) {
     const {part,topology}=data;
-    const label=`Face ${part.faceRanges.findIndex(range=>range.faceId===topology.id)+1}`;
-    if(topology.surfaceReference)return {bodyId:part.id,label,...structuredClone(topology.surfaceReference)};
-    if(topology.surfaceType!=='PLANE')return null;
-    const center=planarFaceCenter(topology),faceAnchor=anchorForPlanarFace(part.topology,topology.id);
-    if(!center||faceAnchor===null)return null;
-    return {bodyId:part.id,label,normal:[...center.zAxis] as [number,number,number],...(faceAnchor?{faceAnchor}:{}),centerMillimeters:[...center.origin] as [number,number,number]};
+    const reference=nativeFaceReference(part.topology,topology);
+    return reference?{bodyId:part.id,label:`Face ${part.faceRanges.findIndex(range=>range.faceId===topology.id)+1}`,...reference}:null;
   }
 
   selectedFaceAnchor():PlanarFaceAnchor|null|undefined {
