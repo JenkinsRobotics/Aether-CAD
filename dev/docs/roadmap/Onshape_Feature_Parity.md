@@ -69,7 +69,7 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Entities to mirror | Features to mirror | Done (features) |
 | Mirror plane: planar face, standard plane, Plane feature, mate connector | Plane box: tree plane, Plane feature, face | Done (no mate connectors) |
 | Reapply features | Reapply features row, disabled with the gap named | Kernel gap |
-| Merge scope / Merge with all | Merge with all, or the target plus additional parts (Extrude's scope, now shared by Revolve); a new revolve starts with the explicit target because the automatic scope's overlap test refused the region-pick gate's edge-touching revolve | Done (alpha-0.1.99); automatic scope on revolves open |
+| Merge scope / Merge with all | Merge with all, or the target plus additional parts (Extrude's scope, now shared by Revolve); a new revolve starts with the explicit target because the automatic scope's overlap test refused the region-pick gate's edge-touching revolve | Done (alpha-0.1.98); automatic scope on revolves open |
 
 ## Split (`src/features/split.ts`) — https://cad.onshape.com/help/Content/PartStudio/split.htm
 
@@ -125,16 +125,16 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
-| Inch / Metric | Metric / Inch tabs choose the standard family (ISO metric or UNC/UNF) | Done (alpha-0.1.99) |
-| Simple / Counterbore / Countersink | Simple / Counterbore / Countersink tabs (a saved counterdrill keeps a fourth) | Done (alpha-0.1.99) |
-| Sketch points to place holes (+ implicit mate connectors) | Sketch points to place holes: points from the list or every point of a sketch picked in the tree; one hole per point, square to its sketch | Done (alpha-0.1.99); viewport picking of sketch points and mate connectors open |
+| Inch / Metric | Metric / Inch tabs choose the standard family (ISO metric or UNC/UNF) | Done (alpha-0.1.98) |
+| Simple / Counterbore / Countersink | Simple / Counterbore / Countersink tabs (a saved counterdrill keeps a fourth) | Done (alpha-0.1.98) |
+| Sketch points to place holes (+ implicit mate connectors) | Sketch points to place holes: points from the list or every point of a sketch picked in the tree; one hole per point, square to its sketch | Done (alpha-0.1.98); viewport picking of sketch points and mate connectors open |
 | Merge scope | Merge scope box (one part) | Partial: one part |
 | Hole type: Drilled / Clearance / Tapped / PEM, with Standard, Size, fit, threads/inch, class | Hole type picker with all four; Standard, Size, Fastener fit, Thread class; PEM and pipe taps refuse with the gap named | Partial: PEM, pipe taps |
 | Diameter | Diameter | Done |
 | Start plane: part / sketch plane / selected plane | Start plane picker with all three; part and selected plane refuse with the gap named | Kernel gap: start from part / selected plane |
 | Termination: Blind / Up to next / Up to entity / Through all, flip | Termination picker with all four and the flip; Up to next and Up to entity refuse with the gap named | Kernel gap: up-to terminations |
 | Counterbore / countersink diameter and depth or angle | Counterbore diameter and depth; Countersink diameter and angle rows | Done |
-| Tip angle: 118 / 135 / Flat / Custom | Tip angle style picker: 118 degrees / 135 degrees / Flat / Custom with Tip angle | Done (alpha-0.1.99) |
+| Tip angle: 118 / 135 / Flat / Custom | Tip angle style picker: 118 degrees / 135 degrees / Flat / Custom with Tip angle | Done (alpha-0.1.98) |
 
 ## Patterns (`src/features/pattern.ts`) — linearpattern.htm, circularpattern.htm, curvepattern.htm
 
@@ -204,7 +204,7 @@ Both live in surface.ts today; move each to its own file.
 | Onshape control | Ours | Status |
 | --- | --- | --- |
 | Neutral plane / Parting line tabs | Neutral plane / Parting line tabs; Parting line disabled with the gap named | Kernel gap: parting-line draft |
-| Neutral plane (face or mate connector) | Neutral plane box (planar face), first as Onshape's | Done (alpha-0.1.99); mate connectors open |
+| Neutral plane (face or mate connector) | Neutral plane box (planar face), first as Onshape's | Done (alpha-0.1.98); mate connectors open |
 | Entities to draft | Entities to draft box | Done |
 | Draft angle + arrow manipulator, flip | Draft angle with the flip button | Partial: handle open |
 | Tangent propagation | Tangent propagation row, disabled with the gap named | Kernel gap |
