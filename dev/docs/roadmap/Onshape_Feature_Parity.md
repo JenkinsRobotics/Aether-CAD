@@ -8,7 +8,7 @@ on the same record) all carry it. Kernel gaps name the capability OCCT lacks tod
 Source pages: https://cad.onshape.com/help/Content/fillet.htm,
 https://cad.onshape.com/help/Content/chamfer.htm
 
-## Gaps closed — 2026-11-04 (alpha-0.1.99)
+## Gaps closed — 2026-11-04 (alpha-0.1.100)
 
 Every row below went through the same validated record (`feature_add` / `feature_update`), the
 kernel and the window, with a closed-form engine check in
@@ -77,7 +77,7 @@ requirements, not optional cosmetic additions.
 
 ## Extrude release blockers — 2026-11-04
 
-The shared-control/selection update is installed as CAD **alpha-0.1.99** with
+The shared-control/selection update is installed as CAD **alpha-0.1.100** with
 matching worker and UI gallery **alpha-0.1.36** (shared package alpha.275).
 That update does **not** sign off the entire Extrude feature. Continue this
 feature before granting release-ready status to Revolve, Chamfer or Fillet.
@@ -131,7 +131,7 @@ Evidence: [Thin and Draft qualification](../reality/data/Extrude_Thin_Draft_2026
 | Radius with drag manipulator | Radius with the preview handle | Done |
 | Asymmetric: second radius, flip | Asymmetric sub-setting with Second radius and flip, disabled with the gap named | Kernel gap: elliptical blend |
 | Partial fillet: start/end by position, entity or offset | Partial fillet sub-setting with Start position, End type, Second bound, disabled with the gap named | Kernel gap: edge split before blending |
-| Variable fillet: per-vertex radii, points on edge, smooth transition | Variable fillet sub-setting: End radius, Add point on edge (position 0…1 and radius rows; one law on every picked edge); Smooth transition disabled with the gap named | Done (alpha-0.1.99); smooth transition is a kernel gap |
+| Variable fillet: per-vertex radii, points on edge, smooth transition | Variable fillet sub-setting: End radius, Add point on edge (position 0…1 and radius rows; one law on every picked edge); Smooth transition disabled with the gap named | Done (alpha-0.1.100); smooth transition is a kernel gap |
 | Allow edge overflow (default on) + edges to keep | Allow edge overflow sub-setting, checked and disabled (always on here) with the Edges to keep box disabled | Kernel gap: keep-edge control |
 | Smooth fillet corners + corners to exclude | Smooth fillet corners sub-setting with Corners to exclude, disabled with the gap named | Kernel gap: vertex blends |
 
@@ -168,15 +168,15 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Tools (parts or surfaces) | Tools, picked | Done (parts) |
 | Keep tools | Keep tools | Done |
 | Targets (Subtract) | Target body box | Done |
-| Offset (Subtract): Offset all, Faces to offset, distance, flip, Reapply fillet | Offset sub-setting: Offset all with the distance and flip grows the tools before the cut; Faces to offset and Reapply fillet disabled with the gap named | Done for Offset all (alpha-0.1.99) |
+| Offset (Subtract): Offset all, Faces to offset, distance, flip, Reapply fillet | Offset sub-setting: Offset all with the distance and flip grows the tools before the cut; Faces to offset and Reapply fillet disabled with the gap named | Done for Offset all (alpha-0.1.100) |
 | Surfaces as tools | — | Open |
 
 ## Mirror (`src/features/mirror.ts`) — https://cad.onshape.com/help/Content/mirror.htm
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
-| Part / Feature / Face mirror | Part / Feature / Face tabs; parts picked into the box; Face disabled with the gap named | Done for parts and features (alpha-0.1.99) |
-| New / Add / Remove / Intersect | New / Add / Remove / Intersect tabs, all four real | Done (alpha-0.1.99) |
+| Part / Feature / Face mirror | Part / Feature / Face tabs; parts picked into the box; Face disabled with the gap named | Done for parts and features (alpha-0.1.100) |
+| New / Add / Remove / Intersect | New / Add / Remove / Intersect tabs, all four real | Done (alpha-0.1.100) |
 | Entities to mirror | Features to mirror | Done (features) |
 | Mirror plane: planar face, standard plane, Plane feature, mate connector | Plane box: tree plane, Plane feature, face | Done (no mate connectors) |
 | Reapply features | Reapply features row, disabled with the gap named | Kernel gap |
@@ -188,8 +188,8 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | --- | --- | --- |
 | Part / Face tabs | Part / Face switch as the window's first row, opening the Face split feature | Done |
 | Parts to split (parts, surfaces, curves) | Part to split (one part) | Partial: one part |
-| Entity to split with: plane, cylinder, mate connector, surface, face | Plane box: tree plane, Plane feature, any face (planar through its plane; cylinder, cone, sphere, torus by the whole surface; any face trimmed to its boundary), sketch line | Done (alpha-0.1.99); mate connectors open |
-| Keep tools, Trim to face boundaries | Keep tools (off consumes a surface tool), Trim to face boundaries (general fuse, keeps both sides) | Done (alpha-0.1.99) |
+| Entity to split with: plane, cylinder, mate connector, surface, face | Plane box: tree plane, Plane feature, any face (planar through its plane; cylinder, cone, sphere, torus by the whole surface; any face trimmed to its boundary), sketch line | Done (alpha-0.1.100); mate connectors open |
+| Keep tools, Trim to face boundaries | Keep tools (off consumes a surface tool), Trim to face boundaries (general fuse, keeps both sides) | Done (alpha-0.1.100) |
 | Keep both sides + opposite direction arrow | Keep both sides with the Opposite direction button | Done |
 
 ## Revolve (`src/features/revolve.ts`) — https://cad.onshape.com/help/Content/revolve.htm
@@ -202,7 +202,7 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Revolve axis: line, edge, cylindrical edge, circular entity, arc, mate connector | Sketch line, Axis feature, solid edge, principal axis | Partial: cylindrical/circular entities |
 | Full revolve; Blind with angle, flip, Symmetric | Same | Done |
 | Up to next / face / part / vertex | Same, both ends | Done (alpha-0.1.90) |
-| Angle offset; Offset distance + flip | Offset sub-setting (distance, flip) for the Up-to ends: the stop grown by the distance, or a vertex's arc shortened | Done (alpha-0.1.99) |
+| Angle offset; Offset distance + flip | Offset sub-setting (distance, flip) for the Up-to ends: the stop grown by the distance, or a vertex's arc shortened | Done (alpha-0.1.100) |
 | Second end position | Same controls as the first end | Done (alpha-0.1.90) |
 | Thin: Mid plane, Thickness 1/2, flip | Thin options | Check against sweep/thin module |
 | Merge scope / Merge with all | Target body | Partial |
@@ -213,11 +213,11 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | --- | --- | --- |
 | Solid / Surface / Thin, operations | Tabs | Done |
 | Faces and sketch regions to sweep | Same | Done |
-| Sweep path + opposite direction arrow | Sweep path box with the Opposite direction button (the path rebuilt reversed: where the laws start) | Done (alpha-0.1.99) |
+| Sweep path + opposite direction arrow | Sweep path box with the Opposite direction button (the path rebuilt reversed: where the laws start) | Done (alpha-0.1.100) |
 | Profile control: None / Keep profile orientation / Lock profile faces / Lock profile direction | Profile control picker with all four; Lock profile faces refuses with the gap named; Lock profile direction takes the up direction | Partial: lock profile faces |
-| Twist: Turns / Angle / Pitch, opposite, extend | Twist by Turns or Angle with Opposite direction (an auxiliary spine wound round the path) | Done (alpha-0.1.99); pitch and extend open |
+| Twist: Turns / Angle / Pitch, opposite, extend | Twist by Turns or Angle with Opposite direction (an auxiliary spine wound round the path) | Done (alpha-0.1.100); pitch and extend open |
 | Scale: scale factor | End scale | Done |
-| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip (one closed curve); Trim ends disabled with the gap named | Done (alpha-0.1.99); trim ends open |
+| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip (one closed curve); Trim ends disabled with the gap named | Done (alpha-0.1.100); trim ends open |
 | Merge scope | Merge scope box (one part) | Partial: one part |
 
 ## Loft (`src/features/loft.ts`) — https://cad.onshape.com/help/Content/loft.htm
@@ -227,8 +227,8 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Profiles, reorder | Sections | Partial: reorder |
 | Start/End profile condition: Normal, Tangent, Match tangent, Match curvature | Start and End profile condition rows, disabled with the gap named | Kernel gap: loft constraints |
 | Guides and continuity, Trim guides, Trim profiles | Guides and continuity sub-setting, disabled with the gap named | Kernel gap |
-| Path + section count | Path sub-setting with the path sketch (OCCT's pipe shell through the sections) | Done (alpha-0.1.99); section count open |
-| Connections (vertex pairs) | Connections: one sketch vertex per section, in order (several sets allowed) | Done (alpha-0.1.99) |
+| Path + section count | Path sub-setting with the path sketch (OCCT's pipe shell through the sections) | Done (alpha-0.1.100); section count open |
+| Connections (vertex pairs) | Connections: one sketch vertex per section, in order (several sets allowed) | Done (alpha-0.1.100) |
 | Show isocurves | Show isocurves row, disabled with the gap named | Gap: isocurve overlay |
 | Thin, Merge scope | Thin tab disabled (gap); Merge scope box (one part) | Partial |
 
@@ -242,8 +242,8 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Merge scope | Merge scope box (one part) | Partial: one part |
 | Hole type: Drilled / Clearance / Tapped / PEM, with Standard, Size, fit, threads/inch, class | Hole type picker with all four; Standard, Size, Fastener fit, Thread class; Straight pipe tap (BSP parallel) and Tapered pipe tap (NPT, 1°47' taper); PEM refuses with the gap named | Partial: PEM |
 | Diameter | Diameter | Done |
-| Start plane: part / sketch plane / selected plane | Start plane picker with all three (Start from part: where the axis first meets the part; selected plane: a plane box) | Done (alpha-0.1.99) |
-| Termination: Blind / Up to next / Up to entity / Through all, flip | Termination picker with all four and the flip; Up to next drills through the first wall, Up to entity stops at a picked face | Done (alpha-0.1.99) |
+| Start plane: part / sketch plane / selected plane | Start plane picker with all three (Start from part: where the axis first meets the part; selected plane: a plane box) | Done (alpha-0.1.100) |
+| Termination: Blind / Up to next / Up to entity / Through all, flip | Termination picker with all four and the flip; Up to next drills through the first wall, Up to entity stops at a picked face | Done (alpha-0.1.100) |
 | Counterbore / countersink diameter and depth or angle | Counterbore diameter and depth; Countersink diameter and angle rows | Done |
 | Tip angle: 118 / 135 / Flat / Custom | Tip angle style picker: 118 degrees / 135 degrees / Flat / Custom with Tip angle | Done (alpha-0.1.98) |
 
@@ -255,7 +255,7 @@ One window today with a Pattern type select; Onshape has three tools. Split into
 | Onshape control | Ours | Status |
 | --- | --- | --- |
 | Part / Feature / Face pattern | Part / Feature / Face tabs; Face disabled with the gap named | Partial: faces |
-| New / Add / Remove / Intersect | New / Add / Remove / Intersect tabs: a feature pattern repeats its feature's own result (as Onshape's); a part pattern makes new parts or adds, removes or intersects with the merge scope | Done (alpha-0.1.99) |
+| New / Add / Remove / Intersect | New / Add / Remove / Intersect tabs: a feature pattern repeats its feature's own result (as Onshape's); a part pattern makes new parts or adds, removes or intersects with the merge scope | Done (alpha-0.1.100) |
 | Entities to pattern | Parts to pattern box + feature chips | Done (parts, features) |
 | Linear: Direction (plane, face, edge, line, curve, mate connector) + flip, Distance, Instance count, Centered, Second direction, Skip instances | Direction box (principal axes or a picked straight edge) with flip, Distance, Instance count, Centered, Second direction with its own direction, flip, distance, count and Centered; Skip instances disabled with the gap named | Partial: direction by plane/face/curve/mate connector and skipping open |
 | Circular: Axis of pattern + flip, Angle, Instance count, Equal spacing, Centered, Skip instances | Axis of pattern box (principal axes or a picked straight edge) with flip, Angle, Instance count, Equal spacing (off: the angle is between instances), Centered; Skip instances disabled with the gap named | Partial: axis by cylindrical face/mate connector and skipping open |
@@ -268,7 +268,7 @@ One window today with a Pattern type select; Onshape has three tools. Split into
 | --- | --- | --- |
 | Entities to transform or copy | Transform part IDs (selection) | Done |
 | Translate by line (line or two points) | Translate by line | Done |
-| Translate by distance (direction + distance + arrow) | Translate by distance: a sketch line, edge or two points for the direction, the distance and the flip | Done (alpha-0.1.99) |
+| Translate by distance (direction + distance + arrow) | Translate by distance: a sketch line, edge or two points for the direction, the distance and the flip | Done (alpha-0.1.100) |
 | Translate by XYZ (fields + manipulator) | Translate XYZ + handles | Done |
 | Transform by mate connectors (from / to + flips) | Transform by faces or points (named as such) | Different: no mate connectors |
 | Rotate (axis + angle + arrow) | Rotate | Done |
@@ -282,17 +282,17 @@ Both live in surface.ts today; move each to its own file.
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
-| Thicken: New / Add / Remove / Intersect; faces and surfaces; Mid plane, Thickness 1 / 2, flip, Keep tools, Merge scope | New / Add / Remove (Intersect disabled), Faces and surfaces to thicken, Mid plane with Thickness, else Thickness 1 with the flip and Thickness 2; Keep tools; Merge scope box | Done (alpha-0.1.99); Intersect open |
-| Enclose: New / Add / Remove / Intersect; Entities (surfaces, faces, planes, parts); Keep tools; Merge scope | Enclose: the four tabs, Entities, Keep tools, Merge scope, plus a point in each region to fill | Done for the layout (alpha-0.1.99); finding the region itself is a kernel gap |
+| Thicken: New / Add / Remove / Intersect; faces and surfaces; Mid plane, Thickness 1 / 2, flip, Keep tools, Merge scope | New / Add / Remove (Intersect disabled), Faces and surfaces to thicken, Mid plane with Thickness, else Thickness 1 with the flip and Thickness 2; Keep tools; Merge scope box | Done (alpha-0.1.100); Intersect open |
+| Enclose: New / Add / Remove / Intersect; Entities (surfaces, faces, planes, parts); Keep tools; Merge scope | Enclose: the four tabs, Entities, Keep tools, Merge scope, plus a point in each region to fill | Done for the layout (alpha-0.1.100); finding the region itself is a kernel gap |
 
 ## External thread (`src/features/thread.ts`) — https://cad.onshape.com/help/Content/PartStudio/external_thread.htm
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
 | Cylinder edges (same size) | Cylindrical face box (one face) | Different: the face, not its edges |
-| Standard ANSI / ISO, Size (auto from diameter), Threads per inch / Pitch | Standard (ISO metric, UNC/UNF, BSP, NPT), Size or "Size from the cylinder's diameter", Pitch or Threads per inch read from the size | Done (alpha-0.1.99) |
+| Standard ANSI / ISO, Size (auto from diameter), Threads per inch / Pitch | Standard (ISO metric, UNC/UNF, BSP, NPT), Size or "Size from the cylinder's diameter", Pitch or Threads per inch read from the size | Done (alpha-0.1.100) |
 | End type Blind / Up to next, Length | End type picker Blind (Length) / Up to next | Done |
-| Add chamfer (distance, angle), Add undercut (diameter, length), Split face | All three real: the chamfer on the start rim, the undercut groove at the thread's end, the face split there | Done (alpha-0.1.99) |
+| Add chamfer (distance, angle), Add undercut (diameter, length), Split face | All three real: the chamfer on the start rim, the undercut groove at the thread's end, the face split there | Done (alpha-0.1.100) |
 
 ## Extrude (`src/features/extrude.ts`) — https://cad.onshape.com/help/Content/extrude.htm
 
@@ -314,13 +314,13 @@ Both live in surface.ts today; move each to its own file.
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
-| Neutral plane / Parting line tabs | Neutral plane / Parting line tabs, both real | Done (alpha-0.1.99) |
+| Neutral plane / Parting line tabs | Neutral plane / Parting line tabs, both real | Done (alpha-0.1.100) |
 | Neutral plane (face or mate connector) | Neutral plane box (planar face), first as Onshape's | Done (alpha-0.1.98); mate connectors open |
 | Entities to draft | Entities to draft box | Done |
 | Draft angle + arrow manipulator, flip | Draft angle with the flip button | Partial: handle open |
 | Tangent propagation | Tangent propagation row, checked and disabled: OCCT keeps tangent faces tangent when one is drafted, so it is always on | Done (always on) |
 | Reapply fillets | Reapply fillets row, disabled with the gap named | Kernel gap |
-| Parting line: pull direction, parting edges, propagation, One sided / Symmetric / Two sided, flip | Pull direction (a plane or planar face), Parting entities (edges), One sided / Symmetric / Two sided with a second angle, flip | Done (alpha-0.1.99); mate connectors open |
+| Parting line: pull direction, parting edges, propagation, One sided / Symmetric / Two sided, flip | Pull direction (a plane or planar face), Parting entities (edges), One sided / Symmetric / Two sided with a second angle, flip | Done (alpha-0.1.100); mate connectors open |
 
 ## Body draft (reference sent 2026-11-02)
 
@@ -332,7 +332,7 @@ parting-entity draft in the kernel. Status: Open.
 
 | Onshape control | Ours | Status |
 | --- | --- | --- |
-| Sketch profiles (rib centrelines) | Sketch profiles: the open curves of one sketch (all, or ticked) | Done (alpha-0.1.99) |
+| Sketch profiles (rib centrelines) | Sketch profiles: the open curves of one sketch (all, or ticked) | Done (alpha-0.1.100) |
 | Parts | Parts box (one part) | Done |
 | Thickness | Thickness, centred on the curve | Done |
 | Parallel / Normal to sketch plane + flip | Rib direction picker with the flip; Normal builds, Parallel refuses with the gap named | Partial: parallel is a kernel gap |
