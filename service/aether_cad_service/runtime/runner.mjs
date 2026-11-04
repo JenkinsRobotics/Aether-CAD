@@ -38160,6 +38160,29 @@ function extendedSolids(shape) {
   if (!solids) throw new Error("Geometry could not be sewn into closed shells. Import a mesh as a reference or repair the source.");
   return compound;
 }
+function extrusionPreviewAxes(options) {
+  const { center, direction: direction2, offset: offset2, primary, second, reversed: reversed2 } = options;
+  const origin2 = center.map((v2, i2) => v2 + direction2[i2] * offset2);
+  const symmetric = options.endType === "symmetric";
+  const axes = [];
+  if (primary.endType === "blind") axes.push({
+    side: "primary",
+    parameter: "distance",
+    originMillimeters: origin2,
+    direction: direction2,
+    scale: symmetric ? 0.5 : 1,
+    reversed: reversed2
+  });
+  if (second?.endType === "blind") axes.push({
+    side: "opposite",
+    parameter: symmetric ? "distance" : "second",
+    originMillimeters: origin2,
+    direction: direction2.map((v2) => -v2),
+    scale: symmetric ? 0.5 : 1,
+    reversed: reversed2
+  });
+  return axes;
+}
 class UnsupportedFeature extends Error {
   /** `fullBuild`: the full OpenCascade.js build can do this; the worker loads it and retries. */
   constructor(featureId2, what, fullBuild = false) {
@@ -42413,6 +42436,25 @@ function evaluatePartDocument(document2, options = {}) {
                 primary.distance = feature3.distanceMillimeters / 2;
                 second = { endType: mode, distance: feature3.distanceMillimeters / 2, endOffset: 0, draft: primary.draft };
               }
+              if (feature3.id === previewId && !previewHandles.some((handle) => handle.parameter === "offset")) {
+                previewAxes.push(...extrusionPreviewAxes({
+                  center: sketchCentroid(feature3.profileFeatureId),
+                  direction: direction2,
+                  offset: offset2,
+                  endType,
+                  primary,
+                  second,
+                  reversed: Boolean(feature3.reversed)
+                }));
+                publish(feature3, {
+                  parameter: "offset",
+                  kind: "linear",
+                  signed: true,
+                  originMillimeters: add$4(sketchCentroid(feature3.profileFeatureId), scale$1(direction2, offset2 - (feature3.startingOffsetMillimeters ?? 0))),
+                  direction: direction2,
+                  label: "Starting offset"
+                });
+              }
               const drafted = Boolean(primary.draft || second?.draft);
               if (drafted && custom && Math.abs(dot$6(direction2, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
               if (drafted && !shape.sections) throw new UnsupportedFeature(feature3.id, "drafted thin extrusions");
@@ -43007,12 +43049,6 @@ function evaluatePartDocument(document2, options = {}) {
               }
               return isShape3D(shape) ? own(shape).simplify() : shape;
             };
-            if (feature3.type === "extrude" && feature3.id === previewId) {
-              const frame2 = sketchFrameOf(feature3.profileFeatureId), n2 = unit$3(frame2.normal), c2 = sketchCentroid(feature3.profileFeatureId);
-              const symmetric = feature3.endType === "symmetric" || feature3.endType === "symmetric-through-all";
-              previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c2, direction: n2, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature3.reversed) });
-              if (feature3.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c2, direction: [-n2[0], -n2[1], -n2[2]], scale: 1, reversed: Boolean(feature3.reversed) });
-            }
             const result = own(feature3.type === "extrude" ? feature3.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen) : revolve());
             if (!isShape3D(result))
               throw new Error("Feature did not produce a solid.");

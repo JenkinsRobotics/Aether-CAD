@@ -29,7 +29,7 @@ const project = point => page.evaluate(point => {
 }, point);
 const pixel = async point => {
   const at = await project(point);
-  const bytes = await page.screenshot({ style: '.cad-section-handle { visibility:hidden!important; }' });
+  const bytes = await page.screenshot({ style: '.cad-section-handle, .cad-section-window { opacity:0!important; }' });
   return page.evaluate(async ({ encoded, at }) => {
     const bitmap = await createImageBitmap(await (await fetch('data:image/png;base64,' + encoded)).blob());
     const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
@@ -105,7 +105,13 @@ try {
   await button('Front view').press('Enter');
   await page.waitForTimeout(450);
   await tool('Section view').click();
+  // The feature window opens on the right; keep it clear of the picked carrier face.
+  const header=await page.locator('.cad-section-window > .aui-float-panel-header').boundingBox();
+  await page.mouse.move(header.x+190,header.y+header.height/2);await page.waitForTimeout(150);await page.mouse.down();await page.waitForTimeout(150);
+  await page.mouse.move(470,header.y+header.height/2,{steps:16});await page.waitForTimeout(150);await page.mouse.up();await page.waitForTimeout(150);
   const face = await project([60, -125.2, 142]);
+  await page.mouse.move(face.x, face.y);await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(p=>document.elementFromPoint(p.x,p.y)?.tagName,face),'CANVAS','The selected face must be clear of the floating window');
   await page.mouse.click(face.x, face.y);
   const planes = page.locator('[aria-label="Section planes"] .aui-feature-entity-select');
   await expect(planes).toHaveCount(1);

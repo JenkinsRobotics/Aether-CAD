@@ -77,6 +77,11 @@ try {
   await expect(dialog().locator('[aria-label="Opposite depth (mm)"]')).toHaveValue('12.7');
   assert.equal(Number(await dialog().locator('[aria-label="Distance (mm)"]').inputValue()), 10);
   await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+  await expect.poll(() => page.evaluate(() => {
+    const model = window.__qualificationPreview; if (!model) return null;
+    let z = Infinity; for (const part of (model.featurePreview?.added ?? model.parts)) for (let i=2;i<part.vertices.length;i+=3) z=Math.min(z,part.vertices[i]);
+    return Number(z.toFixed(3));
+  }), { timeout: 45000 }).toBe(-6.16);
   await page.screenshot({ path: join(evidence, 'extrude-shared-controls.png') });
   await accept();
   await expect.poll(async () => (await stored(extrusionFile.id)).features.at(-1).secondEnd.distanceMillimeters, { timeout: 30000 }).toBe(12.7);
@@ -96,6 +101,11 @@ try {
   await expect(ring).toHaveAttribute('aria-disabled', 'false', { timeout: 45000 });
   await ring.press('ArrowUp'); await expect(dialog().locator('[aria-label^="Angle ("]')).toHaveValue('105');
   await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+  await expect.poll(() => page.evaluate(() => {
+    const model = window.__qualificationPreview; if (!model) return null;
+    let x = Infinity; for (const part of (model.featurePreview?.added ?? model.parts)) for (let i=0;i<part.vertices.length;i+=3) x=Math.min(x,part.vertices[i]);
+    return Number(x.toFixed(3));
+  }), { timeout: 45000 }).toBe(-5.176);
   await page.screenshot({ path: join(evidence, 'revolve-shared-orbit.png') });
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Revolve: shared angular ribbon, live native preview and cancellation');

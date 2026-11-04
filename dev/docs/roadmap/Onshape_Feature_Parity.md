@@ -38,6 +38,8 @@ shoulder midpoint is at z=10 mm, rather than accepting the visually overlapping
 upper rim at z=25 mm. The fixture is an editable sketch and Revolve, with actual
 Chamfer/Fillet features; it contains no imported solids.
 
+The shared Section widget also passes the native robot cutaway on WebGPU and WebKit, with default-plane and face-first cuts, flip, cancel and no document writes.
+
 Qualification evidence: [native and browser checks](../reality/data/Feature_Controls_2026_11_04.json). The actual modeling browser gate also passes sketch creation, Extrude New/Add/Remove/Intersect, Revolve, Fillet, Shell, Mirror, Pattern, Boolean, Hole, surfaces, sheet metal and 3D Sketch, with no server geometry requests.
 
 References reviewed: [Extrude](https://cad.onshape.com/help/Content/PartStudio/extrude.htm)

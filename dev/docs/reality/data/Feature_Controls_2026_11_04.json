@@ -25,7 +25,11 @@
       "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
       "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved"
     ],
-    "errors": []
+    "errors": [],
+    "meshChecks": {
+      "extrudeSecondEndMinZMillimeters": -6.16,
+      "revolve105DegreesMinXMillimeters": -5.176
+    }
   },
   "section": {
     "passed": true,
@@ -189,5 +193,91 @@
       },
       "mismatches": 0
     }
-  ]
+  ],
+  "assemblySection": {
+    "assembly-webgpu": {
+      "passed": true,
+      "backend": "webgpu",
+      "pipeline": "PIPELINE\nOpen CASCADE \u2192 Three.js WebGPU\nFPS\n59.7\nFRAME\n16.74 ms\nBUDGET\n5.8 %\nMEMORY\n37.8 MB\nBODIES\n65\nFACES\n1,316\nEDGES\n59,466\nTRIS\n145,518\nUPLOAD\n49.2 ms",
+      "checks": [
+        "Whole assembly: left shell present",
+        "Whole assembly: right shell present",
+        "Cut assembly: left shell retained",
+        "Cut assembly: right shell removed",
+        "Hovering the cut body cannot restore removed surfaces",
+        "Flipped cut: left shell removed",
+        "Flipped cut: right shell retained",
+        "Highlighted reversed cut retains clipping",
+        "Turning section off restores left shell",
+        "Turning section off restores right shell",
+        "Picked face preview removes front shell before Accept",
+        "Picked face preview retains rear shell",
+        "Flip face preview retains front shell",
+        "Flip face preview removes rear shell",
+        "Cancel face preview restores rear shell",
+        "Picked reference: Face 4"
+      ],
+      "errors": [],
+      "writes": []
+    },
+    "assembly-webkit": {
+      "passed": true,
+      "backend": "webkit",
+      "pipeline": "PIPELINE\nOpen CASCADE \u2192 Three.js WebGL2\nFPS\n37.5\nFRAME\n26.68 ms\nBUDGET\n6.1 %\nMEMORY\nUnavailable\nBODIES\n65\nFACES\n1,316\nEDGES\n59,466\nTRIS\n145,518\nUPLOAD\n72.0 ms",
+      "checks": [
+        "Whole assembly: left shell present",
+        "Whole assembly: right shell present",
+        "Cut assembly: left shell retained",
+        "Cut assembly: right shell removed",
+        "Hovering the cut body cannot restore removed surfaces",
+        "Flipped cut: left shell removed",
+        "Flipped cut: right shell retained",
+        "Highlighted reversed cut retains clipping",
+        "Turning section off restores left shell",
+        "Turning section off restores right shell",
+        "Picked face preview removes front shell before Accept",
+        "Picked face preview retains rear shell",
+        "Flip face preview retains front shell",
+        "Flip face preview removes rear shell",
+        "Cancel face preview restores rear shell",
+        "Picked reference: Face 4"
+      ],
+      "errors": [],
+      "writes": []
+    },
+    "assembly-face-webgpu": {
+      "passed": true,
+      "backend": "webgpu",
+      "pipeline": "PIPELINE\nOpen CASCADE \u2192 Three.js WebGPU\nFPS\n60.0\nFRAME\n16.67 ms\nBUDGET\n5.4 %\nMEMORY\n40.1 MB\nBODIES\n65\nFACES\n1,316\nEDGES\n59,466\nTRIS\n145,518\nUPLOAD\n44.9 ms",
+      "checks": [
+        "Whole assembly: left shell present",
+        "Whole assembly: right shell present",
+        "Picked face preview removes front shell before Accept",
+        "Picked face preview retains rear shell",
+        "Flip face preview retains front shell",
+        "Flip face preview removes rear shell",
+        "Cancel face preview restores rear shell",
+        "Picked reference: Face 4"
+      ],
+      "errors": [],
+      "writes": []
+    },
+    "assembly-face-webkit": {
+      "passed": true,
+      "backend": "webkit",
+      "pipeline": "PIPELINE\nOpen CASCADE \u2192 Three.js WebGL2\nFPS\n40.5\nFRAME\n24.68 ms\nBUDGET\n4.2 %\nMEMORY\nUnavailable\nBODIES\n65\nFACES\n1,316\nEDGES\n59,466\nTRIS\n145,518\nUPLOAD\n78.0 ms",
+      "checks": [
+        "Whole assembly: left shell present",
+        "Whole assembly: right shell present",
+        "Picked face preview removes front shell before Accept",
+        "Picked face preview retains rear shell",
+        "Flip face preview retains front shell",
+        "Flip face preview removes rear shell",
+        "Cancel face preview restores rear shell",
+        "Picked reference: Face 4"
+      ],
+      "errors": [],
+      "writes": []
+    }
+  }
 }
