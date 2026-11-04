@@ -1,3 +1,4 @@
+import { extrusionStopHandle } from './extrusion-stop-preview';
 import { extrusionPreviewAxes } from "./extrusion-preview";
 import { extrusionDraftFrame, extrusionDraftHandle } from "./extrusion-draft-preview";
 import { extrusionThicknessHandles } from "./extrusion-thin-preview";
@@ -3061,6 +3062,23 @@ export function evaluatePartDocument(
               if (!ok) throw new Error("Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.");
               return own(result.simplify());
             };
+            const stopPreview = (end: End, dir: V3, point: V3) => {
+              const parameter = end === primary ? "endOffset" : "secondOffset";
+              if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === parameter))
+                publish(feature, extrusionStopHandle(point, dir, end.endOffset, end !== primary));
+            };
+            // Contact is evaluated against the finished tool, so a distant/back
+            // face of a stopping part cannot become the handle's anchor.
+            const stopContactPreview = (end: End, dir: V3, faces: Face[], tool: Shape3D) => {
+              if (feature.id !== previewId) return;
+              let area = 0, weighted: V3 = [0, 0, 0];
+              for (const face of faces) for (const patch of commonFaces(face, tool)) {
+                const weight = measureArea(patch), center = deleteAfterVectorTuple(patch.center);
+                weighted = add(weighted, scale([center[0], center[1], center[2]], weight));
+                area += weight; patch.delete();
+              }
+              if (area > 1e-10) stopPreview(end, dir, scale(weighted, 1 / area));
+            };
             // Travel along `dir` per unit of axial movement (FreeCAD's profile axis).
             const axisOf = (dir: V3) => { const axis = dot(n, dir) < 0 ? neg(n) : n; return { axis, alignment: dot(axis, dir), origin: dot(o, axis) }; };
             const farthestAlong = (shapes: Iterable<Shape3D>, axis: V3) => { let m = -Infinity; for (const shape of shapes) for (const c of corners(shape.boundingBox.bounds)) m = Math.max(m, dot(c, axis)); return m; };
@@ -3079,6 +3097,7 @@ export function evaluatePartDocument(
                 const { axis, alignment } = axisOf(dir);
                 const depth = dot(axis, sub(stopPoint(end.point), o)) / alignment - end.endOffset;
                 if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
+                stopPreview(end, dir, add(sketchCentroid(feature.profileFeatureId), scale(dir, depth)));
                 return depth;
               }
               return undefined;
@@ -3089,12 +3108,15 @@ export function evaluatePartDocument(
               const ref = end.face;
               if (!ref) throw new Error("Up to face needs an available stopping face.");
               if (ref.surfaceType) {
+                if (end.draft) throw new UnsupportedFeature(feature.id, "drafted extrusions to curved stopping faces");
                 // A curved stop (FreeCAD's extrusion_surface_limit): the untrimmed surface
                 // splits space; the side holding the start is kept. Cylinders and spheres
                 // are exact primitives here (the wasm has no half-space builder).
                 const source = bodyAt(ref.sourceFeatureId, ref.bodyId);
                 if (!source) throw new Error("Up to face reference is unavailable. Reselect the stopping face.");
                 const stopFace = surfaceFaceOf(source, ref.surfaceType, ref.faceAnchor, "Up to face");
+                const stopAnchor = deleteAfterVectorTuple(stopFace.center);
+                stopPreview(end, dir, sub([stopAnchor[0], stopAnchor[1], stopAnchor[2]], scale(dir, end.endOffset)));
                 if (extendedStopSurfaces.includes(ref.surfaceType)) {
                   // Any other surface: the full build makes a half-space from the face's
                   // untrimmed surface, the side holding a start vertex is kept.
@@ -3220,11 +3242,16 @@ export function evaluatePartDocument(
               const alignment = dot(normal, dir);
               if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
               const planePoint = sub(center, scale(dir, end.endOffset));
+              const profileCenter = sketchCentroid(feature.profileFeatureId);
+              const contact = add(profileCenter, scale(dir, dot(normal, sub(planePoint, profileCenter)) / alignment));
+              stopPreview(end, dir, contact);
               const probe = prism(start, start + 1, dir);
               let maximum = -Infinity;
               for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot(normal, sub(planePoint, corner)) / alignment);
               if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-              if (norm(cross(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
+              if (norm(cross(normal, n)) < 1e-10)
+                return end.draft ? draftedPrism(start, start + maximum, dir, end.draft) : prism(start, start + maximum, dir);
+              if (end.draft) throw new UnsupportedFeature(feature.id, "drafted extrusions to tilted stopping faces");
               const full = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
               let span = 1; for (const corner of corners(full.boundingBox.bounds)) span = Math.max(span, norm(sub(corner, planePoint)) + 1);
               const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
@@ -3258,10 +3285,12 @@ export function evaluatePartDocument(
               const length = reach + Math.abs(end.endOffset) + 1;
               const tool = prism(low, low + length, dir);
               const shadows: Shape3D[] = [];
+              const previewStops: Face[] = [];
               const sweep = new Vector(scale(dir, length + Math.abs(end.endOffset) + 1));
               for (const limit of limits) for (const face of limit.faces) {
                 for (const patch of commonFaces(face, probe)) {
                   const shadow = basicFaceExtrusion(patch, sweep);
+                  if (feature.id === previewId) previewStops.push(own(patch.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)));
                   patch.delete();
                   let volume = 0; try { volume = measureVolume(shadow); } catch { volume = 0; }
                   if (Math.abs(volume) <= 1e-10) { shadow.delete(); continue; } // a tangential wall does not stop an axial ray
@@ -3283,6 +3312,7 @@ export function evaluatePartDocument(
                 for (const cap of ends) if (commonArea(cap, result) > Math.max(1e-9, measureArea(cap) * 1e-9)) complete = false;
               } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
               if (!complete) throw new Error("The next boundary does not cover and completely terminate the profile beyond its start. Adjust the profile, direction or end offset.");
+              stopContactPreview(end, dir, previewStops, result);
               return result;
             };
             // Up to part: the tool is trimmed by the chosen solid (curved boundaries
@@ -3318,6 +3348,11 @@ export function evaluatePartDocument(
                 const beyond = ends.reduce((sum, cap) => sum + commonArea(cap, result), 0), endArea = ends.reduce((sum, cap) => sum + measureArea(cap), 0);
                 if (beyond > Math.max(1e-12, endArea * 1e-8) || contact <= tolerance) throw new Error("The selected part does not fully stop the extrusion before the profile passes beyond it.");
                 if (measureVolume(result) <= 1e-9) throw new Error("The stopping part does not produce a valid extrusion.");
+                if (feature.id === previewId) {
+                  const stopFaces = stop.faces;
+                  try { stopContactPreview(end, dir, stopFaces, result); }
+                  finally { stopFaces.forEach(face => face.delete()); }
+                }
                 return result;
               } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
             };
@@ -3335,7 +3370,7 @@ export function evaluatePartDocument(
                 if (side.end.draft) { tools.push(draftedPrism(side.start, far, side.dir, side.end.draft)); continue; }
                 const signed = far * side.sign; low = Math.min(low, signed); high = Math.max(high, signed); intervals++; continue;
               }
-              if (side.end.draft) throw new UnsupportedFeature(feature.id, "drafted extrusions to a face, part or vertex");
+              if (side.end.draft && side.end.endType !== "up-to-face") throw new UnsupportedFeature(feature.id, "drafted extrusions to the next boundary or a part");
               if (side.end.endType === "up-to-face") tools.push(toFace(side.dir, side.start, side.end));
               else if (side.end.endType === "up-to-next") tools.push(toNext(side.dir, side.start, side.end));
               else if (side.end.endType === "up-to-part") tools.push(toPart(side.dir, side.start, side.end));

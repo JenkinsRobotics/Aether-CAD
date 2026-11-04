@@ -55,10 +55,10 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface mode integration; oblique draft and drafted stopping-limit combinations; stopping-offset handles; complete reference-control coverage. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface mode integration; oblique draft and the remaining drafted stopping-limit combinations; complete reference-control coverage. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
-| Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, arbitrary variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
+| Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
 
 History preview previously ignored mixed edge/face picking and returned a face.
 It now uses the main viewport's selection rule. The browser gate checks the saved
@@ -93,10 +93,10 @@ feature before granting release-ready status to Revolve, Chamfer or Fillet.
 | New / Add / Remove / Intersect | Native body operations and explicit/all merge scopes | Selected multi-body scope, disjoint regions and failure recovery across the full extent matrix. |
 | Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
 | Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |
-| Up to next / face / part / vertex / Through all | Native stopping operations and validation | Drafted stopping combinations and curved/partial termination cases; matching end-offset handles. |
+| Up to next / face / part / vertex / Through all | Native stopping operations and validation | Drafted next/part, tilted/curved termination cases and their complete selection matrix; shared end-offset handles are implemented. |
 | Direction | Sketch normal, sketch-line reference and manual unit vector | Additional axis/mate-connector selection parity; drafted oblique direction is currently refused. |
 | Starting offset / entity | Blind signed offset or parallel principal/feature/face reference; shared linear offset handle | Complete reference changes, reverse/second-end combinations and interactive cancellation coverage. |
-| Draft / opposite draft | Native taper for solid regions and closed/open thin walls; shared compact angle rings, separate end angles and fine keyboard adjustment | Oblique draft and the full stopping-limit matrix remain open. |
+| Draft / opposite draft | Native taper for solid regions and closed/open thin walls; shared compact angle rings, separate end angles and fine keyboard adjustment | Oblique draft and drafted next/part/tilted/curved stops remain open; parallel-face draft is qualified below. |
 | Thin thickness 1/2, Mid plane, Flip wall | Native closed/open curve walls with shared thickness arrows, including mid-plane scaling, zero thickness on one side and reversal | Complex contour/termination coverage and the remaining draft combinations. |
 | Live preview / accept / cancel / reopen | Actual native mesh checks for oblique two-ended extrusion; unit-aware readout; saved reopen | Full matrix above must verify resulting geometry, editable history and identical UI/agent behavior. |
 
@@ -123,6 +123,31 @@ The actual editor changes draft and both thicknesses, compares the rendered
 top edge with the analytic taper, saves and reopens the same values. This
 closes those specific blockers, not the full Extrude parity checklist above.
 Evidence: [Thin and Draft qualification](../reality/data/Extrude_Thin_Draft_2026_11_04.json).
+
+
+### Extrude stopping controls — additional qualification
+
+**Activation held; CAD alpha-0.1.101 remains active.** The first broad modeling
+browser run failed after adding Surface Extrude: the earlier Hole reported
+“Cut removes no material.” Two repeat runs passed all 17 steps, and the saved
+model plus transient preview sequence rebuilds headlessly. The cause remains
+unresolved; passing retries are not a fix or release qualification.
+
+Parallel planar Up-to-face stops now use the same native drafted solid builder
+as blind extrusion. Solid and Thin, narrowing/widening, reverse, starting offset,
+end offset and independent opposite-end draft have analytic volume and saved
+reopen checks. Tilted/curved drafted stops and drafted Up-to-next/part still
+refuse explicitly; this does not sign off those combinations.
+
+All four stopping modes now publish shared signed end-offset handles. Face and
+point handles follow the native reference; Next/Part handles come from actual
+terminal contact, excluding an unrelated far face. Each end has its own value.
+A positive offset stops short, and a negative one extends beyond the limit.
+The actual editor changes the value through the shared manipulator, checks the
+native extent, cancels an edit, and saves/reopens the feature. Agent operations
+use the same Draft/Up-to-face/offset implementation and saved document.
+
+Evidence: [stopping controls](../reality/data/Extrude_Stopping_Controls_2026_11_04.json).
 
 ## Fillet (`src/features/fillet.ts`, `aether-engine/src/kernel/features/edge-finish.ts`)
 

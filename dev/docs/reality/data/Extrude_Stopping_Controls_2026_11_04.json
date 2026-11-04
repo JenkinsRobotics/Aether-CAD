@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-04",
+  "status": "implemented; activation held for intermittent modeling rebuild failure",
+  "scope": "Extrude drafted parallel-face termination and shared signed stopping-offset handles. No full feature-parity signoff.",
+  "base_commit": "7be72be89b726a7423470283b63737fd948194f2",
+  "active_release": "alpha-0.1.101",
+  "checks": {
+    "frontend_tests": 2180,
+    "frontend_skipped": 1,
+    "engine_tests": 1282,
+    "native_service_tests": 321,
+    "types_and_build": "passed",
+    "headless_and_sketch_regions": "passed",
+    "standalone_and_hosted_home": "passed",
+    "feature_controls": {
+      "results": [
+        "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+        "Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen",
+        "Extrude: drafted parallel face stop, shared signed end-offset control, native extent, cancel and saved reopen",
+        "Revolve: shared angular ribbon, live native preview and cancellation",
+        "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+        "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved"
+      ],
+      "errors": []
+    },
+    "targeted_native_geometry_cases": 7,
+    "modeling_browser": {
+      "first_run": "failed at surface-extrude; earlier Hole reported Cut removes no material",
+      "subsequent_runs": "two complete 17-step passes; zero server geometry requests",
+      "failure": "build/Example-Collection/extrude-stops-final-modeling-2026-11-04/host/browser/failure.txt",
+      "passing_evidence": [
+        "build/Example-Collection/extrude-stops-diagnostic-modeling-2026-11-04/host/browser/log.json",
+        "build/Example-Collection/extrude-stops-repeat-modeling-2026-11-04/host/browser/log.json"
+      ]
+    }
+  },
+  "geometry_expectations": [
+    "Independent analytic volumes for Solid/Thin narrowed and widened planar-face stops, reversed direction and signed offsets",
+    "Independent opposite-end drafts and offset controls",
+    "Offset arrows anchored to actual native Next/Part terminal contact rather than the far face",
+    "Point-limit offset and atomic refusal of collapsed/invalid input",
+    "Agent authors/edits the same canonical features and verifies saved reopen"
+  ],
+  "unresolved": {
+    "rebuild_failure": "The first browser run failed after adding Surface Extrude: the earlier Hole reported no removed material. Two later editor runs passed. The saved 13-feature model rebuilds in-process, including subsequent Revolve/Surface and a matrix of transient previews. These checks do not establish the root cause or a fix. Do not infer release readiness from a passing retry.",
+    "remaining_extrude": "Unified Surface workflow; oblique draft; drafted next/part and tilted/curved stops; general complex contours and full extent/scope matrix."
+  },
+  "evidence_directory": "build/Example-Collection/extrude-stops-final-controls-2026-11-04/host/browser"
+}

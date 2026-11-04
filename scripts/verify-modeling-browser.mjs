@@ -24,6 +24,7 @@ page.on('console', m => { if (m.type() === 'error')
   (log.fallbacks ??= []).push(m.text()); });
 page.on('dialog', d => { errors.push('native dialog: ' + d.message()); d.dismiss(); });
 let geometryRequests = 0;
+let fixtureFile;
 page.on('response', r => { if (new URL(r.url()).pathname.endsWith('/api/cad/geometry'))
   geometryRequests++; });
 await page.addInitScript(e => { try {
@@ -282,6 +283,7 @@ try {
     await applyDialog('boolean-union');
     await expect(featureRow(/^Boolean/)).toBeVisible();
   });
+  fixtureFile = file;
   const saveFixture = async (name, count) => {
     let content;
     await expect.poll(async () => {
@@ -384,6 +386,15 @@ try {
 catch (error) {
   await page.screenshot({ path: join(evidence, 'failure.png') }).catch(() => { });
   await writeFile(join(evidence, 'failure.txt'), `${error?.stack ?? error}\n${JSON.stringify({ steps, errors, log })}`);
+  if (fixtureFile) {
+    try {
+      const stored = await page.evaluate(async id => {
+        const response = await fetch('/api/library/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ app: 'cad', id }) });
+        if (!response.ok) throw Error(await response.text()); return response.json();
+      }, fixtureFile.id);
+      await writeFile(join(evidence, 'failure.part.json'), JSON.stringify(tabDocumentOf(stored.data_base64), null, 2));
+    } catch (captureError) { await writeFile(join(evidence, 'failure-capture.txt'), String(captureError)); }
+  }
   throw error;
 }
 finally {

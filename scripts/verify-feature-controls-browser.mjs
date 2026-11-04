@@ -129,6 +129,39 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen');
 
+  const stopped = base('Native drafted stopping controls');
+  stopped.features = [
+    { ...sketch('limitSketch', 'XY', [[-5, -5], [25, -5], [25, 15], [-5, 15]]), name: 'Limit sketch', offsetMillimeters: 10 },
+    { id: 'limit', type: 'extrude', name: 'Limit', suppressed: false, profileFeatureId: 'limitSketch', operation: 'new', bodyId: 'limitBody', distanceMillimeters: 5 },
+    sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]),
+    { id: 'e', type: 'extrude', name: 'Extrude 1', suppressed: false, profileFeatureId: 's', operation: 'new', distanceMillimeters: 1,
+      draftAngleDegrees: 3, endType: 'up-to-face', endReference: { sourceFeatureId: 'limit', bodyId: 'limitBody', normal: [0, 0, -1], label: 'Stopping face' } },
+  ];
+  const stoppedFile = await open(stopped);
+  await page.evaluate(() => window.__aetherSetView?.('isometric')); await row(/^Extrude 1/).dblclick();
+  const stopHandle = page.getByRole('button', { name: 'End offset', exact: true });
+  await expect(stopHandle).toBeEnabled({ timeout: 45000 }); await stopHandle.press('ArrowUp');
+  await expect(dialog().locator('[aria-label="End offset (mm)"]')).toHaveValue('1');
+  const stopReadout = page.locator('.aui-manipulator-readout[aria-label="End offset"]');
+  await expect(stopReadout).toBeEnabled({ timeout: 45000 }); await stopReadout.fill('-2 mm'); await stopReadout.press('Enter');
+  await expect(dialog().locator('[aria-label="End offset (mm)"]')).toHaveValue('-2');
+  await expect.poll(() => page.evaluate(() => {
+    const model = window.__qualificationPreview; if (!model) return null;
+    let z = -Infinity;
+    for (const part of (model.featurePreview?.added ?? [])) for (let i=2;i<part.vertices.length;i+=3) z=Math.max(z,part.vertices[i]);
+    return Number(z.toFixed(3));
+  }), { timeout: 45000 }).toBe(12);
+  await page.screenshot({ path: join(evidence, 'extrude-drafted-stop-controls.png') });
+  await accept();
+  await expect.poll(async () => (await stored(stoppedFile.id)).features.at(-1).endOffsetMillimeters, { timeout: 30000 }).toBe(-2);
+  await page.reload(); await row(/^Extrude 1/).dblclick();
+  await expect.poll(async () => Number(await dialog().locator('[aria-label="End offset (mm)"]').inputValue())).toBe(-2);
+  await expect(stopHandle).toBeEnabled({ timeout: 45000 }); await stopHandle.press('ArrowUp');
+  await expect(dialog().locator('[aria-label="End offset (mm)"]')).toHaveValue('-1');
+  await dialog().locator('[data-feature-action="discard"]').click();
+  assert.equal((await stored(stoppedFile.id)).features.at(-1).endOffsetMillimeters, -2);
+  results.push('Extrude: drafted parallel face stop, shared signed end-offset control, native extent, cancel and saved reopen');
+
   const shaft = () => {
     const doc = base('Stepped native shaft');
     doc.features = [sketch('s', 'XZ', [[10, 0], [20, 0], [20, 10], [15, 10], [15, 25], [10, 25]]),

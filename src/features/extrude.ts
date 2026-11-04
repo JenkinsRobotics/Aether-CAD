@@ -85,6 +85,8 @@ export const extrudeEditor: FeatureEditor = {
     mountNativeExtrusionHandles(win.panel,controls,lengthUnitLabel);
     mountPreviewHandles(win.panel,controls,{length:lengthUnitLabel,angle:context.angleUnitLabel},{oppositeDraftAngle:'draftAngle'}, {
       offset:()=>controls.startEnabled.value==='true',
+      endOffset:()=>['up-to-next','up-to-face','up-to-part','up-to-vertex'].includes(controls.endType.value),
+      secondOffset:()=>controls.secondEnabled.value==='true'&&!controls.endType.value.startsWith('symmetric')&&['up-to-next','up-to-face','up-to-part','up-to-vertex'].includes(controls.secondEndType.value),
       draftAngle:()=>controls.draftEnabled.value==='true',
       oppositeDraftAngle:()=>controls.draftEnabled.value==='true'&&controls.endType.value==='symmetric',
       secondDraftAngle:()=>controls.secondEnabled.value==='true'&&controls.secondDraftEnabled.value==='true'&&!controls.endType.value.startsWith('symmetric'),
