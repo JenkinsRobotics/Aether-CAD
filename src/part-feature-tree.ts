@@ -100,6 +100,7 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "surface-unstitch") return "faces apart";
   if (feature.type === "surface-reverse-normal") return "normal reversed";
   if (feature.type === "surface-fair") return `strength ${feature.strength ?? 1}${feature.toleranceMillimeters !== undefined ? ` · ≤ ${feature.toleranceMillimeters} mm` : ""}`;
+  if (feature.type === "fillet" && feature.filletType === "full-round") { const n = feature.replacedFaces?.length ?? 0; return `full round · ${n} face${n === 1 ? "" : "s"}`; }
   return `${feature.radiusMillimeters} mm`;
 }
 

@@ -263,8 +263,8 @@ try {
     await setSelect('Source feature', /^Extrude/).catch(() => { });
     await setSelect('Pattern type', 'linear').catch(() => { });
     await setSelect('Axis', 'X').catch(() => { });
-    await setInput('Occurrences', 3);
-    await setInput('Spacing (mm)', 40);
+    await setInput('Instance count', 3);
+    await setInput('Distance (mm)', 40);
     await setSelect('Target body', 'Body 1').catch(() => { });
     await applyDialog('pattern-linear');
     await expect(featureRow(/^Pattern/)).toBeVisible();
@@ -274,10 +274,11 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     await setSelect('Operation', 'union').catch(() => { });
     await setSelect('Target body', 'Body 1').catch(() => { });
-    // Tool bodies are ids; the Target body select lists every body by name with its id as value.
-    const toolId = await page.locator('.cad-feature-dialog [aria-label="Target body"]').evaluate(el => [...el.options].find(o => o.textContent.trim() === 'Body 2')?.value);
-    assert.ok(toolId, 'a second body to use as the boolean tool');
-    await setInput('Tool body IDs', JSON.stringify([toolId]));
+    // Union combines the Tools (Onshape): both bodies go in the Tools box, the first keeps its identity.
+    // Body ids come from the hidden Target body select, which lists every body by name with its id as value.
+    const ids = await page.locator('.cad-feature-dialog [aria-label="Target body"]').evaluate(el => Object.fromEntries([...el.options].map(o => [o.textContent.trim(), o.value])));
+    assert.ok(ids['Body 2'], 'a second body to use as the boolean tool');
+    await setInput('Tool body IDs', JSON.stringify([ids['Body 1'], ids['Body 2']]));
     await applyDialog('boolean-union');
     await expect(featureRow(/^Boolean/)).toBeVisible();
   });
@@ -295,14 +296,10 @@ try {
   await step('hole', async () => {
     await ribbon('Hole', 'feature-hole').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
-    await setSelect('Sketch', 'Sketch 2').catch(async () => { await setSelect('Center sketch', 'Sketch 2'); });
+    // Onshape's placement: one hole at each sketch point; Sketch 2's circle centre from the list.
+    await setSelect('Sketch points to place holes sketch point', /Sketch 2 · Circle 1 center/);
     await setInput('Diameter (mm)', 4);
     await setInput('Depth (mm)', 6);
-    await setSelect('Target body', 'Body 1').catch(() => { });
-    // Explicitly set drill direction after the source and dimensions so this
-    // preview represents the final authored parameters. The prior revolve/union
-    // puts material on both sides of this plane.
-    await setSelect('Direction', 'normal');
     await applyDialog('hole');
     await expect(featureRow(/^Hole/)).toBeVisible();
     await saveFixture('with-hole.part.json', 13);
@@ -334,8 +331,8 @@ try {
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
     // The sheet is picked as a user does: its row in the Parts list fills the box.
     await page.locator('.cad-parts-list').getByRole('treeitem').last().click();
-    await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Surfaces to thicken"]')).toContainText(/\S/, { timeout: 10000 });
-    await setInput('Thickness (mm)', 1);
+    await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Faces and surfaces to thicken"]')).toContainText(/\S/, { timeout: 10000 });
+    await setInput('Thickness 1 (mm)', 1);
     await applyDialog('surface-thicken');
     await expect(featureRow(/^Surface Thicken/)).toBeVisible();
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 2);

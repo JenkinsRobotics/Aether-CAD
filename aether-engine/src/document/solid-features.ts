@@ -124,6 +124,10 @@ export interface RevolveFeature {
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
+  /** Merge scope, as Extrude's: every touching part (`all`) or explicit parts; Add keeps the first identity. */
+  scopeMode?: "all";
+  scopeResolution?: import("./extrusion-scope").ExtrusionScopeResolution;
+  targetBodyIds?: string[];
   suppressed: boolean;
 }
 export interface MirrorFeature {
@@ -142,7 +146,8 @@ export interface MirrorFeature {
 export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -152,7 +157,9 @@ export type EdgeFinishFeature = {
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -161,6 +168,8 @@ export type EdgeFinishFeature = {
       /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
       /** Direction overrides: these picked edges flip individually (relative to `flipped`). */ flippedEdges?: EdgeFinishEdge[] }
 );
+/** A fillet in its Full round form, with the three face references present. */
+export type FullRoundFillet = Extract<EdgeFinishFeature, { type: "fillet" }> & { filletType: "full-round"; sideFace: SolidFaceReference; oppositeSideFace: SolidFaceReference; replacedFaces: SolidFaceReference[] };
 export interface SweepFeature {
   id: string;
   type: "sweep";
@@ -379,8 +388,15 @@ export function validateSolidFeature(
     )
       throw new Error("Invalid mirror settings.");
     if (feature.mirrorPlane !== undefined) validateMirrorPlane(feature.mirrorPlane, earlier, missingReference);
+  } else if (feature.type === "fillet" && feature.filletType === "full-round") {
+    validateSolidFaceReference(feature.sideFace, earlier, missingReference, "Side face");
+    validateSolidFaceReference(feature.oppositeSideFace, earlier, missingReference, "Opposite side face");
+    if (!Array.isArray(feature.replacedFaces) || !feature.replacedFaces.length) throw new Error("Select the faces to replace with the full round.");
+    for (const face of feature.replacedFaces) validateSolidFaceReference(face, earlier, missingReference, "Faces to replace");
+    if (feature.tangentChain !== undefined && typeof feature.tangentChain !== "boolean") throw new Error("Tangent propagation must be true or false.");
+    if (feature.edges !== undefined || feature.edgePlane !== undefined || feature.radiusMillimeters !== undefined) throw new Error("A full round takes faces, not edges or a radius.");
   } else if (feature.type === "fillet" || feature.type === "chamfer") {
-    positive(feature.radiusMillimeters, "Edge finish size");
+    positive(feature.radiusMillimeters ?? NaN, "Edge finish size");
     if (
       feature.edgePlane &&
       (!["XY", "XZ", "YZ"].includes(feature.edgePlane.plane) ||

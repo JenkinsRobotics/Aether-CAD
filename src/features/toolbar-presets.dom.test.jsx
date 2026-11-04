@@ -40,7 +40,7 @@ it('Offset Face opens on offsetting and Cancel preserves the document', () => {
 it('Split is one feature: its first row switches between Part and Face', async () => {
   cadCommands.execute('feature-split');
   expect(control('Split').value).toBe('part');
-  expect(control('Part to split')).toBeTruthy();
+  expect(control('Parts to split')).toBeTruthy();
   control('Split').value = 'face';
   control('Split').dispatchEvent(new Event('change'));
   await vi.waitFor(() => expect(control('Faces to split')).toBeTruthy());

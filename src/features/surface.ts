@@ -2,7 +2,7 @@ import { mountPartBox } from "./part-box";
 import { edgeIdentity } from "./edge-finish";
 import { availableBodies, type EdgeFinishEdge, type SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
-import { bodyAndOperationTabs, entityChips, requireSelections, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { bodyAndOperationTabs, checkRow, entityChips, iconButton, planned, requireSelections, rowIn, type Control, type Controls, type FeatureEditor, type FeatureEditorContext, unitSuffix } from "./shared";
 
 /** Surface dialogs (SolidCraft's surface.*): sheets from sketch curves, and the
  *  tools that offset, thicken, sew, split and flip them. One editor per feature,
@@ -91,15 +91,48 @@ export const surfaceOffsetEditor: FeatureEditor = {
   serialize(values) { return { operation: "new", bodyIds: JSON.parse(values.bodies), distanceMillimeters: Number(values.distance) }; },
 };
 const thickenOperations = ["new", "add", "cut"] as const;
+/** Thicken, as Onshape's (help: PartStudio/thicken.htm): New / Add / Remove / Intersect, Faces and
+ *  surfaces to thicken, Mid plane with its Thickness, else Thickness 1 with the Opposite direction
+ *  arrow and Thickness 2, Keep tools and the Merge scope. This kernel thickens one way or both
+ *  ways equally: Thickness 2 and Keep tools are present and disabled with the gap named. */
 export const surfaceThickenEditor: FeatureEditor = {
   type: "surface-thicken",
   controls(context: FeatureEditorContext) {
-    const { field, feature } = context;
-    return { ...bodiesControls(context), thickness: field("Thickness (mm)", String(feature?.thicknessMillimeters ?? 2)), symmetric: field("Sides", feature?.symmetric ? "both" : "one", ["one", "both"]), operation: field("Operation", feature?.operation ?? "new", [...thickenOperations]) };
+    const { field, feature, doc } = context;
+    const thickness = feature?.thicknessMillimeters ?? 2;
+    return { ...bodiesControls(context), thickness: field("Thickness 1 (mm)", String(Math.abs(thickness))), flipped: field("Opposite direction", String(thickness < 0), ["false", "true"]), symmetric: field("Mid plane", feature?.symmetric ? "true" : "false", ["false", "true"]), operation: field("Operation", feature?.operation ?? "new", [...thickenOperations]),
+      mergeScope: field("Merge scope part", JSON.stringify(feature?.targetBodyId ? [feature.targetBodyId] : availableBodies(doc).at(-1) ? [availableBodies(doc).at(-1)!.id] : [])) };
   },
-  layout(context, controls) { bodyAndOperationTabs(context.win, context.form, controls.operation, thickenOperations); bodiesLayout(context, controls, "Surfaces to thicken"); },
-  validate(controls) { return !(Number(controls.thickness.value) !== 0 && Number.isFinite(Number(controls.thickness.value))) ? "Enter a nonzero thickness." : bodiesValid(controls, "surface body"); },
-  serialize(values) { return { bodyIds: JSON.parse(values.bodies), thicknessMillimeters: Number(values.thickness), ...(values.symmetric === "both" ? { symmetric: true } : {}), operation: values.operation }; },
+  layout(context, controls) {
+    const { win, form, lengthUnitLabel, doc, feature } = context;
+    bodyAndOperationTabs(win, form, controls.operation, thickenOperations);
+    bodiesLayout(context, controls, "Faces and surfaces to thicken");
+    const hide = (control: Control) => { control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control); };
+    hide(controls.flipped); hide(controls.symmetric); hide(controls.mergeScope);
+    const mid = checkRow(context, controls.symmetric, "Mid plane", () => sync());
+    controls.thickness.closest("label")?.remove(); controls.thickness.setAttribute("form", form.id);
+    const first = rowIn("Thickness 1", controls.thickness, unitSuffix(lengthUnitLabel)); win.body.append(first);
+    const flip = iconButton("flip-horizontal", "Opposite direction");
+    const paintFlip = () => flip.setAttribute("aria-pressed", controls.flipped.value);
+    flip.onclick = () => { controls.flipped.value = controls.flipped.value === "true" ? "false" : "true"; paintFlip(); controls.flipped.dispatchEvent(new Event("change")); };
+    paintFlip(); (first.querySelector(".aui-feature-row-control") ?? first).append(flip);
+    const second = document.createElement("input"); second.type = "text"; second.setAttribute("aria-label", "Thickness 2");
+    const secondRow = planned(rowIn("Thickness 2", second, unitSuffix(lengthUnitLabel)), "Not available in this kernel: a second, different thickness on the other side is a recorded gap (Mid plane thickens both sides equally)."); win.body.append(secondRow);
+    const keep = document.createElement("input"); keep.type = "checkbox"; keep.setAttribute("aria-label", "Keep tools");
+    win.body.append(planned(rowIn("Keep tools", keep), "Not available in this kernel: the thickened surface is always consumed (recorded gap)."));
+    const end = feature ? doc.features.findIndex((f) => f.id === feature.id) : doc.rollbackIndex ?? doc.features.length;
+    const scope = mountPartBox(context, controls.mergeScope, "Merge scope", availableBodies({ ...doc, features: doc.features.slice(0, end), rollbackIndex: undefined }), () => "", { single: true });
+    win.body.append(scope.element);
+    controls.mergeScope.addEventListener("change", () => { const id = JSON.parse(controls.mergeScope.value || "[]")[0]; if (id) { controls.target.value = id; controls.target.dispatchEvent(new Event("change")); } });
+    const sync = () => { const both = controls.symmetric.value === "true"; first.querySelector("span")!.textContent = both ? "Thickness" : "Thickness 1"; flip.hidden = both; secondRow.hidden = both; scope.element.hidden = controls.operation.value === "new"; };
+    controls.operation.addEventListener("change", sync); void mid; sync();
+  },
+  validate(controls) {
+    if (!(Number(controls.thickness.value) > 0)) return "Enter a positive thickness.";
+    if (controls.operation.value !== "new" && !JSON.parse(controls.mergeScope.value || "[]").length) return "Select the merge scope part.";
+    return bodiesValid(controls, "surface body");
+  },
+  serialize(values) { return { bodyIds: JSON.parse(values.bodies), thicknessMillimeters: Number(values.thickness) * (values.flipped === "true" ? -1 : 1), ...(values.symmetric === "true" ? { symmetric: true } : {}), operation: values.operation, ...(values.operation !== "new" ? { targetBodyId: JSON.parse(values.mergeScope || "[]")[0] } : {}) }; },
 };
 export const surfaceStitchEditor: FeatureEditor = {
   type: "surface-stitch",

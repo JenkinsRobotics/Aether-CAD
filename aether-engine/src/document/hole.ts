@@ -1,8 +1,14 @@
 import {validateSolidFaceReference,type SolidFaceReference} from "./solid-face-reference";
 import {isHoleThreadStandard, threadClasses, threadSpecification, type HoleClearanceFit, type HoleThreadStandard} from "./hole-standards";
 
+import {validateExtrusionPointReference, type ExtrusionPointReference} from "./extrusion-point-reference";
+
 /** Where a hole starts: a point on a picked planar face (SolidCraft's `position` on a face). */
 export interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }
+/** Onshape's placement: one hole at each picked sketch point (a contour vertex or a circle centre),
+ *  drilled square to that sketch's plane into the part. */
+export interface HoleSketchPointsPlacement { kind: "sketch-points"; points: Extract<ExtrusionPointReference, { kind: "sketch-point" }>[] }
+export type HolePlacement = HoleFacePlacement | HoleSketchPointsPlacement;
 
 /** A standard screw thread the hole is made for (FreeCAD's Hole profile).
  *  `tapped` holes are drilled at the tap drill and carry the thread, cosmetic
@@ -30,7 +36,7 @@ export interface HoleFeature {
   profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;
   /** One hole at every circle of the sketch instead of one chosen region. */
   allCircles?: boolean;
-  placement?: HoleFacePlacement;
+  placement?: HolePlacement;
   /** Drill direction; default: into the part, square to the sketch or face. */
   direction?: [number, number, number];
   /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */
@@ -51,7 +57,14 @@ export interface HoleFeature {
 
 export function validateHole(feature: HoleFeature, earlier: Map<string, string>, missing: (id: unknown) => boolean): void {
   const positive = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value > 0;
-  if (feature.placement !== undefined) {
+  if (feature.placement?.kind === "sketch-points") {
+    const points = feature.placement.points;
+    if (!Array.isArray(points) || !points.length || points.length > 1024) throw new Error("Select the sketch points to place holes.");
+    for (const point of points) {
+      if (point?.kind !== "sketch-point") throw new Error("Hole placement needs sketch points.");
+      validateExtrusionPointReference(point, earlier, missing as (id: string) => boolean);
+    }
+  } else if (feature.placement !== undefined) {
     const p = feature.placement;
     if (p.kind !== "face-point" || !Array.isArray(p.pointMillimeters) || p.pointMillimeters.length !== 3 || !p.pointMillimeters.every(Number.isFinite)) throw new Error("Hole placement needs a planar face and a point on it.");
     validateSolidFaceReference(p.face, earlier, missing as (id: string) => boolean, "Hole face");

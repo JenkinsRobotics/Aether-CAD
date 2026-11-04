@@ -17,11 +17,12 @@ export function layoutExtrudeStart(context:FeatureEditorContext,c:Controls){
  const section=win.subsection('Starting offset',{kind:'checkbox',open:c.startEnabled.value==='true',onToggle:enabled=>{
   c.startEnabled.value=String(enabled);sync();c.startEnabled.dispatchEvent(new Event('change'));
  }});
- const labels={'Blind offset':'offset','Selected face':'face','Reference plane':'plane'} as const;
+ // Onshape's Start type: Blind (a distance) or Entity (a face or a plane the extrusion starts from).
+ const labels={'Blind':'offset','Entity: face':'face','Entity: plane':'plane'} as const;
  const picker=win.picker(Object.keys(labels),{ariaLabel:'Start type',onChange:label=>{
   c.startMode.value=labels[label as keyof typeof labels];sync();c.startMode.dispatchEvent(new Event('change'));
  }});
- picker.setValue(Object.keys(labels).find(key=>labels[key as keyof typeof labels]===c.startMode.value)??'Blind offset');
+ picker.setValue(Object.keys(labels).find(key=>labels[key as keyof typeof labels]===c.startMode.value)??'Blind');
  section.body.append(rowIn('Start type',picker.element));
  const facePicker=planarFacePicker(context,c.startFace,'Starting planar face');section.body.append(facePicker.element);
  const planes=extrusionStartPlanes(context.doc,context.feature?.id);

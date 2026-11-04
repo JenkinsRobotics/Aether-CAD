@@ -1,23 +1,33 @@
+/** Linear and Circular pattern, as Onshape's (help: PartStudio/linear_pattern.htm,
+ *  circular_pattern.htm): Part / Feature / Face pattern type, the New / Add / Remove / Intersect
+ *  result, Entities to pattern, then for Linear the Direction box and flip, Distance, Instance
+ *  count, Centered and the Second direction; for Circular the Axis of pattern box and flip, Angle,
+ *  Instance count, Equal spacing and Centered; then Skip instances, Reapply features and Merge
+ *  scope. A feature pattern repeats its feature's own result; a part pattern makes new parts.
+ *  Face patterns, Skip instances and Reapply features are present and disabled with the gap named
+ *  (ledger: Patterns). The curve pattern keeps its path rows under the Curve tab. */
 import {mountPartBox} from './part-box';
 import {patternSourceTypes,availableBodies} from '@aether/core/document';
-import {requireSelections,layoutParameterRows,entityChips,type FeatureEditor} from './shared';
+import {requireSelections,layoutParameterRows,entityChips,planned,iconButton,rowIn,checkRow,type Controls,type FeatureEditor,type FeatureEditorContext} from './shared';
 import {transformEdgePicker} from './transform-edge-picker';
 
-/** Linear: along a principal axis, a vector, or a picked straight edge, with an
- *  optional second row. Polar: about a principal axis or a picked straight edge.
- *  Alignment says where the original sits in its row (SolidCraft's contract). */
+const faceGap='Not available in this kernel: patterning faces of a part is a recorded gap (pattern the feature or the part).';
+const resultGap='A feature pattern repeats its feature\'s own result (add or remove); a part pattern makes new parts. Choosing another result here is a recorded gap.';
+const skipGap='Not available in this kernel: skipping instances is a recorded gap.';
+const reapplyGap='Not available in this kernel: regenerating each instance\'s feature references is a recorded gap.';
+
 export const patternEditor:FeatureEditor={
   type:'pattern',
-  controls({field,reference,feature,doc}) {
+  controls({field,reference,feature,doc}:FeatureEditorContext):Controls {
     const end=feature?doc.features.findIndex(f=>f.id===feature.id):doc.rollbackIndex??doc.features.length;
     const choices=availableBodies({...doc,features:doc.features.slice(0,end),rollbackIndex:undefined});
-    const partPick=field('Part',choices[0]?.id??'',choices.map(b=>b.id));Array.from(partPick.children).forEach((o,i)=>(o.textContent=choices[i].name));
     const linear=feature?.patternType==='linear'?feature:undefined,polar=feature?.patternType==='polar'?feature:undefined,path=feature?.patternType==='path'?feature:undefined;
     const dir=linear?.direction,second=linear?.second,axisRef=polar?.axisReference;
     const vec=(v:readonly number[]|undefined,i:number,fallback=0)=>String(v?.[i]??fallback);
     return {
       what:field('Pattern',feature?.bodyIds?'parts':'feature',['feature','parts']),
-      parts:field('Parts to pattern',JSON.stringify(feature?.bodyIds??[])),partPick,
+      parts:field('Parts to pattern',JSON.stringify(feature?.bodyIds??[])),
+      partNames:field('Part names',JSON.stringify(choices)),
       copyPrefix:field('Copy ID prefix',feature?.copyBodyIds?String(Object.values(feature.copyBodyIds as Record<string,string>)[0]??'').replace(/-\d+$/,''):`${doc.documentId}:pattern-${crypto.randomUUID()}`),
       source:reference('Source feature',[...patternSourceTypes],feature?.sourceFeatureId),
       patternType:field('Pattern type',feature?.patternType ?? 'linear',['linear','polar','path']),
@@ -30,62 +40,129 @@ export const patternEditor:FeatureEditor={
       axis:field('Axis',feature?.axis ?? 'X',['X','Y','Z']),
       vectorX:field('Direction X',vec(dir?.kind==='vector'?dir.direction:undefined,0,1)),vectorY:field('Direction Y',vec(dir?.kind==='vector'?dir.direction:undefined,1)),vectorZ:field('Direction Z',vec(dir?.kind==='vector'?dir.direction:undefined,2)),
       edge:field('Direction edge',JSON.stringify(dir?.kind==='solid-edge'?dir:axisRef?.kind==='solid-edge'?axisRef:'')),
-      count:field('Occurrences',String(feature?.count ?? 3)),
-      spacing:field('Spacing (mm)',String(linear?.spacingMillimeters ?? 10)),
+      count:field('Instance count',String(feature?.count ?? 3)),
+      spacing:field('Distance (mm)',String(linear?.spacingMillimeters ?? 10)),
       angle:field('Angle (degrees)',String(polar?.angleDegrees ?? 360)),
+      equalSpacing:field('Equal spacing','true',['false','true']),
       direction:field('Direction',feature?.reversed ? 'reverse' : 'normal',['normal','reverse']),
-      alignment:field('Original at',feature?.alignment ?? 'right',['right','center','left']),
+      centered:field('Centered',feature?.alignment==='center'?'true':'false',['false','true']),
       useSecond:field('Second direction',second?'yes':'no',['no','yes']),
       secondAxis:field('Second axis',second?.axis ?? 'Y',['X','Y','Z']),
-      secondCount:field('Second occurrences',String(second?.count ?? 2)),
-      secondSpacing:field('Second spacing (mm)',String(second?.spacingMillimeters ?? 10)),
+      secondCount:field('Second instance count',String(second?.count ?? 2)),
+      secondSpacing:field('Second distance (mm)',String(second?.spacingMillimeters ?? 10)),
       secondDirection:field('Second direction sense',second?.reversed?'reverse':'normal',['normal','reverse']),
+      secondCentered:field('Second centered',second?.alignment==='center'?'true':'false',['false','true']),
+      mergeScope:field('Merge scope part',JSON.stringify(feature?.targetBodyId?[feature.targetBodyId]:choices.at(-1)?[choices.at(-1)!.id]:[])),
     };
   },
-  layout(context,controls) {
-    const rows=layoutParameterRows(context,control=>control===controls.edge||control===controls.pathSketch||control===controls.parts||control===controls.copyPrefix);
-    entityChips(context.win,'Path sketch',controls.pathSketch,context.form);
-    for(const key of ['parts','copyPrefix']){controls[key].closest('label')?.remove();controls[key].hidden=true;controls[key].setAttribute('form',context.form.id);context.form.append(controls[key]);}
-    const box=mountPartBox(context,controls.parts,'Parts to pattern',Array.from(controls.partPick.children).map(o=>({id:(o as HTMLOptionElement).value,name:o.textContent??''})));
+  layout(context:FeatureEditorContext,controls:Controls) {
+    const {win,form,lengthUnitLabel,angleUnitLabel}=context;
+    const rows=layoutParameterRows(context,control=>![controls.pathSketch,controls.pathMode,controls.pathSpacing,controls.pathDistance,controls.pathOrientation,controls.axis,controls.vectorX,controls.vectorY,controls.vectorZ].includes(control));
+    const hide=(control:Controls[string])=>{control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);};
+    for(const key of ['what','parts','partNames','copyPrefix','source','patternType','edge','count','spacing','angle','equalSpacing','direction','centered','useSecond','secondAxis','secondCount','secondSpacing','secondDirection','secondCentered','mergeScope','directionSource'])hide(controls[key]);
+    const row=(label:string,control:Controls[string],unit?:string)=>{control.closest('label')?.remove();control.setAttribute('form',form.id);const r=unit?rowIn(label,control,Object.assign(document.createElement('span'),{className:'aui-feature-unit',textContent:unit})):rowIn(label,control);win.body.append(r);return r;};
+    const check=(control:Controls[string],label:string)=>checkRow(context,control,label);
+    // Pattern type: Linear / Circular / Curve as the window's first tabs (Onshape opens them as three tools).
+    const kinds=win.tabs(['Linear','Circular','Curve'],['linear','polar','path'].indexOf(controls.patternType.value));
+    [...kinds.children].forEach((tab,index)=>{(tab as HTMLButtonElement).onclick=()=>{controls.patternType.value=['linear','polar','path'][index];if(controls.patternType.value==='polar'&&controls.directionSource.value==='vector')controls.directionSource.value='axis';[...kinds.children].forEach((o,i)=>o.classList.toggle('active',i===index));sync();controls.patternType.dispatchEvent(new Event('change'));};});
+    // Part / Feature / Face, then the result.
+    const whats=win.tabs(['Part','Feature','Face'],controls.what.value==='parts'?0:1);
+    [...whats.children].forEach((tab,index)=>{if(index===2){planned(tab as HTMLButtonElement,faceGap);return;}(tab as HTMLButtonElement).onclick=()=>{controls.what.value=index===0?'parts':'feature';[...whats.children].forEach((o,i)=>o.classList.toggle('active',i===index));sync();controls.what.dispatchEvent(new Event('change'));};});
+    const results=win.tabs(['New','Add','Remove','Intersect'],0);
+    [...results.children].forEach((tab,index)=>{if(index>0)planned(tab as HTMLButtonElement,resultGap);});
+    win.body.append(kinds,whats,results);
+    // Entities to pattern: parts picked in the viewport, or the feature from the list.
+    const choices=JSON.parse(controls.partNames.value) as {id:string;name:string}[];
+    const box=mountPartBox(context,controls.parts,'Entities to pattern',choices);
+    win.body.append(box.element);
+    const sourceRow=row('Entities to pattern',controls.source);
+    // Direction / Axis of pattern: a list of the principal axes, or a solid edge picked in the viewport, with the flip.
+    const directionRow=row('Direction',controls.axis);
+    const flip=iconButton('flip-horizontal','Opposite direction');
+    const paintFlip=()=>flip.setAttribute('aria-pressed',String(controls.direction.value==='reverse'));
+    flip.onclick=()=>{controls.direction.value=controls.direction.value==='reverse'?'normal':'reverse';paintFlip();controls.direction.dispatchEvent(new Event('change'));};
+    paintFlip();directionRow.querySelector('.aui-feature-row-control')?.append(flip);
     const edgePicker=transformEdgePicker(context,controls.edge);
+    controls.edge.addEventListener('change',()=>{if(controls.edge.value){controls.directionSource.value='edge';controls.directionSource.dispatchEvent(new Event('change'));}});
+    controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
+    const spacingRow=row('Distance',controls.spacing,lengthUnitLabel);
+    const angleRow=row('Angle',controls.angle,angleUnitLabel);
+    row('Instance count',controls.count);
+    const equalRow=check(controls.equalSpacing,'Equal spacing');
+    check(controls.centered,'Centered');
+    // Second direction (Linear).
+    const second=win.subsection('Second direction',{kind:'checkbox',open:controls.useSecond.value==='yes',onToggle:(open)=>{controls.useSecond.value=open?'yes':'no';sync();controls.useSecond.dispatchEvent(new Event('change'));}});
+    const into=(label:string,control:Controls[string],unit?:string)=>{control.closest('label')?.remove();control.setAttribute('form',form.id);const r=unit?rowIn(label,control,Object.assign(document.createElement('span'),{className:'aui-feature-unit',textContent:unit})):rowIn(label,control);second.body.append(r);return r;};
+    const secondDirection=into('Direction',controls.secondAxis);
+    const secondFlip=iconButton('flip-horizontal','Opposite direction');
+    const paintSecond=()=>secondFlip.setAttribute('aria-pressed',String(controls.secondDirection.value==='reverse'));
+    secondFlip.onclick=()=>{controls.secondDirection.value=controls.secondDirection.value==='reverse'?'normal':'reverse';paintSecond();controls.secondDirection.dispatchEvent(new Event('change'));};
+    paintSecond();secondDirection.querySelector('.aui-feature-row-control')?.append(secondFlip);
+    into('Distance',controls.secondSpacing,lengthUnitLabel);into('Instance count',controls.secondCount);
+    const secondCentered=document.createElement('input');secondCentered.type='checkbox';secondCentered.setAttribute('aria-label','Second centered');secondCentered.checked=controls.secondCentered.value==='true';
+    secondCentered.onchange=()=>{controls.secondCentered.value=String(secondCentered.checked);controls.secondCentered.dispatchEvent(new Event('change'));};
+    second.body.append(rowIn('Centered',secondCentered));
+    win.body.append(second.element);
+    // Skip instances and Reapply features are gaps, present and named.
+    const skip=win.subsection('Skip instances',{kind:'checkbox',open:false});const skipped=win.entitiesBox('Skipped instances');skipped.render([]);skip.body.append(skipped.element);planned(skip.element,skipGap);win.body.append(skip.element);
+    const reapply=document.createElement('input');reapply.type='checkbox';reapply.setAttribute('aria-label','Reapply features');const reapplyRow=rowIn('Reapply features',reapply);planned(reapplyRow,reapplyGap);win.body.append(reapplyRow);
+    // Merge scope: the part a feature pattern modifies.
+    const scope=mountPartBox(context,controls.mergeScope,'Merge scope',choices,()=>'',{single:true});
+    win.body.append(scope.element);
+    controls.mergeScope.addEventListener('change',()=>{const id=JSON.parse(controls.mergeScope.value||'[]')[0];if(id){controls.target.value=id;controls.target.dispatchEvent(new Event('change'));}});
+    // Curve pattern rows stay as they were, under the Curve tab; the vector direction stays under Aether options.
+    const curve=document.createElement('div');win.body.append(curve);
+    const pathBox=entityChips(win,'Path sketch',controls.pathSketch,form);curve.append(pathBox.element);
+    for(const key of ['pathMode','pathSpacing','pathDistance','pathOrientation'])if(rows.get(controls[key]))curve.append(rows.get(controls[key])!);
+    const more=win.subsection('Aether options',{kind:'disclosure',open:false});
+    const vectorRows=['vectorX','vectorY','vectorZ'].map(key=>{const r=rows.get(controls[key])!;more.body.append(r);return r;});
+    const useVector=document.createElement('input');useVector.type='checkbox';useVector.setAttribute('aria-label','Direction by vector');useVector.checked=controls.directionSource.value==='vector';
+    useVector.onchange=()=>{controls.directionSource.value=useVector.checked?'vector':'axis';sync();controls.directionSource.dispatchEvent(new Event('change'));};
+    more.body.prepend(rowIn('Direction by vector',useVector));
+    win.body.append(more.element);
     const sync=()=>{
-      const linear=controls.patternType.value==='linear',isPath=controls.patternType.value==='path',source=controls.directionSource.value,parts=controls.what.value==='parts';
-      box.element.hidden=!parts;rows.get(controls.partPick)!.hidden=!parts;const sourceRow=controls.source.closest<HTMLElement>('.aui-feature-row')??controls.source.parentElement;if(sourceRow)sourceRow.hidden=parts;
-      rows.get(controls.pathSpacing)!.hidden=!isPath||controls.pathMode.value!=='spacing';rows.get(controls.pathDistance)!.hidden=!isPath||controls.pathMode.value!=='distance';rows.get(controls.pathMode)!.hidden=!isPath;
-      rows.get(controls.pathOrientation)!.hidden=!isPath;
-      rows.get(controls.directionSource)!.hidden=isPath;rows.get(controls.direction)!.hidden=isPath;rows.get(controls.alignment)!.hidden=isPath;
-      rows.get(controls.spacing)!.hidden=!linear;
-      rows.get(controls.angle)!.hidden=linear||isPath;
-      rows.get(controls.axis)!.hidden=source!=='axis'||isPath;
-      for(const key of ['vectorX','vectorY','vectorZ'])rows.get(controls[key])!.hidden=!linear||source!=='vector';
-      edgePicker.setEnabled(source==='edge');
-      for(const key of ['useSecond'])rows.get(controls[key])!.hidden=!linear;
-      for(const key of ['secondAxis','secondCount','secondSpacing','secondDirection'])rows.get(controls[key])!.hidden=!linear||controls.useSecond.value!=='yes';
+      const linear=controls.patternType.value==='linear',polar=controls.patternType.value==='polar',isPath=controls.patternType.value==='path',parts=controls.what.value==='parts',source=controls.directionSource.value;
+      box.element.hidden=!parts;sourceRow.hidden=parts;
+      [...results.children].forEach((tab,i)=>tab.classList.toggle('active',i===0));
+      directionRow.hidden=isPath;directionRow.querySelector('span')!.textContent=polar?'Axis of pattern':'Direction';
+      spacingRow.hidden=!linear;angleRow.hidden=!polar;equalRow.hidden=!polar;
+      second.element.hidden=!linear;
+      curve.hidden=!isPath;
+      for(const r of vectorRows)r.hidden=!linear||source!=='vector';
+      edgePicker.setEnabled(!isPath);
+      (controls.axis as HTMLSelectElement).disabled=source==='vector';
     };
-    controls.patternType.addEventListener('change',()=>{if(controls.patternType.value==='polar'&&controls.directionSource.value==='vector')controls.directionSource.value='axis';sync();});
-    controls.directionSource.addEventListener('change',sync);controls.useSecond.addEventListener('change',sync);controls.what.addEventListener('change',sync);controls.pathMode.addEventListener('change',sync);sync();
-    for(const option of controls.alignment.children)option.textContent=({right:'First',center:'Middle',left:'Last'} as Record<string,string>)[(option as HTMLOptionElement).value];
+    for(const key of ['directionSource','useSecond','what','pathMode'])controls[key].addEventListener('change',sync);
+    sync();
   },
   validate(controls) {
     const parts=controls.what.value==='parts';
-    if(parts&&!JSON.parse(controls.parts.value).length)return 'Choose at least one part to pattern.';
-    if(controls.patternType.value==='path'){if(!controls.pathSketch.value)return 'Choose the path sketch.';if(controls.pathMode.value==='spacing'?!(Number(controls.pathSpacing.value)>0):!(Number(controls.pathDistance.value)>0))return 'Enter a positive spacing or distance along the path.';return parts?null:requireSelections(controls,[{key:'source',noun:'a source feature'},{key:'target',noun:'a target body'}]);}
+    if(parts&&!JSON.parse(controls.parts.value||'[]').length)return 'Select the parts to pattern.';
+    if(!(Number(controls.count.value)>=2))return 'Enter an instance count of at least 2.';
+    if(controls.patternType.value==='path'){if(!controls.pathSketch.value)return 'Choose the path sketch.';if(controls.pathMode.value==='spacing'?!(Number(controls.pathSpacing.value)>0):!(Number(controls.pathDistance.value)>0))return 'Enter a positive path spacing or distance.';}
+    if(controls.patternType.value==='linear'&&!(Number(controls.spacing.value)>0))return 'Enter a positive distance.';
+    if(controls.patternType.value==='polar'&&!(Number(controls.angle.value)>0))return 'Enter a positive angle.';
     if(controls.directionSource.value==='edge'&&!controls.edge.value)return 'Pick a straight edge for the pattern direction.';
     if(controls.directionSource.value==='vector'&&Math.hypot(Number(controls.vectorX.value),Number(controls.vectorY.value),Number(controls.vectorZ.value))<1e-9)return 'Enter a nonzero direction.';
-    return parts?null:requireSelections(controls,[{key:'source',noun:'a source feature'},{key:'target',noun:'a target body'}]);
+    if(controls.useSecond.value==='yes'&&(!(Number(controls.secondCount.value)>=2)||!(Number(controls.secondSpacing.value)>0)))return 'Enter a positive second distance and an instance count of at least 2.';
+    if(!parts&&!JSON.parse(controls.mergeScope.value||'[]').length)return 'Select the merge scope part.';
+    return parts?null:requireSelections(controls,[{key:'source',noun:'a feature to pattern'}]);
   },
   serialize(values) {
-    const parts=values.what==='parts'?(JSON.parse(values.parts) as string[]):undefined;
+    const parts=values.what==='parts'?(JSON.parse(values.parts||'[]') as string[]):undefined;
     const partFields=parts?{bodyIds:parts,copyBodyIds:Object.fromEntries(parts.map((id,i)=>[id,`${values.copyPrefix}-${i+1}`]))}:{};
-    const linear=values.patternType==='linear',source=values.directionSource;
+    const linear=values.patternType==='linear',source=values.directionSource,count=Number(values.count);
     const picked=source==='edge'&&values.edge?JSON.parse(values.edge):undefined;
     const vector=source==='vector'?{kind:'vector' as const,direction:[Number(values.vectorX),Number(values.vectorY),Number(values.vectorZ)] as [number,number,number]}:undefined;
-    if(values.patternType==='path')return {sourceFeatureId:values.source,...partFields,patternType:'path',axis:values.axis,count:Number(values.count),reversed:false,pathFeatureId:values.pathSketch,...(values.pathMode==='distance'?{distanceMillimeters:Number(values.pathDistance)}:{spacingMillimeters:Number(values.pathSpacing)}),...(values.pathOrientation==='path'?{orientation:'path'}:{})};
-    return {sourceFeatureId:values.source,...partFields,patternType:values.patternType,axis:values.axis,count:Number(values.count),reversed:values.direction==='reverse',
-      ...(values.alignment&&values.alignment!=='right'?{alignment:values.alignment}:{}),
+    const target=parts?{}:{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]};
+    if(values.patternType==='path')return {sourceFeatureId:values.source,...partFields,...target,patternType:'path',axis:values.axis,count,reversed:false,pathFeatureId:values.pathSketch,...(values.pathMode==='distance'?{distanceMillimeters:Number(values.pathDistance)}:{spacingMillimeters:Number(values.pathSpacing)}),...(values.pathOrientation==='path'?{orientation:'path'}:{})};
+    // Onshape's Equal spacing off: the angle is between instances; the document stores the total extent.
+    const angle=values.equalSpacing==='true'?Number(values.angle):Math.min(360,Number(values.angle)*(count-1));
+    return {sourceFeatureId:values.source,...partFields,...target,patternType:values.patternType,axis:values.axis,count,reversed:values.direction==='reverse',
+      ...(values.centered==='true'?{alignment:'center'}:{}),
       ...(linear
         ?{spacingMillimeters:Number(values.spacing),...(vector?{direction:vector}:picked?{direction:picked}:{}),
-          ...(values.useSecond==='yes'?{second:{axis:values.secondAxis,count:Number(values.secondCount),spacingMillimeters:Number(values.secondSpacing),...(values.secondDirection==='reverse'?{reversed:true}:{})}}:{})}
-        :{angleDegrees:Number(values.angle),...(picked?{axisReference:picked}:{})})};
+          ...(values.useSecond==='yes'?{second:{axis:values.secondAxis,count:Number(values.secondCount),spacingMillimeters:Number(values.secondSpacing),...(values.secondDirection==='reverse'?{reversed:true}:{}),...(values.secondCentered==='true'?{alignment:'center'}:{})}}:{})}
+        :{angleDegrees:angle,...(picked?{axisReference:picked}:{})})};
   },
 };

@@ -78,9 +78,9 @@ export function unitSuffix(text: string): HTMLElement {
 
 /** A control the gallery shows live but this engine cannot honour yet. Visible
  *  and disabled beats quietly absent: the shape of the feature stays legible. */
-export function planned<T extends HTMLElement>(control: T): T {
+export function planned<T extends HTMLElement>(control: T, reason = "Planned — not functional yet."): T {
   (control as unknown as { disabled: boolean }).disabled = true;
-  control.title = "Planned — not functional yet.";
+  control.title = reason;
   control.setAttribute("aria-disabled", "true");
   for (const child of control.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>("input,button,select")) child.disabled = true;
   return control;

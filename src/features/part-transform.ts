@@ -34,8 +34,10 @@ export const transformEditor:FeatureEditor={
  layout(context,c){
   const{doc,feature,win,form}=context;
   for(const key of ['bodies','outputs']){c[key].closest('label')?.remove();c[key].hidden=true;c[key].setAttribute('form',form.id);form.append(c[key]);}
-  const names:{[key:string]:string}={align:'Align: bring a face or point onto another',mirror:'Mirror about plane or face',translate:'Translate XYZ','translate-reference':'Translate by line or points',rotate:'Rotate','rotate-reference':'Rotate about reference',scale:'Scale','scale-reference':'Scale about point',copy:'Copy in place'};
+  // Onshape's transform types (help: PartStudio/transform.htm); Translate by distance is a recorded gap.
+  const names:{[key:string]:string}={'translate-reference':'Translate by line',translate:'Translate by XYZ','rotate-reference':'Rotate','rotate':'Rotate by XYZ axis',align:'Transform by faces or points (Onshape: by mate connectors)',copy:'Copy in place','scale-reference':'Scale',scale:'Scale about XYZ',mirror:'Mirror'};
   for(const option of c.mode.children)option.textContent=names[(option as HTMLOptionElement).value];
+  const byDistance=document.createElement('option');byDistance.value='translate-distance';byDistance.textContent='Translate by distance';byDistance.disabled=true;byDistance.title='Not available in this kernel: a translation by a picked direction and a distance is a recorded gap (use Translate by XYZ).';c.mode.insertBefore(byDistance,c.mode.children[1]??null);
   layoutParameterRows(context,control=>[c.referenceEdge,c.fromPoint,c.toPoint,c.centerPoint].includes(control));
   const row=(key:string)=>c[key].closest<HTMLElement>('.aui-feature-row')??c[key].parentElement;
   const renderMode=()=>{for(const key of Object.keys(c)){
@@ -54,7 +56,7 @@ export const transformEditor:FeatureEditor={
   const prior={...doc,features:doc.features.slice(0,end),rollbackIndex:undefined};
   const meshes=new Set(prior.features.flatMap(f=>f.type==='import-cad'&&f.meshMode==='reference'?bodyIDsForFeature(prior,f):[]));
   const choices=availableBodies(prior).filter(b=>!meshes.has(b.id));
-  mountPartBox(context,c.bodies,'Parts to transform',choices);
+  mountPartBox(context,c.bodies,'Parts and surfaces to transform',choices);
   const lifecycle=referencePickerLifecycle('body',()=>win.panel.isConnected,active=>{window.dispatchEvent(new CustomEvent('aether-source-body-picking',{detail:active}));});
   const unsubscribe=()=>{};
   const note=document.createElement('p');note.textContent='Select parts in the viewport or list. Coordinates use the document origin. Copies are separate parts and follow source edits. Reference modes follow earlier sketch lines, solid edges or selected point pairs. Rotation follows the right-hand rule from the first point toward the second.';win.addHelp(note);

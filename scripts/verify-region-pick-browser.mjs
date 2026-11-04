@@ -28,7 +28,15 @@ const ribbon = async (name) => { const button = page.getByRole('button', { name,
 const sketchId = 'sketch-pick';
 // Where a sketch point is on screen (set by main.ts for the finished-sketch display probe).
 const at = async (x, y) => { const p = await page.evaluate(([id, px, py]) => window.__aetherFinishedSketchClientPoint?.(id, px, py), [sketchId, x, y]); assert.ok(p, `sketch point ${x},${y} is on screen`); return p; };
-const clickAt = async (x, y) => { const [cx, cy] = await at(x, y); await page.mouse.click(cx, cy); await page.waitForTimeout(600); };
+// Geometry clicks go to the viewport even where a feature window floats over it: the window
+// ignores pointer events for the click, as a user would drag it aside.
+const clickThrough = async (cx, cy) => {
+  const under = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('.cad-feature-dialog') ? 'dialog' : 'viewport', [cx, cy]);
+  if (under === 'dialog') console.log(`click at ${cx},${cy} falls on the feature window; clicking through it`);
+  await page.evaluate(() => { for (const d of document.querySelectorAll('.cad-feature-dialog')) d.style.pointerEvents = 'none'; });
+  try { await page.mouse.click(cx, cy); } finally { await page.evaluate(() => { for (const d of document.querySelectorAll('.cad-feature-dialog')) d.style.pointerEvents = ''; }); }
+};
+const clickAt = async (x, y) => { const [cx, cy] = await at(x, y); await clickThrough(cx, cy); await page.waitForTimeout(600); };
 const apply = async (name) => {
   const accept = dialog().locator('[data-feature-action="accept"]');
   try { await expect(accept).toBeEnabled({ timeout: 30000 }); } catch { throw Error(`${name}: Apply stayed disabled — window says: ${await dialogText()}`); }
@@ -162,7 +170,7 @@ try {
   await dialog().waitFor({ timeout: 30000 });
   await page.waitForTimeout(600);
   const at2 = async (x, y) => { const p = await page.evaluate(([name, px, py]) => window.__aetherFinishedSketchClientPoint?.(name, px, py), ['Sketch 2', x, y]); assert.ok(p, `Sketch 2 point ${x},${y} is on screen`); return p; };
-  const click2 = async (x, y) => { const [cx, cy] = await at2(x, y); await page.mouse.click(cx, cy); await page.waitForTimeout(600); };
+  const click2 = async (x, y) => { const [cx, cy] = await at2(x, y); await clickThrough(cx, cy); await page.waitForTimeout(600); };
   await click2(-40, 0);
   await expect(dialog().locator('.aui-feature-entities[aria-label^="Faces and sketch regions to revolve"]')).toContainText(/Region/, { timeout: 10000 });
   await click2(-80, 10);
@@ -182,6 +190,7 @@ try {
   await click2(-40, 0);
   await expect(dialog().locator('.aui-feature-entities[aria-label^="Faces and sketch regions to revolve"]')).toContainText(/Sketch 2 · Region/, { timeout: 10000 });
   await clickAt(...rot([60, 20]));
+  await expect(dialog().locator('select[aria-label="Revolve axis choice"]')).toHaveValue(/sketch-pick/, { timeout: 10000 });
   await expect(dialog().locator('.aui-feature-entities[aria-label^="Revolve axis"]')).toContainText(/Sketch 1 · Line/, { timeout: 10000 });
   await page.screenshot({ path: join(evidence, '7-other-sketch-axis-picked.png') });
   await apply('Revolve about another sketch\'s line');

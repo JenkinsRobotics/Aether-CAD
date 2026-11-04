@@ -5217,13 +5217,13 @@ function createdBodyIDs(doc, feature3) {
 }
 function consumedBodyIDs(feature3) {
   if (feature3.suppressed) return [];
-  if (feature3.type === "extrude" && feature3.scopeMode === "all") return scopeConsumedBodies(feature3.scopeResolution);
+  if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") return scopeConsumedBodies(feature3.scopeResolution);
   if (feature3.type === "boolean" && !feature3.keepTools) return feature3.toolBodyIds;
   if (feature3.type === "boundary-fill" && feature3.removeTools) return feature3.toolBodyIds;
   if (feature3.type === "remove-body") return feature3.bodyIds;
   if (feature3.type === "surface-stitch") return feature3.bodyIds.slice(1);
   if (feature3.type === "surface-unstitch") return feature3.bodyIds;
-  return feature3.type === "extrude" && feature3.operation === "add" ? feature3.targetBodyIds?.slice(1) ?? [] : [];
+  return (feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" ? feature3.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc) {
   let targetBody;
@@ -5231,7 +5231,7 @@ function stableBodies(doc) {
     ...structuredClone(doc),
     features: doc.features.map((f2) => {
       const feature3 = structuredClone(f2);
-      if (feature3.type === "extrude" && feature3.scopeMode === "all") {
+      if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
         if (!feature3.suppressed) targetBody = feature3.scopeResolution?.groups.at(-1)?.bodyId ?? targetBody;
         return feature3;
       }
@@ -5270,20 +5270,20 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
         lastBody = id2;
         bodyProducers.set(id2, f2.id);
       }
-    } else if (f2.type === "extrude" && f2.scopeMode === "all") {
+    } else if ((f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all") {
       if (!f2.suppressed || includeSuppressedModifiers) for (const id2 of bodyProducers.keys()) bodyProducers.set(id2, f2.id);
       if (!f2.suppressed) lastBody = f2.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
     } else if (!["sketch", "profile", "plane", "axis", "point", "thread", "curve3d"].includes(f2.type)) {
       const body = "targetBodyId" in f2 && f2.targetBodyId ? f2.targetBodyId : lastBody;
-      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : f2.type === "extrude" && f2.targetBodyIds ? f2.targetBodyIds : [body];
+      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : (f2.type === "extrude" || f2.type === "revolve") && f2.targetBodyIds ? f2.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
-        const mergedIntoPrimary = f2.type === "extrude" && f2.operation === "add" && f2.targetBodyIds && target !== body;
+        const mergedIntoPrimary = (f2.type === "extrude" || f2.type === "revolve") && f2.operation === "add" && f2.targetBodyIds && target !== body;
         if (target && !mergedIntoPrimary && (!f2.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f2.id);
       }
     }
     const consumed = consumedBodyIDs(f2);
-    if (consumed.length && !(f2.type === "extrude" && f2.scopeMode === "all")) {
+    if (consumed.length && !((f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all")) {
       for (const id2 of consumed) bodyProducers.delete(id2);
       lastBody = "targetBodyId" in f2 ? f2.targetBodyId : lastBody;
     }
@@ -6103,7 +6103,14 @@ function validateLoft(feature3, earlier, missing) {
 }
 function validateHole(feature3, earlier, missing) {
   const positive = (value2) => typeof value2 === "number" && Number.isFinite(value2) && value2 > 0;
-  if (feature3.placement !== void 0) {
+  if (feature3.placement?.kind === "sketch-points") {
+    const points = feature3.placement.points;
+    if (!Array.isArray(points) || !points.length || points.length > 1024) throw new Error("Select the sketch points to place holes.");
+    for (const point2 of points) {
+      if (point2?.kind !== "sketch-point") throw new Error("Hole placement needs sketch points.");
+      validateExtrusionPointReference(point2, earlier, missing);
+    }
+  } else if (feature3.placement !== void 0) {
     const p2 = feature3.placement;
     if (p2.kind !== "face-point" || !Array.isArray(p2.pointMillimeters) || p2.pointMillimeters.length !== 3 || !p2.pointMillimeters.every(Number.isFinite)) throw new Error("Hole placement needs a planar face and a point on it.");
     validateSolidFaceReference(p2.face, earlier, missing, "Hole face");
@@ -6338,8 +6345,15 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     if (!["XY", "XZ", "YZ"].includes(feature3.plane) || !Number.isFinite(feature3.offsetMillimeters) || !["add", "cut"].includes(feature3.operation))
       throw new Error("Invalid mirror settings.");
     if (feature3.mirrorPlane !== void 0) validateMirrorPlane(feature3.mirrorPlane, earlier, missingReference);
+  } else if (feature3.type === "fillet" && feature3.filletType === "full-round") {
+    validateSolidFaceReference(feature3.sideFace, earlier, missingReference, "Side face");
+    validateSolidFaceReference(feature3.oppositeSideFace, earlier, missingReference, "Opposite side face");
+    if (!Array.isArray(feature3.replacedFaces) || !feature3.replacedFaces.length) throw new Error("Select the faces to replace with the full round.");
+    for (const face of feature3.replacedFaces) validateSolidFaceReference(face, earlier, missingReference, "Faces to replace");
+    if (feature3.tangentChain !== void 0 && typeof feature3.tangentChain !== "boolean") throw new Error("Tangent propagation must be true or false.");
+    if (feature3.edges !== void 0 || feature3.edgePlane !== void 0 || feature3.radiusMillimeters !== void 0) throw new Error("A full round takes faces, not edges or a radius.");
   } else if (feature3.type === "fillet" || feature3.type === "chamfer") {
-    positive(feature3.radiusMillimeters, "Edge finish size");
+    positive(feature3.radiusMillimeters ?? NaN, "Edge finish size");
     if (feature3.edgePlane && (!["XY", "XZ", "YZ"].includes(feature3.edgePlane.plane) || !Number.isFinite(feature3.edgePlane.offsetMillimeters)))
       throw new Error("Invalid edge selection plane.");
     if (feature3.tangentChain !== void 0 && (typeof feature3.tangentChain !== "boolean" || feature3.tangentChain && !feature3.edges)) throw new Error("A tangent chain needs picked edges.");
@@ -7182,6 +7196,7 @@ function validatePartDocument(value2) {
           `${feature3.name} refers to an unavailable target body.`
         );
     }
+    if (feature3.type === "revolve") validateMergeScope(feature3);
     if (feature3.type === "sketch") validateSketchFeature(feature3);
     else if (feature3.type === "extrude") {
       if (!missingReference(feature3.profileFeatureId) && !["sketch", "profile"].includes(
@@ -7190,15 +7205,7 @@ function validatePartDocument(value2) {
         throw new Error("Extrude must reference an earlier Sketch.");
       if (!["new", "add", "cut", "intersect"].includes(feature3.operation))
         throw new Error("Unsupported extrude operation.");
-      if (feature3.scopeMode !== void 0 && (feature3.scopeMode !== "all" || !["add", "cut", "intersect"].includes(feature3.operation) || feature3.targetBodyId !== void 0 || feature3.targetBodyIds !== void 0)) throw Error("Automatic extrusion scope cannot also specify target parts.");
-      if (feature3.scopeResolution !== void 0) {
-        if (feature3.scopeMode !== "all") throw Error("A scope resolution requires automatic scope.");
-        validateExtrusionScopeResolution(feature3.scopeResolution);
-      }
-      if (feature3.targetBodyIds !== void 0) {
-        const scope = feature3.targetBodyIds;
-        if (!["add", "cut", "intersect"].includes(feature3.operation) || !Array.isArray(scope) || !scope.length || scope.length > 256 || scope.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(scope).size !== scope.length || feature3.targetBodyId !== scope[0]) throw Error("Extrusion scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
-      }
+      validateMergeScope(feature3);
       if (feature3.profileContourId !== void 0 && (typeof feature3.profileContourId !== "string" || !feature3.profileContourId.trim() || feature3.profileContourId.length > 128))
         throw new Error("Invalid extruded region identity.");
       if (feature3.profileSelections !== void 0) {
@@ -7265,6 +7272,17 @@ function validatePartDocument(value2) {
     if (!referenceErrors.has(feature3.id) && feature3.type === "profile" && feature3.profile.type === "projection" && !missingReference(feature3.profile.sourceFeatureId) && feature3.profile.authored?.constraints?.some((c2) => [c2.a, c2.b, c2.axis].some((r) => r?.projectedContourId !== void 0))) {
       resolveProfileDrawing(document2.features.map((f2) => f2.type === "profile" ? { ...f2, suppressed: false } : f2), feature3.id);
     }
+  }
+}
+function validateMergeScope(feature3) {
+  if (feature3.scopeMode !== void 0 && (feature3.scopeMode !== "all" || !["add", "cut", "intersect"].includes(feature3.operation) || feature3.targetBodyId !== void 0 || feature3.targetBodyIds !== void 0)) throw Error("Automatic scope cannot also specify target parts.");
+  if (feature3.scopeResolution !== void 0) {
+    if (feature3.scopeMode !== "all") throw Error("A scope resolution requires automatic scope.");
+    validateExtrusionScopeResolution(feature3.scopeResolution);
+  }
+  if (feature3.targetBodyIds !== void 0) {
+    const scope = feature3.targetBodyIds;
+    if (!["add", "cut", "intersect"].includes(feature3.operation) || !Array.isArray(scope) || !scope.length || scope.length > 256 || scope.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(scope).size !== scope.length || feature3.targetBodyId !== scope[0]) throw Error("Merge scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
   }
 }
 function withDocumentDistanceIntent(document2) {
@@ -8038,8 +8056,8 @@ function editSketch(doc, name5, args) {
   return { document: next, featureID: feature3.id };
 }
 function resolveExtrusionScopes(doc, scopes = {}) {
-  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => f2.type === "extrude" && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
-  if (Object.keys(scopes).some((id2) => !active.has(id2))) throw Error("Rebuild returned an unknown automatic extrusion scope.");
+  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => (f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
+  if (Object.keys(scopes).some((id2) => !active.has(id2))) throw Error("Rebuild returned an unknown automatic scope.");
   const available = /* @__PURE__ */ new Set();
   const next = { ...doc, features: doc.features.map((feature3) => {
     if (!feature3.suppressed && "operation" in feature3 && feature3.operation === "new") {
@@ -8053,8 +8071,8 @@ function resolveExtrusionScopes(doc, scopes = {}) {
     if (!resolution) throw Error(`${feature3.name}: rebuild did not resolve the automatic scope.`);
     validateExtrusionScopeResolution(resolution);
     if (resolution.targets.some((id2) => !available.has(id2))) throw Error(`${feature3.name}: rebuild returned an unavailable scope part.`);
-    if (feature3.type === "extrude" && feature3.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
-    if (feature3.type === "extrude" && feature3.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
+    if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
+    if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
     if (feature3.type === "extrude" && feature3.operation === "intersect" && resolution.groups.length !== resolution.targets.length) throw Error("Intersect scope must retain overlapping parts.");
     scopeConsumedBodies(resolution).forEach((id2) => available.delete(id2));
     return { ...feature3, scopeResolution: structuredClone(resolution) };
@@ -12826,7 +12844,8 @@ export interface AxisReference {
   "chamfer": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -12836,7 +12855,9 @@ export interface AxisReference {
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -12892,6 +12913,52 @@ export type SolidFaceReference=FaceSource & (
 );
 
 export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "edge": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "extrude": `export interface ExtrudeFeature {
@@ -13015,7 +13082,8 @@ export interface PlanarFaceAnchor {
   "fillet": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -13025,7 +13093,9 @@ export interface PlanarFaceAnchor {
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -13055,7 +13125,53 @@ export interface CurvedEdgeReference {
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
-  "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HoleFacePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  /** Counterdrill: a counterbore whose floor is the countersink cone down to the hole. */\n  cutType: "plain" | "counterbore" | "countersink" | "counterdrill";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n  thread?: HoleThread;\n  /** A blind hole\'s bottom: flat (default) or a drill-point cone below the depth. */\n  drillPoint?: "flat" | "angled";\n  /** Included angle of the drill point; default 118°. */\n  drillPointAngleDegrees?: number;\n  /** Half-angle taper of the drilled wall, narrowing with depth. */\n  taperAngleDegrees?: number;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport interface HoleThread {\n  standard: HoleThreadStandard;\n  /** "M8", "M10x1.25", "1/4-20". */\n  designation: string;\n  tapped: boolean;\n  /** Clearance fit for a hole that is not tapped; default normal. */\n  fit?: HoleClearanceFit;\n  /** Tolerance class of a tapped thread ("6H", "6G", "2B"); default 6H / 2B. */\n  threadClass?: string;\n  /** Cut the helical thread into the wall instead of recording it; default false. */\n  modeled?: boolean;\n  leftHand?: boolean;\n  /** Thread length from the start face; default: the whole hole. */\n  depthMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type HoleClearanceFit = "close" | "normal" | "loose";',
+  "full-round": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "hole": 'export interface HoleFeature {\n  id: string; type: "hole"; name: string; suppressed: boolean;\n  /** The centre sketch; absent when `placement` gives the hole its start. */\n  profileFeatureId?: string; profileContourId?: string; targetBodyId?: string;\n  /** One hole at every circle of the sketch instead of one chosen region. */\n  allCircles?: boolean;\n  placement?: HolePlacement;\n  /** Drill direction; default: into the part, square to the sketch or face. */\n  direction?: [number, number, number];\n  /** The drilled diameter. With a thread this is the tap drill or clearance size the standard gives. */\n  diameterMillimeters: number; depthMillimeters: number;\n  depthType: "blind" | "through-all";\n  /** Counterdrill: a counterbore whose floor is the countersink cone down to the hole. */\n  cutType: "plain" | "counterbore" | "countersink" | "counterdrill";\n  counterDiameterMillimeters?: number; counterDepthMillimeters?: number;\n  countersinkAngleDegrees?: number; reversed?: boolean;\n  thread?: HoleThread;\n  /** A blind hole\'s bottom: flat (default) or a drill-point cone below the depth. */\n  drillPoint?: "flat" | "angled";\n  /** Included angle of the drill point; default 118°. */\n  drillPointAngleDegrees?: number;\n  /** Half-angle taper of the drilled wall, narrowing with depth. */\n  taperAngleDegrees?: number;\n}\n\nexport type HolePlacement = HoleFacePlacement | HoleSketchPointsPlacement;\n\nexport interface HoleThread {\n  standard: HoleThreadStandard;\n  /** "M8", "M10x1.25", "1/4-20". */\n  designation: string;\n  tapped: boolean;\n  /** Clearance fit for a hole that is not tapped; default normal. */\n  fit?: HoleClearanceFit;\n  /** Tolerance class of a tapped thread ("6H", "6G", "2B"); default 6H / 2B. */\n  threadClass?: string;\n  /** Cut the helical thread into the wall instead of recording it; default false. */\n  modeled?: boolean;\n  leftHand?: boolean;\n  /** Thread length from the start face; default: the whole hole. */\n  depthMillimeters?: number;\n}\n\nexport interface HoleFacePlacement { kind: "face-point"; face: SolidFaceReference; pointMillimeters: [number, number, number] }\n\nexport interface HoleSketchPointsPlacement { kind: "sketch-points"; points: Extract<ExtrusionPointReference, { kind: "sketch-point" }>[] }\n\nexport type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc" | "unf" | "bsp" | "npt";\n\nexport type HoleClearanceFit = "close" | "normal" | "loose";',
   "import-cad": "export interface ImportCADFeature {\n  id:string; type:'import-cad'; name:string; suppressed:boolean; operation:'new';\n  bodyId:string; sourceName:string; dataBase64:string; format:CADImportFormat;\n  meshMode?:'reference'|'solid'; meshUnits?:MeshImportUnits;\n}\n\nexport type CADImportFormat = 'step' | 'iges' | 'brep' | 'stl' | 'obj' | 'ply' | 'off';\n\nexport type MeshImportUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';",
   "import-step": 'export interface ImportSTEPFeature {\n  id: string;\n  type: "import-step";\n  name: string;\n  suppressed: boolean;\n  operation: "new";\n  bodyId: string;\n  sourceName: string;\n  dataBase64: string;\n}',
   "lip": "export interface LipFeature {\n  id:string;type:'lip';name:string;suppressed:boolean;\n  targetBodyId:string;\n  face:SolidFaceReference;\n  shape:'lip'|'groove';\n  side:'inside'|'outside';\n  widthMillimeters:number;heightMillimeters:number;\n  /** Groove clearance added to the width; default: none. */\n  gapMillimeters?:number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
@@ -13089,7 +13205,8 @@ export type SolidFaceReference=FaceSource & (
   "offset": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -13099,7 +13216,9 @@ export type SolidFaceReference=FaceSource & (
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -13363,7 +13482,8 @@ export type PierceContext = Record<string, { source: SketchPierceReference; poin
   "radius": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -13373,7 +13493,9 @@ export type PierceContext = Record<string, { source: SketchPierceReference; poin
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -13430,6 +13552,10 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   operation: "new" | "add" | "cut";
   bodyId?: string;
   targetBodyId?: string;
+  /** Merge scope, as Extrude's: every touching part (\`all\`) or explicit parts; Add keeps the first identity. */
+  scopeMode?: "all";
+  scopeResolution?: import("./extrusion-scope").ExtrusionScopeResolution;
+  targetBodyIds?: string[];
   suppressed: boolean;
 }
 
@@ -13442,6 +13568,11 @@ export type ExtrusionPointReference = {
   kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;
   anchor: SolidVertexAnchor; label: string;
 };
+
+export interface ExtrusionScopeResolution {
+ targets:string[];
+ groups:{bodyId:string;sources:string[]}[];
+}
 
 export type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};
 
@@ -13736,7 +13867,8 @@ export interface ProfileRegionReference { contourIds: string[]; inside?: string[
   "tangent": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -13746,7 +13878,9 @@ export interface ProfileRegionReference { contourIds: string[]; inside?: string[
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -13781,7 +13915,8 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "width": `export type EdgeFinishFeature = {
   id: string;
   name: string;
-  radiusMillimeters: number;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
   targetBodyId?: string;
   edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
   /** Picked edges; when present they replace the plane pin. */
@@ -13791,7 +13926,9 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   suppressed: boolean;
 } & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
-      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width" }
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
       /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
       /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
@@ -38921,6 +39058,34 @@ function tangentChainMidpoints(body, seeds) {
     edges.forEach((edge) => edge.delete());
   }
 }
+function buildFullRound(feature3, body, faceByReference, own) {
+  const planeOf = (face, label) => {
+    if (face.geomType !== "PLANE") throw new Error(`${label} must be planar: this kernel builds full rounds between parallel planar faces only.`);
+    const center = [...deleteAfterVectorTuple(face.center)];
+    return { normal: unit$3([...deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))]), center };
+  };
+  const side = planeOf(faceByReference(body, feature3.sideFace, "Side face"), "Side face");
+  const opposite = planeOf(faceByReference(body, feature3.oppositeSideFace, "Opposite side face"), "Opposite side face");
+  if (dot$6(side.normal, opposite.normal) > -1 + 1e-6) throw new Error("Side face and Opposite side face must be parallel and facing away from each other: this kernel builds full rounds between parallel planar faces only.");
+  const width = dot$6(sub$5(opposite.center, side.center), side.normal);
+  if (!(width < -1e-6)) throw new Error("The side faces must face outward with the faces to replace between them.");
+  const radius = -width / 2;
+  const midPlanePoint = add$4(side.center, scale$1(side.normal, width / 2));
+  const box = body.boundingBox, reach = 2 * Math.hypot(...sub$5(box.bounds[1], box.bounds[0])) + 1;
+  let result = body;
+  for (const reference of feature3.replacedFaces) {
+    const replaced = planeOf(faceByReference(result, reference, "Faces to replace"), "A face to replace");
+    if (Math.abs(dot$6(replaced.normal, side.normal)) > 1e-6) throw new Error(`${reference.label} does not run between the side faces.`);
+    const along = unit$3(cross$4(replaced.normal, side.normal));
+    const onMid = sub$5(replaced.center, scale$1(side.normal, dot$6(sub$5(replaced.center, midPlanePoint), side.normal)));
+    const axisPoint = sub$5(onMid, scale$1(replaced.normal, radius));
+    const slab = own(drawRectangle$1(2 * radius, 2 * reach).sketchOnPlane(own(new Plane(axisPoint, side.normal, replaced.normal))).extrude(reach));
+    const cylinder = own(makeCylinder(radius, 2 * reach, sub$5(axisPoint, scale$1(along, reach)), along));
+    const blend2 = own(cylinder.intersect(body));
+    result = own(own(result.cut(slab)).fuse(blend2));
+  }
+  return result;
+}
 function applyBooleanFeature(feature3, bodies, own) {
   const target = bodies.get(feature3.targetBodyId);
   if (!target)
@@ -40234,7 +40399,7 @@ function evaluatePartDocument(document2, options = {}) {
             const id2 = feature3.targetBodyId ?? currentBodyID;
             const body = id2 && bodies.get(id2);
             if (!body || !id2) throw new Error("Create a solid before finishing edges.");
-            bodies.set(id2, own(buildEdgeFinish(feature3, id2, body, { own, previewId, publish, faceByReference })));
+            bodies.set(id2, own(feature3.type === "fillet" && feature3.filletType === "full-round" ? buildFullRound(feature3, body, faceByReference, own) : buildEdgeFinish(feature3, id2, body, { own, previewId, publish, faceByReference })));
             continue;
           }
           if (feature3.type === "extrude") {
@@ -40265,7 +40430,13 @@ function evaluatePartDocument(document2, options = {}) {
             const body = id2 && bodies.get(id2);
             if (!body || !id2) throw new Error("Choose an existing target body for the hole.");
             const starts = [];
-            if (feature3.placement) {
+            if (feature3.placement?.kind === "sketch-points") {
+              for (const ref of feature3.placement.points) {
+                const frame = sketchFrameOf(ref.sourceFeatureId);
+                const n = unit$3(frame.normal);
+                starts.push({ center: stopPoint(ref), n: [-n[0], -n[1], -n[2]], x: unit$3(frame.xDirection) });
+              }
+            } else if (feature3.placement) {
               const face = faceByReference(body, feature3.placement.face, "Hole face");
               try {
                 const center = deleteAfterVectorTuple(face.center), outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
@@ -42846,7 +43017,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (!isShape3D(result))
               throw new Error("Feature did not produce a solid.");
             tool22 = result;
-            if (feature3.type === "extrude" && feature3.targetBodyIds && feature3.scopeMode !== "all") {
+            if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.targetBodyIds && feature3.scopeMode !== "all") {
               const ids2 = feature3.targetBodyIds, operation2 = feature3.operation;
               if (!["add", "cut", "intersect"].includes(operation2) || !ids2.length || ids2.length > 256 || new Set(ids2).size !== ids2.length || feature3.targetBodyId && feature3.targetBodyId !== ids2[0]) throw new Error("Choose distinct target parts for Add, Remove or Intersect.");
               if (ids2.some((id2) => !bodies.has(id2))) throw new Error("A selected target part is unavailable. Repair the extrusion scope.");
@@ -42884,7 +43055,7 @@ function evaluatePartDocument(document2, options = {}) {
               currentBodyID = ids2[0];
               continue;
             }
-            if (feature3.type === "extrude" && feature3.scopeMode === "all") {
+            if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
               const operation2 = feature3.operation;
               if (!["add", "cut", "intersect"].includes(operation2) || feature3.targetBodyIds || feature3.targetBodyId) throw new Error("Automatic extrusion scope cannot also specify target parts.");
               const solids = [...bodies];

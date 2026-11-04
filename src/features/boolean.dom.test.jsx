@@ -31,11 +31,20 @@ it('Boolean opens on Union/Subtract/Intersect tabs with the tool bodies right un
   expect(order.indexOf('aui-feature-entities')).toBeLessThan(order.findIndex((c) => c === 'aui-feature-row'));
   [...win.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Subtract').click();
   expect(win.querySelector('select[aria-label="Operation"]').value).toBe('cut');
-  // Picking a part in the viewport fills the Tools box; the target is excluded.
-  const tool = availableBodies(doc).find((body) => body.id !== win.querySelector('[aria-label="Target body"]').value);
-  cadSelection.dispatch({ type: 'replace', items: [{ id: 'pick', kind: 'face', partId: tool.id, label: 'Face' }] });
+  // Subtract: the Targets box takes the clicked box's picks, Tools the rest (Onshape's focused field); no Target body select.
+  expect(win.querySelector('.aui-feature-entities[aria-label^="Targets"]').hidden).toBe(false);
+  expect([...win.querySelectorAll('.aui-feature-row')].some((row) => row.textContent.includes('Target body') && !row.closest('[hidden]'))).toBe(false);
+  const [target, tool] = availableBodies(doc);
+  win.querySelector('.aui-feature-entities[aria-label^="Targets"]').dispatchEvent(new Event('pointerdown'));
+  cadSelection.dispatch({ type: 'replace', items: [{ id: 'pick-target', kind: 'face', partId: target.id, label: 'Face' }] });
+  expect(win.querySelector('.aui-feature-entities[aria-label^="Targets"]').textContent).toContain(target.name);
+  win.querySelector('.aui-feature-entities[aria-label^="Tools"]').dispatchEvent(new Event('pointerdown'));
+  cadSelection.dispatch({ type: 'replace', items: [{ id: 'pick-tool', kind: 'face', partId: tool.id, label: 'Face' }] });
   expect(win.querySelector('.aui-feature-entities[aria-label^="Tools"]').textContent).toContain(tool.name);
+  // The Offset options are present for Subtract and name the kernel gap.
+  const offset = [...win.querySelectorAll('[aria-disabled="true"]')].find((el) => el.textContent.includes('Offset all'));
+  expect(offset?.title).toMatch(/kernel/);
   win.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
-  expect(doc.features.at(-1)).toMatchObject({ type: 'boolean', operation: 'cut' });
+  expect(doc.features.at(-1)).toMatchObject({ type: 'boolean', operation: 'cut', targetBodyId: target.id, toolBodyIds: [tool.id] });
 });

@@ -1,7 +1,9 @@
 import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/sketch/reference/profile-region-reference';
 import { sketchRegions } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
-import {bodyAndOperationTabs, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {bodyAndOperationTabs, planned, rowIn, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {availableBodies} from '@aether/core/document';
+import {mountPartBox} from './part-box';
 import {extrusionPointPicker, serializeExtrusionPoint} from './extrude-point-picker';
 
 type Section = {profileFeatureId: string; contourIndex: number} & ProfileRegionSelection;
@@ -26,6 +28,7 @@ export const loftEditor: FeatureEditor = {
       operation:context.field('Operation',context.feature?.operation ?? 'new',['new','add','cut']),
       ruled:context.field('Surface',context.feature?.ruled ? 'ruled' : 'smooth',['smooth','ruled']),
       endPoint:context.field('Apex',context.feature?.endPoint&&context.feature.endPoint.kind!=='point'?JSON.stringify(context.feature.endPoint):''),
+      mergeScope:context.field('Merge scope part',JSON.stringify(context.feature?.targetBodyId?[context.feature.targetBodyId]:availableBodies(context.doc).at(-1)?[availableBodies(context.doc).at(-1)!.id]:[])),
     };
   },
   layout(context, controls) {
@@ -103,18 +106,34 @@ export const loftEditor: FeatureEditor = {
     controls.region.addEventListener('change',sync);
     list.addEventListener('change',sync);
     render(0);
+    // Onshape's rows after the profiles (help: PartStudio/loft.htm); this kernel lofts smooth or ruled
+    // through closed sections to an optional apex, so these are present and disabled with the gap named.
+    const gapRow=(label:string,reason:string)=>{const sel=document.createElement('select');sel.setAttribute('aria-label',label);const o=document.createElement('option');o.textContent='Normal to profile';sel.append(o);const r=rowIn(label,sel);planned(r,reason);win.body.append(r);return r;};
+    const conditionGap='Not available in this kernel: loft end conditions (tangent, match tangent or curvature, with a magnitude) are a recorded gap.';
+    gapRow('Start profile condition',conditionGap);gapRow('End profile condition',conditionGap);
+    const gapSection=(label:string,reason:string,fields:string[])=>{const section=win.subsection(label,{kind:'checkbox',open:false});for(const name of fields){const box=win.entitiesBox(name);box.render([]);section.body.append(box.element);}planned(section.element,reason);win.body.append(section.element);};
+    gapSection('Guides and continuity','Not available in this kernel: guide curves with continuity are a recorded gap.',['Guides']);
+    gapSection('Path','Not available in this kernel: a centreline path with a section count is a recorded gap.',['Path']);
+    gapSection('Connections','Not available in this kernel: vertex or edge connections between profiles are a recorded gap.',['Vertices or edges']);
+    const iso=document.createElement('input');iso.type='checkbox';iso.setAttribute('aria-label','Show isocurves');const isoRow=rowIn('Show isocurves',iso);planned(isoRow,'Not available in this kernel: an isocurve overlay is a recorded gap.');win.body.append(isoRow);
+    const {doc,feature}=context;
+    const end=feature?doc.features.findIndex(f=>f.id===feature.id):doc.rollbackIndex??doc.features.length;
+    const scope=mountPartBox(context,controls.mergeScope,'Merge scope',availableBodies({...doc,features:doc.features.slice(0,end),rollbackIndex:undefined}),()=>'',{single:true});
+    win.body.append(scope.element);
+    controls.mergeScope.addEventListener('change',()=>{const id=JSON.parse(controls.mergeScope.value||'[]')[0];if(id){controls.target.value=id;controls.target.dispatchEvent(new Event('change'));}});
+    const syncScope=()=>{scope.element.hidden=controls.operation.value==='new';};controls.operation.addEventListener('change',syncScope);syncScope();
   },
   validate(controls,context) {
     if (JSON.parse(controls.sections.value).length === 1 && controls.endPoint.value) return null;
     const sections=sectionsOf(controls);
     if (sections.length<2) return 'Add at least two closed sketch sections in loft order.';
     if (sections.some(section=>{const region=regionFor(context,section); return !region || region.closed===false;})) return 'A loft section is unavailable. Remove it and choose a closed sketch region.';
-    if (controls.operation.value!=='new' && !controls.target?.value) return 'Select a target body for the loft.';
+    if (controls.operation.value!=='new' && !JSON.parse(controls.mergeScope.value||'[]').length) return 'Select the merge scope part.';
     return null;
   },
   serialize(values,context) {
     const sections: Section[]=JSON.parse(values.sections);
-    return {operation:values.operation,ruled:values.ruled==='ruled',...(values.endPoint?{endPoint:serializeExtrusionPoint(values.endPoint,context)}:{}),sections:stampProfileSelections(context, sections.map(section=>{
+    return {operation:values.operation,...(values.operation!=='new'?{targetBodyId:JSON.parse(values.mergeScope||'[]')[0]}:{}),ruled:values.ruled==='ruled',...(values.endPoint?{endPoint:serializeExtrusionPoint(values.endPoint,context)}:{}),sections:stampProfileSelections(context, sections.map(section=>{
       const profile=context.doc.features.find(f=>f.id===section.profileFeatureId);
       const region=regionFor(context,section);
       if (!profile || !region) throw Error('A selected loft section is no longer available.');

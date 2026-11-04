@@ -2,6 +2,7 @@ import { AETHER_CAD_EXTENSION } from "../document/file-types";
 import { UnsupportedFeature, FeatureFailure } from "./feature-errors";
 import { sub, add, scale, neg, cross, norm, unit, dot, type V3 } from "./vector";
 import { buildEdgeFinish } from "./features/edge-finish";
+import { buildFullRound } from "./features/full-round";
 import { applyBooleanFeature } from "./features/boolean";
 import { applyPatternFeature } from "./features/pattern";
 import { scopedRemoval } from './scoped-removal';
@@ -908,7 +909,9 @@ export function evaluatePartDocument(
           const id = feature.targetBodyId ?? currentBodyID;
           const body = id && bodies.get(id);
           if (!body || !id) throw new Error("Create a solid before finishing edges.");
-          bodies.set(id, own(buildEdgeFinish(feature, id, body, { own, previewId, publish, faceByReference })));
+          bodies.set(id, own(feature.type === "fillet" && feature.filletType === "full-round"
+            ? buildFullRound(feature as import("../document/index").FullRoundFillet, body, faceByReference, own)
+            : buildEdgeFinish(feature, id, body, { own, previewId, publish, faceByReference })));
           continue;
         }
         if (feature.type === "extrude") {
@@ -935,7 +938,14 @@ export function evaluatePartDocument(
           // Where each hole starts and which way it drills: circle centres of a sketch
           // (one, or every one), or a picked point on a planar face (into the part).
           const starts: { center: V3; n: V3; x: V3 }[] = [];
-          if (feature.placement) {
+          if (feature.placement?.kind === "sketch-points") {
+            // Onshape's placement: each picked sketch point, drilled square to its sketch's plane.
+            for (const ref of feature.placement.points) {
+              const frame = sketchFrameOf(ref.sourceFeatureId);
+              const n = unit(frame.normal as V3);
+              starts.push({ center: stopPoint(ref), n: [-n[0], -n[1], -n[2]], x: unit(frame.xDirection as V3) });
+            }
+          } else if (feature.placement) {
             const face = faceByReference(body, feature.placement.face, "Hole face");
             try {
               const center = deleteAfterVectorTuple(face.center), outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
@@ -3142,7 +3152,7 @@ export function evaluatePartDocument(
           if (!isShape3D(result))
             throw new Error("Feature did not produce a solid.");
           tool = result;
-          if (feature.type === "extrude" && feature.targetBodyIds && feature.scopeMode !== "all") {
+          if ((feature.type === "extrude" || feature.type === "revolve") && feature.targetBodyIds && feature.scopeMode !== "all") {
             // Explicit scope (FreeCAD's rule): Remove and Intersect meet each named
             // part on its own (a part the tool misses is kept unchanged); Add joins
             // every named part and the tool into one solid under the first identity.
@@ -3175,7 +3185,7 @@ export function evaluatePartDocument(
             currentBodyID = ids[0];
             continue;
           }
-          if (feature.type === "extrude" && feature.scopeMode === "all") {
+          if ((feature.type === "extrude" || feature.type === "revolve") && feature.scopeMode === "all") {
             // Automatic scope (FreeCAD's rule): the tool meets every solid it
             // overlaps — removed from or intersected with each, or joined into the
             // parts it touches, which merge; parts a cut empties are consumed.

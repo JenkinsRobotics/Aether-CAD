@@ -47,7 +47,7 @@ export function sourceFeatureForBody(doc:PartDocument,bodyId:string,beforeFeatur
       if(feature.faces.some(face=>face.bodyId===bodyId))sourceFeatureId=feature.id;
       continue;
     }
-    if(feature.type==="extrude"&&feature.scopeMode==="all"){
+    if((feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
       if(feature.scopeResolution?.groups.some(group=>group.bodyId===bodyId))sourceFeatureId=feature.id;
       if(consumedBodyIDs(feature).includes(bodyId))sourceFeatureId=undefined;
       lastBody=feature.scopeResolution?.groups.at(-1)?.bodyId??lastBody;continue;

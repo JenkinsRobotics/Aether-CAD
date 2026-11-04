@@ -6,6 +6,7 @@ import { sketchDirectionLines } from "../modeling/extrude-direction-reference";
 import { extrusionPointPicker, serializeExtrusionPoint } from "./extrude-point-picker";
 import { extrusionPartPicker } from "./extrude-part-picker";
 import { extrusionFacePicker } from "./planar-face-picker";
+import { layoutExtrudeScope } from "./extrude-scope";
 /** Revolve feature editor — window layout, controls, and serialization.
  *  Layout mirrors `core/ui/gallery/features/revolve.ts`: body/boolean tabs, a
  *  regions box, an axis box, then the Full-revolve toggle. */
@@ -13,6 +14,8 @@ import {
   bodyAndOperationTabs,
   entityChips,
   iconButton,
+  planned,
+  rowIn,
   type Controls,
   type FeatureEditor,
   type FeatureEditorContext,
@@ -75,6 +78,10 @@ export const revolveEditor: FeatureEditor = {
       secondPart: field("Opposite stopping part identity", feature?.secondEnd?.endPartId ?? ""),
       secondReference: field("Opposite stopping face", feature?.secondEnd?.endReference ? JSON.stringify(feature.secondEnd.endReference) : ""),
       second: field("Opposite angle (degrees)", String(feature?.secondEnd?.angleDegrees ?? feature?.secondAngleDegrees ?? 90)),
+      // Merge scope, as Extrude's: every touching part, or the target plus additional parts.
+      // A new revolve keeps the explicit target (the automatic scope's overlap test misreads some revolved solids; ledger: Revolve).
+      scopeMode: field("Merge scope mode", feature?.scopeMode ?? "selected", ["selected", "all"]),
+      scope: field("Additional target parts", JSON.stringify(feature?.targetBodyIds?.filter((id: string) => id !== feature.targetBodyId) ?? [])),
     };
   },
 
@@ -186,12 +193,20 @@ export const revolveEditor: FeatureEditor = {
     options.append(secondSection.element);
     controls.second.closest("label")?.remove(); controls.second.setAttribute("form", form.id);
     const syncSecond = layoutEnd(secondSection.body, controls.secondEndType, win.row("Opposite angle", controls.second), controls.secondPoint, controls.secondPart, controls.secondReference, true);
+    // Onshape's Offset for the Up-to end types: present, disabled, the kernel gap named.
+    const offsetGap = "Not available in this kernel: a revolve cannot yet stop short of its end entity by an offset (recorded gap).";
+    const offset = win.subsection("Offset", { kind: "checkbox", open: false });
+    const offsetInput = document.createElement("input"); offsetInput.type = "text"; offsetInput.setAttribute("aria-label", "Offset distance");
+    offset.body.append(rowIn("Offset distance", offsetInput), rowIn("Flip offset", iconButton("flip-horizontal", "Flip offset")));
+    planned(offset.element, offsetGap); options.append(offset.element);
+    layoutExtrudeScope(context, controls);
     full.checked = controls.endType.value === "blind" && Math.abs(degrees(controls.angle) - 360) < 1e-9;
     function sync() {
       options.hidden = full.checked;
       const blind = controls.endType.value === "blind", second = controls.secondEnd.value === "true" && controls.symmetric.value !== "true";
       symmetricRow.hidden = !blind || controls.secondEnd.value === "true";
       secondSection.element.hidden = controls.symmetric.value === "true";
+      offset.element.hidden = blind && controls.secondEndType.value === "blind";
       syncFirst(!full.checked); syncSecond(!full.checked && second);
     }
     full.onchange = () => {
@@ -241,6 +256,8 @@ export const revolveEditor: FeatureEditor = {
       profileFeatureId: values.source,
       ...selectedRegion(values, context),
       operation: values.operation,
+      ...(values.operation !== "new" && values.scopeMode === "all" ? { scopeMode: "all" } : {}),
+      ...(values.scopeMode !== "all" && ["add", "cut"].includes(values.operation) && JSON.parse(values.scope || "[]").length ? { targetBodyIds: [values.target, ...JSON.parse(values.scope)] } : {}),
       axis: (principalAxes as readonly string[]).includes(values.axis) ? values.axis : "Z",
       angleDegrees: Number(values.angle),
       ...(blind ? {} : { endType: values.endType, ...stop(values.endType, values.endPoint, values.endPart, values.endReference) }),

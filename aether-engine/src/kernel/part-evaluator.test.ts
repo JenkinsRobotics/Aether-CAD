@@ -67,7 +67,7 @@ it.each(["fillet", "chamfer"] as const)("finishes only the picked edges (%s)", a
   const topEdge = built.topology.flatMap((face) => face.candidates).find((c) => c.kind === "edge-midpoint" && c.edgeAnchor && Math.abs(c.origin[2] - 10) < 1e-6 && c.measurements?.linearDirection && Math.abs(c.measurements.linearDirection[0]) > 0.5);
   expect(topEdge?.edgeAnchor).toBeDefined();
   box.features.push({ id: "finish", name: "Finish", type, radiusMillimeters: 1, suppressed: false,
-    edges: [{ kind: "solid-edge", sourceFeatureId: box.features[1].id, bodyId: built.id, anchor: structuredClone(topEdge!.edgeAnchor!), label: "Edge" }] });
+    edges: [{ kind: "solid-edge", sourceFeatureId: box.features[1].id, bodyId: built.id, anchor: structuredClone(topEdge!.edgeAnchor!), label: "Edge" }] } as typeof box.features[number]);
   expect(evaluatePartDocument(box).parts[0].topology.length).toBe(built.topology.length + 1);
   // A curved edge by midpoint and length: the top circle of a cylinder.
   const cyl = createEmptyPartDocument("Picked circle");
@@ -77,7 +77,7 @@ it.each(["fillet", "chamfer"] as const)("finishes only the picked edges (%s)", a
   const rim = drum.topology.flatMap((face) => face.candidates).find((c) => c.kind === "edge-midpoint" && Math.abs(c.origin[2] - 8) < 1e-6);
   expect(rim?.measurements?.lengthMillimeters).toBeCloseTo(2 * Math.PI * 10, 3);
   cyl.features.push({ id: "finish", name: "Finish", type, radiusMillimeters: 1, suppressed: false,
-    edges: [{ kind: "curved-edge", sourceFeatureId: "e", bodyId: drum.id, midpointMillimeters: [...rim!.origin] as [number, number, number], lengthMillimeters: rim!.measurements!.lengthMillimeters!, label: "Rim" }] });
+    edges: [{ kind: "curved-edge", sourceFeatureId: "e", bodyId: drum.id, midpointMillimeters: [...rim!.origin] as [number, number, number], lengthMillimeters: rim!.measurements!.lengthMillimeters!, label: "Rim" }] } as never);
   expect(evaluatePartDocument(cyl).parts[0].topology.length).toBe(drum.topology.length + 1);
   // A pick that no longer matches is a refusal, never the nearest edge.
   cyl.features[2] = { ...cyl.features[2], edges: [{ kind: "curved-edge", sourceFeatureId: "e", bodyId: drum.id, midpointMillimeters: [0, 10, 4], lengthMillimeters: 5, label: "Gone" }] } as typeof cyl.features[2];
@@ -503,7 +503,7 @@ it.each(["fillet", "chamfer"] as const)(
       type,
       radiusMillimeters: 0.5,
       suppressed: false,
-    });
+    } as never);
     const after = evaluatePartDocument(doc).parts[0];
     expect(after.topology.length).toBeGreaterThan(before.topology.length);
   },
@@ -1073,3 +1073,66 @@ it('fillets a picked curved face by its surface reference, the same as picking i
  expect(byFace).toBeLessThan(volumeOf(doc));
  expect(byFace).toBeCloseTo(volumeOf(withFillet(edges)),6);
 },60000);
+
+it("builds Onshape's Full round between parallel planar side faces, and refuses other side faces", async () => {
+  const { createRectanglePartDocument } = await import("../document/part-document");
+  // A 40 × 10 × 30 block: the top strip is replaced by a half cylinder of radius 5 tangent to both sides.
+  const box = createRectanglePartDocument("Full round", { widthMillimeters: 40, heightMillimeters: 10, depthMillimeters: 30 });
+  const built = evaluatePartDocument(box).parts[0], extrudeId = box.features.find((f) => f.type === "extrude")!.id;
+  const face = (label: string, normal: [number, number, number]) => ({ sourceFeatureId: extrudeId, bodyId: built.id, label, normal });
+  const volume = (doc: typeof box) => { let v = 0; evaluatePartDocument(doc, { withBodies: (b) => { for (const body of b.values()) v += measureVolume(body as Shape3D); } }); return v; };
+  const full = volume(box);
+  const withRound = (side: [number, number, number], opposite: [number, number, number], replaced: [number, number, number]) => ({ ...box, features: [...box.features,
+    { id: "fr", type: "fillet" as const, filletType: "full-round" as const, name: "Full round", suppressed: false, targetBodyId: built.id, sideFace: face("Side", side), oppositeSideFace: face("Opposite", opposite), replacedFaces: [face("Top", replaced)] }] });
+  const rounded = withRound([0, -1, 0], [0, 1, 0], [0, 0, 1]);
+  // The strip's two 40 mm corners each lose (1 − π/4)·5² per mm.
+  expect(full - volume(rounded)).toBeCloseTo((1 - Math.PI / 4) * 25 * 2 * 40, 2);
+  const topology = evaluatePartDocument(rounded).parts[0].topology;
+  expect(topology.filter((f) => f.surfaceType === "CYLINDER")).toHaveLength(1);
+  expect(topology.some((f) => f.surfaceType === "PLANE" && Math.abs(f.measurements!.centerMillimeters![2] - 30) < 1e-6)).toBe(false);
+  expect(() => volume(withRound([0, -1, 0], [0, 0, 1], [1, 0, 0]))).toThrow(/parallel/);
+}, 60000);
+
+it("revolves with Extrude's merge scope: explicit target parts and every touching part", async () => {
+  const { createRectanglePartDocument } = await import("../document/part-document");
+  // Two separate blocks; a revolved cut about Z through both: explicit scope names both parts,
+  // automatic scope ("Merge with all") finds them.
+  const box = createRectanglePartDocument("Scope", { widthMillimeters: 20, heightMillimeters: 20, depthMillimeters: 10 });
+  const first = evaluatePartDocument(box).parts[0];
+  const second = `${box.documentId}:body-second`;
+  box.features.push(
+    { id: "s2", type: "profile", name: "Second", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "polygon", pointsMillimeters: [[-30, -10], [-10, -10], [-10, 10], [-30, 10]] } },
+    { id: "e2", type: "extrude", name: "Second", profileFeatureId: "s2", distanceMillimeters: 10, operation: "new", bodyId: second, suppressed: false },
+    { id: "cp", type: "profile", name: "Cutter", plane: "XZ", offsetMillimeters: 0, suppressed: false, profile: { type: "polygon", pointsMillimeters: [[0, 4], [40, 4], [40, 6], [0, 6]] } });
+  const volume = (doc: typeof box) => { let v = 0; evaluatePartDocument(doc, { withBodies: (b) => { for (const body of b.values()) v += measureVolume(body as Shape3D); } }); return v; };
+  const whole = volume(box);
+  expect(whole).toBeCloseTo(20 * 20 * 10 + 20 * 20 * 10, 3);
+  const cut = (scope: Record<string, unknown>) => ({ ...box, features: [...box.features, { id: "rc", type: "revolve" as const, name: "Groove", suppressed: false, profileFeatureId: "cp", axis: "Z" as const, angleDegrees: 360, operation: "cut" as const, ...scope }] });
+  // Only the first part named: the second keeps its volume.
+  const one = volume(cut({ targetBodyId: first.id }));
+  expect(one).toBeCloseTo(whole - 20 * 20 * 2, 2);
+  // Both named explicitly, and every touching part automatically, remove the same slab from each.
+  const explicit = volume(cut({ targetBodyId: first.id, targetBodyIds: [first.id, second] }));
+  const automatic = volume(cut({ scopeMode: "all" }));
+  expect(explicit).toBeCloseTo(whole - 2 * (20 * 20 * 2), 2);
+  expect(automatic).toBeCloseTo(explicit, 6);
+}, 60000);
+
+it("drills one hole at each picked sketch point, square to the sketch plane (Onshape's placement)", async () => {
+  const { createRectanglePartDocument } = await import("../document/part-document");
+  const box = createRectanglePartDocument("Holes", { widthMillimeters: 40, heightMillimeters: 20, depthMillimeters: 10 });
+  const built = evaluatePartDocument(box).parts[0];
+  // A sketch on the top face with a triangle (three vertices) and a circle (one centre): four holes.
+  box.features.push({ id: "pts", type: "profile", name: "Points", plane: "XY", offsetMillimeters: 10, suppressed: false, profile: { type: "drawing", contours: [
+    { id: "tri", type: "path", start: [-12, -4], segments: [{ type: "line", end: [-4, -4] }, { type: "line", end: [-8, 4] }, { type: "line", end: [-12, -4] }] },
+    { type: "circle", id: "c", center: [10, 0], radius: 2 }] } } as never);
+  const { identifyProfileContours } = await import("../document/index");
+  const identified = identifyProfileContours(box, "pts"); box.features = identified.features;
+  const contours = (box.features.find((f) => f.id === "pts") as { profile: { contours: { id: string; type: string; startVertexId?: string; segments?: { endVertexId?: string }[] }[] } }).profile.contours;
+  const tri = contours.find((c) => c.type === "path")!, circle = contours.find((c) => c.type === "circle")!;
+  const vertices = [tri.startVertexId!, ...tri.segments!.map((s) => s.endVertexId!).filter((id) => id && id !== tri.startVertexId)];
+  const points = [...vertices.map((vertexId) => ({ kind: "sketch-point" as const, sourceFeatureId: "pts", contourId: tri.id, point: "vertex" as const, vertexId, label: "Point" })), { kind: "sketch-point" as const, sourceFeatureId: "pts", contourId: circle.id, point: "center" as const, label: "Centre" }];
+  const volume = (doc: typeof box) => { let v = 0; evaluatePartDocument(doc, { withBodies: (b) => { for (const body of b.values()) v += measureVolume(body as Shape3D); } }); return v; };
+  const drilled = { ...box, features: [...box.features, { id: "h", type: "hole" as const, name: "Hole", suppressed: false, targetBodyId: built.id, placement: { kind: "sketch-points" as const, points }, cutType: "plain" as const, diameterMillimeters: 2, depthType: "through-all" as const, depthMillimeters: 10 }] };
+  expect(volume(box) - volume(drilled)).toBeCloseTo(points.length * Math.PI * 1 * 1 * 10, 2);
+}, 60000);

@@ -128,7 +128,7 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
     z: number;
   }) => Math.hypot(p[0] - q.x, p[1] - q.y, p[2] - q.z) < 1e-3;
   // Per-edge sizes (a pick's own radius) and a variable fillet (size → end size).
-  const size = feature.radiusMillimeters;
+  const size = feature.radiusMillimeters!; // validated present for every edge finish; absent only on a Full round, built elsewhere
   const filletRadius = (): RadiusConfig<FilletRadius> => {
     const end = feature.type === "fillet" ? feature.endRadiusMillimeters : undefined;
     const perEdge = picks && (picks.some((pick) => pick.size !== undefined) || feature.measurement === "width");

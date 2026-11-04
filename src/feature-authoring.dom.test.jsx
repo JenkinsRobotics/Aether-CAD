@@ -100,6 +100,7 @@ const authored = async (type, values = {}) => {
       panel.querySelector(`[aria-label^="${label} ("]`);
     expect(control, `${type}: no control labelled ${label}`).toBeTruthy();
     if (control.type === "checkbox") control.checked = value === "true";
+    else if (value === "<first option>") control.value = [...control.options].find((option) => option.value)?.value ?? "";
     else control.value = value;
     control.dispatchEvent(new dom.window.Event("change"));
   }
@@ -242,19 +243,21 @@ it("revolves about a line of an earlier sketch and about a construction Axis fea
 it("authors a tapped M8 hole from the thread standards with a cap-screw counterbore", async () => {
   seedProfile();
   await authored("extrude", { Sketch: "profile-1", Distance: "25" });
+  // Onshape's placement: the sketch's circle centre, the first entry of the sketch-points list.
+  const point = "<first option>"; void "{\"kind\": \"sketch-choice\", \"sourceFeatureId\": \"profile-1\", \"contourIndex\": 0, \"index\": 0, \"label\": \"Sketch 1 · Circle 1 center\"}";
   const feature = await authored("hole", {
-    "Center sketch": "profile-1", "Thread profile": "ISO metric coarse", Size: "M8",
-    "Head from standard": "ISO 4762 cap screw counterbore", "Thread geometry": "modelled", "Drill point": "angled",
+    "Sketch points to place holes sketch point": point, "Hole type": "tapped", Standard: "ISO metric coarse", Size: "M8",
+    "Head from standard": "ISO 4762 cap screw counterbore", "Thread geometry": "modelled", "Tip angle style": "118",
   });
   // The standard drives the diameter (tap drill) and the recess (ISO 4762 bore and head height).
   expect(feature).toMatchObject({
-    type: "hole", diameterMillimeters: 6.8, cutType: "counterbore", counterDiameterMillimeters: 15, counterDepthMillimeters: 8,
+    type: "hole", placement: { kind: "sketch-points" }, diameterMillimeters: 6.8, cutType: "counterbore", counterDiameterMillimeters: 15, counterDepthMillimeters: 8,
     drillPoint: "angled", drillPointAngleDegrees: 118,
     thread: { standard: "iso-metric-coarse", designation: "M8", tapped: true, modeled: true },
   });
   expect(feature.taperAngleDegrees).toBeUndefined();
   // Switching to a clearance hole takes the normal fit instead.
-  const clearance = await authored("hole", { "Center sketch": "profile-1", "Thread profile": "ISO metric coarse", Size: "M8", Thread: "clearance", "Clearance fit": "close" });
+  const clearance = await authored("hole", { "Sketch points to place holes sketch point": point, "Hole type": "clearance", Standard: "ISO metric coarse", Size: "M8", "Fastener fit": "close" });
   expect(clearance).toMatchObject({ diameterMillimeters: 8.4, cutType: "plain", thread: { standard: "iso-metric-coarse", designation: "M8", tapped: false, fit: "close" } });
 });
 

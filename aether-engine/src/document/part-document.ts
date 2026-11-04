@@ -428,6 +428,7 @@ export function validatePartDocument(
           `${feature.name} refers to an unavailable target body.`,
         );
     }
+    if (feature.type === "revolve") validateMergeScope(feature);
     if (feature.type === "sketch") validateSketchFeature(feature);
     else if (feature.type === "extrude") {
       if (
@@ -438,15 +439,7 @@ export function validatePartDocument(
         throw new Error("Extrude must reference an earlier Sketch.");
       if (!["new", "add", "cut", "intersect"].includes(feature.operation))
         throw new Error("Unsupported extrude operation.");
-      if (feature.scopeMode !== undefined && (feature.scopeMode!=="all" || !["add","cut","intersect"].includes(feature.operation) || feature.targetBodyId!==undefined || feature.targetBodyIds!==undefined)) throw Error("Automatic extrusion scope cannot also specify target parts.");
-      if(feature.scopeResolution!==undefined){
-        if(feature.scopeMode!=="all")throw Error("A scope resolution requires automatic scope.");
-        validateExtrusionScopeResolution(feature.scopeResolution);
-      }
-      if (feature.targetBodyIds !== undefined) {
-        const scope=feature.targetBodyIds;
-        if (!["add","cut","intersect"].includes(feature.operation) || !Array.isArray(scope) || !scope.length || scope.length>256 || scope.some(id=>typeof id!=="string" || !id.trim()) || new Set(scope).size!==scope.length || feature.targetBodyId!==scope[0]) throw Error("Extrusion scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
-      }
+      validateMergeScope(feature);
       if (
         feature.profileContourId !== undefined &&
         (typeof feature.profileContourId !== "string" ||
@@ -528,5 +521,18 @@ export function validatePartDocument(
       // Validate against actual projected geometry, never silently discard external relations.
       resolveProfileDrawing(document.features.map(f=>f.type==="profile"?{...f,suppressed:false}:f),feature.id);
     }
+  }
+}
+
+/** Merge scope (Extrude and Revolve): automatic (`all`) or explicit parts whose first entry is the primary target. */
+function validateMergeScope(feature: { operation: string; scopeMode?: "all"; scopeResolution?: ExtrusionScopeResolution; targetBodyId?: string; targetBodyIds?: string[] }): void {
+  if (feature.scopeMode !== undefined && (feature.scopeMode!=="all" || !["add","cut","intersect"].includes(feature.operation) || feature.targetBodyId!==undefined || feature.targetBodyIds!==undefined)) throw Error("Automatic scope cannot also specify target parts.");
+  if(feature.scopeResolution!==undefined){
+    if(feature.scopeMode!=="all")throw Error("A scope resolution requires automatic scope.");
+    validateExtrusionScopeResolution(feature.scopeResolution);
+  }
+  if (feature.targetBodyIds !== undefined) {
+    const scope=feature.targetBodyIds;
+    if (!["add","cut","intersect"].includes(feature.operation) || !Array.isArray(scope) || !scope.length || scope.length>256 || scope.some(id=>typeof id!=="string" || !id.trim()) || new Set(scope).size!==scope.length || feature.targetBodyId!==scope[0]) throw Error("Merge scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
   }
 }
