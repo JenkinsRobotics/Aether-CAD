@@ -1,3 +1,4 @@
+import { extrusionPreviewAxes } from "./extrusion-preview";
 import { AETHER_CAD_EXTENSION } from "../document/file-types";
 import { UnsupportedFeature, FeatureFailure } from "./feature-errors";
 import { sub, add, scale, neg, cross, norm, unit, dot, type V3 } from "./vector";
@@ -2631,6 +2632,13 @@ export function evaluatePartDocument(
               primary.endType = mode; primary.distance = feature.distanceMillimeters / 2;
               second = { endType: mode, distance: feature.distanceMillimeters / 2, endOffset: 0, draft: primary.draft };
             }
+            if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === "offset")) {
+              previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction,
+                offset, endType, primary, second, reversed: Boolean(feature.reversed) }));
+              publish(feature, { parameter: "offset", kind: "linear", signed: true,
+                originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))),
+                direction, label: "Starting offset" });
+            }
             const drafted = Boolean(primary.draft || second?.draft);
             if (drafted && custom && Math.abs(dot(direction, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
             if (drafted && !shape.sections) throw new UnsupportedFeature(feature.id, "drafted thin extrusions");
@@ -3140,14 +3148,6 @@ export function evaluatePartDocument(
             }
             return isShape3D(shape) ? own(shape).simplify() : shape;
           };
-          if (feature.type === "extrude" && feature.id === previewId) {
-            // The extrude handles the dialog already drags: the primary extent along the sketch
-            // normal from the profile's centre, and the opposite end when there is one.
-            const frame = sketchFrameOf(feature.profileFeatureId), n = unit(frame.normal as V3), c = sketchCentroid(feature.profileFeatureId);
-            const symmetric = feature.endType === "symmetric" || feature.endType === "symmetric-through-all";
-            previewAxes.push({ side: "primary", parameter: "distance", originMillimeters: c, direction: n, scale: symmetric ? 0.5 : 1, reversed: Boolean(feature.reversed) });
-            if (feature.secondEnd) previewAxes.push({ side: "opposite", parameter: "second", originMillimeters: c, direction: [-n[0], -n[1], -n[2]], scale: 1, reversed: Boolean(feature.reversed) });
-          }
           const result = own(feature.type === "extrude" ? (feature.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen)) : revolve());
           if (!isShape3D(result))
             throw new Error("Feature did not produce a solid.");

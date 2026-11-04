@@ -1,4 +1,5 @@
 import {registerValueHandle} from './value-handles';
+import {evaluateQuantityExpression} from '@aether/core/units';
 // Several handles may share a label (a face offset's sides): the serial keeps their ids apart.
 let handleSerial=0;
 import {directionVector} from './extrude-direction';
@@ -99,17 +100,18 @@ export function mountExtrusionHandle(panel: HTMLElement, controls: Record<string
     id:`${panel.dataset.featureId??panel.id??'feature'}:${options.label??'depth'}:${++handleSerial}`, kind:'axis', label:options.label??'Pull extrusion depth', panel,
     project(){
       // The origin (depth 0) first, so the live depth is the last projection the viewer served.
-      const origin=projectAt(0);
+      const origin=projectAt(0), probe=Number(distance.value)===0?projectAt(1):null;
       const point=projectAt(Number(distance.value)*factor*direction()); if(!point)return null;
-      return {...point, origin: origin && (origin.x!==point.x||origin.y!==point.y) ? {x:origin.x,y:origin.y} : undefined};
+      const angle=probe&&origin?Math.atan2(probe.y-origin.y,probe.x-origin.x)*180/Math.PI+90:undefined;
+      return {...point, angle, origin: origin && (origin.x!==point.x||origin.y!==point.y) ? {x:origin.x,y:origin.y} : undefined};
     },
-    text(){ return options.formatLabel?.(distance.value,unit)??`${distance.value} ${unit}`; },
+    text(){ return `${distance.value} ${unit}`; },
     ready(){ return options.ready?.()!==false; },
     begin(event,projection){
       const p=projection as AxisProjection; const axis=p.depthAt(event.clientX,event.clientY); if(axis===null)return false;
       drag={start:Number(distance.value)*factor*direction(),axis,projection:p,value:distance.value,reverse:reversed.value}; return true;
     },
-    move(event){ if(!drag)return; const axis=drag.projection.depthAt(event.clientX,event.clientY); if(axis!==null)change(drag.start+axis-drag.axis); },
+    move(event){ if(!drag)return; const axis=drag.projection.depthAt(event.clientX,event.clientY); if(axis!==null){drag.start+=(axis-drag.axis)*(event.shiftKey?0.1:1);drag.axis=axis;change(drag.start);} },
     end(cancelled){
       if(!drag)return; const previous=drag; drag=undefined;
       if(cancelled){distance.value=previous.value;reversed.value=previous.reverse;reversed.dispatchEvent(new Event('change'));distance.dispatchEvent(new Event('input'));}
@@ -118,6 +120,13 @@ export function mountExtrusionHandle(panel: HTMLElement, controls: Record<string
     key(event){
       if((event.key==='ArrowUp'||event.key==='ArrowDown')&&options.ready?.()!==false){event.preventDefault();event.stopPropagation();change((Number(distance.value)+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?0.1:1))*factor*direction());distance.dispatchEvent(new Event('change'));}
     },
-    commit(text){ const value=parseFloat(text); if(Number.isFinite(value)){change(value*factor*direction());distance.dispatchEvent(new Event('change'));} },
+    commit(text){
+      try {
+        const value=evaluateQuantityExpression(text,{family:'length',factor:factor/1000});
+        if(!text.trim()||!Number.isFinite(value))throw new Error('Invalid length');
+        if(valueMode==='positive'&&value<=0)return 'Enter a positive length.';
+        change(value*factor*direction());distance.dispatchEvent(new Event('change'));
+      } catch { return 'Enter a valid length or expression, such as 10 mm or 1/2 in.'; }
+    },
   });
 }

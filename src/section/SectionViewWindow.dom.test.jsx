@@ -70,8 +70,8 @@ it('rejects a curved face, and types the offset in document units', async () => 
   expect(sectionView.snapshot().planes[0]?.plane).toBeUndefined();
   faceFrame = { originMillimeters: [0, 0, 10], normal: [0, 0, 1] };
   await pick([{ id: 'face:p:4', kind: 'face', partId: 'p', label: 'Face 4', faceId: 4 }]);
-  const offset = document.querySelector('[aria-label="Section offset (mm)"]');
-  await act(async () => { offset.value = '-6.5'; offset.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+  const offset = win().querySelector('[aria-label="Section offset"]');
+  await act(async () => { Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(offset, '-6.5'); offset.dispatchEvent(new Event('input', { bubbles: true })); offset.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
   expect(sectionView.snapshot().planes[0]?.offsetMillimeters).toBeCloseTo(-6.5);
 });
 

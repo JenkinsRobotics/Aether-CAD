@@ -29,7 +29,7 @@ it('uses the native shifted origin, pauses new drags while pending and clears fa
 });
 it('symmetric handles edit total depth at twice the axial travel',async()=>{
  mountNativeExtrusionHandles(panel,controls,'mm');publish([axis('primary','distance',.5),axis('opposite','distance',.5)]);
- const button=handle('Pull symmetric extrusion depth');capture(button);await vi.waitFor(()=>expect(button.hidden).toBe(false));expect(document.querySelector('.aui-manipulator-readout').value).toBe('10 mm total');
+ const button=handle('Pull symmetric extrusion depth');capture(button);await vi.waitFor(()=>expect(button.hidden).toBe(false));expect(document.querySelector('.aui-manipulator-readout').value).toBe('10 mm');
  pointer(button,'pointerdown',100);pointer(button,'pointermove',105);pointer(button,'pointerup',105);expect(controls.distance.value).toBe('20');expect(controls.second.value).toBe('3');
 });
 it('the independent opposite handle adjusts only its positive distance in display units',async()=>{
@@ -56,9 +56,26 @@ it('preserves the simple Blind handle on older workers without guessing referenc
 
 it('signed face offsets cross zero and Escape restores the previous signed value',async()=>{
  controls={distance:control('-1')};mountNativeExtrusionHandles(panel,controls,'mm',{signed:true,label:'Drag face offset'});publish([axis()]);
- const buttons=[...document.querySelectorAll('[aria-label="Drag face offset"]')];const button=buttons[0];capture(button);
+ const buttons=[...document.querySelectorAll('button[aria-label="Drag face offset"]')];const button=buttons[0];capture(button);
  await vi.waitFor(()=>expect(button.hidden).toBe(false));expect(buttons.slice(1).every(e=>e.hidden)).toBe(true);
  pointer(button,'pointerdown',100);pointer(button,'pointermove',105);expect(Number(controls.distance.value)).toBe(4);
  button.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));expect(Number(controls.distance.value)).toBe(-1);
  expect(document.querySelector('[aria-label="Pull sketch extrusion depth"]')).toBeNull();
+});
+
+it('keeps the opposite depth selected for typed expressions and converts explicit units',async()=>{
+ controls.second.value='1';controls.second.dataset.canonicalFactor='25.4';mountNativeExtrusionHandles(panel,controls,'in');publish([axis(),axis('opposite','second')]);
+ const button=handle('Pull opposite extrusion depth');capture(button);
+ pointer(button,'pointerdown',100);pointer(button,'pointerup',100);
+ const input=document.querySelector('.aui-manipulator-readout');
+ await vi.waitFor(()=>expect(input.getAttribute('aria-label')).toBe('Pull opposite extrusion depth'));
+ const changed=vi.fn();controls.second.addEventListener('change',changed);
+ input.focus();input.value='12.7 mm';input.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ expect(Number(controls.second.value)).toBeCloseTo(.5);expect(controls.distance.value).toBe('10');expect(changed).toHaveBeenCalledTimes(1);
+ input.focus();input.value='1/4 in';input.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ expect(Number(controls.second.value)).toBeCloseTo(.25);
+ input.focus();input.value='10 garbage';input.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ expect(Number(controls.second.value)).toBeCloseTo(.25);expect(input.validity.valid).toBe(false);
+ input.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ expect(input.validity.valid).toBe(true);
 });

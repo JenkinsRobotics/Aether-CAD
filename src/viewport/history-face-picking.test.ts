@@ -27,5 +27,10 @@ it('picks nearby exact edges and vertices on earlier history geometry',()=>{
  expect(pickHistoryFace(ray,layer.group,model,{kind:'edge',point:{x:1,y:1},project})?.item.id).toBe('edge:p:edge');
  expect(pickHistoryFace(ray,layer.group,model,{kind:'vertex',point:{x:1,y:1},project})?.item.id).toBe('vertex:p:vertex');
  expect(pickHistoryFace(ray,layer.group,model,{kind:'edge',point:{x:1,y:50},project})).toBeNull();
+ // Fillet/Chamfer use mixed entity picking on the source history. It must use
+ // the same proximity rule as the main viewport, rather than always returning a face.
+ expect(pickHistoryFace(ray,layer.group,model,{kind:'auto',point:{x:80,y:1},project})?.item.kind).toBe('edge');
+ expect(pickHistoryFace(ray,layer.group,model,{kind:'auto',point:{x:80,y:50},project})?.item.kind).toBe('face');
+ expect(pickHistoryFace(ray,layer.group,model,{kind:'auto',point:{x:1,y:1},project})?.item.kind).toBe('vertex');
  layer.set(null);
 });

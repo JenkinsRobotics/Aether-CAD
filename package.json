@@ -21,7 +21,7 @@
     "@aether/protocol": "file:vendor/aether-protocol-0.1.0-alpha.12.tgz",
     "@aether/session": "file:vendor/aether-session-0.2.0-alpha.192.home.6.tgz",
     "@aether/sketch": "file:vendor/aether-sketch-0.2.0-alpha.4.tgz",
-    "@aether/ui": "file:vendor/aether-ui-0.2.0-alpha.273.tgz",
+    "@aether/ui": "file:vendor/aether-ui-0.2.0-alpha.275.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.180.0",

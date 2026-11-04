@@ -10,6 +10,7 @@ import { extrudeDraftControls, layoutExtrudeDraft, serializeExtrudeDraft, valida
 import { extrusionFacePicker } from "./planar-face-picker";
 import { extrudeDepthDrag } from "./extrude-depth-drag";
 import {mountNativeExtrusionHandles} from './extrude-native-handles';
+import {mountPreviewHandles} from './preview-handles';
 /** Extrude editor. Selection and extents share the native preview/commit path. */
 import { extrudeSelectionControls, layoutExtrudeSelections, serializeExtrudeSelections, setExtrudeProfilePicking } from "./extrude-selection";
 import { bodyAndOperationTabs, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
@@ -82,6 +83,9 @@ export const extrudeEditor: FeatureEditor = {
     function sync(){const mode=controls.endType.value;pointPicker.setEnabled(mode==="up-to-vertex");partPicker.setEnabled(mode==="up-to-part");stopHelp.hidden=mode!=="up-to-face";facePicker.setEnabled(mode==="up-to-face");setExtrudeProfilePicking(controls,!(controls.startEnabled.value==="true"&&controls.startMode.value==="face")&&!["up-to-face","up-to-part","up-to-vertex"].includes(mode)&&!( !mode.startsWith("symmetric")&&controls.secondEnabled.value==="true"&&["up-to-face","up-to-part","up-to-vertex"].includes(controls.secondEndType.value)));endOffset.hidden=!["up-to-next","up-to-face","up-to-part","up-to-vertex"].includes(mode);depth.hidden=mode!=="blind"&&mode!=="symmetric";symmetricRow.hidden=!["blind","symmetric","through-all","symmetric-through-all"].includes(mode);symmetric.checked=mode.startsWith("symmetric");}
     for(const control of [controls.endType,controls.secondEnabled,controls.secondEndType,controls.startEnabled,controls.startMode])control.addEventListener("change",sync);sync();
     mountNativeExtrusionHandles(win.panel,controls,lengthUnitLabel);
+    mountPreviewHandles(win.panel,controls,{length:lengthUnitLabel,angle:context.angleUnitLabel},{}, {
+      offset:()=>controls.startEnabled.value==='true',
+    });
   },
   validate(controls) {
     const draftError=validateExtrudeStart(controls)??validateThin(controls)??validateExtrudeDirection(controls)??validateExtrudeDraft(controls)??validateSecondEnd(controls);if(draftError)return draftError;

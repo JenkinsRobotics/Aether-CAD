@@ -1,0 +1,193 @@
+{
+  "date": "2026-11-04",
+  "scope": "Shared feature controls and native shoulder selection; not full Onshape feature parity",
+  "uiSource": "8cbdae7dd32a077fb2ab10a2ef5dcaaa85b8ddb8",
+  "uiPackage": "0.2.0-alpha.275",
+  "tests": {
+    "ui": {
+      "passed": 984
+    },
+    "cad": {
+      "passed": 2177,
+      "skipped": 1
+    },
+    "engine": {
+      "passed": 1253
+    },
+    "nativeService": {
+      "passed": 319
+    }
+  },
+  "browser": {
+    "results": [
+      "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+      "Revolve: shared angular ribbon, live native preview and cancellation",
+      "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+      "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved"
+    ],
+    "errors": []
+  },
+  "section": {
+    "passed": true,
+    "browser": "webgpu",
+    "errors": []
+  },
+  "render": {
+    "passed": true,
+    "results": [
+      {
+        "backend": "webgpu",
+        "counts": [
+          71820,
+          35910,
+          18220,
+          53866,
+          17955,
+          17955,
+          71820,
+          55035,
+          71820,
+          71820,
+          55035,
+          66486,
+          51539,
+          97262
+        ]
+      },
+      {
+        "backend": "webgl",
+        "counts": [
+          71820,
+          35910,
+          18220,
+          53866,
+          17955,
+          17955,
+          71820,
+          55035,
+          71820,
+          71820,
+          55035,
+          66555,
+          51579,
+          97272
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "picking": [
+    {
+      "browser": "chromium",
+      "count": 1,
+      "triangles": 81408,
+      "rays": 300,
+      "buildMs": 24.699999809265137,
+      "before": {
+        "medianMs": 3.4956666660308837,
+        "samples": [
+          3.5146666685740153,
+          3.4979999987284343,
+          3.4956666660308837,
+          3.4593333339691164,
+          3.4676666673024497
+        ]
+      },
+      "after": {
+        "medianMs": 0.003999999364217122,
+        "samples": [
+          0.003999999364217122,
+          0.004333333969116211,
+          0.003999999364217122,
+          0.0033333333333333335,
+          0.003999999364217122
+        ]
+      },
+      "mismatches": 0
+    },
+    {
+      "browser": "chromium",
+      "count": 65,
+      "triangles": 193440,
+      "rays": 300,
+      "buildMs": 2.1000003814697266,
+      "before": {
+        "medianMs": 0.1486666679382324,
+        "samples": [
+          0.15,
+          0.15266666412353516,
+          0.1486666679382324,
+          0.14799999872843425,
+          0.14700000127156576
+        ]
+      },
+      "after": {
+        "medianMs": 0.015666666030883788,
+        "samples": [
+          0.015333331425984701,
+          0.016000000635782878,
+          0.015666666030883788,
+          0.015666666030883788,
+          0.017000001271565757
+        ]
+      },
+      "mismatches": 0
+    },
+    {
+      "browser": "webkit",
+      "count": 1,
+      "triangles": 81408,
+      "rays": 300,
+      "buildMs": 26,
+      "before": {
+        "medianMs": 5.83,
+        "samples": [
+          5.83,
+          5.87,
+          5.84,
+          5.796666666666667,
+          5.776666666666666
+        ]
+      },
+      "after": {
+        "medianMs": 0.006666666666666667,
+        "samples": [
+          0.006666666666666667,
+          0.006666666666666667,
+          0.0033333333333333335,
+          0.006666666666666667,
+          0.0033333333333333335
+        ]
+      },
+      "mismatches": 0
+    },
+    {
+      "browser": "webkit",
+      "count": 65,
+      "triangles": 193440,
+      "rays": 300,
+      "buildMs": 2,
+      "before": {
+        "medianMs": 0.14,
+        "samples": [
+          0.16333333333333333,
+          0.14,
+          0.14,
+          0.14,
+          0.14
+        ]
+      },
+      "after": {
+        "medianMs": 0.02,
+        "samples": [
+          0.02,
+          0.016666666666666666,
+          0.023333333333333334,
+          0.02,
+          0.016666666666666666
+        ]
+      },
+      "mismatches": 0
+    }
+  ]
+}

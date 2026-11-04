@@ -8,6 +8,43 @@ on the same record) all carry it. Kernel gaps name the capability OCCT lacks tod
 Source pages: https://cad.onshape.com/help/Content/fillet.htm,
 https://cad.onshape.com/help/Content/chamfer.htm
 
+## Qualification pass — 2026-11-04
+
+Requested order: **Extrude, Revolve, Chamfer, Fillet**. Shared interaction fixes
+below are a prerequisite, not a declaration of complete Onshape parity. A row
+marked Done in the older tables is bounded by its stated geometry restrictions;
+a matching dialog, a disabled option or a single successful fixture is not a
+release qualification for the entire feature. “Kernel gap” means missing Aether
+implementation or exposed binding unless separately established as an OCCT limit.
+
+The canonical presentation is Aether UI `mountValueManipulator`: white linear
+arrows, blue pivot, dashed projected orbits with tangent ribbons, and an editable
+value. Section now uses that same component instead of its own orbit/readout
+renderer. CAD owns projections, units, native preview and validated document edits.
+Existing providers retain correct disabled state after preview updates, typed
+expressions target the last adjusted parameter, Escape cancels a typed draft,
+and Enter followed by blur commits only once.
+
+| Feature | Verified interaction change | Remaining qualification scope |
+| --- | --- | --- |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. | Surface mode integration; draft/Thin/oblique and stopping-limit combinations; handles for remaining enabled parameters; complete reference-control coverage. |
+| Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
+| Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
+| Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, arbitrary variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
+
+History preview previously ignored mixed edge/face picking and returned a face.
+It now uses the main viewport's selection rule. The browser gate checks the saved
+shoulder midpoint is at z=10 mm, rather than accepting the visually overlapping
+upper rim at z=25 mm. The fixture is an editable sketch and Revolve, with actual
+Chamfer/Fillet features; it contains no imported solids.
+
+Qualification evidence: [native and browser checks](../reality/data/Feature_Controls_2026_11_04.json). The actual modeling browser gate also passes sketch creation, Extrude New/Add/Remove/Intersect, Revolve, Fillet, Shell, Mirror, Pattern, Boolean, Hole, surfaces, sheet metal and 3D Sketch, with no server geometry requests.
+
+References reviewed: [Extrude](https://cad.onshape.com/help/Content/PartStudio/extrude.htm)
+and [Fillet](https://cad.onshape.com/help/Content/PartStudio/fillet.htm). Onshape's
+second-end draft controls and partial/variable fillet controls remain explicit
+requirements, not optional cosmetic additions.
+
 ## Fillet (`src/features/fillet.ts`, `aether-engine/src/kernel/features/edge-finish.ts`)
 
 | Onshape control | Ours | Status |

@@ -1,11 +1,10 @@
 /** The shared white axis arrows, constrained to the active section's normal. */
-import { mountTransformManipulator } from '@aether/ui';
+import { mountValueManipulator, type ManipulatorOrbit, type ManipulatorPoint } from '@aether/ui';
 import { displayQuantity, parseQuantity, unitChoice } from '@aether/core/units';
 import { documentUnits } from '../document-preferences';
 import type { SectionCut } from './section-view-store';
 import { sectionFrame, moveSectionTo, rotateSection } from './section-frame';
 import type { TransformHandleProjection } from '../viewport/transform-gizmo';
-import { mountSectionOrbits, type SectionOrbit } from './section-orbits';
 export type SectionProjection = {
   start: {
     x: number;
@@ -24,15 +23,6 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
   const element = document.createElement('div');
   element.className = 'cad-section-handle';
   viewport.append(element);
-  const guide = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  guide.setAttribute('aria-hidden', 'true');
-  const line = document.createElementNS(guide.namespaceURI, 'line');
-  guide.append(line);
-  element.append(guide);
-  const input = document.createElement('input');
-  input.setAttribute('aria-label', `Section offset (${length.unit})`);
-  input.inputMode = 'decimal';
-  element.append(input);
   const project = (): SectionProjection | null => {
     let value: SectionProjection | null = null;
     const view = selected();
@@ -111,60 +101,49 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
       change(cut.offsetMillimeters + direction * (handle.id === 'negative' ? -1 : 1) * step);
     },
   };
-  const orbits = mountSectionOrbits(element, callbacks);
-  const gizmo = mountTransformManipulator(element, callbacks);
-  gizmo.element.setAttribute('aria-label', 'Section plane movement');
-  const applyInput = (report = false) => {
+  const applyInput = (text: string, report = false): string | undefined => {
     try {
-      const value = parseQuantity(input.value.replace(new RegExp(`\\s*${length.unit}$`), ''), units, 'length') * 1000;
-      if (!input.value.trim() || !Number.isFinite(value))
-        throw Error();
-      change(value);
-      error(null);
-    }
-    catch {
-      if (report)
-        error(`Enter a valid offset in ${length.unit}.`);
+      const value = parseQuantity(text, units, 'length') * 1000;
+      change(value); error(null);
+    } catch {
+      if (report) { const message = `Enter a valid offset in ${length.unit}.`; error(message); return message; }
     }
   };
-  input.addEventListener('input', () => applyInput());
-  input.addEventListener('keydown', event => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    event.stopPropagation();
-    applyInput(true);
-    input.blur();
+  const gizmo = mountValueManipulator(element, {
+    ...callbacks,
+    readoutLabel: `Section offset (${length.unit})`,
+    onInput: text => { applyInput(text); },
+    onCommit: text => applyInput(text, true),
+    onCancelInput: text => { applyInput(text, true); },
   });
-  input.addEventListener('blur', () => applyInput(true));
+  gizmo.element.setAttribute('aria-label', 'Section plane movement');
   const draw = () => {
     frame = requestAnimationFrame(draw);
     const cut = selected(), projection = project();
     element.hidden = !cut || !projection;
     if (!cut || !projection) {
-      gizmo.update([]);
-      orbits.update([], viewport.getBoundingClientRect());
+      gizmo.update({ handles: [], orbits: [], guides: [], readout: null });
       return;
     }
     const box = viewport.getBoundingClientRect(), x = projection.start.x - box.left, y = projection.start.y - box.top;
     const handles: import('@aether/ui').ManipulatorHandle[] = edit ? [{ id: 'pivot', kind: 'pivot', label: 'Move section origin; snap to geometry', x, y }] : [];
-    orbits.update(edit ? (projection.rotations ?? []).filter((ring): ring is SectionOrbit => Boolean(ring)) : [], box);
+    const local = (p: ManipulatorPoint) => ({ x: p.x - box.left, y: p.y - box.top });
+    const orbits: ManipulatorOrbit[] = edit ? (projection.rotations ?? []).flatMap(ring => {
+      const orbit = ring?.orbit;
+      return ring && orbit ? [{ id: ring.id, label: `Rotate section plane ${ring.index === 0 ? 'X' : 'Y'}`,
+        angle: orbit.angle, points: ring.points.map(local), pointAt: degrees => local(orbit.pointAt(degrees)) }] : [];
+    }) : [];
+    const guides: ManipulatorPoint[][] = [];
     const dx = projection.end.x - projection.start.x, dy = projection.end.y - projection.start.y, size = Math.hypot(dx, dy);
-    if (size < 3) {
-      line.setAttribute('visibility', 'hidden');
-    }
-    else {
-      line.removeAttribute('visibility');
+    if (size >= 3) {
       const ux = dx / size, uy = dy / size;
-      for (const [key, value] of Object.entries({ x1: x - ux * 29, y1: y - uy * 29, x2: x + ux * 29, y2: y + uy * 29 }))
-        line.setAttribute(key, String(value));
+      guides.push([{ x: x - ux * 29, y: y - uy * 29 }, { x: x + ux * 29, y: y + uy * 29 }]);
       const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
       handles.push({ id: 'positive', kind: 'axis', label: 'Move section in positive normal direction', x: x + ux * 40, y: y + uy * 40, angle },
         { id: 'negative', kind: 'axis', label: 'Move section in negative normal direction', x: x - ux * 40, y: y - uy * 40, angle: angle + 180 });
     }
-    gizmo.update(handles);
-    input.style.transform = `translate(${x - 42}px,${y + 28}px)`;
-    if (document.activeElement !== input)
-      input.value = `${displayQuantity(cut.offsetMillimeters / 1000, units, 'length')} ${length.unit}`;
+    gizmo.update({ handles, orbits, guides, readout: { id: cut.id, x: x - 42, y: y + 28,
+      text: `${displayQuantity(cut.offsetMillimeters / 1000, units, 'length')} ${length.unit}` } });
   };
   draw();
   return {
@@ -172,7 +151,6 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     dispose() {
       cancelAnimationFrame(frame);
       gizmo.dispose();
-      orbits.dispose();
       element.remove();
     },
   };

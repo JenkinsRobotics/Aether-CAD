@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 import { createRequire } from 'node:module';
 import { mkdir,writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-const {chromium,webkit}=createRequire(new URL('../../AetherStudio/core/files/package.json',import.meta.url))('@playwright/test');
+const {chromium,webkit}=createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? new URL('../../AetherStudio/core/files/package.json',import.meta.url))('@playwright/test');
 const destination=process.argv[2]??'build/picking-performance.json';
 const vite=await createServer({configFile:false,server:{host:'127.0.0.1',port:0},plugins:[{name:'picking-profile',configureServer(server){
   server.middlewares.use((req,res,next)=>{if(req.url!=='/picking-profile')return next();res.setHeader('content-type','text/html');res.end('<script type="module" src="/scripts/browser/picking-performance.ts"></script>');});

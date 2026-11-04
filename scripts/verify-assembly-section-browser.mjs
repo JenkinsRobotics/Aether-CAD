@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-const { chromium, webkit, expect } = createRequire(new URL('../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
+const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? new URL('../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1');
 assert.notEqual(new URL(origin).port, '8780');

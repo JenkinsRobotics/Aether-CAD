@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { Box3, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three/webgpu';
 import { projectSection } from './section-projection';
-import { orbitArrow } from './section-orbits';
+import { orbitRibbon } from '@aether/ui';
 import { sectionFrame, rotateSection } from './section-frame';
 import type { SectionCut } from './section-view-store';
 
@@ -13,7 +13,7 @@ it.each(['perspective', 'orthographic'])('keeps the arrow tips on the same %s or
   expect(projection.rotations.filter(Boolean)).toHaveLength(2);
   for (const ring of projection.rotations) {
     expect(ring).not.toBeNull();
-    const orbit=ring!.orbit!, points=orbitArrow(orbit);
+    const orbit=ring!.orbit!, points=orbitRibbon({...orbit, id: ring!.id, label: 'Rotation', points: ring!.points});
     // Both arrow tips are exact points on the projected circle (not tangent
     // approximations or a screen-facing glyph). A 35° drag yields 35°.
     for (const tip of [points[0],points[20]]) {

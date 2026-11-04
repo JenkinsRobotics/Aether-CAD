@@ -2,6 +2,7 @@ import type { ImportedModelData, PreviewHandle } from '@aether/core/contracts';
 import { mountExtrusionHandle, type AxisProjection } from './extrude-depth-drag';
 import type { Controls } from './shared';
 import { registerValueHandle, type AngularProjection } from './value-handles';
+import { evaluateQuantityExpression } from '@aether/core/units';
 let angleSerial = 0;
 
 /** Manipulators for every feature the engine publishes handles for (see
@@ -10,7 +11,7 @@ let angleSerial = 0;
  *  one owner. The handles arrive with each preview and move with it. */
 export type AngleProjection = AngularProjection;
 
-export function mountPreviewHandles(panel: HTMLElement, controls: Controls, units: { length: string; angle: string }, map: Record<string, string> = {}) {
+export function mountPreviewHandles(panel: HTMLElement, controls: Controls, units: { length: string; angle: string }, map: Record<string, string> = {}, enabled: Record<string, () => boolean> = {}) {
   let handles: PreviewHandle[] = [], ready = false;
   const mounted = new Set<string>();
   const receive = (event: Event) => {
@@ -22,7 +23,7 @@ export function mountPreviewHandles(panel: HTMLElement, controls: Controls, unit
     }
   };
   const controlFor = (parameter: string) => controls[map[parameter] ?? parameter] as HTMLInputElement | undefined;
-  const current = (parameter: string) => handles.find((h) => h.parameter === parameter);
+  const current = (parameter: string) => enabled[parameter]?.() === false ? undefined : handles.find((h) => h.parameter === parameter);
   const mount = (handle: PreviewHandle) => {
     if (mounted.has(handle.parameter)) return;
     const control = controlFor(handle.parameter);
@@ -54,7 +55,7 @@ export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, 
     const live = handle(); if (!live || !Number.isFinite(read())) return null;
     let projection: AngularProjection | null = null;
     window.dispatchEvent(new CustomEvent('aether-native-angle-handle', { detail: { origin: live.originMillimeters, axis: live.direction, angle: read(), start: live.startMillimeters, respond: (p: AngularProjection | null) => { projection = p; } } }));
-    return projection;
+    return projection ? { ...(projection as AngularProjection), angle: read() } : null;
   };
   let drag: { previous: number; value: number; original: string; projection: AngularProjection } | undefined;
   registerValueHandle({
@@ -80,6 +81,12 @@ export function mountAngleHandle(panel: HTMLElement, control: HTMLInputElement, 
     key(event) {
       if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && ready()) { event.preventDefault(); event.stopPropagation(); set(read() + (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 15)); control.dispatchEvent(new Event('change')); }
     },
-    commit(text) { const value = parseFloat(text); if (Number.isFinite(value)) { set(value * factor); control.dispatchEvent(new Event('change')); } },
+    commit(text) {
+      try {
+        const value = evaluateQuantityExpression(text, { family: 'angle', factor: factor * Math.PI / 180 });
+        if (!text.trim() || !Number.isFinite(value)) throw new Error('Invalid angle');
+        set(value * factor); control.dispatchEvent(new Event('change'));
+      } catch { return 'Enter a valid angle or expression, such as 90 deg or pi/2 rad.'; }
+    },
   });
 }

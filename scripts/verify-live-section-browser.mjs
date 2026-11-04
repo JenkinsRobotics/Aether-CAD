@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partDocumentBase64, tabDocumentOf } from './browser/document-fixture.mjs';
-const { chromium, webkit, expect } = createRequire(fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
+const { chromium, webkit, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? fileURLToPath(new URL('../../AetherStudio/core/files/package.json', import.meta.url)))('@playwright/test');
 const origin = process.env.AETHER_TEST_ORIGIN, evidence = process.env.AETHER_FRONTEND_EVIDENCE;
 assert.equal(new URL(origin).hostname, '127.0.0.1'); assert.notEqual(new URL(origin).port, '8780');
 await mkdir(evidence, { recursive: true });
@@ -15,6 +15,8 @@ const browser = await (browserName === 'webkit' ? webkit : chromium).launch({ he
   ...(browserName === 'webgpu' ? {args:['--enable-unsafe-webgpu','--use-angle=metal']} : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.setDefaultTimeout(15000);
+// This gate checks full-height header actions; compact footer actions are qualified separately.
+await page.addInitScript(() => localStorage.setItem('aether-cad.feature-window-style', 'standard'));
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.cad-studio-view-tools') : page).getByRole('button', { name, exact: true });
@@ -39,7 +41,7 @@ try {
   const pixel=async point=>{
     // The handle sits on the section center. Inspect the rendered cut underneath,
     // rather than accidentally classifying the blue pivot as uncut material.
-    const at=await project(point),bytes=await page.screenshot({style:'.cad-section-handle { visibility:hidden !important; }'});
+    const at=await project(point),bytes=await page.screenshot({style:'.cad-section-handle, .cad-section-window { opacity:0 !important; }'});
     return page.evaluate(async({encoded,at})=>{const bitmap=await createImageBitmap(await(await fetch('data:image/png;base64,'+encoded)).blob());const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close();return [...ctx.getImageData(Math.round(at.x),Math.round(at.y),1,1).data];},{encoded:bytes.toString('base64'),at});
   };
   const isCap=p=>p[0]>p[2]+25;
@@ -58,9 +60,24 @@ try {
   const bounds=await header.boundingBox();
   for(const label of ['Accept section view','Cancel']){const action=await button(label).boundingBox();assert.ok(Math.abs(action.height-bounds.height)<1);assert.ok(Math.abs(action.y-bounds.y)<1);}
   const cancel=await button('Cancel').boundingBox();assert.ok(Math.abs(cancel.x+cancel.width-bounds.x-bounds.width)<1);
+  // Move the floating window clear of the model before exercising pointer handles.
+  const movePanel = async (x=370) => {
+    const box=await header.boundingBox();
+    await page.mouse.move(box.x+90,box.y+box.height/2);await page.mouse.down();
+    await page.mouse.move(x,box.y+box.height/2,{steps:8});await page.mouse.up();
+  };
+  await movePanel();
   await button('Add section plane').click();await page.getByRole('menuitem',{name:'Right plane',exact:true}).click();
   await offset.fill('5');await waitCap([2,10,2.5],true);await waitCap([8,10,2.5],false);
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
+  const value=page.getByRole('textbox',{name:'Section offset (mm)',exact:true});
+  await value.fill('7');await expect.poll(async()=>Number(await offset.inputValue())).toBe(7);
+  await value.press('Escape');await expect.poll(async()=>Number(await offset.inputValue())).toBe(5);
+  await page.evaluate(() => window.__aetherSetView('isometric'));await page.waitForTimeout(500);
+  const orbit=button('Rotate section plane X');
+  await orbit.press('ArrowUp');await expect.poll(async()=>Number(await page.getByRole('textbox',{name:'Section rotation X',exact:true}).inputValue())).toBe(1);
+  await orbit.press('ArrowDown');await expect.poll(async()=>Number(await page.getByRole('textbox',{name:'Section rotation X',exact:true}).inputValue())).toBe(0);
+  await page.evaluate(() => window.__aetherSetView('top'));await page.waitForTimeout(500);
   const positive=button('Move section in positive normal direction'),negative=button('Move section in negative normal direction');
   await expect(positive).toBeVisible();await expect(negative).toBeVisible();
   const plus=await positive.boundingBox(),minus=await negative.boundingBox();
@@ -95,10 +112,10 @@ try {
   await button('Right').click();await expect.poll(async()=>Number(await offset.inputValue())).toBe(5);
   await page.screenshot({path:join(evidence,'two-section-planes-dark.png')});
   await button('Accept section view').click();
-  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();
+  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();await movePanel();
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
   await button('Remove Right').click();await waitCap([8,10,2.5],true);await button('Cancel').click();await waitCap([8,10,2.5],false);
-  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();
+  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();await movePanel();
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
   await button('Home view').click();await page.waitForTimeout(450);
   await page.screenshot({path:join(evidence,'two-section-planes-perspective.png')});
@@ -110,10 +127,12 @@ try {
   // A picked face away from the world origin remains the reference after a
   // center drag. Use the top surface to drag inward from the x=10 side face.
   await button('Home view').click();await page.waitForTimeout(450);
-  await button('Section view').click();
-  const rightFace=await project([10,10,2.5]);await page.mouse.click(rightFace.x,rightFace.y);
+  await button('Section view').click();await movePanel();
+  const rightFace=await project([10,10,2.5]),panelBounds=await page.locator('.cad-section-window').boundingBox();
+  if(rightFace.x>=panelBounds.x&&rightFace.x<=panelBounds.x+panelBounds.width&&rightFace.y>=panelBounds.y&&rightFace.y<=panelBounds.y+panelBounds.height)await movePanel(1100);
+  await page.mouse.click(rightFace.x,rightFace.y);
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(1);
-  await offset.fill('-2');
+  await offset.fill('-2');await movePanel();
   await button('Top view').press('Enter');await page.waitForTimeout(450);
   await dragOrigin([6,14,5]);
   await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(-4,1);
@@ -123,7 +142,7 @@ try {
   await waitCap([6,5,3.5],true);
   await page.screenshot({path:join(evidence,'face-origin-offset.png')});
   await button('Accept section view').click();await waitCap([6,5,3.5],true);
-  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();
+  await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();await movePanel();
   await expect.poll(async()=>Number(await offset.inputValue())).toBeCloseTo(-4,1);
   await offset.fill('0');await waitCap([10,5,3.5],false);
   await button('Cancel').click();await waitCap([6,5,3.5],true);

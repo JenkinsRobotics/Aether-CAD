@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'vite';
-const {chromium}=createRequire(new URL('../../AetherStudio/core/files/package.json',import.meta.url))('@playwright/test');
+const {chromium}=createRequire(process.env.AETHER_PLAYWRIGHT_PACKAGE ?? new URL('../../AetherStudio/core/files/package.json',import.meta.url))('@playwright/test');
 const evidence=process.env.AETHER_SECTION_RENDER_EVIDENCE??'.verification/section-live-2026-10-26/render'; await mkdir(evidence,{recursive:true});
 const vite=await createServer({configFile:false,server:{host:'127.0.0.1',port:0},plugins:[{name:'section-check',configureServer(server){server.middlewares.use((req,res,next)=>{if(!req.url.startsWith('/section-check'))return next();res.setHeader('content-type','text/html');res.end('<script type="module" src="/scripts/browser/section-scene.ts"></script>');});}}]});
 await vite.listen();

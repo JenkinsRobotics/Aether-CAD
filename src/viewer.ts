@@ -2231,7 +2231,7 @@ export class MateViewport {
     this.updatePointer(event);
     const rect = this.renderer.domElement.getBoundingClientRect();
     const hit = pickHistoryFace(this.raycaster, this.historyPreview.group, this.historyModel,
-      filter === "edge" || filter === "vertex" ? {
+      filter === "edge" || filter === "vertex" || (filter === "auto" && this.sourceGeometryPicking === "entity") ? {
         kind: filter, point: {x:event.clientX-rect.left,y:event.clientY-rect.top},
         project: point => this.projectScreenPoint(point),
       } : undefined, this.canPickSourceGeometry());

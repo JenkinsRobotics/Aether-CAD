@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SketchDrawing } from './drawing';
 import { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines, sketchProfileStrokes } from "./sample";
 
 describe("sketch sampling", () => {
