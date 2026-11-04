@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-04",
+  "scope": "Native Thin + Draft and shared draft/thickness controls; full Extrude parity remains open.",
+  "checks": {
+    "frontend_tests": 2180,
+    "frontend_skipped": 1,
+    "engine_tests": 1275,
+    "native_service_tests": 320,
+    "targeted_native_cases": 7,
+    "targeted_projection_interaction_tests": 21,
+    "types_and_build": "passed",
+    "headless_and_sketch_regions": "passed",
+    "standalone_and_hosted_home": "passed",
+    "feature_controls": {
+      "results": [
+        "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+        "Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen",
+        "Revolve: shared angular ribbon, live native preview and cancellation",
+        "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+        "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved"
+      ],
+      "errors": []
+    },
+    "modeling_steps": [
+      "sketch-rectangle-on-top-plane",
+      "extrude-new",
+      "sketch-on-face",
+      "display-analysis",
+      "sketch-circle-and-extrude-remove",
+      "extrude-add-and-intersect",
+      "revolve-new",
+      "fillet",
+      "shell",
+      "mirror-add",
+      "pattern-linear",
+      "boolean-union",
+      "hole",
+      "revolve-remove",
+      "surface-sheet-and-thicken",
+      "sheet-metal-base-and-flat-dxf",
+      "sketch-3d"
+    ],
+    "server_geometry_requests": 0
+  },
+  "native_expectations": [
+    "Analytically integrated circular/rectangular/open straight wall volume",
+    "Symmetric and independent opposite draft, neutral sketch and starting offset",
+    "Saved native history reopen",
+    "Collapsed geometry refused without mutation",
+    "Thickness handle matches actual shifted tapered wall; flip and mid-plane scaling",
+    "Oriented draft ring points into material on rectangle, circle and open wall",
+    "Agent creates and edits canonical Sketch/Extrude records, exact reopen and atomic invalid-edit refusal"
+  ],
+  "remaining": [
+    "Surface mode integration",
+    "Oblique draft",
+    "Complete drafted stopping-limit matrix",
+    "Stopping-offset handles",
+    "General complex-contour coverage"
+  ],
+  "evidence_directories": [
+    "build/Example-Collection/feature-combined-final-controls-2026-11-04/host/browser",
+    "build/Example-Collection/feature-combined-final-modeling-2026-11-04/host/browser",
+    "build/Example-Collection/feature-combined-final-home-2026-11-04/host/browser"
+  ],
+  "source_commit": "8b9bb8a66d39a1c1e2b3ff442df5972e842d80b8",
+  "isolated_implementation_checks": {
+    "frontend_tests": 2178,
+    "frontend_skipped": 1,
+    "engine_tests": 1260,
+    "native_service_tests": 320,
+    "targeted_native_cases": 7,
+    "targeted_projection_interaction_tests": 21,
+    "types_and_build": "passed",
+    "headless_and_sketch_regions": "passed",
+    "standalone_and_hosted_home": "passed",
+    "feature_controls": {
+      "results": [
+        "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+        "Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen",
+        "Revolve: shared angular ribbon, live native preview and cancellation",
+        "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+        "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved"
+      ],
+      "errors": []
+    },
+    "modeling_steps": [
+      "sketch-rectangle-on-top-plane",
+      "extrude-new",
+      "sketch-on-face",
+      "display-analysis",
+      "sketch-circle-and-extrude-remove",
+      "extrude-add-and-intersect",
+      "revolve-new",
+      "fillet",
+      "shell",
+      "mirror-add",
+      "pattern-linear",
+      "boolean-union",
+      "hole",
+      "revolve-remove",
+      "surface-sheet-and-thicken",
+      "sheet-metal-base-and-flat-dxf",
+      "sketch-3d"
+    ],
+    "server_geometry_requests": 0
+  },
+  "packaging_correction": "The active alpha-0.1.100 build rejected Thin + Draft despite including the implementation in its source commit. Frontend and native worker were rebuilt together from the complete combined source; these results qualify that rebuilt pair."
+}

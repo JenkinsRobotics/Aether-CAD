@@ -1764,7 +1764,7 @@ function mirrorTransform(start, end) {
   };
 }
 function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
-  const coordinates = [], arcs = [];
+  const coordinates2 = [], arcs = [];
   const rebuild = () => {
     for (const a2 of arcs) {
       const dx = a2.end[0] - a2.start[0], dy = a2.end[1] - a2.start[1];
@@ -1774,7 +1774,7 @@ function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
   };
   const point2 = (p2, alias) => {
     for (let k2 = 0; k2 < 2; k2++)
-      coordinates.push({
+      coordinates2.push({
         get: () => p2[k2],
         set: (v2) => {
           p2[k2] = v2;
@@ -1787,7 +1787,7 @@ function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
     if (skipContours.has(index2)) continue;
     if (c2.type === "circle") {
       point2(c2.center);
-      coordinates.push({
+      coordinates2.push({
         get: () => c2.radius,
         set: (v2) => {
           c2.radius = v2;
@@ -1801,10 +1801,10 @@ function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
     for (const [i2, s] of c2.segments.entries()) {
       if (!(closed && i2 === c2.segments.length - 1)) point2(s.end);
       if (s.type === "bezier") s.controls.forEach((p2) => point2(p2));
-      if (s.type === "conic") coordinates.push(...conicCoordinates(s));
+      if (s.type === "conic") coordinates2.push(...conicCoordinates(s));
       if (s.type === "ellipse")
         for (const key2 of ["radiusX", "radiusY", "rotationDegrees"])
-          coordinates.push({
+          coordinates2.push({
             get: () => s[key2],
             set: (v2) => {
               s[key2] = v2;
@@ -1818,7 +1818,7 @@ function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
           bulge: Math.tan(sketchArcGeometry(start, s.middle, s.end).sweep / 4)
         };
         arcs.push(arc);
-        coordinates.push({
+        coordinates2.push({
           get: () => arc.bulge,
           set: (v2) => {
             arc.bulge = v2;
@@ -1830,7 +1830,7 @@ function diagnosticCoordinates(d2, skipContours = /* @__PURE__ */ new Set()) {
     }
   }
   rebuild();
-  return coordinates;
+  return coordinates2;
 }
 function patternResiduals(source, target, transform2) {
   if (!source || !target || !transform2)
@@ -1856,10 +1856,10 @@ function patternResiduals(source, target, transform2) {
       }
     });
   }
-  const coordinates = (c2) => diagnosticCoordinates({
+  const coordinates2 = (c2) => diagnosticCoordinates({
     contours: [structuredClone(c2)]
   }).map((v2) => v2.get());
-  const a2 = coordinates(expected), b = coordinates(target);
+  const a2 = coordinates2(expected), b = coordinates2(target);
   return b.map((value2, i2) => value2 - a2[i2]);
 }
 function periodicSplineSecond(points, h) {
@@ -3810,7 +3810,7 @@ function adjustTextForFrameWidth(drawing, item, previousScaledWidth) {
   }
 }
 function textSimilarityCoordinates(drawing, options = {}) {
-  const covered = /* @__PURE__ */ new Set(), coordinates = [], finish = [];
+  const covered = /* @__PURE__ */ new Set(), coordinates2 = [], finish = [];
   for (const item of drawing.textItems ?? []) {
     const indices = item.contourIds.map(
       (id2) => drawing.contours.findIndex((c2) => c2.id === id2)
@@ -3852,7 +3852,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
       }
     };
     state.forEach(
-      (_2, i2) => coordinates.push({
+      (_2, i2) => coordinates2.push({
         get: () => state[i2],
         set: (value2) => {
           state[i2] = value2;
@@ -3868,7 +3868,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
   }
   return {
     covered,
-    coordinates,
+    coordinates: coordinates2,
     finish() {
       finish.forEach((commit) => commit());
       return drawing;
@@ -3877,7 +3877,7 @@ function textSimilarityCoordinates(drawing, options = {}) {
 }
 function ellipseLocusCoordinates(drawing, fixed) {
   const covered = /* @__PURE__ */ new Set();
-  const coordinates = [];
+  const coordinates2 = [];
   drawing.contours.forEach((path, contour) => {
     if (fixed?.has(contour) || path.type !== "path" || path.segments.length < 2 || path.segments.some((s) => s.type !== "ellipse"))
       return;
@@ -3959,7 +3959,7 @@ function ellipseLocusCoordinates(drawing, fixed) {
     };
     covered.add(contour);
     state.forEach(
-      (_2, i2) => coordinates.push({
+      (_2, i2) => coordinates2.push({
         get: () => state[i2],
         set: (value2) => {
           state[i2] = value2;
@@ -3968,10 +3968,10 @@ function ellipseLocusCoordinates(drawing, fixed) {
       })
     );
   });
-  return { covered, coordinates };
+  return { covered, coordinates: coordinates2 };
 }
 function contactParameterCoordinates(d2) {
-  const coordinates = [];
+  const coordinates2 = [];
   for (const c2 of d2.constraints ?? [])
     for (const ref of [c2.a, c2.b]) {
       if (ref?.sliding === void 0) continue;
@@ -3980,7 +3980,7 @@ function contactParameterCoordinates(d2) {
       if (!ref.sliding) continue;
       if (ref.parameter === void 0 || !Number.isFinite(ref.parameter) || ref.parameter < 0 || ref.parameter > 1)
         throw Error("Curve contact parameter must be between zero and one.");
-      coordinates.push({
+      coordinates2.push({
         get: () => ref.parameter,
         set: (v2) => {
           ref.parameter = Math.max(0, Math.min(1, v2));
@@ -3988,7 +3988,7 @@ function contactParameterCoordinates(d2) {
         differenceStep: () => ref.parameter > 0.5 ? -1e-5 : 1e-5
       });
     }
-  return coordinates;
+  return coordinates2;
 }
 function solveDrawingConstraints(source, options = {}) {
   if (source.constraints?.some((c2) => c2.kind === "pierce")) return solveSavedPierceConstraints(source, options);
@@ -38471,6 +38471,66 @@ function extrusionPreviewAxes(options) {
   });
   return axes;
 }
+const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const neg = (a2) => scale$1(a2, -1);
+const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
+function coordinates(vector2) {
+  try {
+    return [vector2.x, vector2.y, vector2.z];
+  } finally {
+    vector2.delete();
+  }
+}
+function extrusionDraftFrame(wire) {
+  const face = makeFace(wire.clone());
+  const outer = face.clone().outerWire();
+  const edges = outer.edges;
+  try {
+    const edge = edges.reduce((longest, current2) => current2.length > longest.length ? current2 : longest);
+    const origin2 = coordinates(edge.pointAt(0.5));
+    const tangent = scale$1(coordinates(edge.tangentAt(0.5)), edge.orientation === "forward" ? 1 : -1);
+    return { origin: origin2, inward: unit$3(cross$4(coordinates(face.normalAt(origin2)), tangent)) };
+  } finally {
+    edges.forEach((edge) => edge.delete());
+    outer.delete();
+    face.delete();
+  }
+}
+function extrusionDraftHandle(frame, options) {
+  const intoMaterial = scale$1(frame.inward, options.angle < 0 ? -1 : 1);
+  return {
+    parameter: options.parameter,
+    label: options.label,
+    kind: "angular",
+    originMillimeters: frame.origin,
+    direction: unit$3(cross$4(options.direction, intoMaterial)),
+    startMillimeters: add$4(frame.origin, scale$1(options.direction, Math.max(1, options.radius))),
+    stepDegrees: 1,
+    screenRadius: true
+  };
+}
+function extrusionThicknessHandles(frame, thin, direction2, offset2, draftDegrees = 0) {
+  const base = add$4(frame.origin, scale$1(direction2, offset2));
+  const origin2 = (side) => add$4(base, scale$1(side, -offset2 * Math.tan(draftDegrees * Math.PI / 180)));
+  if (thin.midplane) return [{
+    parameter: "midThickness",
+    label: "Wall thickness",
+    kind: "linear",
+    originMillimeters: origin2(neg(frame.inward)),
+    direction: neg(frame.inward),
+    scale: 2
+  }];
+  const outward = thin.flipped ? frame.inward : neg(frame.inward);
+  return [
+    { parameter: "thickness1", label: "Wall thickness 1", kind: "linear", nonnegative: true, originMillimeters: origin2(outward), direction: outward },
+    { parameter: "thickness2", label: "Wall thickness 2", kind: "linear", nonnegative: true, originMillimeters: origin2(neg(outward)), direction: neg(outward) }
+  ];
+}
 class UnsupportedFeature extends Error {
   /** `fullBuild`: the full OpenCascade.js build can do this; the worker loads it and retries. */
   constructor(featureId2, what, fullBuild = false) {
@@ -38492,14 +38552,6 @@ class FeatureFailure extends Error {
   featureId;
   featureName;
 }
-const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
-const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
-const neg = (a2) => scale$1(a2, -1);
-const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
-const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
 function pointTuple(point2) {
   return [point2.X(), point2.Y(), point2.Z()];
 }
@@ -43279,6 +43331,9 @@ function evaluatePartDocument(document2, options = {}) {
                 offset2 += dot$6(normal, sub$5(origin2, o)) / alignment;
               }
               if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
+              if (feature3.id === previewId && feature3.thin && shape.wallFrame && !previewHandles.some((handle) => ["thickness1", "midThickness"].includes(handle.parameter))) {
+                for (const handle of extrusionThicknessHandles(shape.wallFrame, feature3.thin, direction2, offset2, feature3.draftAngleDegrees)) publish(feature3, handle);
+              }
               const draftOf = (angle2) => {
                 const value2 = angle2 ?? 0;
                 if (!Number.isFinite(value2) || Math.abs(value2) >= 90) throw new Error("Extrusion draft must be finite and between -90 and 90 degrees.");
@@ -43326,6 +43381,26 @@ function evaluatePartDocument(document2, options = {}) {
               const drafted = Boolean(primary.draft || second?.draft);
               if (drafted && custom && Math.abs(dot$6(direction2, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
               if (drafted && !shape.sections) throw new UnsupportedFeature(feature3.id, "drafted thin extrusions");
+              if (drafted && feature3.id === previewId && !previewHandles.some((handle) => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
+                const section2 = shape.sections()[0];
+                if (section2) {
+                  const frame2 = extrusionDraftFrame(section2.outer);
+                  if (primary.draft) publish(feature3, extrusionDraftHandle(frame2, {
+                    parameter: "draftAngle",
+                    label: "Draft angle",
+                    direction: direction2,
+                    angle: primary.draft,
+                    radius: primary.distance
+                  }));
+                  if (second?.draft) publish(feature3, extrusionDraftHandle(frame2, {
+                    parameter: endType.startsWith("symmetric") ? "oppositeDraftAngle" : "secondDraftAngle",
+                    label: "Opposite draft angle",
+                    direction: neg(direction2),
+                    angle: second.draft,
+                    radius: second.distance
+                  }));
+                }
+              }
               const prism = (low2, high2, dir) => {
                 if (!(high2 - low2 > 0)) throw new Error("Extrusion depths must be finite and positive.");
                 const clean2 = own(shape.solid(high2 - low2, dir)).simplify();
@@ -43744,18 +43819,23 @@ function evaluatePartDocument(document2, options = {}) {
                 const base = own(contourDrawing(contour, feature3.id));
                 if (contourClosed(contour)) {
                   let wall;
+                  let outer, inner;
                   try {
-                    const outer = a2 > 1e-12 ? own(base.offset(a2, { lineJoinType: "miter" })) : base;
-                    const inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base;
+                    outer = a2 > 1e-12 ? own(base.offset(a2, { lineJoinType: "miter" })) : base;
+                    inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base;
                     wall = own(outer.cut(inner));
                   } catch (error2) {
                     throw new Error("The wall offset splits or collapses the closed contour. Reduce thickness.", { cause: error2 });
                   }
-                  tools2.push(extrudeWith({ solid: (length, dir) => {
-                    const shape = sketchOf(wall).extrude(length, { extrusionDirection: dir });
-                    if (!isShape3D(shape)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness.");
-                    return shape;
-                  } }));
+                  tools2.push(extrudeWith({
+                    solid: (length, dir) => {
+                      const shape = sketchOf(wall).extrude(length, { extrusionDirection: dir });
+                      if (!isShape3D(shape)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness.");
+                      return shape;
+                    },
+                    sections: () => [{ outer: wireOf(outer), holes: [wireOf(inner)] }],
+                    ...feature3.id === previewId ? { wallFrame: extrusionDraftFrame(wireOf(base)) } : {}
+                  }));
                   continue;
                 }
                 const sketch2 = sketchOf(base);
@@ -43770,6 +43850,8 @@ function evaluatePartDocument(document2, options = {}) {
                 };
                 const nearest = (at) => edges.find((edge) => norm$4(sub$5(point2(edge.startPoint), at)) < 1e-7 || norm$4(sub$5(point2(edge.endPoint), at)) < 1e-7) ?? edges[0];
                 const first = endTangent(nearest(start), start, true), last22 = endTangent(nearest(end), end, false);
+                const firstEdge = nearest(start), wallTangent = scale$1(point2(firstEdge.tangentAt(0.5)), norm$4(sub$5(point2(firstEdge.startPoint), start)) < 1e-7 ? 1 : -1);
+                const wallFrame = { origin: point2(firstEdge.pointAt(0.5)), inward: unit$3(cross$4(n, wallTangent)) };
                 const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$4(cross$4(first, sub$5(point2(edge.endPoint), start))) < 1e-7);
                 const offsetOpen = (distance2) => {
                   const startTarget = add$4(start, scale$1(cross$4(first, n), distance2)), endTarget = add$4(end, scale$1(cross$4(last22, n), distance2));
@@ -43825,14 +43907,18 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 edges.forEach((edge) => edge.delete());
                 if (!(measureArea(face) > 1e-9)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness.");
-                tools2.push(extrudeWith({ solid: (length, dir) => {
-                  const sweep = new Vector(scale$1(dir, length));
-                  try {
-                    return basicFaceExtrusion(face, sweep);
-                  } finally {
-                    sweep.delete();
-                  }
-                } }));
+                tools2.push(extrudeWith({
+                  solid: (length, dir) => {
+                    const sweep = new Vector(scale$1(dir, length));
+                    try {
+                      return basicFaceExtrusion(face, sweep);
+                    } finally {
+                      sweep.delete();
+                    }
+                  },
+                  sections: () => [{ outer: own(face.clone().outerWire()), holes: face.clone().innerWires().map(own) }],
+                  wallFrame
+                }));
               }
               return tools2.slice(1).reduce((all, tool3) => own(all.fuse(tool3)), tools2[0]);
             };

@@ -77,8 +77,13 @@ requirements, not optional cosmetic additions.
 
 ## Extrude release blockers — 2026-11-04
 
-The shared-control/selection update is installed as CAD **alpha-0.1.100** with
-matching worker and UI gallery **alpha-0.1.36** (shared package alpha.275).
+The shared-control/selection repair first shipped in CAD **alpha-0.1.99** and
+UI gallery **alpha-0.1.36** (shared package alpha.275). The combined alpha-0.1.100
+source included Thin + Draft, but its installed build still rejected that operation.
+The complete combined source has now been rebuilt and qualified as a matching
+frontend/worker pair: 2,180 frontend tests (one skipped), 1,275 engine tests,
+320 native-service tests, both Home routes, shared-control workflows and all
+17 modeling browser steps pass. See the Thin and Draft evidence below.
 That update does **not** sign off the entire Extrude feature. Continue this
 feature before granting release-ready status to Revolve, Chamfer or Fillet.
 
