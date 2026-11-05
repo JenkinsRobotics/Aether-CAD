@@ -163,6 +163,29 @@ pass (one existing skip), as do hosted and standalone Home. The installed packag
 contains 3,576 verified files; other apps and live documents were unchanged.
 [Qualification and remaining work](../reality/data/Extrude_Picker_Focus_2026_11_05.json).
 
+## Extrude creation-mode selection — 2026-11-05 continuation
+
+Solid faces and Surface/Thin curves now have distinct transient selection state.
+The initial whole-sketch handoff stops after a manual selection edit, so changing
+creation mode cannot restore removed curves or invent a selection in an empty
+field. A connected boundary maps to all its authored curves; removing one side
+prevents that incomplete boundary from becoming a Solid face. Returning from an
+incompatible mode restores the exact remaining selection until the user changes
+it. The same behavior applies while editing saved history.
+
+An arrangement cell can contain only part of an authored curve. It retains its
+exact Solid selection on return; automatic conversion into exact partial curve
+references remains open and is not approximated with larger whole contours.
+
+Both browsers pass 20 native feature-control workflows, including removal across
+all three creation modes, connected four-line profiles, saved Solid-to-Surface
+edits and reopen. Both also pass the four reported Part 1 removal cases; native
+modeling, picking and both Home paths pass. The unchanged native runtime reuses
+CAD112's engine/packaged-native evidence. The full frontend suite and release
+status are recorded in [qualification](../reality/data/Extrude_Mode_Selections_2026_11_05.json).
+This is not full Extrude signoff: direction references, curved oblique Draft,
+partial-curve conversion and the remaining termination matrix stay open.
+
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
 The picker already retained multiple sketch sources; native evaluation previously
@@ -599,10 +622,10 @@ Both live in surface.ts today; move each to its own file.
 | Faces and sketch regions | Same | Done |
 | End type Blind / Up to next / face / part / vertex / Through all, flip | Same | Done |
 | Offset (up-to types) + distance | End offset | Done |
-| Direction (axis or mate connector) | Direction subsection | Done (axis, line, edge) |
+| Direction (axis or mate connector) | World axes, normalized vector and persistent sketch-line reference | Partial: native edge/Axis feature/mate-connector selection and common viewport reference picker remain open |
 | Starting offset: Blind distance / Entity (part, face, mate connector), Symmetric, flip | Starting offset sub-setting: Start type Blind / Entity: face / Entity: plane with the Offset and flip | Partial: part and mate connector entities open |
 | Symmetric (Blind, Through all) | Symmetric | Done |
-| Draft angle + flip | Draft | Done |
+| Draft angle + flip | Native normal-direction draft and qualified angled planar-wall draft | Partial: curved oblique Draft remains open |
 | Second end position: own end type, depth, draft | Same | Done |
 | Merge scope / Merge with all | Merge scope mode + parts | Done |
 | Thin: Mid plane, Thickness 1 / 2, flip | Thin options | Done |

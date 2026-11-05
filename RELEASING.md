@@ -84,6 +84,11 @@ Package-manager versions and the shared UI dependency version are separate.
    faces and parts during history previews, and preserve saved limits. Re-run
    the reported Part 1 face-removal workflows on both browsers. Hidden fields
    must not consume picks, and pointer focus must not replace a pending × row.
+   Creation-mode changes must retain explicit removals, including an empty
+   selection. Exercise whole-sketch handoff, connected multi-line boundaries,
+   incompatible open profiles, saved Solid-to-Surface history edits and reopen
+   in both browser gates. Never reinterpret a face-cell index as a curve index
+   or widen a partial arrangement boundary into entire authored contours.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

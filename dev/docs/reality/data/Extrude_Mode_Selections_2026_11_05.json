@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-05",
+  "status": "All qualification passed; ready for local release",
+  "reference": "https://cad.onshape.com/help/Content/PartStudio/extrude.htm",
+  "problem": [
+    "Whole-sketch preselection was reapplied after manual curve removal when changing Solid/Surface/Thin.",
+    "A connected face and its first source curve reused an index and were incorrectly treated as the same selection.",
+    "Switching modes could silently select the only available sketch even with no selected profiles."
+  ],
+  "changes": [
+    "Dedicated transient profile-mode state preserves exact return selections until an explicit edit invalidates them.",
+    "Manual edits retire the initial whole-sketch handoff and stale selections in the other mode, including the empty selection.",
+    "Complete connected boundaries map between one face and all their authored curves. Open/incomplete profiles do not produce guessed closed faces.",
+    "Arrangement cells keep their exact Solid selection when visiting curve modes; cells are not widened into whole intersecting source curves.",
+    "Selection identity remains scoped to each source sketch; saved Part format and native geometry runtime are unchanged."
+  ],
+  "qualification": {
+    "before": "Both newly added DOM regressions failed on CAD113 source.",
+    "focused_dialog_tests": 34,
+    "typecheck": true,
+    "build": true,
+    "native_runtime_byte_identical_to": "CAD alpha-0.1.113 / engine and packaged-native qualification from CAD112",
+    "frozen_files": "build/feature-qualification-2026-11-05/extrude-modes/frozen-files.json",
+    "frozen_files_unchanged": true,
+    "chromium": {
+      "workflows": 20,
+      "errors": [],
+      "path": "build/Example-Collection/extrude-modes-chromium-2026-11-05/host/browser/feature-controls.json"
+    },
+    "webkit": {
+      "workflows": 20,
+      "errors": [],
+      "path": "build/Example-Collection/extrude-modes-webkit-2026-11-05/host/browser/feature-controls.json"
+    },
+    "modeling": {
+      "steps": 17,
+      "errors": [],
+      "path": "build/Example-Collection/extrude-modes-modeling-2026-11-05/host/browser/log.json",
+      "server_geometry_requests": 0
+    },
+    "hosted_home": {
+      "passed": true,
+      "checks": 6,
+      "path": "build/Example-Collection/extrude-modes-home-2026-11-05/host/browser/results.json"
+    },
+    "standalone_home": {
+      "passed": true,
+      "checks": 5,
+      "path": "build/feature-qualification-2026-11-05/extrude-modes/home-standalone/results.json"
+    },
+    "picking": {
+      "cases": 4,
+      "rays_per_case": 300,
+      "mismatches": 0,
+      "path": "build/feature-qualification-2026-11-05/extrude-modes/picking.json"
+    },
+    "frontend": {
+      "passed": 2218,
+      "existing_skipped": 1,
+      "path": "build/feature-qualification-2026-11-05/extrude-modes/frontend.log"
+    },
+    "chromium_reported_part_removal": {
+      "passed": true,
+      "cases": 4,
+      "errors": [],
+      "path": "build/Example-Collection/extrude-modes-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json"
+    },
+    "webkit_reported_part_removal": {
+      "passed": true,
+      "cases": 4,
+      "errors": [],
+      "path": "build/Example-Collection/extrude-modes-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+    }
+  },
+  "schema_changes": false,
+  "live_user_documents_modified": false,
+  "remaining": [
+    "Automatic conversion of arrangement-cell boundaries into exact partial curves requires richer curve references; explicit curve selection is currently required.",
+    "Curved oblique Draft.",
+    "Native edge/Axis feature/mate-connector direction picking and remaining starting/ending references.",
+    "Complete termination/mode conversion matrix and large-scope Surface Add profiling.",
+    "Ordered Revolve, Chamfer, Fillet and remaining requested feature parity."
+  ]
+}

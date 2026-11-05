@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
 import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
 import { verifyExtrudeProfileFocus } from './browser/extrude-profile-focus.mjs';
+import { verifyExtrudeModeRemoval, verifyConnectedProfileModes } from './browser/extrude-mode-selection.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -176,6 +177,7 @@ try {
   const wholeEntities = dialog().locator('[aria-label="Sketch curves to extrude"]');
   await expect(wholeEntities.locator('.aui-feature-entity')).toHaveCount(2);
   await expect.poll(() => page.evaluate(() => window.__qualificationPreview?.bodyOutputs ? Object.values(window.__qualificationPreview.bodyOutputs)[0]?.length : 0), { timeout: 45000 }).toBe(2);
+  await verifyExtrudeModeRemoval({page, expect, dialog, row, results});
   await accept();
   await expect.poll(async () => (await stored(wholeFile.id)).features.at(-1).bodyOutputs?.length, { timeout: 30000 }).toBe(2);
   const wholeSaved = (await stored(wholeFile.id)).features.at(-1);
@@ -189,6 +191,7 @@ try {
   assert.ok(wholeSaved.bodyOutputs.includes(wholeRemaining.bodyOutputs[0]));
   assert.equal(wholeRemaining.profileSelections[0].profileContourId, 'curve-1');
   results.push('Surface whole-sketch preselection: two independent native sheets, construction excluded, saved reopen, curve removal and retained body identity');
+  await verifyConnectedProfileModes({page, expect, dialog, row, open, stored, accept, command, base, results});
 
   const surface = { ...base('Native Surface extrusion controls'), formatVersion: 23 };
   surface.features = [{ id: 's', type: 'profile', name: 'Surface sketch', plane: 'XY', offsetMillimeters: 0, suppressed: false,

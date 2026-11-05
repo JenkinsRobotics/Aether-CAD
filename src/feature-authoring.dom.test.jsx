@@ -427,13 +427,43 @@ it('hands an open whole sketch to Surface and never restores a removed curve on 
     const entities = panel.querySelector('[aria-label="Sketch curves to extrude"]');
     entities.querySelector('button').click();
     expect(picks()).toEqual([{ featureId: 'open', contourIndex: 1 }]);
+    for (const value of ['thin', 'solid', 'surface']) {
+      mode.value = value; mode.dispatchEvent(new Event('change'));
+      expect(picks()).toEqual(value === 'solid' ? [] : [{ featureId: 'open', contourIndex: 1 }]);
+    }
     cadWorkspace.publish({ ...cadWorkspace.snapshot(), partCount: 2 });
     expect(picks()).toEqual([{ featureId: 'open', contourIndex: 1 }]);
     window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'open', contourIndex: 1 } }));
     expect(picks()).toEqual([]);
+    for (const value of ['thin', 'solid', 'surface']) {
+      mode.value = value; mode.dispatchEvent(new Event('change'));
+      expect(picks()).toEqual([]);
+    }
     cadWorkspace.publish({ ...cadWorkspace.snapshot(), partCount: 3 });
     expect(picks()).toEqual([]);
   } finally { cadWorkspace.publish(original); }
+});
+
+it('converts a connected face to all its boundary curves and retains explicit removals across creation modes', async () => {
+  seedConnectedProfile();
+  cadCommands.execute('feature-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const mode = panel.querySelector('[aria-label="Creation type"]');
+  const picks = () => JSON.parse(panel.querySelector('[aria-label="Selected profiles"]').value);
+  window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'joined', contourIndex: 0 } }));
+  expect(picks()).toEqual([{ featureId: 'joined', contourIndex: 0 }]);
+  mode.value = 'surface'; mode.dispatchEvent(new Event('change'));
+  expect(picks().map(p => p.contourIndex)).toEqual([0, 1, 2, 3]);
+  mode.value = 'solid'; mode.dispatchEvent(new Event('change'));
+  expect(picks()).toEqual([{ featureId: 'joined', contourIndex: 0 }]);
+  mode.value = 'thin'; mode.dispatchEvent(new Event('change'));
+  expect(picks()).toHaveLength(4);
+  panel.querySelector('[aria-label="Sketch curves to extrude"] button').click();
+  expect(picks().map(p => p.contourIndex)).toEqual([1, 2, 3]);
+  mode.value = 'solid'; mode.dispatchEvent(new Event('change'));
+  expect(picks()).toEqual([]); // Three sides no longer enclose the original face.
+  mode.value = 'surface'; mode.dispatchEvent(new Event('change'));
+  expect(picks().map(p => p.contourIndex)).toEqual([1, 2, 3]);
 });
 
 it('accepts whole sketches selected from the tree while Surface is open', async () => {
@@ -447,6 +477,42 @@ it('accepts whole sketches selected from the tree while Surface is open', async 
     expect(picks).toHaveLength(4);
     expect(picks.every(p => p.featureId === 'joined')).toBe(true);
   } finally { cadWorkspace.publish(original); }
+});
+
+it('keeps an empty unselected profile empty when changing mode instead of picking the only available sketch', () => {
+  seedProfile(); cadCommands.execute('feature-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const mode = panel.querySelector('[aria-label="Creation type"]');
+  for (const value of ['surface', 'thin', 'solid']) {
+    mode.value = value; mode.dispatchEvent(new Event('change'));
+    expect(JSON.parse(panel.querySelector('[aria-label="Selected profiles"]').value)).toEqual([]);
+  }
+});
+
+it('retains an exact nested region when visiting curve modes without expanding it into whole source contours', async () => {
+  const { sketchRegions } = await import('@aether/core/document');
+  const sketch = { id: 'nested', type: 'profile', name: 'Nested circles', plane: 'XY', offsetMillimeters: 0, suppressed: false,
+    profile: { type: 'drawing', contours: [{ id: 'outer', type: 'circle', center: [0, 0], radius: 10 }, { id: 'inner', type: 'circle', center: [0, 0], radius: 5 }] } };
+  doc = insertFeature(doc, sketch);
+  const ring = sketchRegions(sketch).find(region => region.holes?.length);
+  expect(ring).toBeTruthy();
+  cadCommands.execute('feature-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const mode = panel.querySelector('[aria-label="Creation type"]');
+  window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'nested', contourIndex: ring.contourIndex } }));
+  const picks = () => JSON.parse(panel.querySelector('[aria-label="Selected profiles"]').value);
+  const initial = picks(); expect(initial).toHaveLength(1);
+  for (const value of ['surface', 'thin']) {
+    mode.value = value; mode.dispatchEvent(new Event('change'));
+    expect(picks()).toEqual([]);
+  }
+  mode.value = 'solid'; mode.dispatchEvent(new Event('change'));
+  expect(picks()).toEqual(initial);
+  panel.querySelector('[aria-label="Faces and sketch regions to extrude"] button').click();
+  for (const value of ['surface', 'solid']) {
+    mode.value = value; mode.dispatchEvent(new Event('change'));
+    expect(picks()).toEqual([]);
+  }
 });
 
 it('switches Extrude selection focus between profiles, stopping faces and points without losing × clicks', async () => {
