@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-05",
+  "status": "qualified; installation pending",
+  "scope": [
+    "New Surface Extrude publishes native connected sheets as independently selectable bodies",
+    "Stable output IDs through source reorder, curve removal, dimensional edits and saved reopen",
+    "Whole-sketch preselection and tree picking exclude construction and retain individual removal",
+    "Canonical creation identifies source curves for human and agent edits",
+    "Legacy Surface compound outputs are preserved"
+  ],
+  "implementation": [
+    "aether-engine/src/kernel/surface-extrusion-outputs.ts",
+    "aether-engine/src/document/surface-extrusion-identities.ts",
+    "src/features/extrude-selection.ts"
+  ],
+  "format": {
+    "part": 25,
+    "previousReader": 24,
+    "codec": {
+      "wheel": "aether_animation-0.1.0-28-py3-none-any.whl",
+      "sha256": "7eebd50a2de1dfa20f127c9ae9686100dd04cf8e4fd498de810460e8058099ed",
+      "modules": [
+        "aether_animation/__init__.py",
+        "aether_animation/aether_workspace.py",
+        "aether_animation/aether_project.py",
+        "aether_animation/mates.py",
+        "aether_animation/relation_kinds.py",
+        "aether_animation/workspace_drawings.py"
+      ],
+      "source_commit": "af24721cd6cdc2f91cc0e9ff1123f0a2af115b2b"
+    },
+    "old_files_preserved": true
+  },
+  "references": [
+    "https://cad.onshape.com/help/Content/PartStudio/extrude.htm"
+  ],
+  "qualification": {
+    "controls_chromium": {
+      "path": "build/Example-Collection/surface-outputs-release-chromium-2026-11-05/host/browser/feature-controls.json",
+      "workflows": 13,
+      "passed": true
+    },
+    "exact_part1_removal_chromium": {
+      "path": "build/Example-Collection/surface-outputs-release-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "workflows": 4,
+      "passed": true
+    },
+    "controls_webkit": {
+      "path": "build/Example-Collection/surface-outputs-release-webkit-2026-11-05/host/browser/feature-controls.json",
+      "workflows": 13,
+      "passed": true
+    },
+    "exact_part1_removal_webkit": {
+      "path": "build/Example-Collection/surface-outputs-release-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json",
+      "workflows": 4,
+      "passed": true
+    },
+    "frontend": {
+      "passed": 2210,
+      "existing_skipped": 1,
+      "log": "build/feature-qualification-2026-11-05/surface-outputs/frontend-final.log"
+    },
+    "engine": {
+      "passed": 1373,
+      "log": "build/feature-qualification-2026-11-05/surface-outputs/engine-final.log"
+    },
+    "canonical_codec": {
+      "passed": 36
+    },
+    "types": true,
+    "build": true,
+    "headless": true,
+    "regions": true,
+    "previous_worker_refusal": true,
+    "modeling": {
+      "path": "build/Example-Collection/surface-outputs-release-modeling-2026-11-05/host/browser/log.json",
+      "steps": 17,
+      "passed": true
+    },
+    "home_hosted": {
+      "path": "build/Example-Collection/surface-outputs-release-home-2026-11-05/host/browser/results.json",
+      "passed": true
+    },
+    "home_standalone": {
+      "path": "build/feature-qualification-2026-11-05/surface-home-standalone/results.json",
+      "passed": true
+    },
+    "native_initial": {
+      "passed": 333,
+      "failed": 1,
+      "case": "test_installed_runner_loads_full_kernel_on_demand[extrude-up-to-cone]",
+      "response": "unavailable",
+      "log": "build/feature-qualification-2026-11-05/surface-outputs/release-native.log",
+      "note": "One unavailable response during concurrent browser/frontend/engine qualification. The exact cause is not captured by the error envelope. Both full-kernel rechecks pass unchanged (2/2), and the entire unchanged packaged suite passes when run alone (334/334)."
+    },
+    "archived_logs": "build/feature-qualification-2026-11-05/surface-outputs",
+    "native": {
+      "passed": 334,
+      "seconds": 290.37,
+      "log": "build/feature-qualification-2026-11-05/surface-outputs/release-native-isolated.log"
+    }
+  },
+  "limitations": [
+    "Full Extrude parity is not claimed. Disconnected Surface Add groups still require independent identity handling.",
+    "Oblique Draft, remaining stopping/selection combinations and mode-conversion coverage remain open.",
+    "The rest of the requested feature review remains active, in the requested order."
+  ],
+  "worker_sha256": "b5f13721d6b45fde00eae1c7bcb12bcf002c5d226d742d82560564ee91c79d7d"
+}

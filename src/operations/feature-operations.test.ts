@@ -33,7 +33,7 @@ it('exposes Surface extrusion inherited extents to agents and accepts their cano
     distanceMillimeters: 5, startingOffsetMillimeters: -2, directionVector: [0, .6, .8],
     secondEnd: { endType: 'blind', distanceMillimeters: 3 },
   }) });
-  expect(document.features.at(-1)).toMatchObject({ type: 'surface-extrude', startingOffsetMillimeters: -2,
+  expect(document.features.at(-1)).toMatchObject({ type: 'surface-extrude', separateBodies: true, outputProfileId: 'sketch', startingOffsetMillimeters: -2,
     secondEnd: { endType: 'blind', distanceMillimeters: 3 } });
 });
 

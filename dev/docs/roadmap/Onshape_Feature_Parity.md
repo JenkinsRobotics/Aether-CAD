@@ -59,6 +59,29 @@ and WebKit/WebGL2, including visible cut/restore checks and no document writes.
 Aether UI277 passes 986 tests and its interactive gallery gate.
 [Qualification](../reality/data/Feature_End_On_Controls_2026_11_05.json).
 
+## Independent Surface Extrude outputs — 2026-11-05, qualified
+
+New Surface extrusions now publish one native body per connected sheet. Shared
+edges join a sheet; detached sheets remain independently selectable. IDs derive
+from persistent source curves, so curve order, dimensions and removal of another
+source do not retarget downstream features. Canonical creation assigns missing
+curve IDs for both editor and agent operations. Existing compound Surface files
+retain their original outputs.
+
+Whole-sketch preselection and tree selection include every eligible curve while
+excluding construction geometry. Individual curves remain removable by repeat
+click or ×; unrelated tree updates cannot restore a removed curve. Part25 and
+canonical codec28 carry these identities, and the Part24 worker/codec27 refuse
+new intent. The new native sewing path retains an intentional 0.0005 mm gap.
+
+The final frontend suite passes 2,210 tests (one existing skip), the engine passes
+1,373 and the packaged native service passes 334. Chromium and WebKit each pass
+13 real control workflows and four exact Part 1 face-removal workflows. All 17
+modeling steps and both Home paths pass. Release qualification is recorded in
+[Surface output evidence](../reality/data/Extrude_Surface_Outputs_2026_11_05.json).
+Disconnected Surface Add groups, oblique Draft and the remaining termination and
+mode-conversion matrix remain open. This does not sign off full Extrude parity.
+
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
 The picker already retained multiple sketch sources; native evaluation previously
@@ -194,7 +217,7 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. End-on handles are qualified above. Disjoint Surface outputs, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. End-on handles are qualified above. Independent New Surface outputs are qualified above. Disconnected Surface Add groups, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
 | Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
@@ -228,7 +251,7 @@ feature before granting release-ready status to Revolve, Chamfer or Fillet.
 
 | Reference control | Current implementation | Qualification still required |
 | --- | --- | --- |
-| Solid / Surface / Thin | Unified editor and native Surface extent/merge implementation; qualification below | Complex curves and other curved limits, multiple sketch sources and disjoint Surface output identities; full mode-conversion coverage. |
+| Solid / Surface / Thin | Unified editor and native Surface extent/merge implementation; qualification below | Independent New Surface outputs are qualified above; disconnected Surface Add groups, complex curves and other curved limits, and full mode-conversion coverage remain open. |
 | New / Add / Remove / Intersect | Native body operations and explicit/all merge scopes | Selected multi-body scope, disjoint regions and failure recovery across the full extent matrix. |
 | Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
 | Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |

@@ -6,7 +6,7 @@
  * runs the exact native rebuild, stale-document checks, commit and undo used for
  * every edit. Nothing here evaluates code; every result is an ordinary document.
  */
-import { dependentFeatures, insertFeature, moveFeature, removeFeature, validatePartDocument, type PartDocument, type PartFeature } from '@aether/core/document';
+import { identifySurfaceExtrusionProfiles, dependentFeatures, insertFeature, moveFeature, removeFeature, validatePartDocument, type PartDocument, type PartFeature } from '@aether/core/document';
 import type { AgentTool } from '@aether/ui/AgentServices';
 import { featureSchemas } from './feature-schemas.generated';
 
@@ -61,22 +61,23 @@ export function prepareFeatureOperation(doc: PartDocument, name: string, args: R
     if ('id' in fields) throw Error('Omit "id"; the editor assigns a stable feature ID.');
     if (typeof fields.type !== 'string' || !featureSchemas[fields.type]) throw Error(`Set "type" to one of: ${Object.keys(featureSchemas).join(', ')}.`);
     const id = crypto.randomUUID();
-    const feature = { suppressed: false, name: fields.type, ...fields, id } as unknown as PartFeature;
+    const feature = { suppressed: false, name: fields.type, ...(fields.type === 'surface-extrude' && fields.operation === 'new' ? { separateBodies: true } : {}), ...fields, id } as unknown as PartFeature;
     return { document: insertFeature(doc, feature), featureID: id };
   }
   if (name === 'aether_cad_feature_update') {
     const feature = existing(doc, args.feature_id);
     const changes = parseObject(args.changes_json, 'changes_json');
     if ('id' in changes || 'type' in changes) throw Error('"id" and "type" cannot change; add a new feature instead.');
-    if (feature.type === 'extrude' && 'outputProfileId' in changes && changes.outputProfileId !== (feature.outputProfileId ?? feature.profileFeatureId))
+    if ((feature.type === 'extrude' || feature.type === 'surface-extrude') && 'outputProfileId' in changes && changes.outputProfileId !== (feature.outputProfileId ?? feature.profileFeatureId))
       throw Error('Extrusion output identity is assigned by the document and cannot be changed.');
     if (!Object.keys(changes).length) throw Error('changes_json has no fields to change.');
     const next = structuredClone(doc);
     next.features = next.features.map(f => f.id === feature.id ? { ...f, ...changes,
-      ...(f.type === 'extrude' && f.separateBodies ? { outputProfileId: f.outputProfileId ?? f.profileFeatureId } : {}),
+      ...((f.type === 'extrude' || f.type === 'surface-extrude') && f.separateBodies ? { outputProfileId: f.outputProfileId ?? f.profileFeatureId } : {}),
     } as PartFeature : f);
-    validatePartDocument(next);
-    return { document: next, featureID: feature.id };
+    const identified = identifySurfaceExtrusionProfiles(next, next.features.find(f => f.id === feature.id)!);
+    validatePartDocument(identified);
+    return { document: identified, featureID: feature.id };
   }
   if (name === 'aether_cad_feature_delete') {
     const feature = existing(doc, args.feature_id);

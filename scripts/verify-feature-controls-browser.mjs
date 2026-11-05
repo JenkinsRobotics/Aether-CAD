@@ -141,7 +141,7 @@ try {
     await expect.poll(async () => (await stored(file.id)).features.at(-1).profileSelections?.length, { timeout: 30000 }).toBe(2);
     const original = (await stored(file.id)).features.at(-1);
     assert.equal(original.distanceMillimeters, 11);
-    if (mode !== 'Surface') assert.equal(original.bodyOutputs.length, 2);
+    assert.equal(original.bodyOutputs.length, 2);
     await page.waitForLoadState('networkidle'); await page.reload();
     await row(/^Extrude/).dblclick();
     await expect(entities.locator('.aui-feature-entity')).toHaveCount(2);
@@ -151,7 +151,7 @@ try {
     await expect.poll(async () => (await stored(file.id)).features.at(-1).profileSelections?.length, { timeout: 30000 }).toBe(1);
     const remaining = (await stored(file.id)).features.at(-1);
     assert.equal(remaining.profileSelections[0].profileFeatureId, 'b');
-    if (mode !== 'Surface') {
+    {
       assert.equal(remaining.outputProfileId, 'a');
       assert.equal(remaining.bodyOutputs.length, 1);
       assert.ok(original.bodyOutputs.includes(remaining.bodyOutputs[0]));
@@ -159,6 +159,31 @@ try {
     await page.screenshot({ path: join(evidence, `extrude-multiple-${mode.toLowerCase()}.png`) });
     results.push(mode + ' Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity');
   }
+
+  const whole = base('Whole sketch Surface outputs');
+  whole.features = [{ id: 'whole', type: 'profile', name: 'Two open curves', plane: 'XY', offsetMillimeters: 0, suppressed: false,
+    profile: { type: 'drawing', contours: [0, 10, 20].map((x, index) => ({ id: `curve-${index}`, type: 'path', start: [x, 0],
+      segments: [{ type: 'line', end: [x + 5, 0] }], ...(index === 2 ? { construction: true } : {}) })) } }];
+  const wholeFile = await open(whole);
+  await row(/^Two open curves/).click();
+  await command('Extrude', 'feature-extrude');
+  await dialog().getByRole('button', { name: 'Surface', exact: true }).click();
+  const wholeEntities = dialog().locator('[aria-label="Sketch curves to extrude"]');
+  await expect(wholeEntities.locator('.aui-feature-entity')).toHaveCount(2);
+  await expect.poll(() => page.evaluate(() => window.__qualificationPreview?.bodyOutputs ? Object.values(window.__qualificationPreview.bodyOutputs)[0]?.length : 0), { timeout: 45000 }).toBe(2);
+  await accept();
+  await expect.poll(async () => (await stored(wholeFile.id)).features.at(-1).bodyOutputs?.length, { timeout: 30000 }).toBe(2);
+  const wholeSaved = (await stored(wholeFile.id)).features.at(-1);
+  await page.reload(); await row(/^Extrude/).dblclick();
+  await expect(wholeEntities.locator('.aui-feature-entity')).toHaveCount(2);
+  await wholeEntities.getByRole('button', { name: /^Remove / }).first().click();
+  await expect(wholeEntities.locator('.aui-feature-entity')).toHaveCount(1);
+  await accept();
+  await expect.poll(async () => (await stored(wholeFile.id)).features.at(-1).bodyOutputs?.length, { timeout: 30000 }).toBe(1);
+  const wholeRemaining = (await stored(wholeFile.id)).features.at(-1);
+  assert.ok(wholeSaved.bodyOutputs.includes(wholeRemaining.bodyOutputs[0]));
+  assert.equal(wholeRemaining.profileSelections[0].profileContourId, 'curve-1');
+  results.push('Surface whole-sketch preselection: two independent native sheets, construction excluded, saved reopen, curve removal and retained body identity');
 
   const surface = { ...base('Native Surface extrusion controls'), formatVersion: 23 };
   surface.features = [{ id: 's', type: 'profile', name: 'Surface sketch', plane: 'XY', offsetMillimeters: 0, suppressed: false,

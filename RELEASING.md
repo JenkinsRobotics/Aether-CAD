@@ -55,6 +55,14 @@ Package-manager versions and the shared UI dependency version are separate.
    geometry, saved output IDs, refusal by codec26/Part23 and the actual Solid,
    Thin and Surface workflows in both browser control gates. Rollback cannot
    discard the output lineage or downgrade Part24 files.
+   Independent Surface extrusion outputs use Part25 and canonical codec28.
+   Run `test_native_extrusion_sources.py` and
+   `node scripts/verify-surface-output-format.mjs /path/to/Part24/native-worker.json`.
+   Verify native connected sheets, stable IDs through source reorder/removal,
+   whole-sketch selection excluding construction, downstream single-sheet edits,
+   legacy compound preservation, and actual Part24/codec27 refusal of Part25.
+   Both browser control gates must retain independent Surface output IDs on reopen.
+   Rollback does not downgrade Part25 files.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

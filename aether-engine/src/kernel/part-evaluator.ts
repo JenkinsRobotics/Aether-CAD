@@ -464,6 +464,7 @@ import { binarySTL, flatNormals, meshIsClosed, parseMesh, type MeshFormat } from
 import { extendedKernel, extendedSolids, extendedStopSurfaces, fromExtended, toExtended, type FullOC } from "./extended-kernel";
 import type { ExtrusionScopeResolution } from "../document/extrusion-scope";
 import { sha256Hex } from "./sha256";
+import { surfaceExtrusionOutputs, sewSurfaceExtrusion } from "./surface-extrusion-outputs";
 import {
   availableBodies,
   bodyIDForFeature,
@@ -2962,6 +2963,8 @@ export function evaluatePartDocument(
           const sheetArea = (sheet: Shape3D) => { const a = measureArea(sheet as never); if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances."); return sheet; };
           if (feature.type === "surface-extrude") {
             const commonNormal = unit(sketchFrameOf(feature.profileFeatureId).normal as V3);
+            const separate = feature.operation === "new" && feature.separateBodies;
+            const sources: { key: string; shape: Shape3D }[] = [];
             const buildProfileSheet = (feature: import('../document/surface').SurfaceExtrudeFeature) => {
               const frame = sketchFrameOf(feature.profileFeatureId);
               const n = unit(frame.normal as V3), origin = frame.originMillimeters as V3;
@@ -2986,11 +2989,20 @@ export function evaluatePartDocument(
               const second = symmetric ? { ...primary } : feature.secondEnd ? resolveEnd(feature.secondEnd)
                 : feature.secondDistanceMillimeters ? { type: 'blind' as const, distance: feature.secondDistanceMillimeters } : undefined;
               const picks = feature.profileSelections;
-              const ids = picks?.map(pick => pick.profileContourId).filter((id): id is string => id !== undefined)
-                ?? feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
+              const ids = picks ? (picks.every(pick => pick.profileContourId !== undefined) ? picks.map(pick => pick.profileContourId!) : undefined)
+                : feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
               const wires = curveWires(feature.profileFeatureId, ids, 'Surface extrusion');
-              const result = buildSurfaceExtrusion({ wires, origin, normal: n, direction, startingOffset: offset, primary, second, limits: [...bodies.values()] });
-              const shape = own(result.shape);
+              const build = (curves: Wire[]) => buildSurfaceExtrusion({ wires: curves, origin, normal: n, direction, startingOffset: offset, primary, second, limits: [...bodies.values()] });
+              const contours = profiles.get(feature.profileFeatureId)!.contours.filter(curve => !ids || (curve.id !== undefined && ids.includes(curve.id)));
+              const results = separate ? wires.map((wire, index) => {
+                const curveId = contours.length ? contours[index]?.id : '@profile';
+                if (!curveId) throw Error('Surface output identities need named sketch curves. Edit and save the source sketch.');
+                const result = build([wire]); own(result.shape);
+                sources.push({ key: JSON.stringify([feature.profileFeatureId, curveId]), shape: result.shape });
+                return result;
+              }) : [build(wires)];
+              const result = { shape: separate ? own(sewSurfaceExtrusion(results.map(result => result.shape))) : own(results[0].shape), contacts: results.flatMap(result => result.contacts) };
+              const shape = result.shape;
               if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === "offset")) {
                 previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction, offset, endType,
                   primary: { endType: primary.type }, ...(second ? { second: { endType: second.type } } : {}), reversed: Boolean(feature.reversed) }));
@@ -3001,7 +3013,18 @@ export function evaluatePartDocument(
               return shape;
             };
             const sheets = extrusionProfileGroups(feature).map(buildProfileSheet);
-            tool = sheets.length === 1 ? sheets[0] : sheetArea(joined(sheets.map(sheet => sheet.wrapped)));
+            tool = sheets.length === 1 ? sheets[0] : sheetArea(separate ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map(sheet => sheet.wrapped)));
+            if (separate) {
+              const outputs = surfaceExtrusionOutputs(tool, sources);
+              const prefix = bodyIDForFeature(document, feature);
+              outputs.forEach(output => own(output.shape));
+              const ids = outputs.map(output => `${prefix}:surface-${output.key}`);
+              if (ids.some(id => bodies.has(id))) throw Error('Duplicate surface output body identity.');
+              outputs.forEach((output, index) => bodies.set(ids[index], output.shape));
+              bodyOutputs[feature.id] = ids; currentBodyID = ids.at(-1);
+              tools.set(feature.id, tool);
+              continue;
+            }
           } else if (feature.type === "surface-revolve") {
             let axis: V3 = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
             if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }

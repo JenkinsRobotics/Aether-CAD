@@ -328,6 +328,8 @@ function validateExtrusionDefinition(feature3, earlier, missingReference, surfac
   if (feature3.profileSelections !== void 0) {
     const picks = feature3.profileSelections;
     if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map((p2) => JSON.stringify([p2?.profileFeatureId, p2 ? profileRegionIdentity(p2) : null]))).size !== picks.length || picks.some((p2) => !p2 || !missingReference(p2.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p2.profileFeatureId) || "") || p2.profileContourId !== void 0 && (typeof p2.profileContourId !== "string" || !p2.profileContourId.trim() || p2.profileContourId.length > 128))) throw Error("Choose distinct faces from earlier sketches.");
+    if (surface && feature3.separateBodies && picks.some((pick) => !pick.profileContourId && pick.profileRegion || !pick.profileContourId && picks.filter((other) => other.profileFeatureId === pick.profileFeatureId).length > 1))
+      throw Error("Select either a whole sketch or distinct sketch curves for each surface extrusion source.");
   }
   if (feature3.separateBodies !== void 0 && typeof feature3.separateBodies !== "boolean") throw Error("Invalid separate bodies option.");
   if (feature3.outputProfileId !== void 0 && (typeof feature3.outputProfileId !== "string" || !feature3.outputProfileId.trim() || feature3.outputProfileId.length > 128)) throw Error("Invalid extrusion output profile identity.");
@@ -663,8 +665,8 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
   }
 }
-const current = 24;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+const current = 25;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
 const partFormat = {
   current,
   readable
@@ -685,28 +687,6 @@ function validateImageCanvases(value2) {
     if (!["XY", "XZ", "YZ"].includes(item.plane) || typeof item.visible !== "boolean") throw Error("Invalid canvas plane or visibility.");
     for (const key2 of ["widthMillimeters", "heightMillimeters", "xMillimeters", "yMillimeters", "offsetMillimeters", "rotationDegrees", "opacity"]) if (typeof item[key2] !== "number" || !Number.isFinite(item[key2])) throw Error("Canvas dimensions must be finite.");
     if (item.widthMillimeters <= 0 || item.heightMillimeters <= 0 || item.opacity < 0 || item.opacity > 1) throw Error("Canvas dimensions must be positive and opacity between 0 and 1.");
-  }
-}
-function offsetFaceBodies(feature3) {
-  return [...new Set(feature3.faces.map((face) => face.bodyId))];
-}
-function validateOffsetFace(feature3, earlier, missing) {
-  if (!Array.isArray(feature3.faces) || !feature3.faces.length || feature3.faces.length > 256) throw Error("Choose one or more faces to offset (up to 256).");
-  if (feature3.transform !== void 0) {
-    if (feature3.distanceMillimeters !== void 0 || !["translate", "translate-reference", "rotate", "rotate-reference"].includes(feature3.transform?.kind)) throw Error("Choose an offset distance or a face Translate/Rotate operation.");
-    validateTransform({ id: feature3.id, type: "transform", name: feature3.name, suppressed: feature3.suppressed, bodyIds: offsetFaceBodies(feature3), transform: feature3.transform }, earlier, missing);
-  } else if (feature3.replaceWith !== void 0) {
-    if (feature3.distanceMillimeters !== void 0) throw Error("Replace face takes a target plane, not a distance.");
-    validateMirrorPlane(feature3.replaceWith, earlier, missing, "Replace face plane");
-    if (feature3.faces.some((face) => face.surfaceType)) throw Error("Replace face needs planar faces.");
-  } else if (typeof feature3.distanceMillimeters !== "number" || !Number.isFinite(feature3.distanceMillimeters) || Math.abs(feature3.distanceMillimeters) < 1e-6) throw Error("Offset distance must be finite and nonzero.");
-  if ("targetBodyId" in feature3 || "targetBodyIds" in feature3) throw Error("Offset target parts are determined by the selected faces.");
-  const identities = /* @__PURE__ */ new Set();
-  for (const face of feature3.faces) {
-    validateSolidFaceReference(face, earlier, missing, "Offset faces");
-    const id2 = JSON.stringify([face.sourceFeatureId, face.bodyId, face.normal, face.surfaceType, face.faceAnchor?.centerMillimeters, face.faceAnchor?.areaSquareMillimeters]);
-    if (identities.has(id2)) throw Error("Select each offset face only once.");
-    identities.add(id2);
   }
 }
 function quantity(magnitudeSI, lengthPower = 0, anglePower = 0) {
@@ -4215,6 +4195,555 @@ function solveDrawingConstraintsCore(source, options = {}) {
     "Constraints conflict or cannot converge. No geometry was changed."
   );
 }
+function solveProjectedConstraints(authored, projected) {
+  const next = structuredClone(authored), count = next.contours.length;
+  const fixed = /* @__PURE__ */ new Set(), mapped = /* @__PURE__ */ new Map();
+  const map = (ref) => {
+    const id2 = ref.projectedContourId;
+    if (id2 === void 0) return ref;
+    if (typeof id2 !== "string" || !id2.trim() || ref.contour !== -1)
+      throw Error("Invalid projected constraint reference.");
+    let index2 = mapped.get(id2);
+    if (index2 === void 0) {
+      const matches = projected.contours.filter((c2) => c2.id === id2);
+      if (matches.length !== 1)
+        throw Error(`Broken projected constraint reference: ${id2}.`);
+      index2 = next.contours.length;
+      next.contours.push(structuredClone(matches[0]));
+      fixed.add(index2);
+      mapped.set(id2, index2);
+    }
+    const { projectedContourId: _2, ...local2 } = ref;
+    return { ...local2, contour: index2 };
+  };
+  next.constraints = next.constraints?.map((c2) => ({
+    ...c2,
+    a: map(c2.a),
+    ...c2.b ? { b: map(c2.b) } : {},
+    ...c2.axis ? { axis: map(c2.axis) } : {}
+  }));
+  const solved = solveDrawingConstraints(next, { fixedContours: fixed });
+  const restore = (original, updated) => ({
+    ...structuredClone(original),
+    ...original.kind === "curve" && original.sliding ? { parameter: updated.parameter } : {}
+  });
+  const constraints = authored.constraints?.map((c2, i2) => ({
+    ...structuredClone(c2),
+    ...solved.constraints[i2].distanceSide !== void 0 ? { distanceSide: solved.constraints[i2].distanceSide } : {},
+    a: restore(c2.a, solved.constraints[i2].a),
+    ...c2.b ? { b: restore(c2.b, solved.constraints[i2].b) } : {},
+    ...c2.axis ? { axis: restore(c2.axis, solved.constraints[i2].axis) } : {}
+  }));
+  return {
+    ...structuredClone(authored),
+    contours: solved.contours.slice(0, count),
+    constraints
+  };
+}
+function composeProjectedDrawing(projected, authored) {
+  if (!authored) return projected;
+  const local2 = solveProjectedConstraints(authored, projected);
+  const contours = [
+    ...structuredClone(projected.contours),
+    ...structuredClone(local2.contours)
+  ];
+  const ids2 = /* @__PURE__ */ new Set();
+  for (const contour of contours) {
+    if (contour.id === void 0) continue;
+    if (ids2.has(contour.id))
+      throw Error(
+        `Mixed projection has duplicate contour identity: ${contour.id}.`
+      );
+    ids2.add(contour.id);
+  }
+  return { type: "drawing", contours };
+}
+function collapsedConicPoints(map, frame) {
+  const c2 = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
+  const u2 = map.vector([frame.radiusX * c2, frame.radiusX * s]);
+  const v2 = map.vector([-frame.radiusY * s, frame.radiusY * c2]);
+  const axis = Math.hypot(u2[0], v2[0]) >= Math.hypot(u2[1], v2[1]) ? 0 : 1;
+  const phase = Math.atan2(v2[axis], u2[axis]);
+  const parameters2 = [0, 1];
+  for (let k2 = -6; k2 <= 6; k2++) {
+    const t2 = (phase + k2 * Math.PI - frame.startAngle) / frame.sweep;
+    if (t2 > 1e-12 && t2 < 1 - 1e-12) parameters2.push(t2);
+  }
+  return parameters2.sort((a2, b) => a2 - b).map((t2) => map.point(ellipsePoint(frame, t2)));
+}
+function collapsedInterval(points) {
+  const axis = Math.max(...points.map((p2) => p2[0])) - Math.min(...points.map((p2) => p2[0])) >= Math.max(...points.map((p2) => p2[1])) - Math.min(...points.map((p2) => p2[1])) ? 0 : 1;
+  const sorted = [...points].sort((a2, b) => a2[axis] - b[axis]);
+  return [sorted[0], sorted[sorted.length - 1]];
+}
+const dot$9 = (a2, b) => a2.reduce((s, v2, i2) => s + v2 * b[i2], 0);
+const cross$a = (a2, b) => [
+  a2[1] * b[2] - a2[2] * b[1],
+  a2[2] * b[0] - a2[0] * b[2],
+  a2[0] * b[1] - a2[1] * b[0]
+];
+function basis(frame) {
+  const { originMillimeters: o, xDirection: x2, normal: n } = frame;
+  if (![o, x2, n].every(
+    (v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite)
+  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$9(x2, n)) > 1e-6)
+    throw Error("Projection needs valid orthonormal sketch frames.");
+  return { o, x: x2, y: cross$a(n, x2) };
+}
+function sketchFrameMap(source, target) {
+  const a2 = basis(source), b = basis(target), delta2 = a2.o.map((v2, i2) => v2 - b.o[i2]);
+  const m2 = [
+    dot$9(a2.x, b.x),
+    dot$9(a2.y, b.x),
+    dot$9(a2.x, b.y),
+    dot$9(a2.y, b.y)
+  ];
+  const offset2 = [dot$9(delta2, b.x), dot$9(delta2, b.y)];
+  const vector2 = (p2) => [
+    m2[0] * p2[0] + m2[1] * p2[1],
+    m2[2] * p2[0] + m2[3] * p2[1]
+  ];
+  return {
+    determinant: m2[0] * m2[3] - m2[1] * m2[2],
+    vector: vector2,
+    point(p2) {
+      const v2 = vector2(p2);
+      return [v2[0] + offset2[0], v2[1] + offset2[1]];
+    }
+  };
+}
+function projectedEllipse(map, rx, ry, rotation) {
+  const c2 = Math.cos(rotation), s = Math.sin(rotation), u2 = map.vector([rx * c2, rx * s]), v2 = map.vector([-ry * s, ry * c2]);
+  const scale2 = Math.max(...u2.map(Math.abs), ...v2.map(Math.abs));
+  if (!Number.isFinite(scale2) || scale2 === 0)
+    throw Error("Conic mapping has no finite nonzero extent.");
+  const ux = u2[0] / scale2, uy = u2[1] / scale2, vx = v2[0] / scale2, vy = v2[1] / scale2;
+  const xx = ux * ux + vx * vx, xy = ux * uy + vx * vy, yy = uy * uy + vy * vy;
+  const major = Math.sqrt((xx + yy + Math.hypot(xx - yy, 2 * xy)) / 2);
+  const radiusX = major * scale2;
+  const radiusY = Math.abs(map.determinant * (rx / scale2) * (ry / scale2)) / major * scale2;
+  if (!Number.isFinite(radiusX) || !Number.isFinite(radiusY) || radiusY < 1e-8)
+    throw Error("Mapped conic is below the supported geometric resolution.");
+  const rotationDegrees = Math.atan2(2 * xy, xx - yy) * 90 / Math.PI;
+  return { radiusX, radiusY, rotationDegrees };
+}
+function projectedConicSegment(map, axes, end, sweep) {
+  return {
+    type: "ellipse",
+    ...axes,
+    end: map.point(end),
+    largeArc: Math.abs(sweep) > Math.PI,
+    sweep: sweep * map.determinant > 0
+  };
+}
+function projectSketchDrawing(source, sourceFrame, targetFrame) {
+  return mapSketchDrawing(
+    source,
+    sketchFrameMap(sourceFrame, targetFrame),
+    1e-14
+  );
+}
+function mapSketchDrawing(source, map, collapseTolerance = 0) {
+  const drawing = solveDrawingConstraints(source);
+  if (!Number.isFinite(map.determinant) || !Number.isFinite(collapseTolerance) || collapseTolerance < 0)
+    throw Error("Invalid affine mapping tolerance or determinant.");
+  const collapsed = map.determinant === 0 || Math.abs(map.determinant) < collapseTolerance;
+  const contours = drawing.contours.map((c2) => {
+    const flags2 = {
+      ...c2.sourceLayer !== void 0 ? { sourceLayer: c2.sourceLayer } : {},
+      ...c2.id !== void 0 ? { id: c2.id } : {},
+      ...c2.hole !== void 0 ? { hole: c2.hole } : {},
+      ...c2.construction !== void 0 ? { construction: c2.construction } : {}
+    };
+    if (c2.type === "circle") {
+      if (collapsed) {
+        const [start3, end] = collapsedInterval(
+          collapsedConicPoints(map, {
+            center: c2.center,
+            radiusX: c2.radius,
+            radiusY: c2.radius,
+            rotation: 0,
+            startAngle: 0,
+            sweep: 2 * Math.PI
+          })
+        );
+        return {
+          type: "path",
+          start: start3,
+          segments: sameSketchPoint(start3, end) ? [] : [{ type: "line", end }],
+          ...flags2,
+          hole: false
+        };
+      }
+      const axes = projectedEllipse(map, c2.radius, c2.radius, 0);
+      if (Math.abs(axes.radiusX - axes.radiusY) < 1e-10 * Math.max(1, axes.radiusX))
+        return {
+          type: "circle",
+          center: map.point(c2.center),
+          radius: axes.radiusX,
+          ...flags2
+        };
+      const start2 = [c2.center[0] + c2.radius, c2.center[1]], opposite = [c2.center[0] - c2.radius, c2.center[1]];
+      return {
+        type: "path",
+        start: map.point(start2),
+        segments: [
+          projectedConicSegment(map, axes, opposite, Math.PI),
+          projectedConicSegment(map, axes, start2, Math.PI)
+        ],
+        ...flags2
+      };
+    }
+    let previous = c2.start;
+    let segments = c2.segments.flatMap((segment) => {
+      const start2 = previous;
+      previous = segment.end;
+      if (segment.type === "conic") return projectConic(start2, segment, map.point, collapsed);
+      if (segment.type === "line")
+        return collapsed && sameSketchPoint(map.point(start2), map.point(segment.end)) ? [] : [{ type: "line", end: map.point(segment.end) }];
+      if (segment.type === "bezier")
+        return [
+          {
+            type: "bezier",
+            end: map.point(segment.end),
+            controls: [
+              map.point(segment.controls[0]),
+              map.point(segment.controls[1])
+            ]
+          }
+        ];
+      if (collapsed) {
+        const frame = segment.type === "arc" ? (() => {
+          const a2 = sketchArcGeometry(start2, segment.middle, segment.end);
+          return {
+            ...a2,
+            radiusX: a2.radius,
+            radiusY: a2.radius,
+            rotation: 0
+          };
+        })() : ellipseFrame(start2, segment);
+        const points = collapsedConicPoints(map, frame);
+        return points.slice(1).flatMap(
+          (end, i2) => sameSketchPoint(points[i2], end) ? [] : [{ type: "line", end }]
+        );
+      }
+      if (segment.type === "arc") {
+        const arc = sketchArcGeometry(start2, segment.middle, segment.end);
+        return [
+          projectedConicSegment(
+            map,
+            projectedEllipse(map, arc.radius, arc.radius, 0),
+            segment.end,
+            arc.sweep
+          )
+        ];
+      }
+      const ellipse2 = ellipseFrame(start2, segment);
+      return [
+        projectedConicSegment(
+          map,
+          projectedEllipse(
+            map,
+            ellipse2.radiusX,
+            ellipse2.radiusY,
+            ellipse2.rotation
+          ),
+          segment.end,
+          ellipse2.sweep
+        )
+      ];
+    });
+    if (!collapsed)
+      segments.forEach((segment, index2) => {
+        if (c2.segments[index2].id !== void 0)
+          segment.id = c2.segments[index2].id;
+        if (c2.segments[index2].endVertexId !== void 0)
+          segment.endVertexId = c2.segments[index2].endVertexId;
+      });
+    let start = map.point(c2.start);
+    if (collapsed && contourClosed(c2) && c2.segments.every((s) => s.type !== "bezier")) {
+      const interval = collapsedInterval([
+        start,
+        ...segments.map((s) => s.end)
+      ]);
+      start = interval[0];
+      segments = sameSketchPoint(...interval) ? [] : [{ type: "line", end: interval[1] }];
+    }
+    return {
+      type: "path",
+      start,
+      segments,
+      ...!collapsed && c2.startVertexId !== void 0 ? { startVertexId: c2.startVertexId } : {},
+      ...flags2,
+      ...collapsed ? { hole: false } : {}
+    };
+  });
+  const result = { type: "drawing", contours };
+  validateSketchDrawing(result);
+  return result;
+}
+function validatePierceConstraint(c2) {
+  if (c2.kind !== "pierce") {
+    if (c2.source !== void 0) throw Error("A Pierce source requires a Pierce constraint.");
+    return;
+  }
+  const s = c2.source, b = s?.branch;
+  const id2 = (v2) => typeof v2 === "string" && !!v2.trim() && v2.length <= 128;
+  if (!s || s.kind !== "sketch-curve" || !id2(s.sourceFeatureId) || !id2(s.sourceContourId) || s.sourceSegmentId !== void 0 && !id2(s.sourceSegmentId) || !b || ![-1, 0, 1].includes(b.direction) || !Number.isInteger(b.ordinal) || b.ordinal < 0 || !Array.isArray(b.counts) || b.counts.length !== 3 || !b.counts.every((n) => Number.isInteger(n) && n >= 0) || b.ordinal >= b.counts[b.direction + 1])
+    throw Error("Pierce needs a valid stable source and selected intersection branch.");
+  if (!c2.a || c2.a.projectedContourId !== void 0 || Object.keys(c2).some((key2) => !["id", "kind", "a", "source"].includes(key2)))
+    throw Error("Pierce constrains one editable point or curve to its external source.");
+}
+function sameSource(a2, b) {
+  return a2.kind === b.kind && a2.sourceFeatureId === b.sourceFeatureId && a2.sourceContourId === b.sourceContourId && a2.sourceSegmentId === b.sourceSegmentId && a2.branch.direction === b.branch.direction && a2.branch.ordinal === b.branch.ordinal && a2.branch.counts.every((n, i2) => n === b.branch.counts[i2]);
+}
+function pierceContextPoint(drawing, c2) {
+  validatePierceConstraint(c2);
+  const context2 = drawing.pierceContext?.[c2.id];
+  if (!context2 || !context2.source || !sameSource(context2.source, c2.source) || !Array.isArray(context2.point) || context2.point.length !== 2 || !context2.point.every(Number.isFinite))
+    throw Error("Pierce source context is missing or stale. Resolve the sketch in its document.");
+  return context2.point;
+}
+function withPierceContext(features2, targetId, drawing, resolveDrawing) {
+  const next = structuredClone(drawing);
+  delete next.pierceContext;
+  for (const c2 of next.constraints ?? []) {
+    validatePierceConstraint(c2);
+    if (c2.kind !== "pierce") continue;
+    const hit = resolveSketchPierce(features2, targetId, c2.source, resolveDrawing);
+    (next.pierceContext ??= /* @__PURE__ */ Object.create(null))[c2.id] = { source: structuredClone(c2.source), point: [...hit.point] };
+  }
+  return next;
+}
+function pierceDependencies(drawing) {
+  return [...new Set((drawing.constraints ?? []).filter((c2) => c2.kind === "pierce").map((c2) => c2.source?.sourceFeatureId ?? "missing-pierce-source"))];
+}
+function localPierceValidation(drawing) {
+  if (drawing.pierceContext !== void 0) throw Error("Resolved Pierce context must not be saved.");
+  if (drawing.constraints?.some((c2) => c2.kind === "pierce")) {
+    const ids2 = drawing.constraints.map((c2) => c2.id);
+    if (ids2.length > 512 || new Set(ids2).size !== ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.trim())) throw Error("Invalid or duplicate sketch constraint identities.");
+  }
+  for (const c2 of drawing.constraints ?? []) {
+    validatePierceConstraint(c2);
+    if (c2.kind === "pierce") resolve$1(drawing, c2.a);
+  }
+  return { ...drawing, constraints: drawing.constraints?.filter((c2) => c2.kind !== "pierce") };
+}
+function profileSketchFrame(feature3) {
+  if (feature3.frame) return structuredClone(feature3.frame);
+  const normal = feature3.plane === "XY" ? [0, 0, 1] : feature3.plane === "XZ" ? [0, -1, 0] : [1, 0, 0];
+  return {
+    originMillimeters: normal.map(
+      (v2) => v2 * feature3.offsetMillimeters
+    ),
+    normal,
+    xDirection: feature3.plane === "YZ" ? [0, 1, 0] : [1, 0, 0]
+  };
+}
+function resolveProfileDrawing(features2, featureId2) {
+  const cache2 = /* @__PURE__ */ new Map();
+  const resolve2 = (id2, before, depth) => {
+    if (depth > 256)
+      throw Error("Projection dependency chain exceeds 256 profiles.");
+    const index2 = features2.findIndex((f2) => f2.id === id2), feature3 = features2[index2];
+    if (index2 < 0 || index2 >= before || feature3.type !== "profile")
+      throw Error(
+        `Broken projection reference: ${id2} must be an earlier profile.`
+      );
+    if (feature3.suppressed)
+      throw Error(`Projection source is suppressed: ${feature3.name} (${id2}).`);
+    const hit = cache2.get(id2);
+    if (hit) return hit;
+    const p2 = feature3.profile;
+    let drawing;
+    if (p2.type === "projection") {
+      const input = resolve2(p2.sourceFeatureId, index2, depth + 1), source = features2.find(
+        (f2) => f2.id === p2.sourceFeatureId
+      );
+      const selected = p2.sourceContourId === void 0 ? input.contours : input.contours.filter((c2) => c2.id === p2.sourceContourId);
+      if (p2.sourceContourId !== void 0 && selected.length !== 1) throw Error(`Broken projection contour reference: ${p2.sourceContourId} in ${source.name}.`);
+      drawing = projectSketchDrawing(
+        { type: "drawing", contours: selected },
+        profileSketchFrame(source),
+        profileSketchFrame(feature3)
+      );
+      drawing = composeProjectedDrawing(drawing, p2.authored && withPierceContext(features2, id2, p2.authored, (sourceId) => resolve2(sourceId, index2, depth + 1)));
+    } else if (p2.type === "drawing") drawing = solveDrawingConstraints(withPierceContext(features2, id2, p2, (sourceId) => resolve2(sourceId, index2, depth + 1)));
+    else if (p2.type === "circle")
+      drawing = {
+        type: "drawing",
+        contours: [
+          {
+            type: "circle",
+            center: [...p2.centerMillimeters],
+            radius: p2.radiusMillimeters
+          }
+        ]
+      };
+    else
+      drawing = {
+        type: "drawing",
+        contours: [
+          {
+            type: "path",
+            start: [...p2.pointsMillimeters[0]],
+            segments: [
+              ...p2.pointsMillimeters.slice(1),
+              p2.pointsMillimeters[0]
+            ].map((end) => ({ type: "line", end: [...end] }))
+          }
+        ]
+      };
+    cache2.set(id2, drawing);
+    return drawing;
+  };
+  return resolve2(featureId2, features2.length, 0);
+}
+class PierceReferenceError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PierceReferenceError";
+  }
+}
+const dot$8 = (a2, b) => a2.reduce((sum2, value2, i2) => sum2 + value2 * b[i2], 0);
+const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const value = (coefficients, t2) => coefficients.reduceRight((sum2, n) => sum2 * t2 + n, 0);
+const unique = (values2) => values2.sort((a2, b) => a2 - b).filter((t2, i2, list2) => i2 === 0 || Math.abs(t2 - list2[i2 - 1]) > 8 * Number.EPSILON);
+function distanceRoots(coefficients) {
+  const scale2 = Math.max(...coefficients.map(Math.abs)), c2 = coefficients.map((v2) => v2 / scale2);
+  while (c2.length > 1 && c2.at(-1) === 0) c2.pop();
+  if (c2.length === 1) return [];
+  if (c2.length === 2) {
+    const t2 = -c2[0] / c2[1];
+    return t2 >= -1e-12 && t2 <= 1 + 1e-12 ? [Math.max(0, Math.min(1, t2))] : [];
+  }
+  const critical = distanceRoots(c2.slice(1).map((v2, i2) => v2 * (i2 + 1))), bounds2 = unique([0, ...critical, 1]);
+  const zero = (t2) => Math.abs(value(c2, t2)) <= Number.EPSILON * 16 * c2.reduce((sum2, v2, i2) => sum2 + Math.abs(v2 * t2 ** i2), 0);
+  const roots2 = bounds2.filter(zero);
+  for (let i2 = 1; i2 < bounds2.length; i2++) {
+    let a2 = bounds2[i2 - 1], b = bounds2[i2], fa = value(c2, a2);
+    if (zero(a2) || zero(b) || fa * value(c2, b) >= 0) continue;
+    for (let iteration = 0; iteration < 60; iteration++) {
+      const middle = (a2 + b) / 2, fm = value(c2, middle);
+      if (fa * fm <= 0) b = middle;
+      else {
+        a2 = middle;
+        fa = fm;
+      }
+    }
+    roots2.push((a2 + b) / 2);
+  }
+  return unique(roots2);
+}
+function polynomialDirection(coefficients, t2) {
+  let derivative2 = coefficients;
+  for (let order = 1; order < coefficients.length; order++) {
+    derivative2 = derivative2.slice(1).map((v2, i2) => v2 * (i2 + 1));
+    const slope = value(derivative2, t2);
+    if (Math.abs(slope) > Number.EPSILON * 128 * derivative2.reduce((sum2, v2, i2) => sum2 + Math.abs(v2 * t2 ** i2), 0)) return order % 2 ? slope > 0 ? 1 : -1 : 0;
+  }
+  return 0;
+}
+function pierceCurvePlane(curve, source, target) {
+  const map = sketchFrameMap(source, target);
+  validateSketchDrawing({ type: "drawing", contours: [curve.type === "circle" ? curve : { type: "path", start: curve.start, segments: [curve.segment] }] });
+  const y2 = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v2, i2) => v2 - target.originMillimeters[i2]);
+  const a2 = dot$8(source.xDirection, target.normal), b = dot$8(y2, target.normal), c2 = dot$8(delta2, target.normal);
+  const depth = (p2) => a2 * p2[0] + b * p2[1] + c2;
+  const world = (p2) => source.originMillimeters.map((v2, i2) => v2 + source.xDirection[i2] * p2[0] + y2[i2] * p2[1]);
+  let coefficients, frame, poleDepths = [];
+  if (curve.type === "circle") frame = { center: curve.center, radiusX: curve.radius, radiusY: curve.radius, rotation: 0, startAngle: 0, sweep: 2 * Math.PI };
+  else {
+    const s = curve.segment, d0 = depth(curve.start), d1 = depth(s.end);
+    if (s.type === "line") {
+      coefficients = [d0, d1 - d0];
+      poleDepths = [d0, d1];
+    } else if (s.type === "bezier") {
+      const u2 = depth(s.controls[0]), v2 = depth(s.controls[1]);
+      coefficients = [d0, 3 * (u2 - d0), 3 * (v2 - 2 * u2 + d0), d1 - 3 * v2 + 3 * u2 - d0];
+      poleDepths = [d0, u2, v2, d1];
+    } else if (s.type === "conic") {
+      const r = s.rho, w2 = 1 - r, u2 = depth(s.control);
+      coefficients = [w2 * d0, 2 * (r * u2 - w2 * d0), w2 * (d0 + d1) - 2 * r * u2];
+      poleDepths = [d0, u2, d1];
+    } else if (s.type === "ellipse") frame = ellipseFrame(curve.start, s);
+    else {
+      const arc = sketchArcGeometry(curve.start, s.middle, s.end);
+      frame = { ...arc, radiusX: arc.radius, radiusY: arc.radius, rotation: 0 };
+    }
+  }
+  const at = (t2) => curve.type === "circle" ? ellipsePoint(frame, t2) : segmentPoint(curve.start, curve.segment, t2);
+  let parameters2, direction2;
+  if (coefficients) {
+    if (poleDepths.every((depth2) => Math.abs(depth2) < 1e-10)) throw new PierceReferenceError("The selected curve lies in the sketch plane; Pierce needs an isolated intersection.");
+    parameters2 = distanceRoots(coefficients);
+    direction2 = (t2) => polynomialDirection(coefficients, t2);
+  } else {
+    const f2 = frame, cos2 = Math.cos(f2.rotation), sin2 = Math.sin(f2.rotation);
+    const x2 = f2.radiusX * (a2 * cos2 + b * sin2), y22 = f2.radiusY * (-a2 * sin2 + b * cos2), offset2 = depth(f2.center), radius = Math.hypot(x2, y22);
+    if (radius < 1e-12) {
+      if (Math.abs(offset2) < 1e-10) throw new PierceReferenceError("The selected curve lies in the sketch plane; Pierce needs an isolated intersection.");
+      return [];
+    }
+    const ratio = -offset2 / radius;
+    if (ratio < -1 - 1e-12 || ratio > 1 + 1e-12) return [];
+    const phase = Math.atan2(y22, x2), angle2 = Math.acos(Math.max(-1, Math.min(1, ratio)));
+    const low = Math.min(f2.startAngle, f2.startAngle + f2.sweep), high = Math.max(f2.startAngle, f2.startAngle + f2.sweep);
+    parameters2 = [];
+    for (const base of [phase - angle2, phase + angle2]) for (let turn = Math.ceil((low - base - 1e-10) / (2 * Math.PI)); turn <= Math.floor((high - base + 1e-10) / (2 * Math.PI)); turn++) {
+      const t2 = (base + turn * 2 * Math.PI - f2.startAngle) / f2.sweep;
+      if (t2 >= -1e-9 && t2 <= 1 + 1e-9) parameters2.push(Math.max(0, Math.min(1, t2)));
+    }
+    direction2 = (t2) => {
+      const angle22 = f2.startAngle + t2 * f2.sweep, slope = (-x2 * Math.sin(angle22) + y22 * Math.cos(angle22)) * f2.sweep;
+      return Math.abs(slope) < radius * Math.abs(f2.sweep) * 1e-9 ? 0 : slope > 0 ? 1 : -1;
+    };
+  }
+  parameters2 = unique(parameters2);
+  if (curve.type === "circle" && parameters2.length > 1 && parameters2[0] < 1e-13 && parameters2.at(-1) > 1 - 1e-13 && Math.hypot(...at(parameters2[0]).map((v2, i2) => v2 - at(parameters2.at(-1))[i2])) < 1e-7) parameters2.pop();
+  return parameters2.map((parameter2) => {
+    const p2 = at(parameter2);
+    if (Math.abs(depth(p2)) > 1e-7) throw Error("The curve-plane contact could not be resolved accurately.");
+    return { parameter: parameter2, point: map.point(p2), worldPoint: world(p2), direction: direction2(parameter2) };
+  });
+}
+function branchCounts(hits) {
+  return [-1, 0, 1].map((direction2) => hits.filter((hit) => hit.direction === direction2).length);
+}
+function resolvePierceBranch(hits, branch) {
+  if (!branch || ![-1, 0, 1].includes(branch.direction) || !Number.isInteger(branch.ordinal) || branch.ordinal < 0 || !Array.isArray(branch.counts) || branch.counts.length !== 3 || branch.counts.some((n) => !Number.isInteger(n) || n < 0) || branch.ordinal >= branch.counts[branch.direction + 1]) throw Error("Invalid Pierce intersection reference. Reselect the source curve.");
+  if (branchCounts(hits).some((n, i2) => n !== branch.counts[i2])) throw new PierceReferenceError("The Pierce intersection disappeared or changed branches. Reselect its source intersection.");
+  const hit = hits.filter((h) => h.direction === branch.direction)[branch.ordinal];
+  if (!hit) throw new PierceReferenceError("The Pierce intersection is unavailable.");
+  return hit;
+}
+function sketchPierceContacts(features2, targetFeatureId, source, resolveDrawing = (id2) => resolveProfileDrawing(features2, id2)) {
+  if (!source || source.kind !== "sketch-curve" || typeof source.sourceFeatureId !== "string" || typeof source.sourceContourId !== "string" || !source.sourceContourId.trim()) throw Error("Invalid Pierce source reference.");
+  const targetIndex = features2.findIndex((f2) => f2.id === targetFeatureId), sourceIndex = features2.findIndex((f2) => f2.id === source.sourceFeatureId);
+  const target = features2[targetIndex], feature3 = features2[sourceIndex];
+  if (target?.type !== "profile" || sourceIndex < 0 || sourceIndex >= targetIndex || feature3.type !== "profile") throw Error("Pierce must reference an earlier source sketch.");
+  if (features2.filter((f2) => f2.id === source.sourceFeatureId).length !== 1 || features2.filter((f2) => f2.id === targetFeatureId).length !== 1) throw Error("Invalid Pierce source reference.");
+  if (feature3.suppressed) throw Error(`Pierce source is suppressed: ${feature3.name}.`);
+  const contours = resolveDrawing(feature3.id).contours.filter((c2) => c2.id === source.sourceContourId);
+  if (contours.length !== 1) throw new PierceReferenceError("The Pierce source contour is missing or ambiguous. Reselect it.");
+  const contour = contours[0];
+  let curve;
+  if (contour.type === "circle") {
+    if (source.sourceSegmentId !== void 0) throw new PierceReferenceError("The Pierce source curve changed type. Reselect it.");
+    curve = contour;
+  } else {
+    if (!source.sourceSegmentId?.trim()) throw new PierceReferenceError("The Pierce source curve changed type. Reselect an identified source segment.");
+    const indices = contour.segments.flatMap((s, i2) => s.id === source.sourceSegmentId ? [i2] : []);
+    if (indices.length !== 1) throw new PierceReferenceError("The Pierce source segment is missing or ambiguous. Reselect it.");
+    const index2 = indices[0];
+    curve = { type: "segment", start: index2 ? contour.segments[index2 - 1].end : contour.start, segment: contour.segments[index2] };
+  }
+  return pierceCurvePlane(curve, profileSketchFrame(feature3), profileSketchFrame(target));
+}
+function resolveSketchPierce(features2, targetFeatureId, reference, resolveDrawing) {
+  return resolvePierceBranch(sketchPierceContacts(features2, targetFeatureId, reference, resolveDrawing), reference.branch);
+}
 function pierceTargetReference(drawing, target, point2) {
   if (!target || target.projectedContourId !== void 0 || !Number.isInteger(target.contour) || target.contour < 0)
     throw Error("Pierce needs an editable point or curve in the current sketch.");
@@ -4656,554 +5185,71 @@ function identifySketchContour(contour, createId) {
     segment.endVertexId ??= index2 === contour.segments.length - 1 && contourClosed(contour) ? contour.startVertexId : createId();
   });
 }
-function solveProjectedConstraints(authored, projected) {
-  const next = structuredClone(authored), count = next.contours.length;
-  const fixed = /* @__PURE__ */ new Set(), mapped = /* @__PURE__ */ new Map();
-  const map = (ref) => {
-    const id2 = ref.projectedContourId;
-    if (id2 === void 0) return ref;
-    if (typeof id2 !== "string" || !id2.trim() || ref.contour !== -1)
-      throw Error("Invalid projected constraint reference.");
-    let index2 = mapped.get(id2);
-    if (index2 === void 0) {
-      const matches = projected.contours.filter((c2) => c2.id === id2);
-      if (matches.length !== 1)
-        throw Error(`Broken projected constraint reference: ${id2}.`);
-      index2 = next.contours.length;
-      next.contours.push(structuredClone(matches[0]));
-      fixed.add(index2);
-      mapped.set(id2, index2);
-    }
-    const { projectedContourId: _2, ...local2 } = ref;
-    return { ...local2, contour: index2 };
+function identifyProfileContours(source, featureId2, createId = () => crypto.randomUUID()) {
+  const next = structuredClone(source), visited = /* @__PURE__ */ new Set();
+  const identify = (drawing) => {
+    for (const contour of drawing.contours)
+      identifySketchContour(contour, createId);
   };
-  next.constraints = next.constraints?.map((c2) => ({
-    ...c2,
-    a: map(c2.a),
-    ...c2.b ? { b: map(c2.b) } : {},
-    ...c2.axis ? { axis: map(c2.axis) } : {}
-  }));
-  const solved = solveDrawingConstraints(next, { fixedContours: fixed });
-  const restore = (original, updated) => ({
-    ...structuredClone(original),
-    ...original.kind === "curve" && original.sliding ? { parameter: updated.parameter } : {}
-  });
-  const constraints = authored.constraints?.map((c2, i2) => ({
-    ...structuredClone(c2),
-    ...solved.constraints[i2].distanceSide !== void 0 ? { distanceSide: solved.constraints[i2].distanceSide } : {},
-    a: restore(c2.a, solved.constraints[i2].a),
-    ...c2.b ? { b: restore(c2.b, solved.constraints[i2].b) } : {},
-    ...c2.axis ? { axis: restore(c2.axis, solved.constraints[i2].axis) } : {}
-  }));
-  return {
-    ...structuredClone(authored),
-    contours: solved.contours.slice(0, count),
-    constraints
-  };
-}
-function composeProjectedDrawing(projected, authored) {
-  if (!authored) return projected;
-  const local2 = solveProjectedConstraints(authored, projected);
-  const contours = [
-    ...structuredClone(projected.contours),
-    ...structuredClone(local2.contours)
-  ];
-  const ids2 = /* @__PURE__ */ new Set();
-  for (const contour of contours) {
-    if (contour.id === void 0) continue;
-    if (ids2.has(contour.id))
+  const visit = (id2, depth) => {
+    if (depth > 256 || visited.has(id2))
+      throw Error("Invalid projection identity dependency chain.");
+    visited.add(id2);
+    const feature3 = next.features.find((f2) => f2.id === id2);
+    if (feature3?.type !== "profile" || feature3.suppressed)
       throw Error(
-        `Mixed projection has duplicate contour identity: ${contour.id}.`
+        `Broken projection reference: ${id2} must be an active source sketch.`
       );
-    ids2.add(contour.id);
-  }
-  return { type: "drawing", contours };
-}
-function collapsedConicPoints(map, frame) {
-  const c2 = Math.cos(frame.rotation), s = Math.sin(frame.rotation);
-  const u2 = map.vector([frame.radiusX * c2, frame.radiusX * s]);
-  const v2 = map.vector([-frame.radiusY * s, frame.radiusY * c2]);
-  const axis = Math.hypot(u2[0], v2[0]) >= Math.hypot(u2[1], v2[1]) ? 0 : 1;
-  const phase = Math.atan2(v2[axis], u2[axis]);
-  const parameters2 = [0, 1];
-  for (let k2 = -6; k2 <= 6; k2++) {
-    const t2 = (phase + k2 * Math.PI - frame.startAngle) / frame.sweep;
-    if (t2 > 1e-12 && t2 < 1 - 1e-12) parameters2.push(t2);
-  }
-  return parameters2.sort((a2, b) => a2 - b).map((t2) => map.point(ellipsePoint(frame, t2)));
-}
-function collapsedInterval(points) {
-  const axis = Math.max(...points.map((p2) => p2[0])) - Math.min(...points.map((p2) => p2[0])) >= Math.max(...points.map((p2) => p2[1])) - Math.min(...points.map((p2) => p2[1])) ? 0 : 1;
-  const sorted = [...points].sort((a2, b) => a2[axis] - b[axis]);
-  return [sorted[0], sorted[sorted.length - 1]];
-}
-const dot$9 = (a2, b) => a2.reduce((s, v2, i2) => s + v2 * b[i2], 0);
-const cross$a = (a2, b) => [
-  a2[1] * b[2] - a2[2] * b[1],
-  a2[2] * b[0] - a2[0] * b[2],
-  a2[0] * b[1] - a2[1] * b[0]
-];
-function basis(frame) {
-  const { originMillimeters: o, xDirection: x2, normal: n } = frame;
-  if (![o, x2, n].every(
-    (v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite)
-  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$9(x2, n)) > 1e-6)
-    throw Error("Projection needs valid orthonormal sketch frames.");
-  return { o, x: x2, y: cross$a(n, x2) };
-}
-function sketchFrameMap(source, target) {
-  const a2 = basis(source), b = basis(target), delta2 = a2.o.map((v2, i2) => v2 - b.o[i2]);
-  const m2 = [
-    dot$9(a2.x, b.x),
-    dot$9(a2.y, b.x),
-    dot$9(a2.x, b.y),
-    dot$9(a2.y, b.y)
-  ];
-  const offset2 = [dot$9(delta2, b.x), dot$9(delta2, b.y)];
-  const vector2 = (p2) => [
-    m2[0] * p2[0] + m2[1] * p2[1],
-    m2[2] * p2[0] + m2[3] * p2[1]
-  ];
-  return {
-    determinant: m2[0] * m2[3] - m2[1] * m2[2],
-    vector: vector2,
-    point(p2) {
-      const v2 = vector2(p2);
-      return [v2[0] + offset2[0], v2[1] + offset2[1]];
+    if (feature3.profile.type === "projection") {
+      visit(feature3.profile.sourceFeatureId, depth + 1);
+      if (feature3.profile.authored) identify(feature3.profile.authored);
+    } else {
+      if (feature3.profile.type !== "drawing")
+        feature3.profile = resolveProfileDrawing(next.features, feature3.id);
+      identify(feature3.profile);
     }
   };
-}
-function projectedEllipse(map, rx, ry, rotation) {
-  const c2 = Math.cos(rotation), s = Math.sin(rotation), u2 = map.vector([rx * c2, rx * s]), v2 = map.vector([-ry * s, ry * c2]);
-  const scale2 = Math.max(...u2.map(Math.abs), ...v2.map(Math.abs));
-  if (!Number.isFinite(scale2) || scale2 === 0)
-    throw Error("Conic mapping has no finite nonzero extent.");
-  const ux = u2[0] / scale2, uy = u2[1] / scale2, vx = v2[0] / scale2, vy = v2[1] / scale2;
-  const xx = ux * ux + vx * vx, xy = ux * uy + vx * vy, yy = uy * uy + vy * vy;
-  const major = Math.sqrt((xx + yy + Math.hypot(xx - yy, 2 * xy)) / 2);
-  const radiusX = major * scale2;
-  const radiusY = Math.abs(map.determinant * (rx / scale2) * (ry / scale2)) / major * scale2;
-  if (!Number.isFinite(radiusX) || !Number.isFinite(radiusY) || radiusY < 1e-8)
-    throw Error("Mapped conic is below the supported geometric resolution.");
-  const rotationDegrees = Math.atan2(2 * xy, xx - yy) * 90 / Math.PI;
-  return { radiusX, radiusY, rotationDegrees };
-}
-function projectedConicSegment(map, axes, end, sweep) {
-  return {
-    type: "ellipse",
-    ...axes,
-    end: map.point(end),
-    largeArc: Math.abs(sweep) > Math.PI,
-    sweep: sweep * map.determinant > 0
-  };
-}
-function projectSketchDrawing(source, sourceFrame, targetFrame) {
-  return mapSketchDrawing(
-    source,
-    sketchFrameMap(sourceFrame, targetFrame),
-    1e-14
-  );
-}
-function mapSketchDrawing(source, map, collapseTolerance = 0) {
-  const drawing = solveDrawingConstraints(source);
-  if (!Number.isFinite(map.determinant) || !Number.isFinite(collapseTolerance) || collapseTolerance < 0)
-    throw Error("Invalid affine mapping tolerance or determinant.");
-  const collapsed = map.determinant === 0 || Math.abs(map.determinant) < collapseTolerance;
-  const contours = drawing.contours.map((c2) => {
-    const flags2 = {
-      ...c2.sourceLayer !== void 0 ? { sourceLayer: c2.sourceLayer } : {},
-      ...c2.id !== void 0 ? { id: c2.id } : {},
-      ...c2.hole !== void 0 ? { hole: c2.hole } : {},
-      ...c2.construction !== void 0 ? { construction: c2.construction } : {}
-    };
-    if (c2.type === "circle") {
-      if (collapsed) {
-        const [start3, end] = collapsedInterval(
-          collapsedConicPoints(map, {
-            center: c2.center,
-            radiusX: c2.radius,
-            radiusY: c2.radius,
-            rotation: 0,
-            startAngle: 0,
-            sweep: 2 * Math.PI
-          })
-        );
-        return {
-          type: "path",
-          start: start3,
-          segments: sameSketchPoint(start3, end) ? [] : [{ type: "line", end }],
-          ...flags2,
-          hole: false
-        };
-      }
-      const axes = projectedEllipse(map, c2.radius, c2.radius, 0);
-      if (Math.abs(axes.radiusX - axes.radiusY) < 1e-10 * Math.max(1, axes.radiusX))
-        return {
-          type: "circle",
-          center: map.point(c2.center),
-          radius: axes.radiusX,
-          ...flags2
-        };
-      const start2 = [c2.center[0] + c2.radius, c2.center[1]], opposite = [c2.center[0] - c2.radius, c2.center[1]];
-      return {
-        type: "path",
-        start: map.point(start2),
-        segments: [
-          projectedConicSegment(map, axes, opposite, Math.PI),
-          projectedConicSegment(map, axes, start2, Math.PI)
-        ],
-        ...flags2
-      };
-    }
-    let previous = c2.start;
-    let segments = c2.segments.flatMap((segment) => {
-      const start2 = previous;
-      previous = segment.end;
-      if (segment.type === "conic") return projectConic(start2, segment, map.point, collapsed);
-      if (segment.type === "line")
-        return collapsed && sameSketchPoint(map.point(start2), map.point(segment.end)) ? [] : [{ type: "line", end: map.point(segment.end) }];
-      if (segment.type === "bezier")
-        return [
-          {
-            type: "bezier",
-            end: map.point(segment.end),
-            controls: [
-              map.point(segment.controls[0]),
-              map.point(segment.controls[1])
-            ]
-          }
-        ];
-      if (collapsed) {
-        const frame = segment.type === "arc" ? (() => {
-          const a2 = sketchArcGeometry(start2, segment.middle, segment.end);
-          return {
-            ...a2,
-            radiusX: a2.radius,
-            radiusY: a2.radius,
-            rotation: 0
-          };
-        })() : ellipseFrame(start2, segment);
-        const points = collapsedConicPoints(map, frame);
-        return points.slice(1).flatMap(
-          (end, i2) => sameSketchPoint(points[i2], end) ? [] : [{ type: "line", end }]
-        );
-      }
-      if (segment.type === "arc") {
-        const arc = sketchArcGeometry(start2, segment.middle, segment.end);
-        return [
-          projectedConicSegment(
-            map,
-            projectedEllipse(map, arc.radius, arc.radius, 0),
-            segment.end,
-            arc.sweep
-          )
-        ];
-      }
-      const ellipse2 = ellipseFrame(start2, segment);
-      return [
-        projectedConicSegment(
-          map,
-          projectedEllipse(
-            map,
-            ellipse2.radiusX,
-            ellipse2.radiusY,
-            ellipse2.rotation
-          ),
-          segment.end,
-          ellipse2.sweep
-        )
-      ];
-    });
-    if (!collapsed)
-      segments.forEach((segment, index2) => {
-        if (c2.segments[index2].id !== void 0)
-          segment.id = c2.segments[index2].id;
-        if (c2.segments[index2].endVertexId !== void 0)
-          segment.endVertexId = c2.segments[index2].endVertexId;
-      });
-    let start = map.point(c2.start);
-    if (collapsed && contourClosed(c2) && c2.segments.every((s) => s.type !== "bezier")) {
-      const interval = collapsedInterval([
-        start,
-        ...segments.map((s) => s.end)
-      ]);
-      start = interval[0];
-      segments = sameSketchPoint(...interval) ? [] : [{ type: "line", end: interval[1] }];
-    }
-    return {
-      type: "path",
-      start,
-      segments,
-      ...!collapsed && c2.startVertexId !== void 0 ? { startVertexId: c2.startVertexId } : {},
-      ...flags2,
-      ...collapsed ? { hole: false } : {}
-    };
+  visit(featureId2, 0);
+  const end = next.features.findIndex((f2) => f2.id === featureId2) + 1;
+  validatePartDocument({
+    ...next,
+    features: next.features.slice(0, end),
+    rollbackIndex: void 0
   });
-  const result = { type: "drawing", contours };
-  validateSketchDrawing(result);
-  return result;
+  resolveProfileDrawing(next.features, featureId2);
+  return next;
 }
-function profileSketchFrame(feature3) {
-  if (feature3.frame) return structuredClone(feature3.frame);
-  const normal = feature3.plane === "XY" ? [0, 0, 1] : feature3.plane === "XZ" ? [0, -1, 0] : [1, 0, 0];
-  return {
-    originMillimeters: normal.map(
-      (v2) => v2 * feature3.offsetMillimeters
-    ),
-    normal,
-    xDirection: feature3.plane === "YZ" ? [0, 1, 0] : [1, 0, 0]
-  };
-}
-function resolveProfileDrawing(features2, featureId2) {
-  const cache2 = /* @__PURE__ */ new Map();
-  const resolve2 = (id2, before, depth) => {
-    if (depth > 256)
-      throw Error("Projection dependency chain exceeds 256 profiles.");
-    const index2 = features2.findIndex((f2) => f2.id === id2), feature3 = features2[index2];
-    if (index2 < 0 || index2 >= before || feature3.type !== "profile")
-      throw Error(
-        `Broken projection reference: ${id2} must be an earlier profile.`
-      );
-    if (feature3.suppressed)
-      throw Error(`Projection source is suppressed: ${feature3.name} (${id2}).`);
-    const hit = cache2.get(id2);
-    if (hit) return hit;
-    const p2 = feature3.profile;
-    let drawing;
-    if (p2.type === "projection") {
-      const input = resolve2(p2.sourceFeatureId, index2, depth + 1), source = features2.find(
-        (f2) => f2.id === p2.sourceFeatureId
-      );
-      const selected = p2.sourceContourId === void 0 ? input.contours : input.contours.filter((c2) => c2.id === p2.sourceContourId);
-      if (p2.sourceContourId !== void 0 && selected.length !== 1) throw Error(`Broken projection contour reference: ${p2.sourceContourId} in ${source.name}.`);
-      drawing = projectSketchDrawing(
-        { type: "drawing", contours: selected },
-        profileSketchFrame(source),
-        profileSketchFrame(feature3)
-      );
-      drawing = composeProjectedDrawing(drawing, p2.authored && withPierceContext(features2, id2, p2.authored, (sourceId) => resolve2(sourceId, index2, depth + 1)));
-    } else if (p2.type === "drawing") drawing = solveDrawingConstraints(withPierceContext(features2, id2, p2, (sourceId) => resolve2(sourceId, index2, depth + 1)));
-    else if (p2.type === "circle")
-      drawing = {
-        type: "drawing",
-        contours: [
-          {
-            type: "circle",
-            center: [...p2.centerMillimeters],
-            radius: p2.radiusMillimeters
-          }
-        ]
-      };
-    else
-      drawing = {
-        type: "drawing",
-        contours: [
-          {
-            type: "path",
-            start: [...p2.pointsMillimeters[0]],
-            segments: [
-              ...p2.pointsMillimeters.slice(1),
-              p2.pointsMillimeters[0]
-            ].map((end) => ({ type: "line", end: [...end] }))
-          }
-        ]
-      };
-    cache2.set(id2, drawing);
-    return drawing;
-  };
-  return resolve2(featureId2, features2.length, 0);
-}
-class PierceReferenceError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "PierceReferenceError";
-  }
-}
-const dot$8 = (a2, b) => a2.reduce((sum2, value2, i2) => sum2 + value2 * b[i2], 0);
-const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const value = (coefficients, t2) => coefficients.reduceRight((sum2, n) => sum2 * t2 + n, 0);
-const unique = (values2) => values2.sort((a2, b) => a2 - b).filter((t2, i2, list2) => i2 === 0 || Math.abs(t2 - list2[i2 - 1]) > 8 * Number.EPSILON);
-function distanceRoots(coefficients) {
-  const scale2 = Math.max(...coefficients.map(Math.abs)), c2 = coefficients.map((v2) => v2 / scale2);
-  while (c2.length > 1 && c2.at(-1) === 0) c2.pop();
-  if (c2.length === 1) return [];
-  if (c2.length === 2) {
-    const t2 = -c2[0] / c2[1];
-    return t2 >= -1e-12 && t2 <= 1 + 1e-12 ? [Math.max(0, Math.min(1, t2))] : [];
-  }
-  const critical = distanceRoots(c2.slice(1).map((v2, i2) => v2 * (i2 + 1))), bounds2 = unique([0, ...critical, 1]);
-  const zero = (t2) => Math.abs(value(c2, t2)) <= Number.EPSILON * 16 * c2.reduce((sum2, v2, i2) => sum2 + Math.abs(v2 * t2 ** i2), 0);
-  const roots2 = bounds2.filter(zero);
-  for (let i2 = 1; i2 < bounds2.length; i2++) {
-    let a2 = bounds2[i2 - 1], b = bounds2[i2], fa = value(c2, a2);
-    if (zero(a2) || zero(b) || fa * value(c2, b) >= 0) continue;
-    for (let iteration = 0; iteration < 60; iteration++) {
-      const middle = (a2 + b) / 2, fm = value(c2, middle);
-      if (fa * fm <= 0) b = middle;
-      else {
-        a2 = middle;
-        fa = fm;
-      }
-    }
-    roots2.push((a2 + b) / 2);
-  }
-  return unique(roots2);
-}
-function polynomialDirection(coefficients, t2) {
-  let derivative2 = coefficients;
-  for (let order = 1; order < coefficients.length; order++) {
-    derivative2 = derivative2.slice(1).map((v2, i2) => v2 * (i2 + 1));
-    const slope = value(derivative2, t2);
-    if (Math.abs(slope) > Number.EPSILON * 128 * derivative2.reduce((sum2, v2, i2) => sum2 + Math.abs(v2 * t2 ** i2), 0)) return order % 2 ? slope > 0 ? 1 : -1 : 0;
-  }
-  return 0;
-}
-function pierceCurvePlane(curve, source, target) {
-  const map = sketchFrameMap(source, target);
-  validateSketchDrawing({ type: "drawing", contours: [curve.type === "circle" ? curve : { type: "path", start: curve.start, segments: [curve.segment] }] });
-  const y2 = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v2, i2) => v2 - target.originMillimeters[i2]);
-  const a2 = dot$8(source.xDirection, target.normal), b = dot$8(y2, target.normal), c2 = dot$8(delta2, target.normal);
-  const depth = (p2) => a2 * p2[0] + b * p2[1] + c2;
-  const world = (p2) => source.originMillimeters.map((v2, i2) => v2 + source.xDirection[i2] * p2[0] + y2[i2] * p2[1]);
-  let coefficients, frame, poleDepths = [];
-  if (curve.type === "circle") frame = { center: curve.center, radiusX: curve.radius, radiusY: curve.radius, rotation: 0, startAngle: 0, sweep: 2 * Math.PI };
-  else {
-    const s = curve.segment, d0 = depth(curve.start), d1 = depth(s.end);
-    if (s.type === "line") {
-      coefficients = [d0, d1 - d0];
-      poleDepths = [d0, d1];
-    } else if (s.type === "bezier") {
-      const u2 = depth(s.controls[0]), v2 = depth(s.controls[1]);
-      coefficients = [d0, 3 * (u2 - d0), 3 * (v2 - 2 * u2 + d0), d1 - 3 * v2 + 3 * u2 - d0];
-      poleDepths = [d0, u2, v2, d1];
-    } else if (s.type === "conic") {
-      const r = s.rho, w2 = 1 - r, u2 = depth(s.control);
-      coefficients = [w2 * d0, 2 * (r * u2 - w2 * d0), w2 * (d0 + d1) - 2 * r * u2];
-      poleDepths = [d0, u2, d1];
-    } else if (s.type === "ellipse") frame = ellipseFrame(curve.start, s);
-    else {
-      const arc = sketchArcGeometry(curve.start, s.middle, s.end);
-      frame = { ...arc, radiusX: arc.radius, radiusY: arc.radius, rotation: 0 };
-    }
-  }
-  const at = (t2) => curve.type === "circle" ? ellipsePoint(frame, t2) : segmentPoint(curve.start, curve.segment, t2);
-  let parameters2, direction2;
-  if (coefficients) {
-    if (poleDepths.every((depth2) => Math.abs(depth2) < 1e-10)) throw new PierceReferenceError("The selected curve lies in the sketch plane; Pierce needs an isolated intersection.");
-    parameters2 = distanceRoots(coefficients);
-    direction2 = (t2) => polynomialDirection(coefficients, t2);
-  } else {
-    const f2 = frame, cos2 = Math.cos(f2.rotation), sin2 = Math.sin(f2.rotation);
-    const x2 = f2.radiusX * (a2 * cos2 + b * sin2), y22 = f2.radiusY * (-a2 * sin2 + b * cos2), offset2 = depth(f2.center), radius = Math.hypot(x2, y22);
-    if (radius < 1e-12) {
-      if (Math.abs(offset2) < 1e-10) throw new PierceReferenceError("The selected curve lies in the sketch plane; Pierce needs an isolated intersection.");
-      return [];
-    }
-    const ratio = -offset2 / radius;
-    if (ratio < -1 - 1e-12 || ratio > 1 + 1e-12) return [];
-    const phase = Math.atan2(y22, x2), angle2 = Math.acos(Math.max(-1, Math.min(1, ratio)));
-    const low = Math.min(f2.startAngle, f2.startAngle + f2.sweep), high = Math.max(f2.startAngle, f2.startAngle + f2.sweep);
-    parameters2 = [];
-    for (const base of [phase - angle2, phase + angle2]) for (let turn = Math.ceil((low - base - 1e-10) / (2 * Math.PI)); turn <= Math.floor((high - base + 1e-10) / (2 * Math.PI)); turn++) {
-      const t2 = (base + turn * 2 * Math.PI - f2.startAngle) / f2.sweep;
-      if (t2 >= -1e-9 && t2 <= 1 + 1e-9) parameters2.push(Math.max(0, Math.min(1, t2)));
-    }
-    direction2 = (t2) => {
-      const angle22 = f2.startAngle + t2 * f2.sweep, slope = (-x2 * Math.sin(angle22) + y22 * Math.cos(angle22)) * f2.sweep;
-      return Math.abs(slope) < radius * Math.abs(f2.sweep) * 1e-9 ? 0 : slope > 0 ? 1 : -1;
-    };
-  }
-  parameters2 = unique(parameters2);
-  if (curve.type === "circle" && parameters2.length > 1 && parameters2[0] < 1e-13 && parameters2.at(-1) > 1 - 1e-13 && Math.hypot(...at(parameters2[0]).map((v2, i2) => v2 - at(parameters2.at(-1))[i2])) < 1e-7) parameters2.pop();
-  return parameters2.map((parameter2) => {
-    const p2 = at(parameter2);
-    if (Math.abs(depth(p2)) > 1e-7) throw Error("The curve-plane contact could not be resolved accurately.");
-    return { parameter: parameter2, point: map.point(p2), worldPoint: world(p2), direction: direction2(parameter2) };
-  });
-}
-function branchCounts(hits) {
-  return [-1, 0, 1].map((direction2) => hits.filter((hit) => hit.direction === direction2).length);
-}
-function resolvePierceBranch(hits, branch) {
-  if (!branch || ![-1, 0, 1].includes(branch.direction) || !Number.isInteger(branch.ordinal) || branch.ordinal < 0 || !Array.isArray(branch.counts) || branch.counts.length !== 3 || branch.counts.some((n) => !Number.isInteger(n) || n < 0) || branch.ordinal >= branch.counts[branch.direction + 1]) throw Error("Invalid Pierce intersection reference. Reselect the source curve.");
-  if (branchCounts(hits).some((n, i2) => n !== branch.counts[i2])) throw new PierceReferenceError("The Pierce intersection disappeared or changed branches. Reselect its source intersection.");
-  const hit = hits.filter((h) => h.direction === branch.direction)[branch.ordinal];
-  if (!hit) throw new PierceReferenceError("The Pierce intersection is unavailable.");
-  return hit;
-}
-function sketchPierceContacts(features2, targetFeatureId, source, resolveDrawing = (id2) => resolveProfileDrawing(features2, id2)) {
-  if (!source || source.kind !== "sketch-curve" || typeof source.sourceFeatureId !== "string" || typeof source.sourceContourId !== "string" || !source.sourceContourId.trim()) throw Error("Invalid Pierce source reference.");
-  const targetIndex = features2.findIndex((f2) => f2.id === targetFeatureId), sourceIndex = features2.findIndex((f2) => f2.id === source.sourceFeatureId);
-  const target = features2[targetIndex], feature3 = features2[sourceIndex];
-  if (target?.type !== "profile" || sourceIndex < 0 || sourceIndex >= targetIndex || feature3.type !== "profile") throw Error("Pierce must reference an earlier source sketch.");
-  if (features2.filter((f2) => f2.id === source.sourceFeatureId).length !== 1 || features2.filter((f2) => f2.id === targetFeatureId).length !== 1) throw Error("Invalid Pierce source reference.");
-  if (feature3.suppressed) throw Error(`Pierce source is suppressed: ${feature3.name}.`);
-  const contours = resolveDrawing(feature3.id).contours.filter((c2) => c2.id === source.sourceContourId);
-  if (contours.length !== 1) throw new PierceReferenceError("The Pierce source contour is missing or ambiguous. Reselect it.");
-  const contour = contours[0];
-  let curve;
-  if (contour.type === "circle") {
-    if (source.sourceSegmentId !== void 0) throw new PierceReferenceError("The Pierce source curve changed type. Reselect it.");
-    curve = contour;
-  } else {
-    if (!source.sourceSegmentId?.trim()) throw new PierceReferenceError("The Pierce source curve changed type. Reselect an identified source segment.");
-    const indices = contour.segments.flatMap((s, i2) => s.id === source.sourceSegmentId ? [i2] : []);
-    if (indices.length !== 1) throw new PierceReferenceError("The Pierce source segment is missing or ambiguous. Reselect it.");
-    const index2 = indices[0];
-    curve = { type: "segment", start: index2 ? contour.segments[index2 - 1].end : contour.start, segment: contour.segments[index2] };
-  }
-  return pierceCurvePlane(curve, profileSketchFrame(feature3), profileSketchFrame(target));
-}
-function resolveSketchPierce(features2, targetFeatureId, reference, resolveDrawing) {
-  return resolvePierceBranch(sketchPierceContacts(features2, targetFeatureId, reference, resolveDrawing), reference.branch);
-}
-function validatePierceConstraint(c2) {
-  if (c2.kind !== "pierce") {
-    if (c2.source !== void 0) throw Error("A Pierce source requires a Pierce constraint.");
-    return;
-  }
-  const s = c2.source, b = s?.branch;
-  const id2 = (v2) => typeof v2 === "string" && !!v2.trim() && v2.length <= 128;
-  if (!s || s.kind !== "sketch-curve" || !id2(s.sourceFeatureId) || !id2(s.sourceContourId) || s.sourceSegmentId !== void 0 && !id2(s.sourceSegmentId) || !b || ![-1, 0, 1].includes(b.direction) || !Number.isInteger(b.ordinal) || b.ordinal < 0 || !Array.isArray(b.counts) || b.counts.length !== 3 || !b.counts.every((n) => Number.isInteger(n) && n >= 0) || b.ordinal >= b.counts[b.direction + 1])
-    throw Error("Pierce needs a valid stable source and selected intersection branch.");
-  if (!c2.a || c2.a.projectedContourId !== void 0 || Object.keys(c2).some((key2) => !["id", "kind", "a", "source"].includes(key2)))
-    throw Error("Pierce constrains one editable point or curve to its external source.");
-}
-function sameSource(a2, b) {
-  return a2.kind === b.kind && a2.sourceFeatureId === b.sourceFeatureId && a2.sourceContourId === b.sourceContourId && a2.sourceSegmentId === b.sourceSegmentId && a2.branch.direction === b.branch.direction && a2.branch.ordinal === b.branch.ordinal && a2.branch.counts.every((n, i2) => n === b.branch.counts[i2]);
-}
-function pierceContextPoint(drawing, c2) {
-  validatePierceConstraint(c2);
-  const context2 = drawing.pierceContext?.[c2.id];
-  if (!context2 || !context2.source || !sameSource(context2.source, c2.source) || !Array.isArray(context2.point) || context2.point.length !== 2 || !context2.point.every(Number.isFinite))
-    throw Error("Pierce source context is missing or stale. Resolve the sketch in its document.");
-  return context2.point;
-}
-function withPierceContext(features2, targetId, drawing, resolveDrawing) {
-  const next = structuredClone(drawing);
-  delete next.pierceContext;
-  for (const c2 of next.constraints ?? []) {
-    validatePierceConstraint(c2);
-    if (c2.kind !== "pierce") continue;
-    const hit = resolveSketchPierce(features2, targetId, c2.source, resolveDrawing);
-    (next.pierceContext ??= /* @__PURE__ */ Object.create(null))[c2.id] = { source: structuredClone(c2.source), point: [...hit.point] };
+function identifySurfaceExtrusionProfiles(document2, feature3) {
+  if (feature3.type !== "surface-extrude" || feature3.operation !== "new" || !feature3.separateBodies) return document2;
+  let next = document2;
+  const sources = new Set(feature3.profileSelections?.map((pick) => pick.profileFeatureId) ?? [feature3.profileFeatureId]);
+  for (const id2 of sources) {
+    if (next.features.find((source) => source.id === id2)?.type === "profile")
+      next = identifyProfileContours(next, id2);
   }
   return next;
 }
-function pierceDependencies(drawing) {
-  return [...new Set((drawing.constraints ?? []).filter((c2) => c2.kind === "pierce").map((c2) => c2.source?.sourceFeatureId ?? "missing-pierce-source"))];
+function offsetFaceBodies(feature3) {
+  return [...new Set(feature3.faces.map((face) => face.bodyId))];
 }
-function localPierceValidation(drawing) {
-  if (drawing.pierceContext !== void 0) throw Error("Resolved Pierce context must not be saved.");
-  if (drawing.constraints?.some((c2) => c2.kind === "pierce")) {
-    const ids2 = drawing.constraints.map((c2) => c2.id);
-    if (ids2.length > 512 || new Set(ids2).size !== ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.trim())) throw Error("Invalid or duplicate sketch constraint identities.");
+function validateOffsetFace(feature3, earlier, missing) {
+  if (!Array.isArray(feature3.faces) || !feature3.faces.length || feature3.faces.length > 256) throw Error("Choose one or more faces to offset (up to 256).");
+  if (feature3.transform !== void 0) {
+    if (feature3.distanceMillimeters !== void 0 || !["translate", "translate-reference", "rotate", "rotate-reference"].includes(feature3.transform?.kind)) throw Error("Choose an offset distance or a face Translate/Rotate operation.");
+    validateTransform({ id: feature3.id, type: "transform", name: feature3.name, suppressed: feature3.suppressed, bodyIds: offsetFaceBodies(feature3), transform: feature3.transform }, earlier, missing);
+  } else if (feature3.replaceWith !== void 0) {
+    if (feature3.distanceMillimeters !== void 0) throw Error("Replace face takes a target plane, not a distance.");
+    validateMirrorPlane(feature3.replaceWith, earlier, missing, "Replace face plane");
+    if (feature3.faces.some((face) => face.surfaceType)) throw Error("Replace face needs planar faces.");
+  } else if (typeof feature3.distanceMillimeters !== "number" || !Number.isFinite(feature3.distanceMillimeters) || Math.abs(feature3.distanceMillimeters) < 1e-6) throw Error("Offset distance must be finite and nonzero.");
+  if ("targetBodyId" in feature3 || "targetBodyIds" in feature3) throw Error("Offset target parts are determined by the selected faces.");
+  const identities = /* @__PURE__ */ new Set();
+  for (const face of feature3.faces) {
+    validateSolidFaceReference(face, earlier, missing, "Offset faces");
+    const id2 = JSON.stringify([face.sourceFeatureId, face.bodyId, face.normal, face.surfaceType, face.faceAnchor?.centerMillimeters, face.faceAnchor?.areaSquareMillimeters]);
+    if (identities.has(id2)) throw Error("Select each offset face only once.");
+    identities.add(id2);
   }
-  for (const c2 of drawing.constraints ?? []) {
-    validatePierceConstraint(c2);
-    if (c2.kind === "pierce") resolve$1(drawing, c2.a);
-  }
-  return { ...drawing, constraints: drawing.constraints?.filter((c2) => c2.kind !== "pierce") };
 }
 function featureInputDependencies(feature3, bodyProducers) {
   const inputs = /* @__PURE__ */ new Set();
@@ -5324,7 +5370,7 @@ function bodyIDForFeature(doc, feature3) {
 function bodyIDsForFeature(doc, feature3) {
   if (feature3.type === "transform" || feature3.type === "split" || feature3.type === "mirror" && feature3.bodyIds) return feature3.copyBodyIds ? feature3.bodyIds.map((id2) => feature3.copyBodyIds[id2]) : [];
   if (feature3.type === "pattern" && feature3.bodyIds) return patternCopyIds(feature3);
-  return feature3.type === "extrude" && feature3.separateBodies && feature3.bodyOutputs || feature3.type === "surface-unstitch" && feature3.bodyOutputs ? feature3.bodyOutputs : [bodyIDForFeature(doc, feature3)];
+  return (feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies && feature3.bodyOutputs || feature3.type === "surface-unstitch" && feature3.bodyOutputs ? feature3.bodyOutputs : [bodyIDForFeature(doc, feature3)];
 }
 function createdBodyIDs(doc, feature3) {
   return (feature3.type === "transform" || feature3.type === "split" || feature3.type === "mirror") && feature3.copyBodyIds || feature3.type === "pattern" && feature3.bodyIds ? bodyIDsForFeature(doc, feature3) : "operation" in feature3 && feature3.operation === "new" ? bodyIDsForFeature(doc, feature3) : [];
@@ -5347,7 +5393,7 @@ function stableBodies(doc) {
     ...structuredClone(doc),
     features: doc.features.map((f2) => {
       const feature3 = structuredClone(f2);
-      if (feature3.type === "extrude" && feature3.separateBodies)
+      if ((feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies)
         feature3.outputProfileId ??= feature3.profileFeatureId;
       if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
         if (!feature3.suppressed) targetBody = feature3.scopeResolution?.groups.at(-1)?.bodyId ?? targetBody;
@@ -5439,9 +5485,9 @@ function setFeatureSuppressed(doc, id2, suppressed) {
   return next;
 }
 function insertFeature(doc, feature3) {
-  if (feature3.type === "extrude" && feature3.separateBodies)
+  if ((feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies)
     feature3 = { ...feature3, outputProfileId: feature3.outputProfileId ?? feature3.profileFeatureId };
-  const next = stableBodies(doc), index2 = rollbackPosition(doc);
+  const next = identifySurfaceExtrusionProfiles(stableBodies(doc), feature3), index2 = rollbackPosition(doc);
   if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
     feature3 = {
       ...feature3,
@@ -7368,7 +7414,7 @@ function validatePartDocument(value2) {
       const id2 = ("bodyId" in feature3 ? feature3.bodyId : void 0) ?? (bodies.size === 0 ? `${document2.documentId}:body-1` : `${document2.documentId}:body-${feature3.id}`);
       if (typeof id2 !== "string" || !id2 || bodies.has(id2))
         throw new Error("Body IDs must be unique.");
-      const outputs = feature3.type === "extrude" && feature3.separateBodies && feature3.bodyOutputs || feature3.type === "surface-unstitch" && feature3.bodyOutputs ? feature3.bodyOutputs : [id2];
+      const outputs = (feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies && feature3.bodyOutputs || feature3.type === "surface-unstitch" && feature3.bodyOutputs ? feature3.bodyOutputs : [id2];
       if (!Array.isArray(outputs) || !outputs.length) throw new Error("Extrusion needs output body identities.");
       for (const output of outputs) {
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");
@@ -8200,7 +8246,7 @@ function resolveExtrusionScopes(doc, scopes = {}) {
 }
 function resolveBodyOutputs(document2, outputs = {}) {
   const cutoff = rollbackPosition(document2);
-  const expected = new Set(document2.features.slice(0, cutoff).filter((f2) => !f2.suppressed && (f2.type === "extrude" && f2.operation === "new" && f2.separateBodies || f2.type === "surface-unstitch" || (f2.type === "transform" || f2.type === "split") && f2.copyBodyIds || f2.type === "pattern" && f2.bodyIds)).map((f2) => f2.id));
+  const expected = new Set(document2.features.slice(0, cutoff).filter((f2) => !f2.suppressed && ((f2.type === "extrude" || f2.type === "surface-extrude") && f2.operation === "new" && f2.separateBodies || f2.type === "surface-unstitch" || (f2.type === "transform" || f2.type === "split") && f2.copyBodyIds || f2.type === "pattern" && f2.bodyIds)).map((f2) => f2.id));
   if (Object.keys(outputs).some((id2) => !expected.has(id2))) throw new Error("Rebuild returned an unknown body producer.");
   const next = { ...document2, features: document2.features.map((feature3) => {
     if (!expected.has(feature3.id)) return feature3;
@@ -8210,7 +8256,7 @@ function resolveBodyOutputs(document2, outputs = {}) {
       if (!Array.isArray(ids2) || ids2.length !== expected2.length || new Set(ids2).size !== ids2.length || ids2.some((id2) => !expected2.includes(id2))) throw Error(`${feature3.name}: rebuild changed the saved copy identities.`);
       return feature3;
     }
-    const prefix2 = `${bodyIDForFeature(document2, feature3)}:solid-`;
+    const prefix2 = `${bodyIDForFeature(document2, feature3)}:${feature3.type === "surface-extrude" ? "surface" : "solid"}-`;
     if (!Array.isArray(ids2) || !ids2.length || ids2.some((id2) => typeof id2 !== "string" || !id2.startsWith(prefix2)) || new Set(ids2).size !== ids2.length)
       throw new Error(`${feature3.name}: rebuild did not return distinct output body identities.`);
     return { ...feature3, bodyOutputs: [...ids2] };
@@ -14037,7 +14083,7 @@ export interface CurvedEdgeReference {
 }
 
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
-  "surface-extrude": `export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees' | 'separateBodies' | 'bodyOutputs' | 'outputProfileId'> {
+  "surface-extrude": `export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees'> {
   type: "surface-extrude";
   operation: "new" | "add";
   /** Legacy selected sketch curves, retained on read. New records use profileSelections. */
@@ -14428,24 +14474,25 @@ function prepareFeatureOperation(doc, name5, args) {
     if ("id" in fields2) throw Error('Omit "id"; the editor assigns a stable feature ID.');
     if (typeof fields2.type !== "string" || !featureSchemas[fields2.type]) throw Error(`Set "type" to one of: ${Object.keys(featureSchemas).join(", ")}.`);
     const id2 = crypto.randomUUID();
-    const feature3 = { suppressed: false, name: fields2.type, ...fields2, id: id2 };
+    const feature3 = { suppressed: false, name: fields2.type, ...fields2.type === "surface-extrude" && fields2.operation === "new" ? { separateBodies: true } : {}, ...fields2, id: id2 };
     return { document: insertFeature(doc, feature3), featureID: id2 };
   }
   if (name5 === "aether_cad_feature_update") {
     const feature3 = existing(doc, args.feature_id);
     const changes = parseObject(args.changes_json, "changes_json");
     if ("id" in changes || "type" in changes) throw Error('"id" and "type" cannot change; add a new feature instead.');
-    if (feature3.type === "extrude" && "outputProfileId" in changes && changes.outputProfileId !== (feature3.outputProfileId ?? feature3.profileFeatureId))
+    if ((feature3.type === "extrude" || feature3.type === "surface-extrude") && "outputProfileId" in changes && changes.outputProfileId !== (feature3.outputProfileId ?? feature3.profileFeatureId))
       throw Error("Extrusion output identity is assigned by the document and cannot be changed.");
     if (!Object.keys(changes).length) throw Error("changes_json has no fields to change.");
     const next = structuredClone(doc);
     next.features = next.features.map((f2) => f2.id === feature3.id ? {
       ...f2,
       ...changes,
-      ...f2.type === "extrude" && f2.separateBodies ? { outputProfileId: f2.outputProfileId ?? f2.profileFeatureId } : {}
+      ...(f2.type === "extrude" || f2.type === "surface-extrude") && f2.separateBodies ? { outputProfileId: f2.outputProfileId ?? f2.profileFeatureId } : {}
     } : f2);
-    validatePartDocument(next);
-    return { document: next, featureID: feature3.id };
+    const identified = identifySurfaceExtrusionProfiles(next, next.features.find((f2) => f2.id === feature3.id));
+    validatePartDocument(identified);
+    return { document: identified, featureID: feature3.id };
   }
   if (name5 === "aether_cad_feature_delete") {
     const feature3 = existing(doc, args.feature_id);
@@ -40838,6 +40885,128 @@ function sha256Hex(text2) {
   }
   return Array.from(h, (x2) => x2.toString(16).padStart(8, "0")).join("");
 }
+function sewSurfaceExtrusion(shapes) {
+  if (shapes.length === 1) return shapes[0].clone();
+  const oc = getOC(), sewing = new oc.BRepBuilderAPI_Sewing(1e-7, true, true, true, false);
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    shapes.forEach((shape2) => sewing.Add(shape2.wrapped));
+    sewing.Perform(progress);
+    const shape = cast(sewing.SewedShape());
+    if (isShape3D(shape)) return shape;
+    const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
+    try {
+      builder.MakeShell(shell);
+      builder.Add(shell, shape.wrapped);
+      return cast(shell);
+    } finally {
+      builder.delete();
+      shape.delete();
+    }
+  } finally {
+    sewing.delete();
+    progress.delete();
+  }
+}
+function connectedSurfaceBodies(shape) {
+  const oc = getOC(), faces = shape.faces, parents = faces.map((_2, index2) => index2);
+  const edges = /* @__PURE__ */ new Map();
+  const outputs = [];
+  const root = (index2) => {
+    while (parents[index2] !== index2) {
+      parents[index2] = parents[parents[index2]];
+      index2 = parents[index2];
+    }
+    return index2;
+  };
+  try {
+    faces.forEach((face, index2) => {
+      for (const edge of face.edges) {
+        const bucket = edges.get(edge.hashCode) ?? [];
+        const shared = bucket.find((other) => other.edge.wrapped.IsSame(edge.wrapped));
+        if (shared) {
+          parents[root(index2)] = root(shared.face);
+          edge.delete();
+        } else {
+          bucket.push({ edge, face: index2 });
+          edges.set(edge.hashCode, bucket);
+        }
+      }
+    });
+    const groups = /* @__PURE__ */ new Map();
+    faces.forEach((_2, index2) => {
+      const key2 = root(index2);
+      const group = groups.get(key2) ?? [];
+      group.push(index2);
+      groups.set(key2, group);
+    });
+    for (const group of groups.values()) {
+      const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
+      try {
+        builder.MakeShell(shell);
+        group.forEach((index2) => builder.Add(shell, faces[index2].wrapped));
+        const output = cast(shell);
+        outputs.push(output);
+        const check2 = new oc.BRepCheck_Analyzer(output.wrapped, true, false);
+        try {
+          if (!check2.IsValid_2() || measureArea(output) <= 1e-9) throw Error("Surface extrusion produced an invalid connected sheet.");
+        } finally {
+          check2.delete();
+        }
+      } finally {
+        builder.delete();
+      }
+    }
+    if (!outputs.length) throw Error("Surface extrusion produced no sheets.");
+    return outputs;
+  } catch (error2) {
+    outputs.forEach((output) => output.delete());
+    throw error2;
+  } finally {
+    faces.forEach((face) => face.delete());
+    edges.forEach((bucket) => bucket.forEach(({ edge }) => edge.delete()));
+  }
+}
+function sharedArea(a2, b) {
+  const oc = getOC(), operation2 = new oc.BRepAlgoAPI_Common_1();
+  const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    arguments_.Append_1(a2.wrapped);
+    tools.Append_1(b.wrapped);
+    operation2.SetArguments(arguments_);
+    operation2.SetTools(tools);
+    operation2.SetNonDestructive(true);
+    operation2.Build(progress);
+    const common2 = cast(operation2.Shape());
+    try {
+      return common2 instanceof Face || isShape3D(common2) ? measureArea(common2) : 0;
+    } finally {
+      common2.delete();
+    }
+  } finally {
+    operation2.delete();
+    arguments_.delete();
+    tools.delete();
+    progress.delete();
+  }
+}
+function surfaceExtrusionOutputs(shape, sources) {
+  const outputs = connectedSurfaceBodies(shape);
+  try {
+    const named = outputs.map((output) => {
+      const identities = sources.length === 1 ? [sources[0].key] : sources.filter((source) => sharedArea(output, source.shape) > 1e-9).map((source) => source.key);
+      if (!identities.length) throw Error("Could not identify a surface extrusion output.");
+      return { key: sha256Hex(JSON.stringify([...new Set(identities)].sort())).slice(0, 24), shape: output };
+    });
+    if (new Set(named.map((output) => output.key)).size !== named.length)
+      throw Error("A sketch curve splits into ambiguous surface bodies. Use distinct sketch curves.");
+    return named;
+  } catch (error2) {
+    outputs.forEach((output) => output.delete());
+    throw error2;
+  }
+}
 function once$1(kind, a2, b, options = {}) {
   const oc = getOC();
   const op = kind === "fuse" ? new oc.BRepAlgoAPI_Fuse_1() : kind === "cut" ? new oc.BRepAlgoAPI_Cut_1() : new oc.BRepAlgoAPI_Common_1();
@@ -44116,6 +44285,8 @@ function evaluatePartDocument(document2, options = {}) {
             };
             if (feature3.type === "surface-extrude") {
               const commonNormal = unit$3(sketchFrameOf(feature3.profileFeatureId).normal);
+              const separate = feature3.operation === "new" && feature3.separateBodies;
+              const sources = [];
               const buildProfileSheet = (feature22) => {
                 const frame = sketchFrameOf(feature22.profileFeatureId);
                 const n = unit$3(frame.normal), origin2 = frame.originMillimeters;
@@ -44147,10 +44318,20 @@ function evaluatePartDocument(document2, options = {}) {
                 });
                 const second = symmetric ? { ...primary } : feature22.secondEnd ? resolveEnd(feature22.secondEnd) : feature22.secondDistanceMillimeters ? { type: "blind", distance: feature22.secondDistanceMillimeters } : void 0;
                 const picks = feature22.profileSelections;
-                const ids2 = picks?.map((pick) => pick.profileContourId).filter((id2) => id2 !== void 0) ?? feature22.profileContourIds ?? feature22.contourIds ?? (feature22.profileContourId ? [feature22.profileContourId] : void 0);
+                const ids2 = picks ? picks.every((pick) => pick.profileContourId !== void 0) ? picks.map((pick) => pick.profileContourId) : void 0 : feature22.profileContourIds ?? feature22.contourIds ?? (feature22.profileContourId ? [feature22.profileContourId] : void 0);
                 const wires = curveWires(feature22.profileFeatureId, ids2, "Surface extrusion");
-                const result = buildSurfaceExtrusion({ wires, origin: origin2, normal: n, direction: direction2, startingOffset: offset2, primary, second, limits: [...bodies.values()] });
-                const shape = own(result.shape);
+                const build = (curves2) => buildSurfaceExtrusion({ wires: curves2, origin: origin2, normal: n, direction: direction2, startingOffset: offset2, primary, second, limits: [...bodies.values()] });
+                const contours = profiles.get(feature22.profileFeatureId).contours.filter((curve) => !ids2 || curve.id !== void 0 && ids2.includes(curve.id));
+                const results = separate ? wires.map((wire, index22) => {
+                  const curveId = contours.length ? contours[index22]?.id : "@profile";
+                  if (!curveId) throw Error("Surface output identities need named sketch curves. Edit and save the source sketch.");
+                  const result2 = build([wire]);
+                  own(result2.shape);
+                  sources.push({ key: JSON.stringify([feature22.profileFeatureId, curveId]), shape: result2.shape });
+                  return result2;
+                }) : [build(wires)];
+                const result = { shape: separate ? own(sewSurfaceExtrusion(results.map((result2) => result2.shape))) : own(results[0].shape), contacts: results.flatMap((result2) => result2.contacts) };
+                const shape = result.shape;
                 if (feature22.id === previewId && !previewHandles.some((handle) => handle.parameter === "offset")) {
                   previewAxes.push(...extrusionPreviewAxes({
                     center: sketchCentroid(feature22.profileFeatureId),
@@ -44174,7 +44355,19 @@ function evaluatePartDocument(document2, options = {}) {
                 return shape;
               };
               const sheets = extrusionProfileGroups(feature3).map(buildProfileSheet);
-              tool22 = sheets.length === 1 ? sheets[0] : sheetArea(joined(sheets.map((sheet) => sheet.wrapped)));
+              tool22 = sheets.length === 1 ? sheets[0] : sheetArea(separate ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map((sheet) => sheet.wrapped)));
+              if (separate) {
+                const outputs = surfaceExtrusionOutputs(tool22, sources);
+                const prefix2 = bodyIDForFeature(document2, feature3);
+                outputs.forEach((output) => own(output.shape));
+                const ids2 = outputs.map((output) => `${prefix2}:surface-${output.key}`);
+                if (ids2.some((id2) => bodies.has(id2))) throw Error("Duplicate surface output body identity.");
+                outputs.forEach((output, index22) => bodies.set(ids2[index22], output.shape));
+                bodyOutputs[feature3.id] = ids2;
+                currentBodyID = ids2.at(-1);
+                tools.set(feature3.id, tool22);
+                continue;
+              }
             } else if (feature3.type === "surface-revolve") {
               let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin2 = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {

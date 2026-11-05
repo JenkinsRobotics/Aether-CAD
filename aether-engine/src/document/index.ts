@@ -71,3 +71,5 @@ export { addConfigurationColumn, removeConfigurationColumn, addConfigurationRow,
 
 export { variableUsers, variableGraph, setVariableComment, setVariableFavorite, moveVariable, exportVariables, importVariables, completeExpression, referencedVariables, expressionFunctions, expressionUnits, type VariableUsers, type VariableGraph, type CompletionSuggestion } from "./variable-tools";
 export { copyFeatures, pastePosition } from "./timeline-clipboard";
+
+export { identifySurfaceExtrusionProfiles } from './surface-extrusion-identities';

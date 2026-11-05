@@ -163,3 +163,10 @@ from codec21. The new reader preserves Part22 bytes; actual codec21 refuses them
 Both preserve legacy Part21 bytes. Prior wheels remain unchanged. CAD owns all
 constraint interpretation. Evidence: `.verification/baseline-2026-10-24/` under
 `projected-dimension-codec-*` and `codec22-provenance.json`.
+
+2026-11-05: immutable build `0.1.0-28` accepts embedded Part25 independent
+Surface extrusion outputs. All six bundled modules match canonical Animation
+commit `af24721cd6cdc2f91cc0e9ff1123f0a2af115b2b`; only the workspace version
+whitelist changed from codec27. CAD owns geometry and identity semantics.
+New records preserve the separate sheets and their body IDs on roundtrip;
+codec27 refuses Part25 instead of silently treating the sheets as a compound.

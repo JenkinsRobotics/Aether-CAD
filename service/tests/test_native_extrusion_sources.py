@@ -32,7 +32,7 @@ def test_multiple_sketch_sources_survive_edits_and_saved_reopen(tmp_path, mode):
     steps.append({"id": "extrude", "tool": "aether_cad_feature_add", "arguments": {"feature_json": feature}})
     authored = run(tmp_path, empty(), steps)
     saved = json.loads(authored["content"])
-    assert saved["formatVersion"] == 24
+    assert saved["formatVersion"] == 25
     refs = authored["result"]["references"]
     original = saved["features"][-1]
     changes = {"profileFeatureId": refs["second"]["feature_id"], "distanceMillimeters": 8,
@@ -40,10 +40,10 @@ def test_multiple_sketch_sources_survive_edits_and_saved_reopen(tmp_path, mode):
     edited = run(tmp_path, authored["content"], [{"id": "keep_second", "tool": "aether_cad_feature_update", "arguments": {
         "feature_id": refs["extrude"]["feature_id"], "changes_json": changes}}])
     current = json.loads(edited["content"])["features"][-1]
-    if mode != "surface":
-        assert current["outputProfileId"] == refs["first"]["feature_id"]
-        assert len(current["bodyOutputs"]) == 1
-        assert current["bodyOutputs"][0] in original["bodyOutputs"]
+    assert len(original["bodyOutputs"]) == 2
+    assert current["outputProfileId"] == refs["first"]["feature_id"]
+    assert len(current["bodyOutputs"]) == 1
+    assert current["bodyOutputs"][0] in original["bodyOutputs"]
     rebuilt = invoke(tmp_path, "cad.part.evaluate", edited["content"], {})
     assert "error" not in rebuilt, rebuilt
     body = rebuilt["result"]["evaluated_bodies"][0]
@@ -68,3 +68,39 @@ def test_part24_lineage_archive_and_previous_codec_refusal(tmp_path):
     script = 'import sys;sys.path.insert(0,sys.argv[1]);from aether_animation.aether_workspace import AetherWorkspace;AetherWorkspace.from_bytes(open(sys.argv[2],"rb").read())'
     refused = subprocess.run([sys.executable, '-I', '-S', '-c', script, str(prior), str(path)], capture_output=True, text=True)
     assert refused.returncode != 0 and 'invalid authored Part projection' in refused.stderr
+
+
+def test_part25_surface_output_archive_and_previous_codec_refusal(tmp_path):
+    document = {"format": "aether-part", "formatVersion": 25, "documentId": "lineage", "name": "Lineage", "units": "millimeter", "features": [
+        {"id": "e", "type": "surface-extrude", "profileFeatureId": "b", "outputProfileId": "a", "separateBodies": True,
+         "bodyOutputs": ["saved-id"], "profileSelections": [{"profileFeatureId": "b", "profileContourId": "same-name"}]}]}
+    data = part_archive(document)
+    assert AetherWorkspace.from_bytes(data).part_definitions["lineage"]["feature_document"] == document
+    path = tmp_path / "part.aethercad"
+    path.write_bytes(data)
+    prior = Path(__file__).resolve().parents[2] / "vendor/python/aether_animation-0.1.0-27-py3-none-any.whl"
+    script = 'import sys;sys.path.insert(0,sys.argv[1]);from aether_animation.aether_workspace import AetherWorkspace;AetherWorkspace.from_bytes(open(sys.argv[2],"rb").read())'
+    refused = subprocess.run([sys.executable, '-I', '-S', '-c', script, str(prior), str(path)], capture_output=True, text=True)
+    assert refused.returncode != 0 and 'invalid authored Part projection' in refused.stderr
+
+
+@native
+def test_agent_whole_surface_assigns_persistent_source_curve_ids(tmp_path):
+    steps = [
+        {"id": "source", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "profile", "name": "Open sketch", "plane": "XY", "offsetMillimeters": 0,
+            "profile": {"type": "drawing", "contours": [
+                {"type": "path", "start": [x, 0], "segments": [{"type": "line", "end": [x + 5, 0]}]}
+                for x in [0, 10]]}}}},
+        {"id": "sheet", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "surface-extrude", "operation": "new", "profileFeatureId": {"$ref": "source.feature_id"},
+            "profileSelections": [{"profileFeatureId": {"$ref": "source.feature_id"}}], "distanceMillimeters": 4}}},
+    ]
+    authored = run(tmp_path, empty(), steps)
+    saved = json.loads(authored["content"])
+    assert all(curve.get("id") for curve in saved["features"][0]["profile"]["contours"])
+    feature = saved["features"][-1]
+    assert feature["separateBodies"] and len(feature["bodyOutputs"]) == 2
+    reopened = invoke(tmp_path, "cad.part.evaluate", authored["content"], {})
+    assert "error" not in reopened, reopened
+    assert sorted(body["id"] for body in reopened["result"]["evaluated_bodies"]) == sorted(feature["bodyOutputs"])

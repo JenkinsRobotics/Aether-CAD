@@ -30,6 +30,10 @@ export function validateExtrusionDefinition(feature: ExtrudeFeature, earlier: Re
   if (feature.profileSelections !== undefined) {
     const picks = feature.profileSelections;
     if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map(p => JSON.stringify([p?.profileFeatureId, p ? profileRegionIdentity(p) : null]))).size !== picks.length || picks.some(p => !p || (!missingReference(p.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p.profileFeatureId) || "")) || (p.profileContourId !== undefined && (typeof p.profileContourId !== "string" || !p.profileContourId.trim() || p.profileContourId.length > 128)))) throw Error("Choose distinct faces from earlier sketches.");
+    if (surface && feature.separateBodies && picks.some(pick =>
+      (!pick.profileContourId && pick.profileRegion) ||
+      (!pick.profileContourId && picks.filter(other => other.profileFeatureId === pick.profileFeatureId).length > 1)))
+      throw Error('Select either a whole sketch or distinct sketch curves for each surface extrusion source.');
   }
   if (feature.separateBodies !== undefined && typeof feature.separateBodies !== "boolean") throw Error("Invalid separate bodies option.");
   if (feature.outputProfileId !== undefined && (typeof feature.outputProfileId !== 'string' || !feature.outputProfileId.trim() || feature.outputProfileId.length > 128)) throw Error('Invalid extrusion output profile identity.');

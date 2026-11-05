@@ -412,7 +412,7 @@ export function validatePartDocument(
           : `${document.documentId}:body-${feature.id}`);
       if (typeof id !== "string" || !id || bodies.has(id))
         throw new Error("Body IDs must be unique.");
-      const outputs = (feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs) ? feature.bodyOutputs : [id];
+      const outputs = ((feature.type === "extrude" || feature.type === "surface-extrude") && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs) ? feature.bodyOutputs : [id];
       if (!Array.isArray(outputs) || !outputs.length) throw new Error("Extrusion needs output body identities.");
       for (const output of outputs) {
         if (typeof output !== "string" || !output.trim() || bodies.has(output)) throw new Error("Body IDs must be unique.");

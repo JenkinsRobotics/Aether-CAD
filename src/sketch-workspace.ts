@@ -728,7 +728,7 @@ export function openSketchWorkspace(
         // Tool cleanup clears transient canvas selection. Publish the handoff
         // afterwards so an active constraint/dimension tool cannot erase it.
         setPickedSketchRegion(pick ? {featureId: featureID, contourIndex: pick.contourIndex}
-          : regions.length ? {featureId: featureID, contourIndex: regions[0].contourIndex, contourIndices: regions.map(r => r.contourIndex)} : null);
+          : regions.length ? {featureId: featureID, contourIndex: regions[0].contourIndex, contourIndices: regions.map(r => r.contourIndex), wholeSketch: true} : null);
         return true;
       } catch (error) {
         fail((error as Error).message);

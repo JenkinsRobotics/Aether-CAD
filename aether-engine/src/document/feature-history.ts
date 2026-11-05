@@ -1,4 +1,5 @@
 import { surfaceCreatorTypes } from "./surface";
+import { identifySurfaceExtrusionProfiles } from './surface-extrusion-identities';
 import { patternCopyIds } from "./pattern";
 import {offsetFaceBodies} from './offset-face';
 import {scopeConsumedBodies} from './extrusion-scope';
@@ -32,7 +33,7 @@ export function bodyIDForFeature(
 export function bodyIDsForFeature(doc: PartDocument, feature: PartFeature): string[] {
   if(feature.type==="transform"||feature.type==="split"||(feature.type==="mirror"&&feature.bodyIds))return feature.copyBodyIds?feature.bodyIds!.map(id=>feature.copyBodyIds![id]):[];
   if(feature.type==="pattern"&&feature.bodyIds)return patternCopyIds(feature);
-  return (feature.type === "extrude" && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs)
+  return ((feature.type === "extrude" || feature.type === "surface-extrude") && feature.separateBodies && feature.bodyOutputs) || (feature.type === "surface-unstitch" && feature.bodyOutputs)
     ? feature.bodyOutputs : [bodyIDForFeature(doc, feature)];
 }
 /** Bodies created by this feature, separate from bodies modified in place. */
@@ -59,7 +60,7 @@ function stableBodies(doc: PartDocument): PartDocument {
     ...structuredClone(doc),
     features: doc.features.map((f) => {
       const feature = structuredClone(f);
-      if (feature.type === 'extrude' && feature.separateBodies)
+      if ((feature.type === 'extrude' || feature.type === 'surface-extrude') && feature.separateBodies)
         feature.outputProfileId ??= feature.profileFeatureId;
       if((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
@@ -173,9 +174,9 @@ export function insertFeature(
   doc: PartDocument,
   feature: PartFeature,
 ): PartDocument {
-  if (feature.type === 'extrude' && feature.separateBodies)
+  if ((feature.type === 'extrude' || feature.type === 'surface-extrude') && feature.separateBodies)
     feature = { ...feature, outputProfileId: feature.outputProfileId ?? feature.profileFeatureId };
-  const next = stableBodies(doc),
+  const next = identifySurfaceExtrusionProfiles(stableBodies(doc), feature),
     index = rollbackPosition(doc);
   if (
     (feature.type === "surface-extrude" || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&

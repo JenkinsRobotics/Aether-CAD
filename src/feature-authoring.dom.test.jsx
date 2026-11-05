@@ -199,7 +199,7 @@ it('authors Surface through the common Extrude controls with independent ends an
   expect(feature.profileSelections[0]).toMatchObject({ profileFeatureId: 'profile-1', profileContourId: expect.any(String) });
   expect(feature).not.toHaveProperty('thin');
   expect(feature).not.toHaveProperty('draftAngleDegrees');
-  expect(feature).not.toHaveProperty('separateBodies');
+  expect(feature.separateBodies).toBe(true);
 });
 
 it('uses the same Surface dialog from its command and removes curve inputs by repeat click or ×', async () => {
@@ -288,7 +288,7 @@ it('carries an explicitly selected single-region sketch into Extrude without cho
   } finally {cadWorkspace.publish(original);}
 });
 
-it('requires an explicit face when the selected sketch has multiple regions',async()=>{
+it('uses every region of an explicitly selected whole sketch',async()=>{
   const {cadWorkspace}=await import('./cad-workspace-store');
   const original=cadWorkspace.snapshot();
   doc=insertFeature(doc,{id:'multi',type:'profile',name:'Two regions',plane:'XY',offsetMillimeters:0,suppressed:false,profile:{type:'drawing',contours:[{id:'one',type:'circle',center:[0,0],radius:2},{id:'two',type:'circle',center:[10,0],radius:2}]}});
@@ -296,8 +296,9 @@ it('requires an explicit face when the selected sketch has multiple regions',asy
     cadWorkspace.publish({...original,selectedItemIDs:new Set(['feature/profile/multi'])});
     mountFeatureAuthoring(()=>doc,apply);cadCommands.execute('feature-extrude');
     await new Promise(resolve=>queueMicrotask(resolve));
-    expect(document.querySelector('[aria-label="Selected profiles"]').value).toBe('[]');
-    expect(document.body.textContent).toContain('Select a sketch face.');
+    expect(JSON.parse(document.querySelector('[aria-label="Selected profiles"]').value)).toEqual([
+      { featureId: 'multi', contourIndex: 0 }, { featureId: 'multi', contourIndex: 1 },
+    ]);
     expect(apply).not.toHaveBeenCalled();
   } finally {cadWorkspace.publish(original);}
 });
@@ -402,4 +403,44 @@ it("mirror and split take one plane box: a tree plane, a plane feature, a face o
   const split = await authored("split", { "Part to split identity": JSON.stringify([body.id]), "Split plane reference": JSON.stringify({ kind: "principal", plane: "XZ", offsetMillimeters: 2 }), "Keep both sides": "true" });
   expect(split).toMatchObject({ type: "split", bodyIds: [body.id], plane: { kind: "principal", plane: "XZ", offsetMillimeters: 2 }, keep: "both" });
   expect(split.copyBodyIds[body.id]).toBeTruthy();
+});
+
+
+it('hands an open whole sketch to Surface and never restores a removed curve on unrelated tree updates', async () => {
+  const { cadWorkspace } = await import('./cad-workspace-store');
+  const original = cadWorkspace.snapshot();
+  doc = insertFeature(doc, { id: 'open', type: 'profile', name: 'Open curves', plane: 'XY', offsetMillimeters: 0, suppressed: false,
+    profile: { type: 'drawing', contours: [0, 10, 20].map((x, i) => ({ id: 'curve-' + i, type: 'path', start: [x, 0],
+      segments: [{ type: 'line', end: [x + 5, 0] }], ...(i === 2 ? { construction: true } : {}) })) } });
+  try {
+    cadWorkspace.publish({ ...original, selectedItemIDs: new Set(['feature/profile/open']) });
+    cadCommands.execute('feature-extrude');
+    const panel = document.querySelector('.cad-feature-dialog');
+    await new Promise(resolve => queueMicrotask(resolve));
+    const mode = panel.querySelector('[aria-label="Creation type"]'); mode.value = 'surface'; mode.dispatchEvent(new Event('change'));
+    const picks = () => JSON.parse(panel.querySelector('[aria-label="Selected profiles"]').value);
+    expect(picks()).toEqual([{ featureId: 'open', contourIndex: 0 }, { featureId: 'open', contourIndex: 1 }]);
+    const entities = panel.querySelector('[aria-label="Sketch curves to extrude"]');
+    entities.querySelector('button').click();
+    expect(picks()).toEqual([{ featureId: 'open', contourIndex: 1 }]);
+    cadWorkspace.publish({ ...cadWorkspace.snapshot(), partCount: 2 });
+    expect(picks()).toEqual([{ featureId: 'open', contourIndex: 1 }]);
+    window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'open', contourIndex: 1 } }));
+    expect(picks()).toEqual([]);
+    cadWorkspace.publish({ ...cadWorkspace.snapshot(), partCount: 3 });
+    expect(picks()).toEqual([]);
+  } finally { cadWorkspace.publish(original); }
+});
+
+it('accepts whole sketches selected from the tree while Surface is open', async () => {
+  const { cadWorkspace } = await import('./cad-workspace-store');
+  const original = cadWorkspace.snapshot(); seedConnectedProfile();
+  try {
+    cadWorkspace.publish({ ...original, selectedItemIDs: new Set() });
+    cadCommands.execute('feature-surface-extrude');
+    cadWorkspace.publish({ ...cadWorkspace.snapshot(), selectedItemIDs: new Set(['feature/profile/joined']) });
+    const picks = JSON.parse(document.querySelector('[aria-label="Selected profiles"]').value);
+    expect(picks).toHaveLength(4);
+    expect(picks.every(p => p.featureId === 'joined')).toBe(true);
+  } finally { cadWorkspace.publish(original); }
 });

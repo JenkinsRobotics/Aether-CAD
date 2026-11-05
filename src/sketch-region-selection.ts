@@ -12,6 +12,8 @@ export interface PickedSketchRegion {
   /** A just-finished sketch with no explicit face pick hands all its regions
    * to editors supporting multiple profiles. This is transient selection only. */
   contourIndices?: number[];
+  /** Whole-sketch handoff, resolved anew when switching Solid/Thin/Surface. */
+  wholeSketch?: boolean;
 }
 
 let picked: PickedSketchRegion | null = null;

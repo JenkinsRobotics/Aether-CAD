@@ -120,7 +120,7 @@ it.each(['idle','equal'])('hands every closed region to the next solid feature a
   takePickedSketchRegion();
   if (state === 'equal') { command('equal'); pick(4,0); pick(36,0); }
   await finish(1);
-  expect(takePickedSketchRegion()).toEqual({featureId:'sketch',contourIndex:0,contourIndices:[0,1,2]});
+  expect(takePickedSketchRegion()).toEqual({featureId:'sketch',contourIndex:0,contourIndices:[0,1,2],wholeSketch:true});
   expect(takePickedSketchRegion()).toBeNull();
 });
 

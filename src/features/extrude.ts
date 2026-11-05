@@ -119,11 +119,11 @@ export const extrudeEditor: FeatureEditor = {
   serialize(values,context) {
     return {
       operation:values.operation, ...serializeThin(values), type: values.creationMode === "surface" ? "surface-extrude" : "extrude",
-      ...(values.creationMode !== 'surface' && context.feature ? { outputProfileId: context.feature.outputProfileId ?? context.feature.profileFeatureId } : {}),
+      ...(context.feature ? { outputProfileId: context.feature.outputProfileId ?? context.feature.profileFeatureId } : {}),
       ...serializeExtrudeDirection(values,context), ...serializeExtrudeDraft(values), ...serializeSecondEnd(values,context),
       ...(values.operation!=="new"&&values.scopeMode==="all"?{scopeMode:"all"}:{}),
       ...(values.scopeMode!=="all"&&["add","cut","intersect"].includes(values.operation)&&JSON.parse(values.scope).length?{targetBodyIds:[values.target,...JSON.parse(values.scope)]}:{}),
-      ...(values.creationMode!=="surface"&&values.operation==="new"&&(!context.feature||context.feature.separateBodies)?{separateBodies:true,...(context.feature?.bodyOutputs?{bodyOutputs:context.feature.bodyOutputs}:{})}:{}),
+      ...(values.operation==="new"&&(!context.feature||context.feature.separateBodies)?{separateBodies:true,...((context.feature?.type === "surface-extrude") === (values.creationMode === "surface") && context.feature?.bodyOutputs?{bodyOutputs:context.feature.bodyOutputs}:{})}:{}),
       distanceMillimeters:Number(values.distance),endType:values.endType,
       ...(values.endType==="up-to-vertex"?{endPointReference:serializeExtrusionPoint(values.endPoint,context)}:{}),
       ...(values.endType==="up-to-part"?{endPartId:values.endPart}:{}),

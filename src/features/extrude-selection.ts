@@ -24,8 +24,9 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   const feature = context.feature;
   if (feature?.profileSelections) {
     for (const p of feature.profileSelections) {
-      const r = regions(p.profileFeatureId).find(r => p.profileContourId || p.profileRegion ? matchesProfileRegion(p, r) : regions(p.profileFeatureId).length === 1);
-      if (r) initial.push({ featureId: p.profileFeatureId, contourIndex: r.contourIndex });
+      const choices = regions(p.profileFeatureId);
+      for (const r of choices.filter(r => p.profileContourId || p.profileRegion ? matchesProfileRegion(p, r) : curves() || choices.length === 1))
+        initial.push({ featureId: p.profileFeatureId, contourIndex: r.contourIndex });
     }
   } else if (feature?.profileFeatureId) {
     const ids = feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
@@ -74,9 +75,20 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
     update(picks.some(other => key(other) === key(p)) ? (p.replace ? picks : picks.filter(other => key(other) !== key(p))) : [...picks, {featureId:p.featureId,contourIndex:p.contourIndex}]);
   };
   window.addEventListener("aether-region-picked", picked);
+  let previousTree = new Set(cadWorkspace.snapshot().selectedItemIDs);
+  const unsubscribeTree = cadWorkspace.subscribe(() => {
+    const selected = new Set(cadWorkspace.snapshot().selectedItemIDs);
+    const added = [...selected].filter(id => !previousTree.has(id));
+    previousTree = selected;
+    if (!pickingActive || !selections.isConnected) return;
+    const ids = added.map(id => /^feature\/[^/]+\/(.+)$/.exec(id)?.[1]).filter((id): id is string => Boolean(id && sketches.some(f => f.id === id)));
+    if (!ids.length) return;
+    source.value = ids.at(-1)!;
+    update([...read(), ...ids.flatMap(featureId => regions(featureId).map(r => ({ featureId, contourIndex: r.contourIndex })))]);
+  });
   const observer = new window.MutationObserver(() => {
     if (selections.isConnected) return;
-    observer.disconnect(); eventWindow.removeEventListener("aether-region-picked", picked);
+    observer.disconnect(); unsubscribeTree(); eventWindow.removeEventListener("aether-region-picked", picked);
     if (activeSelection === selections) {
       activeSelection = undefined;
       eventWindow.dispatchEvent(new eventWindow.CustomEvent("aether-region-mode", {detail:{active:false}}));
@@ -94,9 +106,9 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       region.setAttribute('aria-label',curves()?'Sketch curves':'Region');
       const keep=read().filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex));
       const choices=regions(source.value);
-      const handoffChoices = handedOver?.featureId === source.value && handedOver.contourIndices
-        ? choices.filter(r => handedOver!.contourIndices!.includes(r.contourIndex)).map(r => ({featureId:source.value,contourIndex:r.contourIndex})) : [];
-      update(keep.length?keep:handoffChoices.length?handoffChoices:choices.length===1?[{featureId:source.value,contourIndex:choices[0].contourIndex}]:[]);
+      const handoffChoices = handedOver?.featureId === source.value && (handedOver.wholeSketch || handedOver.contourIndices)
+        ? choices.filter(r => handedOver!.wholeSketch || handedOver!.contourIndices!.includes(r.contourIndex)).map(r => ({featureId:source.value,contourIndex:r.contourIndex})) : [];
+      update(handedOver?.wholeSketch && handoffChoices.length ? handoffChoices : keep.length?keep:handoffChoices.length?handoffChoices:choices.length===1?[{featureId:source.value,contourIndex:choices[0].contourIndex}]:[]);
     };
     creationMode?.addEventListener('change',syncMode);
     sourceRow.hidden=curveRow.hidden=!curves();source.hidden=region.hidden=!curves();
@@ -108,7 +120,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       const sketch = selected.length === 1 ? sketches.find(f => selected[0] === `feature/${f.type}/${f.id}`) : undefined;
       const eligible=sketch?regions(sketch.id):[];
       const choices = eligible.length?eligible:sketch?sketchRegions(sketch,true,context.doc.features):[];
-      if (sketch && choices.length === 1) handedOver = {featureId:sketch.id,contourIndex:choices[0].contourIndex};
+      if (sketch && choices.length) handedOver = {featureId:sketch.id,contourIndex:choices[0].contourIndex,contourIndices:choices.map(r=>r.contourIndex),wholeSketch:true};
     }
     if(handedOver && sketches.some(f=>f.id===handedOver.featureId)) {
       // Retain an open sketch while Solid is active. Switching to Thin can then
@@ -117,9 +129,9 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       const handoff = handedOver;
       queueMicrotask(() => {
         if (!selections.isConnected) return;
-        if (handoff.contourIndices) {
+        if (handoff.contourIndices || handoff.wholeSketch) {
           const eligible = regions(handoff.featureId);
-          update(handoff.contourIndices.filter(index => eligible.some(r => r.contourIndex === index))
+          update((handoff.wholeSketch ? eligible.map(r => r.contourIndex) : handoff.contourIndices!).filter(index => eligible.some(r => r.contourIndex === index))
             .map(contourIndex => ({featureId:handoff.featureId, contourIndex})));
         } else picked(new CustomEvent("aether-region-picked", {detail:{...handoff,replace:true}}));
       });
