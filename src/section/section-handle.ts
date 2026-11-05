@@ -15,6 +15,7 @@ export type SectionProjection = {
     y: number;
   };
   valueAt: (x: number, y: number) => number | null;
+  axisView?: 'toward' | 'away';
   point?: [number, number, number];
   rotations?: (TransformHandleProjection & { id: string; index: number } | null)[];
 };
@@ -135,7 +136,10 @@ export function mountSectionHandle(viewport: HTMLElement, selected: () => Sectio
     }) : [];
     const guides: ManipulatorPoint[][] = [];
     const dx = projection.end.x - projection.start.x, dy = projection.end.y - projection.start.y, size = Math.hypot(dx, dy);
-    if (size >= 3) {
+    if (projection.axisView) {
+      guides.push([{ x, y }, { x: x + 40, y }]);
+      handles.push({ id: 'positive', kind: 'axis', label: 'Move section in positive normal direction', x: x + 40, y, axisView: projection.axisView });
+    } else if (size >= 3) {
       const ux = dx / size, uy = dy / size;
       guides.push([{ x: x - ux * 29, y: y - uy * 29 }, { x: x + ux * 29, y: y + uy * 29 }]);
       const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;

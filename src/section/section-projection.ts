@@ -1,6 +1,7 @@
-import { Box3, Raycaster, Vector2, Vector3, type Camera } from 'three/webgpu';
+import { Box3, Vector3, type Camera } from 'three/webgpu';
+import { projectLinearAxis } from '../viewport/linear-axis-projection';
 import { projectTransformGizmo } from '../viewport/transform-gizmo';
-import { lineParameterNearestRay, type SectionCut } from './section-view-store';
+import { type SectionCut } from './section-view-store';
 import { sectionFrame } from './section-frame';
 export function projectSection(cut: SectionCut, camera: Camera, rect: DOMRect, bounds: Box3) {
     if (!rect.width || !rect.height)
@@ -20,15 +21,13 @@ export function projectSection(cut: SectionCut, camera: Camera, rect: DOMRect, b
         return null;
     const unit = screen(at.clone().add(normal)), pixels = Math.hypot(unit.x - start.x, unit.y - start.y);
     const end = screen(at.clone().addScaledVector(normal, pixels > 1e-6 ? 70 / pixels : 0));
-    const ray = new Raycaster();
+    const linear = projectLinearAxis(frozen, rect, origin, normal, cut.offsetMillimeters);
+    if (!linear) return null;
     const rotations = frame.rotationAxes.map((axis, index) => {
         const handles = projectTransformGizmo(frozen, rect, { frame: { centerMillimeters: at.toArray(), radiusMillimeters: 1 },
             transform: { kind: 'rotate', axisOriginMillimeters: at.toArray(), axisDirection: [...axis], angleDegrees: cut.rotationDegrees?.[index] ?? 0 }, uniform: false });
         const ring = handles.find(handle => handle.key === 'angle');
         return ring ? { ...ring, id: `rotate-${index}`, index } : null;
     });
-    return { start, end, point: at.toArray(), rotations, valueAt: (x: number, y: number) => {
-            ray.setFromCamera(new Vector2((x - rect.left) / rect.width * 2 - 1, 1 - (y - rect.top) / rect.height * 2), frozen);
-            return lineParameterNearestRay(origin.toArray(), normal.toArray(), ray.ray.origin.toArray(), ray.ray.direction.toArray());
-        } };
+    return { start, end, point: at.toArray(), rotations, axisView: linear.axisView, valueAt: linear.depthAt };
 }

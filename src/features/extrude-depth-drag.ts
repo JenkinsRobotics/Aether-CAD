@@ -54,7 +54,7 @@ export function extrudeDepthDrag(distance: HTMLInputElement | HTMLSelectElement,
   return handle;
 }
 
-export type AxisProjection = {x:number;y:number;depthAt:(x:number,y:number)=>number|null};
+export type AxisProjection = import('../viewport/linear-axis-projection').LinearAxisProjection;
 type HandleOptions = {
   valueMode?: 'signed'|'magnitude'|'positive'|'nonnegative';
   label?: string;

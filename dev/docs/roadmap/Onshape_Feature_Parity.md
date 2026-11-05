@@ -37,6 +37,28 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
+## End-on feature controls — 2026-11-05, qualified
+
+Extrude and other native linear feature controls retain a usable handle when
+viewed along their axis. The shared Aether UI axis glyph becomes a dot toward
+the viewer or a cross away, with a callout to the actual geometry. Coincident
+controls get separate callouts. Dragging uses a frozen camera and stable
+view-scale vertical mapping; ordinary oblique projections keep exact axis/ray
+mapping. Section offset uses the same projection helper. All retain keyboard,
+editable units and cancellation. The gallery has interactive shared specimens.
+
+Perspective off-center parts use the camera direction as well as pointer-ray
+alignment, so a standard Bottom view does not turn the same end-on axis into
+an unrelated arrow. Shared window drags also cancel native browser selection,
+which otherwise tinted the whole canvas blue in WebKit after reopening Section.
+Geometry, document version and packaged worker are unchanged.
+2,208 frontend tests pass (one existing skip), as do 1,362 engine and 331 native
+service tests. Both browsers pass all 12 feature workflows and four exact-user-Part
+face-removal cases. Section and both assembly cutaway workflows pass in WebGPU
+and WebKit/WebGL2, including visible cut/restore checks and no document writes.
+Aether UI277 passes 986 tests and its interactive gallery gate.
+[Qualification](../reality/data/Feature_End_On_Controls_2026_11_05.json).
+
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
 The picker already retained multiple sketch sources; native evaluation previously
@@ -57,7 +79,8 @@ existing skip). Chromium and WebKit each pass all 12 control workflows, includin
 actual Solid/Thin/Surface selection, editing, removal and saved reopen. All 17
 modeling steps and hosted/standalone Home pass, with no server geometry calls.
 Full Extrude parity
-remains open, including disjoint Surface body identities, end-on linear controls,
+remains open, including disjoint Surface body identities (end-on controls are
+qualified separately above),
 oblique Draft and the complete selection/termination matrix. See
 [qualification evidence](../reality/data/Extrude_Multiple_Sources_2026_11_05.json).
 
@@ -171,7 +194,7 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. Disjoint Surface outputs, end-on handles, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. End-on handles are qualified above. Disjoint Surface outputs, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
 | Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |

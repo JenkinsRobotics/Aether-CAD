@@ -24,7 +24,7 @@ import { selectedCandidateId } from "./viewport/topology-selection";
 import {anchorForPlanarFace,nativeFaceReference,planarFaceCandidates,planarFaceCenter} from './viewport/planar-face-reference';
 import {pickHistoryFace} from './viewport/history-face-picking';
 import type {PlanarFaceAnchor} from '@aether/core/document';
-import { extrusionAxisDepth } from "./viewport/extrusion-axis";
+import { projectLinearAxis } from "./viewport/linear-axis-projection";
 import {projectAngleRing,projectTransformGizmo,type TransformGizmoRequest} from './viewport/transform-gizmo';
 import { SectionLayer } from "./viewport/section-layer";
 import { projectSection } from "./section/section-projection";
@@ -1610,19 +1610,7 @@ export class MateViewport {
   }
 
   private projectAxisHandle(origin:THREE.Vector3,normal:THREE.Vector3,depth:number) {
-    const point = origin.clone().addScaledVector(normal,depth);
-    const local = this.projectScreenPoint(point);
-    if (!local) return null;
-    const canvasRect = this.renderer.domElement.getBoundingClientRect();
-    const screen = {x: local.x + canvasRect.left, y: local.y + canvasRect.top};
-    const depthAt = (clientX:number,clientY:number) => {
-      const rect=this.renderer.domElement.getBoundingClientRect();
-      const ray=new THREE.Raycaster();
-      ray.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),this.camera);
-      return extrusionAxisDepth(ray.ray,origin,normal);
-    };
-    if (depthAt(screen.x,screen.y)===null) return null;
-    return {...screen,depthAt};
+    return projectLinearAxis(this.camera, this.renderer.domElement.getBoundingClientRect(), origin, normal, depth);
   }
 
   private renderSketchCurves(sketches: readonly { id: string; frame: { originMillimeters: [number, number, number]; xDirection: [number, number, number]; normal: [number, number, number] }; polylines: readonly (readonly [number, number][])[]; strokes?: readonly SketchStrokeInput[] }[]): void {

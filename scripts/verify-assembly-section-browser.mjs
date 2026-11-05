@@ -106,9 +106,13 @@ try {
   await page.waitForTimeout(450);
   await tool('Section view').click();
   // The feature window opens on the right; keep it clear of the picked carrier face.
-  const header=await page.locator('.cad-section-window > .aui-float-panel-header').boundingBox();
-  await page.mouse.move(header.x+190,header.y+header.height/2);await page.waitForTimeout(150);await page.mouse.down();await page.waitForTimeout(150);
-  await page.mouse.move(470,header.y+header.height/2,{steps:16});await page.waitForTimeout(150);await page.mouse.up();await page.waitForTimeout(150);
+  const titlebar=page.locator('.cad-section-window > .aui-float-panel-header');
+  // Drag the title, not the full-height Accept button in the current shared frame.
+  await titlebar.hover({position:{x:90,y:15}});
+  const header=await titlebar.boundingBox();
+  await page.mouse.move(header.x+90,header.y+header.height/2);await page.mouse.down();
+  await page.mouse.move(370,header.y+header.height/2,{steps:16});await page.mouse.up();
+  await expect.poll(async()=>Math.abs((await titlebar.boundingBox()).x-280)).toBeLessThan(2);
   const face = await project([60, -125.2, 142]);
   await page.mouse.move(face.x, face.y);await page.waitForTimeout(100);
   assert.equal(await page.evaluate(p=>document.elementFromPoint(p.x,p.y)?.tagName,face),'CANVAS','The selected face must be clear of the floating window');

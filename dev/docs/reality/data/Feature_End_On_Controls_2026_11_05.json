@@ -1,0 +1,128 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.108",
+  "status": "qualified; pending activation",
+  "scope": [
+    "Shared toward/away axis glyphs from @aether/ui 0.2.0-alpha.276",
+    "Frozen camera mapping and view-scale signed scrub for end-on and nearly parallel axes",
+    "Perspective off-center parts retain correct end-on detection",
+    "Distinct callouts for coincident depth, second-end and offset controls",
+    "Same shared mapping used by Section offset controls; no model or section-rendering changes",
+    "Shared FeatureWindow drag cancels native WebKit canvas selection; header controls retain their normal behavior"
+  ],
+  "shared_ui": {
+    "source_commit": "029b21e8f3d6fe3d4d83f7d3f7e8ea11cceba171",
+    "package": "0.2.0-alpha.277",
+    "package_sha256": "afd1d48a99093c632dbf9f2189aaceefad74897e9801e07220b9e1d66b8d4fa3",
+    "tests": 986,
+    "types_package_gallery": "passed",
+    "interactive_gallery_browser": "passed"
+  },
+  "qualification": {
+    "frontend": {
+      "passed": 2208,
+      "skipped": 1,
+      "package": "UI277",
+      "log": "/tmp/cad109-final-tests.log"
+    },
+    "focused_final": {
+      "passed": 30,
+      "includes_off_center_regressions": true
+    },
+    "engine": {
+      "passed": 1362
+    },
+    "types": "passed",
+    "production_build": "passed",
+    "headless": "passed",
+    "sketch_regions": "passed",
+    "home_standalone": "build/home-navigation/results.json",
+    "worker_byte_identical_to": "alpha-0.1.108",
+    "worker_runner_sha256": "53b659c741ddd9132fd332d7f7cad93734e5670ef15506ee04aa7d72e5de0eb2",
+    "native_service": {
+      "passed": 331,
+      "log": "/tmp/cad-endon-service-final.log"
+    },
+    "focused_final_package": {
+      "passed": 19,
+      "log": "/tmp/cad109-focused-ui277.log"
+    },
+    "home_hosted": "build/Example-Collection/end-on-ui277-home-hosted-2026-11-05/host/browser/results.json",
+    "section_render": {
+      "webgpu": "passed",
+      "webgl": "passed",
+      "artifact": ".verification/section-live-2026-10-26/render/result.json"
+    },
+    "section_browser": {
+      "webgpu": "build/Example-Collection/end-on-shared-final-section-webgpu-2026-11-05/host/browser/result.json",
+      "webkit": "build/Example-Collection/end-on-verified-section-webkit-2026-11-05/host/browser/result.json"
+    },
+    "reported_part_face_removal": {
+      "chromium": {
+        "passed": 4,
+        "errors": [],
+        "artifact": "build/Example-Collection/end-on-shared-final-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+        "package": "UI277"
+      },
+      "webkit": {
+        "passed": 4,
+        "errors": [],
+        "artifact": "build/Example-Collection/end-on-shared-final-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json",
+        "package": "UI277"
+      }
+    },
+    "feature_controls": {
+      "chromium": {
+        "passed": 12,
+        "errors": [],
+        "artifact": "build/Example-Collection/end-on-shared-final-controls-chromium-2026-11-05/host/browser/feature-controls.json"
+      },
+      "webkit": {
+        "passed": 12,
+        "errors": [],
+        "artifact": "build/Example-Collection/end-on-shared-final-controls-webkit-2026-11-05/host/browser/feature-controls.json"
+      }
+    },
+    "assembly_section": {
+      "webgpu": {
+        "origin_first": {
+          "passed": 16,
+          "artifact": "build/Example-Collection/end-on-verified-assembly-webgpu-face0-2026-11-05/host/browser/result.json"
+        },
+        "face_first": {
+          "passed": 8,
+          "artifact": "build/Example-Collection/end-on-verified-assembly-webgpu-face1-2026-11-05/host/browser/result.json"
+        },
+        "errors": [],
+        "writes": []
+      },
+      "webkit": {
+        "origin_first": {
+          "passed": 16,
+          "artifact": "build/Example-Collection/end-on-verified-assembly-webkit-face0-2026-11-05/host/browser/result.json"
+        },
+        "face_first": {
+          "passed": 8,
+          "artifact": "build/Example-Collection/end-on-verified-assembly-webkit-face1-2026-11-05/host/browser/result.json"
+        },
+        "errors": [],
+        "writes": []
+      }
+    }
+  },
+  "live_user_documents_modified": false,
+  "complete_feature_parity": false,
+  "remaining": [
+    "Disconnected Surface body identities and whole-sketch selection",
+    "Oblique Draft, full stopping/scope and mode-conversion qualification",
+    "Axis/mate connector inputs",
+    "Transform translation/scale end-on projection uses its existing separate mapping; not claimed qualified by this feature-control gate",
+    "Remaining Revolve, Chamfer, Fillet and complete requested reference-feature set"
+  ],
+  "investigation": {
+    "webkit_blue_tint": "Reproduced in installed CAD108. Native DOM selection included the canvas after a floating-header drag. Clearing only the browser selection restored cap pixels; shared pointerdown preventDefault fixes the cause. No renderer or geometry change was required.",
+    "test_actionability": "Manual window drags now wait for header actionability (opening animation) and assert final placement plus absence of canvas selection. Existing pixel checks are unchanged.",
+    "worker_test_overlap": "Initial service batch was invalidated by a concurrent runtime rebuild. It was stopped, then all 331 service tests passed against the completed frozen worker.",
+    "assembly_gate": "Updated the drag point from the current Accept button to the title; retained every canvas-hit, removed/retained-pixel, flip, restore and no-write assertion."
+  }
+}

@@ -23,6 +23,22 @@ it('uses document display units for keyboard depth adjustments',()=>{
   button.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowUp',shiftKey:true}));
   expect(Number(distance.value)*25.4).toBeCloseTo(27.94);
 });
+it('separates end-on controls and preserves signed dragging, fine adjustment and cancellation',async()=>{
+ document.body.innerHTML='<div class="cad-studio-viewport"><div id="end-on-panel"></div></div>';
+ const panel=document.querySelector('#end-on-panel'),distance=control('10'),offset=control('0');
+ const project=(_depth,respond)=>respond({x:100,y:100,axisView:'toward',depthAt:(_x,y)=>100-y});
+ mountExtrusionHandle(panel,{distance},'mm',project,{label:'Depth'});
+ mountExtrusionHandle(panel,{distance:offset},'mm',project,{label:'Offset'});
+ await vi.waitFor(()=>expect(document.querySelectorAll('[data-axis-view="toward"]')).toHaveLength(2));
+ const handles=[...document.querySelectorAll('[data-axis-view="toward"]')];
+ expect(handles[0].style.top).not.toBe(handles[1].style.top);
+ const button=handles[0];capture(button);
+ pointer(button,'pointerdown',100);pointer(button,'pointermove',80);expect(distance.value).toBe('30');expect(offset.value).toBe('0');
+ const fine=new dom.window.MouseEvent('pointermove',{clientY:70,clientX:0,button:0,bubbles:true,shiftKey:true});Object.defineProperty(fine,'pointerId',{value:1});button.dispatchEvent(fine);expect(distance.value).toBe('31');
+ button.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));expect(distance.value).toBe('10');
+ panel.remove();
+ await vi.waitFor(()=>expect(document.querySelector('.aui-manipulator-handle:not([hidden])')).toBeNull());
+});
 it('maps the viewport handle through the viewer axis and cleans up when the editor closes',async()=>{
   document.body.innerHTML='<div class="cad-studio-viewport"><div id="panel"></div></div>';
   const panel=document.querySelector('#panel');

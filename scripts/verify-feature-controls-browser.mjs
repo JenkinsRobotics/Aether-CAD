@@ -110,16 +110,33 @@ try {
       await dialog().locator('[aria-label="Sketch"]').selectOption('b');
     }
     await expect(entities.locator('.aui-feature-entity')).toHaveCount(2);
-    // Region picking is unambiguous from Top; inspect axial movement from an
-    // oblique view so the projection of the shared direction has nonzero length.
-    await page.evaluate(() => window.__aetherSetView('isometric'));
-    await expect(page.getByRole('button', { name: 'Pull extrusion depth', exact: true })).toBeEnabled({ timeout: 45000 });
-    await page.getByRole('button', { name: 'Pull extrusion depth', exact: true }).press('ArrowUp');
+    // Keep the exact end-on view that previously made every depth control disappear.
+    const depthHandle = page.getByRole('button', { name: 'Pull extrusion depth', exact: true });
+    await expect(depthHandle).toBeEnabled({ timeout: 45000 });
+    await expect(depthHandle).toHaveAttribute('data-axis-view', 'toward');
+    await depthHandle.press('ArrowUp');
+    await expect(depthHandle).toBeEnabled({ timeout: 45000 });
+    const grab = await depthHandle.boundingBox();
+    await page.mouse.move(grab.x + grab.width / 2, grab.y + grab.height / 2); await page.mouse.down();
+    await page.mouse.move(grab.x + grab.width / 2, grab.y + grab.height / 2 - 35, { steps: 5 });
+    await expect.poll(async () => Number(await dialog().locator('[aria-label="Distance (mm)"]').inputValue())).toBeGreaterThan(11);
+    await page.keyboard.press('Escape'); await page.mouse.up();
+    await expect(dialog().locator('[aria-label="Distance (mm)"]')).toHaveValue('11');
     await expect.poll(() => page.evaluate(() => {
       const model = window.__qualificationPreview; if (!model) return null;
       let z = -Infinity; for (const part of model.featurePreview?.added ?? model.parts) for (let i=2;i<part.vertices.length;i+=3) z=Math.max(z,part.vertices[i]);
       return Number(z.toFixed(3));
     }), { timeout: 45000 }).toBe(14);
+    await page.screenshot({ path: join(evidence, `extrude-end-on-${mode.toLowerCase()}.png`) });
+    await page.evaluate(() => window.__aetherSetView('bottom'));
+    await expect(depthHandle).toHaveAttribute('data-axis-view', 'away');
+    await depthHandle.press('ArrowDown');
+    await expect(dialog().locator('[aria-label="Distance (mm)"]')).toHaveValue('10');
+    await expect(depthHandle).toBeEnabled({ timeout: 45000 });
+    await depthHandle.press('ArrowUp');
+    await expect(dialog().locator('[aria-label="Distance (mm)"]')).toHaveValue('11');
+    await page.evaluate(() => window.__aetherSetView('isometric'));
+    await expect(depthHandle).toHaveAttribute('data-axis-view', '');
     await accept();
     await expect.poll(async () => (await stored(file.id)).features.at(-1).profileSelections?.length, { timeout: 30000 }).toBe(2);
     const original = (await stored(file.id)).features.at(-1);

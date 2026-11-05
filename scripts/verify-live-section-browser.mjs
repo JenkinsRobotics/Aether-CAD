@@ -62,11 +62,30 @@ try {
   const cancel=await button('Cancel').boundingBox();assert.ok(Math.abs(cancel.x+cancel.width-bounds.x-bounds.width)<1);
   // Move the floating window clear of the model before exercising pointer handles.
   const movePanel = async (x=370) => {
+    // Honor normal pointer actionability, including the shared opening animation,
+    // before taking coordinates for this manual drag.
+    await header.hover({position:{x:90,y:15}});
     const box=await header.boundingBox();
     await page.mouse.move(box.x+90,box.y+box.height/2);await page.mouse.down();
     await page.mouse.move(x,box.y+box.height/2,{steps:8});await page.mouse.up();
+    await expect.poll(async () => Math.abs((await header.boundingBox()).x - (x - 90))).toBeLessThan(2);
+    assert.equal(await canvas.evaluate(node => {
+      const selection = getSelection();
+      return Boolean(selection && !selection.isCollapsed && Array.from({length: selection.rangeCount}, (_, i) => selection.getRangeAt(i)).some(range => range.intersectsNode(node)));
+    }), false,
+      'moving a feature window must not select the canvas in WebKit');
   };
   await movePanel();
+  const endOn = button('Move section in positive normal direction');
+  await expect(endOn).toHaveAttribute('data-axis-view', 'toward');
+  const grip = await endOn.boundingBox();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2); await page.mouse.down();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 - 25, { steps: 5 });
+  await expect.poll(async () => Number(await offset.inputValue())).toBeGreaterThan(-2.5);
+  await page.keyboard.press('Escape'); await page.mouse.up();
+  await expect.poll(async () => Number(await offset.inputValue())).toBe(-2.5);
+  await waitCap([5,10,2.5],true);
+  await page.screenshot({path:join(evidence,'end-on-offset-control.png')});
   await button('Add section plane').click();await page.getByRole('menuitem',{name:'Right plane',exact:true}).click();
   await offset.fill('5');await waitCap([2,10,2.5],true);await waitCap([8,10,2.5],false);
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
@@ -114,7 +133,8 @@ try {
   await button('Accept section view').click();
   await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();await movePanel();
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
-  await button('Remove Right').click();await waitCap([8,10,2.5],true);await button('Cancel').click();await waitCap([8,10,2.5],false);
+  await button('Remove Right').click();
+  await waitCap([8,10,2.5],true);await button('Cancel').click();await waitCap([8,10,2.5],false);
   await button('Section view').click();await page.getByRole('menuitem',{name:'Edit section view…',exact:true}).click();await movePanel();
   await expect(planes.locator('.aui-feature-entity-select')).toHaveCount(2);
   await button('Home view').click();await page.waitForTimeout(450);

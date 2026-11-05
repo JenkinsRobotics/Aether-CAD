@@ -6,7 +6,7 @@
 import { mountValueManipulator, type ManipulatorHandle, type ManipulatorOrbit, type ManipulatorPoint } from "@aether/ui";
 
 type Point = ManipulatorPoint;
-export type LinearProjection = { x: number; y: number; angle?: number; /** The handle's origin on screen (the sketch plane), for the guide. */ origin?: Point; depthAt: (x: number, y: number) => number | null };
+export type LinearProjection = import('../viewport/linear-axis-projection').LinearAxisProjection & { angle?: number; /** The handle's origin on screen (the sketch plane), for the guide. */ origin?: Point };
 export type AngularProjection = { x: number; y: number; angle?: number; points: Point[]; arc?: Point[]; tangent?: number; pointAt?: (degrees: number) => Point; valueAt: (x: number, y: number) => number | null };
 export interface ValueHandleProvider {
   id: string;
@@ -67,15 +67,24 @@ function draw(viewport: HTMLElement, state: Manager) {
   const handles: ManipulatorHandle[] = [], orbits: ManipulatorOrbit[] = [], guides: Point[][] = [];
   let readout: { x: number; y: number; text: string; id: string; label: string } | null = null;
   const readoutId = readoutFor(state);
+  const endOnPositions: Point[] = [];
   for (const provider of state.providers.values()) {
     if (!provider.panel.isConnected) { state.providers.delete(provider.id); continue; }
     const projection = provider.project(); if (!projection) continue;
     const at = local(projection);
     if (provider.kind === "axis") {
       const p = projection as LinearProjection, origin = p.origin ? local(p.origin) : null;
+      if (p.axisView) {
+        // Coincident depth/offset/second-end controls get separate callouts;
+        // their geometry anchor stays visible and pointer deltas stay native.
+        const anchor = { ...at };
+        at.x += 40;
+        while (endOnPositions.some(other => Math.hypot(other.x - at.x, other.y - at.y) < 30)) at.y -= 34;
+        endOnPositions.push({ ...at }); guides.push([anchor, { ...at }]);
+      }
       const angle = p.angle ?? (origin ? Math.atan2(at.y - origin.y, at.x - origin.x) * 180 / Math.PI + 90 : 0);
-      handles.push({ id: handleId(provider), kind: "axis", label: provider.label, x: at.x, y: at.y, angle });
-      if (origin) guides.push([origin, at]);
+      handles.push({ id: handleId(provider), kind: "axis", label: provider.label, x: at.x, y: at.y, angle: p.axisView ? 0 : angle, axisView: p.axisView });
+      if (origin && !p.axisView) guides.push([origin, at]);
     } else {
       const p = projection as AngularProjection, points = p.points.map(local);
       if (p.pointAt) orbits.push({ id: handleId(provider), label: provider.label, angle: p.angle ?? 0, points, pointAt: (degrees) => local(p.pointAt!(degrees)) });
