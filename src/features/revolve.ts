@@ -83,7 +83,8 @@ export const revolveEditor: FeatureEditor = {
       second: field("Opposite angle (degrees)", String(feature?.secondEnd?.angleDegrees ?? feature?.secondAngleDegrees ?? 90)),
       // Merge scope, as Extrude's: every touching part, or the target plus additional parts.
       // A new revolve keeps the explicit target (the automatic scope's overlap test misreads some revolved solids; ledger: Revolve).
-      scopeMode: field("Merge scope mode", feature?.scopeMode ?? "selected", ["selected", "all"]),
+      // Onshape's default is Merge with all; a saved revolve with explicit parts stays explicit.
+      scopeMode: field("Merge scope mode", feature ? feature.scopeMode ?? "selected" : "all", ["selected", "all"]),
       scope: field("Additional target parts", JSON.stringify(feature?.targetBodyIds?.filter((id: string) => id !== feature.targetBodyId) ?? [])),
     };
   },

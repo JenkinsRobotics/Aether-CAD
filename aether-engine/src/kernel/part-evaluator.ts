@@ -130,6 +130,73 @@ function reversedWire(wire: Wire): Wire {
     return assembleWire(rebuilt);
   } finally { edges.forEach((edge) => edge.delete()); }
 }
+/** The wall of an open sketch curve (Extrude's thin wall, a thin sweep's profile): the curve offset
+ *  `a` to its right and `b` to its left in its plane (normal `n`), closed with straight caps, as one
+ *  planar face; `wallFrame` is the first edge's midpoint and the inward direction for the handle. */
+function openWallFace(wire: Wire, n: V3, a: number, b: number, own: <T>(value: T) => T): { face: Face; wallFrame: { origin: V3; inward: V3 } } {
+  const oc = getOC();
+  const point = (v: { delete(): void; x: number; y: number; z: number }): V3 => deleteAfterVectorTuple(v as never) as unknown as V3;
+  const start = point(wire.startPoint), end = point(wire.endPoint);
+  const edges = wire.edges;
+  const endTangent = (edge: typeof edges[number], at: V3, into: boolean): V3 => {
+    const atStart = norm(sub(point(edge.startPoint), at)) < 1e-7;
+    const tangent = unit(point(edge.tangentAt(atStart ? 0 : 1)));
+    return atStart === into ? tangent : neg(tangent);
+  };
+  const nearest = (at: V3) => edges.find((edge) => norm(sub(point(edge.startPoint), at)) < 1e-7 || norm(sub(point(edge.endPoint), at)) < 1e-7) ?? edges[0];
+  const first = endTangent(nearest(start), start, true), last = endTangent(nearest(end), end, false);
+  const firstEdge = nearest(start), wallTangent = scale(point(firstEdge.tangentAt(.5)), norm(sub(point(firstEdge.startPoint), start)) < 1e-7 ? 1 : -1);
+  const wallFrame = { origin: point(firstEdge.pointAt(.5)), inward: unit(cross(n, wallTangent)) };
+  const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm(cross(first, sub(point(edge.endPoint), start))) < 1e-7);
+  const offsetOpen = (distance: number): { wire: Wire; start: V3; end: V3 } => {
+    const startTarget = add(start, scale(cross(first, n), distance)), endTarget = add(end, scale(cross(last, n), distance));
+    if (Math.abs(distance) < 1e-12) return { wire: own(wire.clone()), start, end };
+    if (straight) { const shift = scale(cross(first, n), distance); return { wire: own(wire.clone().translate(shift[0], shift[1], shift[2])), start: startTarget, end: endTarget }; }
+    const tolerance = Math.max(1e-6, Math.abs(distance) * 1e-6);
+    for (const sign of [1, -1]) {
+      let candidate: Wire | undefined;
+      try {
+        const op = new oc.BRepOffsetAPI_MakeOffset_3(wire.wrapped, oc.GeomAbs_JoinType.GeomAbs_Intersection as never, true);
+        op.Perform(sign * distance, 0);
+        const result = cast(op.Shape());
+        op.delete();
+        const wires = result.wires;
+        if (wires.length === 1 && !wires[0].isClosed) candidate = wires[0]; else wires.forEach((w) => w.delete());
+        if (result !== candidate) result.delete();
+      } catch { candidate = undefined; }
+      if (!candidate) continue;
+      const p = point(candidate.startPoint), q = point(candidate.endPoint);
+      const forward = norm(sub(p, startTarget)) < tolerance && norm(sub(q, endTarget)) < tolerance;
+      const backward = norm(sub(q, startTarget)) < tolerance && norm(sub(p, endTarget)) < tolerance;
+      if (forward || backward) return { wire: own(candidate), start: forward ? p : q, end: forward ? q : p };
+      candidate.delete();
+    }
+    throw new Error("This wall offset collapses or changes the open contour. Reduce thickness or repair the sketch.");
+  };
+  const right = offsetOpen(a), left = offsetOpen(-b);
+  // The wire builder takes edges in traversal order: chain each side from its start.
+  const chain = (side: Wire, from: V3) => {
+    const remaining = side.edges, ordered: typeof remaining = [];
+    let at = from;
+    while (remaining.length) {
+      const next = remaining.findIndex((edge) => norm(sub(point(edge.startPoint), at)) < 1e-6 || norm(sub(point(edge.endPoint), at)) < 1e-6);
+      if (next < 0) throw new Error("The wall offset does not form a complete capped boundary.");
+      const [edge] = remaining.splice(next, 1);
+      const s0 = point(edge.startPoint), s1 = point(edge.endPoint);
+      at = norm(sub(s0, at)) < 1e-6 ? s1 : s0;
+      ordered.push(edge);
+    }
+    return ordered;
+  };
+  let face: Face;
+  try {
+    const boundary = own(assembleWire([...chain(right.wire, right.start), own(makeLine(right.end, left.end)), ...chain(left.wire, left.end), own(makeLine(left.start, right.start))]));
+    face = own(makeFace(boundary));
+  } catch (error) { throw new Error("The wall offset does not form a complete capped boundary.", { cause: error }); }
+  edges.forEach((edge) => edge.delete());
+  if (!(measureArea(face) > 1e-9)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness.");
+  return { face, wallFrame };
+}
 /** A closed wire's vertices, in traversal order from its first edge. */
 function wireVertices(wire: Wire): V3[] {
   const edges = wire.edges;
@@ -2543,7 +2610,8 @@ export function evaluatePartDocument(
         } else if (feature.type === "sweep") {
           // Sweep (PartDesign Pipe, standard mode, transformed transitions): a
           // closed profile region swept along a curve of another sketch.
-          const profileWire = sketchWire(feature.profileFeatureId, feature.profileContourId, "Sweep profile", false, feature.profileRegion ? feature : undefined);
+          // A thin sweep builds its own wall profile below (its curve may be open).
+          const profileWire = feature.thin ? undefined : sketchWire(feature.profileFeatureId, feature.profileContourId, "Sweep profile", false, feature.profileRegion ? feature : undefined);
           const pathProfile = pathSource(feature.pathFeatureId);
           if (!pathProfile) throw new Error("Sweep requires a profile and a path.");
           const pathId = feature.pathContourId ?? (pathProfile.contours.length === 1 ? pathProfile.contours[0].id : undefined);
@@ -2559,7 +2627,7 @@ export function evaluatePartDocument(
           const twistSpine = (): Wire => {
             const edges = spine.edges, total = edges.reduce((sum, edge) => sum + edge.length, 0);
             const twist = feature.twist!, turns = "turns" in twist ? twist.turns : (total / twist.pitchMillimeters) * (twist.reversed ? -1 : 1), samples = Math.max(64, Math.ceil(Math.abs(turns) * 48));
-            const radius = Math.max(1, 0.5 * diagonalOfShape(profileWire));
+            const radius = Math.max(1, 0.5 * diagonalOfShape(profileWire ?? spine));
             const points: V3[] = [];
             // A frame carried along the path by parallel transport, then turned by the twist angle.
             let normalVector: V3 | undefined, previous: V3 | undefined, s = 0;
@@ -2623,7 +2691,7 @@ export function evaluatePartDocument(
             }
           };
           try {
-            if (!feature.thin) swept = sweepOf(profileWire);
+            if (!feature.thin) swept = sweepOf(profileWire!);
             else {
               // Thin: the wall around one closed profile curve, as Extrude's (thickness 1 outside,
               // 2 inside, a mid plane splits one amount), is the outer offset swept less the inner.
@@ -2633,15 +2701,21 @@ export function evaluatePartDocument(
               if (thin.flipped) [a, b] = [b, a];
               const prof = profiles.get(feature.profileFeatureId);
               const contour = prof?.contours.find((c) => c.id === feature.profileContourId) ?? (prof?.contours.length === 1 ? prof.contours[0] : undefined);
-              if (!prof || !contour || !contourClosed(contour)) throw new Error("Sweep: a thin sweep takes one closed sketch curve as its profile.");
+              if (!prof || !contour) throw new Error("Sweep: a thin sweep takes one sketch curve as its profile.");
               const base = own(contourDrawing(contour, feature.id));
               const wireOn = (drawing: Drawing): Wire => (own(typeof prof.plane === "string" ? own(drawing.clone()).sketchOnPlane(prof.plane, prof.offset) : own(drawing.clone()).sketchOnPlane(prof.plane)) as unknown as { wire: Wire }).wire;
-              let outer: Drawing, inner: Drawing;
-              try { outer = a > 1e-12 ? own(base.offset(a, { lineJoinType: "miter" })) : base; inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base; }
-              catch (error) { throw new Error("Sweep: the wall offset splits or collapses the profile. Reduce thickness.", { cause: error }); }
-              const shell = sweepOf(wireOn(outer)), core = sweepOf(wireOn(inner));
-              if (!isShape3D(shell as Shape3D) || !isShape3D(core as Shape3D)) throw new Error("Sweep did not produce a solid.");
-              swept = own(shell as Shape3D).cut(own(core as Shape3D));
+              if (contourClosed(contour)) {
+                let outer: Drawing, inner: Drawing;
+                try { outer = a > 1e-12 ? own(base.offset(a, { lineJoinType: "miter" })) : base; inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base; }
+                catch (error) { throw new Error("Sweep: the wall offset splits or collapses the profile. Reduce thickness.", { cause: error }); }
+                const shell = sweepOf(wireOn(outer)), core = sweepOf(wireOn(inner));
+                if (!isShape3D(shell as Shape3D) || !isShape3D(core as Shape3D)) throw new Error("Sweep did not produce a solid.");
+                swept = own(shell as Shape3D).cut(own(core as Shape3D));
+              } else {
+                // An open curve: its capped wall in the sketch plane (Extrude's), swept as a closed profile.
+                const { face } = openWallFace(wireOn(base), unit(sketchFrameOf(feature.profileFeatureId).normal as V3), a, b, own);
+                swept = sweepOf(own(face.clone().outerWire()));
+              }
             }
           }
           catch (error) { throw new Error(error instanceof Error && error.message.startsWith("Sweep") ? error.message : "Sweep could not be built along that path. Check that the profile sits on the path and the path does not self-intersect.", { cause: error }); }
@@ -3449,7 +3523,6 @@ export function evaluatePartDocument(
             if (thin.flipped) [a, b] = [b, a];
             const named = picks.map((pick) => pick.profileContourId).filter((id): id is string => id !== undefined);
             if (!named.length) throw new Error("Select sketch curves for the thin wall.");
-            const oc = getOC();
             const tools: Shape3D[] = [];
             for (const id of named) {
               const contour = profile.contours.find((c) => c.id === id);
@@ -3473,67 +3546,7 @@ export function evaluatePartDocument(
               // An open curve: offset each side in the sketch plane (OCCT's open
               // result, intersection joins), then close the strip with straight caps.
               const sketch = sketchOf(base) as unknown as { wire: Wire };
-              const wire = sketch.wire;
-              const point = (v: { delete(): void; x: number; y: number; z: number }): V3 => deleteAfterVectorTuple(v as never) as unknown as V3;
-              const start = point(wire.startPoint), end = point(wire.endPoint);
-              const edges = wire.edges;
-              const endTangent = (edge: typeof edges[number], at: V3, into: boolean): V3 => {
-                const atStart = norm(sub(point(edge.startPoint), at)) < 1e-7;
-                const tangent = unit(point(edge.tangentAt(atStart ? 0 : 1)));
-                return atStart === into ? tangent : neg(tangent);
-              };
-              const nearest = (at: V3) => edges.find((edge) => norm(sub(point(edge.startPoint), at)) < 1e-7 || norm(sub(point(edge.endPoint), at)) < 1e-7) ?? edges[0];
-              const first = endTangent(nearest(start), start, true), last = endTangent(nearest(end), end, false);
-              const firstEdge = nearest(start), wallTangent = scale(point(firstEdge.tangentAt(.5)), norm(sub(point(firstEdge.startPoint), start)) < 1e-7 ? 1 : -1);
-              const wallFrame = { origin: point(firstEdge.pointAt(.5)), inward: unit(cross(n, wallTangent)) };
-              const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm(cross(first, sub(point(edge.endPoint), start))) < 1e-7);
-              const offsetOpen = (distance: number): { wire: Wire; start: V3; end: V3 } => {
-                const startTarget = add(start, scale(cross(first, n), distance)), endTarget = add(end, scale(cross(last, n), distance));
-                if (Math.abs(distance) < 1e-12) return { wire: own(wire.clone()), start, end };
-                if (straight) { const shift = scale(cross(first, n), distance); return { wire: own(wire.clone().translate(shift[0], shift[1], shift[2])), start: startTarget, end: endTarget }; }
-                const tolerance = Math.max(1e-6, Math.abs(distance) * 1e-6);
-                for (const sign of [1, -1]) {
-                  let candidate: Wire | undefined;
-                  try {
-                    const op = new oc.BRepOffsetAPI_MakeOffset_3(wire.wrapped, oc.GeomAbs_JoinType.GeomAbs_Intersection as never, true);
-                    op.Perform(sign * distance, 0);
-                    const result = cast(op.Shape());
-                    op.delete();
-                    const wires = result.wires;
-                    if (wires.length === 1 && !wires[0].isClosed) candidate = wires[0]; else wires.forEach((w) => w.delete());
-                    if (result !== candidate) result.delete();
-                  } catch { candidate = undefined; }
-                  if (!candidate) continue;
-                  const p = point(candidate.startPoint), q = point(candidate.endPoint);
-                  const forward = norm(sub(p, startTarget)) < tolerance && norm(sub(q, endTarget)) < tolerance;
-                  const backward = norm(sub(q, startTarget)) < tolerance && norm(sub(p, endTarget)) < tolerance;
-                  if (forward || backward) return { wire: own(candidate), start: forward ? p : q, end: forward ? q : p };
-                  candidate.delete();
-                }
-                throw new Error("This wall offset collapses or changes the open contour. Reduce thickness or repair the sketch.");
-              };
-              const right = offsetOpen(a), left = offsetOpen(-b);
-              // The wire builder takes edges in traversal order: chain each side from its start.
-              const chain = (side: Wire, from: V3) => {
-                const remaining = side.edges, ordered: typeof remaining = [];
-                let at = from;
-                while (remaining.length) {
-                  const next = remaining.findIndex((edge) => norm(sub(point(edge.startPoint), at)) < 1e-6 || norm(sub(point(edge.endPoint), at)) < 1e-6);
-                  if (next < 0) throw new Error("The wall offset does not form a complete capped boundary.");
-                  const [edge] = remaining.splice(next, 1);
-                  const s0 = point(edge.startPoint), s1 = point(edge.endPoint);
-                  at = norm(sub(s0, at)) < 1e-6 ? s1 : s0;
-                  ordered.push(edge);
-                }
-                return ordered;
-              };
-              let face: Face;
-              try {
-                const boundary = own(assembleWire([...chain(right.wire, right.start), own(makeLine(right.end, left.end)), ...chain(left.wire, left.end), own(makeLine(left.start, right.start))]));
-                face = own(makeFace(boundary));
-              } catch (error) { throw new Error("The wall offset does not form a complete capped boundary.", { cause: error }); }
-              edges.forEach((edge) => edge.delete());
-              if (!(measureArea(face) > 1e-9)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness.");
+              const { face, wallFrame } = openWallFace(sketch.wire, n, a, b, own);
               tools.push(extrudeWith({
                 solid: (length, dir) => { const sweep = new Vector(scale(dir, length)); try { return basicFaceExtrusion(face, sweep); } finally { sweep.delete(); } },
                 sections: () => [{ outer: own(face.clone().outerWire()), holes: face.clone().innerWires().map(own) }],

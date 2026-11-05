@@ -328,3 +328,9 @@ it("Pattern: a tree plane gives a direction by its normal, a sketch line by its 
   // The guide line runs (3, 4)/5: the copy at (12, 16).
   expect(pattern({ kind: "sketch-line", sourceFeatureId: "g", contourId: "k", segmentId: "seg" }).centres).toEqual(["0,0", "12,16"]);
 });
+
+it("Sweep: a thin sweep of an open curve is its capped wall swept along the path", () => {
+  // A 10 mm line (x 0…10 at y 0) swept 40 along Z with 1 mm each side: a 10 × 2 × 40 wall.
+  const d = doc({ id: "ln", type: "profile", name: "Line", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [{ id: "k", type: "path", start: [0, 0], segments: [{ id: "seg", type: "line", end: [10, 0] }] }] } }, { id: "path", type: "profile", name: "Path", plane: "XZ", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [{ id: "p", type: "path", start: [0, 0], segments: [{ type: "line", end: [0, 40] }] }] } });
+  expect(total(doc(...d.features, { id: "sw", type: "sweep", name: "Sweep", profileFeatureId: "ln", profileContourId: "k", pathFeatureId: "path", operation: "new", suppressed: false, thin: { thickness1Millimeters: 1, thickness2Millimeters: 1 } } as PartFeature))).toBeCloseTo(800, 1);
+});

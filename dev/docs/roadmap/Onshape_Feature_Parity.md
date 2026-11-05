@@ -8,6 +8,26 @@ on the same record) all carry it. Kernel gaps name the capability OCCT lacks tod
 Source pages: https://cad.onshape.com/help/Content/fillet.htm,
 https://cad.onshape.com/help/Content/chamfer.htm
 
+## Tapered shoulder picking — 2026-11-04
+
+The cylindrical shoulder qualification did not cover the user's two adjoining
+conical faces. The compact OCCT binding exposes `BRepAdaptor_Surface.Cone()` but
+cannot return its unbound `gp_Cone`; topology extraction caught that error by
+replacing the entire face with `UNAVAILABLE`, removing its edges from selection.
+The cone frame now comes from exact surface derivatives (no mesh fitting), and
+failure of optional analytic inference no longer discards measured faces or
+independently available boundary edges. Cone-axis stations remain available.
+
+A native regression fails before this repair and passes after it. Fillet and
+Chamfer resolve the shared circular edge from either tapered face and preserve
+it through saved rebuild. The browser check additionally uses a read-only copy
+of the saved Test hybrid / Part 1 sketch and quarter-revolve, selects the marked
+shoulder from both faces, changes its shared size handle, applies, reopens and
+reselects the source edge while editing. The live document is not changed.
+Release evidence is recorded separately in
+`../reality/data/Conical_Shoulder_2026_11_04.json`; this does not close the broader
+Extrude/Revolve/Chamfer/Fillet parity requirements below.
+
 ## Gaps closed — 2026-11-04 (alpha-0.1.100, continued in alpha-0.1.101)
 
 Every row below went through the same validated record (`feature_add` / `feature_update`), the
@@ -173,7 +193,7 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Onshape control | Ours | Status |
 | --- | --- | --- |
 | Entities: edges or faces | Entities to chamfer, faces expand to their edges | Done (alpha-0.1.91) |
-| Measurement: Offset / Tangent | Measurement: Offset / Tangent distance (equal distance only) | Partial |
+| Measurement: Offset / Tangent | Measurement: Offset / Tangent distance (equal distance only). Onshape's Tangent measures from the intersection of the adjacent faces' tangents (identical to Offset on planar faces); ours measures the width across the chamfer face, which is the same on planar faces too. | Partial: Tangent for the two-distance and angle types |
 | Chamfer type: Equal distance / Two distances / Distance and angle | Same | Done |
 | Distance, second distance, angle (45° default) | Same | Done |
 | Direction flip (all edges) | Reference face (optional) decides the first leg | Different; flip + overrides next |
@@ -247,7 +267,7 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Profile control: None / Keep profile orientation / Lock profile faces / Lock profile direction | Profile control picker with all four; Lock profile faces takes the face the path lies on (Faces to lock to); Lock profile direction takes the up direction | Done (alpha-0.1.101) |
 | Twist: Turns / Angle / Pitch, opposite, extend | Twist by Turns, Angle or Pitch with Opposite direction (an auxiliary spine wound round the path) | Done (alpha-0.1.101); extend open |
 | Scale: scale factor | End scale | Done |
-| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip (one closed curve); Trim ends disabled with the gap named | Done (alpha-0.1.100); trim ends open |
+| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip, for one closed or open curve (an open curve's wall is capped in its plane, as Extrude's); Trim ends disabled with the gap named | Done (alpha-0.1.101); trim ends open |
 | Merge scope | Merge scope box (one part) | Partial: one part |
 
 ## Loft (`src/features/loft.ts`) — https://cad.onshape.com/help/Content/loft.htm

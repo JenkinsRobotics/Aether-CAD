@@ -203,7 +203,7 @@ export interface SweepFeature {
   /** Onshape's Twist: the profile turns about the path by this many turns from start to end (negative: the other
    *  way), or one turn per pitch of path length. */
   twist?: { turns: number } | { pitchMillimeters: number; reversed?: boolean };
-  /** Onshape's Thin sweep: a wall around one closed profile curve (thickness 1 outside, 2 inside; mid plane splits one thickness). */
+  /** Onshape's Thin sweep: a wall around one profile curve (closed: thickness 1 outside, 2 inside; open: to its right and left, capped; mid plane splits one thickness). */
   thin?: { thickness1Millimeters: number; thickness2Millimeters: number; midplane?: boolean; midplaneThicknessMillimeters?: number; flipped?: boolean };
   operation: "new" | "add" | "cut";
   bodyId?: string;

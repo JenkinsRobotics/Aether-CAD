@@ -37,7 +37,10 @@ const clickThrough = async (cx, cy) => {
   try { await page.mouse.click(cx, cy); } finally { await page.evaluate(() => { for (const d of document.querySelectorAll('.cad-feature-dialog')) d.style.pointerEvents = ''; }); }
 };
 const clickAt = async (x, y) => { const [cx, cy] = await at(x, y); await clickThrough(cx, cy); await page.waitForTimeout(600); };
+// This fixture's revolves touch the bar only along an edge, which Merge with all (Onshape's default) refuses: the explicit target is chosen.
+const explicitScope = async () => { const all = dialog().locator('.aui-feature-row', { hasText: 'Merge with all' }).locator('input[type="checkbox"]'); if (await all.count() && await all.isChecked()) { await all.click(); await page.waitForTimeout(300); } };
 const apply = async (name) => {
+  if (/revolve/i.test(name)) await explicitScope();
   const accept = dialog().locator('[data-feature-action="accept"]');
   try { await expect(accept).toBeEnabled({ timeout: 30000 }); } catch { throw Error(`${name}: Apply stayed disabled — window says: ${await dialogText()}`); }
   await accept.click();
