@@ -73,5 +73,21 @@
       "build/Example-Collection/installed-107-removal-chromium/host/browser/face-finish-feedback.json",
       "build/Example-Collection/installed-107-removal-webkit/host/browser/face-finish-feedback.json"
     ]
+  },
+  "cad109_reverification": {
+    "release": "alpha-0.1.109",
+    "source_commit": "ceb01e54f66a77f6ba1903c9bdd0cb15a31cdf66",
+    "artifact_bytes_verified_against_installed_package": true,
+    "browsers": [
+      "Chromium",
+      "WebKit"
+    ],
+    "cases_per_browser": 4,
+    "errors": [],
+    "fixture": "Disposable copy of the reported Part 1; no live edits",
+    "evidence": [
+      "build/Example-Collection/end-on-shared-final-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/end-on-shared-final-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+    ]
   }
 }

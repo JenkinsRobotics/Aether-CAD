@@ -37,7 +37,7 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
-## End-on feature controls — 2026-11-05, qualified
+## End-on feature controls — 2026-11-05, alpha-0.1.109 / UI38
 
 Extrude and other native linear feature controls retain a usable handle when
 viewed along their axis. The shared Aether UI axis glyph becomes a dot toward

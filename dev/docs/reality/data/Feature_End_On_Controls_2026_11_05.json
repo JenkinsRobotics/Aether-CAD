@@ -1,7 +1,7 @@
 {
   "date": "2026-11-05",
   "base_release": "alpha-0.1.108",
-  "status": "qualified; pending activation",
+  "status": "activated locally",
   "scope": [
     "Shared toward/away axis glyphs from @aether/ui 0.2.0-alpha.276",
     "Frozen camera mapping and view-scale signed scrub for end-on and nearly parallel axes",
@@ -124,5 +124,39 @@
     "test_actionability": "Manual window drags now wait for header actionability (opening animation) and assert final placement plus absence of canvas selection. Existing pixel checks are unchanged.",
     "worker_test_overlap": "Initial service batch was invalidated by a concurrent runtime rebuild. It was stopped, then all 331 service tests passed against the completed frozen worker.",
     "assembly_gate": "Updated the drag point from the current Accept button to the title; retained every canvas-hit, removed/retained-pixel, flip, restore and no-write assertion."
+  },
+  "installation": {
+    "active": {
+      "animation": "alpha-0.1.7",
+      "cad": "alpha-0.1.109",
+      "io": "alpha-0.1.9",
+      "map": "alpha-0.1.46",
+      "sketch": "alpha-0.1.7",
+      "ui": "alpha-0.1.38",
+      "vector": "alpha-0.1.7"
+    },
+    "origin": "https://aetherstudio.local:8780",
+    "packages": {
+      "cad": {
+        "app": "cad",
+        "release": "alpha-0.1.109",
+        "sha256": "eb91c95f38e04d8cfb13deae6a5b47221371b992b5cefbedc6f7f78d8d14aae1",
+        "source_commit": "ceb01e54f66a77f6ba1903c9bdd0cb15a31cdf66",
+        "files": 3576,
+        "activated": true,
+        "all_files_verified": true
+      },
+      "ui": {
+        "app": "ui",
+        "release": "alpha-0.1.38",
+        "sha256": "6bfbb81b0219de3ccd65156f1df45dd5a16759e02d14dabf0da61593e7afb17d",
+        "source_commit": "029b21e8f3d6fe3d4d83f7d3f7e8ea11cceba171",
+        "files": 3545,
+        "activated": true,
+        "all_files_verified": true
+      }
+    },
+    "other_apps_unchanged": true,
+    "worker_byte_identical_to": "alpha-0.1.108"
   }
 }
