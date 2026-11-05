@@ -14,10 +14,16 @@
   ],
   "qualification": {
     "before": "Both new DOM regressions fail on the prior implementation",
-    "frontend_tests": { "passed": 2191, "skipped": 1 },
+    "frontend_tests": {
+      "passed": 2191,
+      "skipped": 1
+    },
     "frontend_types": "passed",
     "frontend_build": "passed",
-    "browsers": ["Chromium WebGPU", "WebKit WebGL2"],
+    "browsers": [
+      "Chromium WebGPU",
+      "WebKit WebGL2"
+    ],
     "browser_cases": "Fillet and Chamfer, both conical faces on a disposable copy of the reported Part 1",
     "checks": [
       "Click-to-deselect during valid and failed previews",
@@ -39,5 +45,19 @@
   },
   "live_user_documents_modified": false,
   "complete_feature_parity": false,
-  "remaining_scope": "The full user reference list and themed reference-format windows remain the active objective. Extrude native stopping/draft work is separate and is not included in this selection-only release."
+  "remaining_scope": "The full user reference list and themed reference-format windows remain the active objective. Extrude native stopping/draft work is separate and is not included in this selection-only release.",
+  "installed_106_reverification": {
+    "release": "alpha-0.1.106",
+    "browsers": [
+      "Chromium WebGPU",
+      "WebKit WebGL2"
+    ],
+    "cases_per_browser": 4,
+    "errors": [],
+    "fixture": "Read-only archived copy of the reported Part 1; all edits in disposable hosts",
+    "evidence": [
+      "build/Example-Collection/installed-106-removal-chromium/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/installed-106-removal-webkit/host/browser/face-finish-feedback.json"
+    ]
+  }
 }

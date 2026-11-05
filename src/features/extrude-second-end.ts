@@ -49,7 +49,7 @@ export function validateSecondEnd(controls:Controls):string|null {
  if(controls.secondEnabled.value!=='true'||controls.endType.value.startsWith('symmetric'))return null;
  const mode=controls.secondEndType.value;
  if(mode==='blind'&&(!controls.second.value.trim()||!Number.isFinite(Number(controls.second.value))||Number(controls.second.value)<=0))return 'Opposite depth must be positive.';
- if(mode==='through-all'&&!['cut','intersect'].includes(controls.operation.value))return 'Opposite Through all requires Remove or Intersect.';
+ if(mode==='through-all'&&controls.creationMode?.value!=='surface'&&!['cut','intersect'].includes(controls.operation.value))return 'Opposite Through all requires Remove or Intersect.';
  if(mode==='up-to-vertex'&&!controls.secondPoint.value)return 'Select the opposite stopping point.';
  if(mode==='up-to-part'&&!controls.secondPart.value)return 'Select the opposite stopping part.';
  if(mode==='up-to-face'&&!controls.secondReference.value)return 'Select the opposite stopping face.';

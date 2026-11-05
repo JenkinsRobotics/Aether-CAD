@@ -98,11 +98,11 @@ export function bodyAndOperationTabs(
   operationValues: readonly string[],
   creationMode?: Control,
 ) {
-  const solids = win.tabs(["Solid", "Surface", "Thin"], creationMode?.value === "thin" ? 2 : 0);
+  const solids = win.tabs(["Solid", "Surface", "Thin"], creationMode?.value === "surface" ? 1 : creationMode?.value === "thin" ? 2 : 0);
   [...solids.children].forEach((tab, index) => {
-    if (index === 1 || (index === 2 && !creationMode)) planned(tab as HTMLButtonElement);
+    if ((index === 1 && !(creationMode instanceof window.HTMLSelectElement && [...creationMode.options].some(option => option.value === "surface"))) || (index === 2 && !creationMode)) planned(tab as HTMLButtonElement);
     else if (creationMode) (tab as HTMLButtonElement).onclick = () => {
-      creationMode.value = index === 2 ? "thin" : "solid";
+      creationMode.value = index === 1 ? "surface" : index === 2 ? "thin" : "solid";
       [...solids.children].forEach((other, i) => other.classList.toggle("active", i === index));
       creationMode.dispatchEvent(new Event("change"));
     };
@@ -111,7 +111,16 @@ export function bodyAndOperationTabs(
     creationMode.closest("label")?.remove(); creationMode.hidden = true;
     creationMode.setAttribute("form", form.id); form.append(creationMode);
   }
-  operationTabs(win, form, operation, operationValues, ["New", "Add", "Remove", "Intersect"]);
+  const operations = operationTabs(win, form, operation, operationValues, ["New", "Add", "Remove", "Intersect"]);
+  const sync = () => {
+    const surface = creationMode?.value === 'surface';
+    if (surface && !['new', 'add'].includes(operation.value)) { operation.value = 'new'; operation.dispatchEvent(new Event('change')); }
+    [...operations.children].forEach((tab, index) => {
+      (tab as HTMLElement).hidden = surface && index >= 2;
+      tab.classList.toggle('active', operation.value === operationValues[index]);
+    });
+  };
+  creationMode?.addEventListener('change', sync); sync();
 }
 
 /** One tab row driving a hidden, form-associated operation select: the gallery's

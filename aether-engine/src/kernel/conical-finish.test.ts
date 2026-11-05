@@ -2,21 +2,21 @@ import { beforeAll, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import init from "replicad-opencascadejs";
 import { measureVolume, setOC } from "replicad";
-import type { PartDocument, PartFeature } from "../document/index";
+import { parsePartDocument, type PartDocument, type PartFeature } from "../document/index";
 import { evaluatePartDocument, resetEvaluationCache } from "./part-evaluator";
 
 beforeAll(async () => {
   setOC(await (init as any)({ wasmBinary: readFileSync(new URL("../../node_modules/replicad-opencascadejs/src/replicad_single.wasm", import.meta.url)) }));
 }, 30000);
 
-const shoulder = (): PartDocument => ({
+const shoulder = (): PartDocument => parsePartDocument(JSON.stringify({
   format: "aether-part", formatVersion: 22, documentId: "conical-shoulder", name: "Tapered shoulder", units: "millimeter",
   features: [
     { id: "s", name: "Sketch", type: "profile", plane: "XZ", offsetMillimeters: 0, suppressed: false,
       profile: { type: "polygon", pointsMillimeters: [[0, 10], [0, 30], [8, 30], [10, 25], [30, 24], [30, 10]] } },
     { id: "r", name: "Revolve", type: "revolve", profileFeatureId: "s", axis: "X", angleDegrees: 90, operation: "new", bodyId: "body", suppressed: false },
   ],
-});
+}));
 
 it("retains both tapered faces, the shared circular shoulder and exact cone-axis anchors in the compact kernel", () => {
   const body = evaluatePartDocument(shoulder()).parts[0];

@@ -37,6 +37,24 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
+## Unified Surface Extrude — 2026-11-05, qualified incremental upgrade
+
+Surface uses the same Extrude dialog and shared value manipulators as Solid and
+Thin. New/Add operate on actual native sheet geometry. Open and closed curves,
+oblique travel, reference starts, symmetric/independent ends, stopping offsets,
+finite Next/Part boundaries and underlying planar/spherical/cylindrical Face
+limits have analytic native checks. Surface Add joins adjoining sheets while
+retaining the primary target ID. Missing selected curves and disconnected explicit
+merge scopes fail without silently removing inputs or changing saved history.
+
+Part23 prevents older readers from ignoring these new geometry fields. CAD uses
+codec26 from canonical Animation commit `02d65c0`; every consumed module matches
+that commit. The previous released worker builds a legacy Surface and refuses
+Part23. This is an incremental Extrude improvement, not complete feature parity;
+complex limits, multiple-source selections, independent disjoint outputs and
+full mode-conversion coverage remain open. Current evidence:
+[Surface qualification](../reality/data/Extrude_Surface_2026_11_05.json).
+
 ## Tapered shoulder picking — 2026-11-04
 
 The cylindrical shoulder qualification did not cover the user's two adjoining
@@ -163,7 +181,7 @@ feature before granting release-ready status to Revolve, Chamfer or Fillet.
 
 | Reference control | Current implementation | Qualification still required |
 | --- | --- | --- |
-| Solid / Surface / Thin | Solid and Thin in Extrude; separate native Surface Extrude operation; unified Surface tab disabled | Integrate the Surface workflow and qualify its complete extent/operation matrix. |
+| Solid / Surface / Thin | Unified editor and native Surface extent/merge implementation; qualification below | Complex curves and other curved limits, multiple sketch sources and disjoint Surface output identities; full mode-conversion coverage. |
 | New / Add / Remove / Intersect | Native body operations and explicit/all merge scopes | Selected multi-body scope, disjoint regions and failure recovery across the full extent matrix. |
 | Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
 | Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |

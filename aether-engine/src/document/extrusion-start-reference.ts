@@ -6,7 +6,7 @@ export type ExtrusionStartReference =
  | {kind:'plane';sourceFeatureId:string;label:string}
  | {kind:'principal';plane:'XY'|'XZ'|'YZ';label:string};
 
-export function validateExtrusionStartReference(ref:ExtrusionStartReference,earlier:Map<string,string>,missing:(id:string)=>boolean):void {
+export function validateExtrusionStartReference(ref:ExtrusionStartReference,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean):void {
  const fail=()=>{throw Error('Starting entity needs an earlier parallel face or reference plane.');};
  if(!ref||!['face','plane','principal'].includes(ref.kind)||typeof ref.label!=='string'||!ref.label.trim()||ref.label.length>512)return fail();
  if(ref.kind==='principal'){if(!['XY','XZ','YZ'].includes(ref.plane))fail();return;}

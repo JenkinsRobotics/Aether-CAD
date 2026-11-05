@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.106",
+  "status": "qualified",
+  "scope": [
+    "Shared Solid/Surface/Thin Extrude editor, reused axis/offset/second-end manipulators",
+    "Native open/closed wire sheets without caps or artificial thickness",
+    "Blind, symmetric, independent opposite ends, oblique direction and starting references",
+    "Next/Part finite-boundary trimming; Face infinite planar/spherical/cylindrical limits; Vertex and Through all",
+    "Surface New/Add, selected/automatic adjoining-sheet scope and retained primary body identity",
+    "Exact curve selection; missing selected curves fail without silently dropping inputs",
+    "Part23 plus canonical workspace codec26; previous readers refuse the new geometry intent"
+  ],
+  "source_reference": "https://cad.onshape.com/help/Content/extrude.htm",
+  "canonical_codec": {
+    "source_commit": "02d65c0077bf67c217c812d4771dd4282867104b",
+    "wheel": "aether_animation-0.1.0-26-py3-none-any.whl",
+    "sha256": "207a679e5fe96dd4eacc7cbf89128cffef66e54f7612785f599a3e3decd05df2",
+    "canonical_tests_passed": 49,
+    "all_consumed_modules_byte_identical": true
+  },
+  "native_expectations": [
+    "Exact open and closed sheet areas, tilted and spherical stopping boundaries",
+    "Both independent ends, signed offsets, reverse and inside-part starts",
+    "Finite incomplete stops refused while Face uses the underlying plane",
+    "Borrowed native stopping inputs remain byte-identical",
+    "Disconnected explicit merges and missing curves fail without modifying history",
+    "Multi-sheet Add consumes the full selected scope and keeps the primary ID",
+    "Saved rebuild and insertion before an existing surface preserve geometry and IDs"
+  ],
+  "qualification": {
+    "ui": {
+      "passed": 2198,
+      "skipped": 1
+    },
+    "types": "frontend and engine passed",
+    "frontend_and_worker_build": "passed",
+    "headless": "passed",
+    "sketch_regions": "passed",
+    "previous_part22_worker": "builds legacy Surface and refuses Part23 before interpreting fields",
+    "browsers": {
+      "Chromium WebGPU": {
+        "control_workflows": 9,
+        "errors": []
+      },
+      "WebKit WebGL2": {
+        "control_workflows": 9,
+        "errors": []
+      }
+    },
+    "home_standalone": "passed",
+    "engine": {
+      "passed": 1348
+    },
+    "modeling_browser": {
+      "steps_passed": 17,
+      "server_geometry_requests": 0
+    },
+    "home_hosted": "passed",
+    "worker_runner_sha256": "f23d70dcad855201bd16968c04987ece709a041de3ccab70fbf3dc16e155e0af",
+    "evidence": [
+      "build/Example-Collection/surface-extrude-controls-chromium-2026-11-05/host/browser/feature-controls.json",
+      "build/Example-Collection/surface-extrude-controls-webkit-2026-11-05/host/browser/feature-controls.json",
+      "build/Example-Collection/surface-extrude-modeling-2026-11-05/host/browser/log.json",
+      "build/Example-Collection/surface-extrude-home-2026-11-05/host/browser/results.json"
+    ],
+    "native_service": {
+      "passed": 326,
+      "native_release_flag": true
+    }
+  },
+  "complete_feature_parity": false,
+  "live_user_documents_modified": false,
+  "remaining": [
+    "Additional complex curves and curved stopping surfaces beyond plane/sphere/cylinder",
+    "Multiple source sketches and disjoint Surface output identities",
+    "Draft with oblique direction, axis/mate-connector direction picking and complete Solid/Thin extent matrix",
+    "Full UI/agent conversion coverage between existing Solid, Thin and Surface",
+    "Broader Revolve, Chamfer, Fillet and remaining reference features"
+  ]
+}

@@ -92,6 +92,42 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude: native anchor, secondary readout, explicit units, save and reopen');
 
+  const surface = { ...base('Native Surface extrusion controls'), formatVersion: 23 };
+  surface.features = [{ id: 's', type: 'profile', name: 'Surface sketch', plane: 'XY', offsetMillimeters: 0, suppressed: false,
+    profile: { type: 'drawing', contours: [{ id: 'line', type: 'path', start: [-5, 0], segments: [{ type: 'line', end: [5, 0] }] }] } }];
+  const surfaceFile = await open(surface);
+  await command('Extrude', 'feature-extrude');
+  await dialog().getByRole('button', { name: 'Surface', exact: true }).click();
+  await dialog().locator('[aria-label="Sketch"]').selectOption('s');
+  await expect(dialog().getByRole('button', { name: 'Remove', exact: true })).toBeHidden();
+  await expect(dialog().getByRole('button', { name: 'Intersect', exact: true })).toBeHidden();
+  const surfaceDepth = page.getByRole('button', { name: 'Pull extrusion depth', exact: true });
+  await expect(surfaceDepth).toBeEnabled({ timeout: 45000 });
+  await surfaceDepth.press('ArrowUp');
+  await expect(dialog().locator('[aria-label="Distance (mm)"]')).toHaveValue('11');
+  await expect.poll(() => page.evaluate(() => {
+    const model = window.__qualificationPreview; if (!model) return null;
+    let z = -Infinity; for (const part of (model.featurePreview?.added ?? model.parts)) for (let i=2;i<part.vertices.length;i+=3) z=Math.max(z,part.vertices[i]);
+    return Number(z.toFixed(3));
+  }), { timeout: 45000 }).toBe(11);
+  await page.screenshot({ path: join(evidence, 'surface-shared-extrusion-controls.png') });
+  await accept();
+  await expect.poll(async () => (await stored(surfaceFile.id)).features.at(-1).type).toBe('surface-extrude');
+  const surfaceSaved = (await stored(surfaceFile.id)).features.at(-1);
+  assert.equal(surfaceSaved.distanceMillimeters, 11);
+  assert.equal(surfaceSaved.profileSelections[0].profileContourId, 'line');
+  assert.equal(surfaceSaved.thin, undefined);
+  await page.reload(); await row(/^Extrude /).dblclick();
+  await expect(dialog().locator('[aria-label="Creation type"]')).toHaveValue('surface');
+  await expect(surfaceDepth).toBeEnabled({ timeout: 45000 });
+  const curves = dialog().locator('.aui-feature-entities[aria-label="Sketch curves to extrude"]');
+  await curves.getByRole('button', { name: /^Remove / }).click();
+  await expect(curves.locator('.aui-feature-entity')).toHaveCount(0);
+  await expect(dialog().locator('[data-feature-action="accept"]')).toBeDisabled();
+  await dialog().getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.deepEqual((await stored(surfaceFile.id)).features.at(-1), surfaceSaved);
+  results.push('Surface Extrude: shared Solid/Surface/Thin tabs, open curve, real native sheet preview, shared axis control, editable save/reopen, × removal and cancel');
+
   const thin = base('Native thin draft controls');
   thin.features = [sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]), {
     id: 'e', type: 'extrude', name: 'Extrude 1', suppressed: false, profileFeatureId: 's', profileContourId: 'outline', operation: 'new',

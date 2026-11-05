@@ -1,3 +1,4 @@
+import { extrudeEditor } from './extrude';
 import { mountPartBox } from "./part-box";
 import { edgeIdentity } from "./edge-finish";
 import { availableBodies, type EdgeFinishEdge, type SolidFaceReference } from "@aether/core/document";
@@ -28,18 +29,15 @@ export const bodiesValid = (controls: Controls, noun: string, exactly?: number):
   return null;
 };
 
+// The same dialog, controls and live manipulators; the saved feature keeps its
+// native surface identity so earlier surface histories remain editable.
 export const surfaceExtrudeEditor: FeatureEditor = {
-  type: "surface-extrude",
-  controls({ field, reference, feature }: FeatureEditorContext) {
-    return {
-      profile: reference("Sketch curves", ["sketch", "profile"], feature?.profileFeatureId),
-      distance: field("Distance (mm)", String(feature?.distanceMillimeters ?? 10)),
-      direction: field("Direction", feature?.symmetric ? "symmetric" : feature?.reversed ? "reversed" : "normal", ["normal", "reversed", "symmetric"]),
-    };
+  ...extrudeEditor, type: 'surface-extrude',
+  controls(context) {
+    const controls = extrudeEditor.controls(context);
+    if (!context.feature) { controls.creationMode.value = 'surface'; controls.operation.value = context.initialOperation ?? 'new'; }
+    return controls;
   },
-  layout({ win, form }, controls) { entityChips(win, "Sketch curves", controls.profile, form); },
-  validate(controls) { return !(Number(controls.distance.value) > 0) ? "Enter a positive distance." : requireSelections(controls, [{ key: "profile", noun: "a sketch" }]); },
-  serialize(values) { return { operation: "new", profileFeatureId: values.profile, distanceMillimeters: Number(values.distance), ...(values.direction === "reversed" ? { reversed: true } : {}), ...(values.direction === "symmetric" ? { symmetric: true } : {}) }; },
 };
 export const surfaceRevolveEditor: FeatureEditor = {
   type: "surface-revolve",

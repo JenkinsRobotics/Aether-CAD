@@ -16,14 +16,14 @@ export function bodyIDForFeature(
   feature: PartFeature,
 ): string {
   if (
-    !(surfaceCreatorTypes as readonly string[]).includes(feature.type) && feature.type !== "surface-thicken" && feature.type !== "sheet-base" &&
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (!(surfaceCreatorTypes as readonly string[]).includes(feature.type) || feature.type === "surface-extrude") && feature.type !== "surface-thicken" && feature.type !== "sheet-base" &&
+    (feature.type === "surface-extrude" || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.bodyId
   )
     return feature.bodyId;
   const first = doc.features.find(
     (f) =>
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken" || f.type === "sheet-base") && "operation" in f && f.operation === "new",
+      (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken" || f.type === "sheet-base") && "operation" in f && f.operation === "new",
   );
   return first?.id === feature.id
     ? `${doc.documentId}:body-1`
@@ -43,7 +43,7 @@ export function createdBodyIDs(doc:PartDocument,feature:PartFeature):string[] {
 /** Current output identities absorbed by a feature; original producers persist. */
 export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.suppressed) return [];
-  if ((feature.type==="extrude"||feature.type==="revolve") && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
+  if ((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve") && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
   if (feature.type === "surface-thicken" && feature.keepTools === false) return feature.bodyIds;
   if (feature.type === "split" && feature.keepTools === false && feature.tool) return [feature.tool.bodyId];
@@ -51,7 +51,7 @@ export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.type === "remove-body") return feature.bodyIds;
   if (feature.type === "surface-stitch") return feature.bodyIds.slice(1);
   if (feature.type === "surface-unstitch") return feature.bodyIds;
-  return (feature.type === "extrude" || feature.type === "revolve") && feature.operation === "add" ? feature.targetBodyIds?.slice(1) ?? [] : [];
+  return (feature.type === "surface-extrude" || feature.type === "extrude" || feature.type === "revolve") && feature.operation === "add" ? feature.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc: PartDocument): PartDocument {
   let targetBody: string | undefined;
@@ -59,7 +59,7 @@ function stableBodies(doc: PartDocument): PartDocument {
     ...structuredClone(doc),
     features: doc.features.map((f) => {
       const feature = structuredClone(f);
-      if((feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
+      if((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
         return feature;
       }
@@ -70,7 +70,7 @@ function stableBodies(doc: PartDocument): PartDocument {
       if(feature.type==="mirror"&&feature.operation==="new"){ if(!feature.suppressed)targetBody=bodyIDForFeature(doc,feature); return feature; }
       if (feature.type === "offset-face") return feature;
       if (consumedBodyIDs(feature).length && "targetBodyId" in feature) targetBody = feature.targetBodyId;
-      if ((feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
+      if ((feature.type === "surface-extrude" || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") && feature.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature).at(-1);
         return { ...feature, bodyId: bodyIDForFeature(doc, feature) };
       }
@@ -101,11 +101,11 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       continue;
     }
     if (
-      (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "mirror" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "shape-binder" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
+      (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "mirror" || f.type === "import-step" || f.type === "import-cad" || f.type === "pipe" || f.type === "coil" || f.type === "boundary-fill" || f.type === "bounding-solid" || f.type === "shape-binder" || f.type === "sheet-base" || (surfaceCreatorTypes as readonly string[]).includes(f.type) || f.type === "surface-thicken") &&
       "operation" in f && f.operation === "new"
     ) {
       for (const id of bodyIDsForFeature(doc, f)) { lastBody = id; bodyProducers.set(id, f.id); }
-    } else if ((f.type==="extrude"||f.type==="revolve")&&f.scopeMode==="all") {
+    } else if ((f.type==="surface-extrude"||f.type==="extrude"||f.type==="revolve")&&f.scopeMode==="all") {
       // Automatic scope queries whatever solids exist at this step. It must
       // adapt when an input part is removed/suppressed, not pin cached targets.
       // Later references still depend on this potential modifier and are
@@ -117,17 +117,17 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
         "targetBodyId" in f && f.targetBodyId ? f.targetBodyId : lastBody;
       const targets = f.type === "offset-face" ? offsetFaceBodies(f)
         : "bodyIds" in f && f.type !== "surface-thicken" ? f.bodyIds ?? []
-        : (f.type === "extrude" || f.type === "revolve") && f.targetBodyIds ? f.targetBodyIds : [body];
+        : (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve") && f.targetBodyIds ? f.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
         // A suppressed modifier leaves the preceding body available to later
         // features (in particular, parts restored by a suppressed merge).
-        const mergedIntoPrimary = (f.type === "extrude" || f.type === "revolve") && f.operation === "add" && f.targetBodyIds && target !== body;
+        const mergedIntoPrimary = (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve") && f.operation === "add" && f.targetBodyIds && target !== body;
         if (target && !mergedIntoPrimary && (!f.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f.id);
       }
     }
     const consumed = consumedBodyIDs(f);
-    if (consumed.length && !((f.type==="extrude"||f.type==="revolve")&&f.scopeMode==="all")) {
+    if (consumed.length && !((f.type==="surface-extrude"||f.type==="extrude"||f.type==="revolve")&&f.scopeMode==="all")) {
       for (const id of consumed) bodyProducers.delete(id);
       lastBody = "targetBodyId" in f ? f.targetBodyId : lastBody;
     }
@@ -174,7 +174,7 @@ export function insertFeature(
   const next = stableBodies(doc),
     index = rollbackPosition(doc);
   if (
-    (feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
+    (feature.type === "surface-extrude" || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
     feature.operation === "new"
   )
     feature = {
@@ -183,7 +183,7 @@ export function insertFeature(
         feature.bodyId ??
         (doc.features.some(
           (f) =>
-            (f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") &&
+            (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve" || f.type === "sweep" || f.type === "loft" || f.type === "import-step" || f.type === "import-cad") &&
             f.operation === "new",
         )
           ? `${doc.documentId}:body-${feature.id}`

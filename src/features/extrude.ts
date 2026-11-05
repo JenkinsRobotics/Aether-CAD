@@ -22,7 +22,7 @@ export const extrudeEditor: FeatureEditor = {
   controls(context: FeatureEditorContext): Controls {
     const { field, reference, feature, doc } = context;
     const source = reference("Sketch", ["sketch", "profile"], feature?.profileFeatureId);
-    const thin=thinControls(context);
+    const thin=thinControls(context, true);
     const meshes=new Set(doc.features.filter(f=>f.type==='import-cad'&&f.meshMode==='reference').flatMap(f=>bodyIDsForFeature(doc,f)));
     const hasSolid=availableBodies(doc).some(body=>!meshes.has(body.id));
     return {
@@ -31,7 +31,7 @@ export const extrudeEditor: FeatureEditor = {
       scopeMode:field("Merge scope mode",feature?.scopeMode??(feature?"selected":"all"),["selected","all"]),
       scope:field("Additional target parts",JSON.stringify(feature?.targetBodyIds?.filter((id:string)=>id!==feature.targetBodyId)??[])),
       operation: field("Operation", feature?.operation ?? context.initialOperation ?? (hasSolid ? "add" : "new"), [...operationValues]),
-      endType: field("End condition", feature?.endType ?? "blind", ["blind", "symmetric", "through-all", "symmetric-through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"]),
+      endType: field("End condition", feature?.endType ?? (feature?.symmetric ? "symmetric" : "blind"), ["blind", "symmetric", "through-all", "symmetric-through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"]),
       offset: field("Starting offset (mm)", String(feature?.startingOffsetMillimeters ?? 0)),
       endPoint:field("Stopping point",feature?.endPointReference?JSON.stringify(feature.endPointReference):""),
       endPart:field("Stopping part identity",feature?.endPartId??""),
@@ -107,22 +107,22 @@ export const extrudeEditor: FeatureEditor = {
   },
   validate(controls) {
     const draftError=validateExtrudeStart(controls)??validateThin(controls)??validateExtrudeDirection(controls)??validateExtrudeDraft(controls)??validateSecondEnd(controls);if(draftError)return draftError;
-    if (["add","cut","intersect"].includes(controls.operation.value) && !controls.target?.value) return "Choose a target part to modify.";
-    if(["through-all","symmetric-through-all"].includes(controls.endType.value)&&!["cut", "intersect"].includes(controls.operation.value))return "Through all requires Remove or Intersect and a target body.";
+    if (["add","cut","intersect"].includes(controls.operation.value) && controls.scopeMode.value !== "all" && !controls.target?.value) return "Choose a target part to modify.";
+    if(["through-all","symmetric-through-all"].includes(controls.endType.value)&&controls.creationMode.value!=="surface"&&!["cut", "intersect"].includes(controls.operation.value))return "Through all requires Remove or Intersect and a target body.";
     if(["up-to-next","up-to-face","up-to-part","up-to-vertex"].includes(controls.endType.value)&&(!controls.endOffset.value.trim()||!Number.isFinite(Number(controls.endOffset.value))))return "Enter a finite end offset.";
     if(controls.endType.value==="up-to-vertex"&&!controls.endPoint.value)return "Select a stopping point.";
     if(controls.endType.value==="up-to-part"&&!controls.endPart.value)return "Select a stopping part.";
     if(controls.endType.value==="up-to-face" && !controls.endReference.value)return "Select a stopping face.";
-    if(!JSON.parse(controls.selections.value).length)return controls.creationMode.value==='thin'?"Select sketch curves for the thin wall.":"Select a sketch face.";
+    if(!JSON.parse(controls.selections.value).length)return controls.creationMode.value!=='solid'?"Select sketch curves to extrude.":"Select a sketch face.";
     return null;
   },
   serialize(values,context) {
     return {
-      operation:values.operation, ...serializeThin(values),
+      operation:values.operation, ...serializeThin(values), type: values.creationMode === "surface" ? "surface-extrude" : "extrude",
       ...serializeExtrudeDirection(values,context), ...serializeExtrudeDraft(values), ...serializeSecondEnd(values,context),
       ...(values.operation!=="new"&&values.scopeMode==="all"?{scopeMode:"all"}:{}),
       ...(values.scopeMode!=="all"&&["add","cut","intersect"].includes(values.operation)&&JSON.parse(values.scope).length?{targetBodyIds:[values.target,...JSON.parse(values.scope)]}:{}),
-      ...(values.operation==="new"&&(!context.feature||context.feature.separateBodies)?{separateBodies:true,...(context.feature?.bodyOutputs?{bodyOutputs:context.feature.bodyOutputs}:{})}:{}),
+      ...(values.creationMode!=="surface"&&values.operation==="new"&&(!context.feature||context.feature.separateBodies)?{separateBodies:true,...(context.feature?.bodyOutputs?{bodyOutputs:context.feature.bodyOutputs}:{})}:{}),
       distanceMillimeters:Number(values.distance),endType:values.endType,
       ...(values.endType==="up-to-vertex"?{endPointReference:serializeExtrusionPoint(values.endPoint,context)}:{}),
       ...(values.endType==="up-to-part"?{endPartId:values.endPart}:{}),

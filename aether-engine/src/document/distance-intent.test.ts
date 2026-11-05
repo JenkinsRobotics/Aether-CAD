@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createEmptyPartDocument, type ProfileFeature } from "./part-document";
+import { createEmptyPartDocument, PART_DOCUMENT_VERSION, type ProfileFeature } from "./part-document";
 import { parsePartDocument, serializePartDocument } from "./part-serialization";
 import { resolveProfileDrawing } from "./profile-projection";
 import { editProfileDimension } from "./profile-dimension";
@@ -27,7 +27,7 @@ it("captures legacy intent before upstream editing and retains it through save/r
   const legacy = { ...fixture(), formatVersion: 21 };
   const bytes = JSON.stringify(legacy);
   const migrated = parsePartDocument(bytes);
-  expect(migrated.formatVersion).toBe(22);
+  expect(migrated.formatVersion).toBe(PART_DOCUMENT_VERSION);
   expect(migrated.features[1]).toMatchObject({ profile: { authored: { constraints: [{ distanceSide: 1 }] } } });
   for (const height of [20, 80, 6, 400, 50]) {
     const source = migrated.features[0] as ProfileFeature;

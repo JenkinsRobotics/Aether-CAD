@@ -53,13 +53,16 @@ export function featureSchemas(decls) {
     for (let level = 0; level < 2; level++) {
       const next = [];
       for (const body of queue) for (const [name, decl] of decls) {
-        if (name === member || related.includes(decl) || decl.length > 4000 || !new RegExp(`\\b${name}\\b`).test(body)) continue;
-        if (unionMembers("PartFeature", decls).includes(name)) continue;
+        const inherited = new RegExp(`extends[^{};]*\\b${name}\\b`).test(body);
+        if (name === member || related.includes(decl) || (!inherited && decl.length > 4000) || !new RegExp(`\\b${name}\\b`).test(body)) continue;
+        if (!inherited && unionMembers("PartFeature", decls).includes(name)) continue;
         related.push(decl); next.push(decl);
       }
       queue.splice(0, queue.length, ...next);
     }
-    const body = [text, ...related].join("\n\n").slice(0, 12000);
+    // Never truncate a declaration in the middle of its fields. Inherited
+    // feature definitions (such as Surface Extrude) are part of the contract.
+    const body = [text, ...related].join("\n\n");
     // `{...} & ({ type: "a" } | { type: "b" })` declares one shape for several types.
     // Doc comments inside the union may hold parentheses; drop them before finding the group.
     const tail = /&\s*\(([^)]*)\);?$/.exec(text.replace(/\/\*\*[\s\S]*?\*\//g, ""))?.[1];

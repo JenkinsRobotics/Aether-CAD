@@ -41,7 +41,7 @@ def test_native_projected_clearance_edit_source_crossings_and_reopen(tmp_path):
         "feature_id": "target", "dimension_id": "gap", "value": 7,
     })
     saved = json.loads(edited["content"])
-    assert saved["formatVersion"] == 22
+    assert saved["formatVersion"] == json.loads((Path(__file__).parents[2] / "aether-engine/src/document/part-format.json").read_text())["current"]
     authored = saved["features"][1]["profile"]["authored"]
     assert authored["constraints"][0]["distanceSide"] == 1
     assert authored["contours"][0]["center"] == pytest.approx([50, 43])

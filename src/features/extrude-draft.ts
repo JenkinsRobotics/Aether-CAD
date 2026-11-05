@@ -27,9 +27,13 @@ export function layoutExtrudeDraft({win,form,angleUnitLabel}: FeatureEditorConte
   section.body.append(rowIn('Widen outward',reverse));
   const help=document.createElement('p');
   help.textContent='Draft narrows away from the sketch; Widen reverses it. The sketch stays neutral with a starting offset. Each end can have its own draft. Symmetric applies the same draft on both sides. The stopping face must fully terminate the tapered profile.';
-  if (!opposite) win.addHelp(help);return section.element;
+  if (!opposite) win.addHelp(help);
+  const sync = () => { section.element.hidden = controls.creationMode?.value === 'surface'; help.hidden = section.element.hidden; };
+  controls.creationMode?.addEventListener('change', sync); sync();
+  return section.element;
 }
 export function validateExtrudeDraft(controls: Controls): string | null {
+  if (controls.creationMode?.value === 'surface') return null;
   for(const opposite of [false,true]){
     if(opposite && (controls.secondEnabled.value!=='true'||controls.endType.value.startsWith('symmetric')))continue;
     const prefix=opposite?'secondDraft':'draft';
@@ -41,6 +45,7 @@ export function validateExtrudeDraft(controls: Controls): string | null {
   return null;
 }
 export function serializeExtrudeDraft(values: Record<string,string>,opposite=false) {
+  if (values.creationMode === 'surface') return {};
   const prefix=opposite?'secondDraft':'draft';
   return values[prefix+'Enabled']==='true'?{draftAngleDegrees:Number(values[prefix+'Angle'])*(values[prefix+'Reverse']==='true'?-1:1)}:{};
 }

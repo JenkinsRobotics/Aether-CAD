@@ -22,6 +22,21 @@ it('discovers every canonical feature type and its exact declaration', () => {
   expect(cadAgentTools.map(t => t.name)).toEqual(expect.arrayContaining(['aether_cad_feature_add', 'aether_cad_feature_update', 'aether_cad_feature_delete', 'aether_cad_feature_move', 'aether_cad_feature_schema']));
 });
 
+it('exposes Surface extrusion inherited extents to agents and accepts their canonical inputs', () => {
+  const { declaration } = readFeatureCatalog('aether_cad_feature_schema', { type: 'surface-extrude' }) as { declaration: string };
+  for (const field of ['interface ExtrudeFeature', 'startingReference', 'directionVector', 'secondEnd', 'endPartId', 'targetBodyIds']) {
+    expect(declaration).toContain(field);
+  }
+  const doc = fixture();
+  const { document } = prepareFeatureOperation(doc, 'aether_cad_feature_add', { feature_json: JSON.stringify({
+    type: 'surface-extrude', name: 'Sheet', operation: 'new', profileFeatureId: 'sketch',
+    distanceMillimeters: 5, startingOffsetMillimeters: -2, directionVector: [0, .6, .8],
+    secondEnd: { endType: 'blind', distanceMillimeters: 3 },
+  }) });
+  expect(document.features.at(-1)).toMatchObject({ type: 'surface-extrude', startingOffsetMillimeters: -2,
+    secondEnd: { endType: 'blind', distanceMillimeters: 3 } });
+});
+
 it('adds a canonical feature through the core validator without touching the source document', () => {
   const doc = fixture(), before = serializePartDocument(doc), body = availableBodies(doc)[0].id;
   const { document, featureID } = preparePartEdit(doc, 'aether_cad_feature_add', { feature_json: JSON.stringify({ type: 'fillet', name: 'Round edges', radiusMillimeters: 1, targetBodyId: body }) });

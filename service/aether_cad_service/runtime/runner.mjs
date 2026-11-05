@@ -233,6 +233,33 @@ function flipSketchFrame(frame, flip) {
   const neg2 = (v2) => [-v2[0], -v2[1], -v2[2]];
   return { ...frame, normal: neg2(frame.normal), xDirection: flip === "y" ? neg2(frame.xDirection) : frame.xDirection };
 }
+const ids$1 = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
+function validateProfileRegionSelection(selection) {
+  const value2 = selection.profileRegion;
+  if (value2 === void 0) return;
+  const cell = value2 && typeof value2 === "object" && value2.inside !== void 0;
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key2) => !["contourIds", "inside", "ordinal", "boundary"].includes(key2)) || !ids$1(value2.contourIds, cell ? 1 : 2) || cell && !ids$1(value2.inside, 0) || value2.boundary !== void 0 && (!Array.isArray(value2.boundary) || !value2.boundary.length || value2.boundary.length > 1e4 || value2.boundary.some((s) => typeof s !== "string" || s.length > 320) || new Set(value2.boundary).size !== value2.boundary.length) || value2.ordinal !== void 0 && !(Number.isInteger(value2.ordinal) && value2.ordinal >= 1 && value2.ordinal <= 1e4) || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
+}
+function profileRegionIdentity(selection) {
+  const r = selection.profileRegion;
+  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...r.inside !== void 0 ? { inside: [...r.inside].sort() } : {}, ...r.ordinal ? { ordinal: r.ordinal } : {}, ...r.boundary ? { boundary: [...r.boundary].sort() } : {} } : selection.profileContourId ?? null);
+}
+function matchesProfileRegion(selection, candidate) {
+  if (candidate.ordinal !== void 0) return false;
+  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal, boundary: candidate.boundary } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
+}
+function validateExtrusionScopeResolution(value2) {
+  const ids2 = (v2) => Array.isArray(v2) && v2.length <= 4096 && v2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v2).size === v2.length;
+  if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
+  const used = /* @__PURE__ */ new Set();
+  for (const group of value2.groups) {
+    if (!group || !ids2(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
+    group.sources.forEach((id2) => used.add(id2));
+  }
+}
+function scopeConsumedBodies(resolution) {
+  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
+}
 function validateExtrusionPointReference(ref, earlier, missing) {
   const id2 = (v2, max2 = 128) => typeof v2 === "string" && !!v2.trim() && v2.length <= max2;
   if (!ref || !id2(ref.sourceFeatureId) || !id2(ref.label, 512) || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId))
@@ -263,6 +290,102 @@ function validateSolidFaceReference(ref, earlier, missing, label = "Face selecti
     if (!curvedSurfaceTypes.includes(ref.surfaceType) || ref.normal !== void 0) throw Error(`${label} has an invalid curved surface reference.`);
   } else if (!Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) {
     throw Error(`${label} needs a unit planar normal or a curved surface reference.`);
+  }
+}
+function validateExtrusionFaceReference(ref, earlier, missing) {
+  validateSolidFaceReference(ref, earlier, missing, "Up to face");
+}
+function validateExtrusionStartReference(ref, earlier, missing) {
+  const fail2 = () => {
+    throw Error("Starting entity needs an earlier parallel face or reference plane.");
+  };
+  if (!ref || !["face", "plane", "principal"].includes(ref.kind) || typeof ref.label !== "string" || !ref.label.trim() || ref.label.length > 512) return fail2();
+  if (ref.kind === "principal") {
+    if (!["XY", "XZ", "YZ"].includes(ref.plane)) fail2();
+    return;
+  }
+  if (typeof ref.sourceFeatureId !== "string" || !ref.sourceFeatureId.trim() || ref.sourceFeatureId.length > 128) return fail2();
+  const type = earlier.get(ref.sourceFeatureId);
+  if (!missing(ref.sourceFeatureId) && (!type || (ref.kind === "plane" ? type !== "plane" : ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(type)))) return fail2();
+  if (ref.kind === "face") {
+    validatePlanarFaceAnchor(ref.faceAnchor);
+    if (typeof ref.bodyId !== "string" || !ref.bodyId.trim() || ref.bodyId.length > 256 || !Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) fail2();
+  }
+}
+const requirePositiveFinite = (value2, label) => {
+  if (!Number.isFinite(value2) || value2 <= 0) throw new Error(`${label} must be greater than zero.`);
+};
+function validateExtrusionDefinition(feature3, earlier, missingReference, surface = false) {
+  if (!missingReference(feature3.profileFeatureId) && !["sketch", "profile"].includes(
+    earlier.get(feature3.profileFeatureId) || ""
+  ))
+    throw new Error("Extrude must reference an earlier Sketch.");
+  if (!["new", "add", "cut", "intersect"].includes(feature3.operation))
+    throw new Error("Unsupported extrude operation.");
+  validateMergeScope(feature3);
+  if (feature3.profileContourId !== void 0 && (typeof feature3.profileContourId !== "string" || !feature3.profileContourId.trim() || feature3.profileContourId.length > 128))
+    throw new Error("Invalid extruded region identity.");
+  if (feature3.profileSelections !== void 0) {
+    const picks = feature3.profileSelections;
+    if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map((p2) => JSON.stringify([p2?.profileFeatureId, p2 ? profileRegionIdentity(p2) : null]))).size !== picks.length || picks.some((p2) => !p2 || !missingReference(p2.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p2.profileFeatureId) || "") || p2.profileContourId !== void 0 && (typeof p2.profileContourId !== "string" || !p2.profileContourId.trim() || p2.profileContourId.length > 128))) throw Error("Choose distinct faces from earlier sketches.");
+  }
+  if (feature3.separateBodies !== void 0 && typeof feature3.separateBodies !== "boolean") throw Error("Invalid separate bodies option.");
+  if (feature3.bodyOutputs !== void 0 && (!feature3.separateBodies || feature3.operation !== "new" || !Array.isArray(feature3.bodyOutputs) || !feature3.bodyOutputs.length || feature3.bodyOutputs.some((id2) => typeof id2 !== "string" || !id2.trim()))) throw Error("Invalid extrusion output bodies.");
+  if (feature3.regionMode !== void 0 && feature3.regionMode !== "faces") throw Error("Invalid region mode.");
+  if (feature3.profileContourIds !== void 0 && (feature3.regionMode !== "faces" || !Array.isArray(feature3.profileContourIds) || !feature3.profileContourIds.length || new Set(feature3.profileContourIds).size !== feature3.profileContourIds.length || feature3.profileContourIds.some((id2) => typeof id2 !== "string" || !id2.trim() || id2.length > 128))) throw Error("Choose distinct region identities.");
+  requirePositiveFinite(feature3.distanceMillimeters, "Extrude distance");
+  if (feature3.thin !== void 0) {
+    const wall = feature3.thin;
+    if (!wall || typeof wall !== "object" || Array.isArray(wall) || [wall.thickness1Millimeters, wall.thickness2Millimeters].some((v2) => typeof v2 !== "number" || !Number.isFinite(v2) || v2 < 0 || v2 > 1e6) || [wall.midplane, wall.flipped].some((v2) => v2 !== void 0 && typeof v2 !== "boolean") || wall.midplaneThicknessMillimeters !== void 0 && (typeof wall.midplaneThicknessMillimeters !== "number" || !Number.isFinite(wall.midplaneThicknessMillimeters) || wall.midplaneThicknessMillimeters <= 0 || wall.midplaneThicknessMillimeters > 1e6) || (wall.midplane ? wall.midplaneThicknessMillimeters === void 0 : wall.thickness1Millimeters + wall.thickness2Millimeters <= 1e-7)) {
+      throw Error("Thin extrusion needs valid wall thicknesses and a positive total thickness.");
+    }
+  }
+  if (feature3.secondEnd !== void 0) {
+    if (!feature3.secondEnd || typeof feature3.secondEnd !== "object" || Array.isArray(feature3.secondEnd)) throw Error("Invalid second-end definition.");
+    if (feature3.secondDistanceMillimeters !== void 0 || ["symmetric", "symmetric-through-all"].includes(feature3.endType ?? "")) throw Error("Independent second end cannot combine with Symmetric or legacy opposite depth.");
+    if (!["blind", "through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(feature3.secondEnd.endType)) throw Error("Invalid second-end condition.");
+    requirePositiveFinite(feature3.secondEnd.distanceMillimeters, "Second-end depth");
+  }
+  for (const end of [feature3, ...feature3.secondEnd ? [feature3.secondEnd] : []]) {
+    if (end.draftAngleDegrees !== void 0) {
+      if (!Number.isFinite(end.draftAngleDegrees) || Math.abs(end.draftAngleDegrees) >= 90) throw Error("Extrusion draft must be between -90 and 90 degrees.");
+    }
+    if (end.endType !== void 0 && !["blind", "symmetric", "through-all", "symmetric-through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(end.endType)) throw Error("Invalid extrusion end type.");
+    if (["through-all", "symmetric-through-all"].includes(end.endType ?? "") && !surface && !["cut", "intersect"].includes(feature3.operation)) throw Error("Through all requires Remove or Intersect.");
+    if (end.endType === "up-to-part" && (typeof end.endPartId !== "string" || !end.endPartId.trim() || end.endPartId.length > 256)) throw Error("Up to part needs a stable stopping part identity.");
+    if (end.endPartId !== void 0 && end.endType !== "up-to-part") throw Error("A stopping part requires Up to part.");
+    if (end.endType === "up-to-vertex") validateExtrusionPointReference(end.endPointReference, earlier, missingReference);
+    if (end.endPointReference !== void 0 && end.endType !== "up-to-vertex") throw Error("A stopping point requires Up to vertex.");
+    if (end.endType === "up-to-face") validateExtrusionFaceReference(end.endReference, earlier, missingReference);
+    if (end.endOffsetMillimeters !== void 0 && (!Number.isFinite(end.endOffsetMillimeters) || !["up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(end.endType ?? ""))) throw Error("End offset requires a supported stopping limit and a finite distance.");
+  }
+  if (feature3.startingReference !== void 0) validateExtrusionStartReference(feature3.startingReference, earlier, missingReference);
+  if (feature3.startingOffsetMillimeters !== void 0 && !Number.isFinite(feature3.startingOffsetMillimeters)) throw Error("Invalid starting offset.");
+  if (feature3.secondDistanceMillimeters !== void 0) {
+    requirePositiveFinite(feature3.secondDistanceMillimeters, "Opposite depth");
+    if (feature3.endType && feature3.endType !== "blind") throw Error("Opposite depth requires Blind.");
+  }
+  if (feature3.directionVector !== void 0) {
+    const vector2 = feature3.directionVector;
+    if (!Array.isArray(vector2) || vector2.length !== 3 || !vector2.every(Number.isFinite) || Math.abs(Math.hypot(...vector2) - 1) > 1e-6) throw Error("Extrusion direction must be a finite unit vector.");
+  }
+  if (feature3.directionReference !== void 0) {
+    const ref = feature3.directionReference;
+    if (!ref || ref.kind !== "sketch-line" || feature3.directionVector !== void 0 || ![ref.sourceFeatureId, ref.contourId, ref.segmentId].every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) || !missingReference(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile") {
+      throw Error("Extrusion direction needs a line in an earlier sketch; it cannot also store a manual vector.");
+    }
+  }
+  if (feature3.reversed !== void 0 && typeof feature3.reversed !== "boolean") throw new Error("Invalid extrude direction.");
+}
+function validateMergeScope(feature3) {
+  if (feature3.scopeMode !== void 0 && (feature3.scopeMode !== "all" || !["add", "cut", "intersect"].includes(feature3.operation) || feature3.targetBodyId !== void 0 || feature3.targetBodyIds !== void 0)) throw Error("Automatic scope cannot also specify target parts.");
+  if (feature3.scopeResolution !== void 0) {
+    if (feature3.scopeMode !== "all") throw Error("A scope resolution requires automatic scope.");
+    validateExtrusionScopeResolution(feature3.scopeResolution);
+  }
+  if (feature3.targetBodyIds !== void 0) {
+    const scope = feature3.targetBodyIds;
+    if (!["add", "cut", "intersect"].includes(feature3.operation) || !Array.isArray(scope) || !scope.length || scope.length > 256 || scope.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(scope).size !== scope.length || feature3.targetBodyId !== scope[0]) throw Error("Merge scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
   }
 }
 function validateSolidEdgeReference(ref, earlier, missing) {
@@ -437,13 +560,13 @@ const finite$2 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
 const sketchRef = (id2, earlier, what) => {
   if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
 };
-const ids$1 = (list2, what, exact) => {
+const ids = (list2, what, exact) => {
   if (!Array.isArray(list2) || !list2.length || list2.some((id2) => typeof id2 !== "string") || exact !== void 0 && list2.length !== exact) throw new Error(`${what} needs ${exact === 1 ? "one surface body" : "surface bodies"}.`);
 };
 function validateSurfaceFeature(feature3, earlier, missing) {
   switch (feature3.type) {
     case "surface-boundary":
-      ids$1(feature3.bodyIds, "Boundary surface", 1);
+      ids(feature3.bodyIds, "Boundary surface", 1);
       if (!Array.isArray(feature3.edges) || feature3.edges.length < 2 || feature3.edges.length > 4) throw new Error("Boundary surface needs two to four picked edges meeting end to end.");
       for (const edge of feature3.edges) validateEdgeFinishEdge(edge, earlier, missing);
       return;
@@ -454,23 +577,23 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       }
       return;
     case "surface-fair":
-      ids$1(feature3.bodyIds, "Fair", 1);
+      ids(feature3.bodyIds, "Fair", 1);
       for (const face of feature3.faces ?? []) validateSolidFaceReference(face, earlier, missing);
       if (feature3.strength !== void 0 && !(finite$2(feature3.strength) && feature3.strength > 0 && feature3.strength <= 1)) throw new Error("Fair strength is more than 0 and at most 1.");
       if (feature3.toleranceMillimeters !== void 0 && !(finite$2(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Fair's largest move must be positive.");
       return;
     case "surface-trim":
-      ids$1(feature3.bodyIds, "Trim", 1);
+      ids(feature3.bodyIds, "Trim", 1);
       validateMirrorPlane(feature3.plane, earlier, missing, "Trim plane");
       if (!Array.isArray(feature3.keepPointMillimeters) || feature3.keepPointMillimeters.length !== 3 || !feature3.keepPointMillimeters.every(finite$2)) throw new Error("Trim needs a keep point on the side to keep.");
       return;
     case "surface-untrim":
-      ids$1(feature3.bodyIds, "Untrim", 1);
+      ids(feature3.bodyIds, "Untrim", 1);
       validateSolidFaceReference(feature3.face, earlier, missing);
       return;
     case "surface-ruled":
     case "surface-extend": {
-      ids$1(feature3.bodyIds, feature3.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
+      ids(feature3.bodyIds, feature3.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
       if (!Array.isArray(feature3.edges) || !feature3.edges.length) throw new Error(`${feature3.type === "surface-ruled" ? "Ruled surface" : "Extend"} needs picked edges.`);
       for (const edge of feature3.edges) validateEdgeFinishEdge(edge, earlier, missing);
       if (!finite$2(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
@@ -480,10 +603,14 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       }
       return;
     }
-    case "surface-extrude":
-      sketchRef(feature3.profileFeatureId, earlier, "Surface extrude");
-      if (!finite$2(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Surface extrude needs a positive distance.");
+    case "surface-extrude": {
+      if (!["new", "add"].includes(feature3.operation)) throw new Error("Surface extrusion supports New or Add.");
+      if (feature3.symmetric && (feature3.endType || feature3.secondEnd || feature3.secondDistanceMillimeters)) throw new Error("Choose one symmetric surface extent definition.");
+      if (feature3.contourIds !== void 0 && (!Array.isArray(feature3.contourIds) || !feature3.contourIds.length || new Set(feature3.contourIds).size !== feature3.contourIds.length || feature3.contourIds.some((id2) => typeof id2 !== "string" || !id2.trim()))) throw new Error("Select distinct sketch curve identities.");
+      if ("thin" in feature3 || "draftAngleDegrees" in feature3 || feature3.secondEnd?.draftAngleDegrees !== void 0) throw new Error("Surface extrusion does not support solid wall or draft parameters.");
+      validateExtrusionDefinition({ ...feature3, type: "extrude" }, earlier, missing, true);
       return;
+    }
     case "surface-revolve":
       sketchRef(feature3.profileFeatureId, earlier, "Surface revolve");
       if (!finite$2(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
@@ -512,75 +639,31 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       sketchRef(feature3.pathFeatureId, earlier, "Surface sweep path");
       return;
     case "surface-offset":
-      ids$1(feature3.bodyIds, "Offset surface", 1);
+      ids(feature3.bodyIds, "Offset surface", 1);
       if (!finite$2(feature3.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
       return;
     case "surface-thicken":
-      ids$1(feature3.bodyIds, "Thicken");
+      ids(feature3.bodyIds, "Thicken");
       if (!finite$2(feature3.thicknessMillimeters) || feature3.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
       if (feature3.secondThicknessMillimeters !== void 0 && (!finite$2(feature3.secondThicknessMillimeters) || feature3.secondThicknessMillimeters <= 0 || feature3.symmetric)) throw new Error("Thickness 2 must be positive, and not with Mid plane.");
       if (feature3.keepTools !== void 0 && typeof feature3.keepTools !== "boolean") throw new Error("Keep tools must be true or false.");
       if (!["new", "add", "cut"].includes(feature3.operation)) throw new Error("Thicken makes a new body, adds or cuts.");
       return;
     case "surface-stitch":
-      ids$1(feature3.bodyIds, "Stitch");
+      ids(feature3.bodyIds, "Stitch");
       if (feature3.bodyIds.length < 2) throw new Error("Stitch needs two or more surface bodies.");
       if (feature3.toleranceMillimeters !== void 0 && !(finite$2(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
       return;
     case "surface-unstitch":
-      ids$1(feature3.bodyIds, "Unstitch", 1);
+      ids(feature3.bodyIds, "Unstitch", 1);
       return;
     case "surface-reverse-normal":
-      ids$1(feature3.bodyIds, "Reverse normal", 1);
+      ids(feature3.bodyIds, "Reverse normal", 1);
       return;
   }
 }
-const ids = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
-function validateProfileRegionSelection(selection) {
-  const value2 = selection.profileRegion;
-  if (value2 === void 0) return;
-  const cell = value2 && typeof value2 === "object" && value2.inside !== void 0;
-  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key2) => !["contourIds", "inside", "ordinal", "boundary"].includes(key2)) || !ids(value2.contourIds, cell ? 1 : 2) || cell && !ids(value2.inside, 0) || value2.boundary !== void 0 && (!Array.isArray(value2.boundary) || !value2.boundary.length || value2.boundary.length > 1e4 || value2.boundary.some((s) => typeof s !== "string" || s.length > 320) || new Set(value2.boundary).size !== value2.boundary.length) || value2.ordinal !== void 0 && !(Number.isInteger(value2.ordinal) && value2.ordinal >= 1 && value2.ordinal <= 1e4) || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
-}
-function profileRegionIdentity(selection) {
-  const r = selection.profileRegion;
-  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...r.inside !== void 0 ? { inside: [...r.inside].sort() } : {}, ...r.ordinal ? { ordinal: r.ordinal } : {}, ...r.boundary ? { boundary: [...r.boundary].sort() } : {} } : selection.profileContourId ?? null);
-}
-function matchesProfileRegion(selection, candidate) {
-  if (candidate.ordinal !== void 0) return false;
-  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal, boundary: candidate.boundary } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
-}
-function validateExtrusionScopeResolution(value2) {
-  const ids2 = (v2) => Array.isArray(v2) && v2.length <= 4096 && v2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v2).size === v2.length;
-  if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
-  const used = /* @__PURE__ */ new Set();
-  for (const group of value2.groups) {
-    if (!group || !ids2(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
-    group.sources.forEach((id2) => used.add(id2));
-  }
-}
-function scopeConsumedBodies(resolution) {
-  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
-}
-function validateExtrusionStartReference(ref, earlier, missing) {
-  const fail2 = () => {
-    throw Error("Starting entity needs an earlier parallel face or reference plane.");
-  };
-  if (!ref || !["face", "plane", "principal"].includes(ref.kind) || typeof ref.label !== "string" || !ref.label.trim() || ref.label.length > 512) return fail2();
-  if (ref.kind === "principal") {
-    if (!["XY", "XZ", "YZ"].includes(ref.plane)) fail2();
-    return;
-  }
-  if (typeof ref.sourceFeatureId !== "string" || !ref.sourceFeatureId.trim() || ref.sourceFeatureId.length > 128) return fail2();
-  const type = earlier.get(ref.sourceFeatureId);
-  if (!missing(ref.sourceFeatureId) && (!type || (ref.kind === "plane" ? type !== "plane" : ["profile", "sketch", "plane", "axis", "point", "thread", "curve3d"].includes(type)))) return fail2();
-  if (ref.kind === "face") {
-    validatePlanarFaceAnchor(ref.faceAnchor);
-    if (typeof ref.bodyId !== "string" || !ref.bodyId.trim() || ref.bodyId.length > 256 || !Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) fail2();
-  }
-}
-const current = 22;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+const current = 23;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 const partFormat = {
   current,
   readable
@@ -1594,7 +1677,7 @@ function splineEndTangentShape(path, spanIntervals, ends) {
   const startFree = ends.includes("start"), endFree = ends.includes("end"), n = points.length;
   const second = points.map(() => [0, 0]);
   for (const axis of [0, 1]) {
-    const diagonal = [], upper = [], rhs = [];
+    const diagonal2 = [], upper = [], rhs = [];
     for (let i2 = 0; i2 < n; i2++) {
       let lower = 0, diag = 1, up = 0, force = 0;
       if (i2 === 0 && startFree) {
@@ -1613,13 +1696,13 @@ function splineEndTangentShape(path, spanIntervals, ends) {
         diag = 2 * (lower + up);
         force = 6 * ((points[i2 + 1][axis] - points[i2][axis]) / up - (points[i2][axis] - points[i2 - 1][axis]) / lower);
       }
-      const factor = i2 ? lower / diagonal[i2 - 1] : 0;
-      diagonal[i2] = diag - factor * (upper[i2 - 1] ?? 0);
+      const factor = i2 ? lower / diagonal2[i2 - 1] : 0;
+      diagonal2[i2] = diag - factor * (upper[i2 - 1] ?? 0);
       upper[i2] = up;
       rhs[i2] = force - factor * (rhs[i2 - 1] ?? 0);
     }
     for (let i2 = n - 1; i2 >= 0; i2--)
-      second[i2][axis] = (rhs[i2] - upper[i2] * (second[i2 + 1]?.[axis] ?? 0)) / diagonal[i2];
+      second[i2][axis] = (rhs[i2] - upper[i2] * (second[i2 + 1]?.[axis] ?? 0)) / diagonal2[i2];
   }
   const next = structuredClone(path);
   next.segments.forEach((s, i2) => {
@@ -1867,12 +1950,12 @@ function patternResiduals(source, target, transform2) {
   return b.map((value2, i2) => value2 - a2[i2]);
 }
 function periodicSplineSecond(points, h) {
-  const n = points.length, diagonal = h.map((v2, i2) => 2 * (v2 + h[(i2 + n - 1) % n]));
-  const corner = h[n - 1], gamma = -diagonal[0];
-  diagonal[0] -= gamma;
-  diagonal[n - 1] -= corner * corner / gamma;
+  const n = points.length, diagonal2 = h.map((v2, i2) => 2 * (v2 + h[(i2 + n - 1) % n]));
+  const corner = h[n - 1], gamma = -diagonal2[0];
+  diagonal2[0] -= gamma;
+  diagonal2[n - 1] -= corner * corner / gamma;
   const solve = (rhs) => {
-    const d2 = [...diagonal], x2 = [...rhs];
+    const d2 = [...diagonal2], x2 = [...rhs];
     for (let i2 = 1; i2 < n; i2++) {
       const f2 = h[i2 - 1] / d2[i2 - 1];
       d2[i2] -= f2 * h[i2 - 1];
@@ -1925,16 +2008,16 @@ function fitSketchSpline(points, options = {}) {
   const second = closed ? periodicSplineSecond(points, h) : points.map(() => [0, 0]);
   if (!closed)
     for (const axis of [0, 1]) {
-      const diagonal = [], rhs = [];
+      const diagonal2 = [], rhs = [];
       for (let i2 = 1; i2 < n - 1; i2++) {
         const lower = h[i2 - 1], upper = h[i2];
         const force = 6 * ((points[i2 + 1][axis] - points[i2][axis]) / upper - (points[i2][axis] - points[i2 - 1][axis]) / lower);
-        const factor = i2 === 1 ? 0 : lower / diagonal[i2 - 1];
-        diagonal[i2] = 2 * (lower + upper) - factor * h[i2 - 1];
+        const factor = i2 === 1 ? 0 : lower / diagonal2[i2 - 1];
+        diagonal2[i2] = 2 * (lower + upper) - factor * h[i2 - 1];
         rhs[i2] = force - (i2 === 1 ? 0 : factor * rhs[i2 - 1]);
       }
       for (let i2 = n - 2; i2 >= 1; i2--)
-        second[i2][axis] = (rhs[i2] - h[i2] * second[(i2 + 1) % n][axis]) / diagonal[i2];
+        second[i2][axis] = (rhs[i2] - h[i2] * second[(i2 + 1) % n][axis]) / diagonal2[i2];
     }
   const segments = h.map((step, i2) => {
     const a2 = points[i2], b = points[(i2 + 1) % n], c1 = [0, 0], c2 = [0, 0];
@@ -3016,7 +3099,7 @@ function slotChainContour(source, width) {
   const jets = source.segments.map(
     (segment, i2) => curveJet({ start: points[i2], segment })
   );
-  function boundary(distance2) {
+  function boundary2(distance2) {
     const carriers = source.segments.map(
       (s, i2) => offsetCarrier(points[i2], s, distance2)
     );
@@ -3053,7 +3136,7 @@ function slotChainContour(source, width) {
     });
     return { type: "path", start: starts[0], segments: segments2 };
   }
-  const left = boundary(radius), right = boundary(-radius), rp = [right.start, ...right.segments.map((s) => s.end)];
+  const left = boundary2(radius), right = boundary2(-radius), rp = [right.start, ...right.segments.map((s) => s.end)];
   const cap = (p22, v2, sign) => {
     const n = Math.hypot(...v2);
     return [
@@ -5157,6 +5240,7 @@ function featureInputDependencies(feature3, bodyProducers) {
       if (drawing) pierceDependencies(drawing).forEach((id2) => inputs.add(id2));
       break;
     }
+    case "surface-extrude":
     case "extrude":
       reference(feature3.profileSelections);
       reference(feature3.startingReference);
@@ -5229,10 +5313,10 @@ function featureInputDependencies(feature3, bodyProducers) {
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature3) {
-  if (!surfaceCreatorTypes.includes(feature3.type) && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
+  if ((!surfaceCreatorTypes.includes(feature3.type) || feature3.type === "surface-extrude") && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
     return feature3.bodyId;
   const first = doc.features.find(
-    (f2) => (f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
+    (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
   );
   return first?.id === feature3.id ? `${doc.documentId}:body-1` : `${doc.documentId}:body-${feature3.id}`;
 }
@@ -5246,7 +5330,7 @@ function createdBodyIDs(doc, feature3) {
 }
 function consumedBodyIDs(feature3) {
   if (feature3.suppressed) return [];
-  if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") return scopeConsumedBodies(feature3.scopeResolution);
+  if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") return scopeConsumedBodies(feature3.scopeResolution);
   if (feature3.type === "boolean" && !feature3.keepTools) return feature3.toolBodyIds;
   if (feature3.type === "surface-thicken" && feature3.keepTools === false) return feature3.bodyIds;
   if (feature3.type === "split" && feature3.keepTools === false && feature3.tool) return [feature3.tool.bodyId];
@@ -5254,7 +5338,7 @@ function consumedBodyIDs(feature3) {
   if (feature3.type === "remove-body") return feature3.bodyIds;
   if (feature3.type === "surface-stitch") return feature3.bodyIds.slice(1);
   if (feature3.type === "surface-unstitch") return feature3.bodyIds;
-  return (feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" ? feature3.targetBodyIds?.slice(1) ?? [] : [];
+  return (feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" ? feature3.targetBodyIds?.slice(1) ?? [] : [];
 }
 function stableBodies(doc) {
   let targetBody;
@@ -5262,7 +5346,7 @@ function stableBodies(doc) {
     ...structuredClone(doc),
     features: doc.features.map((f2) => {
       const feature3 = structuredClone(f2);
-      if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
+      if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
         if (!feature3.suppressed) targetBody = feature3.scopeResolution?.groups.at(-1)?.bodyId ?? targetBody;
         return feature3;
       }
@@ -5276,7 +5360,7 @@ function stableBodies(doc) {
       }
       if (feature3.type === "offset-face") return feature3;
       if (consumedBodyIDs(feature3).length && "targetBodyId" in feature3) targetBody = feature3.targetBodyId;
-      if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
+      if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature3).at(-1);
         return { ...feature3, bodyId: bodyIDForFeature(doc, feature3) };
       }
@@ -5300,25 +5384,25 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       result.set(f2.id, [...new Set(refs)]);
       continue;
     }
-    if ((f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "mirror" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "shape-binder" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
+    if ((f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "mirror" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "shape-binder" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
       for (const id2 of bodyIDsForFeature(doc, f2)) {
         lastBody = id2;
         bodyProducers.set(id2, f2.id);
       }
-    } else if ((f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all") {
+    } else if ((f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all") {
       if (!f2.suppressed || includeSuppressedModifiers) for (const id2 of bodyProducers.keys()) bodyProducers.set(id2, f2.id);
       if (!f2.suppressed) lastBody = f2.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
     } else if (!["sketch", "profile", "plane", "axis", "point", "curve3d"].includes(f2.type)) {
       const body = "targetBodyId" in f2 && f2.targetBodyId ? f2.targetBodyId : lastBody;
-      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : (f2.type === "extrude" || f2.type === "revolve") && f2.targetBodyIds ? f2.targetBodyIds : [body];
+      const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.targetBodyIds ? f2.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
-        const mergedIntoPrimary = (f2.type === "extrude" || f2.type === "revolve") && f2.operation === "add" && f2.targetBodyIds && target !== body;
+        const mergedIntoPrimary = (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.operation === "add" && f2.targetBodyIds && target !== body;
         if (target && !mergedIntoPrimary && (!f2.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f2.id);
       }
     }
     const consumed = consumedBodyIDs(f2);
-    if (consumed.length && !((f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all")) {
+    if (consumed.length && !((f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all")) {
       for (const id2 of consumed) bodyProducers.delete(id2);
       lastBody = "targetBodyId" in f2 ? f2.targetBodyId : lastBody;
     }
@@ -5353,11 +5437,11 @@ function setFeatureSuppressed(doc, id2, suppressed) {
 }
 function insertFeature(doc, feature3) {
   const next = stableBodies(doc), index2 = rollbackPosition(doc);
-  if ((feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
+  if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
     feature3 = {
       ...feature3,
       bodyId: feature3.bodyId ?? (doc.features.some(
-        (f2) => (f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad") && f2.operation === "new"
+        (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad") && f2.operation === "new"
       ) ? `${doc.documentId}:body-${feature3.id}` : `${doc.documentId}:body-1`)
     };
   next.features.splice(index2, 0, feature3);
@@ -5430,9 +5514,6 @@ function featureReferenceErrors(document2, failures = /* @__PURE__ */ new Map())
     earlier.set(feature3.id, !feature3.suppressed && !errors.has(feature3.id));
   }
   return errors;
-}
-function validateExtrusionFaceReference(ref, earlier, missing) {
-  validateSolidFaceReference(ref, earlier, missing, "Up to face");
 }
 function resolveSketchTextExpression(expression, variables = /* @__PURE__ */ new Map()) {
   return normalizeSketchText(
@@ -6926,8 +7007,8 @@ function bound(c2, p2) {
     )
   );
 }
-function inside(p2, boundary) {
-  const length = 2 * (1 + Math.max(...boundary.map((c2) => bound(c2, p2))));
+function inside(p2, boundary2) {
+  const length = 2 * (1 + Math.max(...boundary2.map((c2) => bound(c2, p2))));
   for (const angle2 of [
     0.123,
     0.713,
@@ -6946,7 +7027,7 @@ function inside(p2, boundary) {
       }
     };
     let crossings = 0, ambiguous = false;
-    for (const c2 of boundary) {
+    for (const c2 of boundary2) {
       for (const hit of curveIntersections(ray, c2)) {
         const tangent = curveJet(c2)(hit.second).first, n = Math.hypot(...tangent);
         if (hit.first < 1e-9 || hit.second < 1e-8 || hit.second > 1 - 1e-8 || n < 1e-12 || Math.abs(direction2[0] * tangent[1] - direction2[1] * tangent[0]) / n < 1e-8) {
@@ -7205,11 +7286,6 @@ function createEmptyPartDocument(name5) {
   validatePartDocument(doc);
   return doc;
 }
-function requirePositiveFinite(value2, label) {
-  if (!Number.isFinite(value2) || value2 <= 0) {
-    throw new Error(`${label} must be greater than zero.`);
-  }
-}
 function validatePartDocument(value2) {
   if (!value2 || typeof value2 !== "object") {
     throw new Error("Part file is not an object.");
@@ -7306,66 +7382,7 @@ function validatePartDocument(value2) {
     if (feature3.type === "revolve") validateMergeScope(feature3);
     if (feature3.type === "sketch") validateSketchFeature(feature3);
     else if (feature3.type === "extrude") {
-      if (!missingReference(feature3.profileFeatureId) && !["sketch", "profile"].includes(
-        earlier.get(feature3.profileFeatureId) || ""
-      ))
-        throw new Error("Extrude must reference an earlier Sketch.");
-      if (!["new", "add", "cut", "intersect"].includes(feature3.operation))
-        throw new Error("Unsupported extrude operation.");
-      validateMergeScope(feature3);
-      if (feature3.profileContourId !== void 0 && (typeof feature3.profileContourId !== "string" || !feature3.profileContourId.trim() || feature3.profileContourId.length > 128))
-        throw new Error("Invalid extruded region identity.");
-      if (feature3.profileSelections !== void 0) {
-        const picks = feature3.profileSelections;
-        if (!Array.isArray(picks) || !picks.length || picks.length > 256 || new Set(picks.map((p2) => JSON.stringify([p2?.profileFeatureId, p2 ? profileRegionIdentity(p2) : null]))).size !== picks.length || picks.some((p2) => !p2 || !missingReference(p2.profileFeatureId) && !["sketch", "profile"].includes(earlier.get(p2.profileFeatureId) || "") || p2.profileContourId !== void 0 && (typeof p2.profileContourId !== "string" || !p2.profileContourId.trim() || p2.profileContourId.length > 128))) throw Error("Choose distinct faces from earlier sketches.");
-      }
-      if (feature3.separateBodies !== void 0 && typeof feature3.separateBodies !== "boolean") throw Error("Invalid separate bodies option.");
-      if (feature3.bodyOutputs !== void 0 && (!feature3.separateBodies || feature3.operation !== "new" || !Array.isArray(feature3.bodyOutputs) || !feature3.bodyOutputs.length || feature3.bodyOutputs.some((id2) => typeof id2 !== "string" || !id2.trim()))) throw Error("Invalid extrusion output bodies.");
-      if (feature3.regionMode !== void 0 && feature3.regionMode !== "faces") throw Error("Invalid region mode.");
-      if (feature3.profileContourIds !== void 0 && (feature3.regionMode !== "faces" || !Array.isArray(feature3.profileContourIds) || !feature3.profileContourIds.length || new Set(feature3.profileContourIds).size !== feature3.profileContourIds.length || feature3.profileContourIds.some((id2) => typeof id2 !== "string" || !id2.trim() || id2.length > 128))) throw Error("Choose distinct region identities.");
-      requirePositiveFinite(feature3.distanceMillimeters, "Extrude distance");
-      if (feature3.thin !== void 0) {
-        const wall = feature3.thin;
-        if (!wall || typeof wall !== "object" || Array.isArray(wall) || [wall.thickness1Millimeters, wall.thickness2Millimeters].some((v2) => typeof v2 !== "number" || !Number.isFinite(v2) || v2 < 0 || v2 > 1e6) || [wall.midplane, wall.flipped].some((v2) => v2 !== void 0 && typeof v2 !== "boolean") || wall.midplaneThicknessMillimeters !== void 0 && (typeof wall.midplaneThicknessMillimeters !== "number" || !Number.isFinite(wall.midplaneThicknessMillimeters) || wall.midplaneThicknessMillimeters <= 0 || wall.midplaneThicknessMillimeters > 1e6) || (wall.midplane ? wall.midplaneThicknessMillimeters === void 0 : wall.thickness1Millimeters + wall.thickness2Millimeters <= 1e-7)) {
-          throw Error("Thin extrusion needs valid wall thicknesses and a positive total thickness.");
-        }
-      }
-      if (feature3.secondEnd !== void 0) {
-        if (!feature3.secondEnd || typeof feature3.secondEnd !== "object" || Array.isArray(feature3.secondEnd)) throw Error("Invalid second-end definition.");
-        if (feature3.secondDistanceMillimeters !== void 0 || ["symmetric", "symmetric-through-all"].includes(feature3.endType ?? "")) throw Error("Independent second end cannot combine with Symmetric or legacy opposite depth.");
-        if (!["blind", "through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(feature3.secondEnd.endType)) throw Error("Invalid second-end condition.");
-        requirePositiveFinite(feature3.secondEnd.distanceMillimeters, "Second-end depth");
-      }
-      for (const end of [feature3, ...feature3.secondEnd ? [feature3.secondEnd] : []]) {
-        if (end.draftAngleDegrees !== void 0) {
-          if (!Number.isFinite(end.draftAngleDegrees) || Math.abs(end.draftAngleDegrees) >= 90) throw Error("Extrusion draft must be between -90 and 90 degrees.");
-        }
-        if (end.endType !== void 0 && !["blind", "symmetric", "through-all", "symmetric-through-all", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(end.endType)) throw Error("Invalid extrusion end type.");
-        if (["through-all", "symmetric-through-all"].includes(end.endType ?? "") && !["cut", "intersect"].includes(feature3.operation)) throw Error("Through all requires Remove or Intersect.");
-        if (end.endType === "up-to-part" && (typeof end.endPartId !== "string" || !end.endPartId.trim() || end.endPartId.length > 256)) throw Error("Up to part needs a stable stopping part identity.");
-        if (end.endPartId !== void 0 && end.endType !== "up-to-part") throw Error("A stopping part requires Up to part.");
-        if (end.endType === "up-to-vertex") validateExtrusionPointReference(end.endPointReference, earlier, missingReference);
-        if (end.endPointReference !== void 0 && end.endType !== "up-to-vertex") throw Error("A stopping point requires Up to vertex.");
-        if (end.endType === "up-to-face") validateExtrusionFaceReference(end.endReference, earlier, missingReference);
-        if (end.endOffsetMillimeters !== void 0 && (!Number.isFinite(end.endOffsetMillimeters) || !["up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(end.endType ?? ""))) throw Error("End offset requires a supported stopping limit and a finite distance.");
-      }
-      if (feature3.startingReference !== void 0) validateExtrusionStartReference(feature3.startingReference, earlier, missingReference);
-      if (feature3.startingOffsetMillimeters !== void 0 && !Number.isFinite(feature3.startingOffsetMillimeters)) throw Error("Invalid starting offset.");
-      if (feature3.secondDistanceMillimeters !== void 0) {
-        requirePositiveFinite(feature3.secondDistanceMillimeters, "Opposite depth");
-        if (feature3.endType && feature3.endType !== "blind") throw Error("Opposite depth requires Blind.");
-      }
-      if (feature3.directionVector !== void 0) {
-        const vector2 = feature3.directionVector;
-        if (!Array.isArray(vector2) || vector2.length !== 3 || !vector2.every(Number.isFinite) || Math.abs(Math.hypot(...vector2) - 1) > 1e-6) throw Error("Extrusion direction must be a finite unit vector.");
-      }
-      if (feature3.directionReference !== void 0) {
-        const ref = feature3.directionReference;
-        if (!ref || ref.kind !== "sketch-line" || feature3.directionVector !== void 0 || ![ref.sourceFeatureId, ref.contourId, ref.segmentId].every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) || !missingReference(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile") {
-          throw Error("Extrusion direction needs a line in an earlier sketch; it cannot also store a manual vector.");
-        }
-      }
-      if (feature3.reversed !== void 0 && typeof feature3.reversed !== "boolean") throw new Error("Invalid extrude direction.");
+      validateExtrusionDefinition(feature3, earlier, missingReference);
     } else validateSolidFeature(feature3, earlier, missingReference);
     earlier.set(feature3.id, feature3.type);
   });
@@ -7379,17 +7396,6 @@ function validatePartDocument(value2) {
     if (!referenceErrors.has(feature3.id) && feature3.type === "profile" && feature3.profile.type === "projection" && !missingReference(feature3.profile.sourceFeatureId) && feature3.profile.authored?.constraints?.some((c2) => [c2.a, c2.b, c2.axis].some((r) => r?.projectedContourId !== void 0))) {
       resolveProfileDrawing(document2.features.map((f2) => f2.type === "profile" ? { ...f2, suppressed: false } : f2), feature3.id);
     }
-  }
-}
-function validateMergeScope(feature3) {
-  if (feature3.scopeMode !== void 0 && (feature3.scopeMode !== "all" || !["add", "cut", "intersect"].includes(feature3.operation) || feature3.targetBodyId !== void 0 || feature3.targetBodyIds !== void 0)) throw Error("Automatic scope cannot also specify target parts.");
-  if (feature3.scopeResolution !== void 0) {
-    if (feature3.scopeMode !== "all") throw Error("A scope resolution requires automatic scope.");
-    validateExtrusionScopeResolution(feature3.scopeResolution);
-  }
-  if (feature3.targetBodyIds !== void 0) {
-    const scope = feature3.targetBodyIds;
-    if (!["add", "cut", "intersect"].includes(feature3.operation) || !Array.isArray(scope) || !scope.length || scope.length > 256 || scope.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(scope).size !== scope.length || feature3.targetBodyId !== scope[0]) throw Error("Merge scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
   }
 }
 function withDocumentDistanceIntent(document2) {
@@ -7886,13 +7892,13 @@ function connectedSketchRegions(drawing) {
     regions.push({ contourIndices: order, ...ids2.every((value2) => !!value2) && new Set(ids2).size === ids2.length ? { contourIds: ids2 } : {}, contour });
   });
   const isolated = regions.filter((region) => {
-    const boundary = region.contour.segments.map((segment, i2) => ({ start: i2 ? region.contour.segments[i2 - 1].end : region.contour.start, segment }));
+    const boundary2 = region.contour.segments.map((segment, i2) => ({ start: i2 ? region.contour.segments[i2 - 1].end : region.contour.start, segment }));
     try {
       for (let i2 = 0; i2 < drawing.contours.length; i2++) {
         const other = drawing.contours[i2];
         if (other.construction || region.contourIndices.includes(i2)) continue;
         const curves2 = other.type === "circle" ? circleSegments(other.center, other.radius) : other.segments.map((segment, j) => ({ start: j ? other.segments[j - 1].end : other.start, segment }));
-        if (boundary.some((a2) => curves2.some((b) => curveIntersections(a2, b).length > 0))) {
+        if (boundary2.some((a2) => curves2.some((b) => curveIntersections(a2, b).length > 0))) {
           issues.push({ contourIndices: region.contourIndices, reason: "invalid-boundary" });
           return false;
         }
@@ -8025,19 +8031,19 @@ function sketchRegions(feature3, includeOpen = false, history) {
     const closed = Math.hypot(end[0] - contour.start[0], end[1] - contour.start[1]) < 1e-6;
     regions.push({ engineId, contourId: contour.id, contourIndex: index2, closed, label: closed ? label : label.replace(/^Region/, "Curve") });
   });
-  for (const boundary of faces) {
-    if (boundary.sourceContourIndices.length < 2) continue;
-    const sources = boundary.sourceContourIndices.map((index2) => regions.find((region) => region.contourIndex === index2 && !region.sourceContourIndices));
+  for (const boundary2 of faces) {
+    if (boundary2.sourceContourIndices.length < 2) continue;
+    const sources = boundary2.sourceContourIndices.map((index2) => regions.find((region) => region.contourIndex === index2 && !region.sourceContourIndices));
     if (sources.some((source) => !source || source.closed !== false)) continue;
     regions.push({
-      engineId: `${feature3.id}#joined#${boundary.contourIndex}`,
-      contourIndex: boundary.contourIndex,
-      sourceContourIndices: boundary.sourceContourIndices,
-      sourceContourIds: boundary.sourceContourIds,
-      previewContour: boundary.contour,
+      engineId: `${feature3.id}#joined#${boundary2.contourIndex}`,
+      contourIndex: boundary2.contourIndex,
+      sourceContourIndices: boundary2.sourceContourIndices,
+      sourceContourIds: boundary2.sourceContourIds,
+      previewContour: boundary2.contour,
       closed: true,
       // A plain name; the curve count is detail, not a title (Jonathan, 2026-11-01).
-      label: `Region ${boundary.contourIndex + 1}`
+      label: `Region ${boundary2.contourIndex + 1}`
     });
   }
   return regions.filter((region) => includeOpen ? !region.sourceContourIndices : region.closed !== false);
@@ -8069,8 +8075,8 @@ function stampAuthoredProjectionRegion(document2, feature3, region) {
     const contourIds = region.sourceContourIndices.map(identify);
     const inside2 = region.insideContourIndices?.map(identify);
     const identified = resolveProfileDrawing(document2.features.map((candidate) => candidate.id === feature3.id ? { ...feature3, profile: { ...profile, authored } } : candidate), feature3.id);
-    const boundary = region.boundarySides ? regionBoundaryIdentity(identified, region.boundarySides) : void 0;
-    selection = { ...base, profileRegion: { contourIds, ...inside2 ? { inside: inside2 } : {}, ...boundary ? { boundary } : {} } };
+    const boundary2 = region.boundarySides ? regionBoundaryIdentity(identified, region.boundarySides) : void 0;
+    selection = { ...base, profileRegion: { contourIds, ...inside2 ? { inside: inside2 } : {}, ...boundary2 ? { boundary: boundary2 } : {} } };
   }
   profile.authored = authored;
   return selection;
@@ -8163,7 +8169,7 @@ function editSketch(doc, name5, args) {
   return { document: next, featureID: feature3.id };
 }
 function resolveExtrusionScopes(doc, scopes = {}) {
-  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => (f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
+  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
   if (Object.keys(scopes).some((id2) => !active.has(id2))) throw Error("Rebuild returned an unknown automatic scope.");
   const available = /* @__PURE__ */ new Set();
   const next = { ...doc, features: doc.features.map((feature3) => {
@@ -8178,8 +8184,8 @@ function resolveExtrusionScopes(doc, scopes = {}) {
     if (!resolution) throw Error(`${feature3.name}: rebuild did not resolve the automatic scope.`);
     validateExtrusionScopeResolution(resolution);
     if (resolution.targets.some((id2) => !available.has(id2))) throw Error(`${feature3.name}: rebuild returned an unavailable scope part.`);
-    if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
-    if ((feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
+    if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
+    if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
     if (feature3.type === "extrude" && feature3.operation === "intersect" && resolution.groups.length !== resolution.targets.length) throw Error("Intersect scope must retain overlapping parts.");
     scopeConsumedBodies(resolution).forEach((id2) => available.delete(id2));
     return { ...feature3, scopeResolution: structuredClone(resolution) };
@@ -12664,10 +12670,10 @@ function stampResolvedProfileSelection(doc, feature3, region, identifyPrimitives
   };
   const ids2 = region.sourceContourIndices.map(identify);
   const inside2 = region.insideContourIndices?.map(identify);
-  const boundary = region.boundarySides ? regionBoundaryIdentity(drawing, region.boundarySides) : void 0;
+  const boundary2 = region.boundarySides ? regionBoundaryIdentity(drawing, region.boundarySides) : void 0;
   delete drawing.pierceContext;
   feature3.profile = drawing;
-  return { ...base, profileRegion: { contourIds: ids2, ...inside2 ? { inside: inside2 } : {}, ...boundary ? { boundary } : {} } };
+  return { ...base, profileRegion: { contourIds: ids2, ...inside2 ? { inside: inside2 } : {}, ...boundary2 ? { boundary: boundary2 } : {} } };
 }
 function selectionDrawing(doc, feature3) {
   if (feature3.type === "profile") return resolveProfileDrawing(doc.features, feature3.id);
@@ -14023,7 +14029,115 @@ export interface CurvedEdgeReference {
 }
 
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
-  "surface-extrude": 'export interface SurfaceExtrudeFeature {\n  id: string; type: "surface-extrude"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The sketch curves to extrude (open or closed chains); every curve when absent. */\n  contourIds?: string[];\n  distanceMillimeters: number;\n  reversed?: boolean;\n  symmetric?: boolean;\n}',
+  "surface-extrude": `export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees' | 'separateBodies' | 'bodyOutputs'> {
+  type: "surface-extrude";
+  operation: "new" | "add";
+  /** Legacy selected sketch curves, retained on read. New records use profileSelections. */
+  contourIds?: string[];
+  /** Legacy symmetric flag; new records use endType. */
+  symmetric?: boolean;
+}
+
+export interface ExtrudeFeature {
+  id: string;
+  type: "extrude";
+  name: string;
+  profileFeatureId: string;
+  /** Which closed region of that sketch to extrude. Absent means the sketch's
+   *  only region — a sketch holding several needs one named, or the feature is
+   *  ambiguous. Identity is the contour's own id, scoped to its source profile,
+   *  so editing or reordering coordinates cannot retarget the link. */
+  profileContourId?: string;
+  profileContourIds?: string[];
+  profileRegion?: import('../sketch/reference/profile-region-reference').ProfileRegionReference;
+  profileSelections?: ({ profileFeatureId: string } & import('../sketch/reference/profile-region-reference').ProfileRegionSelection)[];
+  regionMode?: "faces";
+  /** New extrusions expose each disconnected solid as an independent body. */
+  separateBodies?: boolean;
+  /** Native output identities, updated only by a successful rebuild. */
+  bodyOutputs?: string[];
+  scopeMode?: "all";
+  scopeResolution?: ExtrusionScopeResolution;
+  distanceMillimeters: number;
+  endType?: "blind" | "symmetric" | "through-all" | "symmetric-through-all" | "up-to-next" | "up-to-face" | "up-to-part" | "up-to-vertex";
+  /** Unit world vector; absent follows the evaluated sketch normal. */
+  directionVector?: [number, number, number];
+  directionReference?: SketchLineDirectionReference;
+  /** Wall offsets around selected curves. Absent retains filled-profile extrusion. */
+  thin?: {
+    thickness1Millimeters: number;
+    thickness2Millimeters: number;
+    midplane?: boolean;
+    midplaneThicknessMillimeters?: number;
+    flipped?: boolean;
+  };
+  /** Stable stopping part, evaluated at this feature’s history position. */
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
+  endReference?: ExtrusionFaceReference;
+  startingReference?: ExtrusionStartReference;
+  startingOffsetMillimeters?: number;
+  /** Signed distance before the next stopping face; negative extends beyond it. */
+  endOffsetMillimeters?: number;
+  /** Legacy opposite depth; editing can replace it with an independent secondEnd. */
+  secondDistanceMillimeters?: number;
+  secondEnd?: ExtrudeSecondEnd;
+  /** Signed taper about the source sketch plane: positive narrows, negative widens. */
+  draftAngleDegrees?: number;
+  reversed?: boolean;
+  operation: ExtrudeOperation;
+  bodyId?: string;
+  targetBodyId?: string;
+  /** Explicit parts for Add/Remove/Intersect; Add retains the first target ID. */
+  targetBodyIds?: string[];
+  suppressed: boolean;
+}
+
+export type ExtrusionFaceReference=SolidFaceReference;
+
+export type ExtrusionPointReference = {
+  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;
+  point: 'vertex' | 'center'; vertexId?: string; label: string;
+} | {
+  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;
+  anchor: SolidVertexAnchor; label: string;
+};
+
+export interface ExtrusionScopeResolution {
+ targets:string[];
+ groups:{bodyId:string;sources:string[]}[];
+}
+
+export type ExtrusionStartReference =
+ | {kind:'face';sourceFeatureId:string;bodyId:string;normal:[number,number,number];label:string;faceAnchor?:PlanarFaceAnchor}
+ | {kind:'plane';sourceFeatureId:string;label:string}
+ | {kind:'principal';plane:'XY'|'XZ'|'YZ';label:string};
+
+export interface SketchLineDirectionReference {
+  kind: "sketch-line";
+  sourceFeatureId: string;
+  contourId: string;
+  segmentId: string;
+}
+
+export type ExtrudeOperation = "new" | "add" | "cut" | "intersect";
+
+export interface ExtrudeSecondEnd {
+  endType: "blind" | "through-all" | "up-to-next" | "up-to-face" | "up-to-part" | "up-to-vertex";
+  distanceMillimeters: number;
+  endReference?: ExtrudeFeature["endReference"];
+  endPartId?: string;
+  endPointReference?: ExtrusionPointReference;
+  endOffsetMillimeters?: number;
+  draftAngleDegrees?: number;
+}
+
+export interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }
+
+export interface ProfileRegionSelection {
+  profileContourId?: string;
+  profileRegion?: ProfileRegionReference;
+}`,
   "surface-fair": 'export interface SurfaceFairFeature {\n  id: string; type: "surface-fair"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  faces?: SolidFaceReference[];\n  strength?: number;\n  toleranceMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "surface-loft": 'export interface SurfaceLoftFeature {\n  id: string; type: "surface-loft"; name: string; suppressed: boolean; operation: "new";\n  sections: { profileFeatureId: string; contourId?: string }[];\n  ruled?: boolean;\n}',
   "surface-offset": 'export interface SurfaceOffsetFeature {\n  id: string; type: "surface-offset"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  distanceMillimeters: number;\n}',
@@ -22721,9 +22835,9 @@ class Shape extends WrappingObj {
 class Vertex extends Shape {
   asTuple() {
     const pnt2 = this.oc.BRep_Tool.Pnt(this.wrapped);
-    const tuple = [pnt2.X(), pnt2.Y(), pnt2.Z()];
+    const tuple2 = [pnt2.X(), pnt2.Y(), pnt2.Z()];
     pnt2.delete();
-    return tuple;
+    return tuple2;
   }
 }
 class _1DShape extends Shape {
@@ -38462,6 +38576,155 @@ function extendedSolids(shape) {
   if (!solids) throw new Error("Geometry could not be sewn into closed shells. Import a mesh as a reference or repair the source.");
   return compound;
 }
+function isSolid(body) {
+  const oc = getOC(), explorer = new oc.TopExp_Explorer_2(body.wrapped, oc.TopAbs_ShapeEnum.TopAbs_SOLID, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+  try {
+    return explorer.More();
+  } finally {
+    explorer.delete();
+  }
+}
+function boundary(body) {
+  const entries = [];
+  for (const face of body.faces) {
+    try {
+      for (const edge of face.edges) {
+        const existing2 = entries.find((item) => item.edge.wrapped.IsSame(edge.wrapped));
+        if (existing2) {
+          existing2.count++;
+          edge.delete();
+        } else entries.push({ edge, count: 1 });
+      }
+    } finally {
+      face.delete();
+    }
+  }
+  for (const entry of entries) if (entry.count !== 1) entry.edge.delete();
+  return entries.filter((entry) => entry.count === 1).map((entry) => entry.edge);
+}
+function connected(a2, b) {
+  const oc = getOC(), first = boundary(a2), second = boundary(b);
+  try {
+    for (const edge of first) for (const other of second) {
+      const op = new oc.BRepAlgoAPI_Common_1(), args = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1(), progress = new oc.Message_ProgressRange_1();
+      let result;
+      try {
+        args.Append_1(edge.wrapped);
+        tools.Append_1(other.wrapped);
+        op.SetArguments(args);
+        op.SetTools(tools);
+        op.SetNonDestructive(true);
+        op.Build(progress);
+        result = cast(op.Shape());
+        if (measureLength(result) > 1e-7) return true;
+      } finally {
+        result?.delete();
+        op.delete();
+        args.delete();
+        tools.delete();
+        progress.delete();
+      }
+    }
+    return false;
+  } finally {
+    first.forEach((edge) => edge.delete());
+    second.forEach((edge) => edge.delete());
+  }
+}
+function mergeSurfaceExtrusion(tool2, bodies, scope) {
+  const candidates = scope ? scope.map((id2) => {
+    const body = bodies.get(id2);
+    if (!body || isSolid(body)) throw new Error("Surface Add requires available surface bodies in its merge scope.");
+    return { id: id2, body };
+  }) : [...bodies].filter(([, body]) => !isSolid(body)).map(([id2, body]) => ({ id: id2, body }));
+  let result = tool2.clone();
+  const targets = [];
+  try {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const { id: id2, body } of candidates) if (!targets.includes(id2) && connected(result, body)) {
+        const joined = result.fuse(body);
+        result.delete();
+        result = joined;
+        targets.push(id2);
+        changed = true;
+      }
+    }
+    if (!targets.length || scope && targets.length !== scope.length) throw new Error("The extrusion must share an edge with every surface in its merge scope.");
+    const check2 = new (getOC()).BRepCheck_Analyzer(result.wrapped, true, false);
+    try {
+      if (!check2.IsValid_2() || isSolid(result)) throw new Error("Surface Add did not produce a valid sheet. Check the selected boundaries.");
+    } finally {
+      check2.delete();
+    }
+    if (scope) targets.sort((a2, b) => scope.indexOf(a2) - scope.indexOf(b));
+    return { shape: result, targets };
+  } catch (error2) {
+    result.delete();
+    throw error2;
+  }
+}
+function planeToolFace(origin2, normal, size) {
+  const o = getOC();
+  const p2 = new o.gp_Pnt_3(...origin2), d2 = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p2, d2), pln = new o.gp_Pln_2(ax);
+  const maker = new o.BRepBuilderAPI_MakeFace_9(pln, -size, size, -size, size);
+  try {
+    return cast(maker.Face());
+  } finally {
+    maker.delete();
+    pln.delete();
+    ax.delete();
+    d2.delete();
+    p2.delete();
+  }
+}
+function splitFacesByTool(faces, tool2) {
+  const o = getOC();
+  const args = new o.TopTools_ListOfShape_1();
+  for (const f2 of faces) args.Append_1(f2.wrapped);
+  args.Append_1(tool2.wrapped);
+  const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
+  try {
+    fuse.SetArguments(args);
+    fuse.SetNonDestructive(true);
+    fuse.Build(progress);
+    if (!fuse.IsDone()) throw new Error("The faces could not be split.");
+    return faces.map((f2) => {
+      const copy = new o.TopTools_ListOfShape_1();
+      copy.Assign(fuse.Modified(f2.wrapped));
+      const pieces = [];
+      while (copy.Size() > 0) {
+        pieces.push(cast(copy.First_1()));
+        copy.RemoveFirst();
+      }
+      copy.delete();
+      return pieces.length ? pieces : [f2.clone()];
+    });
+  } finally {
+    progress.delete();
+    fuse.delete();
+    args.delete();
+  }
+}
+function splitShapeByTool(shape, tool2) {
+  const o = getOC();
+  const args = new o.TopTools_ListOfShape_1();
+  args.Append_1(shape.wrapped);
+  args.Append_1(tool2.wrapped);
+  const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
+  try {
+    fuse.SetArguments(args);
+    fuse.SetNonDestructive(true);
+    fuse.Build(progress);
+    if (!fuse.IsDone()) throw new Error("The part could not be split by that face.");
+    return cast(fuse.Shape());
+  } finally {
+    progress.delete();
+    fuse.delete();
+    args.delete();
+  }
+}
 const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
@@ -38470,6 +38733,275 @@ const neg = (a2) => scale$1(a2, -1);
 const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
 const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
+const tuple = (v2) => {
+  try {
+    return [v2.x, v2.y, v2.z];
+  } finally {
+    v2.delete();
+  }
+};
+function linearCenter(shape) {
+  const properties = measureShapeLinearProperties(shape);
+  try {
+    return properties.centerOfMass;
+  } finally {
+    properties.delete();
+  }
+}
+function corners$1(shape) {
+  const [a2, b] = shape.boundingBox.bounds;
+  return [a2[0], b[0]].flatMap((x2) => [a2[1], b[1]].flatMap((y2) => [a2[2], b[2]].map((z2) => [x2, y2, z2])));
+}
+const diagonal = (shape) => {
+  const [a2, b] = shape.boundingBox.bounds;
+  return norm$4(sub$5(b, a2));
+};
+function common$1(a2, b) {
+  const oc = getOC(), operation2 = new oc.BRepAlgoAPI_Common_1();
+  const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    arguments_.Append_1(a2.wrapped);
+    tools.Append_1(b.wrapped);
+    operation2.SetArguments(arguments_);
+    operation2.SetTools(tools);
+    operation2.SetNonDestructive(true);
+    operation2.Build(progress);
+    return cast(operation2.Shape());
+  } finally {
+    operation2.delete();
+    arguments_.delete();
+    tools.delete();
+    progress.delete();
+  }
+}
+function commonLength(a2, b) {
+  const intersection = common$1(a2, b);
+  try {
+    return measureLength(intersection);
+  } finally {
+    intersection.delete();
+  }
+}
+function buildSurfaceExtrusion(options) {
+  const oc = getOC(), owned = [];
+  const own = (shape) => {
+    owned.push(shape);
+    return shape;
+  };
+  let retained;
+  const contacts = [];
+  const n = unit$3(options.normal), direction2 = unit$3(options.direction), origin2 = options.origin;
+  if (![...n, ...direction2, ...origin2, options.startingOffset ?? 0].every(Number.isFinite) || Math.abs(dot$6(n, direction2)) < 1e-7)
+    throw new Error("Surface extrusion needs a finite direction that leaves the sketch plane.");
+  if (!options.wires.length) throw new Error("Select sketch curves to extrude.");
+  const sheet = (raw) => {
+    if (isShape3D(raw)) return raw;
+    const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
+    try {
+      builder.MakeShell(shell);
+      builder.Add(shell, raw.wrapped);
+      return own(cast(shell));
+    } finally {
+      builder.delete();
+    }
+  };
+  const prism = (wire, low, high, dir) => {
+    if (!(high - low > 1e-9)) throw new Error("The surface extrusion must have positive depth.");
+    const start = own(wire.clone().translate(...scale$1(dir, low)));
+    const vec2 = new oc.gp_Vec_4(...scale$1(dir, high - low));
+    const maker = new oc.BRepPrimAPI_MakePrism_1(start.wrapped, vec2, false, true);
+    try {
+      return sheet(own(cast(maker.Shape())));
+    } finally {
+      maker.delete();
+      vec2.delete();
+    }
+  };
+  const halfSpace2 = (point2, keep, span) => {
+    const box = makeBaseBox(2 * span, 2 * span, 2 * span);
+    const axis = cross$4([0, 0, 1], keep), sine = norm$4(axis);
+    const turned = sine < 1e-9 ? keep[2] > 0 ? box : box.rotate(180, [0, 0, 0], [1, 0, 0]) : box.rotate(Math.atan2(sine, keep[2]) * 180 / Math.PI, [0, 0, 0], axis);
+    return own(turned.translate(...point2));
+  };
+  const contact = (result, stops, opposite, dir, offset2) => {
+    let length = 0, weighted = [0, 0, 0];
+    for (const stop of stops) {
+      const operation2 = new oc.BRepAlgoAPI_Section_3(result.wrapped, stop.wrapped, false);
+      const progress = new oc.Message_ProgressRange_1();
+      try {
+        operation2.Build(progress);
+        const intersection = own(cast(operation2.Shape()));
+        for (const edge of intersection.edges) {
+          try {
+            const weight = measureLength(edge);
+            weighted = add$4(weighted, scale$1(linearCenter(edge), weight));
+            length += weight;
+          } finally {
+            edge.delete();
+          }
+        }
+      } finally {
+        operation2.delete();
+        progress.delete();
+      }
+    }
+    if (length > 1e-8) contacts.push({ opposite, point: scale$1(weighted, 1 / length), direction: dir, offset: offset2 });
+    return length;
+  };
+  const valid = (result, start, far) => {
+    const checker = new oc.BRepCheck_Analyzer(result.wrapped, true, false);
+    const length = measureLength(start), tolerance2 = Math.max(1e-7, length * 1e-8);
+    try {
+      if (!checker.IsValid_2() || measureArea(result) <= 1e-9 || Math.abs(commonLength(start, result) - length) > tolerance2)
+        throw new Error("The stopping surface crosses or does not preserve the complete extrusion start.");
+      if (far && commonLength(far, result) > tolerance2)
+        throw new Error("The selected boundary does not completely terminate the surface extrusion.");
+    } finally {
+      checker.delete();
+    }
+    return result;
+  };
+  try {
+    const pieces = [];
+    for (const [opposite, end] of [[false, options.primary], [true, options.second]]) {
+      if (!end) continue;
+      const dir = opposite ? neg(direction2) : direction2;
+      const low = (options.startingOffset ?? 0) * (opposite ? -1 : 1), offset2 = end.offset ?? 0;
+      if (!Number.isFinite(offset2)) throw new Error("End offset must be finite.");
+      const axis = dot$6(n, dir) > 0 ? n : neg(n), alignment = dot$6(axis, dir);
+      const coordinate = (point2) => dot$6(sub$5(point2, origin2), axis) / alignment;
+      const farthest = (shapes) => Math.max(...shapes.flatMap((shape) => corners$1(shape).map(coordinate)));
+      for (const wire of options.wires) {
+        const start = own(wire.clone().translate(...scale$1(dir, low)));
+        let high;
+        if (end.type === "blind") {
+          if (!Number.isFinite(end.distance) || end.distance <= 0) throw new Error("Enter a positive surface extrusion depth.");
+          high = low + end.distance;
+        } else if (end.type === "through-all") {
+          if (!options.limits?.length) throw new Error("Through all requires an earlier part or surface.");
+          high = farthest(options.limits);
+          if (high <= low) continue;
+          high += 1;
+        } else if (end.type === "up-to-vertex") {
+          if (!end.point?.every(Number.isFinite)) throw new Error("Select an available stopping point.");
+          high = coordinate(end.point) - offset2;
+          contacts.push({ opposite, point: add$4(linearCenter(wire), scale$1(dir, high)), direction: dir, offset: offset2 });
+        }
+        if (high !== void 0) {
+          pieces.push(valid(prism(wire, low, high, dir), start));
+          continue;
+        }
+        const epsilon2 = Math.max(1e-6, diagonal(start) * 1e-9);
+        const advancedStart = own(start.clone().translate(...scale$1(dir, epsilon2)));
+        if (end.type === "up-to-face") {
+          if (!end.face) throw new Error("Select an available stopping face.");
+          const face = own(end.face.clone().translate(...scale$1(dir, -offset2)));
+          let half;
+          if (face.geomType === "PLANE") {
+            const normal2 = unit$3(tuple(face.normalAt())), center2 = tuple(face.center), along = dot$6(normal2, dir);
+            if (Math.abs(along) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction.");
+            const reaches = corners$1(start).map((point2) => dot$6(normal2, sub$5(center2, point2)) / along);
+            high = low + Math.max(...reaches) + 1;
+            const full22 = prism(wire, low, high, dir);
+            const span2 = Math.max(...corners$1(full22).map((point2) => norm$4(sub$5(point2, center2))), 1) * 2;
+            half = halfSpace2(center2, along > 0 ? neg(normal2) : normal2, span2);
+            const result3 = valid(own(full22.intersect(half)), start, own(wire.clone().translate(...scale$1(dir, high))));
+            if (Math.abs(commonLength(advancedStart, half) - measureLength(start)) > Math.max(1e-7, measureLength(start) * 1e-8))
+              throw new Error("The stopping plane crosses or lies behind the extrusion start.");
+            const middle = linearCenter(wire);
+            contacts.push({ opposite, point: add$4(middle, scale$1(dir, dot$6(normal2, sub$5(center2, middle)) / along)), direction: dir, offset: offset2 });
+            pieces.push(result3);
+            continue;
+          }
+          if (!["SPHERE", "CYLINDRE"].includes(face.geomType)) throw new Error("This curved surface is not yet supported as a surface-extrusion limit.");
+          const adaptor = new oc.BRepAdaptor_Surface_2(face.wrapped, true);
+          let center, normal = [0, 0, 1], radius;
+          try {
+            const curved = face.geomType === "SPHERE" ? adaptor.Sphere() : adaptor.Cylinder();
+            const point2 = curved.Location();
+            try {
+              center = [point2.X(), point2.Y(), point2.Z()];
+              radius = curved.Radius();
+            } finally {
+              point2.delete();
+            }
+            if (face.geomType !== "SPHERE") {
+              const cylinder = adaptor.Cylinder(), a2 = cylinder.Axis(), d2 = a2.Direction();
+              normal = [d2.X(), d2.Y(), d2.Z()];
+              d2.delete();
+              a2.delete();
+              cylinder.delete();
+            }
+            curved.delete();
+          } finally {
+            adaptor.delete();
+          }
+          const span = Math.max(1, norm$4(sub$5(center, linearCenter(start))) + diagonal(start) + radius) * 4;
+          const primitive = own(face.geomType === "SPHERE" ? makeSphere(radius).translate(...center) : makeCylinder(radius, 2 * span, sub$5(center, scale$1(normal, span)), normal));
+          const edges = advancedStart.edges;
+          const sample = tuple(edges[0].startPoint);
+          edges.forEach((edge) => edge.delete());
+          const inside2 = (face.geomType === "SPHERE" ? norm$4(sub$5(sample, center)) : norm$4(cross$4(sub$5(sample, center), normal))) < radius;
+          half = inside2 ? primitive : own(own(makeBaseBox(2 * span, 2 * span, 2 * span).translate(center[0], center[1], center[2] - span)).cut(primitive));
+          if (Math.abs(commonLength(advancedStart, half) - measureLength(start)) > Math.max(1e-7, measureLength(start) * 1e-8))
+            throw new Error("The stopping surface crosses or lies behind the extrusion start.");
+          high = farthest([half]) + 1;
+          const result2 = own(prism(wire, low, high, dir).intersect(half));
+          const faces = result2.faces.map(own), connected22 = faces.filter((face2) => commonLength(start, face2) > 1e-8);
+          let changed2 = true;
+          while (changed2) {
+            changed2 = false;
+            for (const candidate of faces) if (!connected22.includes(candidate) && connected22.some((face2) => commonLength(face2, candidate) > 1e-8)) {
+              connected22.push(candidate);
+              changed2 = true;
+            }
+          }
+          const kept = sheet(own(makeCompound(connected22.map((face2) => face2.clone()))));
+          valid(kept, start, own(wire.clone().translate(...scale$1(dir, high))));
+          const boundary2 = primitive.faces.map(own);
+          if (contact(kept, boundary2, opposite, dir, offset2) < 1e-8) throw new Error("The selected surface does not stop the extrusion.");
+          pieces.push(kept);
+          continue;
+        }
+        const limits = end.type === "up-to-part" ? end.part ? [end.part] : [] : options.limits ?? [];
+        if (!limits.length) throw new Error("Select an earlier stopping part or surface.");
+        high = farthest(limits) + Math.abs(offset2) + Math.max(1, ...limits.map(diagonal)) * 1e-5 + 1;
+        if (high <= low + epsilon2) throw new Error("No boundary lies beyond the extrusion start.");
+        const full2 = prism(wire, low, high, dir);
+        const stops = limits.flatMap((limit) => own(limit.clone().translate(...scale$1(dir, -offset2))).faces.map(own));
+        const boundaries = own(makeCompound(stops.map((face) => face.clone())));
+        const sourceFaces = full2.faces.map(own);
+        const fragments = splitFacesByTool(sourceFaces, boundaries).flat().map(own);
+        const connected2 = fragments.filter((face) => commonLength(start, face) > 1e-8);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const candidate of fragments) if (!connected2.includes(candidate)) {
+            const reachable = connected2.some((face) => {
+              const seam = own(common$1(face, candidate)), length = measureLength(seam);
+              if (length <= 1e-8) return false;
+              return !stops.some((stop) => commonLength(seam, stop) > 1e-8);
+            });
+            if (reachable) {
+              connected2.push(candidate);
+              changed = true;
+            }
+          }
+        }
+        const result = sheet(own(makeCompound(connected2.map((face) => face.clone()))));
+        valid(result, start, own(wire.clone().translate(...scale$1(dir, high))));
+        if (contact(result, stops, opposite, dir, offset2) < 1e-8) throw new Error("No stopping boundary meets the surface extrusion.");
+        pieces.push(result);
+      }
+    }
+    if (!pieces.length) throw new Error("Neither end reaches an existing part or surface.");
+    retained = pieces.slice(1).reduce((all, piece) => own(all.fuse(piece)), pieces[0]);
+    return { shape: retained, contacts };
+  } finally {
+    for (const shape of owned.reverse()) if (shape !== retained) shape.delete();
+  }
+}
 function extrusionStopHandle(contact, direction2, offset2, opposite) {
   return {
     parameter: opposite ? "secondOffset" : "endOffset",
@@ -38773,18 +39305,18 @@ function toroidalSurfaceFrame(surface) {
   const du = new oc.gp_Vec_1(), dv = new oc.gp_Vec_1();
   const duu = new oc.gp_Vec_1(), dvv = new oc.gp_Vec_1(), duv = new oc.gp_Vec_1();
   try {
-    const tuple = (value2) => [...pointTuple(value2)];
+    const tuple2 = (value2) => [...pointTuple(value2)];
     const u2 = (surface.FirstUParameter() + surface.LastUParameter()) / 2;
     const first = surface.FirstVParameter(), last2 = surface.LastVParameter();
     for (const fraction of [0.5, 0.25, 0.75]) {
       surface.D2(u2, first + (last2 - first) * fraction, p2, du, dv, duu, dvv, duv);
-      const radialOffset = tuple(duu), radius = norm$4(radialOffset);
+      const radialOffset = tuple2(duu), radius = norm$4(radialOffset);
       if (!(radius > 1e-12)) continue;
       const radial = scale$1(radialOffset, -1 / radius);
-      const majorRadius = radius + dot$6(tuple(dvv), radial);
+      const majorRadius = radius + dot$6(tuple2(dvv), radial);
       if (!(majorRadius > 1e-12)) continue;
-      const axis = unit$3(cross$4(radial, tuple(du)));
-      const origin2 = sub$5(add$4([...pointTuple(p2)], tuple(dvv)), scale$1(radial, majorRadius));
+      const axis = unit$3(cross$4(radial, tuple2(du)));
+      const origin2 = sub$5(add$4([...pointTuple(p2)], tuple2(dvv)), scale$1(radial, majorRadius));
       if (![...origin2, ...axis, ...radial].every(Number.isFinite)) continue;
       return { origin: origin2, axis, radial };
     }
@@ -39248,8 +39780,8 @@ function buildPartGeometry(shape, sourceDocumentId, sourceName, partIndex, optio
     );
   }
   const bounds2 = shape.boundingBox.bounds;
-  const diagonal = Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]);
-  const tolerance2 = Math.min(options.preview ? 0.3 : 0.1, Math.max(0.01, diagonal * (options.preview ? 3e-3 : 12e-4)));
+  const diagonal2 = Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]);
+  const tolerance2 = Math.min(options.preview ? 0.3 : 0.1, Math.max(0.01, diagonal2 * (options.preview ? 3e-3 : 12e-4)));
   const angularTolerance = options.preview ? 0.35 : 0.2;
   if (!options.preview) {
     const anchors = vertexAnchorsOf(shape);
@@ -40051,64 +40583,6 @@ function sketchRegionGroups(contours) {
     ];
   });
 }
-function planeToolFace(origin2, normal, size) {
-  const o = getOC();
-  const p2 = new o.gp_Pnt_3(...origin2), d2 = new o.gp_Dir_4(...normal), ax = new o.gp_Ax3_4(p2, d2), pln = new o.gp_Pln_2(ax);
-  const maker = new o.BRepBuilderAPI_MakeFace_9(pln, -size, size, -size, size);
-  try {
-    return cast(maker.Face());
-  } finally {
-    maker.delete();
-    pln.delete();
-    ax.delete();
-    d2.delete();
-    p2.delete();
-  }
-}
-function splitFacesByTool(faces, tool2) {
-  const o = getOC();
-  const args = new o.TopTools_ListOfShape_1();
-  for (const f2 of faces) args.Append_1(f2.wrapped);
-  args.Append_1(tool2.wrapped);
-  const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
-  try {
-    fuse.SetArguments(args);
-    fuse.Build(progress);
-    if (!fuse.IsDone()) throw new Error("The faces could not be split.");
-    return faces.map((f2) => {
-      const copy = new o.TopTools_ListOfShape_1();
-      copy.Assign(fuse.Modified(f2.wrapped));
-      const pieces = [];
-      while (copy.Size() > 0) {
-        pieces.push(cast(copy.First_1()));
-        copy.RemoveFirst();
-      }
-      copy.delete();
-      return pieces.length ? pieces : [f2.clone()];
-    });
-  } finally {
-    progress.delete();
-    fuse.delete();
-    args.delete();
-  }
-}
-function splitShapeByTool(shape, tool2) {
-  const o = getOC();
-  const args = new o.TopTools_ListOfShape_1();
-  args.Append_1(shape.wrapped);
-  args.Append_1(tool2.wrapped);
-  const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
-  try {
-    fuse.SetArguments(args);
-    fuse.Build(progress);
-    if (!fuse.IsDone()) throw new Error("The part could not be split by that face.");
-    return cast(fuse.Shape());
-  } finally {
-    progress.delete();
-    fuse.delete();
-    args.delete();
-  }
-}
 const text$1 = (bytes) => new TextDecoder("latin1").decode(bytes);
 function indexed(points, faces) {
   const vertices = [], triangles = [];
@@ -40535,8 +41009,8 @@ function openWallFace(wire, n, a2, b, own) {
   };
   let face;
   try {
-    const boundary = own(assembleWire([...chain(right.wire, right.start), own(makeLine(right.end, left.end)), ...chain(left.wire, left.end), own(makeLine(left.start, right.start))]));
-    face = own(makeFace(boundary));
+    const boundary2 = own(assembleWire([...chain(right.wire, right.start), own(makeLine(right.end, left.end)), ...chain(left.wire, left.end), own(makeLine(left.start, right.start))]));
+    face = own(makeFace(boundary2));
   } catch (error2) {
     throw new Error("The wall offset does not form a complete capped boundary.", { cause: error2 });
   }
@@ -40711,7 +41185,7 @@ function keepSideOf(f2, face, shape, probe, own, mustSeparate) {
 function keepSideOfSurface(f2, handle, shape, probe, own, mustSeparate, transform2) {
   if (measureVolume(shape) <= 1e-9) return shape;
   const shapeX = toExtended(shape);
-  const diagonal = diagonalOfShape(shape), reach = 2 * diagonal, clamp2 = (value2, fallback) => Math.abs(value2) > 1e99 ? fallback : value2;
+  const diagonal2 = diagonalOfShape(shape), reach = 2 * diagonal2, clamp2 = (value2, fallback) => Math.abs(value2) > 1e99 ? fallback : value2;
   const adaptor = new f2.GeomAdaptor_Surface_2(handle);
   const u1 = clamp2(adaptor.FirstUParameter(), -reach), u2 = clamp2(adaptor.LastUParameter(), reach), v1 = clamp2(adaptor.FirstVParameter(), -reach), v2 = clamp2(adaptor.LastVParameter(), reach);
   adaptor.delete();
@@ -40721,7 +41195,7 @@ function keepSideOfSurface(f2, handle, shape, probe, own, mustSeparate, transfor
   const bounded = new f2.Handle_Geom_BoundedSurface_2(spline.get());
   for (const [inU, after] of [[true, true], [true, false], [false, true], [false, false]]) {
     try {
-      f2.GeomLib.ExtendSurfByLength(bounded, diagonal / 4, 1, inU, after);
+      f2.GeomLib.ExtendSurfByLength(bounded, diagonal2 / 4, 1, inU, after);
     } catch {
     }
   }
@@ -41213,6 +41687,51 @@ function evaluatePartDocument(document2, options = {}) {
             const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
             return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
           };
+          const extrusionPlacement = (extrusion, n, o) => {
+            let direction2 = n, custom = false;
+            if (extrusion.directionReference) {
+              if (extrusion.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
+              const ref = extrusion.directionReference;
+              const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
+              const along = sub$5(to, from);
+              if (!along.every(Number.isFinite) || norm$4(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
+              direction2 = unit$3(along);
+              custom = true;
+            } else if (extrusion.directionVector) {
+              const v2 = extrusion.directionVector;
+              if (v2.length !== 3 || !v2.every(Number.isFinite) || Math.abs(norm$4(v2) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
+              direction2 = unit$3(v2);
+              custom = true;
+            }
+            if (custom && Math.abs(dot$6(direction2, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
+            if (extrusion.operation === "cut" !== Boolean(extrusion.reversed)) direction2 = neg(direction2);
+            let offset2 = extrusion.startingOffsetMillimeters ?? 0;
+            if (extrusion.startingReference) {
+              const start = extrusion.startingReference;
+              let origin2, normal;
+              if (start.kind === "principal") {
+                const f2 = principalFrame(start.plane, 0);
+                origin2 = f2.originMillimeters;
+                normal = f2.normal;
+              } else if (start.kind === "plane") {
+                const sourceIndex = history.findIndex((f22) => f22.id === start.sourceFeatureId);
+                const plane2 = sourceIndex >= 0 && sourceIndex < index2 ? history[sourceIndex] : void 0;
+                if (!plane2 || plane2.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
+                const f2 = resolvePlaneFrame(plane2, history.slice(0, sourceIndex));
+                origin2 = f2.originMillimeters;
+                normal = f2.normal;
+              } else {
+                normal = unit$3(start.normal);
+                origin2 = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
+              }
+              if (norm$4(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
+              const alignment = dot$6(normal, direction2);
+              if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
+              offset2 += dot$6(normal, sub$5(origin2, o)) / alignment;
+            }
+            if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
+            return { direction: direction2, custom, offset: offset2 };
+          };
           const pathSource = (sourceId) => profiles.get(sourceId) ?? (history.some((f2) => f2.id === sourceId && f2.type === "curve3d" && !f2.suppressed) ? { contours: [{ id: sourceId }] } : void 0);
           const sketchWire = (sourceId, contourId, label, anyContour = false, selection) => {
             const curve3d = history.find((f2) => f2.id === sourceId && f2.type === "curve3d" && !f2.suppressed);
@@ -41327,27 +41846,27 @@ function evaluatePartDocument(document2, options = {}) {
                   combined = combined ? own(contour.hole ? combined.cut(region) : combined.fuse(region)) : region;
                 }
               }
-              for (const boundary of connectedSketchRegions(solved).regions) {
-                const ids2 = boundary.contourIds ?? boundary.contourIndices.map(String);
-                const region = own(contourDrawing(boundary.contour, feature3.id));
-                regions.push({ key: `connected:${JSON.stringify([...ids2].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary.contourIds });
+              for (const boundary2 of connectedSketchRegions(solved).regions) {
+                const ids2 = boundary2.contourIds ?? boundary2.contourIndices.map(String);
+                const region = own(contourDrawing(boundary2.contour, feature3.id));
+                regions.push({ key: `connected:${JSON.stringify([...ids2].sort())}`, drawing: region, outer: region, holes: [], sourceContourIds: boundary2.contourIds });
               }
-              for (const boundary of sketchFaceRegions(solved)) {
-                if (!boundary.cell) continue;
-                const outer = own(contourDrawing(boundary.contour, feature3.id));
-                const holes = (boundary.holes ?? []).map((hole) => own(contourDrawing(hole, feature3.id)));
+              for (const boundary2 of sketchFaceRegions(solved)) {
+                if (!boundary2.cell) continue;
+                const outer = own(contourDrawing(boundary2.contour, feature3.id));
+                const holes = (boundary2.holes ?? []).map((hole) => own(contourDrawing(hole, feature3.id)));
                 const drawing2 = holes.reduce((shape, hole) => own(shape.cut(hole)), outer);
-                const contourIds = boundary.sourceContourIds ?? boundary.sourceContourIndices.map(String);
-                const inside2 = boundary.insideContourIds ?? boundary.insideContourIndices?.map(String);
+                const contourIds = boundary2.sourceContourIds ?? boundary2.sourceContourIndices.map(String);
+                const inside2 = boundary2.insideContourIds ?? boundary2.insideContourIndices?.map(String);
                 cells.push({
-                  key: `cell:${profileRegionIdentity({ profileRegion: { contourIds, inside: inside2, ordinal: boundary.ordinal, boundary: boundary.boundary } })}`,
+                  key: `cell:${profileRegionIdentity({ profileRegion: { contourIds, inside: inside2, ordinal: boundary2.ordinal, boundary: boundary2.boundary } })}`,
                   drawing: drawing2,
                   outer,
                   holes,
-                  sourceContourIds: boundary.sourceContourIds,
-                  insideContourIds: boundary.insideContourIds,
-                  ordinal: boundary.ordinal,
-                  boundary: boundary.boundary,
+                  sourceContourIds: boundary2.sourceContourIds,
+                  insideContourIds: boundary2.insideContourIds,
+                  ordinal: boundary2.ordinal,
+                  boundary: boundary2.boundary,
                   cell: true
                 });
               }
@@ -43549,6 +44068,8 @@ function evaluatePartDocument(document2, options = {}) {
             const curveWires = (sketchId, contourIds, what, closedOnly = false) => {
               const sketchProfile = profiles.get(sketchId);
               if (!sketchProfile) throw new Error(`${what} needs an earlier sketch.`);
+              if (contourIds?.some((id2) => !sketchProfile.contours.some((curve) => curve.id === id2)))
+                throw new Error(`${what}: a selected sketch curve is unavailable. Reselect the missing curve.`);
               if (!sketchProfile.contours.length && sketchProfile.regions.length) return [sketchWire(sketchId, void 0, what, false)];
               const chosen = sketchProfile.contours.filter((c2) => (!contourIds || c2.id !== void 0 && contourIds.includes(c2.id)) && (!closedOnly || contourClosed(c2)));
               if (!chosen.length) throw new Error(`${what}: the sketch has no ${closedOnly ? "closed " : ""}curves to use.`);
@@ -43568,19 +44089,60 @@ function evaluatePartDocument(document2, options = {}) {
             };
             if (feature3.type === "surface-extrude") {
               const frame = sketchFrameOf(feature3.profileFeatureId);
-              const d2 = feature3.distanceMillimeters * (feature3.reversed ? -1 : 1);
-              publish(feature3, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature3.profileFeatureId), direction: scale$1(unit$3(frame.normal), feature3.reversed ? -1 : 1), scale: feature3.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
-              const along = scale$1(unit$3(frame.normal), d2);
-              const wires = curveWires(feature3.profileFeatureId, feature3.contourIds, "Surface extrude");
-              tool22 = sheetArea(joined(wires.map((wire) => {
-                const start = feature3.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
-                const vec2 = new o.gp_Vec_4(along[0], along[1], along[2]);
-                try {
-                  return new o.BRepPrimAPI_MakePrism_1(start.wrapped, vec2, false, true).Shape();
-                } finally {
-                  vec2.delete();
+              const n = unit$3(frame.normal), origin2 = frame.originMillimeters;
+              const { direction: direction2, offset: offset2 } = extrusionPlacement(feature3, n, origin2);
+              const endType = feature3.endType ?? (feature3.symmetric ? "symmetric" : "blind");
+              const resolveEnd = (end) => {
+                const type = end.endType ?? "blind";
+                let face;
+                if (type === "up-to-face") {
+                  const ref = end.endReference;
+                  const body = ref && bodyAt(ref.sourceFeatureId, ref.bodyId);
+                  if (!ref || !body) throw new Error("The surface extrusion stopping face is unavailable. Reselect an earlier face.");
+                  face = own(faceByReference(body, ref, "Surface extrusion stop"));
                 }
-              })));
+                return {
+                  type,
+                  distance: end.distanceMillimeters,
+                  offset: end.endOffsetMillimeters ?? 0,
+                  ...face ? { face } : {},
+                  ...type === "up-to-vertex" ? { point: stopPoint(end.endPointReference) } : {},
+                  ...type === "up-to-part" ? { part: bodies.get(end.endPartId ?? "") } : {}
+                };
+              };
+              const symmetric = endType.startsWith("symmetric");
+              const primary = resolveEnd({
+                ...feature3,
+                endType: symmetric ? endType === "symmetric" ? "blind" : "through-all" : endType,
+                distanceMillimeters: symmetric ? feature3.distanceMillimeters / 2 : feature3.distanceMillimeters
+              });
+              const second = symmetric ? { ...primary } : feature3.secondEnd ? resolveEnd(feature3.secondEnd) : feature3.secondDistanceMillimeters ? { type: "blind", distance: feature3.secondDistanceMillimeters } : void 0;
+              const picks = feature3.profileSelections;
+              if (picks?.some((pick) => pick.profileFeatureId !== feature3.profileFeatureId)) throw new Error("Surface extrusion curves must share one sketch plane.");
+              const ids2 = picks?.map((pick) => pick.profileContourId).filter((id2) => id2 !== void 0) ?? feature3.profileContourIds ?? feature3.contourIds ?? (feature3.profileContourId ? [feature3.profileContourId] : void 0);
+              const wires = curveWires(feature3.profileFeatureId, ids2, "Surface extrusion");
+              const result = buildSurfaceExtrusion({ wires, origin: origin2, normal: n, direction: direction2, startingOffset: offset2, primary, second, limits: [...bodies.values()] });
+              tool22 = own(result.shape);
+              if (feature3.id === previewId) {
+                previewAxes.push(...extrusionPreviewAxes({
+                  center: sketchCentroid(feature3.profileFeatureId),
+                  direction: direction2,
+                  offset: offset2,
+                  endType,
+                  primary: { endType: primary.type },
+                  ...second ? { second: { endType: second.type } } : {},
+                  reversed: Boolean(feature3.reversed)
+                }));
+                publish(feature3, {
+                  parameter: "offset",
+                  kind: "linear",
+                  signed: true,
+                  direction: direction2,
+                  originMillimeters: add$4(sketchCentroid(feature3.profileFeatureId), scale$1(direction2, offset2 - (feature3.startingOffsetMillimeters ?? 0))),
+                  label: "Starting offset"
+                });
+                result.contacts.forEach((contact) => publish(feature3, extrusionStopHandle(contact.point, contact.direction, contact.offset, contact.opposite)));
+              }
             } else if (feature3.type === "surface-revolve") {
               let axis = feature3.axis === "X" ? [1, 0, 0] : feature3.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin2 = [0, 0, 0];
               if (feature3.axisReference?.kind === "vector") {
@@ -43721,48 +44283,7 @@ function evaluatePartDocument(document2, options = {}) {
             };
             const extrudeWith = (shape) => {
               if (feature3.type !== "extrude") throw new Error("not an extrude");
-              let direction2 = n, custom = false;
-              if (feature3.directionReference) {
-                if (feature3.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
-                const ref = feature3.directionReference;
-                const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
-                const along = sub$5(to, from);
-                if (!along.every(Number.isFinite) || norm$4(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
-                direction2 = unit$3(along);
-                custom = true;
-              } else if (feature3.directionVector) {
-                const v2 = feature3.directionVector;
-                if (v2.length !== 3 || !v2.every(Number.isFinite) || Math.abs(norm$4(v2) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
-                direction2 = unit$3(v2);
-                custom = true;
-              }
-              if (custom && Math.abs(dot$6(direction2, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
-              if (feature3.operation === "cut" !== Boolean(feature3.reversed)) direction2 = neg(direction2);
-              let offset2 = feature3.startingOffsetMillimeters ?? 0;
-              if (feature3.startingReference) {
-                const start = feature3.startingReference;
-                let origin2, normal;
-                if (start.kind === "principal") {
-                  const f2 = principalFrame(start.plane, 0);
-                  origin2 = f2.originMillimeters;
-                  normal = f2.normal;
-                } else if (start.kind === "plane") {
-                  const sourceIndex = history.findIndex((f22) => f22.id === start.sourceFeatureId);
-                  const plane2 = sourceIndex >= 0 && sourceIndex < index2 ? history[sourceIndex] : void 0;
-                  if (!plane2 || plane2.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
-                  const f2 = resolvePlaneFrame(plane2, history.slice(0, sourceIndex));
-                  origin2 = f2.originMillimeters;
-                  normal = f2.normal;
-                } else {
-                  normal = unit$3(start.normal);
-                  origin2 = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
-                }
-                if (norm$4(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
-                const alignment = dot$6(normal, direction2);
-                if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-                offset2 += dot$6(normal, sub$5(origin2, o)) / alignment;
-              }
-              if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
+              const { direction: direction2, custom, offset: offset2 } = extrusionPlacement(feature3, n, o);
               if (feature3.id === previewId && feature3.thin && shape.wallFrame && !previewHandles.some((handle) => ["thickness1", "midThickness"].includes(handle.parameter))) {
                 for (const handle of extrusionThicknessHandles(shape.wallFrame, feature3.thin, direction2, offset2, feature3.draftAngleDegrees)) publish(feature3, handle);
               }
@@ -44575,6 +45096,16 @@ function evaluatePartDocument(document2, options = {}) {
             }
           }
           tools.set(feature3.id, tool22);
+          if (feature3.type === "surface-extrude" && feature3.operation === "add") {
+            const scope = feature3.scopeMode === "all" ? void 0 : feature3.targetBodyIds ?? (feature3.targetBodyId ? [feature3.targetBodyId] : currentBodyID ? [currentBodyID] : []);
+            const merged = mergeSurfaceExtrusion(tool22, bodies, scope);
+            const id2 = merged.targets[0];
+            bodies.set(id2, own(merged.shape));
+            merged.targets.slice(1).forEach((target) => bodies.delete(target));
+            currentBodyID = id2;
+            if (feature3.scopeMode === "all") scopeResolutions[feature3.id] = { targets: merged.targets, groups: [{ bodyId: id2, sources: merged.targets }] };
+            continue;
+          }
           combine(tool22, feature3.operation, feature3);
         } catch (error2) {
           failed = true;

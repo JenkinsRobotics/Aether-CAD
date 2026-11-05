@@ -90,7 +90,7 @@ try {
   await step('saved-reopen-and-projected-geometry', async () => {
     await expect.poll(async () => (await read(file.id)).features.length).toBe(3);
     const saved = await read(file.id);
-    assert.equal(saved.formatVersion, 22);
+    assert.equal(saved.formatVersion, JSON.parse(await readFile(new URL('../aether-engine/src/document/part-format.json', import.meta.url), 'utf8')).current);
     assert.equal(saved.features[1].profile.authored.projectionContext, undefined);
     assert.equal(saved.features[1].profile.sourceFeatureId, 'source');
     await writeFile(join(evidence, 'distance-intent.part.json'), JSON.stringify(saved));

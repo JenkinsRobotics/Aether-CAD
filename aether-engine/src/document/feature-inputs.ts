@@ -48,6 +48,7 @@ export function featureInputDependencies(
       if (drawing) pierceDependencies(drawing).forEach(id => inputs.add(id));
       break;
     }
+    case 'surface-extrude':
     case 'extrude':
       reference(feature.profileSelections);
       reference(feature.startingReference);

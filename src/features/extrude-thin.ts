@@ -1,8 +1,8 @@
 import { rowIn, unitSuffix, type Controls, type FeatureEditorContext } from './shared';
 
-export function thinControls({field,feature}:FeatureEditorContext) {
+export function thinControls({field,feature}:FeatureEditorContext, surface = false) {
  const thin=feature?.thin;
- return {creationMode:field('Creation type',thin?'thin':'solid',['solid','thin']),
+ return {creationMode:field('Creation type',feature?.type==='surface-extrude'?'surface':thin?'thin':'solid',surface?['solid','surface','thin']:['solid','thin']),
   thickness1:field('Thickness 1 (mm)',String(thin?.thickness1Millimeters??1)),
   thickness2:field('Thickness 2 (mm)',String(thin?.thickness2Millimeters??0)),
   midThickness:field('Thickness (mm)',String(thin?.midplaneThicknessMillimeters??2)),

@@ -40,6 +40,14 @@ Package-manager versions and the shared UI dependency version are separate.
    saved reopen. Part22/clipboard2 require the prior readers to refuse new intent;
    codec22 must match its canonical Animation commit. Package rollback does not
    downgrade Part22 files to an older reader's format.
+   Unified Surface extrusion writes Part23 and consumes the canonical codec26
+   wheel. Run `test_native_surface_extrusion.py` and
+   `node scripts/verify-surface-format.mjs /path/to/previous/native-worker.json`:
+   both ends, direction and offset must survive agent edits and saved reopen;
+   codec25 and the previous Part22 worker must refuse the new records. Run
+   `scripts/verify-feature-controls-browser.mjs` on Chromium and WebKit for the
+   real Surface tab, native preview, shared depth control, removal and cancel.
+   Older Parts remain readable; rollback does not downgrade new Part23 files.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

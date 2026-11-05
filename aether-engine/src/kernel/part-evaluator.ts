@@ -1,3 +1,5 @@
+import { mergeSurfaceExtrusion } from './surface-extrusion-merge';
+import { buildSurfaceExtrusion, type SurfaceExtrusionEnd } from './surface-extrusion';
 import { extrusionStopHandle } from './extrusion-stop-preview';
 import { extrusionPreviewAxes } from "./extrusion-preview";
 import { extrusionDraftFrame, extrusionDraftHandle } from "./extrusion-draft-preview";
@@ -891,6 +893,43 @@ export function evaluatePartDocument(
           if (at < 0) throw new Error(unavailable);
           const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
           return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
+        };
+        const extrusionPlacement = (extrusion: ExtrudeFeature | import('../document/surface').SurfaceExtrudeFeature, n: V3, o: V3) => {
+            let direction: V3 = n, custom = false;
+            if (extrusion.directionReference) {
+              if (extrusion.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
+              const ref = extrusion.directionReference;
+              const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
+              const along = sub(to, from);
+              if (!along.every(Number.isFinite) || norm(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
+              direction = unit(along); custom = true;
+            } else if (extrusion.directionVector) {
+              const v = extrusion.directionVector;
+              if (v.length !== 3 || !v.every(Number.isFinite) || Math.abs(norm(v) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
+              direction = unit(v); custom = true;
+            }
+            if (custom && Math.abs(dot(direction, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
+            if ((extrusion.operation === "cut") !== Boolean(extrusion.reversed)) direction = neg(direction);
+            // Start: a signed offset along the direction, from the sketch or from a
+            // parallel face or plane named as the starting entity.
+            let offset = extrusion.startingOffsetMillimeters ?? 0;
+            if (extrusion.startingReference) {
+              const start = extrusion.startingReference;
+              let origin: V3, normal: V3;
+              if (start.kind === "principal") { const f = principalFrame(start.plane, 0); origin = f.originMillimeters as V3; normal = f.normal as V3; }
+              else if (start.kind === "plane") {
+                const sourceIndex = history.findIndex((f) => f.id === start.sourceFeatureId);
+                const plane = sourceIndex >= 0 && sourceIndex < index ? history[sourceIndex] : undefined;
+                if (!plane || plane.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
+                const f = resolvePlaneFrame(plane, history.slice(0, sourceIndex)); origin = f.originMillimeters as V3; normal = f.normal as V3;
+              } else { normal = unit(start.normal); origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face."); }
+              if (norm(cross(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
+              const alignment = dot(normal, direction);
+              if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
+              offset += dot(normal, sub(origin, o)) / alignment;
+            }
+            if (!Number.isFinite(offset)) throw new Error("Starting offset must be finite.");
+          return { direction, custom, offset };
         };
         // A closed region (or any contour) of an earlier sketch as a wire on that sketch's plane.
         /** A 3D sketch stands in for a sketch profile where a path is expected: no contours, one curve. */
@@ -2903,6 +2942,8 @@ export function evaluatePartDocument(
           const curveWires = (sketchId: string, contourIds: string[] | undefined, what: string, closedOnly = false): Wire[] => {
             const sketchProfile = profiles.get(sketchId);
             if (!sketchProfile) throw new Error(`${what} needs an earlier sketch.`);
+            if (contourIds?.some(id => !sketchProfile.contours.some(curve => curve.id === id)))
+              throw new Error(`${what}: a selected sketch curve is unavailable. Reselect the missing curve.`);
             // A circle or polygon profile has one closed region and no authored contours.
             if (!sketchProfile.contours.length && sketchProfile.regions.length) return [sketchWire(sketchId, undefined, what, false)];
             const chosen = sketchProfile.contours.filter((c) => (!contourIds || (c.id !== undefined && contourIds.includes(c.id))) && (!closedOnly || contourClosed(c)));
@@ -2920,15 +2961,41 @@ export function evaluatePartDocument(
           const sheetArea = (sheet: Shape3D) => { const a = measureArea(sheet as never); if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances."); return sheet; };
           if (feature.type === "surface-extrude") {
             const frame = sketchFrameOf(feature.profileFeatureId);
-            const d = feature.distanceMillimeters * (feature.reversed ? -1 : 1);
-            publish(feature, { parameter: "distance", kind: "linear", originMillimeters: sketchCentroid(feature.profileFeatureId), direction: scale(unit(frame.normal as V3), feature.reversed ? -1 : 1), scale: feature.symmetric ? 0.5 : 1, label: "Surface extrude distance" });
-            const along = scale(unit(frame.normal as V3), d);
-            const wires = curveWires(feature.profileFeatureId, feature.contourIds, "Surface extrude");
-            tool = sheetArea(joined(wires.map((wire) => {
-              const start = feature.symmetric ? own(wire.clone().translate(-along[0] / 2, -along[1] / 2, -along[2] / 2)) : wire;
-              const vec = new o.gp_Vec_4(along[0], along[1], along[2]);
-              try { return new o.BRepPrimAPI_MakePrism_1(start.wrapped, vec, false, true).Shape(); } finally { vec.delete(); }
-            })));
+            const n = unit(frame.normal as V3), origin = frame.originMillimeters as V3;
+            const { direction, offset } = extrusionPlacement(feature, n, origin);
+            const endType = feature.endType ?? (feature.symmetric ? 'symmetric' : 'blind');
+            const resolveEnd = (end: { endType?: string; distanceMillimeters: number; endOffsetMillimeters?: number; endPointReference?: ExtrusionPointReference; endReference?: ExtrudeFeature['endReference']; endPartId?: string }): SurfaceExtrusionEnd => {
+              const type = end.endType ?? 'blind';
+              let face: Face | undefined;
+              if (type === 'up-to-face') {
+                const ref = end.endReference;
+                const body = ref && bodyAt(ref.sourceFeatureId, ref.bodyId);
+                if (!ref || !body) throw new Error('The surface extrusion stopping face is unavailable. Reselect an earlier face.');
+                face = own(faceByReference(body, ref, 'Surface extrusion stop'));
+              }
+              return { type: type as SurfaceExtrusionEnd['type'], distance: end.distanceMillimeters, offset: end.endOffsetMillimeters ?? 0,
+                ...(face ? { face } : {}), ...(type === 'up-to-vertex' ? { point: stopPoint(end.endPointReference) } : {}),
+                ...(type === 'up-to-part' ? { part: bodies.get(end.endPartId ?? '') } : {}) };
+            };
+            const symmetric = endType.startsWith('symmetric');
+            const primary = resolveEnd({ ...feature, endType: symmetric ? endType === 'symmetric' ? 'blind' : 'through-all' : endType,
+              distanceMillimeters: symmetric ? feature.distanceMillimeters / 2 : feature.distanceMillimeters });
+            const second = symmetric ? { ...primary } : feature.secondEnd ? resolveEnd(feature.secondEnd)
+              : feature.secondDistanceMillimeters ? { type: 'blind' as const, distance: feature.secondDistanceMillimeters } : undefined;
+            const picks = feature.profileSelections;
+            if (picks?.some(pick => pick.profileFeatureId !== feature.profileFeatureId)) throw new Error('Surface extrusion curves must share one sketch plane.');
+            const ids = picks?.map(pick => pick.profileContourId).filter((id): id is string => id !== undefined)
+              ?? feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
+            const wires = curveWires(feature.profileFeatureId, ids, 'Surface extrusion');
+            const result = buildSurfaceExtrusion({ wires, origin, normal: n, direction, startingOffset: offset, primary, second, limits: [...bodies.values()] });
+            tool = own(result.shape);
+            if (feature.id === previewId) {
+              previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction, offset, endType,
+                primary: { endType: primary.type }, ...(second ? { second: { endType: second.type } } : {}), reversed: Boolean(feature.reversed) }));
+              publish(feature, { parameter: 'offset', kind: 'linear', signed: true, direction,
+                originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))), label: 'Starting offset' });
+              result.contacts.forEach(contact => publish(feature, extrusionStopHandle(contact.point, contact.direction, contact.offset, contact.opposite)));
+            }
           } else if (feature.type === "surface-revolve") {
             let axis: V3 = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
             if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
@@ -3066,40 +3133,7 @@ export function evaluatePartDocument(
             // Direction: the sketch normal, a unit vector, or a line of an earlier
             // sketch. A pad grows along it, a cut goes into the material behind the
             // sketch (FreeCAD's rule, which saved documents assume); Reversed flips either.
-            let direction: V3 = n, custom = false;
-            if (feature.directionReference) {
-              if (feature.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
-              const ref = feature.directionReference;
-              const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
-              const along = sub(to, from);
-              if (!along.every(Number.isFinite) || norm(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
-              direction = unit(along); custom = true;
-            } else if (feature.directionVector) {
-              const v = feature.directionVector;
-              if (v.length !== 3 || !v.every(Number.isFinite) || Math.abs(norm(v) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");
-              direction = unit(v); custom = true;
-            }
-            if (custom && Math.abs(dot(direction, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
-            if ((feature.operation === "cut") !== Boolean(feature.reversed)) direction = neg(direction);
-            // Start: a signed offset along the direction, from the sketch or from a
-            // parallel face or plane named as the starting entity.
-            let offset = feature.startingOffsetMillimeters ?? 0;
-            if (feature.startingReference) {
-              const start = feature.startingReference;
-              let origin: V3, normal: V3;
-              if (start.kind === "principal") { const f = principalFrame(start.plane, 0); origin = f.originMillimeters as V3; normal = f.normal as V3; }
-              else if (start.kind === "plane") {
-                const sourceIndex = history.findIndex((f) => f.id === start.sourceFeatureId);
-                const plane = sourceIndex >= 0 && sourceIndex < index ? history[sourceIndex] : undefined;
-                if (!plane || plane.type !== "plane") throw new Error("Starting plane is unavailable. Reselect an earlier reference plane.");
-                const f = resolvePlaneFrame(plane, history.slice(0, sourceIndex)); origin = f.originMillimeters as V3; normal = f.normal as V3;
-              } else { normal = unit(start.normal); origin = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face."); }
-              if (norm(cross(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
-              const alignment = dot(normal, direction);
-              if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-              offset += dot(normal, sub(origin, o)) / alignment;
-            }
-            if (!Number.isFinite(offset)) throw new Error("Starting offset must be finite.");
+            const { direction, custom, offset } = extrusionPlacement(feature, n, o);
             if (feature.id === previewId && feature.thin && shape.wallFrame && !previewHandles.some(handle => ["thickness1", "midThickness"].includes(handle.parameter))) {
               for (const handle of extrusionThicknessHandles(shape.wallFrame, feature.thin, direction, offset, feature.draftAngleDegrees)) publish(feature, handle);
             }
@@ -3789,6 +3823,14 @@ export function evaluatePartDocument(
           }
         }
         tools.set(feature.id, tool);
+        if (feature.type === 'surface-extrude' && feature.operation === 'add') {
+          const scope = feature.scopeMode === 'all' ? undefined : feature.targetBodyIds ?? (feature.targetBodyId ? [feature.targetBodyId] : currentBodyID ? [currentBodyID] : []);
+          const merged = mergeSurfaceExtrusion(tool, bodies, scope);
+          const id = merged.targets[0]; bodies.set(id, own(merged.shape));
+          merged.targets.slice(1).forEach(target => bodies.delete(target)); currentBodyID = id;
+          if (feature.scopeMode === 'all') scopeResolutions[feature.id] = { targets: merged.targets, groups: [{ bodyId: id, sources: merged.targets }] };
+          continue;
+        }
         // Preserve the legacy combine contract after the feature-kind branches (a rib was mapped to an extrude above).
         combine(tool, (feature as Extract<typeof feature, { operation: unknown }>).operation, feature);
       } catch (error) {

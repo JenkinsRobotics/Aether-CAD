@@ -19,7 +19,7 @@ export function splitFacesByTool(faces: readonly Face[], tool: AnyShape): Face[]
   args.Append_1(tool.wrapped);
   const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
   try {
-    fuse.SetArguments(args); fuse.Build(progress);
+    fuse.SetArguments(args); fuse.SetNonDestructive(true); fuse.Build(progress);
     if (!fuse.IsDone()) throw new Error("The faces could not be split.");
     return faces.map((f) => {
       const copy = new o.TopTools_ListOfShape_1();
@@ -39,7 +39,7 @@ export function splitShapeByTool(shape: AnyShape, tool: AnyShape): AnyShape {
   args.Append_1(shape.wrapped); args.Append_1(tool.wrapped);
   const fuse = new o.BRepAlgoAPI_BuilderAlgo_1(), progress = new o.Message_ProgressRange_1();
   try {
-    fuse.SetArguments(args); fuse.Build(progress);
+    fuse.SetArguments(args); fuse.SetNonDestructive(true); fuse.Build(progress);
     if (!fuse.IsDone()) throw new Error("The part could not be split by that face.");
     return cast(fuse.Shape());
   } finally { progress.delete(); fuse.delete(); args.delete(); }

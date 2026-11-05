@@ -185,6 +185,66 @@ it("serializes extrude with its distance and operation", async () => {
   expect(feature.id).toBeTruthy();
 });
 
+it('authors Surface through the common Extrude controls with independent ends and direction', async () => {
+  seedProfile();
+  const feature = await authored('extrude', {
+    'Creation type': 'surface', Sketch: 'profile-1', Distance: '12',
+    'Starting offset enabled': 'true', 'Starting offset (mm)': '2',
+    'Extrusion direction': 'custom', 'Direction X': '0', 'Direction Y': '3', 'Direction Z': '4',
+    'Use second end': 'true', 'Opposite depth (mm)': '3',
+  });
+  expect(feature).toMatchObject({ type: 'surface-extrude', operation: 'new', distanceMillimeters: 12,
+    startingOffsetMillimeters: 2, directionVector: [0, .6, .8], secondEnd: { endType: 'blind', distanceMillimeters: 3 } });
+  expect(feature.profileSelections).toHaveLength(1);
+  expect(feature.profileSelections[0]).toMatchObject({ profileFeatureId: 'profile-1', profileContourId: expect.any(String) });
+  expect(feature).not.toHaveProperty('thin');
+  expect(feature).not.toHaveProperty('draftAngleDegrees');
+  expect(feature).not.toHaveProperty('separateBodies');
+});
+
+it('uses the same Surface dialog from its command and removes curve inputs by repeat click or ×', async () => {
+  seedConnectedProfile();
+  cadCommands.execute('feature-surface-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const field = label => panel.querySelector(`[aria-label="${label}"]`);
+  expect(field('Creation type').value).toBe('surface');
+  const pick = contourIndex => window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'joined', contourIndex } }));
+  const refs = () => JSON.parse(field('Selected profiles').value);
+  pick(0); pick(1);
+  expect(refs()).toEqual([{ featureId: 'joined', contourIndex: 0 }, { featureId: 'joined', contourIndex: 1 }]);
+  pick(0);
+  expect(refs()).toEqual([{ featureId: 'joined', contourIndex: 1 }]);
+  const entities = panel.querySelector('[aria-label="Sketch curves to extrude"]');
+  const remove = entities.querySelector('button');
+  remove.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  expect(remove.isConnected).toBe(true); remove.click();
+  expect(refs()).toEqual([]);
+  expect(entities.querySelectorAll('.aui-feature-entity')).toHaveLength(0);
+  panel.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  expect(apply).not.toHaveBeenCalled();
+  pick(2);
+  panel.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+  expect(doc.features.at(-1)).toMatchObject({ type: 'surface-extrude', profileFeatureId: 'joined' });
+  expect(doc.features.at(-1).profileSelections).toHaveLength(1);
+});
+
+it('reopens a legacy symmetric Surface in the shared editor without losing its extent', async () => {
+  seedProfile();
+  doc = insertFeature(doc, { id: 'surface', type: 'surface-extrude', name: 'Surface', suppressed: false,
+    profileFeatureId: 'profile-1', operation: 'new', distanceMillimeters: 14, symmetric: true });
+  window.dispatchEvent(new CustomEvent('aether-feature-action', { detail: { type: 'item-action',
+    id: 'feature/surface-extrude/surface', actionID: 'edit-feature' } }));
+  const panel = document.querySelector('.cad-feature-dialog');
+  expect(panel.querySelector('[aria-label="Creation type"]').value).toBe('surface');
+  expect(panel.querySelector('[aria-label="Symmetric"]').checked).toBe(true);
+  expect(Number(panel.querySelector('[aria-label="Distance (mm)"]').value)).toBe(14);
+  panel.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+  expect(doc.features.at(-1)).toMatchObject({ id: 'surface', type: 'surface-extrude', endType: 'symmetric', distanceMillimeters: 14 });
+  expect(doc.features.at(-1)).not.toHaveProperty('symmetric');
+});
+
 it('waits for the latest native preview before accepting a feature through either the button or Enter', async () => {
   seedProfile();
   const jobs = [];

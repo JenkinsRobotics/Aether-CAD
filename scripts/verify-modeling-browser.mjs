@@ -370,7 +370,7 @@ try {
     await tab('Surface').click();
     await ribbon('Extrude', 'feature-surface-extrude').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
-    await setSelect('Sketch curves', 'Sketch 1');
+    await setSelect('Sketch', 'Sketch 1');
     await setInput('Distance (mm)', 8);
     await applyDialog('surface-extrude');
     await expect(featureRow(/^Surface Extrude/)).toBeVisible();

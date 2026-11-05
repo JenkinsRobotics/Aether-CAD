@@ -1,3 +1,5 @@
+import type { ExtrudeFeature } from './part-document';
+import { validateExtrusionDefinition } from './extrusion-validation';
 import { validateMirrorPlane } from "./mirror-plane";
 import { validateTransformVectorReference, type TransformVectorReference } from "./part-transform";
 import { validateEdgeFinishEdge, type EdgeFinishEdge } from "./solid-edge-reference";
@@ -14,13 +16,12 @@ export type SurfaceRevolveAxis = { kind: "vector"; origin: [number, number, numb
  *  new-body feature; Stitch keeps the first body's identity and consumes the
  *  rest; Unstitch publishes one body per face; Reverse and Offset change a
  *  sheet in place. */
-export interface SurfaceExtrudeFeature {
-  id: string; type: "surface-extrude"; name: string; suppressed: boolean; operation: "new";
-  profileFeatureId: string;
-  /** The sketch curves to extrude (open or closed chains); every curve when absent. */
+export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees' | 'separateBodies' | 'bodyOutputs'> {
+  type: "surface-extrude";
+  operation: "new" | "add";
+  /** Legacy selected sketch curves, retained on read. New records use profileSelections. */
   contourIds?: string[];
-  distanceMillimeters: number;
-  reversed?: boolean;
+  /** Legacy symmetric flag; new records use endType. */
   symmetric?: boolean;
 }
 export interface SurfaceRevolveFeature {
@@ -189,10 +190,14 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
       }
       return;
     }
-    case "surface-extrude":
-      sketchRef(feature.profileFeatureId, earlier, "Surface extrude");
-      if (!finite(feature.distanceMillimeters) || feature.distanceMillimeters <= 0) throw new Error("Surface extrude needs a positive distance.");
+    case "surface-extrude": {
+      if (!['new', 'add'].includes(feature.operation)) throw new Error('Surface extrusion supports New or Add.');
+      if (feature.symmetric && (feature.endType || feature.secondEnd || feature.secondDistanceMillimeters)) throw new Error('Choose one symmetric surface extent definition.');
+      if (feature.contourIds !== undefined && (!Array.isArray(feature.contourIds) || !feature.contourIds.length || new Set(feature.contourIds).size !== feature.contourIds.length || feature.contourIds.some(id => typeof id !== 'string' || !id.trim()))) throw new Error('Select distinct sketch curve identities.');
+      if ('thin' in feature || 'draftAngleDegrees' in feature || feature.secondEnd?.draftAngleDegrees !== undefined) throw new Error('Surface extrusion does not support solid wall or draft parameters.');
+      validateExtrusionDefinition({ ...feature, type: 'extrude' }, earlier, missing as (id: string) => boolean, true);
       return;
+    }
     case "surface-revolve":
       sketchRef(feature.profileFeatureId, earlier, "Surface revolve");
       if (!finite(feature.angleDegrees) || feature.angleDegrees <= 0 || feature.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");

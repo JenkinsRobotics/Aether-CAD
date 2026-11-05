@@ -18,7 +18,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   region.multiple = true;
   const selections = context.field("Selected profiles", "[]");
   const sketches = context.doc.features.filter(f => [...(source as HTMLSelectElement).options].some(o => o.value === f.id));
-  const curves=()=>creationMode?.value==='thin';
+  const curves=()=>creationMode?.value==='thin'||creationMode?.value==='surface';
   const regions = (id: string) => { const f = sketches.find(f => f.id === id); return f ? featureRegionChoices(context,f,curves()) : []; };
   const initial: Pick[] = [];
   const feature = context.feature;
@@ -28,7 +28,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       if (r) initial.push({ featureId: p.profileFeatureId, contourIndex: r.contourIndex });
     }
   } else if (feature?.profileFeatureId) {
-    const ids = feature.profileContourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
+    const ids = feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
     const choices = regions(feature.profileFeatureId);
     for (const r of choices.filter(r => feature.profileRegion ? matchesProfileRegion(feature, r) : ids ? ids.includes(r.contourId) : !r.cell)) initial.push({featureId: feature.profileFeatureId, contourIndex: r.contourIndex});
   }
@@ -132,9 +132,9 @@ export function serializeExtrudeSelections(values: Record<string,string>, contex
   const picks: Pick[] = JSON.parse(values.selections);
   if (!picks.length) throw new Error("Select a sketch face.");
   const feature=context.feature;
-  if (feature && !feature.profileSelections && values.selections === initialByContext.get(context)) return {profileFeatureId:feature.profileFeatureId, ...(feature.profileContourId ? {profileContourId:feature.profileContourId}:{}), ...(feature.profileRegion ? {profileRegion:feature.profileRegion}:{}), ...(feature.profileContourIds ? {profileContourIds:feature.profileContourIds}:{}), ...(feature.regionMode ? {regionMode:feature.regionMode}:{})};
-  const profileFeatureId=feature?.profileFeatureId ?? picks[0].featureId;
-  const profileSelections = stampProfileSelections(context, picks, values.creationMode === "thin", true);
+  if (feature && feature.type !== 'surface-extrude' && values.creationMode !== 'surface' && !feature.profileSelections && values.selections === initialByContext.get(context)) return {profileFeatureId:feature.profileFeatureId, ...(feature.profileContourId ? {profileContourId:feature.profileContourId}:{}), ...(feature.profileRegion ? {profileRegion:feature.profileRegion}:{}), ...(feature.profileContourIds ? {profileContourIds:feature.profileContourIds}:{}), ...(feature.regionMode ? {regionMode:feature.regionMode}:{})};
+  const profileFeatureId=picks[0].featureId;
+  const profileSelections = stampProfileSelections(context, picks, ["thin", "surface"].includes(values.creationMode), true);
   return {profileFeatureId,profileSelections,regionMode:"faces",profileContourIds:undefined,profileContourId:profileSelections.length===1?profileSelections[0].profileContourId:undefined,profileRegion:profileSelections.length===1?profileSelections[0].profileRegion:undefined};
 }
 
