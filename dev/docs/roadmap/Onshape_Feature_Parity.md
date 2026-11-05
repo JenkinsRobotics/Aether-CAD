@@ -28,7 +28,7 @@ Release evidence is recorded separately in
 `../reality/data/Conical_Shoulder_2026_11_04.json`; this does not close the broader
 Extrude/Revolve/Chamfer/Fillet parity requirements below.
 
-## Gaps closed — 2026-11-04 (alpha-0.1.100, continued in alpha-0.1.101)
+## Gaps closed — 2026-11-04 (alpha-0.1.100, continued in alpha-0.1.103; 0.1.101 and 0.1.102 were the Extrude qualification releases of the other session)
 
 Every row below went through the same validated record (`feature_add` / `feature_update`), the
 kernel and the window, with a closed-form engine check in
@@ -264,10 +264,10 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | Solid / Surface / Thin, operations | Tabs | Done |
 | Faces and sketch regions to sweep | Same | Done |
 | Sweep path + opposite direction arrow | Sweep path box with the Opposite direction button (the path rebuilt reversed: where the laws start) | Done (alpha-0.1.100) |
-| Profile control: None / Keep profile orientation / Lock profile faces / Lock profile direction | Profile control picker with all four; Lock profile faces takes the face the path lies on (Faces to lock to); Lock profile direction takes the up direction | Done (alpha-0.1.101) |
-| Twist: Turns / Angle / Pitch, opposite, extend | Twist by Turns, Angle or Pitch with Opposite direction (an auxiliary spine wound round the path) | Done (alpha-0.1.101); extend open |
+| Profile control: None / Keep profile orientation / Lock profile faces / Lock profile direction | Profile control picker with all four; Lock profile faces takes the face the path lies on (Faces to lock to); Lock profile direction takes the up direction | Done (alpha-0.1.103) |
+| Twist: Turns / Angle / Pitch, opposite, extend | Twist by Turns, Angle or Pitch with Opposite direction (an auxiliary spine wound round the path) | Done (alpha-0.1.103); extend open |
 | Scale: scale factor | End scale | Done |
-| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip, for one closed or open curve (an open curve's wall is capped in its plane, as Extrude's); Trim ends disabled with the gap named | Done (alpha-0.1.101); trim ends open |
+| Thin: Mid plane, thickness, Trim ends | Thin tab with Mid plane, Thickness 1 / 2 and the flip, for one closed or open curve (an open curve's wall is capped in its plane, as Extrude's); Trim ends disabled with the gap named | Done (alpha-0.1.103); trim ends open |
 | Merge scope | Merge scope box (one part) | Partial: one part |
 
 ## Loft (`src/features/loft.ts`) — https://cad.onshape.com/help/Content/loft.htm
@@ -288,7 +288,7 @@ Every disabled control names its kernel gap in its tooltip (alpha-0.1.98).
 | --- | --- | --- |
 | Inch / Metric | Metric / Inch tabs choose the standard family (ISO metric or UNC/UNF) | Done (alpha-0.1.98) |
 | Simple / Counterbore / Countersink | Simple / Counterbore / Countersink tabs (a saved counterdrill keeps a fourth) | Done (alpha-0.1.98) |
-| Sketch points to place holes (+ implicit mate connectors) | Sketch points to place holes: clicked in the viewport, from the list, or every point of a sketch picked in the tree; one hole per point, square to its sketch | Done (alpha-0.1.101); mate connectors open |
+| Sketch points to place holes (+ implicit mate connectors) | Sketch points to place holes: clicked in the viewport, from the list, or every point of a sketch picked in the tree; one hole per point, square to its sketch | Done (alpha-0.1.103); mate connectors open |
 | Merge scope | Merge scope box (one part) | Partial: one part |
 | Hole type: Drilled / Clearance / Tapped / PEM, with Standard, Size, fit, threads/inch, class | Hole type picker with all four; Standard, Size, Fastener fit, Thread class; Straight pipe tap (BSP parallel) and Tapered pipe tap (NPT, 1°47' taper); PEM refuses with the gap named | Partial: PEM |
 | Diameter | Diameter | Done |
@@ -307,8 +307,8 @@ One window today with a Pattern type select; Onshape has three tools. Split into
 | Part / Feature / Face pattern | Part / Feature / Face tabs; Face disabled with the gap named | Partial: faces |
 | New / Add / Remove / Intersect | New / Add / Remove / Intersect tabs: a feature pattern repeats its feature's own result (as Onshape's); a part pattern makes new parts or adds, removes or intersects with the merge scope | Done (alpha-0.1.100) |
 | Entities to pattern | Parts to pattern box + feature chips | Done (parts, features) |
-| Linear: Direction (plane, face, edge, line, curve, mate connector) + flip, Distance, Instance count, Centered, Second direction, Skip instances | Direction: principal axes, a picked straight edge, a planar face, a tree plane, a Plane feature or a sketch line, with the flip; Distance, Instance count, Centered, Second direction with its own direction, flip, distance, count and Centered; Skip instances | Done (alpha-0.1.101); curves and mate connectors open |
-| Circular: Axis of pattern + flip, Angle, Instance count, Equal spacing, Centered, Skip instances | Axis of pattern: principal axes, a picked straight edge, an Axis feature or a cylindrical / conical face, with the flip; Angle, Instance count, Equal spacing (off: the angle is between instances), Centered; Skip instances | Done (alpha-0.1.101); mate connectors open |
+| Linear: Direction (plane, face, edge, line, curve, mate connector) + flip, Distance, Instance count, Centered, Second direction, Skip instances | Direction: principal axes, a picked straight edge, a planar face, a tree plane, a Plane feature or a sketch line, with the flip; Distance, Instance count, Centered, Second direction with its own direction, flip, distance, count and Centered; Skip instances | Done (alpha-0.1.103); curves and mate connectors open |
+| Circular: Axis of pattern + flip, Angle, Instance count, Equal spacing, Centered, Skip instances | Axis of pattern: principal axes, a picked straight edge, an Axis feature or a cylindrical / conical face, with the flip; Angle, Instance count, Equal spacing (off: the angle is between instances), Centered; Skip instances | Done (alpha-0.1.103); mate connectors open |
 | Curve: Path, Equal spacing / Distance, Instance count, Orientation (Tangent / Normal to face / Locked + lock faces), Skip instances | Path sketch, spacing/distance, count, orientation identical/path | Partial |
 | Reapply features, Merge scope | Reapply features disabled with the gap named; Merge scope box (one part) | Partial |
 
@@ -385,7 +385,7 @@ parting-entity draft in the kernel. Status: Open.
 | Sketch profiles (rib centrelines) | Sketch profiles: the open curves of one sketch (all, or ticked) | Done (alpha-0.1.100) |
 | Parts | Parts box (one part) | Done |
 | Thickness | Thickness, centred on the curve | Done |
-| Parallel / Normal to sketch plane + flip | Rib direction picker with the flip; both build | Done (alpha-0.1.101) |
+| Parallel / Normal to sketch plane + flip | Rib direction picker with the flip; both build | Done (alpha-0.1.103) |
 | Draft angle + flip | Present, disabled with the gap named | Kernel gap: drafted thin extrusion |
 | Extend profiles to part | Present, disabled with the gap named | Gap |
 | Merge ribs | Checked and disabled: ribs always merge | Done (always on) |
