@@ -1,5 +1,6 @@
 import type { ExtrudeFeature } from './part-document';
 import { profileRegionIdentity } from '../sketch/reference/profile-region-reference';
+import { validateExtrusionDirectionReference } from './extrusion-direction-reference';
 import { validateExtrusionScopeResolution, type ExtrusionScopeResolution } from './extrusion-scope';
 import { validateExtrusionPointReference } from './extrusion-point-reference';
 import { validateExtrusionFaceReference } from './extrusion-face-reference';
@@ -84,12 +85,8 @@ export function validateExtrusionDefinition(feature: ExtrudeFeature, earlier: Re
     if (!Array.isArray(vector) || vector.length !== 3 || !vector.every(Number.isFinite) || Math.abs(Math.hypot(...vector) - 1) > 1e-6) throw Error("Extrusion direction must be a finite unit vector.");
   }
   if (feature.directionReference !== undefined) {
-    const ref = feature.directionReference;
-    if (!ref || ref.kind !== "sketch-line" || feature.directionVector !== undefined ||
-      ![ref.sourceFeatureId, ref.contourId, ref.segmentId].every(id => typeof id === "string" && !!id.trim() && id.length <= 128) ||
-      (!missingReference(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile")) {
-      throw Error("Extrusion direction needs a line in an earlier sketch; it cannot also store a manual vector.");
-    }
+    if (feature.directionVector !== undefined) throw Error('An extrusion direction reference cannot also store a manual vector.');
+    validateExtrusionDirectionReference(feature.directionReference, earlier, missingReference);
   }
   if (feature.reversed !== undefined && typeof feature.reversed !== "boolean") throw new Error("Invalid extrude direction.");
 }

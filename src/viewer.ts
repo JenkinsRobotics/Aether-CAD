@@ -1,4 +1,5 @@
 import { cadSnapping } from './cad-snapping-store';
+import { pickBoundarySelection } from './viewport/boundary-selection';
 import { paintSurfaceFace, setSurfaceGroups } from './viewport/surface-groups';
 import { samePartGeometry } from './viewport/assembly-geometry';
 import { projectSelectionManipulator, transformMatrix, type Point3 } from './viewport/selection-manipulator-math';
@@ -584,8 +585,8 @@ export class MateViewport {
     return candidate?.vertexAnchor?{bodyId:item.partId,anchor:structuredClone(candidate.vertexAnchor),label:item.label}:null;
   }
 
-  selectedTransformEdge(documentId:string) {
-    const items=cadSelection.snapshot().items,item=items[0];
+  selectedTransformEdge(documentId:string, items = cadSelection.snapshot().items) {
+    const item=items[0];
     if(items.length!==1||item.kind!=='edge')return null;
     const part=this.historyEditing?this.historyModel?.parts.find(p=>p.id===item.partId):this.parts.get(item.partId)?.data;
     if(!part||part.sourceDocumentId!==documentId||part.geometryKind==='mesh')return null;
@@ -2257,11 +2258,11 @@ export class MateViewport {
     if ((this.featurePreview.active && !this.canPickSourceGeometry()) || (!this.sketchPlaneSelection && !this.canPickSourceGeometry() && !["face", "edge", "vertex"].includes(filter))) return null;
     this.updatePointer(event);
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const hit = pickHistoryFace(this.raycaster, this.historyPreview.group, this.historyModel,
+    const hit = pickBoundarySelection(this.raycaster, this.camera, rect, event, filter, ray => pickHistoryFace(ray, this.historyPreview.group, this.historyModel,
       filter === "edge" || filter === "vertex" || (filter === "auto" && this.sourceGeometryPicking === "entity") ? {
         kind: filter, point: {x:event.clientX-rect.left,y:event.clientY-rect.top},
         project: point => this.projectScreenPoint(point),
-      } : undefined, this.canPickSourceGeometry());
+      } : undefined, this.canPickSourceGeometry()));
     return hit&&filter==='body'?{...hit,item:{id:`body:${hit.item.partId}`,kind:'body' as const,partId:hit.item.partId,label:hit.partName}}:hit;
   }
 
@@ -2287,7 +2288,12 @@ export class MateViewport {
   private selectionHit(event: {clientX:number;clientY:number}): SelectionHover | null {
     if (!this.modelRoot.visible && !(this.featurePreview.active && this.canPickSourceGeometry() && !this.historyEditing)) return null;
     this.updatePointer(event);
-    const hit = this.raycaster.intersectObjects(this.pickableSurfaces(), false)
+    return pickBoundarySelection(this.raycaster, this.camera, this.renderer.domElement.getBoundingClientRect(), event,
+      cadSelection.snapshot().filter, ray => this.selectionHitWithRay(ray, event));
+  }
+
+  private selectionHitWithRay(ray: THREE.Raycaster, event: {clientX:number;clientY:number}): SelectionHover | null {
+    const hit = ray.intersectObjects(this.pickableSurfaces(), false)
       .filter(hit => !this.section.hides(String(hit.object.userData.partId), hit.point))[0];
     if (!hit || hit.faceIndex === undefined || hit.faceIndex === null) return null;
     const part = this.parts.get(String(hit.object.userData.partId));

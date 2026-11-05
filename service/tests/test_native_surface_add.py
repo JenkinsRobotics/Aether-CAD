@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from aether_animation.aether_workspace import AetherWorkspace
+from aether_cad_service.part_format import PART_DOCUMENT_VERSION
 from documents import part_archive
 from test_native_feature_operations import native, run
 from test_native_program import empty, invoke
@@ -33,7 +34,7 @@ def test_connected_surface_add_preserves_bodies_and_refuses_detached_edits(tmp_p
         "distanceMillimeters": 4, **({"scopeMode": "all"} if automatic else {"targetBodyId": "b", "targetBodyIds": ["b", "a"]})}}})
     authored = run(tmp_path, empty(), steps)
     saved = json.loads(authored["content"])
-    assert saved["formatVersion"] == 26
+    assert saved["formatVersion"] == PART_DOCUMENT_VERSION
     feature = saved["features"][-1]
     assert feature["connectedMerge"]
     assert sorted(group["bodyId"] for group in feature["scopeResolution"]["groups"]) == ["a", "b"]

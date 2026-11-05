@@ -1,0 +1,37 @@
+/** Released readers must refuse native direction references before interpreting them. */
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+assert.ok(process.argv[2], 'Provide the released Part26 worker manifest');
+const path = resolve(process.argv[2]), manifest = JSON.parse(readFileSync(path));
+const archive = resolve(dirname(path), manifest.entry);
+assert.equal(createHash('sha256').update(readFileSync(archive)).digest('hex'), manifest.sha256);
+const temp = mkdtempSync(join(tmpdir(), 'aether-direction-format-'));
+const current = fileURLToPath(new URL('../service/aether_cad_service/runtime/runner.mjs', import.meta.url));
+const old = { format: 'aether-part', formatVersion: 26, documentId: 'direction', name: 'Direction', units: 'millimeter', features: [
+  { id: 'axis', type: 'axis', name: 'Axis', suppressed: false, definition: { method: 'edge', axis: { kind: 'axis', partId: 'guide', candidateId: 'axis', label: 'Axis', originMillimeters: [0, 0, 0], directionMillimeters: [.6, 0, .8] } } },
+  { id: 's', type: 'profile', name: 'Sketch', suppressed: false, plane: 'XY', offsetMillimeters: 0, profile: { type: 'circle', radiusMillimeters: 5, centerMillimeters: [0, 0] } },
+  { id: 'e', type: 'extrude', name: 'Extrude', suppressed: false, operation: 'new', profileFeatureId: 's', bodyId: 'body', distanceMillimeters: 10 },
+] };
+function run(entry, document) {
+  const result = spawnSync(process.execPath, [entry], { input: JSON.stringify({ phase: 'build', content: JSON.stringify(document) }), encoding: 'utf8', timeout: 30000, maxBuffer: 10 * 1024 * 1024 });
+  assert.equal(result.status, 0, result.stderr || String(result.error)); return JSON.parse(result.stdout);
+}
+try {
+  execFileSync(process.env.AETHER_BUILD_PYTHON || 'python3', ['-c', 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', archive, temp]);
+  const prior = join(temp, 'aether_cad_service/runtime/runner.mjs');
+  const before = run(prior, old), after = run(current, old);
+  assert.equal(before.status, 'ok', JSON.stringify(before)); assert.equal(after.status, 'ok', JSON.stringify(after));
+  assert.deepEqual(after.bodies.map(b => [b.id, b.bbox_mm]), before.bodies.map(b => [b.id, b.bbox_mm]));
+  const next = structuredClone(old); next.formatVersion = 27;
+  next.features.at(-1).directionReference = { kind: 'axis', sourceFeatureId: 'axis', label: 'Axis' };
+  const directed = run(current, next); assert.equal(directed.status, 'ok', JSON.stringify(directed));
+  assert.ok(Math.abs(directed.bodies[0].bbox_mm[1][2] - 8) < 1e-5);
+  const refused = run(prior, next); assert.notEqual(refused.status, 'ok');
+  assert.match(JSON.stringify(refused), /Unsupported Part format version.*27/);
+  console.log('PASS Part26 geometry unchanged; Part27 axis direction builds natively; released Part26 reader refuses new intent');
+} finally { rmSync(temp, { recursive: true, force: true }); }

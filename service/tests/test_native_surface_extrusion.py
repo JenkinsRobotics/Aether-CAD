@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from aether_animation.aether_workspace import AetherWorkspace
+from aether_cad_service.part_format import PART_DOCUMENT_VERSION
 from documents import part_archive
 from test_native_feature_operations import native, run
 from test_native_program import empty, invoke
@@ -30,7 +31,7 @@ def test_agent_surface_extents_edit_refusal_and_saved_reopen(tmp_path):
         }}},
     ])
     saved = json.loads(authored["content"])
-    assert saved["formatVersion"] == 26
+    assert saved["formatVersion"] == PART_DOCUMENT_VERSION
     feature_id = authored["result"]["references"]["sheet"]["feature_id"]
     original_id = authored["result"]["evaluated_bodies"][0]["id"]
     assert authored["result"]["evaluated_bodies"][0]["bbox_mm"][1] == pytest.approx([5, 3.6, 4.8], abs=1e-5)

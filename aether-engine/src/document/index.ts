@@ -1,4 +1,5 @@
 export { resolvePlaneFrame, principalFrame, flipSketchFrame, profileFrame, canonicalPlaneXDirection, validatePlaneDefinition, type PlaneDefinition, type PlaneReference, type PointReference, type AxisReference, type SurfacePointReference } from "./construction-planes";
+export { validateExtrusionDirectionReference, type ExtrusionDirectionReference } from './extrusion-direction-reference';
 export * from "./part-document";
 export * from "./planar-face-anchor";
 // Solid feature types + construction-plane frames are engine truth every feature

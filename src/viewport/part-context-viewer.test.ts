@@ -97,6 +97,8 @@ it('allows anchored source-edge picks through preview only for an active edge pi
   cadSelection.dispatch({type:'set-filter',filter:'edge'});expect(v.selectionHit({clientX:300,clientY:300})).toBeNull();v.setSourceEdgePicking(true);
   const hit=v.selectionHit({clientX:300,clientY:300});expect(hit.item).toMatchObject({kind:'edge',partId:'near'});
   cadSelection.dispatch({type:'replace',items:[hit.item]});expect(v.selectedTransformEdge('doc')).toEqual({bodyId:'near',label:hit.item.label,anchor:candidate.edgeAnchor});
+  cadSelection.dispatch({type:'clear'});expect(v.selectedTransformEdge('doc',[hit.item])).toEqual({bodyId:'near',label:hit.item.label,anchor:candidate.edgeAnchor});
+  expect(v.selectedTransformEdge('doc')).toBeNull();cadSelection.dispatch({type:'replace',items:[hit.item]});
   expect(v.selectedTransformEdge('other')).toBeNull();v.parts.get('near').data.geometryKind='mesh';expect(v.selectedTransformEdge('doc')).toBeNull();delete v.parts.get('near').data.geometryKind;
   delete (candidate as any).measurements.linearDirection;expect(v.selectedTransformEdge('doc')).toBeNull();
   v.setSourceEdgePicking(false);expect(v.selectionHit({clientX:300,clientY:300})).toBeNull();

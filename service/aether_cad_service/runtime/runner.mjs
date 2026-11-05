@@ -233,36 +233,6 @@ function flipSketchFrame(frame, flip) {
   const neg2 = (v2) => [-v2[0], -v2[1], -v2[2]];
   return { ...frame, normal: neg2(frame.normal), xDirection: flip === "y" ? neg2(frame.xDirection) : frame.xDirection };
 }
-const ids$1 = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
-function validateProfileRegionSelection(selection) {
-  const value2 = selection.profileRegion;
-  if (value2 === void 0) return;
-  const cell = value2 && typeof value2 === "object" && value2.inside !== void 0;
-  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key2) => !["contourIds", "inside", "ordinal", "boundary"].includes(key2)) || !ids$1(value2.contourIds, cell ? 1 : 2) || cell && !ids$1(value2.inside, 0) || value2.boundary !== void 0 && (!Array.isArray(value2.boundary) || !value2.boundary.length || value2.boundary.length > 1e4 || value2.boundary.some((s) => typeof s !== "string" || s.length > 320) || new Set(value2.boundary).size !== value2.boundary.length) || value2.ordinal !== void 0 && !(Number.isInteger(value2.ordinal) && value2.ordinal >= 1 && value2.ordinal <= 1e4) || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
-}
-function profileRegionIdentity(selection) {
-  const r = selection.profileRegion;
-  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...r.inside !== void 0 ? { inside: [...r.inside].sort() } : {}, ...r.ordinal ? { ordinal: r.ordinal } : {}, ...r.boundary ? { boundary: [...r.boundary].sort() } : {} } : selection.profileContourId ?? null);
-}
-function matchesProfileRegion(selection, candidate) {
-  if (candidate.ordinal !== void 0) return false;
-  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal, boundary: candidate.boundary } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
-}
-function usesExtrusionScopeResolution(feature3) {
-  return (feature3.type === "extrude" || feature3.type === "surface-extrude" || feature3.type === "revolve") && (feature3.scopeMode === "all" || feature3.type === "surface-extrude" && feature3.operation === "add" && feature3.connectedMerge === true);
-}
-function validateExtrusionScopeResolution(value2) {
-  const ids2 = (v2) => Array.isArray(v2) && v2.length <= 4096 && v2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v2).size === v2.length;
-  if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
-  const used = /* @__PURE__ */ new Set();
-  for (const group of value2.groups) {
-    if (!group || !ids2(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
-    group.sources.forEach((id2) => used.add(id2));
-  }
-}
-function scopeConsumedBodies(resolution) {
-  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
-}
 function validateExtrusionPointReference(ref, earlier, missing) {
   const id2 = (v2, max2 = 128) => typeof v2 === "string" && !!v2.trim() && v2.length <= max2;
   if (!ref || !id2(ref.sourceFeatureId) || !id2(ref.label, 512) || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId))
@@ -294,6 +264,68 @@ function validateSolidFaceReference(ref, earlier, missing, label = "Face selecti
   } else if (!Array.isArray(ref.normal) || ref.normal.length !== 3 || !ref.normal.every(Number.isFinite) || Math.abs(Math.hypot(...ref.normal) - 1) > 1e-6) {
     throw Error(`${label} needs a unit planar normal or a curved surface reference.`);
   }
+}
+function validateSolidEdgeReference(ref, earlier, missing) {
+  if (!ref.anchor) throw Error("Select a straight solid edge with valid endpoint anchors.");
+  for (const anchor of [ref.anchor.start, ref.anchor.end]) validateExtrusionPointReference({ ...ref, kind: "solid-vertex", anchor }, earlier, missing);
+  if (ref.anchor.start.shapeFingerprint !== ref.anchor.end.shapeFingerprint || Math.hypot(...ref.anchor.start.positionMillimeters.map((v2, i2) => v2 - ref.anchor.end.positionMillimeters[i2])) < 1e-9) throw Error("Solid edge endpoints must be distinct and come from the same source shape.");
+}
+function validateEdgeFinishEdge(ref, earlier, missing) {
+  if (!ref || typeof ref !== "object") throw Error("Select solid edges to finish.");
+  if (ref.radiusMillimeters !== void 0 && !(ref.radiusMillimeters > 0)) throw Error("Edge sizes must be positive.");
+  if (ref.kind === "face-edges") {
+    validateSolidFaceReference(ref, earlier, missing, "Entities to finish");
+    return;
+  }
+  if (ref.kind === "solid-edge") {
+    validateSolidEdgeReference(ref, earlier, missing);
+    return;
+  }
+  if (ref.kind !== "curved-edge" || typeof ref.sourceFeatureId !== "string" || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId) || typeof ref.bodyId !== "string" || typeof ref.label !== "string" || !Array.isArray(ref.midpointMillimeters) || ref.midpointMillimeters.length !== 3 || !ref.midpointMillimeters.every(Number.isFinite) || !(ref.lengthMillimeters > 0)) throw Error("Select solid edges on an earlier feature to finish.");
+}
+function validateExtrusionDirectionReference(ref, earlier, missing) {
+  const id2 = (value2) => typeof value2 === "string" && !!value2.trim() && value2.length <= 128;
+  if (!ref || typeof ref !== "object") throw Error("Select an extrusion direction reference.");
+  if (ref.kind === "solid-edge") {
+    validateSolidEdgeReference(ref, earlier, missing);
+    return;
+  }
+  if (ref.kind === "sketch-line") {
+    if ([ref.sourceFeatureId, ref.contourId, ref.segmentId].every(id2) && (missing(ref.sourceFeatureId) || earlier.get(ref.sourceFeatureId) === "profile")) return;
+  } else if (ref.kind === "axis") {
+    if (id2(ref.sourceFeatureId) && typeof ref.label === "string" && !!ref.label.trim() && ref.label.length <= 512 && (missing(ref.sourceFeatureId) || earlier.get(ref.sourceFeatureId) === "axis")) return;
+  }
+  throw Error("Extrusion direction needs an earlier sketch line, native straight edge or construction axis.");
+}
+const ids$1 = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
+function validateProfileRegionSelection(selection) {
+  const value2 = selection.profileRegion;
+  if (value2 === void 0) return;
+  const cell = value2 && typeof value2 === "object" && value2.inside !== void 0;
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2) || Object.keys(value2).some((key2) => !["contourIds", "inside", "ordinal", "boundary"].includes(key2)) || !ids$1(value2.contourIds, cell ? 1 : 2) || cell && !ids$1(value2.inside, 0) || value2.boundary !== void 0 && (!Array.isArray(value2.boundary) || !value2.boundary.length || value2.boundary.length > 1e4 || value2.boundary.some((s) => typeof s !== "string" || s.length > 320) || new Set(value2.boundary).size !== value2.boundary.length) || value2.ordinal !== void 0 && !(Number.isInteger(value2.ordinal) && value2.ordinal >= 1 && value2.ordinal <= 1e4) || selection.profileContourId !== void 0) throw Error("A connected sketch region needs distinct source contour identities, without a single-contour reference.");
+}
+function profileRegionIdentity(selection) {
+  const r = selection.profileRegion;
+  return JSON.stringify(r ? { contours: [...r.contourIds].sort(), ...r.inside !== void 0 ? { inside: [...r.inside].sort() } : {}, ...r.ordinal ? { ordinal: r.ordinal } : {}, ...r.boundary ? { boundary: [...r.boundary].sort() } : {} } : selection.profileContourId ?? null);
+}
+function matchesProfileRegion(selection, candidate) {
+  if (candidate.ordinal !== void 0) return false;
+  return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal, boundary: candidate.boundary } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
+}
+function usesExtrusionScopeResolution(feature3) {
+  return (feature3.type === "extrude" || feature3.type === "surface-extrude" || feature3.type === "revolve") && (feature3.scopeMode === "all" || feature3.type === "surface-extrude" && feature3.operation === "add" && feature3.connectedMerge === true);
+}
+function validateExtrusionScopeResolution(value2) {
+  const ids2 = (v2) => Array.isArray(v2) && v2.length <= 4096 && v2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v2).size === v2.length;
+  if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
+  const used = /* @__PURE__ */ new Set();
+  for (const group of value2.groups) {
+    if (!group || !ids2(group.sources) || !group.sources.length || group.bodyId !== group.sources[0] || group.sources.some((id2) => !value2.targets.includes(id2) || used.has(id2))) throw Error("Invalid automatic extrusion scope group.");
+    group.sources.forEach((id2) => used.add(id2));
+  }
+}
+function scopeConsumedBodies(resolution) {
+  return resolution?.targets.filter((id2) => !resolution.groups.some((group) => group.bodyId === id2)) ?? [];
 }
 function validateExtrusionFaceReference(ref, earlier, missing) {
   validateSolidFaceReference(ref, earlier, missing, "Up to face");
@@ -378,10 +410,8 @@ function validateExtrusionDefinition(feature3, earlier, missingReference, surfac
     if (!Array.isArray(vector2) || vector2.length !== 3 || !vector2.every(Number.isFinite) || Math.abs(Math.hypot(...vector2) - 1) > 1e-6) throw Error("Extrusion direction must be a finite unit vector.");
   }
   if (feature3.directionReference !== void 0) {
-    const ref = feature3.directionReference;
-    if (!ref || ref.kind !== "sketch-line" || feature3.directionVector !== void 0 || ![ref.sourceFeatureId, ref.contourId, ref.segmentId].every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) || !missingReference(ref.sourceFeatureId) && earlier.get(ref.sourceFeatureId) !== "profile") {
-      throw Error("Extrusion direction needs a line in an earlier sketch; it cannot also store a manual vector.");
-    }
+    if (feature3.directionVector !== void 0) throw Error("An extrusion direction reference cannot also store a manual vector.");
+    validateExtrusionDirectionReference(feature3.directionReference, earlier, missingReference);
   }
   if (feature3.reversed !== void 0 && typeof feature3.reversed !== "boolean") throw new Error("Invalid extrude direction.");
 }
@@ -401,24 +431,6 @@ function validateMergeScope(feature3, connectedMerge = false) {
     const scope = feature3.targetBodyIds;
     if (!["add", "cut", "intersect"].includes(feature3.operation) || !Array.isArray(scope) || !scope.length || scope.length > 256 || scope.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(scope).size !== scope.length || feature3.targetBodyId !== scope[0]) throw Error("Merge scope needs distinct parts and a matching primary target for Add, Remove or Intersect.");
   }
-}
-function validateSolidEdgeReference(ref, earlier, missing) {
-  if (!ref.anchor) throw Error("Select a straight solid edge with valid endpoint anchors.");
-  for (const anchor of [ref.anchor.start, ref.anchor.end]) validateExtrusionPointReference({ ...ref, kind: "solid-vertex", anchor }, earlier, missing);
-  if (ref.anchor.start.shapeFingerprint !== ref.anchor.end.shapeFingerprint || Math.hypot(...ref.anchor.start.positionMillimeters.map((v2, i2) => v2 - ref.anchor.end.positionMillimeters[i2])) < 1e-9) throw Error("Solid edge endpoints must be distinct and come from the same source shape.");
-}
-function validateEdgeFinishEdge(ref, earlier, missing) {
-  if (!ref || typeof ref !== "object") throw Error("Select solid edges to finish.");
-  if (ref.radiusMillimeters !== void 0 && !(ref.radiusMillimeters > 0)) throw Error("Edge sizes must be positive.");
-  if (ref.kind === "face-edges") {
-    validateSolidFaceReference(ref, earlier, missing, "Entities to finish");
-    return;
-  }
-  if (ref.kind === "solid-edge") {
-    validateSolidEdgeReference(ref, earlier, missing);
-    return;
-  }
-  if (ref.kind !== "curved-edge" || typeof ref.sourceFeatureId !== "string" || !earlier.has(ref.sourceFeatureId) && !missing(ref.sourceFeatureId) || typeof ref.bodyId !== "string" || typeof ref.label !== "string" || !Array.isArray(ref.midpointMillimeters) || ref.midpointMillimeters.length !== 3 || !ref.midpointMillimeters.every(Number.isFinite) || !(ref.lengthMillimeters > 0)) throw Error("Select solid edges on an earlier feature to finish.");
 }
 function validateMirrorPlane(ref, earlier, missing, label = "Mirror plane") {
   if (!ref || typeof ref !== "object") throw Error(`${label} is required.`);
@@ -676,8 +688,8 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
   }
 }
-const current = 26;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
+const current = 27;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27];
 const partFormat = {
   current,
   readable
@@ -13202,7 +13214,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   endType?: "blind" | "symmetric" | "through-all" | "symmetric-through-all" | "up-to-next" | "up-to-face" | "up-to-part" | "up-to-vertex";
   /** Unit world vector; absent follows the evaluated sketch normal. */
   directionVector?: [number, number, number];
-  directionReference?: SketchLineDirectionReference;
+  directionReference?: import('./extrusion-direction-reference').ExtrusionDirectionReference;
   /** Wall offsets around selected curves. Absent retains filled-profile extrusion. */
   thin?: {
     thickness1Millimeters: number;
@@ -13233,6 +13245,9 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   suppressed: boolean;
 }
 
+export type ExtrusionDirectionReference = SketchLineDirectionReference | SolidEdgeReference |
+  { kind: 'axis'; sourceFeatureId: string; label: string };
+
 export type ExtrusionFaceReference=SolidFaceReference;
 
 export type ExtrusionPointReference = {
@@ -13253,13 +13268,6 @@ export type ExtrusionStartReference =
  | {kind:'plane';sourceFeatureId:string;label:string}
  | {kind:'principal';plane:'XY'|'XZ'|'YZ';label:string};
 
-export interface SketchLineDirectionReference {
-  kind: "sketch-line";
-  sourceFeatureId: string;
-  contourId: string;
-  segmentId: string;
-}
-
 export type ExtrudeOperation = "new" | "add" | "cut" | "intersect";
 
 export interface ExtrudeSecondEnd {
@@ -13277,6 +13285,17 @@ export interface ProfileRegionReference { contourIds: string[]; inside?: string[
 export interface ProfileRegionSelection {
   profileContourId?: string;
   profileRegion?: ProfileRegionReference;
+}
+
+export interface SketchLineDirectionReference {
+  kind: "sketch-line";
+  sourceFeatureId: string;
+  contourId: string;
+  segmentId: string;
+}
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
 }
 
 export type SolidFaceReference=FaceSource & (
@@ -14140,7 +14159,7 @@ export interface ExtrudeFeature {
   endType?: "blind" | "symmetric" | "through-all" | "symmetric-through-all" | "up-to-next" | "up-to-face" | "up-to-part" | "up-to-vertex";
   /** Unit world vector; absent follows the evaluated sketch normal. */
   directionVector?: [number, number, number];
-  directionReference?: SketchLineDirectionReference;
+  directionReference?: import('./extrusion-direction-reference').ExtrusionDirectionReference;
   /** Wall offsets around selected curves. Absent retains filled-profile extrusion. */
   thin?: {
     thickness1Millimeters: number;
@@ -14171,6 +14190,9 @@ export interface ExtrudeFeature {
   suppressed: boolean;
 }
 
+export type ExtrusionDirectionReference = SketchLineDirectionReference | SolidEdgeReference |
+  { kind: 'axis'; sourceFeatureId: string; label: string };
+
 export type ExtrusionFaceReference=SolidFaceReference;
 
 export type ExtrusionPointReference = {
@@ -14190,13 +14212,6 @@ export type ExtrusionStartReference =
  | {kind:'face';sourceFeatureId:string;bodyId:string;normal:[number,number,number];label:string;faceAnchor?:PlanarFaceAnchor}
  | {kind:'plane';sourceFeatureId:string;label:string}
  | {kind:'principal';plane:'XY'|'XZ'|'YZ';label:string};
-
-export interface SketchLineDirectionReference {
-  kind: "sketch-line";
-  sourceFeatureId: string;
-  contourId: string;
-  segmentId: string;
-}
 
 export type ExtrudeOperation = "new" | "add" | "cut" | "intersect";
 
@@ -38673,6 +38688,130 @@ function extrusionProfileGroups(feature3) {
   }
   return [...groups].map(([profileFeatureId, profileSelections]) => ({ ...feature3, profileFeatureId, profileSelections }));
 }
+function pointTuple(point2) {
+  return [point2.X(), point2.Y(), point2.Z()];
+}
+function deleteAfterPointTuple(point2) {
+  try {
+    return pointTuple(point2);
+  } finally {
+    point2.delete();
+  }
+}
+function deleteAfterVectorTuple(vector2) {
+  try {
+    return vector2.toTuple();
+  } finally {
+    vector2.delete();
+  }
+}
+function pointAlongAxis(origin2, direction2, distance2) {
+  return [
+    origin2[0] + direction2[0] * distance2,
+    origin2[1] + direction2[1] * distance2,
+    origin2[2] + direction2[2] * distance2
+  ];
+}
+function cross$4(a2, b) {
+  return [
+    a2[1] * b[2] - a2[2] * b[1],
+    a2[2] * b[0] - a2[0] * b[2],
+    a2[0] * b[1] - a2[1] * b[0]
+  ];
+}
+function dot$6(a2, b) {
+  return a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+}
+function normalize(value2) {
+  const length = Math.hypot(value2[0], value2[1], value2[2]);
+  if (length < 1e-12) return [1, 0, 0];
+  return [value2[0] / length, value2[1] / length, value2[2] / length];
+}
+function connectorAxes(zInput, preferredX) {
+  const zAxis = normalize(zInput);
+  const projected = [
+    preferredX[0] - zAxis[0] * dot$6(preferredX, zAxis),
+    preferredX[1] - zAxis[1] * dot$6(preferredX, zAxis),
+    preferredX[2] - zAxis[2] * dot$6(preferredX, zAxis)
+  ];
+  const fallback = Math.abs(zAxis[0]) < 0.8 ? [1, 0, 0] : [0, 1, 0];
+  const xAxis = normalize(
+    Math.hypot(...projected) > 1e-8 ? projected : fallback
+  );
+  const yAxis = normalize(cross$4(zAxis, xAxis));
+  return { xAxis: normalize(cross$4(yAxis, zAxis)), yAxis, zAxis };
+}
+function cylinderAxisStations(firstV, lastV, tolerance2 = 1e-9) {
+  if (!Number.isFinite(firstV) || !Number.isFinite(lastV)) {
+    return [{ role: "center", parameter: 0 }];
+  }
+  const center = (firstV + lastV) / 2;
+  if (Math.abs(lastV - firstV) <= tolerance2) {
+    return [{ role: "center", parameter: center }];
+  }
+  return [
+    { role: "start", parameter: firstV },
+    { role: "center", parameter: center },
+    { role: "end", parameter: lastV }
+  ];
+}
+function sameOrigin(a2, b, tolerance2 = 1e-7) {
+  return Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < tolerance2;
+}
+function connectorKindPreference(kind) {
+  switch (kind) {
+    case "cylinder-axis":
+    case "cone-axis":
+    case "sphere-center":
+    case "torus-center":
+      return 0;
+    case "circle-center":
+    case "ellipse-center":
+      return 1;
+    case "vertex":
+      return 2;
+    case "edge-midpoint":
+      return 3;
+    case "face-center":
+      return 4;
+  }
+}
+const dot$5 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const neg = (a2) => scale$1(a2, -1);
+const cross$3 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
+function resolveExtrusionDirection(ref, context2) {
+  if (ref.kind === "axis") return unit$3(context2.axis(ref.sourceFeatureId));
+  let from, to;
+  if (ref.kind === "sketch-line") {
+    [from, to] = context2.sketchLine(ref, "Extrusion direction line is unavailable or no longer straight. Reselect it.");
+  } else {
+    const body = context2.bodyAt(ref.sourceFeatureId, ref.bodyId);
+    if (!body) throw Error("Extrusion direction edge source is unavailable. Reselect an earlier native edge.");
+    const at = (anchor) => context2.point({ ...ref, kind: "solid-vertex", anchor });
+    from = at(ref.anchor.start);
+    to = at(ref.anchor.end);
+    const edges = body.edges;
+    try {
+      const same = (a2, b) => Math.hypot(...a2.map((v2, i2) => v2 - b[i2])) < 1e-6;
+      const matches = edges.filter((edge) => {
+        if (edge.geomType !== "LINE") return false;
+        const a2 = deleteAfterVectorTuple(edge.startPoint), b = deleteAfterVectorTuple(edge.endPoint);
+        return same(a2, from) && same(b, to) || same(b, from) && same(a2, to);
+      });
+      if (matches.length !== 1) throw Error("Extrusion direction is no longer one native straight edge. Reselect it.");
+    } finally {
+      edges.forEach((edge) => edge.delete());
+    }
+  }
+  const along = sub$5(to, from);
+  if (!along.every(Number.isFinite) || norm$4(along) < 1e-9) throw Error("Extrusion direction must have finite nonzero length.");
+  return unit$3(along);
+}
 const K = new Uint32Array([1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298]);
 function sha256Hex(text2) {
   const bytes = new TextEncoder().encode(text2);
@@ -39057,14 +39196,6 @@ function splitShapeByTool(shape, tool2) {
     args.delete();
   }
 }
-const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
-const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
-const neg = (a2) => scale$1(a2, -1);
-const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
-const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
 const tuple = (v2) => {
   try {
     return [v2.x, v2.y, v2.z];
@@ -39124,7 +39255,7 @@ function buildSurfaceExtrusion(options) {
   let retained;
   const contacts = [];
   const n = unit$3(options.normal), direction2 = unit$3(options.direction), origin2 = options.origin;
-  if (![...n, ...direction2, ...origin2, options.startingOffset ?? 0].every(Number.isFinite) || Math.abs(dot$6(n, direction2)) < 1e-7)
+  if (![...n, ...direction2, ...origin2, options.startingOffset ?? 0].every(Number.isFinite) || Math.abs(dot$5(n, direction2)) < 1e-7)
     throw new Error("Surface extrusion needs a finite direction that leaves the sketch plane.");
   if (!options.wires.length) throw new Error("Select sketch curves to extrude.");
   const sheet = (raw) => {
@@ -39152,7 +39283,7 @@ function buildSurfaceExtrusion(options) {
   };
   const halfSpace2 = (point2, keep, span) => {
     const box = makeBaseBox(2 * span, 2 * span, 2 * span);
-    const axis = cross$4([0, 0, 1], keep), sine = norm$4(axis);
+    const axis = cross$3([0, 0, 1], keep), sine = norm$4(axis);
     const turned = sine < 1e-9 ? keep[2] > 0 ? box : box.rotate(180, [0, 0, 0], [1, 0, 0]) : box.rotate(Math.atan2(sine, keep[2]) * 180 / Math.PI, [0, 0, 0], axis);
     return own(turned.translate(...point2));
   };
@@ -39201,8 +39332,8 @@ function buildSurfaceExtrusion(options) {
       const dir = opposite ? neg(direction2) : direction2;
       const low = (options.startingOffset ?? 0) * (opposite ? -1 : 1), offset2 = end.offset ?? 0;
       if (!Number.isFinite(offset2)) throw new Error("End offset must be finite.");
-      const axis = dot$6(n, dir) > 0 ? n : neg(n), alignment = dot$6(axis, dir);
-      const coordinate = (point2) => dot$6(sub$5(point2, origin2), axis) / alignment;
+      const axis = dot$5(n, dir) > 0 ? n : neg(n), alignment = dot$5(axis, dir);
+      const coordinate = (point2) => dot$5(sub$5(point2, origin2), axis) / alignment;
       const farthest = (shapes) => Math.max(...shapes.flatMap((shape) => corners$1(shape).map(coordinate)));
       for (const wire of options.wires) {
         const start = own(wire.clone().translate(...scale$1(dir, low)));
@@ -39231,9 +39362,9 @@ function buildSurfaceExtrusion(options) {
           const face = own(end.face.clone().translate(...scale$1(dir, -offset2)));
           let half;
           if (face.geomType === "PLANE") {
-            const normal2 = unit$3(tuple(face.normalAt())), center2 = tuple(face.center), along = dot$6(normal2, dir);
+            const normal2 = unit$3(tuple(face.normalAt())), center2 = tuple(face.center), along = dot$5(normal2, dir);
             if (Math.abs(along) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction.");
-            const reaches = corners$1(start).map((point2) => dot$6(normal2, sub$5(center2, point2)) / along);
+            const reaches = corners$1(start).map((point2) => dot$5(normal2, sub$5(center2, point2)) / along);
             high = low + Math.max(...reaches) + 1;
             const full22 = prism(wire, low, high, dir);
             const span2 = Math.max(...corners$1(full22).map((point2) => norm$4(sub$5(point2, center2))), 1) * 2;
@@ -39242,7 +39373,7 @@ function buildSurfaceExtrusion(options) {
             if (Math.abs(commonLength(advancedStart, half) - measureLength(start)) > Math.max(1e-7, measureLength(start) * 1e-8))
               throw new Error("The stopping plane crosses or lies behind the extrusion start.");
             const middle = linearCenter(wire);
-            contacts.push({ opposite, point: add$4(middle, scale$1(dir, dot$6(normal2, sub$5(center2, middle)) / along)), direction: dir, offset: offset2 });
+            contacts.push({ opposite, point: add$4(middle, scale$1(dir, dot$5(normal2, sub$5(center2, middle)) / along)), direction: dir, offset: offset2 });
             pieces.push(result3);
             continue;
           }
@@ -39274,7 +39405,7 @@ function buildSurfaceExtrusion(options) {
           const edges = advancedStart.edges;
           const sample = tuple(edges[0].startPoint);
           edges.forEach((edge) => edge.delete());
-          const inside2 = (face.geomType === "SPHERE" ? norm$4(sub$5(sample, center)) : norm$4(cross$4(sub$5(sample, center), normal))) < radius;
+          const inside2 = (face.geomType === "SPHERE" ? norm$4(sub$5(sample, center)) : norm$4(cross$3(sub$5(sample, center), normal))) < radius;
           half = inside2 ? primitive : own(own(makeBaseBox(2 * span, 2 * span, 2 * span).translate(center[0], center[1], center[2] - span)).cut(primitive));
           if (Math.abs(commonLength(advancedStart, half) - measureLength(start)) > Math.max(1e-7, measureLength(start) * 1e-8))
             throw new Error("The stopping surface crosses or lies behind the extrusion start.");
@@ -39368,20 +39499,20 @@ function extrusionPreviewAxes(options) {
   return axes;
 }
 function extrusionDraftWallNormal(outward, sketchNormal, pull, degrees2) {
-  const tangent = unit$3(cross$4(sketchNormal, outward));
-  const perpendicular = sub$5(pull, scale$1(tangent, dot$6(pull, tangent)));
+  const tangent = unit$3(cross$3(sketchNormal, outward));
+  const perpendicular = sub$5(pull, scale$1(tangent, dot$5(pull, tangent)));
   const sine = Math.sin(degrees2 * Math.PI / 180) / Math.hypot(...perpendicular);
   if (Math.abs(sine) >= 1) throw Error("The draft angle is too large for this extrusion direction and profile edge. Reduce the angle or change the direction.");
-  let originalNormal = unit$3(cross$4(tangent, pull));
-  if (dot$6(originalNormal, outward) < 0) originalNormal = scale$1(originalNormal, -1);
+  let originalNormal = unit$3(cross$3(tangent, pull));
+  if (dot$5(originalNormal, outward) < 0) originalNormal = scale$1(originalNormal, -1);
   return add$4(scale$1(originalNormal, Math.sqrt(1 - sine * sine)), scale$1(unit$3(perpendicular), sine));
 }
 function extrusionDraftWallShift(outward, sketchNormal, pull, degrees2, offset2) {
   if (!degrees2 || !offset2) return 0;
   const normal = extrusionDraftWallNormal(outward, sketchNormal, pull, degrees2);
-  const denominator = dot$6(normal, outward);
+  const denominator = dot$5(normal, outward);
   if (Math.abs(denominator) < 1e-9) throw Error("The draft wall is parallel to its starting section. Reduce the angle or change the direction.");
-  return -offset2 * dot$6(normal, pull) / denominator;
+  return -offset2 * dot$5(normal, pull) / denominator;
 }
 function coordinates(vector2) {
   try {
@@ -39399,7 +39530,7 @@ function extrusionDraftFrame(wire) {
     const origin2 = coordinates(edge.pointAt(0.5));
     const tangent = scale$1(coordinates(edge.tangentAt(0.5)), edge.orientation === "forward" ? 1 : -1);
     const normal = unit$3(coordinates(face.normalAt(origin2)));
-    return { origin: origin2, inward: unit$3(cross$4(normal, tangent)), normal };
+    return { origin: origin2, inward: unit$3(cross$3(normal, tangent)), normal };
   } finally {
     edges.forEach((edge) => edge.delete());
     outer.delete();
@@ -39414,7 +39545,7 @@ function extrusionDraftHandle(frame, options) {
     label: options.label,
     kind: "angular",
     originMillimeters: frame.origin,
-    direction: unit$3(cross$4(options.direction, intoMaterial)),
+    direction: unit$3(cross$3(options.direction, intoMaterial)),
     startMillimeters: add$4(frame.origin, scale$1(options.direction, Math.max(1, options.radius))),
     stepDegrees: 1,
     screenRadius: true
@@ -39432,10 +39563,10 @@ function draftStoppedExtrusion(body, direction2, origin2, normal, degrees2) {
     let walls = 0;
     for (const face of faces) {
       const n = face.normalAt();
-      const lateral = Math.abs(dot$6(unit$3([n.x, n.y, n.z]), direction2)) < 1e-7;
+      const lateral = Math.abs(dot$5(unit$3([n.x, n.y, n.z]), direction2)) < 1e-7;
       n.delete();
       if (!lateral) continue;
-      if (face.geomType !== "PLANE" && Math.abs(dot$6(normal, direction2)) < 1 - 1e-7)
+      if (face.geomType !== "PLANE" && Math.abs(dot$5(normal, direction2)) < 1 - 1e-7)
         throw new Error("Draft along an angled direction currently requires straight profile edges. Curved profile draft requires the sketch normal.");
       builder.Add(face.wrapped, pull, degrees2 * Math.PI / 180, neutral, true);
       if (!builder.AddDone()) throw new Error("A side wall cannot be drafted against this stopping surface.");
@@ -39530,94 +39661,6 @@ class FeatureFailure extends Error {
   featureId;
   featureName;
 }
-function pointTuple(point2) {
-  return [point2.X(), point2.Y(), point2.Z()];
-}
-function deleteAfterPointTuple(point2) {
-  try {
-    return pointTuple(point2);
-  } finally {
-    point2.delete();
-  }
-}
-function deleteAfterVectorTuple(vector2) {
-  try {
-    return vector2.toTuple();
-  } finally {
-    vector2.delete();
-  }
-}
-function pointAlongAxis(origin2, direction2, distance2) {
-  return [
-    origin2[0] + direction2[0] * distance2,
-    origin2[1] + direction2[1] * distance2,
-    origin2[2] + direction2[2] * distance2
-  ];
-}
-function cross$3(a2, b) {
-  return [
-    a2[1] * b[2] - a2[2] * b[1],
-    a2[2] * b[0] - a2[0] * b[2],
-    a2[0] * b[1] - a2[1] * b[0]
-  ];
-}
-function dot$5(a2, b) {
-  return a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-}
-function normalize(value2) {
-  const length = Math.hypot(value2[0], value2[1], value2[2]);
-  if (length < 1e-12) return [1, 0, 0];
-  return [value2[0] / length, value2[1] / length, value2[2] / length];
-}
-function connectorAxes(zInput, preferredX) {
-  const zAxis = normalize(zInput);
-  const projected = [
-    preferredX[0] - zAxis[0] * dot$5(preferredX, zAxis),
-    preferredX[1] - zAxis[1] * dot$5(preferredX, zAxis),
-    preferredX[2] - zAxis[2] * dot$5(preferredX, zAxis)
-  ];
-  const fallback = Math.abs(zAxis[0]) < 0.8 ? [1, 0, 0] : [0, 1, 0];
-  const xAxis = normalize(
-    Math.hypot(...projected) > 1e-8 ? projected : fallback
-  );
-  const yAxis = normalize(cross$3(zAxis, xAxis));
-  return { xAxis: normalize(cross$3(yAxis, zAxis)), yAxis, zAxis };
-}
-function cylinderAxisStations(firstV, lastV, tolerance2 = 1e-9) {
-  if (!Number.isFinite(firstV) || !Number.isFinite(lastV)) {
-    return [{ role: "center", parameter: 0 }];
-  }
-  const center = (firstV + lastV) / 2;
-  if (Math.abs(lastV - firstV) <= tolerance2) {
-    return [{ role: "center", parameter: center }];
-  }
-  return [
-    { role: "start", parameter: firstV },
-    { role: "center", parameter: center },
-    { role: "end", parameter: lastV }
-  ];
-}
-function sameOrigin(a2, b, tolerance2 = 1e-7) {
-  return Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < tolerance2;
-}
-function connectorKindPreference(kind) {
-  switch (kind) {
-    case "cylinder-axis":
-    case "cone-axis":
-    case "sphere-center":
-    case "torus-center":
-      return 0;
-    case "circle-center":
-    case "ellipse-center":
-      return 1;
-    case "vertex":
-      return 2;
-    case "edge-midpoint":
-      return 3;
-    case "face-center":
-      return 4;
-  }
-}
 const mapVector = (vector2, map) => [map(vector2[0], 0), map(vector2[1], 1), map(vector2[2], 2)];
 function conicalSurfaceFrame(surface) {
   const oc = getOC();
@@ -39668,9 +39711,9 @@ function toroidalSurfaceFrame(surface) {
       const radialOffset = tuple2(duu), radius = norm$4(radialOffset);
       if (!(radius > 1e-12)) continue;
       const radial = scale$1(radialOffset, -1 / radius);
-      const majorRadius = radius + dot$6(tuple2(dvv), radial);
+      const majorRadius = radius + dot$5(tuple2(dvv), radial);
       if (!(majorRadius > 1e-12)) continue;
-      const axis = unit$3(cross$4(radial, tuple2(du)));
+      const axis = unit$3(cross$3(radial, tuple2(du)));
       const origin2 = sub$5(add$4([...pointTuple(p2)], tuple2(dvv)), scale$1(radial, majorRadius));
       if (![...origin2, ...axis, ...radial].every(Number.isFinite)) continue;
       return { origin: origin2, axis, radial };
@@ -40406,7 +40449,7 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
     });
     faces.forEach((face) => face.delete());
     if (normals.length < 2) return 1;
-    const beta = Math.acos(Math.max(-1, Math.min(1, dot$6(normals[0], normals[1]))));
+    const beta = Math.acos(Math.max(-1, Math.min(1, dot$5(normals[0], normals[1]))));
     const value2 = cosine ? Math.cos(beta / 2) : Math.sin(beta / 2);
     return value2 < 1e-3 ? 1 : value2;
   };
@@ -40597,7 +40640,7 @@ function tangentChainMidpoints(body, seeds) {
       te.delete();
       return out;
     });
-    const parallel = (a2, b) => Math.abs(dot$6(a2, b)) / Math.max(Math.hypot(...a2) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
+    const parallel = (a2, b) => Math.abs(dot$5(a2, b)) / Math.max(Math.hypot(...a2) * Math.hypot(...b), 1e-12) > Math.cos(Math.PI / 180);
     const chosen = /* @__PURE__ */ new Set();
     const queue2 = info.map((_2, i2) => i2).filter((i2) => seeds.some((p2) => Math.hypot(p2[0] - info[i2].mid[0], p2[1] - info[i2].mid[1], p2[2] - info[i2].mid[2]) < 1e-3));
     queue2.forEach((i2) => chosen.add(i2));
@@ -40628,8 +40671,8 @@ function buildFullRound(feature3, body, faceByReference, own) {
   };
   const side = planeOf(faceByReference(body, feature3.sideFace, "Side face"), "Side face");
   const opposite = planeOf(faceByReference(body, feature3.oppositeSideFace, "Opposite side face"), "Opposite side face");
-  if (dot$6(side.normal, opposite.normal) > -1 + 1e-6) throw new Error("Side face and Opposite side face must be parallel and facing away from each other: this kernel builds full rounds between parallel planar faces only.");
-  const width = dot$6(sub$5(opposite.center, side.center), side.normal);
+  if (dot$5(side.normal, opposite.normal) > -1 + 1e-6) throw new Error("Side face and Opposite side face must be parallel and facing away from each other: this kernel builds full rounds between parallel planar faces only.");
+  const width = dot$5(sub$5(opposite.center, side.center), side.normal);
   if (!(width < -1e-6)) throw new Error("The side faces must face outward with the faces to replace between them.");
   const radius = -width / 2;
   const midPlanePoint = add$4(side.center, scale$1(side.normal, width / 2));
@@ -40637,9 +40680,9 @@ function buildFullRound(feature3, body, faceByReference, own) {
   let result = body;
   for (const reference of feature3.replacedFaces) {
     const replaced = planeOf(faceByReference(result, reference, "Faces to replace"), "A face to replace");
-    if (Math.abs(dot$6(replaced.normal, side.normal)) > 1e-6) throw new Error(`${reference.label} does not run between the side faces.`);
-    const along = unit$3(cross$4(replaced.normal, side.normal));
-    const onMid = sub$5(replaced.center, scale$1(side.normal, dot$6(sub$5(replaced.center, midPlanePoint), side.normal)));
+    if (Math.abs(dot$5(replaced.normal, side.normal)) > 1e-6) throw new Error(`${reference.label} does not run between the side faces.`);
+    const along = unit$3(cross$3(replaced.normal, side.normal));
+    const onMid = sub$5(replaced.center, scale$1(side.normal, dot$5(sub$5(replaced.center, midPlanePoint), side.normal)));
     const axisPoint = sub$5(onMid, scale$1(replaced.normal, radius));
     const slab = own(drawRectangle$1(2 * radius, 2 * reach).sketchOnPlane(own(new Plane(axisPoint, side.normal, replaced.normal))).extrude(reach));
     const cylinder = own(makeCylinder(radius, 2 * reach, sub$5(axisPoint, scale$1(along, reach)), along));
@@ -40778,7 +40821,7 @@ function applyPatternFeature(feature3, context2) {
       placements.push((shape) => {
         let moved = own(shape.clone().translate(move[0], move[1], move[2]));
         if (feature3.orientation === "path") {
-          const axis = cross$4(start.tangent, target2.tangent), angle2 = Math.acos(Math.max(-1, Math.min(1, dot$6(start.tangent, target2.tangent)))) * 180 / Math.PI;
+          const axis = cross$3(start.tangent, target2.tangent), angle2 = Math.acos(Math.max(-1, Math.min(1, dot$5(start.tangent, target2.tangent)))) * 180 / Math.PI;
           if (Math.hypot(...axis) > 1e-9 && angle2 > 1e-9)
             moved = own(moved.rotate(angle2, target2.at, unit$3(axis)));
         }
@@ -41188,7 +41231,7 @@ function solidsOf(shape) {
 }
 function lineHits(shape, origin2, direction2, span) {
   const oc = getOC(), line2 = makeLine(sub$5(origin2, scale$1(direction2, span)), add$4(origin2, scale$1(direction2, span)));
-  const t2 = (p2) => dot$6(sub$5([p2.x, p2.y, p2.z], origin2), direction2);
+  const t2 = (p2) => dot$5(sub$5([p2.x, p2.y, p2.z], origin2), direction2);
   const hits = [];
   try {
     if (isShape3D(shape)) {
@@ -41268,13 +41311,13 @@ function openWallFace(wire, n, a2, b, own) {
   const nearest = (at) => edges.find((edge) => norm$4(sub$5(point2(edge.startPoint), at)) < 1e-7 || norm$4(sub$5(point2(edge.endPoint), at)) < 1e-7) ?? edges[0];
   const first = endTangent(nearest(start), start, true), last2 = endTangent(nearest(end), end, false);
   const firstEdge = nearest(start), wallTangent = scale$1(point2(firstEdge.tangentAt(0.5)), norm$4(sub$5(point2(firstEdge.startPoint), start)) < 1e-7 ? 1 : -1);
-  const wallFrame = { origin: point2(firstEdge.pointAt(0.5)), inward: unit$3(cross$4(n, wallTangent)), normal: n };
-  const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$4(cross$4(first, sub$5(point2(edge.endPoint), start))) < 1e-7);
+  const wallFrame = { origin: point2(firstEdge.pointAt(0.5)), inward: unit$3(cross$3(n, wallTangent)), normal: n };
+  const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$4(cross$3(first, sub$5(point2(edge.endPoint), start))) < 1e-7);
   const offsetOpen = (distance2) => {
-    const startTarget = add$4(start, scale$1(cross$4(first, n), distance2)), endTarget = add$4(end, scale$1(cross$4(last2, n), distance2));
+    const startTarget = add$4(start, scale$1(cross$3(first, n), distance2)), endTarget = add$4(end, scale$1(cross$3(last2, n), distance2));
     if (Math.abs(distance2) < 1e-12) return { wire: own(wire.clone()), start, end };
     if (straight) {
-      const shift = scale$1(cross$4(first, n), distance2);
+      const shift = scale$1(cross$3(first, n), distance2);
       return { wire: own(wire.clone().translate(shift[0], shift[1], shift[2])), start: startTarget, end: endTarget };
     }
     const tolerance2 = Math.max(1e-6, Math.abs(distance2) * 1e-6);
@@ -41415,16 +41458,16 @@ function quadricOf(face, near) {
     if (kind === "CONE") {
       const p0 = at(0, 0), p1 = at(Math.PI, 0), p2 = at(0, 1);
       const location = scale$1(add$4(p0, p1), 0.5), radial = sub$5(p0, location), R = norm$4(radial), X2 = unit$3(radial);
-      const generatrix = sub$5(p2, p0), sin2 = dot$6(generatrix, X2), axial = sub$5(generatrix, scale$1(X2, sin2)), cos2 = norm$4(axial), Z = unit$3(axial);
+      const generatrix = sub$5(p2, p0), sin2 = dot$5(generatrix, X2), axial = sub$5(generatrix, scale$1(X2, sin2)), cos2 = norm$4(axial), Z = unit$3(axial);
       const tan2 = Math.abs(sin2 / cos2);
       if (!(tan2 > 1e-9) || !Number.isFinite(tan2)) throw new Error("cone faces of this shape");
       const apex = sub$5(location, scale$1(Z, R * cos2 / sin2));
-      return { kind, apex, along: dot$6(sub$5(near, apex), Z) < 0 ? neg(Z) : Z, tan: tan2 };
+      return { kind, apex, along: dot$5(sub$5(near, apex), Z) < 0 ? neg(Z) : Z, tan: tan2 };
     }
     if (kind === "TORUS") {
       const outer = at(0, 0), opposite = at(Math.PI, 0), inner = at(0, Math.PI), top = at(0, Math.PI / 2);
       const centre = scale$1(add$4(outer, opposite), 0.5), X2 = unit$3(sub$5(outer, centre));
-      const outerRadius = dot$6(sub$5(outer, centre), X2), innerRadius = dot$6(sub$5(inner, centre), X2);
+      const outerRadius = dot$5(sub$5(outer, centre), X2), innerRadius = dot$5(sub$5(inner, centre), X2);
       const R = (outerRadius + innerRadius) / 2, r = (outerRadius - innerRadius) / 2;
       const along = unit$3(sub$5(sub$5(top, centre), scale$1(X2, R)));
       return { kind, at: centre, along, R, r: Math.abs(r) };
@@ -41434,7 +41477,7 @@ function quadricOf(face, near) {
     adaptor.delete();
   }
 }
-const perpendicularTo = (u2) => unit$3(Math.abs(u2[0]) < 0.9 ? cross$4(u2, [1, 0, 0]) : cross$4(u2, [0, 1, 0]));
+const perpendicularTo = (u2) => unit$3(Math.abs(u2[0]) < 0.9 ? cross$3(u2, [1, 0, 0]) : cross$3(u2, [0, 1, 0]));
 const quadricCentre = (q) => q.kind === "CONE" ? q.apex : q.at;
 function quadricSolid(q, length, own) {
   if (q.kind === "SPHERE") return own(makeSphere(q.r).translate(q.at[0], q.at[1], q.at[2]));
@@ -41456,14 +41499,14 @@ function quadricSolid(q, length, own) {
 }
 function insideQuadric(q, p2) {
   if (q.kind === "SPHERE") return norm$4(sub$5(p2, q.at)) < q.r;
-  const centre = quadricCentre(q), to = sub$5(p2, centre), h = dot$6(to, q.along), rho = norm$4(sub$5(to, scale$1(q.along, h)));
+  const centre = quadricCentre(q), to = sub$5(p2, centre), h = dot$5(to, q.along), rho = norm$4(sub$5(to, scale$1(q.along, h)));
   if (q.kind === "CYLINDER") return rho < q.r;
   if (q.kind === "TORUS") return Math.hypot(rho - q.R, h) < q.r;
   return h > 0 && rho < h * q.tan;
 }
 function quadricRadial(q, p2) {
   if (q.kind === "SPHERE") return sub$5(p2, q.at);
-  const centre = quadricCentre(q), to = sub$5(p2, centre), h = dot$6(to, q.along), radial = sub$5(to, scale$1(q.along, h));
+  const centre = quadricCentre(q), to = sub$5(p2, centre), h = dot$5(to, q.along), radial = sub$5(to, scale$1(q.along, h));
   if (q.kind !== "TORUS") return radial;
   return sub$5(p2, add$4(q.at, scale$1(unit$3(radial), q.R)));
 }
@@ -41631,7 +41674,7 @@ function capFaces(prism, direction2, sign) {
     if (face.geomType === "PLANE") {
       const center = deleteAfterVectorTuple(face.center);
       const normal = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-      keep = dot$6([normal[0], normal[1], normal[2]], direction2) * sign > 1 - 1e-7;
+      keep = dot$5([normal[0], normal[1], normal[2]], direction2) * sign > 1 - 1e-7;
     }
     if (keep) caps.push(face);
     else face.delete();
@@ -41640,7 +41683,7 @@ function capFaces(prism, direction2, sign) {
 }
 function halfSpace(point2, keep, span, own) {
   const box = makeBaseBox(2 * span, 2 * span, 2 * span);
-  const axis = cross$4([0, 0, 1], keep), sine = norm$4(axis), cosine = keep[2];
+  const axis = cross$3([0, 0, 1], keep), sine = norm$4(axis), cosine = keep[2];
   const turned = sine < 1e-9 ? cosine > 0 ? box : box.rotate(180, [0, 0, 0], [1, 0, 0]) : box.rotate(Math.atan2(sine, cosine) * 180 / Math.PI, [0, 0, 0], axis);
   return own(turned.translate(point2[0], point2[1], point2[2]));
 }
@@ -41719,7 +41762,7 @@ function helicalThreadGroove(center, direction2, minorRadius, spec, length, left
   const first = helix.edges[0], startPoint = deleteAfterVectorTuple(first.startPoint);
   helix.edges.forEach((edge) => edge.delete());
   const radial = unit$3(sub$5(startPoint, origin2));
-  const plane2 = own(new Plane(startPoint, radial, cross$4(radial, direction2)));
+  const plane2 = own(new Plane(startPoint, radial, cross$3(radial, direction2)));
   const half = Math.min(depth * Math.tan(Math.PI / 6), pitch * 0.45), inset = Math.min(0.05, minorRadius / 10);
   const section2 = own(draw([-inset, -half]).lineTo([depth, 0]).lineTo([-inset, half]).close().sketchOnPlane(plane2));
   const swept = genericSweep(section2.wire, helix, { frenet: true, transitionMode: "transformed" });
@@ -41758,7 +41801,7 @@ function evaluatePartDocument(document2, options = {}) {
   };
   const perpendicular = (d2) => {
     const seed = Math.abs(d2[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
-    const c2 = cross$4(d2, seed);
+    const c2 = cross$3(d2, seed);
     const l = norm$4(c2) || 1;
     return [c2[0] / l, c2[1] / l, c2[2] / l];
   };
@@ -41952,7 +41995,7 @@ function evaluatePartDocument(document2, options = {}) {
             const frame = sketchFrameOf(sourceId), p2 = profiles.get(sourceId);
             const box = p2?.drawing ? p2.drawing.boundingBox : void 0;
             const [cx2, cy2] = box?.center ?? [0, 0];
-            const x2 = unit$3(frame.xDirection), n = unit$3(frame.normal), y2 = cross$4(n, x2);
+            const x2 = unit$3(frame.xDirection), n = unit$3(frame.normal), y2 = cross$3(n, x2);
             return [0, 1, 2].map((i2) => frame.originMillimeters[i2] + x2[i2] * cx2 + y2[i2] * cy2);
           };
           const sketchContour = (sourceId, contourId, unavailable) => {
@@ -41961,7 +42004,7 @@ function evaluatePartDocument(document2, options = {}) {
             return resolveProfileDrawing(history, source.id).contours.find((c2) => c2.id === contourId);
           };
           const sketchPoint = (sourceId, local2) => {
-            const f2 = sketchFrameOf(sourceId), x2 = f2.xDirection, y2 = cross$4(f2.normal, x2);
+            const f2 = sketchFrameOf(sourceId), x2 = f2.xDirection, y2 = cross$3(f2.normal, x2);
             return add$4(f2.originMillimeters, add$4(scale$1(x2, local2[0]), scale$1(y2, local2[1])));
           };
           const stopPoint = (ref) => {
@@ -41991,19 +42034,24 @@ function evaluatePartDocument(document2, options = {}) {
             const contour = sketchContour(ref.sourceFeatureId, ref.contourId, unavailable);
             if (!contour || contour.type === "circle") throw new Error(unavailable);
             const at = contour.segments.findIndex((segment) => segment.id === ref.segmentId);
-            if (at < 0) throw new Error(unavailable);
+            if (at < 0 || contour.segments[at].type !== "line") throw new Error(unavailable);
             const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
             return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
           };
           const extrusionPlacement = (extrusion, n, o, defaultNormal = n) => {
-            let direction2 = defaultNormal, custom = norm$4(cross$4(defaultNormal, n)) > 1e-7;
+            let direction2 = defaultNormal, custom = norm$4(cross$3(defaultNormal, n)) > 1e-7;
             if (extrusion.directionReference) {
-              if (extrusion.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
-              const ref = extrusion.directionReference;
-              const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
-              const along = sub$5(to, from);
-              if (!along.every(Number.isFinite) || norm$4(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
-              direction2 = unit$3(along);
+              if (extrusion.directionVector) throw new Error("Choose either a direction reference or a manual extrusion direction.");
+              direction2 = resolveExtrusionDirection(extrusion.directionReference, {
+                sketchLine,
+                bodyAt,
+                point: stopPoint,
+                axis: (sourceId) => {
+                  const source = history.find((f2) => f2.id === sourceId);
+                  if (!source || source.type !== "axis" || source.suppressed) throw Error("Extrusion direction axis is unavailable or suppressed. Reselect an earlier axis.");
+                  return axisFeatureLine(sourceId).axis;
+                }
+              });
               custom = true;
             } else if (extrusion.directionVector) {
               const v2 = extrusion.directionVector;
@@ -42011,7 +42059,7 @@ function evaluatePartDocument(document2, options = {}) {
               direction2 = unit$3(v2);
               custom = true;
             }
-            if (custom && Math.abs(dot$6(direction2, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
+            if (custom && Math.abs(dot$5(direction2, n)) < 1e-7) throw new Error("The extrusion direction is tangent to the sketch. Choose a direction that leaves its plane.");
             if (extrusion.operation === "cut" !== Boolean(extrusion.reversed)) direction2 = neg(direction2);
             let offset2 = extrusion.startingOffsetMillimeters ?? 0;
             if (extrusion.startingReference) {
@@ -42032,10 +42080,10 @@ function evaluatePartDocument(document2, options = {}) {
                 normal = unit$3(start.normal);
                 origin2 = planarFaceCenter(start.sourceFeatureId, start.bodyId, normal, start.faceAnchor, "Starting face", "Starting face is unavailable. Reselect an earlier planar face.");
               }
-              if (norm$4(cross$4(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
-              const alignment = dot$6(normal, direction2);
+              if (norm$4(cross$3(normal, n)) > 1e-7) throw new Error("Starting entity must be parallel to the sketch plane.");
+              const alignment = dot$5(normal, direction2);
               if (Math.abs(alignment) < 1e-7) throw new Error("Extrusion direction must leave the starting plane.");
-              offset2 += dot$6(normal, sub$5(origin2, o)) / alignment;
+              offset2 += dot$5(normal, sub$5(origin2, o)) / alignment;
             }
             if (!Number.isFinite(offset2)) throw new Error("Starting offset must be finite.");
             return { direction: direction2, custom, offset: offset2 };
@@ -42227,7 +42275,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (ref.kind === "sketch-line") {
               const [a2, b] = sketchLine(ref, "The plane's sketch line is unavailable. Reselect a straight sketch line.");
-              const f2 = sketchFrameOf(ref.sourceFeatureId), along = unit$3(sub$5(b, a2)), n = unit$3(cross$4(along, f2.normal));
+              const f2 = sketchFrameOf(ref.sourceFeatureId), along = unit$3(sub$5(b, a2)), n = unit$3(cross$3(along, f2.normal));
               return own(new Plane(a2, along, n));
             }
             const body = bodies.get(ref.bodyId);
@@ -42278,15 +42326,15 @@ function evaluatePartDocument(document2, options = {}) {
               edges = face.edges.flatMap((edge) => {
                 const circular = edge.geomType === "CIRCLE";
                 const m2 = [...deleteAfterVectorTuple(edge.pointAt(0.5))];
-                const r = circular ? norm$4(sub$5(sub$5(m2, at), scale$1(axis, dot$6(sub$5(m2, at), axis)))) : 0;
+                const r = circular ? norm$4(sub$5(sub$5(m2, at), scale$1(axis, dot$5(sub$5(m2, at), axis)))) : 0;
                 edge.delete();
-                return circular ? [{ centre: add$4(at, scale$1(axis, dot$6(sub$5(m2, at), axis))), radius: r, along: dot$6(sub$5(m2, at), axis) }] : [];
+                return circular ? [{ centre: add$4(at, scale$1(axis, dot$5(sub$5(m2, at), axis))), radius: r, along: dot$5(sub$5(m2, at), axis) }] : [];
               });
             } finally {
               face.delete();
             }
             if (edges.length < 1) throw new Error("The thread face has no circular rim to start from.");
-            const bounds2 = body.boundingBox.bounds, extent = [...corners(bounds2)].map((c2) => dot$6(sub$5(c2, q.at), q.along));
+            const bounds2 = body.boundingBox.bounds, extent = [...corners(bounds2)].map((c2) => dot$5(sub$5(c2, q.at), q.along));
             const low = Math.min(...extent), high = Math.max(...extent);
             edges.sort((a2, b) => Math.min(a2.along - low, high - a2.along) - Math.min(b.along - low, high - b.along));
             const start = edges[0], outward = start.along - low < high - start.along ? neg(q.along) : q.along, inward = neg(outward);
@@ -42295,7 +42343,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature3.chamfer) {
               const { distanceMillimeters: d2, angleDegrees: a2 } = feature3.chamfer, where = start.centre;
               const rim = (e) => {
-                const m2 = e.pointAt(0.5), hit = Math.abs(norm$4(sub$5([m2.x, m2.y, m2.z], where)) - start.radius) < 1e-3 && Math.abs(dot$6(sub$5([m2.x, m2.y, m2.z], where), q.along)) < 1e-3;
+                const m2 = e.pointAt(0.5), hit = Math.abs(norm$4(sub$5([m2.x, m2.y, m2.z], where)) - start.radius) < 1e-3 && Math.abs(dot$5(sub$5([m2.x, m2.y, m2.z], where), q.along)) < 1e-3;
                 m2.delete();
                 return hit;
               };
@@ -42370,7 +42418,7 @@ function evaluatePartDocument(document2, options = {}) {
               const a2 = [...deleteAfterVectorTuple(wire.startPoint)], b = [...deleteAfterVectorTuple(wire.endPoint)];
               const chord = sub$5(b, a2);
               if (norm$4(chord) < 1e-6) throw new Error("A rib curve must be open (its ends apart).");
-              const across = unit$3(cross$4(n, unit$3(chord))), push = scale$1(across, feature3.reversed ? -1 : 1);
+              const across = unit$3(cross$3(n, unit$3(chord))), push = scale$1(across, feature3.reversed ? -1 : 1);
               const half = scale$1(n, feature3.thicknessMillimeters / 2);
               const lower = own(wire.clone().translate(-half[0], -half[1], -half[2]));
               const band = own(prism(lower, scale$1(n, feature3.thicknessMillimeters)));
@@ -42454,7 +42502,7 @@ function evaluatePartDocument(document2, options = {}) {
             for (const start of starts) {
               const direction2 = feature3.direction ? (() => {
                 const d2 = unit$3(feature3.direction);
-                return dot$6(d2, start.n) < 0 ? unit$3([-d2[0], -d2[1], -d2[2]]) : d2;
+                return dot$5(d2, start.n) < 0 ? unit$3([-d2[0], -d2[1], -d2[2]]) : d2;
               })() : feature3.reversed ? [-start.n[0], -start.n[1], -start.n[2]] : start.n;
               let center = start.center;
               const span = throughAllDistance([body], center, direction2) + throughAllDistance([body], center, neg(direction2));
@@ -42475,9 +42523,9 @@ function evaluatePartDocument(document2, options = {}) {
                 center = add$4(center, scale$1(direction2, entry));
               } else if (feature3.startFrom) {
                 const plane2 = mirrorPlaneOf(feature3.startFrom.plane), pn = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z], po = [plane2.origin.x, plane2.origin.y, plane2.origin.z];
-                const along2 = dot$6(direction2, pn);
+                const along2 = dot$5(direction2, pn);
                 if (Math.abs(along2) < 1e-9) throw new Error("The start plane is parallel to the hole. Choose a plane the hole crosses.");
-                center = add$4(center, scale$1(direction2, dot$6(sub$5(po, center), pn) / along2));
+                center = add$4(center, scale$1(direction2, dot$5(sub$5(po, center), pn) / along2));
               }
               if (start === starts[0]) {
                 publish(feature3, { parameter: "depth", kind: "linear", originMillimeters: center, direction: direction2, label: "Hole depth" });
@@ -42568,9 +42616,9 @@ function evaluatePartDocument(document2, options = {}) {
               let cone = own(section2.sketchOnPlane("XZ")).revolve([0, 0, 1], { origin: [0, 0, 0], angle: 360 });
               if (!isShape3D(cone)) throw new Error("The boss is not a valid solid.");
               cone = own(cone);
-              const from = [0, 0, 1], d2 = dot$6(from, outward);
+              const from = [0, 0, 1], d2 = dot$5(from, outward);
               if (d2 < 1 - 1e-9) {
-                const axis = cross$4(from, outward);
+                const axis = cross$3(from, outward);
                 cone = own(cone.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], Math.hypot(...axis) > 1e-9 ? unit$3(axis) : [1, 0, 0]));
               }
               return own(cone.translate(base[0], base[1], base[2]));
@@ -42591,7 +42639,7 @@ function evaluatePartDocument(document2, options = {}) {
               tool3 = frustum(r, taper(r), height);
             } else {
               const along = feature3.alongMillimeters ? unit$3(feature3.alongMillimeters) : xDir;
-              const across = unit$3(cross$4(outward, along));
+              const across = unit$3(cross$3(outward, along));
               const rect = (w2, l, at) => {
                 const corners2 = [[-l / 2, -w2 / 2], [l / 2, -w2 / 2], [l / 2, w2 / 2], [-l / 2, w2 / 2]].map(([a2, b]) => add$4(add$4(at, scale$1(along, a2)), scale$1(across, b)));
                 return own(assembleWire(corners2.map((p2, i2) => own(makeLine(p2, corners2[(i2 + 1) % 4])))));
@@ -42652,9 +42700,9 @@ function evaluatePartDocument(document2, options = {}) {
               publish(feature3, { parameter: "height", kind: "linear", originMillimeters: add$4([start[0], start[1], start[2]], along), direction: feature3.shape === "groove" ? scale$1(n, -1) : n, label: feature3.shape === "groove" ? "Groove depth" : "Lip height" });
             } else {
               const base = [...feature3.pointMillimeters], n = unit$3([...deleteAfterVectorTuple(face.normalAt([base[0], base[1], base[2]]))]);
-              const raw2 = feature3.hookDirectionMillimeters, hook = unit$3(sub$5(raw2, scale$1(n, dot$6(raw2, n))));
+              const raw2 = feature3.hookDirectionMillimeters, hook = unit$3(sub$5(raw2, scale$1(n, dot$5(raw2, n))));
               if (norm$4(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
-              const across = unit$3(cross$4(n, hook));
+              const across = unit$3(cross$3(n, hook));
               const { lengthMillimeters: L2, thicknessMillimeters: t2, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature3;
               const at = (x2, y2) => add$4(add$4(add$4(base, scale$1(hook, x2)), scale$1(n, y2)), scale$1(across, -w2 / 2));
               const pts = [at(0, 0), at(t2, 0), at(t2, L2 - cl), at(t2 + cd, L2 - cl), at(t2, L2), at(0, L2)];
@@ -42876,10 +42924,10 @@ function evaluatePartDocument(document2, options = {}) {
                 let fromAt = from.at;
                 if (from.normal && to.normal) {
                   const target = t2.flip ? to.normal : [-to.normal[0], -to.normal[1], -to.normal[2]];
-                  const d2 = dot$6(from.normal, target), axis = cross$4(from.normal, target), l = Math.hypot(...axis);
+                  const d2 = dot$5(from.normal, target), axis = cross$3(from.normal, target), l = Math.hypot(...axis);
                   const angle2 = Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI;
                   if (angle2 > 1e-9) {
-                    const about = l > 1e-9 ? unit$3(axis) : unit$3(cross$4(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
+                    const about = l > 1e-9 ? unit$3(axis) : unit$3(cross$3(from.normal, Math.abs(from.normal[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]));
                     turned = own(shape.clone().rotate(angle2, from.at, about));
                     const rotated = own(turned.clone());
                     rotated.delete();
@@ -42981,7 +43029,7 @@ function evaluatePartDocument(document2, options = {}) {
                 for (const i2 of [...chosen]) for (const [k2, n] of keys22[i2]) all.forEach((_2, j) => {
                   if (chosen.has(j)) return;
                   const match = keys22[j].find(([k22]) => k22 === k2);
-                  if (match && dot$6(n, match[1]) > Math.cos(Math.PI / 180)) chosen.add(j);
+                  if (match && dot$5(n, match[1]) > Math.cos(Math.PI / 180)) chosen.add(j);
                 });
                 all.forEach((face, i2) => {
                   if (chosen.has(i2) && !referenced.some((r) => r.wrapped.IsSame(face.wrapped))) referenced.push(face);
@@ -43106,7 +43154,7 @@ function evaluatePartDocument(document2, options = {}) {
                   beside.forEach((face) => face.delete());
                   throw new Error("A parting edge must lie between two faces of the part.");
                 }
-                const along = (face) => dot$6(sub$5([...deleteAfterVectorTuple(face.center)], point2), pull2);
+                const along = (face) => dot$5(sub$5([...deleteAfterVectorTuple(face.center)], point2), pull2);
                 beside.sort((a2, b) => along(b) - along(a2));
                 const [pullSide, farSide] = beside;
                 beside.slice(2).forEach((face) => face.delete());
@@ -43141,7 +43189,7 @@ function evaluatePartDocument(document2, options = {}) {
                 if (face.geomType === "PLANE") {
                   const center = deleteAfterVectorTuple(face.center);
                   const outward = deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]));
-                  keep = Math.abs(Math.abs(dot$6([outward[0], outward[1], outward[2]], faceAxis)) - 1) < 1e-7 && Math.abs(dot$6([center[0], center[1], center[2]], faceAxis) - faceOffset) < 1e-6;
+                  keep = Math.abs(Math.abs(dot$5([outward[0], outward[1], outward[2]], faceAxis)) - 1) < 1e-7 && Math.abs(dot$5([center[0], center[1], center[2]], faceAxis) - faceOffset) < 1e-6;
                 }
                 if (keep) matches.push(face);
                 else face.delete();
@@ -43216,7 +43264,7 @@ function evaluatePartDocument(document2, options = {}) {
               const n = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z], o = [plane2.origin.x, plane2.origin.y, plane2.origin.z];
               const half = (sign) => {
                 let box = own(makeBaseBox(size * 2, size * 2, size).translate(0, 0, sign > 0 ? 0 : -size));
-                const d2 = n[2], axis = cross$4([0, 0, 1], n), l = Math.hypot(...axis);
+                const d2 = n[2], axis = cross$3([0, 0, 1], n), l = Math.hypot(...axis);
                 if (d2 < 1 - 1e-9) box = own(box.rotate(Math.acos(Math.max(-1, Math.min(1, d2))) * 180 / Math.PI, [0, 0, 0], l > 1e-9 ? axis : [1, 0, 0]));
                 return own(box.translate(o[0], o[1], o[2]));
               };
@@ -43294,8 +43342,8 @@ function evaluatePartDocument(document2, options = {}) {
               try {
                 const c0 = deleteAfterVectorTuple(face0.center), n0 = unit$3([...deleteAfterVectorTuple(face0.normalAt([c0[0], c0[1], c0[2]]))]);
                 const pn = [target.zDir.x, target.zDir.y, target.zDir.z], po = [target.origin.x, target.origin.y, target.origin.z];
-                if (Math.abs(Math.abs(dot$6(n0, pn)) - 1) > 1e-6) throw new Error("Replace face needs a plane parallel to the faces.");
-                distance2 = dot$6(sub$5(po, [c0[0], c0[1], c0[2]]), n0);
+                if (Math.abs(Math.abs(dot$5(n0, pn)) - 1) > 1e-6) throw new Error("Replace face needs a plane parallel to the faces.");
+                distance2 = dot$5(sub$5(po, [c0[0], c0[1], c0[2]]), n0);
                 if (Math.abs(distance2) < 1e-6) throw new Error("The faces already lie on that plane.");
               } finally {
                 face0.delete();
@@ -43303,7 +43351,7 @@ function evaluatePartDocument(document2, options = {}) {
             }
             if (!t2 && (distance2 === void 0 || !Number.isFinite(distance2) || Math.abs(distance2) < 1e-6)) throw new Error("Offset distance must be finite and nonzero.");
             const rotateVector = (v2, axis, degrees2) => {
-              const u2 = unit$3(axis), th = degrees2 * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$4(u2, v2), d2 = dot$6(u2, v2);
+              const u2 = unit$3(axis), th = degrees2 * Math.PI / 180, c2 = Math.cos(th), s = Math.sin(th), w2 = cross$3(u2, v2), d2 = dot$5(u2, v2);
               return [v2[0] * c2 + w2[0] * s + u2[0] * d2 * (1 - c2), v2[1] * c2 + w2[1] * s + u2[1] * d2 * (1 - c2), v2[2] * c2 + w2[2] * s + u2[2] * d2 * (1 - c2)];
             };
             const volumeOf = (shape) => {
@@ -43383,14 +43431,14 @@ function evaluatePartDocument(document2, options = {}) {
                     continue;
                   }
                   const atEdge = unit$3([...deleteAfterVectorTuple(face.normalAt([middle[0], middle[1], middle[2]]))]);
-                  const across = unit$3(cross$4(atEdge, tangent));
+                  const across = unit$3(cross$3(atEdge, tangent));
                   const inward = onFace(add$4(middle, scale$1(across, 2 * step))) ? across : neg(across);
                   const probe = nearestOnFace(add$4(middle, scale$1(inward, 20 * step)));
                   const otherKind = other.geomType === "CYLINDRE" ? "CYLINDER" : other.geomType;
                   if (otherKind === "PLANE") {
                     const c2 = [...deleteAfterVectorTuple(other.center)];
                     const outward = unit$3([...deleteAfterVectorTuple(other.normalAt([c2[0], c2[1], c2[2]]))]);
-                    const side = halfSpace(c2, dot$6(sub$5(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
+                    const side = halfSpace(c2, dot$5(sub$5(probe, c2), outward) > 0 ? outward : neg(outward), span, own);
                     surfaces.push(side);
                     sides.push(side);
                   } else if (["CYLINDER", "SPHERE", "CONE", "TORUS"].includes(otherKind)) {
@@ -43451,7 +43499,7 @@ function evaluatePartDocument(document2, options = {}) {
                         return q;
                       };
                       const handles = candidates.map((c2) => new f2.Handle_Geom_Surface_2(c2));
-                      const base = sample(handle), shifts = handles.map((h) => dot$6(sub$5(sample(h), base), normal) * Math.sign(distance2));
+                      const base = sample(handle), shifts = handles.map((h) => dot$5(sub$5(sample(h), base), normal) * Math.sign(distance2));
                       const chosen = shifts[0] >= shifts[1] ? 0 : 1;
                       insideNew = keepSideOfSurface(f2, handles[chosen], column, inside2, own, true);
                       handles.forEach((h) => h.delete());
@@ -43462,7 +43510,7 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                 } else {
                   const q = quadricOf(face, center), length = 2 * span;
-                  const convex = dot$6(normal, quadricRadial(q, center)) > 0;
+                  const convex = dot$5(normal, quadricRadial(q, center)) > 0;
                   const primitive = (shape) => {
                     const solid = quadricSolid(shape, length, own), c2 = quadricCentre(shape);
                     return convex ? solid : own(fuzzyBoolean(own(makeBaseBox(2 * length, 2 * length, 2 * length).translate(c2[0], c2[1], c2[2] - length)), solid, "cut", { glue: false, fuzzy: 1e-5 }));
@@ -43575,10 +43623,10 @@ function evaluatePartDocument(document2, options = {}) {
                 else {
                   const tv = edge.tangentAt(0.5), t2 = unit$3([tv.x, tv.y, tv.z]);
                   tv.delete();
-                  let side = unit$3(cross$4(n, t2));
+                  let side = unit$3(cross$3(n, t2));
                   const c2 = face.center, away = sub$5(mid, [c2.x, c2.y, c2.z]);
                   c2.delete();
-                  if (dot$6(side, away) < 0) side = neg(side);
+                  if (dot$5(side, away) < 0) side = neg(side);
                   reach = scale$1(side, distance2);
                 }
               }
@@ -43635,10 +43683,10 @@ function evaluatePartDocument(document2, options = {}) {
               const nv = face.normalAt(mid);
               let n = unit$3([nv.x, nv.y, nv.z]);
               nv.delete();
-              let o = unit$3(cross$4(n, tdir));
+              let o = unit$3(cross$3(n, tdir));
               const c2 = face.center, away = sub$5(mid, [c2.x, c2.y, c2.z]);
               c2.delete();
-              if (dot$6(o, away) < 0) o = neg(o);
+              if (dot$5(o, away) < 0) o = neg(o);
               if (feature3.id === previewId && !previewHandles.length) {
                 publish(feature3, { parameter: feature3.type === "sheet-hem" ? "length" : "distance", kind: "linear", originMillimeters: mid, direction: o, label: feature3.type === "sheet-hem" ? "Hem length" : "Flange length" });
                 if (feature3.type === "sheet-flange") publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: mid, direction: tdir, label: "Flange angle" });
@@ -43664,7 +43712,7 @@ function evaluatePartDocument(document2, options = {}) {
                 pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
               }
               const section2 = own(pen.close());
-              const zdir = unit$3(cross$4(o, n)), from = dot$6(zdir, tdir) > 0 ? a2 : b;
+              const zdir = unit$3(cross$3(o, n)), from = dot$5(zdir, tdir) > 0 ? a2 : b;
               const plane2 = own(new Plane([from[0], from[1], from[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
               const piece = own(section2.sketchOnPlane(plane2)).extrude(length);
               if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error(`${options2.what} could not be built on that edge.`);
@@ -43697,7 +43745,7 @@ function evaluatePartDocument(document2, options = {}) {
             const onFace = faces.filter((f2) => {
               const c2 = f2.center, nv2 = f2.normalAt(c2);
               const n2 = [nv2.x, nv2.y, nv2.z];
-              const dPlane = Math.abs(dot$6(n2, sub$5(p2, [c2.x, c2.y, c2.z])));
+              const dPlane = Math.abs(dot$5(n2, sub$5(p2, [c2.x, c2.y, c2.z])));
               c2.delete();
               nv2.delete();
               return dPlane < 1e-4;
@@ -43707,7 +43755,7 @@ function evaluatePartDocument(document2, options = {}) {
             const nv = face.normalAt(face.center);
             let n = unit$3([nv.x, nv.y, nv.z]);
             nv.delete();
-            let o = unit$3(cross$4(n, tdir));
+            let o = unit$3(cross$3(n, tdir));
             if (feature3.otherSide) o = neg(o);
             const bounds2 = body.boundingBox.bounds, span = 4 * Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]);
             const slab = (from, to) => {
@@ -43719,7 +43767,7 @@ function evaluatePartDocument(document2, options = {}) {
             const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
             if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
             const sb = strip.boundingBox.bounds;
-            const along = (pt) => dot$6(sub$5(pt, p2), tdir);
+            const along = (pt) => dot$5(sub$5(pt, p2), tdir);
             const corners2 = [];
             for (const x2 of [sb[0][0], sb[1][0]]) for (const y2 of [sb[0][1], sb[1][1]]) for (const z2 of [sb[0][2], sb[1][2]]) corners2.push([x2, y2, z2]);
             const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
@@ -43731,8 +43779,8 @@ function evaluatePartDocument(document2, options = {}) {
             pen.lineTo(at(r, alpha));
             pen.threePointsArcTo(at(r, 0), at(r, alpha / 2));
             const section2 = own(pen.close());
-            const zdir = unit$3(cross$4(o, n));
-            const start = add$4(p2, scale$1(tdir, dot$6(zdir, tdir) > 0 ? s0 : s1));
+            const zdir = unit$3(cross$3(o, n));
+            const start = add$4(p2, scale$1(tdir, dot$5(zdir, tdir) > 0 ? s0 : s1));
             const sectionPlane = own(new Plane([start[0], start[1], start[2]], [o[0], o[1], o[2]], [zdir[0], zdir[1], zdir[2]]));
             const bend = own(own(section2.sketchOnPlane(sectionPlane)).extrude(s1 - s0));
             const axisOrigin = add$4(p2, scale$1(n, feature3.inward ? r : -(t2 + r)));
@@ -43748,8 +43796,8 @@ function evaluatePartDocument(document2, options = {}) {
           const perforations = (body, f2, thickness) => {
             const face = faceByReference(body, f2.face, "Perforate face");
             const c2 = [...deleteAfterVectorTuple(face.center)], n = unit$3([...deleteAfterVectorTuple(face.normalAt([c2[0], c2[1], c2[2]]))]);
-            const x2 = unit$3(canonicalPlaneXDirection(n)), y2 = unit$3(cross$4(n, x2));
-            const to2 = (p22) => [dot$6(sub$5(p22, c2), x2), dot$6(sub$5(p22, c2), y2)];
+            const x2 = unit$3(canonicalPlaneXDirection(n)), y2 = unit$3(cross$3(n, x2));
+            const to2 = (p22) => [dot$5(sub$5(p22, c2), x2), dot$5(sub$5(p22, c2), y2)];
             const polygon = (w2) => {
               const pts = [];
               for (const edge of w2.edges) {
@@ -44060,11 +44108,11 @@ function evaluatePartDocument(document2, options = {}) {
                     const u2 = i2 / steps2, p2 = edge.pointAt(u2), d2 = edge.tangentAt(u2), at = [p2.x, p2.y, p2.z], tangent = unit$3([d2.x, d2.y, d2.z]);
                     p2.delete();
                     d2.delete();
-                    if (!normalVector) normalVector = unit$3(Math.abs(tangent[2]) < 0.9 ? cross$4(tangent, [0, 0, 1]) : cross$4(tangent, [1, 0, 0]));
-                    else normalVector = unit$3(sub$5(normalVector, scale$1(tangent, dot$6(normalVector, tangent))));
+                    if (!normalVector) normalVector = unit$3(Math.abs(tangent[2]) < 0.9 ? cross$3(tangent, [0, 0, 1]) : cross$3(tangent, [1, 0, 0]));
+                    else normalVector = unit$3(sub$5(normalVector, scale$1(tangent, dot$5(normalVector, tangent))));
                     if (previous) s += norm$4(sub$5(at, previous));
                     previous = at;
-                    const angle2 = 2 * Math.PI * turns * (s / total), binormal = unit$3(cross$4(tangent, normalVector));
+                    const angle2 = 2 * Math.PI * turns * (s / total), binormal = unit$3(cross$3(tangent, normalVector));
                     points.push(add$4(at, scale$1(add$4(scale$1(normalVector, Math.cos(angle2)), scale$1(binormal, Math.sin(angle2))), radius)));
                   }
                 }
@@ -44492,7 +44540,7 @@ function evaluatePartDocument(document2, options = {}) {
                 axis = t2.axisDirection;
               }
               if (feature3.id === previewId) {
-                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$6(sub$5(c2, origin2), axis);
+                const c2 = sketchCentroid(feature3.profileFeatureId), t2 = dot$5(sub$5(c2, origin2), axis);
                 publish(feature3, { parameter: "angle", kind: "angular", originMillimeters: add$4(origin2, scale$1(axis, t2)), direction: axis, label: "Revolve angle" });
               }
               const angle2 = feature3.angleDegrees * Math.PI / 180 * (feature3.reversed ? -1 : 1);
@@ -44671,7 +44719,7 @@ function evaluatePartDocument(document2, options = {}) {
                   });
                 }
                 const drafted = Boolean(primary.draft || second?.draft);
-                const oblique = Math.abs(dot$6(direction2, n)) < 1 - 1e-7;
+                const oblique = Math.abs(dot$5(direction2, n)) < 1 - 1e-7;
                 if (drafted && !shape.sections) throw new UnsupportedFeature(feature22.id, "drafted thin extrusions");
                 if (drafted && feature22.id === previewId && !previewHandles.some((handle) => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
                   const section2 = shape.sections()[0];
@@ -44754,12 +44802,12 @@ function evaluatePartDocument(document2, options = {}) {
                   if (area > 1e-10) stopPreview(end, dir, scale$1(weighted, 1 / area));
                 };
                 const axisOf = (dir) => {
-                  const axis = dot$6(n, dir) < 0 ? neg(n) : n;
-                  return { axis, alignment: dot$6(axis, dir), origin: dot$6(o, axis) };
+                  const axis = dot$5(n, dir) < 0 ? neg(n) : n;
+                  return { axis, alignment: dot$5(axis, dir), origin: dot$5(o, axis) };
                 };
                 const farthestAlong = (shapes, axis) => {
                   let m2 = -Infinity;
-                  for (const shape2 of shapes) for (const c2 of corners(shape2.boundingBox.bounds)) m2 = Math.max(m2, dot$6(c2, axis));
+                  for (const shape2 of shapes) for (const c2 of corners(shape2.boundingBox.bounds)) m2 = Math.max(m2, dot$5(c2, axis));
                   return m2;
                 };
                 const diagonalOf = (shape2) => {
@@ -44779,7 +44827,7 @@ function evaluatePartDocument(document2, options = {}) {
                   }
                   if (end.endType === "up-to-vertex") {
                     const { axis, alignment } = axisOf(dir);
-                    const depth = dot$6(axis, sub$5(stopPoint(end.point), o)) / alignment - end.endOffset;
+                    const depth = dot$5(axis, sub$5(stopPoint(end.point), o)) / alignment - end.endOffset;
                     if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
                     stopPreview(end, dir, add$4(sketchCentroid(feature22.profileFeatureId), scale$1(dir, depth)));
                     return depth;
@@ -44926,7 +44974,7 @@ function evaluatePartDocument(document2, options = {}) {
                     const vertex = [...deleteAfterVectorTuple(firstEdge.startPoint)];
                     firstEdge.delete();
                     const sample = add$4(vertex, scale$1(dir, epsilon2));
-                    const fromAxis = ref.surfaceType === "cylinder" ? norm$4(cross$4(sub$5(sample, axisLocation), axisDirection)) : norm$4(sub$5(sample, axisLocation));
+                    const fromAxis = ref.surfaceType === "cylinder" ? norm$4(cross$3(sub$5(sample, axisLocation), axisDirection)) : norm$4(sub$5(sample, axisLocation));
                     const inside2 = fromAxis < radius;
                     const span2 = Math.max(1, norm$4(sub$5(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
                     const size = 4 * span2 + 2 * radius;
@@ -44975,20 +45023,20 @@ function evaluatePartDocument(document2, options = {}) {
                   if (!ref.normal) throw new Error("Up to face needs a valid unit normal.");
                   const normal = unit$3(ref.normal);
                   const center = planarFaceCenter(ref.sourceFeatureId, ref.bodyId, normal, ref.faceAnchor, "Up to face", "Up to face reference is unavailable. Reselect the stopping face.");
-                  const alignment = dot$6(normal, dir);
+                  const alignment = dot$5(normal, dir);
                   if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
                   const planePoint = sub$5(center, scale$1(dir, end.endOffset));
                   const profileCenter = sketchCentroid(feature22.profileFeatureId);
-                  const contact = add$4(profileCenter, scale$1(dir, dot$6(normal, sub$5(planePoint, profileCenter)) / alignment));
+                  const contact = add$4(profileCenter, scale$1(dir, dot$5(normal, sub$5(planePoint, profileCenter)) / alignment));
                   stopPreview(end, dir, contact);
-                  if (norm$4(cross$4(normal, n)) < 1e-10) {
-                    const end2 = dot$6(normal, sub$5(planePoint, o)) / alignment;
+                  if (norm$4(cross$3(normal, n)) < 1e-10) {
+                    const end2 = dot$5(normal, sub$5(planePoint, o)) / alignment;
                     if (end2 <= start + 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
                     return prism(start, end2, dir);
                   }
                   const probe = prism(start, start + 1, dir);
                   let maximum = -Infinity;
-                  for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$6(normal, sub$5(planePoint, corner)) / alignment);
+                  for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$5(normal, sub$5(planePoint, corner)) / alignment);
                   if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
                   const full2 = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
                   let span = 1;
@@ -45030,7 +45078,7 @@ function evaluatePartDocument(document2, options = {}) {
                   for (const limit of limits) for (const face of (end.draft && end.endOffset ? own(limit.clone().translate(...scale$1(dir, -end.endOffset))) : limit).faces) {
                     if (face.geomType === "PLANE") {
                       const normal = deleteAfterVectorTuple(face.normalAt());
-                      if (Math.abs(dot$6(normal, dir)) < 1e-9) {
+                      if (Math.abs(dot$5(normal, dir)) < 1e-9) {
                         face.delete();
                         continue;
                       }
@@ -45238,7 +45286,7 @@ function evaluatePartDocument(document2, options = {}) {
                 if (primary.endType === "blind" && second?.endType === "blind" && blind(primary) + blind(second) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
                 const sign = feature22.reversed ? -1 : 1;
                 if (feature22.id === previewId) {
-                  const c2 = sketchCentroid(feature22.profileFeatureId), foot = add$4(origin2, scale$1(axis, dot$6(sub$5(c2, origin2), axis)));
+                  const c2 = sketchCentroid(feature22.profileFeatureId), foot = add$4(origin2, scale$1(axis, dot$5(sub$5(c2, origin2), axis)));
                   const ring = (parameter2, side, label) => publish(feature22, { parameter: parameter2, kind: "angular", originMillimeters: foot, direction: scale$1(axis, side), startMillimeters: c2, label });
                   if (primary.endType === "blind") ring("angle", sign, "Revolve angle");
                   if (second?.endType === "blind") ring("second", -sign, "Opposite angle");
@@ -45250,14 +45298,14 @@ function evaluatePartDocument(document2, options = {}) {
                 };
                 const radial = (p2) => {
                   const d2 = sub$5(p2, origin2);
-                  return sub$5(d2, scale$1(axis, dot$6(d2, axis)));
+                  return sub$5(d2, scale$1(axis, dot$5(d2, axis)));
                 };
                 const sweep = (end, side) => {
                   if (end.endType === "blind") return turn(side * blind(end));
                   if (end.endType === "up-to-vertex") {
                     const a2 = radial(sketchCentroid(feature22.profileFeatureId)), b = radial(stopPoint(end.point));
                     if (norm$4(b) < 1e-9) throw new Error("The stopping point lies on the revolve axis. Pick another point.");
-                    const angle2 = (side * Math.atan2(dot$6(cross$4(a2, b), axis), dot$6(a2, b)) * 180 / Math.PI % 360 + 360) % 360 - end.offset / norm$4(b) * 180 / Math.PI;
+                    const angle2 = (side * Math.atan2(dot$5(cross$3(a2, b), axis), dot$5(a2, b)) * 180 / Math.PI % 360 + 360) % 360 - end.offset / norm$4(b) * 180 / Math.PI;
                     if (angle2 < 1e-6) throw new Error("The stopping point lies in the profile's plane. Flip direction or pick another point.");
                     return turn(side * angle2);
                   }
@@ -47131,8 +47179,8 @@ function takePoint(point2) {
   }
 }
 function projectionFrame(frame) {
-  const y2 = cross$4(frame.normal, frame.xDirection);
-  const vector2 = (v2) => [dot$6(v2, frame.xDirection), dot$6(v2, y2)];
+  const y2 = cross$3(frame.normal, frame.xDirection);
+  const vector2 = (v2) => [dot$5(v2, frame.xDirection), dot$5(v2, y2)];
   return {
     vector: vector2,
     point: (p2) => vector2(sub$5(p2, frame.originMillimeters))

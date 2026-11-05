@@ -79,7 +79,7 @@ export const extrudeEditor: FeatureEditor = {
     let previousDirection = controls.directionMode.value;
     const direction = win.subsection('Direction', {kind: 'checkbox', open: previousDirection !== 'normal', onToggle: enabled => {
       if (!enabled) { previousDirection = controls.directionMode.value; controls.directionMode.value = 'normal'; }
-      else controls.directionMode.value = previousDirection;
+      else controls.directionMode.value = previousDirection === 'normal' ? 'reference' : previousDirection;
       controls.directionMode.dispatchEvent(new Event('change'));
     }});
     layoutExtrudeDirection(context, controls, direction.body);

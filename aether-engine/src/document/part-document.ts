@@ -92,7 +92,7 @@ export interface ExtrudeFeature {
   endType?: "blind" | "symmetric" | "through-all" | "symmetric-through-all" | "up-to-next" | "up-to-face" | "up-to-part" | "up-to-vertex";
   /** Unit world vector; absent follows the evaluated sketch normal. */
   directionVector?: [number, number, number];
-  directionReference?: SketchLineDirectionReference;
+  directionReference?: import('./extrusion-direction-reference').ExtrusionDirectionReference;
   /** Wall offsets around selected curves. Absent retains filled-profile extrusion. */
   thin?: {
     thickness1Millimeters: number;

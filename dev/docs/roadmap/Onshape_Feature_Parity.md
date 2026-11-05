@@ -187,6 +187,33 @@ apps and live documents were unchanged. Full results are recorded in [qualificat
 This is not full Extrude signoff: direction references, curved oblique Draft,
 partial-curve conversion and the remaining termination matrix stay open.
 
+## Extrude native direction references — 2026-11-05
+
+Solid, Surface and Thin share an Edge or axis direction field. Native straight
+edges retain their source feature, body and endpoint anchors; construction axes
+retain their feature identity. The engine resolves the selected reference at its
+history position, including edited axes, instead of saving a copied direction
+vector. Native previews publish the existing shared depth handles in the resolved
+direction. Missing, suppressed, future, curved and ambiguous sources refuse.
+
+The field supports viewport selection, axis selection in the tree, repeated-click
+removal and its remove button during invalid previews. Saved edge identity does
+not depend on JSON property order or endpoint traversal order. A shared pixel-boundary
+probe fixes ray/triangle rounding misses for visible edges in both the
+normal viewport and history editing; every probe still uses the usual visibility
+and section rules. Face-only selection keeps its original ray.
+
+Part27 and canonical workspace codec30 preserve the new references. Part26 geometry
+retains its previous result, while the released Part26 reader and codec29 refuse
+Part27 instead of silently losing the extrusion direction. Existing files are
+migrated by CAD on read; no live documents are rewritten by installation.
+
+Qualification and installation status are recorded in
+[direction-reference evidence](../reality/data/Extrude_Direction_References_2026_11_05.json).
+This does not complete Extrude parity: mate connectors, implicit cylindrical axes,
+remaining starting/ending references, curved oblique Draft, partial arrangement
+curve conversion, remembered creation mode and the full termination matrix remain.
+
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
 The picker already retained multiple sketch sources; native evaluation previously
@@ -623,7 +650,7 @@ Both live in surface.ts today; move each to its own file.
 | Faces and sketch regions | Same | Done |
 | End type Blind / Up to next / face / part / vertex / Through all, flip | Same | Done |
 | Offset (up-to types) + distance | End offset | Done |
-| Direction (axis or mate connector) | World axes, normalized vector and persistent sketch-line reference | Partial: native edge/Axis feature/mate-connector selection and common viewport reference picker remain open |
+| Direction (axis or mate connector) | World axes, normalized vector, persistent sketch line, native straight edge and construction Axis feature; shared field and native handles | Partial: mate connectors and implicit cylindrical axes remain open; native reference qualification is recorded above |
 | Starting offset: Blind distance / Entity (part, face, mate connector), Symmetric, flip | Starting offset sub-setting: Start type Blind / Entity: face / Entity: plane with the Offset and flip | Partial: part and mate connector entities open |
 | Symmetric (Blind, Through all) | Symmetric | Done |
 | Draft angle + flip | Native normal-direction draft and qualified angled planar-wall draft | Partial: curved oblique Draft remains open |

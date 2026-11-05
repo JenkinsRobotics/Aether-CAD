@@ -4,6 +4,7 @@ import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
 import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
 import { verifyExtrudeProfileFocus } from './browser/extrude-profile-focus.mjs';
 import { verifyExtrudeModeRemoval, verifyConnectedProfileModes } from './browser/extrude-mode-selection.mjs';
+import { verifyExtrudeDirection } from './browser/extrude-direction-workflow.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -63,6 +64,7 @@ try {
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
   await expect(page.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible({ timeout: 30000 });
   await page.waitForLoadState('networkidle');
+  if (!process.env.AETHER_EXTRUDE_DIRECTION_ONLY) {
   const extrude = base('Native extrusion controls');
   extrude.features = [sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]), {
     id: 'e', type: 'extrude', name: 'Extrude 1', suppressed: false, profileFeatureId: 's', operation: 'new',
@@ -412,6 +414,8 @@ try {
     assert.equal(edge.kind, 'curved-edge'); assert.ok(Math.abs(edge.midpointMillimeters[2] - 10) < 1e-5, JSON.stringify(edge));
     results.push(`${name}: native stepped shoulder picked, previewed, applied, reselected while editing and saved`);
   }
+  }
+  await verifyExtrudeDirection({ page, expect, dialog, row, point, open, stored, accept, base, sketch, evidence, results });
   assert.deepEqual(errors, []);
   await writeFile(join(evidence, 'feature-controls.json'), JSON.stringify({ results, errors }, null, 2));
   console.log(results.join('\n'));

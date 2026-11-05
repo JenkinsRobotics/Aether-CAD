@@ -1,4 +1,5 @@
 import { extrusionProfileGroups } from './extrusion-profile-groups';
+import { resolveExtrusionDirection } from './extrusion-direction';
 import { mergeSurfaceExtrusion, mergeConnectedSurfaceExtrusion } from './surface-extrusion-merge';
 import { buildSurfaceExtrusion, type SurfaceExtrusionEnd } from './surface-extrusion';
 import { extrusionStopHandle } from './extrusion-stop-preview';
@@ -892,19 +893,23 @@ export function evaluatePartDocument(
           const contour = sketchContour(ref.sourceFeatureId, ref.contourId, unavailable);
           if (!contour || contour.type === "circle") throw new Error(unavailable);
           const at = contour.segments.findIndex((segment) => segment.id === ref.segmentId);
-          if (at < 0) throw new Error(unavailable);
+          if (at < 0 || contour.segments[at].type !== 'line') throw new Error(unavailable);
           const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
           return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
         };
         const extrusionPlacement = (extrusion: ExtrudeFeature | import('../document/surface').SurfaceExtrudeFeature, n: V3, o: V3, defaultNormal: V3 = n) => {
             let direction: V3 = defaultNormal, custom = norm(cross(defaultNormal, n)) > 1e-7;
             if (extrusion.directionReference) {
-              if (extrusion.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
-              const ref = extrusion.directionReference;
-              const [from, to] = sketchLine(ref, "Extrusion direction line is unavailable. Reselect a sketch line.");
-              const along = sub(to, from);
-              if (!along.every(Number.isFinite) || norm(along) < 1e-9) throw new Error("Extrusion direction line must have finite nonzero length.");
-              direction = unit(along); custom = true;
+              if (extrusion.directionVector) throw new Error("Choose either a direction reference or a manual extrusion direction.");
+              direction = resolveExtrusionDirection(extrusion.directionReference, {
+                sketchLine, bodyAt, point: stopPoint,
+                axis: sourceId => {
+                  const source = history.find(f => f.id === sourceId);
+                  if (!source || source.type !== 'axis' || source.suppressed) throw Error('Extrusion direction axis is unavailable or suppressed. Reselect an earlier axis.');
+                  return axisFeatureLine(sourceId).axis;
+                },
+              });
+              custom = true;
             } else if (extrusion.directionVector) {
               const v = extrusion.directionVector;
               if (v.length !== 3 || !v.every(Number.isFinite) || Math.abs(norm(v) - 1) > 1e-6) throw new Error("Extrusion direction must be a finite unit vector.");

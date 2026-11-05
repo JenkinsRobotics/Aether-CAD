@@ -27,7 +27,7 @@ def encoded(doc):
 
 def test_packaged_version_manifest_matches_document_authority():
     canonical = (ROOT / "aether-engine/src/document/part-format.json").read_bytes()
-    assert PART_DOCUMENT_VERSION == 26
+    assert PART_DOCUMENT_VERSION == 27
     assert (ROOT / "service/aether_cad_service/data/part-format.json").read_bytes() == canonical
     with zipfile.ZipFile(ROOT / "service/aether_cad_service/runtime/runner.pyz") as archive:
         assert archive.read("aether_cad_service/data/part-format.json") == canonical

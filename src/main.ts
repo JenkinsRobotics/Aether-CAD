@@ -1746,9 +1746,9 @@ window.addEventListener('aether-extrude-point-request',event=>{
 });
 
 window.addEventListener('aether-transform-edge-request',event=>{
-  const picked=activePartDocument?viewer.selectedTransformEdge(activePartDocument.documentId):null;
+  const picked=activePartDocument?viewer.selectedTransformEdge(activePartDocument.documentId,(event as CustomEvent).detail?.selection):null;
   const sourceFeatureId=picked&&activePartDocument?sourceFeatureForBody(activePartDocument,picked.bodyId,(event as CustomEvent).detail?.beforeFeatureId):undefined;
-  window.dispatchEvent(new CustomEvent('aether-transform-edge',{detail:picked&&sourceFeatureId?{reference:{kind:'solid-edge',sourceFeatureId,...picked}}:{error:'Select one straight edge on an earlier solid part. Curved edges and mesh edges cannot define this transform.'}}));
+  window.dispatchEvent(new CustomEvent('aether-transform-edge',{detail:picked&&sourceFeatureId?{reference:{kind:'solid-edge',sourceFeatureId,...picked}}:{error:'Select one straight edge on an earlier native part. Curved edges and mesh edges cannot define a direction.'}}));
 });
 window.addEventListener('aether-finish-edges-request',event=>{
   const doc=activePartDocument;

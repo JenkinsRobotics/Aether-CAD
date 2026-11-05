@@ -25,6 +25,13 @@ Package-manager versions and the shared UI dependency version are separate.
    the Aether/OCCT runner. The test oracle imports the hash-pinned workspace-codec
    wheel from `vendor/python/`, never an editable sibling Animation checkout.
    A default pytest run skips release gates and is insufficient for qualification.
+   Native Extrude direction references use Part27 and canonical codec30. Run
+   `test_native_extrude_direction.py` and
+   `node scripts/verify-extrude-direction-format.mjs /path/to/Part26/native-worker.json`.
+   Both browser control gates must cover native edge selection, saved-history
+   removal, shared depth handles, construction-axis selection and saved reopen.
+   The previous reader refuses Part27; restoring an older app cannot discard its
+   direction references. Boundary picking must retain visibility and section rules.
    Kernel feature changes also require `scripts/verify-modeling-browser.mjs`
    through Studio's disposable authenticated browser fixture with the candidate
    frontend and matching worker. It covers sketch creation, additive/subtractive

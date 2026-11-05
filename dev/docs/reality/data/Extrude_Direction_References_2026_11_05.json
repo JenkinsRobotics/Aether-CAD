@@ -1,0 +1,124 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.114",
+  "status": "qualified; pending local installation",
+  "scope": [
+    "Persistent native straight-edge and construction-Axis direction references across Solid, Surface and Thin Extrude",
+    "Shared direction picker with exact click and remove-button semantics during failed previews and saved history",
+    "Shared pixel-boundary picking for normal and history geometry; visible surfaces retain occlusion and section filtering",
+    "Part27 and pinned canonical workspace codec30; old-reader refusal and unchanged legacy geometry"
+  ],
+  "qualification": {
+    "engine": {
+      "passed": 1418,
+      "path": "build/feature-qualification-2026-11-05/direction/engine-full.log"
+    },
+    "canonical_codec": {
+      "passed": 41,
+      "source_commit": "31c25008a47231fa3561576c4e6d99eedb68e311",
+      "path": "build/feature-qualification-2026-11-05/direction/codec.log"
+    },
+    "native_service": {
+      "initial_passed": 338,
+      "initial_failed": 4,
+      "failure_reason": "Four current-version assertions still expected Part26; corrected to the canonical current version",
+      "corrected_suites_passed": 11,
+      "paths": [
+        "build/feature-qualification-2026-11-05/direction/service-full.log",
+        "build/feature-qualification-2026-11-05/direction/service-version.log"
+      ],
+      "focused_passed": 60,
+      "final_worker_bytes_identical_to_full_run": true
+    },
+    "frontend": {
+      "passed": 2224,
+      "skipped": 1,
+      "path": "build/feature-qualification-2026-11-05/direction/frontend-full.log",
+      "initial_stale_module_run": {
+        "passed": 2223,
+        "failed": 1,
+        "skipped": 1,
+        "reason": "The identity fix changed during that run; the complete rerun on frozen source passed."
+      }
+    },
+    "build_and_types": "Frontend build and types, engine types passed",
+    "format": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/direction/format.log",
+      "checks": [
+        "Part26 geometry and identity preserved",
+        "Part27 native direction evaluated",
+        "Released Part26 reader and codec29 refuse Part27"
+      ]
+    },
+    "headless": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/direction/headless.log"
+    },
+    "regions": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/direction/regions.log"
+    },
+    "picking": {
+      "browsers": [
+        "Chromium",
+        "WebKit"
+      ],
+      "body_counts": [
+        1,
+        65
+      ],
+      "rays_per_case": 300,
+      "mismatches": 0,
+      "path": "build/feature-qualification-2026-11-05/direction-picking.json"
+    },
+    "face_removal": {
+      "cases_per_browser": 4,
+      "errors": [],
+      "fixture": "Disposable copy of reported Part 1; 0.020 inch finishing, valid and failed previews, duplicate face labels, saved history",
+      "evidence": [
+        "build/Example-Collection/extrude-direction-final2-removal-chromium/host/browser/face-finish-feedback.json",
+        "build/Example-Collection/extrude-direction-final2-removal-webkit/host/browser/face-finish-feedback.json"
+      ]
+    },
+    "controls": {
+      "webkit": {
+        "passed": 21,
+        "errors": [],
+        "path": "build/Example-Collection/extrude-direction-final2-controls-webkit/host/browser/feature-controls.json"
+      },
+      "chromium": {
+        "passed": 21,
+        "errors": [],
+        "path": "build/Example-Collection/extrude-direction-final2-controls-chromium/host/browser/feature-controls.json"
+      }
+    },
+    "home_standalone": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/direction/home-standalone.log"
+    },
+    "modeling": {
+      "passed": 17,
+      "errors": [],
+      "server_geometry_requests": 0,
+      "path": "build/Example-Collection/extrude-direction-final2-modeling/host/browser/log.json"
+    },
+    "home_hosted": {
+      "passed": true,
+      "path": "build/Example-Collection/extrude-direction-final2-home-hosted/host/browser.log"
+    },
+    "build_frozen_files": 3581,
+    "source_edited_during_final_browser_runs": false,
+    "visual_review": "Inspected native direction field, selected Axis, blue native preview and shared 11 mm axis handle in WebKit screenshot"
+  },
+  "live_user_documents_modified": false,
+  "complete_feature_parity": false,
+  "remaining": [
+    "Mate connectors, implicit cylindrical axes and remaining starting/ending references",
+    "Curved oblique Draft",
+    "Automatic exact partial-curve selection conversion",
+    "Remember creation mode across new Extrudes",
+    "Complete termination/mode matrix and large-scope Surface Add profiling",
+    "Ordered Revolve, Chamfer, Fillet and remaining requested feature parity"
+  ]
+}
