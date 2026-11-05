@@ -1,6 +1,6 @@
 {
   "date": "2026-11-05",
-  "status": "All qualification passed; ready for local release",
+  "status": "Qualified and installed locally as CAD alpha-0.1.114",
   "reference": "https://cad.onshape.com/help/Content/PartStudio/extrude.htm",
   "problem": [
     "Whole-sketch preselection was reapplied after manual curve removal when changing Solid/Surface/Thin.",
@@ -80,5 +80,19 @@
     "Native edge/Axis feature/mate-connector direction picking and remaining starting/ending references.",
     "Complete termination/mode conversion matrix and large-scope Surface Add profiling.",
     "Ordered Revolve, Chamfer, Fillet and remaining requested feature parity."
-  ]
+  ],
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.114",
+    "sha256": "371845cd4dc8ad72bc2badf7a1ae2d9a6acc7c4eea863949053746ecf31a6644",
+    "source_commit": "fd96c6962a0c30a6a23dc3157687ce81c55a2e16",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "unauthenticated_https_status": 302,
+    "live_user_documents_modified": false
+  }
 }

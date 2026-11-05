@@ -121,5 +121,21 @@
       "build/Example-Collection/extrude-picker-qualified-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
       "build/Example-Collection/extrude-picker-qualified-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
     ]
+  },
+  "cad114_reverification": {
+    "release": "alpha-0.1.114",
+    "source_commit": "fd96c6962a0c30a6a23dc3157687ce81c55a2e16",
+    "artifact_bytes_verified_against_installed_package": true,
+    "browsers": [
+      "Chromium",
+      "WebKit"
+    ],
+    "cases_per_browser": 4,
+    "errors": [],
+    "fixture": "Disposable copy of reported Part 1; no live edits",
+    "evidence": [
+      "build/Example-Collection/extrude-modes-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/extrude-modes-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+    ]
   }
 }

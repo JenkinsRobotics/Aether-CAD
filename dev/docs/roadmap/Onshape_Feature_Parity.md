@@ -163,7 +163,7 @@ pass (one existing skip), as do hosted and standalone Home. The installed packag
 contains 3,576 verified files; other apps and live documents were unchanged.
 [Qualification and remaining work](../reality/data/Extrude_Picker_Focus_2026_11_05.json).
 
-## Extrude creation-mode selection — 2026-11-05 continuation
+## Extrude creation-mode selection — 2026-11-05, alpha-0.1.114
 
 Solid faces and Surface/Thin curves now have distinct transient selection state.
 The initial whole-sketch handoff stops after a manual selection edit, so changing
@@ -181,8 +181,9 @@ Both browsers pass 20 native feature-control workflows, including removal across
 all three creation modes, connected four-line profiles, saved Solid-to-Surface
 edits and reopen. Both also pass the four reported Part 1 removal cases; native
 modeling, picking and both Home paths pass. The unchanged native runtime reuses
-CAD112's engine/packaged-native evidence. The full frontend suite and release
-status are recorded in [qualification](../reality/data/Extrude_Mode_Selections_2026_11_05.json).
+CAD112's engine/packaged-native evidence. All 2,218 frontend tests pass (one
+existing skip). All 3,576 installed files match the qualified artifact; other
+apps and live documents were unchanged. Full results are recorded in [qualification](../reality/data/Extrude_Mode_Selections_2026_11_05.json).
 This is not full Extrude signoff: direction references, curved oblique Draft,
 partial-curve conversion and the remaining termination matrix stay open.
 
