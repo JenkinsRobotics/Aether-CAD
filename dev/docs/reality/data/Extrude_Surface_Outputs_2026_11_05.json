@@ -1,6 +1,6 @@
 {
   "date": "2026-11-05",
-  "status": "qualified; installation pending",
+  "status": "installed alpha-0.1.110",
   "scope": [
     "New Surface Extrude publishes native connected sheets as independently selectable bodies",
     "Stable output IDs through source reorder, curve removal, dimensional edits and saved reopen",
@@ -105,5 +105,23 @@
     "Oblique Draft, remaining stopping/selection combinations and mode-conversion coverage remain open.",
     "The rest of the requested feature review remains active, in the requested order."
   ],
-  "worker_sha256": "b5f13721d6b45fde00eae1c7bcb12bcf002c5d226d742d82560564ee91c79d7d"
+  "worker_sha256": "b5f13721d6b45fde00eae1c7bcb12bcf002c5d226d742d82560564ee91c79d7d",
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.110",
+    "sha256": "5859463eef6564d5ae5558190e9a37d1ee2ac8c9f78286813e32a20013a1f49c",
+    "source_commit": "65b61e4b7fc7b6218bb13f793f0ccb38de256d3c",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "origin": "https://aetherstudio.local:8780"
+  },
+  "live_authentication_guard": {
+    "page_status": 302,
+    "page_authentication_required": true,
+    "asset_status": 401,
+    "asset": "./assets/aethercad-archive-D2N0GxF2.js"
+  }
 }

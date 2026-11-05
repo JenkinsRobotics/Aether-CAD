@@ -59,7 +59,7 @@ and WebKit/WebGL2, including visible cut/restore checks and no document writes.
 Aether UI277 passes 986 tests and its interactive gallery gate.
 [Qualification](../reality/data/Feature_End_On_Controls_2026_11_05.json).
 
-## Independent Surface Extrude outputs — 2026-11-05, qualified
+## Independent Surface Extrude outputs — 2026-11-05, alpha-0.1.110
 
 New Surface extrusions now publish one native body per connected sheet. Shared
 edges join a sheet; detached sheets remain independently selectable. IDs derive
