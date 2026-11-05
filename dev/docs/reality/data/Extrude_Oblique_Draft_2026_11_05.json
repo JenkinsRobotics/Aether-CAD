@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-05",
+  "status": "All candidate qualification passed; ready for local release",
+  "scope": [
+    "Native straight-edged oblique Draft for Solid and open/closed Thin, preserving the neutral sketch plane",
+    "Signed draft, starting offset, reversed travel, symmetric and independent ends",
+    "Up-to-face/part/next/vertex caps classified by sketch normal rather than travel direction",
+    "Parallel-face stopping depth calculated from its plane, without bounding-box inflation",
+    "Shared draft orbit and wall-thickness handles placed on the actual oblique native walls"
+  ],
+  "references": [
+    "https://cad.onshape.com/FsDoc/library.html#extrude-Context-Id-map",
+    "https://cad.onshape.com/help/Content/PartStudio/extrude.htm",
+    "https://occt3d.com/dev/doc/refman/html/class_b_rep_offset_a_p_i___draft_angle.html"
+  ],
+  "geometry_contract": "The side-wall normal dotted with the unit pull direction equals sin(signed draft angle); the sketch remains neutral. Independent section integrals verify volume, rather than merely accepting a valid B-rep.",
+  "investigation": {
+    "generic_curved_builder_rejected": "The native MakeDraft probe produced the wrong pull-relative wall angle and an open oversized rectangle shell. It is not used by the product. DraftAngle on a curved oblique extrusion also refuses. Curved oblique draft remains open.",
+    "probe_log": "build/feature-qualification-2026-11-05/oblique-draft/native-probe.log",
+    "no_new_engine_or_mesh_substitute": true
+  },
+  "qualification": {
+    "focused_native": {
+      "passed": 16,
+      "test": "aether-engine/src/kernel/extrusion-oblique-draft.test.ts"
+    },
+    "engine": {
+      "passed": 1400,
+      "files": 292,
+      "log": "build/feature-qualification-2026-11-05/oblique-draft/engine.log"
+    },
+    "chromium": {
+      "passed": true,
+      "workflows": 17,
+      "path": "build/Example-Collection/oblique-draft-chromium-2026-11-05/host/browser/feature-controls.json"
+    },
+    "engine_types": true,
+    "build": true,
+    "headless": true,
+    "regions": true,
+    "packaged_native": {
+      "passed": 340,
+      "log": "build/feature-qualification-2026-11-05/oblique-draft/native.log"
+    },
+    "webkit": {
+      "passed": true,
+      "workflows": 17,
+      "path": "build/Example-Collection/oblique-draft-webkit-2026-11-05/host/browser/feature-controls.json"
+    },
+    "frontend": {
+      "passed": 2213,
+      "existing_skipped": 1,
+      "log": "build/feature-qualification-2026-11-05/oblique-draft/frontend.log"
+    },
+    "modeling": {
+      "passed": true,
+      "steps": 17,
+      "server_geometry_requests": 0,
+      "path": "build/Example-Collection/oblique-draft-modeling-2026-11-05/host/browser/log.json"
+    },
+    "home": {
+      "passed": true,
+      "path": "build/Example-Collection/oblique-draft-home-2026-11-05/host/browser/results.json"
+    },
+    "home_standalone": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/oblique-draft/home-standalone/results.json"
+    },
+    "frozen_product_files_unchanged": true,
+    "reported_part_face_removal": [
+      {
+        "browser": "chromium",
+        "cases": 4,
+        "errors": [],
+        "path": "build/Example-Collection/oblique-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json"
+      },
+      {
+        "browser": "webkit",
+        "cases": 4,
+        "errors": [],
+        "path": "build/Example-Collection/oblique-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+      }
+    ]
+  },
+  "compatibility": {
+    "part": 26,
+    "workspace_codec": 29,
+    "shared_ui": "0.2.0-alpha.277",
+    "document_schema_changed": false,
+    "previously_rejected_geometry_enabled": true
+  },
+  "remaining": [
+    "Curved oblique Draft with the correct pull-relative angle and robust trim/caps",
+    "Remaining Extrude termination/mode conversion and selection-reference matrix",
+    "Remove redundant legacy Sketch/curve selectors from the unified Thin panel while preserving actual selection behavior",
+    "Large-scope Surface Add profiling and optimization",
+    "Complete Extrude qualification before Revolve, Chamfer, Fillet and the remaining requested features"
+  ]
+}

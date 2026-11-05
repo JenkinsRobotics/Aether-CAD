@@ -72,6 +72,13 @@ Package-manager versions and the shared UI dependency version are separate.
    save/reopen them, remove curves after a failed preview, and preserve Cancel.
    Existing Add records without `connectedMerge` retain their compound semantics.
    Older readers must refuse Part26; never downgrade a saved file for rollback.
+   Angled Extrude Draft requires `extrusion-oblique-draft.test.ts`, the packaged
+   `test_native_thin_draft.py` agent cases and both browser control gates. Check
+   native wall angles against the pull direction, analytic volumes, the neutral
+   sketch plane, starting offsets, independent ends, exact stopping limits and
+   shared draft/thickness control positions. Straight-edged profiles are currently
+   supported; curved oblique draft remains an explicit gap, not a sheared-loft
+   approximation. Normal-direction curved drafts retain their existing behavior.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

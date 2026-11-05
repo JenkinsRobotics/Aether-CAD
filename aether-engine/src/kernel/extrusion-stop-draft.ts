@@ -1,5 +1,5 @@
 import { cast, getOC, isShape3D, measureVolume, type AnyShape, type Shape3D } from 'replicad';
-import { dot, type V3 } from './vector';
+import { dot, unit, type V3 } from './vector';
 
 /** Draft the longitudinal walls of a terminated extrusion. OCCT extends those
  * walls on the original stopping surfaces, so a distant construction cap never
@@ -18,9 +18,11 @@ export function draftStoppedExtrusion(body: Shape3D, direction: V3, origin: V3, 
     let walls = 0;
     for (const face of faces) {
       const n = face.normalAt();
-      const lateral = Math.abs(dot([n.x, n.y, n.z], direction)) < 1e-7;
+      const lateral = Math.abs(dot(unit([n.x, n.y, n.z]), direction)) < 1e-7;
       n.delete();
       if (!lateral) continue;
+      if (face.geomType !== 'PLANE' && Math.abs(dot(normal, direction)) < 1 - 1e-7)
+        throw new Error('Draft along an angled direction currently requires straight profile edges. Curved profile draft requires the sketch normal.');
       builder.Add(face.wrapped, pull, degrees * Math.PI / 180, neutral, true);
       if (!builder.AddDone()) throw new Error('A side wall cannot be drafted against this stopping surface.');
       walls++;
@@ -33,6 +35,9 @@ export function draftStoppedExtrusion(body: Shape3D, direction: V3, origin: V3, 
     try { if (!check.IsValid_2() || measureVolume(result) <= 1e-9) throw new Error('Draft collapses or intersects the extrusion before its stopping surface.'); }
     finally { check.delete(); }
     const made = result; result = undefined; return made;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error('Draft collapses or intersects the extrusion. Reduce the angle, depth or starting offset.', { cause: error });
   } finally {
     result?.delete(); builder.delete(); progress.delete(); neutral.delete(); axis.delete(); point.delete(); pull.delete();
     faces.forEach(face => face.delete()); source.delete();

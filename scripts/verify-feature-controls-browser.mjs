@@ -1,6 +1,7 @@
 // Real native documents and actual UI interaction on the disposable Studio host.
 import assert from 'node:assert/strict';
 import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
+import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -262,6 +263,7 @@ try {
   await expect.poll(async () => Number(await dialog().locator('[aria-label="Thickness 2 (mm)"]').inputValue())).toBe(0);
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen');
+  await verifyObliqueDraft({ page, expect, dialog, row, open, stored, accept, base, sketch, evidence, results });
 
   const stopped = base('Native drafted stopping controls');
   stopped.features = [

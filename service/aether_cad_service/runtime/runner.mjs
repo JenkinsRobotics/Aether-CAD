@@ -39367,6 +39367,22 @@ function extrusionPreviewAxes(options) {
   });
   return axes;
 }
+function extrusionDraftWallNormal(outward, sketchNormal, pull, degrees2) {
+  const tangent = unit$3(cross$4(sketchNormal, outward));
+  const perpendicular = sub$5(pull, scale$1(tangent, dot$6(pull, tangent)));
+  const sine = Math.sin(degrees2 * Math.PI / 180) / Math.hypot(...perpendicular);
+  if (Math.abs(sine) >= 1) throw Error("The draft angle is too large for this extrusion direction and profile edge. Reduce the angle or change the direction.");
+  let originalNormal = unit$3(cross$4(tangent, pull));
+  if (dot$6(originalNormal, outward) < 0) originalNormal = scale$1(originalNormal, -1);
+  return add$4(scale$1(originalNormal, Math.sqrt(1 - sine * sine)), scale$1(unit$3(perpendicular), sine));
+}
+function extrusionDraftWallShift(outward, sketchNormal, pull, degrees2, offset2) {
+  if (!degrees2 || !offset2) return 0;
+  const normal = extrusionDraftWallNormal(outward, sketchNormal, pull, degrees2);
+  const denominator = dot$6(normal, outward);
+  if (Math.abs(denominator) < 1e-9) throw Error("The draft wall is parallel to its starting section. Reduce the angle or change the direction.");
+  return -offset2 * dot$6(normal, pull) / denominator;
+}
 function coordinates(vector2) {
   try {
     return [vector2.x, vector2.y, vector2.z];
@@ -39382,7 +39398,8 @@ function extrusionDraftFrame(wire) {
     const edge = edges.reduce((longest, current2) => current2.length > longest.length ? current2 : longest);
     const origin2 = coordinates(edge.pointAt(0.5));
     const tangent = scale$1(coordinates(edge.tangentAt(0.5)), edge.orientation === "forward" ? 1 : -1);
-    return { origin: origin2, inward: unit$3(cross$4(coordinates(face.normalAt(origin2)), tangent)) };
+    const normal = unit$3(coordinates(face.normalAt(origin2)));
+    return { origin: origin2, inward: unit$3(cross$4(normal, tangent)), normal };
   } finally {
     edges.forEach((edge) => edge.delete());
     outer.delete();
@@ -39390,7 +39407,8 @@ function extrusionDraftFrame(wire) {
   }
 }
 function extrusionDraftHandle(frame, options) {
-  const intoMaterial = scale$1(frame.inward, options.angle < 0 ? -1 : 1);
+  const wallNormal = extrusionDraftWallNormal(scale$1(frame.inward, -1), frame.normal, options.direction, options.angle);
+  const intoMaterial = scale$1(wallNormal, options.angle < 0 ? 1 : -1);
   return {
     parameter: options.parameter,
     label: options.label,
@@ -39414,9 +39432,11 @@ function draftStoppedExtrusion(body, direction2, origin2, normal, degrees2) {
     let walls = 0;
     for (const face of faces) {
       const n = face.normalAt();
-      const lateral = Math.abs(dot$6([n.x, n.y, n.z], direction2)) < 1e-7;
+      const lateral = Math.abs(dot$6(unit$3([n.x, n.y, n.z]), direction2)) < 1e-7;
       n.delete();
       if (!lateral) continue;
+      if (face.geomType !== "PLANE" && Math.abs(dot$6(normal, direction2)) < 1 - 1e-7)
+        throw new Error("Draft along an angled direction currently requires straight profile edges. Curved profile draft requires the sketch normal.");
       builder.Add(face.wrapped, pull, degrees2 * Math.PI / 180, neutral, true);
       if (!builder.AddDone()) throw new Error("A side wall cannot be drafted against this stopping surface.");
       walls++;
@@ -39434,6 +39454,9 @@ function draftStoppedExtrusion(body, direction2, origin2, normal, degrees2) {
     const made = result;
     result = void 0;
     return made;
+  } catch (error2) {
+    if (error2 instanceof Error) throw error2;
+    throw new Error("Draft collapses or intersects the extrusion. Reduce the angle, depth or starting offset.", { cause: error2 });
   } finally {
     result?.delete();
     builder.delete();
@@ -39471,7 +39494,7 @@ function extrusionDraftReach(start, far, build) {
 }
 function extrusionThicknessHandles(frame, thin, direction2, offset2, draftDegrees = 0) {
   const base = add$4(frame.origin, scale$1(direction2, offset2));
-  const origin2 = (side) => add$4(base, scale$1(side, -offset2 * Math.tan(draftDegrees * Math.PI / 180)));
+  const origin2 = (side) => add$4(base, scale$1(side, extrusionDraftWallShift(side, frame.normal, direction2, draftDegrees, offset2)));
   if (thin.midplane) return [{
     parameter: "midThickness",
     label: "Wall thickness",
@@ -41245,7 +41268,7 @@ function openWallFace(wire, n, a2, b, own) {
   const nearest = (at) => edges.find((edge) => norm$4(sub$5(point2(edge.startPoint), at)) < 1e-7 || norm$4(sub$5(point2(edge.endPoint), at)) < 1e-7) ?? edges[0];
   const first = endTangent(nearest(start), start, true), last2 = endTangent(nearest(end), end, false);
   const firstEdge = nearest(start), wallTangent = scale$1(point2(firstEdge.tangentAt(0.5)), norm$4(sub$5(point2(firstEdge.startPoint), start)) < 1e-7 ? 1 : -1);
-  const wallFrame = { origin: point2(firstEdge.pointAt(0.5)), inward: unit$3(cross$4(n, wallTangent)) };
+  const wallFrame = { origin: point2(firstEdge.pointAt(0.5)), inward: unit$3(cross$4(n, wallTangent)), normal: n };
   const straight = edges.every((edge) => edge.geomType === "LINE") && edges.every((edge) => norm$4(cross$4(first, sub$5(point2(edge.endPoint), start))) < 1e-7);
   const offsetOpen = (distance2) => {
     const startTarget = add$4(start, scale$1(cross$4(first, n), distance2)), endTarget = add$4(end, scale$1(cross$4(last2, n), distance2));
@@ -44599,7 +44622,7 @@ function evaluatePartDocument(document2, options = {}) {
               };
               const extrudeWith = (shape) => {
                 if (feature22.type !== "extrude") throw new Error("not an extrude");
-                const { direction: direction2, custom, offset: offset2 } = extrusionPlacement(feature22, n, o, commonNormal);
+                const { direction: direction2, offset: offset2 } = extrusionPlacement(feature22, n, o, commonNormal);
                 if (feature22.id === previewId && feature22.thin && shape.wallFrame && !previewHandles.some((handle) => ["thickness1", "midThickness"].includes(handle.parameter))) {
                   for (const handle of extrusionThicknessHandles(shape.wallFrame, feature22.thin, direction2, offset2, feature22.draftAngleDegrees)) publish(feature22, handle);
                 }
@@ -44648,7 +44671,7 @@ function evaluatePartDocument(document2, options = {}) {
                   });
                 }
                 const drafted = Boolean(primary.draft || second?.draft);
-                if (drafted && custom && Math.abs(dot$6(direction2, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
+                const oblique = Math.abs(dot$6(direction2, n)) < 1 - 1e-7;
                 if (drafted && !shape.sections) throw new UnsupportedFeature(feature22.id, "drafted thin extrusions");
                 if (drafted && feature22.id === previewId && !previewHandles.some((handle) => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
                   const section2 = shape.sections()[0];
@@ -44677,6 +44700,7 @@ function evaluatePartDocument(document2, options = {}) {
                 };
                 const draftedPrism = (low2, high2, dir, angle2) => {
                   if (!(high2 - low2 > 0)) throw new Error("Extrusion depths must be finite and positive.");
+                  if (oblique) return own(draftStoppedExtrusion(prism(low2, high2, dir), dir, o, n, angle2));
                   const slope = Math.tan(angle2 * Math.PI / 180);
                   const collapse = "Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.";
                   const sectionAt = (wire, delta2, t2) => {
@@ -44778,7 +44802,7 @@ function evaluatePartDocument(document2, options = {}) {
                         throw new UnsupportedFeature(feature22.id, `${ref.surfaceType} stopping faces`);
                       }
                       const probe3 = prism(start, start + 1, dir);
-                      const starts2 = capFaces(probe3, dir, -1);
+                      const starts2 = capFaces(probe3, axisOf(dir).axis, -1);
                       if (starts2.length !== 1) {
                         starts2.forEach((cap) => cap.delete());
                         stopFace.delete();
@@ -44787,7 +44811,7 @@ function evaluatePartDocument(document2, options = {}) {
                       const startCap2 = starts2[0], startArea2 = measureArea(startCap2), tolerance22 = Math.max(1e-9, startArea2 * 1e-9);
                       const stopCenter2 = [...deleteAfterVectorTuple(stopFace.center)], startCenter2 = [...deleteAfterVectorTuple(startCap2.center)];
                       const span3 = Math.max(1, norm$4(sub$5(stopCenter2, startCenter2)) + diagonalOfShape(stopFace) + diagonalOf(probe3) + Math.abs(end.endOffset));
-                      const tool5 = prism(start, start + 4 * span3, dir), ends2 = capFaces(tool5, dir, 1);
+                      const tool5 = prism(start, start + 4 * span3, dir), ends2 = capFaces(tool5, axisOf(dir).axis, 1);
                       const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
                       const faceX = toExtended(stopFace), toolX = toExtended(tool5);
                       const handle = f2.BRep_Tool.Surface_2(f2.TopoDS.Face_1(faceX));
@@ -44891,7 +44915,7 @@ function evaluatePartDocument(document2, options = {}) {
                     stopFace.delete();
                     const probe2 = prism(start, start + 1, dir);
                     const startDiagonal = diagonalOf(probe2), epsilon2 = Math.max(1e-6, startDiagonal * 1e-9);
-                    const starts = capFaces(probe2, dir, -1);
+                    const starts = capFaces(probe2, axisOf(dir).axis, -1);
                     if (starts.length !== 1) {
                       starts.forEach((cap) => cap.delete());
                       throw new UnsupportedFeature(feature22.id, "curved stops of several regions");
@@ -44925,7 +44949,7 @@ function evaluatePartDocument(document2, options = {}) {
                       startCap.delete();
                       throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset.");
                     }
-                    const tool4 = prism(start, high2, dir), ends = capFaces(tool4, dir, 1);
+                    const tool4 = prism(start, high2, dir), ends = capFaces(tool4, axisOf(dir).axis, 1);
                     try {
                       const remainder = own(tool4.intersect(half2));
                       const pieces = solidsOf(remainder);
@@ -44957,16 +44981,20 @@ function evaluatePartDocument(document2, options = {}) {
                   const profileCenter = sketchCentroid(feature22.profileFeatureId);
                   const contact = add$4(profileCenter, scale$1(dir, dot$6(normal, sub$5(planePoint, profileCenter)) / alignment));
                   stopPreview(end, dir, contact);
+                  if (norm$4(cross$4(normal, n)) < 1e-10) {
+                    const end2 = dot$6(normal, sub$5(planePoint, o)) / alignment;
+                    if (end2 <= start + 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
+                    return prism(start, end2, dir);
+                  }
                   const probe = prism(start, start + 1, dir);
                   let maximum = -Infinity;
                   for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$6(normal, sub$5(planePoint, corner)) / alignment);
                   if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-                  if (norm$4(cross$4(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
                   const full2 = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
                   let span = 1;
                   for (const corner of corners(full2.boundingBox.bounds)) span = Math.max(span, norm$4(sub$5(corner, planePoint)) + 1);
                   const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
-                  for (const cap of capFaces(probe, dir, -1)) {
+                  for (const cap of capFaces(probe, axisOf(dir).axis, -1)) {
                     const area = measureArea(cap);
                     const shifted = own(cap.translate(dir[0] * 1e-6, dir[1] * 1e-6, dir[2] * 1e-6));
                     if (area - commonArea(shifted, half) > Math.max(1e-10, area * 1e-10)) throw new Error("The stopping plane crosses or lies behind the extrusion start. Flip direction or adjust the offset.");
@@ -45031,7 +45059,7 @@ function evaluatePartDocument(document2, options = {}) {
                   if (!shadows.length) throw new Error("No next face covers the selected profile. Flip direction or choose another limit.");
                   let result2 = tool3;
                   for (const shadow of shadows) result2 = own(result2.cut(shadow));
-                  const starts = capFaces(tool3, dir, -1), ends = capFaces(tool3, dir, 1);
+                  const starts = capFaces(tool3, axisOf(dir).axis, -1), ends = capFaces(tool3, axisOf(dir).axis, 1);
                   let complete = true;
                   try {
                     const pieces = solidsOf(result2);
@@ -45060,7 +45088,7 @@ function evaluatePartDocument(document2, options = {}) {
                   const bound2 = (farthestAlong([stop], axis) - origin2) / alignment + epsilon2 * 10;
                   if (!Number.isFinite(bound2) || bound2 <= low2 + epsilon2) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
                   const { tool: tool3 } = stoppingTool(low2, bound2, dir, end.draft);
-                  const starts = capFaces(tool3, dir, -1), ends = capFaces(tool3, dir, 1);
+                  const starts = capFaces(tool3, axisOf(dir).axis, -1), ends = capFaces(tool3, axisOf(dir).axis, 1);
                   try {
                     if (starts.length !== 1) throw new UnsupportedFeature(feature22.id, "up-to-part extrusions of several regions");
                     const start = starts[0], startArea = measureArea(start), tolerance2 = Math.max(1e-8, startArea * 1e-8);

@@ -1,12 +1,13 @@
 import type { PreviewHandle } from '../contracts/geometry';
 import type { ExtrudeFeature } from '../document/index';
 import { add, neg, scale, type V3 } from './vector';
+import { extrusionDraftWallShift } from './extrusion-draft-wall';
 
 /** Thickness is measured across the sketch curve at the evaluated start plane.
  * Mid-plane displays total thickness while each end moves half that amount. */
-export function extrusionThicknessHandles(frame: { origin: V3; inward: V3 }, thin: NonNullable<ExtrudeFeature['thin']>, direction: V3, offset: number, draftDegrees = 0): PreviewHandle[] {
+export function extrusionThicknessHandles(frame: { origin: V3; inward: V3; normal: V3 }, thin: NonNullable<ExtrudeFeature['thin']>, direction: V3, offset: number, draftDegrees = 0): PreviewHandle[] {
   const base = add(frame.origin, scale(direction, offset));
-  const origin = (side: V3) => add(base, scale(side, -offset * Math.tan(draftDegrees * Math.PI / 180)));
+  const origin = (side: V3) => add(base, scale(side, extrusionDraftWallShift(side, frame.normal, direction, draftDegrees, offset)));
   if (thin.midplane) return [{
     parameter: 'midThickness', label: 'Wall thickness', kind: 'linear',
     originMillimeters: origin(neg(frame.inward)), direction: neg(frame.inward), scale: 2,

@@ -10,6 +10,54 @@ from test_native_program import empty, invoke
 
 
 @native
+@pytest.mark.parametrize("thin", [False, True])
+def test_agent_oblique_planar_draft_edits_and_reopens(tmp_path, thin):
+    authored = run(tmp_path, empty(), [
+        {"id": "sketch", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "profile", "name": "Draft sketch", "plane": "XY", "offsetMillimeters": 0,
+            "profile": {"type": "drawing", "contours": [{"id": "outline", "type": "path", "start": [0, 0],
+                "segments": [{"type": "line", "end": p} for p in [[20, 0], [20, 10], [0, 10], [0, 0]]]}]},
+        }}},
+        {"id": "draft", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "extrude", "name": "Angled draft", "profileFeatureId": {"$ref": "sketch.feature_id"},
+            "profileContourId": "outline", "distanceMillimeters": 10, "operation": "new",
+            "directionVector": [0.6, 0, 0.8], "startingOffsetMillimeters": 2, "draftAngleDegrees": 3,
+            **({"thin": {"thickness1Millimeters": 2, "thickness2Millimeters": 1}} if thin else {}),
+        }}},
+    ])
+
+    def integral(z, angle, width=20, height=10):
+        a, theta = math.radians(angle), math.atan2(0.6, 0.8)
+        wx = math.tan(theta + a) - math.tan(theta - a)
+        wy = 2 * math.sin(a) / math.sqrt(0.8**2 - math.sin(a)**2)
+        return width * height * z - (width * wy + height * wx) * z**2 / 2 + wx * wy * z**3 / 3
+
+    def expected(angle):
+        def section(z):
+            return integral(z, angle, 24, 14) - integral(z, -angle, 18, 8) if thin else integral(z, angle)
+        return section(9.6) - section(1.6)
+
+    assert volume(authored) == pytest.approx(expected(3), abs=1e-5)
+    feature_id = authored["result"]["references"]["draft"]["feature_id"]
+    edited = run(tmp_path, authored["content"], [
+        {"id": "resize", "tool": "aether_cad_feature_update", "arguments": {
+            "feature_id": feature_id, "changes_json": '{"draftAngleDegrees":-3}',
+        }},
+    ])
+    assert volume(edited) == pytest.approx(expected(-3), abs=1e-5)
+    reopened = invoke(tmp_path, "cad.part.verify", edited["content"], {})
+    assert reopened["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=1e-5)
+    failed = invoke(tmp_path, "cad.part.runprogram", edited["content"], {"program_json": json.dumps({"version": 1, "steps": [
+        {"id": "collapse", "tool": "aether_cad_feature_update", "arguments": {
+            "feature_id": feature_id, "changes_json": '{"draftAngleDegrees":40,"distanceMillimeters":100}',
+        }},
+    ]})})
+    assert "error" in failed and "content" not in failed, failed
+    unchanged = invoke(tmp_path, "cad.part.verify", edited["content"], {})
+    assert unchanged["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=1e-5)
+
+
+@native
 def test_agent_authors_edits_and_reopens_drafted_thin_wall(tmp_path):
     authored = run(tmp_path, empty(), [
         {"id": "sketch", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {

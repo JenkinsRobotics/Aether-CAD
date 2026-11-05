@@ -1,6 +1,7 @@
 import { makeFace, type Vector, type Wire } from 'replicad';
 import type { PreviewHandle } from '../contracts/geometry';
 import { add, cross, scale, unit, type V3 } from './vector';
+import { extrusionDraftWallNormal } from './extrusion-draft-wall';
 
 function coordinates(vector: Vector): V3 {
   try { return [vector.x, vector.y, vector.z]; }
@@ -10,7 +11,7 @@ function coordinates(vector: Vector): V3 {
 /** Anchor draft at an actual profile boundary on the neutral sketch plane.
  * The oriented outer wire gives the material side even for concave profiles;
  * a centroid-to-edge estimate would point the wrong way in a concavity. */
-export function extrusionDraftFrame(wire: Wire): { origin: V3; inward: V3 } {
+export function extrusionDraftFrame(wire: Wire): { origin: V3; inward: V3; normal: V3 } {
   const face = makeFace(wire.clone());
   const outer = face.clone().outerWire();
   const edges = outer.edges;
@@ -18,7 +19,8 @@ export function extrusionDraftFrame(wire: Wire): { origin: V3; inward: V3 } {
     const edge = edges.reduce((longest, current) => current.length > longest.length ? current : longest);
     const origin = coordinates(edge.pointAt(.5));
     const tangent = scale(coordinates(edge.tangentAt(.5)), edge.orientation === 'forward' ? 1 : -1);
-    return { origin, inward: unit(cross(coordinates(face.normalAt(origin)), tangent)) };
+    const normal = unit(coordinates(face.normalAt(origin)));
+    return { origin, inward: unit(cross(normal, tangent)), normal };
   } finally {
     edges.forEach(edge => edge.delete()); outer.delete(); face.delete();
   }
@@ -28,7 +30,8 @@ export function extrusionDraftHandle(frame: ReturnType<typeof extrusionDraftFram
   parameter: string; label: string; direction: V3; angle: number; radius: number;
 }): PreviewHandle {
   // Dialog angles are magnitudes; widening is its separate reversal control.
-  const intoMaterial = scale(frame.inward, options.angle < 0 ? -1 : 1);
+  const wallNormal = extrusionDraftWallNormal(scale(frame.inward, -1), frame.normal, options.direction, options.angle);
+  const intoMaterial = scale(wallNormal, options.angle < 0 ? 1 : -1);
   return {
     parameter: options.parameter, label: options.label, kind: 'angular',
     originMillimeters: frame.origin,
