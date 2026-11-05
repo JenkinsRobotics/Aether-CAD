@@ -45,7 +45,7 @@ export class PreviewQueue<T, R> {
   }
 }
 
-export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocument, onError?: (message: string | null) => void, complete?: () => PartDocument, notice?: (message: string | null) => void, inputs?: () => PartFeature | undefined) {
+export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocument, onError?: (message: string | null) => void, complete?: () => PartDocument, notice?: (message: string | null) => void, inputs?: () => PartFeature | undefined, onPending?: () => void) {
   if (!service) return { update() {}, close() {}, pause() {} };
   // A preview shows the history up to the edited feature; once it is on screen
   // and the user has paused, the rest of the document is built ahead so Apply
@@ -103,6 +103,7 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
     if (closed) return;
     clearTimeout(warmTimer); warmTimer = undefined;
     queue.invalidate(false);
+    onPending?.();
     root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{pending:true}}));
     try {
       latest = candidate(); feedback('pending'); if(status.textContent !== "Updating preview…") show("Updating preview…");
@@ -114,7 +115,7 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
         timer = undefined;
         if (latest) queue.request(latest);
       }, 100);
-    } catch (error) { clearTimeout(timer); timer = undefined; queue.invalidate(); const message = error instanceof Error ? error.message : String(error); feedback('error', message); show(message); }
+    } catch (error) { clearTimeout(timer); timer = undefined; queue.invalidate(); const message = error instanceof Error ? error.message : String(error); feedback('error', message); show(message); onError?.(message); }
   };
   const observer = new window.MutationObserver(() => { if (!root.isConnected) close(); });
   observer.observe(document.body, { childList: true, subtree: true });

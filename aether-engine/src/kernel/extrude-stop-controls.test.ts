@@ -79,6 +79,18 @@ it.each(['up-to-next', 'up-to-part'] as const)('anchors %s offset on actual term
   }
 });
 
+it.each(['up-to-next', 'up-to-part'] as const)('drafts solid and thin extrusions to %s without changing the stopping distance', endType => {
+  for (const thin of [false, true]) for (const reversed of [false, true]) for (const angle of [3, -3]) {
+    const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+      endReference: undefined, startingOffsetMillimeters: 2, endOffsetMillimeters: 1,
+      draftAngleDegrees: angle,
+      ...(thin ? { profileContourId: 'wall', thin: { thickness1Millimeters: 2, thickness2Millimeters: 1 } } : {}) }, reversed);
+    const expected = areaIntegral(9, angle, thin) - areaIntegral(2, angle, thin);
+    expect(outputVolume(doc)).toBeCloseTo(expected, 4);
+    expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(expected, 4);
+  }
+});
+
 it('provides the same signed offset control at a native stopping sketch point', () => {
   const doc = fixture({ endType: 'up-to-vertex', endReference: undefined, endOffsetMillimeters: -2,
     endPointReference: { kind: 'sketch-point', sourceFeatureId: 'point', contourId: 'circle', point: 'center', label: 'Point' } });
@@ -95,5 +107,77 @@ it('refuses an offset behind the start or a collapsed draft without changing the
     const doc = fixture(change), saved = serializePartDocument(doc);
     expect(() => outputVolume(doc)).toThrow();
     expect(serializePartDocument(doc)).toBe(saved);
+  }
+});
+
+it.each(['up-to-next', 'up-to-part'] as const)('refuses a widened draft escaping the finite %s boundary', endType => {
+  const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+    endReference: undefined, draftAngleDegrees: -3 });
+  doc.features[0] = { ...doc.features[0], profile: { type: 'polygon', pointsMillimeters: [[-.1, -.1], [20.1, -.1], [20.1, 10.1], [-.1, 10.1]] } } as PartFeature;
+  const saved = serializePartDocument(doc);
+  expect(() => outputVolume(doc)).toThrow(/fully|completely|terminate|stop/);
+  expect(serializePartDocument(doc)).toBe(saved);
+});
+
+it.each(['up-to-next', 'up-to-part'] as const)('terminates a narrowing profile on a smaller %s footprint', endType => {
+  const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+    endReference: undefined, draftAngleDegrees: 10 });
+  doc.features[0] = { ...doc.features[0], profile: { type: 'polygon', pointsMillimeters: [[1, 1], [19, 1], [19, 9], [1, 9]] } } as PartFeature;
+  expect(outputVolume(doc)).toBeCloseTo(areaIntegral(10, 10, false), 4);
+  expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(areaIntegral(10, 10, false), 4);
+});
+
+it.each(['up-to-next', 'up-to-part'] as const)('ignores a distant back face beyond the taper collapse for %s', endType => {
+  const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+    endReference: undefined, draftAngleDegrees: 10 });
+  (doc.features[1] as ExtrudeFeature).distanceMillimeters = 100;
+  expect(outputVolume(doc)).toBeCloseTo(areaIntegral(10, 10, false), 4);
+  expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(areaIntegral(10, 10, false), 4);
+  doc.features[0] = { ...doc.features[0], offsetMillimeters: 40 } as PartFeature;
+  const saved = serializePartDocument(doc);
+  expect(() => outputVolume(doc)).toThrow();
+  expect(serializePartDocument(doc)).toBe(saved);
+});
+
+it('ignores the axial cylindrical wall of a stopping part when finding the next drafted cap', () => {
+  const doc = fixture({ endType: 'up-to-next', endReference: undefined, draftAngleDegrees: 3 });
+  doc.features[0] = { ...doc.features[0], profile: { type: 'circle', centerMillimeters: [10, 5], radiusMillimeters: 20 } } as PartFeature;
+  expect(outputVolume(doc)).toBeCloseTo(areaIntegral(10, 3, false), 4);
+  expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(areaIntegral(10, 3, false), 4);
+});
+
+it.each(['up-to-face', 'up-to-next', 'up-to-part'] as const)('keeps a tilted %s surface fixed while drafting its side walls', endType => {
+  const slope = .2, c = 1 / Math.hypot(1, slope), height = 9;
+  for (const angle of [-3, 3]) {
+    const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+      endReference: endType === 'up-to-face' ? { sourceFeatureId: 'limit', bodyId: 'limitBody', normal: [slope * c, 0, -c], label: 'Tilted stop' } : undefined,
+      startingOffsetMillimeters: 2, endOffsetMillimeters: 1, draftAngleDegrees: angle });
+    doc.features[0] = { ...doc.features[0], frame: { originMillimeters: [0, 0, 10], normal: [-slope * c, 0, c], xDirection: [c, 0, slope * c] } } as PartFeature;
+    // Integrate horizontal cross-sections: first the whole tapered rectangle,
+    // then only its portion below z = height + slope*x.
+    const k = Math.tan(angle * Math.PI / 180), first = height / (1 - slope * k), last = (height + 20 * slope) / (1 + slope * k);
+    const a = 20 + height / slope, b = k + 1 / slope;
+    const partial = (t: number) => 10 * a * t - (2 * a * k + 10 * b) * t * t / 2 + 2 * b * k * t * t * t / 3;
+    const expected = areaIntegral(first, angle, false) - areaIntegral(2, angle, false) + partial(last) - partial(first);
+    expect(outputVolume(doc)).toBeCloseTo(expected, 4);
+    expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(expected, 4);
+  }
+});
+
+it.each(['up-to-face', 'up-to-next', 'up-to-part'] as const)('drafts a circular profile inside a spherical %s limit with an analytic volume', endType => {
+  for (const angle of [-3, 3]) {
+    const doc = fixture({ endType, endPartId: endType === 'up-to-part' ? 'limitBody' : undefined,
+      endReference: endType === 'up-to-face' ? { sourceFeatureId: 'limit', bodyId: 'limitBody', surfaceType: 'sphere', label: 'Sphere' } : undefined,
+      draftAngleDegrees: angle });
+    doc.features[0] = { id: 'limitSketch', name: 'Sphere meridian', type: 'profile', plane: 'XZ', offsetMillimeters: 0, suppressed: false,
+      profile: { type: 'drawing', contours: [{ id: 'meridian', type: 'path', start: [0, -10], segments: [{ type: 'arc', middle: [10, 0], end: [0, 10] }, { type: 'line', end: [0, -10] }] }] } };
+    doc.features[1] = { id: 'limit', name: 'Spherical limit', type: 'revolve', profileFeatureId: 'limitSketch', axis: 'Z', angleDegrees: 360, suppressed: false, operation: 'new', bodyId: 'limitBody' };
+    doc.features[2] = { id: 's', name: 'Round profile', type: 'profile', plane: 'XY', offsetMillimeters: 0, suppressed: false, profile: { type: 'circle', centerMillimeters: [0, 0], radiusMillimeters: 4 } };
+    const k = Math.tan(angle * Math.PI / 180), top = (4 * k + Math.sqrt((1 + k * k) * 100 - 16)) / (1 + k * k);
+    const cylinder = (t: number) => 16 * t - 4 * k * t * t + k * k * t * t * t / 3;
+    const sphere = (t: number) => 100 * t - t * t * t / 3;
+    const expected = Math.PI * (cylinder(top) + sphere(10) - sphere(top));
+    expect(outputVolume(doc)).toBeCloseTo(expected, 3);
+    expect(outputVolume(parsePartDocument(serializePartDocument(doc)))).toBeCloseTo(expected, 3);
   }
 });

@@ -25,7 +25,7 @@ beforeEach(async () => {
   geometry = { points: [], measurements: [] }; analyzePart.mockReset();
   await act(async () => { applyDocumentUnits({ length: { unit: 'in', decimals: 3 }, angle: { unit: 'deg', decimals: 2 } }); toggleMeasureWindow(() => part); });
 });
-afterEach(async () => { await act(async () => { if (measureWindowOpen()) toggleMeasureWindow(() => part); cadSelection.dispatch({ type: 'clear' }); }); });
+afterEach(async () => { await act(async () => { if (measureWindowOpen()) toggleMeasureWindow(() => part); cadSelection.dispatch({ type: 'clear' }); }); localStorage.removeItem('aether-cad.feature-window-style'); });
 const select = items => act(async () => cadSelection.dispatch({ type: 'replace', items }));
 const results = () => document.querySelector('[aria-label="Measurements"]').textContent;
 const choose = async (label, option) => {
@@ -61,10 +61,17 @@ it('copies full precision, pins XYZ overlays, and retains the reference frame wh
   } finally {window.removeEventListener('aether-measure-frame',reference);}
 });
 
-it('opens the standard compact window (icon, Cancel and Done), condensed until something is measured', async () => {
+it.each(['standard', 'compact'])('opens the %s window with working Cancel and Done, condensed until something is measured', async style => {
+  await act(async () => {
+    toggleMeasureWindow(() => part);
+    localStorage.setItem('aether-cad.feature-window-style', style);
+    toggleMeasureWindow(() => part);
+  });
   const win = document.querySelector('.cad-measure-window');
   expect(win.querySelector('.aui-float-panel-title').textContent).toBe('Measure');
-  expect([...win.querySelectorAll('.aui-feature-commit-actions button')].map(button => button.textContent)).toEqual(['Cancel', 'Done']);
+  expect(win.querySelector('[data-feature-action="accept"]').getAttribute('aria-label')).toBe('Done');
+  expect(win.querySelector('[data-feature-action="discard"]').getAttribute('aria-label')).toBe('Cancel');
+  expect(win.querySelector('.aui-feature-commit-actions') !== null).toBe(style === 'compact');
   expect(win.querySelector('.aui-feature-header-icon svg')).toBeTruthy();
   // Readouts remain empty until a pick; instructions belong to Help.
   expect(win.querySelector('[aria-label="Measurements"]')).toBeNull();
@@ -80,13 +87,13 @@ it('opens the standard compact window (icon, Cancel and Done), condensed until s
   // Removing it from the window deselects it in the model.
   await act(async () => win.querySelector('[aria-label="Remove Face 1 of Plate"]').click());
   expect(cadSelection.snapshot().items).toEqual([]);
-  await act(async () => [...win.querySelectorAll('.aui-feature-commit-actions button')].find(b => b.textContent === 'Done').click());
+  await act(async () => win.querySelector('[data-feature-action="accept"]').click());
   expect(document.querySelector('.cad-measure-window')).toBeNull();
   expect(picking).toEqual({ active: false, points: false });
   // Cancel closes too, and drops what was picked.
   await act(async () => toggleMeasureWindow(() => part));
   await select([{ id: 'face:p:1', kind: 'face', partId: 'p', label: 'Face 1 of Plate', faceId: 1 }]);
-  await act(async () => [...document.querySelectorAll('.cad-measure-window .aui-feature-commit-actions button')].find(b => b.textContent === 'Cancel').click());
+  await act(async () => document.querySelector('.cad-measure-window [data-feature-action="discard"]').click());
   expect(document.querySelector('.cad-measure-window')).toBeNull();
   expect(cadSelection.snapshot().items).toEqual([]);
 });

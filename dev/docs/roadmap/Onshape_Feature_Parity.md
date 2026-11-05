@@ -8,6 +8,35 @@ on the same record) all carry it. Kernel gaps name the capability OCCT lacks tod
 Source pages: https://cad.onshape.com/help/Content/fillet.htm,
 https://cad.onshape.com/help/Content/chamfer.htm
 
+## Selection removal and current-preview acceptance — 2026-11-05
+
+CAD alpha-0.1.105 fixes both removal paths reported on the user's Chamfer:
+clicking the selected native face again toggles its exact reference, and its
+entity-row × removes that reference without a pointerdown refresh replacing
+the button before click. Two faces with the same display name remain distinct.
+Chromium and WebKit checks cover failed previews, red feedback, correction,
+saved history editing and cancellation. Evidence:
+[selection removal](../reality/data/Feature_Selection_Removal_2026_11_05.json).
+
+The qualified continuation also gates Apply and Enter on the latest completed native
+preview. A previous valid result cannot authorize a newer pending or failed
+edit. A controlled asynchronous regression covers this sequence and correction.
+The standard Aether UI window with header commit controls is now the default;
+an explicitly saved Compact preference is retained. Extrude follows the
+reference control order, with direction reversal beside the end condition and
+Direction, Starting offset, Symmetric, Draft and Second end in sequence.
+
+The continuation gate reproduced the previously intermittent Hole failure while
+opening Surface Thicken. Replaying the captured requests headlessly succeeded;
+three diagnostic browser runs also succeeded, so those retries do not isolate
+its cause. Investigation separately proved a shared native-input mutation:
+Cut/Union/Intersect changed the B-rep bytes of operands retained by history.
+The shared fuse/cut/intersect wrapper now uses non-destructive mode, and its
+simplification operates on an isolated native result. The regression requires both operand B-reps to stay
+byte-identical across repeated operations and checks analytic output volumes.
+This repairs the demonstrated mutation; the earlier Hole failure's causal link
+is not claimed without a deterministic reproduction.
+
 ## Tapered shoulder picking — 2026-11-04
 
 The cylindrical shoulder qualification did not cover the user's two adjoining
@@ -138,10 +167,10 @@ feature before granting release-ready status to Revolve, Chamfer or Fillet.
 | New / Add / Remove / Intersect | Native body operations and explicit/all merge scopes | Selected multi-body scope, disjoint regions and failure recovery across the full extent matrix. |
 | Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
 | Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |
-| Up to next / face / part / vertex / Through all | Native stopping operations and validation | Drafted next/part, tilted/curved termination cases and their complete selection matrix; shared end-offset handles are implemented. |
+| Up to next / face / part / vertex / Through all | Native stopping operations and validation; drafted planar, tilted and spherical limits covered below | Complete selection/geometry matrix, including other curved limits; shared end-offset handles are implemented. |
 | Direction | Sketch normal, sketch-line reference and manual unit vector | Additional axis/mate-connector selection parity; drafted oblique direction is currently refused. |
 | Starting offset / entity | Blind signed offset or parallel principal/feature/face reference; shared linear offset handle | Complete reference changes, reverse/second-end combinations and interactive cancellation coverage. |
-| Draft / opposite draft | Native taper for solid regions and closed/open thin walls; shared compact angle rings, separate end angles and fine keyboard adjustment | Oblique draft and drafted next/part/tilted/curved stops remain open; parallel-face draft is qualified below. |
+| Draft / opposite draft | Native taper for solid regions and closed/open thin walls; shared compact angle rings, separate end angles and fine keyboard adjustment; drafted stopping cases below | Oblique draft and remaining complex contour/curved stop combinations. |
 | Thin thickness 1/2, Mid plane, Flip wall | Native closed/open curve walls with shared thickness arrows, including mid-plane scaling, zero thickness on one side and reversal | Complex contour/termination coverage and the remaining draft combinations. |
 | Live preview / accept / cancel / reopen | Actual native mesh checks for oblique two-ended extrusion; unit-aware readout; saved reopen | Full matrix above must verify resulting geometry, editable history and identical UI/agent behavior. |
 
@@ -172,17 +201,20 @@ Evidence: [Thin and Draft qualification](../reality/data/Extrude_Thin_Draft_2026
 
 ### Extrude stopping controls — additional qualification
 
-**Activation held; CAD alpha-0.1.101 remains active.** The first broad modeling
+**Historical held candidate, subsequently included in alpha-0.1.103.** The first broad modeling
 browser run failed after adding Surface Extrude: the earlier Hole reported
 “Cut removes no material.” Two repeat runs passed all 17 steps, and the saved
 model plus transient preview sequence rebuilds headlessly. The cause remains
-unresolved; passing retries are not a fix or release qualification.
+unresolved; passing retries alone do not establish its cause. The later .104
+and .105 releases passed all 17 modeling steps. CAD .105 is the active release
+at the start of this continuation; this paragraph records the earlier failure.
 
 Parallel planar Up-to-face stops now use the same native drafted solid builder
 as blind extrusion. Solid and Thin, narrowing/widening, reverse, starting offset,
 end offset and independent opposite-end draft have analytic volume and saved
-reopen checks. Tilted/curved drafted stops and drafted Up-to-next/part still
-refuse explicitly; this does not sign off those combinations.
+reopen checks. At that checkpoint, tilted/curved drafted stops and drafted
+Up-to-next/part still refused explicitly; the following continuation addresses
+those specific cases without signing off the full geometry matrix.
 
 All four stopping modes now publish shared signed end-offset handles. Face and
 point handles follow the native reference; Next/Part handles come from actual
@@ -193,6 +225,27 @@ native extent, cancels an edit, and saves/reopens the feature. Agent operations
 use the same Draft/Up-to-face/offset implementation and saved document.
 
 Evidence: [stopping controls](../reality/data/Extrude_Stopping_Controls_2026_11_04.json).
+
+### Drafted stopping surfaces — 2026-11-05 continuation
+
+Up-to-next and Up-to-part now trim the actual tapered tool. This allows a
+narrowing profile to reach a smaller finite stop even when its original straight
+profile would miss it. A distant back face may lie beyond the taper's collapse:
+construction reach is bounded by native validity, and the final result must
+still reach the requested surface with none of the artificial far cap retained.
+No user angle or stopping reference is silently substituted. Widening material
+that escapes the stop and stops beyond collapse remain errors.
+
+Up-to-face drafts the terminated native extrusion against the original stopping
+surface. Tilted planar and spherical stops have independently integrated volume
+checks for narrowing and widening, with saved rebuild. Next/Part additionally
+cover solid/thin, reverse, signed end offsets, smaller stops and cylindrical
+walls parallel to the extrusion. Evidence and release checks:
+[drafted stopping qualification](../reality/data/Extrude_Drafted_Stops_2026_11_05.json).
+
+These checks do not close unified Surface mode, oblique Draft, axis/mate-connector
+direction selection, or the complete multi-region, scope, contour and curved
+termination matrix. Continue Extrude qualification before declaring feature parity.
 
 ## Fillet (`src/features/fillet.ts`, `aether-engine/src/kernel/features/edge-finish.ts`)
 

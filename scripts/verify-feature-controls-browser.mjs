@@ -52,10 +52,12 @@ const sketch = (id, plane, points) => ({ id, type: 'profile', name: 'Sketch 1', 
   profile: { type: 'drawing', contours: [{ type: 'path', id: 'outline', start: points[0], segments: [...points.slice(1), points[0]].map((end, i) => ({ id: `edge-${i}`, type: 'line', end })) }] } });
 try {
   await page.goto(origin + '/cad/');
+  await page.waitForLoadState('networkidle');
   await page.locator('input[name="username"]').fill('editor');
   await page.locator('input[name="password"]').fill('account-test-password-2026');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 30000 });
+  await expect(page.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible({ timeout: 30000 });
   await page.waitForLoadState('networkidle');
   const extrude = base('Native extrusion controls');
   extrude.features = [sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]), {
@@ -161,6 +163,45 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   assert.equal((await stored(stoppedFile.id)).features.at(-1).endOffsetMillimeters, -2);
   results.push('Extrude: drafted parallel face stop, shared signed end-offset control, native extent, cancel and saved reopen');
+
+  for (const endType of ['up-to-next', 'up-to-part']) {
+    const narrowed = base(`Drafted ${endType} controls`);
+    narrowed.features = [
+      { ...sketch('limitSketch', 'XY', [[1, 1], [19, 1], [19, 9], [1, 9]]), name: 'Limit sketch', offsetMillimeters: 10 },
+      { id: 'limit', type: 'extrude', name: 'Limit', suppressed: false, profileFeatureId: 'limitSketch', operation: 'new', bodyId: 'limitBody', distanceMillimeters: 100 },
+      sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]),
+      { id: 'e', type: 'extrude', name: 'Extrude 1', suppressed: false, profileFeatureId: 's', operation: 'new', bodyId: 'output', distanceMillimeters: 1,
+        draftAngleDegrees: 10, endType, ...(endType === 'up-to-part' ? { endPartId: 'limitBody' } : {}) },
+    ];
+    const file = await open(narrowed); await row(/^Extrude 1/).dblclick();
+    const offset = dialog().locator('[aria-label="End offset (mm)"]');
+    await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+    // Keyboard interaction uses the same shared manipulator and canonical
+    // draft as typing, even when the original profile exceeds the stop width.
+    await expect(stopHandle).toBeEnabled({ timeout: 45000 }); await stopHandle.press('ArrowUp');
+    await expect(offset).toHaveValue('1');
+    await expect.poll(() => page.evaluate(() => {
+      const preview = window.__qualificationPreview;
+      const part = preview?.featurePreview?.added?.find(part => part.bodyId === 'output') ?? preview?.featurePreview?.added?.[0];
+      if (!part) return null;
+      const points = []; for (let i = 0; i < part.vertices.length; i += 3) points.push(part.vertices.slice(i, i + 3));
+      const top = Math.max(...points.map(p => p[2]));
+      return [Number(top.toFixed(4)), Number(Math.min(...points.filter(p => Math.abs(p[2] - top) < 1e-4).map(p => p[0])).toFixed(4))];
+    }), { timeout: 45000 }).toEqual([9, Number((9 * Math.tan(10 * Math.PI / 180)).toFixed(4))]);
+    // A real reversal is refused when the part is behind the profile; toggling
+    // back restores the same selected stop and its valid geometry.
+    const flip = dialog().getByRole('button', { name: 'Reverse extrusion direction', exact: true });
+    await flip.click(); await expect(dialog().locator('[data-feature-action="accept"]')).toBeDisabled();
+    await flip.click(); await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+    await page.screenshot({ path: join(evidence, `extrude-${endType}-reference-layout.png`) });
+    await accept();
+    await expect.poll(async () => (await stored(file.id)).features.at(-1).endOffsetMillimeters, { timeout: 30000 }).toBe(1);
+    await page.reload(); await row(/^Extrude 1/).dblclick();
+    await expect.poll(async () => Number(await offset.inputValue())).toBe(1);
+    await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+    await dialog().locator('[data-feature-action="discard"]').click();
+    results.push(`Extrude ${endType}: smaller finite stop, distant back face, native taper, shared offset handle, reversal recovery and saved reopen`);
+  }
 
   const shaft = () => {
     const doc = base('Stepped native shaft');

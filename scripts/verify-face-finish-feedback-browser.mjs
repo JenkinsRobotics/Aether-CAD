@@ -73,6 +73,9 @@ try {
   await page.waitForLoadState('networkidle');
   for (const name of ['Fillet', 'Chamfer']) for (const side of [-1, 1]) {
     const file = await api('create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: `Whole ${name} face ${side}.aethercad`, data_base64: partDocumentBase64(fixture) });
+    // Finish the previous document's collaboration refresh before navigating.
+    // WebKit can report a navigation-cancelled fetch as a page access error.
+    await page.waitForLoadState('networkidle');
     await page.goto(`${origin}/cad/index.html?document=${file.id}`);
     await page.getByRole('treeitem', { name: /^Revolve/ }).first().waitFor({ timeout: 90000 });
     await page.waitForLoadState('networkidle');

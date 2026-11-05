@@ -38538,6 +38538,73 @@ function extrusionDraftHandle(frame, options) {
     screenRadius: true
   };
 }
+function draftStoppedExtrusion(body, direction2, origin2, normal, degrees2) {
+  const oc = getOC();
+  const source = body.clone().translate(0, 0, 0);
+  const faces = source.faces;
+  const builder = new oc.BRepOffsetAPI_DraftAngle_2(source.wrapped);
+  const pull = new oc.gp_Dir_4(...direction2), point2 = new oc.gp_Pnt_3(...origin2), axis = new oc.gp_Dir_4(...normal);
+  const neutral = new oc.gp_Pln_3(point2, axis), progress = new oc.Message_ProgressRange_1();
+  let result;
+  try {
+    let walls = 0;
+    for (const face of faces) {
+      const n = face.normalAt();
+      const lateral = Math.abs(dot$6([n.x, n.y, n.z], direction2)) < 1e-7;
+      n.delete();
+      if (!lateral) continue;
+      builder.Add(face.wrapped, pull, degrees2 * Math.PI / 180, neutral, true);
+      if (!builder.AddDone()) throw new Error("A side wall cannot be drafted against this stopping surface.");
+      walls++;
+    }
+    if (!walls) throw new Error("The extrusion has no available side walls to draft.");
+    builder.Build(progress);
+    result = cast(builder.Shape());
+    if (!isShape3D(result)) throw new Error("Draft did not retain a solid extrusion.");
+    const check2 = new oc.BRepCheck_Analyzer(result.wrapped, true, false);
+    try {
+      if (!check2.IsValid_2() || measureVolume(result) <= 1e-9) throw new Error("Draft collapses or intersects the extrusion before its stopping surface.");
+    } finally {
+      check2.delete();
+    }
+    const made = result;
+    result = void 0;
+    return made;
+  } finally {
+    result?.delete();
+    builder.delete();
+    progress.delete();
+    neutral.delete();
+    axis.delete();
+    point2.delete();
+    pull.delete();
+    faces.forEach((face) => face.delete());
+    source.delete();
+  }
+}
+function extrusionDraftReach(start, far, build) {
+  try {
+    return { tool: build(far), far };
+  } catch (failure) {
+    let invalid = far, valid = start;
+    let best;
+    for (let iteration = 0; iteration < 28; iteration++) {
+      const middle = (valid + invalid) / 2;
+      if (middle - start < 1e-7) break;
+      try {
+        const candidate = build(middle);
+        best?.delete();
+        best = candidate;
+        valid = middle;
+      } catch {
+        invalid = middle;
+      }
+      if (best && invalid - valid <= Math.max(1e-6, (far - start) * 1e-8)) break;
+    }
+    if (!best) throw failure;
+    return { tool: best, far: valid };
+  }
+}
 function extrusionThicknessHandles(frame, thin, direction2, offset2, draftDegrees = 0) {
   const base = add$4(frame.origin, scale$1(direction2, offset2));
   const origin2 = (side) => add$4(base, scale$1(side, -offset2 * Math.tan(draftDegrees * Math.PI / 180)));
@@ -38698,6 +38765,79 @@ function conicalSurfaceFrame(surface) {
     duu.delete();
     dvv.delete();
     duv.delete();
+  }
+}
+function toroidalSurfaceFrame(surface) {
+  const oc = getOC();
+  const p2 = new oc.gp_Pnt_1();
+  const du = new oc.gp_Vec_1(), dv = new oc.gp_Vec_1();
+  const duu = new oc.gp_Vec_1(), dvv = new oc.gp_Vec_1(), duv = new oc.gp_Vec_1();
+  try {
+    const tuple = (value2) => [...pointTuple(value2)];
+    const u2 = (surface.FirstUParameter() + surface.LastUParameter()) / 2;
+    const first = surface.FirstVParameter(), last2 = surface.LastVParameter();
+    for (const fraction of [0.5, 0.25, 0.75]) {
+      surface.D2(u2, first + (last2 - first) * fraction, p2, du, dv, duu, dvv, duv);
+      const radialOffset = tuple(duu), radius = norm$4(radialOffset);
+      if (!(radius > 1e-12)) continue;
+      const radial = scale$1(radialOffset, -1 / radius);
+      const majorRadius = radius + dot$6(tuple(dvv), radial);
+      if (!(majorRadius > 1e-12)) continue;
+      const axis = unit$3(cross$4(radial, tuple(du)));
+      const origin2 = sub$5(add$4([...pointTuple(p2)], tuple(dvv)), scale$1(radial, majorRadius));
+      if (![...origin2, ...axis, ...radial].every(Number.isFinite)) continue;
+      return { origin: origin2, axis, radial };
+    }
+    throw new Error("The torus has no regular axial frame.");
+  } finally {
+    p2.delete();
+    du.delete();
+    dv.delete();
+    duu.delete();
+    dvv.delete();
+    duv.delete();
+  }
+}
+class NativeTopologyCache {
+  constructor(limit = 2048) {
+    this.limit = limit;
+  }
+  limit;
+  kernel;
+  entries = /* @__PURE__ */ new Map();
+  synchronizeKernel() {
+    const kernel = getOC();
+    if (kernel !== this.kernel) {
+      this.clear();
+      this.kernel = kernel;
+    }
+  }
+  get(face, id2) {
+    this.synchronizeKernel();
+    const cached = this.entries.get(face.hashCode);
+    if (!cached || !cached.face.wrapped.IsEqual(face.wrapped)) return;
+    const data2 = cached.data;
+    return { ...data2, id: id2, candidates: data2.candidates.map((candidate) => ({
+      ...candidate,
+      faceId: id2,
+      id: candidate.id.replace(`face-${data2.id}-`, `face-${id2}-`)
+    })) };
+  }
+  set(face, data2) {
+    this.synchronizeKernel();
+    const key2 = face.hashCode;
+    this.entries.get(key2)?.face.delete();
+    this.entries.delete(key2);
+    if (this.entries.size >= this.limit) {
+      const oldest = this.entries.keys().next().value;
+      this.entries.get(oldest).face.delete();
+      this.entries.delete(oldest);
+    }
+    this.entries.set(key2, { face: face.clone(), data: data2 });
+  }
+  clear() {
+    for (const entry of this.entries.values()) entry.face.delete();
+    this.entries.clear();
   }
 }
 function errorDescription$1(error2) {
@@ -38953,25 +39093,16 @@ function extractFaceTopology(face, faceId) {
       }
     } else if (type === oc.GeomAbs_SurfaceType.GeomAbs_Torus) {
       surfaceType = "TORUS";
-      const torus = adaptor.Torus();
-      const position = torus.Position();
-      try {
-        faceFrame = connectorAxes(
-          deleteAfterPointTuple(position.Direction()),
-          deleteAfterPointTuple(position.XDirection())
-        );
-        addUniqueCandidate(candidates, {
-          id: `face-${faceId}-torus-center`,
-          faceId,
-          kind: "torus-center",
-          label: "Exact torus center and revolution axis",
-          origin: deleteAfterPointTuple(torus.Location()),
-          ...faceFrame
-        });
-      } finally {
-        position.delete();
-        torus.delete();
-      }
+      const torus = toroidalSurfaceFrame(adaptor);
+      faceFrame = connectorAxes(torus.axis, torus.radial);
+      addUniqueCandidate(candidates, {
+        id: `face-${faceId}-torus-center`,
+        faceId,
+        kind: "torus-center",
+        label: "Exact torus center and revolution axis",
+        origin: torus.origin,
+        ...faceFrame
+      });
     } else {
       try {
         faceFrame = connectorAxes(
@@ -39011,6 +39142,18 @@ function extractFaceTopology(face, faceId) {
       edge.delete();
     }
   });
+  const canonicalVector = (value2) => [value2[0] + 0, value2[1] + 0, value2[2] + 0];
+  const canonicalMeasurements = (data2) => {
+    if (!data2) return;
+    for (const key2 of ["centerMillimeters", "linearDirection", "planarNormal", "axisDirection"])
+      if (data2[key2]) data2[key2] = canonicalVector(data2[key2]);
+  };
+  canonicalMeasurements(measurements);
+  for (const candidate of candidates) {
+    canonicalMeasurements(candidate.measurements);
+    for (const key2 of ["origin", "xAxis", "yAxis", "zAxis"])
+      candidate[key2] = canonicalVector(candidate[key2]);
+  }
   return { id: faceId, surfaceType, measurements, candidates };
 }
 function signatureText(face) {
@@ -39033,8 +39176,7 @@ function faceSignature(text2) {
   for (let i2 = 0; i2 < text2.length; i2++) hash = Math.imul(hash ^ text2.charCodeAt(i2), 16777619) >>> 0;
   return hash % 1073741822 + 1;
 }
-const topologyCache = /* @__PURE__ */ new Map();
-const TOPOLOGY_CACHE_LIMIT = 2e4;
+const topologyCache = new NativeTopologyCache();
 function facesOf(shape) {
   const oc = getOC();
   const explorer = new oc.TopExp_Explorer_2(
@@ -39065,11 +39207,11 @@ function facesOf(shape) {
 }
 function topologyOf(faces) {
   const topology = [];
-  for (const { face, id: id2, key: key2 } of faces) {
+  for (const { face, id: id2 } of faces) {
     try {
-      const cached = key2 !== void 0 ? topologyCache.get(key2) : void 0;
+      const cached = topologyCache.get(face, id2);
       if (cached) {
-        topology.push({ ...cached, id: id2 });
+        topology.push(cached);
         continue;
       }
       let data2;
@@ -39079,10 +39221,7 @@ function topologyOf(faces) {
         data2 = { id: id2, surfaceType: "UNAVAILABLE", candidates: [] };
       }
       topology.push(data2);
-      if (key2 !== void 0 && data2.surfaceType !== "UNAVAILABLE") {
-        if (topologyCache.size >= TOPOLOGY_CACHE_LIMIT) topologyCache.delete(topologyCache.keys().next().value);
-        topologyCache.set(key2, data2);
-      }
+      if (data2.surfaceType !== "UNAVAILABLE") topologyCache.set(face, data2);
     } finally {
       face.delete();
     }
@@ -39232,6 +39371,80 @@ function vertexAnchorsOf(shape) {
   const anchors = /* @__PURE__ */ new Map();
   for (const [key2, r] of records) anchors.set(key2, { positionMillimeters: r.point, shapeFingerprint: fingerprint, incidence: JSON.stringify([r.faceIndices, r.edgeIndices]), signature: hashText(JSON.stringify([structure, r.faces.slice().sort(), r.edges.slice().sort()])) });
   return anchors;
+}
+function validFinishSolid(shape) {
+  const oc = getOC(), check2 = new oc.BRepCheck_Analyzer(shape.wrapped, true, false);
+  try {
+    return check2.IsValid_2();
+  } finally {
+    check2.delete();
+  }
+}
+function recoverConstantEdgeFinish(kind, body, points, radius) {
+  const source = body.clone().translate(0, 0, 0);
+  let selected = [];
+  try {
+    selected = new EdgeFinder().either(points.map((p2) => (f2) => f2.containsPoint(p2))).find(source);
+    if (selected.length < 2) throw new Error("No multi-edge corner to recover.");
+    const ordered2 = [...selected].sort((a2, b) => Number(b.geomType === "LINE") - Number(a2.geomType === "LINE") || a2.length - b.length);
+    const oc = getOC(), builder = kind === "fillet" ? new oc.BRepFilletAPI_MakeFillet(source.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational) : new oc.BRepFilletAPI_MakeChamfer(source.wrapped);
+    const progress = new oc.Message_ProgressRange_1();
+    let trial;
+    try {
+      for (const edge of ordered2) builder.Add_2(radius, edge.wrapped);
+      builder.Build(progress);
+      trial = cast(builder.Shape());
+      if (isShape3D(trial) && validFinishSolid(trial)) {
+        const made = trial;
+        trial = void 0;
+        return made;
+      }
+    } catch {
+    } finally {
+      trial?.delete();
+      builder.delete();
+      progress.delete();
+    }
+    const midpoint = (edge) => {
+      const p2 = edge.pointAt(0.5);
+      try {
+        return [p2.x, p2.y, p2.z];
+      } finally {
+        p2.delete();
+      }
+    };
+    const groups = [selected.filter((e) => e.geomType !== "LINE"), selected.filter((e) => e.geomType === "LINE")].map((edges) => edges.map(midpoint));
+    if (groups.some((group) => !group.length)) throw new Error("The selected corner could not be built.");
+    let result = body.clone().translate(0, 0, 0);
+    try {
+      for (const group of groups) {
+        const edges = [];
+        try {
+          for (const point2 of group) {
+            const hits = new EdgeFinder().containsPoint(point2).find(result);
+            if (hits.length !== 1) {
+              hits.forEach((e) => e.delete());
+              throw new Error("An earlier finish consumed another selected edge.");
+            }
+            edges.push(hits[0]);
+          }
+          const next = kind === "fillet" ? result.fillet(radius, (finder) => finder.inList(edges)) : result.chamfer(radius, (finder) => finder.inList(edges));
+          result.delete();
+          result = next;
+          if (!validFinishSolid(result)) throw new Error("The selected corner produces an invalid solid.");
+        } finally {
+          edges.forEach((e) => e.delete());
+        }
+      }
+      return result;
+    } catch (error2) {
+      result.delete();
+      throw error2;
+    }
+  } finally {
+    selected.forEach((edge) => edge.delete());
+    source.delete();
+  }
 }
 function pickedEdgePoints(edges, bodyId, body, faceByReference, verb) {
   return edges.flatMap((pick) => {
@@ -39467,7 +39680,18 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
   let rounded;
   try {
     rounded = feature3.type === "fillet" && feature3.points?.length ? filletThroughPoints() : feature3.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
+    if (!validFinishSolid(rounded)) {
+      rounded.delete();
+      throw new Error("Invalid finished solid.");
+    }
   } catch (error2) {
+    const constantSize = feature3.type === "fillet" ? feature3.endRadiusMillimeters === void 0 && !feature3.points?.length && feature3.measurement !== "width" : feature3.secondDistanceMillimeters === void 0 && feature3.angleDegrees === void 0 && feature3.measurement !== "tangent";
+    if (constantSize && chainPoints && chainPoints.length > 1 && !picks?.some((p2) => p2.size !== void 0)) {
+      try {
+        return recoverConstantEdgeFinish(feature3.type, body, chainPoints, size);
+      } catch {
+      }
+    }
     throw new Error(`${feature3.type === "fillet" ? "Fillet" : "Chamfer"} did not produce a valid solid. Reduce the size or choose fewer edges.`, { cause: error2 });
   }
   return rounded;
@@ -40121,21 +40345,40 @@ function once$1(kind, a2, b, options = {}) {
   tools.Append_1(b.wrapped);
   op.SetArguments(arguments_);
   op.SetTools(tools);
+  op.SetNonDestructive(true);
   if (options.optimisation === "commonFace") op.SetGlue(oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift);
   if (options.optimisation === "sameFace") op.SetGlue(oc.BOPAlgo_GlueEnum.BOPAlgo_GlueFull);
   const progress = new oc.Message_ProgressRange_1();
-  op.Build(progress);
-  op.SimplifyResult(true, true, 1e-3);
-  const result = cast(op.Shape());
-  op.delete();
-  arguments_.delete();
-  tools.delete();
-  progress.delete();
-  if (!isShape3D(result)) {
-    result.delete();
-    throw new Error(`Could not ${kind} as a 3d shape`);
+  try {
+    op.Build(progress);
+    const raw = cast(op.Shape());
+    let isolated;
+    try {
+      isolated = raw.clone().translate(0, 0, 0);
+    } finally {
+      raw.delete();
+    }
+    const unifier = new oc.ShapeUpgrade_UnifySameDomain_2(isolated.wrapped, true, true, false);
+    try {
+      unifier.SetSafeInputMode(true);
+      unifier.SetAngularTolerance(1e-3);
+      unifier.Build();
+      const result = cast(unifier.Shape());
+      if (!isShape3D(result)) {
+        result.delete();
+        throw new Error(`Could not ${kind} as a 3d shape`);
+      }
+      return result;
+    } finally {
+      unifier.delete();
+      isolated.delete();
+    }
+  } finally {
+    op.delete();
+    arguments_.delete();
+    tools.delete();
+    progress.delete();
   }
-  return result;
 }
 const prototype = _3DShape.prototype;
 prototype.fuse = function(other, options) {
@@ -43619,10 +43862,19 @@ function evaluatePartDocument(document2, options = {}) {
                   result2 = result2 ? own(result2.fuse(solid)) : solid;
                 }
                 if (!result2) throw new Error("Draft needs a closed planar region.");
-                const pieces = solidsOf(result2), ok = pieces.length >= 1 && pieces.every((piece) => measureVolume(piece) > 1e-9);
+                const checker = new (getOC()).BRepCheck_Analyzer(result2.wrapped, true, false);
+                const pieces = solidsOf(result2);
+                const ok = checker.IsValid_2() && pieces.length >= 1 && pieces.every((piece) => measureVolume(piece) > 1e-9);
+                checker.delete();
                 pieces.forEach(release$1);
                 if (!ok) throw new Error("Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.");
                 return own(result2.simplify());
+              };
+              const stoppingTool = (start, far, dir, draft) => {
+                if (!draft) return { tool: prism(start, far, dir), far };
+                const result2 = extrusionDraftReach(start, far, (end) => draftedPrism(start, end, dir, draft).clone());
+                own(result2.tool);
+                return result2;
               };
               const stopPreview = (end, dir, point2) => {
                 const parameter2 = end === primary ? "endOffset" : "secondOffset";
@@ -43677,7 +43929,6 @@ function evaluatePartDocument(document2, options = {}) {
                 const ref = end.face;
                 if (!ref) throw new Error("Up to face needs an available stopping face.");
                 if (ref.surfaceType) {
-                  if (end.draft) throw new UnsupportedFeature(feature3.id, "drafted extrusions to curved stopping faces");
                   const source = bodyAt(ref.sourceFeatureId, ref.bodyId);
                   if (!source) throw new Error("Up to face reference is unavailable. Reselect the stopping face.");
                   const stopFace = surfaceFaceOf(source, ref.surfaceType, ref.faceAnchor, "Up to face");
@@ -43873,9 +44124,7 @@ function evaluatePartDocument(document2, options = {}) {
                 let maximum = -Infinity;
                 for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot$6(normal, sub$5(planePoint, corner)) / alignment);
                 if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-                if (norm$4(cross$4(normal, n)) < 1e-10)
-                  return end.draft ? draftedPrism(start, start + maximum, dir, end.draft) : prism(start, start + maximum, dir);
-                if (end.draft) throw new UnsupportedFeature(feature3.id, "drafted extrusions to tilted stopping faces");
+                if (norm$4(cross$4(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
                 const full2 = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
                 let span = 1;
                 for (const corner of corners(full2.boundingBox.bounds)) span = Math.max(span, norm$4(sub$5(corner, planePoint)) + 1);
@@ -43901,17 +44150,29 @@ function evaluatePartDocument(document2, options = {}) {
                 let reach = (farthestAlong(limits, axis) - origin2) / alignment - low2;
                 if (!Number.isFinite(reach) || reach <= epsilon2) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
                 reach += Math.max(1, Math.max(...limits.map(diagonalOf)) * 1e-6) / alignment;
-                const probe = prism(low2 + epsilon2, low2 + epsilon2 + reach, dir);
                 const length = reach + Math.abs(end.endOffset) + 1;
-                const tool3 = prism(low2, low2 + length, dir);
+                const { tool: tool3 } = stoppingTool(low2, low2 + length, dir, end.draft);
+                const forward = end.draft ? halfSpace(
+                  add$4(o, scale$1(dir, low2 + epsilon2)),
+                  axis,
+                  Math.max(diagonalOf(tool3), ...limits.flatMap((limit) => [...corners(limit.boundingBox.bounds)].map((corner) => norm$4(sub$5(corner, o))))) * 4,
+                  own
+                ) : void 0;
+                const probe = forward ?? prism(low2 + epsilon2, low2 + epsilon2 + reach, dir);
                 const shadows = [];
-                const previewStops = [];
+                const stoppingFaces = [];
                 const sweep = new Vector(scale$1(dir, length + Math.abs(end.endOffset) + 1));
-                for (const limit of limits) for (const face of limit.faces) {
+                for (const limit of limits) for (const face of (end.draft && end.endOffset ? own(limit.clone().translate(...scale$1(dir, -end.endOffset))) : limit).faces) {
+                  if (face.geomType === "PLANE") {
+                    const normal = deleteAfterVectorTuple(face.normalAt());
+                    if (Math.abs(dot$6(normal, dir)) < 1e-9) {
+                      face.delete();
+                      continue;
+                    }
+                  }
                   for (const patch of commonFaces(face, probe)) {
                     const shadow = basicFaceExtrusion(patch, sweep);
-                    if (feature3.id === previewId) previewStops.push(own(patch.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)));
-                    patch.delete();
+                    const shift = end.draft ? 0 : end.endOffset;
                     let volume = 0;
                     try {
                       volume = measureVolume(shadow);
@@ -43920,9 +44181,12 @@ function evaluatePartDocument(document2, options = {}) {
                     }
                     if (Math.abs(volume) <= 1e-10) {
                       shadow.delete();
+                      patch.delete();
                       continue;
                     }
-                    shadows.push(own(end.endOffset ? shadow.translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset) : shadow));
+                    stoppingFaces.push(own(patch.clone().translate(...scale$1(dir, -shift))));
+                    patch.delete();
+                    shadows.push(own(shift ? shadow.translate(...scale$1(dir, -shift)) : shadow));
                   }
                   face.delete();
                 }
@@ -43941,11 +44205,13 @@ function evaluatePartDocument(document2, options = {}) {
                     if (Math.abs(commonArea(cap, result2) - area) > Math.max(1e-9, area * 1e-9)) complete = false;
                   }
                   for (const cap of ends) if (commonArea(cap, result2) > Math.max(1e-9, measureArea(cap) * 1e-9)) complete = false;
+                  const contact = stoppingFaces.reduce((sum2, face) => sum2 + commonArea(face, result2), 0);
+                  if (contact <= Math.max(1e-10, starts.reduce((sum2, face) => sum2 + measureArea(face), 0) * 1e-10)) complete = false;
                 } finally {
                   for (const cap of [...starts, ...ends]) cap.delete();
                 }
                 if (!complete) throw new Error("The next boundary does not cover and completely terminate the profile beyond its start. Adjust the profile, direction or end offset.");
-                stopContactPreview(end, dir, previewStops, result2);
+                stopContactPreview(end, dir, stoppingFaces, result2);
                 return result2;
               };
               const toPart = (dir, low2, end) => {
@@ -43956,7 +44222,7 @@ function evaluatePartDocument(document2, options = {}) {
                 const epsilon2 = Math.max(1e-6, diagonalOf(prism(low2, low2 + 1, dir)) * 1e-8);
                 const bound2 = (farthestAlong([stop], axis) - origin2) / alignment + epsilon2 * 10;
                 if (!Number.isFinite(bound2) || bound2 <= low2 + epsilon2) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
-                const tool3 = prism(low2, bound2, dir);
+                const { tool: tool3 } = stoppingTool(low2, bound2, dir, end.draft);
                 const starts = capFaces(tool3, dir, -1), ends = capFaces(tool3, dir, 1);
                 try {
                   if (starts.length !== 1) throw new UnsupportedFeature(feature3.id, "up-to-part extrusions of several regions");
@@ -44011,11 +44277,16 @@ function evaluatePartDocument(document2, options = {}) {
                   intervals++;
                   continue;
                 }
-                if (side.end.draft && side.end.endType !== "up-to-face") throw new UnsupportedFeature(feature3.id, "drafted extrusions to the next boundary or a part");
-                if (side.end.endType === "up-to-face") tools2.push(toFace(side.dir, side.start, side.end));
-                else if (side.end.endType === "up-to-next") tools2.push(toNext(side.dir, side.start, side.end));
-                else if (side.end.endType === "up-to-part") tools2.push(toPart(side.dir, side.start, side.end));
+                let stopped;
+                if (side.end.endType === "up-to-face") stopped = toFace(side.dir, side.start, side.end);
+                else if (side.end.endType === "up-to-next") stopped = toNext(side.dir, side.start, side.end);
+                else if (side.end.endType === "up-to-part") stopped = toPart(side.dir, side.start, side.end);
                 else throw new Error("Unknown extrusion end type.");
+                if (!side.end.draft || side.end.endType !== "up-to-face") {
+                  tools2.push(stopped);
+                  continue;
+                }
+                tools2.push(own(draftStoppedExtrusion(stopped, side.dir, o, n, side.end.draft)));
               }
               if (intervals) tools2.push(prism(low, high, direction2));
               if (!tools2.length) throw new Error(sides.length > 1 ? "Neither extrusion end reaches the target part." : "The target lies behind the extrusion. Flip direction or adjust its offset.");

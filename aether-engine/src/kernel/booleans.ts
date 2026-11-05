@@ -13,15 +13,31 @@ function once(kind: "fuse" | "cut" | "intersect", a: Shape3D, b: Shape3D, option
   const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
   arguments_.Append_1(a.wrapped); tools.Append_1(b.wrapped);
   op.SetArguments(arguments_); op.SetTools(tools);
+  // History and previews share immutable native inputs. OCCT's default mode
+  // updates their subshapes in place, invalidating cached geometry/snapshots.
+  op.SetNonDestructive(true);
   if (options.optimisation === "commonFace") op.SetGlue(oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift as never);
   if (options.optimisation === "sameFace") op.SetGlue(oc.BOPAlgo_GlueEnum.BOPAlgo_GlueFull as never);
   const progress = new oc.Message_ProgressRange_1();
-  op.Build(progress);
-  op.SimplifyResult(true, true, 1e-3);
-  const result = cast(op.Shape());
-  op.delete(); arguments_.delete(); tools.delete(); progress.delete();
-  if (!isShape3D(result)) { result.delete(); throw new Error(`Could not ${kind} as a 3d shape`); }
-  return result;
+  try {
+    op.Build(progress);
+    // Unification in the shipped kernel can still add curves to shared tool
+    // faces even in safe-input mode. Isolate its result first; a plain clone
+    // only copies the TopoDS wrapper and still shares the underlying TShape.
+    const raw = cast(op.Shape());
+    let isolated: typeof raw;
+    try { isolated = raw.clone().translate(0, 0, 0); }
+    finally { raw.delete(); }
+    const unifier = new oc.ShapeUpgrade_UnifySameDomain_2(isolated.wrapped, true, true, false);
+    try {
+      unifier.SetSafeInputMode(true);
+      unifier.SetAngularTolerance(1e-3);
+      unifier.Build();
+      const result = cast(unifier.Shape());
+      if (!isShape3D(result)) { result.delete(); throw new Error(`Could not ${kind} as a 3d shape`); }
+      return result;
+    } finally { unifier.delete(); isolated.delete(); }
+  } finally { op.delete(); arguments_.delete(); tools.delete(); progress.delete(); }
 }
 
 const prototype = _3DShape.prototype as unknown as Record<string, unknown>;

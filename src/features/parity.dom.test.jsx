@@ -23,6 +23,31 @@ afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const visible = (win, selector) => [...win.querySelectorAll(selector)].filter((el) => !el.closest('[hidden]'));
 const tabs = (win) => [...win.querySelectorAll('.aui-feature-tabs, [role="tablist"]')].map((row) => [...row.querySelectorAll('button')].map((b) => b.textContent.trim()));
 
+it('Extrude follows the reference control order, preserves a disabled direction, and flips every extent', () => {
+  cadCommands.execute('feature-extrude');
+  const win = document.querySelector('.cad-feature-dialog');
+  expect(tabs(win)).toEqual([['Solid', 'Surface', 'Thin'], ['New', 'Add', 'Remove', 'Intersect']]);
+  const order = ['Direction', 'Starting offset', 'Symmetric', 'Draft', 'Second end position'];
+  const controls = order.map(label => win.querySelector(`input[type="checkbox"][aria-label="${label}"]`));
+  controls.forEach(control => expect(control).toBeTruthy());
+  for (let i = 1; i < controls.length; i++) expect(controls[i - 1].compareDocumentPosition(controls[i]) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const direction = controls[0], mode = win.querySelector('[aria-label="Extrusion direction"]');
+  expect(direction.checked).toBe(false);
+  direction.click(); mode.value = 'custom'; mode.dispatchEvent(new Event('change'));
+  win.querySelector('[aria-label="Direction X"]').value = '2';
+  direction.click(); expect(mode.value).toBe('normal');
+  direction.click(); expect(mode.value).toBe('custom');
+  expect(win.querySelector('[aria-label="Direction X"]').value).toBe('2');
+  const extent = win.querySelector('[aria-label="End condition"]');
+  const flip = win.querySelector('button[aria-label="Reverse extrusion direction"]');
+  for (const value of ['blind', 'up-to-face', 'up-to-part', 'up-to-next', 'through-all']) {
+    extent.value = value; extent.dispatchEvent(new Event('change'));
+    expect(flip.closest('[hidden]')).toBeNull();
+    flip.click(); expect(win.querySelector('[aria-label="Flip direction"]').value).toBe('true');
+    flip.click(); expect(win.querySelector('[aria-label="Flip direction"]').value).toBe('false');
+  }
+});
+
 it('Revolve offers Merge scope for Add and Remove, and an Offset for the Up-to ends', async () => {
   cadCommands.execute('feature-revolve');
   const win = document.querySelector('.cad-feature-dialog');

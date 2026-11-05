@@ -13,7 +13,7 @@ import {mountNativeExtrusionHandles} from './extrude-native-handles';
 import {mountPreviewHandles} from './preview-handles';
 /** Extrude editor. Selection and extents share the native preview/commit path. */
 import { extrudeSelectionControls, layoutExtrudeSelections, serializeExtrudeSelections, setExtrudeProfilePicking } from "./extrude-selection";
-import { bodyAndOperationTabs, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
+import { bodyAndOperationTabs, iconButton, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
 const operationValues = ["new", "add", "cut", "intersect"] as const;
 export const extrudeEditor: FeatureEditor = {
@@ -46,7 +46,6 @@ export const extrudeEditor: FeatureEditor = {
     bodyAndOperationTabs(win, form, controls.operation, operationValues, controls.creationMode);
     layoutExtrudeSelections(controls);
     layoutThin(context,controls);
-    layoutExtrudeScope(context,controls);
     for (const control of [controls.endType, controls.reversed]) {
       control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
     }
@@ -58,28 +57,39 @@ export const extrudeEditor: FeatureEditor = {
       sync(); controls.endType.dispatchEvent(new Event("change"));
     }});
     endType.setValue(Object.keys(endValues).find(key=>endValues[key as keyof typeof endValues]===(controls.endType.value==="symmetric-through-all"?"through-all":controls.endType.value))??"Blind");
-    win.body.append(endType.element);
+    const flip = iconButton('arrows-vertical', 'Reverse extrusion direction');
+    const paintFlip = () => flip.setAttribute('aria-pressed', String(controls.reversed.value === 'true'));
+    flip.onclick = () => {
+      controls.reversed.value = String(controls.reversed.value !== 'true');
+      controls.reversed.dispatchEvent(new Event('change'));
+    };
+    controls.reversed.addEventListener('change', paintFlip); paintFlip();
+    const extent = document.createElement('div'); extent.className = 'aui-feature-row';
+    extent.append(endType.element, flip); win.body.append(extent);
     controls.distance.closest("label")?.remove(); controls.distance.setAttribute("form",form.id);
     const depth=win.row("Depth",controls.distance,unitSuffix(lengthUnitLabel),extrudeDepthDrag(controls.distance,controls.reversed,lengthUnitLabel));
     controls.endOffset.closest("label")?.remove(); controls.endOffset.setAttribute("form",form.id);
-    const endOffset = win.row("End offset", controls.endOffset, unitSuffix(lengthUnitLabel));
+    const endOffset = rowIn("End offset", controls.endOffset, unitSuffix(lengthUnitLabel));
     controls.endOffset.title = "Positive stops short; negative extends beyond the stopping surface, measured along the extrusion direction.";
     const pointPicker=extrusionPointPicker(context,controls.endPoint,"Stopping point");
     const partPicker=extrusionPartPicker(context,controls.endPart,"Stopping part");
     const facePicker=extrusionFacePicker(context,controls.endReference,"End face");
+    win.body.append(endOffset);
     const stopHelp=document.createElement("p");stopHelp.textContent="Extrude to the underlying plane or curved surface, including beyond its trimmed edges. The surface must completely stop the extrusion. Changed or ambiguous faces require reselection.";win.addHelp(stopHelp);
+    let previousDirection = controls.directionMode.value;
+    const direction = win.subsection('Direction', {kind: 'checkbox', open: previousDirection !== 'normal', onToggle: enabled => {
+      if (!enabled) { previousDirection = controls.directionMode.value; controls.directionMode.value = 'normal'; }
+      else controls.directionMode.value = previousDirection;
+      controls.directionMode.dispatchEvent(new Event('change'));
+    }});
+    layoutExtrudeDirection(context, controls, direction.body);
+    layoutExtrudeStart(context,controls);
     const symmetric=document.createElement("input"); symmetric.type="checkbox"; symmetric.setAttribute("aria-label","Symmetric"); symmetric.checked=controls.endType.value.startsWith("symmetric");
     const symmetricRow=win.row("Symmetric",symmetric);
     symmetric.onchange=()=>{const through=controls.endType.value.includes("through-all");controls.endType.value=symmetric.checked?(through?"symmetric-through-all":"symmetric"):(through?"through-all":"blind");sync();controls.endType.dispatchEvent(new Event("change"));};
     layoutExtrudeDraft(context,controls);
-    const direction=win.subsection("Direction",{kind:"disclosure"});
-    const reverse=document.createElement("input");reverse.type="checkbox";reverse.setAttribute("aria-label","Reverse extrusion direction");reverse.checked=controls.reversed.value==="true";
-    controls.reversed.addEventListener("change",()=>{reverse.checked=controls.reversed.value==="true";});
-    reverse.onchange=()=>{controls.reversed.value=String(reverse.checked);controls.reversed.dispatchEvent(new Event("change"));};
-    direction.body.append(rowIn("Flip direction",reverse));
-    layoutExtrudeDirection(context,controls,direction.body);
-    layoutExtrudeStart(context,controls);
     layoutSecondEnd(context,controls);
+    layoutExtrudeScope(context,controls);
     function sync(){const mode=controls.endType.value;pointPicker.setEnabled(mode==="up-to-vertex");partPicker.setEnabled(mode==="up-to-part");stopHelp.hidden=mode!=="up-to-face";facePicker.setEnabled(mode==="up-to-face");setExtrudeProfilePicking(controls,!(controls.startEnabled.value==="true"&&controls.startMode.value==="face")&&!["up-to-face","up-to-part","up-to-vertex"].includes(mode)&&!( !mode.startsWith("symmetric")&&controls.secondEnabled.value==="true"&&["up-to-face","up-to-part","up-to-vertex"].includes(controls.secondEndType.value)));endOffset.hidden=!["up-to-next","up-to-face","up-to-part","up-to-vertex"].includes(mode);depth.hidden=mode!=="blind"&&mode!=="symmetric";symmetricRow.hidden=!["blind","symmetric","through-all","symmetric-through-all"].includes(mode);symmetric.checked=mode.startsWith("symmetric");}
     for(const control of [controls.endType,controls.secondEnabled,controls.secondEndType,controls.startEnabled,controls.startMode])control.addEventListener("change",sync);sync();
     mountNativeExtrusionHandles(win.panel,controls,lengthUnitLabel);

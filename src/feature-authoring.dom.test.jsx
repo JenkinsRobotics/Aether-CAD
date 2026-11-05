@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { createEmptyPartDocument, insertFeature } from "@aether/core/document";
+import { configureFeaturePreview } from './modeling/feature-preview';
 
 // Characterization test for the feature dialogs. feature-authoring.ts carries
 // every feature's controls, layout and serialization in three parallel
@@ -182,6 +183,34 @@ it("serializes extrude with its distance and operation", async () => {
   expect(feature.profileFeatureId).toBe("profile-1");
   expect(feature.suppressed).toBe(false);
   expect(feature.id).toBeTruthy();
+});
+
+it('waits for the latest native preview before accepting a feature through either the button or Enter', async () => {
+  seedProfile();
+  const jobs = [];
+  configureFeaturePreview({ evaluate: candidate => new Promise((resolve, reject) => jobs.push({ candidate, resolve, reject })), show: vi.fn() });
+  try {
+    cadCommands.execute('feature-extrude');
+    const win = document.querySelector('.cad-feature-dialog'), form = win.querySelector('form');
+    const accept = win.querySelector('[data-feature-action="accept"]'), distance = win.querySelector('[aria-label="Distance (mm)"]');
+    const source = win.querySelector('[aria-label="Sketch"]'); source.value = 'profile-1'; source.dispatchEvent(new Event('change'));
+    const submit = () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(accept.disabled).toBe(true); submit(); expect(apply).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(jobs).toHaveLength(1));
+    distance.value = '200'; distance.dispatchEvent(new Event('input'));
+    jobs[0].resolve({ parts: [] });
+    await vi.waitFor(() => expect(jobs).toHaveLength(2));
+    expect(accept.disabled).toBe(true); submit(); expect(apply).not.toHaveBeenCalled();
+    jobs[1].reject(new Error('The latest feature cannot be built'));
+    await vi.waitFor(() => expect(win.textContent).toContain('The latest feature cannot be built'));
+    expect(accept.disabled).toBe(true); submit(); expect(apply).not.toHaveBeenCalled();
+    distance.value = '15'; distance.dispatchEvent(new Event('input'));
+    await vi.waitFor(() => expect(jobs).toHaveLength(3));
+    jobs[2].resolve({ parts: [] });
+    await vi.waitFor(() => expect(accept.disabled).toBe(false));
+    submit(); await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+    expect(doc.features.at(-1).distanceMillimeters).toBe(15);
+  } finally { configureFeaturePreview(null); }
 });
 
 it('carries an explicitly selected single-region sketch into Extrude without choosing the last sketch',async()=>{

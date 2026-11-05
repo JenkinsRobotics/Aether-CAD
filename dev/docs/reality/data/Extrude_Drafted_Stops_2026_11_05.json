@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.105",
+  "scope": [
+    "Native Draft with up-to-face, up-to-next and up-to-part termination",
+    "Reference-ordered Extrude controls and standard shared feature-window default",
+    "Shared acceptance waits for the current native preview",
+    "Shared native Boolean operations preserve operands reused by history"
+  ],
+  "implementation": [
+    "Trim the actual tapered tool for Next and Part; bound construction reach by native validity while requiring the exact selected stop",
+    "Draft a terminated Up-to-face solid against its native stopping surfaces, with the authored sketch as neutral plane",
+    "Retain positive-volume and BRep validity checks; reject collapse, incomplete stops and widening escape without changing authored parameters",
+    "Preserve an explicitly saved Compact preference; the gallery uses the same real editor",
+    "Disable Apply and Enter during pending preview; stale successful results cannot approve newer edits",
+    "Non-destructive Boolean building plus an isolated result for simplification; both native input B-reps remain byte-identical",
+    "Next requires actual native stopping-face contact in addition to removal of the artificial far cap"
+  ],
+  "qualification": {
+    "status": "qualified",
+    "frontend_full_suite": {
+      "passed": 2194,
+      "skipped": 1
+    },
+    "latest_authoring_and_controls": {
+      "passed": 28,
+      "covers": "pending/stale/failed preview, correction, both form submission paths, reference order and direction reversal"
+    },
+    "engine_typecheck": "passed",
+    "frontend_typecheck": "passed",
+    "frontend_build": "passed",
+    "native_service": {
+      "passed": 323
+    },
+    "headless_kernel": "passed on final packaged worker",
+    "sketch_regions": "passed on final packaged worker",
+    "agent_draft_stops": {
+      "passed": 4,
+      "cases": "Thin Draft, Up-to-face, narrowed Up-to-next and Up-to-part; edit offset and verify saved rebuild"
+    },
+    "focused_contact_and_isolation": {
+      "passed": 25,
+      "includes": "Refuse Next beyond taper collapse even when the construction tip has negligible area"
+    },
+    "engine_full_suite": {
+      "passed": 1324
+    },
+    "browsers": {
+      "Chromium WebGPU": {
+        "controls_passed": 8,
+        "errors": [],
+        "face_finish_workflows_passed": 4
+      },
+      "WebKit WebGL2": {
+        "controls_passed": 8,
+        "errors": [],
+        "face_finish_workflows_passed": 4
+      }
+    },
+    "modeling_browser": {
+      "steps_passed": 17,
+      "server_geometry_requests": 0
+    },
+    "evidence": [
+      "build/Example-Collection/draft-stops-modeling-2026-11-05/host/browser/log.json",
+      "build/Example-Collection/draft-stops-controls-chromium-2026-11-05/host/browser/feature-controls.json",
+      "build/Example-Collection/draft-stops-controls-webkit-2026-11-05/host/browser/feature-controls.json",
+      "build/Example-Collection/draft-stops-face-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/draft-stops-face-webkit-2026-11-05/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/draft-stops-home-2026-11-05/host/browser/results.json",
+      "build/Example-Collection/draft-stops-home-standalone-2026-11-05/results.json"
+    ],
+    "home": {
+      "hosted": "passed",
+      "standalone": "passed"
+    },
+    "harness_corrections": "Wait for completed sign-in and collaboration refresh before fixture navigation; final browser checks retain all error assertions.",
+    "worker_runner_sha256": "4aaf7151c8236923c39bf64d77cd1908d33abf04cf5ac0a01f4d5abd81f959ff"
+  },
+  "native_expectations": [
+    "Closed-form tapered rectangle/thin-wall volume integrals for Next/Part across both draft signs, extrusion direction and signed end offset",
+    "Smaller finite stopping part reached by a narrowing profile",
+    "Front stop before taper collapse despite a distant back face; a stop beyond collapse is refused",
+    "Tilted planar stop with piecewise analytic integration in all three stopping modes",
+    "Spherical stop with exact sphere/cone intersection volume integration in all three stopping modes",
+    "Axial cylindrical walls do not shadow the planar stopping cap",
+    "Saved rebuild retains native geometry and authored feature parameters"
+  ],
+  "live_user_documents_modified": false,
+  "saved_format_changed": false,
+  "complete_feature_parity": false,
+  "remaining": [
+    "Unified Surface extrusion workflow",
+    "Draft with oblique direction",
+    "Axis and mate-connector direction picking",
+    "Complete multi-region, merge-scope, complex contour and curved termination matrix",
+    "Remaining Revolve, Chamfer, Fillet and other reference-feature requirements",
+    "Isolate the intermittent Hole browser failure; audit custom native builders beyond the shared Boolean wrapper"
+  ],
+  "investigation": {
+    "browser_failure": "Surface Thicken preview reported an earlier Hole removes no material",
+    "evidence": "build/feature-qualification-2026-11-05/prior-modeling-failure/native-trace.json",
+    "exact_headless_replay": "passed, including snapshot serialization and forced garbage collection",
+    "diagnostic_browser_repeats": "3 passed before the Boolean fix; this does not prove the failure resolved",
+    "deterministic_boolean_regression": "3 tests fail before repair; each checks both input B-reps and exact analytic volume across repeated operations",
+    "causation_limit": "Operand mutation is proven and fixed. Its causal connection to the intermittent Hole failure has not been isolated.",
+    "native_api_reference": "https://www.occt3d.com/dev/doc/refman/html/class_b_rep_algo_a_p_i___boolean_operation.html"
+  }
+}

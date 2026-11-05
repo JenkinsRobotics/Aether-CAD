@@ -441,7 +441,7 @@ const presentFeatureWindow = (
       broken.delete(draftId); if (existing) broken.delete(existing.id);
       return featurePreviewDocument(broken.size ? { ...candidate, features: candidate.features.map(f => broken.has(f.id) ? { ...f, suppressed: true } : f) } : candidate, existing?.id);
     };
-    const preview = mountFeaturePreview(win.body, previewDocument, reportValidation, () => candidateDocument(), message => win.setNotice?.(message), () => candidateDocument(false).features.find(f => f.id === draftId));
+    const preview = mountFeaturePreview(win.body, previewDocument, reportValidation, () => candidateDocument(), message => win.setNotice?.(message), () => candidateDocument(false).features.find(f => f.id === draftId), () => { win.accept.disabled = true; });
     for (const control of [...Object.values(controls), name]) {
       control.addEventListener("input", preview.update);
       control.addEventListener("change", preview.update);
@@ -449,6 +449,9 @@ const presentFeatureWindow = (
     preview.update();
     form.onsubmit = async (e) => {
       e.preventDefault();
+      // Enter and programmatic form submission must obey the same native
+      // preview gate as the header button, including its pending state.
+      if (win.accept.disabled) return;
       submit.disabled = true;
       alert.textContent = "";
       try {

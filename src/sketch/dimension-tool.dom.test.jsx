@@ -25,7 +25,9 @@ beforeEach(() => {
 });
 afterEach(() => { button('Cancel')?.click(); unregister(); });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
-const button = text => ['Undo', 'Redo'].includes(text) ? { click: () => clickSketchControl(text) } : [...querySketchControls('button')].find(b => b.textContent === text || b.getAttribute('aria-label') === (text === 'Cancel' ? 'Cancel sketch' : text));
+const button = text => text === 'Cancel' ? document.querySelector('.cad-sketch-window [data-feature-action="discard"]')
+  : ['Undo', 'Redo'].includes(text) ? { click: () => clickSketchControl(text) }
+  : [...querySketchControls('button')].find(b => b.textContent === text || b.getAttribute('aria-label') === text);
 const panel = () => querySketchControl('.cad-sketch-dimension-entry');
 const key = (target = document.body, options = {}) => target.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true, ...options }));
 function start(inWorld = false) {

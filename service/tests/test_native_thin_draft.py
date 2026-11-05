@@ -81,3 +81,43 @@ def test_agent_drafted_face_stop_edits_offset_and_reopens(tmp_path):
     assert sum(body["volume_mm3"] for body in edited["result"]["evaluated_bodies"]) == pytest.approx(expected(12), abs=1e-4)
     reopened = invoke(tmp_path, "cad.part.verify", edited["content"], {})
     assert sum(body["volume_mm3"] for body in reopened["result"]["measurements"]) == pytest.approx(expected(12), abs=1e-4)
+
+
+@native
+@pytest.mark.parametrize("end_type", ["up-to-next", "up-to-part"])
+def test_agent_draft_reaches_smaller_stop_and_reopens_offset(tmp_path, end_type):
+    """The initial profile exceeds the stop; only the actual taper fits it."""
+    termination = {"endType": end_type}
+    if end_type == "up-to-part":
+        termination["endPartId"] = {"$ref": "limit.body_id"}
+    authored = run(tmp_path, empty(), [
+        {"id": "limitSketch", "tool": "aether_cad_sketch_circle", "arguments": {
+            "plane": "XY", "offset_mm": 10, "center_x_mm": 0, "center_y_mm": 0, "radius_mm": 8,
+        }},
+        {"id": "limit", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "extrude", "name": "Smaller stopping part", "profileFeatureId": {"$ref": "limitSketch.feature_id"},
+            "distanceMillimeters": 100, "operation": "new",
+        }}},
+        {"id": "profile", "tool": "aether_cad_sketch_circle", "arguments": {
+            "plane": "XY", "offset_mm": 0, "center_x_mm": 0, "center_y_mm": 0, "radius_mm": 10,
+        }},
+        {"id": "draft", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
+            "type": "extrude", "name": "Taper to stop", "profileFeatureId": {"$ref": "profile.feature_id"},
+            "distanceMillimeters": 1, "operation": "new", "draftAngleDegrees": 15, **termination,
+        }}},
+    ])
+    slope = math.tan(math.radians(15))
+
+    def expected(height):
+        return math.pi * (6400 + 100 * height - 10 * slope * height**2 + slope**2 * height**3 / 3)
+
+    assert sum(body["volume_mm3"] for body in authored["result"]["evaluated_bodies"]) == pytest.approx(expected(10), abs=1e-4)
+    feature_id = authored["result"]["references"]["draft"]["feature_id"]
+    edited = run(tmp_path, authored["content"], [
+        {"id": "offset", "tool": "aether_cad_feature_update", "arguments": {
+            "feature_id": feature_id, "changes_json": '{"endOffsetMillimeters":1}',
+        }},
+    ])
+    assert sum(body["volume_mm3"] for body in edited["result"]["evaluated_bodies"]) == pytest.approx(expected(9), abs=1e-4)
+    reopened = invoke(tmp_path, "cad.part.verify", edited["content"], {})
+    assert sum(body["volume_mm3"] for body in reopened["result"]["measurements"]) == pytest.approx(expected(9), abs=1e-4)

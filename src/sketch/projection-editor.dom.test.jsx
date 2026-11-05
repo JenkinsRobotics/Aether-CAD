@@ -91,11 +91,7 @@ it("blocks invalid projection previews and preserves the document on cancellatio
   expect(querySketchControl('[role="status"]').textContent).toContain(
     "finite plane offset",
   );
-  expect(
-    [...querySketchControls("button")].find(
-      (b) => b.textContent === "Create projection",
-    ).disabled,
-  ).toBe(true);
+  expect(querySketchControl('button[aria-label="Create projection"]').disabled).toBe(true);
   set("Plane offset (mm)", "0");
   const original = doc;
   doc = structuredClone(doc);

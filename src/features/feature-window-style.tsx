@@ -14,7 +14,7 @@ export function previewFeatureWindowStyle(style: FeatureWindowStyle | null): voi
 
 export function featureWindowStyle(): FeatureWindowStyle {
   if (preview) return preview;
-  try { return localStorage.getItem(KEY) === "standard" ? "standard" : "compact"; } catch { return "compact"; }
+  try { return localStorage.getItem(KEY) === "compact" ? "compact" : "standard"; } catch { return "standard"; }
 }
 export function setFeatureWindowStyle(style: FeatureWindowStyle): void {
   try { localStorage.setItem(KEY, style); } catch { /* session-only preference */ }

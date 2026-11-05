@@ -46,10 +46,10 @@ test('search narrows the cards and the viewport tab still shows the gizmo', asyn
 test('the design switch reopens every window in the other Aether UI design', async () => {
   mount();
   await act(() => new Promise(resolve => setTimeout(resolve, 50)));
-  expect(card('Extrude')!.querySelector('.aui-feature-window--compact')).toBeTruthy();
-  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Standard')!.click());
-  await act(() => new Promise(resolve => setTimeout(resolve, 50)));
   expect(card('Extrude')!.querySelector('.aui-feature-window--standard')).toBeTruthy();
-  expect(card('Extrude')!.querySelectorAll('.aui-feature-window')).toHaveLength(1);
   await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Compact')!.click());
+  await act(() => new Promise(resolve => setTimeout(resolve, 50)));
+  expect(card('Extrude')!.querySelector('.aui-feature-window--compact')).toBeTruthy();
+  expect(card('Extrude')!.querySelectorAll('.aui-feature-window')).toHaveLength(1);
+  await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent === 'Standard')!.click());
 });
