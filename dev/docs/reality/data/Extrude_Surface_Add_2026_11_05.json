@@ -1,6 +1,6 @@
 {
   "date": "2026-11-05",
-  "status": "qualified, pending activation",
+  "status": "installed alpha-0.1.111",
   "scope": [
     "Surface Add retains one target body identity per connected group",
     "Bridges consume only the connected secondary target IDs",
@@ -103,11 +103,29 @@
   "remaining": [
     "Oblique Draft",
     "Remaining Extrude termination and mode-conversion matrix",
-    "Revolve, Chamfer, Fillet and remaining requested feature parity"
+    "Revolve, Chamfer, Fillet and remaining requested feature parity",
+    "Large Surface Add scope performance has not been benchmarked"
   ],
   "observations": [
     "Initial browser test reproduced duplicate blur invalidation swallowing the first accept click; shared preview deduplication and atomic candidate reuse added, with pending/error rejection retained.",
     "Browser explicit-target gate corrected to inspect the actual default target and select additional bodies through the visible control; the old underlying select is intentionally hidden."
   ],
-  "worker_sha256": "1e452c62c22bd0a042bb037f7ecd775a01e7ad0ad2af302f0d183ce8351f727d"
+  "worker_sha256": "1e452c62c22bd0a042bb037f7ecd775a01e7ad0ad2af302f0d183ce8351f727d",
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.111",
+    "sha256": "94263a1254908d9189434319a5a7d3f15a1c0362e54d113e077414901840f288",
+    "source_commit": "75d0fa000410921da8b6613bdc0365ea263c4a52",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false
+  },
+  "live_origin": {
+    "url": "https://aetherstudio.local:8780",
+    "trusted_tls": true,
+    "unauthenticated_cad_status": 302,
+    "note": "Login guard checked; installed manifest and all artifact bytes verified separately. No live user document or session was modified."
+  }
 }
