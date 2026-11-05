@@ -295,3 +295,36 @@ it("Thread: the chamfer, undercut and split face change the cylinder; the size c
   // Size from the face: the window resolves the designation; the record stays cosmetic.
   expect(total(thread({ sizeFromFace: true }))).toBeCloseTo(base, 6);
 });
+
+it("Rib, parallel to the sketch plane: the wall fills from the curve to the part", () => {
+  // A 40 × 40 × 20 block at x 0…40; a line at x = 60 from y 10 to 30 in a plane at z = 10, pushed toward −x: a 20 × 2 × 20 wall from x 40 to 60.
+  const block = doc(rect("a", 0, 0, 40, 40), extrude("b", "a", 20), { id: "s", type: "profile", name: "Rib sketch", plane: "XY", offsetMillimeters: 10, suppressed: false, profile: { type: "drawing", contours: [{ id: "L", type: "path", start: [60, 10], segments: [{ id: "seg", type: "line", end: [60, 30] }] }] } });
+  const id = bodyIDForFeature(block, block.features[1]);
+  const rib = (reversed: boolean) => doc(...block.features, { id: "r", type: "rib", name: "Rib", suppressed: false, profileFeatureId: "s", targetBodyId: id, thicknessMillimeters: 2, direction: "parallel", ...(reversed ? { reversed: true } : {}) } as PartFeature);
+  // The chord runs +y, the sketch normal +z: across = n × chord = −x, toward the block.
+  expect(total(rib(false))).toBeCloseTo(32000 + 20 * 2 * 20, 1);
+  expect(() => total(rib(true))).toThrow(/ahead/);
+});
+
+it("Sweep: the profile locks to a support face along the path, and a twist can be given by pitch", () => {
+  // A 10 mm square swept 40 along Z: locked to the +X face of a block the path lies on, the result is the same prism; by pitch 320 it turns an eighth.
+  const d = doc(rect("sq", -5, -5, 5, 5), { id: "path", type: "profile", name: "Path", plane: "XZ", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [{ id: "p", type: "path", start: [0, 0], segments: [{ type: "line", end: [0, 40] }] }] } }, rect("w", -20, -20, 0, 20), extrude("wall", "w", 40));
+  const wallId = bodyIDForFeature(d, d.features[3]);
+  const built = evaluatePartDocument(d).parts[0];
+  const plusX = built.topology.find((f) => f.surfaceType === "PLANE" && f.measurements?.planarNormal?.[0] === 1)!;
+  const face = { sourceFeatureId: "wall", bodyId: wallId, label: "+X", normal: [1, 0, 0] as [number, number, number], faceAnchor: { centerMillimeters: plusX.measurements!.centerMillimeters as [number, number, number], areaSquareMillimeters: plusX.measurements!.areaSquareMillimeters as number } };
+  const sweep = (extra: Record<string, unknown>) => { const sd = doc(...d.features, { id: "sw", type: "sweep", name: "Sweep", profileFeatureId: "sq", pathFeatureId: "path", operation: "new", suppressed: false, ...extra } as PartFeature); const v = evaluatePartDocument(sd).parts.find((p) => p.id !== wallId)!.vertices; const span = (z: number) => { const xs: number[] = []; for (let i = 0; i < v.length; i += 3) if (Math.abs(v[i + 2] - z) < 1e-3) xs.push(v[i]); return Math.max(...xs) - Math.min(...xs); }; return { volume: total(sd) - 32000, spans: [span(0), span(40)] }; };
+  expect(sweep({ orientation: { kind: "support", face } }).volume).toBeCloseTo(4000, 0);
+  const pitched = sweep({ twist: { pitchMillimeters: 320 } });
+  expect(pitched.spans[1]).toBeCloseTo(10 * Math.SQRT2, 1);
+});
+
+it("Pattern: a tree plane gives a direction by its normal, a sketch line by its direction", () => {
+  const plate = doc(rect("s", -50, -50, 50, 50), extrude("e", "s", 5), { id: "c", type: "profile", name: "Post", plane: "XY", offsetMillimeters: 5, suppressed: false, profile: { type: "circle", radiusMillimeters: 2, centerMillimeters: [0, 0] } }, extrude("post", "c", 5, "add"), { id: "g", type: "profile", name: "Guide", plane: "XY", offsetMillimeters: 0, suppressed: false, profile: { type: "drawing", contours: [{ id: "k", type: "path", start: [0, 0], segments: [{ id: "seg", type: "line", end: [3, 4] }] }] } });
+  const post = Math.PI * 4 * 5, base = total(plate);
+  const pattern = (direction: Record<string, unknown>) => { const pd = doc(...plate.features, { id: "p", type: "pattern", name: "Pattern", suppressed: false, sourceFeatureId: "post", patternType: "linear", axis: "X", count: 2, spacingMillimeters: 20, reversed: false, direction } as PartFeature); const parts = evaluatePartDocument(pd).parts[0]; const centres = parts.topology.filter((f) => f.surfaceType === "CYLINDER").map((f) => f.measurements!.centerMillimeters!.slice(0, 2).map((v) => Math.round(v * 100) / 100).join(",")).sort(); return { volume: total(pd), centres }; };
+  // The Right plane (YZ) has normal +x: the copy at (20, 0).
+  expect(pattern({ kind: "principal", plane: "YZ", offsetMillimeters: 0 })).toEqual({ volume: expect.closeTo(base + post, 2), centres: ["0,0", "20,0"] });
+  // The guide line runs (3, 4)/5: the copy at (12, 16).
+  expect(pattern({ kind: "sketch-line", sourceFeatureId: "g", contourId: "k", segmentId: "seg" }).centres).toEqual(["0,0", "12,16"]);
+});

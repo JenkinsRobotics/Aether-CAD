@@ -30,7 +30,7 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
   const render=()=>{const ref=read();box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
   const set=(value:string)=>{control.value=value;select.value='';render();control.dispatchEvent(new Event('change'));};
   select.onchange=()=>{if(select.value)set(select.value);};const listRow=rowIn('Sketch point',select);listRow.hidden=true;element.append(listRow); // ponytail: the list stays for the suite; points are picked in the viewport
-  const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));element.dataset.picking=String(value);});
+  const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));window.dispatchEvent(new CustomEvent('aether-sketch-point-picking',{detail:value}));element.dataset.picking=String(value);});
   element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});
   const request=()=>{
     if(!enabled||!active||!win.panel.isConnected)return;
@@ -45,9 +45,17 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
     set(JSON.stringify(result.reference));
   };
   window.addEventListener('aether-extrude-point',receive);
+  // A sketch point clicked in the viewport: the matching list entry (its exact choice) is taken.
+  const receiveSketch=(event:Event)=>{
+    if(!enabled||!active||!win.panel.isConnected)return;
+    const pick=(event as CustomEvent).detail as {sourceFeatureId:string;contourIndex:number;index:number}|undefined;
+    const option=pick&&[...select.options].find(o=>{if(!o.value)return false;const c=JSON.parse(o.value);return c.sourceFeatureId===pick.sourceFeatureId&&c.contourIndex===pick.contourIndex&&c.index===pick.index;});
+    if(option)set(option.value);
+  };
+  window.addEventListener('aether-sketch-point',receiveSketch);
   let items=cadSelection.snapshot().items;
   const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===items)return;items=next;if(items.length===1&&items[0].kind==='vertex')request();});
   const note=document.createElement('p');note.textContent=noteText;win.addHelp(note);
-  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-extrude-point',receive);lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});
+  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-extrude-point',receive);window.removeEventListener('aether-sketch-point',receiveSketch);lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});
   render();return {element,setEnabled:(value:boolean)=>{element.hidden=!value;note.hidden=!value;if(enabled!==value){enabled=value;lifecycle.setActive(value);}activateAvailableReferencePicker();}};
 }

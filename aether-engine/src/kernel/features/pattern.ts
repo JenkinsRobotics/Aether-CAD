@@ -32,11 +32,13 @@ export interface PatternContext {
     axis: V3;
   };
   faceByReference: (body: Shape3D, reference: { normal?: V3 | number[]; surfaceType?: string; faceAnchor?: { centerMillimeters: number[]; areaSquareMillimeters: number } }, label: string) => Face;
+  /** A tree plane, Plane feature or sketch line as a frame (origin, normal, x direction). */
+  planeFrameOf: (reference: import("../../document/mirror-plane").MirrorPlaneReference) => { normal: V3; xDirection: V3 };
 }
 /** Repeats the authored source tool or whole bodies, retaining source identity,
  * output identities and preview handles. The caller owns atomic cache commit. */
 export function applyPatternFeature(feature: PatternFeature, context: PatternContext): string | undefined {
-  const { history, bodies, tools, bodyOutputs, own, previewId, publish, resolveTransform, pathSource, sketchWire, axisFeatureLine, faceByReference } = context;
+  const { history, bodies, tools, bodyOutputs, own, previewId, publish, resolveTransform, pathSource, sketchWire, axisFeatureLine, faceByReference, planeFrameOf } = context;
   let { currentBodyID } = context;
   // PartDesign patterns: the source feature's own tool, repeated along a
   // body axis (count includes the original) and applied the way the
@@ -79,6 +81,9 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
         return unit([...deleteAfterVectorTuple(face.normalAt([c[0], c[1], c[2]]))] as V3);
       } finally { face.delete(); }
     }
+    if (ref.kind === "principal" || ref.kind === "feature") return planeFrameOf(ref).normal;
+    // A sketch line is the direction itself: the x direction of the plane through it.
+    if (ref.kind === "sketch-line") return planeFrameOf(ref).xDirection;
     const t = resolveTransform({ kind: "translate-reference", reference: ref, distanceMillimeters: 1 });
     return (t as {
       translationMillimeters: V3;

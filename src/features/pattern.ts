@@ -10,8 +10,8 @@
  *  Reapply features are present and disabled with the gap named (ledger: Patterns). The curve
  *  pattern keeps its path rows under the Curve tab. */
 import {mountPartBox} from './part-box';
-import {patternSourceTypes,availableBodies,type SolidFaceReference} from '@aether/core/document';
-import {faceIdentity,mountPickedReferences} from './picked-references';
+import {patternSourceTypes,availableBodies} from '@aether/core/document';
+import {mountPlaneBox} from './plane-box';
 import {requireSelections,layoutParameterRows,entityChips,planned,iconButton,rowIn,checkRow,type Controls,type FeatureEditor,type FeatureEditorContext} from './shared';
 import {transformEdgePicker} from './transform-edge-picker';
 
@@ -40,7 +40,7 @@ export const patternEditor:FeatureEditor={
       pathDistance:field('Overall distance (mm)',String(path?.distanceMillimeters ?? 30)),
       pathOrientation:field('Orientation',path?.orientation ?? 'identical',['identical','path']),
       directionSource:field('Direction source',dir?.kind==='vector'?'vector':dir?.kind==='solid-edge'||axisRef?.kind==='solid-edge'?'edge':dir?.kind==='face'||axisRef?.kind==='face'?'face':'axis',['axis','vector','edge','face']),
-      directionFace:field('Direction face',JSON.stringify(dir?.kind==='face'?[dir]:axisRef?.kind==='face'?[axisRef]:[])),
+      directionFace:field('Direction face',dir&&dir.kind!=='vector'&&dir.kind!=='solid-edge'?JSON.stringify(dir):axisRef?.kind==='face'?JSON.stringify(axisRef):''),
       result:field('Result',feature?.resultOperation??'new',['new','add','cut','intersect']),
       skip:field('Skipped instances',(feature?.skipInstances??[]).join(', ')),
       axis:field('Axis',feature?.axis ?? 'X',['X','Y','Z']),
@@ -92,10 +92,11 @@ export const patternEditor:FeatureEditor={
     const edgePicker=transformEdgePicker(context,controls.edge);
     controls.edge.addEventListener('change',()=>{if(controls.edge.value){controls.directionSource.value='edge';controls.directionSource.dispatchEvent(new Event('change'));}});
     // A picked face: a planar face's normal is a direction; a cylindrical or conical face's axis is the axis of pattern.
-    const faces=mountPickedReferences<SolidFaceReference>(context,controls.directionFace,{title:'Direction face',kind:'face',requestEvent:'aether-offset-faces-request',replyEvent:'aether-offset-faces',replyKey:'faces',identity:faceIdentity,
-      onChange:picked=>{if(picked.length>1){faces.update([picked[picked.length-1]]);return;}if(picked.length){controls.directionSource.value='face';controls.directionSource.dispatchEvent(new Event('change'));}}});
+    // A picked plane, Plane feature, face or sketch line: a plane's normal (or a line) is the direction; a cylindrical or conical face's axis is the axis of pattern.
+    const faces=mountPlaneBox(context,controls.directionFace,'Direction face',{sketchLines:true,anyFace:true});
+    controls.directionFace.addEventListener('change',()=>{if(controls.directionFace.value){controls.directionSource.value='face';controls.directionSource.dispatchEvent(new Event('change'));}});
     edgePicker.element.after(faces.element);
-    controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value==='face'&&!JSON.parse(controls.directionFace.value||'[]').length)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
+    controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value==='face'&&!controls.directionFace.value)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
     const spacingRow=row('Distance',controls.spacing,lengthUnitLabel);
     const angleRow=row('Angle',controls.angle,angleUnitLabel);
     row('Instance count',controls.count);
@@ -138,7 +139,7 @@ export const patternEditor:FeatureEditor={
       // A feature pattern has Onshape's one result (its feature's own); the other tabs apply to parts.
       if(!parts)controls.result.value='new';
       [...results.children].forEach((tab,i)=>{tab.classList.toggle('active',i===resultValues.indexOf(controls.result.value));if(i>0)planned(tab as HTMLButtonElement,resultGap);if(parts&&i>0){tab.removeAttribute('disabled');tab.removeAttribute('aria-disabled');tab.removeAttribute('title');}});
-      faces.element.hidden=isPath;const caption=faces.element.querySelector('.aui-feature-entities-caption');if(caption)caption.textContent=polar?'Axis face (cylindrical)':'Direction face (planar)';
+      faces.element.hidden=isPath;const caption=faces.element.querySelector('.aui-feature-entities-caption');if(caption)caption.textContent=polar?'Axis face (cylindrical)':'Direction (plane, face or line)';
       scope.element.hidden=parts?controls.result.value==='new':false;
       directionRow.hidden=isPath;directionRow.querySelector('span')!.textContent=polar?'Axis of pattern':'Direction';
       spacingRow.hidden=!linear;angleRow.hidden=!polar;equalRow.hidden=!polar;
@@ -159,7 +160,8 @@ export const patternEditor:FeatureEditor={
     if(controls.patternType.value==='linear'&&!(Number(controls.spacing.value)>0))return 'Enter a positive distance.';
     if(controls.patternType.value==='polar'&&!(Number(controls.angle.value)>0))return 'Enter a positive angle.';
     if(controls.directionSource.value==='edge'&&!controls.edge.value)return 'Pick a straight edge for the pattern direction.';
-    if(controls.directionSource.value==='face'&&!JSON.parse(controls.directionFace.value||'[]').length)return 'Pick a face for the pattern direction.';
+    if(controls.directionSource.value==='face'&&!controls.directionFace.value)return 'Pick a plane, face or sketch line for the pattern direction.';
+    if(controls.directionSource.value==='face'&&controls.patternType.value==='polar'){const ref=JSON.parse(controls.directionFace.value);if(ref.kind!=='face'||!['cylinder','cone'].includes(ref.surfaceType))return 'The axis of pattern needs a cylindrical or conical face (or an edge, line or axis).';}
     if(controls.skip.value.trim()&&controls.skip.value.split(/[\s,]+/).filter(Boolean).some(n=>!(Number.isInteger(Number(n))&&Number(n)>=2)))return 'Skipped instances are instance numbers from 2 up, such as 2, 4.';
     if(parts&&controls.result.value!=='new'&&!JSON.parse(controls.mergeScope.value||'[]').length)return 'Select the merge scope part.';
     if(controls.directionSource.value==='vector'&&Math.hypot(Number(controls.vectorX.value),Number(controls.vectorY.value),Number(controls.vectorZ.value))<1e-9)return 'Enter a nonzero direction.';
@@ -171,9 +173,9 @@ export const patternEditor:FeatureEditor={
     const parts=values.what==='parts'?(JSON.parse(values.parts||'[]') as string[]):undefined;
     const partFields=parts?{bodyIds:parts,copyBodyIds:Object.fromEntries(parts.map((id,i)=>[id,`${values.copyPrefix}-${i+1}`]))}:{};
     const linear=values.patternType==='linear',source=values.directionSource,count=Number(values.count);
-    const face=source==='face'?JSON.parse(values.directionFace||'[]')[0] as (SolidFaceReference&{centerMillimeters?:unknown})|undefined:undefined;
+    const face=source==='face'&&values.directionFace?JSON.parse(values.directionFace) as {kind:string;centerMillimeters?:unknown}:undefined;
     if(face)delete face.centerMillimeters;
-    const picked=source==='edge'&&values.edge?JSON.parse(values.edge):face?{kind:'face',...face}:undefined;
+    const picked=source==='edge'&&values.edge?JSON.parse(values.edge):face;
     const vector=source==='vector'?{kind:'vector' as const,direction:[Number(values.vectorX),Number(values.vectorY),Number(values.vectorZ)] as [number,number,number]}:undefined;
     const result=parts&&values.result!=='new'?{resultOperation:values.result,targetBodyId:JSON.parse(values.mergeScope||'[]')[0]}:{};
     const skip=values.skip.trim()?{skipInstances:[...new Set(values.skip.split(/[\s,]+/).filter(Boolean).map(Number))].sort((a,b)=>a-b)}:{};

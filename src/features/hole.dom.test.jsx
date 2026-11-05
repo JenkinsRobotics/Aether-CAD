@@ -53,7 +53,9 @@ it("Hole opens on Metric / Inch and Simple / Counterbore / Countersink with Onsh
   const list = win.querySelector('select[aria-label="Sketch points to place holes sketch point"]');
   const option = [...list.options].find((o) => o.value);
   expect(option, 'a sketch point of an earlier sketch').toBeTruthy();
-  list.value = option.value; list.dispatchEvent(new Event('change'));
+  // The viewer's answer to a click on that sketch point (its sketch-choice reference) fills the box the same way.
+  const choice = JSON.parse(option.value);
+  window.dispatchEvent(new CustomEvent('aether-sketch-point', { detail: { kind: 'sketch-choice', sourceFeatureId: choice.sourceFeatureId, contourIndex: choice.contourIndex, index: choice.index, label: 'Sketch point' } }));
   expect(win.querySelector('.aui-feature-entities[aria-label^="Sketch points"]').textContent).toContain(option.textContent.trim());
   win.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());

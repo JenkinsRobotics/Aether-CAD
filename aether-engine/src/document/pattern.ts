@@ -1,8 +1,10 @@
 import {validateSolidEdgeReference,type SolidEdgeReference} from './solid-edge-reference';
 import {validateSolidFaceReference,type SolidFaceReference} from './solid-face-reference';
+import {validateMirrorPlane,type MirrorPlaneReference} from './mirror-plane';
 
-/** A pattern direction beyond the principal axes: a fixed vector, a picked straight edge, or a picked planar face (its normal). */
-export type PatternDirection={kind:'vector';direction:[number,number,number]}|SolidEdgeReference|({kind:'face'}&SolidFaceReference);
+/** A pattern direction beyond the principal axes: a fixed vector, a picked straight edge, a picked planar face
+ *  (its normal), a tree plane or Plane feature (its normal), or a sketch line (its direction). */
+export type PatternDirection={kind:'vector';direction:[number,number,number]}|SolidEdgeReference|MirrorPlaneReference;
 /** A polar axis beyond the principal axes: a fixed line, a picked straight edge, or a picked cylindrical or conical face (its axis). */
 export type PatternAxis={kind:'vector';origin:[number,number,number];direction:[number,number,number]}|{kind:'feature';featureId:string}|SolidEdgeReference|({kind:'face'}&SolidFaceReference);
 
@@ -63,7 +65,8 @@ export function validatePattern(feature:PatternFeature,earlier:Map<string,string
     if(ref.kind==='vector'){if(!unit(ref.direction))throw new Error(`${label} needs a nonzero direction.`);return;}
     if(ref.kind==='solid-edge'){validateSolidEdgeReference(ref,earlier,missing);return;}
     if(ref.kind==='face'){validateSolidFaceReference(ref,earlier,missing,label);if(ref.surfaceType)throw new Error(`${label} by a face needs a planar face.`);return;}
-    throw new Error(`${label} must be a vector, a straight solid edge or a planar face.`);
+    if(ref.kind==='principal'||ref.kind==='feature'||ref.kind==='sketch-line'){validateMirrorPlane(ref,earlier,missing,label);return;}
+    throw new Error(`${label} must be a vector, a straight solid edge, a planar face, a plane or a sketch line.`);
   };
   if (feature.patternType === 'linear') {
     if (!Number.isFinite(feature.spacingMillimeters) || feature.spacingMillimeters<=0) throw new Error('Pattern spacing must be positive.');

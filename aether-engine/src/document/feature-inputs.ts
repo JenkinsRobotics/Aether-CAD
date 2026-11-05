@@ -74,7 +74,7 @@ export function featureInputDependencies(
     case 'shell': reference(feature.removedFaces); break;
     case 'draft': reference(feature.neutralFace); reference(feature.pullPlane); reference(feature.partingEdges); break;
     case 'loft': reference(feature.startPoint); reference(feature.endPoint); reference(feature.path); reference(feature.connections); break;
-    case 'sweep': reference(feature.rail); break;
+    case 'sweep': reference(feature.rail); reference(feature.orientation); break;
     case 'hole': reference(feature.placement); reference(feature.endReference); if (typeof feature.startFrom === 'object') reference(feature.startFrom.plane); break;
     case 'sheet-fold': reference(feature.line); break;
     case 'surface-blend':

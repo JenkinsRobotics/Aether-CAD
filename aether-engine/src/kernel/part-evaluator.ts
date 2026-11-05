@@ -660,14 +660,15 @@ export function evaluatePartDocument(
     for (let index = reuse; index < history.length; index++) {
       // Onshape's Rib, normal to the sketch plane, is Extrude's thin wall around the open curves,
       // centred, up to the part, merged into it: the same validated pipeline builds it under the rib's id.
-      const feature: import("../document/index").PartFeature = history[index].type === "rib" ? ((rib: Extract<import("../document/index").PartFeature, { type: "rib" }>) => {
+      const raw = history[index];
+      const feature: import("../document/index").PartFeature = raw.type === "rib" && raw.direction !== "parallel" ? ((rib: Extract<import("../document/index").PartFeature, { type: "rib" }>) => {
         const curves: string[] = rib.profileContourIds ?? (profiles.get(rib.profileFeatureId)?.contours.filter((c: SketchContour) => c.id !== undefined && !contourClosed(c)).map((c: SketchContour) => c.id!) ?? []);
         if (!curves.length) throw new FeatureFailure(rib.id, rib.name, "Rib needs open curves in its sketch.");
         const extrude: ExtrudeFeature = { id: rib.id, type: "extrude", name: rib.name, suppressed: false, profileFeatureId: rib.profileFeatureId, distanceMillimeters: 1, operation: "add", endType: "up-to-next", targetBodyId: rib.targetBodyId, targetBodyIds: [rib.targetBodyId],
           ...(rib.reversed ? { reversed: true } : {}), thin: { thickness1Millimeters: 0, thickness2Millimeters: 0, midplane: true, midplaneThicknessMillimeters: rib.thicknessMillimeters },
           profileSelections: curves.map((id) => ({ profileFeatureId: rib.profileFeatureId, profileContourId: id })) };
         return extrude;
-      })(history[index] as Extract<import("../document/index").PartFeature, { type: "rib" }>) : history[index];
+      })(raw as Extract<import("../document/index").PartFeature, { type: "rib" }>) : raw;
       const featureStarted = options.observe ? performance.now() : 0;
       stepOwned = [];
       let failed = false;
@@ -1009,17 +1010,6 @@ export function evaluatePartDocument(
         if (feature.type === "extrude") {
           // Named so a forced engine tells the user exactly what is missing.
         }
-        if (feature.type === "boolean") {
-          currentBodyID = applyBooleanFeature(feature, bodies, own);
-          continue;
-        }
-        if (feature.type === "pattern") {
-          currentBodyID = applyPatternFeature(feature, {
-            history, bodies, tools, bodyOutputs, currentBodyID, own, previewId,
-            publish, resolveTransform, pathSource, sketchWire, axisFeatureLine, faceByReference,
-          });
-          continue;
-        }
         // A mirror plane: principal + offset, a plane feature's frame, or a picked planar face.
         const mirrorPlaneOf = (ref: import("../document/mirror-plane").MirrorPlaneReference): Plane => {
           if (ref.kind === "principal") { const f = principalFrame(ref.plane, ref.offsetMillimeters); return own(new Plane(f.originMillimeters, f.xDirection, f.normal)); }
@@ -1042,6 +1032,18 @@ export function evaluatePartDocument(
             return own(new Plane([center[0], center[1], center[2]], canonicalPlaneXDirection([n[0], n[1], n[2]]), [n[0], n[1], n[2]]));
           } finally { face.delete(); }
         };
+        if (feature.type === "boolean") {
+          currentBodyID = applyBooleanFeature(feature, bodies, own);
+          continue;
+        }
+        if (feature.type === "pattern") {
+          currentBodyID = applyPatternFeature(feature, {
+            history, bodies, tools, bodyOutputs, currentBodyID, own, previewId,
+            publish, resolveTransform, pathSource, sketchWire, axisFeatureLine, faceByReference,
+            planeFrameOf: (ref) => { const plane = mirrorPlaneOf(ref); return { normal: unit([plane.zDir.x, plane.zDir.y, plane.zDir.z]), xDirection: unit([plane.xDir.x, plane.xDir.y, plane.xDir.z]) }; },
+          });
+          continue;
+        }
         if (feature.type === "thread") {
           // Onshape's thread options on the cylinder: the chamfer at the start edge, the undercut
           // groove and the face split where the thread ends. The thread itself stays cosmetic.
@@ -1102,6 +1104,48 @@ export function evaluatePartDocument(
           }
           bodies.set(id, result);
           currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "rib") {
+          // Parallel to the sketch plane: each open curve becomes a band `thickness` tall across the
+          // plane, pushed in-plane (square to the curve's chord, the flip the other way) through the
+          // part; what lies between the curve and the part is the rib, merged into it.
+          const body = bodies.get(feature.targetBodyId);
+          if (!body) throw new Error("Rib needs an available part to join.");
+          const prof = profiles.get(feature.profileFeatureId);
+          const curves = feature.profileContourIds ?? prof?.contours.filter((c) => c.id !== undefined && !contourClosed(c)).map((c) => c.id!) ?? [];
+          if (!prof || !curves.length) throw new Error("Rib needs open curves in its sketch.");
+          const frame = sketchFrameOf(feature.profileFeatureId), n = unit(frame.normal as V3), oc = getOC();
+          const prism = (shape: { wrapped: unknown }, v: V3) => { const vec = new oc.gp_Vec_4(v[0], v[1], v[2]); try { return cast(new oc.BRepPrimAPI_MakePrism_1(shape.wrapped as never, vec, false, true).Shape()); } finally { vec.delete(); } };
+          const reach = 4 * (diagonalOfShape(body) + 1);
+          let result: Shape3D = body;
+          for (const id of curves) {
+            const wire = sketchWire(feature.profileFeatureId, id, "Rib curve", true);
+            const a = [...deleteAfterVectorTuple(wire.startPoint)] as V3, b = [...deleteAfterVectorTuple(wire.endPoint)] as V3;
+            const chord = sub(b, a);
+            if (norm(chord) < 1e-6) throw new Error("A rib curve must be open (its ends apart).");
+            const across = unit(cross(n, unit(chord))), push = scale(across, feature.reversed ? -1 : 1);
+            // The band: the curve swept across the plane by the thickness, centred.
+            const half = scale(n, feature.thicknessMillimeters / 2);
+            const lower = own(wire.clone().translate(-half[0], -half[1], -half[2]));
+            const band = own(prism(lower, scale(n, feature.thicknessMillimeters)));
+            const slab = own(prism(band, scale(push, reach)) as Shape3D);
+            if (!isShape3D(slab) || measureVolume(slab) <= 1e-9) throw new Error("The rib curve could not be swept into a wall.");
+            const meets = slab.intersect(body);
+            if (!isShape3D(meets) || measureVolume(meets) <= 1e-9) { release(meets); throw new Error("No part lies ahead of the rib curve. Flip the direction or move the curve."); }
+            release(meets);
+            // Between the curve and the part: the pieces of the slab outside the part that touch the band.
+            const outside = own(slab.cut(body));
+            const bandFaces = (own(band) as unknown as Shape3D).faces;
+            const pieces = solidsOf(outside).map(own).filter((piece) => bandFaces.some((face) => commonArea(face, piece) > 1e-6));
+            bandFaces.forEach((face) => face.delete());
+            if (!pieces.length) throw new Error("The rib curve lies inside the part already.");
+            for (const piece of pieces) { const joined = result.fuse(piece); if (!isShape3D(joined)) throw new Error("The rib could not be joined to the part."); result = own(joined); }
+          }
+          const pieces = solidsOf(result), one = pieces.length === 1; pieces.forEach(release);
+          if (!one) throw new Error("The rib must join the part into one solid.");
+          bodies.set(feature.targetBodyId, own(result.simplify()));
+          currentBodyID = feature.targetBodyId;
           continue;
         }
         if (feature.type === "hole") {
@@ -2513,8 +2557,8 @@ export function evaluatePartDocument(
           // Onshape's Twist: an auxiliary spine beside the path, wound round it by the turns, which the
           // pipe shell keeps the profile's x axis pointing at (OCCT's auxiliary-spine mode).
           const twistSpine = (): Wire => {
-            const turns = feature.twist!.turns, samples = Math.max(64, Math.ceil(Math.abs(turns) * 48));
             const edges = spine.edges, total = edges.reduce((sum, edge) => sum + edge.length, 0);
+            const twist = feature.twist!, turns = "turns" in twist ? twist.turns : (total / twist.pitchMillimeters) * (twist.reversed ? -1 : 1), samples = Math.max(64, Math.ceil(Math.abs(turns) * 48));
             const radius = Math.max(1, 0.5 * diagonalOfShape(profileWire));
             const points: V3[] = [];
             // A frame carried along the path by parallel transport, then turned by the twist angle.
@@ -2547,6 +2591,13 @@ export function evaluatePartDocument(
               const builder = new oc.BRepOffsetAPI_MakePipeShell(spine.wrapped), progress = new oc.Message_ProgressRange_1(), owned: { delete(): void }[] = [builder, progress];
               try {
                 if (orientation === "parallel") { const ax = new oc.gp_Ax2_1(); owned.push(ax); builder.SetMode_2(ax); }
+                else if (typeof orientation === "object" && orientation.kind === "support") {
+                  // Lock profile faces: the profile keeps its angle to the support face the path lies on (OCCT's spine-support trihedron).
+                  const host = bodyAt(orientation.face.sourceFeatureId, orientation.face.bodyId);
+                  if (!host) throw new Error("Sweep: the support face's part is unavailable. Reselect the face.");
+                  const support = own(faceByReference(host, orientation.face, "Sweep support face"));
+                  if (!builder.SetMode_4(support.wrapped)) throw new Error("Sweep: the path does not lie on the support face. Pick the face the path runs along.");
+                }
                 else if (typeof orientation === "object") { const u = unit(orientation.direction), dir = new oc.gp_Dir_4(u[0], u[1], u[2]); owned.push(dir); builder.SetMode_3(dir); }
                 else builder.SetMode_1(false);
                 if (feature.twist) builder.SetMode_5(twistSpine().wrapped, true, oc.BRepFill_TypeOfContact.BRepFill_NoContact as never);

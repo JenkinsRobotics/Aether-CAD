@@ -190,8 +190,9 @@ export interface SweepFeature {
   profileRegion?: import('../sketch/reference/profile-region-reference').ProfileRegionReference;
   pathFeatureId: string;
   pathContourId?: string;
-  /** How the profile turns along the path: square to it (default), kept as drawn, or square to it with a fixed up direction. */
-  orientation?: "perpendicular" | "parallel" | { kind: "direction"; direction: [number, number, number] };
+  /** How the profile turns along the path: square to it (default), kept as drawn, square to it with a fixed up
+   *  direction, or Onshape's Lock profile faces: the profile keeps its angle to a picked support face the path lies on. */
+  orientation?: "perpendicular" | "parallel" | { kind: "direction"; direction: [number, number, number] } | { kind: "support"; face: SolidFaceReference };
   /** The profile's scale at the end of the path, linear along it (1 = unchanged). */
   endScale?: number;
   /** A guide rail: a curve of another sketch the profile's edge follows. */
@@ -199,8 +200,9 @@ export interface SweepFeature {
   /** Onshape's Opposite direction on the path: the path runs from its other end, which is where the
    *  scale (and twist) laws start; a profile on the path sweeps the same solid either way. */
   reversedPath?: boolean;
-  /** Onshape's Twist: the profile turns about the path by this many turns from start to end (negative: the other way). */
-  twist?: { turns: number };
+  /** Onshape's Twist: the profile turns about the path by this many turns from start to end (negative: the other
+   *  way), or one turn per pitch of path length. */
+  twist?: { turns: number } | { pitchMillimeters: number; reversed?: boolean };
   /** Onshape's Thin sweep: a wall around one closed profile curve (thickness 1 outside, 2 inside; mid plane splits one thickness). */
   thin?: { thickness1Millimeters: number; thickness2Millimeters: number; midplane?: boolean; midplaneThicknessMillimeters?: number; flipped?: boolean };
   operation: "new" | "add" | "cut";
@@ -373,8 +375,10 @@ export function validateSolidFeature(
       throw new Error("Invalid revolve settings.");
   } else if (feature.type === "sweep") {
     if (feature.orientation !== undefined && feature.orientation !== "perpendicular" && feature.orientation !== "parallel" &&
-      !(typeof feature.orientation === "object" && feature.orientation.kind === "direction" && Array.isArray(feature.orientation.direction) && feature.orientation.direction.length === 3 && feature.orientation.direction.every(Number.isFinite) && Math.hypot(...feature.orientation.direction) > 1e-9))
-      throw new Error("Sweep orientation must be perpendicular, parallel, or a nonzero direction.");
+      !(typeof feature.orientation === "object" && feature.orientation.kind === "direction" && Array.isArray(feature.orientation.direction) && feature.orientation.direction.length === 3 && feature.orientation.direction.every(Number.isFinite) && Math.hypot(...feature.orientation.direction) > 1e-9) &&
+      !(typeof feature.orientation === "object" && feature.orientation.kind === "support"))
+      throw new Error("Sweep orientation must be perpendicular, parallel, a nonzero direction, or a support face.");
+    if (typeof feature.orientation === "object" && feature.orientation.kind === "support") validateSolidFaceReference(feature.orientation.face, earlier, missingReference, "Sweep support face");
     if (feature.endScale !== undefined && !(Number.isFinite(feature.endScale) && feature.endScale >= 0.01 && feature.endScale <= 100)) throw new Error("Sweep end scale must be between 0.01 and 100.");
     if (feature.rail !== undefined && (typeof feature.rail.pathFeatureId !== "string" || (!missingReference(feature.rail.pathFeatureId) && !["sketch", "profile", "curve3d"].includes(earlier.get(feature.rail.pathFeatureId) ?? "")))) throw new Error("Sweep rail must be a curve of an earlier sketch.");
     if (!missingReference(feature.profileFeatureId) && !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) || ""))
@@ -382,7 +386,7 @@ export function validateSolidFeature(
     if (!missingReference(feature.pathFeatureId) && !["profile", "sketch", "curve3d"].includes(earlier.get(feature.pathFeatureId) || ""))
       throw new Error("Sweep must reference an earlier sketch path or 3D sketch.");
     if (feature.reversedPath !== undefined && typeof feature.reversedPath !== "boolean") throw new Error("Invalid sweep path direction.");
-    if (feature.twist !== undefined && (!Number.isFinite(feature.twist.turns) || feature.twist.turns === 0 || Math.abs(feature.twist.turns) > 100)) throw new Error("Sweep twist needs a nonzero number of turns (up to 100).");
+    if (feature.twist !== undefined && ("turns" in feature.twist ? (!Number.isFinite(feature.twist.turns) || feature.twist.turns === 0 || Math.abs(feature.twist.turns) > 100) : !(Number.isFinite(feature.twist.pitchMillimeters) && feature.twist.pitchMillimeters > 0))) throw new Error("Sweep twist needs a nonzero number of turns (up to 100) or a positive pitch.");
     if (feature.twist && feature.rail) throw new Error("A sweep takes a twist or a guide rail, not both.");
     if (feature.thin !== undefined) {
       const t = feature.thin, finite = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0;

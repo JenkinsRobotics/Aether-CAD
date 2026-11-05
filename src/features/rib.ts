@@ -1,13 +1,12 @@
 /** Rib, as Onshape's (help: PartStudio/rib.htm): Sketch profiles (open curves of one sketch),
  *  Parts, Thickness, Parallel / Normal to sketch plane with the flip, Draft angle, Extend profiles
- *  to part and Merge ribs. This kernel builds the wall normal to the sketch plane, centred on the
- *  curves, up to the part, merged into it (Extrude's thin wall under the hood). Parallel to sketch
- *  plane, the draft angle and Extend profiles to part are present and refuse with the gap named. */
+ *  to part and Merge ribs. Normal to the sketch plane builds the wall centred on the curves, up to
+ *  the part (Extrude's thin wall under the hood); Parallel fills in-plane from the curve to the
+ *  part. The draft angle and Extend profiles to part are present and disabled with the gap named. */
 import { availableBodies, sketchRegions } from "@aether/core/document";
 import { mountPartBox } from "./part-box";
 import { entityChips, iconButton, planned, rowIn, unitSuffix, type Controls, type FeatureEditor, type FeatureEditorContext } from "./shared";
 
-const parallelGap = "Not available in this kernel: filling the rib in the sketch plane from the curve to the part is a recorded gap (the wall normal to the sketch plane is available).";
 const draftGap = "Not available in this kernel: a drafted rib (a drafted thin extrusion) is a recorded gap.";
 const extendGap = "Not available in this kernel: extending the curves' ends to the part is a recorded gap; draw the curve to the part.";
 const mergeGap = "Ribs merge into the part as they are built; separate rib bodies are a recorded gap.";
@@ -23,7 +22,7 @@ export const ribEditor: FeatureEditor = {
       curves: field("Rib curves", JSON.stringify(feature?.profileContourIds ?? [])),
       parts: field("Parts", JSON.stringify(feature?.targetBodyId ? [feature.targetBodyId] : bodies.at(-1) ? [bodies.at(-1)!.id] : [])),
       thickness: field("Thickness (mm)", String(feature?.thicknessMillimeters ?? 2)),
-      direction: field("Rib direction", "normal", ["normal", "parallel"]),
+      direction: field("Rib direction", feature?.direction ?? "normal", ["normal", "parallel"]),
       reversed: field("Opposite direction", feature?.reversed ? "true" : "false", ["false", "true"]),
     };
   },
@@ -53,7 +52,7 @@ export const ribEditor: FeatureEditor = {
     // Rib direction and its flip.
     const directions = { "Normal to sketch plane": "normal", "Parallel to sketch plane": "parallel" } as const;
     const picker = win.picker(Object.keys(directions), { ariaLabel: "Rib direction menu", onChange: (text) => { controls.direction.value = directions[text as keyof typeof directions]; controls.direction.dispatchEvent(new Event("change")); } });
-    picker.setValue("Normal to sketch plane");
+    picker.setValue(controls.direction.value === "parallel" ? "Parallel to sketch plane" : "Normal to sketch plane");
     const flip = iconButton("flip-horizontal", "Opposite direction");
     const paintFlip = () => flip.setAttribute("aria-pressed", controls.reversed.value);
     flip.onclick = () => { controls.reversed.value = controls.reversed.value === "true" ? "false" : "true"; paintFlip(); controls.reversed.dispatchEvent(new Event("change")); };
@@ -62,7 +61,7 @@ export const ribEditor: FeatureEditor = {
     const gapInput = (label: string, reason: string) => { const input = document.createElement("input"); input.type = "text"; input.setAttribute("aria-label", label); return planned(rowIn(label, input), reason); };
     const gapCheck = (label: string, reason: string, checked = false) => { const box = document.createElement("input"); box.type = "checkbox"; box.checked = checked; box.setAttribute("aria-label", label); return planned(rowIn(label, box), reason); };
     win.body.append(gapInput("Draft angle", draftGap), gapCheck("Extend profiles to part", extendGap), gapCheck("Merge ribs", mergeGap, true));
-    const note = document.createElement("p"); note.textContent = "The wall is centred on each open curve and runs square to the sketch plane until it meets the part."; win.addHelp(note);
+    const note = document.createElement("p"); note.textContent = "Normal: the wall is centred on each open curve and runs square to the sketch plane until it meets the part. Parallel: the wall stands the thickness tall across the plane and fills from the curve to the part, square to the curve's chord."; win.addHelp(note);
   },
   validate(controls, context) {
     if (!controls.profile.value) return "Choose the sketch with the rib curves.";
@@ -70,11 +69,10 @@ export const ribEditor: FeatureEditor = {
     if (!sketch || !sketchRegions(sketch, true, context.doc.features).some((r) => r.closed === false)) return "The sketch has no open curves to build ribs from.";
     if (!JSON.parse(controls.parts.value || "[]").length) return "Select the part the rib joins.";
     if (!(Number(controls.thickness.value) > 0)) return "Enter a positive thickness.";
-    if (controls.direction.value === "parallel") return parallelGap;
     return null;
   },
   serialize(values) {
     const curves = JSON.parse(values.curves || "[]") as string[];
-    return { profileFeatureId: values.profile, ...(curves.length ? { profileContourIds: curves } : {}), targetBodyId: JSON.parse(values.parts)[0], thicknessMillimeters: Number(values.thickness), ...(values.reversed === "true" ? { reversed: true } : {}) };
+    return { profileFeatureId: values.profile, ...(curves.length ? { profileContourIds: curves } : {}), targetBodyId: JSON.parse(values.parts)[0], thicknessMillimeters: Number(values.thickness), ...(values.direction === "parallel" ? { direction: "parallel" } : {}), ...(values.reversed === "true" ? { reversed: true } : {}) };
   },
 };

@@ -18,6 +18,31 @@ const headed = process.env.AETHER_TIMING_HEADED === '1';
 // AETHER_GATE_BROWSER=webkit stands in for Safari (Playwright WebKit).
 const browser = process.env.AETHER_GATE_BROWSER === 'webkit' ? await webkit.launch({ headless: !headed }) : await chromium.launch({ headless: !headed, args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage(), errors = [], steps = [], log = { engine: {} };
+// Preserve the exact native inputs and first failure when an intermittent editor
+// rebuild fails. Test-only interception; no timing or request semantics change.
+await page.addInitScript(() => {
+  const NativeWorker = window.Worker;
+  const trace = window.__cadModelTrace = [];
+  let workerId = 0;
+  window.Worker = class extends NativeWorker {
+    constructor(...args) {
+      super(...args);
+      this.traceId = ++workerId;
+      this.addEventListener('message', event => {
+        const reply = event.data;
+        if (reply?.type === 'error' || reply?.type === 'part-evaluated') {
+          trace.push({ worker: this.traceId, direction: 'reply', type: reply.type, requestId: reply.requestId,
+            message: reply.message, featureId: reply.featureId, replayed: reply.model?.replayedFeatures });
+        }
+      });
+    }
+    postMessage(request, ...args) {
+      if (request?.type === 'evaluate-part') trace.push({ worker: this.traceId, direction: 'request', ...JSON.parse(JSON.stringify(request)) });
+      return super.postMessage(request, ...args);
+    }
+  };
+});
+
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error')
   errors.push(m.text()); if (m.text().startsWith('[engine]'))
@@ -298,8 +323,11 @@ try {
   await step('hole', async () => {
     await ribbon('Hole', 'feature-hole').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
-    // Onshape's placement: one hole at each sketch point; Sketch 2's circle centre from the list.
-    await setSelect('Sketch points to place holes sketch point', /Sketch 2 · Circle 1 center/);
+    // Onshape's placement: one hole at each sketch point, clicked in the viewport: Sketch 2's circle centre (drawn at 30, 6).
+    const centre = await page.evaluate(() => window.__aetherFinishedSketchClientPoint?.('Sketch 2', 30, 6));
+    assert.ok(centre, 'the circle centre of Sketch 2 projects into the viewport');
+    await page.mouse.click(centre[0], centre[1]);
+    await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Sketch points"]')).toContainText(/Sketch 2 · Circle 1 center/, { timeout: 10000 });
     await setInput('Diameter (mm)', 4);
     await setInput('Depth (mm)', 6);
     await applyDialog('hole');
@@ -385,6 +413,7 @@ try {
 }
 catch (error) {
   await page.screenshot({ path: join(evidence, 'failure.png') }).catch(() => { });
+  await writeFile(join(evidence, 'native-trace.json'), JSON.stringify(await page.evaluate(() => window.__cadModelTrace), null, 2));
   await writeFile(join(evidence, 'failure.txt'), `${error?.stack ?? error}\n${JSON.stringify({ steps, errors, log })}`);
   if (fixtureFile) {
     try {

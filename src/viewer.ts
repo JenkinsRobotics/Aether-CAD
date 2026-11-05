@@ -358,6 +358,7 @@ export class MateViewport {
     this.controls = createCADCameraControls(this.camera, this.renderer.domElement, () => this.publishCameraOrientation());
     this.controls.target.set(0, 0, modelStudioCamera.target[1]*25);
     this.controls.update();
+    window.addEventListener("aether-sketch-point-picking", (event) => { this.sketchPointPicking = Boolean((event as CustomEvent).detail); });
     window.addEventListener("aether-sketch-normal-view", () => {
       const surface = this.sketchSurface;
       if (!surface) return;
@@ -389,6 +390,11 @@ export class MateViewport {
       this.cameraRotation.cancel();
       if (this.forwardToSketch(event)) return;
       if (event.button === 0) {
+        // A window asking for sketch points takes the one under the pointer before anything else is picked.
+        if (this.sketchPointPicking && this.tool === "none") {
+          const point = this.sketchPointAt(event);
+          if (point) { window.dispatchEvent(new CustomEvent("aether-sketch-point", { detail: point })); return; }
+        }
         this.pointerDown = { x: event.clientX, y: event.clientY };
         if (this.tool === "none" && !this.historyEditing && !this.featurePreview.active && !this.sketchPlaneSelection && !this.regionPicker.group.children.length) {
           this.renderer.domElement.setPointerCapture(event.pointerId);
@@ -1369,6 +1375,21 @@ export class MateViewport {
   }
 
   private sketchCurveKey = "";
+  /** Every finished sketch's vertices and circle centres, in the world: picked when a window asks for sketch points. */
+  private sketchPickPoints: { sketchId: string; contourIndex: number; index: number; world: THREE.Vector3 }[] = [];
+  private sketchPointPicking = false;
+  /** The sketch point within reach of the pointer, as the windows' sketch-choice reference. */
+  private sketchPointAt(event: { clientX: number; clientY: number }): { kind: "sketch-choice"; sourceFeatureId: string; contourIndex: number; index: number; label: string } | null {
+    const rect = this.renderer.domElement.getBoundingClientRect(), at = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    let best: typeof this.sketchPickPoints[number] | undefined, bestDistance = 8;
+    for (const point of this.sketchPickPoints) {
+      const screen = this.projectScreenPoint(point.world);
+      if (!screen) continue;
+      const d = Math.hypot(screen.x - at.x, screen.y - at.y);
+      if (d <= bestDistance) { best = point; bestDistance = d; }
+    }
+    return best ? { kind: "sketch-choice", sourceFeatureId: best.sketchId, contourIndex: best.contourIndex, index: best.index, label: "Sketch point" } : null;
+  }
   private editingSketchID: string | null = null;
   /** The sketch open in the editor draws through its live surface, so its
    * persisted curves are suppressed to avoid a stale double image. */
@@ -1597,6 +1618,7 @@ export class MateViewport {
       child.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (object.material as THREE.Material).dispose(); } });
       this.sketchCurveGroup.remove(child);
     }
+    this.sketchPickPoints = [];
     if (!this.sketchCurveGroup.parent) this.referenceRoot.add(this.sketchCurveGroup);
     for (const sketch of sketches) {
       const origin = new THREE.Vector3(...sketch.frame.originMillimeters);
@@ -1611,6 +1633,8 @@ export class MateViewport {
       // construction dashed, closed contours lightly filled, vertices dotted.
       const strokes: readonly SketchStrokeInput[] = sketch.strokes ?? sketch.polylines.map((polyline) => ({ polyline, construction: false, closed: false, vertices: [] }));
       const vertexPositions: number[] = [];
+      // A stroke per contour, in the sketch's order: its vertices (a circle's centre) are the pickable sketch points.
+      strokes.forEach((item, contourIndex) => item.vertices.forEach((vertex, index) => this.sketchPickPoints.push({ sketchId: sketch.id, contourIndex, index, world: toWorld(vertex) })));
       for (const item of strokes) {
         if (item.polyline.length < 2) continue;
         const points = item.polyline.map(toWorld);

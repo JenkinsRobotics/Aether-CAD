@@ -39,7 +39,7 @@ function featureDetail(feature: PartFeature): string {
   if (feature.type === "face-extrude") return `${feature.distanceMillimeters} mm · ${feature.faceLabel}`;
   if (feature.type === "boolean") return `${feature.operation} · ${feature.toolBodyIds.length} tools${feature.keepTools ? " · keep tools" : ""}`;
   if (feature.type === "pattern") return `${feature.patternType} · ${feature.count} occurrences · ${feature.axis}`;
-  if (feature.type === "rib") return `${feature.thicknessMillimeters} mm · normal to sketch${feature.reversed ? " · reversed" : ""}`;
+  if (feature.type === "rib") return `${feature.thicknessMillimeters} mm · ${feature.direction === "parallel" ? "parallel to" : "normal to"} sketch${feature.reversed ? " · reversed" : ""}`;
   if (feature.type === "draft") return `${feature.angleDegrees}° · ${feature.mode === "parting-line" ? `parting line · ${feature.partingEdges?.length ?? 0} edge${feature.partingEdges?.length === 1 ? "" : "s"}` : feature.neutralFace?.label ?? feature.facePlane?.plane ?? "faces"} · ${feature.reversed ? "reverse" : "normal"}`;
   if (feature.type === "loft") return `${feature.sections.length} sections · ${feature.operation} · ${feature.ruled ? "ruled" : "smooth"}`;
   if (feature.type === "hole") {
