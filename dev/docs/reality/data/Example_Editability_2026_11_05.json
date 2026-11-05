@@ -22,7 +22,7 @@
         {
           "id": "648d8a3e-4597-4261-93c8-56a474b73ff6",
           "type": "profile",
-          "name": "Front spherical wall \u2014 constrained meridian",
+          "name": "Front spherical wall — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -44,7 +44,7 @@
         {
           "id": "bb434490-4858-482d-85d1-28fe6cc73708",
           "type": "profile",
-          "name": "Optical spigot clearance through the shell \u2014 sketch",
+          "name": "Optical spigot clearance through the shell — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "bb434490-4858-482d-85d1-28fe6cc73708",
@@ -68,7 +68,7 @@
         {
           "id": "8a591af7-f7b3-48e6-bfee-af2e4fb804ff",
           "type": "profile",
-          "name": "Optical collar \u2014 flat seating face at 110 \u2014 sketch",
+          "name": "Optical collar — flat seating face at 110 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "8a591af7-f7b3-48e6-bfee-af2e4fb804ff",
@@ -81,7 +81,7 @@
         {
           "id": "5ceba3b0-21b8-407b-a2e4-5287e7e751f7",
           "type": "extrude",
-          "name": "Optical collar \u2014 flat seating face at 110",
+          "name": "Optical collar — flat seating face at 110",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 5.9399999999999995
@@ -92,7 +92,7 @@
         {
           "id": "5ffd874e-d31a-464f-a44e-cf7a63641ccb",
           "type": "profile",
-          "name": "Left hub \u2014 mounting boss \u2014 sketch",
+          "name": "Left hub — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "5ffd874e-d31a-464f-a44e-cf7a63641ccb",
@@ -105,7 +105,7 @@
         {
           "id": "470c72e6-f474-439a-85c7-4888addce311",
           "type": "extrude",
-          "name": "Left hub \u2014 mounting boss",
+          "name": "Left hub — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 12.87
@@ -116,7 +116,7 @@
         {
           "id": "34b62e31-a9ad-4f83-ab61-afc361aa7873",
           "type": "profile",
-          "name": "Left hub \u2014 passage \u2014 sketch",
+          "name": "Left hub — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "34b62e31-a9ad-4f83-ab61-afc361aa7873",
@@ -129,7 +129,7 @@
         {
           "id": "4d47a18e-1e95-4221-b620-4d13ff77a6b8",
           "type": "extrude",
-          "name": "Left hub \u2014 passage",
+          "name": "Left hub — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 46.53
@@ -140,7 +140,7 @@
         {
           "id": "705fa808-d459-481a-bf0b-9bb1a3bb7082",
           "type": "profile",
-          "name": "Right hub \u2014 mounting boss \u2014 sketch",
+          "name": "Right hub — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "705fa808-d459-481a-bf0b-9bb1a3bb7082",
@@ -153,7 +153,7 @@
         {
           "id": "1005d64e-7225-4087-8cc6-984388200464",
           "type": "extrude",
-          "name": "Right hub \u2014 mounting boss",
+          "name": "Right hub — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 12.87
@@ -164,7 +164,7 @@
         {
           "id": "732dfdf8-3ce4-44f0-861f-f8ecf82b63de",
           "type": "profile",
-          "name": "Right hub \u2014 passage \u2014 sketch",
+          "name": "Right hub — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "732dfdf8-3ce4-44f0-861f-f8ecf82b63de",
@@ -177,7 +177,7 @@
         {
           "id": "d632e41e-2334-49d6-83b7-54f2add92149",
           "type": "extrude",
-          "name": "Right hub \u2014 passage",
+          "name": "Right hub — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 46.53
@@ -188,7 +188,7 @@
         {
           "id": "75542052-968d-44d0-847c-7ca8e1c569da",
           "type": "profile",
-          "name": "Sensor -63 -96 \u2014 mounting boss \u2014 sketch",
+          "name": "Sensor -63 -96 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "75542052-968d-44d0-847c-7ca8e1c569da",
@@ -201,7 +201,7 @@
         {
           "id": "43e21e12-08b3-411d-9e27-415e1d78a93d",
           "type": "extrude",
-          "name": "Sensor -63 -96 \u2014 mounting boss",
+          "name": "Sensor -63 -96 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 31.68
@@ -212,7 +212,7 @@
         {
           "id": "d280eb32-6ba7-4b0a-b107-1929a3906fea",
           "type": "profile",
-          "name": "Sensor -63 -96 \u2014 passage \u2014 sketch",
+          "name": "Sensor -63 -96 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "d280eb32-6ba7-4b0a-b107-1929a3906fea",
@@ -225,7 +225,7 @@
         {
           "id": "c7d3b94b-8b64-4eb9-b5ac-9e08afa7a77a",
           "type": "extrude",
-          "name": "Sensor -63 -96 \u2014 passage",
+          "name": "Sensor -63 -96 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 110.88
@@ -236,7 +236,7 @@
         {
           "id": "c339262d-a6a3-43ea-a5e5-0e623ac699b9",
           "type": "profile",
-          "name": "Sensor -63 -96 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Sensor -63 -96 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c339262d-a6a3-43ea-a5e5-0e623ac699b9",
@@ -249,7 +249,7 @@
         {
           "id": "d4cebb70-3a52-4728-a44b-038f3a06f5d3",
           "type": "extrude",
-          "name": "Sensor -63 -96 \u2014 recessed mounting seat",
+          "name": "Sensor -63 -96 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -260,7 +260,7 @@
         {
           "id": "cfcd4771-9b80-416a-b53b-bd59f8630cac",
           "type": "profile",
-          "name": "Sensor -63 96 \u2014 mounting boss \u2014 sketch",
+          "name": "Sensor -63 96 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "cfcd4771-9b80-416a-b53b-bd59f8630cac",
@@ -273,7 +273,7 @@
         {
           "id": "0085dd9c-e1cb-4910-9769-bc6018b8972d",
           "type": "extrude",
-          "name": "Sensor -63 96 \u2014 mounting boss",
+          "name": "Sensor -63 96 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 31.68
@@ -284,7 +284,7 @@
         {
           "id": "38c53091-f1e2-4cf5-b1d1-ffb35ebfe4f9",
           "type": "profile",
-          "name": "Sensor -63 96 \u2014 passage \u2014 sketch",
+          "name": "Sensor -63 96 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "38c53091-f1e2-4cf5-b1d1-ffb35ebfe4f9",
@@ -297,7 +297,7 @@
         {
           "id": "18e0e686-1210-4245-a4b6-eada6d613813",
           "type": "extrude",
-          "name": "Sensor -63 96 \u2014 passage",
+          "name": "Sensor -63 96 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 110.88
@@ -308,7 +308,7 @@
         {
           "id": "51cd2fd9-18b4-401c-9d84-07f6b80674d8",
           "type": "profile",
-          "name": "Sensor -63 96 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Sensor -63 96 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "51cd2fd9-18b4-401c-9d84-07f6b80674d8",
@@ -321,7 +321,7 @@
         {
           "id": "d34f0725-a05a-420c-a954-10c93f1cee3a",
           "type": "extrude",
-          "name": "Sensor -63 96 \u2014 recessed mounting seat",
+          "name": "Sensor -63 96 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -332,7 +332,7 @@
         {
           "id": "0c954d12-b24d-40fd-a41c-962e7ddbe40d",
           "type": "profile",
-          "name": "Sensor 63 -96 \u2014 mounting boss \u2014 sketch",
+          "name": "Sensor 63 -96 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "0c954d12-b24d-40fd-a41c-962e7ddbe40d",
@@ -345,7 +345,7 @@
         {
           "id": "cb2f3fd1-3648-40e2-a38d-7cd41e48382b",
           "type": "extrude",
-          "name": "Sensor 63 -96 \u2014 mounting boss",
+          "name": "Sensor 63 -96 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 31.68
@@ -356,7 +356,7 @@
         {
           "id": "fe3c9e24-e06e-4d9b-b8ec-c46a6f4a9063",
           "type": "profile",
-          "name": "Sensor 63 -96 \u2014 passage \u2014 sketch",
+          "name": "Sensor 63 -96 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "fe3c9e24-e06e-4d9b-b8ec-c46a6f4a9063",
@@ -369,7 +369,7 @@
         {
           "id": "3444864a-5b81-410d-86fc-14590eeea5cb",
           "type": "extrude",
-          "name": "Sensor 63 -96 \u2014 passage",
+          "name": "Sensor 63 -96 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 110.88
@@ -380,7 +380,7 @@
         {
           "id": "a9637625-4ffb-4e7a-9e77-0d82a8071a32",
           "type": "profile",
-          "name": "Sensor 63 -96 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Sensor 63 -96 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a9637625-4ffb-4e7a-9e77-0d82a8071a32",
@@ -393,7 +393,7 @@
         {
           "id": "fe0417a6-190b-4561-b7c6-4a98368f9dab",
           "type": "extrude",
-          "name": "Sensor 63 -96 \u2014 recessed mounting seat",
+          "name": "Sensor 63 -96 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -404,7 +404,7 @@
         {
           "id": "ad3b0c81-82db-4813-9b18-806d10bf4072",
           "type": "profile",
-          "name": "Sensor 63 96 \u2014 mounting boss \u2014 sketch",
+          "name": "Sensor 63 96 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ad3b0c81-82db-4813-9b18-806d10bf4072",
@@ -417,7 +417,7 @@
         {
           "id": "c88aeb6b-869c-45ea-a78f-e6a8e1382de6",
           "type": "extrude",
-          "name": "Sensor 63 96 \u2014 mounting boss",
+          "name": "Sensor 63 96 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 31.68
@@ -428,7 +428,7 @@
         {
           "id": "16dbee08-de26-48fb-b51e-58919242300c",
           "type": "profile",
-          "name": "Sensor 63 96 \u2014 passage \u2014 sketch",
+          "name": "Sensor 63 96 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "16dbee08-de26-48fb-b51e-58919242300c",
@@ -441,7 +441,7 @@
         {
           "id": "63dad5e3-57d7-460c-a458-62a42d83001b",
           "type": "extrude",
-          "name": "Sensor 63 96 \u2014 passage",
+          "name": "Sensor 63 96 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 110.88
@@ -452,7 +452,7 @@
         {
           "id": "6de6e2e9-e1e8-4599-8b4f-b4a35ee81afc",
           "type": "profile",
-          "name": "Sensor 63 96 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Sensor 63 96 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "6de6e2e9-e1e8-4599-8b4f-b4a35ee81afc",
@@ -465,7 +465,7 @@
         {
           "id": "403efcdd-c2be-424b-a39b-b63314c93ee1",
           "type": "extrude",
-          "name": "Sensor 63 96 \u2014 recessed mounting seat",
+          "name": "Sensor 63 96 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -476,7 +476,7 @@
         {
           "id": "4e783c37-7632-4cda-95fd-ce4f9471c717",
           "type": "profile",
-          "name": "Left cooling duct 1 \u2014 mounting boss \u2014 sketch",
+          "name": "Left cooling duct 1 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4e783c37-7632-4cda-95fd-ce4f9471c717",
@@ -489,7 +489,7 @@
         {
           "id": "19581f3a-d910-4bf4-806d-5c2a5461d846",
           "type": "extrude",
-          "name": "Left cooling duct 1 \u2014 mounting boss",
+          "name": "Left cooling duct 1 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -500,7 +500,7 @@
         {
           "id": "7b1d6743-07dc-463e-aa35-fdac5cd327cf",
           "type": "profile",
-          "name": "Left cooling duct 1 \u2014 passage \u2014 sketch",
+          "name": "Left cooling duct 1 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "7b1d6743-07dc-463e-aa35-fdac5cd327cf",
@@ -513,7 +513,7 @@
         {
           "id": "8396ae29-5ca7-4de0-a969-0ed369518c3a",
           "type": "extrude",
-          "name": "Left cooling duct 1 \u2014 passage",
+          "name": "Left cooling duct 1 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -524,7 +524,7 @@
         {
           "id": "ba50c2c5-ca39-4305-adcb-42a25c848427",
           "type": "profile",
-          "name": "Left cooling duct 1 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Left cooling duct 1 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ba50c2c5-ca39-4305-adcb-42a25c848427",
@@ -537,7 +537,7 @@
         {
           "id": "a84f02c7-90e2-4bc3-92d4-21897ad162cf",
           "type": "extrude",
-          "name": "Left cooling duct 1 \u2014 recessed mounting seat",
+          "name": "Left cooling duct 1 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -548,7 +548,7 @@
         {
           "id": "cf71cce6-3162-49e3-a7a5-cf1ab1525ca9",
           "type": "profile",
-          "name": "Left cooling duct 2 \u2014 mounting boss \u2014 sketch",
+          "name": "Left cooling duct 2 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "cf71cce6-3162-49e3-a7a5-cf1ab1525ca9",
@@ -561,7 +561,7 @@
         {
           "id": "e4001aab-ee25-4f40-acfe-efaa5d0de227",
           "type": "extrude",
-          "name": "Left cooling duct 2 \u2014 mounting boss",
+          "name": "Left cooling duct 2 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -572,7 +572,7 @@
         {
           "id": "2207b059-1f9c-4511-a350-67a4af8657c7",
           "type": "profile",
-          "name": "Left cooling duct 2 \u2014 passage \u2014 sketch",
+          "name": "Left cooling duct 2 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "2207b059-1f9c-4511-a350-67a4af8657c7",
@@ -585,7 +585,7 @@
         {
           "id": "0dbff99a-0057-4adf-a61b-708634dc85db",
           "type": "extrude",
-          "name": "Left cooling duct 2 \u2014 passage",
+          "name": "Left cooling duct 2 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -596,7 +596,7 @@
         {
           "id": "f9d8b5ca-efb9-4d0e-b1cb-5731bc513e15",
           "type": "profile",
-          "name": "Left cooling duct 2 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Left cooling duct 2 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f9d8b5ca-efb9-4d0e-b1cb-5731bc513e15",
@@ -609,7 +609,7 @@
         {
           "id": "811d7444-f4d6-4bf8-a069-7ed5000bff4b",
           "type": "extrude",
-          "name": "Left cooling duct 2 \u2014 recessed mounting seat",
+          "name": "Left cooling duct 2 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -620,7 +620,7 @@
         {
           "id": "dde81d26-0c47-430c-9d8e-b11c2a128dad",
           "type": "profile",
-          "name": "Left cooling duct 3 \u2014 mounting boss \u2014 sketch",
+          "name": "Left cooling duct 3 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "dde81d26-0c47-430c-9d8e-b11c2a128dad",
@@ -633,7 +633,7 @@
         {
           "id": "0b016ce9-3ac8-4b82-a167-7e052ff044a0",
           "type": "extrude",
-          "name": "Left cooling duct 3 \u2014 mounting boss",
+          "name": "Left cooling duct 3 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -644,7 +644,7 @@
         {
           "id": "3c98e527-a273-4e87-aac6-f9d56fecc879",
           "type": "profile",
-          "name": "Left cooling duct 3 \u2014 passage \u2014 sketch",
+          "name": "Left cooling duct 3 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3c98e527-a273-4e87-aac6-f9d56fecc879",
@@ -657,7 +657,7 @@
         {
           "id": "1d9ee65c-6491-4f92-a6e4-9d0ce1efb7a8",
           "type": "extrude",
-          "name": "Left cooling duct 3 \u2014 passage",
+          "name": "Left cooling duct 3 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -668,7 +668,7 @@
         {
           "id": "78b5df14-0229-4377-a8a3-e1df25e83252",
           "type": "profile",
-          "name": "Left cooling duct 3 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Left cooling duct 3 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "78b5df14-0229-4377-a8a3-e1df25e83252",
@@ -681,7 +681,7 @@
         {
           "id": "94be78a0-5bfa-42ca-abed-4bc8e579f1b1",
           "type": "extrude",
-          "name": "Left cooling duct 3 \u2014 recessed mounting seat",
+          "name": "Left cooling duct 3 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -692,7 +692,7 @@
         {
           "id": "05a3001a-0d72-4f8d-9907-165f115522aa",
           "type": "profile",
-          "name": "Right cooling duct 1 \u2014 mounting boss \u2014 sketch",
+          "name": "Right cooling duct 1 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "05a3001a-0d72-4f8d-9907-165f115522aa",
@@ -705,7 +705,7 @@
         {
           "id": "005a18e6-cef0-4675-982c-3b4d51949b40",
           "type": "extrude",
-          "name": "Right cooling duct 1 \u2014 mounting boss",
+          "name": "Right cooling duct 1 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -716,7 +716,7 @@
         {
           "id": "9ccb83ea-984f-4cd6-9340-8988d9229dbb",
           "type": "profile",
-          "name": "Right cooling duct 1 \u2014 passage \u2014 sketch",
+          "name": "Right cooling duct 1 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "9ccb83ea-984f-4cd6-9340-8988d9229dbb",
@@ -729,7 +729,7 @@
         {
           "id": "e335b58b-ee1d-4b16-8e34-07d89c0d084a",
           "type": "extrude",
-          "name": "Right cooling duct 1 \u2014 passage",
+          "name": "Right cooling duct 1 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -740,7 +740,7 @@
         {
           "id": "ffc85b50-93a2-4175-86e9-4050bd52647e",
           "type": "profile",
-          "name": "Right cooling duct 1 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Right cooling duct 1 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ffc85b50-93a2-4175-86e9-4050bd52647e",
@@ -753,7 +753,7 @@
         {
           "id": "04dff65f-b45a-43f5-93f2-03643f44f2ea",
           "type": "extrude",
-          "name": "Right cooling duct 1 \u2014 recessed mounting seat",
+          "name": "Right cooling duct 1 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -764,7 +764,7 @@
         {
           "id": "142dfd50-88b5-4a3e-9d24-553dc4c21910",
           "type": "profile",
-          "name": "Right cooling duct 2 \u2014 mounting boss \u2014 sketch",
+          "name": "Right cooling duct 2 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "142dfd50-88b5-4a3e-9d24-553dc4c21910",
@@ -777,7 +777,7 @@
         {
           "id": "673ef246-57cf-433a-9793-fff8fbcd229c",
           "type": "extrude",
-          "name": "Right cooling duct 2 \u2014 mounting boss",
+          "name": "Right cooling duct 2 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -788,7 +788,7 @@
         {
           "id": "7bfcd4a3-8a14-4655-8ec9-108c13b563ad",
           "type": "profile",
-          "name": "Right cooling duct 2 \u2014 passage \u2014 sketch",
+          "name": "Right cooling duct 2 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "7bfcd4a3-8a14-4655-8ec9-108c13b563ad",
@@ -801,7 +801,7 @@
         {
           "id": "4109c864-317d-4712-8fc5-e87e7125e734",
           "type": "extrude",
-          "name": "Right cooling duct 2 \u2014 passage",
+          "name": "Right cooling duct 2 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -812,7 +812,7 @@
         {
           "id": "908af109-e327-4144-92d9-ca24fd496fc4",
           "type": "profile",
-          "name": "Right cooling duct 2 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Right cooling duct 2 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "908af109-e327-4144-92d9-ca24fd496fc4",
@@ -825,7 +825,7 @@
         {
           "id": "1dfc245e-c2bf-4e93-a8e9-5bdc0689bcf8",
           "type": "extrude",
-          "name": "Right cooling duct 2 \u2014 recessed mounting seat",
+          "name": "Right cooling duct 2 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -836,7 +836,7 @@
         {
           "id": "d5753486-3365-40c7-a75b-928b4776cf51",
           "type": "profile",
-          "name": "Right cooling duct 3 \u2014 mounting boss \u2014 sketch",
+          "name": "Right cooling duct 3 — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "d5753486-3365-40c7-a75b-928b4776cf51",
@@ -849,7 +849,7 @@
         {
           "id": "a5fe234f-6647-4c38-83fb-8f20b1d6b5c1",
           "type": "extrude",
-          "name": "Right cooling duct 3 \u2014 mounting boss",
+          "name": "Right cooling duct 3 — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 9.9
@@ -860,7 +860,7 @@
         {
           "id": "f2ad83f4-4671-4853-b20f-1661fdb5764c",
           "type": "profile",
-          "name": "Right cooling duct 3 \u2014 passage \u2014 sketch",
+          "name": "Right cooling duct 3 — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f2ad83f4-4671-4853-b20f-1661fdb5764c",
@@ -873,7 +873,7 @@
         {
           "id": "3f11ae8e-7b9a-4b5b-9ef6-c1acaff34b1b",
           "type": "extrude",
-          "name": "Right cooling duct 3 \u2014 passage",
+          "name": "Right cooling duct 3 — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 89.1
@@ -884,7 +884,7 @@
         {
           "id": "1d70aef9-ea3e-49a7-882a-81464b4f626a",
           "type": "profile",
-          "name": "Right cooling duct 3 \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Right cooling duct 3 — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1d70aef9-ea3e-49a7-882a-81464b4f626a",
@@ -897,7 +897,7 @@
         {
           "id": "af0636c9-7a72-457e-8693-a44d581aa686",
           "type": "extrude",
-          "name": "Right cooling duct 3 \u2014 recessed mounting seat",
+          "name": "Right cooling duct 3 — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 77.22
@@ -908,7 +908,7 @@
         {
           "id": "fdc7930b-812b-4e0a-b39a-39bfd38c929f",
           "type": "profile",
-          "name": "Front gasket seating plane \u2014 sketch",
+          "name": "Front gasket seating plane — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.61
@@ -938,7 +938,7 @@
         {
           "id": "3f7f9af5-be70-4d93-a07a-5cc730f43a29",
           "type": "profile",
-          "name": "Rear spherical wall \u2014 constrained meridian",
+          "name": "Rear spherical wall — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -960,7 +960,7 @@
         {
           "id": "10bf25ae-1819-4c2c-aa9e-9660320a9120",
           "type": "profile",
-          "name": "Left hub \u2014 mounting boss \u2014 sketch",
+          "name": "Left hub — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "10bf25ae-1819-4c2c-aa9e-9660320a9120",
@@ -973,7 +973,7 @@
         {
           "id": "885b07cf-3f43-4e48-a664-64950642fb43",
           "type": "extrude",
-          "name": "Left hub \u2014 mounting boss",
+          "name": "Left hub — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 12.87
@@ -984,7 +984,7 @@
         {
           "id": "5a20b1d6-6bd5-43f2-a79e-33a01658a565",
           "type": "profile",
-          "name": "Left hub \u2014 passage \u2014 sketch",
+          "name": "Left hub — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "5a20b1d6-6bd5-43f2-a79e-33a01658a565",
@@ -997,7 +997,7 @@
         {
           "id": "05926a80-aac7-498a-84d3-e0b90c6bab82",
           "type": "extrude",
-          "name": "Left hub \u2014 passage",
+          "name": "Left hub — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 46.53
@@ -1008,7 +1008,7 @@
         {
           "id": "48fe52c4-a744-4ff1-a17d-639e011c7f09",
           "type": "profile",
-          "name": "Right hub \u2014 mounting boss \u2014 sketch",
+          "name": "Right hub — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "48fe52c4-a744-4ff1-a17d-639e011c7f09",
@@ -1021,7 +1021,7 @@
         {
           "id": "b53e39e4-2741-45fe-b9f8-5bf1ed646821",
           "type": "extrude",
-          "name": "Right hub \u2014 mounting boss",
+          "name": "Right hub — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 12.87
@@ -1032,7 +1032,7 @@
         {
           "id": "fea037a1-a194-4061-b2df-d32c31c7614d",
           "type": "profile",
-          "name": "Right hub \u2014 passage \u2014 sketch",
+          "name": "Right hub — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "fea037a1-a194-4061-b2df-d32c31c7614d",
@@ -1045,7 +1045,7 @@
         {
           "id": "0b009d7b-5f1b-41e3-9d62-0c4be5cbb735",
           "type": "extrude",
-          "name": "Right hub \u2014 passage",
+          "name": "Right hub — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 46.53
@@ -1056,7 +1056,7 @@
         {
           "id": "45c4bd29-5cdb-495e-ba85-fa16a8fabb4e",
           "type": "profile",
-          "name": "Top grille \u2014 mounting boss \u2014 sketch",
+          "name": "Top grille — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "45c4bd29-5cdb-495e-ba85-fa16a8fabb4e",
@@ -1069,7 +1069,7 @@
         {
           "id": "50274003-b6ef-467c-8af5-2ccaa7231ce1",
           "type": "extrude",
-          "name": "Top grille \u2014 mounting boss",
+          "name": "Top grille — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 26.73
@@ -1080,7 +1080,7 @@
         {
           "id": "4d61d442-88ad-497d-b3c8-7dbd9c123881",
           "type": "profile",
-          "name": "Top grille \u2014 passage \u2014 sketch",
+          "name": "Top grille — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4d61d442-88ad-497d-b3c8-7dbd9c123881",
@@ -1093,7 +1093,7 @@
         {
           "id": "e7e7ab08-9a51-4756-bc68-573444d6b771",
           "type": "extrude",
-          "name": "Top grille \u2014 passage",
+          "name": "Top grille — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 45.54
@@ -1104,7 +1104,7 @@
         {
           "id": "2bf91285-4cf8-489c-ac35-a1eb12dae9b8",
           "type": "profile",
-          "name": "Antenna \u2014 mounting boss \u2014 sketch",
+          "name": "Antenna — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "2bf91285-4cf8-489c-ac35-a1eb12dae9b8",
@@ -1117,7 +1117,7 @@
         {
           "id": "0a1a26c2-8375-4a9a-96d8-be9bde8744bd",
           "type": "extrude",
-          "name": "Antenna \u2014 mounting boss",
+          "name": "Antenna — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 11.879999999999999
@@ -1128,7 +1128,7 @@
         {
           "id": "48323906-e107-4583-856a-8954e00d56e9",
           "type": "profile",
-          "name": "Antenna \u2014 passage \u2014 sketch",
+          "name": "Antenna — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "48323906-e107-4583-856a-8954e00d56e9",
@@ -1141,7 +1141,7 @@
         {
           "id": "db909d1d-1c9d-40e9-afac-ae843a157a0f",
           "type": "extrude",
-          "name": "Antenna \u2014 passage",
+          "name": "Antenna — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 55.44
@@ -1152,7 +1152,7 @@
         {
           "id": "1babf277-32d4-4f61-a6bd-390012e75869",
           "type": "profile",
-          "name": "Antenna \u2014 recessed mounting seat \u2014 sketch",
+          "name": "Antenna — recessed mounting seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1babf277-32d4-4f61-a6bd-390012e75869",
@@ -1165,7 +1165,7 @@
         {
           "id": "94560fc2-28cf-4f62-92e8-5f253985af16",
           "type": "extrude",
-          "name": "Antenna \u2014 recessed mounting seat",
+          "name": "Antenna — recessed mounting seat",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 41.58
@@ -1176,7 +1176,7 @@
         {
           "id": "9f2da946-74bc-463b-b5f0-95e08730a0d5",
           "type": "profile",
-          "name": "Rear service \u2014 mounting boss \u2014 sketch",
+          "name": "Rear service — mounting boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "9f2da946-74bc-463b-b5f0-95e08730a0d5",
@@ -1189,7 +1189,7 @@
         {
           "id": "0364150d-9138-4547-bd71-d8b9b8b0306a",
           "type": "extrude",
-          "name": "Rear service \u2014 mounting boss",
+          "name": "Rear service — mounting boss",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 11.879999999999999
@@ -1200,7 +1200,7 @@
         {
           "id": "a282be2f-f81f-406e-95b5-255f3caa10a4",
           "type": "profile",
-          "name": "Rear service \u2014 passage \u2014 sketch",
+          "name": "Rear service — passage — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a282be2f-f81f-406e-95b5-255f3caa10a4",
@@ -1213,7 +1213,7 @@
         {
           "id": "b15ea284-53c4-41dd-853b-79f390337c4f",
           "type": "extrude",
-          "name": "Rear service \u2014 passage",
+          "name": "Rear service — passage",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 28.71
@@ -1224,7 +1224,7 @@
         {
           "id": "12480c40-1fc6-4a9e-9b6e-3f3582c02cd2",
           "type": "profile",
-          "name": "Rear cover screw sockets \u2014 sketch",
+          "name": "Rear cover screw sockets — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "12480c40-1fc6-4a9e-9b6e-3f3582c02cd2",
@@ -1248,7 +1248,7 @@
         {
           "id": "4a16b657-3eb3-4dde-a4dc-4609e579cd49",
           "type": "profile",
-          "name": "Rear gasket seating plane \u2014 sketch",
+          "name": "Rear gasket seating plane — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -0.59
@@ -1278,7 +1278,7 @@
         {
           "id": "03d0ed1f-2807-4657-b3e6-168999fc03f5",
           "type": "profile",
-          "name": "Continuous gasket arc \u2014 sketch",
+          "name": "Continuous gasket arc — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -0.59
@@ -1308,7 +1308,7 @@
         {
           "id": "609c2ae4-b476-4ff8-b548-debbe43acfc4",
           "type": "profile",
-          "name": "Carrier turned section \u2014 constrained meridian",
+          "name": "Carrier turned section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -1330,7 +1330,7 @@
         {
           "id": "e44bf3e1-6fac-4d25-b9bd-f2e69ed12a16",
           "type": "profile",
-          "name": "Bezel mounting sockets \u2014 sketch",
+          "name": "Bezel mounting sockets — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e44bf3e1-6fac-4d25-b9bd-f2e69ed12a16",
@@ -1373,7 +1373,7 @@
         {
           "id": "3f2794be-26e3-4129-8b4e-467e79817001",
           "type": "profile",
-          "name": "Bezel annulus \u2014 sketch",
+          "name": "Bezel annulus — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3f2794be-26e3-4129-8b4e-467e79817001",
@@ -1397,7 +1397,7 @@
         {
           "id": "17b64b50-39f3-4015-b318-95573e4d54b3",
           "type": "profile",
-          "name": "Inner mounting web \u2014 sketch",
+          "name": "Inner mounting web — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "17b64b50-39f3-4015-b318-95573e4d54b3",
@@ -1421,7 +1421,7 @@
         {
           "id": "e33ee607-d78e-41ce-9f26-19313ef38352",
           "type": "profile",
-          "name": "Eight fixing holes \u2014 sketch",
+          "name": "Eight fixing holes — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e33ee607-d78e-41ce-9f26-19313ef38352",
@@ -1445,7 +1445,7 @@
         {
           "id": "bd56c87a-0622-42b5-8e85-200f34ae601d",
           "type": "profile",
-          "name": "Screw head recesses \u2014 sketch",
+          "name": "Screw head recesses — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "bd56c87a-0622-42b5-8e85-200f34ae601d",
@@ -1488,7 +1488,7 @@
         {
           "id": "e8569adb-b617-4781-8ee4-6718db6a07f5",
           "type": "profile",
-          "name": "Optical crown \u2014 constrained meridian",
+          "name": "Optical crown — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -1518,7 +1518,7 @@
         {
           "id": "6e72744f-c363-4510-9385-726cdadec945",
           "type": "profile",
-          "name": "Optic seal \u2014 sketch",
+          "name": "Optic seal — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "6e72744f-c363-4510-9385-726cdadec945",
@@ -1550,7 +1550,7 @@
         {
           "id": "56d982c7-c712-4aa7-bc36-ae17d3e73109",
           "type": "profile",
-          "name": "Retainer section \u2014 constrained meridian",
+          "name": "Retainer section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -1572,7 +1572,7 @@
         {
           "id": "a9989724-48c1-4e2e-a75e-7394b1b04653",
           "type": "profile",
-          "name": "Spanner recesses \u2014 sketch",
+          "name": "Spanner recesses — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a9989724-48c1-4e2e-a75e-7394b1b04653",
@@ -1615,7 +1615,7 @@
         {
           "id": "f675ef1d-417b-4527-8734-b651d017eca8",
           "type": "profile",
-          "name": "Shank \u2014 sketch",
+          "name": "Shank — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f675ef1d-417b-4527-8734-b651d017eca8",
@@ -1639,7 +1639,7 @@
         {
           "id": "17bee196-152a-4ba1-8541-8eb91cf70966",
           "type": "profile",
-          "name": "Head \u2014 sketch",
+          "name": "Head — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "17bee196-152a-4ba1-8541-8eb91cf70966",
@@ -1663,7 +1663,7 @@
         {
           "id": "a2ba892f-b279-4fba-9e11-2a95c94186fc",
           "type": "profile",
-          "name": "Hex socket \u2014 sketch",
+          "name": "Hex socket — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 9.51
@@ -1704,7 +1704,7 @@
         {
           "id": "5f725490-1d54-4db9-a04b-5d2cfd734807",
           "type": "profile",
-          "name": "Hub turned section \u2014 constrained meridian",
+          "name": "Hub turned section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -1726,7 +1726,7 @@
         {
           "id": "302b3d42-604a-49a4-8636-dd95bad8fc09",
           "type": "profile",
-          "name": "Cover screw sockets \u2014 sketch",
+          "name": "Cover screw sockets — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "302b3d42-604a-49a4-8636-dd95bad8fc09",
@@ -1769,7 +1769,7 @@
         {
           "id": "3314de76-f7a1-44c4-a33e-bfe2283ec6e9",
           "type": "profile",
-          "name": "Cover flange \u2014 sketch",
+          "name": "Cover flange — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3314de76-f7a1-44c4-a33e-bfe2283ec6e9",
@@ -1793,7 +1793,7 @@
         {
           "id": "1fb954d1-0c8c-4186-a320-e43f8acad4ff",
           "type": "profile",
-          "name": "Locating spigot \u2014 0.4 mm radial clearance \u2014 sketch",
+          "name": "Locating spigot — 0.4 mm radial clearance — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1fb954d1-0c8c-4186-a320-e43f8acad4ff",
@@ -1806,7 +1806,7 @@
         {
           "id": "c152a8c4-97c5-4b6c-8ce9-a48fca73f5dd",
           "type": "extrude",
-          "name": "Locating spigot \u2014 0.4 mm radial clearance",
+          "name": "Locating spigot — 0.4 mm radial clearance",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 3.96
@@ -1817,7 +1817,7 @@
         {
           "id": "b69d52f4-be80-4bfe-bbf1-44b056d97b44",
           "type": "profile",
-          "name": "Raised center cap \u2014 sketch",
+          "name": "Raised center cap — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "b69d52f4-be80-4bfe-bbf1-44b056d97b44",
@@ -1841,7 +1841,7 @@
         {
           "id": "8590ac7f-8951-4d57-ad39-fb536d5896f9",
           "type": "profile",
-          "name": "Front recess \u2014 sketch",
+          "name": "Front recess — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "8590ac7f-8951-4d57-ad39-fb536d5896f9",
@@ -1865,7 +1865,7 @@
         {
           "id": "f300dd31-c02f-4fcd-93c1-b9aa728377eb",
           "type": "profile",
-          "name": "Cover fixing holes \u2014 sketch",
+          "name": "Cover fixing holes — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f300dd31-c02f-4fcd-93c1-b9aa728377eb",
@@ -1889,7 +1889,7 @@
         {
           "id": "29288226-ed3c-40cd-ba56-82003ee8849f",
           "type": "profile",
-          "name": "Radial cooling pockets \u2014 sketch",
+          "name": "Radial cooling pockets — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 12.01
@@ -1930,7 +1930,7 @@
         {
           "id": "e2bfaca4-39e2-43ad-94af-1fe93c90a124",
           "type": "profile",
-          "name": "Hub seal \u2014 sketch",
+          "name": "Hub seal — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e2bfaca4-39e2-43ad-94af-1fe93c90a124",
@@ -1954,7 +1954,7 @@
         {
           "id": "c80c71b1-60b0-4999-8c17-d4519ee92795",
           "type": "profile",
-          "name": "Seal bolt clearances \u2014 sketch",
+          "name": "Seal bolt clearances — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c80c71b1-60b0-4999-8c17-d4519ee92795",
@@ -1986,7 +1986,7 @@
         {
           "id": "dd2b8cf7-d529-4fc2-a3d0-7ecca31c7459",
           "type": "profile",
-          "name": "Locating tube and barrel \u2014 sketch",
+          "name": "Locating tube and barrel — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "dd2b8cf7-d529-4fc2-a3d0-7ecca31c7459",
@@ -2010,7 +2010,7 @@
         {
           "id": "6f3b19e5-633d-4b5e-9049-185907a86b7e",
           "type": "profile",
-          "name": "Recessed mounting flange \u2014 sketch",
+          "name": "Recessed mounting flange — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "6f3b19e5-633d-4b5e-9049-185907a86b7e",
@@ -2034,7 +2034,7 @@
         {
           "id": "c8ccaf8b-1934-4734-98b2-8a4884d16b9f",
           "type": "profile",
-          "name": "Outlet lip \u2014 sketch",
+          "name": "Outlet lip — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c8ccaf8b-1934-4734-98b2-8a4884d16b9f",
@@ -2058,7 +2058,7 @@
         {
           "id": "60c1b357-69eb-453e-b0a5-9a499b0e6ade",
           "type": "profile",
-          "name": "Recessed screen seat \u2014 sketch",
+          "name": "Recessed screen seat — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "60c1b357-69eb-453e-b0a5-9a499b0e6ade",
@@ -2082,7 +2082,7 @@
         {
           "id": "be7ec804-c87e-473e-8697-cefa48cc279b",
           "type": "profile",
-          "name": "Rear barrel relief groove \u2014 sketch",
+          "name": "Rear barrel relief groove — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "be7ec804-c87e-473e-8697-cefa48cc279b",
@@ -2106,7 +2106,7 @@
         {
           "id": "ac7243af-c1ee-42f4-b5fe-35d365abf6d9",
           "type": "profile",
-          "name": "Front barrel relief groove \u2014 sketch",
+          "name": "Front barrel relief groove — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ac7243af-c1ee-42f4-b5fe-35d365abf6d9",
@@ -2130,7 +2130,7 @@
         {
           "id": "c3602b25-5f10-430f-aa38-eb4e813eedb4",
           "type": "profile",
-          "name": "Flange mounting holes \u2014 sketch",
+          "name": "Flange mounting holes — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c3602b25-5f10-430f-aa38-eb4e813eedb4",
@@ -2173,7 +2173,7 @@
         {
           "id": "03447e36-68e4-45f9-9d18-e7333029bfdc",
           "type": "profile",
-          "name": "Screen disk \u2014 sketch",
+          "name": "Screen disk — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "03447e36-68e4-45f9-9d18-e7333029bfdc",
@@ -2197,7 +2197,7 @@
         {
           "id": "eef90bda-d7e7-40bb-b252-1d7c0eef0d72",
           "type": "profile",
-          "name": "Six airflow holes \u2014 sketch",
+          "name": "Six airflow holes — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "eef90bda-d7e7-40bb-b252-1d7c0eef0d72",
@@ -2221,7 +2221,7 @@
         {
           "id": "3912ac0f-e26a-42f2-8612-138509ab9a20",
           "type": "profile",
-          "name": "Center airflow hole \u2014 sketch",
+          "name": "Center airflow hole — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3912ac0f-e26a-42f2-8612-138509ab9a20",
@@ -2253,7 +2253,7 @@
         {
           "id": "f91cab92-8044-46d1-819d-238bc0e5b34a",
           "type": "profile",
-          "name": "Housing base \u2014 sketch",
+          "name": "Housing base — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f91cab92-8044-46d1-819d-238bc0e5b34a",
@@ -2277,7 +2277,7 @@
         {
           "id": "81a6ed09-e497-4532-92bd-715696997bf8",
           "type": "profile",
-          "name": "Sensor face \u2014 sketch",
+          "name": "Sensor face — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "81a6ed09-e497-4532-92bd-715696997bf8",
@@ -2301,7 +2301,7 @@
         {
           "id": "acc32aab-a622-4b66-80bb-e90c51e9ce24",
           "type": "profile",
-          "name": "Window pocket \u2014 sketch",
+          "name": "Window pocket — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "acc32aab-a622-4b66-80bb-e90c51e9ce24",
@@ -2325,7 +2325,7 @@
         {
           "id": "eeff98c2-bab3-4073-9db2-3c3c63f53a55",
           "type": "profile",
-          "name": "Cable recess \u2014 sketch",
+          "name": "Cable recess — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "eeff98c2-bab3-4073-9db2-3c3c63f53a55",
@@ -2349,7 +2349,7 @@
         {
           "id": "e9965f11-8371-45b9-8f20-8d06c2217233",
           "type": "profile",
-          "name": "Sensor fastener recesses \u2014 sketch",
+          "name": "Sensor fastener recesses — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e9965f11-8371-45b9-8f20-8d06c2217233",
@@ -2392,7 +2392,7 @@
         {
           "id": "b3a72dc8-f328-42e9-8065-384666826c9a",
           "type": "profile",
-          "name": "Small optical crown \u2014 constrained meridian",
+          "name": "Small optical crown — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2422,7 +2422,7 @@
         {
           "id": "ad7dab9f-4c5a-4f40-ba48-2b46ced9e338",
           "type": "profile",
-          "name": "Vent frame section \u2014 constrained meridian",
+          "name": "Vent frame section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2444,7 +2444,7 @@
         {
           "id": "c5a41c4c-1522-4d3c-89df-91a1e66224ff",
           "type": "profile",
-          "name": "Grille screw holes \u2014 sketch",
+          "name": "Grille screw holes — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c5a41c4c-1522-4d3c-89df-91a1e66224ff",
@@ -2487,7 +2487,7 @@
         {
           "id": "7c9be7db-48ea-409e-890c-0b762e5de6ea",
           "type": "profile",
-          "name": "Grille disk \u2014 sketch",
+          "name": "Grille disk — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "7c9be7db-48ea-409e-890c-0b762e5de6ea",
@@ -2511,7 +2511,7 @@
         {
           "id": "dcbff333-24de-467e-afac-a64ebafa4c25",
           "type": "profile",
-          "name": "Nine airflow slots \u2014 sketch",
+          "name": "Nine airflow slots — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 2.01
@@ -2541,7 +2541,7 @@
         {
           "id": "4e637c2f-c369-4dea-b45d-87c6fff0dca7",
           "type": "profile",
-          "name": "Base flange \u2014 sketch",
+          "name": "Base flange — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4e637c2f-c369-4dea-b45d-87c6fff0dca7",
@@ -2565,7 +2565,7 @@
         {
           "id": "8b029a8f-b00a-48a5-967f-23a6cf735d94",
           "type": "profile",
-          "name": "Pedestal \u2014 sketch",
+          "name": "Pedestal — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "8b029a8f-b00a-48a5-967f-23a6cf735d94",
@@ -2589,7 +2589,7 @@
         {
           "id": "9265a347-2684-48ba-acc4-c4a337a4619f",
           "type": "profile",
-          "name": "Mast socket \u2014 sketch",
+          "name": "Mast socket — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "9265a347-2684-48ba-acc4-c4a337a4619f",
@@ -2613,7 +2613,7 @@
         {
           "id": "d2ee3ac8-59b4-4f58-b55e-cab6bad51eb6",
           "type": "profile",
-          "name": "Base screw pockets \u2014 sketch",
+          "name": "Base screw pockets — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "d2ee3ac8-59b4-4f58-b55e-cab6bad51eb6",
@@ -2645,7 +2645,7 @@
         {
           "id": "8aea532e-847f-4946-aefc-e773e859f1f5",
           "type": "profile",
-          "name": "Mast axial section \u2014 constrained meridian",
+          "name": "Mast axial section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2675,7 +2675,7 @@
         {
           "id": "06d2472c-2790-4d15-8ec9-a4734d0e88a7",
           "type": "profile",
-          "name": "Rounded cap section \u2014 constrained meridian",
+          "name": "Rounded cap section — constrained meridian",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2697,7 +2697,7 @@
         {
           "id": "f86506ed-7742-4aaf-9c8e-7ba47963ef00",
           "type": "profile",
-          "name": "Blind mast socket \u2014 sketch",
+          "name": "Blind mast socket — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f86506ed-7742-4aaf-9c8e-7ba47963ef00",
@@ -2729,7 +2729,7 @@
         {
           "id": "54d8e017-3653-46fd-8679-a8ddea1f3cd4",
           "type": "profile",
-          "name": "Cover flange \u2014 sketch",
+          "name": "Cover flange — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "54d8e017-3653-46fd-8679-a8ddea1f3cd4",
@@ -2753,7 +2753,7 @@
         {
           "id": "ad872cc5-29c3-449c-a6ce-19a0cf83acda",
           "type": "profile",
-          "name": "Location spigot \u2014 sketch",
+          "name": "Location spigot — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ad872cc5-29c3-449c-a6ce-19a0cf83acda",
@@ -2777,7 +2777,7 @@
         {
           "id": "0949c782-beb0-45a3-b2a9-d40b5288e7c7",
           "type": "profile",
-          "name": "Recessed center \u2014 sketch",
+          "name": "Recessed center — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "0949c782-beb0-45a3-b2a9-d40b5288e7c7",
@@ -2801,7 +2801,7 @@
         {
           "id": "ccb98eae-6aae-4f7c-8794-3b261009b48e",
           "type": "profile",
-          "name": "Service cover bolts \u2014 sketch",
+          "name": "Service cover bolts — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ccb98eae-6aae-4f7c-8794-3b261009b48e",
@@ -2844,7 +2844,7 @@
         {
           "id": "d18794f2-05a8-4b77-a2a4-446290c07444",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 1",
+          "name": "Fuselage stations — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -134.99
@@ -2855,7 +2855,7 @@
         {
           "id": "28fb0206-0262-4e3e-9d59-d99d4c7644ad",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 2",
+          "name": "Fuselage stations — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -89.99
@@ -2866,7 +2866,7 @@
         {
           "id": "80020888-7423-413b-8f1e-69742e0994da",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 3",
+          "name": "Fuselage stations — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2877,7 +2877,7 @@
         {
           "id": "76357b55-963e-4898-ba6f-0cef35e473f6",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 4",
+          "name": "Fuselage stations — station 4",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 100.01
@@ -2888,7 +2888,7 @@
         {
           "id": "a732b59a-1024-4acb-85de-f668ef39a252",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 5",
+          "name": "Fuselage stations — station 5",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 170.01
@@ -2910,7 +2910,7 @@
         {
           "id": "cb423ed3-34d6-4463-8b36-cb6949362c58",
           "type": "profile",
-          "name": "Cockpit opening \u2014 sketch",
+          "name": "Cockpit opening — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 90.01
@@ -2932,7 +2932,7 @@
         {
           "id": "0b9f6729-160b-4d5d-9117-109e9051cc69",
           "type": "profile",
-          "name": "Wing mount counterbores \u2014 centers",
+          "name": "Wing mount counterbores — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "0b9f6729-160b-4d5d-9117-109e9051cc69",
@@ -2964,7 +2964,7 @@
         {
           "id": "3839580d-370e-45cb-b564-615172ce8dc1",
           "type": "profile",
-          "name": "Airfoil loft \u2014 station 1",
+          "name": "Airfoil loft — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -2975,7 +2975,7 @@
         {
           "id": "2b8e5046-92eb-4dc1-bf3f-48beb6bf7aea",
           "type": "profile",
-          "name": "Airfoil loft \u2014 station 2",
+          "name": "Airfoil loft — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 95.01
@@ -2986,7 +2986,7 @@
         {
           "id": "f857c739-061a-42d4-972c-5c73d63f1bfd",
           "type": "profile",
-          "name": "Airfoil loft \u2014 station 3",
+          "name": "Airfoil loft — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 190.01
@@ -3008,7 +3008,7 @@
         {
           "id": "f41fe928-5d06-4d45-bf3d-5778f343ca84",
           "type": "profile",
-          "name": "Wing root fixing \u2014 centers",
+          "name": "Wing root fixing — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f41fe928-5d06-4d45-bf3d-5778f343ca84",
@@ -3040,7 +3040,7 @@
         {
           "id": "08a5b73e-ae38-4de3-9d0f-a7bddf480937",
           "type": "profile",
-          "name": "Starboard airfoil loft \u2014 station 1",
+          "name": "Starboard airfoil loft — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3051,7 +3051,7 @@
         {
           "id": "6c0fa585-5e55-455a-8bae-7c620e90cfad",
           "type": "profile",
-          "name": "Starboard airfoil loft \u2014 station 2",
+          "name": "Starboard airfoil loft — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -94.99
@@ -3062,7 +3062,7 @@
         {
           "id": "2a775d04-8cbe-4640-a4b5-d2cb2d83e27c",
           "type": "profile",
-          "name": "Starboard airfoil loft \u2014 station 3",
+          "name": "Starboard airfoil loft — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -189.99
@@ -3084,7 +3084,7 @@
         {
           "id": "b975b114-f0ca-4c6f-818a-5f74d7003e83",
           "type": "profile",
-          "name": "Starboard wing root fixing \u2014 centers",
+          "name": "Starboard wing root fixing — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "b975b114-f0ca-4c6f-818a-5f74d7003e83",
@@ -3116,7 +3116,7 @@
         {
           "id": "a51455d8-3956-4ff4-9e03-9dcc7d203026",
           "type": "profile",
-          "name": "Tapered aileron \u2014 sketch",
+          "name": "Tapered aileron — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3146,7 +3146,7 @@
         {
           "id": "cb6bcc2b-e886-43bf-9b79-c93e47ca89f6",
           "type": "profile",
-          "name": "Tail planform \u2014 sketch",
+          "name": "Tail planform — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3187,7 +3187,7 @@
         {
           "id": "9be13380-33ec-4083-8eab-4dff89ee9b46",
           "type": "profile",
-          "name": "Fin profile \u2014 sketch",
+          "name": "Fin profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -1.59
@@ -3217,7 +3217,7 @@
         {
           "id": "80d8e9d6-0ee2-43cb-9220-6a1e1aee5da5",
           "type": "profile",
-          "name": "Canopy crown \u2014 station 1",
+          "name": "Canopy crown — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3228,7 +3228,7 @@
         {
           "id": "3d659a9f-9b81-4032-a7a0-40b454970106",
           "type": "profile",
-          "name": "Canopy crown \u2014 station 2",
+          "name": "Canopy crown — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 12.01
@@ -3239,7 +3239,7 @@
         {
           "id": "79f4b5d1-ec0d-4f85-8f73-778e3978fd55",
           "type": "profile",
-          "name": "Canopy crown \u2014 station 3",
+          "name": "Canopy crown — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 20.01
@@ -3269,7 +3269,7 @@
         {
           "id": "d9a3cdd9-f11d-40f8-9055-dc9b7d33bb0f",
           "type": "profile",
-          "name": "Seat cushion \u2014 sketch",
+          "name": "Seat cushion — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3291,7 +3291,7 @@
         {
           "id": "d22fe128-9ad7-4d35-aa4d-27d878883a5a",
           "type": "profile",
-          "name": "Seat back \u2014 sketch",
+          "name": "Seat back — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 5.01
@@ -3321,7 +3321,7 @@
         {
           "id": "dcfdc3ce-63b3-4d40-a9df-e19a52870102",
           "type": "profile",
-          "name": "Spinner nose \u2014 section",
+          "name": "Spinner nose — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3351,7 +3351,7 @@
         {
           "id": "069c7065-ca99-4a39-8e62-76ab2681f645",
           "type": "profile",
-          "name": "Hub disk \u2014 sketch",
+          "name": "Hub disk — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "069c7065-ca99-4a39-8e62-76ab2681f645",
@@ -3375,7 +3375,7 @@
         {
           "id": "8098e5ea-c22a-4935-8a32-6d02a253c3b5",
           "type": "profile",
-          "name": "Hub bolts \u2014 centers",
+          "name": "Hub bolts — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "8098e5ea-c22a-4935-8a32-6d02a253c3b5",
@@ -3407,7 +3407,7 @@
         {
           "id": "c294045d-3899-4c85-9451-11d8017d5605",
           "type": "profile",
-          "name": "Blade twist \u2014 station 1",
+          "name": "Blade twist — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3418,7 +3418,7 @@
         {
           "id": "7261c72a-12db-48f3-8cf5-58833c529f16",
           "type": "profile",
-          "name": "Blade twist \u2014 station 2",
+          "name": "Blade twist — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 35.01
@@ -3429,7 +3429,7 @@
         {
           "id": "0fe80b3d-cc98-4183-a8aa-c6b63efdd8bf",
           "type": "profile",
-          "name": "Blade twist \u2014 station 3",
+          "name": "Blade twist — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 70.01
@@ -3459,7 +3459,7 @@
         {
           "id": "e2938cfa-57fb-4dce-b7f0-57c708715eca",
           "type": "profile",
-          "name": "Round strut sweep \u2014 section",
+          "name": "Round strut sweep — section",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e2938cfa-57fb-4dce-b7f0-57c708715eca",
@@ -3472,7 +3472,7 @@
         {
           "id": "37874511-030d-4e74-9814-8ec00a276660",
           "type": "profile",
-          "name": "Round strut sweep \u2014 path",
+          "name": "Round strut sweep — path",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3502,7 +3502,7 @@
         {
           "id": "83d75117-d5a8-41a1-8c11-e39268982165",
           "type": "profile",
-          "name": "Tire section \u2014 section",
+          "name": "Tire section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3532,7 +3532,7 @@
         {
           "id": "5742006c-6a9f-400f-a727-fc7f5d5f89c0",
           "type": "profile",
-          "name": "Wheel rim \u2014 sketch",
+          "name": "Wheel rim — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "5742006c-6a9f-400f-a727-fc7f5d5f89c0",
@@ -3556,7 +3556,7 @@
         {
           "id": "2295908d-85b3-492b-b31f-22d331c272c0",
           "type": "profile",
-          "name": "Hub lightening holes \u2014 centers",
+          "name": "Hub lightening holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "2295908d-85b3-492b-b31f-22d331c272c0",
@@ -3588,7 +3588,7 @@
         {
           "id": "39e6ca8b-54b3-4e9a-b388-cb9c71cc1539",
           "type": "profile",
-          "name": "Tail skid sweep \u2014 section",
+          "name": "Tail skid sweep — section",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "39e6ca8b-54b3-4e9a-b388-cb9c71cc1539",
@@ -3601,7 +3601,7 @@
         {
           "id": "7a50944c-34c9-4cd2-9d1e-f54cebc27f3e",
           "type": "profile",
-          "name": "Tail skid sweep \u2014 path",
+          "name": "Tail skid sweep — path",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3631,7 +3631,7 @@
         {
           "id": "c7bd7aa9-b0ca-4890-b8d0-a3b22fb98529",
           "type": "profile",
-          "name": "Forged outline \u2014 sketch",
+          "name": "Forged outline — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3664,7 +3664,7 @@
         {
           "id": "1cc93c33-bf5e-4774-aa9d-94f97f35c1e4",
           "type": "profile",
-          "name": "Handle relief front \u2014 sketch",
+          "name": "Handle relief front — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 12.01
@@ -3686,7 +3686,7 @@
         {
           "id": "d4310c4a-b72e-4721-91b6-ddfafa35f970",
           "type": "profile",
-          "name": "Jaw guide \u2014 sketch",
+          "name": "Jaw guide — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 12.01
@@ -3708,7 +3708,7 @@
         {
           "id": "f726dd4a-78ad-401b-a45c-2f34217bf9ab",
           "type": "profile",
-          "name": "Adjustment roller window \u2014 sketch",
+          "name": "Adjustment roller window — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 12.01
@@ -3730,7 +3730,7 @@
         {
           "id": "3b9e27b5-18ba-4060-9c1b-6f06b837b0dc",
           "type": "profile",
-          "name": "Hanging eye \u2014 through hole \u2014 centers",
+          "name": "Hanging eye — through hole — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3b9e27b5-18ba-4060-9c1b-6f06b837b0dc",
@@ -3743,7 +3743,7 @@
         {
           "id": "5d58a4f7-7783-4af7-b6b7-bf86cab652a6",
           "type": "hole",
-          "name": "Hanging eye \u2014 through hole",
+          "name": "Hanging eye — through hole",
           "tool": "aether_cad_feature_update",
           "change": {
             "depthMillimeters": 11.879999999999999
@@ -3762,7 +3762,7 @@
         {
           "id": "ba755aab-ea4c-4f3f-bc09-4bc10ba86f68",
           "type": "profile",
-          "name": "Jaw shoulder \u2014 sketch",
+          "name": "Jaw shoulder — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3784,7 +3784,7 @@
         {
           "id": "8e2e64ca-e76a-4f2d-98f6-f11f4447a1e0",
           "type": "profile",
-          "name": "Guide tongue \u2014 sketch",
+          "name": "Guide tongue — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 3.4099999999999997
@@ -3806,7 +3806,7 @@
         {
           "id": "4719bba8-a809-46d8-b312-1c6c84ce5b71",
           "type": "profile",
-          "name": "Rack tooth gaps \u2014 sketch",
+          "name": "Rack tooth gaps — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 8.209999999999999
@@ -3847,7 +3847,7 @@
         {
           "id": "46761401-5a4c-478e-8427-d82e62d0d9a4",
           "type": "profile",
-          "name": "Turned roller \u2014 section",
+          "name": "Turned roller — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -3869,7 +3869,7 @@
         {
           "id": "4c893a60-f0e4-431c-8fd7-ee1be96a5925",
           "type": "profile",
-          "name": "Grip groove 1 \u2014 sketch",
+          "name": "Grip groove 1 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4c893a60-f0e4-431c-8fd7-ee1be96a5925",
@@ -3893,7 +3893,7 @@
         {
           "id": "1e7b7209-a999-48f2-bcf8-a68bbd40d901",
           "type": "profile",
-          "name": "Grip groove 2 \u2014 sketch",
+          "name": "Grip groove 2 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1e7b7209-a999-48f2-bcf8-a68bbd40d901",
@@ -3917,7 +3917,7 @@
         {
           "id": "35f2830c-c83d-4b69-98a2-a22a534837cc",
           "type": "profile",
-          "name": "Grip groove 3 \u2014 sketch",
+          "name": "Grip groove 3 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "35f2830c-c83d-4b69-98a2-a22a534837cc",
@@ -3941,7 +3941,7 @@
         {
           "id": "9f48c949-aaab-43a4-91ee-85a0dabc7add",
           "type": "profile",
-          "name": "Grip groove 4 \u2014 sketch",
+          "name": "Grip groove 4 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "9f48c949-aaab-43a4-91ee-85a0dabc7add",
@@ -3965,7 +3965,7 @@
         {
           "id": "5f9f65b6-157c-4f4c-b985-8a55dd79ea57",
           "type": "profile",
-          "name": "Grip groove 5 \u2014 sketch",
+          "name": "Grip groove 5 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "5f9f65b6-157c-4f4c-b985-8a55dd79ea57",
@@ -3989,7 +3989,7 @@
         {
           "id": "d8acb3d7-2627-4bfe-a0f4-f84a5ffa67c9",
           "type": "profile",
-          "name": "Grip groove 6 \u2014 sketch",
+          "name": "Grip groove 6 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "d8acb3d7-2627-4bfe-a0f4-f84a5ffa67c9",
@@ -4032,7 +4032,7 @@
         {
           "id": "ed96383f-ae65-4d02-9e4f-c657ff08980a",
           "type": "profile",
-          "name": "Shaft \u2014 sketch",
+          "name": "Shaft — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ed96383f-ae65-4d02-9e4f-c657ff08980a",
@@ -4056,7 +4056,7 @@
         {
           "id": "d6c581c4-468f-47e9-9dc8-89ecdd9b26c0",
           "type": "profile",
-          "name": "Retaining head \u2014 sketch",
+          "name": "Retaining head — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "d6c581c4-468f-47e9-9dc8-89ecdd9b26c0",
@@ -4088,7 +4088,7 @@
         {
           "id": "3c9636c5-92b1-4212-930c-cc6e429e0a3e",
           "type": "profile",
-          "name": "Molded grip \u2014 sketch",
+          "name": "Molded grip — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4118,7 +4118,7 @@
         {
           "id": "5bc8e7ee-29a0-4c52-90f0-21d6a08dab92",
           "type": "profile",
-          "name": "Scale index \u2014 sketch",
+          "name": "Scale index — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4148,7 +4148,7 @@
         {
           "id": "c1382800-5ce7-4685-8f75-f213636a6ec3",
           "type": "profile",
-          "name": "Body loft \u2014 station 1",
+          "name": "Body loft — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -159.99
@@ -4159,7 +4159,7 @@
         {
           "id": "706ae1f1-2c5b-4c46-8627-88806cc0780b",
           "type": "profile",
-          "name": "Body loft \u2014 station 2",
+          "name": "Body loft — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -119.99
@@ -4170,7 +4170,7 @@
         {
           "id": "da5e0cef-7921-49e9-ba13-99f3a0cc6511",
           "type": "profile",
-          "name": "Body loft \u2014 station 3",
+          "name": "Body loft — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4181,7 +4181,7 @@
         {
           "id": "7321dd33-2363-4a08-93a4-7a926936d6cd",
           "type": "profile",
-          "name": "Body loft \u2014 station 4",
+          "name": "Body loft — station 4",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 110.01
@@ -4192,7 +4192,7 @@
         {
           "id": "59aa3516-387b-4084-bf38-bbd0e37b3b29",
           "type": "profile",
-          "name": "Body loft \u2014 station 5",
+          "name": "Body loft — station 5",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 155.01
@@ -4214,7 +4214,7 @@
         {
           "id": "f2038368-c9e6-4a36-a7c6-2a52073717b8",
           "type": "profile",
-          "name": "Cabin pocket \u2014 sketch",
+          "name": "Cabin pocket — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 95.01
@@ -4236,7 +4236,7 @@
         {
           "id": "4520ce85-45d0-4a60-b90b-25023c68310b",
           "type": "profile",
-          "name": "Wheel arches \u2014 sketch",
+          "name": "Wheel arches — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4520ce85-45d0-4a60-b90b-25023c68310b",
@@ -4260,7 +4260,7 @@
         {
           "id": "756429f9-2647-4644-b40e-e86409840153",
           "type": "profile",
-          "name": "Hood panel recess \u2014 sketch",
+          "name": "Hood panel recess — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 80.01
@@ -4282,7 +4282,7 @@
         {
           "id": "7f87d5e4-8c9c-40ee-a0d1-c140d3888939",
           "type": "profile",
-          "name": "Rear deck recess \u2014 sketch",
+          "name": "Rear deck recess — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 80.01
@@ -4312,7 +4312,7 @@
         {
           "id": "d365afce-54b2-4226-8e9b-f1f57aa8bcbb",
           "type": "profile",
-          "name": "Floor plate \u2014 sketch",
+          "name": "Floor plate — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4334,7 +4334,7 @@
         {
           "id": "4ede3838-24ae-421d-84bd-339a82a02c60",
           "type": "profile",
-          "name": "Chassis screw counterbores \u2014 centers",
+          "name": "Chassis screw counterbores — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4ede3838-24ae-421d-84bd-339a82a02c60",
@@ -4366,7 +4366,7 @@
         {
           "id": "e401ae37-73f3-4492-9763-7bdf5d2dc521",
           "type": "profile",
-          "name": "Hood skin \u2014 sketch",
+          "name": "Hood skin — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4388,7 +4388,7 @@
         {
           "id": "cd807be2-9046-4d5a-8fb7-4dad7efa18bb",
           "type": "profile",
-          "name": "Hood vent slots \u2014 sketch",
+          "name": "Hood vent slots — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 2.51
@@ -4418,7 +4418,7 @@
         {
           "id": "80fa511d-a845-4820-b75e-8f632b1a8d9b",
           "type": "profile",
-          "name": "Rear deck \u2014 sketch",
+          "name": "Rear deck — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4448,7 +4448,7 @@
         {
           "id": "d1ca450e-65d3-40c4-9935-8576c146cc45",
           "type": "profile",
-          "name": "Tire section \u2014 section",
+          "name": "Tire section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4470,7 +4470,7 @@
         {
           "id": "a87d64b6-9a70-4de7-9333-f97b9a74b358",
           "type": "profile",
-          "name": "Tread circumferential groove 4.5 \u2014 sketch",
+          "name": "Tread circumferential groove 4.5 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a87d64b6-9a70-4de7-9333-f97b9a74b358",
@@ -4494,7 +4494,7 @@
         {
           "id": "43675aed-ed80-41c5-8731-aedb974fd6d5",
           "type": "profile",
-          "name": "Tread circumferential groove 10.5 \u2014 sketch",
+          "name": "Tread circumferential groove 10.5 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "43675aed-ed80-41c5-8731-aedb974fd6d5",
@@ -4518,7 +4518,7 @@
         {
           "id": "738317f0-7ea9-40d8-a4bc-9b30b944b728",
           "type": "profile",
-          "name": "Tread circumferential groove 16.5 \u2014 sketch",
+          "name": "Tread circumferential groove 16.5 — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "738317f0-7ea9-40d8-a4bc-9b30b944b728",
@@ -4550,7 +4550,7 @@
         {
           "id": "3103ee3b-1dcf-44c2-a47e-68eec3c03c2f",
           "type": "profile",
-          "name": "Wheel barrel \u2014 sketch",
+          "name": "Wheel barrel — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "3103ee3b-1dcf-44c2-a47e-68eec3c03c2f",
@@ -4574,7 +4574,7 @@
         {
           "id": "2219c5a0-7790-4718-aaf0-8cbae5eb630e",
           "type": "profile",
-          "name": "Front wheel web \u2014 sketch",
+          "name": "Front wheel web — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "2219c5a0-7790-4718-aaf0-8cbae5eb630e",
@@ -4598,7 +4598,7 @@
         {
           "id": "87c2de4e-ffd2-46c3-8d04-dadb9b4f91d2",
           "type": "profile",
-          "name": "Wheel mounting counterbores \u2014 centers",
+          "name": "Wheel mounting counterbores — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "87c2de4e-ffd2-46c3-8d04-dadb9b4f91d2",
@@ -4622,7 +4622,7 @@
         {
           "id": "5c88cf0b-a28a-4d06-be8b-f6231bfccb14",
           "type": "profile",
-          "name": "Five spoke windows \u2014 sketch",
+          "name": "Five spoke windows — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 22.01
@@ -4663,7 +4663,7 @@
         {
           "id": "a4a55e72-6981-4dfc-a451-c109d0fd9f34",
           "type": "profile",
-          "name": "Brake disk \u2014 sketch",
+          "name": "Brake disk — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a4a55e72-6981-4dfc-a451-c109d0fd9f34",
@@ -4687,7 +4687,7 @@
         {
           "id": "e6b79a63-8b4b-4d4c-9963-701148c3d8f3",
           "type": "profile",
-          "name": "Drilled rotor holes \u2014 centers",
+          "name": "Drilled rotor holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e6b79a63-8b4b-4d4c-9963-701148c3d8f3",
@@ -4719,7 +4719,7 @@
         {
           "id": "59a18159-32b5-4325-b91a-0380cf9122d3",
           "type": "profile",
-          "name": "Axle shaft \u2014 sketch",
+          "name": "Axle shaft — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "59a18159-32b5-4325-b91a-0380cf9122d3",
@@ -4743,7 +4743,7 @@
         {
           "id": "cb182e40-f0b1-44d3-ab30-3970205458e1",
           "type": "profile",
-          "name": "Center collar \u2014 sketch",
+          "name": "Center collar — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "cb182e40-f0b1-44d3-ab30-3970205458e1",
@@ -4775,7 +4775,7 @@
         {
           "id": "81ee06cc-98fc-40fd-bcde-2e6cffa76c2e",
           "type": "profile",
-          "name": "Curved windshield \u2014 station 1",
+          "name": "Curved windshield — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4786,7 +4786,7 @@
         {
           "id": "a9cd7a1e-683f-4e8a-a99e-f870b8b2fa85",
           "type": "profile",
-          "name": "Curved windshield \u2014 station 2",
+          "name": "Curved windshield — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 26.01
@@ -4816,7 +4816,7 @@
         {
           "id": "fc1f86ac-f547-4202-b253-1bdd8f025830",
           "type": "profile",
-          "name": "Cushion \u2014 sketch",
+          "name": "Cushion — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4838,7 +4838,7 @@
         {
           "id": "b50a38ff-b286-45b5-988a-501fb0fcb79c",
           "type": "profile",
-          "name": "Seat back \u2014 sketch",
+          "name": "Seat back — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 8.01
@@ -4860,7 +4860,7 @@
         {
           "id": "cf6e21da-76d6-405d-9a54-1ac67bc07240",
           "type": "profile",
-          "name": "Cushion relief \u2014 sketch",
+          "name": "Cushion relief — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 8.01
@@ -4890,7 +4890,7 @@
         {
           "id": "659adf04-2dd6-40fb-90be-a3d6d44b2af2",
           "type": "profile",
-          "name": "Bent roll hoop \u2014 section",
+          "name": "Bent roll hoop — section",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "659adf04-2dd6-40fb-90be-a3d6d44b2af2",
@@ -4903,7 +4903,7 @@
         {
           "id": "980a35e5-5345-44e1-865f-191185e0500a",
           "type": "profile",
-          "name": "Bent roll hoop \u2014 path",
+          "name": "Bent roll hoop — path",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4933,7 +4933,7 @@
         {
           "id": "4ec4685d-ece9-45cd-8df1-756617914269",
           "type": "profile",
-          "name": "Dashboard \u2014 sketch",
+          "name": "Dashboard — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4963,7 +4963,7 @@
         {
           "id": "53a91a53-8a25-4338-8c07-eb2608656e62",
           "type": "profile",
-          "name": "Headlamp \u2014 sketch",
+          "name": "Headlamp — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -4993,7 +4993,7 @@
         {
           "id": "03f7c62c-960b-494b-add1-82d7fe65615e",
           "type": "profile",
-          "name": "Rear light \u2014 sketch",
+          "name": "Rear light — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5023,7 +5023,7 @@
         {
           "id": "0453f368-2b24-4d23-a11f-434c81af6bb0",
           "type": "profile",
-          "name": "Exhaust outer sweep \u2014 section",
+          "name": "Exhaust outer sweep — section",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "0453f368-2b24-4d23-a11f-434c81af6bb0",
@@ -5036,7 +5036,7 @@
         {
           "id": "ad1499cc-5cb1-4251-ae6f-5ca3e6c1c0f8",
           "type": "profile",
-          "name": "Exhaust outer sweep \u2014 path",
+          "name": "Exhaust outer sweep — path",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5058,7 +5058,7 @@
         {
           "id": "e3429821-3094-41f3-ac53-497b0b640532",
           "type": "profile",
-          "name": "Outlet bore \u2014 centers",
+          "name": "Outlet bore — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e3429821-3094-41f3-ac53-497b0b640532",
@@ -5090,7 +5090,7 @@
         {
           "id": "ff45e3b8-5f7a-4a86-913f-0376db9061ef",
           "type": "profile",
-          "name": "Mirror housing \u2014 sketch",
+          "name": "Mirror housing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5112,7 +5112,7 @@
         {
           "id": "626bbf5e-463c-4333-9571-03c7783cd46c",
           "type": "profile",
-          "name": "Mounting stem \u2014 sketch",
+          "name": "Mounting stem — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5142,7 +5142,7 @@
         {
           "id": "de00ac28-0489-4b50-b35d-9c3726cad533",
           "type": "profile",
-          "name": "Enclosure blank \u2014 sketch",
+          "name": "Enclosure blank — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5164,7 +5164,7 @@
         {
           "id": "0e5f620a-19cf-4fea-93ac-09e262c93b42",
           "type": "profile",
-          "name": "Electronics cavity \u2014 sketch",
+          "name": "Electronics cavity — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 7.81
@@ -5186,7 +5186,7 @@
         {
           "id": "c7879af5-8c5d-4126-9f96-7349696d5047",
           "type": "profile",
-          "name": "USB-C aperture \u2014 sketch",
+          "name": "USB-C aperture — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -77.99
@@ -5208,7 +5208,7 @@
         {
           "id": "0a0deccd-168a-4272-90b3-3a660aec98cd",
           "type": "profile",
-          "name": "Power button opening \u2014 sketch",
+          "name": "Power button opening — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 38.01
@@ -5230,7 +5230,7 @@
         {
           "id": "356dfc66-0595-443d-8c8c-74def8eb478b",
           "type": "profile",
-          "name": "Volume button openings \u2014 sketch",
+          "name": "Volume button openings — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -37.99
@@ -5252,7 +5252,7 @@
         {
           "id": "7d4bcc0d-c192-4802-9ab1-1bde88a4109f",
           "type": "profile",
-          "name": "Speaker perforations \u2014 centers",
+          "name": "Speaker perforations — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "7d4bcc0d-c192-4802-9ab1-1bde88a4109f",
@@ -5276,7 +5276,7 @@
         {
           "id": "ce54357d-525e-4e9a-a094-da809bb3a6e7",
           "type": "profile",
-          "name": "Back cover fasteners \u2014 centers",
+          "name": "Back cover fasteners — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ce54357d-525e-4e9a-a094-da809bb3a6e7",
@@ -5308,7 +5308,7 @@
         {
           "id": "a214da51-473c-44b1-831b-328178c49bd4",
           "type": "profile",
-          "name": "Rear glass \u2014 sketch",
+          "name": "Rear glass — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5330,7 +5330,7 @@
         {
           "id": "256a5890-8e6d-4365-9956-4d90c80c0d17",
           "type": "profile",
-          "name": "Camera island clearance \u2014 sketch",
+          "name": "Camera island clearance — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.81
@@ -5360,7 +5360,7 @@
         {
           "id": "2e605860-d7ce-404b-b4c8-5e28760c4a17",
           "type": "profile",
-          "name": "Display gasket \u2014 sketch",
+          "name": "Display gasket — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5390,7 +5390,7 @@
         {
           "id": "f6de3a4d-20be-4fea-a85d-b1a5a1288bb1",
           "type": "profile",
-          "name": "Cover glass \u2014 sketch",
+          "name": "Cover glass — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5431,7 +5431,7 @@
         {
           "id": "fe9e23c3-f5a1-4d63-af4c-1445315cafbc",
           "type": "profile",
-          "name": "Display active area \u2014 sketch",
+          "name": "Display active area — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5461,7 +5461,7 @@
         {
           "id": "08271520-12dc-4f5b-828c-2d5d9942a734",
           "type": "profile",
-          "name": "Camera island \u2014 sketch",
+          "name": "Camera island — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5483,7 +5483,7 @@
         {
           "id": "903c3c8a-73e1-4cdd-b2c0-3bc43c034996",
           "type": "profile",
-          "name": "Three camera bores \u2014 centers",
+          "name": "Three camera bores — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "903c3c8a-73e1-4cdd-b2c0-3bc43c034996",
@@ -5515,7 +5515,7 @@
         {
           "id": "d3abd10d-2100-4042-9074-6893e1190507",
           "type": "profile",
-          "name": "Camera stepped section \u2014 section",
+          "name": "Camera stepped section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5545,7 +5545,7 @@
         {
           "id": "af2f9b7c-c581-4a00-85a0-00557c1e859a",
           "type": "profile",
-          "name": "Optical disk \u2014 sketch",
+          "name": "Optical disk — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "af2f9b7c-c581-4a00-85a0-00557c1e859a",
@@ -5588,7 +5588,7 @@
         {
           "id": "1099c8bb-1773-42c6-a0da-2b04cfaf47db",
           "type": "profile",
-          "name": "Diffuser \u2014 sketch",
+          "name": "Diffuser — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1099c8bb-1773-42c6-a0da-2b04cfaf47db",
@@ -5620,7 +5620,7 @@
         {
           "id": "442b8bb1-11cf-45ae-9ad4-1e2228a0e1e5",
           "type": "profile",
-          "name": "Button cap \u2014 sketch",
+          "name": "Button cap — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5650,7 +5650,7 @@
         {
           "id": "6b2137a7-c19a-47bd-b945-f2e538242adf",
           "type": "profile",
-          "name": "Button cap \u2014 sketch",
+          "name": "Button cap — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5680,7 +5680,7 @@
         {
           "id": "46bdd32e-cf9d-4844-b08b-a35ec0ea08bc",
           "type": "profile",
-          "name": "Battery cell envelope \u2014 sketch",
+          "name": "Battery cell envelope — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5710,7 +5710,7 @@
         {
           "id": "dfa35f69-6482-4ef4-a001-e4beefb7de71",
           "type": "profile",
-          "name": "Board outline \u2014 sketch",
+          "name": "Board outline — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5732,7 +5732,7 @@
         {
           "id": "faaed147-eea5-4ed9-a0dc-5e59f36aaca5",
           "type": "profile",
-          "name": "Board mounting holes \u2014 centers",
+          "name": "Board mounting holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "faaed147-eea5-4ed9-a0dc-5e59f36aaca5",
@@ -5764,7 +5764,7 @@
         {
           "id": "d84cce1d-8589-4d25-a99d-ce516144e292",
           "type": "profile",
-          "name": "EMI shield \u2014 sketch",
+          "name": "EMI shield — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5794,7 +5794,7 @@
         {
           "id": "321084bd-90c7-4d0c-96fc-282e1a5d12c2",
           "type": "profile",
-          "name": "Speaker enclosure \u2014 sketch",
+          "name": "Speaker enclosure — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5824,7 +5824,7 @@
         {
           "id": "37903166-8079-43d4-9214-e1ac549279ab",
           "type": "profile",
-          "name": "Sensor window \u2014 sketch",
+          "name": "Sensor window — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5854,7 +5854,7 @@
         {
           "id": "2c129bf6-a0a2-482f-b6ca-4997c0ef0f8a",
           "type": "profile",
-          "name": "External tank meridian \u2014 section",
+          "name": "External tank meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5884,7 +5884,7 @@
         {
           "id": "6707d05b-f02e-4d11-b5a7-b0bfae0d8102",
           "type": "profile",
-          "name": "Intertank band \u2014 sketch",
+          "name": "Intertank band — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "6707d05b-f02e-4d11-b5a7-b0bfae0d8102",
@@ -5916,7 +5916,7 @@
         {
           "id": "094075b2-0547-4373-a91e-c5e5f66d54f1",
           "type": "profile",
-          "name": "Stiffener section \u2014 sketch",
+          "name": "Stiffener section — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5946,7 +5946,7 @@
         {
           "id": "40be7877-b406-4ac5-b2fc-c3902f203370",
           "type": "profile",
-          "name": "Hollow pipe \u2014 sketch",
+          "name": "Hollow pipe — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "40be7877-b406-4ac5-b2fc-c3902f203370",
@@ -5978,7 +5978,7 @@
         {
           "id": "fa90d657-0541-4f29-9f2a-378c5b467b4d",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 1",
+          "name": "Fuselage stations — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -5989,7 +5989,7 @@
         {
           "id": "ff738983-99fc-4d03-a193-a6807c6e57dc",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 2",
+          "name": "Fuselage stations — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 40.01
@@ -6000,7 +6000,7 @@
         {
           "id": "2928b303-7341-4cad-815d-c77f59207074",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 3",
+          "name": "Fuselage stations — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 57.11
@@ -6011,7 +6011,7 @@
         {
           "id": "4020f67d-7284-4ec5-a50f-3dded361f0cf",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 4",
+          "name": "Fuselage stations — station 4",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 243.165
@@ -6022,7 +6022,7 @@
         {
           "id": "73abe888-3b3b-4e33-a015-8b520e59a4e7",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 5",
+          "name": "Fuselage stations — station 5",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 255.01
@@ -6033,7 +6033,7 @@
         {
           "id": "26f345ba-f645-44cd-85b4-9f161ec9bc0e",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 6",
+          "name": "Fuselage stations — station 6",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 268.01
@@ -6044,7 +6044,7 @@
         {
           "id": "e8b4fede-3b67-4f6f-87c2-2d93d786f2aa",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 7",
+          "name": "Fuselage stations — station 7",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 282.01
@@ -6055,7 +6055,7 @@
         {
           "id": "33ad0086-97b9-440d-b723-282c510879d6",
           "type": "profile",
-          "name": "Fuselage stations \u2014 station 8",
+          "name": "Fuselage stations — station 8",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 296.01
@@ -6077,7 +6077,7 @@
         {
           "id": "9c62a92e-a428-4cc9-a368-0568fec121b4",
           "type": "profile",
-          "name": "Open payload bay \u2014 sketch",
+          "name": "Open payload bay — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -44.99
@@ -6099,7 +6099,7 @@
         {
           "id": "1130d021-f4ca-4d86-a4f4-777ea20c81a7",
           "type": "profile",
-          "name": "Payload floor mounting holes \u2014 centers",
+          "name": "Payload floor mounting holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1130d021-f4ca-4d86-a4f4-777ea20c81a7",
@@ -6133,7 +6133,7 @@
         {
           "id": "0b234660-97c3-48ae-8e94-f4c9dddf3dbe",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 1",
+          "name": "Belly thermal profile — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6144,7 +6144,7 @@
         {
           "id": "24e0bb04-22da-40db-8379-16577b3fdbd2",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 2",
+          "name": "Belly thermal profile — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 57.11
@@ -6155,7 +6155,7 @@
         {
           "id": "326c491c-7e1e-497e-9a97-4ec495d1f838",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 3",
+          "name": "Belly thermal profile — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 243.165
@@ -6166,7 +6166,7 @@
         {
           "id": "ac0d52e5-52af-46c8-9c81-06a9f1cd78c9",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 4",
+          "name": "Belly thermal profile — station 4",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 255.01
@@ -6177,7 +6177,7 @@
         {
           "id": "f2bcd6fd-820e-4044-9bfc-8d555e3854a0",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 5",
+          "name": "Belly thermal profile — station 5",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 268.01
@@ -6188,7 +6188,7 @@
         {
           "id": "07ac2e3e-2a5c-4cd6-8797-f4e89250b911",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 6",
+          "name": "Belly thermal profile — station 6",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 282.01
@@ -6199,7 +6199,7 @@
         {
           "id": "d32fd973-d2ec-4fde-8fb1-5d31da293123",
           "type": "profile",
-          "name": "Belly thermal profile \u2014 station 7",
+          "name": "Belly thermal profile — station 7",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 296.01
@@ -6229,7 +6229,7 @@
         {
           "id": "a222d767-4553-45d7-8f76-f256151c55a4",
           "type": "profile",
-          "name": "Double-delta wing profile \u2014 sketch",
+          "name": "Double-delta wing profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 16.01
@@ -6259,7 +6259,7 @@
         {
           "id": "5370a68a-3747-4bac-b3f3-7f3373dd8b98",
           "type": "profile",
-          "name": "Underside thermal layer \u2014 sketch",
+          "name": "Underside thermal layer — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 20.01
@@ -6289,7 +6289,7 @@
         {
           "id": "dfdbd795-915f-4987-a094-aee430aacb8e",
           "type": "profile",
-          "name": "Double-delta wing profile \u2014 sketch",
+          "name": "Double-delta wing profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 16.01
@@ -6319,7 +6319,7 @@
         {
           "id": "9997bd4e-d520-4a98-986a-8d471ce21215",
           "type": "profile",
-          "name": "Underside thermal layer \u2014 sketch",
+          "name": "Underside thermal layer — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 20.01
@@ -6349,7 +6349,7 @@
         {
           "id": "a61eab60-edd5-4e92-8853-c4008da4132b",
           "type": "profile",
-          "name": "Swept fin profile \u2014 sketch",
+          "name": "Swept fin profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -1.79
@@ -6379,7 +6379,7 @@
         {
           "id": "8b5816af-faca-4919-b121-5d2c01b71c75",
           "type": "profile",
-          "name": "Rudder trailing surface \u2014 sketch",
+          "name": "Rudder trailing surface — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -1.99
@@ -6409,7 +6409,7 @@
         {
           "id": "e294d88d-2fc9-4882-8870-3887ef8f6625",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 1",
+          "name": "Blunt nose cap stations — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 296.01
@@ -6420,7 +6420,7 @@
         {
           "id": "815b881f-c85c-4167-95fb-b617e3ffd33e",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 2",
+          "name": "Blunt nose cap stations — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 302.01
@@ -6431,7 +6431,7 @@
         {
           "id": "631502a1-2a2e-41d5-ae50-6c4e705d8763",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 3",
+          "name": "Blunt nose cap stations — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 310.01
@@ -6442,7 +6442,7 @@
         {
           "id": "ca4b1950-0eda-431b-991b-7ea03728527d",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 4",
+          "name": "Blunt nose cap stations — station 4",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 318.01
@@ -6453,7 +6453,7 @@
         {
           "id": "427f539b-db47-469a-9658-9bfba84c8481",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 5",
+          "name": "Blunt nose cap stations — station 5",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 325.01
@@ -6464,7 +6464,7 @@
         {
           "id": "1d3b63f9-5bc5-4f83-beae-fc8af21165a1",
           "type": "profile",
-          "name": "Blunt nose cap stations \u2014 station 6",
+          "name": "Blunt nose cap stations — station 6",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 328.90999999999997
@@ -6494,7 +6494,7 @@
         {
           "id": "aa28fbf4-40a9-466e-add3-fabe360a3923",
           "type": "profile",
-          "name": "Cockpit glazing \u2014 sketch",
+          "name": "Cockpit glazing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -31.99
@@ -6524,7 +6524,7 @@
         {
           "id": "5f70edd5-b816-43b3-bdc9-95402a827f6e",
           "type": "profile",
-          "name": "Cockpit glazing \u2014 sketch",
+          "name": "Cockpit glazing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -31.99
@@ -6554,7 +6554,7 @@
         {
           "id": "276e98a3-d5dd-4623-843f-a2b48e0e1818",
           "type": "profile",
-          "name": "Cockpit glazing \u2014 sketch",
+          "name": "Cockpit glazing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -31.99
@@ -6584,7 +6584,7 @@
         {
           "id": "9127e6a9-3c08-498c-bb73-4553fd547241",
           "type": "profile",
-          "name": "Cockpit glazing \u2014 sketch",
+          "name": "Cockpit glazing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -31.99
@@ -6614,7 +6614,7 @@
         {
           "id": "f2b69000-5274-4900-9911-80bb77306c7a",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6644,7 +6644,7 @@
         {
           "id": "83f67ba2-c948-438b-bf8c-d93ae3bf6a29",
           "type": "profile",
-          "name": "OMS pod stations \u2014 station 1",
+          "name": "OMS pod stations — station 1",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6655,7 +6655,7 @@
         {
           "id": "04c22e5f-3cc1-4a4f-96e6-a5000c10c2a9",
           "type": "profile",
-          "name": "OMS pod stations \u2014 station 2",
+          "name": "OMS pod stations — station 2",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 25.01
@@ -6666,7 +6666,7 @@
         {
           "id": "870dcfdc-4910-4914-828a-4adce68caf7d",
           "type": "profile",
-          "name": "OMS pod stations \u2014 station 3",
+          "name": "OMS pod stations — station 3",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 52.01
@@ -6696,7 +6696,7 @@
         {
           "id": "48767c4f-db87-42ff-85c1-0badb6d472ac",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6726,7 +6726,7 @@
         {
           "id": "721dd274-2552-43a3-80ba-b9f246f34e99",
           "type": "profile",
-          "name": "Curved payload door \u2014 sketch",
+          "name": "Curved payload door — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6756,7 +6756,7 @@
         {
           "id": "162aa6ff-4691-4ded-b783-3345a3da31fe",
           "type": "profile",
-          "name": "Radiator backing \u2014 sketch",
+          "name": "Radiator backing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -11.99
@@ -6786,7 +6786,7 @@
         {
           "id": "bac7ac78-a0c0-45cf-91a9-75d8388dda49",
           "type": "profile",
-          "name": "Curved payload door \u2014 sketch",
+          "name": "Curved payload door — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6816,7 +6816,7 @@
         {
           "id": "6d18ac2e-2b33-4f06-a33c-11324ef9a82c",
           "type": "profile",
-          "name": "Radiator backing \u2014 sketch",
+          "name": "Radiator backing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -11.99
@@ -6846,7 +6846,7 @@
         {
           "id": "31729684-76b3-4eeb-832c-c308bb4344cc",
           "type": "profile",
-          "name": "Hinge pin \u2014 sketch",
+          "name": "Hinge pin — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "31729684-76b3-4eeb-832c-c308bb4344cc",
@@ -6878,7 +6878,7 @@
         {
           "id": "13ccdcef-d886-44aa-a36f-b7bd94758cf5",
           "type": "profile",
-          "name": "U frame \u2014 sketch",
+          "name": "U frame — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -6908,7 +6908,7 @@
         {
           "id": "ed7fec82-55cf-417c-a0ea-497ba024316c",
           "type": "profile",
-          "name": "Payload housing \u2014 sketch",
+          "name": "Payload housing — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ed7fec82-55cf-417c-a0ea-497ba024316c",
@@ -6932,7 +6932,7 @@
         {
           "id": "45543c04-bfa2-4d95-a258-9e869b2638a0",
           "type": "profile",
-          "name": "End closure \u2014 sketch",
+          "name": "End closure — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "45543c04-bfa2-4d95-a258-9e869b2638a0",
@@ -6956,7 +6956,7 @@
         {
           "id": "c93c3444-6669-489c-aaf5-fbfd2d55249e",
           "type": "profile",
-          "name": "Payload end fasteners \u2014 centers",
+          "name": "Payload end fasteners — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c93c3444-6669-489c-aaf5-fbfd2d55249e",
@@ -6988,7 +6988,7 @@
         {
           "id": "91c6627e-252d-4dbb-ad90-26a857408394",
           "type": "profile",
-          "name": "Cover \u2014 sketch",
+          "name": "Cover — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "91c6627e-252d-4dbb-ad90-26a857408394",
@@ -7020,7 +7020,7 @@
         {
           "id": "c0083374-34ae-40e4-83f3-b523a0ce6529",
           "type": "profile",
-          "name": "Attachment strut \u2014 sketch",
+          "name": "Attachment strut — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c0083374-34ae-40e4-83f3-b523a0ce6529",
@@ -7052,7 +7052,7 @@
         {
           "id": "1ef2d2bf-4985-4cea-b75b-c28b9149bdfc",
           "type": "profile",
-          "name": "Hollow booster case \u2014 sketch",
+          "name": "Hollow booster case — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1ef2d2bf-4985-4cea-b75b-c28b9149bdfc",
@@ -7084,7 +7084,7 @@
         {
           "id": "c2d515c8-3c0a-4203-b271-92feb93cce01",
           "type": "profile",
-          "name": "Field joint \u2014 sketch",
+          "name": "Field joint — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "c2d515c8-3c0a-4203-b271-92feb93cce01",
@@ -7116,7 +7116,7 @@
         {
           "id": "fbc668a5-6253-42c2-ac79-8fd66d4f2b95",
           "type": "profile",
-          "name": "Aft skirt section \u2014 section",
+          "name": "Aft skirt section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7146,7 +7146,7 @@
         {
           "id": "070a20e2-43c6-47d6-bac8-6bfce05ae8bf",
           "type": "profile",
-          "name": "Cylindrical forward skirt and short nose \u2014 section",
+          "name": "Cylindrical forward skirt and short nose — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7176,7 +7176,7 @@
         {
           "id": "4f3f3504-4600-414c-a505-143937dce094",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7206,7 +7206,7 @@
         {
           "id": "d39935d6-bb27-4a73-8b64-a03dc7c42351",
           "type": "profile",
-          "name": "Core stage shell meridian \u2014 section",
+          "name": "Core stage shell meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7236,7 +7236,7 @@
         {
           "id": "e37f56ba-a87d-4390-bf6a-34f6b1fb5a28",
           "type": "profile",
-          "name": "Engine-section reinforcement \u2014 sketch",
+          "name": "Engine-section reinforcement — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e37f56ba-a87d-4390-bf6a-34f6b1fb5a28",
@@ -7260,7 +7260,7 @@
         {
           "id": "4f365a35-9d43-43fd-abe9-fcc4ed599876",
           "type": "profile",
-          "name": "Engine-section bolt circle \u2014 centers",
+          "name": "Engine-section bolt circle — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "4f365a35-9d43-43fd-abe9-fcc4ed599876",
@@ -7292,7 +7292,7 @@
         {
           "id": "84577fd9-e266-4927-8279-b75646d59238",
           "type": "profile",
-          "name": "Stage flange section \u2014 sketch",
+          "name": "Stage flange section — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "84577fd9-e266-4927-8279-b75646d59238",
@@ -7324,7 +7324,7 @@
         {
           "id": "4940b5c6-fb3c-4edb-8135-3bfc46ca1147",
           "type": "profile",
-          "name": "Longitudinal rib \u2014 sketch",
+          "name": "Longitudinal rib — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7354,7 +7354,7 @@
         {
           "id": "cd17ce8c-d227-46a1-9aa0-f5cafa76bad2",
           "type": "profile",
-          "name": "External line sweep \u2014 section",
+          "name": "External line sweep — section",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "cd17ce8c-d227-46a1-9aa0-f5cafa76bad2",
@@ -7367,7 +7367,7 @@
         {
           "id": "4c24b16b-b8ea-4e50-9143-7be7c8bd83c9",
           "type": "profile",
-          "name": "External line sweep \u2014 path",
+          "name": "External line sweep — path",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7397,7 +7397,7 @@
         {
           "id": "e4f5baaf-cb13-49ef-9f94-a067c8304c22",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7427,7 +7427,7 @@
         {
           "id": "234be6fa-0ced-4c8a-8bf1-77e08edb2cac",
           "type": "profile",
-          "name": "Booster aft skirt \u2014 section",
+          "name": "Booster aft skirt — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7457,7 +7457,7 @@
         {
           "id": "72da5cab-a199-43e1-83ad-66a750a9b631",
           "type": "profile",
-          "name": "Hollow segment case \u2014 sketch",
+          "name": "Hollow segment case — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "72da5cab-a199-43e1-83ad-66a750a9b631",
@@ -7489,7 +7489,7 @@
         {
           "id": "81facda4-03ea-4415-8e27-7e4ff59bde3d",
           "type": "profile",
-          "name": "Joint band \u2014 sketch",
+          "name": "Joint band — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "81facda4-03ea-4415-8e27-7e4ff59bde3d",
@@ -7521,7 +7521,7 @@
         {
           "id": "873f45d2-bb3a-47d2-abeb-4cab0717b798",
           "type": "profile",
-          "name": "Rounded nose meridian \u2014 section",
+          "name": "Rounded nose meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7551,7 +7551,7 @@
         {
           "id": "1303f637-134f-4675-b1bd-d9c71e623d47",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7581,7 +7581,7 @@
         {
           "id": "f99754fc-797a-42a4-9b24-fd854f9883d7",
           "type": "profile",
-          "name": "Attachment pin \u2014 sketch",
+          "name": "Attachment pin — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f99754fc-797a-42a4-9b24-fd854f9883d7",
@@ -7613,7 +7613,7 @@
         {
           "id": "145b2f68-1e47-4860-b382-04bb202eb6bc",
           "type": "profile",
-          "name": "Stage adapter cone \u2014 section",
+          "name": "Stage adapter cone — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7643,7 +7643,7 @@
         {
           "id": "26279652-bb17-4ce7-b487-d2826d6e04b5",
           "type": "profile",
-          "name": "ICPS tank shell \u2014 section",
+          "name": "ICPS tank shell — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7673,7 +7673,7 @@
         {
           "id": "312cb7ed-8385-4b2a-bf94-6c4ad1702313",
           "type": "profile",
-          "name": "Upper-stage band \u2014 sketch",
+          "name": "Upper-stage band — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "312cb7ed-8385-4b2a-bf94-6c4ad1702313",
@@ -7705,7 +7705,7 @@
         {
           "id": "933da2f7-3147-4238-aaf0-a03e275dc686",
           "type": "profile",
-          "name": "Orion adapter shell \u2014 section",
+          "name": "Orion adapter shell — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7735,7 +7735,7 @@
         {
           "id": "b31ca380-f926-4900-b931-aa3fd3d27328",
           "type": "profile",
-          "name": "Service module shell \u2014 section",
+          "name": "Service module shell — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7765,7 +7765,7 @@
         {
           "id": "e7a8e0cf-fb95-4369-8f47-80ede052b6a3",
           "type": "profile",
-          "name": "Thermal blanket band \u2014 sketch",
+          "name": "Thermal blanket band — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e7a8e0cf-fb95-4369-8f47-80ede052b6a3",
@@ -7797,7 +7797,7 @@
         {
           "id": "74c52f8b-cd9a-4060-a49b-701a9eeb611f",
           "type": "profile",
-          "name": "Equipment deck \u2014 sketch",
+          "name": "Equipment deck — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "74c52f8b-cd9a-4060-a49b-701a9eeb611f",
@@ -7821,7 +7821,7 @@
         {
           "id": "94759d57-b4e8-4f8c-9b96-909bc50184b2",
           "type": "profile",
-          "name": "Equipment mounting holes \u2014 centers",
+          "name": "Equipment mounting holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "94759d57-b4e8-4f8c-9b96-909bc50184b2",
@@ -7853,7 +7853,7 @@
         {
           "id": "fcdf3917-62d5-4a48-8904-7dbe3509e189",
           "type": "profile",
-          "name": "Heat shield meridian \u2014 section",
+          "name": "Heat shield meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7883,7 +7883,7 @@
         {
           "id": "e35bc2bc-0c26-41ba-8abf-175954dfa8ea",
           "type": "profile",
-          "name": "Crew module conical shell \u2014 section",
+          "name": "Crew module conical shell — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7913,7 +7913,7 @@
         {
           "id": "f6fee66b-470c-48fa-9f2b-0eb9d808c3a9",
           "type": "profile",
-          "name": "Docking collar \u2014 sketch",
+          "name": "Docking collar — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "f6fee66b-470c-48fa-9f2b-0eb9d808c3a9",
@@ -7937,7 +7937,7 @@
         {
           "id": "877bc86c-a475-4a7b-8076-4971ddc5c8f5",
           "type": "profile",
-          "name": "Docking ring bolt holes \u2014 centers",
+          "name": "Docking ring bolt holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "877bc86c-a475-4a7b-8076-4971ddc5c8f5",
@@ -7969,7 +7969,7 @@
         {
           "id": "02798797-dcd1-4940-a652-e01ec677de10",
           "type": "profile",
-          "name": "Hatch profile \u2014 sketch",
+          "name": "Hatch profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -7991,7 +7991,7 @@
         {
           "id": "831dfbe5-cbb2-4546-ac10-8108415c083f",
           "type": "profile",
-          "name": "Hatch fixing holes \u2014 centers",
+          "name": "Hatch fixing holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "831dfbe5-cbb2-4546-ac10-8108415c083f",
@@ -8023,7 +8023,7 @@
         {
           "id": "cfcbeb34-0711-4e4e-bff6-7ef834874f8d",
           "type": "profile",
-          "name": "Window aperture glazing \u2014 sketch",
+          "name": "Window aperture glazing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8053,7 +8053,7 @@
         {
           "id": "e5f70ca2-c369-4dd5-a786-6a0e554f3ea9",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8083,7 +8083,7 @@
         {
           "id": "419110e5-73ed-40cd-a2fe-86600905c91f",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8113,7 +8113,7 @@
         {
           "id": "f66973e5-6367-4ecc-b49f-a3d1a18c123c",
           "type": "profile",
-          "name": "Panel backing \u2014 sketch",
+          "name": "Panel backing — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8135,7 +8135,7 @@
         {
           "id": "e781c5f4-1d9a-4078-8c07-4fc29ff2f2b7",
           "type": "profile",
-          "name": "Panel inset \u2014 sketch",
+          "name": "Panel inset — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.56
@@ -8165,7 +8165,7 @@
         {
           "id": "c854a7ca-6351-4dc7-b0ac-8e1d4fc2156f",
           "type": "profile",
-          "name": "Cell substrate \u2014 sketch",
+          "name": "Cell substrate — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8187,7 +8187,7 @@
         {
           "id": "3898702f-e56e-4ac4-8930-38fec03c20ff",
           "type": "profile",
-          "name": "Cell column channels \u2014 sketch",
+          "name": "Cell column channels — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.23
@@ -8209,7 +8209,7 @@
         {
           "id": "f9388d29-b4d4-4ced-b8bb-688a37be7ad2",
           "type": "profile",
-          "name": "Cell row channels \u2014 sketch",
+          "name": "Cell row channels — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.23
@@ -8239,7 +8239,7 @@
         {
           "id": "2b5b8df7-8246-4d56-9bd2-4b77bb54d566",
           "type": "profile",
-          "name": "Root boom \u2014 sketch",
+          "name": "Root boom — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -0.49
@@ -8261,7 +8261,7 @@
         {
           "id": "305ccb6a-01f9-495e-8880-8c5eb8d336b9",
           "type": "profile",
-          "name": "Root pivot bore \u2014 centers",
+          "name": "Root pivot bore — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "305ccb6a-01f9-495e-8880-8c5eb8d336b9",
@@ -8293,7 +8293,7 @@
         {
           "id": "037cdfdc-2bbe-490a-b4ef-d8c38b686283",
           "type": "profile",
-          "name": "Panel hinge pin \u2014 sketch",
+          "name": "Panel hinge pin — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "037cdfdc-2bbe-490a-b4ef-d8c38b686283",
@@ -8325,7 +8325,7 @@
         {
           "id": "384fe70c-c662-4d39-971c-3bdfeaf48205",
           "type": "profile",
-          "name": "One-third fairing shell \u2014 sketch",
+          "name": "One-third fairing shell — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8355,7 +8355,7 @@
         {
           "id": "e5177403-eee3-4b8b-9056-3019ee596938",
           "type": "profile",
-          "name": "Crew protective shell \u2014 section",
+          "name": "Crew protective shell — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8385,7 +8385,7 @@
         {
           "id": "a0632e8e-51ac-40ea-bae1-57ef6b6b345f",
           "type": "profile",
-          "name": "Tower outer profile \u2014 section",
+          "name": "Tower outer profile — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8415,7 +8415,7 @@
         {
           "id": "c88b05a4-02d7-4efc-b968-263bba39325f",
           "type": "profile",
-          "name": "Hollow nozzle display section \u2014 section",
+          "name": "Hollow nozzle display section — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8445,7 +8445,7 @@
         {
           "id": "fa0ad3d7-edb3-485a-92a8-c45152592a3a",
           "type": "profile",
-          "name": "L profile extrusion \u2014 sketch",
+          "name": "L profile extrusion — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8478,7 +8478,7 @@
         {
           "id": "9b597c85-6998-46c1-b493-bfdeff03f947",
           "type": "profile",
-          "name": "Two mounting holes \u2014 centers",
+          "name": "Two mounting holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "9b597c85-6998-46c1-b493-bfdeff03f947",
@@ -8510,7 +8510,7 @@
         {
           "id": "36aae0c7-60c0-4471-bb80-be2b467f34cd",
           "type": "profile",
-          "name": "Rounded case outline \u2014 sketch",
+          "name": "Rounded case outline — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8532,7 +8532,7 @@
         {
           "id": "c2c48bfc-eda1-4750-b175-a00352e04f5c",
           "type": "shell",
-          "name": "Shell \u2014 2 mm walls",
+          "name": "Shell — 2 mm walls",
           "tool": "aether_cad_feature_update",
           "change": {
             "thicknessMillimeters": 1.98
@@ -8543,7 +8543,7 @@
         {
           "id": "f102e7c6-e3c2-49cd-957e-eba83f503ab1",
           "type": "profile",
-          "name": "USB side opening \u2014 sketch",
+          "name": "USB side opening — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 41.01
@@ -8565,7 +8565,7 @@
         {
           "id": "19688a24-a3fb-48fc-926b-ec77c380a9ec",
           "type": "profile",
-          "name": "Four screw bosses \u2014 sketch",
+          "name": "Four screw bosses — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "19688a24-a3fb-48fc-926b-ec77c380a9ec",
@@ -8589,7 +8589,7 @@
         {
           "id": "6896ed6b-f2cc-44b1-82cc-a896bdf62648",
           "type": "profile",
-          "name": "Boss pilot holes \u2014 centers",
+          "name": "Boss pilot holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "6896ed6b-f2cc-44b1-82cc-a896bdf62648",
@@ -8621,7 +8621,7 @@
         {
           "id": "37d9616f-46f7-4bd6-bf7b-ddc081f3d60c",
           "type": "profile",
-          "name": "Lid cover \u2014 sketch",
+          "name": "Lid cover — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8643,7 +8643,7 @@
         {
           "id": "cc989677-d383-4cda-9c8c-5fd3303a422d",
           "type": "profile",
-          "name": "Locating lip \u2014 sketch",
+          "name": "Locating lip — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": -1.99
@@ -8665,7 +8665,7 @@
         {
           "id": "108441c4-4d6f-4083-a9b1-d87a20eb476d",
           "type": "profile",
-          "name": "Lid screw holes \u2014 centers",
+          "name": "Lid screw holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "108441c4-4d6f-4083-a9b1-d87a20eb476d",
@@ -8697,7 +8697,7 @@
         {
           "id": "0af08e5f-46f9-4835-acd0-5182cd283632",
           "type": "profile",
-          "name": "Rounded hollow profile \u2014 sketch",
+          "name": "Rounded hollow profile — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 35.01
@@ -8727,7 +8727,7 @@
         {
           "id": "75c28ff8-2360-4df5-9580-e9d73164d974",
           "type": "profile",
-          "name": "Lid outline \u2014 sketch",
+          "name": "Lid outline — sketch",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8757,7 +8757,7 @@
         {
           "id": "3608a310-3267-495c-960b-bf0d6f76fcdf",
           "type": "profile",
-          "name": "Sphere meridian \u2014 section",
+          "name": "Sphere meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8787,7 +8787,7 @@
         {
           "id": "0caa3547-159e-460b-9b43-70f538500468",
           "type": "profile",
-          "name": "Puck \u2014 sketch",
+          "name": "Puck — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "0caa3547-159e-460b-9b43-70f538500468",
@@ -8819,7 +8819,7 @@
         {
           "id": "20c12358-529f-4304-af92-c8a837e15699",
           "type": "profile",
-          "name": "Tall vessel meridian \u2014 section",
+          "name": "Tall vessel meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8849,7 +8849,7 @@
         {
           "id": "fae73d50-0df3-4f19-9741-7be186cf2db9",
           "type": "profile",
-          "name": "Short vessel meridian \u2014 section",
+          "name": "Short vessel meridian — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8879,7 +8879,7 @@
         {
           "id": "3ab7575f-727f-45c9-9020-7edabb3877d4",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8909,7 +8909,7 @@
         {
           "id": "e5b77315-8673-4ab3-b3e2-a0a43ae08c74",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8939,7 +8939,7 @@
         {
           "id": "80032203-6891-402d-a2c8-01370994cf12",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8969,7 +8969,7 @@
         {
           "id": "fe10e8c7-0812-4d7c-b1a4-012fee2dea88",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -8999,7 +8999,7 @@
         {
           "id": "872679f9-e254-4f70-8147-40c2b2eadfc8",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -9029,7 +9029,7 @@
         {
           "id": "59d76689-008e-4efe-b6a4-9634ea7cef05",
           "type": "profile",
-          "name": "Spherical specimen \u2014 section",
+          "name": "Spherical specimen — section",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -9059,7 +9059,7 @@
         {
           "id": "1b0876a8-a82f-409c-9f89-187f010e45a7",
           "type": "profile",
-          "name": "Tube centerline section \u2014 \u00d818",
+          "name": "Tube centerline section — Ø18",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "1b0876a8-a82f-409c-9f89-187f010e45a7",
@@ -9072,7 +9072,7 @@
         {
           "id": "ba9ff4a4-18a2-42a2-b512-6f948dd8c774",
           "type": "profile",
-          "name": "Route \u2014 40 straight, R30 elbow, 40 straight",
+          "name": "Route — 40 straight, R30 elbow, 40 straight",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ba9ff4a4-18a2-42a2-b512-6f948dd8c774",
@@ -9104,7 +9104,7 @@
         {
           "id": "371fdae1-6b5f-420c-85b1-05bbadd694dc",
           "type": "profile",
-          "name": "Extrude annular flange \u2014 sketch",
+          "name": "Extrude annular flange — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "371fdae1-6b5f-420c-85b1-05bbadd694dc",
@@ -9128,7 +9128,7 @@
         {
           "id": "b3ad5ef3-96b1-4604-9b1b-26e02137a821",
           "type": "profile",
-          "name": "Four \u00d84 bolt holes \u2014 centers",
+          "name": "Four Ø4 bolt holes — centers",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "b3ad5ef3-96b1-4604-9b1b-26e02137a821",
@@ -9141,7 +9141,7 @@
         {
           "id": "a2738ad3-233d-4d7d-bf50-58cfcea6dbc5",
           "type": "hole",
-          "name": "Four \u00d84 bolt holes",
+          "name": "Four Ø4 bolt holes",
           "tool": "aether_cad_feature_update",
           "change": {
             "depthMillimeters": 5.9399999999999995
@@ -9160,7 +9160,7 @@
         {
           "id": "16de5007-4d80-43a0-a6a6-e06cc45984c8",
           "type": "profile",
-          "name": "Base plate \u2014 sketch",
+          "name": "Base plate — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "16de5007-4d80-43a0-a6a6-e06cc45984c8",
@@ -9184,7 +9184,7 @@
         {
           "id": "5747d9ab-4cf9-45e7-bfe3-6528d97d2dbe",
           "type": "profile",
-          "name": "Seed boss \u2014 sketch",
+          "name": "Seed boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "5747d9ab-4cf9-45e7-bfe3-6528d97d2dbe",
@@ -9208,7 +9208,7 @@
         {
           "id": "1ae99c13-9621-4be1-bc68-c1ad550bdf19",
           "type": "pattern",
-          "name": "Three bosses \u2014 linear feature pattern",
+          "name": "Three bosses — linear feature pattern",
           "tool": "aether_cad_feature_update",
           "change": {
             "spacingMillimeters": 19.8
@@ -9219,7 +9219,7 @@
         {
           "id": "cc570372-f97a-498f-8139-93744d4c0134",
           "type": "mirror",
-          "name": "Opposite row \u2014 mirror patterned feature",
+          "name": "Opposite row — mirror patterned feature",
           "tool": "aether_cad_feature_update",
           "change": {
             "offsetMillimeters": 0.01
@@ -9238,7 +9238,7 @@
         {
           "id": "ad766372-dafc-4452-a263-5805f3e132a8",
           "type": "profile",
-          "name": "Stock \u2014 sketch",
+          "name": "Stock — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "ad766372-dafc-4452-a263-5805f3e132a8",
@@ -9262,7 +9262,7 @@
         {
           "id": "e016b0fc-21de-4a5d-9345-2b7f78e26b48",
           "type": "profile",
-          "name": "Bore tool \u2014 sketch",
+          "name": "Bore tool — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e016b0fc-21de-4a5d-9345-2b7f78e26b48",
@@ -9297,7 +9297,7 @@
         {
           "id": "70d7bd22-5739-4dbb-b995-98e77a849ed6",
           "type": "split",
-          "name": "Split stock \u2014 retain lower half",
+          "name": "Split stock — retain lower half",
           "tool": "aether_cad_feature_update",
           "change": {
             "plane": {
@@ -9320,7 +9320,7 @@
         {
           "id": "7792a5dd-4146-4020-a1cc-210781ada1c5",
           "type": "profile",
-          "name": "Mold blank \u2014 sketch",
+          "name": "Mold blank — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "7792a5dd-4146-4020-a1cc-210781ada1c5",
@@ -9344,7 +9344,7 @@
         {
           "id": "4d4e489b-2959-4405-963a-c30d2832415d",
           "type": "draft",
-          "name": "Two walls \u2014 3 degree draft",
+          "name": "Two walls — 3 degree draft",
           "tool": "aether_cad_feature_update",
           "change": {
             "angleDegrees": 2.9699999999999998
@@ -9355,7 +9355,7 @@
         {
           "id": "5c54bd83-0d36-4b2e-9cd2-5486b1a2cb93",
           "type": "shell",
-          "name": "Open top \u2014 2 mm shell",
+          "name": "Open top — 2 mm shell",
           "tool": "aether_cad_feature_update",
           "change": {
             "thicknessMillimeters": 1.98
@@ -9374,7 +9374,7 @@
         {
           "id": "e564e22c-ae68-4200-aa21-23a59ba0e56d",
           "type": "profile",
-          "name": "Hub plate \u2014 sketch",
+          "name": "Hub plate — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "e564e22c-ae68-4200-aa21-23a59ba0e56d",
@@ -9398,7 +9398,7 @@
         {
           "id": "a95d6ce8-2da8-4680-8173-0dcffb35bc76",
           "type": "profile",
-          "name": "Radial seed boss \u2014 sketch",
+          "name": "Radial seed boss — sketch",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "a95d6ce8-2da8-4680-8173-0dcffb35bc76",
@@ -9422,7 +9422,7 @@
         {
           "id": "bc48e7a9-f674-462a-a5a9-895a63a42faf",
           "type": "pattern",
-          "name": "Six bosses \u2014 circular feature pattern",
+          "name": "Six bosses — circular feature pattern",
           "tool": "aether_cad_feature_update",
           "change": {
             "angleDegrees": 356.4
@@ -9441,7 +9441,7 @@
         {
           "id": "eca9c8f2-1c32-4f29-ac7a-7a7559b6dde5",
           "type": "profile",
-          "name": "Web width \u2014 40 mm",
+          "name": "Web width — 40 mm",
           "tool": "aether_cad_sketch_dimension",
           "change": {
             "feature_id": "eca9c8f2-1c32-4f29-ac7a-7a7559b6dde5",
@@ -9454,7 +9454,7 @@
         {
           "id": "f24b8278-1859-4b67-9b09-f8071f922771",
           "type": "surface-extrude",
-          "name": "Extrude open profile \u2014 surface",
+          "name": "Extrude open profile — surface",
           "tool": "aether_cad_feature_update",
           "change": {
             "distanceMillimeters": 24.75
@@ -9465,7 +9465,7 @@
         {
           "id": "1c6b511d-6678-41f7-9677-e96924f15d2a",
           "type": "surface-thicken",
-          "name": "Thicken web \u2014 3 mm solid",
+          "name": "Thicken web — 3 mm solid",
           "tool": "aether_cad_feature_update",
           "change": {
             "thicknessMillimeters": 2.9699999999999998
@@ -9523,7 +9523,12 @@
     }
   },
   "release": {
-    "status": "qualified; awaiting immutable staging"
+    "status": "active locally",
+    "release": "alpha-0.1.119",
+    "source_commit": "c3b1a86a2f0a7dc6a5883421a935b4e7a2608609",
+    "sha256": "b148c60851df8852a074dfa1a277dc1722f086f79978fc9c08f9ab12cc940dcf",
+    "verified_files": 3580,
+    "other_apps_unchanged": true
   },
   "archive_inventory": [
     {
@@ -9847,5 +9852,103 @@
     "HTTP MCP builder now uses native archive codec instead of obsolete raw JSON files.",
     "Pipe route uses linked run/rise dimensions with the bend radius to retain an exact quarter circle during length edits.",
     "Thumbnail capture is explicit; qualification no longer rewrites public thumbnails."
+  ],
+  "new_analytic_checks": [
+    {
+      "example": "piping",
+      "part": "elbow",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 14377.373218926858,
+      "actual": 14377.373218926852,
+      "absoluteError": 5.4569682106375694e-12,
+      "relativeError": 3.7955251822035427e-16,
+      "tolerance": 0.014377373218926856,
+      "passed": true
+    },
+    {
+      "example": "piping",
+      "part": "flange",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 7615.220592301659,
+      "actual": 7615.22059230166,
+      "absoluteError": 9.094947017729282e-13,
+      "relativeError": 1.1943116955697252e-16,
+      "tolerance": 0.007615220592301659,
+      "passed": true
+    },
+    {
+      "example": "piping",
+      "part": "flange",
+      "field": "holeRemoval",
+      "units": "mm³",
+      "expected": 301.59289474462014,
+      "actual": 301.5928947446191,
+      "absoluteError": 1.0231815394945443e-12,
+      "relativeError": 3.392591660227751e-15,
+      "tolerance": 0.00030159289474462013,
+      "passed": true
+    },
+    {
+      "example": "solid-feature-lab",
+      "part": "draft-cup",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 7065.266175809806,
+      "actual": 7065.2661758098075,
+      "absoluteError": 1.8189894035458565e-12,
+      "relativeError": 2.574551840345021e-16,
+      "tolerance": 0.007065266175809806,
+      "passed": true
+    },
+    {
+      "example": "solid-feature-lab",
+      "part": "radial-plate",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 10835.353062231197,
+      "actual": 10835.353062231196,
+      "absoluteError": 1.8189894035458565e-12,
+      "relativeError": 1.6787541606616493e-16,
+      "tolerance": 0.010835353062231197,
+      "passed": true
+    },
+    {
+      "example": "solid-feature-lab",
+      "part": "thickened-web",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 3000,
+      "actual": 3000,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": 0.003,
+      "passed": true
+    },
+    {
+      "example": "solid-feature-lab",
+      "part": "boss-plate",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 22412.74315795696,
+      "actual": 22412.743157956953,
+      "absoluteError": 7.275957614183426e-12,
+      "relativeError": 3.246348545068799e-16,
+      "tolerance": 0.02241274315795696,
+      "passed": true
+    },
+    {
+      "example": "solid-feature-lab",
+      "part": "bored-block",
+      "field": "volume",
+      "units": "mm³",
+      "expected": 14869.026644707674,
+      "actual": 14869.026644707672,
+      "absoluteError": 1.8189894035458565e-12,
+      "relativeError": 1.2233412764737285e-16,
+      "tolerance": 0.014869026644707673,
+      "passed": true
+    }
   ]
 }
