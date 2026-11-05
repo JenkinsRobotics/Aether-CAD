@@ -32,6 +32,14 @@ Package-manager versions and the shared UI dependency version are separate.
    removal, shared depth handles, construction-axis selection and saved reopen.
    The previous reader refuses Part27; restoring an older app cannot discard its
    direction references. Boundary picking must retain visibility and section rules.
+   Native cylindrical/conical face-axis directions use Part28 and canonical
+   codec31. Run `test_native_extrude_face_axis.py` and
+   `node scripts/verify-extrude-face-axis-format.mjs /path/to/Part27/native-worker.json`.
+   Verify Solid/Thin/Surface geometry, upstream axis edits, missing/ambiguous source
+   refusal, shared handles, persistent selected/error highlights, repeat-click and
+   × removal, saved reopen and the Part27/codec30 refusal boundary. Unique analytic
+   surfaces follow edits; anchored faces must still resolve exactly. Rollback does
+   not downgrade Part28 documents.
    Kernel feature changes also require `scripts/verify-modeling-browser.mjs`
    through Studio's disposable authenticated browser fixture with the candidate
    frontend and matching worker. It covers sketch creation, additive/subtractive

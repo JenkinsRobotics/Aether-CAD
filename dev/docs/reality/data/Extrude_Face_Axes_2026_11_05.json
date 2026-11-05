@@ -1,0 +1,106 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.116",
+  "status": "qualified; awaiting immutable release",
+  "scope": [
+    "Persistent cylindrical/conical face-axis directions for Solid, Thin and Surface Extrude",
+    "Native source-history resolution and consistent axis orientation with Reverse",
+    "Shared direction picker, depth handles and persistent selected/error feedback",
+    "Shared face identity compares explicit discriminator values instead of JSON field order, preserving deselection after canonical archive serialization",
+    "Repeated-click and remove-button semantics, editable saved reopen, canonical agent operations",
+    "Part28 and committed hash-pinned canonical workspace codec31; prior-reader refusal"
+  ],
+  "qualification": {
+    "frontend": {
+      "passed": 2229,
+      "skipped": 1,
+      "path": "build/feature-qualification-2026-11-05/face-axis/frontend-final.log"
+    },
+    "engine": {
+      "passed": 1456,
+      "path": "build/feature-qualification-2026-11-05/face-axis/engine-full.log"
+    },
+    "canonical_codec": {
+      "passed": 44,
+      "source_commit": "5ad72ea2e3d2347f218cd7bce1abdba137350f87"
+    },
+    "format": {
+      "passed": true,
+      "checks": [
+        "Part27 geometry and body identities unchanged",
+        "Part28 native face axis evaluates",
+        "Part27 worker and codec30 refuse new records"
+      ]
+    },
+    "headless": {
+      "passed": true
+    },
+    "regions": {
+      "passed": true
+    },
+    "build_and_types": "Frontend build, frontend and engine TypeScript checks passed",
+    "modeling": {
+      "passed": true,
+      "steps": 17,
+      "server_geometry_builds": 0,
+      "path": "build/Example-Collection/face-axis-qualified-modeling/host/browser/log.json"
+    },
+    "home": {
+      "standalone": "passed",
+      "hosted": "passed",
+      "paths": [
+        "build/feature-qualification-2026-11-05/face-axis/qualified-standalone-home/results.json",
+        "build/Example-Collection/face-axis-qualified-home/host/browser/results.json"
+      ]
+    },
+    "native_service": {
+      "full_run_passed": 350,
+      "full_run_failed": 1,
+      "failure": "The version-manifest assertion still expected Part27. Corrected to Part28 and added explicit legacy Part27 settings preservation.",
+      "worker_bytes_identical_after_frontend_selection_fix": true,
+      "corrected_version_gate": {
+        "passed": 28,
+        "deselected": 324,
+        "path": "build/feature-qualification-2026-11-05/face-axis/native-version.log"
+      },
+      "unique_cases": 352,
+      "unresolved_failures": 0
+    },
+    "browser_controls": {
+      "chromium": {
+        "passed": 25,
+        "path": "build/Example-Collection/face-axis-qualified-controls-chromium/host/browser/feature-controls.json"
+      },
+      "webkit": {
+        "passed": 25,
+        "path": "build/Example-Collection/face-axis-qualified-controls-webkit/host/browser/feature-controls.json"
+      }
+    },
+    "reported_part_face_removal": {
+      "chromium": {
+        "passed": 4,
+        "path": "build/Example-Collection/face-axis-qualified-removal-chromium/host/browser/face-finish-feedback.json"
+      },
+      "webkit": {
+        "passed": 4,
+        "path": "build/Example-Collection/face-axis-qualified-removal-webkit/host/browser/face-finish-feedback.json"
+      }
+    }
+  },
+  "development_findings": [
+    "Native cylinder/cone parameter signs differ; implicit axes now orient toward the sketch normal before Reverse",
+    "Unanchored curved direction references needed inclusion in the shared persistent input-feedback resolver",
+    "Initial native fixture omitted Thin contour selection and assumed Surface output IDs/area summary fields; fixture corrected to explicit editable contours and native bounds",
+    "Browser fixtures initially picked outside the visible face and, after reload, clicked a feature dialog covering the source. Gates now choose a visible native mid-height station, move the dialog after reopen, and assert that the click lands on the viewport; product bytes unchanged.",
+    "Canonical workspace serialization sorts object keys; common face identity now compares centroid and area values, with an actual picker regression covering duplicate labels and invalid previews",
+    "The new browser axis assertion distinguished negative zero from zero; it now checks Euclidean direction error below 1e-9 without altering product geometry"
+  ],
+  "limits": [
+    "Unique analytic faces follow source edits; ambiguous or changed anchored faces require reselection",
+    "Part mate connectors and remaining start/end entity references remain open",
+    "Sharp curved Draft corners, partial arrangement curve conversion, remembered creation mode and full termination qualification remain open",
+    "Full requested CAD feature parity is not complete"
+  ],
+  "live_documents_modified": false,
+  "other_apps_modified": false
+}

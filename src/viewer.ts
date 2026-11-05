@@ -734,6 +734,21 @@ export class MateViewport {
     return faces.every(face=>face!==null)?faces:null;
   }
 
+  selectedExtrusionAxisFace(documentId: string, selected = cadSelection.snapshot().items) {
+    if (selected.length !== 1) return null;
+    const data = this.selectedFaceData(selected[0]);
+    if (!data || data.part.sourceDocumentId !== documentId || data.part.geometryKind === 'mesh' ||
+        !['CYLINDER', 'CYLINDRE', 'CONE'].includes(data.topology.surfaceType)) return null;
+    const reference = this.nativeFaceReference(data);
+    if (!reference) return null;
+    const kind = (type: string) => type === 'CYLINDRE' ? 'CYLINDER' : type;
+    // A unique analytic surface follows edits. Several surfaces of this type
+    // require the same exact discriminator as other native face references.
+    const count = data.part.topology.filter(face => kind(face.surfaceType) === kind(data.topology.surfaceType)).length;
+    if (count === 1) { delete reference.faceAnchor; delete reference.radiusMillimeters; }
+    return { ...reference, kind: 'face-axis' as const };
+  }
+
   private nativeFaceReference(data:NonNullable<ReturnType<MateViewport['selectedFaceData']>>) {
     const {part,topology}=data;
     const reference=nativeFaceReference(part.topology,topology);

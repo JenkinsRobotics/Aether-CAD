@@ -53,12 +53,12 @@ export function layoutExtrudeDirection(context:FeatureEditorContext,controls:Con
 }
 export function validateExtrudeDirection(controls:Controls):string|null {
  if(controls.directionMode.value==='line'&&!controls.directionLine.value)return 'Choose an available straight line in an earlier sketch.';
- if(controls.directionMode.value==='reference')return controls.directionNativeReference.value?null:'Select a straight native edge or construction axis.';
+ if(controls.directionMode.value==='reference')return controls.directionNativeReference.value?null:'Select a straight edge, cylindrical or conical face, or construction axis.';
  return directionVector(Object.fromEntries(Object.entries(controls).map(([key,control])=>[key,control.value])))===null?'Enter a finite, nonzero extrusion direction vector.':null;
 }
 export function serializeExtrudeDirection(values:Record<string,string>,context:FeatureEditorContext) {
  if(values.directionMode==='reference'){
-  if(!values.directionNativeReference)throw Error('Select a straight native edge or construction axis.');
+  if(!values.directionNativeReference)throw Error('Select a straight edge, cylindrical or conical face, or construction axis.');
   return {directionReference:JSON.parse(values.directionNativeReference)};
  }
  if(values.directionMode==='line'){

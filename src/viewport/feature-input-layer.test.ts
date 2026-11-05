@@ -39,3 +39,17 @@ for (const type of ['chamfer', 'shell', 'draft', 'offset-face']) it(`shares pers
   expect(((layer.group.children[0].children[0] as Mesh).material as any).color.getHex()).toBe(featureInputColors.error);
   layer.set(null, [], () => new Matrix4());
 });
+
+for (const surfaceType of ['cylinder', 'cone']) it(`highlights a unique ${surfaceType} direction face and clears it on removal`, () => {
+  const curved = { ...part, topology: [{ ...part.topology[0], surfaceType: surfaceType.toUpperCase() }] };
+  const selected = { id: 'e', type: 'extrude', directionReference: { kind: 'face-axis', sourceFeatureId: 'guide',
+    bodyId: 'body', label: 'Axis', surfaceType } } as PartFeature;
+  const layer = new FeatureInputLayer();
+  layer.set({ feature: selected, status: 'valid' }, [curved], () => new Matrix4());
+  expect(layer.group.children[0].children).toHaveLength(2);
+  layer.set({ feature: selected, status: 'error' }, [curved], () => new Matrix4());
+  for (const object of layer.group.children[0].children) expect(((object as Mesh).material as any).color.getHex()).toBe(featureInputColors.error);
+  expect(resolveFeatureInputs(selected, [{ ...curved, topology: [...curved.topology, { ...curved.topology[0], id: 8 }] }])).toHaveLength(0);
+  layer.set({ feature: { ...selected, directionReference: undefined } as PartFeature, status: 'error' }, [curved], () => new Matrix4());
+  expect(layer.group.children).toHaveLength(0);
+});

@@ -903,13 +903,17 @@ export function evaluatePartDocument(
             if (extrusion.directionReference) {
               if (extrusion.directionVector) throw new Error("Choose either a direction reference or a manual extrusion direction.");
               direction = resolveExtrusionDirection(extrusion.directionReference, {
-                sketchLine, bodyAt, point: stopPoint,
+                sketchLine, bodyAt, point: stopPoint, face: faceByReference,
                 axis: sourceId => {
                   const source = history.find(f => f.id === sourceId);
                   if (!source || source.type !== 'axis' || source.suppressed) throw Error('Extrusion direction axis is unavailable or suppressed. Reselect an earlier axis.');
                   return axisFeatureLine(sourceId).axis;
                 },
               });
+              // A surface supplies an unoriented axis. OCCT's parameter sign
+              // can differ for equivalent cylinders/cones; start toward the
+              // sketch's positive side and let Reverse control the other side.
+              if (extrusion.directionReference.kind === 'face-axis' && dot(direction, n) < 0) direction = neg(direction);
               custom = true;
             } else if (extrusion.directionVector) {
               const v = extrusion.directionVector;

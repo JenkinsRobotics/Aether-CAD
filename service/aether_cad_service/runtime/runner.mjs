@@ -290,12 +290,17 @@ function validateExtrusionDirectionReference(ref, earlier, missing) {
     validateSolidEdgeReference(ref, earlier, missing);
     return;
   }
+  if (ref.kind === "face-axis") {
+    validateSolidFaceReference(ref, earlier, missing, "Extrusion axis");
+    if (ref.surfaceType === "cylinder" || ref.surfaceType === "cone") return;
+    throw Error("Extrusion axis needs a cylindrical or conical face.");
+  }
   if (ref.kind === "sketch-line") {
     if ([ref.sourceFeatureId, ref.contourId, ref.segmentId].every(id2) && (missing(ref.sourceFeatureId) || earlier.get(ref.sourceFeatureId) === "profile")) return;
   } else if (ref.kind === "axis") {
     if (id2(ref.sourceFeatureId) && typeof ref.label === "string" && !!ref.label.trim() && ref.label.length <= 512 && (missing(ref.sourceFeatureId) || earlier.get(ref.sourceFeatureId) === "axis")) return;
   }
-  throw Error("Extrusion direction needs an earlier sketch line, native straight edge or construction axis.");
+  throw Error("Extrusion direction needs an earlier sketch line, native straight edge, cylindrical or conical face, or construction axis.");
 }
 const ids$1 = (list2, min) => Array.isArray(list2) && list2.length >= min && list2.length <= 1e3 && list2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 128) && new Set(list2).size === list2.length;
 function validateProfileRegionSelection(selection) {
@@ -688,8 +693,8 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
   }
 }
-const current = 27;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27];
+const current = 28;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
 const partFormat = {
   current,
   readable
@@ -13246,6 +13251,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
 }
 
 export type ExtrusionDirectionReference = SketchLineDirectionReference | SolidEdgeReference |
+  (SolidFaceReference & { kind: 'face-axis'; surfaceType: 'cylinder' | 'cone' }) |
   { kind: 'axis'; sourceFeatureId: string; label: string };
 
 export type ExtrusionFaceReference=SolidFaceReference;
@@ -14191,6 +14197,7 @@ export interface ExtrudeFeature {
 }
 
 export type ExtrusionDirectionReference = SketchLineDirectionReference | SolidEdgeReference |
+  (SolidFaceReference & { kind: 'face-axis'; surfaceType: 'cylinder' | 'cone' }) |
   { kind: 'axis'; sourceFeatureId: string; label: string };
 
 export type ExtrusionFaceReference=SolidFaceReference;
@@ -38992,8 +38999,81 @@ function connectorKindPreference(kind) {
       return 4;
   }
 }
+const mapVector = (vector2, map) => [map(vector2[0], 0), map(vector2[1], 1), map(vector2[2], 2)];
+function conicalSurfaceFrame(surface) {
+  const oc = getOC();
+  const point2 = new oc.gp_Pnt_1();
+  const du = new oc.gp_Vec_1(), dv = new oc.gp_Vec_1();
+  const duu = new oc.gp_Vec_1(), dvv = new oc.gp_Vec_1(), duv = new oc.gp_Vec_1();
+  try {
+    const u2 = (surface.FirstUParameter() + surface.LastUParameter()) / 2;
+    const firstV = surface.FirstVParameter(), lastV = surface.LastVParameter();
+    for (const fraction of [0.5, 0.25, 0.75]) {
+      const v2 = firstV + (lastV - firstV) * fraction;
+      surface.D2(u2, v2, point2, du, dv, duu, dvv, duv);
+      const radialOffset = pointTuple(duu), derivative2 = pointTuple(dv);
+      const radius = Math.hypot(...radialOffset);
+      if (!(radius > 1e-12)) continue;
+      const radial = mapVector(radialOffset, (value2) => -value2 / radius);
+      const radialSpeed = derivative2.reduce((sum2, value2, i2) => sum2 + value2 * radial[i2], 0);
+      const axial = mapVector(derivative2, (value2, i2) => value2 - radialSpeed * radial[i2]);
+      const axialScale = Math.hypot(...axial);
+      if (!(axialScale > 1e-12)) continue;
+      const axis = mapVector(axial, (value2) => value2 / axialScale);
+      const station = mapVector(pointTuple(point2), (value2, i2) => value2 + radialOffset[i2]);
+      const origin2 = mapVector(station, (value2, i2) => value2 - axis[i2] * v2 * axialScale);
+      if (![...origin2, ...axis, ...radial, axialScale].every(Number.isFinite)) continue;
+      return { origin: origin2, axis, radial, axialScale, firstV, lastV };
+    }
+    throw new Error("The cone has no regular axial station.");
+  } finally {
+    point2.delete();
+    du.delete();
+    dv.delete();
+    duu.delete();
+    dvv.delete();
+    duv.delete();
+  }
+}
+function nativeFaceAxisDirection(face) {
+  const surface = new (getOC()).BRepAdaptor_Surface_2(face.wrapped, true);
+  try {
+    if (face.geomType === "CONE") return unit$3([...conicalSurfaceFrame(surface).axis]);
+    if (!["CYLINDRE", "CYLINDER"].includes(face.geomType)) {
+      throw Error("Extrusion axis needs a cylindrical or conical face.");
+    }
+    const cylinder = surface.Cylinder();
+    try {
+      const axis = cylinder.Axis();
+      try {
+        const direction2 = axis.Direction();
+        try {
+          return unit$3([direction2.X(), direction2.Y(), direction2.Z()]);
+        } finally {
+          direction2.delete();
+        }
+      } finally {
+        axis.delete();
+      }
+    } finally {
+      cylinder.delete();
+    }
+  } finally {
+    surface.delete();
+  }
+}
 function resolveExtrusionDirection(ref, context2) {
   if (ref.kind === "axis") return unit$3(context2.axis(ref.sourceFeatureId));
+  if (ref.kind === "face-axis") {
+    const body = context2.bodyAt(ref.sourceFeatureId, ref.bodyId);
+    if (!body) throw Error("Extrusion axis face source is unavailable. Reselect an earlier native face.");
+    const face = context2.face(body, ref, "Extrusion axis");
+    try {
+      return nativeFaceAxisDirection(face);
+    } finally {
+      face.delete();
+    }
+  }
   let from, to;
   if (ref.kind === "sketch-line") {
     [from, to] = context2.sketchLine(ref, "Extrusion direction line is unavailable or no longer straight. Reselect it.");
@@ -39852,42 +39932,6 @@ class FeatureFailure extends Error {
   }
   featureId;
   featureName;
-}
-const mapVector = (vector2, map) => [map(vector2[0], 0), map(vector2[1], 1), map(vector2[2], 2)];
-function conicalSurfaceFrame(surface) {
-  const oc = getOC();
-  const point2 = new oc.gp_Pnt_1();
-  const du = new oc.gp_Vec_1(), dv = new oc.gp_Vec_1();
-  const duu = new oc.gp_Vec_1(), dvv = new oc.gp_Vec_1(), duv = new oc.gp_Vec_1();
-  try {
-    const u2 = (surface.FirstUParameter() + surface.LastUParameter()) / 2;
-    const firstV = surface.FirstVParameter(), lastV = surface.LastVParameter();
-    for (const fraction of [0.5, 0.25, 0.75]) {
-      const v2 = firstV + (lastV - firstV) * fraction;
-      surface.D2(u2, v2, point2, du, dv, duu, dvv, duv);
-      const radialOffset = pointTuple(duu), derivative2 = pointTuple(dv);
-      const radius = Math.hypot(...radialOffset);
-      if (!(radius > 1e-12)) continue;
-      const radial = mapVector(radialOffset, (value2) => -value2 / radius);
-      const radialSpeed = derivative2.reduce((sum2, value2, i2) => sum2 + value2 * radial[i2], 0);
-      const axial = mapVector(derivative2, (value2, i2) => value2 - radialSpeed * radial[i2]);
-      const axialScale = Math.hypot(...axial);
-      if (!(axialScale > 1e-12)) continue;
-      const axis = mapVector(axial, (value2) => value2 / axialScale);
-      const station = mapVector(pointTuple(point2), (value2, i2) => value2 + radialOffset[i2]);
-      const origin2 = mapVector(station, (value2, i2) => value2 - axis[i2] * v2 * axialScale);
-      if (![...origin2, ...axis, ...radial, axialScale].every(Number.isFinite)) continue;
-      return { origin: origin2, axis, radial, axialScale, firstV, lastV };
-    }
-    throw new Error("The cone has no regular axial station.");
-  } finally {
-    point2.delete();
-    du.delete();
-    dv.delete();
-    duu.delete();
-    dvv.delete();
-    duv.delete();
-  }
 }
 function toroidalSurfaceFrame(surface) {
   const oc = getOC();
@@ -42238,12 +42282,14 @@ function evaluatePartDocument(document2, options = {}) {
                 sketchLine,
                 bodyAt,
                 point: stopPoint,
+                face: faceByReference,
                 axis: (sourceId) => {
                   const source = history.find((f2) => f2.id === sourceId);
                   if (!source || source.type !== "axis" || source.suppressed) throw Error("Extrusion direction axis is unavailable or suppressed. Reselect an earlier axis.");
                   return axisFeatureLine(sourceId).axis;
                 }
               });
+              if (extrusion.directionReference.kind === "face-axis" && dot$6(direction2, n) < 0) direction2 = neg(direction2);
               custom = true;
             } else if (extrusion.directionVector) {
               const v2 = extrusion.directionVector;

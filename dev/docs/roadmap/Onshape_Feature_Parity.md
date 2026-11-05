@@ -807,3 +807,28 @@ deleted (tools, commands, palette entries, help, store action). Component remain
 assemblies. Open: snapping to vertices and anchor points in sketch-on-face flows; the reported
 slowdown while hovering and reselecting over time — the region-pick gate now times a hover
 sweep twice and fails if the second pass is 3× slower, so a regression shows in the fixture.
+
+## Extrude cylindrical and conical face axes — 2026-11-05
+
+The shared direction picker now accepts cylindrical and conical faces, retaining
+source feature/body identity. Geometry is resolved at that source history position;
+the native analytic axis drives Solid, Thin and Surface extrusion and the existing
+shared depth controls. OCCT surface parameter signs do not decide the default
+extrusion side: face axes start toward the sketch normal, with Reverse controlling
+the opposite side. Unique analytic faces follow source edits. Multiple faces use
+an exact centroid/area discriminator and refuse ambiguous or changed matches.
+
+Persistent input feedback also handles unanchored curved references: selected
+faces and boundaries remain visible during preview, turn red on failure, and
+clear on repeated click or × removal. Shared face identity compares explicit
+centroid/area values, so canonical archive key ordering cannot defeat deselection
+or duplicate a saved reference. The picker retains its source through
+save/reopen and shares the same canonical agent operations and native evaluator.
+
+Part28 and canonical workspace codec31 preserve this new intent; Part27 geometry
+is unchanged and the prior worker/codec refuse the new format. Installation and
+qualification are tracked in [face-axis evidence](../reality/data/Extrude_Face_Axes_2026_11_05.json).
+This closes implicit cylindrical/conical direction selection, not complete
+Extrude parity. Part mate connectors, remaining starting/ending entities, sharp
+curved Draft corners, partial arrangement curve conversion, remembered creation
+mode and full termination-matrix qualification remain open before Revolve review.

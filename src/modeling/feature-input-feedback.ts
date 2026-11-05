@@ -21,7 +21,7 @@ export function featureInputReferences(feature: PartFeature): Reference[] {
     if (!value || typeof value !== 'object') return;
     if (Array.isArray(value)) { value.forEach(visit); return; }
     const row = value as Record<string, unknown>;
-    if (typeof row.bodyId === 'string' && (row.normal || row.faceAnchor || row.midpointMillimeters || row.anchor)) {
+    if (typeof row.bodyId === 'string' && (row.normal || row.surfaceType || row.faceAnchor || row.midpointMillimeters || row.anchor)) {
       refs.push(row as Reference); return;
     }
     Object.values(row).forEach(visit);
@@ -63,7 +63,7 @@ export function resolveFeatureInputs(feature: PartFeature, parts: readonly PartG
         return m?.centerMillimeters && near(m.centerMillimeters, ref.faceAnchor.centerMillimeters)
           && Math.abs((m.areaSquareMillimeters ?? 0) - ref.faceAnchor.areaSquareMillimeters) <= Math.max(1e-6, ref.faceAnchor.areaSquareMillimeters * 1e-9);
       }
-      return Boolean(ref.normal);
+      return Boolean(ref.normal || ref.surfaceType);
     });
     return matches.length === 1 ? [{ part, faceIds: [matches[0].id], edges: matches[0].candidates.filter(c => c.kind === 'edge-midpoint') }] : [];
   });

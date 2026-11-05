@@ -95,4 +95,10 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   return { read, update, element: box.element };
 }
 
-export const faceIdentity = (face: { sourceFeatureId: string; bodyId: string; normal?: unknown; surfaceType?: unknown; faceAnchor?: unknown }) => JSON.stringify([face.sourceFeatureId, face.bodyId, face.normal, face.surfaceType, face.faceAnchor]);
+/** Archive codecs may reorder object keys. Compare the geometric discriminator,
+ * not its JSON property order, so a reopened face still toggles off when clicked. */
+export const faceIdentity = (face: { sourceFeatureId: string; bodyId: string; normal?: unknown; surfaceType?: unknown; faceAnchor?: unknown }) => {
+  const anchor = face.faceAnchor as { centerMillimeters?: unknown; areaSquareMillimeters?: unknown } | undefined;
+  return JSON.stringify([face.sourceFeatureId, face.bodyId, face.normal, face.surfaceType,
+    anchor?.centerMillimeters, anchor?.areaSquareMillimeters]);
+};

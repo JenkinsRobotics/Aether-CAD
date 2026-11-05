@@ -10,6 +10,7 @@ const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom: any;
 let close: (() => void) | undefined;
 let respond: EventListener;
+let respondFace: EventListener;
 const edge = { kind: 'solid-edge', sourceFeatureId: 'guide', bodyId: 'guide-body', label: 'Guide edge',
   anchor: { start: { signature: 'a', positionMillimeters: [0, 0, 0] }, end: { signature: 'b', positionMillimeters: [3, 0, 4] } } };
 const axis = { kind: 'axis', sourceFeatureId: 'axis', label: 'Axis' };
@@ -21,6 +22,7 @@ beforeAll(() => {
 });
 afterEach(async () => {
   close?.(); window.removeEventListener('aether-transform-edge-request', respond);
+  window.removeEventListener('aether-extrude-direction-face-request', respondFace);
   await new Promise(resolve => setTimeout(resolve, 0)); cadSelection.dispatch({ type: 'clear' });
   cadWorkspace.publish({ ...cadWorkspace.snapshot(), selectedItemIDs: new Set() });
 });
@@ -86,4 +88,22 @@ it('deselects a saved edge after archive key reordering or reversed endpoint tra
     end: { positionMillimeters: edge.anchor.start.positionMillimeters, signature: edge.anchor.start.signature } } };
   const f = await mount(saved);
   expect(click()).toBe(false); expect(f.value()).toBeUndefined();
+});
+
+for (const surfaceType of ['cylinder', 'cone']) it(`selects, toggles and removes a ${surfaceType} axis during failed preview`, async () => {
+  const f = await mount(); f.mode('reference');
+  const item = { id: 'face', kind: 'face', partId: 'guide-body', faceId: 3, label: 'Face' };
+  const reference = { kind: 'face-axis', sourceFeatureId: 'guide', bodyId: 'guide-body', surfaceType, label: 'Axis of Face 3' };
+  respondFace = event => {
+    expect((event as CustomEvent).detail.selection).toEqual([item]);
+    window.dispatchEvent(new CustomEvent('aether-extrude-direction-face', { detail: { reference } }));
+  };
+  window.addEventListener('aether-extrude-direction-face-request', respondFace);
+  const pick = () => window.dispatchEvent(new CustomEvent('aether-feature-reference-click', { cancelable: true, detail: { item } }));
+  expect(pick()).toBe(false); expect(f.serialize()).toEqual({ directionReference: reference });
+  f.win.setError('Preview failed'); expect(pick()).toBe(false); expect(f.value()).toBeUndefined();
+  pick(); const button = f.box.querySelector<HTMLButtonElement>('button')!;
+  button.dispatchEvent(new Event('pointerdown', { bubbles: true })); expect(button.isConnected).toBe(true);
+  button.click(); expect(f.value()).toBeUndefined();
+  f.mode('normal'); expect(pick()).toBe(true); expect(f.value()).toBeUndefined();
 });

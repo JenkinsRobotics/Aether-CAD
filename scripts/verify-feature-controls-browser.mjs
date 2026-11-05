@@ -5,6 +5,7 @@ import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
 import { verifyCurvedDraft } from './browser/curved-draft-workflow.mjs';
 import { verifyExtrudeProfileFocus } from './browser/extrude-profile-focus.mjs';
 import { verifyExtrudeModeRemoval, verifyConnectedProfileModes } from './browser/extrude-mode-selection.mjs';
+import { verifyExtrudeFaceAxis } from './browser/extrude-face-axis-workflow.mjs';
 import { verifyExtrudeDirection } from './browser/extrude-direction-workflow.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
@@ -418,6 +419,7 @@ try {
   }
   }
   await verifyExtrudeDirection({ page, expect, dialog, row, point, open, stored, accept, base, sketch, evidence, results });
+  await verifyExtrudeFaceAxis({ page, expect, dialog, row, point, open, stored, accept, base, sketch, evidence, results });
   assert.deepEqual(errors, []);
   await writeFile(join(evidence, 'feature-controls.json'), JSON.stringify({ results, errors }, null, 2));
   console.log(results.join('\n'));

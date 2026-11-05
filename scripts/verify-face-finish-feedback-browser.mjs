@@ -134,6 +134,11 @@ try {
     assert.equal(JSON.parse(await dialog().locator('[aria-label="Picked edges"]').inputValue())[0].kind, 'face-edges');
     await page.screenshot({ path: join(evidence, `${name.toLowerCase()}-face-${side}-reopened.png`) });
     const persisted = await saved(file.id);
+    await page.evaluate(() => window.__aetherSetView('isometric')); await page.waitForTimeout(300);
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(0);
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(1);
     await entities.getByRole('button', { name: /^Remove / }).click();
     await expect.poll(async () => (await references()).length).toBe(0);
     await page.evaluate(() => window.__aetherSetView('isometric')); await page.waitForTimeout(300);

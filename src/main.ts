@@ -1787,6 +1787,15 @@ window.addEventListener('aether-extrude-face-request',event=>{
   window.dispatchEvent(new CustomEvent('aether-extrude-face',{detail:face&&sourceFeatureId?{support:{...face,sourceFeatureId,label:source?`Face of ${source.name}`:face.label}}:{error:'Select an unambiguous native face on an earlier part. Rebuild or reselect if its surface is unavailable.'}}));
 });
 
+window.addEventListener('aether-extrude-direction-face-request', event => {
+  const detail = (event as CustomEvent).detail;
+  const face = activePartDocument && viewer.selectedExtrusionAxisFace(activePartDocument.documentId, detail?.selection);
+  const sourceFeatureId = face && activePartDocument && sourceFeatureForBody(activePartDocument, face.bodyId, detail?.beforeFeatureId);
+  window.dispatchEvent(new CustomEvent('aether-extrude-direction-face', { detail: face && sourceFeatureId
+    ? { reference: { ...face, sourceFeatureId, label: `Axis of ${face.label}` } }
+    : { error: 'Select a cylindrical or conical face on an earlier native part.' } }));
+});
+
 window.addEventListener("aether-sketch-face-request", (event) => {
   const frame = viewer.selectedSketchFrame();
   // Carry WHICH face was picked, not only its frame: a sketch needs the frame,

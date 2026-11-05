@@ -1,17 +1,26 @@
-import type { Shape3D } from 'replicad';
+import type { Face, Shape3D } from 'replicad';
 import type { ExtrusionDirectionReference, ExtrusionPointReference } from '../document/index';
 import { deleteAfterVectorTuple } from '../geometry/index';
 import { norm, sub, unit, type V3 } from './vector';
+import { nativeFaceAxisDirection } from './native-face-axis';
 
 type Context = {
   sketchLine: (ref: Extract<ExtrusionDirectionReference, { kind: 'sketch-line' }>, error: string) => [V3, V3];
   axis: (sourceId: string) => V3;
   bodyAt: (sourceId: string, bodyId: string) => Shape3D | undefined | null;
   point: (ref: ExtrusionPointReference) => V3;
+  face: (body: Shape3D, ref: Extract<ExtrusionDirectionReference, { kind: 'face-axis' }>, label: string) => Face;
 };
 
 export function resolveExtrusionDirection(ref: ExtrusionDirectionReference, context: Context): V3 {
   if (ref.kind === 'axis') return unit(context.axis(ref.sourceFeatureId));
+  if (ref.kind === 'face-axis') {
+    const body = context.bodyAt(ref.sourceFeatureId, ref.bodyId);
+    if (!body) throw Error('Extrusion axis face source is unavailable. Reselect an earlier native face.');
+    const face = context.face(body, ref, 'Extrusion axis');
+    try { return nativeFaceAxisDirection(face); }
+    finally { face.delete(); }
+  }
   let from: V3, to: V3;
   if (ref.kind === 'sketch-line') {
     [from, to] = context.sketchLine(ref, 'Extrusion direction line is unavailable or no longer straight. Reselect it.');

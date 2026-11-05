@@ -27,7 +27,7 @@ def test_agent_axis_direction_edit_reopen_and_failed_transaction(tmp_path):
     ])
     assert created["result"]["evaluated_bodies"][0]["volume_mm3"] == pytest.approx(1600)
     document = json.loads(created["content"])
-    assert document["formatVersion"] == 27
+    assert document["formatVersion"] == 28
     axis_id = created["result"]["references"]["axis"]["feature_id"]
     updated = run(tmp_path, created["content"], [{"id": "axis", "tool": "aether_cad_feature_update", "arguments": {
         "feature_id": axis_id, "changes_json": {"definition": {"method": "edge", "axis": {**axis, "directionMillimeters": [0, 0, 1]}}}}}])
