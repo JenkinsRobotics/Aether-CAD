@@ -63,6 +63,12 @@
     }
   },
   "release": {
-    "status": "qualified; awaiting immutable staging"
+    "status": "active locally",
+    "release": "alpha-0.1.118",
+    "source_commit": "a60162d1858cb0b91df3df3468603de352739228",
+    "sha256": "73eed1cd7e6a83f2e7671ce05de4ec4f055db73f24a1ca54eaddec4dc1863389",
+    "verified_files": 3576,
+    "other_apps_unchanged": true,
+    "https_home_status": 302
   }
 }
