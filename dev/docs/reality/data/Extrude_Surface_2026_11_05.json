@@ -67,6 +67,18 @@
     "native_service": {
       "passed": 326,
       "native_release_flag": true
+    },
+    "installed_selection_removal": {
+      "browsers": [
+        "Chromium WebGPU",
+        "WebKit WebGL2"
+      ],
+      "cases_per_browser": 4,
+      "errors": [],
+      "evidence": [
+        "build/Example-Collection/installed-107-removal-chromium/host/browser/face-finish-feedback.json",
+        "build/Example-Collection/installed-107-removal-webkit/host/browser/face-finish-feedback.json"
+      ]
     }
   },
   "complete_feature_parity": false,
@@ -77,5 +89,17 @@
     "Draft with oblique direction, axis/mate-connector direction picking and complete Solid/Thin extent matrix",
     "Full UI/agent conversion coverage between existing Solid, Thin and Surface",
     "Broader Revolve, Chamfer, Fillet and remaining reference features"
-  ]
+  ],
+  "release": {
+    "version": "alpha-0.1.107",
+    "source_commit": "c7fdb63f8d6bdb3324b82229368792a947b8a747",
+    "sha256": "9380e507d8e7e5e03498f3a5052519a63bc238407e6c784af8330f9c8500b113",
+    "verified_package_files": 3576,
+    "active": true,
+    "restart_required": false,
+    "rollback_contract_guard": true,
+    "origin": "https://aetherstudio.local:8780",
+    "other_apps_unchanged": true,
+    "live_asset_check": "Anonymous editor redirects to sign-in; assets require authentication. Installed package hashes verified; authenticated behavior tested in disposable hosts."
+  }
 }

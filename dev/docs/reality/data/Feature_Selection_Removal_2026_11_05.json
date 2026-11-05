@@ -59,5 +59,19 @@
       "build/Example-Collection/installed-106-removal-chromium/host/browser/face-finish-feedback.json",
       "build/Example-Collection/installed-106-removal-webkit/host/browser/face-finish-feedback.json"
     ]
+  },
+  "installed_107_reverification": {
+    "release": "alpha-0.1.107",
+    "browsers": [
+      "Chromium WebGPU",
+      "WebKit WebGL2"
+    ],
+    "cases_per_browser": 4,
+    "errors": [],
+    "fixture": "Read-only archived copy of the reported Part 1; all edits in disposable hosts",
+    "evidence": [
+      "build/Example-Collection/installed-107-removal-chromium/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/installed-107-removal-webkit/host/browser/face-finish-feedback.json"
+    ]
   }
 }

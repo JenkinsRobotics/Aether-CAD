@@ -37,7 +37,7 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
-## Unified Surface Extrude — 2026-11-05, qualified incremental upgrade
+## Unified Surface Extrude — 2026-11-05, alpha-0.1.107
 
 Surface uses the same Extrude dialog and shared value manipulators as Solid and
 Thin. New/Add operate on actual native sheet geometry. Open and closed curves,
@@ -147,7 +147,7 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface mode integration; oblique draft and the remaining drafted stopping-limit combinations; complete reference-control coverage. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source/disjoint outputs, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
 | Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
