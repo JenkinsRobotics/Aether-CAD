@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-05",
+  "status": "All qualification passed; ready for local release",
+  "problem": [
+    "A stopping-face or point mode disabled profile picking without a way to focus the profile field again.",
+    "Stopping-part fields did not share the reference picker lifecycle and could consume selections while hidden.",
+    "Thin and Surface repeated the profile entity box with legacy Sketch/curve menus."
+  ],
+  "changes": [
+    "One visible profile entity box across Solid, Surface and Thin; real tree and viewport selection retained.",
+    "Profiles, stopping faces, points and parts share the existing reference picker lifecycle; pointer and keyboard focus select the active field.",
+    "Focus changes announce the picking mode without replacing entity rows before a pending remove click.",
+    "Inactive or hidden stopping-part fields ignore selections; first and second stopping parts stay independent.",
+    "Face and part pickers explicitly enable source geometry during native previews/history edits."
+  ],
+  "qualification": {
+    "focused_dialog_tests": 31,
+    "types": true,
+    "build": true,
+    "native_runtime_byte_identical_to": "alpha-0.1.112",
+    "reused_native_evidence": "Extrude_Oblique_Draft_2026_11_05.json",
+    "frontend": {
+      "passed": 2215,
+      "existing_skipped": 1,
+      "log": "build/feature-qualification-2026-11-05/extrude-picker/frontend-final.log"
+    },
+    "build_log": "build/feature-qualification-2026-11-05/extrude-picker/build-final.log",
+    "native_source_selection": "Stopping-face and stopping-part references reselected using actual viewport clicks during a native history preview",
+    "frozen_product_files_unchanged": true,
+    "modeling": {
+      "steps": 17,
+      "errors": [],
+      "server_geometry_requests": 0,
+      "path": "build/Example-Collection/extrude-picker-qualified-modeling-2026-11-05/host/browser/log.json"
+    },
+    "chromium": {
+      "passed": true,
+      "workflows": 18,
+      "path": "build/Example-Collection/extrude-picker-qualified-chromium-2026-11-05/host/browser/feature-controls.json"
+    },
+    "chromium_reported_part_removal": {
+      "passed": true,
+      "cases": 4,
+      "path": "build/Example-Collection/extrude-picker-qualified-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json"
+    },
+    "webkit": {
+      "passed": true,
+      "workflows": 18,
+      "path": "build/Example-Collection/extrude-picker-qualified-webkit-2026-11-05/host/browser/feature-controls.json"
+    },
+    "webkit_reported_part_removal": {
+      "passed": true,
+      "cases": 4,
+      "path": "build/Example-Collection/extrude-picker-qualified-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+    },
+    "hosted_home": {
+      "passed": true,
+      "path": "build/Example-Collection/extrude-picker-qualified-home-2026-11-05/host/browser/results.json"
+    },
+    "standalone_home": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/extrude-picker/qualified-home-standalone/results.json"
+    },
+    "initial_browser_investigation": "The first added viewport-toggle check hit the Draft overlay instead of an exposed canvas point. The final strict check uses an unobstructed bottom view, verifies the event target is the canvas, then toggles the actual profile and reselects the native stopping face. No assertions were relaxed."
+  },
+  "schema_changes": false,
+  "live_user_documents_modified": false,
+  "remaining": [
+    "Curved oblique Draft and complete Extrude termination/mode-conversion matrix.",
+    "Direction axis/mate-connector picking and remaining reference controls.",
+    "Check profile selection preservation when switching Solid/Surface/Thin after manually removing inputs.",
+    "Large-scope Surface Add profiling.",
+    "Revolve, Chamfer, Fillet and remaining requested reference features in the agreed order."
+  ]
+}

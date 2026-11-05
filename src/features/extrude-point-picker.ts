@@ -31,7 +31,9 @@ export function extrusionPointPicker(context:FeatureEditorContext,control:Contro
   const set=(value:string)=>{control.value=value;select.value='';render();control.dispatchEvent(new Event('change'));};
   select.onchange=()=>{if(select.value)set(select.value);};const listRow=rowIn('Sketch point',select);listRow.hidden=true;element.append(listRow); // ponytail: the list stays for the suite; points are picked in the viewport
   const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));window.dispatchEvent(new CustomEvent('aether-sketch-point-picking',{detail:value}));element.dataset.picking=String(value);});
-  element.addEventListener('pointerdown',()=>{if(enabled)lifecycle.setActive(true);});
+  box.element.tabIndex=0;
+  const activate=()=>{if(enabled)lifecycle.setActive(true);};
+  element.addEventListener('pointerdown',activate);element.addEventListener('focusin',activate);
   const request=()=>{
     if(!enabled||!active||!win.panel.isConnected)return;
     const items=cadSelection.snapshot().items;

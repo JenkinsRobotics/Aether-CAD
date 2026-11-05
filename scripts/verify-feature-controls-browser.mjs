@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
 import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
+import { verifyExtrudeProfileFocus } from './browser/extrude-profile-focus.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -108,10 +109,12 @@ try {
     if (mode === 'Solid') {
       for (const p of [[-12, 0, 0], [12, 0, 3]]) { const at = await point(p); assert.ok(at); await page.mouse.click(...at); }
     } else {
-      await dialog().locator('[aria-label="Sketch"]').selectOption('a');
-      await dialog().locator('[aria-label="Sketch"]').selectOption('b');
+      await row(/^Sketch 1/).click();
+      await row(/^Sketch 2/).click();
     }
     await expect(entities.locator('.aui-feature-entity')).toHaveCount(2);
+    await expect(dialog().locator('select[aria-label="Sketch"]')).toBeHidden();
+    await expect(dialog().locator('select[aria-label="Sketch curves"], select[aria-label="Region"]')).toBeHidden();
     // Keep the exact end-on view that previously made every depth control disappear.
     const depthHandle = page.getByRole('button', { name: 'Pull extrusion depth', exact: true });
     await expect(depthHandle).toBeEnabled({ timeout: 45000 });
@@ -193,7 +196,7 @@ try {
   const surfaceFile = await open(surface);
   await command('Extrude', 'feature-extrude');
   await dialog().getByRole('button', { name: 'Surface', exact: true }).click();
-  await dialog().locator('[aria-label="Sketch"]').selectOption('s');
+  await row(/^Surface sketch/).click();
   await expect(dialog().getByRole('button', { name: 'Remove', exact: true })).toBeHidden();
   await expect(dialog().getByRole('button', { name: 'Intersect', exact: true })).toBeHidden();
   const surfaceDepth = page.getByRole('button', { name: 'Pull extrusion depth', exact: true });
@@ -275,6 +278,7 @@ try {
   ];
   const stoppedFile = await open(stopped);
   await page.evaluate(() => window.__aetherSetView?.('isometric')); await row(/^Extrude 1/).dblclick();
+  await verifyExtrudeProfileFocus({ page, expect, dialog, row, point, evidence, results });
   const stopHandle = page.getByRole('button', { name: 'End offset', exact: true });
   await expect(stopHandle).toBeEnabled({ timeout: 45000 }); await stopHandle.press('ArrowUp');
   await expect(dialog().locator('[aria-label="End offset (mm)"]')).toHaveValue('1');
@@ -310,6 +314,17 @@ try {
     const file = await open(narrowed); await row(/^Extrude 1/).dblclick();
     const offset = dialog().locator('[aria-label="End offset (mm)"]');
     await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+    if (endType === 'up-to-part') {
+      const parts = dialog().locator('.aui-feature-entities[aria-label="Stopping part"]');
+      await parts.getByRole('button', { name: /^Remove / }).click();
+      await expect(parts.locator('.aui-feature-entity')).toHaveCount(0);
+      const at = await point([10, 5, 110]);
+      assert.ok(at);
+      assert.equal(await page.evaluate(p => document.elementFromPoint(...p)?.matches('canvas.viewport-canvas'), at), true);
+      await page.mouse.click(...at);
+      await expect(dialog().locator('input[aria-label="Stopping part identity"]')).toHaveValue('limitBody');
+      await expect(dialog().locator('[data-feature-action="accept"]')).toBeEnabled({ timeout: 45000 });
+    }
     // Keyboard interaction uses the same shared manipulator and canonical
     // draft as typing, even when the original profile exceeds the stop width.
     await expect(stopHandle).toBeEnabled({ timeout: 45000 }); await stopHandle.press('ArrowUp');

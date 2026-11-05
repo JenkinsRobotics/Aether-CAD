@@ -20,10 +20,13 @@ function facePicker(context:FeatureEditorContext, control:Control, title:string,
  let enabled=false,active=false;
  const lifecycle=referencePickerLifecycle('face',()=>enabled&&win.panel.isConnected,value=>{
   active=value;container.dataset.picking=String(active);
+  window.dispatchEvent(new CustomEvent('aether-source-face-picking',{detail:value}));
   box.element.style.outline=active?'1px solid var(--aui-accent, #3576e8)':'';
  });
  const setActive=lifecycle.setActive;
- container.addEventListener('pointerdown',()=>{if(enabled)setActive(true);});
+ box.element.tabIndex=0;
+ const activate=()=>{if(enabled)setActive(true);};
+ container.addEventListener('pointerdown',activate);container.addEventListener('focusin',activate);
  const request=()=>{
   if(!enabled||!active||!win.panel.isConnected)return;
   const items=cadSelection.snapshot().items;

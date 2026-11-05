@@ -3,7 +3,7 @@
 import { cadSelection } from "../cad-selection-store";
 import type { Control, FeatureEditorContext } from "./shared";
 
-export function mountPartBox(context: FeatureEditorContext, control: Control, title: string, choices: { id: string; name: string }[], exclude: () => string = () => "", options: { single?: boolean; scalar?: boolean } = {}) {
+export function mountPartBox(context: FeatureEditorContext, control: Control, title: string, choices: { id: string; name: string }[], exclude: () => string = () => "", options: { single?: boolean; scalar?: boolean; isActive?: () => boolean } = {}) {
   const { win, form } = context;
   control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
   const box = win.entitiesBox(title);
@@ -11,7 +11,7 @@ export function mountPartBox(context: FeatureEditorContext, control: Control, ti
   const panel = win.panel as HTMLElement & { dataset: DOMStringMap };
   if (!panel.dataset.activePartBox) panel.dataset.activePartBox = title;
   box.element.addEventListener("pointerdown", () => { panel.dataset.activePartBox = title; });
-  const active = () => panel.dataset.activePartBox === title;
+  const active = () => !box.element.closest('[hidden]') && (options.isActive ? options.isActive() : panel.dataset.activePartBox === title);
   // `scalar`: the control holds one bare id (Extrude's stopping part), not a JSON list.
   const read = (): string[] => options.scalar ? (control.value ? [control.value] : []) : JSON.parse(control.value || "[]");
   const update = (ids: string[]) => { control.value = options.scalar ? (ids[0] ?? "") : JSON.stringify(ids); render(); control.dispatchEvent(new Event("change")); };

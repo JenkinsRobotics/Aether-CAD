@@ -4,6 +4,7 @@ import { takePickedSketchRegion } from "../sketch-region-selection";
 import { cadWorkspace } from "../cad-workspace-store";
 import { featureRegionChoices, stampProfileSelections } from "./regions";
 import type { Controls, Control, FeatureEditorContext } from "./shared";
+import { referencePickerLifecycle } from './reference-picker-lifecycle';
 
 type Pick = { featureId: string; contourIndex: number };
 const initialByContext = new WeakMap<FeatureEditorContext, string>();
@@ -46,10 +47,19 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       return option;
     }));
   };
-  let pickingActive=true;
+  let pickingActive=false;
+  const announce = () => {
+    const picks = read();
+    if (box) box.element.dataset.picking = String(pickingActive);
+    window.dispatchEvent(new CustomEvent("aether-region-mode", {detail: {active:pickingActive, curveMode:curves(), regionMode: feature?.regionMode === "faces" || !feature || selections.value !== selections.dataset.initial, selections:picks, legacySelections:picks.filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex && r.contourId && !r.cell)), allowedSourceIds:sketches.map(f=>f.id)}}));
+  };
+  const lifecycle = referencePickerLifecycle('auto', () => selections.isConnected, active => {
+    pickingActive = active;
+    if (active) activeSelection = selections;
+    announce();
+  });
   const render = () => {
     const picks = read();
-    activeSelection = selections;
     if (box) {
       const caption=curves()?"Sketch curves to extrude":"Faces and sketch regions to extrude";
       box.element.setAttribute('aria-label',caption);
@@ -57,9 +67,9 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       if(label)label.textContent=caption;
     }
     box?.render(picks.map(p => ({label: `${sketches.find(f => f.id === p.featureId)?.name ?? "Sketch"} · ${curves()?`Curve ${p.contourIndex + 1}`:regions(p.featureId).find(r=>r.contourIndex===p.contourIndex)?.label ?? "Missing region"}`, onRemove: () => update(picks.filter(other => key(other) !== key(p)))})));
-    window.dispatchEvent(new CustomEvent("aether-region-mode", {detail: {active:pickingActive, curveMode:curves(), regionMode: feature?.regionMode === "faces" || !feature || selections.value !== selections.dataset.initial, selections:picks, legacySelections:picks.filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex && r.contourId && !r.cell)), allowedSourceIds:sketches.map(f=>f.id)}}));
+    announce();
   };
-  pickingModes.set(selections,active=>{pickingActive=active;render();});
+  pickingModes.set(selections, lifecycle.setActive);
   const update = (picks: Pick[]) => {
     selections.value = JSON.stringify([...new Map(picks.map(p => [key(p),p])).values()]);
     syncRegion(); render(); selections.dispatchEvent(new Event("change"));
@@ -67,7 +77,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   source.addEventListener("change", () => update(source.value ? [...read(), ...regions(source.value).map(r => ({featureId:source.value, contourIndex:r.contourIndex}))] : []));
   region.addEventListener("change", () => update([...read().filter(p => p.featureId !== source.value), ...Array.from(region.selectedOptions, o => ({featureId:source.value, contourIndex:Number(o.value)}))]));
   const picked = (event: Event) => {
-    if (!selections.isConnected) return;
+    if (!selections.isConnected || !pickingActive) return;
     const p = (event as CustomEvent).detail as Pick & {replace?:boolean};
     if (!regions(p.featureId).some(r => r.contourIndex === p.contourIndex)) return;
     source.value = p.featureId;
@@ -89,6 +99,7 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   const observer = new window.MutationObserver(() => {
     if (selections.isConnected) return;
     observer.disconnect(); unsubscribeTree(); eventWindow.removeEventListener("aether-region-picked", picked);
+    lifecycle.dispose();
     if (activeSelection === selections) {
       activeSelection = undefined;
       eventWindow.dispatchEvent(new eventWindow.CustomEvent("aether-region-mode", {detail:{active:false}}));
@@ -98,11 +109,12 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
   layouts.set(selections, () => {
     for (const control of [source,region,selections]) { control.closest("label")?.remove(); control.hidden=true; control.setAttribute("form",context.form.id); context.form.append(control); }
     box = context.win.entitiesBox("Faces and sketch regions to extrude");
-    const sourceRow=document.createElement('label');sourceRow.className='aui-feature-row';sourceRow.append('Sketch',source);
-    const curveRow=document.createElement('label');curveRow.className='aui-feature-row';curveRow.append('Sketch curves',region);
-    region.multiple=true;region.size=3;region.style.height='auto';context.win.body.append(sourceRow,curveRow);
+    // Focus changes only the picking channel; never replace a pending × target.
+    box.element.tabIndex = 0;
+    const activate = () => lifecycle.setActive(true);
+    box.element.addEventListener('pointerdown', activate);
+    box.element.addEventListener('focusin', activate);
     const syncMode=()=>{
-      sourceRow.hidden=curveRow.hidden=!curves();source.hidden=region.hidden=!curves();
       region.setAttribute('aria-label',curves()?'Sketch curves':'Region');
       const keep=read().filter(p=>regions(p.featureId).some(r=>r.contourIndex===p.contourIndex));
       const choices=regions(source.value);
@@ -111,7 +123,6 @@ export function extrudeSelectionControls(context: FeatureEditorContext, source: 
       update(handedOver?.wholeSketch && handoffChoices.length ? handoffChoices : keep.length?keep:handoffChoices.length?handoffChoices:choices.length===1?[{featureId:source.value,contourIndex:choices[0].contourIndex}]:[]);
     };
     creationMode?.addEventListener('change',syncMode);
-    sourceRow.hidden=curveRow.hidden=!curves();source.hidden=region.hidden=!curves();
     region.setAttribute('aria-label',curves()?'Sketch curves':'Region');
     syncRegion(); render();
     let handedOver = feature ? null : takePickedSketchRegion();

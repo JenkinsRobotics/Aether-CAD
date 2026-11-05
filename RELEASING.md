@@ -79,6 +79,11 @@ Package-manager versions and the shared UI dependency version are separate.
    shared draft/thickness control positions. Straight-edged profiles are currently
    supported; curved oblique draft remains an explicit gap, not a sheared-loft
    approximation. Normal-direction curved drafts retain their existing behavior.
+   Extrude selection changes also require both feature-control browser gates to
+   switch between profile and stopping-reference fields, remove/reselect native
+   faces and parts during history previews, and preserve saved limits. Re-run
+   the reported Part 1 face-removal workflows on both browsers. Hidden fields
+   must not consume picks, and pointer focus must not replace a pending × row.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

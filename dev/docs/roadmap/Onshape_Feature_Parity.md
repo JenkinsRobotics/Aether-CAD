@@ -138,9 +138,28 @@ exact × removal with duplicate labels, failed previews, red-highlight cleanup,
 Curved oblique Draft remains open. The investigated generic native draft builder
 produces a different pull-relative angle and can return an open shell; it is not
 used as a substitute. Normal-direction curved Draft retains its existing path.
-The full Extrude termination/mode matrix, direction-reference selection, redundant
-legacy Thin selectors and large-scope Surface Add profiling also remain open.
+The full Extrude termination/mode matrix, direction-reference selection and
+large-scope Surface Add profiling also remain open. The subsequent picker work
+below removes redundant legacy Thin selectors and repairs selection focus.
 [Qualification and remaining gaps](../reality/data/Extrude_Oblique_Draft_2026_11_05.json).
+
+## Profile and stopping-reference picking — 2026-11-05 continuation
+
+Extrude now uses one visible profile entity box in Solid, Surface and Thin.
+The existing shared reference-picker lifecycle coordinates profiles, stopping
+faces, points and parts. Pointer and keyboard focus select the receiving field;
+changing focus preserves the row under a pending × click. Hidden or inactive
+stopping-part fields ignore later picks, and opposite stopping parts remain
+independent. Face and part selection explicitly request earlier native geometry
+while a preview or history edit is displayed.
+
+Chromium and WebKit each passed 18 complete control workflows, including profile
+removal/reselection with a saved stopping face, real stopping-face and stopping-part
+removal/reselection, native preview, save and reopen. Each browser also repeated
+four Chamfer/Fillet removal cases on the reported Part 1. All 17 modeling workflows
+passed without server geometry. The native runtime is byte-identical to CAD112;
+this change does not alter geometry or document formats.
+[Qualification and remaining work](../reality/data/Extrude_Picker_Focus_2026_11_05.json).
 
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 

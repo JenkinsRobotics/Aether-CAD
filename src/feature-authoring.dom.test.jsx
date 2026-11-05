@@ -449,6 +449,83 @@ it('accepts whole sketches selected from the tree while Surface is open', async 
   } finally { cadWorkspace.publish(original); }
 });
 
+it('switches Extrude selection focus between profiles, stopping faces and points without losing × clicks', async () => {
+  const { cadSelection } = await import('./cad-selection-store');
+  seedProfile();
+  cadCommands.execute('feature-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const field = label => panel.querySelector(`input[aria-label="${label}"], select[aria-label="${label}"]`);
+  const change = (label, value) => { field(label).value = value; field(label).dispatchEvent(new Event('change')); };
+  change('Sketch', 'profile-1');
+  change('End condition', 'up-to-face');
+  const profiles = panel.querySelector('.aui-feature-entities[aria-label="Faces and sketch regions to extrude"]');
+  const face = panel.querySelector('.aui-feature-entities[aria-label="End face"]');
+  const reference = { sourceFeatureId: 'stop', bodyId: 'stop-body', label: 'Stop face', normal: [0, 0, -1] };
+  const reply = () => window.dispatchEvent(new CustomEvent('aether-extrude-face', { detail: { support: reference } }));
+  reply();
+  expect(JSON.parse(field('Stopping face').value)).toEqual(reference);
+  const remove = profiles.querySelector('button');
+  remove.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  expect(remove.isConnected).toBe(true);
+  expect(profiles.dataset.picking).toBe('true');
+  expect(cadSelection.snapshot().filter).toBe('auto');
+  remove.click();
+  expect(JSON.parse(field('Selected profiles').value)).toEqual([]);
+  window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'profile-1', contourIndex: 0 } }));
+  expect(JSON.parse(field('Selected profiles').value)).toHaveLength(1);
+  face.focus();
+  expect(profiles.dataset.picking).toBe('false');
+  expect(cadSelection.snapshot().filter).toBe('face');
+  window.dispatchEvent(new CustomEvent('aether-region-picked', { detail: { featureId: 'profile-1', contourIndex: 0 } }));
+  expect(JSON.parse(field('Selected profiles').value)).toHaveLength(1);
+  change('End condition', 'up-to-vertex');
+  expect(cadSelection.snapshot().filter).toBe('vertex');
+  profiles.focus();
+  expect(cadSelection.snapshot().filter).toBe('auto');
+  window.dispatchEvent(new CustomEvent('aether-extrude-point', { detail: { reference: { label: 'Inactive vertex' } } }));
+  expect(field('Stopping point').value).toBe('');
+  expect(JSON.parse(field('Stopping face').value)).toEqual(reference);
+  for (const mode of ['thin', 'surface', 'solid']) {
+    change('Creation type', mode);
+    expect(field('Sketch').hidden).toBe(true);
+    expect(field(mode === 'solid' ? 'Region' : 'Sketch curves').hidden).toBe(true);
+    expect(profiles.querySelectorAll('.aui-feature-entity')).toHaveLength(1);
+  }
+});
+
+it('keeps opposite stopping-part inputs independent and ignores hidden or inactive part fields', async () => {
+  const { cadSelection } = await import('./cad-selection-store');
+  seedProfile();
+  for (const id of ['first', 'second']) doc = insertFeature(doc, {
+    id, type: 'extrude', name: id, profileFeatureId: 'profile-1', bodyId: id + '-body', distanceMillimeters: 5, operation: 'new', suppressed: false,
+  });
+  cadCommands.execute('feature-extrude');
+  const panel = document.querySelector('.cad-feature-dialog');
+  const field = label => panel.querySelector(`input[aria-label="${label}"], select[aria-label="${label}"]`);
+  const change = (label, value) => { field(label).value = value; field(label).dispatchEvent(new Event('change')); };
+  const pick = id => cadSelection.dispatch({ type: 'replace', items: [{ id, kind: 'body', partId: id + '-body', label: id }] });
+  change('End condition', 'up-to-part');
+  pick('first');
+  expect(field('Stopping part identity').value).toBe('first-body');
+  expect(field('Opposite stopping part identity').value).toBe('');
+  panel.querySelector('input[type="checkbox"][aria-label="Second end position"]').click(); change('Opposite end condition', 'up-to-part');
+  pick('second');
+  expect(field('Stopping part identity').value).toBe('first-body');
+  expect(field('Opposite stopping part identity').value).toBe('second-body');
+  panel.querySelector('.aui-feature-entities[aria-label="Stopping part"]').focus();
+  pick('second');
+  expect(field('Stopping part identity').value).toBe('second-body');
+  panel.querySelector('.aui-feature-entities[aria-label="Faces and sketch regions to extrude"]').focus();
+  pick('first');
+  expect(field('Stopping part identity').value).toBe('second-body');
+  expect(field('Opposite stopping part identity').value).toBe('second-body');
+  change('End condition', 'blind'); panel.querySelector('input[type="checkbox"][aria-label="Second end position"]').click();
+  pick('first');
+  expect(field('Stopping part identity').value).toBe('second-body');
+  expect(field('Opposite stopping part identity').value).toBe('second-body');
+  cadSelection.dispatch({ type: 'clear' });
+});
+
 it('keeps newly assigned legacy sketch identities identical between Surface preview, blur and commit', async () => {
   seedProfile();
   const candidates = [];
