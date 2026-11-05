@@ -1,0 +1,172 @@
+{
+  "date": "2026-11-04",
+  "scope": "Native picking on adjoining conical faces; Fillet and Chamfer on their shared shoulder. No saved format change.",
+  "qualified_baseline": {
+    "release": "alpha-0.1.101",
+    "source_commit": "7be72be89b726a7423470283b63737fd948194f2"
+  },
+  "cause": "The compact kernel cannot return gp_Cone from BRepAdaptor_Surface.Cone. Analytic inference failure replaced the whole face with UNAVAILABLE and discarded its independently extractable boundary edges.",
+  "repair": [
+    "Recover the exact cone frame from OCCT D2 surface derivatives, without fitting tessellation.",
+    "Retain measured native faces and boundary edges when optional analytic frame inference fails."
+  ],
+  "native_regression": {
+    "file": "aether-engine/src/kernel/conical-finish.test.ts",
+    "before": {
+      "failed": 3,
+      "passed": 0
+    },
+    "after": {
+      "failed": 0,
+      "passed": 3
+    },
+    "checks": [
+      "Two CONE faces with four native edges each",
+      "Shared circular shoulder at x=10 mm and r=25 mm with quarter-circle length",
+      "Three exact axial stations on each cone",
+      "Fillet and Chamfer resolve from either adjacent cone",
+      "Saved rebuild preserves exact finish volume"
+    ]
+  },
+  "saved_part": {
+    "name": "Test hybrid / Part 1",
+    "saved_revision": 38,
+    "part_id": "part-000003",
+    "history": "Original saved Sketch 1 and 90-degree Revolve 9, including earlier saved transform records",
+    "shoulder": {
+      "axis": "X",
+      "x_mm": 39.624,
+      "radius_mm": 123.825
+    },
+    "live_document_modified": false,
+    "fixture_committed": false,
+    "method": "Read-only immutable archive copy; all feature edits performed in disposable authenticated hosts."
+  },
+  "gates": {
+    "frontend_tests": {
+      "passed": 2180,
+      "skipped": 1
+    },
+    "engine_tests": {
+      "passed": 1278
+    },
+    "native_service_tests": {
+      "passed": 320,
+      "AETHER_TEST_NATIVE": true
+    },
+    "typechecks": "passed",
+    "frontend_and_matching_worker_build": "passed",
+    "headless": [
+      "plate exact bounds",
+      "nonuniform scale exact bounds",
+      "cone stopping face",
+      "lazy full-kernel retry",
+      "installed zipapp independent of checkout"
+    ],
+    "sketch_regions": "passed",
+    "native_modeling_browser": {
+      "steps": [
+        "sketch-rectangle-on-top-plane",
+        "extrude-new",
+        "sketch-on-face",
+        "display-analysis",
+        "sketch-circle-and-extrude-remove",
+        "extrude-add-and-intersect",
+        "revolve-new",
+        "fillet",
+        "shell",
+        "mirror-add",
+        "pattern-linear",
+        "boolean-union",
+        "hole",
+        "revolve-remove",
+        "surface-sheet-and-thicken",
+        "sheet-metal-base-and-flat-dxf",
+        "sketch-3d"
+      ],
+      "page_errors": [],
+      "server_geometry_builds": 0
+    },
+    "hosted_home": "passed",
+    "standalone_home": "passed",
+    "picking_profile": [
+      {
+        "browser": "chromium",
+        "bodies": 1,
+        "rays": 300,
+        "mismatches": 0
+      },
+      {
+        "browser": "chromium",
+        "bodies": 65,
+        "rays": 300,
+        "mismatches": 0
+      },
+      {
+        "browser": "webkit",
+        "bodies": 1,
+        "rays": 300,
+        "mismatches": 0
+      },
+      {
+        "browser": "webkit",
+        "bodies": 65,
+        "rays": 300,
+        "mismatches": 0
+      }
+    ]
+  },
+  "targeted_browser_checks": [
+    {
+      "browser": "chromium",
+      "fixture": "synthetic",
+      "passed": true,
+      "results": [
+        "Fillet: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection",
+        "Chamfer: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection"
+      ],
+      "page_errors": [],
+      "evidence": "build/Example-Collection/conical-shoulder-synthetic-2026-11-04/host/browser"
+    },
+    {
+      "browser": "chromium",
+      "fixture": "saved",
+      "passed": true,
+      "results": [
+        "Fillet: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection",
+        "Chamfer: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection"
+      ],
+      "page_errors": [],
+      "evidence": "build/Example-Collection/conical-shoulder-saved-2026-11-04/host/browser"
+    },
+    {
+      "browser": "webkit",
+      "fixture": "synthetic",
+      "passed": true,
+      "results": [
+        "Fillet: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection",
+        "Chamfer: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection"
+      ],
+      "page_errors": [],
+      "evidence": "build/Example-Collection/conical-shoulder-synthetic-webkit-2026-11-04/host/browser"
+    },
+    {
+      "browser": "webkit",
+      "fixture": "saved",
+      "passed": true,
+      "results": [
+        "Fillet: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection",
+        "Chamfer: shoulder selected from both cones, shared handle preview, apply, saved reopen and history reselection"
+      ],
+      "page_errors": [],
+      "evidence": "build/Example-Collection/conical-shoulder-saved-webkit-2026-11-04/host/browser"
+    }
+  ],
+  "worker_sha256": "8b9ad93eba9496ea0c32c4e55083d8a27dcd522334ad5c77ce387ddc0c30e0c8",
+  "qualification_note": "The browser check waits for the edited radius to reach durable storage before navigating away. An earlier test navigated while its debounced save was still pending and WebKit reported a canceled status request; the final checks keep the strict empty-page-errors assertion.",
+  "limitations": [
+    "This repair does not establish complete Onshape feature parity.",
+    "The separate Extrude stopping follow-up at 1846810570fa3371a751b45939ffd1622305323b remains held for the unrelated intermittent broad modeling rebuild failure.",
+    "Concurrent later feature work in the main checkout is not included in this isolated release."
+  ]
+}

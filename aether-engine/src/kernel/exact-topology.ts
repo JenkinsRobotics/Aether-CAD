@@ -1,5 +1,6 @@
 import type { TopAbs_ShapeEnum } from "replicad-opencascadejs";
 import { cast, getOC, measureArea, measureLength, type AnyShape, type Edge, type Face } from "replicad";
+import { conicalSurfaceFrame } from "./conical-surface-frame";
 import {
   connectorAxes,
   deleteAfterPointTuple,
@@ -273,31 +274,10 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
       }
     } else if (type === oc.GeomAbs_SurfaceType.GeomAbs_Cone) {
       surfaceType = "CONE";
-      const cone = adaptor.Cone();
-      const axis = cone.Axis();
-      const position = cone.Position();
-      try {
-        const axisDirection = deleteAfterPointTuple(axis.Direction());
-        faceFrame = connectorAxes(
-          axisDirection,
-          deleteAfterPointTuple(position.XDirection()),
-        );
-        appendAxialStations(
-          candidates,
-          faceId,
-          "cone-axis",
-          deleteAfterPointTuple(axis.Location()),
-          axisDirection,
-          faceFrame,
-          adaptor.FirstVParameter(),
-          adaptor.LastVParameter(),
-          Math.cos(cone.SemiAngle()),
-        );
-      } finally {
-        position.delete();
-        axis.delete();
-        cone.delete();
-      }
+      const cone = conicalSurfaceFrame(adaptor);
+      faceFrame = connectorAxes(cone.axis, cone.radial);
+      appendAxialStations(candidates, faceId, "cone-axis", cone.origin,
+        cone.axis, faceFrame, cone.firstV, cone.lastV, cone.axialScale);
     } else if (type === oc.GeomAbs_SurfaceType.GeomAbs_Sphere) {
       surfaceType = "SPHERE";
       const sphere = adaptor.Sphere();
@@ -353,10 +333,12 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
         // edge/vertex inference even without a stable center normal.
       }
     }
-  } catch (error) {
-    throw new Error(
-      `face ${faceId} ${surfaceType} analytic surface: ${errorDescription(error)}`,
-    );
+  } catch {
+    // Analytic inference is optional. An unavailable frame must not erase the
+    // measured native face or its independently extractable boundary edges.
+    // In particular gp_Cone/gp_Torus are absent from the compact WASM bindings.
+    try { faceFrame = connectorAxes(deleteAfterVectorTuple(face.normalAt([...center])), [1, 0, 0]); }
+    catch { /* retain the neutral frame; topology and measurements remain valid */ }
   } finally {
     adaptor.delete();
   }
