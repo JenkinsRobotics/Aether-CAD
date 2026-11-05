@@ -143,7 +143,7 @@ large-scope Surface Add profiling also remain open. The subsequent picker work
 below removes redundant legacy Thin selectors and repairs selection focus.
 [Qualification and remaining gaps](../reality/data/Extrude_Oblique_Draft_2026_11_05.json).
 
-## Profile and stopping-reference picking — 2026-11-05 continuation
+## Profile and stopping-reference picking — 2026-11-05, alpha-0.1.113
 
 Extrude now uses one visible profile entity box in Solid, Surface and Thin.
 The existing shared reference-picker lifecycle coordinates profiles, stopping
@@ -158,7 +158,9 @@ removal/reselection with a saved stopping face, real stopping-face and stopping-
 removal/reselection, native preview, save and reopen. Each browser also repeated
 four Chamfer/Fillet removal cases on the reported Part 1. All 17 modeling workflows
 passed without server geometry. The native runtime is byte-identical to CAD112;
-this change does not alter geometry or document formats.
+this change does not alter geometry or document formats. All 2,215 frontend tests
+pass (one existing skip), as do hosted and standalone Home. The installed package
+contains 3,576 verified files; other apps and live documents were unchanged.
 [Qualification and remaining work](../reality/data/Extrude_Picker_Focus_2026_11_05.json).
 
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108

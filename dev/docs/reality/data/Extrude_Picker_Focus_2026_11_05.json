@@ -1,6 +1,6 @@
 {
   "date": "2026-11-05",
-  "status": "All qualification passed; ready for local release",
+  "status": "Qualified and installed locally as CAD alpha-0.1.113",
   "problem": [
     "A stopping-face or point mode disabled profile picking without a way to focus the profile field again.",
     "Stopping-part fields did not share the reference picker lifecycle and could consume selections while hidden.",
@@ -71,5 +71,19 @@
     "Check profile selection preservation when switching Solid/Surface/Thin after manually removing inputs.",
     "Large-scope Surface Add profiling.",
     "Revolve, Chamfer, Fillet and remaining requested reference features in the agreed order."
-  ]
+  ],
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.113",
+    "sha256": "4e16f9ce82cfae65be63af7f43214a2ef023ef53fb74929751285b1d6a6515ec",
+    "source_commit": "bac6fafbf2571f42e1a36b74a0ee9a717d7500cb",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "unauthenticated_https_status": 302,
+    "live_user_documents_modified": false
+  }
 }
