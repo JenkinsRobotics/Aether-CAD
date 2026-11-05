@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-04",
+  "base_release": "alpha-0.1.103",
+  "base_source": "b6f2a64",
+  "scope": [
+    "Shared persistent native edge and face input highlights in feature previews, independent of hover and result geometry",
+    "Failed input sets retain red boundary outlines and face tint, populated selection fields receive aria-invalid, and the feature tree receives a temporary error indication",
+    "Correction restores the configured selection color; cancel clears temporary feedback; missing or ambiguous face references never highlight a nearby unrelated face",
+    "Whole-face constant-radius Fillet and equal-distance Chamfer retry native contour order and two-pass corners, preserving every selected boundary and the exact requested size",
+    "Every finishing result must pass native BRep validity checking",
+    "Native topology cache identity, candidate face IDs, exact torus center and signed-zero snapshot equivalence"
+  ],
+  "regressions": {
+    "native_face_finishing": {
+      "file": "aether-engine/src/kernel/face-finish.test.ts",
+      "baseline": "Three Fillet cases failed before recovery. Adding the same audit for Chamfer exposed three corresponding failures.",
+      "result": "6 passed; both conical faces at 0.254, 0.508 and 1.5 mm, all four original boundaries consumed, valid native solids, exact saved rebuild and unchanged input document"
+    },
+    "topology": {
+      "file": "aether-engine/src/kernel/topology-audit.test.ts",
+      "result": "11 passed: equal-centroid/equal-area distinct faces, submicron placement, cache ID remapping, plane/cylinder/sphere/ellipse/torus/BSpline/Bezier boundaries and exact transformed torus frames"
+    },
+    "browser": {
+      "script": "scripts/verify-face-finish-feedback-browser.mjs",
+      "engines": ["Chromium WebGPU", "WebKit WebGL2"],
+      "fixture": "Read-only archived copy of the reported saved Part 1, edited only in disposable authenticated hosts",
+      "cases_per_browser": 4,
+      "checks": [
+        "Select either conical face through a real pointer click for Fillet and Chamfer",
+        "Preview at 0.020 inches (0.508 mm)",
+        "Oversized finish fails, preserves the selected face label and shows red boundary pixels",
+        "Populated selection field is marked invalid and existing feature row is marked as an error; Apply is disabled",
+        "Correcting the size clears errors and restores valid native preview",
+        "Apply, save, reload and edit preserve native face references",
+        "Cancel clears the temporary feedback; no browser page errors"
+      ],
+      "evidence": [
+        "build/Example-Collection/feedback-face-chromium-2026-11-04/host/browser/face-finish-feedback.json",
+        "build/Example-Collection/feedback-face-webkit-2026-11-04/host/browser/face-finish-feedback.json"
+      ]
+    }
+  },
+  "qualification": {
+    "frontend": { "passed": 2189, "skipped": 1, "typecheck": "passed" },
+    "engine": { "passed": 1306, "typecheck": "passed" },
+    "native_service": { "passed": 321, "native_release_flag": true },
+    "build": "Frontend and matching native worker completed before qualification",
+    "headless_kernel": "passed, including isolated packaged zipapp",
+    "sketch_regions": "passed",
+    "modeling_browser": { "steps_passed": 17, "errors": [], "server_geometry_requests": 0 },
+    "modeling_fixture_repair": "Return to isometric view before locating Hole points; drag an overlapping feature window by its actual header instead of disabling pointer events. Original strict modeling assertions remain enabled.",
+    "home": "Hosted and standalone passed",
+    "picking": "Chromium and WebKit, one and 65 bodies, 300 rays each: zero hit/triangle mismatches",
+    "snapshot_cache": "Existing replay cache uses the fingerprinted worker import URL; installing the new worker invalidates stale cached topology",
+    "logs": [
+      "/tmp/cad-feedback-complete-ui.log",
+      "/tmp/cad-feedback-complete-engine.log",
+      "/tmp/cad-feedback-complete-native.log",
+      "/tmp/cad-feedback-complete-gates.log",
+      "/tmp/cad-feedback-complete-headless.log",
+      "/tmp/cad-feedback-complete-regions.log"
+    ]
+  },
+  "limits": [
+    "Kernel failures identify the failed input set, not necessarily one proven bad edge within that set; the UI does not claim otherwise",
+    "This shared native edge/face feedback does not establish complete Onshape parity or universal sketch/body-reference visualization",
+    "Variable-radius, width-based, unequal-distance and angle-based finishing never silently fall back to constant-size intent",
+    "Missing and ambiguous references still require correction rather than proximity-based reassignment",
+    "The earlier intermittent broad-modeling failure is not proven explained by the current passing gate"
+  ],
+  "live_user_documents_modified": false,
+  "remote_push": false
+}

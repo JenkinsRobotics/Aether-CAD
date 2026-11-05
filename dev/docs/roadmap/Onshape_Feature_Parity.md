@@ -28,6 +28,31 @@ Release evidence is recorded separately in
 `../reality/data/Conical_Shoulder_2026_11_04.json`; this does not close the broader
 Extrude/Revolve/Chamfer/Fillet parity requirements below.
 
+## Persistent input feedback and whole-face fillets — 2026-11-04
+
+Feature previews now retain their canonical native face/edge selections in a
+shared viewport layer, independently of pointer hover and result geometry.
+A failed preview keeps those inputs visible with red boundaries and face tint,
+marks populated selection fields and the feature row, and prevents Apply.
+Correction restores the configured selection color; cancel clears the temporary
+feedback. Missing or ambiguous references are reported in the form instead of
+highlighting an unrelated nearby face. A kernel failure currently identifies
+the failing input set, not a proven individual bad edge within that set.
+
+The user's 0.020 inch whole-face fillet exposed an OCCT multi-edge corner failure
+separate from the earlier unselectable shoulder. Constant-radius Fillet and equal-distance Chamfer recovery tries
+a different native contour order, then curved and straight boundaries in two
+native passes. Every selected boundary must resolve; every result must pass
+BRep validity checking. The requested radius is retained. Variable-radius, unequal-distance, angle-based and
+width-based failures do not silently fall back to a constant radius.
+
+The topology audit also replaced rounded centroid/area cache keys with guarded
+native face identity, fixed cached candidate face IDs, and restored torus center
+inference using exact derivatives. Exact zero frame components are normalized
+for cold-build/native-snapshot equivalence. These fixes do not close the remaining
+feature-parity rows below. Qualification is recorded in
+`../reality/data/Feature_Input_Feedback_2026_11_04.json`.
+
 ## Gaps closed — 2026-11-04 (alpha-0.1.100, continued in alpha-0.1.103; 0.1.101 and 0.1.102 were the Extrude qualification releases of the other session)
 
 Every row below went through the same validated record (`feature_add` / `feature_update`), the

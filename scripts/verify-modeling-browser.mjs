@@ -23,6 +23,8 @@ const page = await (await browser.newContext({ viewport: { width: 1440, height: 
 await page.addInitScript(() => {
   const NativeWorker = window.Worker;
   const trace = window.__cadModelTrace = [];
+  const pointTrace = window.__cadPointTrace = [];
+  for (const type of ['aether-sketch-point-picking', 'aether-sketch-point']) window.addEventListener(type, event => pointTrace.push({ type, detail: event.detail }));
   let workerId = 0;
   window.Worker = class extends NativeWorker {
     constructor(...args) {
@@ -323,10 +325,26 @@ try {
   await step('hole', async () => {
     await ribbon('Hole', 'feature-hole').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
+    await page.evaluate(() => window.__aetherSetView('isometric'));
+    await page.waitForTimeout(500);
     // Onshape's placement: one hole at each sketch point, clicked in the viewport: Sketch 2's circle centre (drawn at 30, 6).
     const centre = await page.evaluate(() => window.__aetherFinishedSketchClientPoint?.('Sketch 2', 30, 6));
     assert.ok(centre, 'the circle centre of Sketch 2 projects into the viewport');
+    // Keep the real point-picking path: move an overlapping window by its
+    // draggable header instead of sending a click through the form.
+    const panel = page.locator('.cad-feature-dialog');
+    const bounds = await panel.boundingBox();
+    if (centre[0] >= bounds.x && centre[0] <= bounds.x + bounds.width && centre[1] >= bounds.y && centre[1] <= bounds.y + bounds.height) {
+      const title = await panel.locator('.aui-float-panel-title').boundingBox();
+      const targetX = centre[0] < 720 ? 1060 : 260;
+      await page.mouse.move(title.x + 20, title.y + title.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(title.x + 20 + targetX - bounds.x, title.y + title.height / 2, { steps: 8 });
+      await page.mouse.up();
+    }
+    log.holePoint = await page.evaluate(point => ({ point, hit: document.elementFromPoint(...point)?.outerHTML, trace: window.__cadPointTrace }), centre);
     await page.mouse.click(centre[0], centre[1]);
+    log.holePoint.after = await page.evaluate(() => window.__cadPointTrace);
     await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Sketch points"]')).toContainText(/Sketch 2 · Circle 1 center/, { timeout: 10000 });
     await setInput('Diameter (mm)', 4);
     await setInput('Depth (mm)', 6);

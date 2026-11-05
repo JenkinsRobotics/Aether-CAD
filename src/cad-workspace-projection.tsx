@@ -152,15 +152,16 @@ export function buildCADWorkspaceProjection(
     // History owns every replay operation; the tree only displays modeling features.
     historyNodes.push(...history.map<TreeNode>((feature) => {
       const id = `feature/${feature.kind}/${feature.id}`;
+      const error = feature.error || (draftFeature?.id === feature.id && draftFeature.invalid ? "Feature preview failed" : undefined);
       if (modelingIDs.has(feature.id) && selectedFeatureIDs.has(feature.id)) selected.add(id);
       return {
         id,
         label: feature.name,
-        tone: feature.error ? "error" : undefined,
-        badge: feature.error ? "Error" : feature.detail === "Suppressed" || feature.detail === "Rolled back" ? feature.detail : sketchUnderDefined && feature.id === firstSketch?.id ? "Under-defined" : undefined,
+        tone: error ? "error" : undefined,
+        badge: error ? "Error" : feature.detail === "Suppressed" || feature.detail === "Rolled back" ? feature.detail : sketchUnderDefined && feature.id === firstSketch?.id ? "Under-defined" : undefined,
         dimmed: feature.detail === "Suppressed" || feature.detail === "Rolled back",
         actions:[{id:"edit-feature",label:`Edit ${feature.name}`,icon: <AetherIcon name="pencil" />},...(feature.kind === "profile" || feature.kind === "sketch" ? [{id:"sketch-visibility",label:`${partDocument.sketchPresentation?.[feature.id]?.hidden?"Show":"Hide"} ${feature.name}`,icon:eyeIcon(!partDocument.sketchPresentation?.[feature.id]?.hidden)}] : []),{id:"suppress-feature",label:`${feature.detail === "Suppressed"?"Unsuppress":"Suppress"} ${feature.name}`,icon:feature.detail === "Suppressed"?"▶":"Ⅱ"},{id:"rollback-before",label:`Roll back before ${feature.name}`,icon:"↥"},...(partDocument.features.some((f) => f.id === feature.id && f.type === "profile" && f.profile.type === "projection") ? [{id:"break-link",label:`Break link of ${feature.name}`,icon:"⛓"}] : [])],
-        icon: feature.error ? createElement("span", { className: "cad-tree-icon", title: feature.error }, treeIcon(feature.kind === "profile" || feature.kind === "sketch" ? "sketch" : feature.kind === "extrude" ? "extrude" : feature.kind === "plane" ? "plane" : "part"), createElement("span", { className: "cad-tree-icon-badge cad-tree-icon-badge--over-constrained" }, "!")) : feature.kind === "sketch" || feature.kind === "profile"
+        icon: error ? createElement("span", { className: "cad-tree-icon", title: error }, treeIcon(feature.kind === "profile" || feature.kind === "sketch" ? "sketch" : feature.kind === "extrude" ? "extrude" : feature.kind === "plane" ? "plane" : "part"), createElement("span", { className: "cad-tree-icon-badge cad-tree-icon-badge--over-constrained" }, "!")) : feature.kind === "sketch" || feature.kind === "profile"
           ? sketchTreeIcon(sketchStates.get(feature.id) ?? "other")
           : treeIcon(feature.kind === "plane" ? "plane" : feature.kind === "extrude" ? "extrude" : feature.kind === "revolve" ? "revolve" : feature.kind === "mirror" ? "mirror" : feature.kind === "fillet" ? "fillet" : feature.kind === "chamfer" ? "chamfer" : "part"),
       };

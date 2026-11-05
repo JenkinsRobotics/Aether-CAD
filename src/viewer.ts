@@ -38,6 +38,8 @@ import { bindSketchCameraInput, isSketchCameraGesture } from "./viewport/sketch-
 import { createOriginMarker, updateOriginMarker } from "./viewport/origin-marker";
 import type { ImportedModelData } from "@aether/core/contracts";
 import { FeaturePreviewLayer } from "./modeling/feature-preview-layer";
+import { FeatureInputLayer } from './viewport/feature-input-layer';
+import type { FeatureInputState } from './modeling/feature-input-feedback';
 import { RegionPicker } from "./modeling/region-picker";
 import { createPlaneVisual, tintPlane, updatePlaneVisual } from "./plane-visual";
 import type { SketchPlane } from "@aether/core/document";
@@ -206,6 +208,19 @@ export class MateViewport {
   private controls: CADCameraControls;
   private workspaceUpAxis: ViewportUpAxis = "z";
   private readonly featurePreview = new FeaturePreviewLayer();
+  private readonly featureInputs = new FeatureInputLayer();
+  private featureInputState: FeatureInputState | null = null;
+  setFeatureInputFeedback(state: FeatureInputState | null): void {
+    this.featureInputState = state;
+    if (!this.featureInputs.group.parent) this.scene.add(this.featureInputs.group);
+    const parts = this.historyModel?.parts ?? [...this.parts.values()].map(p => p.data);
+    this.featureInputs.set(state, parts, id => {
+      if (this.historyEditing) return new THREE.Matrix4();
+      const part = this.parts.get(id); part?.group.updateWorldMatrix(true, false);
+      return part?.group.matrixWorld ?? new THREE.Matrix4();
+    }, this.appearance ? resolveAppearance(this.appearance).selectionColor : undefined);
+    this.renderer.domElement.dataset.featureInputState = state?.status ?? '';
+  }
   private readonly historyPreview = new FeaturePreviewLayer();
   private historyEditing = false;
   private sourceGeometryPicking: 'face'|'body'|'vertex'|'edge'|'entity'|null = null;
@@ -270,6 +285,7 @@ export class MateViewport {
     this.historyEditing = active;
     this.historyModel = active ? model : null;
     this.historyPreview.set(model, false);
+    this.setFeatureInputFeedback(this.featureInputState);
     this.updatePreviewVisibility();
   }
   private updatePreviewVisibility(): void {

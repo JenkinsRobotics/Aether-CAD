@@ -1238,7 +1238,7 @@ configureEditHistory({
 (window as unknown as { __aetherClientPoint?: unknown }).__aetherClientPoint = (x: number, y: number, z: number) => viewer.clientFromPoint([x, y, z]);
 // Gates read which bodies the viewport shows (verify-region-pick-browser.mjs).
 (window as unknown as { __aetherPartVisibility?: unknown }).__aetherPartVisibility = () => viewer.getPartRows().map(row => row.visible);
-configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), warm: doc => worker.evaluatePart(doc) });
+configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, {preview:true}), show: model => viewer.setFeaturePreview(model), feedback: state => viewer.setFeatureInputFeedback(state), warm: doc => worker.evaluatePart(doc) });
 worker.ready
   .then(async () => {
     const label = "Aether engine (OpenCASCADE)";

@@ -258,3 +258,14 @@ it('shows a feature whose window is open as an Editing row until it is applied o
   const closed = buildCADWorkspaceProjection(part, ...args, null);
   expect(JSON.stringify(closed.itemNodes)).not.toContain('draft-1');
 });
+
+it('marks an existing feature preview error transiently without modifying saved history', () => {
+  const document = createRectanglePartDocument('Feedback', { widthMillimeters: 20, heightMillimeters: 20, depthMillimeters: 5 });
+  const feature = document.features[1], before = JSON.stringify(document);
+  const project = (invalid: boolean) => buildCADWorkspaceProjection(document, [], new Set(), visibility, null, [], [], null, { faceCount: 0, candidateCount: 0 }, new Set(), new Set(), new Set(), null, null, { id: feature.id, name: feature.name, kind: feature.type, invalid });
+  const failed = project(true);
+  expect(failed.itemNodes.find(row => row.label === feature.name)?.tone).toBe('error');
+  expect(failed.itemNodes.filter(row => row.label === feature.name)).toHaveLength(1);
+  expect(project(false).itemNodes.find(row => row.label === feature.name)?.tone).toBeUndefined();
+  expect(JSON.stringify(document)).toBe(before);
+});

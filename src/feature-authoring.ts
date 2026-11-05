@@ -367,7 +367,7 @@ const presentFeatureWindow = (
     // it (badge "Editing") until Apply makes it history or Cancel removes it.
     const announceDraft = (detail: { id: string; name: string; kind: string; invalid?: boolean } | null) =>
       window.dispatchEvent(new CustomEvent("aether-feature-editing", { detail }));
-    if (!existing) {
+    {
       announceDraft({ id: draftId, name: name.value, kind: type });
       name.addEventListener("input", () => announceDraft({ id: draftId, name: name.value, kind: type, invalid: Boolean(win.panel.classList.contains("invalid")) }));
       const close = win.close;
@@ -379,19 +379,19 @@ const presentFeatureWindow = (
     // The tree row turns red while the window is invalid: announced on the change only,
     // since every announcement rebuilds the workspace lists.
     let announcedInvalid: boolean | null = null;
-    const validate = () => {
-      const message = editor?.validate?.(controls, context) ?? null;
+    const reportValidation = (message: string | null) => {
       win.setError(message);
-      if (!existing && Boolean(message) !== announcedInvalid) { announcedInvalid = Boolean(message); announceDraft({ id: draftId, name: name.value, kind: type, invalid: announcedInvalid }); }
+      if (Boolean(message) !== announcedInvalid) { announcedInvalid = Boolean(message); announceDraft({ id: draftId, name: name.value, kind: type, invalid: announcedInvalid }); }
     };
+    const validate = () => reportValidation(editor?.validate?.(controls, context) ?? null);
     for (const control of Object.values(controls)) {
       control.addEventListener("change", validate);
       control.addEventListener("input", validate);
     }
     validate();
-    const candidateDocument = () => {
+    const candidateDocument = (check = true) => {
         const invalid = editor?.validate?.(controls, context);
-        if (invalid) throw new Error(invalid);
+        if (check && invalid) throw new Error(invalid);
         const values = Object.fromEntries(
           Object.entries(controls).map(([k, v]) => [
             k,
@@ -441,7 +441,7 @@ const presentFeatureWindow = (
       broken.delete(draftId); if (existing) broken.delete(existing.id);
       return featurePreviewDocument(broken.size ? { ...candidate, features: candidate.features.map(f => broken.has(f.id) ? { ...f, suppressed: true } : f) } : candidate, existing?.id);
     };
-    const preview = mountFeaturePreview(win.body, previewDocument, message => win.setError(message), () => candidateDocument(), message => win.setNotice?.(message));
+    const preview = mountFeaturePreview(win.body, previewDocument, reportValidation, () => candidateDocument(), message => win.setNotice?.(message), () => candidateDocument(false).features.find(f => f.id === draftId));
     for (const control of [...Object.values(controls), name]) {
       control.addEventListener("input", preview.update);
       control.addEventListener("change", preview.update);

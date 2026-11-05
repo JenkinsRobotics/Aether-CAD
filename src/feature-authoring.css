@@ -126,3 +126,10 @@
 /* Revolve: the end type and its flip share one row, like Onshape's. */
 .cad-revolve-end { display: flex; align-items: center; gap: 6px; }
 .cad-revolve-end .aui-feature-picker { flex: 1; }
+[data-feature-validation="error"] .aui-feature-entities[aria-invalid="true"] {
+  border-color: #ed4f58;
+  box-shadow: inset 3px 0 #ed4f58;
+}
+[data-feature-validation="error"] .aui-feature-entities[aria-invalid="true"] {
+  background-color: color-mix(in srgb, #ed4f58 8%, transparent);
+}

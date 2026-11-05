@@ -1,6 +1,8 @@
 import type { TopAbs_ShapeEnum } from "replicad-opencascadejs";
 import { cast, getOC, measureArea, measureLength, type AnyShape, type Edge, type Face } from "replicad";
 import { conicalSurfaceFrame } from "./conical-surface-frame";
+import { toroidalSurfaceFrame } from "./toroidal-surface-frame";
+import { NativeTopologyCache } from "./native-topology-cache";
 import {
   connectorAxes,
   deleteAfterPointTuple,
@@ -301,25 +303,13 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
       }
     } else if (type === oc.GeomAbs_SurfaceType.GeomAbs_Torus) {
       surfaceType = "TORUS";
-      const torus = adaptor.Torus();
-      const position = torus.Position();
-      try {
-        faceFrame = connectorAxes(
-          deleteAfterPointTuple(position.Direction()),
-          deleteAfterPointTuple(position.XDirection()),
-        );
-        addUniqueCandidate(candidates, {
-          id: `face-${faceId}-torus-center`,
-          faceId,
-          kind: "torus-center",
-          label: "Exact torus center and revolution axis",
-          origin: deleteAfterPointTuple(torus.Location()),
-          ...faceFrame,
-        });
-      } finally {
-        position.delete();
-        torus.delete();
-      }
+      const torus = toroidalSurfaceFrame(adaptor);
+      faceFrame = connectorAxes(torus.axis, torus.radial);
+      addUniqueCandidate(candidates, {
+        id: `face-${faceId}-torus-center`, faceId, kind: "torus-center",
+        label: "Exact torus center and revolution axis",
+        origin: torus.origin, ...faceFrame,
+      });
     } else {
       try {
         faceFrame = connectorAxes(
@@ -366,6 +356,20 @@ function extractFaceTopology(face: Face, faceId: number): FaceTopologyData {
     }
   });
 
+  // B-rep restore may change the sign of exact zero derivatives. Keep frame
+  // values canonical across cold builds and restored native snapshots.
+  const canonicalVector = (value: Vec3): Vec3 => [value[0] + 0, value[1] + 0, value[2] + 0];
+  const canonicalMeasurements = (data?: TopologyMeasurements) => {
+    if (!data) return;
+    for (const key of ['centerMillimeters', 'linearDirection', 'planarNormal', 'axisDirection'] as const)
+      if (data[key]) data[key] = canonicalVector(data[key]!);
+  };
+  canonicalMeasurements(measurements);
+  for (const candidate of candidates) {
+    canonicalMeasurements(candidate.measurements);
+    for (const key of ['origin', 'xAxis', 'yAxis', 'zAxis'] as const)
+      candidate[key] = canonicalVector(candidate[key]);
+  }
   return { id: faceId, surfaceType, measurements, candidates };
 }
 
@@ -391,11 +395,7 @@ function faceSignature(text: string): number {
   for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619) >>> 0;
   return (hash % 0x3ffffffe) + 1;
 }
-/** Topology of faces seen before, by their geometric signature: a face that an
- *  edit left unchanged (most faces of a part, through booleans) is measured
- *  once per session, not once per rebuild. Same geometry, same measurements. */
-const topologyCache = new Map<string, FaceTopologyData>();
-const TOPOLOGY_CACHE_LIMIT = 20000;
+const topologyCache = new NativeTopologyCache();
 
 /** Every face of a shape with its stable id, in the kernel's face order. The
  *  caller deletes the faces. */
@@ -431,10 +431,10 @@ export function facesOf(shape: AnyShape): { face: Face; id: number; hash: number
 /** The topology of faces listed by `facesOf`; the faces are deleted. */
 export function topologyOf(faces: { face: Face; id: number; key?: string }[]): FaceTopologyData[] {
   const topology: FaceTopologyData[] = [];
-  for (const { face, id, key } of faces) {
+  for (const { face, id } of faces) {
     try {
-      const cached = key !== undefined ? topologyCache.get(key) : undefined;
-      if (cached) { topology.push({ ...cached, id }); continue; }
+      const cached = topologyCache.get(face, id);
+      if (cached) { topology.push(cached); continue; }
       let data: FaceTopologyData;
       try {
         data = extractFaceTopology(face, id);
@@ -442,10 +442,7 @@ export function topologyOf(faces: { face: Face; id: number; key?: string }[]): F
         data = { id, surfaceType: "UNAVAILABLE", candidates: [] };
       }
       topology.push(data);
-      if (key !== undefined && data.surfaceType !== "UNAVAILABLE") {
-        if (topologyCache.size >= TOPOLOGY_CACHE_LIMIT) topologyCache.delete(topologyCache.keys().next().value as string);
-        topologyCache.set(key, data);
-      }
+      if (data.surfaceType !== "UNAVAILABLE") topologyCache.set(face, data);
     } finally {
       face.delete();
     }

@@ -4,6 +4,7 @@ import type { PreviewHandle } from "../../contracts/geometry";
 import { deleteAfterVectorTuple } from "../../geometry/index";
 import { vertexAnchorsOf } from "../part-geometry";
 import { add, scale, norm, unit, dot, type V3 } from "../vector";
+import { recoverConstantEdgeFinish, validFinishSolid } from './edge-finish-recovery';
 type EdgeFinishFeature = Extract<PartFeature, {
   type: "fillet" | "chamfer";
 }>;
@@ -229,8 +230,16 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
   let rounded: Shape3D;
   try {
     rounded = feature.type === "fillet" && feature.points?.length ? filletThroughPoints() : feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
+    if (!validFinishSolid(rounded)) { rounded.delete(); throw new Error("Invalid finished solid."); }
   }
   catch (error) {
+    const constantSize = feature.type === 'fillet'
+      ? feature.endRadiusMillimeters === undefined && !feature.points?.length && feature.measurement !== 'width'
+      : feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined && feature.measurement !== 'tangent';
+    if (constantSize && chainPoints && chainPoints.length > 1 && !picks?.some(p => p.size !== undefined)) {
+      try { return recoverConstantEdgeFinish(feature.type, body, chainPoints, size); }
+      catch { /* Preserve the failure; never commit a partial edge set. */ }
+    }
     throw new Error(`${feature.type === "fillet" ? "Fillet" : "Chamfer"} did not produce a valid solid. Reduce the size or choose fewer edges.`, { cause: error });
   }
   return rounded;
