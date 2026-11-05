@@ -1,7 +1,7 @@
 {
   "date": "2026-11-05",
   "base_release": "alpha-0.1.114",
-  "status": "qualified; pending local installation",
+  "status": "qualified and installed locally",
   "scope": [
     "Persistent native straight-edge and construction-Axis direction references across Solid, Surface and Thin Extrude",
     "Shared direction picker with exact click and remove-button semantics during failed previews and saved history",
@@ -120,5 +120,19 @@
     "Remember creation mode across new Extrudes",
     "Complete termination/mode matrix and large-scope Surface Add profiling",
     "Ordered Revolve, Chamfer, Fillet and remaining requested feature parity"
-  ]
+  ],
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.115",
+    "sha256": "6a8a460c68f3fa508918aba7e7914f53b71472034f4b1171545ed068874a0bec",
+    "source_commit": "ab6fd1b5644c47d346b8d0d5cfbd75b8be25215e",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "unauthenticated_https_status": 302,
+    "live_user_documents_modified": false
+  }
 }
