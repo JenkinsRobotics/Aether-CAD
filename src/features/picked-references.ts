@@ -2,7 +2,7 @@
  *  current selection through a main-thread request (the viewer builds the exact
  *  references, the dialog never manufactures identities). Shared by every tool
  *  that takes individual faces or edges, SolidCraft's `faces: [...]` / `edges: [...]`. */
-import { cadSelection } from "../cad-selection-store";
+import { cadSelection, type CADSelectionItem } from "../cad-selection-store";
 import { referencePickerLifecycle } from "./reference-picker-lifecycle";
 import type { Control, FeatureEditorContext } from "./shared";
 
@@ -26,8 +26,8 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control);
   const box = win.entitiesBox(options.title); win.body.prepend(box.element);
   const read = (): T[] => JSON.parse(control.value || "[]");
-  const update = (refs: T[]) => { control.value = JSON.stringify(refs); options.onChange?.(refs); render(); control.dispatchEvent(new Event("change")); };
-  const render = () => box.render(read().map((ref, index) => ({ label: ref.label, onRemove: () => { cadSelection.dispatch({ type: "clear" }); update(read().filter((_, i) => i !== index)); } })));
+  const update = (refs: T[]) => { const value = JSON.stringify(refs); if (value === control.value) return; control.value = value; options.onChange?.(refs); render(); control.dispatchEvent(new Event("change")); };
+  const render = () => box.render(read().map(ref => ({ label: ref.label, onRemove: () => { cadSelection.dispatch({ type: "clear" }); update(read().filter(item => options.identity(item) !== options.identity(ref))); } })));
   // Selecting in the viewport fills the list (the subscription below); each row removes itself. No Add/Clear buttons: the gallery's editors have none.
   let active = false;
   const entity = options.kind === "entity";
@@ -37,13 +37,30 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
     window.dispatchEvent(new CustomEvent(`aether-source-${options.kind}-picking`, { detail: value }));
   });
   const kindOf = (items: readonly { kind: string }[]) => items.length && items.every((item) => item.kind === items[0].kind) ? items[0].kind : null;
-  const request = () => {
-    if (!active || !win.panel.isConnected) return;
-    if (entity && kindOf(cadSelection.snapshot().items) === "face") window.dispatchEvent(new CustomEvent("aether-offset-faces-request", { detail: { beforeFeatureId: feature?.id } }));
-    else window.dispatchEvent(new CustomEvent(options.requestEvent, { detail: { beforeFeatureId: feature?.id } }));
+  // Main-thread reference resolution is synchronous. A preview refresh can also
+  // update global selection; it must not reenter or reinterpret a pointer toggle.
+  let requesting = false, toggleReply = false;
+  const request = (selection?: readonly CADSelectionItem[], toggle = false) => {
+    if (!active || !win.panel.isConnected || requesting) return;
+    requesting = true; toggleReply = toggle;
+    try {
+      const items = selection ?? cadSelection.snapshot().items;
+      const event = entity && kindOf(items) === "face" ? "aether-offset-faces-request" : options.requestEvent;
+      window.dispatchEvent(new CustomEvent(event, { detail: { beforeFeatureId: feature?.id, ...(selection ? { selection } : {}) } }));
+    } finally { requesting = false; toggleReply = false; }
   };
-  box.element.addEventListener("pointerdown", () => { lifecycle.setActive(true); request(); });
-  const add = (picked: T[]) => { const refs = read(), known = new Set(refs.map(options.identity)); for (const ref of picked) if (!known.has(options.identity(ref))) { refs.push(ref); known.add(options.identity(ref)); } update(refs); };
+  box.element.addEventListener("pointerdown", event => {
+    lifecycle.setActive(true);
+    // A request replaces entity rows. Never detach the remove button between
+    // pointerdown and click, which would swallow the browser's click entirely.
+    if (!(event.target instanceof window.Element && event.target.closest('button'))) request();
+  });
+  const add = (picked: T[]) => {
+    const refs = read(), known = new Set(refs.map(options.identity));
+    const unique = [...new Map(picked.map(ref => [options.identity(ref), ref])).values()];
+    const removed = toggleReply ? new Set(unique.map(options.identity).filter(id => known.has(id))) : new Set<string>();
+    update([...refs.filter(ref => !removed.has(options.identity(ref))), ...unique.filter(ref => !known.has(options.identity(ref)))]);
+  };
   const receive = (event: Event) => {
     if (!active || !win.panel.isConnected) return;
     const reply = (event as CustomEvent).detail;
@@ -60,10 +77,19 @@ export function mountPickedReferences<T extends { label: string }>(context: Feat
   window.addEventListener(options.replyEvent, receive);
   if (entity) window.addEventListener("aether-offset-faces", receiveFaces);
   const accepts = (kind: string | null) => kind !== null && (entity ? kind === "face" || kind === "edge" : kind === options.kind);
+  // Feature inputs own their selection set. Resolve the actual clicked item,
+  // not the transient global selection, so normal and modifier clicks can both
+  // remove an existing input without disturbing any other selected reference.
+  const click = (event: Event) => {
+    const item = (event as CustomEvent<{ item: CADSelectionItem }>).detail?.item;
+    if (!active || !win.panel.isConnected || !item || !accepts(item.kind)) return;
+    event.preventDefault(); request([item], true);
+  };
+  window.addEventListener('aether-feature-reference-click', click);
   let selected = cadSelection.snapshot().items;
   const unsubscribe = cadSelection.subscribe(() => { const next = cadSelection.snapshot().items; if (next === selected) return; selected = next; if (accepts(kindOf(next))) request(); });
   if (options.note) { const note = document.createElement("p");  note.textContent = options.note; win.addHelp(note); }
-  const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); window.removeEventListener("aether-offset-faces", receiveFaces); lifecycle.dispose(); });
+  const observer = new window.MutationObserver(() => { if (win.panel.isConnected) return; observer.disconnect(); unsubscribe(); window.removeEventListener(options.replyEvent, receive); window.removeEventListener("aether-offset-faces", receiveFaces); window.removeEventListener('aether-feature-reference-click', click); lifecycle.dispose(); });
   observer.observe(document.body, { childList: true, subtree: true }); render(); lifecycle.setActive(true);
   if (!feature && accepts(kindOf(selected))) queueMicrotask(request);
   return { read, update, element: box.element };

@@ -595,8 +595,8 @@ export class MateViewport {
 
   /** Every selected edge on this document's parts, as a finish reference: a straight
    *  edge by its vertex anchors, any other by midpoint and length (native coordinates). */
-  selectedFinishEdges(documentId:string):Array<{bodyId:string;label:string}&({kind:'solid-edge';anchor:import("@aether/core/document").SolidEdgeAnchor}|{kind:'curved-edge';midpointMillimeters:[number,number,number];lengthMillimeters:number})>|null {
-    const items=cadSelection.snapshot().items.filter(item=>item.kind==='edge');
+  selectedFinishEdges(documentId:string, selection = cadSelection.snapshot().items):Array<{bodyId:string;label:string}&({kind:'solid-edge';anchor:import("@aether/core/document").SolidEdgeAnchor}|{kind:'curved-edge';midpointMillimeters:[number,number,number];lengthMillimeters:number})>|null {
+    const items=selection.filter(item=>item.kind==='edge');
     if(!items.length)return null;
     const out=[] as NonNullable<ReturnType<MateViewport['selectedFinishEdges']>>;
     for(const item of items){
@@ -724,8 +724,7 @@ export class MateViewport {
     return this.nativeFaceReference(data);
   }
 
-  selectedOffsetFaces(documentId:string) {
-    const selected=cadSelection.snapshot().items;
+  selectedOffsetFaces(documentId:string, selected = cadSelection.snapshot().items) {
     if(!selected.length)return null;
     const faces=selected.map(item=>{
       const data=this.selectedFaceData(item);
@@ -2386,6 +2385,7 @@ export class MateViewport {
       if(!['face','edge','vertex'].includes(cadSelection.snapshot().filter)&&!this.sketchPlaneSelection&&!this.canPickSourceGeometry())return;
       const hit=this.historySelectionHit(event);
       if(hit){
+        if (this.pickFeatureReference(hit.item)) return;
         cadSelection.dispatch({type:'replace',items:[hit.item]});
         if(this.sketchPlaneSelection && hit.item.kind==='face')window.dispatchEvent(new CustomEvent('aether-sketch-face-request'));
         this.callbacks.onStatus(`${hit.item.label} selected.`);
@@ -2414,6 +2414,7 @@ export class MateViewport {
       this.callbacks.onStateChanged();
       return;
     }
+    if (this.pickFeatureReference(hit.item)) return;
     cadSelection.dispatch({
       type: extendsSelection ? "toggle" : "replace",
       items: [hit.item],
@@ -2422,6 +2423,14 @@ export class MateViewport {
     this.selectionHover = hit;
     this.callbacks.onStatus(`${hit.item.label} selected.`);
     this.callbacks.onStateChanged();
+  }
+
+  private pickFeatureReference(item: CADSelectionItem): boolean {
+    const event = new CustomEvent('aether-feature-reference-click', { cancelable: true, detail: { item } });
+    if (window.dispatchEvent(event)) return false;
+    cadSelection.dispatch({ type: 'clear' });
+    this.callbacks.onStateChanged();
+    return true;
   }
 
   private cancelSelectionGesture(): void {

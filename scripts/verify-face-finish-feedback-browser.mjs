@@ -97,9 +97,31 @@ try {
     await expect.poll(() => redPixels(at), { timeout: 10000 }).toBeGreaterThan(8);
     await page.screenshot({ path: join(evidence, `${name.toLowerCase()}-face-${side}-error.png`) });
     await expect(dialog().locator('[data-feature-action="accept"]')).toBeDisabled();
+    const references = async () => JSON.parse(await dialog().locator('[aria-label="Picked edges"]').inputValue());
+    // A failed preview must remain editable: actual viewport clicks toggle a
+    // selected face, and pointerdown on × must not rebuild away its click target.
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(0);
+    await expect(entities.locator('.aui-feature-entity')).toHaveCount(0);
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(1);
+    await pick(-side);
+    await expect.poll(async () => (await references()).length).toBe(2);
+    const kept = (await references())[1];
+    await entities.getByRole('button', { name: /^Remove / }).first().click();
+    await expect.poll(async () => (await references()).length).toBe(1);
+    assert.deepEqual((await references())[0], kept, 'Removing one of two equal labels keeps the other exact face');
+    await entities.getByRole('button', { name: /^Remove / }).click();
+    await expect.poll(async () => (await references()).length).toBe(0);
+    await expect.poll(() => redPixels(at)).toBeLessThan(5);
+    await pick(side);
     await radius.fill(String(.508 / Number(await radius.getAttribute('data-canonical-factor') ?? 1))); await radius.press('Tab');
     await expect(dialog().locator('[data-feature-validation]')).toHaveAttribute('data-feature-validation', 'valid', { timeout: 60000 });
     await expect(entities).toHaveAttribute('aria-invalid', 'false');
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(0);
+    await pick(side);
+    await expect(dialog().locator('[data-feature-validation]')).toHaveAttribute('data-feature-validation', 'valid', { timeout: 60000 });
     await page.screenshot({ path: join(evidence, `${name.toLowerCase()}-face-${side}-corrected.png`) });
     await accept();
     await expect.poll(async () => (await saved(file.id)).features.at(-1).radiusMillimeters, { timeout: 30000 }).toBeCloseTo(.508, 6);
@@ -108,10 +130,19 @@ try {
     await expect(dialog().locator('[data-feature-validation]')).toHaveAttribute('data-feature-validation', 'valid', { timeout: 60000 });
     assert.equal(JSON.parse(await dialog().locator('[aria-label="Picked edges"]').inputValue())[0].kind, 'face-edges');
     await page.screenshot({ path: join(evidence, `${name.toLowerCase()}-face-${side}-reopened.png`) });
+    const persisted = await saved(file.id);
+    await entities.getByRole('button', { name: /^Remove / }).click();
+    await expect.poll(async () => (await references()).length).toBe(0);
+    await page.evaluate(() => window.__aetherSetView('isometric')); await page.waitForTimeout(300);
+    await pick(side);
+    await expect(dialog().locator('[data-feature-validation]')).toHaveAttribute('data-feature-validation', 'valid', { timeout: 60000 });
+    await pick(side);
+    await expect.poll(async () => (await references()).length).toBe(0);
     await dialog().getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.locator('canvas.viewport-canvas')).toHaveAttribute('data-feature-input-state', '');
+    assert.deepEqual(await saved(file.id), persisted, 'Removing picks in a cancelled history edit does not save the draft');
     await writeFile(join(evidence, `${name.toLowerCase()}-face-${side}.part.json`), JSON.stringify(await saved(file.id), null, 2));
-    results.push(`${name} cone ${side}: whole face selected, 0.020 in preview, oversized error retains red boundaries, correction, save and editable reopen`);
+    results.push(`${name} cone ${side}: whole face selected, 0.020 in preview, error retains red boundaries, click deselection, independent remove buttons with duplicate labels, correction, save and editable reopen`);
   }
   assert.deepEqual(errors, []);
   await writeFile(join(evidence, 'face-finish-feedback.json'), JSON.stringify({ browser: engine === webkit ? 'webkit' : 'chromium', results, errors }, null, 2));

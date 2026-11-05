@@ -1752,7 +1752,7 @@ window.addEventListener('aether-transform-edge-request',event=>{
 });
 window.addEventListener('aether-finish-edges-request',event=>{
   const doc=activePartDocument;
-  const picked=doc?viewer.selectedFinishEdges(doc.documentId):null;
+  const picked=doc?viewer.selectedFinishEdges(doc.documentId,(event as CustomEvent).detail?.selection):null;
   // Picks read like Onshape's: "Edge of Revolve 1", the feature that made the body.
   const edges=picked?.map(edge=>{const sourceFeatureId=sourceFeatureForBody(doc!,edge.bodyId,(event as CustomEvent).detail?.beforeFeatureId);return sourceFeatureId?{...edge,sourceFeatureId,label:`Edge of ${doc!.features.find(f=>f.id===sourceFeatureId)?.name??edge.label}`}:null;});
   window.dispatchEvent(new CustomEvent('aether-finish-edges',{detail:edges?.length&&edges.every(e=>e!==null)?{edges}:{error:'Select edges on an earlier solid part in this document.'}}));
@@ -1772,7 +1772,7 @@ window.addEventListener('aether-source-body-picking',event=>viewer.setSourceBody
 window.addEventListener('aether-source-face-picking',event=>viewer.setSourceFacePicking((event as CustomEvent).detail===true));
 window.addEventListener('aether-offset-faces-request',event=>{
   const doc=activePartDocument;
-  const faces=doc?viewer.selectedOffsetFaces(doc.documentId):null;
+  const faces=doc?viewer.selectedOffsetFaces(doc.documentId,(event as CustomEvent).detail?.selection):null;
   const references=faces?.map(face=>{
     const sourceFeatureId=sourceFeatureForBody(doc!,face.bodyId,(event as CustomEvent).detail?.beforeFeatureId);
     return sourceFeatureId?{...face,sourceFeatureId,label:`Face of ${doc!.features.find(f=>f.id===sourceFeatureId)?.name??face.label}`}:null;

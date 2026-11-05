@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.104",
+  "problem": "A selected face could not be removed by a repeated viewport click or its entity-list remove button, especially while the feature preview failed.",
+  "causes": [
+    "Entity-box pointerdown requested current geometry and replaced its rows before the browser dispatched click to the original remove button",
+    "Reference replies only added inputs, with no toggle semantics for a direct viewport click"
+  ],
+  "implementation": [
+    "Shared face/edge picker resolves the exact clicked item and toggles its canonical reference; other input references remain intact",
+    "Row buttons activate the picker without refreshing away the click target; removal uses reference identity instead of a stale row index",
+    "Idempotent updates preserve existing row elements, and nested preview selection updates cannot reenter a reference request",
+    "The same path handles source geometry while creating or editing features, independently of transient viewport selection"
+  ],
+  "qualification": {
+    "before": "Both new DOM regressions fail on the prior implementation",
+    "frontend_tests": { "passed": 2191, "skipped": 1 },
+    "frontend_types": "passed",
+    "frontend_build": "passed",
+    "browsers": ["Chromium WebGPU", "WebKit WebGL2"],
+    "browser_cases": "Fillet and Chamfer, both conical faces on a disposable copy of the reported Part 1",
+    "checks": [
+      "Click-to-deselect during valid and failed previews",
+      "Two faces with identical display names: each remove button removes only its exact reference",
+      "Removing the final reference clears the persisted red outline",
+      "Re-add, correct radius to 0.020 inches, native preview, apply, save and reload",
+      "Reopened history edit: remove with the button, re-add, remove in the viewport and cancel without saving the draft",
+      "No browser page errors"
+    ],
+    "modeling_browser": "All 17 native steps passed with zero server geometry requests",
+    "home": "Hosted and standalone passed",
+    "picking_profile": "Chromium/WebKit, one and 65 bodies, 300 rays each: zero hit/triangle mismatches",
+    "native_worker": "Byte-identical to qualified CAD alpha-0.1.104; no kernel/document changes in this release",
+    "evidence": [
+      "build/Example-Collection/remove-face-chromium-2026-11-04/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/remove-face-webkit-2026-11-04/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/remove-modeling-2026-11-04/host/browser/log.json"
+    ]
+  },
+  "live_user_documents_modified": false,
+  "complete_feature_parity": false,
+  "remaining_scope": "The full user reference list and themed reference-format windows remain the active objective. Extrude native stopping/draft work is separate and is not included in this selection-only release."
+}
