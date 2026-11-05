@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 
 export function compareReference(model, proofs) {
-  if (!model.reference) return null;
+  if (!model.reference && !model.checks) return null;
   const comparisons = [];
-  for (const expected of model.reference.checks) {
+  for (const expected of (model.checks ?? model.reference.checks)) {
     const proof = proofs.find((p) => p.key === expected.part);
     assert.ok(proof, `Missing measurement for ${expected.part}`);
     const measure = proof.verification.measurements[0];
@@ -51,7 +51,7 @@ export function compareReference(model, proofs) {
   return {
     ...model.reference,
     method:
-      "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+      "Independent analytic expectations compared with native OpenCASCADE measurements; not a run of another CAD engine.",
     comparisons,
   };
 }

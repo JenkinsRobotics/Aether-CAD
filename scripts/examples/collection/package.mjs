@@ -13,6 +13,8 @@ const previous = selection
   : [];
 const catalog = [];
 for (const key of [
+  "piping",
+  "solid-feature-lab",
   "scifirobot",
   "airplane",
   "wrench",
@@ -37,6 +39,7 @@ for (const key of [
   const result = JSON.parse(
     await readFile(join(source, "evidence/result.json"), "utf8"),
   );
+  compareReference(model, result.proofs);
   const history = verifyNativeHistory(join(source, model.name + ".aethercad"), result.configurations?.[0]?.id ?? "assembly-000001");
   if (history.parts.length !== result.parts || history.features !== result.features) throw Error("Example native history differs from its build proof");
   const bytes = await readFile(join(source, model.name + ".aethercad"));

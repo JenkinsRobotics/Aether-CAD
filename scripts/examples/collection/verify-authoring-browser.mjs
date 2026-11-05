@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { connectLiveAgent } from '../../browser/live-agent.mjs';
-import model from './models/artemis-sls.mjs';
+const recipeName = process.env.AETHER_AUTHOR_RECIPE ?? 'artemis-sls';
+const model = (await import('./models/' + recipeName + '.mjs')).default;
 import { partDocumentBase64, tabDocumentOf } from '../../browser/document-fixture.mjs';
 
 const { chromium, expect } = createRequire(new URL('../../../../AetherStudio/core/files/package.json', import.meta.url))('@playwright/test');
@@ -47,7 +48,7 @@ try {
   await page.waitForLoadState('networkidle');
   if (process.env.AETHER_EXAMPLE_AUTHOR_ONLY === '1') {
     // Start empty. Every sketch/solid is made through the live editor's MCP tools.
-    for (const key of ['orion-deck', 'orion-capsule', 'solar-frame']) {
+    for (const key of (process.env.AETHER_AUTHOR_PARTS?.split(',') ?? (recipeName === 'artemis-sls' ? ['orion-deck', 'orion-capsule', 'solar-frame'] : model.parts.map(p => p.key)))) {
       const part = model.parts.find(p => p.key === key || (key === 'solar-frame' && p.name === 'Solar wing panel frame'));
       assert.ok(part, key);
       await step('live-author-' + key, async () => {
@@ -60,11 +61,35 @@ try {
         await invoke('aether_cad_run_program', { program_json: JSON.stringify({ version: 1, steps: part.steps }) });
         const proof = await invoke('aether_cad_verify');
         assert.ok(volume(proof) > 0);
-        const expected = JSON.parse(await readFile(new URL('../../../build/Example-Collection/artemis-sls/evidence/' + part.key + '.json', import.meta.url), 'utf8'));
+        const expected = JSON.parse(await readFile(new URL('../../../build/Example-Collection/' + model.id + '/evidence/' + part.key + '.json', import.meta.url), 'utf8'));
         const expectedVolume = volume(expected.verification);
         assert.ok(Math.abs(volume(proof) - expectedVolume) <= expectedVolume * 1e-6, 'Live authored solid must match the shipped recipe');
         assert.equal((await invoke('aether_cad_inspect')).total_features, part.steps.length);
         await expect.poll(async () => tabDocumentOf((await api('read', { id: file.id })).data_base64).features.length, { timeout: 30000 }).toBe(part.steps.length);
+        if (recipeName !== 'artemis-sls') {
+          const inspection = await invoke('aether_cad_inspect', { limit: 50 });
+          const sketchID = inspection.features[0].id;
+          const sketch = await invoke('aether_cad_sketch_inspect', { feature_id: sketchID });
+          const dimension = sketch.profile.constraints.find(c => ['diameter','length','radius'].includes(c.kind) && c.value > 0);
+          assert.ok(dimension, 'Each workshop Part needs an editable driving dimension');
+          await invoke('aether_cad_sketch_dimension', { feature_id: sketchID, dimension_id: dimension.id, value: dimension.value * .99 });
+          const changed = volume(await invoke('aether_cad_verify'));
+          assert.ok(Math.abs(changed - expectedVolume) > .01, 'Dimension edit must change real solid geometry');
+          await page.keyboard.press('ControlOrMeta+z');
+          assert.ok(Math.abs(volume(await invoke('aether_cad_verify')) - expectedVolume) < expectedVolume * 1e-6);
+          await page.keyboard.press('ControlOrMeta+Shift+z');
+          assert.ok(Math.abs(volume(await invoke('aether_cad_verify')) - changed) < changed * 1e-6);
+          await expect.poll(async () => tabDocumentOf((await api('read', { id: file.id })).data_base64).features[0].profile.constraints.find(c => c.id === dimension.id).value).toBe(dimension.value * .99);
+          if (part.key === 'elbow') {
+            const path = inspection.features.find(f => f.type === 'profile' && f.name.startsWith('Route'));
+            await invoke('aether_cad_sketch_dimension', { feature_id: path.id, dimension_id: 'inlet-length', value: 45 });
+            const routed = volume(await invoke('aether_cad_verify'));
+            const expectedAdded = Math.PI * 4 * (dimension.value * .99 / 2) * 5;
+            assert.ok(Math.abs(routed - changed - expectedAdded) < expectedAdded * 1e-5, 'Route length edit must extend the hollow Sweep by the exact annular volume');
+            await expect.poll(async () => tabDocumentOf((await api('read', { id: file.id })).data_base64).features.find(f => f.id === path.id).profile.constraints.find(c => c.id === 'inlet-length').value).toBe(45);
+          }
+
+        }
         await agent.dispose(); agent = null;
         await page.reload();
         await expect(row(new RegExp('^' + part.steps[0].arguments.feature_json.name))).toBeVisible({ timeout: 90000 });

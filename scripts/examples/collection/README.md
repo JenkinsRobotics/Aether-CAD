@@ -142,3 +142,39 @@ in NASA EP-182, *The First 25 Years*, printed page 70
 (https://files.eric.ed.gov/fulltext/ED252377.pdf). The 3.71 m booster case diameter
 is also listed by ESA
 (https://www.esa.int/Science_Exploration/Human_and_Robotic_Exploration/Space_Shuttle/Shuttle_technical_facts).
+
+## Feature coverage and editability audit, 2026-11-05
+
+The collection includes two focused, original engineering exercises:
+
+- **Flanged Process Pipe:** a native Thin Sweep over a dimensioned, tangent straight–arc–straight route; a diameter-driven section; annular Extrude flanges and real drilled bolt holes. Both flange occurrences share one editable Part definition.
+- **Solid Feature Workshop:** linear and circular feature patterns, a mirrored patterned feature, Boolean subtraction, Split cutoff, drafted walls followed by Shell, and an open-profile Surface Extrude followed by solid Thicken. Rectangular sketches use length dimensions and horizontal/vertical constraints rather than whole-contour fixation.
+
+All seven new Parts have independent analytic volume expectations. The HTTP MCP
+builder checks these before packaging, including actual drilled-hole removal.
+`compare-reference.mjs` also accepts original-model `checks`; these are analytic
+checks, not comparisons against another CAD product.
+
+The saved-file MCP builder writes native archives through the product codec.
+Raw Part JSON is not a valid replacement for a saved native CAD document.
+The live authoring gate supports `AETHER_AUTHOR_RECIPE=piping` or
+`solid-feature-lab` with `AETHER_EXAMPLE_AUTHOR_ONLY=1`. It creates the Parts from
+empty documents through the open editor's MCP tools, changes a driving sketch
+dimension, checks changed solid volume, uses human undo/redo, and saves/reopens.
+`AETHER_AUTHOR_PARTS` optionally bounds the invocation to named recipe Parts.
+The default gate separately edits the existing Orion equipment deck through the
+visible sketch editor and MCP, including shared history and saved reopen.
+
+`node scripts/examples/collection/audit-editability.mjs` inspects the actual
+packaged archives and exercises the canonical editing adapter and native kernel
+for each history entry. It records the requested edit, success or refusal, final
+solid volume and native serialization. Each Part runs in a fresh process so one
+native failure cannot invalidate subsequent models. A refused experimental
+parameter combination is recorded, not silently treated as a successful edit.
+The authored document must still rebuild after the experiment.
+
+Legacy examples contain fixed-contour constraints for many styled profiles.
+They retain real editable sketch geometry, but are not uniformly dimension-driven
+or fully constrained engineering designs. The archive inventory reports fixed
+contour sketches separately from driving dimensions. Do not describe that
+inventory alone as proof of every UI gesture or every possible parameter range.

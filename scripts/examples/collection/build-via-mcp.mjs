@@ -1,3 +1,4 @@
+import { partDocumentBase64, partDocumentOf } from '../../browser/document-fixture.mjs';
 import { buildConfigurations } from "./build-configurations.mjs";
 import { compareReference } from "./compare-reference.mjs";
 import assert from "node:assert/strict";
@@ -86,7 +87,7 @@ const read = async (id) => {
   const file = await api("read", { id });
   return {
     file,
-    doc: JSON.parse(Buffer.from(file.data_base64, "base64").toString()),
+    doc: partDocumentOf(file.data_base64),
   };
 };
 try {
@@ -201,7 +202,7 @@ try {
       scope: "personal",
       operation_id: randomUUID(),
       name: p.name + ".aethercad",
-      data_base64: Buffer.from(JSON.stringify(empty)).toString("base64"),
+      data_base64: partDocumentBase64(empty),
     });
     let revision = file.revision,
       refs = {},

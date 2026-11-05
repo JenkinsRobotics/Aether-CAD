@@ -1,5 +1,63 @@
 [
   {
+    "id": "piping",
+    "name": "Flanged Process Pipe",
+    "description": "Editable hollow elbow with a sketched tangent route, swept wall, extruded flanges and drilled bolt circles. Change the section diameters, route or flange dimensions in native feature history.",
+    "file": "piping.aethercad.bin",
+    "thumbnail": "piping.png",
+    "parts": 2,
+    "instances": 3,
+    "features": 7,
+    "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 3,
+        "mates": 2,
+        "movable": false
+      }
+    ],
+    "tags": [
+      "Sweep",
+      "Extrude",
+      "Hole",
+      "Dimension editing"
+    ],
+    "sha256": "605e01a2ae51b0d2324b3049f2df1faf52a185139c89040b6498476600dfa7be"
+  },
+  {
+    "id": "solid-feature-lab",
+    "name": "Solid Feature Workshop",
+    "description": "Native feature exercises: patterned and mirrored bosses, Boolean bore with a Split cutoff, and a drafted open shell. Each operation remains in the editable history.",
+    "file": "solid-feature-lab.aethercad.bin",
+    "thumbnail": "solid-feature-lab.png",
+    "parts": 5,
+    "instances": 5,
+    "features": 24,
+    "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 5,
+        "mates": 4,
+        "movable": false
+      }
+    ],
+    "tags": [
+      "Pattern",
+      "Mirror",
+      "Boolean",
+      "Split",
+      "Draft",
+      "Shell",
+      "Thicken",
+      "Surface Extrude"
+    ],
+    "sha256": "0f7e3285d5532a08acde784566ba7cf8900113e742d9bcdc73f9e39f7741e084"
+  },
+  {
     "id": "scifirobot",
     "name": "Scifirobot Detailed",
     "description": "A spherical inspection robot with recessed forward-facing barrels, black sensors, stepped side panels, clearance-fit interfaces, optical assemblies and parent-child component mates.",

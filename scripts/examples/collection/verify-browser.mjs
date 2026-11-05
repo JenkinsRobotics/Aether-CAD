@@ -126,12 +126,14 @@ try {
     }
     await page.mouse.move(20, 20);
     await page.waitForTimeout(400);
+    if (process.env.AETHER_EXAMPLES_CAPTURE_THUMBNAILS === '1') {
     await page.screenshot({
       path: join(root, "public/examples", example.thumbnail),
       clip: { x: 400, y: 130, width: 1000, height: 620 },
       style:
         ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube { visibility:hidden!important; }",
     });
+    }
     if (example.id === "scifirobot") {
       for (const view of ["Front", "Right", "Top"]) {
         // Side faces of the view cube are hidden in an orthographic front view.
