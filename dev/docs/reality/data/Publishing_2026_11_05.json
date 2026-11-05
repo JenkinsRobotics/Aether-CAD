@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-05",
+  "scope": "Publish the combined Aether-CAD alpha-0.1 development work, including the other session handoff and qualified CAD117.",
+  "original_checkout_head": "078cf9d",
+  "qualified_source_commit": "16a3381db5a0712e2bb1a2a44f9774bd306ae0eb",
+  "published_equivalent_source_commit": "9b710ebcafefa831636f8e380229e23ba305e1d9",
+  "history": {
+    "migrated_commits": 236,
+    "changed_paths_per_migrated_commit": [
+      ".gitattributes",
+      "vendor/aether-assets-*.tgz"
+    ],
+    "all_non_asset_files_identical": true,
+    "commit_map": "Publish_LFS_2026_11_05.csv",
+    "remote_master_unchanged": true,
+    "remote_codex_alpha_unchanged": true,
+    "force_push_required": false,
+    "qualified_branches_preserved": true,
+    "original_history_backup_ref": "archive/pre-lfs-alpha-0.1-20261105"
+  },
+  "dependencies": {
+    "lfs": [
+      "vendor/aether-assets-0.2.0-alpha.29.tgz",
+      "vendor/aether-assets-0.2.0-alpha.32.tgz"
+    ],
+    "new_pinned_archives": [
+      "vendor/aether-assets-0.2.0-alpha.32.tgz",
+      "vendor/aether-session-0.2.0-alpha.192.home.6.tgz",
+      "vendor/aether-files-0.1.0-alpha.2.tgz",
+      "vendor/aether-protocol-0.1.0-alpha.12.tgz"
+    ],
+    "all_six_vendor_hashes_verified": true,
+    "ci": "Git LFS checkout and engine dependency install before frontend build"
+  },
+  "qualification": {
+    "product": "Extrude_Face_Axes_2026_11_05.json",
+    "clean_clone": "/tmp/aether-cad-clean-20261105",
+    "clean_install": true,
+    "clean_build": true,
+    "headless": true,
+    "tests": "passed",
+    "runtime_dependency_audit": {
+      "vulnerabilities": 0
+    },
+    "existing_dev_dependency_audit": {
+      "moderate": 1,
+      "critical": 2,
+      "affected": "Vitest, @vitest/mocker and tinypool test tooling",
+      "fix_requires_separate_major_version_qualification": true
+    },
+    "clean_build_identical_files": 3581,
+    "clean_build_different_files": 0,
+    "engine": {
+      "passed": 1456,
+      "files": 296
+    },
+    "frontend": {
+      "passed": 2229,
+      "skipped": 1,
+      "files_passed": 367,
+      "files_skipped": 1
+    },
+    "clean_logs": [
+      "/tmp/cad-clean-vendor.log",
+      "/tmp/cad-clean-build.log",
+      "/tmp/cad-clean-test.log",
+      "/tmp/cad-clean-engine-test.log",
+      "/tmp/cad-clean-headless.log"
+    ]
+  },
+  "limits": [
+    "Full feature parity remains open; see Onshape_Feature_Parity.md and Handoff_Parity_2026_11_05.md.",
+    "This publishes the CAD development branch; it does not promote master or create a downloadable desktop release."
+  ]
+}

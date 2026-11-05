@@ -1,5 +1,15 @@
 # Handoff: Onshape parity work, 2026-11-05
 
+> Publishing follow-up, 2026-11-05: CAD117 is qualified and active. The combined
+> branch was prepared in an isolated checkout with Git LFS for the oversized
+> assets archives, all four missing dependencies included, and CI installing
+> the engine before building. Every migrated commit preserves all non-asset
+> files exactly. See [`Publishing_2026_11_05.json`](../reality/data/Publishing_2026_11_05.json)
+> and [`Publish_LFS_2026_11_05.csv`](../reality/data/Publish_LFS_2026_11_05.csv)
+> for checks and old-to-new commit IDs. The original qualification refs are
+> preserved; never merge those old-history refs into the LFS branch. Use the
+> mapping to identify their equivalent commits. Master is outside this push.
+
 For the agent continuing this work and pushing it. Everything below was checked
 against the checkout at the time of writing (HEAD `b5a2690`, active CAD release
 `alpha-0.1.116`).
