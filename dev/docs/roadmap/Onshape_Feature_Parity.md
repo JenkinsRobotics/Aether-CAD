@@ -112,7 +112,7 @@ recorded in [Surface Add evidence](../reality/data/Extrude_Surface_Add_2026_11_0
 Oblique Draft and the remaining Extrude termination/mode-conversion matrix remain
 open before full Extrude signoff and the ordered Revolve/Chamfer/Fillet review.
 
-## Angled Draft for planar walls — 2026-11-05 continuation
+## Angled Draft for planar walls — 2026-11-05, alpha-0.1.112
 
 Straight-edged Solid and open/closed Thin extrusions can now draft along an
 angled direction. Native side-wall normals satisfy the requested pull-relative

@@ -1,6 +1,6 @@
 {
   "date": "2026-11-05",
-  "status": "All candidate qualification passed; ready for local release",
+  "status": "Qualified and installed as CAD alpha-0.1.112",
   "scope": [
     "Native straight-edged oblique Draft for Solid and open/closed Thin, preserving the neutral sketch plane",
     "Signed draft, starting offset, reversed travel, symmetric and independent ends",
@@ -95,5 +95,19 @@
     "Remove redundant legacy Sketch/curve selectors from the unified Thin panel while preserving actual selection behavior",
     "Large-scope Surface Add profiling and optimization",
     "Complete Extrude qualification before Revolve, Chamfer, Fillet and the remaining requested features"
-  ]
+  ],
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.112",
+    "sha256": "b541370fd67a9ecdcc6e42aacd737e6cb5676cc819342a9cbbc9e9e3639ef627",
+    "source_commit": "dcd5807b34038b3237f7039cea1981242ce64ed2",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "unauthenticated_https_status": 302,
+    "live_user_documents_modified": false
+  }
 }
