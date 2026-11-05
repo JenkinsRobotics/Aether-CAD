@@ -16,7 +16,7 @@ export type SurfaceRevolveAxis = { kind: "vector"; origin: [number, number, numb
  *  new-body feature; Stitch keeps the first body's identity and consumes the
  *  rest; Unstitch publishes one body per face; Reverse and Offset change a
  *  sheet in place. */
-export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees' | 'separateBodies' | 'bodyOutputs'> {
+export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees' | 'separateBodies' | 'bodyOutputs' | 'outputProfileId'> {
   type: "surface-extrude";
   operation: "new" | "add";
   /** Legacy selected sketch curves, retained on read. New records use profileSelections. */

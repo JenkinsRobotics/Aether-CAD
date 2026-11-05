@@ -1,3 +1,4 @@
+import { extrusionProfileGroups } from './extrusion-profile-groups';
 import { mergeSurfaceExtrusion } from './surface-extrusion-merge';
 import { buildSurfaceExtrusion, type SurfaceExtrusionEnd } from './surface-extrusion';
 import { extrusionStopHandle } from './extrusion-stop-preview';
@@ -894,8 +895,8 @@ export function evaluatePartDocument(
           const from = at === 0 ? contour.start : contour.segments[at - 1].end, to = contour.segments[at].end;
           return [sketchPoint(ref.sourceFeatureId, from), sketchPoint(ref.sourceFeatureId, to)];
         };
-        const extrusionPlacement = (extrusion: ExtrudeFeature | import('../document/surface').SurfaceExtrudeFeature, n: V3, o: V3) => {
-            let direction: V3 = n, custom = false;
+        const extrusionPlacement = (extrusion: ExtrudeFeature | import('../document/surface').SurfaceExtrudeFeature, n: V3, o: V3, defaultNormal: V3 = n) => {
+            let direction: V3 = defaultNormal, custom = norm(cross(defaultNormal, n)) > 1e-7;
             if (extrusion.directionReference) {
               if (extrusion.directionVector) throw new Error("Choose either a sketch-line reference or a manual extrusion direction.");
               const ref = extrusion.directionReference;
@@ -2960,42 +2961,47 @@ export function evaluatePartDocument(
           };
           const sheetArea = (sheet: Shape3D) => { const a = measureArea(sheet as never); if (!(a > 1e-9)) throw new Error("The surface has no area. Check the curves and distances."); return sheet; };
           if (feature.type === "surface-extrude") {
-            const frame = sketchFrameOf(feature.profileFeatureId);
-            const n = unit(frame.normal as V3), origin = frame.originMillimeters as V3;
-            const { direction, offset } = extrusionPlacement(feature, n, origin);
-            const endType = feature.endType ?? (feature.symmetric ? 'symmetric' : 'blind');
-            const resolveEnd = (end: { endType?: string; distanceMillimeters: number; endOffsetMillimeters?: number; endPointReference?: ExtrusionPointReference; endReference?: ExtrudeFeature['endReference']; endPartId?: string }): SurfaceExtrusionEnd => {
-              const type = end.endType ?? 'blind';
-              let face: Face | undefined;
-              if (type === 'up-to-face') {
-                const ref = end.endReference;
-                const body = ref && bodyAt(ref.sourceFeatureId, ref.bodyId);
-                if (!ref || !body) throw new Error('The surface extrusion stopping face is unavailable. Reselect an earlier face.');
-                face = own(faceByReference(body, ref, 'Surface extrusion stop'));
+            const commonNormal = unit(sketchFrameOf(feature.profileFeatureId).normal as V3);
+            const buildProfileSheet = (feature: import('../document/surface').SurfaceExtrudeFeature) => {
+              const frame = sketchFrameOf(feature.profileFeatureId);
+              const n = unit(frame.normal as V3), origin = frame.originMillimeters as V3;
+              const { direction, offset } = extrusionPlacement(feature, n, origin, commonNormal);
+              const endType = feature.endType ?? (feature.symmetric ? 'symmetric' : 'blind');
+              const resolveEnd = (end: { endType?: string; distanceMillimeters: number; endOffsetMillimeters?: number; endPointReference?: ExtrusionPointReference; endReference?: ExtrudeFeature['endReference']; endPartId?: string }): SurfaceExtrusionEnd => {
+                const type = end.endType ?? 'blind';
+                let face: Face | undefined;
+                if (type === 'up-to-face') {
+                  const ref = end.endReference;
+                  const body = ref && bodyAt(ref.sourceFeatureId, ref.bodyId);
+                  if (!ref || !body) throw new Error('The surface extrusion stopping face is unavailable. Reselect an earlier face.');
+                  face = own(faceByReference(body, ref, 'Surface extrusion stop'));
+                }
+                return { type: type as SurfaceExtrusionEnd['type'], distance: end.distanceMillimeters, offset: end.endOffsetMillimeters ?? 0,
+                  ...(face ? { face } : {}), ...(type === 'up-to-vertex' ? { point: stopPoint(end.endPointReference) } : {}),
+                  ...(type === 'up-to-part' ? { part: bodies.get(end.endPartId ?? '') } : {}) };
+              };
+              const symmetric = endType.startsWith('symmetric');
+              const primary = resolveEnd({ ...feature, endType: symmetric ? endType === 'symmetric' ? 'blind' : 'through-all' : endType,
+                distanceMillimeters: symmetric ? feature.distanceMillimeters / 2 : feature.distanceMillimeters });
+              const second = symmetric ? { ...primary } : feature.secondEnd ? resolveEnd(feature.secondEnd)
+                : feature.secondDistanceMillimeters ? { type: 'blind' as const, distance: feature.secondDistanceMillimeters } : undefined;
+              const picks = feature.profileSelections;
+              const ids = picks?.map(pick => pick.profileContourId).filter((id): id is string => id !== undefined)
+                ?? feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
+              const wires = curveWires(feature.profileFeatureId, ids, 'Surface extrusion');
+              const result = buildSurfaceExtrusion({ wires, origin, normal: n, direction, startingOffset: offset, primary, second, limits: [...bodies.values()] });
+              const shape = own(result.shape);
+              if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === "offset")) {
+                previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction, offset, endType,
+                  primary: { endType: primary.type }, ...(second ? { second: { endType: second.type } } : {}), reversed: Boolean(feature.reversed) }));
+                publish(feature, { parameter: 'offset', kind: 'linear', signed: true, direction,
+                  originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))), label: 'Starting offset' });
+                result.contacts.forEach(contact => publish(feature, extrusionStopHandle(contact.point, contact.direction, contact.offset, contact.opposite)));
               }
-              return { type: type as SurfaceExtrusionEnd['type'], distance: end.distanceMillimeters, offset: end.endOffsetMillimeters ?? 0,
-                ...(face ? { face } : {}), ...(type === 'up-to-vertex' ? { point: stopPoint(end.endPointReference) } : {}),
-                ...(type === 'up-to-part' ? { part: bodies.get(end.endPartId ?? '') } : {}) };
+              return shape;
             };
-            const symmetric = endType.startsWith('symmetric');
-            const primary = resolveEnd({ ...feature, endType: symmetric ? endType === 'symmetric' ? 'blind' : 'through-all' : endType,
-              distanceMillimeters: symmetric ? feature.distanceMillimeters / 2 : feature.distanceMillimeters });
-            const second = symmetric ? { ...primary } : feature.secondEnd ? resolveEnd(feature.secondEnd)
-              : feature.secondDistanceMillimeters ? { type: 'blind' as const, distance: feature.secondDistanceMillimeters } : undefined;
-            const picks = feature.profileSelections;
-            if (picks?.some(pick => pick.profileFeatureId !== feature.profileFeatureId)) throw new Error('Surface extrusion curves must share one sketch plane.');
-            const ids = picks?.map(pick => pick.profileContourId).filter((id): id is string => id !== undefined)
-              ?? feature.profileContourIds ?? feature.contourIds ?? (feature.profileContourId ? [feature.profileContourId] : undefined);
-            const wires = curveWires(feature.profileFeatureId, ids, 'Surface extrusion');
-            const result = buildSurfaceExtrusion({ wires, origin, normal: n, direction, startingOffset: offset, primary, second, limits: [...bodies.values()] });
-            tool = own(result.shape);
-            if (feature.id === previewId) {
-              previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction, offset, endType,
-                primary: { endType: primary.type }, ...(second ? { second: { endType: second.type } } : {}), reversed: Boolean(feature.reversed) }));
-              publish(feature, { parameter: 'offset', kind: 'linear', signed: true, direction,
-                originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))), label: 'Starting offset' });
-              result.contacts.forEach(contact => publish(feature, extrusionStopHandle(contact.point, contact.direction, contact.offset, contact.opposite)));
-            }
+            const sheets = extrusionProfileGroups(feature).map(buildProfileSheet);
+            tool = sheets.length === 1 ? sheets[0] : sheetArea(joined(sheets.map(sheet => sheet.wrapped)));
           } else if (feature.type === "surface-revolve") {
             let axis: V3 = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
             if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
@@ -3071,644 +3077,655 @@ export function evaluatePartDocument(
             if (feature.keepTools === false) for (const id of feature.bodyIds) bodies.delete(id);
           }
         } else {
-          const profile = profiles.get(feature.profileFeatureId);
-          if (!profile) throw new Error("Sketch needs a closed profile before creating a solid.");
-          // The regions the feature chose (the way the UI records picks): contour
-          // ids of this sketch, or the whole sketch when nothing was named.
-          const picks: { profileFeatureId?: string; profileContourId?: string; profileRegion?: unknown }[] =
-            ("profileSelections" in feature && feature.profileSelections?.length) ? feature.profileSelections
-            : ("profileContourIds" in feature && feature.profileContourIds?.length) ? feature.profileContourIds.map((id) => ({ profileContourId: id }))
-            : [{ profileContourId: ("profileContourId" in feature ? feature.profileContourId : undefined), profileRegion: ("profileRegion" in feature ? feature.profileRegion : undefined) }];
-          if (picks.some((pick) => pick.profileFeatureId && pick.profileFeatureId !== feature.profileFeatureId)) throw new UnsupportedFeature(feature.id, "profiles from several sketches");
-          const thinWalls = feature.type === "extrude" && Boolean(feature.thin);
-          const chosen = picks.map((pick) => {
-            // Nothing named: the whole sketch (every region), as saved text and legacy documents expect.
-            if ((pick.profileContourId === undefined && !pick.profileRegion) || thinWalls) return null;
-            const region = pick.profileRegion
-              ? [...profile.regions, ...(profile.cells ?? [])].find((r) => r.sourceContourIds && matchesProfileRegion(pick as ProfileRegionSelection, r))
-              : profile.regions.find((r) => r.key === pick.profileContourId);
-            if (!region) throw new Error(pick.profileRegion ? "The referenced curves no longer form the same closed region. Repair the sketch or reselect the region." : "A selected region is no longer in its sketch.");
-            return region;
-          });
-          const everyRegion = chosen.includes(null) || (chosen.length === profile.regions.length && profile.regions.every((region) => chosen.includes(region)));
-          const regionsChosen = chosen.filter((region): region is Region => region !== null);
-          // The whole sketch is its closed contours; a sketch whose only regions are
-          // connected ones has no whole, so the chosen regions are fused instead.
-          const planarDrawing: Drawing | undefined = thinWalls ? undefined : everyRegion && profile.drawing ? own(profile.drawing.clone())
-            : regionsChosen.length ? own(regionsChosen.slice(1).reduce((all, region) => own(all.fuse(own(region.drawing.clone()))), own(regionsChosen[0].drawing.clone())))
-            : undefined;
-          const requireDrawing = (): Drawing => { if (!planarDrawing) throw new Error("Sketch needs a closed profile before creating a solid."); return planarDrawing; };
-          const sketchOf = (drawing: Drawing) => own(typeof profile.plane === "string"
-            ? own(drawing.clone()).sketchOnPlane(profile.plane, profile.offset)
-            : own(drawing.clone()).sketchOnPlane(profile.plane));
-          // One extrusion end: how far the tool goes along its direction, and its draft.
-          type End = { endType: string; distance: number; endOffset: number; draft: number; point?: ExtrusionPointReference; partId?: string; face?: ExtrudeFeature["endReference"] };
-          // What is extruded: a straight prism builder, and (for drafts) offset sections.
-          type ProfileShape = { solid: (length: number, dir: V3) => Shape3D; sections?: () => { outer: Wire; holes: Wire[] }[]; wallFrame?: { origin: V3; inward: V3 } };
-          const frame = typeof profile.plane === "string" ? principalFrame(profile.plane, profile.offset)
-            : { normal: [profile.plane.zDir.x, profile.plane.zDir.y, profile.plane.zDir.z], originMillimeters: [profile.plane.origin.x, profile.plane.origin.y, profile.plane.origin.z], xDirection: [profile.plane.xDir.x, profile.plane.xDir.y, profile.plane.xDir.z] };
-          const basePlane = typeof profile.plane === "string" ? own(new Plane(frame.originMillimeters as V3, frame.xDirection as V3, frame.normal as V3)) : profile.plane;
-          const n = unit(frame.normal as V3), o = frame.originMillimeters as V3;
-          // A lone circle is one full-circle edge (replicad draws circles as two
-          // arcs, which an oblique or drafted extrusion keeps as two faces).
-          const circleWire = (region: Region): Wire | undefined => {
-            const circle = !(region.holes?.length) ? profile.circles.find((c) => c.key === region.key) : undefined;
-            if (!circle) return undefined;
-            const center = deleteAfterVectorTuple(basePlane.toWorldCoords(circle.center));
-            return own(assembleWire([own(makeCircle(circle.radius, [center[0], center[1], center[2]], n))]));
-          };
-          const wireOf = (drawing: Drawing): Wire => (sketchOf(drawing) as unknown as { wire: Wire }).wire;
-          const drawingShape = (drawing: Drawing, regions: Region[]): ProfileShape => {
-            const lone = regions.length === 1 ? circleWire(regions[0]) : undefined;
-            return {
-              solid: (length, dir) => {
-                const shape = lone ? own(new Sketch(own(lone.clone()), { defaultOrigin: o, defaultDirection: n })).extrude(length, { extrusionDirection: dir }) : sketchOf(drawing).extrude(length, { extrusionDirection: dir });
-                if (!isShape3D(shape)) throw new Error("Feature did not produce a solid."); return shape;
-              },
-              sections: () => regions.map((region) => ({ outer: circleWire(region) ?? wireOf(region.outer ?? region.drawing), holes: (region.holes ?? []).map(wireOf) })),
+          const commonNormal = unit(sketchFrameOf(feature.profileFeatureId).normal as V3);
+          const buildProfileTool = (feature: ExtrudeFeature | import('../document/part-document').RevolveFeature) => {
+            const profile = profiles.get(feature.profileFeatureId);
+            if (!profile) throw new Error("Sketch needs a closed profile before creating a solid.");
+            // The regions the feature chose (the way the UI records picks): contour
+            // ids of this sketch, or the whole sketch when nothing was named.
+            const picks: { profileFeatureId?: string; profileContourId?: string; profileRegion?: unknown }[] =
+              ("profileSelections" in feature && feature.profileSelections?.length) ? feature.profileSelections
+              : ("profileContourIds" in feature && feature.profileContourIds?.length) ? feature.profileContourIds.map((id) => ({ profileContourId: id }))
+              : [{ profileContourId: ("profileContourId" in feature ? feature.profileContourId : undefined), profileRegion: ("profileRegion" in feature ? feature.profileRegion : undefined) }];
+            if (picks.some((pick) => pick.profileFeatureId && pick.profileFeatureId !== feature.profileFeatureId)) throw new UnsupportedFeature(feature.id, "profiles from several sketches");
+            const thinWalls = feature.type === "extrude" && Boolean(feature.thin);
+            const chosen = picks.map((pick) => {
+              // Nothing named: the whole sketch (every region), as saved text and legacy documents expect.
+              if ((pick.profileContourId === undefined && !pick.profileRegion) || thinWalls) return null;
+              const region = pick.profileRegion
+                ? [...profile.regions, ...(profile.cells ?? [])].find((r) => r.sourceContourIds && matchesProfileRegion(pick as ProfileRegionSelection, r))
+                : profile.regions.find((r) => r.key === pick.profileContourId);
+              if (!region) throw new Error(pick.profileRegion ? "The referenced curves no longer form the same closed region. Repair the sketch or reselect the region." : "A selected region is no longer in its sketch.");
+              return region;
+            });
+            const everyRegion = chosen.includes(null) || (chosen.length === profile.regions.length && profile.regions.every((region) => chosen.includes(region)));
+            const regionsChosen = chosen.filter((region): region is Region => region !== null);
+            // The whole sketch is its closed contours; a sketch whose only regions are
+            // connected ones has no whole, so the chosen regions are fused instead.
+            const planarDrawing: Drawing | undefined = thinWalls ? undefined : everyRegion && profile.drawing ? own(profile.drawing.clone())
+              : regionsChosen.length ? own(regionsChosen.slice(1).reduce((all, region) => own(all.fuse(own(region.drawing.clone()))), own(regionsChosen[0].drawing.clone())))
+              : undefined;
+            const requireDrawing = (): Drawing => { if (!planarDrawing) throw new Error("Sketch needs a closed profile before creating a solid."); return planarDrawing; };
+            const sketchOf = (drawing: Drawing) => own(typeof profile.plane === "string"
+              ? own(drawing.clone()).sketchOnPlane(profile.plane, profile.offset)
+              : own(drawing.clone()).sketchOnPlane(profile.plane));
+            // One extrusion end: how far the tool goes along its direction, and its draft.
+            type End = { endType: string; distance: number; endOffset: number; draft: number; point?: ExtrusionPointReference; partId?: string; face?: ExtrudeFeature["endReference"] };
+            // What is extruded: a straight prism builder, and (for drafts) offset sections.
+            type ProfileShape = { solid: (length: number, dir: V3) => Shape3D; sections?: () => { outer: Wire; holes: Wire[] }[]; wallFrame?: { origin: V3; inward: V3 } };
+            const frame = typeof profile.plane === "string" ? principalFrame(profile.plane, profile.offset)
+              : { normal: [profile.plane.zDir.x, profile.plane.zDir.y, profile.plane.zDir.z], originMillimeters: [profile.plane.origin.x, profile.plane.origin.y, profile.plane.origin.z], xDirection: [profile.plane.xDir.x, profile.plane.xDir.y, profile.plane.xDir.z] };
+            const basePlane = typeof profile.plane === "string" ? own(new Plane(frame.originMillimeters as V3, frame.xDirection as V3, frame.normal as V3)) : profile.plane;
+            const n = unit(frame.normal as V3), o = frame.originMillimeters as V3;
+            // A lone circle is one full-circle edge (replicad draws circles as two
+            // arcs, which an oblique or drafted extrusion keeps as two faces).
+            const circleWire = (region: Region): Wire | undefined => {
+              const circle = !(region.holes?.length) ? profile.circles.find((c) => c.key === region.key) : undefined;
+              if (!circle) return undefined;
+              const center = deleteAfterVectorTuple(basePlane.toWorldCoords(circle.center));
+              return own(assembleWire([own(makeCircle(circle.radius, [center[0], center[1], center[2]], n))]));
             };
-          };
-          const extrudeWith = (shape: ProfileShape): Shape3D => {
-            if (feature.type !== "extrude") throw new Error("not an extrude");
-            // Direction: the sketch normal, a unit vector, or a line of an earlier
-            // sketch. A pad grows along it, a cut goes into the material behind the
-            // sketch (FreeCAD's rule, which saved documents assume); Reversed flips either.
-            const { direction, custom, offset } = extrusionPlacement(feature, n, o);
-            if (feature.id === previewId && feature.thin && shape.wallFrame && !previewHandles.some(handle => ["thickness1", "midThickness"].includes(handle.parameter))) {
-              for (const handle of extrusionThicknessHandles(shape.wallFrame, feature.thin, direction, offset, feature.draftAngleDegrees)) publish(feature, handle);
-            }
-            const draftOf = (angle: number | undefined) => {
-              const value = angle ?? 0;
-              if (!Number.isFinite(value) || Math.abs(value) >= 90) throw new Error("Extrusion draft must be finite and between -90 and 90 degrees.");
-              return value;
-            };
-            const endType = feature.endType ?? "blind";
-            const primary: End = { endType, distance: feature.distanceMillimeters, endOffset: feature.endOffsetMillimeters ?? 0, draft: draftOf(feature.draftAngleDegrees), point: feature.endPointReference, partId: feature.endPartId, face: feature.endReference };
-            if (primary.endOffset && !["up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(endType)) throw new Error("End offset requires a supported stopping limit.");
-            // The other side: an independent second end, the legacy opposite depth,
-            // or the second half of a symmetric extrusion.
-            let second: End | undefined;
-            if (feature.secondEnd) {
-              const s = feature.secondEnd;
-              if (feature.secondDistanceMillimeters) throw new Error("Choose one second-end definition, not both legacy depth and independent end.");
-              if (endType.startsWith("symmetric")) throw new Error("Symmetric and an independent second end are mutually exclusive.");
-              if (!Number.isFinite(s.distanceMillimeters) || s.distanceMillimeters <= 0) throw new Error("Second-end depth must be finite and positive.");
-              second = { endType: s.endType, distance: s.distanceMillimeters, endOffset: s.endOffsetMillimeters ?? 0, draft: draftOf(s.draftAngleDegrees), point: s.endPointReference, partId: s.endPartId, face: s.endReference };
-            } else if (feature.secondDistanceMillimeters) {
-              if (endType !== "blind") throw new Error("Legacy opposite depth requires Blind.");
-              if (!Number.isFinite(feature.secondDistanceMillimeters) || feature.secondDistanceMillimeters < 0) throw new Error("Extrusion depths must be finite and positive.");
-              second = { endType: "blind", distance: feature.secondDistanceMillimeters, endOffset: 0, draft: 0 };
-            } else if (endType === "symmetric" || endType === "symmetric-through-all") {
-              const mode = endType === "symmetric" ? "blind" : "through-all";
-              primary.endType = mode; primary.distance = feature.distanceMillimeters / 2;
-              second = { endType: mode, distance: feature.distanceMillimeters / 2, endOffset: 0, draft: primary.draft };
-            }
-            if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === "offset")) {
-              previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction,
-                offset, endType, primary, second, reversed: Boolean(feature.reversed) }));
-              publish(feature, { parameter: "offset", kind: "linear", signed: true,
-                originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))),
-                direction, label: "Starting offset" });
-            }
-            const drafted = Boolean(primary.draft || second?.draft);
-            if (drafted && custom && Math.abs(dot(direction, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
-            if (drafted && !shape.sections) throw new UnsupportedFeature(feature.id, "drafted thin extrusions");
-            if (drafted && feature.id === previewId && !previewHandles.some(handle => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
-              const section = shape.sections!()[0];
-              if (section) {
-                const frame = extrusionDraftFrame(section.outer);
-                if (primary.draft) publish(feature, extrusionDraftHandle(frame, {
-                  parameter: "draftAngle", label: "Draft angle", direction, angle: primary.draft, radius: primary.distance,
-                }));
-                if (second?.draft) publish(feature, extrusionDraftHandle(frame, {
-                  parameter: endType.startsWith("symmetric") ? "oppositeDraftAngle" : "secondDraftAngle",
-                  label: "Opposite draft angle", direction: neg(direction), angle: second.draft, radius: second.distance,
-                }));
-              }
-            }
-            const prism = (low: number, high: number, dir: V3): Shape3D => {
-              if (!(high - low > 0)) throw new Error("Extrusion depths must be finite and positive.");
-              // A drawn circle is two arcs: merge same-domain faces so a cylinder is
-              // one face with a seam, as FreeCAD builds it.
-              const clean = own(shape.solid(high - low, dir)).simplify();
-              return own(low ? clean.translate(dir[0] * low, dir[1] * low, dir[2] * low) : clean);
-            };
-            // A drafted prism (FreeCAD's PartDesign::Draft, checked there against the
-            // same planar offsets): the sketch plane is neutral, every section at a
-            // signed distance t from it is the profile offset by -t·tan(angle) (holes
-            // the other way), and the solid is the ruled loft between the end sections.
-            const draftedPrism = (low: number, high: number, dir: V3, angle: number): Shape3D => {
-              if (!(high - low > 0)) throw new Error("Extrusion depths must be finite and positive.");
-              const slope = Math.tan(angle * Math.PI / 180);
-              const collapse = "Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.";
-              const sectionAt = (wire: Wire, delta: number, t: number): Wire => {
-                try {
-                  const offset = Math.abs(delta) < 1e-10 ? own(wire.clone()) : own(wire.clone().offset2D(delta, "intersection"));
-                  return t ? own(offset.translate(dir[0] * t, dir[1] * t, dir[2] * t)) : offset;
-                } catch (error) { throw new Error(collapse, { cause: error }); }
+            const wireOf = (drawing: Drawing): Wire => (sketchOf(drawing) as unknown as { wire: Wire }).wire;
+            const drawingShape = (drawing: Drawing, regions: Region[]): ProfileShape => {
+              const lone = regions.length === 1 ? circleWire(regions[0]) : undefined;
+              return {
+                solid: (length, dir) => {
+                  const shape = lone ? own(new Sketch(own(lone.clone()), { defaultOrigin: o, defaultDirection: n })).extrude(length, { extrusionDirection: dir }) : sketchOf(drawing).extrude(length, { extrusionDirection: dir });
+                  if (!isShape3D(shape)) throw new Error("Feature did not produce a solid."); return shape;
+                },
+                sections: () => regions.map((region) => ({ outer: circleWire(region) ?? wireOf(region.outer ?? region.drawing), holes: (region.holes ?? []).map(wireOf) })),
               };
-              const ruled = (wire: Wire, sign: 1 | -1) => {
-                const solid = loft([sectionAt(wire, -sign * low * slope, low), sectionAt(wire, -sign * high * slope, high)], { ruled: true });
-                if (!isShape3D(solid)) throw new Error(collapse);
-                return own(solid);
+            };
+            const extrudeWith = (shape: ProfileShape): Shape3D => {
+              if (feature.type !== "extrude") throw new Error("not an extrude");
+              // Direction: the sketch normal, a unit vector, or a line of an earlier
+              // sketch. A pad grows along it, a cut goes into the material behind the
+              // sketch (FreeCAD's rule, which saved documents assume); Reversed flips either.
+              const { direction, custom, offset } = extrusionPlacement(feature, n, o, commonNormal);
+              if (feature.id === previewId && feature.thin && shape.wallFrame && !previewHandles.some(handle => ["thickness1", "midThickness"].includes(handle.parameter))) {
+                for (const handle of extrusionThicknessHandles(shape.wallFrame, feature.thin, direction, offset, feature.draftAngleDegrees)) publish(feature, handle);
+              }
+              const draftOf = (angle: number | undefined) => {
+                const value = angle ?? 0;
+                if (!Number.isFinite(value) || Math.abs(value) >= 90) throw new Error("Extrusion draft must be finite and between -90 and 90 degrees.");
+                return value;
               };
-              let result: Shape3D | undefined;
-              for (const { outer, holes } of shape.sections!()) {
-                let solid = ruled(outer, 1);
-                for (const hole of holes) solid = own(solid.cut(ruled(hole, -1)));
-                result = result ? own(result.fuse(solid)) : solid;
+              const endType = feature.endType ?? "blind";
+              const primary: End = { endType, distance: feature.distanceMillimeters, endOffset: feature.endOffsetMillimeters ?? 0, draft: draftOf(feature.draftAngleDegrees), point: feature.endPointReference, partId: feature.endPartId, face: feature.endReference };
+              if (primary.endOffset && !["up-to-next", "up-to-face", "up-to-part", "up-to-vertex"].includes(endType)) throw new Error("End offset requires a supported stopping limit.");
+              // The other side: an independent second end, the legacy opposite depth,
+              // or the second half of a symmetric extrusion.
+              let second: End | undefined;
+              if (feature.secondEnd) {
+                const s = feature.secondEnd;
+                if (feature.secondDistanceMillimeters) throw new Error("Choose one second-end definition, not both legacy depth and independent end.");
+                if (endType.startsWith("symmetric")) throw new Error("Symmetric and an independent second end are mutually exclusive.");
+                if (!Number.isFinite(s.distanceMillimeters) || s.distanceMillimeters <= 0) throw new Error("Second-end depth must be finite and positive.");
+                second = { endType: s.endType, distance: s.distanceMillimeters, endOffset: s.endOffsetMillimeters ?? 0, draft: draftOf(s.draftAngleDegrees), point: s.endPointReference, partId: s.endPartId, face: s.endReference };
+              } else if (feature.secondDistanceMillimeters) {
+                if (endType !== "blind") throw new Error("Legacy opposite depth requires Blind.");
+                if (!Number.isFinite(feature.secondDistanceMillimeters) || feature.secondDistanceMillimeters < 0) throw new Error("Extrusion depths must be finite and positive.");
+                second = { endType: "blind", distance: feature.secondDistanceMillimeters, endOffset: 0, draft: 0 };
+              } else if (endType === "symmetric" || endType === "symmetric-through-all") {
+                const mode = endType === "symmetric" ? "blind" : "through-all";
+                primary.endType = mode; primary.distance = feature.distanceMillimeters / 2;
+                second = { endType: mode, distance: feature.distanceMillimeters / 2, endOffset: 0, draft: primary.draft };
               }
-              if (!result) throw new Error("Draft needs a closed planar region.");
-              const checker = new (getOC().BRepCheck_Analyzer)(result.wrapped, true, false);
-              const pieces = solidsOf(result);
-              const ok = checker.IsValid_2() && pieces.length >= 1 && pieces.every((piece) => measureVolume(piece) > 1e-9);
-              checker.delete(); pieces.forEach(release);
-              if (!ok) throw new Error("Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.");
-              return own(result.simplify());
-            };
-            const stoppingTool = (start: number, far: number, dir: V3, draft: number) => {
-              if (!draft) return { tool: prism(start, far, dir), far };
-              // The reach helper owns/replaces trial results. Clone the result
-              // because draftedPrism's temporary geometry belongs to this rebuild.
-              const result = extrusionDraftReach(start, far, end => draftedPrism(start, end, dir, draft).clone());
-              own(result.tool); return result;
-            };
-            const stopPreview = (end: End, dir: V3, point: V3) => {
-              const parameter = end === primary ? "endOffset" : "secondOffset";
-              if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === parameter))
-                publish(feature, extrusionStopHandle(point, dir, end.endOffset, end !== primary));
-            };
-            // Contact is evaluated against the finished tool, so a distant/back
-            // face of a stopping part cannot become the handle's anchor.
-            const stopContactPreview = (end: End, dir: V3, faces: Face[], tool: Shape3D) => {
-              if (feature.id !== previewId) return;
-              let area = 0, weighted: V3 = [0, 0, 0];
-              for (const face of faces) for (const patch of commonFaces(face, tool)) {
-                const weight = measureArea(patch), center = deleteAfterVectorTuple(patch.center);
-                weighted = add(weighted, scale([center[0], center[1], center[2]], weight));
-                area += weight; patch.delete();
+              if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === "offset")) {
+                previewAxes.push(...extrusionPreviewAxes({ center: sketchCentroid(feature.profileFeatureId), direction,
+                  offset, endType, primary, second, reversed: Boolean(feature.reversed) }));
+                publish(feature, { parameter: "offset", kind: "linear", signed: true,
+                  originMillimeters: add(sketchCentroid(feature.profileFeatureId), scale(direction, offset - (feature.startingOffsetMillimeters ?? 0))),
+                  direction, label: "Starting offset" });
               }
-              if (area > 1e-10) stopPreview(end, dir, scale(weighted, 1 / area));
-            };
-            // Travel along `dir` per unit of axial movement (FreeCAD's profile axis).
-            const axisOf = (dir: V3) => { const axis = dot(n, dir) < 0 ? neg(n) : n; return { axis, alignment: dot(axis, dir), origin: dot(o, axis) }; };
-            const farthestAlong = (shapes: Iterable<Shape3D>, axis: V3) => { let m = -Infinity; for (const shape of shapes) for (const c of corners(shape.boundingBox.bounds)) m = Math.max(m, dot(c, axis)); return m; };
-            const diagonalOf = (shape: Shape3D) => { const b = shape.boundingBox.bounds; return norm(sub([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]])); };
-            // Ends that are a distance along the direction: the far end, null when
-            // a through-all finds nothing on this side, undefined for the others.
-            const intervalEnd = (dir: V3, start: number, end: End): number | null | undefined => {
-              if (end.endType === "blind") { if (!Number.isFinite(end.distance) || end.distance <= 0) throw new Error("Extrusion depths must be finite and positive."); return start + end.distance; }
-              if (end.endType === "through-all") {
-                if (!["cut", "intersect"].includes(feature.operation) || !bodies.size) throw new Error("Through all requires Remove or Intersect and a target body.");
-                const { axis, alignment, origin } = axisOf(dir);
-                const maximum = (farthestAlong(bodies.values(), axis) - origin) / alignment;
-                return maximum <= start ? null : maximum + 1;
+              const drafted = Boolean(primary.draft || second?.draft);
+              if (drafted && custom && Math.abs(dot(direction, n)) < 1 - 1e-7) throw new Error("Draft along an oblique direction is not supported yet. Disable Draft or use the sketch normal.");
+              if (drafted && !shape.sections) throw new UnsupportedFeature(feature.id, "drafted thin extrusions");
+              if (drafted && feature.id === previewId && !previewHandles.some(handle => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
+                const section = shape.sections!()[0];
+                if (section) {
+                  const frame = extrusionDraftFrame(section.outer);
+                  if (primary.draft) publish(feature, extrusionDraftHandle(frame, {
+                    parameter: "draftAngle", label: "Draft angle", direction, angle: primary.draft, radius: primary.distance,
+                  }));
+                  if (second?.draft) publish(feature, extrusionDraftHandle(frame, {
+                    parameter: endType.startsWith("symmetric") ? "oppositeDraftAngle" : "secondDraftAngle",
+                    label: "Opposite draft angle", direction: neg(direction), angle: second.draft, radius: second.distance,
+                  }));
+                }
               }
-              if (end.endType === "up-to-vertex") {
-                const { axis, alignment } = axisOf(dir);
-                const depth = dot(axis, sub(stopPoint(end.point), o)) / alignment - end.endOffset;
-                if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
-                stopPreview(end, dir, add(sketchCentroid(feature.profileFeatureId), scale(dir, depth)));
-                return depth;
-              }
-              return undefined;
-            };
-            // Up to face: a planar stop. Parallel to the sketch it is a plain prism;
-            // tilted, the prism is kept on the near side of the plane.
-            const toFace = (dir: V3, start: number, end: End): Shape3D => {
-              const ref = end.face;
-              if (!ref) throw new Error("Up to face needs an available stopping face.");
-              if (ref.surfaceType) {
-                // A curved stop (FreeCAD's extrusion_surface_limit): the untrimmed surface
-                // splits space; the side holding the start is kept. Cylinders and spheres
-                // are exact primitives here (the wasm has no half-space builder).
-                const source = bodyAt(ref.sourceFeatureId, ref.bodyId);
-                if (!source) throw new Error("Up to face reference is unavailable. Reselect the stopping face.");
-                const stopFace = surfaceFaceOf(source, ref.surfaceType, ref.faceAnchor, "Up to face");
-                const stopAnchor = deleteAfterVectorTuple(stopFace.center);
-                stopPreview(end, dir, sub([stopAnchor[0], stopAnchor[1], stopAnchor[2]], scale(dir, end.endOffset)));
-                if (extendedStopSurfaces.includes(ref.surfaceType)) {
-                  // Any other surface: the full build makes a half-space from the face's
-                  // untrimmed surface, the side holding a start vertex is kept.
-                  const f = extendedKernel();
-                  if (!f) { stopFace.delete(); throw new UnsupportedFeature(feature.id, `${ref.surfaceType} stopping faces`); }
-                  const probe = prism(start, start + 1, dir);
-                  const starts = capFaces(probe, dir, -1);
-                  if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); stopFace.delete(); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
-                  const startCap = starts[0], startArea = measureArea(startCap), tolerance = Math.max(1e-9, startArea * 1e-9);
-                  const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, startCenter = [...deleteAfterVectorTuple(startCap.center)] as V3;
-                  const span = Math.max(1, norm(sub(stopCenter, startCenter)) + diagonalOfShape(stopFace) + diagonalOf(probe) + Math.abs(end.endOffset));
-                  const tool = prism(start, start + 4 * span, dir), ends = capFaces(tool, dir, 1);
-                  const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
-                  const faceX = toExtended(stopFace), toolX = toExtended(tool);
-                  const handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
-                  // The untrimmed surface, its infinite parameters clamped to the tool's reach
-                  // (an unbounded cone face does not split the prism).
-                  const adaptor = new f.GeomAdaptor_Surface_2(handle);
-                  const clamp = (value: number, fallback: number) => (Math.abs(value) > 1e99 ? fallback : value);
-                  const reach = 4 * span + diagonalOfShape(stopFace);
-                  const maker = new f.BRepBuilderAPI_MakeFace_14(handle, clamp(adaptor.FirstUParameter(), -reach), clamp(adaptor.LastUParameter(), reach), clamp(adaptor.FirstVParameter(), -reach), clamp(adaptor.LastVParameter(), reach), 1e-7);
-                  adaptor.delete();
-                  // Split the prism by the surface patch (moved by the end offset); the piece
-                  // holding the whole start is the material before the surface.
-                  let patchX = maker.Face();
-                  if (end.endOffset) { const move = new f.gp_Trsf_1(), vec = new f.gp_Vec_4(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset); move.SetTranslation_1(vec); const mover = new f.BRepBuilderAPI_Transform_2(patchX, move, true); patchX = mover.Shape(); mover.delete(); vec.delete(); move.delete(); }
-                  const progress = new f.Message_ProgressRange_1();
-                  const splitter = new f.BRepAlgoAPI_Splitter_1(), arguments_ = new f.TopTools_ListOfShape_1(), tools_ = new f.TopTools_ListOfShape_1();
-                  arguments_.Append_1(toolX); tools_.Append_1(patchX);
-                  splitter.SetArguments(arguments_); splitter.SetTools(tools_);
-                  splitter.Build(progress);
-                  let remainder: Shape3D;
-                  try { if (splitter.HasErrors()) throw new Error("split failed"); remainder = own(fromExtended(splitter.Shape())); }
-                  catch (error) { startCap.delete(); ends.forEach((cap) => cap.delete()); throw new Error("The stopping surface does not leave the complete extrusion start connected.", { cause: error }); }
-                  finally { splitter.delete(); arguments_.delete(); tools_.delete(); progress.delete(); maker.delete(); handle.delete(); toolX.delete(); faceX.delete(); }
+              const prism = (low: number, high: number, dir: V3): Shape3D => {
+                if (!(high - low > 0)) throw new Error("Extrusion depths must be finite and positive.");
+                // A drawn circle is two arcs: merge same-domain faces so a cylinder is
+                // one face with a seam, as FreeCAD builds it.
+                const clean = own(shape.solid(high - low, dir)).simplify();
+                return own(low ? clean.translate(dir[0] * low, dir[1] * low, dir[2] * low) : clean);
+              };
+              // A drafted prism (FreeCAD's PartDesign::Draft, checked there against the
+              // same planar offsets): the sketch plane is neutral, every section at a
+              // signed distance t from it is the profile offset by -t·tan(angle) (holes
+              // the other way), and the solid is the ruled loft between the end sections.
+              const draftedPrism = (low: number, high: number, dir: V3, angle: number): Shape3D => {
+                if (!(high - low > 0)) throw new Error("Extrusion depths must be finite and positive.");
+                const slope = Math.tan(angle * Math.PI / 180);
+                const collapse = "Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.";
+                const sectionAt = (wire: Wire, delta: number, t: number): Wire => {
                   try {
-                    // A double cone leaves disjoint lumps in one solid: every shell is its own piece.
-                    const pieces = solidsOf(remainder).flatMap((solid) => {
-                      const oc = getOC(), shells: Shell[] = [];
-                      const explorer = new oc.TopExp_Explorer_2(solid.wrapped, oc.TopAbs_ShapeEnum.TopAbs_SHELL as never, oc.TopAbs_ShapeEnum.TopAbs_SHAPE as never);
-                      while (explorer.More()) { shells.push(cast(explorer.Current()) as Shell); explorer.Next(); }
-                      explorer.delete();
-                      if (shells.length < 2) { shells.forEach((shell) => shell.delete()); return [solid]; }
-                      release(solid);
-                      return shells.map((shell) => { const piece = makeSolid([shell]); shell.delete(); return measureVolume(piece) < 0 ? (cast(piece.wrapped.Reversed()) as Shape3D) : piece; });
-                    });
+                    const offset = Math.abs(delta) < 1e-10 ? own(wire.clone()) : own(wire.clone().offset2D(delta, "intersection"));
+                    return t ? own(offset.translate(dir[0] * t, dir[1] * t, dir[2] * t)) : offset;
+                  } catch (error) { throw new Error(collapse, { cause: error }); }
+                };
+                const ruled = (wire: Wire, sign: 1 | -1) => {
+                  const solid = loft([sectionAt(wire, -sign * low * slope, low), sectionAt(wire, -sign * high * slope, high)], { ruled: true });
+                  if (!isShape3D(solid)) throw new Error(collapse);
+                  return own(solid);
+                };
+                let result: Shape3D | undefined;
+                for (const { outer, holes } of shape.sections!()) {
+                  let solid = ruled(outer, 1);
+                  for (const hole of holes) solid = own(solid.cut(ruled(hole, -1)));
+                  result = result ? own(result.fuse(solid)) : solid;
+                }
+                if (!result) throw new Error("Draft needs a closed planar region.");
+                const checker = new (getOC().BRepCheck_Analyzer)(result.wrapped, true, false);
+                const pieces = solidsOf(result);
+                const ok = checker.IsValid_2() && pieces.length >= 1 && pieces.every((piece) => measureVolume(piece) > 1e-9);
+                checker.delete(); pieces.forEach(release);
+                if (!ok) throw new Error("Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.");
+                return own(result.simplify());
+              };
+              const stoppingTool = (start: number, far: number, dir: V3, draft: number) => {
+                if (!draft) return { tool: prism(start, far, dir), far };
+                // The reach helper owns/replaces trial results. Clone the result
+                // because draftedPrism's temporary geometry belongs to this rebuild.
+                const result = extrusionDraftReach(start, far, end => draftedPrism(start, end, dir, draft).clone());
+                own(result.tool); return result;
+              };
+              const stopPreview = (end: End, dir: V3, point: V3) => {
+                const parameter = end === primary ? "endOffset" : "secondOffset";
+                if (feature.id === previewId && !previewHandles.some(handle => handle.parameter === parameter))
+                  publish(feature, extrusionStopHandle(point, dir, end.endOffset, end !== primary));
+              };
+              // Contact is evaluated against the finished tool, so a distant/back
+              // face of a stopping part cannot become the handle's anchor.
+              const stopContactPreview = (end: End, dir: V3, faces: Face[], tool: Shape3D) => {
+                if (feature.id !== previewId) return;
+                let area = 0, weighted: V3 = [0, 0, 0];
+                for (const face of faces) for (const patch of commonFaces(face, tool)) {
+                  const weight = measureArea(patch), center = deleteAfterVectorTuple(patch.center);
+                  weighted = add(weighted, scale([center[0], center[1], center[2]], weight));
+                  area += weight; patch.delete();
+                }
+                if (area > 1e-10) stopPreview(end, dir, scale(weighted, 1 / area));
+              };
+              // Travel along `dir` per unit of axial movement (FreeCAD's profile axis).
+              const axisOf = (dir: V3) => { const axis = dot(n, dir) < 0 ? neg(n) : n; return { axis, alignment: dot(axis, dir), origin: dot(o, axis) }; };
+              const farthestAlong = (shapes: Iterable<Shape3D>, axis: V3) => { let m = -Infinity; for (const shape of shapes) for (const c of corners(shape.boundingBox.bounds)) m = Math.max(m, dot(c, axis)); return m; };
+              const diagonalOf = (shape: Shape3D) => { const b = shape.boundingBox.bounds; return norm(sub([b[1][0], b[1][1], b[1][2]], [b[0][0], b[0][1], b[0][2]])); };
+              // Ends that are a distance along the direction: the far end, null when
+              // a through-all finds nothing on this side, undefined for the others.
+              const intervalEnd = (dir: V3, start: number, end: End): number | null | undefined => {
+                if (end.endType === "blind") { if (!Number.isFinite(end.distance) || end.distance <= 0) throw new Error("Extrusion depths must be finite and positive."); return start + end.distance; }
+                if (end.endType === "through-all") {
+                  if (!["cut", "intersect"].includes(feature.operation) || !bodies.size) throw new Error("Through all requires Remove or Intersect and a target body.");
+                  const { axis, alignment, origin } = axisOf(dir);
+                  const maximum = (farthestAlong(bodies.values(), axis) - origin) / alignment;
+                  return maximum <= start ? null : maximum + 1;
+                }
+                if (end.endType === "up-to-vertex") {
+                  const { axis, alignment } = axisOf(dir);
+                  const depth = dot(axis, sub(stopPoint(end.point), o)) / alignment - end.endOffset;
+                  if (!Number.isFinite(depth) || depth <= start + 1e-7) throw new Error("The stopping point leaves no extrusion beyond its start. Flip direction or adjust the offset.");
+                  stopPreview(end, dir, add(sketchCentroid(feature.profileFeatureId), scale(dir, depth)));
+                  return depth;
+                }
+                return undefined;
+              };
+              // Up to face: a planar stop. Parallel to the sketch it is a plain prism;
+              // tilted, the prism is kept on the near side of the plane.
+              const toFace = (dir: V3, start: number, end: End): Shape3D => {
+                const ref = end.face;
+                if (!ref) throw new Error("Up to face needs an available stopping face.");
+                if (ref.surfaceType) {
+                  // A curved stop (FreeCAD's extrusion_surface_limit): the untrimmed surface
+                  // splits space; the side holding the start is kept. Cylinders and spheres
+                  // are exact primitives here (the wasm has no half-space builder).
+                  const source = bodyAt(ref.sourceFeatureId, ref.bodyId);
+                  if (!source) throw new Error("Up to face reference is unavailable. Reselect the stopping face.");
+                  const stopFace = surfaceFaceOf(source, ref.surfaceType, ref.faceAnchor, "Up to face");
+                  const stopAnchor = deleteAfterVectorTuple(stopFace.center);
+                  stopPreview(end, dir, sub([stopAnchor[0], stopAnchor[1], stopAnchor[2]], scale(dir, end.endOffset)));
+                  if (extendedStopSurfaces.includes(ref.surfaceType)) {
+                    // Any other surface: the full build makes a half-space from the face's
+                    // untrimmed surface, the side holding a start vertex is kept.
+                    const f = extendedKernel();
+                    if (!f) { stopFace.delete(); throw new UnsupportedFeature(feature.id, `${ref.surfaceType} stopping faces`); }
+                    const probe = prism(start, start + 1, dir);
+                    const starts = capFaces(probe, dir, -1);
+                    if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); stopFace.delete(); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
+                    const startCap = starts[0], startArea = measureArea(startCap), tolerance = Math.max(1e-9, startArea * 1e-9);
+                    const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, startCenter = [...deleteAfterVectorTuple(startCap.center)] as V3;
+                    const span = Math.max(1, norm(sub(stopCenter, startCenter)) + diagonalOfShape(stopFace) + diagonalOf(probe) + Math.abs(end.endOffset));
+                    const tool = prism(start, start + 4 * span, dir), ends = capFaces(tool, dir, 1);
+                    const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
+                    const faceX = toExtended(stopFace), toolX = toExtended(tool);
+                    const handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
+                    // The untrimmed surface, its infinite parameters clamped to the tool's reach
+                    // (an unbounded cone face does not split the prism).
+                    const adaptor = new f.GeomAdaptor_Surface_2(handle);
+                    const clamp = (value: number, fallback: number) => (Math.abs(value) > 1e99 ? fallback : value);
+                    const reach = 4 * span + diagonalOfShape(stopFace);
+                    const maker = new f.BRepBuilderAPI_MakeFace_14(handle, clamp(adaptor.FirstUParameter(), -reach), clamp(adaptor.LastUParameter(), reach), clamp(adaptor.FirstVParameter(), -reach), clamp(adaptor.LastVParameter(), reach), 1e-7);
+                    adaptor.delete();
+                    // Split the prism by the surface patch (moved by the end offset); the piece
+                    // holding the whole start is the material before the surface.
+                    let patchX = maker.Face();
+                    if (end.endOffset) { const move = new f.gp_Trsf_1(), vec = new f.gp_Vec_4(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset); move.SetTranslation_1(vec); const mover = new f.BRepBuilderAPI_Transform_2(patchX, move, true); patchX = mover.Shape(); mover.delete(); vec.delete(); move.delete(); }
+                    const progress = new f.Message_ProgressRange_1();
+                    const splitter = new f.BRepAlgoAPI_Splitter_1(), arguments_ = new f.TopTools_ListOfShape_1(), tools_ = new f.TopTools_ListOfShape_1();
+                    arguments_.Append_1(toolX); tools_.Append_1(patchX);
+                    splitter.SetArguments(arguments_); splitter.SetTools(tools_);
+                    splitter.Build(progress);
+                    let remainder: Shape3D;
+                    try { if (splitter.HasErrors()) throw new Error("split failed"); remainder = own(fromExtended(splitter.Shape())); }
+                    catch (error) { startCap.delete(); ends.forEach((cap) => cap.delete()); throw new Error("The stopping surface does not leave the complete extrusion start connected.", { cause: error }); }
+                    finally { splitter.delete(); arguments_.delete(); tools_.delete(); progress.delete(); maker.delete(); handle.delete(); toolX.delete(); faceX.delete(); }
+                    try {
+                      // A double cone leaves disjoint lumps in one solid: every shell is its own piece.
+                      const pieces = solidsOf(remainder).flatMap((solid) => {
+                        const oc = getOC(), shells: Shell[] = [];
+                        const explorer = new oc.TopExp_Explorer_2(solid.wrapped, oc.TopAbs_ShapeEnum.TopAbs_SHELL as never, oc.TopAbs_ShapeEnum.TopAbs_SHAPE as never);
+                        while (explorer.More()) { shells.push(cast(explorer.Current()) as Shell); explorer.Next(); }
+                        explorer.delete();
+                        if (shells.length < 2) { shells.forEach((shell) => shell.delete()); return [solid]; }
+                        release(solid);
+                        return shells.map((shell) => { const piece = makeSolid([shell]); shell.delete(); return measureVolume(piece) < 0 ? (cast(piece.wrapped.Reversed()) as Shape3D) : piece; });
+                      });
+                      const touching = pieces.filter((piece) => commonArea(startCap, piece) > tolerance);
+                      const result = touching.length === 1 ? touching[0] : undefined;
+                      for (const piece of pieces) if (piece !== result) release(piece);
+                      if (!result || Math.abs(commonArea(startCap, result) - startArea) > tolerance) throw new Error("The stopping surface does not leave the complete extrusion start connected.");
+                      own(result);
+                      const escapes = ends.some((cap) => commonArea(cap, result) > Math.max(1e-12, measureArea(cap) * 1e-9));
+                      // The result came back through STEP, so its boundary no longer shares the
+                      // source face's representation: contact is a distance, not a common area.
+                      const touchesSurface = measureDistanceBetween(surfaceContact, result) <= 1e-6;
+                      if (escapes || !touchesSurface) throw new Error("The selected surface does not completely terminate the extrusion before the profile escapes or its draft collapses.");
+                      if (measureVolume(result) <= 1e-9) throw new Error("The stopping surface does not produce a valid extrusion.");
+                      return result;
+                    } finally { startCap.delete(); ends.forEach((cap) => cap.delete()); if (surfaceContact === stopFace) stopFace.delete(); }
+                  }
+                  const oc = getOC();
+                  const adaptor = new oc.BRepAdaptor_Surface_2(stopFace.wrapped, true);
+                  let axisLocation: V3, axisDirection: V3 = [0, 0, 1], radius: number;
+                  if (ref.surfaceType === "cylinder") {
+                    const cylinder = adaptor.Cylinder(), axis = cylinder.Axis(), l = axis.Location(), d = axis.Direction();
+                    axisLocation = [l.X(), l.Y(), l.Z()]; axisDirection = unit([d.X(), d.Y(), d.Z()]); radius = cylinder.Radius();
+                    l.delete(); d.delete(); axis.delete(); cylinder.delete();
+                  } else {
+                    const sphere = adaptor.Sphere(), l = sphere.Location();
+                    axisLocation = [l.X(), l.Y(), l.Z()]; radius = sphere.Radius();
+                    l.delete(); sphere.delete();
+                  }
+                  adaptor.delete();
+                  const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, stopDiagonal = diagonalOfShape(stopFace);
+                  stopFace.delete();
+                  const probe = prism(start, start + 1, dir);
+                  const startDiagonal = diagonalOf(probe), epsilon = Math.max(1e-6, startDiagonal * 1e-9);
+                  const starts = capFaces(probe, dir, -1);
+                  if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
+                  const startCap = starts[0], startArea = measureArea(startCap), tolerance = Math.max(1e-9, startArea * 1e-9);
+                  const startCenter = [...deleteAfterVectorTuple(startCap.center)] as V3;
+                  // A start vertex belongs to actual material (a ring's centre does not): it picks the side.
+                  const [firstEdge] = startCap.edges;
+                  const vertex = [...deleteAfterVectorTuple(firstEdge.startPoint)] as V3; firstEdge.delete();
+                  const sample = add(vertex, scale(dir, epsilon));
+                  const fromAxis = ref.surfaceType === "cylinder" ? norm(cross(sub(sample, axisLocation), axisDirection)) : norm(sub(sample, axisLocation));
+                  const inside = fromAxis < radius;
+                  const span = Math.max(1, norm(sub(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
+                  const size = 4 * span + 2 * radius;
+                  const primitive: Shape3D = ref.surfaceType === "cylinder"
+                    ? own(makeCylinder(radius, size, sub(axisLocation, scale(axisDirection, size / 2)), axisDirection))
+                    : own(makeSphere(radius).translate(axisLocation[0], axisLocation[1], axisLocation[2]));
+                  let half: Shape3D = primitive;
+                  if (!inside) { const box = own(makeBaseBox(size, size, size).translate(axisLocation[0], axisLocation[1], axisLocation[2] - size / 2)); half = own(box.cut(primitive)); }
+                  // An end offset moves the stopping surface along the extrusion, not radially.
+                  const surface = end.endOffset ? own(primitive.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : primitive;
+                  if (end.endOffset) half = own(half.translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset));
+                  const shifted = own(startCap.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
+                  if (Math.abs(commonArea(shifted, half) - startArea) > tolerance) { startCap.delete(); throw new Error("The stopping surface crosses or lies behind the extrusion start. Adjust the start or end offset."); }
+                  const { axis, alignment, origin } = axisOf(dir);
+                  const high = (farthestAlong([half], axis) - origin) / alignment + 1;
+                  if (!(high > start + epsilon)) { startCap.delete(); throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset."); }
+                  const tool = prism(start, high, dir), ends = capFaces(tool, dir, 1);
+                  try {
+                    const remainder = own(tool.intersect(half));
+                    const pieces = solidsOf(remainder);
                     const touching = pieces.filter((piece) => commonArea(startCap, piece) > tolerance);
                     const result = touching.length === 1 ? touching[0] : undefined;
                     for (const piece of pieces) if (piece !== result) release(piece);
                     if (!result || Math.abs(commonArea(startCap, result) - startArea) > tolerance) throw new Error("The stopping surface does not leave the complete extrusion start connected.");
                     own(result);
                     const escapes = ends.some((cap) => commonArea(cap, result) > Math.max(1e-12, measureArea(cap) * 1e-9));
-                    // The result came back through STEP, so its boundary no longer shares the
-                    // source face's representation: contact is a distance, not a common area.
-                    const touchesSurface = measureDistanceBetween(surfaceContact, result) <= 1e-6;
-                    if (escapes || !touchesSurface) throw new Error("The selected surface does not completely terminate the extrusion before the profile escapes or its draft collapses.");
+                    let contact = 0;
+                    for (const face of surface.faces) { if (face.geomType !== "PLANE") contact += commonArea(face, result); face.delete(); }
+                    if (escapes || contact <= tolerance) throw new Error("The selected surface does not completely terminate the extrusion before the profile escapes or its draft collapses.");
                     if (measureVolume(result) <= 1e-9) throw new Error("The stopping surface does not produce a valid extrusion.");
                     return result;
-                  } finally { startCap.delete(); ends.forEach((cap) => cap.delete()); if (surfaceContact === stopFace) stopFace.delete(); }
+                  } finally { startCap.delete(); ends.forEach((cap) => cap.delete()); }
                 }
-                const oc = getOC();
-                const adaptor = new oc.BRepAdaptor_Surface_2(stopFace.wrapped, true);
-                let axisLocation: V3, axisDirection: V3 = [0, 0, 1], radius: number;
-                if (ref.surfaceType === "cylinder") {
-                  const cylinder = adaptor.Cylinder(), axis = cylinder.Axis(), l = axis.Location(), d = axis.Direction();
-                  axisLocation = [l.X(), l.Y(), l.Z()]; axisDirection = unit([d.X(), d.Y(), d.Z()]); radius = cylinder.Radius();
-                  l.delete(); d.delete(); axis.delete(); cylinder.delete();
-                } else {
-                  const sphere = adaptor.Sphere(), l = sphere.Location();
-                  axisLocation = [l.X(), l.Y(), l.Z()]; radius = sphere.Radius();
-                  l.delete(); sphere.delete();
-                }
-                adaptor.delete();
-                const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, stopDiagonal = diagonalOfShape(stopFace);
-                stopFace.delete();
+                if (!ref.normal) throw new Error("Up to face needs a valid unit normal.");
+                const normal = unit(ref.normal);
+                const center = planarFaceCenter(ref.sourceFeatureId, ref.bodyId, normal, ref.faceAnchor, "Up to face", "Up to face reference is unavailable. Reselect the stopping face.");
+                const alignment = dot(normal, dir);
+                if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
+                const planePoint = sub(center, scale(dir, end.endOffset));
+                const profileCenter = sketchCentroid(feature.profileFeatureId);
+                const contact = add(profileCenter, scale(dir, dot(normal, sub(planePoint, profileCenter)) / alignment));
+                stopPreview(end, dir, contact);
                 const probe = prism(start, start + 1, dir);
-                const startDiagonal = diagonalOf(probe), epsilon = Math.max(1e-6, startDiagonal * 1e-9);
-                const starts = capFaces(probe, dir, -1);
-                if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
-                const startCap = starts[0], startArea = measureArea(startCap), tolerance = Math.max(1e-9, startArea * 1e-9);
-                const startCenter = [...deleteAfterVectorTuple(startCap.center)] as V3;
-                // A start vertex belongs to actual material (a ring's centre does not): it picks the side.
-                const [firstEdge] = startCap.edges;
-                const vertex = [...deleteAfterVectorTuple(firstEdge.startPoint)] as V3; firstEdge.delete();
-                const sample = add(vertex, scale(dir, epsilon));
-                const fromAxis = ref.surfaceType === "cylinder" ? norm(cross(sub(sample, axisLocation), axisDirection)) : norm(sub(sample, axisLocation));
-                const inside = fromAxis < radius;
-                const span = Math.max(1, norm(sub(stopCenter, startCenter)) + stopDiagonal + startDiagonal + Math.abs(end.endOffset));
-                const size = 4 * span + 2 * radius;
-                const primitive: Shape3D = ref.surfaceType === "cylinder"
-                  ? own(makeCylinder(radius, size, sub(axisLocation, scale(axisDirection, size / 2)), axisDirection))
-                  : own(makeSphere(radius).translate(axisLocation[0], axisLocation[1], axisLocation[2]));
-                let half: Shape3D = primitive;
-                if (!inside) { const box = own(makeBaseBox(size, size, size).translate(axisLocation[0], axisLocation[1], axisLocation[2] - size / 2)); half = own(box.cut(primitive)); }
-                // An end offset moves the stopping surface along the extrusion, not radially.
-                const surface = end.endOffset ? own(primitive.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : primitive;
-                if (end.endOffset) half = own(half.translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset));
-                const shifted = own(startCap.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
-                if (Math.abs(commonArea(shifted, half) - startArea) > tolerance) { startCap.delete(); throw new Error("The stopping surface crosses or lies behind the extrusion start. Adjust the start or end offset."); }
+                let maximum = -Infinity;
+                for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot(normal, sub(planePoint, corner)) / alignment);
+                if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
+                if (norm(cross(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
+                const full = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
+                let span = 1; for (const corner of corners(full.boundingBox.bounds)) span = Math.max(span, norm(sub(corner, planePoint)) + 1);
+                const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
+                // Nothing of the starting profile may lie behind the plane.
+                for (const cap of capFaces(probe, dir, -1)) {
+                  const area = measureArea(cap);
+                  const shifted = own(cap.translate(dir[0] * 1e-6, dir[1] * 1e-6, dir[2] * 1e-6)); // consumes the cap
+                  if (area - commonArea(shifted, half) > Math.max(1e-10, area * 1e-10)) throw new Error("The stopping plane crosses or lies behind the extrusion start. Flip direction or adjust the offset.");
+                }
+                const tool = own(full.intersect(half));
+                const before = solidsOf(full), after = solidsOf(tool);
+                const valid = after.length === before.length && after.every((solid) => measureVolume(solid) > 1e-9);
+                before.forEach(release); after.forEach(release);
+                if (!valid) throw new Error("The selected plane does not produce a valid complete extrusion.");
+                return tool;
+              };
+              // Up to next (FreeCAD's rule): every boundary patch the ray meets casts
+              // a forward shadow; cutting the shadows away keeps only the material
+              // before the first boundary, so stepped stops from several parts work.
+              const toNext = (dir: V3, low: number, end: End): Shape3D => {
+                const limits = [...bodies.values()];
+                if (!limits.length) throw new Error("Up to next requires an existing part in the extrusion direction.");
                 const { axis, alignment, origin } = axisOf(dir);
-                const high = (farthestAlong([half], axis) - origin) / alignment + 1;
-                if (!(high > start + epsilon)) { startCap.delete(); throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset."); }
-                const tool = prism(start, high, dir), ends = capFaces(tool, dir, 1);
+                const epsilon = Math.max(1e-6, diagonalOf(prism(low, low + 1, dir)) * 1e-9);
+                let reach = (farthestAlong(limits, axis) - origin) / alignment - low;
+                if (!Number.isFinite(reach) || reach <= epsilon) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
+                reach += Math.max(1, Math.max(...limits.map(diagonalOf)) * 1e-6) / alignment;
+                // The probe starts just past the sketch, so a coincident starting face
+                // is ignored and a profile inside a part reaches its exit.
+                const length = reach + Math.abs(end.endOffset) + 1;
+                const { tool } = stoppingTool(low, low + length, dir, end.draft);
+                // For tapered walls, cast each actual boundary's complete shadow.
+                // Cropping a stop to the taper at its own height lets widening
+                // material leak around that shadow farther along the extrusion.
+                const forward = end.draft
+                  ? halfSpace(add(o, scale(dir, low + epsilon)), axis,
+                    Math.max(diagonalOf(tool), ...limits.flatMap(limit => [...corners(limit.boundingBox.bounds)].map(corner => norm(sub(corner, o))))) * 4, own)
+                  : undefined;
+                const probe = forward ?? prism(low + epsilon, low + epsilon + reach, dir);
+                const shadows: Shape3D[] = [];
+                const stoppingFaces: Face[] = [];
+                const sweep = new Vector(scale(dir, length + Math.abs(end.endOffset) + 1));
+                for (const limit of limits) for (const face of (end.draft && end.endOffset
+                  ? own(limit.clone().translate(...scale(dir, -end.endOffset))) : limit).faces) {
+                  if (face.geomType === 'PLANE') {
+                    const normal = deleteAfterVectorTuple(face.normalAt()) as V3;
+                    if (Math.abs(dot(normal, dir)) < 1e-9) { face.delete(); continue; }
+                  }
+                  for (const patch of commonFaces(face, probe)) {
+                    const shadow = basicFaceExtrusion(patch, sweep);
+                    const shift = end.draft ? 0 : end.endOffset;
+                    let volume = 0; try { volume = measureVolume(shadow); } catch { volume = 0; }
+                    if (Math.abs(volume) <= 1e-10) { shadow.delete(); patch.delete(); continue; } // a tangential wall does not stop an axial ray
+                    stoppingFaces.push(own(patch.clone().translate(...scale(dir, -shift))));
+                    patch.delete();
+                    shadows.push(own(shift ? shadow.translate(...scale(dir, -shift)) : shadow));
+                  }
+                  face.delete();
+                }
+                sweep.delete();
+                if (!shadows.length) throw new Error("No next face covers the selected profile. Flip direction or choose another limit.");
+                let result: Shape3D = tool;
+                for (const shadow of shadows) result = own(result.cut(shadow));
+                const starts = capFaces(tool, dir, -1), ends = capFaces(tool, dir, 1);
+                let complete = true;
                 try {
-                  const remainder = own(tool.intersect(half));
+                  const pieces = solidsOf(result);
+                  complete = pieces.length === starts.length && pieces.every((piece) => measureVolume(piece) > 1e-9);
+                  pieces.forEach(release);
+                  for (const cap of starts) { const area = measureArea(cap); if (Math.abs(commonArea(cap, result) - area) > Math.max(1e-9, area * 1e-9)) complete = false; }
+                  for (const cap of ends) if (commonArea(cap, result) > Math.max(1e-9, measureArea(cap) * 1e-9)) complete = false;
+                  // A construction tool near taper collapse can have a negligible
+                  // far cap. Its absence alone is not proof of a real termination.
+                  const contact = stoppingFaces.reduce((sum, face) => sum + commonArea(face, result), 0);
+                  if (contact <= Math.max(1e-10, starts.reduce((sum, face) => sum + measureArea(face), 0) * 1e-10)) complete = false;
+                } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
+                if (!complete) throw new Error("The next boundary does not cover and completely terminate the profile beyond its start. Adjust the profile, direction or end offset.");
+                stopContactPreview(end, dir, stoppingFaces, result);
+                return result;
+              };
+              // Up to part: the tool is trimmed by the chosen solid (curved boundaries
+              // included); the one piece still touching the whole start is kept and
+              // must stop at the part before the far cap.
+              const toPart = (dir: V3, low: number, end: End): Shape3D => {
+                const limit = end.partId ? bodies.get(end.partId) : undefined;
+                if (!limit) throw new Error("The stopping part is unavailable. Reselect an earlier solid part.");
+                const stop = end.endOffset ? own(limit.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : limit;
+                const { axis, alignment, origin } = axisOf(dir);
+                const epsilon = Math.max(1e-6, diagonalOf(prism(low, low + 1, dir)) * 1e-8);
+                const bound = (farthestAlong([stop], axis) - origin) / alignment + epsilon * 10;
+                if (!Number.isFinite(bound) || bound <= low + epsilon) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
+                const { tool } = stoppingTool(low, bound, dir, end.draft);
+                const starts = capFaces(tool, dir, -1), ends = capFaces(tool, dir, 1);
+                try {
+                  if (starts.length !== 1) throw new UnsupportedFeature(feature.id, "up-to-part extrusions of several regions");
+                  const start = starts[0], startArea = measureArea(start), tolerance = Math.max(1e-8, startArea * 1e-8);
+                  // A profile inside the part stops at its exit, one outside at its entry.
+                  const shifted = own(start.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
+                  const overlap = commonArea(shifted, stop);
+                  const inside = Math.abs(overlap - startArea) <= tolerance;
+                  if (!inside && overlap > tolerance) throw new Error("The stopping part crosses the extrusion start. Move the start to one side of its boundary.");
+                  const remainder = own(inside ? tool.intersect(stop) : tool.cut(stop));
                   const pieces = solidsOf(remainder);
-                  const touching = pieces.filter((piece) => commonArea(startCap, piece) > tolerance);
+                  const touching = pieces.filter((piece) => commonArea(start, piece) > tolerance);
                   const result = touching.length === 1 ? touching[0] : undefined;
                   for (const piece of pieces) if (piece !== result) release(piece);
-                  if (!result || Math.abs(commonArea(startCap, result) - startArea) > tolerance) throw new Error("The stopping surface does not leave the complete extrusion start connected.");
+                  if (!result || Math.abs(commonArea(start, result) - startArea) > tolerance) throw new Error("The stopping part does not leave the complete extrusion start connected.");
                   own(result);
-                  const escapes = ends.some((cap) => commonArea(cap, result) > Math.max(1e-12, measureArea(cap) * 1e-9));
                   let contact = 0;
-                  for (const face of surface.faces) { if (face.geomType !== "PLANE") contact += commonArea(face, result); face.delete(); }
-                  if (escapes || contact <= tolerance) throw new Error("The selected surface does not completely terminate the extrusion before the profile escapes or its draft collapses.");
-                  if (measureVolume(result) <= 1e-9) throw new Error("The stopping surface does not produce a valid extrusion.");
+                  for (const face of stop.faces) { contact += commonArea(face, result) - commonArea(face, start); face.delete(); }
+                  const beyond = ends.reduce((sum, cap) => sum + commonArea(cap, result), 0), endArea = ends.reduce((sum, cap) => sum + measureArea(cap), 0);
+                  if (beyond > Math.max(1e-12, endArea * 1e-8) || contact <= tolerance) throw new Error("The selected part does not fully stop the extrusion before the profile passes beyond it.");
+                  if (measureVolume(result) <= 1e-9) throw new Error("The stopping part does not produce a valid extrusion.");
+                  if (feature.id === previewId) {
+                    const stopFaces = stop.faces;
+                    try { stopContactPreview(end, dir, stopFaces, result); }
+                    finally { stopFaces.forEach(face => face.delete()); }
+                  }
                   return result;
-                } finally { startCap.delete(); ends.forEach((cap) => cap.delete()); }
-              }
-              if (!ref.normal) throw new Error("Up to face needs a valid unit normal.");
-              const normal = unit(ref.normal);
-              const center = planarFaceCenter(ref.sourceFeatureId, ref.bodyId, normal, ref.faceAnchor, "Up to face", "Up to face reference is unavailable. Reselect the stopping face.");
-              const alignment = dot(normal, dir);
-              if (Math.abs(alignment) < 1e-7) throw new Error("The stopping plane is parallel to the extrusion direction. Select another face.");
-              const planePoint = sub(center, scale(dir, end.endOffset));
-              const profileCenter = sketchCentroid(feature.profileFeatureId);
-              const contact = add(profileCenter, scale(dir, dot(normal, sub(planePoint, profileCenter)) / alignment));
-              stopPreview(end, dir, contact);
-              const probe = prism(start, start + 1, dir);
-              let maximum = -Infinity;
-              for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot(normal, sub(planePoint, corner)) / alignment);
-              if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-              if (norm(cross(normal, n)) < 1e-10) return prism(start, start + maximum, dir);
-              const full = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
-              let span = 1; for (const corner of corners(full.boundingBox.bounds)) span = Math.max(span, norm(sub(corner, planePoint)) + 1);
-              const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
-              // Nothing of the starting profile may lie behind the plane.
-              for (const cap of capFaces(probe, dir, -1)) {
-                const area = measureArea(cap);
-                const shifted = own(cap.translate(dir[0] * 1e-6, dir[1] * 1e-6, dir[2] * 1e-6)); // consumes the cap
-                if (area - commonArea(shifted, half) > Math.max(1e-10, area * 1e-10)) throw new Error("The stopping plane crosses or lies behind the extrusion start. Flip direction or adjust the offset.");
-              }
-              const tool = own(full.intersect(half));
-              const before = solidsOf(full), after = solidsOf(tool);
-              const valid = after.length === before.length && after.every((solid) => measureVolume(solid) > 1e-9);
-              before.forEach(release); after.forEach(release);
-              if (!valid) throw new Error("The selected plane does not produce a valid complete extrusion.");
-              return tool;
-            };
-            // Up to next (FreeCAD's rule): every boundary patch the ray meets casts
-            // a forward shadow; cutting the shadows away keeps only the material
-            // before the first boundary, so stepped stops from several parts work.
-            const toNext = (dir: V3, low: number, end: End): Shape3D => {
-              const limits = [...bodies.values()];
-              if (!limits.length) throw new Error("Up to next requires an existing part in the extrusion direction.");
-              const { axis, alignment, origin } = axisOf(dir);
-              const epsilon = Math.max(1e-6, diagonalOf(prism(low, low + 1, dir)) * 1e-9);
-              let reach = (farthestAlong(limits, axis) - origin) / alignment - low;
-              if (!Number.isFinite(reach) || reach <= epsilon) throw new Error("No next boundary lies beyond the extrusion start. Flip direction or adjust its offset.");
-              reach += Math.max(1, Math.max(...limits.map(diagonalOf)) * 1e-6) / alignment;
-              // The probe starts just past the sketch, so a coincident starting face
-              // is ignored and a profile inside a part reaches its exit.
-              const length = reach + Math.abs(end.endOffset) + 1;
-              const { tool } = stoppingTool(low, low + length, dir, end.draft);
-              // For tapered walls, cast each actual boundary's complete shadow.
-              // Cropping a stop to the taper at its own height lets widening
-              // material leak around that shadow farther along the extrusion.
-              const forward = end.draft
-                ? halfSpace(add(o, scale(dir, low + epsilon)), axis,
-                  Math.max(diagonalOf(tool), ...limits.flatMap(limit => [...corners(limit.boundingBox.bounds)].map(corner => norm(sub(corner, o))))) * 4, own)
-                : undefined;
-              const probe = forward ?? prism(low + epsilon, low + epsilon + reach, dir);
-              const shadows: Shape3D[] = [];
-              const stoppingFaces: Face[] = [];
-              const sweep = new Vector(scale(dir, length + Math.abs(end.endOffset) + 1));
-              for (const limit of limits) for (const face of (end.draft && end.endOffset
-                ? own(limit.clone().translate(...scale(dir, -end.endOffset))) : limit).faces) {
-                if (face.geomType === 'PLANE') {
-                  const normal = deleteAfterVectorTuple(face.normalAt()) as V3;
-                  if (Math.abs(dot(normal, dir)) < 1e-9) { face.delete(); continue; }
+                } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
+              };
+              // Both sides share the start plane. Without drafts, distance-type ends on
+              // either side merge into one prism; a drafted side is lofted on its own
+              // (narrowing away from the sketch); face, next and part stops are their own tools.
+              const sides: { dir: V3; sign: 1 | -1; start: number; end: End }[] = [{ dir: direction, sign: 1, start: offset, end: primary }];
+              if (second) sides.push({ dir: neg(direction), sign: -1, start: -offset, end: second });
+              const tools: Shape3D[] = [];
+              let low = offset, high = offset, intervals = 0;
+              for (const side of sides) {
+                const far = intervalEnd(side.dir, side.start, side.end);
+                if (far === null) continue;
+                if (far !== undefined) {
+                  if (side.end.draft) { tools.push(draftedPrism(side.start, far, side.dir, side.end.draft)); continue; }
+                  const signed = far * side.sign; low = Math.min(low, signed); high = Math.max(high, signed); intervals++; continue;
                 }
-                for (const patch of commonFaces(face, probe)) {
-                  const shadow = basicFaceExtrusion(patch, sweep);
-                  const shift = end.draft ? 0 : end.endOffset;
-                  let volume = 0; try { volume = measureVolume(shadow); } catch { volume = 0; }
-                  if (Math.abs(volume) <= 1e-10) { shadow.delete(); patch.delete(); continue; } // a tangential wall does not stop an axial ray
-                  stoppingFaces.push(own(patch.clone().translate(...scale(dir, -shift))));
-                  patch.delete();
-                  shadows.push(own(shift ? shadow.translate(...scale(dir, -shift)) : shadow));
-                }
-                face.delete();
+                let stopped: Shape3D;
+                if (side.end.endType === "up-to-face") stopped = toFace(side.dir, side.start, side.end);
+                else if (side.end.endType === "up-to-next") stopped = toNext(side.dir, side.start, side.end);
+                else if (side.end.endType === "up-to-part") stopped = toPart(side.dir, side.start, side.end);
+                else throw new Error("Unknown extrusion end type.");
+                if (!side.end.draft || side.end.endType !== 'up-to-face') { tools.push(stopped); continue; }
+                tools.push(own(draftStoppedExtrusion(stopped, side.dir, o, n, side.end.draft)));
               }
-              sweep.delete();
-              if (!shadows.length) throw new Error("No next face covers the selected profile. Flip direction or choose another limit.");
-              let result: Shape3D = tool;
-              for (const shadow of shadows) result = own(result.cut(shadow));
-              const starts = capFaces(tool, dir, -1), ends = capFaces(tool, dir, 1);
-              let complete = true;
-              try {
-                const pieces = solidsOf(result);
-                complete = pieces.length === starts.length && pieces.every((piece) => measureVolume(piece) > 1e-9);
-                pieces.forEach(release);
-                for (const cap of starts) { const area = measureArea(cap); if (Math.abs(commonArea(cap, result) - area) > Math.max(1e-9, area * 1e-9)) complete = false; }
-                for (const cap of ends) if (commonArea(cap, result) > Math.max(1e-9, measureArea(cap) * 1e-9)) complete = false;
-                // A construction tool near taper collapse can have a negligible
-                // far cap. Its absence alone is not proof of a real termination.
-                const contact = stoppingFaces.reduce((sum, face) => sum + commonArea(face, result), 0);
-                if (contact <= Math.max(1e-10, starts.reduce((sum, face) => sum + measureArea(face), 0) * 1e-10)) complete = false;
-              } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
-              if (!complete) throw new Error("The next boundary does not cover and completely terminate the profile beyond its start. Adjust the profile, direction or end offset.");
-              stopContactPreview(end, dir, stoppingFaces, result);
-              return result;
+              if (intervals) tools.push(prism(low, high, direction));
+              if (!tools.length) throw new Error(sides.length > 1 ? "Neither extrusion end reaches the target part." : "The target lies behind the extrusion. Flip direction or adjust its offset.");
+              return tools.length === 1 ? tools[0] : own(tools[0].fuse(tools[1]));
             };
-            // Up to part: the tool is trimmed by the chosen solid (curved boundaries
-            // included); the one piece still touching the whole start is kept and
-            // must stop at the part before the far cap.
-            const toPart = (dir: V3, low: number, end: End): Shape3D => {
-              const limit = end.partId ? bodies.get(end.partId) : undefined;
-              if (!limit) throw new Error("The stopping part is unavailable. Reselect an earlier solid part.");
-              const stop = end.endOffset ? own(limit.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : limit;
-              const { axis, alignment, origin } = axisOf(dir);
-              const epsilon = Math.max(1e-6, diagonalOf(prism(low, low + 1, dir)) * 1e-8);
-              const bound = (farthestAlong([stop], axis) - origin) / alignment + epsilon * 10;
-              if (!Number.isFinite(bound) || bound <= low + epsilon) throw new Error("The stopping part lies behind the extrusion start. Flip direction or adjust its offset.");
-              const { tool } = stoppingTool(low, bound, dir, end.draft);
-              const starts = capFaces(tool, dir, -1), ends = capFaces(tool, dir, 1);
-              try {
-                if (starts.length !== 1) throw new UnsupportedFeature(feature.id, "up-to-part extrusions of several regions");
-                const start = starts[0], startArea = measureArea(start), tolerance = Math.max(1e-8, startArea * 1e-8);
-                // A profile inside the part stops at its exit, one outside at its entry.
-                const shifted = own(start.clone().translate(dir[0] * epsilon, dir[1] * epsilon, dir[2] * epsilon));
-                const overlap = commonArea(shifted, stop);
-                const inside = Math.abs(overlap - startArea) <= tolerance;
-                if (!inside && overlap > tolerance) throw new Error("The stopping part crosses the extrusion start. Move the start to one side of its boundary.");
-                const remainder = own(inside ? tool.intersect(stop) : tool.cut(stop));
-                const pieces = solidsOf(remainder);
-                const touching = pieces.filter((piece) => commonArea(start, piece) > tolerance);
-                const result = touching.length === 1 ? touching[0] : undefined;
+            const extrudeDrawing = (drawing: Drawing, regions: Region[]) => extrudeWith(drawingShape(drawing, regions));
+            // Thin: walls around the picked sketch curves (FreeCAD's rule). Thickness 1
+            // is outside a closed loop or to the right of an open curve, thickness 2 the
+            // other side; open ends are capped flat; a mid-plane wall is centred.
+            const extrudeThin = (curveIds?: string[]): Shape3D => {
+              if (feature.type !== "extrude" || !feature.thin) throw new Error("not a thin extrude");
+              const thin = feature.thin;
+              let a = thin.thickness1Millimeters, b = thin.thickness2Millimeters;
+              if (![a, b].every((v) => Number.isFinite(v) && v >= 0 && v <= 1e6)) throw new Error("Wall thicknesses must be finite nonnegative distances up to 1000000 mm.");
+              if (thin.midplane) {
+                const total = thin.midplaneThicknessMillimeters ?? 0;
+                if (!Number.isFinite(total) || !(total > 0) || total > 1e6) throw new Error("Mid plane thickness must be positive and at most 1000000 mm.");
+                a = b = total / 2;
+              }
+              if (a + b <= 1e-7) throw new Error("The total wall thickness must be positive.");
+              if (thin.flipped) [a, b] = [b, a];
+              const named = curveIds ?? picks.map((pick) => pick.profileContourId).filter((id): id is string => id !== undefined);
+              if (!named.length) throw new Error("Select sketch curves for the thin wall.");
+              const tools: Shape3D[] = [];
+              for (const id of named) {
+                const contour = profile.contours.find((c) => c.id === id);
+                if (!contour) throw new Error("A selected curve is no longer in its sketch.");
+                const base = own(contourDrawing(contour, feature.id));
+                if (contourClosed(contour)) {
+                  let wall: Drawing;
+                  let outer: Drawing, inner: Drawing;
+                  try {
+                    outer = a > 1e-12 ? own(base.offset(a, { lineJoinType: "miter" })) : base;
+                    inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base;
+                    wall = own(outer.cut(inner));
+                  } catch (error) { throw new Error("The wall offset splits or collapses the closed contour. Reduce thickness.", { cause: error }); }
+                  tools.push(extrudeWith({
+                    solid: (length, dir) => { const shape = sketchOf(wall).extrude(length, { extrusionDirection: dir }); if (!isShape3D(shape)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness."); return shape; },
+                    sections: () => [{ outer: wireOf(outer), holes: [wireOf(inner)] }],
+                    ...(feature.id === previewId ? { wallFrame: extrusionDraftFrame(wireOf(base)) } : {}),
+                  }));
+                  continue;
+                }
+                // An open curve: offset each side in the sketch plane (OCCT's open
+                // result, intersection joins), then close the strip with straight caps.
+                const sketch = sketchOf(base) as unknown as { wire: Wire };
+                const { face, wallFrame } = openWallFace(sketch.wire, n, a, b, own);
+                tools.push(extrudeWith({
+                  solid: (length, dir) => { const sweep = new Vector(scale(dir, length)); try { return basicFaceExtrusion(face, sweep); } finally { sweep.delete(); } },
+                  sections: () => [{ outer: own(face.clone().outerWire()), holes: face.clone().innerWires().map(own) }],
+                  wallFrame,
+                }));
+              }
+              return tools.slice(1).reduce((all, tool) => own(all.fuse(tool)), tools[0]);
+            };
+            const revolve = () => {
+              if (feature.type !== "revolve") throw new Error("not a revolve");
+              let axis: [number, number, number] = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
+              if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
+              else if (feature.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
+              else if (feature.axisReference) {
+                const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
+                origin = t.axisOriginMillimeters; axis = t.axisDirection;
+              }
+              type RevolveEnd = { endType: string; angle?: number; face?: ExtrudeFeature["endReference"]; partId?: string; point?: ExtrusionPointReference; offset: number };
+              const primary: RevolveEnd = { endType: feature.endType ?? "blind", angle: feature.angleDegrees, face: feature.endReference, partId: feature.endPartId, point: feature.endPointReference, offset: feature.endOffsetMillimeters ?? 0 };
+              const second: RevolveEnd | undefined = feature.secondEnd ? { endType: feature.secondEnd.endType, angle: feature.secondEnd.angleDegrees, face: feature.secondEnd.endReference, partId: feature.secondEnd.endPartId, point: feature.secondEnd.endPointReference, offset: feature.secondEnd.endOffsetMillimeters ?? 0 }
+                : feature.secondAngleDegrees ? { endType: "blind", angle: feature.secondAngleDegrees, offset: 0 } : undefined;
+              if (feature.symmetric && (second || primary.endType !== "blind")) throw new Error("Symmetric revolve needs a Blind end and no second end.");
+              const blind = (end: RevolveEnd) => { const a = end.angle ?? NaN; if (!(a > 0) || a > 360) throw new Error("Revolve angles must be finite, positive and at most 360 degrees."); return a; };
+              if (primary.endType === "blind" && second?.endType === "blind" && blind(primary) + blind(second) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
+              // FreeCAD's Revolution flags: Reversed turns the other way, Midplane
+              // centres the sweep on the sketch, a second end adds the other side.
+              const sign = feature.reversed ? -1 : 1;
+              if (feature.id === previewId) {
+                // One ring per Blind end through the profile's centre, turning its own way.
+                const c = sketchCentroid(feature.profileFeatureId), foot = add(origin, scale(axis, dot(sub(c, origin), axis)));
+                const ring = (parameter: string, side: number, label: string) => publish(feature, { parameter, kind: "angular", originMillimeters: foot, direction: scale(axis, side), startMillimeters: c, label });
+                if (primary.endType === "blind") ring("angle", sign, "Revolve angle");
+                if (second?.endType === "blind") ring("second", -sign, "Opposite angle");
+              }
+              const turn = (angle: number) => {
+                const shape = sketchOf(requireDrawing()).revolve(axis, { origin, angle });
+                // A profile straddling its axis sweeps through itself: OCCT returns an
+                // empty solid rather than failing, so say what is wrong instead.
+                if (isShape3D(shape) && measureVolume(shape) < 1e-6) throw new Error("Revolve profile crosses its axis. Keep the profile on one side of the axis.");
+                return shape;
+              };
+              const radial = (p: V3) => { const d = sub(p, origin); return sub(d, scale(axis, dot(d, axis))); };
+              // One side of the revolve, turning `side` about the axis until its end is met.
+              const sweep = (end: RevolveEnd, side: 1 | -1): Shape3D | ReturnType<typeof turn> => {
+                if (end.endType === "blind") return turn(side * blind(end));
+                if (end.endType === "up-to-vertex") {
+                  // The half-plane through the stopping point and the axis, measured from the profile's.
+                  const a = radial(sketchCentroid(feature.profileFeatureId)), b = radial(stopPoint(end.point));
+                  if (norm(b) < 1e-9) throw new Error("The stopping point lies on the revolve axis. Pick another point.");
+                  // The offset is a distance along the point's own arc: stop short of it by that arc.
+                  const angle = (((side * Math.atan2(dot(cross(a, b), axis), dot(a, b)) * 180 / Math.PI) % 360) + 360) % 360 - end.offset / norm(b) * 180 / Math.PI;
+                  if (angle < 1e-6) throw new Error("The stopping point lies in the profile's plane. Flip direction or pick another point.");
+                  return turn(side * angle);
+                }
+                const limits = end.endType === "up-to-part" ? [end.partId ? bodies.get(end.partId) : undefined]
+                  : end.endType === "up-to-face" ? [end.face && bodyAt(end.face.sourceFeatureId, end.face.bodyId)]
+                  : [...bodies.values()];
+                if (!limits.length || limits.some((limit) => !limit)) throw new Error(end.endType === "up-to-next" ? "Up to next requires an earlier part." : "The stopping part is unavailable. Reselect an earlier solid part or face.");
+                let stop = (limits as Shape3D[]).slice(1).reduce((all, limit) => own(all.fuse(limit)), limits[0] as Shape3D);
+                // Onshape's Offset: the stop grown by the distance (shrunk for a negative one), so the sweep ends that far from the entity.
+                if (end.offset) stop = own(offsetSolid(stop, end.offset));
+                // ponytail: a near-full turn trimmed by the stop, like Extrude's Up to part: the piece
+                // still holding the whole profile is the revolve, and the stop must cut it off before
+                // the far end. Up to face accepts the face the sweep meets first on its part.
+                const full = turn(side * 359.99);
+                if (!isShape3D(full)) throw new Error("Feature did not produce a solid.");
+                own(full);
+                const profileSketch = sketchOf(requireDrawing());
+                const starts = "face" in profileSketch ? [own(profileSketch.face())] : (own(profileSketch.faces()) as Shape3D).faces.map(own);
+                const area = (faces: Face[], of: Shape3D) => faces.reduce((sum, face) => sum + commonArea(face, of), 0);
+                const startArea = starts.reduce((sum, face) => sum + measureArea(face), 0), tolerance = Math.max(1e-8, startArea * 1e-8);
+                const turned = (degrees: number) => starts.map((face) => own(own(face.clone()).rotate(degrees, origin, axis)));
+                const overlap = area(turned(side * 1e-3), stop), inside = Math.abs(overlap - startArea) <= tolerance;
+                if (!inside && overlap > tolerance) throw new Error("The stop crosses the profile. Keep the profile on one side of it.");
+                const pieces = solidsOf(own(inside ? full.intersect(stop) : full.cut(stop)));
+                const touching = pieces.filter((piece) => area(starts, piece) > tolerance), result = touching.length === 1 ? touching[0] : undefined;
                 for (const piece of pieces) if (piece !== result) release(piece);
-                if (!result || Math.abs(commonArea(start, result) - startArea) > tolerance) throw new Error("The stopping part does not leave the complete extrusion start connected.");
+                if (!result || Math.abs(area(starts, result) - startArea) > tolerance) throw new Error("The stop does not leave the whole profile connected to the revolve.");
                 own(result);
-                let contact = 0;
-                for (const face of stop.faces) { contact += commonArea(face, result) - commonArea(face, start); face.delete(); }
-                const beyond = ends.reduce((sum, cap) => sum + commonArea(cap, result), 0), endArea = ends.reduce((sum, cap) => sum + measureArea(cap), 0);
-                if (beyond > Math.max(1e-12, endArea * 1e-8) || contact <= tolerance) throw new Error("The selected part does not fully stop the extrusion before the profile passes beyond it.");
-                if (measureVolume(result) <= 1e-9) throw new Error("The stopping part does not produce a valid extrusion.");
-                if (feature.id === previewId) {
-                  const stopFaces = stop.faces;
-                  try { stopContactPreview(end, dir, stopFaces, result); }
-                  finally { stopFaces.forEach(face => face.delete()); }
+                if (measureVolume(full) - measureVolume(result) <= tolerance) throw new Error("Nothing stops the revolve in this direction. Flip direction or choose another limit.");
+                if (area(turned(side * 359.99), result) > tolerance) throw new Error("The limit does not completely stop the revolve before it comes round. Choose another limit.");
+                if (end.endType === "up-to-face" && !end.offset) {
+                  const face = faceByReference(stop, end.face!, "Up to face"), contact = commonArea(face, result);
+                  face.delete();
+                  if (contact <= tolerance) throw new Error("The revolve meets its part before the selected face. Choose the face it reaches first.");
                 }
                 return result;
-              } finally { for (const cap of [...starts, ...ends]) cap.delete(); }
+              };
+              let shape = sweep(primary, sign);
+              if (feature.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * blind(primary) / 2, origin, axis);
+              if (second && isShape3D(shape)) {
+                const other = sweep(second, -sign as 1 | -1);
+                if (isShape3D(other)) shape = own(shape).fuse(own(other));
+              }
+              return isShape3D(shape) ? own(shape).simplify() : shape;
             };
-            // Both sides share the start plane. Without drafts, distance-type ends on
-            // either side merge into one prism; a drafted side is lofted on its own
-            // (narrowing away from the sketch); face, next and part stops are their own tools.
-            const sides: { dir: V3; sign: 1 | -1; start: number; end: End }[] = [{ dir: direction, sign: 1, start: offset, end: primary }];
-            if (second) sides.push({ dir: neg(direction), sign: -1, start: -offset, end: second });
-            const tools: Shape3D[] = [];
-            let low = offset, high = offset, intervals = 0;
-            for (const side of sides) {
-              const far = intervalEnd(side.dir, side.start, side.end);
-              if (far === null) continue;
-              if (far !== undefined) {
-                if (side.end.draft) { tools.push(draftedPrism(side.start, far, side.dir, side.end.draft)); continue; }
-                const signed = far * side.sign; low = Math.min(low, signed); high = Math.max(high, signed); intervals++; continue;
-              }
-              let stopped: Shape3D;
-              if (side.end.endType === "up-to-face") stopped = toFace(side.dir, side.start, side.end);
-              else if (side.end.endType === "up-to-next") stopped = toNext(side.dir, side.start, side.end);
-              else if (side.end.endType === "up-to-part") stopped = toPart(side.dir, side.start, side.end);
-              else throw new Error("Unknown extrusion end type.");
-              if (!side.end.draft || side.end.endType !== 'up-to-face') { tools.push(stopped); continue; }
-              tools.push(own(draftStoppedExtrusion(stopped, side.dir, o, n, side.end.draft)));
-            }
-            if (intervals) tools.push(prism(low, high, direction));
-            if (!tools.length) throw new Error(sides.length > 1 ? "Neither extrusion end reaches the target part." : "The target lies behind the extrusion. Flip direction or adjust its offset.");
-            return tools.length === 1 ? tools[0] : own(tools[0].fuse(tools[1]));
+            const result = own(feature.type === "extrude" ? (feature.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen)) : revolve());
+            if (!isShape3D(result))
+              throw new Error("Feature did not produce a solid.");
+            const identityRegions = regionsChosen.some(region => region.cell) ? regionsChosen : profile.regions;
+            const identities = feature.type === 'extrude' && feature.thin
+              ? picks.map(pick => ({ key: pick.profileContourId!, build: () => extrudeThin([pick.profileContourId!]) }))
+              : identityRegions.map(region => ({ key: region.key, build: () => extrudeDrawing(region.drawing, [region]) }));
+            return { tool: result, identities: identities.map(identity => ({ ...identity, sourceId: feature.profileFeatureId })) };
+
           };
-          const extrudeDrawing = (drawing: Drawing, regions: Region[]) => extrudeWith(drawingShape(drawing, regions));
-          // Thin: walls around the picked sketch curves (FreeCAD's rule). Thickness 1
-          // is outside a closed loop or to the right of an open curve, thickness 2 the
-          // other side; open ends are capped flat; a mid-plane wall is centred.
-          const extrudeThin = (): Shape3D => {
-            if (feature.type !== "extrude" || !feature.thin) throw new Error("not a thin extrude");
-            const thin = feature.thin;
-            let a = thin.thickness1Millimeters, b = thin.thickness2Millimeters;
-            if (![a, b].every((v) => Number.isFinite(v) && v >= 0 && v <= 1e6)) throw new Error("Wall thicknesses must be finite nonnegative distances up to 1000000 mm.");
-            if (thin.midplane) {
-              const total = thin.midplaneThicknessMillimeters ?? 0;
-              if (!Number.isFinite(total) || !(total > 0) || total > 1e6) throw new Error("Mid plane thickness must be positive and at most 1000000 mm.");
-              a = b = total / 2;
-            }
-            if (a + b <= 1e-7) throw new Error("The total wall thickness must be positive.");
-            if (thin.flipped) [a, b] = [b, a];
-            const named = picks.map((pick) => pick.profileContourId).filter((id): id is string => id !== undefined);
-            if (!named.length) throw new Error("Select sketch curves for the thin wall.");
-            const tools: Shape3D[] = [];
-            for (const id of named) {
-              const contour = profile.contours.find((c) => c.id === id);
-              if (!contour) throw new Error("A selected curve is no longer in its sketch.");
-              const base = own(contourDrawing(contour, feature.id));
-              if (contourClosed(contour)) {
-                let wall: Drawing;
-                let outer: Drawing, inner: Drawing;
-                try {
-                  outer = a > 1e-12 ? own(base.offset(a, { lineJoinType: "miter" })) : base;
-                  inner = b > 1e-12 ? own(base.offset(-b, { lineJoinType: "miter" })) : base;
-                  wall = own(outer.cut(inner));
-                } catch (error) { throw new Error("The wall offset splits or collapses the closed contour. Reduce thickness.", { cause: error }); }
-                tools.push(extrudeWith({
-                  solid: (length, dir) => { const shape = sketchOf(wall).extrude(length, { extrusionDirection: dir }); if (!isShape3D(shape)) throw new Error("The thin wall self-intersects or collapses. Repair the sketch or reduce thickness."); return shape; },
-                  sections: () => [{ outer: wireOf(outer), holes: [wireOf(inner)] }],
-                  ...(feature.id === previewId ? { wallFrame: extrusionDraftFrame(wireOf(base)) } : {}),
-                }));
-                continue;
-              }
-              // An open curve: offset each side in the sketch plane (OCCT's open
-              // result, intersection joins), then close the strip with straight caps.
-              const sketch = sketchOf(base) as unknown as { wire: Wire };
-              const { face, wallFrame } = openWallFace(sketch.wire, n, a, b, own);
-              tools.push(extrudeWith({
-                solid: (length, dir) => { const sweep = new Vector(scale(dir, length)); try { return basicFaceExtrusion(face, sweep); } finally { sweep.delete(); } },
-                sections: () => [{ outer: own(face.clone().outerWire()), holes: face.clone().innerWires().map(own) }],
-                wallFrame,
-              }));
-            }
-            return tools.slice(1).reduce((all, tool) => own(all.fuse(tool)), tools[0]);
-          };
-          const revolve = () => {
-            if (feature.type !== "revolve") throw new Error("not a revolve");
-            let axis: [number, number, number] = feature.axis === "X" ? [1, 0, 0] : feature.axis === "Y" ? [0, 1, 0] : [0, 0, 1], origin: V3 = [0, 0, 0];
-            if (feature.axisReference?.kind === "vector") { origin = [...feature.axisReference.origin] as V3; axis = unit(feature.axisReference.direction); }
-            else if (feature.axisReference?.kind === "feature") ({ origin, axis } = axisFeatureLine(feature.axisReference.featureId));
-            else if (feature.axisReference) {
-              const t = resolveTransform({ kind: "rotate-reference", reference: feature.axisReference, angleDegrees: 0 }) as { axisOriginMillimeters: V3; axisDirection: V3 };
-              origin = t.axisOriginMillimeters; axis = t.axisDirection;
-            }
-            type RevolveEnd = { endType: string; angle?: number; face?: ExtrudeFeature["endReference"]; partId?: string; point?: ExtrusionPointReference; offset: number };
-            const primary: RevolveEnd = { endType: feature.endType ?? "blind", angle: feature.angleDegrees, face: feature.endReference, partId: feature.endPartId, point: feature.endPointReference, offset: feature.endOffsetMillimeters ?? 0 };
-            const second: RevolveEnd | undefined = feature.secondEnd ? { endType: feature.secondEnd.endType, angle: feature.secondEnd.angleDegrees, face: feature.secondEnd.endReference, partId: feature.secondEnd.endPartId, point: feature.secondEnd.endPointReference, offset: feature.secondEnd.endOffsetMillimeters ?? 0 }
-              : feature.secondAngleDegrees ? { endType: "blind", angle: feature.secondAngleDegrees, offset: 0 } : undefined;
-            if (feature.symmetric && (second || primary.endType !== "blind")) throw new Error("Symmetric revolve needs a Blind end and no second end.");
-            const blind = (end: RevolveEnd) => { const a = end.angle ?? NaN; if (!(a > 0) || a > 360) throw new Error("Revolve angles must be finite, positive and at most 360 degrees."); return a; };
-            if (primary.endType === "blind" && second?.endType === "blind" && blind(primary) + blind(second) > 360) throw new Error("Revolve angles must total at most 360 degrees.");
-            // FreeCAD's Revolution flags: Reversed turns the other way, Midplane
-            // centres the sweep on the sketch, a second end adds the other side.
-            const sign = feature.reversed ? -1 : 1;
-            if (feature.id === previewId) {
-              // One ring per Blind end through the profile's centre, turning its own way.
-              const c = sketchCentroid(feature.profileFeatureId), foot = add(origin, scale(axis, dot(sub(c, origin), axis)));
-              const ring = (parameter: string, side: number, label: string) => publish(feature, { parameter, kind: "angular", originMillimeters: foot, direction: scale(axis, side), startMillimeters: c, label });
-              if (primary.endType === "blind") ring("angle", sign, "Revolve angle");
-              if (second?.endType === "blind") ring("second", -sign, "Opposite angle");
-            }
-            const turn = (angle: number) => {
-              const shape = sketchOf(requireDrawing()).revolve(axis, { origin, angle });
-              // A profile straddling its axis sweeps through itself: OCCT returns an
-              // empty solid rather than failing, so say what is wrong instead.
-              if (isShape3D(shape) && measureVolume(shape) < 1e-6) throw new Error("Revolve profile crosses its axis. Keep the profile on one side of the axis.");
-              return shape;
-            };
-            const radial = (p: V3) => { const d = sub(p, origin); return sub(d, scale(axis, dot(d, axis))); };
-            // One side of the revolve, turning `side` about the axis until its end is met.
-            const sweep = (end: RevolveEnd, side: 1 | -1): Shape3D | ReturnType<typeof turn> => {
-              if (end.endType === "blind") return turn(side * blind(end));
-              if (end.endType === "up-to-vertex") {
-                // The half-plane through the stopping point and the axis, measured from the profile's.
-                const a = radial(sketchCentroid(feature.profileFeatureId)), b = radial(stopPoint(end.point));
-                if (norm(b) < 1e-9) throw new Error("The stopping point lies on the revolve axis. Pick another point.");
-                // The offset is a distance along the point's own arc: stop short of it by that arc.
-                const angle = (((side * Math.atan2(dot(cross(a, b), axis), dot(a, b)) * 180 / Math.PI) % 360) + 360) % 360 - end.offset / norm(b) * 180 / Math.PI;
-                if (angle < 1e-6) throw new Error("The stopping point lies in the profile's plane. Flip direction or pick another point.");
-                return turn(side * angle);
-              }
-              const limits = end.endType === "up-to-part" ? [end.partId ? bodies.get(end.partId) : undefined]
-                : end.endType === "up-to-face" ? [end.face && bodyAt(end.face.sourceFeatureId, end.face.bodyId)]
-                : [...bodies.values()];
-              if (!limits.length || limits.some((limit) => !limit)) throw new Error(end.endType === "up-to-next" ? "Up to next requires an earlier part." : "The stopping part is unavailable. Reselect an earlier solid part or face.");
-              let stop = (limits as Shape3D[]).slice(1).reduce((all, limit) => own(all.fuse(limit)), limits[0] as Shape3D);
-              // Onshape's Offset: the stop grown by the distance (shrunk for a negative one), so the sweep ends that far from the entity.
-              if (end.offset) stop = own(offsetSolid(stop, end.offset));
-              // ponytail: a near-full turn trimmed by the stop, like Extrude's Up to part: the piece
-              // still holding the whole profile is the revolve, and the stop must cut it off before
-              // the far end. Up to face accepts the face the sweep meets first on its part.
-              const full = turn(side * 359.99);
-              if (!isShape3D(full)) throw new Error("Feature did not produce a solid.");
-              own(full);
-              const profileSketch = sketchOf(requireDrawing());
-              const starts = "face" in profileSketch ? [own(profileSketch.face())] : (own(profileSketch.faces()) as Shape3D).faces.map(own);
-              const area = (faces: Face[], of: Shape3D) => faces.reduce((sum, face) => sum + commonArea(face, of), 0);
-              const startArea = starts.reduce((sum, face) => sum + measureArea(face), 0), tolerance = Math.max(1e-8, startArea * 1e-8);
-              const turned = (degrees: number) => starts.map((face) => own(own(face.clone()).rotate(degrees, origin, axis)));
-              const overlap = area(turned(side * 1e-3), stop), inside = Math.abs(overlap - startArea) <= tolerance;
-              if (!inside && overlap > tolerance) throw new Error("The stop crosses the profile. Keep the profile on one side of it.");
-              const pieces = solidsOf(own(inside ? full.intersect(stop) : full.cut(stop)));
-              const touching = pieces.filter((piece) => area(starts, piece) > tolerance), result = touching.length === 1 ? touching[0] : undefined;
-              for (const piece of pieces) if (piece !== result) release(piece);
-              if (!result || Math.abs(area(starts, result) - startArea) > tolerance) throw new Error("The stop does not leave the whole profile connected to the revolve.");
-              own(result);
-              if (measureVolume(full) - measureVolume(result) <= tolerance) throw new Error("Nothing stops the revolve in this direction. Flip direction or choose another limit.");
-              if (area(turned(side * 359.99), result) > tolerance) throw new Error("The limit does not completely stop the revolve before it comes round. Choose another limit.");
-              if (end.endType === "up-to-face" && !end.offset) {
-                const face = faceByReference(stop, end.face!, "Up to face"), contact = commonArea(face, result);
-                face.delete();
-                if (contact <= tolerance) throw new Error("The revolve meets its part before the selected face. Choose the face it reaches first.");
-              }
-              return result;
-            };
-            let shape = sweep(primary, sign);
-            if (feature.symmetric && isShape3D(shape)) shape = own(shape).rotate(-sign * blind(primary) / 2, origin, axis);
-            if (second && isShape3D(shape)) {
-              const other = sweep(second, -sign as 1 | -1);
-              if (isShape3D(other)) shape = own(shape).fuse(own(other));
-            }
-            return isShape3D(shape) ? own(shape).simplify() : shape;
-          };
-          const result = own(feature.type === "extrude" ? (feature.thin ? extrudeThin() : extrudeDrawing(requireDrawing(), everyRegion ? profile.regions : regionsChosen)) : revolve());
-          if (!isShape3D(result))
-            throw new Error("Feature did not produce a solid.");
-          tool = result;
+          const groups = feature.type === 'extrude' ? extrusionProfileGroups(feature) : [feature];
+          const builtProfiles = groups.map(buildProfileTool);
+          tool = builtProfiles.slice(1).reduce((all, result) => own(all.fuse(result.tool)), builtProfiles[0].tool);
           if ((feature.type === "extrude" || feature.type === "revolve") && feature.targetBodyIds && feature.scopeMode !== "all") {
             // Explicit scope (FreeCAD's rule): Remove and Intersect meet each named
             // part on its own (a part the tool misses is kept unchanged); Add joins
@@ -3808,10 +3825,11 @@ export function evaluatePartDocument(
             const solids = solidsOf(tool);
             // One region: every solid is its own, no per-region prisms and booleans
             // (they cost more than the extrusion itself).
-            const identityRegions = regionsChosen.some(region => region.cell) ? regionsChosen : profile.regions;
-            const regionTools = identityRegions.length === 1 ? [] : identityRegions.map((region) => ({ key: region.key, tool: extrudeDrawing(region.drawing, [region]) }));
+            const identityRegions = builtProfiles.flatMap(result => result.identities);
+            const regionTools = identityRegions.length === 1 ? [] : identityRegions.map(identity => ({ ...identity, tool: identity.build() }));
+            const identity = (sourceId: string, key: string) => sourceId === (feature.outputProfileId ?? feature.profileFeatureId) ? key : JSON.stringify([sourceId, key]);
             const keys = solids.map((solid) => {
-              const identities = identityRegions.length === 1 ? [identityRegions[0].key] : regionTools.filter(({ tool: regionTool }) => { const overlap = solid.intersect(regionTool); const volume = isShape3D(overlap) ? measureVolume(overlap) : 0; release(overlap); return volume > 1e-8; }).map((r) => r.key).sort();
+              const identities = identityRegions.length === 1 ? [identity(identityRegions[0].sourceId, identityRegions[0].key)] : regionTools.filter(({ tool: regionTool }) => { const overlap = solid.intersect(regionTool); const volume = isShape3D(overlap) ? measureVolume(overlap) : 0; release(overlap); return volume > 1e-8; }).map(r => identity(r.sourceId, r.key)).sort();
               if (!identities.length) throw new Error("Could not identify an extrusion output body.");
               return sha256Hex(JSON.stringify(identities)).slice(0, 24);
             });

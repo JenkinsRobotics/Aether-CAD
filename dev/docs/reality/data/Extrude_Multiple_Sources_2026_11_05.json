@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.107",
+  "status": "qualified; awaiting local activation",
+  "scope": [
+    "One native Extrude from regions or curves in multiple earlier sketches",
+    "Shared direction, per-source planes and start/end resolution across Solid, Thin and Surface",
+    "Combined native tool applied once to Add/Remove/Intersect scope",
+    "Distinct source-qualified output identities, including duplicate contour IDs",
+    "Original output profile retained across primary selection removal, saved reopen and agent edits",
+    "Part24 and canonical codec27; previous readers refuse new output identity intent"
+  ],
+  "source_reference": "https://cad.onshape.com/help/Content/PartStudio/extrude.htm",
+  "canonical_codec": {
+    "wheel": "aether_animation-0.1.0-27-py3-none-any.whl",
+    "sha256": "8edf5ce08e3526f6ae2faea10a0718abd2d233ee54be785aba8969237048ce9f",
+    "modules": [
+      "aether_animation/__init__.py",
+      "aether_animation/aether_workspace.py",
+      "aether_animation/aether_project.py",
+      "aether_animation/mates.py",
+      "aether_animation/relation_kinds.py",
+      "aether_animation/workspace_drawings.py"
+    ],
+    "source_commit": "b6a5cc6eceeb67d156c1f28c36efeea840bdbcd6"
+  },
+  "qualification": {
+    "engine": {
+      "passed": 1362
+    },
+    "native_source_cases": 13,
+    "canonical_codec_tests": 34,
+    "headless": "passed",
+    "sketch_regions": "passed",
+    "prior_part23_reader": "preserves legacy output geometry/identity; refuses Part24; new reader retains both outputs and the surviving output after removing the primary source",
+    "native_service": {
+      "passed": 331,
+      "native_release_flag": true
+    },
+    "frontend_and_worker_build": "passed",
+    "types": "frontend and engine passed",
+    "home_standalone": "passed",
+    "worker_runner_sha256": "53b659c741ddd9132fd332d7f7cad93734e5670ef15506ee04aa7d72e5de0eb2",
+    "frontend": {
+      "passed": 2199,
+      "skipped": 1
+    },
+    "browser_controls": {
+      "chromium": {
+        "passed": 12,
+        "evidence": "build/Example-Collection/multisource-extrude-controls-chromium-2026-11-05/host/browser/feature-controls.json",
+        "errors": []
+      },
+      "webkit": {
+        "passed": 12,
+        "evidence": "build/Example-Collection/multisource-extrude-controls-webkit-2026-11-05/host/browser/feature-controls.json",
+        "errors": []
+      }
+    },
+    "browser_modeling": {
+      "passed": 17,
+      "server_geometry_requests": 0,
+      "evidence": "build/Example-Collection/multisource-extrude-modeling-2026-11-05/host/browser/log.json"
+    },
+    "home_hosted": {
+      "passed": true,
+      "evidence": "build/Example-Collection/multisource-extrude-home-2026-11-05/host/browser/results.json"
+    }
+  },
+  "complete_feature_parity": false,
+  "live_user_documents_modified": false,
+  "remaining": [
+    "Disconnected Surface output identities still use one compound body",
+    "Whole-sketch Surface selection must be qualified separately from explicit curve picks",
+    "Oblique Draft and complete complex-curve/stopping/selected-scope matrix",
+    "Axis and mate connector direction inputs",
+    "Full UI and agent conversion coverage between Solid, Thin and Surface",
+    "Shared linear handle is hidden when the axis projects to a point; qualify or implement an end-on interaction",
+    "Remaining Revolve, Chamfer, Fillet and the complete requested reference-feature set"
+  ]
+}

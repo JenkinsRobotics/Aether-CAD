@@ -68,9 +68,13 @@ export function prepareFeatureOperation(doc: PartDocument, name: string, args: R
     const feature = existing(doc, args.feature_id);
     const changes = parseObject(args.changes_json, 'changes_json');
     if ('id' in changes || 'type' in changes) throw Error('"id" and "type" cannot change; add a new feature instead.');
+    if (feature.type === 'extrude' && 'outputProfileId' in changes && changes.outputProfileId !== (feature.outputProfileId ?? feature.profileFeatureId))
+      throw Error('Extrusion output identity is assigned by the document and cannot be changed.');
     if (!Object.keys(changes).length) throw Error('changes_json has no fields to change.');
     const next = structuredClone(doc);
-    next.features = next.features.map(f => f.id === feature.id ? { ...f, ...changes } as PartFeature : f);
+    next.features = next.features.map(f => f.id === feature.id ? { ...f, ...changes,
+      ...(f.type === 'extrude' && f.separateBodies ? { outputProfileId: f.outputProfileId ?? f.profileFeatureId } : {}),
+    } as PartFeature : f);
     validatePartDocument(next);
     return { document: next, featureID: feature.id };
   }

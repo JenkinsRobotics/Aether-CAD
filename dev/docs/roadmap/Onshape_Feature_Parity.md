@@ -37,6 +37,30 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
+## Multiple-source Extrude — 2026-11-05, qualified
+
+The picker already retained multiple sketch sources; native evaluation previously
+refused them. One Extrude now builds each source in its evaluated plane with a
+common direction, joins the tools and applies the requested body operation once.
+Solid, Thin and Surface use this path. Selected curve IDs are scoped to their
+sketch; identical names in different sketches cannot collide.
+
+Part24 pins the original output profile namespace before editing selections.
+Removing or reordering the primary sketch preserves the surviving body IDs,
+including newly separated Thin walls. Existing single-source bodies retain their
+legacy identity when another source is added. Canonical workspace codec27 retains
+this intent; the previous Part23 worker and codec26 must refuse it.
+
+Thirteen native source/identity tests and the full 1,362-test engine suite pass.
+The packaged native service passes 331 tests; the frontend passes 2,199 (one
+existing skip). Chromium and WebKit each pass all 12 control workflows, including
+actual Solid/Thin/Surface selection, editing, removal and saved reopen. All 17
+modeling steps and hosted/standalone Home pass, with no server geometry calls.
+Full Extrude parity
+remains open, including disjoint Surface body identities, end-on linear controls,
+oblique Draft and the complete selection/termination matrix. See
+[qualification evidence](../reality/data/Extrude_Multiple_Sources_2026_11_05.json).
+
 ## Unified Surface Extrude — 2026-11-05, alpha-0.1.107
 
 Surface uses the same Extrude dialog and shared value manipulators as Solid and
@@ -147,7 +171,7 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source/disjoint outputs, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. Disjoint Surface outputs, end-on handles, oblique draft and the remaining stopping-limit combinations still need work; complete reference-control coverage. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
 | Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |

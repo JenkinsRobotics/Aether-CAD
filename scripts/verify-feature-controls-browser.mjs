@@ -92,6 +92,57 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude: native anchor, secondary readout, explicit units, save and reopen');
 
+  for (const mode of ['Solid', 'Thin', 'Surface']) {
+    const multiple = base('Multiple sketch ' + mode);
+    multiple.features = [-12, 12].map((x, index) => ({ id: index ? 'b' : 'a', type: 'profile', name: 'Sketch ' + (index + 1), plane: 'XY', offsetMillimeters: index * 3, suppressed: false,
+      profile: { type: 'drawing', contours: [{ id: 'same-name', type: 'circle', center: [x, 0], radius: 4 }] } }));
+    const file = await open(multiple);
+    await page.evaluate(() => window.__aetherSetView('top'));
+    await command('Extrude', 'feature-extrude');
+    await dialog().getByRole('button', { name: mode, exact: true }).click();
+    const entities = dialog().locator('.aui-feature-entities').first();
+    while (await entities.getByRole('button', { name: /^Remove / }).count())
+      await entities.getByRole('button', { name: /^Remove / }).first().click();
+    if (mode === 'Solid') {
+      for (const p of [[-12, 0, 0], [12, 0, 3]]) { const at = await point(p); assert.ok(at); await page.mouse.click(...at); }
+    } else {
+      await dialog().locator('[aria-label="Sketch"]').selectOption('a');
+      await dialog().locator('[aria-label="Sketch"]').selectOption('b');
+    }
+    await expect(entities.locator('.aui-feature-entity')).toHaveCount(2);
+    // Region picking is unambiguous from Top; inspect axial movement from an
+    // oblique view so the projection of the shared direction has nonzero length.
+    await page.evaluate(() => window.__aetherSetView('isometric'));
+    await expect(page.getByRole('button', { name: 'Pull extrusion depth', exact: true })).toBeEnabled({ timeout: 45000 });
+    await page.getByRole('button', { name: 'Pull extrusion depth', exact: true }).press('ArrowUp');
+    await expect.poll(() => page.evaluate(() => {
+      const model = window.__qualificationPreview; if (!model) return null;
+      let z = -Infinity; for (const part of model.featurePreview?.added ?? model.parts) for (let i=2;i<part.vertices.length;i+=3) z=Math.max(z,part.vertices[i]);
+      return Number(z.toFixed(3));
+    }), { timeout: 45000 }).toBe(14);
+    await accept();
+    await expect.poll(async () => (await stored(file.id)).features.at(-1).profileSelections?.length, { timeout: 30000 }).toBe(2);
+    const original = (await stored(file.id)).features.at(-1);
+    assert.equal(original.distanceMillimeters, 11);
+    if (mode !== 'Surface') assert.equal(original.bodyOutputs.length, 2);
+    await page.waitForLoadState('networkidle'); await page.reload();
+    await row(/^Extrude/).dblclick();
+    await expect(entities.locator('.aui-feature-entity')).toHaveCount(2);
+    await entities.getByRole('button', { name: /^Remove / }).first().click();
+    await expect(entities.locator('.aui-feature-entity')).toHaveCount(1);
+    await accept();
+    await expect.poll(async () => (await stored(file.id)).features.at(-1).profileSelections?.length, { timeout: 30000 }).toBe(1);
+    const remaining = (await stored(file.id)).features.at(-1);
+    assert.equal(remaining.profileSelections[0].profileFeatureId, 'b');
+    if (mode !== 'Surface') {
+      assert.equal(remaining.outputProfileId, 'a');
+      assert.equal(remaining.bodyOutputs.length, 1);
+      assert.ok(original.bodyOutputs.includes(remaining.bodyOutputs[0]));
+    }
+    await page.screenshot({ path: join(evidence, `extrude-multiple-${mode.toLowerCase()}.png`) });
+    results.push(mode + ' Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity');
+  }
+
   const surface = { ...base('Native Surface extrusion controls'), formatVersion: 23 };
   surface.features = [{ id: 's', type: 'profile', name: 'Surface sketch', plane: 'XY', offsetMillimeters: 0, suppressed: false,
     profile: { type: 'drawing', contours: [{ id: 'line', type: 'path', start: [-5, 0], segments: [{ type: 'line', end: [5, 0] }] }] } }];

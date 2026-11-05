@@ -119,6 +119,7 @@ export const extrudeEditor: FeatureEditor = {
   serialize(values,context) {
     return {
       operation:values.operation, ...serializeThin(values), type: values.creationMode === "surface" ? "surface-extrude" : "extrude",
+      ...(values.creationMode !== 'surface' && context.feature ? { outputProfileId: context.feature.outputProfileId ?? context.feature.profileFeatureId } : {}),
       ...serializeExtrudeDirection(values,context), ...serializeExtrudeDraft(values), ...serializeSecondEnd(values,context),
       ...(values.operation!=="new"&&values.scopeMode==="all"?{scopeMode:"all"}:{}),
       ...(values.scopeMode!=="all"&&["add","cut","intersect"].includes(values.operation)&&JSON.parse(values.scope).length?{targetBodyIds:[values.target,...JSON.parse(values.scope)]}:{}),

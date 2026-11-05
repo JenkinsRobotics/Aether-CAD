@@ -58,6 +58,19 @@ it('updates, deletes and moves features with identity and dependency guards', ()
   expect(() => prepareFeatureOperation(doc, 'aether_cad_feature_move', { feature_id: 'pad', delta: -1 })).toThrow();
 });
 
+it('pins legacy extrusion output identity before changing its primary selected sketch', () => {
+  const doc = fixture();
+  const second = { ...structuredClone(doc.features[0]), id: 'second', name: 'Second sketch' };
+  doc.features.splice(1, 0, second);
+  Object.assign(doc.features.at(-1)!, { separateBodies: true });
+  const updated = prepareFeatureOperation(doc, 'aether_cad_feature_update', { feature_id: 'pad',
+    changes_json: JSON.stringify({ profileFeatureId: 'second', profileSelections: [{ profileFeatureId: 'second' }] }) });
+  expect(updated.document.features.at(-1)).toMatchObject({ profileFeatureId: 'second', outputProfileId: 'sketch' });
+  expect(() => prepareFeatureOperation(updated.document, 'aether_cad_feature_update', {
+    feature_id: 'pad', changes_json: '{"outputProfileId":"second"}',
+  })).toThrow(/identity.*cannot be changed/);
+});
+
 it('composes canonical features in one transactional program with step references', async () => {
   const doc = fixture();
   const program = JSON.stringify({ version: 1, steps: [

@@ -48,6 +48,13 @@ Package-manager versions and the shared UI dependency version are separate.
    `scripts/verify-feature-controls-browser.mjs` on Chromium and WebKit for the
    real Surface tab, native preview, shared depth control, removal and cancel.
    Older Parts remain readable; rollback does not downgrade new Part23 files.
+   Multi-source Extrude output identity uses Part24 and canonical codec27.
+   Run `test_native_extrusion_sources.py` and
+   `node scripts/verify-extrusion-sources-format.mjs /path/to/prior/native-worker.json`
+   against the released Part23 reader. Verify source reordering/removal, exact
+   geometry, saved output IDs, refusal by codec26/Part23 and the actual Solid,
+   Thin and Surface workflows in both browser control gates. Rollback cannot
+   discard the output lineage or downgrade Part24 files.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

@@ -59,6 +59,8 @@ function stableBodies(doc: PartDocument): PartDocument {
     ...structuredClone(doc),
     features: doc.features.map((f) => {
       const feature = structuredClone(f);
+      if (feature.type === 'extrude' && feature.separateBodies)
+        feature.outputProfileId ??= feature.profileFeatureId;
       if((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
         return feature;
@@ -171,6 +173,8 @@ export function insertFeature(
   doc: PartDocument,
   feature: PartFeature,
 ): PartDocument {
+  if (feature.type === 'extrude' && feature.separateBodies)
+    feature = { ...feature, outputProfileId: feature.outputProfileId ?? feature.profileFeatureId };
   const next = stableBodies(doc),
     index = rollbackPosition(doc);
   if (

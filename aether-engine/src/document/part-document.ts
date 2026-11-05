@@ -83,6 +83,9 @@ export interface ExtrudeFeature {
   separateBodies?: boolean;
   /** Native output identities, updated only by a successful rebuild. */
   bodyOutputs?: string[];
+  /** Original profile whose output keys retain the legacy namespace. Pinned
+   * before editing selections so remaining bodies never follow pick order. */
+  outputProfileId?: string;
   scopeMode?: "all";
   scopeResolution?: ExtrusionScopeResolution;
   distanceMillimeters: number;
