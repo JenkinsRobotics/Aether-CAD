@@ -30,7 +30,10 @@ The script verifies every archive against `vendor-manifest.json` before installi
 it in the expected local vendor path. It can be rerun without downloading verified
 files. Then follow the normal repository setup instructions.
 
-For the web frontend, run `npm ci` and `npm run build` from `the repository root`.
+For current development, use branch `alpha-0.1` (not the historical release tag).
+It includes the pinned packages; large assets archives require `git lfs pull`.
+Run `python3 tools/fetch-vendor.py`, `npm --prefix aether-engine ci`, `npm ci`
+and `npm run build` from the repository root.
 Use the product README for backend requirements and development commands.
 
 The web build archive is a frontend bundle, not a desktop installer or a bundled

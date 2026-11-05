@@ -146,15 +146,23 @@ checkout.** Read `MIGRATION.md` before switching development to this folder.
 
 ## Build
 
-Use Node 22.12+ and npm. From `.`:
+Use Node 22.12+, npm and Git LFS. For the current development branch:
 
 ```sh
+git clone --branch alpha-0.1 https://github.com/JenkinsRobotics/Aether-CAD.git
+cd Aether-CAD
+git lfs install --local
+git lfs pull
+python3 tools/fetch-vendor.py
+npm --prefix aether-engine ci
 npm ci
 npm run build
 ```
 
 Shared Aether packages are versioned archives under `vendor/`, with lockfile
-integrity checks. No frontend imports source from the original checkout. Archives
+integrity checks. Large assets archives use Git LFS; all six current packages are
+included in this branch. The fetch command verifies their pinned hashes. No
+frontend imports source from the original checkout. Archives
 are temporary local distribution until the package registry is configured.
 The platform serves these builds using `aether-platform/projects.json`.
 

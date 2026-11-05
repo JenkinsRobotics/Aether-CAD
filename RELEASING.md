@@ -4,11 +4,13 @@ This repository owns the `cad` source. Development branch: `alpha-0.1`.
 Each independently staged release receives the next `alpha-0.1.N` index.
 Package-manager versions and the shared UI dependency version are separate.
 
-1. Restore exact dependencies with `python3 tools/fetch-vendor.py`.
+1. Install Git LFS and run `git lfs pull` to retrieve the large tracked assets
+   archives, then verify exact dependencies with `python3 tools/fetch-vendor.py`.
    The default local cache is `~/Library/Caches/Aether/packages`; override it with
    `AETHER_PACKAGE_CACHE`. Unpublished dependencies must be supplied by SHA-256.
    Product source must not import another repository's source files.
-2. Run `npm ci`, tests and `npm run build` from `.`.
+2. Run `npm --prefix aether-engine ci`, then `npm ci`, tests and
+   `npm run build` from `.`.
    Every frontend release must also pass `scripts/verify-home-browser.mjs` against
    its built frontend (`AETHER_HOME_FRONTEND=/absolute/path/to/dist`) and through
    Studio's disposable authenticated browser fixture. This guards `/cad/` and
