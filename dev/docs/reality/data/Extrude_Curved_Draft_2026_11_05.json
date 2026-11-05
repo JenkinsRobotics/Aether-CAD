@@ -77,7 +77,7 @@
       "passed": 17,
       "server_geometry_requests": 0,
       "evidence": "build/Example-Collection/curved-draft-modeling-ready-2026-11-05/host/browser/log.json",
-      "initial_attempt": "Test clicked Sketch after a fixed 2.5-second startup delay, before hosted document readiness. No feature authored or geometry failure. Gate now waits for native Part evaluation and network idle; all 17 workflows pass on identical product bytes.",
+      "initial_attempt": "Initial attempt timed out opening the first sketch after a fixed 2.5-second startup delay; no feature was authored and no geometry error was recorded. Gate now waits for native Part evaluation and network idle; all 17 workflows pass on identical product bytes. A startup timing race is suspected, not conclusively established.",
       "initial_evidence": "build/Example-Collection/curved-draft-modeling-2026-11-05/host/browser"
     },
     "home": {
@@ -104,5 +104,28 @@
     "Mate connectors, implicit cylindrical direction axes and remaining starting references.",
     "Exact partial arrangement-curve conversion, remembered creation mode and complete mode/termination matrix.",
     "Continue the ordered Revolve, Chamfer, Fillet and remaining reference feature qualifications."
-  ]
+  ],
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.116",
+    "sha256": "da37cd11c733c0a3f5cbd8d18c52b0944c858f8d0254b7168194840968d0a1c6",
+    "source_commit": "57e0c21fb26f76a0121e45b7a31b34edfab9d36f",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "live_user_documents_modified": false,
+    "active_apps": {
+      "animation": "alpha-0.1.7",
+      "cad": "alpha-0.1.116",
+      "io": "alpha-0.1.9",
+      "map": "alpha-0.1.46",
+      "sketch": "alpha-0.1.7",
+      "ui": "alpha-0.1.38",
+      "vector": "alpha-0.1.7"
+    },
+    "unauthenticated_https_status": 302
+  }
 }

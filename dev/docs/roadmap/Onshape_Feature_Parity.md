@@ -214,7 +214,7 @@ This does not complete Extrude parity: mate connectors, implicit cylindrical axe
 remaining starting/ending references, sharp curved Draft corners, partial arrangement
 curve conversion, remembered creation mode and the full termination matrix remain.
 
-## Extrude curved oblique Draft — 2026-11-05
+## Extrude curved oblique Draft — 2026-11-05, alpha-0.1.116
 
 Angled Draft now constructs native walls for smooth closed circular, elliptical,
 and tangent-continuous curved boundaries, including circular Thin walls. The

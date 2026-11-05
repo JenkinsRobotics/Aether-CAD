@@ -153,5 +153,21 @@
       "build/Example-Collection/extrude-direction-final2-removal-chromium/host/browser/face-finish-feedback.json",
       "build/Example-Collection/extrude-direction-final2-removal-webkit/host/browser/face-finish-feedback.json"
     ]
+  },
+  "cad116_reverification": {
+    "release": "alpha-0.1.116",
+    "source_commit": "57e0c21fb26f76a0121e45b7a31b34edfab9d36f",
+    "artifact_bytes_verified_against_installed_package": true,
+    "browsers": [
+      "Chromium",
+      "WebKit"
+    ],
+    "cases_per_browser": 4,
+    "errors": [],
+    "fixture": "Disposable copy of reported Part 1; no live edits",
+    "evidence": [
+      "build/Example-Collection/curved-draft-part1-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "build/Example-Collection/curved-draft-part1-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+    ]
   }
 }
