@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { parsePartDocument } from '@aether/core/document';
 import { cadCommands } from '../cad-command-registry';
+import { applyDocumentUnits } from '../document-preferences';
 
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, doc, apply;
@@ -55,4 +56,24 @@ it('Fillet Full round shows Side face, Opposite side face, Faces to replace and 
   expect(win.querySelector('select[aria-label="Fillet type"]').value).toBe('full-round');
   expect(captions(win).slice(0, 4)).toEqual(['Side face', 'Opposite side face', 'Faces to replace', 'Tangent propagation']);
   await vi.waitFor(() => expect(win.textContent).toContain('Select the side face.'));
+});
+
+
+it('variable fillet point radii display and edit inches while retaining canonical millimetres', () => {
+  applyDocumentUnits({ length: { unit: 'in', decimals: 3 } });
+  try {
+    cadCommands.execute('feature-fillet');
+    const win = document.querySelector('.cad-feature-dialog');
+    win.querySelector('input[type="checkbox"][aria-label="Variable fillet"]').click();
+    const add = [...win.querySelectorAll('button')].find(button => button.textContent === 'Add point on edge');
+    add.click();
+    const points = win.querySelector('input[aria-label="Points on edge"]');
+    expect(JSON.parse(points.value)[0].radiusMillimeters).toBe(0.5);
+    const radius = win.querySelector('input[aria-label="Point 1 radius"]');
+    expect(Number(radius.value)).toBeCloseTo(0.5 / 25.4, 10);
+    radius.value = '0.020'; radius.dispatchEvent(new Event('change'));
+    expect(JSON.parse(points.value)[0].radiusMillimeters).toBeCloseTo(0.508, 10);
+    add.click();
+    expect(Number(win.querySelector('input[aria-label="Point 1 radius"]').value)).toBeCloseTo(0.020, 10);
+  } finally { applyDocumentUnits({}); }
 });

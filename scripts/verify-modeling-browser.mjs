@@ -377,7 +377,7 @@ try {
     await setSelect('Sketch', 'Sketch 1');
     await setInput('Distance (mm)', 8);
     await applyDialog('surface-extrude');
-    await expect(featureRow(/^Surface Extrude/)).toBeVisible();
+    await expect(featureRow(/^Extrude/).last()).toBeVisible();
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 1);
     await ribbon('Thicken', 'feature-surface-thicken').click();
     await page.locator('.cad-feature-dialog').waitFor({ timeout: 30000 });
@@ -386,7 +386,7 @@ try {
     await expect(page.locator('.cad-feature-dialog .aui-feature-entities[aria-label^="Faces and surfaces to thicken"]')).toContainText(/\S/, { timeout: 10000 });
     await setInput('Thickness 1 (mm)', 1);
     await applyDialog('surface-thicken');
-    await expect(featureRow(/^Surface Thicken/)).toBeVisible();
+    await expect(featureRow(/^Thicken/)).toBeVisible();
     // Keep tools is off by default (Onshape's): the sheet is consumed, so the solid replaces it.
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 1);
     await tab('Solid').click().catch(() => { });
@@ -400,7 +400,7 @@ try {
     await setSelect('Sketch', 'Sketch 1');
     await setInput('Thickness (mm)', 2);
     await applyDialog('sheet-base');
-    await expect(featureRow(/^Sheet Base/)).toBeVisible();
+    await expect(featureRow(/^Sheet metal model/)).toBeVisible();
     await expect(page.locator('.cad-parts-list').getByRole('treeitem')).toHaveCount(before + 1);
     await ribbon('Flat pattern DXF', 'sheet-export-flat-dxf').click();
     await page.waitForTimeout(1500);

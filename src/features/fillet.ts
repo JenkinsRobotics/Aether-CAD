@@ -85,20 +85,21 @@ export const filletEditor: FeatureEditor = {
     // Points on the edge: (position along the edge, radius) rows, the same law on every picked edge.
     hide(controls.points);
     const pointsList = document.createElement("div"); pointsList.className = "cad-fillet-points";
+    const radiusFactor = Number(controls.radius.dataset.canonicalFactor ?? 1);
     const readPoints = (): { position: number; radiusMillimeters: number }[] => JSON.parse(controls.points.value || "[]");
     const writePoints = (points: { position: number; radiusMillimeters: number }[]) => { controls.points.value = JSON.stringify(points); renderPoints(); controls.points.dispatchEvent(new Event("change")); };
     const renderPoints = () => {
       pointsList.replaceChildren(...readPoints().map((point, index) => {
         const position = document.createElement("input"); position.type = "text"; position.value = String(point.position); position.setAttribute("aria-label", `Point ${index + 1} position`);
-        const radius = document.createElement("input"); radius.type = "text"; radius.value = String(point.radiusMillimeters); radius.setAttribute("aria-label", `Point ${index + 1} radius`);
-        const update = () => { const points = readPoints(); points[index] = { position: Number(position.value), radiusMillimeters: Number(radius.value) }; controls.points.value = JSON.stringify(points); controls.points.dispatchEvent(new Event("change")); };
+        const radius = document.createElement("input"); radius.type = "text"; radius.value = String(Number((point.radiusMillimeters / radiusFactor).toPrecision(12))); radius.setAttribute("aria-label", `Point ${index + 1} radius`);
+        const update = () => { const points = readPoints(); points[index] = { position: Number(position.value), radiusMillimeters: Number(radius.value) * radiusFactor }; controls.points.value = JSON.stringify(points); controls.points.dispatchEvent(new Event("change")); };
         position.onchange = update; radius.onchange = update;
         const remove = iconButton("close", `Remove point ${index + 1}`); remove.onclick = () => writePoints(readPoints().filter((_, i) => i !== index));
         return rowIn(`Point ${index + 1} (0…1, ${lengthUnitLabel})`, position, radius, remove);
       }));
     };
     const addPoint = Object.assign(document.createElement("button"), { type: "button", className: "aui-button", textContent: "Add point on edge" });
-    addPoint.onclick = () => { const points = readPoints(); writePoints([...points, { position: Math.round((points.length + 1) / (points.length + 2) * 100) / 100, radiusMillimeters: Number(controls.radius.value) || 1 }]); };
+    addPoint.onclick = () => { const points = readPoints(); writePoints([...points, { position: Math.round((points.length + 1) / (points.length + 2) * 100) / 100, radiusMillimeters: controls.radius.value === controls.radius.dataset.displayValue ? Number(controls.radius.dataset.originalValue) : Number(controls.radius.value) * radiusFactor }]); };
     renderPoints();
     variable.body.append(end, pointsList, rowIn("Points on edge", addPoint), gapCheck("Smooth transition", pointsGap));
     edge.append(variable.element);

@@ -1,0 +1,98 @@
+{
+  "date": "2026-11-05",
+  "scope": "First-pass layout alignment with user-supplied Onshape screenshots; not full modeling parity",
+  "reviewed": [
+    "Extrude",
+    "Revolve",
+    "Sweep",
+    "Loft",
+    "Thicken",
+    "Fillet",
+    "Chamfer",
+    "Draft",
+    "Rib",
+    "Shell",
+    "Hole",
+    "External thread",
+    "Linear pattern",
+    "Circular pattern",
+    "Curve pattern",
+    "Mirror",
+    "Boolean",
+    "Split",
+    "Enclose"
+  ],
+  "changes": [
+    "Shared visible parameter rows restore moved inputs",
+    "Loft profiles first, collapsible profile builder and end conditions, optional Aether controls grouped",
+    "Thicken operation tabs only, second thickness visible",
+    "Split Part/Face tabs",
+    "Rib Draft subsection retains unavailable status",
+    "Chamfer type caption and document angle units",
+    "Pattern parameters visible, Curve ordering and no Centered, no orphan Axis row",
+    "Sweep removes empty legacy rows and retains conditional twist/thin controls",
+    "Headers reuse toolbar names and artwork",
+    "Revolve and Pattern edge-picker captions match their purpose",
+    "Fillet variable radius displays document units and stores canonical millimeters"
+  ],
+  "preserved": [
+    "Shared viewport manipulators; no new arrow geometry",
+    "Standard header accept/discard and compact footer actions",
+    "Native modeling operations and document schema",
+    "Existing feature names on edit"
+  ],
+  "remaining": [
+    "Body Draft is not implemented",
+    "Rolling-ball Face Blend is not implemented; Surface Blend is a different operation",
+    "Advanced disabled controls remain kernel gaps as recorded in Onshape_Feature_Parity.md",
+    "Loft profile construction retains an Aether disclosure rather than claiming complete Onshape selection parity"
+  ],
+  "gallery": "Aether UI embeds the live CAD feature gallery; these editors are its reference, not copied mockups",
+  "validation": {
+    "build": "passed",
+    "frontend_tests": {
+      "passed": 2230,
+      "skipped": 1
+    },
+    "final_focused_tests": {
+      "passed": 29
+    },
+    "layout_browsers": {
+      "chromium": 17,
+      "webkit": 17,
+      "variants": [
+        "standard",
+        "compact"
+      ],
+      "evidence": "build/feature-layout-2026-11-05"
+    },
+    "feature_controls_before_final_sweep_pattern_row_cleanup": {
+      "chromium": 25,
+      "webkit": 25,
+      "errors": []
+    },
+    "worker": "native-worker.json and runner.pyz SHA-256 equal installed alpha-0.1.117; existing engine/native qualification retained",
+    "modeling": {
+      "status": "failed",
+      "step": "hole",
+      "error": "Hole 13: Cut removes no material. Flip direction or check the selected target and depth.",
+      "evidence": "build/Example-Collection/layout-first-pass-modeling-final/host/browser",
+      "completed_steps": 12,
+      "page_errors": [],
+      "release_gate": "not waived"
+    },
+    "home": {
+      "hosted": "passed",
+      "standalone": "passed"
+    },
+    "headless": "passed: exact builds/bounds, lazy retry, analysis, STEP and isolated packaged runner"
+  },
+  "qualification_observations": [
+    "Initial modeling gate reached Surface Extrude but expected its old generated name; updated assertions to toolbar names",
+    "Second modeling run failed on an earlier Hole during Revolve preview: Cut removes no material. No tolerance or geometry assertion was removed. Final rerun recorded separately.",
+    "Final built frontend again failed at Hole. Existing parity ledger records this intermittent failure before this layout pass; causation is not established. No further retry was used to declare qualification."
+  ],
+  "installation": {
+    "status": "activation held for broad modeling gate; installed alpha-0.1.117 unchanged"
+  }
+}

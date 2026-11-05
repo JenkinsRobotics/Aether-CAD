@@ -60,7 +60,10 @@ export const ribEditor: FeatureEditor = {
     win.body.append(rowIn("Rib direction", picker.element, flip));
     const gapInput = (label: string, reason: string) => { const input = document.createElement("input"); input.type = "text"; input.setAttribute("aria-label", label); return planned(rowIn(label, input), reason); };
     const gapCheck = (label: string, reason: string, checked = false) => { const box = document.createElement("input"); box.type = "checkbox"; box.checked = checked; box.setAttribute("aria-label", label); return planned(rowIn(label, box), reason); };
-    win.body.append(gapInput("Draft angle", draftGap), gapCheck("Extend profiles to part", extendGap), gapCheck("Merge ribs", mergeGap, true));
+    const draft = win.subsection("Draft", { kind: "checkbox", open: false });
+    draft.body.append(gapInput("Draft angle", draftGap));
+    planned(draft.element, draftGap);
+    win.body.append(draft.element, gapCheck("Extend profiles to part", extendGap), gapCheck("Merge ribs", mergeGap, true));
     const note = document.createElement("p"); note.textContent = "Normal: the wall is centred on each open curve and runs square to the sketch plane until it meets the part. Parallel: the wall stands the thickness tall across the plane and fills from the curve to the part, square to the curve's chord."; win.addHelp(note);
   },
   validate(controls, context) {

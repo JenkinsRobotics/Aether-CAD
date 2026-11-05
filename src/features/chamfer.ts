@@ -38,7 +38,7 @@ export const chamferEditor: FeatureEditor = {
     const measurement = win.picker(Object.keys(measurements), { ariaLabel: "Measurement menu", onChange: (value) => { controls.measurement.value = measurements[value as keyof typeof measurements]; sync(); controls.measurement.dispatchEvent(new Event("change")); } });
     measurement.setValue(controls.measurement.value === "tangent" ? "Tangent distance" : "Offset");
     const measurementRow = win.body.appendChild(win.row("Measurement", measurement.element));
-    win.body.append(picker.element);
+    win.body.append(rowIn("Chamfer type", picker.element));
     const distance = row("Distance", controls.radius, lengthUnitLabel);
     // Onshape's direction flip: the first leg moves to the other adjacent face on every edge.
     controls.flipped.closest("label")?.remove(); controls.flipped.hidden = true; controls.flipped.setAttribute("form", form.id); form.append(controls.flipped);
@@ -46,7 +46,7 @@ export const chamferEditor: FeatureEditor = {
     const paintFlip = () => flip.setAttribute("aria-pressed", controls.flipped.value);
     flip.onclick = () => { controls.flipped.value = controls.flipped.value === "true" ? "false" : "true"; paintFlip(); controls.flipped.dispatchEvent(new Event("change")); };
     paintFlip(); distance.querySelector(".aui-feature-row-control")?.append(flip);
-    const second = row("Second distance", controls.secondDistance, lengthUnitLabel), angle = row("Angle", controls.angle, "deg");
+    const second = row("Second distance", controls.secondDistance, lengthUnitLabel), angle = row("Angle", controls.angle, context.angleUnitLabel);
     const faces = mountPickedReferences<SolidFaceReference>(context, controls.referenceFace, {
       title: "Reference face (optional)", kind: "face", requestEvent: "aether-offset-faces-request", replyEvent: "aether-offset-faces", replyKey: "faces", identity: faceIdentity,
       note: "The face the first distance lies on. Default: the adjacent face facing up most.",

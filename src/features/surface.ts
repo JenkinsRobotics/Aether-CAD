@@ -3,7 +3,7 @@ import { mountPartBox } from "./part-box";
 import { edgeIdentity } from "./edge-finish";
 import { availableBodies, type EdgeFinishEdge, type SolidFaceReference } from "@aether/core/document";
 import { faceIdentity, mountPickedReferences } from "./picked-references";
-import { bodyAndOperationTabs, checkRow, entityChips, iconButton, requireSelections, rowIn, type Control, type Controls, type FeatureEditor, type FeatureEditorContext, unitSuffix } from "./shared";
+import { operationTabs, checkRow, entityChips, iconButton, requireSelections, rowIn, type Control, type Controls, type FeatureEditor, type FeatureEditorContext, unitSuffix } from "./shared";
 
 /** Surface dialogs (SolidCraft's surface.*): sheets from sketch curves, and the
  *  tools that offset, thicken, sew, split and flip them. One editor per feature,
@@ -105,7 +105,7 @@ export const surfaceThickenEditor: FeatureEditor = {
   },
   layout(context, controls) {
     const { win, form, lengthUnitLabel, doc, feature } = context;
-    bodyAndOperationTabs(win, form, controls.operation, thickenOperations);
+    operationTabs(win, form, controls.operation, thickenOperations, ["New", "Add", "Remove", "Intersect"]);
     bodiesLayout(context, controls, "Faces and surfaces to thicken");
     const hide = (control: Control) => { control.closest("label")?.remove(); control.hidden = true; control.setAttribute("form", form.id); form.append(control); };
     hide(controls.flipped); hide(controls.symmetric); hide(controls.mergeScope); hide(controls.second);

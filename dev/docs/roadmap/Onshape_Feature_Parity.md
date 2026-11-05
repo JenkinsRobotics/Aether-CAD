@@ -10,6 +10,15 @@ https://cad.onshape.com/help/Content/chamfer.htm
 
 ## Selection removal and current-preview acceptance — 2026-11-05
 
+First-pass layout review (2026-11-05): the supplied reference dialogs were reviewed
+for tab order, selections, parameter rows, conditional sections and shared window
+actions. Loft, Thicken, Split, Rib, Chamfer, Pattern and Sweep received layout
+corrections; headers now reuse toolbar presentation. Fillet variable radii now
+display document units while retaining canonical millimeters. Aether UI embeds
+these live CAD editors. This does not close kernel parity rows: Body Draft,
+rolling-ball Face Blend and the disabled advanced controls remain open. Evidence:
+`../reality/data/Feature_Layout_First_Pass_2026_11_05.json`.
+
 CAD alpha-0.1.105 fixes both removal paths reported on the user's Chamfer:
 clicking the selected native face again toggles its exact reference, and its
 entity-row × removes that reference without a pointerdown refresh replacing

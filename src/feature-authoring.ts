@@ -1,6 +1,5 @@
 import { closeOpenFeatureWindows, openCADFeatureWindow } from "./features/feature-window-style";
-/** Feature types whose tool artwork has another name. */
-const FEATURE_ARTWORK: Record<string, string> = { "face-extrude": "push-pull", "offset-face": "offset", "import-cad": "import", profile: "sketch" };
+import { featurePresentation } from "./features/presentation";
 import { mountConstructionCommands } from "./construction-commands";
 import { mountSheetMetalCommands } from "./sheet-metal-commands";
 import { mountPlasticRulesCommands } from "./plastic-rules-window";
@@ -162,11 +161,12 @@ const presentFeatureWindow = (
     const form = document.createElement("form");
     // The window's title is the feature's name (Jonathan, 2026-11-02): "Revolve 8" from the
     // start, renamed by double-clicking the title; no Name row.
+    const presentation = featurePresentation(type);
     const defaultName = type === "import-cad" ? (feature?.name ?? "Edit CAD import") : feature?.name ??
-        (launch.title ?? (type === "offset-face" ? "Move faces" : type === "face-extrude" ? "Push/Pull" : type === "boundary-fill" ? "Enclose" : type.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "))) + " " + (doc.features.length + 1);
+        (launch.title ?? presentation.label) + " " + (doc.features.length + 1);
     const win = openCADFeatureWindow({
       viewport: document.querySelector<HTMLElement>(".cad-studio-viewport") ?? document.body,
-      className: "cad-feature-dialog", icon: FEATURE_ARTWORK[type] ?? type,
+      className: "cad-feature-dialog", icon: presentation.icon,
       title: defaultName,
       onTitleChange: (value) => { name.value = value; name.dispatchEvent(new Event("input")); },
       onAccept: () => form.requestSubmit(),
@@ -287,6 +287,13 @@ const presentFeatureWindow = (
     const family = FEATURE_FAMILIES[type];
     if (family && !existing) {
       const kind = field(family.label, Object.entries(family.kinds).find(([, t]) => t === type)![0], Object.keys(family.kinds));
+      kind.closest("label")?.remove(); kind.hidden = true; kind.setAttribute("form", form.id); form.append(kind);
+      const entries = Object.entries(family.kinds);
+      const tabs = win.tabs(entries.map(([label]) => label[0].toUpperCase() + label.slice(1)), entries.findIndex(([, value]) => value === type));
+      [...tabs.children].forEach((tab, index) => { (tab as HTMLButtonElement).onclick = () => {
+        if (kind.value === entries[index][0]) return;
+        kind.value = entries[index][0]; kind.dispatchEvent(new Event("change"));
+      }; });
       kind.addEventListener("change", () => { win.close(); show(family.kinds[kind.value], undefined, launch); });
     }
     const name = field("Name", defaultName);

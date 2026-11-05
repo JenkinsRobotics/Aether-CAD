@@ -63,7 +63,7 @@ export const patternEditor:FeatureEditor={
   },
   layout(context:FeatureEditorContext,controls:Controls) {
     const {win,form,lengthUnitLabel,angleUnitLabel}=context;
-    const rows=layoutParameterRows(context,control=>![controls.pathSketch,controls.pathMode,controls.pathSpacing,controls.pathDistance,controls.pathOrientation,controls.axis,controls.vectorX,controls.vectorY,controls.vectorZ].includes(control));
+    const rows=layoutParameterRows(context,control=>![controls.pathMode,controls.pathSpacing,controls.pathDistance,controls.pathOrientation,controls.vectorX,controls.vectorY,controls.vectorZ].includes(control));
     const hide=(control:Controls[string])=>{control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);};
     for(const key of ['what','parts','partNames','copyPrefix','source','patternType','edge','count','spacing','angle','equalSpacing','direction','centered','useSecond','secondAxis','secondCount','secondSpacing','secondDirection','secondCentered','mergeScope','directionSource','result','skip'])hide(controls[key]);
     const row=(label:string,control:Controls[string],unit?:string)=>{control.closest('label')?.remove();control.setAttribute('form',form.id);const r=unit?rowIn(label,control,Object.assign(document.createElement('span'),{className:'aui-feature-unit',textContent:unit})):rowIn(label,control);win.body.append(r);return r;};
@@ -89,7 +89,7 @@ export const patternEditor:FeatureEditor={
     const paintFlip=()=>flip.setAttribute('aria-pressed',String(controls.direction.value==='reverse'));
     flip.onclick=()=>{controls.direction.value=controls.direction.value==='reverse'?'normal':'reverse';paintFlip();controls.direction.dispatchEvent(new Event('change'));};
     paintFlip();directionRow.querySelector('.aui-feature-row-control')?.append(flip);
-    const edgePicker=transformEdgePicker(context,controls.edge);
+    const edgePicker=transformEdgePicker(context,controls.edge,'Direction or axis edge');
     controls.edge.addEventListener('change',()=>{if(controls.edge.value){controls.directionSource.value='edge';controls.directionSource.dispatchEvent(new Event('change'));}});
     // A picked face: a planar face's normal is a direction; a cylindrical or conical face's axis is the axis of pattern.
     // A picked plane, Plane feature, face or sketch line: a plane's normal (or a line) is the direction; a cylindrical or conical face's axis is the axis of pattern.
@@ -99,9 +99,9 @@ export const patternEditor:FeatureEditor={
     controls.axis.addEventListener('change',()=>{if(controls.directionSource.value==='edge'&&!controls.edge.value)return;if(controls.directionSource.value==='face'&&!controls.directionFace.value)return;if(controls.directionSource.value!=='vector'){controls.directionSource.value='axis';controls.directionSource.dispatchEvent(new Event('change'));}});
     const spacingRow=row('Distance',controls.spacing,lengthUnitLabel);
     const angleRow=row('Angle',controls.angle,angleUnitLabel);
-    row('Instance count',controls.count);
+    const countRow=row('Instance count',controls.count);
     const equalRow=check(controls.equalSpacing,'Equal spacing');
-    check(controls.centered,'Centered');
+    const centeredRow=check(controls.centered,'Centered');
     // Second direction (Linear).
     const second=win.subsection('Second direction',{kind:'checkbox',open:controls.useSecond.value==='yes',onToggle:(open)=>{controls.useSecond.value=open?'yes':'no';sync();controls.useSecond.dispatchEvent(new Event('change'));}});
     const into=(label:string,control:Controls[string],unit?:string)=>{control.closest('label')?.remove();control.setAttribute('form',form.id);const r=unit?rowIn(label,control,Object.assign(document.createElement('span'),{className:'aui-feature-unit',textContent:unit})):rowIn(label,control);second.body.append(r);return r;};
@@ -124,7 +124,7 @@ export const patternEditor:FeatureEditor={
     win.body.append(scope.element);
     controls.mergeScope.addEventListener('change',()=>{const id=JSON.parse(controls.mergeScope.value||'[]')[0];if(id){controls.target.value=id;controls.target.dispatchEvent(new Event('change'));}});
     // Curve pattern rows stay as they were, under the Curve tab; the vector direction stays under Aether options.
-    const curve=document.createElement('div');win.body.append(curve);
+    const curve=document.createElement('div');win.body.insertBefore(curve,countRow);
     const pathBox=entityChips(win,'Path sketch',controls.pathSketch,form);curve.append(pathBox.element);
     for(const key of ['pathMode','pathSpacing','pathDistance','pathOrientation'])if(rows.get(controls[key]))curve.append(rows.get(controls[key])!);
     const more=win.subsection('Aether options',{kind:'disclosure',open:false});
@@ -144,7 +144,7 @@ export const patternEditor:FeatureEditor={
       directionRow.hidden=isPath;directionRow.querySelector('span')!.textContent=polar?'Axis of pattern':'Direction';
       spacingRow.hidden=!linear;angleRow.hidden=!polar;equalRow.hidden=!polar;
       second.element.hidden=!linear;
-      curve.hidden=!isPath;
+      curve.hidden=!isPath; centeredRow.hidden=isPath;
       for(const r of vectorRows)r.hidden=!linear||source!=='vector';
       edgePicker.setEnabled(!isPath);
       (controls.axis as HTMLSelectElement).disabled=source==='vector';

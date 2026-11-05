@@ -125,7 +125,7 @@ export const revolveEditor: FeatureEditor = {
     };
     const edgeLabel = () => { try { return JSON.parse(controls.axisEdge.value || '""')?.label || "Solid edge"; } catch { return "Solid edge"; } };
     entityChips(win, "Revolve axis", axis, form);
-    const edgePicker = transformEdgePicker(context, controls.axisEdge);
+    const edgePicker = transformEdgePicker(context, controls.axisEdge, 'Revolve axis edge');
     edgePicker.setEnabled(true); edgePicker.element.style.display = "none";
     controls.axisEdge.addEventListener("change", () => {
       if (!controls.axisEdge.value) return;

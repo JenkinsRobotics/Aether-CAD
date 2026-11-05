@@ -56,7 +56,9 @@ export const sweepEditor: FeatureEditor = {
     const paintPath = () => pathFlip.setAttribute("aria-pressed", controls.pathReversed.value);
     pathFlip.onclick = () => { controls.pathReversed.value = controls.pathReversed.value === "true" ? "false" : "true"; paintPath(); controls.pathReversed.dispatchEvent(new Event("change")); };
     paintPath(); path.element.append(pathFlip);
-    const rows = layoutParameterRows(context, (control) => control === controls.rail || control === controls.orientation || control === controls.endScale);
+    // Only these controls retain automatic rows; the others are placed below in
+    // entity boxes or conditional sections. Moving them twice leaves empty rows.
+    const rows = layoutParameterRows(context, (control) => ![controls.upX, controls.upY, controls.upZ].includes(control));
     hide(controls.orientation); hide(controls.endScale);
     // Profile control: None (square to the path) / Keep profile orientation (as drawn) / Lock profile faces (gap) / Lock profile direction (a fixed up direction).
     const modes = { None: "perpendicular", "Keep profile orientation": "parallel", "Lock profile faces": "lock-faces", "Lock profile direction": "direction" } as const;

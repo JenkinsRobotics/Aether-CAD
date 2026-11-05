@@ -1,7 +1,7 @@
 import { matchesProfileRegion, type ProfileRegionSelection } from '@aether/core/sketch/reference/profile-region-reference';
 import { sketchRegions } from "@aether/core/document";
 import {layoutRegion, regionControls, stampProfileSelections} from './regions';
-import {bodyAndOperationTabs, entityChips, planned, rowIn, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
+import {bodyAndOperationTabs, entityChips, iconButton, planned, rowIn, type FeatureEditor, type FeatureEditorContext, type Controls} from './shared';
 import {mountSketchPointsBox} from './sketch-points-box';
 import {availableBodies} from '@aether/core/document';
 import {mountPartBox} from './part-box';
@@ -38,20 +38,23 @@ export const loftEditor: FeatureEditor = {
   layout(context, controls) {
     const {win,form} = context;
     bodyAndOperationTabs(win,form,controls.operation,['new','add','cut']);
-    const apex=extrusionPointPicker(context,controls.endPoint,'Apex (optional)','The loft runs to this point after its last section. A changed or ambiguous vertex requires reselection.');apex.setEnabled(true);
     const hide=(control:Controls[string])=>{control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);};
     hide(controls.sections);
     controls.source.closest('label')?.remove();
     controls.source.setAttribute('form',form.id);
-    win.row('Section sketch',controls.source);
+    const selection = win.subsection('Profile selection', {kind:'disclosure', open: false});
+    const sourceRow = win.row('Section sketch',controls.source);
     layoutRegion(context,controls.source,controls.region);
+    selection.body.append(sourceRow, controls.region.closest('.aui-feature-row')!);
     const list = document.createElement('select');
     list.size = 4; list.style.height = 'auto'; list.className = 'aui-feature-method';
     list.setAttribute('aria-label','Loft section order');
     const buttons = document.createElement('span');
-    const button = (label: string, action:()=>void) => {
-      const element = document.createElement('button');
-      element.type = 'button'; element.className = 'aui-button'; element.textContent = label; element.setAttribute('aria-label', label); element.onclick = action;
+    const button = (label: string, action:()=>void, icon?: string) => {
+      const element = icon ? iconButton(icon,label) : document.createElement('button');
+      element.type = 'button';
+      if (!icon) { element.className = 'aui-button'; element.textContent = label; }
+      element.setAttribute('aria-label', label); element.onclick = action;
       buttons.append(element); return element;
     };
     const change = (sections: Section[], index: number) => {
@@ -68,8 +71,11 @@ export const loftEditor: FeatureEditor = {
       sections.push({profileFeatureId:profile!.id,profileContourId:region.contourId,contourIndex:region.contourIndex});
       change(sections,sections.length-1);
     });
-    win.row('',buttons);
-    win.entitiesBox('Sections in order').element.append(list);
+    selection.body.append(rowIn('',buttons));
+    const profiles = win.entitiesBox('Profiles');
+    profiles.element.append(list);
+    profiles.element.addEventListener('pointerdown',()=>selection.setOpen(true));
+    win.body.insertBefore(profiles.element, selection.element);
     const orderButtons = document.createElement('span');
     const move = (delta: number) => {
       const sections = sectionsOf(controls), index = list.selectedIndex, next = index+delta;
@@ -77,16 +83,15 @@ export const loftEditor: FeatureEditor = {
       [sections[index],sections[next]]=[sections[next],sections[index]];
       change(sections,next);
     };
-    const up = button('Move up',()=>move(-1));
-    const down = button('Move down',()=>move(1));
+    const up = button('Move up',()=>move(-1),'chevron-up');
+    const down = button('Move down',()=>move(1),'chevron-down');
     const remove = button('Remove section',()=>{
       const sections=sectionsOf(controls),index=list.selectedIndex;
       if(index<0)return;
       sections.splice(index,1); change(sections,Math.min(index,sections.length-1));
-    });
-    remove.textContent = 'Remove';
+    },'close');
     orderButtons.append(up,down,remove);
-    win.row('',orderButtons);
+    selection.body.append(rowIn('',orderButtons));
     const sync = () => {
       const sections=sectionsOf(controls),index=list.selectedIndex;
       const profile=context.doc.features.find(f=>f.id===controls.source.value);
@@ -102,6 +107,8 @@ export const loftEditor: FeatureEditor = {
         option.value=String(index); option.textContent=`${index+1}. ${profile?.name ?? 'Missing sketch'} · ${region?.label ?? 'Missing region'}`;
         list.append(option);
       });
+      list.size=Math.max(1,Math.min(4,sectionsOf(controls).length));
+      list.hidden=sectionsOf(controls).length===0;
       list.selectedIndex=index; sync();
     };
     controls.source.addEventListener('change',sync);
@@ -110,9 +117,10 @@ export const loftEditor: FeatureEditor = {
     render(0);
     // Onshape's rows after the profiles (help: PartStudio/loft.htm); this kernel lofts smooth or ruled
     // through closed sections to an optional apex, so these are present and disabled with the gap named.
-    const gapRow=(label:string,reason:string)=>{const sel=document.createElement('select');sel.setAttribute('aria-label',label);const o=document.createElement('option');o.textContent='Normal to profile';sel.append(o);const r=rowIn(label,sel);planned(r,reason);win.body.append(r);return r;};
+    const gapRow=(label:string,reason:string)=>{const sel=document.createElement('select');sel.setAttribute('aria-label',label);const o=document.createElement('option');o.textContent='None';sel.append(o);const r=rowIn(label,sel);planned(r,reason);win.body.append(r);return r;};
     const conditionGap='Not available in this kernel: loft end conditions (tangent, match tangent or curvature, with a magnitude) are a recorded gap.';
-    gapRow('Start profile condition',conditionGap);gapRow('End profile condition',conditionGap);
+    const ends = win.subsection('End conditions',{kind:'disclosure',open:true});
+    ends.body.append(gapRow('Start profile condition',conditionGap),gapRow('End profile condition',conditionGap));
     const gapSection=(label:string,reason:string,fields:string[])=>{const section=win.subsection(label,{kind:'checkbox',open:false});for(const name of fields){const box=win.entitiesBox(name);box.render([]);section.body.append(box.element);}planned(section.element,reason);win.body.append(section.element);};
     gapSection('Guides and continuity','Not available in this kernel: guide curves with continuity are a recorded gap.',['Guides']);
     // Path: the sections swept along a curve of an earlier sketch.
@@ -129,6 +137,11 @@ export const loftEditor: FeatureEditor = {
     const scope=mountPartBox(context,controls.mergeScope,'Merge scope',availableBodies({...doc,features:doc.features.slice(0,end),rollbackIndex:undefined}),()=>'',{single:true});
     win.body.append(scope.element);
     controls.mergeScope.addEventListener('change',()=>{const id=JSON.parse(controls.mergeScope.value||'[]')[0];if(id){controls.target.value=id;controls.target.dispatchEvent(new Event('change'));}});
+    const more = win.subsection('Aether options',{kind:'disclosure',open:Boolean(controls.endPoint.value)||controls.ruled.value==='ruled'});
+    controls.ruled.closest('label')?.remove(); controls.ruled.setAttribute('form',form.id);
+    more.body.append(rowIn('Surface interpolation', controls.ruled));
+    const apex=extrusionPointPicker(context,controls.endPoint,'Apex (optional)','The loft runs to this point after its last section. A changed or ambiguous vertex requires reselection.');
+    more.body.append(apex.element); apex.setEnabled(true);
     const syncScope=()=>{scope.element.hidden=controls.operation.value==='new';};controls.operation.addEventListener('change',syncScope);syncScope();
   },
   validate(controls,context) {

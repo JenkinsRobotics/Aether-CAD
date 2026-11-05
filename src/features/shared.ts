@@ -64,6 +64,11 @@ export function rowIn(label: string, ...controls: HTMLElement[]): HTMLElement {
   caption.textContent = label;
   const control = document.createElement("span");
   control.className = "aui-feature-row-control";
+  // A field moved out of the hidden form becomes visible in its parameter row.
+  // Conditional visibility belongs to the row or subsection, not a stale field flag.
+  for (const element of controls) {
+    if (element.matches("input:not([type=hidden]), select, textarea")) element.hidden = false;
+  }
   control.append(...controls);
   row.append(caption, control);
   return row;

@@ -3,10 +3,10 @@ import {referencePickerLifecycle,activateAvailableReferencePicker} from './refer
 import type {Control,FeatureEditorContext} from './shared';
 
 /** Pick native source geometry; the renderer does not manufacture edge identities. */
-export function transformEdgePicker(context:FeatureEditorContext,control:Control) {
+export function transformEdgePicker(context:FeatureEditorContext,control:Control,title = 'Transform solid edge') {
  const {win,form,feature}=context;
  control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);
- const box=win.entitiesBox('Transform solid edge'),element=document.createElement('div');element.append(box.element);win.body.append(element);
+ const box=win.entitiesBox(title),element=document.createElement('div');element.append(box.element);win.body.append(element);
  let enabled=false,active=false;
  const render=()=>{const ref=control.value?JSON.parse(control.value):undefined;box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
  const set=(value:string)=>{control.value=value;render();control.dispatchEvent(new Event('change'));};
