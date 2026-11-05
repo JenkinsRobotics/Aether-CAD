@@ -61,7 +61,7 @@ export function prepareFeatureOperation(doc: PartDocument, name: string, args: R
     if ('id' in fields) throw Error('Omit "id"; the editor assigns a stable feature ID.');
     if (typeof fields.type !== 'string' || !featureSchemas[fields.type]) throw Error(`Set "type" to one of: ${Object.keys(featureSchemas).join(', ')}.`);
     const id = crypto.randomUUID();
-    const feature = { suppressed: false, name: fields.type, ...(fields.type === 'surface-extrude' && fields.operation === 'new' ? { separateBodies: true } : {}), ...fields, id } as unknown as PartFeature;
+    const feature = { suppressed: false, name: fields.type, ...(fields.type === 'surface-extrude' ? (fields.operation === 'new' ? { separateBodies: true } : fields.operation === 'add' ? { connectedMerge: true } : {}) : {}), ...fields, id } as unknown as PartFeature;
     return { document: insertFeature(doc, feature), featureID: id };
   }
   if (name === 'aether_cad_feature_update') {
@@ -75,7 +75,9 @@ export function prepareFeatureOperation(doc: PartDocument, name: string, args: R
     next.features = next.features.map(f => f.id === feature.id ? { ...f, ...changes,
       ...((f.type === 'extrude' || f.type === 'surface-extrude') && f.separateBodies ? { outputProfileId: f.outputProfileId ?? f.profileFeatureId } : {}),
     } as PartFeature : f);
-    const identified = identifySurfaceExtrusionProfiles(next, next.features.find(f => f.id === feature.id)!);
+    const updated = next.features.find(f => f.id === feature.id)!;
+    if (updated.type === 'surface-extrude' && updated.connectedMerge) delete updated.scopeResolution;
+    const identified = identifySurfaceExtrusionProfiles(next, updated);
     validatePartDocument(identified);
     return { document: identified, featureID: feature.id };
   }

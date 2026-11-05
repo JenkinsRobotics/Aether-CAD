@@ -389,6 +389,8 @@ const presentFeatureWindow = (
       control.addEventListener("input", validate);
     }
     validate();
+    let candidateKey: string | undefined;
+    let cachedCandidate: PartDocument | undefined;
     const candidateDocument = (check = true) => {
         const invalid = editor?.validate?.(controls, context);
         if (check && invalid) throw new Error(invalid);
@@ -423,9 +425,16 @@ const presentFeatureWindow = (
         if (type === "draft" && next.faces?.length) next.targetBodyId = next.faces[0].bodyId;
         if (type === "draft" && next.partingEdges?.length) next.targetBodyId = next.partingEdges[0].bodyId;
         if (type === "thread" && next.face) next.targetBodyId = next.face.bodyId;
+        const key = JSON.stringify(next);
+        // Canonical insertion can assign missing source-curve IDs. Reuse the
+        // same atomic candidate for preview, blur and commit, so an unchanged
+        // form cannot generate a different sketch identity on every read.
+        if (key === candidateKey && cachedCandidate) return structuredClone(cachedCandidate);
         const candidate = structuredClone(doc);
         if (existing) candidate.features[candidate.features.findIndex(f => f.id === existing.id)] = next;
-        return existing ? candidate : insertFeature(candidate, next);
+        const result = existing ? candidate : insertFeature(candidate, next);
+        cachedCandidate = structuredClone(result); candidateKey = key;
+        return result;
 
     };
     mountEditHistory(win.panel, source, existing?.id);

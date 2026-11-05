@@ -82,3 +82,16 @@ it('composes canonical features in one transactional program with step reference
   expect(boss).toMatchObject({ type: 'extrude', profileFeatureId: result.references.outline.feature_id });
   expect(doc.features).toHaveLength(2);
 });
+
+it('authors connected Surface Add by default and discards stale scope projections when edited', () => {
+ const doc = fixture();
+ const candidate = prepareFeatureOperation(doc, 'aether_cad_feature_add', {feature_json: {
+  type: 'surface-extrude', name: 'Surface Add', operation: 'add', profileFeatureId: 'sketch', distanceMillimeters: 4,
+  targetBodyId: 'first', targetBodyIds: ['first', 'second'],
+ }});
+ expect(candidate.document.features.at(-1)).toMatchObject({connectedMerge: true});
+ Object.assign(candidate.document.features.at(-1)!, {scopeResolution: {targets: ['first','second'], groups: [{bodyId:'first',sources:['first','second']}]}});
+ const changed = prepareFeatureOperation(candidate.document, 'aether_cad_feature_update', {feature_id: candidate.featureID, changes_json: {targetBodyId:'second', targetBodyIds:['second']}});
+ expect(changed.document.features.at(-1)).toMatchObject({targetBodyIds:['second'], connectedMerge:true});
+ expect(changed.document.features.at(-1)).not.toHaveProperty('scopeResolution');
+});

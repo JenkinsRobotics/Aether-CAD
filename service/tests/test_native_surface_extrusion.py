@@ -30,7 +30,7 @@ def test_agent_surface_extents_edit_refusal_and_saved_reopen(tmp_path):
         }}},
     ])
     saved = json.loads(authored["content"])
-    assert saved["formatVersion"] == 25
+    assert saved["formatVersion"] == 26
     feature_id = authored["result"]["references"]["sheet"]["feature_id"]
     original_id = authored["result"]["evaluated_bodies"][0]["id"]
     assert authored["result"]["evaluated_bodies"][0]["bbox_mm"][1] == pytest.approx([5, 3.6, 4.8], abs=1e-5)

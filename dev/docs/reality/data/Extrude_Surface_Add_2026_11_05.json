@@ -1,0 +1,113 @@
+{
+  "date": "2026-11-05",
+  "status": "qualified, pending activation",
+  "scope": [
+    "Surface Add retains one target body identity per connected group",
+    "Bridges consume only the connected secondary target IDs",
+    "Every added sheet must connect; unrelated explicit targets fail",
+    "Successful explicit/automatic scope projections persist through history and reopen",
+    "Shared preview ignores duplicate blur events and retains canonical candidate identities"
+  ],
+  "format": {
+    "part": 26,
+    "previousReader": 25,
+    "codec": {
+      "wheel": "aether_animation-0.1.0-29-py3-none-any.whl",
+      "sha256": "449e4314a62e1132ab962c62db979430a4c386a0c8ad09372266924c80c2666a",
+      "modules": [
+        "aether_animation/__init__.py",
+        "aether_animation/aether_workspace.py",
+        "aether_animation/aether_project.py",
+        "aether_animation/mates.py",
+        "aether_animation/relation_kinds.py",
+        "aether_animation/workspace_drawings.py"
+      ],
+      "source_commit": "ef9d43017986dc7f8f55aeb001b21d417b90d891"
+    },
+    "legacy_add_compounds_preserved": true
+  },
+  "qualification": {
+    "engine": {
+      "passed": 1384,
+      "log": "build/feature-qualification-2026-11-05/surface-add/engine-final.log"
+    },
+    "canonical_codec": {
+      "passed": 38
+    },
+    "preview_blur_and_identity": {
+      "passed": 25,
+      "log": "build/feature-qualification-2026-11-05/surface-add/preview-identity.log"
+    },
+    "controls_chromium": {
+      "path": "build/Example-Collection/surface-add-qualified-chromium-2026-11-05/host/browser/feature-controls.json",
+      "workflows": 16,
+      "passed": true
+    },
+    "exact_part1_removal_chromium": {
+      "path": "build/Example-Collection/surface-add-removal-chromium-2026-11-05/host/browser/face-finish-feedback.json",
+      "workflows": 4,
+      "passed": true
+    },
+    "controls_webkit": {
+      "path": "build/Example-Collection/surface-add-qualified-webkit-2026-11-05/host/browser/feature-controls.json",
+      "workflows": 16,
+      "passed": true
+    },
+    "exact_part1_removal_webkit": {
+      "path": "build/Example-Collection/surface-add-removal-webkit-2026-11-05/host/browser/face-finish-feedback.json",
+      "workflows": 4,
+      "passed": true
+    },
+    "types": true,
+    "build": true,
+    "previous_worker_refusal": true,
+    "headless": true,
+    "regions": true,
+    "home_standalone": {
+      "passed": true,
+      "path": "build/feature-qualification-2026-11-05/surface-add/home-standalone/results.json"
+    },
+    "frontend": {
+      "passed": 2213,
+      "existing_skipped": 1,
+      "log": "build/feature-qualification-2026-11-05/surface-add/frontend-qualified.log"
+    },
+    "modeling": {
+      "path": "build/Example-Collection/surface-add-modeling-2026-11-05/host/browser/log.json",
+      "passed": true,
+      "steps": 17
+    },
+    "home": {
+      "path": "build/Example-Collection/surface-add-home-2026-11-05/host/browser/results.json",
+      "passed": true
+    },
+    "packaged_native": {
+      "full_run": {
+        "passed": 336,
+        "failed": 1,
+        "duration_seconds": 304.27,
+        "log": "build/feature-qualification-2026-11-05/surface-add/native-qualified.log"
+      },
+      "failure": "Only test_packaged_version_manifest_matches_document_authority still expected 25 instead of the intentional Part26 version. Packaged and canonical manifests were already correct.",
+      "format_suite_recheck": {
+        "passed": 58,
+        "deselected": 280,
+        "duration_seconds": 52.52,
+        "log": "build/feature-qualification-2026-11-05/surface-add/native-format-qualified.log"
+      },
+      "all_failures_resolved": true,
+      "unique_checks_covered": 338,
+      "application_artifacts_unchanged_during_recheck": true
+    }
+  },
+  "remaining": [
+    "Oblique Draft",
+    "Remaining Extrude termination and mode-conversion matrix",
+    "Revolve, Chamfer, Fillet and remaining requested feature parity"
+  ],
+  "observations": [
+    "Initial browser test reproduced duplicate blur invalidation swallowing the first accept click; shared preview deduplication and atomic candidate reuse added, with pending/error rejection retained.",
+    "Browser explicit-target gate corrected to inspect the actual default target and select additional bodies through the visible control; the old underlying select is intentionally hidden."
+  ],
+  "worker_sha256": "1e452c62c22bd0a042bb037f7ecd775a01e7ad0ad2af302f0d183ce8351f727d"
+}

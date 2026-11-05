@@ -124,6 +124,8 @@ export const extrudeEditor: FeatureEditor = {
       ...(values.operation!=="new"&&values.scopeMode==="all"?{scopeMode:"all"}:{}),
       ...(values.scopeMode!=="all"&&["add","cut","intersect"].includes(values.operation)&&JSON.parse(values.scope).length?{targetBodyIds:[values.target,...JSON.parse(values.scope)]}:{}),
       ...(values.operation==="new"&&(!context.feature||context.feature.separateBodies)?{separateBodies:true,...((context.feature?.type === "surface-extrude") === (values.creationMode === "surface") && context.feature?.bodyOutputs?{bodyOutputs:context.feature.bodyOutputs}:{})}:{}),
+      ...(values.creationMode === 'surface' && values.operation === 'add' &&
+        (context.feature?.type !== 'surface-extrude' || context.feature.operation !== 'add' || context.feature.connectedMerge) ? { connectedMerge: true } : {}),
       distanceMillimeters:Number(values.distance),endType:values.endType,
       ...(values.endType==="up-to-vertex"?{endPointReference:serializeExtrusionPoint(values.endPoint,context)}:{}),
       ...(values.endType==="up-to-part"?{endPartId:values.endPart}:{}),

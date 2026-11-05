@@ -1,7 +1,7 @@
-import {bodyIDsForFeature,consumedBodyIDs,scopeConsumedBodies,rollbackPosition,validatePartDocument,validateExtrusionScopeResolution,type ExtrusionScopeResolution,type PartDocument} from '@aether/core/document';
+import {usesExtrusionScopeResolution,bodyIDsForFeature,consumedBodyIDs,scopeConsumedBodies,rollbackPosition,validatePartDocument,validateExtrusionScopeResolution,type ExtrusionScopeResolution,type PartDocument} from '@aether/core/document';
 /** Publish only a complete successful native scope evaluation. */
 export function resolveExtrusionScopes(doc:PartDocument,scopes:Record<string,ExtrusionScopeResolution>={}):PartDocument {
- const active=new Set(doc.features.slice(0,rollbackPosition(doc)).filter(f=>(f.type==='surface-extrude'||f.type==='extrude'||f.type==='revolve')&&f.scopeMode==='all'&&!f.suppressed).map(f=>f.id));
+ const active=new Set(doc.features.slice(0,rollbackPosition(doc)).filter(f=>usesExtrusionScopeResolution(f)&&!f.suppressed).map(f=>f.id));
  if(Object.keys(scopes).some(id=>!active.has(id)))throw Error('Rebuild returned an unknown automatic scope.');
  const available=new Set<string>();
  const next={...doc,features:doc.features.map(feature=>{
@@ -21,6 +21,10 @@ export function resolveExtrusionScopes(doc:PartDocument,scopes:Record<string,Ext
   if((feature.type==='surface-extrude'||feature.type==='extrude'||feature.type==='revolve')&&feature.operation==='add'&&resolution.groups.flatMap(g=>g.sources).length!==resolution.targets.length)throw Error('Add cannot discard source parts.');
   if((feature.type==='surface-extrude'||feature.type==='extrude'||feature.type==='revolve')&&feature.operation!=='add'&&resolution.groups.some(g=>g.sources.length!==1))throw Error('Only Add can merge part identities.');
   if(feature.type==='extrude'&&feature.operation==='intersect'&&resolution.groups.length!==resolution.targets.length)throw Error('Intersect scope must retain overlapping parts.');
+  if (feature.type === 'surface-extrude' && feature.connectedMerge && feature.scopeMode !== 'all') {
+   const targets = feature.targetBodyIds ?? (feature.targetBodyId ? [feature.targetBodyId] : undefined);
+   if (targets && JSON.stringify(targets) !== JSON.stringify(resolution.targets)) throw Error('Surface Add rebuild changed its selected scope.');
+  }
   scopeConsumedBodies(resolution).forEach(id=>available.delete(id));
   return {...feature,scopeResolution:structuredClone(resolution)};
  })};

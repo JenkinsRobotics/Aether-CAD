@@ -1,5 +1,6 @@
 // Real native documents and actual UI interaction on the disposable Studio host.
 import assert from 'node:assert/strict';
+import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -220,6 +221,8 @@ try {
   await dialog().getByRole('button', { name: 'Cancel', exact: true }).click();
   assert.deepEqual((await stored(surfaceFile.id)).features.at(-1), surfaceSaved);
   results.push('Surface Extrude: shared Solid/Surface/Thin tabs, open curve, real native sheet preview, shared axis control, editable save/reopen, × removal and cancel');
+
+  await verifySurfaceAdd({page, expect, dialog, row, open, stored, accept, command, base, evidence, results});
 
   const thin = base('Native thin draft controls');
   thin.features = [sketch('s', 'XY', [[0, 0], [20, 0], [20, 10], [0, 10]]), {

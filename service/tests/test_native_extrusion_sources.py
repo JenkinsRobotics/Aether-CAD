@@ -32,7 +32,7 @@ def test_multiple_sketch_sources_survive_edits_and_saved_reopen(tmp_path, mode):
     steps.append({"id": "extrude", "tool": "aether_cad_feature_add", "arguments": {"feature_json": feature}})
     authored = run(tmp_path, empty(), steps)
     saved = json.loads(authored["content"])
-    assert saved["formatVersion"] == 25
+    assert saved["formatVersion"] == 26
     refs = authored["result"]["references"]
     original = saved["features"][-1]
     changes = {"profileFeatureId": refs["second"]["feature_id"], "distanceMillimeters": 8,

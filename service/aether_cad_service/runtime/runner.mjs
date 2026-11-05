@@ -248,6 +248,9 @@ function matchesProfileRegion(selection, candidate) {
   if (candidate.ordinal !== void 0) return false;
   return selection.profileRegion ? !!candidate.sourceContourIds && profileRegionIdentity(selection) === profileRegionIdentity({ profileRegion: { contourIds: candidate.sourceContourIds, inside: candidate.insideContourIds, ordinal: candidate.ordinal, boundary: candidate.boundary } }) : selection.profileContourId !== void 0 ? candidate.contourId === selection.profileContourId : false;
 }
+function usesExtrusionScopeResolution(feature3) {
+  return (feature3.type === "extrude" || feature3.type === "surface-extrude" || feature3.type === "revolve") && (feature3.scopeMode === "all" || feature3.type === "surface-extrude" && feature3.operation === "add" && feature3.connectedMerge === true);
+}
 function validateExtrusionScopeResolution(value2) {
   const ids2 = (v2) => Array.isArray(v2) && v2.length <= 4096 && v2.every((id2) => typeof id2 === "string" && !!id2.trim() && id2.length <= 512) && new Set(v2).size === v2.length;
   if (!value2 || !ids2(value2.targets) || !value2.targets.length || !Array.isArray(value2.groups) || value2.groups.length > value2.targets.length) throw Error("Invalid automatic extrusion scope resolution.");
@@ -322,7 +325,9 @@ function validateExtrusionDefinition(feature3, earlier, missingReference, surfac
     throw new Error("Extrude must reference an earlier Sketch.");
   if (!["new", "add", "cut", "intersect"].includes(feature3.operation))
     throw new Error("Unsupported extrude operation.");
-  validateMergeScope(feature3);
+  const connectedMerge = surface ? feature3.connectedMerge : void 0;
+  if (connectedMerge !== void 0 && (typeof connectedMerge !== "boolean" || feature3.operation !== "add")) throw Error("Connected surface merge requires Surface Add.");
+  validateMergeScope(feature3, connectedMerge === true);
   if (feature3.profileContourId !== void 0 && (typeof feature3.profileContourId !== "string" || !feature3.profileContourId.trim() || feature3.profileContourId.length > 128))
     throw new Error("Invalid extruded region identity.");
   if (feature3.profileSelections !== void 0) {
@@ -380,11 +385,17 @@ function validateExtrusionDefinition(feature3, earlier, missingReference, surfac
   }
   if (feature3.reversed !== void 0 && typeof feature3.reversed !== "boolean") throw new Error("Invalid extrude direction.");
 }
-function validateMergeScope(feature3) {
+function validateMergeScope(feature3, connectedMerge = false) {
   if (feature3.scopeMode !== void 0 && (feature3.scopeMode !== "all" || !["add", "cut", "intersect"].includes(feature3.operation) || feature3.targetBodyId !== void 0 || feature3.targetBodyIds !== void 0)) throw Error("Automatic scope cannot also specify target parts.");
   if (feature3.scopeResolution !== void 0) {
-    if (feature3.scopeMode !== "all") throw Error("A scope resolution requires automatic scope.");
+    if (feature3.scopeMode !== "all" && !connectedMerge) throw Error("A scope resolution requires automatic scope or connected Surface Add.");
     validateExtrusionScopeResolution(feature3.scopeResolution);
+    if (connectedMerge) {
+      const resolution = feature3.scopeResolution;
+      const targets = feature3.targetBodyIds ?? (feature3.targetBodyId ? [feature3.targetBodyId] : void 0);
+      if (resolution.groups.flatMap((group) => group.sources).length !== resolution.targets.length) throw Error("Surface Add cannot discard scope bodies.");
+      if (feature3.scopeMode !== "all" && targets && JSON.stringify(targets) !== JSON.stringify(resolution.targets)) throw Error("Surface Add resolution must match its selected scope.");
+    }
   }
   if (feature3.targetBodyIds !== void 0) {
     const scope = feature3.targetBodyIds;
@@ -665,8 +676,8 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
   }
 }
-const current = 25;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+const current = 26;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 const partFormat = {
   current,
   readable
@@ -5377,7 +5388,7 @@ function createdBodyIDs(doc, feature3) {
 }
 function consumedBodyIDs(feature3) {
   if (feature3.suppressed) return [];
-  if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") return scopeConsumedBodies(feature3.scopeResolution);
+  if (usesExtrusionScopeResolution(feature3)) return scopeConsumedBodies(feature3.scopeResolution);
   if (feature3.type === "boolean" && !feature3.keepTools) return feature3.toolBodyIds;
   if (feature3.type === "surface-thicken" && feature3.keepTools === false) return feature3.bodyIds;
   if (feature3.type === "split" && feature3.keepTools === false && feature3.tool) return [feature3.tool.bodyId];
@@ -5395,7 +5406,8 @@ function stableBodies(doc) {
       const feature3 = structuredClone(f2);
       if ((feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies)
         feature3.outputProfileId ??= feature3.profileFeatureId;
-      if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.scopeMode === "all") {
+      if (usesExtrusionScopeResolution(feature3)) {
+        if (feature3.scopeMode !== "all" && !feature3.targetBodyId) feature3.targetBodyId = feature3.scopeResolution?.targets[0] ?? targetBody;
         if (!feature3.suppressed) targetBody = feature3.scopeResolution?.groups.at(-1)?.bodyId ?? targetBody;
         return feature3;
       }
@@ -5446,7 +5458,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       const targets = f2.type === "offset-face" ? offsetFaceBodies(f2) : "bodyIds" in f2 && f2.type !== "surface-thicken" ? f2.bodyIds ?? [] : (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.targetBodyIds ? f2.targetBodyIds : [body];
       for (const target of targets) {
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
-        const mergedIntoPrimary = (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.operation === "add" && f2.targetBodyIds && target !== body;
+        const mergedIntoPrimary = (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.operation === "add" && f2.targetBodyIds && target !== body && !(f2.type === "surface-extrude" && f2.connectedMerge && !consumedBodyIDs(f2).includes(target));
         if (target && !mergedIntoPrimary && (!f2.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f2.id);
       }
     }
@@ -5455,6 +5467,8 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       for (const id2 of consumed) bodyProducers.delete(id2);
       lastBody = "targetBodyId" in f2 ? f2.targetBodyId : lastBody;
     }
+    if (f2.type === "surface-extrude" && f2.connectedMerge && !f2.suppressed)
+      lastBody = f2.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
     result.set(f2.id, [...new Set(refs)]);
   }
   return result;
@@ -8220,7 +8234,7 @@ function editSketch(doc, name5, args) {
   return { document: next, featureID: feature3.id };
 }
 function resolveExtrusionScopes(doc, scopes = {}) {
-  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve") && f2.scopeMode === "all" && !f2.suppressed).map((f2) => f2.id));
+  const active = new Set(doc.features.slice(0, rollbackPosition(doc)).filter((f2) => usesExtrusionScopeResolution(f2) && !f2.suppressed).map((f2) => f2.id));
   if (Object.keys(scopes).some((id2) => !active.has(id2))) throw Error("Rebuild returned an unknown automatic scope.");
   const available = /* @__PURE__ */ new Set();
   const next = { ...doc, features: doc.features.map((feature3) => {
@@ -8238,6 +8252,10 @@ function resolveExtrusionScopes(doc, scopes = {}) {
     if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation === "add" && resolution.groups.flatMap((g2) => g2.sources).length !== resolution.targets.length) throw Error("Add cannot discard source parts.");
     if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve") && feature3.operation !== "add" && resolution.groups.some((g2) => g2.sources.length !== 1)) throw Error("Only Add can merge part identities.");
     if (feature3.type === "extrude" && feature3.operation === "intersect" && resolution.groups.length !== resolution.targets.length) throw Error("Intersect scope must retain overlapping parts.");
+    if (feature3.type === "surface-extrude" && feature3.connectedMerge && feature3.scopeMode !== "all") {
+      const targets = feature3.targetBodyIds ?? (feature3.targetBodyId ? [feature3.targetBodyId] : void 0);
+      if (targets && JSON.stringify(targets) !== JSON.stringify(resolution.targets)) throw Error("Surface Add rebuild changed its selected scope.");
+    }
     scopeConsumedBodies(resolution).forEach((id2) => available.delete(id2));
     return { ...feature3, scopeResolution: structuredClone(resolution) };
   }) };
@@ -14086,6 +14104,9 @@ export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-extrude": `export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees'> {
   type: "surface-extrude";
   operation: "new" | "add";
+  /** Part26 Add retains a target identity per connected group; absent preserves
+   * the legacy single-compound result. Native scopeResolution is output only. */
+  connectedMerge?: boolean;
   /** Legacy selected sketch curves, retained on read. New records use profileSelections. */
   contourIds?: string[];
   /** Legacy symmetric flag; new records use endType. */
@@ -14474,7 +14495,7 @@ function prepareFeatureOperation(doc, name5, args) {
     if ("id" in fields2) throw Error('Omit "id"; the editor assigns a stable feature ID.');
     if (typeof fields2.type !== "string" || !featureSchemas[fields2.type]) throw Error(`Set "type" to one of: ${Object.keys(featureSchemas).join(", ")}.`);
     const id2 = crypto.randomUUID();
-    const feature3 = { suppressed: false, name: fields2.type, ...fields2.type === "surface-extrude" && fields2.operation === "new" ? { separateBodies: true } : {}, ...fields2, id: id2 };
+    const feature3 = { suppressed: false, name: fields2.type, ...fields2.type === "surface-extrude" ? fields2.operation === "new" ? { separateBodies: true } : fields2.operation === "add" ? { connectedMerge: true } : {} : {}, ...fields2, id: id2 };
     return { document: insertFeature(doc, feature3), featureID: id2 };
   }
   if (name5 === "aether_cad_feature_update") {
@@ -14490,7 +14511,9 @@ function prepareFeatureOperation(doc, name5, args) {
       ...changes,
       ...(f2.type === "extrude" || f2.type === "surface-extrude") && f2.separateBodies ? { outputProfileId: f2.outputProfileId ?? f2.profileFeatureId } : {}
     } : f2);
-    const identified = identifySurfaceExtrusionProfiles(next, next.features.find((f2) => f2.id === feature3.id));
+    const updated = next.features.find((f2) => f2.id === feature3.id);
+    if (updated.type === "surface-extrude" && updated.connectedMerge) delete updated.scopeResolution;
+    const identified = identifySurfaceExtrusionProfiles(next, updated);
     validatePartDocument(identified);
     return { document: identified, featureID: feature3.id };
   }
@@ -38650,6 +38673,175 @@ function extrusionProfileGroups(feature3) {
   }
   return [...groups].map(([profileFeatureId, profileSelections]) => ({ ...feature3, profileFeatureId, profileSelections }));
 }
+const K = new Uint32Array([1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298]);
+function sha256Hex(text2) {
+  const bytes = new TextEncoder().encode(text2);
+  const length = bytes.length;
+  const blocks = (length + 8 >> 6) + 1;
+  const words = new Uint32Array(blocks * 16);
+  for (let i2 = 0; i2 < length; i2++) words[i2 >> 2] |= bytes[i2] << 24 - (i2 & 3) * 8;
+  words[length >> 2] |= 128 << 24 - (length & 3) * 8;
+  words[blocks * 16 - 1] = length * 8;
+  const h = new Uint32Array([1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]);
+  const w2 = new Uint32Array(64);
+  const rotr2 = (x2, n) => x2 >>> n | x2 << 32 - n;
+  for (let block = 0; block < blocks; block++) {
+    for (let i2 = 0; i2 < 16; i2++) w2[i2] = words[block * 16 + i2];
+    for (let i2 = 16; i2 < 64; i2++) {
+      const s0 = rotr2(w2[i2 - 15], 7) ^ rotr2(w2[i2 - 15], 18) ^ w2[i2 - 15] >>> 3;
+      const s1 = rotr2(w2[i2 - 2], 17) ^ rotr2(w2[i2 - 2], 19) ^ w2[i2 - 2] >>> 10;
+      w2[i2] = w2[i2 - 16] + s0 + w2[i2 - 7] + s1 >>> 0;
+    }
+    let [a2, b, c2, d2, e, f2, g2, hh] = h;
+    for (let i2 = 0; i2 < 64; i2++) {
+      const S1 = rotr2(e, 6) ^ rotr2(e, 11) ^ rotr2(e, 25);
+      const ch = e & f2 ^ ~e & g2;
+      const t1 = hh + S1 + ch + K[i2] + w2[i2] >>> 0;
+      const S0 = rotr2(a2, 2) ^ rotr2(a2, 13) ^ rotr2(a2, 22);
+      const maj = a2 & b ^ a2 & c2 ^ b & c2;
+      const t2 = S0 + maj >>> 0;
+      hh = g2;
+      g2 = f2;
+      f2 = e;
+      e = d2 + t1 >>> 0;
+      d2 = c2;
+      c2 = b;
+      b = a2;
+      a2 = t1 + t2 >>> 0;
+    }
+    h[0] = h[0] + a2 >>> 0;
+    h[1] = h[1] + b >>> 0;
+    h[2] = h[2] + c2 >>> 0;
+    h[3] = h[3] + d2 >>> 0;
+    h[4] = h[4] + e >>> 0;
+    h[5] = h[5] + f2 >>> 0;
+    h[6] = h[6] + g2 >>> 0;
+    h[7] = h[7] + hh >>> 0;
+  }
+  return Array.from(h, (x2) => x2.toString(16).padStart(8, "0")).join("");
+}
+function sewSurfaceExtrusion(shapes) {
+  if (shapes.length === 1) return shapes[0].clone();
+  const oc = getOC(), sewing = new oc.BRepBuilderAPI_Sewing(1e-7, true, true, true, false);
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    shapes.forEach((shape2) => sewing.Add(shape2.wrapped));
+    sewing.Perform(progress);
+    const shape = cast(sewing.SewedShape());
+    if (isShape3D(shape)) return shape;
+    const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
+    try {
+      builder.MakeShell(shell);
+      builder.Add(shell, shape.wrapped);
+      return cast(shell);
+    } finally {
+      builder.delete();
+      shape.delete();
+    }
+  } finally {
+    sewing.delete();
+    progress.delete();
+  }
+}
+function connectedSurfaceBodies(shape) {
+  const oc = getOC(), faces = shape.faces, parents = faces.map((_2, index2) => index2);
+  const edges = /* @__PURE__ */ new Map();
+  const outputs = [];
+  const root = (index2) => {
+    while (parents[index2] !== index2) {
+      parents[index2] = parents[parents[index2]];
+      index2 = parents[index2];
+    }
+    return index2;
+  };
+  try {
+    faces.forEach((face, index2) => {
+      for (const edge of face.edges) {
+        const bucket = edges.get(edge.hashCode) ?? [];
+        const shared = bucket.find((other) => other.edge.wrapped.IsSame(edge.wrapped));
+        if (shared) {
+          parents[root(index2)] = root(shared.face);
+          edge.delete();
+        } else {
+          bucket.push({ edge, face: index2 });
+          edges.set(edge.hashCode, bucket);
+        }
+      }
+    });
+    const groups = /* @__PURE__ */ new Map();
+    faces.forEach((_2, index2) => {
+      const key2 = root(index2);
+      const group = groups.get(key2) ?? [];
+      group.push(index2);
+      groups.set(key2, group);
+    });
+    for (const group of groups.values()) {
+      const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
+      try {
+        builder.MakeShell(shell);
+        group.forEach((index2) => builder.Add(shell, faces[index2].wrapped));
+        const output = cast(shell);
+        outputs.push(output);
+        const check2 = new oc.BRepCheck_Analyzer(output.wrapped, true, false);
+        try {
+          if (!check2.IsValid_2() || measureArea(output) <= 1e-9) throw Error("Surface extrusion produced an invalid connected sheet.");
+        } finally {
+          check2.delete();
+        }
+      } finally {
+        builder.delete();
+      }
+    }
+    if (!outputs.length) throw Error("Surface extrusion produced no sheets.");
+    return outputs;
+  } catch (error2) {
+    outputs.forEach((output) => output.delete());
+    throw error2;
+  } finally {
+    faces.forEach((face) => face.delete());
+    edges.forEach((bucket) => bucket.forEach(({ edge }) => edge.delete()));
+  }
+}
+function sharedArea(a2, b) {
+  const oc = getOC(), operation2 = new oc.BRepAlgoAPI_Common_1();
+  const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    arguments_.Append_1(a2.wrapped);
+    tools.Append_1(b.wrapped);
+    operation2.SetArguments(arguments_);
+    operation2.SetTools(tools);
+    operation2.SetNonDestructive(true);
+    operation2.Build(progress);
+    const common2 = cast(operation2.Shape());
+    try {
+      return common2 instanceof Face || isShape3D(common2) ? measureArea(common2) : 0;
+    } finally {
+      common2.delete();
+    }
+  } finally {
+    operation2.delete();
+    arguments_.delete();
+    tools.delete();
+    progress.delete();
+  }
+}
+function surfaceExtrusionOutputs(shape, sources) {
+  const outputs = connectedSurfaceBodies(shape);
+  try {
+    const named = outputs.map((output) => {
+      const identities = sources.length === 1 ? [sources[0].key] : sources.filter((source) => sharedArea(output, source.shape) > 1e-9).map((source) => source.key);
+      if (!identities.length) throw Error("Could not identify a surface extrusion output.");
+      return { key: sha256Hex(JSON.stringify([...new Set(identities)].sort())).slice(0, 24), shape: output };
+    });
+    if (new Set(named.map((output) => output.key)).size !== named.length)
+      throw Error("A sketch curve splits into ambiguous surface bodies. Use distinct sketch curves.");
+    return named;
+  } catch (error2) {
+    outputs.forEach((output) => output.delete());
+    throw error2;
+  }
+}
 function isSolid(body) {
   const oc = getOC(), explorer = new oc.TopExp_Explorer_2(body.wrapped, oc.TopAbs_ShapeEnum.TopAbs_SOLID, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
   try {
@@ -38737,6 +38929,72 @@ function mergeSurfaceExtrusion(tool2, bodies, scope) {
   } catch (error2) {
     result.delete();
     throw error2;
+  }
+}
+function mergeConnectedSurfaceExtrusion(tool2, bodies, scope) {
+  const candidates = scope ? scope.map((id2) => {
+    const body = bodies.get(id2);
+    if (!body || isSolid(body)) throw Error("Surface Add requires available surface bodies in its merge scope.");
+    return { id: id2, body };
+  }) : [...bodies].filter(([, body]) => !isSolid(body)).map(([id2, body]) => ({ id: id2, body }));
+  const sewn = sewSurfaceExtrusion([tool2]);
+  const outputs = [];
+  let pieces = [];
+  try {
+    pieces = connectedSurfaceBodies(sewn);
+    const shapes = [...pieces, ...candidates.map((candidate) => candidate.body)];
+    const parents = shapes.map((_2, index2) => index2);
+    const root = (index2) => {
+      while (parents[index2] !== index2) {
+        parents[index2] = parents[parents[index2]];
+        index2 = parents[index2];
+      }
+      return index2;
+    };
+    for (let a2 = 0; a2 < shapes.length; a2++) for (let b = a2 + 1; b < shapes.length; b++) {
+      if (root(a2) !== root(b) && connected(shapes[a2], shapes[b])) parents[root(b)] = root(a2);
+    }
+    const groups = /* @__PURE__ */ new Map();
+    shapes.forEach((_2, index2) => {
+      const key2 = root(index2), group = groups.get(key2) ?? [];
+      group.push(index2);
+      groups.set(key2, group);
+    });
+    for (const group of groups.values()) {
+      const tools = group.filter((index2) => index2 < pieces.length);
+      const targets = group.filter((index2) => index2 >= pieces.length).map((index2) => candidates[index2 - pieces.length]);
+      if (!tools.length) {
+        if (scope) throw Error("The extrusion must share an edge with every surface in its merge scope.");
+        continue;
+      }
+      if (!targets.length) throw Error("Every added surface must share an edge with a surface in its merge scope.");
+      let result = shapes[group[0]].clone();
+      try {
+        for (const index2 of group.slice(1)) {
+          const joined = result.fuse(shapes[index2]);
+          result.delete();
+          result = joined;
+        }
+        const check2 = new (getOC()).BRepCheck_Analyzer(result.wrapped, true, false);
+        try {
+          if (!check2.IsValid_2() || isSolid(result)) throw Error("Surface Add did not produce a valid sheet. Check the selected boundaries.");
+        } finally {
+          check2.delete();
+        }
+        outputs.push({ shape: result, targets: targets.map((target) => target.id) });
+      } catch (error2) {
+        result.delete();
+        throw error2;
+      }
+    }
+    outputs.sort((a2, b) => candidates.findIndex((c2) => c2.id === a2.targets[0]) - candidates.findIndex((c2) => c2.id === b.targets[0]));
+    return outputs;
+  } catch (error2) {
+    outputs.forEach((output) => output.shape.delete());
+    throw error2;
+  } finally {
+    pieces.forEach((piece) => piece.delete());
+    sewn.delete();
   }
 }
 function planeToolFace(origin2, normal, size) {
@@ -40837,175 +41095,6 @@ function binarySTL(mesh, scale2 = 1) {
     for (let c2 = 0; c2 < 3; c2++) for (let k2 = 0; k2 < 3; k2++) view.setFloat32(at + 12 + c2 * 12 + k2 * 4, mesh.vertices[mesh.triangles[i2 * 3 + c2] * 3 + k2] * scale2, true);
   }
   return out;
-}
-const K = new Uint32Array([1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298]);
-function sha256Hex(text2) {
-  const bytes = new TextEncoder().encode(text2);
-  const length = bytes.length;
-  const blocks = (length + 8 >> 6) + 1;
-  const words = new Uint32Array(blocks * 16);
-  for (let i2 = 0; i2 < length; i2++) words[i2 >> 2] |= bytes[i2] << 24 - (i2 & 3) * 8;
-  words[length >> 2] |= 128 << 24 - (length & 3) * 8;
-  words[blocks * 16 - 1] = length * 8;
-  const h = new Uint32Array([1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]);
-  const w2 = new Uint32Array(64);
-  const rotr2 = (x2, n) => x2 >>> n | x2 << 32 - n;
-  for (let block = 0; block < blocks; block++) {
-    for (let i2 = 0; i2 < 16; i2++) w2[i2] = words[block * 16 + i2];
-    for (let i2 = 16; i2 < 64; i2++) {
-      const s0 = rotr2(w2[i2 - 15], 7) ^ rotr2(w2[i2 - 15], 18) ^ w2[i2 - 15] >>> 3;
-      const s1 = rotr2(w2[i2 - 2], 17) ^ rotr2(w2[i2 - 2], 19) ^ w2[i2 - 2] >>> 10;
-      w2[i2] = w2[i2 - 16] + s0 + w2[i2 - 7] + s1 >>> 0;
-    }
-    let [a2, b, c2, d2, e, f2, g2, hh] = h;
-    for (let i2 = 0; i2 < 64; i2++) {
-      const S1 = rotr2(e, 6) ^ rotr2(e, 11) ^ rotr2(e, 25);
-      const ch = e & f2 ^ ~e & g2;
-      const t1 = hh + S1 + ch + K[i2] + w2[i2] >>> 0;
-      const S0 = rotr2(a2, 2) ^ rotr2(a2, 13) ^ rotr2(a2, 22);
-      const maj = a2 & b ^ a2 & c2 ^ b & c2;
-      const t2 = S0 + maj >>> 0;
-      hh = g2;
-      g2 = f2;
-      f2 = e;
-      e = d2 + t1 >>> 0;
-      d2 = c2;
-      c2 = b;
-      b = a2;
-      a2 = t1 + t2 >>> 0;
-    }
-    h[0] = h[0] + a2 >>> 0;
-    h[1] = h[1] + b >>> 0;
-    h[2] = h[2] + c2 >>> 0;
-    h[3] = h[3] + d2 >>> 0;
-    h[4] = h[4] + e >>> 0;
-    h[5] = h[5] + f2 >>> 0;
-    h[6] = h[6] + g2 >>> 0;
-    h[7] = h[7] + hh >>> 0;
-  }
-  return Array.from(h, (x2) => x2.toString(16).padStart(8, "0")).join("");
-}
-function sewSurfaceExtrusion(shapes) {
-  if (shapes.length === 1) return shapes[0].clone();
-  const oc = getOC(), sewing = new oc.BRepBuilderAPI_Sewing(1e-7, true, true, true, false);
-  const progress = new oc.Message_ProgressRange_1();
-  try {
-    shapes.forEach((shape2) => sewing.Add(shape2.wrapped));
-    sewing.Perform(progress);
-    const shape = cast(sewing.SewedShape());
-    if (isShape3D(shape)) return shape;
-    const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
-    try {
-      builder.MakeShell(shell);
-      builder.Add(shell, shape.wrapped);
-      return cast(shell);
-    } finally {
-      builder.delete();
-      shape.delete();
-    }
-  } finally {
-    sewing.delete();
-    progress.delete();
-  }
-}
-function connectedSurfaceBodies(shape) {
-  const oc = getOC(), faces = shape.faces, parents = faces.map((_2, index2) => index2);
-  const edges = /* @__PURE__ */ new Map();
-  const outputs = [];
-  const root = (index2) => {
-    while (parents[index2] !== index2) {
-      parents[index2] = parents[parents[index2]];
-      index2 = parents[index2];
-    }
-    return index2;
-  };
-  try {
-    faces.forEach((face, index2) => {
-      for (const edge of face.edges) {
-        const bucket = edges.get(edge.hashCode) ?? [];
-        const shared = bucket.find((other) => other.edge.wrapped.IsSame(edge.wrapped));
-        if (shared) {
-          parents[root(index2)] = root(shared.face);
-          edge.delete();
-        } else {
-          bucket.push({ edge, face: index2 });
-          edges.set(edge.hashCode, bucket);
-        }
-      }
-    });
-    const groups = /* @__PURE__ */ new Map();
-    faces.forEach((_2, index2) => {
-      const key2 = root(index2);
-      const group = groups.get(key2) ?? [];
-      group.push(index2);
-      groups.set(key2, group);
-    });
-    for (const group of groups.values()) {
-      const builder = new oc.TopoDS_Builder(), shell = new oc.TopoDS_Shell();
-      try {
-        builder.MakeShell(shell);
-        group.forEach((index2) => builder.Add(shell, faces[index2].wrapped));
-        const output = cast(shell);
-        outputs.push(output);
-        const check2 = new oc.BRepCheck_Analyzer(output.wrapped, true, false);
-        try {
-          if (!check2.IsValid_2() || measureArea(output) <= 1e-9) throw Error("Surface extrusion produced an invalid connected sheet.");
-        } finally {
-          check2.delete();
-        }
-      } finally {
-        builder.delete();
-      }
-    }
-    if (!outputs.length) throw Error("Surface extrusion produced no sheets.");
-    return outputs;
-  } catch (error2) {
-    outputs.forEach((output) => output.delete());
-    throw error2;
-  } finally {
-    faces.forEach((face) => face.delete());
-    edges.forEach((bucket) => bucket.forEach(({ edge }) => edge.delete()));
-  }
-}
-function sharedArea(a2, b) {
-  const oc = getOC(), operation2 = new oc.BRepAlgoAPI_Common_1();
-  const arguments_ = new oc.TopTools_ListOfShape_1(), tools = new oc.TopTools_ListOfShape_1();
-  const progress = new oc.Message_ProgressRange_1();
-  try {
-    arguments_.Append_1(a2.wrapped);
-    tools.Append_1(b.wrapped);
-    operation2.SetArguments(arguments_);
-    operation2.SetTools(tools);
-    operation2.SetNonDestructive(true);
-    operation2.Build(progress);
-    const common2 = cast(operation2.Shape());
-    try {
-      return common2 instanceof Face || isShape3D(common2) ? measureArea(common2) : 0;
-    } finally {
-      common2.delete();
-    }
-  } finally {
-    operation2.delete();
-    arguments_.delete();
-    tools.delete();
-    progress.delete();
-  }
-}
-function surfaceExtrusionOutputs(shape, sources) {
-  const outputs = connectedSurfaceBodies(shape);
-  try {
-    const named = outputs.map((output) => {
-      const identities = sources.length === 1 ? [sources[0].key] : sources.filter((source) => sharedArea(output, source.shape) > 1e-9).map((source) => source.key);
-      if (!identities.length) throw Error("Could not identify a surface extrusion output.");
-      return { key: sha256Hex(JSON.stringify([...new Set(identities)].sort())).slice(0, 24), shape: output };
-    });
-    if (new Set(named.map((output) => output.key)).size !== named.length)
-      throw Error("A sketch curve splits into ambiguous surface bodies. Use distinct sketch curves.");
-    return named;
-  } catch (error2) {
-    outputs.forEach((output) => output.delete());
-    throw error2;
-  }
 }
 function once$1(kind, a2, b, options = {}) {
   const oc = getOC();
@@ -44355,7 +44444,7 @@ function evaluatePartDocument(document2, options = {}) {
                 return shape;
               };
               const sheets = extrusionProfileGroups(feature3).map(buildProfileSheet);
-              tool22 = sheets.length === 1 ? sheets[0] : sheetArea(separate ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map((sheet) => sheet.wrapped)));
+              tool22 = sheets.length === 1 ? sheets[0] : sheetArea(separate || feature3.connectedMerge ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map((sheet) => sheet.wrapped)));
               if (separate) {
                 const outputs = surfaceExtrusionOutputs(tool22, sources);
                 const prefix2 = bodyIDForFeature(document2, feature3);
@@ -45332,12 +45421,17 @@ function evaluatePartDocument(document2, options = {}) {
           tools.set(feature3.id, tool22);
           if (feature3.type === "surface-extrude" && feature3.operation === "add") {
             const scope = feature3.scopeMode === "all" ? void 0 : feature3.targetBodyIds ?? (feature3.targetBodyId ? [feature3.targetBodyId] : currentBodyID ? [currentBodyID] : []);
-            const merged = mergeSurfaceExtrusion(tool22, bodies, scope);
-            const id2 = merged.targets[0];
-            bodies.set(id2, own(merged.shape));
-            merged.targets.slice(1).forEach((target) => bodies.delete(target));
-            currentBodyID = id2;
-            if (feature3.scopeMode === "all") scopeResolutions[feature3.id] = { targets: merged.targets, groups: [{ bodyId: id2, sources: merged.targets }] };
+            const merged = feature3.connectedMerge ? mergeConnectedSurfaceExtrusion(tool22, bodies, scope) : [mergeSurfaceExtrusion(tool22, bodies, scope)];
+            for (const group of merged) {
+              const id2 = group.targets[0];
+              bodies.set(id2, own(group.shape));
+              group.targets.slice(1).forEach((target) => bodies.delete(target));
+              currentBodyID = id2;
+            }
+            if (feature3.scopeMode === "all" || feature3.connectedMerge) scopeResolutions[feature3.id] = {
+              targets: scope ? [...scope] : merged.flatMap((group) => group.targets),
+              groups: merged.map((group) => ({ bodyId: group.targets[0], sources: group.targets }))
+            };
             continue;
           }
           combine(tool22, feature3.operation, feature3);

@@ -79,8 +79,34 @@ The final frontend suite passes 2,210 tests (one existing skip), the engine pass
 13 real control workflows and four exact Part 1 face-removal workflows. All 17
 modeling steps and both Home paths pass. Release qualification is recorded in
 [Surface output evidence](../reality/data/Extrude_Surface_Outputs_2026_11_05.json).
-Disconnected Surface Add groups, oblique Draft and the remaining termination and
-mode-conversion matrix remain open. This does not sign off full Extrude parity.
+At this release, disconnected Surface Add groups, oblique Draft and the remaining
+termination/mode-conversion matrix were open. The Surface Add continuation is
+recorded below; this does not sign off full Extrude parity.
+
+## Connected Surface Add and preview acceptance — 2026-11-05
+
+Surface Add now retains one target identity per connected group. Independent
+extensions grow their respective sheets; a bridge consumes only its connected
+secondary targets and keeps the primary target name and appearance. Every tool
+component must connect, and every explicit target must participate. Automatic
+scope leaves unrelated surfaces alone. Native groups are published only after a
+successful rebuild and survive saved reopen and downstream references.
+
+Part26 and canonical codec29 carry this intent. Earlier Surface Add records keep
+their original compound behavior. Both the released Part25 worker and codec28
+must refuse new files, rather than absorb independent outputs into one identity.
+
+The actual browser workflow also reproduced a shared acceptance race: a text
+field's blur event repeated a completed preview and disabled ✓ before click.
+Unchanged candidates now retain their preview; newer pending or failed inputs
+still block Apply/Enter. Canonical candidate reuse keeps source sketch IDs the
+same between preview and commit, including legacy primitives without curve IDs.
+
+Chromium and WebKit each pass 16 feature-control workflows and four exact Part 1
+face-removal/error/correction workflows. Full release status and gate results are
+recorded in [Surface Add evidence](../reality/data/Extrude_Surface_Add_2026_11_05.json).
+Oblique Draft and the remaining Extrude termination/mode-conversion matrix remain
+open before full Extrude signoff and the ordered Revolve/Chamfer/Fillet review.
 
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 

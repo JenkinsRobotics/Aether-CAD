@@ -90,7 +90,7 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
         : model.featurePreview ? [model.featurePreview.added.length ? "Blue: added material" : "", model.featurePreview.removed.length ? "Red: removed material" : ""].filter(Boolean).join(" · ") || null : null);
       onError?.(null);
     }
-    else if (error) { feedback('error', error); show("Preview failed · selected inputs shown in red"); onError?.(error); }
+    else if (error) { latestKey = undefined; feedback('error', error); show("Preview failed · selected inputs shown in red"); onError?.(error); }
     else show(null);
   // Intermediate geometry is visible, but handles stay pending until their
   // axes match the latest parameters. Only the final result publishes readiness.
@@ -98,15 +98,25 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let latest: PartDocument | null = null;
+  let latestKey: string | undefined;
   const close = () => { if (closed) return; closed = true; clearTimeout(timer); clearTimeout(warmTimer); queue.close(); backend.feedback?.(null); observer.disconnect(); window.removeEventListener("aether-part-updated", close); };
   const update = () => {
     if (closed) return;
-    clearTimeout(warmTimer); warmTimer = undefined;
-    queue.invalidate(false);
-    onPending?.();
-    root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{pending:true}}));
     try {
-      latest = candidate(); feedback('pending'); if(status.textContent !== "Updating preview…") show("Updating preview…");
+      const next = candidate(), key = JSON.stringify(next);
+      // Text fields emit input while typing, then change on blur. Rebuilding
+      // the same draft on blur disables the header before its click arrives.
+      // Reuse only this exact candidate; a pending result remains uncommittable.
+      if (key === latestKey) {
+        if (root.dataset.featureValidation === 'pending') onPending?.();
+        return;
+      }
+      latest = next; latestKey = key;
+      clearTimeout(warmTimer); warmTimer = undefined;
+      queue.invalidate(false);
+      onPending?.();
+      root.dispatchEvent(new CustomEvent('aether-feature-preview-state',{bubbles:true,detail:{pending:true}}));
+      feedback('pending'); if(status.textContent !== "Updating preview…") show("Updating preview…");
       // Typing coalesces for 100 ms; a handle drag wants every frame (the queue
       // drops stale requests, so the engine never runs more than one at a time).
       const dragging = document.body.dataset.cadHandleDrag === "1";
@@ -115,11 +125,11 @@ export function mountFeaturePreview(root: HTMLElement, candidate: () => PartDocu
         timer = undefined;
         if (latest) queue.request(latest);
       }, 100);
-    } catch (error) { clearTimeout(timer); timer = undefined; queue.invalidate(); const message = error instanceof Error ? error.message : String(error); feedback('error', message); show(message); onError?.(message); }
+    } catch (error) { latestKey = undefined; clearTimeout(timer); timer = undefined; queue.invalidate(); const message = error instanceof Error ? error.message : String(error); feedback('error', message); show(message); onError?.(message); }
   };
   const observer = new window.MutationObserver(() => { if (!root.isConnected) close(); });
   observer.observe(document.body, { childList: true, subtree: true });
   closePrevious = close;
   window.addEventListener("aether-part-updated", close);
-  return { update, close, pause: () => { clearTimeout(timer); timer = undefined; clearTimeout(warmTimer); warmTimer = undefined; latest = null; queue.invalidate(); backend.feedback?.(null); } };
+  return { update, close, pause: () => { clearTimeout(timer); timer = undefined; clearTimeout(warmTimer); warmTimer = undefined; latest = null; latestKey = undefined; queue.invalidate(); backend.feedback?.(null); } };
 }

@@ -260,6 +260,7 @@ it('waits for the latest native preview before accepting a feature through eithe
     distance.value = '200'; distance.dispatchEvent(new Event('input'));
     jobs[0].resolve({ parts: [] });
     await vi.waitFor(() => expect(jobs).toHaveLength(2));
+    distance.dispatchEvent(new Event('change')); // blur repeats the pending value
     expect(accept.disabled).toBe(true); submit(); expect(apply).not.toHaveBeenCalled();
     jobs[1].reject(new Error('The latest feature cannot be built'));
     await vi.waitFor(() => expect(win.textContent).toContain('The latest feature cannot be built'));
@@ -268,7 +269,10 @@ it('waits for the latest native preview before accepting a feature through eithe
     await vi.waitFor(() => expect(jobs).toHaveLength(3));
     jobs[2].resolve({ parts: [] });
     await vi.waitFor(() => expect(accept.disabled).toBe(false));
+    distance.dispatchEvent(new Event('change')); // the completed value must stay ready
+    expect(accept.disabled).toBe(false);
     submit(); await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+    expect(jobs).toHaveLength(3);
     expect(doc.features.at(-1).distanceMillimeters).toBe(15);
   } finally { configureFeaturePreview(null); }
 });
@@ -443,4 +447,26 @@ it('accepts whole sketches selected from the tree while Surface is open', async 
     expect(picks).toHaveLength(4);
     expect(picks.every(p => p.featureId === 'joined')).toBe(true);
   } finally { cadWorkspace.publish(original); }
+});
+
+it('keeps newly assigned legacy sketch identities identical between Surface preview, blur and commit', async () => {
+  seedProfile();
+  const candidates = [];
+  configureFeaturePreview({ evaluate: async candidate => { candidates.push(structuredClone(candidate)); return { parts: [] }; }, show: vi.fn() });
+  try {
+    cadCommands.execute('feature-extrude');
+    const win = document.querySelector('.cad-feature-dialog'), form = win.querySelector('form');
+    const source = win.querySelector('[aria-label="Sketch"]'); source.value = 'profile-1'; source.dispatchEvent(new Event('change'));
+    [...win.querySelectorAll('button')].find(button => button.textContent === 'Surface').click();
+    const accept = win.querySelector('[data-feature-action="accept"]');
+    await vi.waitFor(() => { expect(candidates.at(-1)?.features.at(-1).type).toBe('surface-extrude'); expect(accept.disabled).toBe(false); });
+    const preview = candidates.at(-1), count = candidates.length;
+    expect(preview.features[0].profile.contours[0].id).toBeTruthy();
+    win.querySelector('[aria-label="Distance (mm)"]').dispatchEvent(new Event('change'));
+    expect(accept.disabled).toBe(false);
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(apply).toHaveBeenCalledTimes(1));
+    expect(doc.features[0].profile).toEqual(preview.features[0].profile);
+    expect(candidates).toHaveLength(count);
+  } finally { configureFeaturePreview(null); }
 });

@@ -40,7 +40,7 @@ export * from "./extrusion-point-reference";
 
 export type {ExtrusionStartReference} from './extrusion-start-reference';
 
-export {validateExtrusionScopeResolution,scopeConsumedBodies,type ExtrusionScopeResolution} from './extrusion-scope';
+export {validateExtrusionScopeResolution,scopeConsumedBodies,usesExtrusionScopeResolution,type ExtrusionScopeResolution} from './extrusion-scope';
 
 export * from './extrusion-face-reference';
 

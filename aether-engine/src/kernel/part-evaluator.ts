@@ -1,5 +1,5 @@
 import { extrusionProfileGroups } from './extrusion-profile-groups';
-import { mergeSurfaceExtrusion } from './surface-extrusion-merge';
+import { mergeSurfaceExtrusion, mergeConnectedSurfaceExtrusion } from './surface-extrusion-merge';
 import { buildSurfaceExtrusion, type SurfaceExtrusionEnd } from './surface-extrusion';
 import { extrusionStopHandle } from './extrusion-stop-preview';
 import { extrusionPreviewAxes } from "./extrusion-preview";
@@ -3013,7 +3013,7 @@ export function evaluatePartDocument(
               return shape;
             };
             const sheets = extrusionProfileGroups(feature).map(buildProfileSheet);
-            tool = sheets.length === 1 ? sheets[0] : sheetArea(separate ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map(sheet => sheet.wrapped)));
+            tool = sheets.length === 1 ? sheets[0] : sheetArea(separate || feature.connectedMerge ? own(sewSurfaceExtrusion(sheets)) : joined(sheets.map(sheet => sheet.wrapped)));
             if (separate) {
               const outputs = surfaceExtrusionOutputs(tool, sources);
               const prefix = bodyIDForFeature(document, feature);
@@ -3866,10 +3866,15 @@ export function evaluatePartDocument(
         tools.set(feature.id, tool);
         if (feature.type === 'surface-extrude' && feature.operation === 'add') {
           const scope = feature.scopeMode === 'all' ? undefined : feature.targetBodyIds ?? (feature.targetBodyId ? [feature.targetBodyId] : currentBodyID ? [currentBodyID] : []);
-          const merged = mergeSurfaceExtrusion(tool, bodies, scope);
-          const id = merged.targets[0]; bodies.set(id, own(merged.shape));
-          merged.targets.slice(1).forEach(target => bodies.delete(target)); currentBodyID = id;
-          if (feature.scopeMode === 'all') scopeResolutions[feature.id] = { targets: merged.targets, groups: [{ bodyId: id, sources: merged.targets }] };
+          const merged = feature.connectedMerge ? mergeConnectedSurfaceExtrusion(tool, bodies, scope) : [mergeSurfaceExtrusion(tool, bodies, scope)];
+          for (const group of merged) {
+            const id = group.targets[0]; bodies.set(id, own(group.shape));
+            group.targets.slice(1).forEach(target => bodies.delete(target)); currentBodyID = id;
+          }
+          if (feature.scopeMode === 'all' || feature.connectedMerge) scopeResolutions[feature.id] = {
+            targets: scope ? [...scope] : merged.flatMap(group => group.targets),
+            groups: merged.map(group => ({ bodyId: group.targets[0], sources: group.targets })),
+          };
           continue;
         }
         // Preserve the legacy combine contract after the feature-kind branches (a rib was mapped to an extrude above).

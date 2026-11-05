@@ -63,6 +63,15 @@ Package-manager versions and the shared UI dependency version are separate.
    legacy compound preservation, and actual Part24/codec27 refusal of Part25.
    Both browser control gates must retain independent Surface output IDs on reopen.
    Rollback does not downgrade Part25 files.
+   Connected Surface Add uses Part26 and canonical codec29. Run the native
+   Surface Add grouping/history suite, packaged agent/codec tests, and
+   `scripts/verify-surface-add-format.mjs` against the installed Part25 worker.
+   Disconnected additions retain their respective target IDs; a bridge keeps
+   the primary ID; detached tool pieces and unrelated explicit targets fail.
+   Both browser control gates must author automatic/explicit groups and bridges,
+   save/reopen them, remove curves after a failed preview, and preserve Cancel.
+   Existing Add records without `connectedMerge` retain their compound semantics.
+   Older readers must refuse Part26; never downgrade a saved file for rollback.
    Model-to-sketch projection additionally requires the packaged
    `service/tests/test_native_model_projection.py` cases and
    `scripts/verify-model-projection-browser.mjs` through that disposable host.

@@ -19,7 +19,9 @@ export function validateExtrusionDefinition(feature: ExtrudeFeature, earlier: Re
     throw new Error("Extrude must reference an earlier Sketch.");
   if (!["new", "add", "cut", "intersect"].includes(feature.operation))
     throw new Error("Unsupported extrude operation.");
-  validateMergeScope(feature);
+  const connectedMerge = surface ? (feature as unknown as { connectedMerge?: boolean }).connectedMerge : undefined;
+  if (connectedMerge !== undefined && (typeof connectedMerge !== "boolean" || feature.operation !== "add")) throw Error("Connected surface merge requires Surface Add.");
+  validateMergeScope(feature, connectedMerge === true);
   if (
     feature.profileContourId !== undefined &&
     (typeof feature.profileContourId !== "string" ||
@@ -92,11 +94,17 @@ export function validateExtrusionDefinition(feature: ExtrudeFeature, earlier: Re
   if (feature.reversed !== undefined && typeof feature.reversed !== "boolean") throw new Error("Invalid extrude direction.");
 }
 
-export function validateMergeScope(feature: { operation: string; scopeMode?: "all"; scopeResolution?: ExtrusionScopeResolution; targetBodyId?: string; targetBodyIds?: string[] }): void {
+export function validateMergeScope(feature: { operation: string; scopeMode?: "all"; scopeResolution?: ExtrusionScopeResolution; targetBodyId?: string; targetBodyIds?: string[] }, connectedMerge = false): void {
   if (feature.scopeMode !== undefined && (feature.scopeMode!=="all" || !["add","cut","intersect"].includes(feature.operation) || feature.targetBodyId!==undefined || feature.targetBodyIds!==undefined)) throw Error("Automatic scope cannot also specify target parts.");
   if(feature.scopeResolution!==undefined){
-    if(feature.scopeMode!=="all")throw Error("A scope resolution requires automatic scope.");
+    if(feature.scopeMode!=="all" && !connectedMerge)throw Error("A scope resolution requires automatic scope or connected Surface Add.");
     validateExtrusionScopeResolution(feature.scopeResolution);
+    if (connectedMerge) {
+      const resolution = feature.scopeResolution;
+      const targets = feature.targetBodyIds ?? (feature.targetBodyId ? [feature.targetBodyId] : undefined);
+      if (resolution.groups.flatMap(group => group.sources).length !== resolution.targets.length) throw Error("Surface Add cannot discard scope bodies.");
+      if (feature.scopeMode !== "all" && targets && JSON.stringify(targets) !== JSON.stringify(resolution.targets)) throw Error("Surface Add resolution must match its selected scope.");
+    }
   }
   if (feature.targetBodyIds !== undefined) {
     const scope=feature.targetBodyIds;

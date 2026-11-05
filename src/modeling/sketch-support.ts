@@ -1,4 +1,4 @@
-import { bodyIDsForFeature, consumedBodyIDs, patternCopyIds, rollbackPosition, validatePartDocument, type PartDocument, type PlanarSketchSupport, type PlanarFaceAnchor } from "@aether/core/document";
+import { usesExtrusionScopeResolution, bodyIDsForFeature, consumedBodyIDs, patternCopyIds, rollbackPosition, validatePartDocument, type PartDocument, type PlanarSketchSupport, type PlanarFaceAnchor } from "@aether/core/document";
 import type { SketchFrame } from "@aether/core/sketch";
 
 export function supportForFace(doc: PartDocument, bodyId: string, frame: SketchFrame, label: string, beforeFeatureId?: string, faceAnchor?:PlanarFaceAnchor): PlanarSketchSupport | undefined {
@@ -47,7 +47,7 @@ export function sourceFeatureForBody(doc:PartDocument,bodyId:string,beforeFeatur
       if(feature.faces.some(face=>face.bodyId===bodyId))sourceFeatureId=feature.id;
       continue;
     }
-    if((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
+    if(usesExtrusionScopeResolution(feature)){
       if(feature.scopeResolution?.groups.some(group=>group.bodyId===bodyId))sourceFeatureId=feature.id;
       if(consumedBodyIDs(feature).includes(bodyId))sourceFeatureId=undefined;
       lastBody=feature.scopeResolution?.groups.at(-1)?.bodyId??lastBody;continue;

@@ -1,4 +1,5 @@
 import { cast, getOC, measureLength, type AnyShape, type Edge, type Shape3D } from 'replicad';
+import { connectedSurfaceBodies, sewSurfaceExtrusion } from './surface-extrusion-outputs';
 
 function isSolid(body: Shape3D): boolean {
   const oc = getOC(), explorer = new oc.TopExp_Explorer_2(body.wrapped, oc.TopAbs_ShapeEnum.TopAbs_SOLID as never, oc.TopAbs_ShapeEnum.TopAbs_SHAPE as never);
@@ -62,4 +63,59 @@ export function mergeSurfaceExtrusion(tool: Shape3D, bodies: ReadonlyMap<string,
     if (scope) targets.sort((a, b) => scope.indexOf(a) - scope.indexOf(b));
     return { shape: result, targets };
   } catch (error) { result.delete(); throw error; }
+}
+
+/** Part26 Surface Add: disconnected additions retain independent target bodies.
+ * A target is one identity even when an older feature created a compound sheet.
+ * Inputs are borrowed; the caller owns the returned group shapes. */
+export function mergeConnectedSurfaceExtrusion(tool: Shape3D, bodies: ReadonlyMap<string, Shape3D>, scope?: readonly string[]): { shape: Shape3D; targets: string[] }[] {
+  const candidates = scope ? scope.map(id => {
+    const body = bodies.get(id);
+    if (!body || isSolid(body)) throw Error('Surface Add requires available surface bodies in its merge scope.');
+    return { id, body };
+  }) : [...bodies].filter(([, body]) => !isSolid(body)).map(([id, body]) => ({ id, body }));
+  const sewn = sewSurfaceExtrusion([tool]);
+  const outputs: { shape: Shape3D; targets: string[] }[] = [];
+  let pieces: Shape3D[] = [];
+  try {
+    pieces = connectedSurfaceBodies(sewn);
+    const shapes = [...pieces, ...candidates.map(candidate => candidate.body)];
+    const parents = shapes.map((_, index) => index);
+    const root = (index: number): number => {
+      while (parents[index] !== index) { parents[index] = parents[parents[index]]; index = parents[index]; }
+      return index;
+    };
+    for (let a = 0; a < shapes.length; a++) for (let b = a + 1; b < shapes.length; b++) {
+      if (root(a) !== root(b) && connected(shapes[a], shapes[b])) parents[root(b)] = root(a);
+    }
+    const groups = new Map<number, number[]>();
+    shapes.forEach((_, index) => {
+      const key = root(index), group = groups.get(key) ?? [];
+      group.push(index); groups.set(key, group);
+    });
+    for (const group of groups.values()) {
+      const tools = group.filter(index => index < pieces.length);
+      const targets = group.filter(index => index >= pieces.length).map(index => candidates[index - pieces.length]);
+      if (!tools.length) {
+        if (scope) throw Error('The extrusion must share an edge with every surface in its merge scope.');
+        continue;
+      }
+      if (!targets.length) throw Error('Every added surface must share an edge with a surface in its merge scope.');
+      let result = shapes[group[0]].clone();
+      try {
+        for (const index of group.slice(1)) {
+          const joined = result.fuse(shapes[index]); result.delete(); result = joined;
+        }
+        const check = new (getOC().BRepCheck_Analyzer)(result.wrapped, true, false);
+        try {
+          if (!check.IsValid_2() || isSolid(result)) throw Error('Surface Add did not produce a valid sheet. Check the selected boundaries.');
+        } finally { check.delete(); }
+        outputs.push({ shape: result, targets: targets.map(target => target.id) });
+      } catch (error) { result.delete(); throw error; }
+    }
+    // Preserve explicit primary order, regardless of native face traversal.
+    outputs.sort((a, b) => candidates.findIndex(c => c.id === a.targets[0]) - candidates.findIndex(c => c.id === b.targets[0]));
+    return outputs;
+  } catch (error) { outputs.forEach(output => output.shape.delete()); throw error; }
+  finally { pieces.forEach(piece => piece.delete()); sewn.delete(); }
 }

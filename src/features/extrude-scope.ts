@@ -20,7 +20,7 @@ export function layoutExtrudeScope(context:FeatureEditorContext,controls:Control
   const merge=controls.operation.value==='add';
   const modifying=['add','cut','intersect'].includes(controls.operation.value),automatic=mode.value==='all';
   all.checked=automatic;allRow.hidden=!modifying;automaticHelp.hidden=!modifying||!automatic;
-  automaticHelp.textContent=merge?'Merge every touching solid part. Separate groups stay separate; each group keeps its earliest part’s name and appearance.':'Modify every solid part the extrusion overlaps. Parts outside the extrusion stay unchanged.';
+  automaticHelp.textContent=controls.creationMode?.value==='surface'?'Merge surfaces along shared edges. Separate groups keep their own target names and appearances.':merge?'Merge every touching solid part. Separate groups stay separate; each group keeps its earliest part’s name and appearance.':'Modify every solid part the extrusion overlaps. Parts outside the extrusion stay unchanged.';
   box.element.hidden=!modifying||automatic;
   const caption=merge?'Additional parts to merge':'Additional parts to modify';
   box.element.setAttribute('aria-label',caption);
@@ -38,6 +38,7 @@ export function layoutExtrudeScope(context:FeatureEditorContext,controls:Control
   if(!list.children.length)list.textContent='No additional parts available.';
  };
  controls.operation.addEventListener('change',render);
+ controls.creationMode?.addEventListener('change',render);
  mode.addEventListener('change',render);
  controls.target.addEventListener('change',()=>{controls.scope.value=JSON.stringify(selected().filter(id=>id!==controls.target.value));render();controls.scope.dispatchEvent(new Event('change'));});
  render();

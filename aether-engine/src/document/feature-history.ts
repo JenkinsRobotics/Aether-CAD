@@ -2,7 +2,7 @@ import { surfaceCreatorTypes } from "./surface";
 import { identifySurfaceExtrusionProfiles } from './surface-extrusion-identities';
 import { patternCopyIds } from "./pattern";
 import {offsetFaceBodies} from './offset-face';
-import {scopeConsumedBodies} from './extrusion-scope';
+import {scopeConsumedBodies, usesExtrusionScopeResolution} from './extrusion-scope';
 import { featureReferenceErrors } from "./feature-errors";
 import { featureInputDependencies } from './feature-inputs';
 import {
@@ -44,7 +44,7 @@ export function createdBodyIDs(doc:PartDocument,feature:PartFeature):string[] {
 /** Current output identities absorbed by a feature; original producers persist. */
 export function consumedBodyIDs(feature: PartFeature): string[] {
   if (feature.suppressed) return [];
-  if ((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve") && feature.scopeMode==="all")return scopeConsumedBodies(feature.scopeResolution);
+  if (usesExtrusionScopeResolution(feature))return scopeConsumedBodies(feature.scopeResolution);
   if (feature.type === "boolean" && !feature.keepTools) return feature.toolBodyIds;
   if (feature.type === "surface-thicken" && feature.keepTools === false) return feature.bodyIds;
   if (feature.type === "split" && feature.keepTools === false && feature.tool) return [feature.tool.bodyId];
@@ -62,7 +62,8 @@ function stableBodies(doc: PartDocument): PartDocument {
       const feature = structuredClone(f);
       if ((feature.type === 'extrude' || feature.type === 'surface-extrude') && feature.separateBodies)
         feature.outputProfileId ??= feature.profileFeatureId;
-      if((feature.type==="surface-extrude"||feature.type==="extrude"||feature.type==="revolve")&&feature.scopeMode==="all"){
+      if(usesExtrusionScopeResolution(feature)){
+        if (feature.scopeMode !== "all" && !feature.targetBodyId) feature.targetBodyId = feature.scopeResolution?.targets[0] ?? targetBody;
         if(!feature.suppressed)targetBody=feature.scopeResolution?.groups.at(-1)?.bodyId??targetBody;
         return feature;
       }
@@ -125,7 +126,7 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
         refs.push((target && bodyProducers.get(target)) ?? `body:${target ?? "missing"}`);
         // A suppressed modifier leaves the preceding body available to later
         // features (in particular, parts restored by a suppressed merge).
-        const mergedIntoPrimary = (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve") && f.operation === "add" && f.targetBodyIds && target !== body;
+        const mergedIntoPrimary = (f.type === "surface-extrude" || f.type === "extrude" || f.type === "revolve") && f.operation === "add" && f.targetBodyIds && target !== body && !(f.type === "surface-extrude" && f.connectedMerge && !consumedBodyIDs(f).includes(target!));
         if (target && !mergedIntoPrimary && (!f.suppressed || includeSuppressedModifiers)) bodyProducers.set(target, f.id);
       }
     }
@@ -134,6 +135,8 @@ export function featureDependencies(doc: PartDocument, includeSuppressedModifier
       for (const id of consumed) bodyProducers.delete(id);
       lastBody = "targetBodyId" in f ? f.targetBodyId : lastBody;
     }
+    if (f.type === "surface-extrude" && f.connectedMerge && !f.suppressed)
+      lastBody = f.scopeResolution?.groups.at(-1)?.bodyId ?? lastBody;
     result.set(f.id, [...new Set(refs)]);
   }
   return result;

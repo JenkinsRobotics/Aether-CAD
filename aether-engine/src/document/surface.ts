@@ -19,6 +19,9 @@ export type SurfaceRevolveAxis = { kind: "vector"; origin: [number, number, numb
 export interface SurfaceExtrudeFeature extends Omit<ExtrudeFeature, 'type' | 'operation' | 'thin' | 'draftAngleDegrees'> {
   type: "surface-extrude";
   operation: "new" | "add";
+  /** Part26 Add retains a target identity per connected group; absent preserves
+   * the legacy single-compound result. Native scopeResolution is output only. */
+  connectedMerge?: boolean;
   /** Legacy selected sketch curves, retained on read. New records use profileSelections. */
   contourIds?: string[];
   /** Legacy symmetric flag; new records use endType. */

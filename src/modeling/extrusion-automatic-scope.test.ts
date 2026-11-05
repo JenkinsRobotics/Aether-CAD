@@ -42,3 +42,18 @@ it('saved depth edits keep automatic intent and finalize fresh scope rather than
  const next=parsePartDocument(finalizeCandidate(prepared.candidate!,{}, {},{e:{targets:['a'],groups:[{bodyId:'a',sources:['a']}]}}));
  expect(availableBodies(next).map(b=>b.id)).toEqual(['a','b','other']);expect(next.features.at(-1)).toMatchObject({scopeMode:'all',distanceMillimeters:10});
 });
+
+it('publishes explicit Surface Add groups and validates native scope ownership', () => {
+ const doc = fixture();
+ Object.assign(doc.features.at(-1)!, { type: 'surface-extrude', operation: 'add', scopeMode: undefined,
+  connectedMerge: true, targetBodyId: 'a', targetBodyIds: ['a', 'b'] });
+ const scopes = { e: { targets: ['a', 'b'], groups: [{ bodyId: 'a', sources: ['a'] }, { bodyId: 'b', sources: ['b'] }] } };
+ const resolved = resolveExtrusionScopes(doc, scopes);
+ expect(availableBodies(resolved).map(body => body.id)).toEqual(['a', 'b', 'other']);
+ const frame = { originMillimeters: [0,0,25] as [number,number,number], normal: [0,0,1] as [number,number,number], xDirection: [1,0,0] as [number,number,number] };
+ expect(supportForFace(resolved, 'b', frame, 'Top')?.sourceFeatureId).toBe('e');
+ expect(parsePartDocument(serializePartDocument(resolved)).features.at(-1)).toEqual(resolved.features.at(-1));
+ expect(() => resolveExtrusionScopes(doc, {})).toThrow(/resolve/);
+ expect(() => resolveExtrusionScopes(doc, { e: { targets: ['a', 'other'], groups: [{ bodyId: 'a', sources: ['a','other'] }] } })).toThrow(/selected scope/);
+ expect(availableBodies(setFeatureSuppressed(resolveExtrusionScopes(doc, {e: merged}), 'e', true)).map(body=>body.id)).toEqual(['a','b','other']);
+});
