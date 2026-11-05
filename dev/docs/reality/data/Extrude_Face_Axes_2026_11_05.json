@@ -1,7 +1,7 @@
 {
   "date": "2026-11-05",
   "base_release": "alpha-0.1.116",
-  "status": "qualified; awaiting immutable release",
+  "status": "qualified and installed",
   "scope": [
     "Persistent cylindrical/conical face-axis directions for Solid, Thin and Surface Extrude",
     "Native source-history resolution and consistent axis orientation with Reverse",
@@ -102,5 +102,19 @@
     "Full requested CAD feature parity is not complete"
   ],
   "live_documents_modified": false,
-  "other_apps_modified": false
+  "other_apps_modified": false,
+  "installation": {
+    "app": "cad",
+    "release": "alpha-0.1.117",
+    "sha256": "e0599a0b7e76f9c3060cb9deecaee9e57c40598a5f07e254fc723519b9f9da88",
+    "source_commit": "16a3381db5a0712e2bb1a2a44f9774bd306ae0eb",
+    "files": 3576,
+    "activated": true,
+    "all_files_verified": true,
+    "other_apps_unchanged": true,
+    "restart_required": false,
+    "https_origin": "https://aetherstudio.local:8780",
+    "live_user_documents_modified": false,
+    "unauthenticated_https_status": 302
+  }
 }

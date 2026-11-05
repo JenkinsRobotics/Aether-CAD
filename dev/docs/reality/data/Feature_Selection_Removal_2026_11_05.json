@@ -169,5 +169,13 @@
       "build/Example-Collection/curved-draft-part1-chromium-2026-11-05/host/browser/face-finish-feedback.json",
       "build/Example-Collection/curved-draft-part1-webkit-2026-11-05/host/browser/face-finish-feedback.json"
     ]
+  },
+  "cad117_reverification": {
+    "release": "alpha-0.1.117",
+    "source_commit": "16a3381db5a0712e2bb1a2a44f9774bd306ae0eb",
+    "shared_archive_identity_fix": true,
+    "chromium_cases": 4,
+    "webkit_cases": 4,
+    "evidence": "Extrude_Face_Axes_2026_11_05.json"
   }
 }
