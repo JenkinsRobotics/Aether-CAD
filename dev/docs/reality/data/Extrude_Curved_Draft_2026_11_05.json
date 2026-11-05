@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-05",
+  "base_release": "alpha-0.1.115",
+  "scope": "Native Extrude Draft along oblique directions for smooth closed curves; Solid and closed Thin, same canonical UI/agent history and shared manipulators.",
+  "implementation": [
+    "Constant-angle developable walls: m is perpendicular to the authored boundary tangent, m dot pull = sin(angle), and rulings follow pull - sin(angle) m.",
+    "Native B-spline fitting with checked 1e-7 mm boundary position and 1e-8 wall-normal-dot tolerances; adaptive parameter subdivision avoids ill-conditioned high-order interpolation.",
+    "Neutral sketch plane retained at signed start/end sections. Interior cap wires are oriented before sewing. Native validity and wall regularity reject collapse/intersection.",
+    "Native drafted tools used before trimming to planar and curved stops; incomplete far construction caps refuse.",
+    "Existing shared angular orbit and thickness controls; no feature-specific replacement arrows. No document schema, codec, or API change."
+  ],
+  "qualification": {
+    "frontend": {
+      "passed": 2224,
+      "existing_skipped": 1
+    },
+    "engine": {
+      "passed": 1440,
+      "new_curved_tests": 22
+    },
+    "typechecks": true,
+    "build": true,
+    "native": {
+      "initial_passed": 342,
+      "initial_failed": 2,
+      "reason": "New curved-volume assertions used planar 1e-5 mm^3 tolerance; differences were 1.58e-5 and 1.42e-5 mm^3. Curved checks now use the same 5e-5 mm^3 bound as the independent engine integral gate. Product bytes unchanged.",
+      "affected_suite": {
+        "passed": 8,
+        "deselected": 336,
+        "errors": [],
+        "log": "build/feature-qualification-2026-11-05/curved-draft/qualification/curved-draft-native-affected.log"
+      },
+      "final_unresolved_failures": 0,
+      "total_cases_covered": 344
+    },
+    "geometry_checks": [
+      "Independent tangent-support volume integrals",
+      "Native wall angles and neutral boundaries",
+      "Circle, ellipse and tangent rounded boundaries",
+      "Inner/outer Thin cap orientation",
+      "Both draft signs and reversed travel",
+      "Starting offsets, symmetric and independent second ends",
+      "Rotated sketch frame",
+      "Face/vertex/part/next stopping limits and tilted cap consistency",
+      "Add/Remove/Intersect with explicit target identity",
+      "Shared angular orbit lies on native wall",
+      "Invalid Thin collapse preserves authored input",
+      "Save/edit/reopen through canonical native agent operations"
+    ],
+    "browsers": {
+      "chromium": {
+        "feature_controls": {
+          "passed": 23,
+          "errors": [],
+          "evidence": "build/Example-Collection/curved-draft-controls-chromium-2026-11-05/host/browser/feature-controls.json"
+        },
+        "reported_part_1": {
+          "passed": 4,
+          "errors": [],
+          "evidence": "build/Example-Collection/curved-draft-part1-chromium-2026-11-05/host/browser/face-finish-feedback.json"
+        }
+      },
+      "webkit": {
+        "feature_controls": {
+          "passed": 23,
+          "errors": [],
+          "evidence": "build/Example-Collection/curved-draft-controls-webkit-2026-11-05/host/browser/feature-controls.json"
+        },
+        "reported_part_1": {
+          "passed": 4,
+          "errors": [],
+          "evidence": "build/Example-Collection/curved-draft-part1-webkit-2026-11-05/host/browser/face-finish-feedback.json"
+        }
+      }
+    },
+    "modeling": {
+      "passed": 17,
+      "server_geometry_requests": 0,
+      "evidence": "build/Example-Collection/curved-draft-modeling-ready-2026-11-05/host/browser/log.json",
+      "initial_attempt": "Test clicked Sketch after a fixed 2.5-second startup delay, before hosted document readiness. No feature authored or geometry failure. Gate now waits for native Part evaluation and network idle; all 17 workflows pass on identical product bytes.",
+      "initial_evidence": "build/Example-Collection/curved-draft-modeling-2026-11-05/host/browser"
+    },
+    "home": {
+      "standalone": "build/feature-qualification-2026-11-05/curved-draft/home-standalone/results.json",
+      "hosted": "build/Example-Collection/curved-draft-home-hosted-2026-11-05/host/browser/results.json"
+    },
+    "headless_and_regions": true,
+    "build_files": 3581,
+    "build_unchanged_during_qualification": true,
+    "logs": "build/feature-qualification-2026-11-05/curved-draft/qualification",
+    "visual_inspection": [
+      "build/Example-Collection/curved-draft-controls-chromium-2026-11-05/host/browser/extrude-curved-draft-solid.png",
+      "build/Example-Collection/curved-draft-controls-webkit-2026-11-05/host/browser/extrude-curved-draft-thin.png"
+    ]
+  },
+  "references": [
+    "https://cad.onshape.com/help/Content/PartStudio/extrude.htm",
+    "https://dev.opencascade.org/doc/refman/html/class_b_rep_offset_a_p_i___draft_angle.html"
+  ],
+  "live_user_documents_modified": false,
+  "complete_feature_parity": false,
+  "remaining_scope": [
+    "Sharp corners joining curved profile edges need native trimming support, including open Thin curved ends.",
+    "Mate connectors, implicit cylindrical direction axes and remaining starting references.",
+    "Exact partial arrangement-curve conversion, remembered creation mode and complete mode/termination matrix.",
+    "Continue the ordered Revolve, Chamfer, Fillet and remaining reference feature qualifications."
+  ]
+}

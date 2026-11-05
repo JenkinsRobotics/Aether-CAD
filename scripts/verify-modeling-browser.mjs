@@ -159,7 +159,11 @@ try {
     throw Error(await r.text()); return r.json(); }, { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Tools qualification.aethercad', data_base64: partDocumentBase64(doc) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`);
   await featureRow(/Default geometry/).waitFor({ timeout: 90000 });
-  await page.waitForTimeout(2500);
+  // The default tree exists before the hosted Part finishes opening. Wait for
+  // its native evaluation, not a fixed delay that races a cold worker startup.
+  await expect.poll(() => page.evaluate(() => window.__cadModelTrace?.some(event =>
+    event.direction === 'reply' && event.type === 'part-evaluated')), { timeout: 90000 }).toBe(true);
+  await page.waitForLoadState('networkidle');
   await step('sketch-rectangle-on-top-plane', async () => {
     await newSketchOn('Top Plane');
     // Off the origin so the same profile can be revolved later.

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { verifySurfaceAdd } from './browser/surface-add-workflow.mjs';
 import { verifyObliqueDraft } from './browser/oblique-draft-workflow.mjs';
+import { verifyCurvedDraft } from './browser/curved-draft-workflow.mjs';
 import { verifyExtrudeProfileFocus } from './browser/extrude-profile-focus.mjs';
 import { verifyExtrudeModeRemoval, verifyConnectedProfileModes } from './browser/extrude-mode-selection.mjs';
 import { verifyExtrudeDirection } from './browser/extrude-direction-workflow.mjs';
@@ -272,6 +273,7 @@ try {
   await dialog().locator('[data-feature-action="discard"]').click();
   results.push('Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen');
   await verifyObliqueDraft({ page, expect, dialog, row, open, stored, accept, base, sketch, evidence, results });
+  await verifyCurvedDraft({ page, expect, dialog, row, open, stored, accept, base, evidence, results });
 
   const stopped = base('Native drafted stopping controls');
   stopped.features = [

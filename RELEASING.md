@@ -83,9 +83,15 @@ Package-manager versions and the shared UI dependency version are separate.
    `test_native_thin_draft.py` agent cases and both browser control gates. Check
    native wall angles against the pull direction, analytic volumes, the neutral
    sketch plane, starting offsets, independent ends, exact stopping limits and
-   shared draft/thickness control positions. Straight-edged profiles are currently
-   supported; curved oblique draft remains an explicit gap, not a sheared-loft
-   approximation. Normal-direction curved drafts retain their existing behavior.
+   shared draft/thickness control positions. Smooth closed curved boundaries also
+   require `extrusion-curved-draft.test.ts` and `extrude-curved-draft.test.ts`:
+   native validity, independent support-function volumes, neutral boundaries,
+   inner-wall winding, exact native wall angles, tilted stopping planes and
+   explicit-target booleans. Both browser gates exercise curved Solid and Thin
+   drafts, shared controls, failed-preview removal and saved reopen. Curved walls
+   use checked native B-spline surfaces, not a shear of normal-direction draft.
+   Sharp corners joining curved edges remain an explicit trimming gap.
+   Normal-direction curved drafts retain their existing behavior.
    Extrude selection changes also require both feature-control browser gates to
    switch between profile and stopping-reference fields, remove/reselect native
    faces and parts during history previews, and preserve saved limits. Re-run

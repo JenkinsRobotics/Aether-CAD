@@ -1,3 +1,4 @@
+import { curvedDraftPrism, hasCurvedDraftBoundary } from './extrusion-curved-draft';
 import { extrusionProfileGroups } from './extrusion-profile-groups';
 import { resolveExtrusionDirection } from './extrusion-direction';
 import { mergeSurfaceExtrusion, mergeConnectedSurfaceExtrusion } from './surface-extrusion-merge';
@@ -3208,6 +3209,7 @@ export function evaluatePartDocument(
               }
               const drafted = Boolean(primary.draft || second?.draft);
               const oblique = Math.abs(dot(direction, n)) < 1 - 1e-7;
+              const curvedDraft = oblique && drafted && Boolean(shape.sections && hasCurvedDraftBoundary(shape.sections()));
               if (drafted && !shape.sections) throw new UnsupportedFeature(feature.id, "drafted thin extrusions");
               if (drafted && feature.id === previewId && !previewHandles.some(handle => handle.parameter === "draftAngle" || handle.parameter === "secondDraftAngle")) {
                 const section = shape.sections!()[0];
@@ -3235,6 +3237,7 @@ export function evaluatePartDocument(
               // the other way), and the solid is the ruled loft between the end sections.
               const draftedPrism = (low: number, high: number, dir: V3, angle: number): Shape3D => {
                 if (!(high - low > 0)) throw new Error("Extrusion depths must be finite and positive.");
+                if (curvedDraft) return own(curvedDraftPrism(shape.sections!(), dir, n, low, high, angle));
                 if (oblique) return own(draftStoppedExtrusion(prism(low, high, dir), dir, o, n, angle));
                 const slope = Math.tan(angle * Math.PI / 180);
                 const collapse = "Draft collapses or intersects the profile. Reduce the angle, depth or starting offset.";
@@ -3313,6 +3316,9 @@ export function evaluatePartDocument(
               // Up to face: a planar stop. Parallel to the sketch it is a plain prism;
               // tilted, the prism is kept on the near side of the plane.
               const toFace = (dir: V3, start: number, end: End): Shape3D => {
+                const facePrism = (low: number, high: number, pull: V3, construction = false) =>
+                  curvedDraft && end.draft ? (construction ? stoppingTool(low, high, pull, end.draft).tool
+                    : draftedPrism(low, high, pull, end.draft)) : prism(low, high, pull);
                 const ref = end.face;
                 if (!ref) throw new Error("Up to face needs an available stopping face.");
                 if (ref.surfaceType) {
@@ -3329,13 +3335,13 @@ export function evaluatePartDocument(
                     // untrimmed surface, the side holding a start vertex is kept.
                     const f = extendedKernel();
                     if (!f) { stopFace.delete(); throw new UnsupportedFeature(feature.id, `${ref.surfaceType} stopping faces`); }
-                    const probe = prism(start, start + 1, dir);
+                    const probe = facePrism(start, start + 1, dir);
                     const starts = capFaces(probe, axisOf(dir).axis, -1);
                     if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); stopFace.delete(); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
                     const startCap = starts[0], startArea = measureArea(startCap), tolerance = Math.max(1e-9, startArea * 1e-9);
                     const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, startCenter = [...deleteAfterVectorTuple(startCap.center)] as V3;
                     const span = Math.max(1, norm(sub(stopCenter, startCenter)) + diagonalOfShape(stopFace) + diagonalOf(probe) + Math.abs(end.endOffset));
-                    const tool = prism(start, start + 4 * span, dir), ends = capFaces(tool, axisOf(dir).axis, 1);
+                    const tool = facePrism(start, start + 4 * span, dir, true), ends = capFaces(tool, axisOf(dir).axis, 1);
                     const surfaceContact = end.endOffset ? own(stopFace.clone().translate(-dir[0] * end.endOffset, -dir[1] * end.endOffset, -dir[2] * end.endOffset)) : stopFace;
                     const faceX = toExtended(stopFace), toolX = toExtended(tool);
                     const handle = f.BRep_Tool.Surface_2(f.TopoDS.Face_1(faceX));
@@ -3399,7 +3405,7 @@ export function evaluatePartDocument(
                   adaptor.delete();
                   const stopCenter = [...deleteAfterVectorTuple(stopFace.center)] as V3, stopDiagonal = diagonalOfShape(stopFace);
                   stopFace.delete();
-                  const probe = prism(start, start + 1, dir);
+                  const probe = facePrism(start, start + 1, dir);
                   const startDiagonal = diagonalOf(probe), epsilon = Math.max(1e-6, startDiagonal * 1e-9);
                   const starts = capFaces(probe, axisOf(dir).axis, -1);
                   if (starts.length !== 1) { starts.forEach((cap) => cap.delete()); throw new UnsupportedFeature(feature.id, "curved stops of several regions"); }
@@ -3426,7 +3432,7 @@ export function evaluatePartDocument(
                   const { axis, alignment, origin } = axisOf(dir);
                   const high = (farthestAlong([half], axis) - origin) / alignment + 1;
                   if (!(high > start + epsilon)) { startCap.delete(); throw new Error("The stopping surface lies behind the extrusion start. Flip direction or adjust its offset."); }
-                  const tool = prism(start, high, dir), ends = capFaces(tool, axisOf(dir).axis, 1);
+                  const tool = facePrism(start, high, dir, true), ends = capFaces(tool, axisOf(dir).axis, 1);
                   try {
                     const remainder = own(tool.intersect(half));
                     const pieces = solidsOf(remainder);
@@ -3455,13 +3461,13 @@ export function evaluatePartDocument(
                 if (norm(cross(normal, n)) < 1e-10) {
                   const end = dot(normal, sub(planePoint, o)) / alignment;
                   if (end <= start + 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-                  return prism(start, end, dir);
+                  return facePrism(start, end, dir);
                 }
-                const probe = prism(start, start + 1, dir);
+                const probe = facePrism(start, start + 1, dir);
                 let maximum = -Infinity;
                 for (const corner of corners(probe.boundingBox.bounds)) maximum = Math.max(maximum, dot(normal, sub(planePoint, corner)) / alignment);
                 if (!Number.isFinite(maximum) || maximum <= 1e-7) throw new Error("The stopping plane leaves no extrusion beyond its start.");
-                const full = prism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir);
+                const full = facePrism(start, start + maximum + Math.max(1, diagonalOf(probe) * 0.01), dir, true);
                 let span = 1; for (const corner of corners(full.boundingBox.bounds)) span = Math.max(span, norm(sub(corner, planePoint)) + 1);
                 const half = halfSpace(planePoint, alignment > 0 ? neg(normal) : normal, span, own);
                 // Nothing of the starting profile may lie behind the plane.
@@ -3475,6 +3481,12 @@ export function evaluatePartDocument(
                 const valid = after.length === before.length && after.every((solid) => measureVolume(solid) > 1e-9);
                 before.forEach(release); after.forEach(release);
                 if (!valid) throw new Error("The selected plane does not produce a valid complete extrusion.");
+                if (curvedDraft && end.draft) {
+                  const ends = capFaces(full, axisOf(dir).axis, 1);
+                  try { if (ends.some(cap => commonArea(cap, tool) > Math.max(1e-10, measureArea(cap) * 1e-8)))
+                    throw Error('The stopping plane does not fully terminate the curved draft before its construction limit.'); }
+                  finally { ends.forEach(cap => cap.delete()); }
+                }
                 return tool;
               };
               // Up to next (FreeCAD's rule): every boundary patch the ray meets casts
@@ -3601,7 +3613,7 @@ export function evaluatePartDocument(
                 else if (side.end.endType === "up-to-next") stopped = toNext(side.dir, side.start, side.end);
                 else if (side.end.endType === "up-to-part") stopped = toPart(side.dir, side.start, side.end);
                 else throw new Error("Unknown extrusion end type.");
-                if (!side.end.draft || side.end.endType !== 'up-to-face') { tools.push(stopped); continue; }
+                if (!side.end.draft || side.end.endType !== 'up-to-face' || curvedDraft) { tools.push(stopped); continue; }
                 tools.push(own(draftStoppedExtrusion(stopped, side.dir, o, n, side.end.draft)));
               }
               if (intervals) tools.push(prism(low, high, direction));

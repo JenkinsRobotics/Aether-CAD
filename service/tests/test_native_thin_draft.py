@@ -11,12 +11,16 @@ from test_native_program import empty, invoke
 
 @native
 @pytest.mark.parametrize("thin", [False, True])
-def test_agent_oblique_planar_draft_edits_and_reopens(tmp_path, thin):
+@pytest.mark.parametrize("curved", [False, True])
+def test_agent_oblique_draft_edits_and_reopens(tmp_path, thin, curved):
+    contour = {"id": "outline", "type": "circle", "center": [0, 0], "radius": 10} if curved else {
+        "id": "outline", "type": "path", "start": [0, 0],
+        "segments": [{"type": "line", "end": p} for p in [[20, 0], [20, 10], [0, 10], [0, 0]]],
+    }
     authored = run(tmp_path, empty(), [
         {"id": "sketch", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
             "type": "profile", "name": "Draft sketch", "plane": "XY", "offsetMillimeters": 0,
-            "profile": {"type": "drawing", "contours": [{"id": "outline", "type": "path", "start": [0, 0],
-                "segments": [{"type": "line", "end": p} for p in [[20, 0], [20, 10], [0, 10], [0, 0]]]}]},
+            "profile": {"type": "drawing", "contours": [contour]},
         }}},
         {"id": "draft", "tool": "aether_cad_feature_add", "arguments": {"feature_json": {
             "type": "extrude", "name": "Angled draft", "profileFeatureId": {"$ref": "sketch.feature_id"},
@@ -34,19 +38,25 @@ def test_agent_oblique_planar_draft_edits_and_reopens(tmp_path, thin):
 
     def expected(angle):
         def section(z):
+            if curved:
+                return circle_integral(12, z, angle) - circle_integral(9, z, -angle) if thin else circle_integral(10, z, angle)
             return integral(z, angle, 24, 14) - integral(z, -angle, 18, 8) if thin else integral(z, angle)
         return section(9.6) - section(1.6)
 
-    assert volume(authored) == pytest.approx(expected(3), abs=1e-5)
+    # Native B-spline integration and the 1e-7 mm fitting budget use the same
+    # 5e-5 mm^3 bound as the independent engine volume gate. Planar tolerance
+    # remains unchanged; wall-angle and position tolerances are tested directly.
+    volume_tolerance = 5e-5 if curved else 1e-5
+    assert volume(authored) == pytest.approx(expected(3), abs=volume_tolerance)
     feature_id = authored["result"]["references"]["draft"]["feature_id"]
     edited = run(tmp_path, authored["content"], [
         {"id": "resize", "tool": "aether_cad_feature_update", "arguments": {
             "feature_id": feature_id, "changes_json": '{"draftAngleDegrees":-3}',
         }},
     ])
-    assert volume(edited) == pytest.approx(expected(-3), abs=1e-5)
+    assert volume(edited) == pytest.approx(expected(-3), abs=volume_tolerance)
     reopened = invoke(tmp_path, "cad.part.verify", edited["content"], {})
-    assert reopened["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=1e-5)
+    assert reopened["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=volume_tolerance)
     failed = invoke(tmp_path, "cad.part.runprogram", edited["content"], {"program_json": json.dumps({"version": 1, "steps": [
         {"id": "collapse", "tool": "aether_cad_feature_update", "arguments": {
             "feature_id": feature_id, "changes_json": '{"draftAngleDegrees":40,"distanceMillimeters":100}',
@@ -54,7 +64,24 @@ def test_agent_oblique_planar_draft_edits_and_reopens(tmp_path, thin):
     ]})})
     assert "error" in failed and "content" not in failed, failed
     unchanged = invoke(tmp_path, "cad.part.verify", edited["content"], {})
-    assert unchanged["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=1e-5)
+    assert unchanged["result"]["measurements"][0]["volume_mm3"] == pytest.approx(expected(-3), abs=volume_tolerance)
+
+
+def circle_integral(radius, height, angle):
+    """Independent tangent-support area integral, not kernel surface fitting."""
+    sine = math.sin(math.radians(angle))
+    denominator = .8**2 - sine**2
+    step = 2 * math.pi / 4096
+    integral_k = integral_q = 0
+    for i in range(4096):
+        phi = i * step
+        q = .6 * math.cos(phi)
+        root = math.sqrt(.8**2 + q*q - sine*sine)
+        k = (-q * .8 + sine * root) / denominator
+        derivative = (-.8 + sine * q / root) * (-.6 * math.sin(phi)) / denominator
+        integral_k += k * step
+        integral_q += (k*k - derivative*derivative) * step
+    return math.pi * radius**2 * height - radius * height**2 / 2 * integral_k + height**3 / 6 * integral_q
 
 
 @native

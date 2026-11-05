@@ -148,12 +148,9 @@ it('preserves a concave profile through rebuild, reopen and reversed travel', ()
   expect(volume(doc)).toBeCloseTo(expected, 5);
 });
 
-it('rejects a collapsed or unavailable curved draft without substituting geometry or changing history', () => {
+it('rejects a collapsed draft without substituting geometry or changing history', () => {
   const collapsed = fixture({ draftAngleDegrees: 40, distanceMillimeters: 100 });
   const before = serializePartDocument(collapsed);
   expect(() => volume(collapsed)).toThrow(/draft|collaps|solid/i);
   expect(serializePartDocument(collapsed)).toBe(before);
-  const curved = fixture();
-  curved.features[0] = { ...curved.features[0], profile: { type: 'circle', radiusMillimeters: 10, centerMillimeters: [0, 0] } } as PartFeature;
-  expect(() => volume(curved)).toThrow(/straight profile edges/);
 });

@@ -211,8 +211,29 @@ migrated by CAD on read; no live documents are rewritten by installation.
 Qualification and installation status are recorded in
 [direction-reference evidence](../reality/data/Extrude_Direction_References_2026_11_05.json).
 This does not complete Extrude parity: mate connectors, implicit cylindrical axes,
-remaining starting/ending references, curved oblique Draft, partial arrangement
+remaining starting/ending references, sharp curved Draft corners, partial arrangement
 curve conversion, remembered creation mode and the full termination matrix remain.
+
+## Extrude curved oblique Draft — 2026-11-05
+
+Angled Draft now constructs native walls for smooth closed circular, elliptical,
+and tangent-continuous curved boundaries, including circular Thin walls. The
+sketch remains the neutral plane. Each wall normal satisfies the requested draft
+angle relative to the pull direction; a sheared normal-direction taper does not.
+Native B-spline patches must meet 1e-7 mm boundary position and 1e-8 normal-dot
+checks. End caps retain the inner-wire winding, and native validity rejects
+collapsed or intersecting walls. Sharp corners joining curved edges still need
+trimming support and are explicitly refused.
+
+The existing shared draft orbit and thickness handles control this geometry;
+UI and agent edits retain the same canonical Extrude history. Checks include
+independent tangent-support volume integrals, both taper signs, reversed travel,
+shifted starts, symmetric and independently drafted opposite ends, tilted stops,
+explicit-target Boolean operations, saved reopen and invalid-edit preservation.
+No document fields, format version or codec contract change in this correction.
+The qualification and local installation record is
+[curved Draft evidence](../reality/data/Extrude_Curved_Draft_2026_11_05.json).
+Complete Extrude and Onshape parity remain open.
 
 ## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
@@ -349,7 +370,7 @@ and Enter followed by blur commits only once.
 
 | Feature | Verified interaction change | Remaining qualification scope |
 | --- | --- | --- |
-| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. End-on handles are qualified above. Independent New Surface outputs are qualified above. Connected Surface Add groups are qualified above. Planar oblique draft is covered by the continuation above; curved oblique draft, remaining stopping-limit combinations and complete reference-control coverage remain open. |
+| Extrude | Native handles use the resolved direction and starting offset; both symmetric ends share total depth; independent second ends keep their own value. Stop-bound ends do not show a depth control that has no effect. Starting offset uses the shared value control. Oblique extrusion and explicit-unit secondary-depth edits survive saved reopen. Native Thin plus Draft now has analytic coverage, compact shared draft rings and wall-thickness handles. | Surface integration qualified in alpha-0.1.107; multiple-source Solid/Thin/Surface selection and stable Solid/Thin outputs now qualified. End-on handles are qualified above. Independent New Surface outputs are qualified above. Connected Surface Add groups are qualified above. Planar and smooth closed curved oblique drafts are covered above; sharp curved corners, remaining stopping-limit combinations and complete reference-control coverage remain open. |
 | Revolve | Orbit ribbon follows the actual angle. Angular keyboard edits produce a valid native preview; cancel restores the document. Shared readout accepts complete unit expressions. | Every extent/axis/Thin combination and remaining offset controls. |
 | Chamfer | A native quarter-revolved stepped shaft's circular shoulder can be selected, changed with the shared size handle, applied, reselected while editing earlier history, and saved with the exact curved-edge reference. | Second-distance and angle handles, all direction/measurement combinations and general geometry coverage. |
 | Fillet | The same shoulder fixture passes selection, radius manipulation, native preview, apply, history reselection and save. | Partial/asymmetric/conic/curvature controls, shared controls for variable-radius points, overflow/corners, and general full-round geometry remain incomplete. |
@@ -388,7 +409,7 @@ feature before granting release-ready status to Revolve, Chamfer or Fillet.
 | Sketch regions and planar faces | Shared native profile and planar-face selection | Multiple-source and ambiguous/upstream-changed references must be checked explicitly. |
 | Blind / Symmetric / Second end | Native extents with correct shared primary/opposite handles, including resolved oblique direction and starting offset | Remaining combinations with Thin, Draft and selected scopes. |
 | Up to next / face / part / vertex / Through all | Native stopping operations and validation; drafted planar, tilted and spherical limits covered below | Complete selection/geometry matrix, including other curved limits; shared end-offset handles are implemented. |
-| Direction | Sketch normal, sketch-line reference and manual unit vector | Additional axis/mate-connector selection parity; curved oblique draft remains open, while straight-edged oblique draft is covered above. |
+| Direction | Sketch normal, sketch-line reference and manual unit vector | Native straight edges and construction axes are covered above; mate connectors, implicit cylinder axes and sharp curved Draft corners remain open. |
 | Starting offset / entity | Blind signed offset or parallel principal/feature/face reference; shared linear offset handle | Complete reference changes, reverse/second-end combinations and interactive cancellation coverage. |
 | Draft / opposite draft | Native taper for solid regions and closed/open thin walls; shared compact angle rings, separate end angles and fine keyboard adjustment; drafted stopping cases below | Curved oblique draft and remaining complex contour/curved stop combinations. |
 | Thin thickness 1/2, Mid plane, Flip wall | Native closed/open curve walls with shared thickness arrows, including mid-plane scaling, zero thickness on one side and reversal | Complex contour/termination coverage and the remaining draft combinations. |
@@ -653,7 +674,7 @@ Both live in surface.ts today; move each to its own file.
 | Direction (axis or mate connector) | World axes, normalized vector, persistent sketch line, native straight edge and construction Axis feature; shared field and native handles | Partial: mate connectors and implicit cylindrical axes remain open; native reference qualification is recorded above |
 | Starting offset: Blind distance / Entity (part, face, mate connector), Symmetric, flip | Starting offset sub-setting: Start type Blind / Entity: face / Entity: plane with the Offset and flip | Partial: part and mate connector entities open |
 | Symmetric (Blind, Through all) | Symmetric | Done |
-| Draft angle + flip | Native normal-direction draft and qualified angled planar-wall draft | Partial: curved oblique Draft remains open |
+| Draft angle + flip | Native normal-direction draft; angled planar and smooth closed curved walls use the same shared controls | Partial: sharp corners joining curved edges still need trimming support |
 | Second end position: own end type, depth, draft | Same | Done |
 | Merge scope / Merge with all | Merge scope mode + parts | Done |
 | Thin: Mid plane, Thickness 1 / 2, flip | Thin options | Done |
