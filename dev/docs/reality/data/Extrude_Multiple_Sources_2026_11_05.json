@@ -1,7 +1,7 @@
 {
   "date": "2026-11-05",
   "base_release": "alpha-0.1.107",
-  "status": "qualified; awaiting local activation",
+  "status": "qualified and active locally",
   "scope": [
     "One native Extrude from regions or curves in multiple earlier sketches",
     "Shared direction, per-source planes and start/end resolution across Solid, Thin and Surface",
@@ -77,5 +77,20 @@
     "Full UI and agent conversion coverage between Solid, Thin and Surface",
     "Shared linear handle is hidden when the axis projects to a point; qualify or implement an end-on interaction",
     "Remaining Revolve, Chamfer, Fillet and the complete requested reference-feature set"
-  ]
+  ],
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.108",
+    "source": {
+      "branch": "alpha-0.1",
+      "commit": "8fe429b8af31df6c1b0196a7352189639ed220e2"
+    },
+    "sha256": "1165f6caf40ecc67fb23bde46769c3f20674bd0c978b44f6be03aea88dc640dd",
+    "verified_files": 3576,
+    "active": true,
+    "contract_change": true,
+    "worker_runner_sha256": "53b659c741ddd9132fd332d7f7cad93734e5670ef15506ee04aa7d72e5de0eb2"
+  },
+  "origin": "https://aetherstudio.local:8780",
+  "other_apps_unchanged": true
 }

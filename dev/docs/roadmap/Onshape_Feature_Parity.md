@@ -37,7 +37,7 @@ byte-identical across repeated operations and checks analytic output volumes.
 This repairs the demonstrated mutation; the earlier Hole failure's causal link
 is not claimed without a deterministic reproduction.
 
-## Multiple-source Extrude — 2026-11-05, qualified
+## Multiple-source Extrude — 2026-11-05, alpha-0.1.108
 
 The picker already retained multiple sketch sources; native evaluation previously
 refused them. One Extrude now builds each source in its evaluated plane with a
