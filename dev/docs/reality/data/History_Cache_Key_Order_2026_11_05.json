@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-05",
+  "problem": "Equivalent feature objects received from save/container round trips changed JSON property order, invalidating every subsequent history cache key.",
+  "change": "Sort object keys recursively for feature history keys; preserve array ordering and feature values. No document format change. Persisted cache entries with previous keys are safely ignored.",
+  "demonstrated_regression": {
+    "before": "Equivalent thirteen-feature document rebuilt all 13 features",
+    "after": "Equivalent document rebuilds 0 features; editing only Hole depth rebuilds 1",
+    "geometry": "Hole removes pi * 2^2 * depth mm3, before and after previews, snapshot restoration and fresh parsing",
+    "native_inputs": "Upstream B-rep bytes remain identical across Hole depth previews"
+  },
+  "intermittent_failure": {
+    "observed": "A later Revolve preview re-evaluated unchanged Hole history. Hole start [30,6,0], direction [0,0,-1], diameter 4 mm and depth 6 mm stayed unchanged, but incoming volume was 22976.377887512022 mm3 instead of 105045.29976057349 mm3.",
+    "captured_evidence": "build/Example-Collection/hole-failure-only-b/host/browser",
+    "limitation": "The unwanted full-history rebuild trigger is fixed. The underlying intermittent native geometry divergence has not been independently isolated; this is not a claim that every native rebuild error is eliminated.",
+    "diagnostic_runs": "Fresh and incremental captured-request replays, GC/serialization checks, twenty fresh/cache-restore cycles and several instrumented browser workflows succeeded. Temporary instrumentation removed."
+  },
+  "validation": {
+    "targeted": "4 tests passed: Hole geometry/key order and exact robot replay/snapshot",
+    "build": "passed",
+    "engine": {
+      "passed": 1458
+    },
+    "frontend": {
+      "passed": 2230,
+      "skipped": 1
+    },
+    "native_service": {
+      "passed": 352
+    },
+    "browser_modeling": {
+      "steps": 17,
+      "errors": [],
+      "server_geometry_requests": 0,
+      "hole_preview_replayed": 1,
+      "evidence": "build/Example-Collection/history-cache-final-modeling/host/browser"
+    },
+    "controls": {
+      "chromium": {
+        "passed": 25,
+        "errors": [],
+        "evidence": "build/Example-Collection/history-cache-controls-chromium/host/browser/feature-controls.json"
+      },
+      "webkit": {
+        "passed": 25,
+        "errors": [],
+        "evidence": "build/Example-Collection/history-cache-controls-webkit/host/browser/feature-controls.json"
+      }
+    },
+    "home": {
+      "hosted": "passed",
+      "standalone": "passed"
+    },
+    "typecheck": "passed",
+    "headless": "exact build, bounds, lazy kernel retry, analysis, STEP export and isolated packaged runner passed",
+    "sketch_regions": "saved agent region/frame qualification passed",
+    "layout": {
+      "chromium": 17,
+      "webkit": 17,
+      "variants": [
+        "standard",
+        "compact"
+      ]
+    }
+  },
+  "release": {
+    "status": "qualified; awaiting immutable staging"
+  }
+}

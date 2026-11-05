@@ -1,4 +1,5 @@
 import { curvedDraftPrism, hasCurvedDraftBoundary } from './extrusion-curved-draft';
+import { featureKeyJSON } from './history-key';
 import { extrusionProfileGroups } from './extrusion-profile-groups';
 import { resolveExtrusionDirection } from './extrusion-direction';
 import { mergeSurfaceExtrusion, mergeConnectedSurfaceExtrusion } from './surface-extrusion-merge';
@@ -549,7 +550,7 @@ export function cachedSteps(documentId: string): number { return steps.get(docum
 /** Each history step's key: its feature and every feature before it. */
 function historyKeys(document: PartDocument): string[] {
   const keys: string[] = [];
-  document.features.slice(0, rollbackPosition(document)).reduce((previous, feature) => { const key = hashKey(previous + JSON.stringify(feature)); keys.push(key); return key; }, "");
+  document.features.slice(0, rollbackPosition(document)).reduce((previous, feature) => { const key = hashKey(previous + featureKeyJSON(feature)); keys.push(key); return key; }, "");
   return keys;
 }
 

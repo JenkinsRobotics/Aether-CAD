@@ -19,6 +19,17 @@ these live CAD editors. This does not close kernel parity rows: Body Draft,
 rolling-ball Face Blend and the disabled advanced controls remain open. Evidence:
 `../reality/data/Feature_Layout_First_Pass_2026_11_05.json`.
 
+The follow-up isolated an unnecessary rebuild trigger: history cache keys used
+object insertion order, so equivalent feature JSON from saving/reopening replayed
+all thirteen steps. Keys now sort object properties recursively while preserving
+array order. Equivalent history replays zero steps; editing Hole depth replays
+one, with exact volume and unchanged upstream B-rep assertions. The browser gate
+also requires its new Hole preview to replay only one feature. A captured failing
+run had unchanged Hole inputs but a different upstream solid volume. Eliminating
+the redundant rebuild trigger does not independently explain that native geometry
+divergence. Evidence and remaining limitation:
+`../reality/data/History_Cache_Key_Order_2026_11_05.json`.
+
 CAD alpha-0.1.105 fixes both removal paths reported on the user's Chamfer:
 clicking the selected native face again toggles its exact reference, and its
 entity-row × removes that reference without a pointerdown refresh replacing

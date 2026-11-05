@@ -38901,6 +38901,14 @@ function fitWall(sample, low, high, direction2, sine) {
   }
   return null;
 }
+function featureKeyJSON(feature3) {
+  return JSON.stringify(feature3, (_key, value2) => {
+    if (value2 && typeof value2 === "object" && !Array.isArray(value2)) {
+      return Object.fromEntries(Object.keys(value2).sort().map((key2) => [key2, value2[key2]]));
+    }
+    return value2;
+  });
+}
 function extrusionProfileGroups(feature3) {
   if (!feature3.profileSelections?.length) return [feature3];
   const groups = /* @__PURE__ */ new Map();
@@ -41984,7 +41992,7 @@ function dropSteps(list2, from) {
 function historyKeys(document2) {
   const keys3 = [];
   document2.features.slice(0, rollbackPosition(document2)).reduce((previous, feature3) => {
-    const key2 = hashKey(previous + JSON.stringify(feature3));
+    const key2 = hashKey(previous + featureKeyJSON(feature3));
     keys3.push(key2);
     return key2;
   }, "");

@@ -39,7 +39,7 @@ await page.addInitScript(() => {
       });
     }
     postMessage(request, ...args) {
-      if (request?.type === 'evaluate-part') trace.push({ worker: this.traceId, direction: 'request', ...JSON.parse(JSON.stringify(request)) });
+      if (request?.document) trace.push({ worker: this.traceId, direction: 'request', ...JSON.parse(JSON.stringify(request)) });
       return super.postMessage(request, ...args);
     }
   };
@@ -353,6 +353,15 @@ try {
     await setInput('Diameter (mm)', 4);
     await setInput('Depth (mm)', 6);
     await applyDialog('hole');
+    // Save/container round trips reorder JSON keys. The unchanged twelve-step
+    // prefix must stay cached when the new Hole preview is evaluated.
+    const holePreviewReplay = await page.evaluate(() => {
+      const trace = window.__cadModelTrace;
+      const request = [...trace].reverse().find(item => item.direction === 'request' &&
+        item.type === 'evaluate-part' && item.options?.preview && item.document.features.at(-1)?.type === 'hole');
+      return trace.find(item => item.direction === 'reply' && item.worker === request?.worker && item.requestId === request?.requestId)?.replayed;
+    });
+    assert.equal(holePreviewReplay, 1, 'Hole preview must rebuild only the new feature after save/reopen serialization');
     await expect(featureRow(/^Hole/)).toBeVisible();
     await saveFixture('with-hole.part.json', 13);
   });
@@ -449,5 +458,6 @@ catch (error) {
   throw error;
 }
 finally {
+  await writeFile(join(evidence, 'native-trace.json'), JSON.stringify(await page.evaluate(() => window.__cadModelTrace).catch(() => []), null, 2));
   await browser.close();
 }

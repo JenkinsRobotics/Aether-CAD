@@ -94,5 +94,14 @@
   ],
   "installation": {
     "status": "activation held for broad modeling gate; installed alpha-0.1.117 unchanged"
+  },
+  "continuation": {
+    "evidence": "History_Cache_Key_Order_2026_11_05.json",
+    "change": "Canonical feature history keys prevent redundant full-history rebuild after JSON property reordering. Final modeling workflow passes with the new Hole alone replayed. Deeper intermittent native divergence remains tracked.",
+    "final_controls": {
+      "chromium": 25,
+      "webkit": 25,
+      "errors": []
+    }
   }
 }
