@@ -95,6 +95,15 @@
     "instances": 20,
     "features": 59,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 20,
+        "mates": 19,
+        "movable": true
+      }
+    ],
     "tags": [
       "Loft",
       "Sweep",
@@ -104,7 +113,7 @@
       "Chamfer"
     ],
     "motion": "Revolute propeller and landing wheels. The spinner and blades rotate together; the fuselage is grounded.",
-    "sha256": "1e879323939dd94a9e145050d9b02aec04fd56bd2a21b02ffd5ff0e748caf595"
+    "sha256": "455c7e775701004cda85d46927cfb0fc2d6bf24f769832782b75acb3c82f603f"
   },
   {
     "id": "wrench",
@@ -116,6 +125,15 @@
     "instances": 11,
     "features": 41,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 11,
+        "mates": 10,
+        "movable": true
+      }
+    ],
     "tags": [
       "Extrude",
       "Pocket",
@@ -124,7 +142,7 @@
       "Chamfer"
     ],
     "motion": "Grounded frame, sliding jaw and rotating adjustment roller. Demonstrate 0–10 mm jaw travel; roller and jaw are independent.",
-    "sha256": "6d100fde560a126a496a3306924732329266c50263e54fc6525ef447df2db306"
+    "sha256": "c6dfa016e4d0e7a5962e814016f3a2173feab2156178b89a59baccd5c2167792"
   },
   {
     "id": "roadster",
@@ -158,6 +176,15 @@
     "instances": 21,
     "features": 52,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 21,
+        "mates": 20,
+        "movable": false
+      }
+    ],
     "tags": [
       "Extrude",
       "Pocket",
@@ -166,7 +193,7 @@
       "Fillet",
       "Chamfer"
     ],
-    "sha256": "d58ec695f1e9e2a5cb33ef626c91e0e320c62ab83cf76d48284a6c5a91bbe221"
+    "sha256": "cacb1d7728d7d4f76be61ee247fbadc9a82e0780f333e325e02716bd094b9932"
   },
   {
     "id": "space-shuttle",
@@ -309,6 +336,15 @@
     "instances": 2,
     "features": 15,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 2,
+        "mates": 1,
+        "movable": false
+      }
+    ],
     "tags": [
       "Extrude",
       "Shell",
@@ -319,7 +355,7 @@
       "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/demo/enclosure_steps.json",
       "comparison": "reference-enclosure-comparison.json"
     },
-    "sha256": "162d0fb418b906ea0acdaf67d9d02e681cb1460f5281b8fe0a6b9671876e8ee1"
+    "sha256": "00ffdc34afe3a4c756e2e918ed3bd5dd36985a3a08a45ed72589db766bf9d136"
   },
   {
     "id": "reference-studio",

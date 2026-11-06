@@ -245,3 +245,10 @@ through the disposable host on Chromium and with `AETHER_THUMBNAIL_BROWSER=webki
 All native robot Parts must have nonblank previews before opening any Part, retain
 their images through navigation/reload, and leave the main viewport rendered.
 Previewing must not save documents or fetch the container once per thumbnail.
+
+Assembly history playback changes also require
+`scripts/verify-assembly-history-browser.mjs` through the disposable browser host
+in Chromium and with `AETHER_HISTORY_BROWSER=webkit`. The gate must finish all
+224 native Scifirobot source features, preserve solved placements, scroll the
+active history row into view, restore the original scene on Stop/Escape, and
+perform no document writes. Run the existing Part playback gate on both browsers.

@@ -55,3 +55,15 @@ it('frames the changed material without distant hidden reference parts',()=>{
  layer.setVisibility(()=>true);expect(visiblePreviewBounds([layer.group]).max.x).toBe(1001);
  layer.set(null);
 });
+
+it('retains unchanged history occurrence buffers and disposes only changed or removed bodies',()=>{
+ const layer=new FeaturePreviewLayer(), first=part('first'), second=part('second');
+ layer.set({sourceName:'History',parseMilliseconds:0,parts:[first]},false);
+ const mesh=layer.group.children[0] as Mesh, disposed=vi.spyOn(mesh.geometry,'dispose');
+ layer.set({sourceName:'History',parseMilliseconds:0,parts:[{...first},second]},false);
+ expect(layer.group.children[0]).toBe(mesh);expect(disposed).not.toHaveBeenCalled();
+ layer.set({sourceName:'History',parseMilliseconds:0,parts:[second]},false);
+ expect(disposed).toHaveBeenCalledOnce();expect(layer.group.children).toHaveLength(2);
+ const last=layer.group.children[0] as Mesh, cleared=vi.spyOn(last.geometry,'dispose');
+ layer.set(null,false);expect(cleared).toHaveBeenCalledOnce();expect(layer.group.children).toHaveLength(0);
+});

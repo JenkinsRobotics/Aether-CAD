@@ -1,3 +1,6 @@
+import type { AssemblyProjectionV1 } from "./cad-assembly-bridge";
+import { assemblyPlayback } from "./history/assembly-playback";
+import type { PlaybackSequence } from "./history/playback";
 import { auxToolbarItems } from "./aux-toolbar-preferences";
 import { sourceFeatureTarget } from "./assembly/source-features";
 import { AssemblyGeometryCache } from './assembly/geometry-cache';
@@ -513,7 +516,7 @@ let draftSketch: { id: string; name: string; hasPlane: boolean; existing: boolea
 let draftFeature: { id: string; name: string; kind: string; invalid?: boolean } | null = null;
 function canPlayHistory(): boolean {
   const state=cadPresentation.snapshot();
-  return activeWorkspaceKind==='part' && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
+  return (activeWorkspaceKind==='part' || activeWorkspaceKind==='assembly') && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
     editingDocument(activePartDocument)===activePartDocument && !document.querySelector('.cad-feature-dialog,.cad-sketch-workspace,.cad-plane-window,.cad-axis-window,.cad-point-window');
 }
 // A feature window that picks sketch geometry shows every sketch while it is open, hidden ones
@@ -525,8 +528,18 @@ window.addEventListener("aether-region-mode", (event) => {
   revealHiddenSketches = next;
   updateLists(false);
 });
+let playbackProjection: AssemblyProjectionV1 | null = null;
+let playbackSequence: PlaybackSequence | null = null;
+function syncHistoryPlayback(): void {
+  const projection = activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null;
+  if (projection !== playbackProjection) {
+    playbackProjection = projection;
+    playbackSequence = projection ? assemblyPlayback(projection, doc => worker.evaluatePart(doc, { transient: true })) : null;
+  }
+  historyPlayback.sync(activeWorkspaceKind === 'part' ? activePartDocument : null, canPlayHistory(), playbackSequence);
+}
 function updateLists(notifyDocumentChange = true): void {
-  historyPlayback.sync(activePartDocument, canPlayHistory());
+  syncHistoryPlayback();
   const displayedDocument = historyPlayback.project(editingDocument(activePartDocument));
   const visibleDocument = renderableDocument(displayedDocument);
   viewer.setConstructionPlanes(visibleDocument);
@@ -1216,7 +1229,7 @@ window.addEventListener('aether-feature-preview-start', () => historyPlayback.st
 window.addEventListener('aether-sketch-editing', () => historyPlayback.stop());
 window.addEventListener('keydown', event => { if(event.key==='Escape') historyPlayback.stop(); });
 cadPresentation.subscribe(() => {
-  historyPlayback.sync(activePartDocument,canPlayHistory());
+  syncHistoryPlayback();
 });
 configureEditHistory({
   // Features that already fail in the full rebuild (and are red in the tree) must not

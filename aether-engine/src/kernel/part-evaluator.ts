@@ -1,3 +1,4 @@
+import { sectionLoft } from "./features/section-loft";
 import { curvedDraftPrism, hasCurvedDraftBoundary } from './extrusion-curved-draft';
 import { featureKeyJSON } from './history-key';
 import { extrusionProfileGroups } from './extrusion-profile-groups';
@@ -2658,7 +2659,7 @@ export function evaluatePartDocument(
               builder.Build(progress);
               lofted = cast(builder.Shape());
             } finally { builder.delete(); progress.delete(); }
-          } else lofted = loft(wires, { ruled: Boolean(feature.ruled), startPoint: apex(feature.startPoint), endPoint: apex(feature.endPoint) });
+          } else lofted = sectionLoft(wires, { ruled: Boolean(feature.ruled), startPoint: apex(feature.startPoint), endPoint: apex(feature.endPoint) });
           // Failed previews own their result too: the failure cleanup must release
           // it instead of retaining native memory until a later GC turn.
           own(lofted);

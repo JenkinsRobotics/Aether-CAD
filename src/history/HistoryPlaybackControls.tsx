@@ -8,7 +8,7 @@ export function HistoryPlaybackControls() {
   return <div className="cad-history-playback" aria-label="History playback">
     <div className="cad-history-playback-controls">
       <button type="button" disabled={!state.available} aria-label={playing?'Pause history playback':state.status==='paused'?'Resume history playback':'Play feature history'}
-        title="Watch the Part being built without changing or saving it"
+        title="Replay native feature history without changing or saving the document"
         onClick={()=>playing?historyPlayback.pause():historyPlayback.play()}>{playing?'Ⅱ':'▶'} <span>{playing?'Pause':state.status==='paused'?'Resume':'Play'}</span></button>
       <button type="button" disabled={!active} aria-label="Stop history playback" title="Stop and return to the current model" onClick={()=>historyPlayback.stop()}>■</button>
       <select aria-label="History playback speed" value={state.speed} onChange={event=>historyPlayback.setSpeed(Number(event.target.value))}>

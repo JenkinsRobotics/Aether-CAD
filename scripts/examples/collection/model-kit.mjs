@@ -319,6 +319,23 @@ export class Part {
     });
     return this;
   }
+  finishFace(name, radius, normal, type = "chamfer") {
+    // A unique oriented native face follows upstream dimensions. Ambiguous
+    // normals are rejected by the evaluator rather than selecting a neighbor.
+    this.add(name, {
+      type,
+      radiusMillimeters: radius,
+      targetBodyId: ref(this.solid, "body_id"),
+      edges: [{
+        kind: "face-edges",
+        sourceFeatureId: ref(this.solid),
+        bodyId: ref(this.solid, "body_id"),
+        label: name,
+        normal,
+      }],
+    });
+    return this;
+  }
   finish(name, r, z, type = "chamfer") {
     this.add(name, {
       type,

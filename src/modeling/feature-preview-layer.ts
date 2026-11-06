@@ -1,3 +1,4 @@
+import { samePartGeometry } from "../viewport/assembly-geometry";
 import * as THREE from "three/webgpu";
 import type { ImportedModelData, PartGeometryData } from "@aether/core/contracts";
 
@@ -7,6 +8,7 @@ export const previewColors = { added: 0x419de6, removed: 0xe34e56, base: 0xb4bbc
 export class FeaturePreviewLayer {
   readonly group = new THREE.Group();
   active = false;
+  private historyParts = new Map<string, PartGeometryData>();
   /** Keep hidden/isolate-excluded reference bodies out of the preview. Changed
    * material stays visible so the user can inspect the operation being edited. */
   setVisibility(visible:(bodyId:string)=>boolean) {
@@ -16,6 +18,29 @@ export class FeaturePreviewLayer {
     }
   }
   set(model: ImportedModelData | null, highlight = true) {
+    if (!highlight) {
+      // Completed assembly definitions keep their immutable buffers between
+      // frames. Retain their GPU objects instead of uploading them every step.
+      const next = new Map((model?.parts ?? []).map(part => [part.id, part]));
+      const retained = new Set([...next].filter(([id, part]) => {
+        const previous = this.historyParts.get(id);
+        return previous && samePartGeometry(previous, part);
+      }).map(([id]) => id));
+      for (const object of [...this.group.children]) {
+        if (retained.has(String(object.userData.previewPartId))) continue;
+        if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
+          object.geometry.dispose();
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => material.dispose());
+        }
+        this.group.remove(object);
+      }
+      this.add([...next.values()].filter(part => !retained.has(part.id)), "base", 1);
+      this.historyParts = next;
+      this.active = model !== null;
+      return;
+    }
+    this.historyParts.clear();
     this.group.traverse(object => {
       if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
         object.geometry.dispose();

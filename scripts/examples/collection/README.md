@@ -206,3 +206,21 @@ using the same endpoint anchors as a viewport pick. The live agent's `topology`
 tool pages native candidates and returns usable edge references without changing
 the document. Curved edges still require unchanged midpoint/length references;
 ambiguous moved straight edges remain an explicit limitation.
+
+## Whole-history repairs and assembly replay
+
+The reference enclosure opens its native top face for Shell instead of a fixed
+coordinate plane. The airplane tail, phone glass/lens and wrench use native
+face-edge selections for their finishing features; the wrench jaw is finished
+before adding its lower guide. Original solid volumes are checked against the
+previous archives, and the full downstream history is rebuilt after each trial.
+
+Assembly History playback traverses the embedded Part histories in the same
+order as the history panel. Every occurrence retains its solved placement;
+completed definitions share immutable geometry. Pause, Resume, Stop and Escape
+operate on temporary previews without saving, editing the source Parts or adding
+undo entries. This is source-feature replay, not assembly mate-authoring replay.
+Run `scripts/verify-assembly-history-browser.mjs` through the isolated host on
+Chromium and WebKit; it replays all 224 Scifirobot features and checks visible
+geometry, restoration and absence of writes. Keep the ordinary Part playback
+gate too (`scripts/verify-history-playback-browser.mjs`).

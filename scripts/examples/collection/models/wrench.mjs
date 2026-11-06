@@ -43,7 +43,7 @@ frame
     0,
     12,
   )
-  .finish("Forged edge break", 0.3, 12)
+  .finishFace("Forged edge break", 0.3, [0, 0, 1])
   .pad("Handle relief front", [rounded(100, 9, 4, -108, -1)], 12, 1.8, "cut")
   .pad("Jaw guide", [rectangle(10, 28, -16, 12)], 12, 12, "cut")
   .pad("Adjustment roller window", [rounded(23, 18, 3, -30, -3)], 12, 12, "cut")
@@ -71,6 +71,7 @@ const jaw = m
     0,
     11.6,
   )
+  .finishFace("Jaw edge break", 0.4, [0, 0, 1])
   .pad("Guide tongue", [rectangle(8.8, 28, -16, -2)], 3.4, 4.8, "add")
   .pad(
     "Rack tooth gaps",
@@ -78,8 +79,7 @@ const jaw = m
     8.2,
     4.8,
     "cut",
-  )
-  .finish("Jaw edge break", 0.4, 11.6);
+  );
 m.place("Adjustable jaw", jaw, [0, 0, 0.2]);
 const roller = m.part("roller", "Adjustment roller", "brass").revolve(
   "Turned roller",

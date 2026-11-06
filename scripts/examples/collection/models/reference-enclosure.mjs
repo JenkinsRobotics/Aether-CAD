@@ -12,7 +12,12 @@ box.add("Shell — 2 mm walls", {
   type: "shell",
   targetBodyId: ref(box.solid, "body_id"),
   thicknessMillimeters: 2,
-  removedFaces: [{ plane: "XY", offsetMillimeters: 30 }],
+  removedFaces: [{
+    sourceFeatureId: ref(box.solid),
+    bodyId: ref(box.solid, "body_id"),
+    label: "Case opening",
+    normal: [0, 0, 1],
+  }],
 });
 box.pad("USB side opening", [rectangle(12, 7, 0, 12)], 41, 4, "cut", "YZ");
 box.pad(

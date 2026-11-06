@@ -51,3 +51,13 @@ it('stops when editing becomes active and does not start on empty or unavailable
   expect(player.snapshot()).toMatchObject({status:'idle',available:false});player.play();expect(service.evaluate).toHaveBeenCalledTimes(1);
   player.sync({...source,features:[]});player.play();expect(service.evaluate).toHaveBeenCalledTimes(1);
 });
+it('plays assembly sequences without a standalone Part and discards late frames on navigation', async () => {
+  const {player, service} = setup();
+  let finish!: (value: ImportedModelData) => void;
+  const sequence = { features: [{ name: 'Source Part · Extrude', suppressed: false }], evaluate: vi.fn(() => new Promise<ImportedModelData>(resolve => { finish = resolve; })) };
+  player.sync(null, true, sequence);player.play();
+  expect(player.snapshot()).toMatchObject({ available: true, pending: true, total: 1 });
+  player.sync(null, false);finish(model('late assembly'));await tick();
+  expect(service.show).not.toHaveBeenCalledWith(model('late assembly'), true);
+  expect(player.snapshot().status).toBe('idle');
+});

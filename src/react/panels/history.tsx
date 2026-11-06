@@ -12,7 +12,7 @@ export function CADHistoryPanel() {
   const playback=useSyncExternalStore(historyPlayback.subscribe,historyPlayback.snapshot,historyPlayback.snapshot);
   useEffect(()=>{
     if(playback.status==='idle')return;
-    panel.current?.querySelector<HTMLElement>(`[data-history-rollback-index="${playback.index-1}"]`)?.scrollIntoView?.({block:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+    panel.current?.querySelector<HTMLElement>('[data-current="true"]')?.scrollIntoView?.({block:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   },[playback.index,playback.status]);
   const workspace = useSyncExternalStore(cadWorkspace.subscribe, cadWorkspace.snapshot, cadWorkspace.snapshot);
   const presentation = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot);
@@ -25,10 +25,10 @@ export function CADHistoryPanel() {
     const node = nodeFor(id);
     return node ? cadFeatureActions(node, workspace.itemNodes, new Set([node.id]), workspace.rollbackIndex, presentation.partOpen, featureIDs, nodes) : [];
   };
-  const entries: HistoryEntry[] = workspace.historyItems.map(row => ({
+  const entries: HistoryEntry[] = workspace.historyItems.map((row, index) => ({
     id: row.id, label: row.label, icon: nodeFor(row.id) ? <FeatureTypeIcon type={nodeFor(row.id)!.id.split("/")[1]}/> : row.icon, description: row.description, category: row.group,
     inactive: row.description === 'Suppressed' || row.description === 'Rolled back',
-    current: row.id === features[workspace.rollbackIndex - 1]?.id,
+    current: !presentation.partOpen && playback.status !== 'idle' ? index === playback.index - 1 : row.id === features[workspace.rollbackIndex - 1]?.id,
     actions: nodeFor(row.id) ? featureTreeMenuItems(actionsFor(row.id))
       : [{ id: 'inspect', label: row.id.startsWith('history/source-') ? 'Open source Part' : row.id.startsWith('history/mate/') ? 'Inspect mate' : 'Show imported parts', icon: <AetherIcon name="info"/> }],
   }));

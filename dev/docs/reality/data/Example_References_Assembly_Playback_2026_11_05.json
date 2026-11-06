@@ -1,0 +1,267 @@
+{
+  "date": "2026-11-05",
+  "stage": "Example reference repairs, smooth loft recovery and native assembly playback",
+  "audit": {
+    "parts": 165,
+    "trials": 710,
+    "failures": 8,
+    "originalVolumesRetained": true,
+    "remaining": [
+      {
+        "example": "scifirobot",
+        "part": "Lens bezel",
+        "errors": [
+          "FeatureFailure: Bezel face chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Socket screw",
+        "errors": [
+          "FeatureFailure: Head edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Side hub cover",
+        "errors": [
+          "FeatureFailure: Cover chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Cooling duct",
+        "errors": [
+          "FeatureFailure: Outlet edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Auxiliary sensor housing",
+        "errors": [
+          "FeatureFailure: Sensor bezel chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Rear service cover",
+        "errors": [
+          "FeatureFailure: Service cover edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      },
+      {
+        "example": "roadster",
+        "part": "Five-spoke alloy wheel",
+        "errors": [
+          "FeatureFailure: Rim bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges.",
+          "FeatureFailure: Rim bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+        ]
+      }
+    ],
+    "shapeEquivalence": [
+      {
+        "example": "airplane",
+        "part": "Horizontal stabilizer",
+        "symmetricDifferenceMm3": 0
+      },
+      {
+        "example": "wrench",
+        "part": "Forged wrench frame",
+        "symmetricDifferenceMm3": 0
+      },
+      {
+        "example": "wrench",
+        "part": "Sliding jaw",
+        "symmetricDifferenceMm3": 0
+      },
+      {
+        "example": "smartphone",
+        "part": "Display glass",
+        "symmetricDifferenceMm3": 0
+      },
+      {
+        "example": "smartphone",
+        "part": "Camera optical cover",
+        "symmetricDifferenceMm3": 0
+      },
+      {
+        "example": "reference-enclosure",
+        "part": "Enclosure case",
+        "symmetricDifferenceMm3": 0
+      }
+    ]
+  },
+  "qualification": {
+    "engine": 1465,
+    "nativeService": 352,
+    "frontendFullSuite": 2235,
+    "frontendSkipped": 1,
+    "finalFocusedTests": 14,
+    "featureControls": {
+      "chromium": {
+        "results": [
+          "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+          "Solid Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Thin Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Surface Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Extrude modes: removed curves stay removed, empty remains empty, temporary Solid incompatibility preserves remaining open curves, explicit whole-sketch reselection works",
+          "Surface whole-sketch preselection: two independent native sheets, construction excluded, saved reopen, curve removal and retained body identity",
+          "Connected profiles: one face converts to four native boundary curves, Solid/Surface/Thin preview, saved history mode edit, incomplete boundary refusal and saved reopen",
+          "Surface Extrude: shared Solid/Surface/Thin tabs, open curve, real native sheet preview, shared axis control, editable save/reopen, \u00d7 removal and cancel",
+          "Surface Add automatic: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Surface Add explicit: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Surface Add bridge: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen",
+          "Angled Extrude Draft: exact planar Thin preview, shared orbit/thickness controls, native wall position, save/reopen and cancel",
+          "Curved Solid Draft: shared angle/thickness controls, native cap extent, saved reopen, failed preview removal and Cancel",
+          "Curved Thin Draft: shared angle/thickness controls, native cap extent, saved reopen, failed preview removal and Cancel",
+          "Extrude: stopping-face and profile focus, \u00d7 removal, tree re-selection, viewport toggling and native stopping-face re-selection",
+          "Extrude: drafted parallel face stop, shared signed end-offset control, native extent, cancel and saved reopen",
+          "Extrude up-to-next: smaller finite stop, distant back face, native taper, shared offset handle, reversal recovery and saved reopen",
+          "Extrude up-to-part: smaller finite stop, distant back face, native taper, shared offset handle, reversal recovery and saved reopen",
+          "Revolve: shared angular ribbon, live native preview and cancellation",
+          "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+          "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+          "Extrude: native straight-edge picking, shared depth handle, \u00d7 and repeated-click removal, axis selection, save and editable reopen",
+          "Extrude cylinder axis: actual face picking, shared depth handle, native direction, archive reopen, \u00d7 and repeat-click removal, Cancel",
+          "Extrude cone axis: actual face picking, shared depth handle, native direction, archive reopen, \u00d7 and repeat-click removal, Cancel"
+        ],
+        "errors": []
+      },
+      "webkit": {
+        "results": [
+          "Extrude: native anchor, secondary readout, explicit units, save and reopen",
+          "Solid Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Thin Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Surface Extrude: two real sketch selections, common depth preview, saved reopen, primary selection removal and retained output identity",
+          "Extrude modes: removed curves stay removed, empty remains empty, temporary Solid incompatibility preserves remaining open curves, explicit whole-sketch reselection works",
+          "Surface whole-sketch preselection: two independent native sheets, construction excluded, saved reopen, curve removal and retained body identity",
+          "Connected profiles: one face converts to four native boundary curves, Solid/Surface/Thin preview, saved history mode edit, incomplete boundary refusal and saved reopen",
+          "Surface Extrude: shared Solid/Surface/Thin tabs, open curve, real native sheet preview, shared axis control, editable save/reopen, \u00d7 removal and cancel",
+          "Surface Add automatic: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Surface Add explicit: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Surface Add bridge: native grouping, primary identity, visible authoring, saved reopen and selection/error handling",
+          "Extrude Thin: real draft, shared angle/thickness controls, zero and negative validation, native taper and saved reopen",
+          "Angled Extrude Draft: exact planar Thin preview, shared orbit/thickness controls, native wall position, save/reopen and cancel",
+          "Curved Solid Draft: shared angle/thickness controls, native cap extent, saved reopen, failed preview removal and Cancel",
+          "Curved Thin Draft: shared angle/thickness controls, native cap extent, saved reopen, failed preview removal and Cancel",
+          "Extrude: stopping-face and profile focus, \u00d7 removal, tree re-selection, viewport toggling and native stopping-face re-selection",
+          "Extrude: drafted parallel face stop, shared signed end-offset control, native extent, cancel and saved reopen",
+          "Extrude up-to-next: smaller finite stop, distant back face, native taper, shared offset handle, reversal recovery and saved reopen",
+          "Extrude up-to-part: smaller finite stop, distant back face, native taper, shared offset handle, reversal recovery and saved reopen",
+          "Revolve: shared angular ribbon, live native preview and cancellation",
+          "Chamfer: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+          "Fillet: native stepped shoulder picked, previewed, applied, reselected while editing and saved",
+          "Extrude: native straight-edge picking, shared depth handle, \u00d7 and repeated-click removal, axis selection, save and editable reopen",
+          "Extrude cylinder axis: actual face picking, shared depth handle, native direction, archive reopen, \u00d7 and repeat-click removal, Cancel",
+          "Extrude cone axis: actual face picking, shared depth handle, native direction, archive reopen, \u00d7 and repeat-click removal, Cancel"
+        ],
+        "errors": []
+      }
+    },
+    "examplesSavedReopen": {
+      "models": [
+        "airplane",
+        "wrench",
+        "smartphone",
+        "reference-enclosure"
+      ],
+      "previewCreatedNoFiles": true,
+      "saveCopies": 4,
+      "nativePartsRetained": true,
+      "savedReopen": true,
+      "errors": []
+    },
+    "modelingBrowser": "17-step native modeling gate passed",
+    "partPlayback": {
+      "chromium": {
+        "passed": true,
+        "browser": "chromium",
+        "steps": [
+          {
+            "index": 1,
+            "label": "Profile\nPaused",
+            "timing": "Build 15 ms \u00b7 Present 25 ms"
+          },
+          {
+            "index": 2,
+            "label": "Extrude\nPaused",
+            "timing": "Build 15 ms \u00b7 Present 31 ms"
+          },
+          {
+            "index": 3,
+            "label": "Move 1\nPaused",
+            "timing": "Build 14 ms \u00b7 Present 33 ms"
+          },
+          {
+            "index": 4,
+            "label": "Move 2\nComplete",
+            "timing": "Build 16 ms \u00b7 Present 31 ms"
+          }
+        ],
+        "writes": [],
+        "errors": [],
+        "originalRollback": 3
+      },
+      "webkit": {
+        "passed": true,
+        "browser": "webkit",
+        "steps": [
+          {
+            "index": 1,
+            "label": "Profile\nPaused",
+            "timing": "Build 25 ms \u00b7 Present 47 ms"
+          },
+          {
+            "index": 2,
+            "label": "Extrude\nPaused",
+            "timing": "Build 19 ms \u00b7 Present 70 ms"
+          },
+          {
+            "index": 3,
+            "label": "Move 1\nPaused",
+            "timing": "Build 7 ms \u00b7 Present 63 ms"
+          },
+          {
+            "index": 4,
+            "label": "Move 2\nComplete",
+            "timing": "Build 23 ms \u00b7 Present 63 ms"
+          }
+        ],
+        "writes": [],
+        "errors": [],
+        "originalRollback": 3
+      }
+    },
+    "home": "Standalone and disposable authenticated hosted Home gates passed"
+  },
+  "playback": {
+    "scope": "Read-only embedded Part histories in assembly definition order, with solved occurrence placements; not a replay of assembly mate-authoring operations.",
+    "status": "Passed full 224-feature replay in Chromium and WebKit; pause/resume, Stop/Escape, current-row scrolling and zero document writes.",
+    "browsers": [
+      {
+        "passed": true,
+        "browser": "chromium",
+        "features": 224,
+        "writes": [],
+        "errors": []
+      },
+      {
+        "passed": true,
+        "browser": "webkit",
+        "features": 224,
+        "writes": [],
+        "errors": []
+      }
+    ]
+  },
+  "release": {
+    "status": "not staged"
+  },
+  "smoothLoftRecovery": {
+    "fixture": "8-station Shuttle fuselage; complete downstream history",
+    "cubicVolumeMm3": 794801.8653580933,
+    "preservedRuledVolumeMm3": 884822.1752185362,
+    "validation": "Valid native solid, positive volume, every station endpoint and midpoint on output boundary within 0.0001 mm; repeated edit/revert; all 13 full-history trials passed."
+  }
+}

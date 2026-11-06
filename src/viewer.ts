@@ -1,3 +1,4 @@
+import type { PlaybackModel } from "./history/playback";
 import { cadSnapping } from './cad-snapping-store';
 import { pickBoundarySelection } from './viewport/boundary-selection';
 import { paintSurfaceFace, setSurfaceGroups } from './viewport/surface-groups';
@@ -281,11 +282,17 @@ export class MateViewport {
   }
   private canPickSourceGeometry() { const filter = cadSelection.snapshot().filter; return this.sourceGeometryPicking!==null && (this.sourceGeometryPicking === 'entity' ? filter === 'auto' : filter === this.sourceGeometryPicking); }
   private historyModel: ImportedModelData | null = null;
-  setHistoryPreview(model: ImportedModelData | null, active: boolean): void {
+  setHistoryPreview(model: PlaybackModel | null, active: boolean): void {
     if (!this.historyPreview.group.parent) this.scene.add(this.historyPreview.group);
     this.historyEditing = active;
     this.historyModel = active ? model : null;
     this.historyPreview.set(model, false);
+    for (const object of this.historyPreview.group.children) {
+      const placement = model?.placements?.get(String(object.userData.previewPartId));
+      if (!placement) continue;
+      object.position.set(placement.position[0], placement.position[1], placement.position[2]);
+      object.quaternion.set(placement.rotation[0], placement.rotation[1], placement.rotation[2], placement.rotation[3]);
+    }
     this.setFeatureInputFeedback(this.featureInputState);
     this.updatePreviewVisibility();
   }

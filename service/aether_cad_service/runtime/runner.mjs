@@ -38687,6 +38687,43 @@ function extendedSolids(shape) {
   if (!solids) throw new Error("Geometry could not be sewn into closed shells. Import a mesh as a reference or repair the source.");
   return compound;
 }
+function sectionLoft(wires, options) {
+  const original = loft(wires, options);
+  const volume = measureVolume(original);
+  if (options.ruled || options.startPoint || options.endPoint || Number.isFinite(volume) && volume > 1e-9) return original;
+  original.delete();
+  const oc = getOC();
+  const builder = new oc.BRepOffsetAPI_ThruSections(true, false, 1e-6);
+  const progress = new oc.Message_ProgressRange_1();
+  try {
+    builder.SetMaxDegree(3);
+    for (const wire of wires) builder.AddWire(wire.wrapped);
+    builder.Build(progress);
+    const candidate = cast(builder.Shape());
+    let accepted = false;
+    try {
+      if (!isShape3D(candidate)) throw Error("Loft did not produce a closed solid.");
+      const check2 = new oc.BRepCheck_Analyzer(candidate.wrapped, true, false);
+      let valid;
+      try {
+        valid = check2.IsValid_2();
+      } finally {
+        check2.delete();
+      }
+      const candidateVolume = measureVolume(candidate);
+      if (!valid || !Number.isFinite(candidateVolume) || candidateVolume <= 1e-9) {
+        throw Error("Loft produced an inverted or degenerate solid. Adjust the sections or use a ruled loft.");
+      }
+      accepted = true;
+      return candidate;
+    } finally {
+      if (!accepted) candidate.delete();
+    }
+  } finally {
+    builder.delete();
+    progress.delete();
+  }
+}
 const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
 const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
@@ -44361,7 +44398,7 @@ function evaluatePartDocument(document2, options = {}) {
                 builder.delete();
                 progress.delete();
               }
-            } else lofted = loft(wires, { ruled: Boolean(feature3.ruled), startPoint: apex(feature3.startPoint), endPoint: apex(feature3.endPoint) });
+            } else lofted = sectionLoft(wires, { ruled: Boolean(feature3.ruled), startPoint: apex(feature3.startPoint), endPoint: apex(feature3.endPoint) });
             own(lofted);
             if (!isShape3D(lofted)) throw new Error("Loft did not produce a closed solid. Check the section boundaries.");
             const loftVolume = measureVolume(lofted);

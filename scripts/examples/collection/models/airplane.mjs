@@ -143,7 +143,7 @@ const tail = m
     0,
     3.8,
   )
-  .finish("Tail perimeter bevel", 0.7, 3.8);
+  .finishFace("Tail perimeter bevel", 0.7, [0, 0, 1]);
 m.place("Horizontal stabilizer", tail, [126, 0, 57]);
 const fin = m.part("fin", "Vertical stabilizer", "blue").pad(
   "Fin profile",

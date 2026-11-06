@@ -15,7 +15,7 @@
     "Matches the source at its initial 80 mm width, before its final 100 mm parameter demonstration.",
     "A fitted lid is added; four boss bores use Hole Wizard. The rounded outline is authored as exact arcs before Shell."
   ],
-  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "method": "Independent analytic expectations compared with native OpenCASCADE measurements; not a run of another CAD engine.",
   "comparisons": [
     {
       "part": "case",

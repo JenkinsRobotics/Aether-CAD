@@ -115,7 +115,7 @@ const display = m
     opacity: 1,
   })
   .pad("Cover glass", [rounded(68.5, 148.5, 8.8)], 0, 0.6)
-  .finish("Glass edge radius", 0.18, 0.6, "fillet");
+  .finishFace("Glass edge radius", 0.18, [0, 0, 1], "fillet");
 m.place("Display glass", display, [0, 0, 8.35]);
 const screen = m
   .part("screen", "OLED active display", {
@@ -165,7 +165,7 @@ const lens = m
     opacity: 0.9,
   })
   .ring("Optical disk", 5.35, 0, 0, 0.65)
-  .finish("Lens rim radius", 0.15, 0.65, "fillet");
+  .finishFace("Lens rim radius", 0.15, [0, 0, 1], "fillet");
 for (const [i, [x, y]] of [
   [-8, 9],
   [-8, -10],
