@@ -256,7 +256,18 @@
     ]
   },
   "release": {
-    "status": "not staged"
+    "app": "cad",
+    "release": "alpha-0.1.122",
+    "sha256": "9b8821c585e81e5216e3256760baf65ea428a16c388a6f38f02b68ddb3ce25ca",
+    "source_commit": "ce13324815f2c1e63a778f5a0dcd56169a6b517f",
+    "files": 3580,
+    "activated": true,
+    "durable": true,
+    "previous": "alpha-0.1.121",
+    "verifiedFiles": 3580,
+    "qualifiedFrontendAndWorkerExact": true,
+    "otherAppsUnchanged": true,
+    "trustedHttpsCadStatus": 302
   },
   "smoothLoftRecovery": {
     "fixture": "8-station Shuttle fuselage; complete downstream history",
