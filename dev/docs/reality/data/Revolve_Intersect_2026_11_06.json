@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-06",
+  "feature": "Solid Revolve Intersect",
+  "status": "qualified; activation recorded separately",
+  "changes": [
+    "Enabled editor operation and explicit merge scope",
+    "Canonical document validator and agent operation support",
+    "Part v29 and workspace codec build33 preserve intersection intent; older readers refuse v29"
+  ],
+  "checks": {
+    "engine": {
+      "passed": 47,
+      "coverage": [
+        "single/selected/automatic scope",
+        "analytic volume",
+        "180-degree extent",
+        "profile edit and reopen",
+        "missing target and empty result refusal"
+      ]
+    },
+    "editor_dom": 9,
+    "agent_contracts_and_workspace": 39,
+    "generated_schema_and_automation_format": 10,
+    "native_program_and_versions": 73,
+    "native_extrude_regressions": 9,
+    "workspace_codec": 46,
+    "browser": {
+      "results": [
+        "Native Revolve Intersect: editor switch, valid preview, apply, undo/redo, server save and reopened editable feature"
+      ],
+      "errors": []
+    },
+    "preview_bounds_mm": [
+      4,
+      6
+    ],
+    "old_reader": "Installed CAD124 accepts v28, refuses v29 with invalid result and no file output"
+  },
+  "browser_evidence": "build/Example-Collection/revolve-intersect-29-final/host/browser",
+  "limitations": [
+    "This closes Solid Revolve Intersect only; Surface/Thin Revolve remain unavailable",
+    "Does not establish complete Onshape parity or general 0.1 release readiness",
+    "Existing finishing-reference, performance, and Drawing gaps remain tracked separately"
+  ]
+}

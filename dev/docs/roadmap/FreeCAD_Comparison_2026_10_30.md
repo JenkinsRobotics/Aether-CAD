@@ -164,7 +164,7 @@ comparison evidence yet).
 | FreeCAD | Aether | Status | Evidence / missing |
 | --- | --- | --- | --- |
 | Pad / Pocket: length, two lengths, two-sided (1.1), symmetric, up to face/first/last, offset, taper, reversed | Extrude: all of these, plus explicit target bodies, up-to-point, start reference, curved stopping faces (cylinder/sphere) | parity | oracle: 181 extrude features across fixtures; cone/torus/spline stopping faces refused (no half-space builder in the default wasm) |
-| Revolution / Groove (angle, two angles, axis choices) | Revolve add/cut/new, axis from sketch line or world axis, two angles | parity | oracle 14 revolve fixtures |
+| Revolution / Groove (angle, two angles, axis choices) | Revolve add/cut/new/intersect, axis from sketch line or world axis, two angles | parity | oracle 14 revolve fixtures |
 | Additive/Subtractive Loft (ruled, closed) | Loft with apex point, rails; surface loft | parity | tracker `solid.loft` partial only on SolidCraft-specific options |
 | Additive/Subtractive Pipe (orientation modes, auxiliary spine, scaling) | Sweep: perpendicular/parallel/fixed direction, end scale, guide rail; pipe feature | parity | |
 | Additive/Subtractive Helix | Coil feature | parity | analytic self-consistency: coil volume = wire area × helix length in `aether-engine/src/kernel/part-evaluator.test.ts` ("coils a wire"); no FreeCAD capture needed |

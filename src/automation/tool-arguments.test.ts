@@ -53,3 +53,16 @@ it('fails visibly if a future tool declares a rule the validator cannot enforce'
   const tools: AgentTool[] = [{ name: 'future', description: 'Future', inputSchema: { type: 'object', not: {} } }];
   expect(() => validateToolArguments(tools, 'future', {})).toThrow(/Unsupported CAD contract keyword: not/);
 });
+
+it('authors Revolve Intersect through the published agent tool without changing its source', () => {
+  const source = createEmptyPartDocument('Intersection');
+  const sketch = preparePartEdit(source, 'aether_cad_sketch_rectangle', {
+    plane:'XZ', x_mm:0, y_mm:4, width_mm:40, height_mm:2,
+  });
+  const args = {profile_id:sketch.featureID,axis:'Z',angle_deg:360,operation:'intersect',target_body_id:'body'};
+  validateToolArguments(cadAgentTools, 'aether_cad_revolve', args);
+  const result = preparePartEdit(sketch.document, 'aether_cad_revolve', args);
+  expect(result.document.features.at(-1)).toMatchObject({type:'revolve',operation:'intersect',targetBodyId:'body',profileFeatureId:sketch.featureID});
+  expect(sketch.document.features).toHaveLength(1);
+  expect(() => preparePartEdit(sketch.document,'aether_cad_revolve',{...args,target_body_id:undefined})).toThrow();
+});

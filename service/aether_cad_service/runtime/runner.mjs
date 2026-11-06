@@ -694,8 +694,8 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
   }
 }
-const current = 28;
-const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
+const current = 29;
+const readable = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];
 const partFormat = {
   current,
   readable
@@ -6566,7 +6566,7 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
       if (end.endReference !== void 0 && end.endType !== "up-to-face") throw new Error(`${label}: a stopping face requires Up to face.`);
       if (end.endOffsetMillimeters !== void 0 && (!Number.isFinite(end.endOffsetMillimeters) || end.endType === "blind")) throw new Error(`${label}: an end offset is a finite distance on an Up-to end.`);
     }
-    if (feature3.angleDegrees > 360 || !["X", "Y", "Z"].includes(feature3.axis) || !["new", "add", "cut"].includes(feature3.operation))
+    if (feature3.angleDegrees > 360 || !["X", "Y", "Z"].includes(feature3.axis) || !["new", "add", "cut", "intersect"].includes(feature3.operation))
       throw new Error("Invalid revolve settings.");
   } else if (feature3.type === "sweep") {
     if (feature3.orientation !== void 0 && feature3.orientation !== "perpendicular" && feature3.orientation !== "parallel" && !(typeof feature3.orientation === "object" && feature3.orientation.kind === "direction" && Array.isArray(feature3.orientation.direction) && feature3.orientation.direction.length === 3 && feature3.orientation.direction.every(Number.isFinite) && Math.hypot(...feature3.orientation.direction) > 1e-9) && !(typeof feature3.orientation === "object" && feature3.orientation.kind === "support"))
@@ -13870,7 +13870,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   secondAngleDegrees?: number;
   /** The opposite side with its own end type. */
   secondEnd?: RevolveEnd;
-  operation: "new" | "add" | "cut";
+  operation: "new" | "add" | "cut" | "intersect";
   bodyId?: string;
   targetBodyId?: string;
   /** Merge scope, as Extrude's: every touching part (\`all\`) or explicit parts; Add keeps the first identity. */
@@ -14573,7 +14573,7 @@ const cadAgentTools = [
   tool("sketch_circle", "Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.", { ...plane, center_x_mm: number$1, center_y_mm: number$1, radius_mm: number$1 }, ["center_x_mm", "center_y_mm", "radius_mm"]),
   tool("sketch_polygon", "Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.", { ...plane, points_mm: { type: "array", minItems: 3, maxItems: 128, items: { type: "array", items: number$1, minItems: 2, maxItems: 2 } } }, ["points_mm"]),
   tool("extrude", "Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.", { ...operation, depth_mm: number$1, reversed: boolean, all_regions: boolean }, ["profile_id", "depth_mm", "operation"]),
-  tool("revolve", "Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.", { ...operation, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number$1 }, ["profile_id", "axis", "angle_deg", "operation"]),
+  tool("revolve", "Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut/intersect require target_body_id. The exact engine checks validity.", { ...operation, operation: { type: "string", enum: ["new", "add", "cut", "intersect"] }, axis: { type: "string", enum: ["X", "Y", "Z"] }, angle_deg: number$1 }, ["profile_id", "axis", "angle_deg", "operation"]),
   tool("extrude_depth", "Change an existing blind/symmetric extrusion depth, then rebuild.", { feature_id: string, depth_mm: number$1 }, ["feature_id", "depth_mm"]),
   tool("suppress", "Suppress or unsuppress an existing feature. Rebuild must succeed.", { feature_id: string, suppressed: boolean }, ["feature_id", "suppressed"]),
   tool("undo", "Undo one successful Part edit, using the same history as the editor.", {}),
@@ -14636,7 +14636,8 @@ function preparePartEdit(doc, name5, args) {
   } else if (name5 === "aether_cad_extrude" || name5 === "aether_cad_revolve") {
     const profile = candidate.features.find((f2) => f2.id === args.profile_id && (f2.type === "profile" || f2.type === "sketch") && !f2.suppressed);
     if (!profile) throw Error("Inspect the part and choose an unsuppressed sketch ID.");
-    if (!["new", "add", "cut"].includes(String(args.operation))) throw Error("Choose new, add or cut.");
+    const allowedOperations = name5 === "aether_cad_revolve" ? ["new", "add", "cut", "intersect"] : ["new", "add", "cut"];
+    if (!allowedOperations.includes(String(args.operation))) throw Error("Choose " + allowedOperations.join(", ") + ".");
     const operation2 = args.operation;
     if (operation2 !== "new" && typeof args.target_body_id !== "string") throw Error("Choose a target_body_id from inspect.");
     const selections = selectAgentProfileRegions(candidate, profile.id, args.profile_point_mm, name5 === "aether_cad_extrude" ? args.all_regions : void 0);

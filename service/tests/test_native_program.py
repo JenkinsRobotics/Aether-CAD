@@ -246,3 +246,27 @@ def test_existing_rectangle_driving_dimension_keeps_origin_and_rebuilds(tmp_path
     assert proof['center_mm']==pytest.approx([0,0,2.5])
     assert proof['bounds_mm']==pytest.approx([60,20,5])
     saved=json.loads(result['content']);assert saved['features'][0]['constraints']==source['features'][0]['constraints']
+
+
+@pytest.mark.skipif(os.environ.get("AETHER_TEST_NATIVE") != "1", reason="Native qualification required")
+def test_revolve_intersection_program_survives_saved_reopen(tmp_path):
+    steps = [
+        {"id": "outline", "tool": "aether_cad_sketch_rectangle", "arguments": {
+            "plane": "XY", "x_mm": -10, "y_mm": -10, "width_mm": 20, "height_mm": 20}},
+        {"id": "block", "tool": "aether_cad_extrude", "arguments": {
+            "profile_id": {"$ref": "outline.feature_id"}, "depth_mm": 10, "operation": "new"}},
+        {"id": "section", "tool": "aether_cad_sketch_rectangle", "arguments": {
+            "plane": "XZ", "x_mm": 0, "y_mm": 4, "width_mm": 40, "height_mm": 2}},
+        {"id": "intersection", "tool": "aether_cad_revolve", "arguments": {
+            "profile_id": {"$ref": "section.feature_id"}, "target_body_id": {"$ref": "block.body_id"},
+            "axis": "Z", "angle_deg": 360, "operation": "intersect"}},
+    ]
+    result = invoke(tmp_path, "cad.part.runprogram", empty(), {"program_json": json.dumps({"version": 1, "steps": steps})})
+    assert "error" not in result, result
+    assert result["result"]["evaluated_bodies"][0]["volume_mm3"] == pytest.approx(800)
+    document = part_of(result["content"])
+    assert document["formatVersion"] == 29
+    assert document["features"][-1]["operation"] == "intersect"
+    assert result["result"]["references"]["block"]["body_id"] == result["result"]["references"]["intersection"]["body_id"]
+    reopened = invoke(tmp_path, "cad.part.evaluate", result["content"], {})
+    assert reopened["result"]["evaluated_bodies"][0]["volume_mm3"] == pytest.approx(800)

@@ -126,7 +126,7 @@ export interface RevolveFeature {
   secondAngleDegrees?: number;
   /** The opposite side with its own end type. */
   secondEnd?: RevolveEnd;
-  operation: "new" | "add" | "cut";
+  operation: "new" | "add" | "cut" | "intersect";
   bodyId?: string;
   targetBodyId?: string;
   /** Merge scope, as Extrude's: every touching part (`all`) or explicit parts; Add keeps the first identity. */
@@ -370,7 +370,7 @@ export function validateSolidFeature(
     if (
       feature.angleDegrees > 360 ||
       !["X", "Y", "Z"].includes(feature.axis) ||
-      !["new", "add", "cut"].includes(feature.operation)
+      !["new", "add", "cut", "intersect"].includes(feature.operation)
     )
       throw new Error("Invalid revolve settings.");
   } else if (feature.type === "sweep") {

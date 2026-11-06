@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from aether_cad_service.part_format import PART_DOCUMENT_VERSION
 from aether_animation.aether_workspace import AetherWorkspace
 from documents import part_archive
 from test_native_feature_operations import native, run
@@ -40,7 +41,7 @@ def test_native_face_axis_edit_reopen_and_failed_transaction(tmp_path, surface, 
     body = next(b for b in created['result']['evaluated_bodies'] if b['id'] != 'guide-body')
     assert (body['bbox_mm'][1][2] if mode == 'surface' else body['volume_mm3']) == pytest.approx(expected)
     document = json.loads(created['content'])
-    assert document['formatVersion'] == 28
+    assert document['formatVersion'] == PART_DOCUMENT_VERSION
     guide_id = created['result']['references']['guideSketch']['feature_id']
     changed = run(tmp_path, created['content'], [{'id': 'edit', 'tool': 'aether_cad_feature_update', 'arguments': {
         'feature_id': guide_id, 'changes_json': {'frame': {**guide['frame'], 'normal': [0, 0, 1], 'xDirection': [1, 0, 0]}}}}])

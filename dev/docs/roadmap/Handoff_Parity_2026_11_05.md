@@ -84,8 +84,9 @@ All are recorded in the ledger with `planned(control, reason)` on the disabled c
    `ChFi3d_FilletShape`; asymmetric chamfer exists (`AddDA`) but its Tangent variant does
    not. Leave disabled.
 7. **Reapply features (pattern/mirror), mate connectors, PEM holes, sweep Trim ends, rib
-   draft/extend, Revolve and Thicken Intersect.** Each is a named gap; none has a kernel path
-   yet.
+   draft/extend and Thicken Intersect.** These remain open. Revolve Intersect was
+   enabled and qualified on 2026-11-06 using the existing shared intersection evaluator;
+   see `dev/docs/reality/data/Revolve_Intersect_2026_11_06.json`.
 
 Still open from earlier rounds: pocket outer-edge pick repro needs Jonathan's wheel
 `.aethercad`; stale gates `verify-toolbar-presets`, `verify-assembly-insert`,

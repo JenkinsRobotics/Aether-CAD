@@ -33,7 +33,7 @@ function setDegrees(control: Controls[string], value: number) {
   control.dataset.originalValue = String(value);
 }
 
-const operationValues = ["new", "add", "cut"] as const;
+const operationValues = ["new", "add", "cut", "intersect"] as const;
 
 const principalAxes = ["X", "Y", "Z"] as const;
 const endTypes = ["blind", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"] as const;
@@ -82,7 +82,6 @@ export const revolveEditor: FeatureEditor = {
       secondReference: field("Opposite stopping face", feature?.secondEnd?.endReference ? JSON.stringify(feature.secondEnd.endReference) : ""),
       second: field("Opposite angle (degrees)", String(feature?.secondEnd?.angleDegrees ?? feature?.secondAngleDegrees ?? 90)),
       // Merge scope, as Extrude's: every touching part, or the target plus additional parts.
-      // A new revolve keeps the explicit target (the automatic scope's overlap test misreads some revolved solids; ledger: Revolve).
       // Onshape's default is Merge with all; a saved revolve with explicit parts stays explicit.
       scopeMode: field("Merge scope mode", feature ? feature.scopeMode ?? "selected" : "all", ["selected", "all"]),
       scope: field("Additional target parts", JSON.stringify(feature?.targetBodyIds?.filter((id: string) => id !== feature.targetBodyId) ?? [])),
@@ -266,7 +265,7 @@ export const revolveEditor: FeatureEditor = {
       ...selectedRegion(values, context),
       operation: values.operation,
       ...(values.operation !== "new" && values.scopeMode === "all" ? { scopeMode: "all" } : {}),
-      ...(values.scopeMode !== "all" && ["add", "cut"].includes(values.operation) && JSON.parse(values.scope || "[]").length ? { targetBodyIds: [values.target, ...JSON.parse(values.scope)] } : {}),
+      ...(values.scopeMode !== "all" && ["add", "cut", "intersect"].includes(values.operation) && JSON.parse(values.scope || "[]").length ? { targetBodyIds: [values.target, ...JSON.parse(values.scope)] } : {}),
       axis: (principalAxes as readonly string[]).includes(values.axis) ? values.axis : "Z",
       angleDegrees: Number(values.angle),
       ...(blind ? {} : { endType: values.endType, ...stop(values.endType, values.endPoint, values.endPart, values.endReference), ...(values.offsetOn === "yes" ? { endOffsetMillimeters: Number(values.endOffset) * (values.offsetFlip === "yes" ? -1 : 1) } : {}) }),

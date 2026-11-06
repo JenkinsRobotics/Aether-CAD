@@ -8,14 +8,14 @@ const part = () => createRectanglePartDocument("Version boundary", {
 }, { documentId: "doc", sketchId: "sketch", extrudeId: "pad" });
 
 describe("Part file version boundary", () => {
-  it("writes v28 for new documents and examples", () => {
-    expect(PART_DOCUMENT_VERSION).toBe(28);
+  it("writes v29 for new documents and examples", () => {
+    expect(PART_DOCUMENT_VERSION).toBe(29);
     for (const doc of [part(), createWheelExample()]) {
       expect(JSON.parse(serializePartDocument(doc)).formatVersion).toBe(PART_DOCUMENT_VERSION);
       expect(parsePartDocument(serializePartDocument(doc))).toEqual(doc);
     }
   });
-  it.each([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])("migrates v%s without rewriting history, references or metadata", version => {
+  it.each([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28])("migrates v%s without rewriting history, references or metadata", version => {
     const source = { ...part(), formatVersion: version, rollbackIndex: 1,
       document_settings: { description: "Retain this", units: { length: { unit: "in", decimals: 5 } } },
       sketchPresentation: { sketch: { dimensionLabelPositionsMillimeters: { width: [7, 11] } } },

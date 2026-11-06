@@ -48,12 +48,17 @@ it('Extrude follows the reference control order, preserves a disabled direction,
   }
 });
 
-it('Revolve offers Merge scope for Add and Remove, and an Offset for the Up-to ends', async () => {
+it('Revolve offers Merge scope for Add, Remove and Intersect, and an Offset for the Up-to ends', async () => {
   cadCommands.execute('feature-revolve');
   const win = document.querySelector('.cad-feature-dialog');
   expect(tabs(win)).toEqual([['Solid', 'Surface', 'Thin'], ['New', 'Add', 'Remove', 'Intersect']]);
   [...win.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add').click();
   expect(visible(win, '.aui-feature-row').some((row) => row.textContent.includes('Merge with all'))).toBe(true);
+  const intersect = [...win.querySelectorAll('button')].find(b => b.textContent.trim() === 'Intersect');
+  expect(intersect.disabled).toBe(false);
+  intersect.click();
+  expect(win.querySelector('select[aria-label="Operation"]').value).toBe('intersect');
+  expect(visible(win, '.aui-feature-row').some(row => row.textContent.includes('Merge with all'))).toBe(true);
   win.querySelector('[aria-label="Full revolve"]').click();
   const offset = win.querySelector('[aria-label^="Offset distance"]');
   expect(offset).toBeTruthy();

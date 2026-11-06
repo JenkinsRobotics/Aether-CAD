@@ -30,7 +30,7 @@ export const cadAgentTools:AgentTool[]=[
   tool('sketch_circle','Add an editable circular sketch profile; returns its feature ID. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules.',{...plane,center_x_mm:number,center_y_mm:number,radius_mm:number},['center_x_mm','center_y_mm','radius_mm']),
   tool('sketch_polygon','Add a closed polygon sketch. Coordinates are local millimeters; do not repeat the first point. Specify plane OR frame as for sketch_rectangle; offset_mm and flip use the same placement rules. The CAD engine validates the profile.',{...plane,points_mm:{type:'array',minItems:3,maxItems:128,items:{type:'array',items:number,minItems:2,maxItems:2}}},['points_mm']),
   tool('extrude','Extrude a sketch: new/add travel along its normal; cut travels opposite the normal by default. Reversed flips that direction. Use new for a new body; add/cut require a target_body_id from inspect. For multiple sketch regions choose profile_point_mm strictly inside the wanted region, or all_regions:true for every closed region. Exact rebuild must succeed before the document changes.',{...operation,depth_mm:number,reversed:boolean,all_regions:boolean},['profile_id','depth_mm','operation']),
-  tool('revolve','Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut require target_body_id. The exact engine checks validity.',{...operation,axis:{type:'string',enum:['X','Y','Z']},angle_deg:number},['profile_id','axis','angle_deg','operation']),
+  tool('revolve','Revolve one sketch region around a principal axis. For multiple regions, choose profile_point_mm strictly inside the wanted region. add/cut/intersect require target_body_id. The exact engine checks validity.',{...operation,operation:{type:'string',enum:['new','add','cut','intersect']},axis:{type:'string',enum:['X','Y','Z']},angle_deg:number},['profile_id','axis','angle_deg','operation']),
   tool('extrude_depth','Change an existing blind/symmetric extrusion depth, then rebuild.',{feature_id:string,depth_mm:number},['feature_id','depth_mm']),
   tool('suppress','Suppress or unsuppress an existing feature. Rebuild must succeed.',{feature_id:string,suppressed:boolean},['feature_id','suppressed']),
   tool('undo','Undo one successful Part edit, using the same history as the editor.',{}),
@@ -89,8 +89,9 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
   }else if(name==='aether_cad_extrude'||name==='aether_cad_revolve'){
     const profile=candidate.features.find(f=>f.id===args.profile_id&&(f.type==='profile'||f.type==='sketch')&&!f.suppressed);
     if(!profile)throw Error('Inspect the part and choose an unsuppressed sketch ID.');
-    if(!['new','add','cut'].includes(String(args.operation)))throw Error('Choose new, add or cut.');
-    const operation=args.operation as 'new'|'add'|'cut';
+    const allowedOperations=name==='aether_cad_revolve'?['new','add','cut','intersect']:['new','add','cut'];
+    if(!allowedOperations.includes(String(args.operation)))throw Error('Choose '+allowedOperations.join(', ')+'.');
+    const operation=args.operation as 'new'|'add'|'cut'|'intersect';
     if(operation!=='new'&&typeof args.target_body_id!=='string')throw Error('Choose a target_body_id from inspect.');
     const selections=selectAgentProfileRegions(candidate,profile.id,args.profile_point_mm,name==='aether_cad_extrude'?args.all_regions:undefined);
     const common={id,suppressed:false,profileFeatureId:profile.id,operation,...(operation!=='new'?{targetBodyId:args.target_body_id as string}:{})};

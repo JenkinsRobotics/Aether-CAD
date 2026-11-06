@@ -27,14 +27,14 @@ def encoded(doc):
 
 def test_packaged_version_manifest_matches_document_authority():
     canonical = (ROOT / "aether-engine/src/document/part-format.json").read_bytes()
-    assert PART_DOCUMENT_VERSION == 28
+    assert PART_DOCUMENT_VERSION == 29
     assert (ROOT / "service/aether_cad_service/data/part-format.json").read_bytes() == canonical
     with zipfile.ZipFile(ROOT / "service/aether_cad_service/runtime/runner.pyz") as archive:
         assert archive.read("aether_cad_service/data/part-format.json") == canonical
         assert "aether_cad_service/part_format.py" in archive.namelist()
 
 
-@pytest.mark.parametrize("version", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])
+@pytest.mark.parametrize("version", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28])
 def test_settings_retain_legacy_header_until_explicit_update(tmp_path, version):
     source = part(version)
     args = {"data_base64": encoded(source)}
