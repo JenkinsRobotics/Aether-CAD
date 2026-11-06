@@ -24,8 +24,9 @@ Checks: 29 engine Drawing tests; 10 Drawing controller tests and 2 agent tests;
 steps, including chain creation/undo/redo, MCP member edits, server save/reopen
 and read-only revisions. Evidence:
 `build/Example-Collection/freecad-drawing-chain/host/browser/results.json`.
-A final build with corrected chain help text is being qualified separately before
-release. Ordinate dimensions, viewport point picking, and the remaining retirement
+The final build also passed all 13 workflows and was activated as CAD
+`alpha-0.1.124`. All 3,582 packaged files match the qualified artifacts; other app
+releases are unchanged. Release evidence: `../reality/data/Drawing_Dimensions_2026_11_06.json`. Ordinate dimensions, viewport point picking, and the remaining retirement
 items below are still open. Chains do not imply full TechDraw parity.
 
 ## Retirement review — 2026-11-05, in progress
@@ -42,7 +43,7 @@ as a behavior reference. No FreeCAD source was copied and no new oracle answers
 were captured. Native model dimensions, geometry-backed attachment, and rebuild
 behavior are the requirements; screenshots alone are insufficient.
 
-Implemented in the current candidate, not yet released:
+Implemented in the November 5 candidate, shipped in alpha-0.1.124 on November 6:
 
 - Drawing format 5 point-to-point dimensions (aligned/horizontal/vertical) and
   three-point angles, shared by editor and agent commands. Picks resolve to
@@ -72,9 +73,8 @@ Implemented in the current candidate, not yet released:
   mismatch. Updated the PDF verifier to check ink separation around the shared
   dimension line's text gap instead of requiring its obsolete right-offset label.
 
-These are candidate checks, not completion of the retirement review or a live
-release. Installed CAD remains alpha-0.1.123 until a separately qualified package
-is staged and activated.
+The above checks do not imply completion of the retirement review. The combined
+Drawing batch shipped as alpha-0.1.124 after the final qualification recorded above.
 
 Remaining retirement work, checked against current source where noted:
 

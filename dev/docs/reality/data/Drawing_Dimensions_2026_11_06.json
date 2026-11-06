@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-06",
+  "change": "Geometry-backed point distances, three-point angles and atomic editable dimension chains; Drawing save compatibility and headless source refresh",
+  "qualification": {
+    "drawingEngineTests": 29,
+    "drawingControllerTests": 10,
+    "drawingAgentTests": 2,
+    "nativeMetadataAndContainerTests": 10,
+    "sharedCodecTests": 26,
+    "headlessFreshProcesses": 17,
+    "pdfFreshProcesses": 10,
+    "independentPDFValidation": "passed; embedded fonts, vectors, hatch clipping and label separation",
+    "typecheck": "passed",
+    "build": "passed"
+  },
+  "limits": [
+    "Sheet-coordinate picks; viewport point picking and persistent topology references remain open",
+    "Ordinate dimensions and assembly drawing sources remain open",
+    "FreeCAD retirement review incomplete; reference retained"
+  ],
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.124",
+    "sha256": "902480d33a15ce84e6a62d8e2bbac82b0f928aa35eb35bbf8490e1c4afc6bec1",
+    "source_commit": "b66239ded7c48e2f45039147d92a4c71060312f8",
+    "files": 3582,
+    "activated": true,
+    "activation": {
+      "app": "cad",
+      "current": "alpha-0.1.124",
+      "durable": true,
+      "previous": "alpha-0.1.123",
+      "restart_required": false
+    }
+  },
+  "packageVerification": {
+    "files": 3582,
+    "exactQualifiedFiles": true,
+    "sha256": "902480d33a15ce84e6a62d8e2bbac82b0f928aa35eb35bbf8490e1c4afc6bec1"
+  },
+  "browser": {
+    "status": "passed",
+    "steps": [
+      "base-and-projected-views",
+      "exact-section-view-and-invalid-cut-refusal",
+      "dimension-and-note",
+      "source-edit-and-associative-rebuild",
+      "invalid-edit-keeps-drawing",
+      "exports-and-local-reopen",
+      "multiple-sheets",
+      "sheet-fits-workspace",
+      "point-dimensions-ui",
+      "dimension-chain-edit-and-history",
+      "live-drawing-agent",
+      "saved-and-read-only-drawing",
+      "drawing-tab-and-metadata"
+    ],
+    "errors": []
+  },
+  "otherAppsUnchanged": true
+}
