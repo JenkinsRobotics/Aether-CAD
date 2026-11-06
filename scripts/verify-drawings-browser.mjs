@@ -134,6 +134,24 @@ try {
     await drawing();
     await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: /^24.00$/ })).toHaveCount(1);
   });
+  await step('point-dimensions-ui', async () => {
+    for (const [kind, picks, text] of [
+      ['point-distance', '60,50\n100,70', '44.72'],
+      ['point-angle', '60,50\n100,50\n100,70', '90.00°'],
+    ]) {
+      await button('Annotation').click();
+      await page.locator('#drawing-annotation-kind').selectOption(kind);
+      await page.locator('#drawing-dimension-view').selectOption({ label: 'Top' });
+      await page.locator('#drawing-point-picks').fill(picks);
+      await page.locator('#drawing-x').fill('125'); await page.locator('#drawing-y').fill('75');
+      await add();
+      await expect(page.locator('svg[data-sheet-id] text').filter({ hasText: text })).toHaveCount(1);
+    }
+    const points = await save('point-dimensions.aethercad');
+    assert.equal(points.formatVersion, 5);
+    assert.equal(points.sheets[0].annotations.filter(a => a.kind.startsWith('point-')).length, 2);
+    await exportPDF('point-dimensions', [[297, 210]]);
+  });
   await step('live-drawing-agent', async () => { await verifyDrawingAgent(page, origin, async bytes => {
       await writeFile(join(evidence, 'agent.pdf'), bytes);
       await checkPDF(bytes, [[297, 210], [210, 297]]);

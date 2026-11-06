@@ -36,6 +36,18 @@ export async function verifyDrawingAgent(page,origin, checkPDF) {
     }throw Error('Drawing agent operation timed out');
   };
   let state=await invoke('aether_cad_drawing_inspect');
+  const point = state.sheet.annotations.find(a => a.kind === 'point-distance');
+  assert.ok(point, 'UI-authored point dimension is visible to MCP');
+  assert.ok(Math.abs(point.value_mm - Math.hypot(40, 20)) < 1e-8);
+  const { value_mm, value_deg, text, ...pointIntent } = point;
+  state = await invoke('aether_cad_drawing_edit', { expected_revision: state.revision, command_json: JSON.stringify({
+    type: 'update-annotation', sheetId: state.active_sheet_id, annotation: { ...pointIntent, axis: 'x' }
+  }) });
+  assert.equal(state.sheet.annotations.find(a => a.id === point.id).value_mm, 40);
+  state = await invoke('aether_cad_drawing_undo', { expected_revision: state.revision });
+  assert.ok(Math.abs(state.sheet.annotations.find(a => a.id === point.id).value_mm - Math.hypot(40,20)) < 1e-8);
+  state = await invoke('aether_cad_drawing_redo', { expected_revision: state.revision });
+  assert.equal(state.sheet.annotations.find(a => a.id === point.id).value_mm, 40);
   const section=state.sheet.views.find(view=>view.section);assert.ok(section,'Inspect exposes section intent');assert.ok(section.hatch_lines>5);
   const revision=state.revision;
   await invoke('aether_cad_drawing_edit',{expected_revision:revision,command_json:JSON.stringify({type:'update-view',sheetId:state.active_sheet_id,viewId:section.id,changes:{section:{offsetMm:1000,hatchSpacingMm:2}}})},false);

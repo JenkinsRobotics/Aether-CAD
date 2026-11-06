@@ -47751,7 +47751,7 @@ function projectBodyGeometry(bodies, frame, options = {}) {
   });
 }
 const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
-const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length"];
+const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"];
 function object(value2) {
   if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
 }
@@ -47778,7 +47778,7 @@ function atLeast(value2, version2, what) {
 }
 function validateDrawingDocument(value2) {
   object(value2);
-  if (value2.format !== "aether-drawing" || ![1, 2, 3, 4].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
+  if (value2.format !== "aether-drawing" || ![1, 2, 3, 4, 5].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
   text(value2.documentId);
   text(value2.name);
   text(value2.activeSheetId);
@@ -47901,7 +47901,13 @@ function validateDrawingDocument(value2) {
         if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6);
         if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
-        if (annotation.kind === "length") {
+        if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
+          atLeast(value2.formatVersion, 5, "Point dimensions");
+          list(annotation.pointsMm, 3);
+          if (annotation.pointsMm.length !== (annotation.kind === "point-angle" ? 3 : 2)) throw Error("Choose two distance points or three angle points.");
+          annotation.pointsMm.forEach(point);
+          if (annotation.axis !== void 0 && (annotation.kind === "point-angle" || !["x", "y"].includes(annotation.axis))) throw Error("Point distance axis must be x or y; point angles have no axis.");
+        } else if (annotation.kind === "length") {
           atLeast(value2.formatVersion, 4, "Edge length dimensions");
           point(annotation.atMm);
         } else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
@@ -47998,9 +48004,12 @@ function applyDrawingCommand(source, command) {
         throw Error("Unknown drawing command.");
     }
   }
-  if (doc.sheets.some((sheet) => sheet.titleBlock || sheet.partsList || sheet.views.some((view) => view.direction || view.detail) || sheet.annotations.some((annotation) => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
+  const previousVersion = doc.formatVersion;
+  if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
+  else if (doc.sheets.some((sheet) => sheet.titleBlock || sheet.partsList || sheet.views.some((view) => view.direction || view.detail) || sheet.annotations.some((annotation) => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
   else if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
   else if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
+  doc.formatVersion = Math.max(previousVersion, doc.formatVersion);
   validateDrawingDocument(doc);
   return doc;
 }
@@ -48212,6 +48221,58 @@ function attachedDimension(annotation, view) {
   const graphics = radialDimension(round4.center, round4.radiusMm, label, annotation.kind);
   return { id: annotation.id, viewId: annotation.viewId, text: text2, valueMm: value2, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text2) };
 }
+function projectedDimensionPoint(view, pick) {
+  const candidates = [];
+  const add2 = (point2) => {
+    const value2 = sheetPoint(view, point2);
+    if (!candidates.some((other) => Math.hypot(value2[0] - other[0], value2[1] - other[1]) < 1e-7)) candidates.push(value2);
+  };
+  for (const curve of [...view.geometry.visible, ...view.view.hiddenLines ? view.geometry.hidden : []]) {
+    if (curve.kind === "line") {
+      add2(curve.start);
+      add2(curve.end);
+    }
+    if (curve.kind === "circle" || curve.kind === "arc") add2(curve.center);
+    if (curve.kind === "arc") {
+      for (const angle2 of [curve.start, curve.end]) {
+        add2([curve.center[0] + curve.radius * Math.cos(angle2), curve.center[1] + curve.radius * Math.sin(angle2)]);
+      }
+    }
+  }
+  const ranked = candidates.map((point2) => ({ point: point2, distance: Math.hypot(point2[0] - pick[0], point2[1] - pick[1]) })).sort((a2, b) => a2.distance - b.distance);
+  if (!ranked.length || ranked[0].distance > 5) throw Error("No projected endpoint or circle centre lies within 5 mm of the point pick.");
+  if (ranked[1] && Math.abs(ranked[1].distance - ranked[0].distance) < 1e-7) throw Error("The point pick is ambiguous. Pick closer to one endpoint or centre.");
+  return ranked[0].point;
+}
+function pointDimension(annotation, view) {
+  const points = annotation.pointsMm.map((pick) => projectedDimensionPoint(view, pick));
+  const common2 = { id: annotation.id, viewId: annotation.viewId, textAlign: "center" };
+  if (annotation.kind === "point-distance") {
+    const [a22, b2] = points, delta2 = [b2[0] - a22[0], b2[1] - a22[1]];
+    const valueMm = (annotation.axis ? Math.abs(delta2[annotation.axis === "x" ? 0 : 1]) : Math.hypot(...delta2)) / view.view.scale;
+    if (valueMm < 1e-9) throw Error("The selected points have zero distance along the chosen direction.");
+    const text2 = valueMm.toFixed(annotation.decimals);
+    const graphics2 = linearDimension(a22, b2, annotation.positionMm, sheetStyle, annotation.axis);
+    return { ...common2, text: text2, valueMm, measure: "length", positionMm: graphics2.text.at, lines: sheetLines(graphics2, text2) };
+  }
+  const [a2, vertex, b] = points;
+  const v1 = [a2[0] - vertex[0], a2[1] - vertex[1]], v2 = [b[0] - vertex[0], b[1] - vertex[1]];
+  const l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
+  if (Math.min(l1, l2) < 1e-9) throw Error("An angle needs three distinct points.");
+  const r1 = [v1[0] / l1, v1[1] / l1], r2 = [v2[0] / l2, v2[1] / l2];
+  const cross2 = r1[0] * r2[1] - r1[1] * r2[0];
+  if (Math.abs(cross2) < 1e-9) throw Error("An angle needs three non-collinear points.");
+  const valueDeg = Math.acos(Math.max(-1, Math.min(1, r1[0] * r2[0] + r1[1] * r2[1]))) * 180 / Math.PI;
+  const graphics = angularDimension(vertex, r1, r2, Math.sign(cross2), annotation.positionMm, sheetStyle, [l1, l2]);
+  return {
+    ...common2,
+    text: `${valueDeg.toFixed(annotation.decimals)}°`,
+    valueDeg,
+    measure: "angle",
+    positionMm: graphics.text.at,
+    lines: [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))]
+  };
+}
 const TOLERANCE_MM = 0.01;
 function clipSegment(a2, b, c2, r) {
   const d2 = [b[0] - a2[0], b[1] - a2[1]], f2 = [a2[0] - c2[0], a2[1] - c2[1]];
@@ -48317,6 +48378,10 @@ async function buildDrawing(input, project) {
       const view = built.views.find((v2) => v2.view.id === annotation.viewId);
       if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") {
         built.annotations.push(attachedDimension(annotation, view));
+        continue;
+      }
+      if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
+        built.annotations.push(pointDimension(annotation, view));
         continue;
       }
       const [x0, y0, x1, y1] = view.boundsMm;
@@ -48599,9 +48664,9 @@ const drawingCommandDocs = {
   content: "create: the source Part document JSON; other operations: the Drawing document JSON. Returned content is a complete drawing including its source snapshot.",
   command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "update-annotation", "remove-annotation", "refresh-source"],
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
-  annotations: ["note", "width", "height"],
+  annotations: ["note", "width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle", "balloon", "center-mark"],
   exports: ["svg", "dxf", "pdf"],
-  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "PDF returns data_base64 and mime_type; SVG/DXF return text. all_sheets:true exports PDF pages in document order and cannot be combined with sheet_id. PDF embeds the bundled Noto Sans font; unsupported glyphs are refused. Assembly sources and edge-attached dimensions are not implemented yet."]
+  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "PDF returns data_base64 and mime_type; SVG/DXF return text. all_sheets:true exports PDF pages in document order and cannot be combined with sheet_id. PDF embeds the bundled Noto Sans font; unsupported glyphs are refused. Assembly sources are not implemented yet. Attached edge and point dimensions measure projected model geometry. Point-distance (two endpoint/centre picks) and point-angle (endpoint, vertex, endpoint) require Drawing format 5; ambiguous or missing picks are refused."]
 };
 async function executeDrawingRequest(request, project, loadFont = async () => {
   throw Error("Drawing PDF font loader is unavailable.");
@@ -48614,7 +48679,11 @@ async function executeDrawingRequest(request, project, loadFont = async () => {
   if (request.operation !== "export" && (request.format !== void 0 || request.sheet_id !== void 0 || request.all_sheets !== void 0)) throw Error("Only export accepts a format or sheet selection.");
   const source = request.operation === "create" ? createDrawingDocument(parsePartDocument(request.content)) : parseDrawingDocument(request.content);
   if (request.operation === "mutate" && (!request.command || typeof request.command !== "object" || Array.isArray(request.command))) throw Error("mutate requires a drawing command.");
-  const document2 = request.operation === "mutate" ? applyDrawingCommand(source, request.command) : source;
+  let command = request.command;
+  if (request.operation === "mutate" && command.type === "refresh-source") {
+    command = { ...command, source: parsePartDocument(JSON.stringify(command.source)) };
+  }
+  const document2 = request.operation === "mutate" ? applyDrawingCommand(source, command) : source;
   if (document2.source.features.length > 512) throw Error("Drawing automation supports source Parts with at most 512 features.");
   const built = await buildDrawing(document2, project);
   if (request.operation === "export") {
@@ -48627,7 +48696,7 @@ async function executeDrawingRequest(request, project, loadFont = async () => {
     source_hash: built.sourceHash,
     drawing_id: document2.documentId,
     active_sheet_id: document2.activeSheetId,
-    sheets: built.sheets.map(({ sheet, views, annotations }) => ({ id: sheet.id, name: sheet.name, size_mm: [sheet.widthMm, sheet.heightMm], projection: sheet.projection, views: views.map((v2) => ({ id: v2.view.id, name: v2.view.name, orientation: v2.view.orientation, section: v2.view.section ?? null, hatch_lines: v2.geometry.hatch?.length ?? 0, scale: v2.view.scale, origin_mm: v2.view.originMm, model_bounds_mm: v2.geometry.bounds, sheet_bounds_mm: v2.boundsMm, body_ids: v2.geometry.bodyIds, visible_curves: v2.geometry.visible.length, hidden_curves: v2.geometry.hidden.length })), annotations: annotations.map((a2) => ({ id: a2.id, text: a2.text, value_mm: a2.valueMm, view_id: a2.viewId })) }))
+    sheets: built.sheets.map(({ sheet, views, annotations }) => ({ id: sheet.id, name: sheet.name, size_mm: [sheet.widthMm, sheet.heightMm], projection: sheet.projection, views: views.map((v2) => ({ id: v2.view.id, name: v2.view.name, orientation: v2.view.orientation, section: v2.view.section ?? null, hatch_lines: v2.geometry.hatch?.length ?? 0, scale: v2.view.scale, origin_mm: v2.view.originMm, model_bounds_mm: v2.geometry.bounds, sheet_bounds_mm: v2.boundsMm, body_ids: v2.geometry.bodyIds, visible_curves: v2.geometry.visible.length, hidden_curves: v2.geometry.hidden.length })), annotations: annotations.map((a2) => ({ id: a2.id, text: a2.text, value_mm: a2.valueMm, value_deg: a2.valueDeg, view_id: a2.viewId })) }))
   };
 }
 async function drawingFont() {

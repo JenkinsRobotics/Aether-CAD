@@ -42,7 +42,7 @@ def defaults():
 def validate_drawing_header(doc):
     # Settings carry portable metadata only; the TS drawing module validates
     # authoring commands and geometry when the product opens/rebuilds the file.
-    if not isinstance(doc, dict) or doc.get("format") != "aether-drawing" or type(doc.get("formatVersion")) is not int or doc["formatVersion"] not in (1, 2):
+    if not isinstance(doc, dict) or doc.get("format") != "aether-drawing" or type(doc.get("formatVersion")) is not int or doc["formatVersion"] not in (1, 2, 3, 4, 5):
         raise ValueError("Unsupported Drawing format.")
     text(doc.get("name"), 1000, True)
     text(doc.get("documentId"), 1000, True)

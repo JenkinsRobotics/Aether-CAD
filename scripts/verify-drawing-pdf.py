@@ -40,7 +40,14 @@ for name, dimensions in sizes.items():
         if name != "detail":
             page = pdf.pages[0]
             dimension = next(word for word in page.extract_words() if word["text"] == "24.00")
-            assert dimension["x0"] / point >= 91.49, "Dimension text crosses its x=90 mm dimension line"
+            # Shared dimension graphics centre the label in a gap in the line.
+            # Check actual ink separation, not the obsolete right-offset layout.
+            dimension_lines = [line for line in page.lines
+                               if math.isclose(line["x0"], 90 * point, abs_tol=1e-6)
+                               and math.isclose(line["x1"], 90 * point, abs_tol=1e-6)]
+            assert len(dimension_lines) == 2
+            assert all(line["bottom"] <= dimension["top"] or line["top"] >= dimension["bottom"]
+                       for line in dimension_lines), "Dimension line crosses its label"
             strokes = [*page.curves, *page.lines, *page.rects]
             # The independent reader reports transformed physical points.
             widths = {round(stroke["linewidth"] / point, 2) for stroke in strokes}

@@ -3,6 +3,7 @@ import { availableBodies } from "../document/feature-history";
 import { sha256Hex } from "../kernel/sha256";
 import { resolvedDrawingView, validateDrawingDocument, type DrawingDocument, type DrawingPoint, type DrawingSheet, type DrawingView } from "./document";
 import type { PartDrawingOptions, PartDrawingProjection, ProjectedDrawingCurve } from "./projection";
+import { pointDimension } from "./point-dimensions";
 import { attachedDimension, sheetLines, sheetStyle } from "./attached-dimensions";
 import { linearDimension } from "../annotation/dimension-geometry";
 import { circleChords, clipProjectionToCircle } from "./detail-view";
@@ -69,6 +70,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
       if (annotation.kind === "balloon") { built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm)); continue; }
       const view = built.views.find(v => v.view.id === annotation.viewId)!;
       if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") { built.annotations.push(attachedDimension(annotation, view)); continue; }
+      if (annotation.kind === "point-distance" || annotation.kind === "point-angle") { built.annotations.push(pointDimension(annotation, view)); continue; }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];

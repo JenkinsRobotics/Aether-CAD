@@ -1,6 +1,6 @@
 {
-  "wheel": "aether_animation-0.1.0-31-py3-none-any.whl",
-  "sha256": "7b57f96ad993085cde6978ad070272281e79f81e85b6dc8e02303ea69d75857c",
+  "wheel": "aether_animation-0.1.0-32-py3-none-any.whl",
+  "sha256": "2e01cad9afa77cd5f05b3e6e077e6131ee830ea0bda2d4e258caaa4b330e80f4",
   "modules": [
     "aether_animation/__init__.py",
     "aether_animation/aether_workspace.py",
@@ -9,5 +9,5 @@
     "aether_animation/relation_kinds.py",
     "aether_animation/workspace_drawings.py"
   ],
-  "source_commit": "5ad72ea2e3d2347f218cd7bce1abdba137350f87"
+  "source_commit": "64eb07c40f2df35525e551ecaf5782dc91c59d59"
 }

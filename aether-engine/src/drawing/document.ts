@@ -18,7 +18,7 @@ export interface DrawingSourceReference {
  * Refresh explicitly replaces that snapshot with the same document's new revision. */
 export interface DrawingDocument {
   format: "aether-drawing";
-  formatVersion: 1 | 2 | 3 | 4;
+  formatVersion: 1 | 2 | 3 | 4 | 5;
   documentId: string;
   name: string;
   source: PartDocument;
@@ -104,6 +104,14 @@ export type DrawingAnnotation = {
   atMm: DrawingPoint;
   toMm: DrawingPoint;
 } | {
+  /** Native projected endpoints or circle centres, selected by sheet-space picks.
+   * Point-distance uses two points; point-angle uses endpoint, vertex, endpoint. */
+  kind: "point-distance" | "point-angle";
+  viewId: string;
+  decimals: number;
+  pointsMm: DrawingPoint[];
+  axis?: "x" | "y";
+} | {
   /** Circled item text with a leader to `leaderMm`. Format version 4. */
   kind: "balloon";
   text: string;
@@ -114,7 +122,7 @@ export type DrawingAnnotation = {
   viewId: string;
   atMm: DrawingPoint;
 });
-export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length"] as const;
+export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"] as const;
 
 export type DrawingCommand =
   | { type: "add-sheet"; sheet: DrawingSheet }
@@ -156,7 +164,7 @@ function atLeast(value: unknown, version: number, what: string): void {
 
 export function validateDrawingDocument(value: unknown): asserts value is DrawingDocument {
   object(value);
-  if (value.format !== "aether-drawing" || ![1, 2, 3, 4].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
+  if (value.format !== "aether-drawing" || ![1, 2, 3, 4, 5].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
   text(value.documentId); text(value.name); text(value.activeSheetId);
   validatePartDocument(value.source);
   if (value.sourceReference !== undefined) {
@@ -239,7 +247,14 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       else if (drawingDimensionKinds.includes(annotation.kind as never)) {
         text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
-        if (annotation.kind === "length") { atLeast(value.formatVersion, 4, "Edge length dimensions"); point(annotation.atMm); }
+        if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
+          atLeast(value.formatVersion, 5, "Point dimensions");
+          list(annotation.pointsMm, 3);
+          if (annotation.pointsMm.length !== (annotation.kind === "point-angle" ? 3 : 2)) throw Error("Choose two distance points or three angle points.");
+          annotation.pointsMm.forEach(point);
+          if (annotation.axis !== undefined && (annotation.kind === "point-angle" || !["x", "y"].includes(annotation.axis as string))) throw Error("Point distance axis must be x or y; point angles have no axis.");
+        }
+        else if (annotation.kind === "length") { atLeast(value.formatVersion, 4, "Edge length dimensions"); point(annotation.atMm); }
         else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
           atLeast(value.formatVersion, 3, "Diameter, radius and angle dimensions");
           point(annotation.atMm);
@@ -312,9 +327,12 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
     }
   }
   // Each feature pins the lowest version that can hold it; older readers refuse newer files.
-  if (doc.sheets.some(sheet => sheet.titleBlock || sheet.partsList || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
+  const previousVersion = doc.formatVersion;
+  if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
+  else if (doc.sheets.some(sheet => sheet.titleBlock || sheet.partsList || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
   else if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
   else if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;
+  doc.formatVersion = Math.max(previousVersion, doc.formatVersion) as DrawingDocument["formatVersion"];
   validateDrawingDocument(doc);
   return doc;
 }

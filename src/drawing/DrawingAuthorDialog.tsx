@@ -30,6 +30,8 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
   const [width, setWidth] = useState(sheet.widthMm), [height, setHeight] = useState(sheet.heightMm);
   const [projection, setProjection] = useState(sheet.projection);
   const [kind, setKind] = useState<DrawingAnnotation["kind"]>(annotation?.kind ?? "note");
+  const [pointPicks, setPointPicks] = useState(annotation && "pointsMm" in annotation ? annotation.pointsMm.map(point => point.join(", ")).join("\n") : "");
+  const [pointAxis, setPointAxis] = useState<"aligned" | "x" | "y">(annotation && "axis" in annotation ? annotation.axis ?? "aligned" : "aligned");
   const [text, setText] = useState(annotation?.kind === "note" || annotation?.kind === "balloon" ? annotation.text : "");
   const [viewId, setViewId] = useState(annotation && annotation.kind !== "note" && annotation.kind !== "balloon" ? annotation.viewId : sheet.views[0]?.id ?? "");
   const [decimals, setDecimals] = useState(annotation && "decimals" in annotation ? annotation.decimals : 2);
@@ -55,6 +57,9 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
       } else {
         const annotation: DrawingAnnotation = kind === "note" ? { id, kind, text, positionMm: [x, y] }
           : kind === "balloon" ? { id, kind, text, positionMm: [x, y], leaderMm: leader }
+          : kind === "point-distance" || kind === "point-angle" ? { id, kind, viewId, decimals, positionMm: [x, y],
+              pointsMm: pointPicks.trim().split("\n").map(line => { const coordinates = line.split(",").map(value => Number(value.trim())); if (coordinates.length !== 2 || line.split(",").some(value => !value.trim()) || coordinates.some(value => !Number.isFinite(value))) throw Error("Enter one X, Y point per line."); return coordinates as [number, number]; }),
+              ...(kind === "point-distance" && pointAxis !== "aligned" ? { axis: pointAxis } : {}) }
           : kind === "center-mark" ? { id, kind, viewId, positionMm: [atX, atY], atMm: [atX, atY] }
           : kind === "angle" ? { id, kind, viewId, decimals, positionMm: [x, y], atMm: [atX, atY], toMm: [toX, toY] }
           : kind === "diameter" || kind === "radius" || kind === "length" ? { id, kind, viewId, decimals, positionMm: [x, y], atMm: [atX, atY] }
@@ -95,12 +100,16 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
         </>}
         <Checkbox label="Show hidden edges" checked={hidden} disabled={busy} onChange={e => setHidden(e.target.checked)}/>
       </> : <>
-        <FieldRow label="Annotation" htmlFor="drawing-annotation-kind"><SelectField id="drawing-annotation-kind" value={kind} disabled={busy} options={[{ value: "note", label: "Note" }, { value: "width", label: "Overall width dimension" }, { value: "height", label: "Overall height dimension" }, { value: "diameter", label: "Diameter dimension" }, { value: "radius", label: "Radius dimension" }, { value: "angle", label: "Angle dimension" }, { value: "length", label: "Edge length dimension" }, { value: "balloon", label: "Balloon" }, { value: "center-mark", label: "Centre mark" }]} onChange={e => setKind(e.target.value as typeof kind)}/></FieldRow>
+        <FieldRow label="Annotation" htmlFor="drawing-annotation-kind"><SelectField id="drawing-annotation-kind" value={kind} disabled={busy} options={[{ value: "note", label: "Note" }, { value: "width", label: "Overall width dimension" }, { value: "height", label: "Overall height dimension" }, { value: "diameter", label: "Diameter dimension" }, { value: "radius", label: "Radius dimension" }, { value: "angle", label: "Angle dimension" }, { value: "length", label: "Edge length dimension" }, { value: "point-distance", label: "Point-to-point dimension" }, { value: "point-angle", label: "Three-point angle" }, { value: "balloon", label: "Balloon" }, { value: "center-mark", label: "Centre mark" }]} onChange={e => setKind(e.target.value as typeof kind)}/></FieldRow>
         {kind === "note" || kind === "balloon" ? <>
           <FieldRow label="Text" htmlFor="drawing-note"><input id="drawing-note" value={text} disabled={busy} onChange={e => setText(e.target.value)}/></FieldRow>
           {kind === "balloon" && <>{numberField("leader-x", "Leader tip X (sheet mm)", leader[0], n => setLeader([n, leader[1]]))}{numberField("leader-y", "Leader tip Y (sheet mm)", leader[1], n => setLeader([leader[0], n]))}</>}
         </> : <>
           <FieldRow label="View" htmlFor="drawing-dimension-view"><SelectField id="drawing-dimension-view" value={viewId} disabled={busy} options={sheet.views.map(v => ({ value: v.id, label: v.name }))} onChange={e => setViewId(e.target.value)}/></FieldRow>
+          {(kind === "point-distance" || kind === "point-angle") && <>
+            <FieldRow label={kind === "point-angle" ? "Points: endpoint, vertex, endpoint (sheet mm)" : "Two points (sheet mm)"} htmlFor="drawing-point-picks"><textarea id="drawing-point-picks" value={pointPicks} disabled={busy} onChange={event => setPointPicks(event.target.value)} placeholder="X, Y — one point per line" /></FieldRow>
+            {kind === "point-distance" && <FieldRow label="Direction" htmlFor="drawing-point-axis"><SelectField id="drawing-point-axis" value={pointAxis} disabled={busy} options={[{ value: "aligned", label: "Aligned" }, { value: "x", label: "Horizontal" }, { value: "y", label: "Vertical" }]} onChange={event => setPointAxis(event.target.value as typeof pointAxis)} /></FieldRow>}
+          </>}
           {kind !== "center-mark" && numberField("decimals", "Decimal places", decimals, setDecimals)}
           {(kind === "diameter" || kind === "radius" || kind === "angle" || kind === "center-mark" || kind === "length") && <>
             {numberField("at-x", kind === "angle" ? "First edge pick X (sheet mm)" : kind === "length" ? "Edge pick X (sheet mm)" : "Circle pick X (sheet mm)", atX, setAtX)}{numberField("at-y", kind === "angle" ? "First edge pick Y (sheet mm)" : kind === "length" ? "Edge pick Y (sheet mm)" : "Circle pick Y (sheet mm)", atY, setAtY)}
@@ -108,7 +117,8 @@ export function DrawingAuthorDialog({ draft, document, execute, onClose }: { dra
           </>}
           <p>{kind === "width" || kind === "height" ? "The dimension measures the view's overall geometric extent in model millimeters. It updates when the source Part is rebuilt."
             : kind === "length" ? "The dimension measures the model length of the straight edge nearest the pick (within 5 mm on the sheet); the dimension line passes through the label position."
-            : kind === "center-mark" ? "Centre lines cross the projected circle or arc nearest the pick (within 5 mm on the sheet)."
+              : kind === "point-distance" || kind === "point-angle" ? "Points snap to unique projected endpoints or circle centres within 5 mm on the sheet. Enter one X, Y pair per line."
+          : kind === "center-mark" ? "Centre lines cross the projected circle or arc nearest the pick (within 5 mm on the sheet)."
             : kind === "angle" ? "The angle is measured between the straight edges nearest the two picks (within 5 mm on the sheet), in the sector the picks span. It updates when the source Part is rebuilt."
             : "The dimension attaches to the projected circle or arc nearest the pick (within 5 mm on the sheet) and shows the model value. It updates when the source Part is rebuilt."}</p>
         </>}

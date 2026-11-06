@@ -11,6 +11,77 @@ Both run OpenCASCADE, which is why FreeCAD's answers were usable as an oracle. T
 SolidCraft 0.23 comparison (`SolidCraft_0_23_Foundations.md`, `Tool_Parity_Tracker.md`)
 continues separately; nothing below promotes a SolidCraft row.
 
+## Retirement review — 2026-11-05, in progress
+
+The downloaded reference is **not cleared for deletion**. The tables below are a
+historical comparison, not a current release qualification. “Parity” in a row
+means the named cases were tested, not that all options and interactions match.
+In particular, the later 2026-10-31 instruction in AGENTS.md supersedes this
+report's exclusions: omitted workbenches are unreviewed, not automatically waived.
+
+This pass inspected the installed TechDraw dimension tests
+(`/Applications/FreeCAD.app/Contents/Resources/Mod/TechDraw/TDTest/DrawViewDimensionTest.py`)
+as a behavior reference. No FreeCAD source was copied and no new oracle answers
+were captured. Native model dimensions, geometry-backed attachment, and rebuild
+behavior are the requirements; screenshots alone are insufficient.
+
+Implemented in the current candidate, not yet released:
+
+- Drawing format 5 point-to-point dimensions (aligned/horizontal/vertical) and
+  three-point angles, shared by editor and agent commands. Picks resolve to
+  analytic projected line/arc endpoints or circle centres. Measurements use model
+  units, respect view scale, and export through the common SVG/DXF/PDF geometry.
+- Ambiguous/missing picks refuse the rebuild. References remain proximity-based
+  sheet-coordinate picks, **not persistent topology references**; viewport click
+  picking, chain and ordinate dimensions are still open.
+- Metadata settings now preserve Drawing formats 3–5. The old Python metadata
+  adapter accepted only 1–2, despite the drawing editor supporting later formats.
+  Future versions are still refused; canonical authoring validation remains in TS.
+- Current focused checks: 28 engine Drawing tests, 11 editor/controller/agent unit
+  tests, 10 native metadata/container tests, 26 shared-codec tests and TypeScript
+  check pass. The disposable authenticated browser gate passed all 12 workflows
+  (including actual UI/MCP editing, undo/redo, Studio save/reopen and read-only
+  revisions): `build/Example-Collection/freecad-drawing-points-fixed/host/browser/results.json`.
+  Headless drawing commands passed 15 fresh-process checks; PDF export passed 10
+  fresh-process checks and independent pypdf/pdfplumber validation. Both pages of
+  the all-sheets PDF were rendered with Poppler and inspected.
+- The first browser run exposed a second version-1/2-only check in the shared
+  workspace container. Fixed in Animation source commit `64eb07c`, consumed as
+  pinned codec wheel build 32; only `workspace_drawings.py` changed among CAD's
+  consumed codec modules. Older codec readers refuse newer drawings rather than
+  dropping them. Other apps have not been redeployed.
+- Headless refresh now migrates supported older Part sources at its serialized
+  boundary, matching create/open. The existing qualification fixture exposed this
+  mismatch. Updated the PDF verifier to check ink separation around the shared
+  dimension line's text gap instead of requiring its obsolete right-offset label.
+
+These are candidate checks, not completion of the retirement review or a live
+release. Installed CAD remains alpha-0.1.123 until a separately qualified package
+is staged and activated.
+
+Remaining retirement work, checked against current source where noted:
+
+1. Drawing: chain/ordinate dimensions, persistent/clickable references, assembly
+   sources/BOM, stepped sections, clip groups/active views, engineering symbols,
+   rich text/images and reusable templates/zone grids. Current source still uses a
+   Part source; `drawing/document.ts` and the drawing agent expose these limits.
+2. CAD: reconcile the kernel gaps recorded in `Handoff_Parity_2026_11_05.md`
+   (partial finishing, per-face Boolean offset, guide loft, cell enumeration) with
+   the current feature commands; add reproducible editable examples and checks.
+3. Sketch/assembly: recheck persistent model links, linked sketch copies,
+   large-constraint performance, nested assembly authoring and motion coverage.
+   Do not retire these rows based on the older table alone.
+4. Interchange: `kernel/export.ts` currently offers STEP/STL/OBJ/glTF/3MF;
+   BREP, IGES export and OFF/PLY export remain absent there.
+5. Performance: matched viewport rendering evidence and the documented solver,
+   Boolean and display targets remain to be reconciled and qualified.
+6. Review the formerly excluded FreeCAD workbenches for transferable value and
+   record an explicit disposition before claiming the reference is exhausted.
+
+Preserve the installed reference and downloaded DMG until this review is complete.
+Keep existing frozen oracle measurements and import fixtures as regression data
+regardless of whether the app/installer is eventually removed.
+
 ## 1. What was verified today
 
 | Check | Result |
