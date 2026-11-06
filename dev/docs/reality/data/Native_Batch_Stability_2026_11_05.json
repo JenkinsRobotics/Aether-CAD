@@ -1962,5 +1962,14 @@
     "The earlier intermittent browser rebuild divergence needs a separate reproducible test.",
     "Feature gap, dimension coverage, performance and drawing pipeline stages remain."
   ],
-  "release": "not yet staged"
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.120",
+    "sha256": "79ef2a0eddcb453d85de97868db8807177c407bec04ae8bc0281b997db02cdec",
+    "source_commit": "eeece9efdec8148ed14230dcb336b713508f98f0",
+    "files": 3580,
+    "activated": true,
+    "verifiedFiles": 3580,
+    "otherAppsUnchanged": true
+  }
 }
