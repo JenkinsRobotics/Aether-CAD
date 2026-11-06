@@ -1,0 +1,450 @@
+{
+  "date": "2026-11-05",
+  "stage": "Example audit follow-up; remaining failures are not release-ready parity",
+  "changes": [
+    "Native straight-edge references follow unique endpoint identities or an unchanged supporting line; ambiguous moved references refuse.",
+    "Live MCP topology inspection returns bounded candidate pages with native straight-edge anchors.",
+    "Reference bracket rebuilt through MCP with dimensioned foot and upright, native Fillet, Add Extrude and Hole Wizard; original analytic solid preserved.",
+    "Failed loft previews release their native result and report invalid solid orientation explicitly."
+  ],
+  "completeHistoryAudit": {
+    "parts": 165,
+    "trials": 710,
+    "passedTrials": 690,
+    "failedParts": 14,
+    "scope": "One canonical trial per feature through the whole history; not every parameter combination. Bracket row replaced by its final seven-feature archive audit.",
+    "failures": [
+      {
+        "example": "scifirobot",
+        "part": "Lens bezel",
+        "trials": [
+          {
+            "id": "b0a1f7a6-352e-43d1-9333-18c04d46c4c0",
+            "type": "extrude",
+            "name": "Bezel annulus",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 7.425
+            },
+            "passed": false,
+            "error": "FeatureFailure: Bezel face chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Socket screw",
+        "trials": [
+          {
+            "id": "8d79b5cb-fcda-4ede-b49f-2b9261bc3fa4",
+            "type": "extrude",
+            "name": "Head",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 2.475
+            },
+            "passed": false,
+            "error": "FeatureFailure: Head edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Side hub cover",
+        "trials": [
+          {
+            "id": "3cf04066-c28d-41f7-832d-3a370c025ad3",
+            "type": "extrude",
+            "name": "Raised center cap",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 7.92
+            },
+            "passed": false,
+            "error": "FeatureFailure: Cover chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Cooling duct",
+        "trials": [
+          {
+            "id": "29b2d2a9-14e9-4871-8e10-3dff4f73b371",
+            "type": "extrude",
+            "name": "Outlet lip",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 3.96
+            },
+            "passed": false,
+            "error": "FeatureFailure: Outlet edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Auxiliary sensor housing",
+        "trials": [
+          {
+            "id": "3ede70ec-0f39-4956-82ff-19db37190c84",
+            "type": "extrude",
+            "name": "Sensor face",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 2.9699999999999998
+            },
+            "passed": false,
+            "error": "FeatureFailure: Sensor bezel chamfer: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "scifirobot",
+        "part": "Rear service cover",
+        "trials": [
+          {
+            "id": "c2fbaea8-739e-4e89-9f12-08dabf556c7b",
+            "type": "extrude",
+            "name": "Cover flange",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 3.96
+            },
+            "passed": false,
+            "error": "FeatureFailure: Service cover edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "airplane",
+        "part": "Horizontal stabilizer",
+        "trials": [
+          {
+            "id": "cb6bcc2b-e886-43bf-9b79-c93e47ca89f6",
+            "type": "profile",
+            "name": "Tail planform \u2014 sketch",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "offsetMillimeters": 0.01
+            },
+            "passed": false,
+            "error": "FeatureFailure: Tail perimeter bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          },
+          {
+            "id": "2a595a4d-06e4-44fc-8c29-19d7361ef52f",
+            "type": "extrude",
+            "name": "Tail planform",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 3.762
+            },
+            "passed": false,
+            "error": "FeatureFailure: Tail perimeter bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "wrench",
+        "part": "Forged wrench frame",
+        "trials": [
+          {
+            "id": "c7bd7aa9-b0ca-4890-b8d0-a3b22fb98529",
+            "type": "profile",
+            "name": "Forged outline \u2014 sketch",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "offsetMillimeters": 0.01
+            },
+            "passed": false,
+            "error": "FeatureFailure: Forged edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          },
+          {
+            "id": "9c6809f2-0a54-4801-8c72-3ce2b36ad1af",
+            "type": "extrude",
+            "name": "Forged outline",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 11.879999999999999
+            },
+            "passed": false,
+            "error": "FeatureFailure: Forged edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "wrench",
+        "part": "Sliding jaw",
+        "trials": [
+          {
+            "id": "ba755aab-ea4c-4f3f-bc09-4bc10ba86f68",
+            "type": "profile",
+            "name": "Jaw shoulder \u2014 sketch",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "offsetMillimeters": 0.01
+            },
+            "passed": false,
+            "error": "FeatureFailure: Jaw edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          },
+          {
+            "id": "9088be94-96c7-40ff-9cd1-c077d6b93526",
+            "type": "extrude",
+            "name": "Jaw shoulder",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 11.484
+            },
+            "passed": false,
+            "error": "FeatureFailure: Jaw edge break: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "roadster",
+        "part": "Five-spoke alloy wheel",
+        "trials": [
+          {
+            "id": "b4796109-d11a-4f19-b8ee-1a7683c40c13",
+            "type": "extrude",
+            "name": "Wheel barrel",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 21.78
+            },
+            "passed": false,
+            "error": "FeatureFailure: Rim bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          },
+          {
+            "id": "d4d092b0-6215-43ad-adfc-9755663bc4ed",
+            "type": "extrude",
+            "name": "Front wheel web",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 3.465
+            },
+            "passed": false,
+            "error": "FeatureFailure: Rim bevel: Chamfer did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "smartphone",
+        "part": "Display glass",
+        "trials": [
+          {
+            "id": "f6de3a4d-20be-4fea-a85d-b1a5a1288bb1",
+            "type": "profile",
+            "name": "Cover glass \u2014 sketch",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "offsetMillimeters": 0.01
+            },
+            "passed": false,
+            "error": "FeatureFailure: Glass edge radius: Fillet did not produce a valid solid. Reduce the size or choose fewer edges."
+          },
+          {
+            "id": "ca5a5d59-706d-4f61-a965-b4034439a632",
+            "type": "extrude",
+            "name": "Cover glass",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 0.594
+            },
+            "passed": false,
+            "error": "FeatureFailure: Glass edge radius: Fillet did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "smartphone",
+        "part": "Camera optical cover",
+        "trials": [
+          {
+            "id": "ae88aa5a-44c8-4183-9168-98a7975b75ea",
+            "type": "extrude",
+            "name": "Optical disk",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 0.6435
+            },
+            "passed": false,
+            "error": "FeatureFailure: Lens rim radius: Fillet did not produce a valid solid. Reduce the size or choose fewer edges."
+          }
+        ]
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbiter fuselage",
+        "trials": [
+          {
+            "id": "6e611b17-68d2-44b1-9049-e7c6fb4628c7",
+            "type": "loft",
+            "name": "Fuselage stations",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "ruled": false
+            },
+            "passed": false,
+            "error": "FeatureFailure: Fuselage stations: Loft produced an inverted or degenerate solid. Adjust the sections or use a ruled loft."
+          }
+        ]
+      },
+      {
+        "example": "reference-enclosure",
+        "part": "Enclosure case",
+        "trials": [
+          {
+            "id": "36aae0c7-60c0-4471-bb80-be2b467f34cd",
+            "type": "profile",
+            "name": "Rounded case outline \u2014 sketch",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "offsetMillimeters": 0.01
+            },
+            "passed": false,
+            "error": "FeatureFailure: Shell \u2014 2 mm walls: shell matched no face on that plane to open"
+          },
+          {
+            "id": "d9cdd645-8e4b-485d-a6aa-bf9d7e1f0d7f",
+            "type": "extrude",
+            "name": "Rounded case outline",
+            "tool": "aether_cad_feature_update",
+            "change": {
+              "distanceMillimeters": 29.7
+            },
+            "passed": false,
+            "error": "FeatureFailure: Shell \u2014 2 mm walls: shell matched no face on that plane to open"
+          }
+        ]
+      }
+    ]
+  },
+  "bracket": {
+    "archiveSha256": "c99639522aacc31c9d08599ef20104e241fe21edb796e9962afece6e2e9d7471",
+    "features": 7,
+    "baselineAnalyticVolumeMm3": 22385.309769726147,
+    "dimensionTrials": {
+      "example": "reference-bracket",
+      "partId": "part-000003",
+      "part": "Mounting bracket",
+      "scope": "complete-history-driving-dimensions",
+      "features": [
+        {
+          "id": "a02f0dc1-ec78-408b-9c0e-7925da149194",
+          "name": "Foot extrusion \u2014 sketch",
+          "dimension": "size-0-0",
+          "before": 40,
+          "requested": 39.6,
+          "volume": 22241.309772394932,
+          "passed": true,
+          "expectedVolumeMm3": 22241.309769726147
+        },
+        {
+          "id": "a02f0dc1-ec78-408b-9c0e-7925da149194",
+          "name": "Foot extrusion \u2014 sketch",
+          "dimension": "size-0-1",
+          "before": 6,
+          "requested": 5.9399999999999995,
+          "volume": 22268.941627691933,
+          "passed": true,
+          "expectedVolumeMm3": 22268.94162762104
+        },
+        {
+          "id": "b761b10b-4787-49a4-919c-0fa512729ff1",
+          "name": "Upright extrusion \u2014 sketch",
+          "dimension": "size-0-0",
+          "before": 6,
+          "requested": 5.9399999999999995,
+          "volume": 22298.90976977065,
+          "passed": true,
+          "expectedVolumeMm3": 22298.909769726146
+        },
+        {
+          "id": "b761b10b-4787-49a4-919c-0fa512729ff1",
+          "name": "Upright extrusion \u2014 sketch",
+          "dimension": "size-0-1",
+          "before": 30,
+          "requested": 29.7,
+          "volume": 22277.309769844964,
+          "passed": true,
+          "expectedVolumeMm3": 22277.309769726147
+        },
+        {
+          "id": "f0cb7863-62ae-47e3-953a-bc2ef0af0238",
+          "name": "Two mounting holes \u2014 centers",
+          "dimension": "diameter-0",
+          "before": 8,
+          "requested": 7.92,
+          "volume": 22385.309769726147,
+          "passed": true,
+          "expectedVolumeMm3": 22385.309769726147
+        },
+        {
+          "id": "f0cb7863-62ae-47e3-953a-bc2ef0af0238",
+          "name": "Two mounting holes \u2014 centers",
+          "dimension": "diameter-1",
+          "before": 8,
+          "requested": 7.92,
+          "volume": 22385.309769726147,
+          "passed": true,
+          "expectedVolumeMm3": 22385.309769726147
+        }
+      ],
+      "errors": []
+    },
+    "volumeToleranceMm3": 1e-05
+  },
+  "qualification": {
+    "engineTests": 1465,
+    "frontendFullSuitePassed": 2232,
+    "frontendSkipped": 1,
+    "currentTopologyFocusedTests": 26,
+    "nativeServiceTests": 352,
+    "typecheck": true,
+    "headless": true,
+    "regions": true,
+    "featureControlsChromium": 25,
+    "featureControlsWebkit": 25,
+    "modelingBrowserSteps": 17,
+    "homeHosted": true,
+    "homeStandalone": true,
+    "archiveInspection": "14 examples; 165 native Parts; 710 sketch/features; no imports"
+  },
+  "limitations": [
+    "20 complete-history edit trials fail in 14 Parts; chiefly absolute-plane finishing/Shell references, plus Shuttle smooth loft.",
+    "Curved-edge references still require unchanged midpoint and length.",
+    "Legacy sketches still include fixed contours; dimensions are not fully authored throughout the collection.",
+    "Shuttle ruled loft remains valid; smooth loft negative signed volume is rejected, not repaired.",
+    "No full Onshape parity or large-assembly performance claim."
+  ],
+  "browserFinal": {
+    "liveBracket": {
+      "passed": true,
+      "steps": [
+        "live-author-bracket"
+      ],
+      "topologyPages": 11,
+      "largestTopologyResultBytes": 4166,
+      "checks": [
+        "Created from empty Part through live MCP",
+        "Native topology selection",
+        "Exact width edit volume",
+        "Shared keyboard undo/redo",
+        "Autosave and reopen"
+      ]
+    },
+    "humanAndAgentSavedExample": {
+      "passed": true,
+      "steps": [
+        "assembly-native-history-and-source-navigation",
+        "human-sketch-dimension-agent-inspection",
+        "agent-dimension-human-history-save-reopen"
+      ]
+    },
+    "bracketPreviewCopyReopen": true
+  },
+  "release": {
+    "status": "qualified; awaiting immutable staging and activation"
+  }
+}

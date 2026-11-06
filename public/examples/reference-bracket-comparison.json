@@ -11,7 +11,7 @@
   "differences": [
     "Hole Wizard replaces the source’s circular extrusion cuts. Coordinate system and nominal dimensions are retained."
   ],
-  "method": "Source-recipe dimensions and analytic geometry compared with native OpenCASCADE measurements; not a run of the SolidCraft engine.",
+  "method": "Independent analytic expectations compared with native OpenCASCADE measurements; not a run of another CAD engine.",
   "comparisons": [
     {
       "part": "bracket",
@@ -29,9 +29,9 @@
       "field": "holeRemoval",
       "units": "mm³",
       "expected": 603.1857894892403,
-      "actual": 603.1857894892455,
-      "absoluteError": 5.229594535194337e-12,
-      "relativeError": 8.669956465026476e-15,
+      "actual": 603.1857894892419,
+      "absoluteError": 1.5916157281026244e-12,
+      "relativeError": 2.638682402399362e-15,
       "tolerance": 0.0006031857894892403,
       "passed": true
     }

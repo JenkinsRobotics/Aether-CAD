@@ -276,8 +276,17 @@
     "thumbnail": "reference-bracket.png",
     "parts": 1,
     "instances": 1,
-    "features": 5,
+    "features": 7,
     "assemblyId": "assembly-000001",
+    "configurations": [
+      {
+        "id": "assembly-000001",
+        "name": "Main Assembly",
+        "instances": 1,
+        "mates": 0,
+        "movable": false
+      }
+    ],
     "tags": [
       "Extrude",
       "Fillet",
@@ -288,7 +297,7 @@
       "source": "https://github.com/tangency-labs/solidcraft/blob/main/examples/bracket.json",
       "comparison": "reference-bracket-comparison.json"
     },
-    "sha256": "4d2d72489460f099735fdbe4ac0be63281123ceb9140c5af819e8e2b9f4b58ff"
+    "sha256": "c99639522aacc31c9d08599ef20104e241fe21edb796e9962afece6e2e9d7471"
   },
   {
     "id": "reference-enclosure",

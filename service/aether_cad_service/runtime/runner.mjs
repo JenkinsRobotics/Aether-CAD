@@ -14564,6 +14564,7 @@ const cadAgentTools = [
   ...featureReadTools,
   ...featureEditTools,
   tool("inspect", "Inspect the open Part: feature IDs, editable parameters and body IDs. All geometry tools use explicit millimeters or degrees. Use offset/limit to page the features.", { offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }),
+  tool("topology", "Inspect native candidates from the same evaluator as viewport picking. Offset/limit page candidates, grouped by face in each response. Straight-edge candidates include ready-to-use anchored references for feature creation. Reinspect after edits; curved-edge references require an unchanged midpoint and length.", { body_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 5 } }, ["body_id"]),
   tool("feature_references", "Inspect direct inputs or dependents of one feature before editing. Uses the canonical history graph, including suppressed features; does not claim face/edge correspondence or geometric validity. Paginate using next_offset.", { feature_id: string, direction: { type: "string", enum: ["inputs", "dependents"] }, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 50 } }, ["feature_id"]),
   tool("sketch_inspect", "Inspect existing sketch geometry, local coordinates, constraints, dimension IDs and closed regions before editing. Page contours, constraints and regions with offset/limit; region boundary coordinates are local millimeters. Choose a strictly interior profile_point_mm for Extrude/Revolve. Does not change the document.", { feature_id: string, offset: { type: "integer", minimum: 0 }, limit: { type: "integer", minimum: 1, maximum: 25 } }, ["feature_id"]),
   tool("sketch_translate", "Move an EXISTING sketch by dx_mm/dy_mm in its local plane. Preserves feature, contour and segment IDs, extrusion references and constraints; rejects conflicting fixed anchors. To center a rectangle at its local origin, inspect its corners then translate by the negative center. Does not move the sketch plane or add a new sketch.", { feature_id: string, dx_mm: number$1, dy_mm: number$1 }, ["feature_id", "dx_mm", "dy_mm"]),
@@ -40547,6 +40548,48 @@ function vertexAnchorsOf(shape) {
   for (const [key2, r] of records) anchors.set(key2, { positionMillimeters: r.point, shapeFingerprint: fingerprint, incidence: JSON.stringify([r.faceIndices, r.edgeIndices]), signature: hashText(JSON.stringify([structure, r.faces.slice().sort(), r.edges.slice().sort()])) });
   return anchors;
 }
+function straightEdgeMidpoint(body, reference) {
+  const anchors = [...vertexAnchorsOf(body).values()];
+  const distance2 = (a2, b) => Math.hypot(...a2.map((x2, i2) => x2 - b[i2]));
+  const old = [reference.anchor.start, reference.anchor.end];
+  const resolved = old.map((anchor) => {
+    const candidates = anchors.filter((a2) => a2.signature === anchor.signature);
+    if (candidates.length === 1) return candidates[0];
+    const exact = candidates.filter((a2) => distance2(a2.positionMillimeters, anchor.positionMillimeters) < 1e-6);
+    return exact.length === 1 ? exact[0] : void 0;
+  });
+  const origin2 = old[0].positionMillimeters;
+  const delta2 = old[1].positionMillimeters.map((x2, i2) => x2 - origin2[i2]);
+  const length = Math.hypot(...delta2), direction2 = delta2.map((x2) => x2 / length);
+  const onLine = (point2) => {
+    const relative = point2.map((x2, i2) => x2 - origin2[i2]);
+    const along = relative.reduce((sum2, x2, i2) => sum2 + x2 * direction2[i2], 0);
+    return Math.hypot(...relative.map((x2, i2) => x2 - along * direction2[i2])) < 1e-6;
+  };
+  const edges = body.edges, matches = [];
+  try {
+    for (const edge of edges) {
+      if (edge.geomType !== "LINE") continue;
+      const a2 = edge.startPoint, b = edge.endPoint;
+      const points = [[a2.x, a2.y, a2.z], [b.x, b.y, b.z]];
+      a2.delete();
+      b.delete();
+      const ends = points.map((point2) => anchors.find((anchor) => distance2(anchor.positionMillimeters, point2) < 1e-6));
+      if (!ends.every(Boolean)) continue;
+      const signaturesMatch = ends[0].signature === old[0].signature && ends[1].signature === old[1].signature || ends[1].signature === old[0].signature && ends[0].signature === old[1].signature;
+      if (!signaturesMatch) continue;
+      const exactPair = resolved.every(Boolean) && (distance2(points[0], resolved[0].positionMillimeters) < 1e-6 && distance2(points[1], resolved[1].positionMillimeters) < 1e-6 || distance2(points[1], resolved[0].positionMillimeters) < 1e-6 && distance2(points[0], resolved[1].positionMillimeters) < 1e-6);
+      if (!exactPair && !(length > 1e-9 && points.every(onLine))) continue;
+      const middle = edge.pointAt(0.5);
+      matches.push([middle.x, middle.y, middle.z]);
+      middle.delete();
+    }
+  } finally {
+    edges.forEach((edge) => edge.delete());
+  }
+  if (matches.length !== 1) throw Error(`${reference.label} changed or is ambiguous. Reselect the edge.`);
+  return matches[0];
+}
 function validFinishSolid(shape) {
   const oc = getOC(), check2 = new oc.BRepCheck_Analyzer(shape.wrapped, true, false);
   try {
@@ -40640,16 +40683,7 @@ function pickedEdgePoints(edges, bodyId, body, faceByReference, verb) {
     }
     const point2 = (() => {
       if (pick.kind === "solid-edge") {
-        const anchors = [...vertexAnchorsOf(body).values()];
-        const vertex = (anchor) => {
-          const matches = anchors.filter((a22) => a22.signature === anchor.signature);
-          const found = matches.length === 1 ? matches[0] : matches.find((a22) => a22.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a22.positionMillimeters.map((v2, i2) => v2 - anchor.positionMillimeters[i2])) < 1e-6);
-          if (!found)
-            throw refuse();
-          return [...found.positionMillimeters];
-        };
-        const a2 = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-        return scale$1(add$4(a2, b), 0.5);
+        return straightEdgeMidpoint(body, pick);
       }
       const target = pick.midpointMillimeters, tolerance2 = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
       const edges2 = body.edges;
@@ -44328,8 +44362,11 @@ function evaluatePartDocument(document2, options = {}) {
                 progress.delete();
               }
             } else lofted = loft(wires, { ruled: Boolean(feature3.ruled), startPoint: apex(feature3.startPoint), endPoint: apex(feature3.endPoint) });
-            if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("Every loft section must be an available closed sketch region.");
-            tool22 = own(lofted);
+            own(lofted);
+            if (!isShape3D(lofted)) throw new Error("Loft did not produce a closed solid. Check the section boundaries.");
+            const loftVolume = measureVolume(lofted);
+            if (!Number.isFinite(loftVolume) || loftVolume <= 1e-9) throw new Error("Loft produced an inverted or degenerate solid. Adjust the sections or use a ruled loft.");
+            tool22 = lofted;
           } else if (feature3.type === "sweep") {
             const profileWire = feature3.thin ? void 0 : sketchWire(feature3.profileFeatureId, feature3.profileContourId, "Sweep profile", false, feature3.profileRegion ? feature3 : void 0);
             const pathProfile = pathSource(feature3.pathFeatureId);

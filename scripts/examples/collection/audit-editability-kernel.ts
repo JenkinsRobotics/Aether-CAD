@@ -7,6 +7,7 @@ import { parsePartDocument, serializePartDocument } from '../../../aether-engine
 import { preparePartEdit } from '../../../src/automation/live-commands';
 import { getOC, measureVolume } from 'replicad';
 const out = process.argv[2];
+const fullHistory = process.env.AETHER_EXAMPLES_FULL_HISTORY === '1';
 await initNodeKernel(readFileSync('aether-engine/node_modules/replicad-opencascadejs/src/replicad_single.wasm'));
 const results: any[] = [];
 const volume = (doc: any) => runNodeOperation(doc, () => { let v = 0; evaluatePartDocument(doc, { withBodies: bodies => { for (const b of bodies.values()) v += measureVolume(b); } }); return v; }, resolve('aether-engine/node_modules/opencascade.js/dist/opencascade.full.wasm'));
@@ -15,7 +16,7 @@ for (const example of JSON.parse(readFileSync(out + '/input.json', 'utf8'))) {
   if (process.argv[3] && part.id !== process.argv[3]) continue;
   resetEvaluationCache();
   const doc = parsePartDocument(JSON.stringify(part.feature_document));
-  const result: any = { example: example.id, part: part.name, features: [], errors: [] };results.push(result);
+  const result: any = { example: example.id, partId: part.id, part: part.name, scope: fullHistory ? 'complete-history' : 'feature-prefix', features: [], errors: [] };results.push(result);
   try {
    result.volume = await volume(doc); assert.ok(result.volume > 0);
    const reopened = parsePartDocument(serializePartDocument(doc));
@@ -40,10 +41,11 @@ for (const example of JSON.parse(readFileSync(out + '/input.json', 'utf8'))) {
      else changes={name:f.name+' — edit audit'};
     }
     const entry: any = { id:f.id, type:f.type, name:f.name, tool, change:args ?? changes };result.features.push(entry);
+    writeFileSync(out + '/progress.json', JSON.stringify({ example: example.id, part: part.name, feature: f.name, index: i, total: doc.features.length }));
     try {
-     const edited=preparePartEdit(prefix,tool,args ?? {feature_id:f.id,changes_json:JSON.stringify(changes)}).document;
+     const edited=preparePartEdit(fullHistory ? doc : prefix,tool,args ?? {feature_id:f.id,changes_json:JSON.stringify(changes)}).document;
      entry.volume=await volume(edited);entry.passed=true;
-     assert.equal(parsePartDocument(serializePartDocument(edited)).features.at(-1)!.id,f.id);
+     assert.equal(parsePartDocument(serializePartDocument(edited)).features[i].id,f.id);
     } catch(e) {entry.passed=false;entry.error=String(e);result.errors.push(entry.error);}
    }
    assert.ok(Math.abs((await volume(doc))-result.volume)<Math.max(1,result.volume)*1e-7);

@@ -1,3 +1,4 @@
+import { authorWithNativePicks } from './native-edge-picks.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
@@ -58,7 +59,8 @@ try {
         await expect(tree()).toBeVisible({ timeout: 90000 });
         agent = await connectLiveAgent(page, origin, file.id, 'Example author ' + key);
         assert.equal((await invoke('aether_cad_inspect')).total_features, 0);
-        await invoke('aether_cad_run_program', { program_json: JSON.stringify({ version: 1, steps: part.steps }) });
+        if (recipeName === 'reference-bracket') await authorWithNativePicks(part.steps, invoke);
+        else await invoke('aether_cad_run_program', { program_json: JSON.stringify({ version: 1, steps: part.steps }) });
         const proof = await invoke('aether_cad_verify');
         assert.ok(volume(proof) > 0);
         const expected = JSON.parse(await readFile(new URL('../../../build/Example-Collection/' + model.id + '/evidence/' + part.key + '.json', import.meta.url), 'utf8'));
@@ -74,6 +76,7 @@ try {
           assert.ok(dimension, 'Each workshop Part needs an editable driving dimension');
           await invoke('aether_cad_sketch_dimension', { feature_id: sketchID, dimension_id: dimension.id, value: dimension.value * .99 });
           const changed = volume(await invoke('aether_cad_verify'));
+          if (recipeName === 'reference-bracket') assert.ok(Math.abs(expectedVolume - changed - 60 * 6 * (dimension.value * .01)) < 1e-5, 'Bracket width must change the complete solid by the exact foot volume');
           assert.ok(Math.abs(changed - expectedVolume) > .01, 'Dimension edit must change real solid geometry');
           await page.keyboard.press('ControlOrMeta+z');
           assert.ok(Math.abs(volume(await invoke('aether_cad_verify')) - expectedVolume) < expectedVolume * 1e-6);

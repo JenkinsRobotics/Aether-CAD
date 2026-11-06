@@ -1,3 +1,4 @@
+import { inspectNativeTopology } from './topology-inspection';
 import {resolveExtrusionScopes} from '../modeling/extrusion-scope-resolution';
 import { serializePartDocument, type PartDocument } from '@aether/core/document';
 import type { AgentInteraction, AgentToolCall } from '@aether/ui/AgentServices';
@@ -42,8 +43,8 @@ export class CADAgentEditor {
     if(call.name==='aether_cad_feature_references')return inspectFeatureReferences(source,call.arguments);
     if(this.busy)throw Error('Another agent edit is rebuilding.');
     if(!w.available())throw Error('Finish or cancel the open sketch/feature and return to Modeling first.');
-    if(call.name==='aether_cad_verify'||call.name==='aether_cad_preview'){
-      const operation=call.name==='aether_cad_verify'?()=>w.verify?.(source,call.arguments,signal):()=>w.preview?.(source,signal);
+    if(call.name==='aether_cad_verify'||call.name==='aether_cad_preview'||call.name==='aether_cad_topology'){
+      const operation=call.name==='aether_cad_topology'?async()=>inspectNativeTopology(source,await w.evaluate(source),call.arguments):call.name==='aether_cad_verify'?()=>w.verify?.(source,call.arguments,signal):()=>w.preview?.(source,signal);
       this.busy=true;
       const signature=serializePartDocument(source);
       try {

@@ -1,3 +1,4 @@
+import { bindNativeEdgePicks } from './native-edge-picks.mjs';
 import { partDocumentBase64, partDocumentOf } from '../../browser/document-fixture.mjs';
 import { buildConfigurations } from "./build-configurations.mjs";
 import { compareReference } from "./compare-reference.mjs";
@@ -212,10 +213,11 @@ try {
       // Verify material removal immediately around every real Hole Wizard feature.
       const hole = p.steps[offset].arguments.feature_json?.type === "hole";
       let end = Math.min(offset + batchSize, p.steps.length);
-      if (hole) end = offset + 1;
+      const pickedFinish = !!p.steps[offset].arguments.feature_json?.edges?.some(edge => edge.kind === 'curved-edge');
+      if (hole || pickedFinish) end = offset + 1;
       else {
         const next = p.steps.findIndex(
-          (s, i) => i > offset && s.arguments.feature_json?.type === "hole",
+          (s, i) => i > offset && (s.arguments.feature_json?.type === 'hole' || s.arguments.feature_json?.edges?.some(edge => edge.kind === 'curved-edge')),
         );
         if (next >= 0) end = Math.min(end, next);
       }
@@ -236,6 +238,8 @@ try {
                   Object.entries(v).map(([k, x]) => [k, resolve(x)]),
                 )
             : v;
+      const pickedSteps = await bindNativeEdgePicks(resolve(steps), async (body_id, offset) =>
+        (await call('cad_part_topology', { app: 'cad', id: file.id, body_id, offset })).result);
       console.log("Building:", model.id, p.name, offset, end);
       const built = await call(
         "cad_part_runprogram",
@@ -243,7 +247,7 @@ try {
           app: "cad",
           id: file.id,
           expected_revision: revision,
-          program_json: JSON.stringify({ version: 1, steps: resolve(steps) }),
+          program_json: JSON.stringify({ version: 1, steps: pickedSteps }),
         },
         true,
       );

@@ -2,7 +2,7 @@ import { cast, FaceFinder, getOC, isShape3D, Plane, type Face, type Shape3D, typ
 import type { EdgeFinishEdge, PartFeature } from "../../document/index";
 import type { PreviewHandle } from "../../contracts/geometry";
 import { deleteAfterVectorTuple } from "../../geometry/index";
-import { vertexAnchorsOf } from "../part-geometry";
+import { straightEdgeMidpoint } from "../native-straight-edge";
 import { add, scale, norm, unit, dot, type V3 } from "../vector";
 import { recoverConstantEdgeFinish, validFinishSolid } from './edge-finish-recovery';
 type EdgeFinishFeature = Extract<PartFeature, {
@@ -36,16 +36,7 @@ export function pickedEdgePoints(edges: readonly EdgeFinishEdge[], bodyId: strin
     }
     const point = ((): V3 => {
     if (pick.kind === "solid-edge") {
-      const anchors = [...vertexAnchorsOf(body).values()];
-      const vertex = (anchor: typeof pick.anchor.start): V3 => {
-        const matches = anchors.filter((a) => a.signature === anchor.signature);
-        const found = matches.length === 1 ? matches[0] : matches.find((a) => a.shapeFingerprint === anchor.shapeFingerprint && Math.hypot(...a.positionMillimeters.map((v, i) => v - anchor.positionMillimeters[i])) < 1e-6);
-        if (!found)
-          throw refuse();
-        return [...found.positionMillimeters] as V3;
-      };
-      const a = vertex(pick.anchor.start), b = vertex(pick.anchor.end);
-      return scale(add(a, b), 0.5);
+      return straightEdgeMidpoint(body, pick);
     }
     const target = pick.midpointMillimeters as V3, tolerance = Math.max(1e-3, pick.lengthMillimeters * 1e-6);
     const edges = body.edges;

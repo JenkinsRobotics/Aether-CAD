@@ -39,7 +39,7 @@ it('only a successful rebuild commits, and readonly/open dialogs are respected',
 });
 
 it('offers no premade shapes: bodies come from sketches',()=>{
-  expect(cadAgentTools).toHaveLength(25); // Includes validated model projection.
+  expect(cadAgentTools).toHaveLength(26); // Includes validated model projection.
   expect(cadAgentTools.some(t=>t.name==='aether_cad_solid_primitive')).toBe(false);
 });
 
@@ -84,4 +84,31 @@ it.each(['cancel','changed'])('discards %s proof rather than attributing it to a
   const controller=new AbortController(),pending=f.editor.execute('part1',{id:'verify',name:'aether_cad_verify',arguments:{}},controller.signal);
   if(mode==='cancel')controller.abort();else f.workspace.current=()=>createEmptyPartDocument('Other');
   finish({changed:false});await expect(pending).rejects.toThrow();expect(f.commit).not.toHaveBeenCalled();
+});
+
+it('exposes viewport edge anchors read-only without changing history',async()=>{
+  const f=fixture();
+  const sketch=preparePartEdit(f.workspace.current()!,'aether_cad_sketch_rectangle',{plane:'XY',x_mm:0,y_mm:0,width_mm:40,height_mm:20});
+  const pad=preparePartEdit(sketch.document,'aether_cad_extrude',{profile_id:sketch.featureID,depth_mm:5,operation:'new'});
+  f.workspace.current=()=>pad.document;f.workspace.writable=()=>false;
+  const bodyId=availableBodies(pad.document)[0].id;
+  const anchor={start:{signature:'start'},end:{signature:'end'}};
+  f.model.parts=[{id:bodyId,topology:[{id:0,surfaceType:'PLANE',candidates:[{id:'edge',kind:'edge-midpoint',label:'Edge',origin:[0,0,0],edgeAnchor:anchor}]}]} as any];
+  const result=await f.editor.execute('part1',{id:'topology',name:'aether_cad_topology',arguments:{body_id:bodyId,limit:1}},new AbortController().signal) as any;
+  expect(result).toMatchObject({changed:false,total_faces:1,next_offset:null});
+  expect(result.faces[0].candidates[0].reference).toEqual({kind:'solid-edge',bodyId,sourceFeatureId:pad.featureID,label:'Edge',anchor});
+  expect(f.commit).not.toHaveBeenCalled();expect(f.workspace.history.commit).not.toHaveBeenCalled();
+  await expect(f.editor.execute('part1',{id:'missing',name:'aether_cad_topology',arguments:{body_id:'missing'}},new AbortController().signal)).rejects.toThrow('Body not found');
+});
+
+it('discards topology when the current Part changes during evaluation',async()=>{
+  const f=fixture();
+  const sketch=preparePartEdit(f.workspace.current()!,'aether_cad_sketch_rectangle',{plane:'XY',x_mm:0,y_mm:0,width_mm:40,height_mm:20});
+  const pad=preparePartEdit(sketch.document,'aether_cad_extrude',{profile_id:sketch.featureID,depth_mm:5,operation:'new'});
+  f.workspace.current=()=>pad.document;
+  const bodyId=availableBodies(pad.document)[0].id;
+  f.model.parts=[{id:bodyId,topology:[]}] as any;
+  f.workspace.evaluate=async()=>{f.switch();return f.model;};
+  await expect(f.editor.execute('part1',{id:'topology',name:'aether_cad_topology',arguments:{body_id:bodyId}},new AbortController().signal)).rejects.toThrow('The Part changed while inspecting');
+  expect(f.commit).not.toHaveBeenCalled();
 });

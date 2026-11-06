@@ -1,3 +1,4 @@
+import { dimensionRectangles } from "../dimension-sketches.mjs";
 import { Model, polygon, ref } from "../model-kit.mjs";
 const m = new Model(
   "reference-bracket",
@@ -6,15 +7,13 @@ const m = new Model(
 );
 m.tags = ["Extrude", "Fillet", "Hole Wizard", "Reference comparison"];
 const p = m.part("bracket", "Mounting bracket", "aluminum").pad(
-  "L profile extrusion",
+  "Foot extrusion",
   [
     polygon([
       [0, 0],
       [40, 0],
       [40, -6],
-      [6, -6],
-      [6, -30],
-      [0, -30],
+      [0, -6],
     ]),
   ],
   0,
@@ -37,6 +36,9 @@ p.add("Outer edge fillet R2", {
     },
   ],
 });
+// Finish the simple foot before adding the upright. This keeps the selected
+// edge topologically distinct as width and thickness dimensions are edited.
+p.pad("Upright extrusion", [polygon([[0, 0], [6, 0], [6, -30], [0, -30]])], 0, 60, "add", "XZ");
 p.holes(
   "Two mounting holes",
   [
@@ -64,4 +66,4 @@ m.reference = {
     "Hole Wizard replaces the source’s circular extrusion cuts. Coordinate system and nominal dimensions are retained.",
   ],
 };
-export default m;
+export default dimensionRectangles(m);

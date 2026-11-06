@@ -2659,8 +2659,13 @@ export function evaluatePartDocument(
               lofted = cast(builder.Shape());
             } finally { builder.delete(); progress.delete(); }
           } else lofted = loft(wires, { ruled: Boolean(feature.ruled), startPoint: apex(feature.startPoint), endPoint: apex(feature.endPoint) });
-          if (!isShape3D(lofted as Shape3D) || measureVolume(lofted as Shape3D) <= 1e-9) throw new Error("Every loft section must be an available closed sketch region.");
-          tool = own(lofted as Shape3D);
+          // Failed previews own their result too: the failure cleanup must release
+          // it instead of retaining native memory until a later GC turn.
+          own(lofted);
+          if (!isShape3D(lofted as Shape3D)) throw new Error("Loft did not produce a closed solid. Check the section boundaries.");
+          const loftVolume = measureVolume(lofted as Shape3D);
+          if (!Number.isFinite(loftVolume) || loftVolume <= 1e-9) throw new Error("Loft produced an inverted or degenerate solid. Adjust the sections or use a ruled loft.");
+          tool = lofted as Shape3D;
         } else if (feature.type === "sweep") {
           // Sweep (PartDesign Pipe, standard mode, transformed transitions): a
           // closed profile region swept along a curve of another sketch.

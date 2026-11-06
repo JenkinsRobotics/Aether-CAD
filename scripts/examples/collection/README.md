@@ -187,3 +187,22 @@ each Part in `results.json`. It still reports refused edits as failures. The
 operation boundary yields to the event loop so Replicad's native finalizers can
 run; a chain of already-resolved promises alone does not provide that boundary.
 WASM capacity is a high-water allocation, not a measure of live native objects.
+
+The default edit audit tests each feature at its history position; it does not
+establish that all later features survive that edit. Use
+`AETHER_EXAMPLES_FULL_HISTORY=1 node scripts/examples/collection/audit-editability.mjs`
+to rebuild the complete Part after every trial. This reports downstream reference
+failures separately from the earlier prefix evidence. A per-Part timeout defaults
+to ten minutes (`AETHER_EXAMPLE_AUDIT_TIMEOUT_MS`); timeouts are failures, never
+passes. `AETHER_EXAMPLES_RESUME=1` resumes recorded Parts in the same audit scope.
+`progress.json` identifies the active feature when diagnosing long rebuilds.
+
+The reference bracket now uses four driving lengths on separate foot and upright
+sketches. Its foot is filleted before adding the upright, keeping the finishing
+edge distinct through all four dimension edits. Both placement-circle diameters
+are editable too; Hole Wizard owns the actual bore diameter. Its straight
+finishing edge is obtained from actual native topology during MCP authoring,
+using the same endpoint anchors as a viewport pick. The live agent's `topology`
+tool pages native candidates and returns usable edge references without changing
+the document. Curved edges still require unchanged midpoint/length references;
+ambiguous moved straight edges remain an explicit limitation.
