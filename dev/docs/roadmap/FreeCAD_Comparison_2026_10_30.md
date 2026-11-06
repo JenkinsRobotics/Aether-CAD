@@ -11,6 +11,23 @@ Both run OpenCASCADE, which is why FreeCAD's answers were usable as an oracle. T
 SolidCraft 0.23 comparison (`SolidCraft_0_23_Foundations.md`, `Tool_Parity_Tracker.md`)
 continues separately; nothing below promotes a SolidCraft row.
 
+## Drawing continuation — 2026-11-06
+
+Chain dimensions now use `add-dimension-chain`: 3–64 ordered picks expand into
+consecutive, independently editable point-distance annotations. Creation is one
+undo step and any attachment failure preserves the previous document/history.
+The stored annotations remain format 5; geometry values are recomputed, not saved
+as labels. Human and MCP operations share this command.
+
+Checks: 29 engine Drawing tests; 10 Drawing controller tests and 2 agent tests;
+17 fresh-process headless checks. The disposable browser workflow passed all 13
+steps, including chain creation/undo/redo, MCP member edits, server save/reopen
+and read-only revisions. Evidence:
+`build/Example-Collection/freecad-drawing-chain/host/browser/results.json`.
+A final build with corrected chain help text is being qualified separately before
+release. Ordinate dimensions, viewport point picking, and the remaining retirement
+items below are still open. Chains do not imply full TechDraw parity.
+
 ## Retirement review — 2026-11-05, in progress
 
 The downloaded reference is **not cleared for deletion**. The tables below are a

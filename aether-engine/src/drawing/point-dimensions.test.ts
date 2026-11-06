@@ -71,3 +71,21 @@ it('exports point dimensions to PDF with embedded font and remeasures source edi
   const pdf = await exportDrawingPDF(refreshed, { fontBytes });
   expect(Buffer.from(pdf).subarray(0, 5).toString()).toBe('%PDF-');
 });
+
+it('creates an editable consecutive dimension chain atomically, without stored measurements', async () => {
+  const base = drawing();
+  const command = { type: 'add-dimension-chain' as const, sheetId: base.activeSheetId, chain: {
+    id: 'chain', viewId: 'top', pointsMm: [[70,55],[90,55],[90,65]] as [number,number][], positionMm: [80,45] as [number,number], decimals: 2,
+  } };
+  const doc = applyDrawingCommand(base, command);
+  const built = await buildDrawing(doc, projectPartDrawing);
+  expect(built.sheets[0].annotations.map(a=>a.valueMm)).toEqual([40,20]);
+  expect(doc.sheets[0].annotations.map(a=>a.id)).toEqual(['chain/1','chain/2']);
+  expect(base.sheets[0].annotations).toEqual([]);
+  expect(parseDrawingDocument(serializeDrawingDocument(doc))).toEqual(doc);
+  expect(() => applyDrawingCommand(doc,command)).toThrow();
+  const edited = applyDrawingCommand(doc,{type:'update-annotation',sheetId:doc.activeSheetId,annotation:{...doc.sheets[0].annotations[0],positionMm:[75,40]}});
+  expect(edited.sheets[0].annotations[1]).toEqual(doc.sheets[0].annotations[1]);
+  expect(() => applyDrawingCommand(base,{...command,chain:{...command.chain,pointsMm:[]}})).toThrow(/3–64/);
+  expect(() => applyDrawingCommand(base,{...command,chain:{...command.chain,axis:'z' as 'x'}})).toThrow(/axis/);
+});

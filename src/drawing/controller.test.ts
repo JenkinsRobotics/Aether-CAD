@@ -109,3 +109,20 @@ it("publishes section hatches through the existing drawing canvas and retains in
   await editor.travel(1);expect(editor.serialize()).toBe(saved);
   await editor.open(saved);expect(editor.serialize()).toBe(saved);
 });
+
+it("treats a chain as one undo step and preserves it when any new member cannot attach", async () => {
+  const editor = new DrawingEditor(new CADDrawingWorkspaceStore(), async () => geometry);
+  editor.configure(source); await editor.enter();
+  const sheetId = editor.snapshot()!.document.activeSheetId;
+  await editor.execute({ type: "add-view", sheetId, view });
+  const before = editor.serialize();
+  const chain = { id: "chain", viewId: "front", pointsMm: [[80,105],[120,95],[80,105]] as [number,number][], positionMm: [100,80] as [number,number], decimals: 2 };
+  await editor.execute({ type: "add-dimension-chain", sheetId, chain });
+  const saved = editor.serialize();
+  expect(editor.snapshot()!.sheets[0].annotations).toHaveLength(2);
+  await editor.travel(-1); expect(editor.serialize()).toBe(before);
+  await editor.travel(1); expect(editor.serialize()).toBe(saved);
+  await expect(editor.execute({ type: "add-dimension-chain", sheetId, chain: { ...chain, id: "broken", pointsMm: [[80,105],[120,95],[0,0]] } })).rejects.toThrow(/within 5 mm/);
+  expect(editor.serialize()).toBe(saved);
+  await editor.travel(-1); expect(editor.serialize()).toBe(before);
+});

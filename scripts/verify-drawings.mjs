@@ -55,4 +55,7 @@ assert.ok(Math.abs(result.sheets[0].annotations.find(a=>a.id==='point-diagonal')
 mutate({ type: 'add-annotation', sheetId, annotation: { id: 'point-angle', kind: 'point-angle', viewId: 'front', pointsMm: [[76.5,94], [83.5,94], [83.5,106]], positionMm: [105,110], decimals: 2 } });
 assert.equal(result.sheets[0].annotations.find(a=>a.id==='point-angle').value_deg, 90);
 assert.deepEqual(run({ phase: 'drawing', operation: 'inspect', content: result.content }).sheets, result.sheets);
+mutate({ type: 'add-dimension-chain', sheetId, chain: { id: 'chain', viewId: 'front', pointsMm: [[76.5,94],[83.5,94],[83.5,106]], positionMm: [80,85], decimals: 3 } });
+assert.deepEqual(result.sheets[0].annotations.filter(a=>a.id.startsWith('chain/')).map(a=>a.value_mm),[14,24]);
+assert.deepEqual(run({ phase: 'drawing', operation: 'inspect', content: result.content }).sheets,result.sheets);
 console.log(JSON.stringify({ section_hatching:true, invalid_section_refused:true, status: 'passed', fresh_processes: processes, source_changed_dimension: '12.00 → 24.00', analytic_circle_export: true, saved_reopen: true, invalid_refresh_refused: true }));

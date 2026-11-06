@@ -47750,6 +47750,31 @@ function projectBodyGeometry(bodies, frame, options = {}) {
     return { contours: unique2, approximatedEdges, toleranceMillimeters };
   });
 }
+function dimensionChainAnnotations(chain) {
+  if (!chain || !Array.isArray(chain.pointsMm) || chain.pointsMm.length < 3 || chain.pointsMm.length > 64) {
+    throw Error("A dimension chain needs 3–64 ordered points.");
+  }
+  const point2 = (p2) => Array.isArray(p2) && p2.length === 2 && p2.every(Number.isFinite);
+  if (!chain.pointsMm.every(point2) || !point2(chain.positionMm)) throw Error("Chain coordinates must be finite X, Y pairs.");
+  if (typeof chain.id !== "string" || !chain.id.trim() || chain.id.length > 950) throw Error("A dimension chain requires an ID of 1–950 characters.");
+  if (chain.axis !== void 0 && chain.axis !== "x" && chain.axis !== "y") throw Error("Chain axis must be x or y.");
+  const [first, second] = chain.pointsMm;
+  const offset2 = [chain.positionMm[0] - (first[0] + second[0]) / 2, chain.positionMm[1] - (first[1] + second[1]) / 2];
+  return chain.pointsMm.slice(1).map((b, index2) => {
+    const a2 = chain.pointsMm[index2];
+    const midpoint = [(a2[0] + b[0]) / 2, (a2[1] + b[1]) / 2];
+    const positionMm = chain.axis === "x" ? [midpoint[0], chain.positionMm[1]] : chain.axis === "y" ? [chain.positionMm[0], midpoint[1]] : [midpoint[0] + offset2[0], midpoint[1] + offset2[1]];
+    return {
+      id: `${chain.id}/${index2 + 1}`,
+      kind: "point-distance",
+      viewId: chain.viewId,
+      pointsMm: [a2, b],
+      positionMm,
+      decimals: chain.decimals,
+      ...chain.axis ? { axis: chain.axis } : {}
+    };
+  });
+}
 const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
 const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"];
 function object(value2) {
@@ -47986,6 +48011,9 @@ function applyDrawingCommand(source, command) {
         sheet.views = sheet.views.filter((v2) => v2.id !== command.viewId);
         break;
       }
+      case "add-dimension-chain":
+        sheet.annotations.push(...structuredClone(dimensionChainAnnotations(command.chain)));
+        break;
       case "add-annotation":
         sheet.annotations.push(structuredClone(command.annotation));
         break;
@@ -48662,11 +48690,11 @@ const drawingCommandDocs = {
   phase: "drawing",
   operations: ["create", "mutate", "inspect", "export"],
   content: "create: the source Part document JSON; other operations: the Drawing document JSON. Returned content is a complete drawing including its source snapshot.",
-  command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "update-annotation", "remove-annotation", "refresh-source"],
+  command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "add-dimension-chain", "update-annotation", "remove-annotation", "refresh-source"],
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
   annotations: ["note", "width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle", "balloon", "center-mark"],
   exports: ["svg", "dxf", "pdf"],
-  rules: ["Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "PDF returns data_base64 and mime_type; SVG/DXF return text. all_sheets:true exports PDF pages in document order and cannot be combined with sheet_id. PDF embeds the bundled Noto Sans font; unsupported glyphs are refused. Assembly sources are not implemented yet. Attached edge and point dimensions measure projected model geometry. Point-distance (two endpoint/centre picks) and point-angle (endpoint, vertex, endpoint) require Drawing format 5; ambiguous or missing picks are refused."]
+  rules: ["add-dimension-chain takes sheetId and chain:{id,viewId,pointsMm,positionMm,decimals,axis?}; 3–64 ordered points create consecutive independently editable dimensions in one transaction. axis is x or y, or omitted for aligned distances.", "Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "PDF returns data_base64 and mime_type; SVG/DXF return text. all_sheets:true exports PDF pages in document order and cannot be combined with sheet_id. PDF embeds the bundled Noto Sans font; unsupported glyphs are refused. Assembly sources are not implemented yet. Attached edge and point dimensions measure projected model geometry. Point-distance (two endpoint/centre picks) and point-angle (endpoint, vertex, endpoint) require Drawing format 5; ambiguous or missing picks are refused."]
 };
 async function executeDrawingRequest(request, project, loadFont = async () => {
   throw Error("Drawing PDF font loader is unavailable.");

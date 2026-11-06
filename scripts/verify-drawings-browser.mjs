@@ -152,6 +152,21 @@ try {
     assert.equal(points.sheets[0].annotations.filter(a => a.kind.startsWith('point-')).length, 2);
     await exportPDF('point-dimensions', [[297, 210]]);
   });
+  await step('dimension-chain-edit-and-history', async () => {
+    await button('Annotation').click();
+    await page.locator('#drawing-annotation-kind').selectOption('chain');
+    await page.locator('#drawing-dimension-view').selectOption({ label: 'Top' });
+    await page.locator('#drawing-point-picks').fill('60,50\n100,50\n100,70');
+    await page.locator('#drawing-x').fill('80'); await page.locator('#drawing-y').fill('35');
+    await add();
+    const chain = await save('dimension-chain.aethercad');
+    const members = chain.sheets[0].annotations.filter(a=>a.kind==='point-distance' && /\/[12]$/.test(a.id));
+    assert.equal(members.length,2);
+    await page.keyboard.press('Meta+z');
+    assert.equal((await save('chain-undone.aethercad')).sheets[0].annotations.length,chain.sheets[0].annotations.length-2);
+    await page.keyboard.press('Meta+Shift+z');
+    assert.deepEqual((await save('chain-redone.aethercad')).sheets[0].annotations,chain.sheets[0].annotations);
+  });
   await step('live-drawing-agent', async () => { await verifyDrawingAgent(page, origin, async bytes => {
       await writeFile(join(evidence, 'agent.pdf'), bytes);
       await checkPDF(bytes, [[297, 210], [210, 297]]);

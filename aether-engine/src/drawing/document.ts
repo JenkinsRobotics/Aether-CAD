@@ -1,3 +1,4 @@
+import { dimensionChainAnnotations, type DimensionChain } from './dimension-chain';
 import { validatePartDocument, type PartDocument } from "../document/part-document";
 
 export type DrawingPoint = [number, number];
@@ -132,6 +133,7 @@ export type DrawingCommand =
   | { type: "add-view"; sheetId: string; view: DrawingView }
   | { type: "update-view"; sheetId: string; viewId: string; changes: Partial<Omit<DrawingView, "id">> }
   | { type: "remove-view"; sheetId: string; viewId: string }
+  | { type: "add-dimension-chain"; sheetId: string; chain: DimensionChain }
   | { type: "add-annotation"; sheetId: string; annotation: DrawingAnnotation }
   | { type: "update-annotation"; sheetId: string; annotation: DrawingAnnotation }
   | { type: "remove-annotation"; sheetId: string; annotationId: string }
@@ -313,6 +315,7 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
         if (sheet.views.some(v => v.parentId === command.viewId || v.detail?.parentId === command.viewId) || sheet.annotations.some(a => a.kind !== "note" && a.kind !== "balloon" && a.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
         sheet.views = sheet.views.filter(v => v.id !== command.viewId); break;
       }
+      case "add-dimension-chain": sheet.annotations.push(...structuredClone(dimensionChainAnnotations(command.chain))); break;
       case "add-annotation": sheet.annotations.push(structuredClone(command.annotation)); break;
       case "update-annotation": {
         const index = sheet.annotations.findIndex(a => a.id === command.annotation.id);

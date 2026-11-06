@@ -48,6 +48,13 @@ export async function verifyDrawingAgent(page,origin, checkPDF) {
   assert.ok(Math.abs(state.sheet.annotations.find(a => a.id === point.id).value_mm - Math.hypot(40,20)) < 1e-8);
   state = await invoke('aether_cad_drawing_redo', { expected_revision: state.revision });
   assert.equal(state.sheet.annotations.find(a => a.id === point.id).value_mm, 40);
+  const chainMember = state.sheet.annotations.find(a => a.kind === 'point-distance' && /\/1$/.test(a.id));
+  assert.ok(chainMember, 'Chain members are visible and individually editable through MCP');
+  const { value_mm: chainValue, value_deg: chainAngle, text: chainText, ...chainIntent } = chainMember;
+  state = await invoke('aether_cad_drawing_edit', { expected_revision: state.revision, command_json: JSON.stringify({
+    type: 'update-annotation', sheetId: state.active_sheet_id, annotation: { ...chainIntent, decimals: 3 }
+  }) });
+  assert.equal(state.sheet.annotations.find(a => a.id === chainMember.id).text, '40.000');
   const section=state.sheet.views.find(view=>view.section);assert.ok(section,'Inspect exposes section intent');assert.ok(section.hatch_lines>5);
   const revision=state.revision;
   await invoke('aether_cad_drawing_edit',{expected_revision:revision,command_json:JSON.stringify({type:'update-view',sheetId:state.active_sheet_id,viewId:section.id,changes:{section:{offsetMm:1000,hatchSpacingMm:2}}})},false);
