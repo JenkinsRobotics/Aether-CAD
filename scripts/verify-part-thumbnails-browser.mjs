@@ -48,6 +48,8 @@ try {
   const count = await parts.count(), url = page.url(), started = Date.now();
   await expect(parts.locator('.aui-tab-browser-thumb img')).toHaveCount(count, { timeout: 120000 });
   const elapsed = Date.now() - started;
+  const assemblies = panel.locator('[data-document-tab-id]').filter({ hasText: 'Assembly ·' });
+  await expect(assemblies.first().locator('.aui-tab-browser-thumb img')).toHaveCount(1, { timeout: 120000 });
   const images = await parts.locator('.aui-tab-browser-thumb img').evaluateAll(async images => Promise.all(images.map(async image => {
     await image.decode();
     const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;

@@ -19,6 +19,8 @@ type StoredFile = {
   data_base64?: string;
 };
 export type Project = {
+  previewGraph?: import("./document/aethercad-archive").AetherCADGraph;
+  previewProjection?: AssemblyProjectionV1;
   id?: string;
   kind?: DocumentKind;
   parts: {
@@ -30,12 +32,19 @@ export type Project = {
   assemblies: { id: string; name: string }[];
   drawings?: { id: string; name: string; document: unknown }[];
 };
+/** Preview metadata is optional; it must never block opening an otherwise
+ * available project or recovering a Part from the canonical project response. */
+function projectPreviewGraph(file: StoredFile): Project['previewGraph'] {
+  if (!file.data_base64) return undefined;
+  try { return readAetherCAD(Uint8Array.from(atob(file.data_base64), c => c.charCodeAt(0))).graph; }
+  catch { return undefined; }
+}
 export let activeProject: Project | null = null;
 /** Refresh project tabs from the active canonical archive after an assembly
  * edit. Persistence still serializes that archive through the normal save path. */
 export function syncHostedAssemblyProject(projection: AssemblyProjectionV1): void {
   if (activeProject ? activeProject.id !== projection.workspace_id : !query.has('example')) return;
-  activeProject = {...activeProject, id: projection.workspace_id,
+  activeProject = {...activeProject, id: projection.workspace_id, previewProjection: projection,
     parts:projection.part_definitions.map(part=>({id:part.id,name:part.name,document:part.feature_document,
       source:{kind:part.source.kind,label:part.source.label,asset_ref:part.source.asset_ref??undefined}})),
     assemblies:projection.assemblies.map(assembly=>({id:assembly.id,name:assembly.name})),
@@ -361,7 +370,7 @@ export async function loadHostedFile(updateAddress = true): Promise<File | null>
       revision: active.revision,
       branch: query.get("branch") ?? undefined,
     })) as StoredFile & { project: Project };
-    activeProject = result.project;
+    activeProject = {...result.project, previewGraph: projectPreviewGraph(active)};
     if (query.has("drawing")) {
       const drawing = activeProject.drawings?.find(item => item.id === query.get("drawing"));
       if (!drawing) throw Error("This Drawing is not present in the selected design revision.");
@@ -461,7 +470,7 @@ async function persistHostedFile(
         document: readAetherCAD(bytes).graph.part_definitions[0]?.feature_document,
       })) as StoredFile & { project: Project };
       active = result;
-      activeProject = result.project;
+      activeProject = { ...activeProject, ...result.project };
       return;
     }
     let binary = "";

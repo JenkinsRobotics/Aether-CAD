@@ -252,3 +252,10 @@ in Chromium and with `AETHER_HISTORY_BROWSER=webkit`. The gate must finish all
 224 native Scifirobot source features, preserve solved placements, scroll the
 active history row into view, restore the original scene on Stop/Escape, and
 perform no document writes. Run the existing Part playback gate on both browsers.
+
+Thumbnail changes require both `verify-part-thumbnails-browser.mjs` and
+`verify-live-thumbnails-browser.mjs` through the disposable host in Chromium and
+WebKit (`AETHER_THUMBNAIL_BROWSER=webkit`). Verify unopened Parts and assemblies,
+live native edits, unchanged sibling images, undo/redo, saved reopen, and the
+whole-assembly preview in the file list. Native Part JSON and file archives must
+both render; thumbnail creation must not switch or save the active document.

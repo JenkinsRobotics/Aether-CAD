@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { PartGeometryData } from './aether-core';
 
 /** Read-only thumbnail scene. No editor state or geometry semantics. */
-export function createPreviewScene(parts: readonly PartGeometryData[]) {
+export function createPreviewScene(parts: readonly PartGeometryData[], placements?: ReadonlyMap<string, { positionMillimeters: readonly number[]; quaternion: readonly number[] }>) {
   const scene = new THREE.Scene();
   const model = new THREE.Group();
   const disposables: {dispose: () => void}[] = [];
@@ -11,16 +11,23 @@ export function createPreviewScene(parts: readonly PartGeometryData[]) {
   disposables.push(material, edgeMaterial);
   for (const part of parts) {
     if (!part.vertices.length || !part.triangles.length) continue;
+    const group = new THREE.Group();
+    const placement = placements?.get(part.id);
+    if (placement) {
+      group.position.fromArray(placement.positionMillimeters);
+      group.quaternion.fromArray(placement.quaternion);
+    }
+    model.add(group);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(part.vertices, 3));
     geometry.setIndex(new THREE.BufferAttribute(part.triangles, 1));
     if (part.normals.length === part.vertices.length) geometry.setAttribute('normal', new THREE.BufferAttribute(part.normals, 3));
     else geometry.computeVertexNormals();
-    model.add(new THREE.Mesh(geometry, material)); disposables.push(geometry);
+    group.add(new THREE.Mesh(geometry, material)); disposables.push(geometry);
     if (part.edgeLines.length) {
       const edges = new THREE.BufferGeometry();
       edges.setAttribute('position', new THREE.BufferAttribute(part.edgeLines, 3));
-      model.add(new THREE.LineSegments(edges, edgeMaterial)); disposables.push(edges);
+      group.add(new THREE.LineSegments(edges, edgeMaterial)); disposables.push(edges);
     }
   }
   scene.add(model);

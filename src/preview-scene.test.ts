@@ -21,3 +21,13 @@ test('fits large translated geometry in the thumbnail and preserves model coordi
   expect(vertices[0]).toBeGreaterThan(3900);
   result.dispose(); box.dispose();
 });
+test('fits each assembly occurrence at its solved pose without mutating shared vertices', () => {
+  const box = new THREE.BoxGeometry(10, 20, 30);
+  const data = { id: 'occurrence', vertices: box.attributes.position.array, normals: box.attributes.normal.array, triangles: box.index!.array, edgeLines: new Float32Array() } as PartGeometryData;
+  const result = createPreviewScene([data], new Map([[data.id, { positionMillimeters: [1000, 0, 0], quaternion: [0, 0, Math.SQRT1_2, Math.SQRT1_2] }]]))!;
+  const bounds = new THREE.Box3().setFromObject(result.scene.children[0]);
+  expect(bounds.getCenter(new THREE.Vector3()).x).toBeCloseTo(1000);
+  expect(bounds.getSize(new THREE.Vector3()).x).toBeCloseTo(20);
+  expect(Math.abs(data.vertices[0])).toBe(5);
+  result.dispose(); box.dispose();
+});

@@ -74,8 +74,8 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const [order, setOrder] = useState<string[]>([]);
   useEffect(() => {
     const changed = () => setNavigation(value => value + 1);
-    window.addEventListener("cad-document-navigation", changed); window.addEventListener("cad-document-saved", changed);
-    return () => { window.removeEventListener("cad-document-navigation", changed); window.removeEventListener("cad-document-saved", changed); };
+    window.addEventListener("aether-part-updated", changed); window.addEventListener("cad-document-navigation", changed); window.addEventListener("cad-document-saved", changed);
+    return () => { window.removeEventListener("aether-part-updated", changed); window.removeEventListener("cad-document-navigation", changed); window.removeEventListener("cad-document-saved", changed); };
   }, []);
   const search = new URLSearchParams(typeof location === "undefined" ? "" : location.search);
   const documentID = search.get("document");
@@ -223,7 +223,7 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
       revision:contextual&&search.has('revision')?Number(search.get('revision')):undefined,
       linked:project?.parts.find(part=>part.id===id)?.source?.kind==='linked'};
   };
-  const partTabs=variant==="browser"?(project ? tabs : tabs.filter(tab=>tab.current)).filter(tab=>tab.detail==="Part Studio").map(tab=>tab.id):[];
+  const partTabs=variant==="browser"?(project ? tabs : tabs.filter(tab=>tab.current)).filter(tab=>tab.detail!=="Drawing").map(tab=>tab.id):[];
   const thumbnails = usePartThumbnails(partTabs.map(targetFor), project,
     `${navigation}:${presentation.backendState}:${saveStatus === 'Saved'}`);
   const runTabAction=(id:string,action:string)=>{

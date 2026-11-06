@@ -1,7 +1,7 @@
 import { AssemblyBridgeClient } from "../cad-assembly-bridge";
 import type { Project } from "../host-library";
 import { cadExample, readExample, base64 } from "./catalog";
-import { tabArchive } from "../document/aethercad-archive";
+import { tabArchive, readAetherCAD } from "../document/aethercad-archive";
 
 /** Read a packaged Hybrid into an ephemeral workspace. This never creates a
  * Studio file; only the explicit Save copy action enters the user's library. */
@@ -10,12 +10,17 @@ export async function openExample(
 ): Promise<{ file: File; project: Project | null }> {
   const example = cadExample(query.get("example")),
     file = await readExample(example);
+  const graph = readAetherCAD(new Uint8Array(await file.arrayBuffer())).graph;
   const assemblyID = query.get("assembly") ?? example.assemblyId;
   if (!query.has("part")) {
     // The controller's canonical projection supplies project tabs as well as
     // geometry. Opening a second throwaway workspace just for tabs doubles work.
     query.set("assembly", assemblyID);
-    return { file, project: null };
+    return { file, project: {
+      id: graph.workspace_id, previewGraph: graph,
+      parts: graph.part_definitions.map(part => ({ id: part.id, name: part.name, document: part.feature_document })),
+      assemblies: (graph.assemblies as { id: string; name: string }[]).map(assembly => ({ id: assembly.id, name: assembly.name })),
+    } };
   }
   const client = new AssemblyBridgeClient({ baseURL: "" });
   const workspace = await client.openWorkspace(
@@ -28,6 +33,8 @@ export async function openExample(
     );
     const project: Project = {
       id: projection.workspace_id,
+      previewProjection: projection,
+      previewGraph: graph,
       parts: projection.part_definitions.map((part) => ({
         id: part.id,
         name: part.name,

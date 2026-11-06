@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-05",
+  "change": "Restore native Part, Assembly and file thumbnails; refresh from live editor snapshots",
+  "qualification": {
+    "focusedTests": 15,
+    "typecheck": "passed",
+    "build": "passed",
+    "home": "standalone and disposable authenticated host passed",
+    "kernelAndWorker": "Unchanged from qualified CAD alpha-0.1.122",
+    "fullFrontendRun": {
+      "passed": 2231,
+      "failed": 9,
+      "skipped": 1,
+      "failureCause": "Optional thumbnail archive decoding propagated into project opening. Corrected; all failing storage tests passed on rerun."
+    },
+    "finalRegressionRun": {
+      "passed": 30,
+      "failed": 0,
+      "includes": "All previously failing storage tests, navigation, Part/Assembly preview geometry, cache and example loading"
+    },
+    "finalArtifactRobotWebKit": true,
+    "finalArtifactHome": true
+  },
+  "browser": {
+    "chromium": {
+      "unopenedParts": 22,
+      "unopenedPartPixels": true,
+      "assemblyImage": true,
+      "previewWrites": [],
+      "liveHybrid": {
+        "passed": true,
+        "browser": "chromium",
+        "distinctPartAndAssemblyImages": true,
+        "liveEdit": true,
+        "unchangedPartRetained": true,
+        "undoRedo": true,
+        "savedReopen": true,
+        "topLevelAssembly": true,
+        "configurations": true,
+        "errors": []
+      }
+    },
+    "webkit": {
+      "unopenedParts": 22,
+      "unopenedPartPixels": true,
+      "assemblyImage": true,
+      "previewWrites": [],
+      "liveHybrid": {
+        "passed": true,
+        "browser": "webkit",
+        "distinctPartAndAssemblyImages": true,
+        "liveEdit": true,
+        "unchangedPartRetained": true,
+        "undoRedo": true,
+        "savedReopen": true,
+        "topLevelAssembly": true,
+        "configurations": false,
+        "errors": []
+      }
+    }
+  },
+  "release": {
+    "status": "pending"
+  }
+}
