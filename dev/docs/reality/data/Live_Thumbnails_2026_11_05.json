@@ -60,6 +60,20 @@
     }
   },
   "release": {
-    "status": "pending"
+    "app": "cad",
+    "release": "alpha-0.1.123",
+    "sha256": "23eedad7ddfea86927f031286c65862ab84a93153ddc50d609514b87d221bbb5",
+    "source_commit": "eb96d0f298c4be1664fec644cddd12d00c24b9f2",
+    "files": 3582,
+    "activated": true,
+    "activation": {
+      "app": "cad",
+      "current": "alpha-0.1.123",
+      "durable": true,
+      "previous": "alpha-0.1.122",
+      "restart_required": false
+    },
+    "exactQualifiedFilesVerified": 3582,
+    "otherAppsUnchanged": true
   }
 }
