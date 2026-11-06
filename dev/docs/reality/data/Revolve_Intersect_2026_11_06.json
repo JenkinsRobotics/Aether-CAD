@@ -1,7 +1,7 @@
 {
   "date": "2026-11-06",
   "feature": "Solid Revolve Intersect",
-  "status": "qualified; activation recorded separately",
+  "status": "qualified and active",
   "changes": [
     "Enabled editor operation and explicit merge scope",
     "Canonical document validator and agent operation support",
@@ -41,5 +41,27 @@
     "This closes Solid Revolve Intersect only; Surface/Thin Revolve remain unavailable",
     "Does not establish complete Onshape parity or general 0.1 release readiness",
     "Existing finishing-reference, performance, and Drawing gaps remain tracked separately"
-  ]
+  ],
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.125",
+    "sha256": "31619492dc999807dbc7dd832bffafed61228a85d77237877a7bfa8216be49e9",
+    "source_commit": "c41b1625a8580a59bd006b0305ac8d2c709be39f",
+    "files": 3582,
+    "activated": true
+  },
+  "activation": {
+    "app": "cad",
+    "current": "alpha-0.1.125",
+    "durable": true,
+    "previous": "alpha-0.1.124",
+    "restart_required": false
+  },
+  "package_verification": {
+    "release": "alpha-0.1.125",
+    "files": 3582,
+    "match": true
+  },
+  "other_apps_unchanged": true,
+  "https_cad_status": 302
 }
