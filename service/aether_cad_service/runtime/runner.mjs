@@ -6,6 +6,7 @@ const __filename = __fileURLToPath(import.meta.url);
 const __dirname = __dirname_of(__filename);
 import { stderr, stdin, stdout } from "node:process";
 import { readFileSync } from "node:fs";
+import { setImmediate as setImmediate$1 } from "node:timers/promises";
 import { readFile } from "node:fs/promises";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -45818,6 +45819,7 @@ const kernelDiagnostic = (message) => {
 `);
 };
 async function runNodeOperation(document2, operation2, fullWasmPath2 = new URL("../../node_modules/opencascade.js/dist/opencascade.full.wasm", import.meta.url)) {
+  await setImmediate$1();
   const documents = Array.isArray(document2) ? document2 : [document2];
   const load = () => loadExtendedKernel(async () => {
     const init3 = (await Promise.resolve().then(() => node)).default;

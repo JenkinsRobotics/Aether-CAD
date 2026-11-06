@@ -178,3 +178,12 @@ They retain real editable sketch geometry, but are not uniformly dimension-drive
 or fully constrained engineering designs. The archive inventory reports fixed
 contour sketches separately from driving dimensions. Do not describe that
 inventory alone as proof of every UI gesture or every possible parameter range.
+
+For the persistent headless-kernel stress gate, run
+`AETHER_EXAMPLES_SINGLE_PROCESS=1 node scripts/examples/collection/audit-editability.mjs`.
+This keeps all Parts in one process, uses the same Node operation boundary as the
+headless client, and records JS/process memory plus the WASM heap capacity after
+each Part in `results.json`. It still reports refused edits as failures. The
+operation boundary yields to the event loop so Replicad's native finalizers can
+run; a chain of already-resolved promises alone does not provide that boundary.
+WASM capacity is a high-water allocation, not a measure of live native objects.

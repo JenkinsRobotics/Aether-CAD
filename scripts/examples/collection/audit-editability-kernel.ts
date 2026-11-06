@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { initNodeKernel } from '../../../aether-engine/src/kernel/node-kernel';
+import { resolve } from 'node:path';
+import { initNodeKernel, runNodeOperation } from '../../../aether-engine/src/kernel/node-kernel';
 import { evaluatePartDocument, resetEvaluationCache } from '../../../aether-engine/src/kernel/part-evaluator';
 import { parsePartDocument, serializePartDocument } from '../../../aether-engine/src/document';
 import { preparePartEdit } from '../../../src/automation/live-commands';
-import { measureVolume } from 'replicad';
+import { getOC, measureVolume } from 'replicad';
 const out = process.argv[2];
 await initNodeKernel(readFileSync('aether-engine/node_modules/replicad-opencascadejs/src/replicad_single.wasm'));
 const results: any[] = [];
-const volume = (doc: any) => { let v = 0; evaluatePartDocument(doc, { withBodies: bodies => { for (const b of bodies.values()) v += measureVolume(b); } }); return v; };
+const volume = (doc: any) => runNodeOperation(doc, () => { let v = 0; evaluatePartDocument(doc, { withBodies: bodies => { for (const b of bodies.values()) v += measureVolume(b); } }); return v; }, resolve('aether-engine/node_modules/opencascade.js/dist/opencascade.full.wasm'));
 for (const example of JSON.parse(readFileSync(out + '/input.json', 'utf8'))) {
  for (const part of example.part_definitions) {
   if (process.argv[3] && part.id !== process.argv[3]) continue;
@@ -16,7 +17,7 @@ for (const example of JSON.parse(readFileSync(out + '/input.json', 'utf8'))) {
   const doc = parsePartDocument(JSON.stringify(part.feature_document));
   const result: any = { example: example.id, part: part.name, features: [], errors: [] };results.push(result);
   try {
-   result.volume = volume(doc); assert.ok(result.volume > 0);
+   result.volume = await volume(doc); assert.ok(result.volume > 0);
    const reopened = parsePartDocument(serializePartDocument(doc));
    assert.equal(reopened.features.length, doc.features.length);
    for (let i = 0; i < doc.features.length; i++) {
@@ -41,13 +42,14 @@ for (const example of JSON.parse(readFileSync(out + '/input.json', 'utf8'))) {
     const entry: any = { id:f.id, type:f.type, name:f.name, tool, change:args ?? changes };result.features.push(entry);
     try {
      const edited=preparePartEdit(prefix,tool,args ?? {feature_id:f.id,changes_json:JSON.stringify(changes)}).document;
-     entry.volume=volume(edited);entry.passed=true;
+     entry.volume=await volume(edited);entry.passed=true;
      assert.equal(parsePartDocument(serializePartDocument(edited)).features.at(-1)!.id,f.id);
     } catch(e) {entry.passed=false;entry.error=String(e);result.errors.push(entry.error);}
    }
-   assert.ok(Math.abs(volume(doc)-result.volume)<Math.max(1,result.volume)*1e-7);
+   assert.ok(Math.abs((await volume(doc))-result.volume)<Math.max(1,result.volume)*1e-7);
   } catch(e) {result.errors.push(String(e));}
-  writeFileSync(out+'/part-'+process.argv[3]+'.json',JSON.stringify(results,null,2));
+  result.memory = { ...process.memoryUsage(), wasmBytes: (getOC() as any).HEAPU8.buffer.byteLength };
+  writeFileSync(out + (process.argv[3] ? '/part-' + process.argv[3] + '.json' : '/results.json'),JSON.stringify(results,null,2));
   console.log(example.id,part.name,result.features.length,'edits',result.errors.length,'errors');
  }
 }

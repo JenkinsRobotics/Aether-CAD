@@ -1,0 +1,1966 @@
+{
+  "date": "2026-11-05",
+  "scope": "Persistent Node operation boundaries; not a claim of complete CAD parity or bounded memory for arbitrary assemblies",
+  "cause": "Uninterrupted synchronous batches and resolved-promise chains can starve Replicad FinalizationRegistry cleanup. Browser worker messages already supply event-loop boundaries.",
+  "change": "Yield through node:timers/promises setImmediate before each runNodeOperation. Preserve shared evaluator and errors.",
+  "baseline": {
+    "partsCompleted": 43,
+    "failurePart": "Roadster body",
+    "rawFailure": 24,
+    "lastLoggedWasmBytes": 1851719680
+  },
+  "persistentOriginalExamples": {
+    "parts": 158,
+    "edits": 677,
+    "successfulEdits": 676,
+    "maximumWasmCapacityBytes": 1346371584,
+    "nativeMemoryFailure": false,
+    "refusals": [
+      {
+        "part": "Orbiter fuselage",
+        "errors": [
+          "FeatureFailure: Fuselage stations: Every loft section must be an available closed sketch region."
+        ]
+      }
+    ],
+    "memoryByPart": [
+      {
+        "example": "scifirobot",
+        "part": "Front shell",
+        "memory": {
+          "rss": 1005764608,
+          "heapTotal": 788856832,
+          "heapUsed": 643274288,
+          "external": 488346878,
+          "arrayBuffers": 36497851,
+          "wasmBytes": 449839104
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Rear shell",
+        "memory": {
+          "rss": 1107558400,
+          "heapTotal": 971833344,
+          "heapUsed": 865716616,
+          "external": 562844422,
+          "arrayBuffers": 21014467,
+          "wasmBytes": 539820032
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Equatorial shell seal",
+        "memory": {
+          "rss": 1102004224,
+          "heapTotal": 962052096,
+          "heapUsed": 823888984,
+          "external": 562029070,
+          "arrayBuffers": 20199115,
+          "wasmBytes": 539820032
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Optical carrier",
+        "memory": {
+          "rss": 1140080640,
+          "heapTotal": 1011351552,
+          "heapUsed": 903529872,
+          "external": 563352838,
+          "arrayBuffers": 21522883,
+          "wasmBytes": 539820032
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Lens bezel",
+        "memory": {
+          "rss": 1000767488,
+          "heapTotal": 1094303744,
+          "heapUsed": 991894920,
+          "external": 564299134,
+          "arrayBuffers": 22469179,
+          "wasmBytes": 539820032
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Optical window",
+        "memory": {
+          "rss": 1220296704,
+          "heapTotal": 1033142272,
+          "heapUsed": 560587104,
+          "external": 653737750,
+          "arrayBuffers": 11047891,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Lens gasket",
+        "memory": {
+          "rss": 1426620416,
+          "heapTotal": 1033437184,
+          "heapUsed": 585973816,
+          "external": 653891353,
+          "arrayBuffers": 11201494,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Lens retaining ring",
+        "memory": {
+          "rss": 1446576128,
+          "heapTotal": 1036140544,
+          "heapUsed": 614866768,
+          "external": 654551158,
+          "arrayBuffers": 11861299,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Socket screw",
+        "memory": {
+          "rss": 1468022784,
+          "heapTotal": 1039319040,
+          "heapUsed": 654091424,
+          "external": 654341854,
+          "arrayBuffers": 11651995,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Side hub housing",
+        "memory": {
+          "rss": 1474854912,
+          "heapTotal": 1041432576,
+          "heapUsed": 727424800,
+          "external": 655337542,
+          "arrayBuffers": 12647683,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Side hub cover",
+        "memory": {
+          "rss": 1511161856,
+          "heapTotal": 1045643264,
+          "heapUsed": 765009464,
+          "external": 655433998,
+          "arrayBuffers": 12744139,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Side hub seal",
+        "memory": {
+          "rss": 1524105216,
+          "heapTotal": 1048526848,
+          "heapUsed": 772901248,
+          "external": 655493902,
+          "arrayBuffers": 12804043,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Cooling duct",
+        "memory": {
+          "rss": 1534066688,
+          "heapTotal": 1092075520,
+          "heapUsed": 894369000,
+          "external": 656582854,
+          "arrayBuffers": 13892995,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Cooling duct screen",
+        "memory": {
+          "rss": 1488060416,
+          "heapTotal": 1099677696,
+          "heapUsed": 938483992,
+          "external": 657168382,
+          "arrayBuffers": 14478523,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Auxiliary sensor housing",
+        "memory": {
+          "rss": 1511587840,
+          "heapTotal": 1111736320,
+          "heapUsed": 974883712,
+          "external": 657203734,
+          "arrayBuffers": 14513875,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Auxiliary sensor window",
+        "memory": {
+          "rss": 1518501888,
+          "heapTotal": 1114619904,
+          "heapUsed": 951600912,
+          "external": 657207190,
+          "arrayBuffers": 14517331,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Top vent frame",
+        "memory": {
+          "rss": 1537654784,
+          "heapTotal": 1124057088,
+          "heapUsed": 997398952,
+          "external": 657558574,
+          "arrayBuffers": 14868715,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Top vent grille",
+        "memory": {
+          "rss": 1564377088,
+          "heapTotal": 1138737152,
+          "heapUsed": 1003363920,
+          "external": 657106102,
+          "arrayBuffers": 14416243,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Antenna pedestal",
+        "memory": {
+          "rss": 1584119808,
+          "heapTotal": 1155252224,
+          "heapUsed": 1000552880,
+          "external": 657373462,
+          "arrayBuffers": 14683603,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Antenna mast",
+        "memory": {
+          "rss": 1588363264,
+          "heapTotal": 1157251072,
+          "heapUsed": 1034676088,
+          "external": 657594310,
+          "arrayBuffers": 14904451,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Antenna tip",
+        "memory": {
+          "rss": 1626521600,
+          "heapTotal": 1176748032,
+          "heapUsed": 1023260336,
+          "external": 657780046,
+          "arrayBuffers": 15090187,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "scifirobot",
+        "part": "Rear service cover",
+        "memory": {
+          "rss": 1338064896,
+          "heapTotal": 1218707456,
+          "heapUsed": 1060753368,
+          "external": 658021342,
+          "arrayBuffers": 15331483,
+          "wasmBytes": 640679936
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Fuselage",
+        "memory": {
+          "rss": 828588032,
+          "heapTotal": 924139520,
+          "heapUsed": 190425000,
+          "external": 857369614,
+          "arrayBuffers": 13156555,
+          "wasmBytes": 842203136
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Tapered main wing",
+        "memory": {
+          "rss": 832487424,
+          "heapTotal": 916963328,
+          "heapUsed": 222273264,
+          "external": 857872942,
+          "arrayBuffers": 13659883,
+          "wasmBytes": 842203136
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Starboard main wing",
+        "memory": {
+          "rss": 1154547712,
+          "heapTotal": 666189824,
+          "heapUsed": 204827896,
+          "external": 956674190,
+          "arrayBuffers": 11535691,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Aileron",
+        "memory": {
+          "rss": 1155416064,
+          "heapTotal": 666189824,
+          "heapUsed": 168161952,
+          "external": 956467414,
+          "arrayBuffers": 11328915,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Horizontal stabilizer",
+        "memory": {
+          "rss": 1157824512,
+          "heapTotal": 667205632,
+          "heapUsed": 196100152,
+          "external": 956486638,
+          "arrayBuffers": 11348139,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Vertical stabilizer",
+        "memory": {
+          "rss": 1158053888,
+          "heapTotal": 667402240,
+          "heapUsed": 205968016,
+          "external": 956493574,
+          "arrayBuffers": 11355075,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Cockpit canopy",
+        "memory": {
+          "rss": 1177518080,
+          "heapTotal": 668614656,
+          "heapUsed": 229112360,
+          "external": 956697038,
+          "arrayBuffers": 11558539,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Pilot seat",
+        "memory": {
+          "rss": 1184972800,
+          "heapTotal": 668614656,
+          "heapUsed": 208546320,
+          "external": 956513534,
+          "arrayBuffers": 11375035,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Spinner",
+        "memory": {
+          "rss": 1189609472,
+          "heapTotal": 668827648,
+          "heapUsed": 246307824,
+          "external": 957080390,
+          "arrayBuffers": 11941891,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Propeller hub",
+        "memory": {
+          "rss": 1202520064,
+          "heapTotal": 669679616,
+          "heapUsed": 230196768,
+          "external": 956710478,
+          "arrayBuffers": 11571979,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Propeller blade",
+        "memory": {
+          "rss": 1249968128,
+          "heapTotal": 671793152,
+          "heapUsed": 273802232,
+          "external": 956938862,
+          "arrayBuffers": 11800363,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Bent landing strut",
+        "memory": {
+          "rss": 1257963520,
+          "heapTotal": 671793152,
+          "heapUsed": 257624832,
+          "external": 956903198,
+          "arrayBuffers": 11764699,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Landing tire",
+        "memory": {
+          "rss": 1260978176,
+          "heapTotal": 672022528,
+          "heapUsed": 292226768,
+          "external": 957123998,
+          "arrayBuffers": 11985499,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Landing wheel hub",
+        "memory": {
+          "rss": 1275248640,
+          "heapTotal": 671793152,
+          "heapUsed": 311775992,
+          "external": 957155014,
+          "arrayBuffers": 12016515,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "airplane",
+        "part": "Tail skid",
+        "memory": {
+          "rss": 1281720320,
+          "heapTotal": 673906688,
+          "heapUsed": 301223696,
+          "external": 957188806,
+          "arrayBuffers": 12050307,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Forged wrench frame",
+        "memory": {
+          "rss": 1286291456,
+          "heapTotal": 678117376,
+          "heapUsed": 360246984,
+          "external": 956908150,
+          "arrayBuffers": 11769651,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Sliding jaw",
+        "memory": {
+          "rss": 1296957440,
+          "heapTotal": 678117376,
+          "heapUsed": 393577256,
+          "external": 956944486,
+          "arrayBuffers": 11805987,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Adjustment roller",
+        "memory": {
+          "rss": 1379762176,
+          "heapTotal": 690733056,
+          "heapUsed": 459064176,
+          "external": 958142350,
+          "arrayBuffers": 13003851,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Captive roller shaft",
+        "memory": {
+          "rss": 1381302272,
+          "heapTotal": 690995200,
+          "heapUsed": 490868736,
+          "external": 958337446,
+          "arrayBuffers": 13198947,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Recessed grip insert",
+        "memory": {
+          "rss": 1388380160,
+          "heapTotal": 690733056,
+          "heapUsed": 479205520,
+          "external": 957927374,
+          "arrayBuffers": 12788875,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "wrench",
+        "part": "Jaw scale index",
+        "memory": {
+          "rss": 1389297664,
+          "heapTotal": 691257344,
+          "heapUsed": 489435720,
+          "external": 957934310,
+          "arrayBuffers": 12795811,
+          "wasmBytes": 943128576
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Roadster body",
+        "memory": {
+          "rss": 1522548736,
+          "heapTotal": 613777408,
+          "heapUsed": 299006728,
+          "external": 1161538918,
+          "arrayBuffers": 14877219,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Floor chassis",
+        "memory": {
+          "rss": 1485586432,
+          "heapTotal": 584531968,
+          "heapUsed": 263972784,
+          "external": 1161485326,
+          "arrayBuffers": 14823627,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Hood panel",
+        "memory": {
+          "rss": 1457831936,
+          "heapTotal": 586645504,
+          "heapUsed": 303627480,
+          "external": 1161522382,
+          "arrayBuffers": 14860683,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Rear deck panel",
+        "memory": {
+          "rss": 1458176000,
+          "heapTotal": 586924032,
+          "heapUsed": 333038608,
+          "external": 1161604774,
+          "arrayBuffers": 14943075,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Performance tire",
+        "memory": {
+          "rss": 1460551680,
+          "heapTotal": 590856192,
+          "heapUsed": 355745344,
+          "external": 1161955390,
+          "arrayBuffers": 15293691,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Five-spoke alloy wheel",
+        "memory": {
+          "rss": 1070186496,
+          "heapTotal": 595066880,
+          "heapUsed": 427657360,
+          "external": 1163333710,
+          "arrayBuffers": 16672011,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Ventilated brake rotor",
+        "memory": {
+          "rss": 1087045632,
+          "heapTotal": 603471872,
+          "heapUsed": 495464696,
+          "external": 1163889406,
+          "arrayBuffers": 17227707,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Wheel axle",
+        "memory": {
+          "rss": 1098432512,
+          "heapTotal": 603471872,
+          "heapUsed": 492044080,
+          "external": 1163632310,
+          "arrayBuffers": 16970611,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Windshield",
+        "memory": {
+          "rss": 1140965376,
+          "heapTotal": 607404032,
+          "heapUsed": 492774816,
+          "external": 1163610166,
+          "arrayBuffers": 16948467,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Bucket seat",
+        "memory": {
+          "rss": 1170866176,
+          "heapTotal": 624181248,
+          "heapUsed": 539938280,
+          "external": 1163725942,
+          "arrayBuffers": 17064243,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Roll hoop",
+        "memory": {
+          "rss": 1153925120,
+          "heapTotal": 633880576,
+          "heapUsed": 552422208,
+          "external": 1164233206,
+          "arrayBuffers": 17571507,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Dashboard",
+        "memory": {
+          "rss": 1086013440,
+          "heapTotal": 640696320,
+          "heapUsed": 535180568,
+          "external": 1163917510,
+          "arrayBuffers": 17255811,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Headlamp lens",
+        "memory": {
+          "rss": 1040826368,
+          "heapTotal": 650395648,
+          "heapUsed": 520467768,
+          "external": 1163615070,
+          "arrayBuffers": 16953371,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Rear light lens",
+        "memory": {
+          "rss": 1000095744,
+          "heapTotal": 652017664,
+          "heapUsed": 550379736,
+          "external": 1163697462,
+          "arrayBuffers": 17035763,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Exhaust pipe",
+        "memory": {
+          "rss": 888078336,
+          "heapTotal": 659308544,
+          "heapUsed": 563369240,
+          "external": 1163983990,
+          "arrayBuffers": 17322291,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "roadster",
+        "part": "Door mirror",
+        "memory": {
+          "rss": 865943552,
+          "heapTotal": 666910720,
+          "heapUsed": 572549168,
+          "external": 1163834918,
+          "arrayBuffers": 17173219,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Machined aluminum enclosure",
+        "memory": {
+          "rss": 1377058816,
+          "heapTotal": 730628096,
+          "heapUsed": 499557328,
+          "external": 1161208750,
+          "arrayBuffers": 14547051,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Rear glass panel",
+        "memory": {
+          "rss": 1376026624,
+          "heapTotal": 729153536,
+          "heapUsed": 529634424,
+          "external": 1161372142,
+          "arrayBuffers": 14710443,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Display perimeter seal",
+        "memory": {
+          "rss": 1381187584,
+          "heapTotal": 733364224,
+          "heapUsed": 547126488,
+          "external": 1161414352,
+          "arrayBuffers": 14752653,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Display glass",
+        "memory": {
+          "rss": 1381679104,
+          "heapTotal": 733364224,
+          "heapUsed": 570832560,
+          "external": 1161708926,
+          "arrayBuffers": 15047227,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "OLED active display",
+        "memory": {
+          "rss": 1380548608,
+          "heapTotal": 733364224,
+          "heapUsed": 555052272,
+          "external": 1161571798,
+          "arrayBuffers": 14910099,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Camera mounting island",
+        "memory": {
+          "rss": 1221672960,
+          "heapTotal": 733888512,
+          "heapUsed": 572265416,
+          "external": 1161699118,
+          "arrayBuffers": 15037419,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Camera housing",
+        "memory": {
+          "rss": 1210908672,
+          "heapTotal": 733888512,
+          "heapUsed": 565036752,
+          "external": 1161770134,
+          "arrayBuffers": 15108435,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Camera optical cover",
+        "memory": {
+          "rss": 1216544768,
+          "heapTotal": 734232576,
+          "heapUsed": 602172056,
+          "external": 1162181182,
+          "arrayBuffers": 15519483,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Flash diffuser",
+        "memory": {
+          "rss": 1212284928,
+          "heapTotal": 737558528,
+          "heapUsed": 571934208,
+          "external": 1161864422,
+          "arrayBuffers": 15202723,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Power button",
+        "memory": {
+          "rss": 1143308288,
+          "heapTotal": 737902592,
+          "heapUsed": 602215904,
+          "external": 1161946814,
+          "arrayBuffers": 15285115,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Volume button",
+        "memory": {
+          "rss": 1143242752,
+          "heapTotal": 740704256,
+          "heapUsed": 590261976,
+          "external": 1161948854,
+          "arrayBuffers": 15287155,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Battery pack",
+        "memory": {
+          "rss": 1095286784,
+          "heapTotal": 741064704,
+          "heapUsed": 619924760,
+          "external": 1162031246,
+          "arrayBuffers": 15369547,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Logic board",
+        "memory": {
+          "rss": 1055817728,
+          "heapTotal": 753827840,
+          "heapUsed": 613820456,
+          "external": 1162246998,
+          "arrayBuffers": 15585299,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Logic shield",
+        "memory": {
+          "rss": 1059487744,
+          "heapTotal": 755499008,
+          "heapUsed": 643324080,
+          "external": 1162329390,
+          "arrayBuffers": 15667691,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Speaker module",
+        "memory": {
+          "rss": 1067630592,
+          "heapTotal": 761954304,
+          "heapUsed": 628509288,
+          "external": 1162307694,
+          "arrayBuffers": 15645995,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "smartphone",
+        "part": "Front sensor window",
+        "memory": {
+          "rss": 1075691520,
+          "heapTotal": 768770048,
+          "heapUsed": 614403264,
+          "external": 1162320686,
+          "arrayBuffers": 15658987,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "External tank shell",
+        "memory": {
+          "rss": 929628160,
+          "heapTotal": 815153152,
+          "heapUsed": 675723280,
+          "external": 1164408150,
+          "arrayBuffers": 17746451,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "External tank intertank band",
+        "memory": {
+          "rss": 842317824,
+          "heapTotal": 816562176,
+          "heapUsed": 701562536,
+          "external": 1164559449,
+          "arrayBuffers": 17897750,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Intertank stiffener",
+        "memory": {
+          "rss": 836468736,
+          "heapTotal": 825212928,
+          "heapUsed": 684743168,
+          "external": 1164018250,
+          "arrayBuffers": 17356551,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "External feed-line display tube",
+        "memory": {
+          "rss": 815071232,
+          "heapTotal": 826638336,
+          "heapUsed": 710321808,
+          "external": 1164166093,
+          "arrayBuffers": 17504394,
+          "wasmBytes": 1144651776
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbiter fuselage",
+        "memory": {
+          "rss": 1604157440,
+          "heapTotal": 832733184,
+          "heapUsed": 385629008,
+          "external": 1258964558,
+          "arrayBuffers": 11574027,
+          "wasmBytes": 1245380608
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbiter thermal belly",
+        "memory": {
+          "rss": 1126907904,
+          "heapTotal": 594083840,
+          "heapUsed": 368022200,
+          "external": 1372609102,
+          "arrayBuffers": 24227595,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port delta wing",
+        "memory": {
+          "rss": 1119174656,
+          "heapTotal": 580894720,
+          "heapUsed": 328260504,
+          "external": 1372568566,
+          "arrayBuffers": 24187059,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port wing thermal panel",
+        "memory": {
+          "rss": 1112883200,
+          "heapTotal": 581287936,
+          "heapUsed": 347037792,
+          "external": 1372581838,
+          "arrayBuffers": 24200331,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard delta wing",
+        "memory": {
+          "rss": 1116028928,
+          "heapTotal": 582221824,
+          "heapUsed": 366326208,
+          "external": 1372595110,
+          "arrayBuffers": 24213603,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard wing thermal panel",
+        "memory": {
+          "rss": 1121124352,
+          "heapTotal": 581435392,
+          "heapUsed": 335829632,
+          "external": 1372587142,
+          "arrayBuffers": 24205635,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Vertical stabilizer",
+        "memory": {
+          "rss": 1126563840,
+          "heapTotal": 582893568,
+          "heapUsed": 353622304,
+          "external": 1372598830,
+          "arrayBuffers": 24217323,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Split rudder outline",
+        "memory": {
+          "rss": 1131266048,
+          "heapTotal": 583286784,
+          "heapUsed": 363933344,
+          "external": 1372605766,
+          "arrayBuffers": 24224259,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Reinforced nose cap",
+        "memory": {
+          "rss": 1327923200,
+          "heapTotal": 583565312,
+          "heapUsed": 361549904,
+          "external": 1372895158,
+          "arrayBuffers": 24513651,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port front cockpit window",
+        "memory": {
+          "rss": 1332281344,
+          "heapTotal": 586088448,
+          "heapUsed": 374033432,
+          "external": 1372902094,
+          "arrayBuffers": 24520587,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port side cockpit window",
+        "memory": {
+          "rss": 1332920320,
+          "heapTotal": 586498048,
+          "heapUsed": 384317344,
+          "external": 1372909030,
+          "arrayBuffers": 24527523,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard front cockpit window",
+        "memory": {
+          "rss": 1333379072,
+          "heapTotal": 586907648,
+          "heapUsed": 394652936,
+          "external": 1372915966,
+          "arrayBuffers": 24534459,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard side cockpit window",
+        "memory": {
+          "rss": 1334542336,
+          "heapTotal": 585678848,
+          "heapUsed": 360891856,
+          "external": 1372848046,
+          "arrayBuffers": 24466539,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbiter main engine bell",
+        "memory": {
+          "rss": 1340768256,
+          "heapTotal": 585678848,
+          "heapUsed": 383482136,
+          "external": 1373241670,
+          "arrayBuffers": 24860163,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbital maneuvering pod",
+        "memory": {
+          "rss": 1421541376,
+          "heapTotal": 585678848,
+          "heapUsed": 428367728,
+          "external": 1373482630,
+          "arrayBuffers": 25101123,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbital engine bell",
+        "memory": {
+          "rss": 1429258240,
+          "heapTotal": 585678848,
+          "heapUsed": 397442432,
+          "external": 1373764774,
+          "arrayBuffers": 25383267,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port payload door",
+        "memory": {
+          "rss": 1432354816,
+          "heapTotal": 588218368,
+          "heapUsed": 415497048,
+          "external": 1373806270,
+          "arrayBuffers": 25424763,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Port door radiator",
+        "memory": {
+          "rss": 1431535616,
+          "heapTotal": 588644352,
+          "heapUsed": 445176440,
+          "external": 1373888662,
+          "arrayBuffers": 25507155,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard payload door",
+        "memory": {
+          "rss": 1435156480,
+          "heapTotal": 587792384,
+          "heapUsed": 416181536,
+          "external": 1373766046,
+          "arrayBuffers": 25384539,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Starboard door radiator",
+        "memory": {
+          "rss": 1435484160,
+          "heapTotal": 588218368,
+          "heapUsed": 445846096,
+          "external": 1373848438,
+          "arrayBuffers": 25466931,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Payload door hinge pin",
+        "memory": {
+          "rss": 1435090944,
+          "heapTotal": 587792384,
+          "heapUsed": 411557296,
+          "external": 1373834382,
+          "arrayBuffers": 25452875,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Payload bay frame",
+        "memory": {
+          "rss": 1417068544,
+          "heapTotal": 588218368,
+          "heapUsed": 430116552,
+          "external": 1373847654,
+          "arrayBuffers": 25466147,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Science payload housing",
+        "memory": {
+          "rss": 1443217408,
+          "heapTotal": 592003072,
+          "heapUsed": 479181088,
+          "external": 1374535486,
+          "arrayBuffers": 26153979,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Payload end cover",
+        "memory": {
+          "rss": 1447936000,
+          "heapTotal": 592003072,
+          "heapUsed": 448707952,
+          "external": 1374352646,
+          "arrayBuffers": 25971139,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Orbiter tank attachment strut",
+        "memory": {
+          "rss": 1448083456,
+          "heapTotal": 592445440,
+          "heapUsed": 461537344,
+          "external": 1374426254,
+          "arrayBuffers": 26044747,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Four-segment booster case",
+        "memory": {
+          "rss": 1448853504,
+          "heapTotal": 592887808,
+          "heapUsed": 487096744,
+          "external": 1374582289,
+          "arrayBuffers": 26200782,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Booster field-joint band",
+        "memory": {
+          "rss": 1422262272,
+          "heapTotal": 592003072,
+          "heapUsed": 465741024,
+          "external": 1374568272,
+          "arrayBuffers": 26186765,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Booster aft skirt",
+        "memory": {
+          "rss": 1405403136,
+          "heapTotal": 592445440,
+          "heapUsed": 504025272,
+          "external": 1374851568,
+          "arrayBuffers": 26470061,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Booster forward skirt and nose",
+        "memory": {
+          "rss": 1390231552,
+          "heapTotal": 592527360,
+          "heapUsed": 495230616,
+          "external": 1375001934,
+          "arrayBuffers": 26620427,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "space-shuttle",
+        "part": "Booster nozzle display",
+        "memory": {
+          "rss": 1384022016,
+          "heapTotal": 602750976,
+          "heapUsed": 513554144,
+          "external": 1375229046,
+          "arrayBuffers": 26847539,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "SLS core stage shell",
+        "memory": {
+          "rss": 1382858752,
+          "heapTotal": 613761024,
+          "heapUsed": 517934328,
+          "external": 1375426374,
+          "arrayBuffers": 27044867,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Core engine section",
+        "memory": {
+          "rss": 1341489152,
+          "heapTotal": 654409728,
+          "heapUsed": 571845632,
+          "external": 1376213238,
+          "arrayBuffers": 27831731,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Stage flange",
+        "memory": {
+          "rss": 1289158656,
+          "heapTotal": 663322624,
+          "heapUsed": 555551472,
+          "external": 1376145897,
+          "arrayBuffers": 27764390,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Core intertank rib",
+        "memory": {
+          "rss": 1257488384,
+          "heapTotal": 665092096,
+          "heapUsed": 586051304,
+          "external": 1376228289,
+          "arrayBuffers": 27846782,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Core external line",
+        "memory": {
+          "rss": 1291943936,
+          "heapTotal": 687882240,
+          "heapUsed": 591433328,
+          "external": 1377469038,
+          "arrayBuffers": 29087531,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "RS-25 display nozzle",
+        "memory": {
+          "rss": 1302265856,
+          "heapTotal": 701366272,
+          "heapUsed": 618349952,
+          "external": 1377431886,
+          "arrayBuffers": 29050379,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Five-segment booster aft skirt",
+        "memory": {
+          "rss": 1301250048,
+          "heapTotal": 712638464,
+          "heapUsed": 616702096,
+          "external": 1377511614,
+          "arrayBuffers": 29130107,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "SLS booster segment",
+        "memory": {
+          "rss": 1187053568,
+          "heapTotal": 728907776,
+          "heapUsed": 604033096,
+          "external": 1377468351,
+          "arrayBuffers": 29086844,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "SLS booster joint band",
+        "memory": {
+          "rss": 1160216576,
+          "heapTotal": 730431488,
+          "heapUsed": 629557200,
+          "external": 1377616194,
+          "arrayBuffers": 29234687,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "SLS booster forward assembly",
+        "memory": {
+          "rss": 1085685760,
+          "heapTotal": 739131392,
+          "heapUsed": 617936256,
+          "external": 1377810366,
+          "arrayBuffers": 29428859,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "SLS booster display nozzle",
+        "memory": {
+          "rss": 1102790656,
+          "heapTotal": 750403584,
+          "heapUsed": 638832360,
+          "external": 1378076166,
+          "arrayBuffers": 29694659,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Booster attachment pin",
+        "memory": {
+          "rss": 1105149952,
+          "heapTotal": 751403008,
+          "heapUsed": 651654848,
+          "external": 1378149774,
+          "arrayBuffers": 29768267,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Launch vehicle stage adapter",
+        "memory": {
+          "rss": 1328103424,
+          "heapTotal": 763412480,
+          "heapUsed": 692161784,
+          "external": 1378605486,
+          "arrayBuffers": 30223979,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Interim cryogenic propulsion stage",
+        "memory": {
+          "rss": 1439236096,
+          "heapTotal": 705363968,
+          "heapUsed": 514486104,
+          "external": 1359929422,
+          "arrayBuffers": 11547915,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "ICPS insulation band",
+        "memory": {
+          "rss": 1234681856,
+          "heapTotal": 706658304,
+          "heapUsed": 541059312,
+          "external": 1360077265,
+          "arrayBuffers": 11695758,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion stage adapter",
+        "memory": {
+          "rss": 1234616320,
+          "heapTotal": 706183168,
+          "heapUsed": 517310744,
+          "external": 1360136782,
+          "arrayBuffers": 11755275,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion European service module",
+        "memory": {
+          "rss": 1229979648,
+          "heapTotal": 707215360,
+          "heapUsed": 553806304,
+          "external": 1360378222,
+          "arrayBuffers": 11996715,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Service module thermal blanket",
+        "memory": {
+          "rss": 1229848576,
+          "heapTotal": 706723840,
+          "heapUsed": 532979736,
+          "external": 1360314145,
+          "arrayBuffers": 11932638,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Service module equipment deck",
+        "memory": {
+          "rss": 1044021248,
+          "heapTotal": 712261632,
+          "heapUsed": 562363272,
+          "external": 1360971694,
+          "arrayBuffers": 12590187,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion heat shield",
+        "memory": {
+          "rss": 991150080,
+          "heapTotal": 712753152,
+          "heapUsed": 588752688,
+          "external": 1361241094,
+          "arrayBuffers": 12859587,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion crew module shell",
+        "memory": {
+          "rss": 669696000,
+          "heapTotal": 718831616,
+          "heapUsed": 595924528,
+          "external": 1361323066,
+          "arrayBuffers": 12941559,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion docking collar",
+        "memory": {
+          "rss": 653656064,
+          "heapTotal": 735608832,
+          "heapUsed": 635115552,
+          "external": 1362032578,
+          "arrayBuffers": 13651071,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Crew access hatch",
+        "memory": {
+          "rss": 708739072,
+          "heapTotal": 755548160,
+          "heapUsed": 631221096,
+          "external": 1362030130,
+          "arrayBuffers": 13648623,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion observation window",
+        "memory": {
+          "rss": 724631552,
+          "heapTotal": 762888192,
+          "heapUsed": 616901520,
+          "external": 1361959866,
+          "arrayBuffers": 13578359,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion main engine display",
+        "memory": {
+          "rss": 745177088,
+          "heapTotal": 777060352,
+          "heapUsed": 645882344,
+          "external": 1362354946,
+          "arrayBuffers": 13973439,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion auxiliary display nozzle",
+        "memory": {
+          "rss": 768245760,
+          "heapTotal": 788594688,
+          "heapUsed": 666478504,
+          "external": 1362760594,
+          "arrayBuffers": 14379087,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Solar wing panel frame",
+        "memory": {
+          "rss": 780599296,
+          "heapTotal": 798556160,
+          "heapUsed": 650284440,
+          "external": 1362567826,
+          "arrayBuffers": 14186319,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Solar cell panel",
+        "memory": {
+          "rss": 699318272,
+          "heapTotal": 862797824,
+          "heapUsed": 732660160,
+          "external": 1362892386,
+          "arrayBuffers": 14510879,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Solar wing root boom",
+        "memory": {
+          "rss": 721600512,
+          "heapTotal": 864370688,
+          "heapUsed": 760783032,
+          "external": 1362976650,
+          "arrayBuffers": 14595143,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Solar panel hinge",
+        "memory": {
+          "rss": 729497600,
+          "heapTotal": 870662144,
+          "heapUsed": 727664336,
+          "external": 1363007682,
+          "arrayBuffers": 14626175,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion service module fairing panel",
+        "memory": {
+          "rss": 735772672,
+          "heapTotal": 871972864,
+          "heapUsed": 744938896,
+          "external": 1363060698,
+          "arrayBuffers": 14679191,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Orion boost protective cover",
+        "memory": {
+          "rss": 745242624,
+          "heapTotal": 878526464,
+          "heapUsed": 739946680,
+          "external": 1363273458,
+          "arrayBuffers": 14891951,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Launch abort tower display",
+        "memory": {
+          "rss": 723877888,
+          "heapTotal": 880885760,
+          "heapUsed": 773863176,
+          "external": 1363523154,
+          "arrayBuffers": 15141647,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "artemis-sls",
+        "part": "Abort tower display nozzle",
+        "memory": {
+          "rss": 709705728,
+          "heapTotal": 900300800,
+          "heapUsed": 803275848,
+          "external": 1363958658,
+          "arrayBuffers": 15577151,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-bracket",
+        "part": "Mounting bracket",
+        "memory": {
+          "rss": 732069888,
+          "heapTotal": 911572992,
+          "heapUsed": 814921880,
+          "external": 1363840986,
+          "arrayBuffers": 15459479,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-enclosure",
+        "part": "Enclosure case",
+        "memory": {
+          "rss": 967294976,
+          "heapTotal": 965050368,
+          "heapUsed": 819912376,
+          "external": 1364523162,
+          "arrayBuffers": 16141655,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-enclosure",
+        "part": "Fitted lid",
+        "memory": {
+          "rss": 1032028160,
+          "heapTotal": 992313344,
+          "heapUsed": 881113768,
+          "external": 1364954922,
+          "arrayBuffers": 16573415,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-studio",
+        "part": "Coated curved shell",
+        "memory": {
+          "rss": 1048887296,
+          "heapTotal": 1001750528,
+          "heapUsed": 889254360,
+          "external": 1364913036,
+          "arrayBuffers": 16531529,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-studio",
+        "part": "Floating coated lid",
+        "memory": {
+          "rss": 1060749312,
+          "heapTotal": 1009876992,
+          "heapUsed": 874372856,
+          "external": 1364925802,
+          "arrayBuffers": 16544295,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-studio",
+        "part": "Chrome sphere",
+        "memory": {
+          "rss": 1065254912,
+          "heapTotal": 1012531200,
+          "heapUsed": 904346488,
+          "external": 1365370378,
+          "arrayBuffers": 16988871,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-studio",
+        "part": "Chrome floating puck",
+        "memory": {
+          "rss": 1071235072,
+          "heapTotal": 1017217024,
+          "heapUsed": 873535360,
+          "external": 1365181522,
+          "arrayBuffers": 16800015,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-tumblers",
+        "part": "Tall thick tumbler",
+        "memory": {
+          "rss": 1078296576,
+          "heapTotal": 1021181952,
+          "heapUsed": 925061152,
+          "external": 1365811426,
+          "arrayBuffers": 17429919,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-tumblers",
+        "part": "Short thick tumbler",
+        "memory": {
+          "rss": 1090322432,
+          "heapTotal": 1031110656,
+          "heapUsed": 924514336,
+          "external": 1366018794,
+          "arrayBuffers": 17637287,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "Stainless steel specimen",
+        "memory": {
+          "rss": 1102266368,
+          "heapTotal": 1041858560,
+          "heapUsed": 907746336,
+          "external": 1366050114,
+          "arrayBuffers": 17668607,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "Aluminum 6061 specimen",
+        "memory": {
+          "rss": 1105575936,
+          "heapTotal": 1044250624,
+          "heapUsed": 933432096,
+          "external": 1366415202,
+          "arrayBuffers": 18033695,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "Copper specimen",
+        "memory": {
+          "rss": 1116258304,
+          "heapTotal": 1053917184,
+          "heapUsed": 919774736,
+          "external": 1366415202,
+          "arrayBuffers": 18033695,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "ABS specimen",
+        "memory": {
+          "rss": 1119764480,
+          "heapTotal": 1056309248,
+          "heapUsed": 945617448,
+          "external": 1366780290,
+          "arrayBuffers": 18398783,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "PLA specimen",
+        "memory": {
+          "rss": 1112784896,
+          "heapTotal": 1065975808,
+          "heapUsed": 931882544,
+          "external": 1366780290,
+          "arrayBuffers": 18398783,
+          "wasmBytes": 1346371584
+        }
+      },
+      {
+        "example": "reference-materials",
+        "part": "Oak specimen",
+        "memory": {
+          "rss": 1116307456,
+          "heapTotal": 1068384256,
+          "heapUsed": 957724696,
+          "external": 1367145378,
+          "arrayBuffers": 18763871,
+          "wasmBytes": 1346371584
+        }
+      }
+    ]
+  },
+  "newExamples": {
+    "parts": 7,
+    "edits": 31,
+    "errors": []
+  },
+  "shuttleDiagnosis": {
+    "ruledVolume": 884822.1752185362,
+    "smoothSignedVolume": -502729.9729053369,
+    "brepCheckValidForBoth": true,
+    "conclusion": "Smooth trial returns negative signed volume. Existing missing-region message is misleading. Ruled archive preserved; no automatic orientation repair or successful smooth-loft claim."
+  },
+  "checks": {
+    "engineTests": 1460,
+    "additionalHistoryStabilityTest": true,
+    "typecheck": "passed",
+    "build": "passed",
+    "packagedHeadless": "passed",
+    "packagedSketchRegions": "passed",
+    "hostedHome": "passed",
+    "nativeSuite": {
+      "passed": 352
+    },
+    "frontendSuite": {
+      "passed": 2230,
+      "skipped": 1
+    },
+    "standaloneHome": "passed",
+    "browserModeling": {
+      "status": "passed",
+      "steps": 17,
+      "evidence": "build/Example-Collection/stability-modeling/host/browser",
+      "limitation": "No recurrence in this run is not proof that the previous intermittent divergence is fixed."
+    },
+    "newExampleAuditFinal": "7 Parts / 31 edits passed through runNodeOperation"
+  },
+  "remaining": [
+    "Do not infer low live native memory from WASM heap capacity, which does not shrink.",
+    "The earlier intermittent browser rebuild divergence needs a separate reproducible test.",
+    "Feature gap, dimension coverage, performance and drawing pipeline stages remain."
+  ],
+  "release": "not yet staged"
+}

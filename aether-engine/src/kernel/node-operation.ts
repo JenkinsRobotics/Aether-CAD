@@ -1,5 +1,6 @@
 /** Shared Node execution policy for the in-process client and packaged runner. */
 import { readFileSync } from 'node:fs';
+import { setImmediate as yieldToNativeCleanup } from 'node:timers/promises';
 import { stderr } from 'node:process';
 import type { PartDocument } from '../document/index';
 import { extendedKernel, loadExtendedKernel, needsExtendedKernel } from './extended-kernel';
@@ -13,6 +14,10 @@ export async function runNodeOperation<T>(
   operation: () => T | Promise<T>,
   fullWasmPath: URL | string = new URL('../../node_modules/opencascade.js/dist/opencascade.full.wasm', import.meta.url),
 ): Promise<T> {
+  // Replicad releases unreachable native wrappers through FinalizationRegistry.
+  // Resolved promises alone can starve those callbacks in headless programs.
+  // Match worker message boundaries before starting another operation.
+  await yieldToNativeCleanup();
   const documents: readonly PartDocument[] = Array.isArray(document) ? document : [document as PartDocument];
   const load = () => loadExtendedKernel(async () => {
     const init = (await import('opencascade.js/dist/node.js')).default;
