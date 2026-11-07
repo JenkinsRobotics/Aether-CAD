@@ -1,6 +1,6 @@
 {
   "date": "2026-11-06",
-  "status": "qualified",
+  "status": "qualified and active",
   "primary_tabs": [
     "Properties",
     "Inspect",
@@ -47,5 +47,21 @@
     ]
   },
   "evidence": "build/Example-Collection/right-sidebar-four-tabs-final/host/browser",
-  "scope": "CAD sidebar composition only; no modeling engine changes"
+  "scope": "CAD sidebar composition only; no modeling engine changes",
+  "release": {
+    "app": "cad",
+    "release": "alpha-0.1.126",
+    "sha256": "9eec7f80b9c9419fbe5c3bd636e763b383410f299c70e87cce5fa9dc28cdbd8a",
+    "source_commit": "7cc2e8ebb0bb3ed50f73663fd1bc5f408a42f65c",
+    "files": 3582,
+    "activated": true
+  },
+  "activation": {
+    "app": "cad",
+    "current": "alpha-0.1.126",
+    "durable": true,
+    "previous": "alpha-0.1.125",
+    "restart_required": false
+  },
+  "other_apps_unchanged": true
 }
