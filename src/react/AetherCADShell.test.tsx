@@ -132,7 +132,7 @@ describe("AetherCADShell", () => {
     expect(html).toContain("panel-bottom-docked");
     expect(html).not.toContain('aria-label="Model placement"');
     expect(html).toContain("Features and parts");
-    expect(html).toContain('aria-label="Properties placement"');
+    expect(html).toContain('aria-label="Properties tabs"');
     expect(html).toContain('aria-label="History"');
     expect(html).toContain('aria-label="Workspace modes"');
   });

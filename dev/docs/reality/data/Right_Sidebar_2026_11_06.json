@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-06",
+  "status": "qualified",
+  "primary_tabs": [
+    "Properties",
+    "Inspect",
+    "Assembly",
+    "View"
+  ],
+  "inner_tabs": {
+    "Properties": [
+      "Properties",
+      "Material"
+    ],
+    "Inspect": [
+      "Analysis",
+      "Performance"
+    ],
+    "Assembly": [
+      "Assembly",
+      "Configurations"
+    ],
+    "View": [
+      "Camera",
+      "Environment"
+    ]
+  },
+  "design": [
+    "Shared panel-variant SegmentedControl",
+    "280 px default sidebar width using shared sizing API",
+    "Collapsible Properties and Inspection sections",
+    "Neutral icon-labelled inspection actions",
+    "Removed duplicate placement control and inline instructions"
+  ],
+  "checks": {
+    "typescript_build": "passed",
+    "dom_tests": 58,
+    "browser": {
+      "results": [
+        "Four primary sidebar tabs; inner navigation exposes properties, materials, appearance, inspection, performance, configurations and environment"
+      ],
+      "errors": []
+    },
+    "visual_review": [
+      "appearance.png",
+      "inspect.png"
+    ]
+  },
+  "evidence": "build/Example-Collection/right-sidebar-four-tabs-final/host/browser",
+  "scope": "CAD sidebar composition only; no modeling engine changes"
+}

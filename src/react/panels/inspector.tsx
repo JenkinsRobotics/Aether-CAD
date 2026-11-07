@@ -5,9 +5,9 @@ import { cadAssemblyWorkspace } from "../../cad-assembly-workspace-store";
 import { type CADPanelPlacement } from "../../cad-presentation-store";
 import { Button, InspectorActions, InspectorSection } from "@aether/ui";
 import { useState, useSyncExternalStore } from "react";
-import { findTreeNode, CADPanelPlacementMenu, ReadOnlyPropertyGrid, ReadOnlyPropertySections } from "./shared";
+import { findTreeNode, ReadOnlyPropertyGrid, ReadOnlyPropertySections } from "./shared";
 
-export function InspectorPanel({ placement }: { placement: CADPanelPlacement }) {
+export function InspectorPanel(_props: { placement: CADPanelPlacement }) {
   const [unitsOpen,setUnitsOpen]=useState(false);
   const workspace=useSyncExternalStore(cadWorkspace.subscribe,cadWorkspace.snapshot,cadWorkspace.snapshot);
   const selected=workspace.selectedItemIDs.size===1?findTreeNode(workspace.itemNodes,[...workspace.selectedItemIDs][0]):undefined;
@@ -21,7 +21,7 @@ export function InspectorPanel({ placement }: { placement: CADPanelPlacement }) 
   const canonicalAssembly = assembly.loadState === "ready" && assembly.data !== null;
   return (
     <>
-    <InspectorSection title={canonicalAssembly ? "Assembly properties" : "Properties"} actions={<CADPanelPlacementMenu panel="inspector" label="Properties" placement={placement} />}>
+    <InspectorSection defaultOpen title={canonicalAssembly ? "Assembly selection" : "Selection"}>
         {canonicalAssembly ? <ReadOnlyPropertySections
           sections={assembly.data!.inspectorSections}
           ariaLabel="Assembly inspector"
@@ -31,12 +31,11 @@ export function InspectorPanel({ placement }: { placement: CADPanelPlacement }) 
             emptyState="Create or open a Part to inspect document, feature, and exact-topology values."
           />}
     </InspectorSection>
-    <InspectorSection title="Editing and units">
+    <InspectorSection defaultOpen title="Editing and units">
       <InspectorActions>
       <Button disabled={!editable} onClick={()=>{if(selected)cadWorkspace.dispatch({type:'item-action',id:selected.id,actionID:'edit-feature'});}}>Edit selected feature</Button>
       <Button disabled={!saved} onClick={()=>setUnitsOpen(true)}>Units and precision…</Button>
       </InspectorActions>
-      <p>Select a feature to edit its dimensions. Changes preview in the model.</p>
     </InspectorSection>
     {unitsOpen && <CADDocumentSettings action="units" onClose={()=>setUnitsOpen(false)}/>}
     </>

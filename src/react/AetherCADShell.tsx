@@ -1,3 +1,4 @@
+import { RightSidebarPanel, rightSidebarGroup } from './panels/right-sidebar';
 import { CADSaveGuard } from './CADSaveGuard';
 import { CADShareDocument } from "./CADShareDocument";
 import { CADDocumentControls } from "./CADDocumentControls";
@@ -386,15 +387,24 @@ export function AetherCADShell() {
     toggle:{pressed:presentation.panelPlacements.browser !== "hidden",onToggle:()=>cadPresentation.dispatch({type:"set-panel-placement",panel:"browser",placement:presentation.panelPlacements.browser === "hidden" ? "docked" : "hidden"})}});
   const studioRailOrder = ["comments","advisor","versions","files","feature-tree","browser","create-version","notes","reminders","tasks","device-reminders","history"];
   leftPanels.sort((a,b)=>studioRailOrder.indexOf(a.id)-studioRailOrder.indexOf(b.id));
+  const [rightRequest, setRightRequest] = useState({id: "inspector", sequence: 0});
   const rightPanels: WorkspacePanel[] = [
-    { id: "inspector", title: "Properties", icon: <AetherIcon name="sliders" />, content: <InspectorPanel placement={presentation.panelPlacements.inspector} /> },
-    { id: "parameters", title: "Configurations", icon: <AetherIcon name="columns" />, content: <ConfigurationsPanel /> },
-    { id: "mates", title: "Assembly", icon: <AetherIcon name="cube" />, content: <MatesPanel active /> },
-    { id: "inspect", title: "Inspect", icon: <AetherIcon name="info" />, content: <InspectPanel active /> },
-    { id: "visualization", title: "Material properties", icon: <AetherIcon name="appearance-system" />, separatorBefore: true, content: <PartAppearancePanel /> },
-    { id: "rendering", title: "Rendering environment", icon: <AetherIcon name="lighting" />, content: <VisualizationPanel active /> },
-    { id: "view", title: "Camera and display", icon: <AetherIcon name="cube-transparent" />, content: <CADViewPanel active /> },
-    { id: "performance", title: "Performance", icon: <AetherIcon name="gauge" />, content: <CADPerformancePanel active /> },
+    { id: "inspector", title: "Properties", icon: <AetherIcon name="sliders" />, content: <RightSidebarPanel label="Properties" request={rightRequest} tabs={[
+      {id:"inspector",label:"Properties",content:<InspectorPanel placement={presentation.panelPlacements.inspector}/>},
+      {id:"visualization",label:"Material",content:<PartAppearancePanel/>},
+    ]}/> },
+    { id: "inspect", title: "Inspect", icon: <AetherIcon name="info" />, content: <RightSidebarPanel label="Inspect" request={rightRequest} tabs={[
+      {id:"inspect",label:"Analysis",content:<InspectPanel active/>},
+      {id:"performance",label:"Performance",content:<CADPerformancePanel active/>},
+    ]}/> },
+    { id: "mates", title: "Assembly", icon: <AetherIcon name="cube" />, content: <RightSidebarPanel label="Assembly" request={rightRequest} tabs={[
+      {id:"mates",label:"Assembly",content:<MatesPanel active/>},
+      {id:"parameters",label:"Configurations",content:<ConfigurationsPanel/>},
+    ]}/> },
+    { id: "view", title: "View", icon: <AetherIcon name="cube-transparent" />, content: <RightSidebarPanel label="View" request={rightRequest} tabs={[
+      {id:"view",label:"Camera",content:<CADViewPanel active/>},
+      {id:"rendering",label:"Environment",content:<VisualizationPanel active/>},
+    ]}/> },
   ];
 
   const studioPanelState: WorkspacePanelState = useMemo(() => ({
@@ -424,6 +434,9 @@ export function AetherCADShell() {
   };
   const openRightPanel = (id: string) => {
     if (id === "material") id = "visualization";
+    const requested = id;
+    setRightRequest(previous => ({id: requested, sequence: previous.sequence + 1}));
+    id = rightSidebarGroup(id);
     const next = { ...studioPanelState };
     for (const key of rightPanelIDs) next[key] = { ...next[key], placement: key === id ? "docked" : "hidden" };
     updateStudioPanels(next);
@@ -523,6 +536,7 @@ export function AetherCADShell() {
       >
         <CADSaveGuard />
         <WorkspaceShell
+          sidebarSizing={{width:280,minWidth:240,maxWidth:520,minCenterWidth:240}}
           workspaceControls={drawingMode ? <CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} /> : undefined}
           contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
           preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}

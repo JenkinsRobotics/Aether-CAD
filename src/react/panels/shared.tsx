@@ -85,7 +85,9 @@ export function CommandButton({
   className,
   children,
   disabled = false,
+  primary = true,
 }: {
+  primary?: boolean;
   disabled?: boolean;
   command: CADCommandID;
   id?: string;
@@ -102,7 +104,7 @@ export function CommandButton({
     <Button
       id={id}
       className={className}
-      primary
+      primary={primary}
       active={state.active}
       disabled={disabled || !state.enabled || !state.registered}
       onClick={() => cadCommands.execute(command)}

@@ -23,3 +23,12 @@
 .cad-material-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .cad-material-fields:disabled { opacity: .55; }
 .cad-material-fields .aui-material-browser { min-width: 0; width: 100%; box-sizing: border-box; }
+
+/* Consistent inner navigation and content rhythm for the four sidebar panels. */
+.cad-sidebar-panel { min-width: 0; display: flex; flex-direction: column; }
+.cad-sidebar-tabs { padding: 0 0 12px; }
+.cad-sidebar-tabs .aui-segmented-control { width: 100%; }
+.cad-sidebar-content { min-width: 0; }
+.cad-sidebar-content[hidden] { display: none; }
+.cad-sidebar-analysis-actions { display: grid; gap: 8px; }
+.cad-sidebar-analysis-actions button { width: 100%; justify-content: flex-start; }

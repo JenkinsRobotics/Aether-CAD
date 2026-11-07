@@ -153,12 +153,14 @@ it('ribbon category changes preserve the chosen left view and right appearance i
     expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
     expect(cadPresentation.snapshot().activePanel).toBe('items');
   }
-  await click('Material properties');
+  if(railButton('Properties').getAttribute('aria-pressed')!=='true')await click('Properties');
+  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
   const appearance=container.querySelector('[data-panel="visualization"]');
   expect(isVisible(appearance)).toBe(true);
   expect(appearance.closest('.aui-shell-side--right')).toBeTruthy();
   expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
-  await click('Configurations');
+  await click('Assembly');
+  await act(async()=>[...container.querySelectorAll('[aria-label="Assembly tabs"] [role="radio"]')].find(b=>b.textContent==='Configurations').click());
   expect(isVisible(appearance)).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="configurations"]'))).toBe(true);
 });
@@ -252,7 +254,7 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   const left=['Comments','AI advisor','Version control','Files'];
   expect(container.querySelector('[aria-label="Left sidebar"] [aria-label="Part manager"]')).toBeNull();
   for(const label of ['Features and parts','Document notes','Reminders','Create version']) expect(railButton(label)).toBeUndefined();
-  const right=['Properties','Configurations','Assembly','Inspect','Material properties','Rendering environment','Camera and display','Performance'];
+  const right=['Properties','Inspect','Assembly','View'];
   const active=labels=>labels.filter(label=>railButton(label)?.getAttribute('aria-pressed')==='true');
   const tree=()=>container.querySelector('[data-panel="items"]');
   const visiblePanels=side=>[...container.querySelectorAll(`[aria-label="${side} sidebar"] .aui-shell-panel, .aui-studio-aux-sidebar .aui-shell-panel`)].filter(isVisible).filter(panel=>!panel.contains(tree()));
@@ -274,7 +276,7 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   expect(tree()).toBe(itemTree);
   await click(left.at(-1));
   expect(active(left)).toEqual([]);
-  expect(active(right)).toEqual(['Performance']);
+  expect(active(right)).toEqual(['View']);
   expect(isVisible(tree())).toBe(true);
   await click('Comments');
   // Aux cards close from the aux toolbar; they have no float/close chrome.
@@ -352,19 +354,20 @@ it('shows draft and assembly states as accessible SVG icons rather than status w
   }
 });
 
-it('routes each right rail tool to its own panel without duplicate view trays', async () => {
-  for (const label of ['Orientation', 'Display', 'Scene', 'Material', 'Ground', 'Panels', 'Parameters', 'Appearance', 'View']) expect(railButton(label)).toBeUndefined();
-  const routes = [['Material properties','visualization'], ['Rendering environment','rendering'], ['Camera and display','view'], ['Configurations','configurations']];
-  for (const [label,id] of routes) {
-    await click(label);
+it('provides four right sidebar destinations and retains every tool through inner tabs', async () => {
+  const toolbar=container.querySelector('[aria-label="Right sidebar tabs"]');
+  expect([...toolbar.querySelectorAll('button')].map(b=>b.getAttribute('aria-label'))).toEqual(['Properties','Inspect','Assembly','View']);
+  const routes=[['Properties','Material','visualization'],['View','Environment','rendering'],['View','Camera','view'],['Assembly','Configurations','configurations']];
+  for(const [group,tab,id] of routes){
+    if(railButton(group).getAttribute('aria-pressed')!=='true')await click(group);
+    await act(async()=>[...container.querySelectorAll(`[aria-label="${group} tabs"] [role="radio"]`)].find(b=>b.textContent===tab).click());
     expect(isVisible(container.querySelector(`[data-panel="${id}"]`))).toBe(true);
-    for (const [,other] of routes) if (other !== id) expect(isVisible(container.querySelector(`[data-panel="${other}"]`))).toBe(false);
   }
-  expect(railButton('Material finish')).toBeUndefined();
 });
 
 it('exposes the real shared appearance palette and drives body color', async () => {
-  await click('Material properties');
+  await click('Properties');
+  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
   const panel=container.querySelector('[data-panel="visualization"]');
   await act(async()=>{const target=panel.querySelector('[aria-label="Appearance target"]');target.value='defaults';target.dispatchEvent(new Event('change',{bubbles:true}));});
   const {cadAppearance}=await import('../cad-appearance-store');
@@ -413,7 +416,8 @@ it('presents real parts with shared tree controls and opens appearance from thei
   };
   await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
-  await click('Material properties');
+  await click('Properties');
+  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(false);
   await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
@@ -492,7 +496,7 @@ it('switches the camera projection through the viewer action and disables perspe
     if(action.type==='set-projection')cadCameraPresentation.setProjection(action.projection);
   });
   try {
-    await click('Camera and display');
+    await click('View');
     const projection=container.querySelector('[aria-label="Camera projection"]');
     const fov=container.querySelector('[aria-label="Camera field of view"]');
     expect(projection.disabled).toBe(false);
@@ -509,7 +513,7 @@ it('opens related rendering tools repeatedly without leaving the assembly worksp
  await act(async()=>cadPresentation.patch({workspaceMode:'assembly'}));
  await act(async()=>requestCADPropertyPanel('rendering'));
  expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(true);
- await click('Rendering environment');expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(false);
+ await click('View');expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(false);
  await act(async()=>requestCADPropertyPanel('rendering'));
  expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(true);
  expect(cadPresentation.snapshot().workspaceMode).toBe('assembly');
