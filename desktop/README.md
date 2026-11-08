@@ -6,6 +6,22 @@ not connect to Studio, require an account, or depend on an installed Python/Node
 Files use the existing local-folder adapter and content fingerprint save guards.
 Studio collaboration, PDM and accounts remain server services.
 
+## Install and use
+
+Use the matching alpha release: Windows x64 `.exe`, Apple Silicon Mac `arm64.dmg`,
+or Intel Mac `x64.dmg`. On Windows, run the installer; on Mac, open the DMG and
+copy Aether CAD into Applications. Alpha builds are unsigned on Windows and
+ad-hoc signed (not notarized) on Mac, so system approval may be required.
+
+Launch Aether CAD and choose a local folder. Create or open a `.aethercad` design;
+that folder holds your saved documents. The editor and geometry engine run on
+your machine without a Studio account or an internet connection. Keep the folder
+available between sessions. Files can also be uploaded to hosted CAD; the native
+sketches and feature history use the same format in both editions.
+
+Studio accounts, collaboration and server PDM are not offline services. The
+Studio Server installer is intentionally unavailable from the CAD download page.
+
 ## Build
 
 Build on the target platform/architecture. Python 3.13 and Node are build tools

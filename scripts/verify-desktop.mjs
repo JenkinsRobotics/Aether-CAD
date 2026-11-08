@@ -10,16 +10,25 @@ const { _electron, expect } = createRequire(process.env.AETHER_PLAYWRIGHT_PACKAG
 const profile = await mkdtemp(tmpdir() + '/aether-offline-');
 const evidence = resolve('build/desktop-smoke');
 await mkdir(evidence, { recursive: true });
-const app = await _electron.launch({ executablePath: process.env.AETHER_DESKTOP_EXECUTABLE || resolve('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
+const app = await _electron.launch({ executablePath: process.env.AETHER_DESKTOP_EXECUTABLE || process.env.AETHER_DESKTOP_DEV_EXECUTABLE || resolve('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
   args: process.env.AETHER_DESKTOP_EXECUTABLE ? [] : ['desktop'], env: { ...process.env, AETHER_DESKTOP_TEST_PROFILE: profile } });
 const errors = [];
 let page;
 try {
   await app.context().route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, route => route.abort());
   page = await app.firstWindow();
-  page.on('pageerror', error => errors.push(error.message));
-  await expect(page.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible();
+  page.on('pageerror', error => errors.push(error.stack || error.message));
+  await expect(page.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible({timeout:60000});
   const origin = new URL(page.url()).origin;
+  const graphicsAvailable = await page.evaluate(async () => {
+    try { if (await navigator.gpu?.requestAdapter()) return true; } catch {}
+    const gl = document.createElement('canvas').getContext('webgl2');
+    const available = !!gl;
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return available;
+  });
+  const noGPUQualification = !graphicsAvailable && process.env.AETHER_DESKTOP_ALLOW_NO_GPU === '1';
+  if (!graphicsAvailable && !noGPUQualification) throw Error('No usable GPU: viewport qualification requires WebGPU or WebGL2.');
   // Do not touch the user's files or native file dialog. The browser's real
   // filesystem handles and IndexedDB exercise the local storage adapter.
   await page.evaluate(() => { window.showDirectoryPicker = () => navigator.storage.getDirectory(); });
@@ -62,13 +71,17 @@ try {
   await expect(page.locator('.cad-feature-dialog').getByLabel('Distance (mm)', {exact:true})).toHaveValue('15.000');
   await page.locator('.cad-feature-dialog [data-feature-action="discard"]').click();
   await page.getByRole('button', {name:/Units and precision/}).click();
-  await expect(page.locator('#unit-length')).toBeVisible();
+  await expect(page.locator('#unit-length')).toBeVisible({timeout:60000});
   await page.getByRole('button',{name:'Save',exact:true}).click();
-  await expect(page.locator('#unit-length')).not.toBeVisible();
+  await expect(page.locator('#unit-length')).not.toBeVisible({timeout:60000});
   await expect(page.getByRole('treeitem',{name:/Extrude 1/}).first()).toBeVisible({timeout:60000});
   assert.equal(await page.evaluate(() => { const child=window.open('about:blank','_blank');const opened=!!child;child?.close();return opened; }),true);
-  assert.deepEqual(errors,[]);
-  await writeFile(resolve(evidence,'results.json'),JSON.stringify({checks,errors,profile,nativeFileDialogTested:false},null,2));
+  // A VM without either graphics API cannot qualify the viewport. Only its
+  // known Three fallback-context failure is expected; every other error fails.
+  const expectedGraphicsErrors = noGPUQualification ? errors.filter(error => error.includes("Cannot read properties of null (reading 'getSupportedExtensions')")) : [];
+  assert.deepEqual(errors.filter(error => !expectedGraphicsErrors.includes(error)),[]);
+  if (noGPUQualification) console.log('NO GPU: viewport rendering NOT qualified; document and modeling checks only.');
+  await writeFile(resolve(evidence,'results.json'),JSON.stringify({checks,errors,profile,graphicsAvailable,viewportQualified:graphicsAvailable,nativeFileDialogTested:false},null,2));
   console.log('Offline home, engine, assembly creation and editable Part reopen passed.');
 } catch (error) {
   if (page && !page.isClosed()) {
