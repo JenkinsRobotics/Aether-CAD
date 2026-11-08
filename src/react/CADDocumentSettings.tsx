@@ -1,4 +1,5 @@
-import { documentRequest } from "@aether/session/documents";
+import { cadDocumentRequest as documentRequest } from '../document/local-project';
+import { isLocalDocument } from '@aether/session/home/runtime';
 import { parsePartDocument } from "@aether/core/document";
 import { useEffect, useState } from "react";
 import {
@@ -57,6 +58,7 @@ export type Metadata = {
   }[];
 };
 export async function documentAPI<T>(action: string, data: object): Promise<T> {
+  if (isLocalDocument()) return documentRequest<T>('cad',action,{...data});
   if (action === "cad_operation") return documentRequest<T>("cad", action, data as Record<string, unknown>);
   const response = await fetch("/api/library/" + action, {
     method: "POST",

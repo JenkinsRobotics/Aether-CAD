@@ -13,9 +13,10 @@ await mkdir(evidence, { recursive: true });
 const app = await _electron.launch({ executablePath: process.env.AETHER_DESKTOP_EXECUTABLE || resolve('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),
   args: process.env.AETHER_DESKTOP_EXECUTABLE ? [] : ['desktop'], env: { ...process.env, AETHER_DESKTOP_TEST_PROFILE: profile } });
 const errors = [];
+let page;
 try {
   await app.context().route(/^https?:\/\/(?!127\.0\.0\.1[:/])/, route => route.abort());
-  const page = await app.firstWindow();
+  page = await app.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
   await expect(page.getByRole('heading', { name: 'Get started', exact: true })).toBeVisible();
   const origin = new URL(page.url()).origin;
@@ -59,7 +60,20 @@ try {
   await expect(page.getByRole('treeitem',{name:/Extrude 1/}).first()).toBeVisible({timeout:60000});
   await page.getByRole('treeitem',{name:/Extrude 1/}).first().dblclick();
   await expect(page.locator('.cad-feature-dialog').getByLabel('Distance (mm)', {exact:true})).toHaveValue('15.000');
+  await page.locator('.cad-feature-dialog [data-feature-action="discard"]').click();
+  await page.getByRole('button', {name:/Units and precision/}).click();
+  await expect(page.locator('#unit-length')).toBeVisible();
+  await page.getByRole('button',{name:'Save',exact:true}).click();
+  await expect(page.locator('#unit-length')).not.toBeVisible();
+  await expect(page.getByRole('treeitem',{name:/Extrude 1/}).first()).toBeVisible({timeout:60000});
+  assert.equal(await page.evaluate(() => { const child=window.open('about:blank','_blank');const opened=!!child;child?.close();return opened; }),true);
   assert.deepEqual(errors,[]);
   await writeFile(resolve(evidence,'results.json'),JSON.stringify({checks,errors,profile,nativeFileDialogTested:false},null,2));
   console.log('Offline home, engine, assembly creation and editable Part reopen passed.');
+} catch (error) {
+  if (page && !page.isClosed()) {
+    await page.screenshot({path:resolve(evidence,'failure.png')});
+    await writeFile(resolve(evidence,'failure.json'),JSON.stringify({error:String(error),errors,url:page.url(),body:await page.locator('body').innerText()},null,2));
+  }
+  throw error;
 } finally { await app.close(); }

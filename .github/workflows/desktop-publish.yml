@@ -1,0 +1,34 @@
+name: Publish qualified standalone alpha
+on:
+  push:
+    tags: ['publish-desktop-v*']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify installer checks and publish the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PUBLISH_TAG: ${{ github.ref_name }}
+        run: |
+          TAG="${PUBLISH_TAG#publish-}"
+          gh release view "$TAG" --json assets,isDraft,tagName > release.json
+          gh api "repos/$GH_REPO/commits/$TAG" --jq .sha > commit.txt
+          gh api "repos/$GH_REPO/actions/workflows/desktop.yml/runs?head_sha=$(cat commit.txt)" > checks.json
+          python3 - "$TAG" <<'PY'
+          import json,sys
+          tag=sys.argv[1]
+          release=json.load(open('release.json'))
+          assert release['isDraft'] and release['tagName']==tag
+          names={a['name'] for a in release['assets']}
+          version=tag.removeprefix('desktop-v')
+          expected={f'Aether-CAD-{version}-{platform}' for platform in ('mac-arm64.dmg','mac-x64.dmg','win-x64.exe')}
+          assert expected | {'SHA256SUMS.txt'} <= names, 'Missing platform installers/checksums'
+          runs=json.load(open('checks.json'))['workflow_runs']
+          assert any(r['conclusion']=='success' for r in runs), 'Installer qualification has not passed'
+          PY
+          gh release edit "$TAG" --draft=false --prerelease --latest=false

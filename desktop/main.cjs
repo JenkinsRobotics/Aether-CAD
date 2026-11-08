@@ -7,6 +7,16 @@ let runtime;
 if (process.env.AETHER_DESKTOP_TEST_PROFILE) app.setPath('userData', process.env.AETHER_DESKTOP_TEST_PROFILE);
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
+  app.on('web-contents-created', (_event, contents) => {
+    contents.setWindowOpenHandler(({url}) => {
+      if (url === 'about:blank' || (runtime && new URL(url).origin === runtime.origin)) {
+        return {action:'allow', overrideBrowserWindowOptions:{webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}}};
+      }
+      if (/^https:\/\//.test(url)) void shell.openExternal(url);
+      return {action:'deny'};
+    });
+    contents.on('will-navigate', (event,url) => { if (url !== 'about:blank' && new URL(url).origin !== runtime?.origin) event.preventDefault(); });
+  });
   app.on('second-instance', () => { const win = BrowserWindow.getAllWindows()[0]; if (win) { win.restore(); win.focus(); } });
   app.whenReady().then(async () => {
     const resources = app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '..');
@@ -20,8 +30,6 @@ else {
     await fs.writeFile(settingsFile, JSON.stringify({ port: Number(new URL(runtime.origin).port) }));
     session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(contents.getURL().startsWith(runtime.origin + '/') && permission === 'fileSystem'));
     const win = new BrowserWindow({ width: 1440, height: 960, minWidth: 900, minHeight: 600, title: 'Aether CAD', webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
-    win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) void shell.openExternal(url); return { action: 'deny' }; });
-    win.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== runtime.origin) event.preventDefault(); });
     await win.loadURL(runtime.origin);
   }).catch(error => { dialog.showErrorBox('Aether CAD could not start', error.message); app.quit(); });
   app.on('window-all-closed', () => app.quit());
