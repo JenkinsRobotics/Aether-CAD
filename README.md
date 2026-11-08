@@ -19,7 +19,7 @@
   <a href="https://jenkinsrobotics.github.io/Aether-CAD/"><img alt="Website" src="https://img.shields.io/badge/site-Aether--CAD-1f6feb"></a>
 </p>
 
-Sketch a profile, add features and edit any step of the history. Aether CAD runs its own OpenCASCADE engine in the browser behind its own feature model, so every part rebuilds exactly — and every action is available to you, your team and your AI. An open alternative to SolidWorks, Onshape and Shapr3D.
+Sketch a profile, add features and edit the history. Aether CAD uses its own feature model and an Open CASCADE geometry kernel. The standalone app and hosted editor share the same modeling code. An open alternative to SolidWorks, Onshape and Shapr3D.
 
 > **Alpha 0.1 — early access.** Aether CAD is alpha software: features are incomplete,
 > file formats may change between alphas, and it is not yet qualified for production
@@ -93,14 +93,12 @@ releases, and multi-user sharing, comments and tasks. Parts and assemblies live 
 
 ## Get started
 
-```sh
-git clone --branch v0.1.0-alpha.1 --single-branch https://github.com/JenkinsRobotics/Aether-CAD.git
-cd Aether-CAD
-python3 tools/fetch-vendor.py
-```
+Standalone Windows and Mac installers are being qualified. Platform downloads
+remain disabled until the matching artifacts are tested and uploaded. See
+[standalone build and qualification](desktop/README.md) for the current process.
+Aether Studio Server installation is not available yet.
 
-See [Alpha 0.1 setup and current limits](ALPHA_0_1.md) for frontend build and
-server requirements. The web download is a frontend bundle, not a desktop installer.
+For source builds, follow [Alpha setup](ALPHA_0_1.md).
 
 See the [website](https://jenkinsrobotics.github.io/Aether-CAD/) for the full tour.
 
@@ -109,7 +107,7 @@ See the [website](https://jenkinsrobotics.github.io/Aether-CAD/) for the full to
 | | App | What it's for | Links |
 |---|---|---|---|
 | <img src="assets/branding/suite/aether-cad-icon.png" width="32" alt=""> | **Aether CAD** | **3D parametric parts, assemblies and production drawings.** · you are here | [Site](https://jenkinsrobotics.github.io/Aether-CAD/) · [GitHub](https://github.com/JenkinsRobotics/Aether-CAD) |
-| <img src="assets/branding/suite/aether-animation-icon.png" width="32" alt=""> | Aether Animation | Animate characters and animatronics, then play the motion on real servos. | [Site](https://jenkinsrobotics.github.io/Aether-Animation/) · [GitHub](https://github.com/JenkinsRobotics/Aether-Animation) |
+| <img src="assets/branding/suite/aether-animation-icon.png" width="32" alt=""> | Aether Animation | Animatronics and rig control: model, rehearse and operate physical mechanisms. | [Site](https://jenkinsrobotics.github.io/Aether-Animation/) · [GitHub](https://github.com/JenkinsRobotics/Aether-Animation) |
 | <img src="assets/branding/suite/aether-map-icon.png" width="32" alt=""> | Aether Map | Projection mapping and unattended show playback on Raspberry Pi players. | [Site](https://jenkinsrobotics.github.io/Aether-Map/) · [GitHub](https://github.com/JenkinsRobotics/Aether-Map) |
 | <img src="assets/branding/suite/aether-sketch-icon.png" width="32" alt=""> | Aether Sketch | Drawing and sketching — clean vector paths today, expressive brushes next. | [Site](https://jenkinsrobotics.github.io/Aether-Sketch/) · [GitHub](https://github.com/JenkinsRobotics/Aether-Sketch) |
 | <img src="assets/branding/suite/aether-io-icon.png" width="32" alt=""> | Aether IO | Electronics and wiring for motion hardware. | [Site](https://jenkinsrobotics.github.io/Aether-IO/) · [GitHub](https://github.com/JenkinsRobotics/Aether-IO) |

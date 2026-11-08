@@ -159,7 +159,7 @@ export function CADDocumentControls({
       {workspaceOnly && <div className="aui-studio-document-state">
         <MenuButton label={`Workspace version: ${workspaceName}`} items={[{id:'current',label:workspaceName,kind:'radio',checked:true},{id:'properties',label:'Workspace properties…',separatorBefore:true}]} onSelect={id=>{if(id==='properties')setSettingsAction('properties');}}>{workspaceName}<AetherIcon name="chevron-down"/></MenuButton>
         <IconButton label="Share document link" size="medium" disabled={!link} title={link?'Copy document link':'Save to Aether Studio to obtain a shareable document link.'} onClick={()=>void copyLink()}><AetherIcon name="link"/></IconButton>
-        <span className="aui-studio-connection"><AetherIcon name="cloud"/>{link?'Studio document':'Local file'}</span>
+        <span className="aui-studio-connection"><AetherIcon name={link?'cloud':'file-folder'}/>{link?'Studio document':'Local file'}</span>
       </div>}
       {!workspaceOnly && renderDocumentMenu(false)}
       {!workspaceOnly && !menuOnly && <div className={`cad-document-header-group${compact ? " cad-document-header-group--bounded" : ""}`}>

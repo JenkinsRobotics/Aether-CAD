@@ -12,7 +12,11 @@
     "smoke:step": "node scripts/smoke-step.mjs",
     "smoke:browser": "node scripts/e2e-import.mjs",
     "build:automation": "node scripts/build-automation.mjs",
-    "test:headless": "npm run build:automation && node scripts/verify-headless-kernel.mjs"
+    "test:headless": "npm run build:automation && node scripts/verify-headless-kernel.mjs",
+    "desktop:start": "electron desktop",
+    "desktop:service": "python3 desktop/build-service.py",
+    "desktop:package": "electron-builder --config desktop/electron-builder.json --publish never",
+    "desktop:test": "node --test desktop/server.test.cjs"
   },
   "dependencies": {
     "@aether/assets": "file:vendor/aether-assets-0.2.0-alpha.32.tgz",
@@ -32,6 +36,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.180.0",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "jsdom": "^25.0.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",

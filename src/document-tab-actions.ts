@@ -1,5 +1,6 @@
 import type { MenuItem } from '@aether/ui';
-import { decodeDocument, documentRequest, fileRecycleRequest } from '@aether/session/documents';
+import { decodeDocument, fileRecycleRequest } from '@aether/session/documents';
+import { cadDocumentRequest as documentRequest } from './document/local-project';
 import { parseDrawingDocument, serializeDrawingDocument } from '@aether/core/drawing';
 import { parsePartDocument, serializePartDocument } from '@aether/core/document';
 import type { Metadata } from './react/CADDocumentSettings';

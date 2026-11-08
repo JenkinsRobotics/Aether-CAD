@@ -4,6 +4,7 @@ import { createDocument } from '../create-document';
 import { readAetherCAD, writeAetherCAD } from '../document/aethercad-archive';
 import { CADWhatsNew } from './CADWhatsNew';
 import { CAD_DESIGN_KINDS, DESIGN_UNIT_OPTIONS } from './design-kinds';
+import { localProjectOperation } from '../document/local-project';
 
 export const homeDefinition: AppHomeDefinition = {
     brand: "Aether CAD",
@@ -27,7 +28,12 @@ export const homeDefinition: AppHomeDefinition = {
     ],
   welcome:<CADWhatsNew/>, design:{kinds:CAD_DESIGN_KINDS,units:DESIGN_UNIT_OPTIONS}, preview:{accept:/\.aethercad$/i,render:async(text)=>(await import('../preview-document')).previewDocument(text)},create:async(kind,name,{storage,destination,preferences})=>{
       if(kind==='assembly'||kind==='project') {
-        if(!storage.hosted) throw new Error('Assembly and Hybrid creation require a running CAD engine. Import an existing design, or create a Part to work locally.');
+        if(!storage.hosted) {
+          const result = await localProjectOperation('create', {name, packaging:kind, operation_id:crypto.randomUUID()});
+          if (!result.data_base64) throw new Error('The CAD runtime returned no design.');
+          const bytes = Uint8Array.from(atob(result.data_base64), c => c.charCodeAt(0));
+          return storage.createFile(new File([bytes], /\.aethercad$/i.test(name) ? name : `${name}.aethercad`, {type:'application/vnd.aether.workspace+zip'}), destination);
+        }
         return storage.request('/api/library/project_create',{app:'cad',name,packaging:kind,...destination});
       }
       const file=createDocument(name);

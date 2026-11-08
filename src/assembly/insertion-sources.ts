@@ -1,5 +1,5 @@
 /** Saved-source access never changes the active editor or writes the source. */
-import { documentRequest } from '@aether/session/documents';
+import { cadDocumentRequest as documentRequest } from '../document/local-project';
 import { isAetherCADFile } from '@aether/core/document/file-types';
 import { insertionPart, type InsertCandidate, type InsertSource } from './insertion';
 import type { Project } from '../host-library';

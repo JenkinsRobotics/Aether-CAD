@@ -1,0 +1,8 @@
+{
+  "name": "aether-cad-desktop",
+  "version": "0.1.0-alpha.127",
+  "description": "Aether CAD offline desktop runtime",
+  "author": "Jenkins Robotics",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "main": "main.cjs"
+}

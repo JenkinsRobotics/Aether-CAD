@@ -1,0 +1,17 @@
+{
+  "appId": "com.jenkinsrobotics.aethercad",
+  "productName": "Aether CAD",
+  "directories": { "app": "desktop", "output": "build/installers" },
+  "files": ["main.cjs", "server.cjs", "package.json", "!node_modules/**/*"],
+  "extraResources": [
+    { "from": "dist", "to": "dist" },
+    { "from": "build/desktop-service/cad-service", "to": "cad-service" },
+    { "from": "LICENSE", "to": "LICENSE" },
+    { "from": "aether-engine/ATTRIBUTION.md", "to": "CAD-ATTRIBUTION.md" }
+  ],
+  "artifactName": "Aether-CAD-${version}-${os}-${arch}.${ext}",
+  "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "icon": "assets/branding/aether-cad-icon.png", "identity": "-", "notarize": false },
+  "win": { "target": ["nsis"], "icon": "assets/branding/aether-cad-icon.png" },
+  "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true },
+  "publish": null
+}

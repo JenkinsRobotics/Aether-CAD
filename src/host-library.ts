@@ -1,7 +1,7 @@
 import {documentURL} from '@aether/session/home/runtime';
 import {isLocalDocument} from '@aether/session/home/runtime';
+import { cadDocumentRequest as documentRequest } from './document/local-project';
 import { prepareSaveRecovery, SaveRecoveryController, downloadRecovery, type RecoverySelection } from '@aether/session/save-recovery';
-import { documentRequest } from "@aether/session/documents";
 import { AutosaveSession, SaveError, recoveryKey, sessionOwner } from "@aether/session/autosave";
 import { configureDocumentSession } from "./document-session";
 import { isAetherCADFile, type DocumentKind } from "@aether/core/document/file-types";

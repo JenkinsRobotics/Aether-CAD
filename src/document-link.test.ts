@@ -5,6 +5,7 @@ describe("document sharing routes", () => {
     expect(documentLink("https://studio.test/cad/index.html?document=wheel&part=hub&revision=4&new=part&token=secret#setup=secret")).toBe("https://studio.test/cad/index.html?document=wheel&part=hub&revision=4");
     expect(documentLink("https://studio.test/cad/index.html?document=p&assembly=a")).toBe("https://studio.test/cad/index.html?document=p&assembly=a");
     expect(documentLink("https://studio.test/cad/index.html?new=part")).toBeNull();
+    expect(documentLink("http://127.0.0.1:49123/index.html?document=private.aethercad&storage=local")).toBeNull();
   });
   it("distinguishes the working document from an immutable revision", () => {
     expect(documentRevision("https://studio.test/cad/?document=a")).toBe("Main");
