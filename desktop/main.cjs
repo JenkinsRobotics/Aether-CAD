@@ -30,7 +30,7 @@ else {
     await fs.writeFile(settingsFile, JSON.stringify({ port: Number(new URL(runtime.origin).port) }));
     session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(contents.getURL().startsWith(runtime.origin + '/') && permission === 'fileSystem'));
     const win = new BrowserWindow({ width: 1440, height: 960, minWidth: 900, minHeight: 600, title: 'Aether CAD', webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
-    await win.loadURL(runtime.origin);
+    await win.loadURL(runtime.origin + '/cad/');
   }).catch(error => { dialog.showErrorBox('Aether CAD could not start', error.message); app.quit(); });
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', () => runtime?.close());

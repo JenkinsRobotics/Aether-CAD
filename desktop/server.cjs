@@ -38,6 +38,15 @@ async function startServer({ root, service, node, port = 0 }) {
         return;
       }
       if (!['GET', 'HEAD'].includes(request.method)) return reply(405, { error: 'Method not allowed.' });
+      // Match the hosted product mount, but explicitly retain local storage.
+      // Old links and detached windows must never turn into Studio requests.
+      if (['/cad', '/cad/', '/cad/index.html'].includes(url.pathname) && url.searchParams.get('storage') !== 'local') {
+        url.searchParams.set('storage','local');
+        response.writeHead(302,{Location:(url.pathname === '/cad' ? '/cad/' : url.pathname)+url.search});
+        response.end(); return;
+      }
+      if (url.pathname.startsWith('/cad/')) url.pathname = url.pathname.slice(4);
+
       const relative = decodeURIComponent(url.pathname).replace(/^\/+/, '') || 'index.html';
       const file = path.resolve(root, relative);
       if (!file.startsWith(path.resolve(root) + path.sep)) return reply(403, { error: 'Invalid path.' });

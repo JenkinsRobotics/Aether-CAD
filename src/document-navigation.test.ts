@@ -21,3 +21,11 @@ test('competing tab loads cannot race document identity',async()=>{
   await expect(navigateDocument('/cad/index.html?document=c')).rejects.toThrow('Wait');
   done(); await first; expect(location.search).toBe('?document=b');
 });
+
+test('retains local storage while switching through a shared CAD route',async()=>{
+ history.replaceState(null,'','/cad/index.html?document=a&storage=local');
+ const loader=vi.fn(async(url:URL)=>{expect(url.searchParams.get('storage')).toBe('local');});
+ configureDocumentNavigation(loader);
+ await navigateDocument('/cad/index.html?document=b');
+ expect(loader).toHaveBeenCalledOnce();expect(new URL(location.href).searchParams.get('storage')).toBe('local');
+});

@@ -48,7 +48,7 @@ try {
     return {engine:engine.engine,assembly:read.project.assemblies.length,picker:typeof showDirectoryPicker};
   }, { encoded:partDocumentBase64(doc) });
   assert.equal(checks.engine,'Aether'); assert.equal(checks.assembly,1);
-  await page.goto(origin+'/index.html?storage=local&document=Offline%20fixture.aethercad');
+  await page.goto(origin+'/cad/index.html?storage=local&document=Offline%20fixture.aethercad');
   const feature = page.getByRole('treeitem', {name:/Extrude 1/}).first();
   await expect(feature).toBeVisible({timeout:60000});
   await feature.dblclick();
@@ -76,13 +76,27 @@ try {
   await expect(page.locator('#unit-length')).not.toBeVisible({timeout:60000});
   await expect(page.getByRole('treeitem',{name:/Extrude 1/}).first()).toBeVisible({timeout:60000});
   assert.equal(await page.evaluate(() => { const child=window.open('about:blank','_blank');const opened=!!child;child?.close();return opened; }),true);
+  const example = await page.evaluate(async () => {
+    const catalog=await (await fetch('./examples/catalog.json')).json();
+    const entry=catalog.find(item=>item.id==='piping');
+    const bytes=new Uint8Array(await (await fetch('./examples/'+entry.file)).arrayBuffer());
+    let raw='';for(const byte of bytes)raw+=String.fromCharCode(byte);
+    const response=await fetch('/api/cad/project-read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data_base64:btoa(raw)})});
+    if(!response.ok)throw Error(await response.text());
+    const {project}=await response.json();
+    const part=project.parts.find(part=>part.document?.features?.some(feature=>feature.type==='sweep'));
+    if(!part)throw Error('The bundled pipe example must contain a native Sweep.');
+    return {id:entry.id,part:part.id,feature:part.document.features.find(feature=>feature.type==='sweep').name};
+  });
+  await page.goto(origin+'/cad/index.html?editor=1&example='+example.id+'&part='+encodeURIComponent(example.part));
+  await expect(page.getByRole('treeitem',{name:example.feature}).first()).toBeVisible({timeout:60000});
   // A VM without either graphics API cannot qualify the viewport. Only its
   // known Three fallback-context failure is expected; every other error fails.
   const expectedGraphicsErrors = noGPUQualification ? errors.filter(error => error.includes("Cannot read properties of null (reading 'getSupportedExtensions')")) : [];
   assert.deepEqual(errors.filter(error => !expectedGraphicsErrors.includes(error)),[]);
   if (noGPUQualification) console.log('NO GPU: viewport rendering NOT qualified; document and modeling checks only.');
-  await writeFile(resolve(evidence,'results.json'),JSON.stringify({checks,errors,profile,graphicsAvailable,viewportQualified:graphicsAvailable,nativeFileDialogTested:false},null,2));
-  console.log('Offline home, engine, assembly creation and editable Part reopen passed.');
+  await writeFile(resolve(evidence,'results.json'),JSON.stringify({checks,example,errors,profile,graphicsAvailable,viewportQualified:graphicsAvailable,nativeFileDialogTested:false},null,2));
+  console.log('Offline home, engine, assembly creation, editable Part reopen and bundled Sweep example passed.');
 } catch (error) {
   if (page && !page.isClosed()) {
     await page.screenshot({path:resolve(evidence,'failure.png')});

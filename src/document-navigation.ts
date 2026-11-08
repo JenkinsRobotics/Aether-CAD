@@ -1,3 +1,4 @@
+import { isLocalDocument } from '@aether/session/home/runtime';
 type OpenDocument = (url: URL) => Promise<void>;
 let openDocument: OpenDocument | undefined;
 let switching = false;
@@ -22,6 +23,7 @@ export function configureDocumentNavigation(open: OpenDocument) { openDocument =
 /** Keep the shell mounted. Refuse competing switches rather than racing autosave. */
 export async function navigateDocument(href: string): Promise<void> {
   const url = new URL(href, location.href);
+  if(isLocalDocument() && url.origin === location.origin && ['/cad/', '/cad/index.html'].includes(url.pathname)) url.searchParams.set('storage','local');
   if (new URL(location.href).searchParams.has("isolated")) url.searchParams.set("isolated", "1");
   if (url.href === location.href) return;
   if (switching) throw new Error('Wait for the current tab to finish opening.');
