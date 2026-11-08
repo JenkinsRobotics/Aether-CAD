@@ -74,12 +74,12 @@ releases, and multi-user sharing, comments and tasks. Parts and assemblies live 
 
 ## What every Aether app brings
 
-- **Runs on its own.** Open an app on one machine and work locally. Your files stay on your disk in open, documented formats. _(local install today · downloadable desktop app planned)_
+- **Runs on its own.** Open an app on one machine and work locally. Your files stay on your disk in open, documented formats. _(Windows and Mac alpha installers)_
 - **Or on your own server.** Point the apps at an Aether Studio server — a Mac Studio in the office or a rack of machines — and the whole team works from one place.
-- **Any device.** Every app is a web app first, so laptops, desktops and tablets connect through a browser — no install on the client. _(desktop downloads planned)_
-- **Built-in AI.** Connect ChatGPT, Claude or Gemini once in Studio. Each app's AI advisor edits your open document with the app's own tools — and AI is never required to open or play your work.
-- **PDM and version control.** Versions, branches, releases and obsolescence for every document, with a visual version graph and restore.
-- **Multi-user.** One account across every app, shared workspaces, permissions, comments and tasks. _(real-time co-editing in progress)_
+- **Any device.** Every app is a web app first, so laptops, desktops and tablets connect through a browser — no install on the client. _(browser access requires Studio; standalone supports Windows and Mac)_
+- **Built-in AI.** Connect ChatGPT, Claude or Gemini once in Studio. Each app's AI advisor edits your open document with the app's own tools — and AI is never required to open or play your work. _(Studio service; not included in the offline app)_
+- **PDM and version control.** Versions, branches, releases and obsolescence for every document, with a visual version graph and restore. _(Studio service; not included in the offline app)_
+- **Multi-user.** One account across every app, shared workspaces, permissions, comments and tasks. _(Studio service; not included in the offline app)_
 - **Command line and MCP.** Every agent tool is also a CLI command and an MCP tool, with scoped grants, revision guards and retry receipts.
 - **Open source.** Apache-2.0. Own your tools, your files and your server.
 
@@ -93,12 +93,14 @@ releases, and multi-user sharing, comments and tasks. Parts and assemblies live 
 
 ## Get started
 
-Standalone Windows and Mac installers are being qualified. Platform downloads
-remain disabled until the matching artifacts are tested and uploaded. See
-[standalone build and qualification](desktop/README.md) for the current process.
-Aether Studio Server installation is not available yet.
+Download the standalone alpha installers from the
+[CAD download page](https://jenkinsrobotics.github.io/Aether-CAD/): Windows x64, Mac Apple Silicon or Mac Intel.
+The installer includes its runtime; no Studio server, Python or Node installation
+is required. Choose a local folder in the app to create and save your designs.
 
-For source builds, follow [Alpha setup](ALPHA_0_1.md).
+These are alpha test builds: Mac installers are ad-hoc signed, not notarized, and
+Windows installers are unsigned. Studio Server installation is not available yet.
+See [standalone build and qualification](desktop/README.md).
 
 See the [website](https://jenkinsrobotics.github.io/Aether-CAD/) for the full tour.
 
