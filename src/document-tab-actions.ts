@@ -1,3 +1,4 @@
+import { isLocalDocument } from '@aether/session/home/runtime';
 import type { MenuItem } from '@aether/ui';
 import { decodeDocument, fileRecycleRequest } from '@aether/session/documents';
 import { cadDocumentRequest as documentRequest } from './document/local-project';
@@ -40,6 +41,7 @@ export function tabURL(target:CADTabTarget):string {
   if(target.itemId)query.set(target.kind,target.itemId);
   if(target.branch)query.set('branch',target.branch);
   if(target.revision)query.set('revision',String(target.revision));
+  if(isLocalDocument()){query.set('storage','local');return new URL('./index.html',location.href).pathname+'?'+query;}
   return '/cad/index.html?'+query;
 }
 const scope=(target:CADTabTarget)=>({id:target.documentId,...(target.branch?{branch:target.branch}:{}),...(target.revision?{revision:target.revision}:{})});
@@ -49,6 +51,7 @@ async function read<T>(path:string,data:object):Promise<T>{
 }
 export async function loadTabMetadata(target:CADTabTarget):Promise<Metadata> {
   if(!target.documentId)throw Error('Save this document to the server first.');
+  if(isLocalDocument())return documentRequest<Metadata>('cad','cad_metadata',scope(target));
   return read('/api/library/cad_metadata',{app:'cad',...scope(target)});
 }
 export function tabMetadataItem(target:CADTabTarget,meta:Metadata) {

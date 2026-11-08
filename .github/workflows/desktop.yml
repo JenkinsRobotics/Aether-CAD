@@ -50,7 +50,6 @@ jobs:
           path: |
             build/installers/*.dmg
             build/installers/*.exe
-            build/installers/*.zip
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
@@ -76,5 +75,5 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd installers
-          sha256sum *.dmg *.exe *.zip > SHA256SUMS.txt
-          gh release create "$RELEASE_TAG" *.dmg *.exe *.zip SHA256SUMS.txt --verify-tag --draft --prerelease --title "Aether CAD standalone alpha" --notes "Offline CAD test installers. Same editor and modeling engine as hosted CAD. Mac builds are ad-hoc signed, not notarized; Windows builds are unsigned. Packaged-app automated offline edit/save/reopen checks passed on all three platforms. Intel Mac CI has no usable GPU, so Intel viewport rendering still requires hardware acceptance testing. Native folder dialogs and installation/uninstallation still need teammate acceptance testing. Studio Server installation is not included."
+          sha256sum *.dmg *.exe > SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" *.dmg *.exe SHA256SUMS.txt --verify-tag --draft --prerelease --title "Aether CAD standalone alpha" --notes "Offline CAD test installers. Same editor and modeling engine as hosted CAD. Mac builds are ad-hoc signed, not notarized; Windows builds are unsigned. Packaged-app automated offline edit/save/reopen checks passed on all three platforms. Intel Mac CI has no usable GPU, so Intel viewport rendering still requires hardware acceptance testing. Native folder dialogs and installation/uninstallation still need teammate acceptance testing. Studio Server installation is not included."

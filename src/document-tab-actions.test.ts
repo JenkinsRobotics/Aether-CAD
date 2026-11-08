@@ -2,12 +2,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument } from '@aether/core/document';
 import { deleteTab, duplicateTab, editTabProperties, loadTabMetadata, prepareTabDeletion, tabActionItems, tabPartCode, tabURL, type CADTabTarget } from './document-tab-actions';
 import type { Metadata } from './react/CADDocumentSettings';
-const mocks=vi.hoisted(()=>({request:vi.fn(),recycle:vi.fn(),snapshot:vi.fn(),project:null as import('./host-library').Project|null}));
+const mocks=vi.hoisted(()=>({local:false,request:vi.fn(),recycle:vi.fn(),snapshot:vi.fn(),project:null as import('./host-library').Project|null}));
 vi.mock('@aether/session/documents',()=>({documentRequest:mocks.request,fileRecycleRequest:mocks.recycle,decodeDocument:(s:string)=>Buffer.from(s,'base64').toString()}));
+vi.mock('@aether/session/home/runtime',()=>({isLocalDocument:()=>mocks.local}));
+vi.mock('./document/local-project',()=>({cadDocumentRequest:mocks.request}));
 vi.mock('./host-library',()=>({currentEditorSnapshot:mocks.snapshot,get activeProject(){return mocks.project;}}));
 const target:CADTabTarget={id:'part-b',name:'Bracket',kind:'part',current:false,documentId:'file-b',itemId:'part-b',branch:'Design B'};
 const meta=():Metadata=>({id:'file-b',name:'Design.acad',revision:7,writable:true,scope:'personal',parent:null,deleted:[],featureVersion:3,upgradeDocuments:{},upgradeNeeded:false,updates:[],settings:{description:'',revisionManaged:true,workspaceName:'Main',workspaceDescription:'',units:{},itemQuantities:{'part-b':{mass:4}}},items:[{id:'part-b',name:'Bracket',description:'keep',category:'Metal',kind:'part'}]} as Metadata);
-beforeEach(()=>{vi.resetAllMocks();mocks.project=null;vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>meta()})));});
+beforeEach(()=>{vi.resetAllMocks();mocks.project=null;mocks.local=false;vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>meta()})));});
 it('lists the reference commands and gives truthful availability for drafts, history and unsupported storage',()=>{
  const items=tabActionItems(target);
  expect(items.map(i=>i.label)).toEqual(['Delete','Open in new browser tab','Rename','Properties…','Show code','Duplicate','Copy to clipboard']);
@@ -107,4 +109,12 @@ it('reads an internal Drawing from the selected design revision and retains its 
  const url=new URL(tabURL(drawingTarget),'http://localhost');
  expect(url.searchParams.get('drawing')).toBe(drawing.documentId);
  expect(url.searchParams.has('part')).toBe(false);
+});
+
+it('keeps detached local tabs in the offline document transport',async()=>{
+ mocks.local=true;vi.stubGlobal('location',{href:'http://127.0.0.1:8789/index.html?storage=local'});
+ expect(tabURL({...target,branch:undefined})).toBe('/index.html?document=file-b&part=part-b&storage=local');
+ await loadTabMetadata({...target,branch:undefined});
+ expect(mocks.request).toHaveBeenCalledWith('cad','cad_metadata',{id:'file-b'});
+ expect(fetch).not.toHaveBeenCalled();
 });

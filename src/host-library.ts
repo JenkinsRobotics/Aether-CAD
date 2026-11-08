@@ -514,13 +514,7 @@ export async function listHostedParts(): Promise<
 > {
   const groups = await Promise.all(
     ["personal", "workspace"].map(async (view) => {
-      const response = await fetch("/api/library/list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ app: "cad", query: ".", view }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
+      const result = await documentRequest<{files:{id:string;name:string;revision:number}[]}>("cad","list", {query:".",view});
       return result.files as { id: string; name: string; revision: number }[];
     }),
   );

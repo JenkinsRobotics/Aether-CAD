@@ -10,7 +10,7 @@
     { "from": "aether-engine/ATTRIBUTION.md", "to": "CAD-ATTRIBUTION.md" }
   ],
   "artifactName": "Aether-CAD-${version}-${os}-${arch}.${ext}",
-  "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "icon": "assets/branding/aether-cad-icon.png", "identity": "-", "notarize": false },
+  "mac": { "target": ["dmg"], "category": "public.app-category.graphics-design", "icon": "assets/branding/aether-cad-icon.png", "identity": "-", "notarize": false },
   "win": { "target": ["nsis"], "icon": "assets/branding/aether-cad-icon.png" },
   "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true },
   "publish": null
