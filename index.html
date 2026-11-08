@@ -260,6 +260,7 @@
 
   @media (max-width: 640px) { .nav-links a:not(.btn) { display: none; } .nav-links { gap: 12px; } }
 
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
   /* ── Aether additions: alpha notice, status columns, run-it-your-way, family ── */
   section > .wrap, .hero > .wrap { width: 100%; }
   .badge .dot.alpha { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
@@ -318,7 +319,7 @@
     <div class="dot a"></div><div class="dot b"></div><div class="dot c"></div><div class="dot d"></div><div class="dot e"></div>
   </div>
   <div class="wrap">
-    <div class="badge"><span class="dot alpha"></span> Alpha 0.1 · v0.1.0-alpha.1 · Apache-2.0</div>
+    <div class="badge"><span class="dot alpha"></span> Alpha 0.1 · desktop-v0.1.0-alpha.132 · Apache-2.0</div>
 
     <h2 class="hero-wordmark"><img src="assets/branding/aether-cad-wordmark-dark.png" alt="Aether CAD"></h2>
 
@@ -326,10 +327,13 @@
 
     <h1>Parametric CAD, <span class="grad">open and agent-ready.</span></h1>
 
-    <p class="lede">Sketch a profile, add features and edit any step of the history. Aether CAD runs a native FreeCAD/OpenCASCADE kernel behind its own feature model, so every part rebuilds exactly — and every action is available to you, your team and your AI.</p>
+    <p class="lede">Sketch a profile, add features and edit the history. Aether CAD uses its own feature model and an Open CASCADE geometry kernel. The standalone app and hosted editor share the same modeling code.</p>
 
     <div class="hero-cta">
-      <a class="btn primary" href="https://github.com/JenkinsRobotics/Aether-CAD/releases/tag/v0.1.0-alpha.1" target="_blank" rel="noopener">Download Alpha 0.1 →</a>
+      <a class="btn primary" href="https://github.com/JenkinsRobotics/Aether-CAD/releases/download/desktop-v0.1.0-alpha.132/Aether-CAD-0.1.0-alpha.132-win-x64.exe">Download for Windows</a>
+<a class="btn primary" href="https://github.com/JenkinsRobotics/Aether-CAD/releases/download/desktop-v0.1.0-alpha.132/Aether-CAD-0.1.0-alpha.132-mac-arm64.dmg">Download for Mac · Apple Silicon</a>
+<a class="btn primary" href="https://github.com/JenkinsRobotics/Aether-CAD/releases/download/desktop-v0.1.0-alpha.132/Aether-CAD-0.1.0-alpha.132-mac-x64.dmg">Download for Mac · Intel</a>
+<button class="btn" disabled aria-disabled="true">Aether Studio Server — not available yet</button>
       <a class="btn" href="#features">See what works</a>
       <a class="btn" href="https://github.com/JenkinsRobotics/Aether-CAD" target="_blank" rel="noopener">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.1 0 4.6-2.8 5.5-5.5 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>
@@ -337,15 +341,17 @@
       </a>
     </div>
 
+    <p class="alpha-note">Offline alpha test installers · Windows x64 and Mac Apple Silicon/Intel. No Studio account, Python or Node installation required. Mac builds are ad-hoc signed and not notarized; Windows builds are unsigned. Your operating system may require approval to open them. Studio collaboration and account services require a server. Intel Mac viewport rendering still needs hardware acceptance testing.</p>
+
     <div class="term" aria-label="get the source">
       <div class="term-bar"><div class="lights"><span></span><span></span><span></span></div><span class="ttl">get started — bash</span><span style="width:48px"></span></div>
 <pre><span class="cm"># Check out the Alpha 0.1 release and fetch its verified packages.</span>
-<span class="pmt">$</span> git clone --branch v0.1.0-alpha.1 --single-branch https://github.com/JenkinsRobotics/Aether-CAD.git
+<span class="pmt">$</span> git clone --branch desktop-v0.1.0-alpha.132 --single-branch https://github.com/JenkinsRobotics/Aether-CAD.git
 <span class="pmt">$</span> cd Aether-CAD
 <span class="pmt">$</span> python3 tools/fetch-vendor.py<span class="blink">▎</span></pre>
     </div>
 
-    <p class="alpha-note"><strong>Alpha 0.1</strong>Aether CAD is alpha software: features are incomplete, file formats may change between alphas, and it is not yet qualified for production work. Below, every feature is marked as working today, in progress or planned. <a href="https://github.com/JenkinsRobotics/Aether-CAD/blob/v0.1.0-alpha.1/ALPHA_0_1.md" target="_blank" rel="noopener">Release notes and current limits →</a></p>
+    <p class="alpha-note"><strong>Alpha 0.1</strong>Aether CAD is alpha software: features are incomplete, file formats may change between alphas, and it is not yet qualified for production work. Below, every feature is marked as working today, in progress or planned. <a href="https://github.com/JenkinsRobotics/Aether-CAD/blob/desktop-v0.1.0-alpha.132/ALPHA_0_1.md" target="_blank" rel="noopener">Release notes and current limits →</a></p>
   </div>
 </header>
 
@@ -355,7 +361,7 @@
     <div class="eyebrow">// what it is</div>
     <h2 class="h">3D parametric parts, assemblies and production drawings.</h2>
     <p class="sub">Aether CAD is a feature-based 3D modeller for mechanical parts. You draw constrained sketches, turn them into solids with features like Extrude, Revolve, Sweep and Loft, and keep a full parametric history you can roll back, reorder and edit at any point.</p>
-    <p class="sub" style="margin-top:18px">Geometry is computed by a native FreeCAD/OpenCASCADE engine behind a replaceable boundary. Aether owns the document, selection, references and history; the kernel performs the exact operations. Exports are exact STEP, not tessellated approximations.</p>
+    <p class="sub" style="margin-top:18px">Geometry is computed locally by the Aether engine using Open CASCADE. Aether owns the document, selection, references and history; the kernel performs the exact operations. STEP exports preserve solid geometry.</p>
     <p class="sub" style="margin-top:18px">An open alternative to SolidWorks, Onshape and Shapr3D. Part of the <a href="#family">Aether apps</a>: open-source tools for designing, animating and running real-world shows and machines.</p>
   </div>
 </section>
@@ -490,7 +496,7 @@
         <h4>// standalone</h4>
         <h3>Aether CAD on one machine</h3>
         <p>Work locally and offline with the app’s core features. Your files stay on your disk in open formats.</p>
-        <ul><li>Every core feature of the app</li><li>Local files you own</li><li>Today: a local install; a downloadable desktop app is planned</li></ul>
+        <ul><li>Every core feature of the app</li><li>Local files you own</li><li>Windows and Mac standalone installers</li></ul>
       </div>
       <div class="arch-box primary">
         <h4>// with aether studio</h4>
@@ -514,7 +520,7 @@
       <div class="feature">
         <h3>Runs on its own</h3>
         <p>Open an app on one machine and work locally. Your files stay on your disk in open, documented formats.</p>
-        <span class="pill ok">works today</span><span class="note">local install today · downloadable desktop app planned</span>
+        <span class="pill ok">works today</span><span class="note">Windows and Mac alpha installers</span>
       </div>
       <div class="feature">
         <h3>Or on your own server</h3>
@@ -524,22 +530,22 @@
       <div class="feature">
         <h3>Any device</h3>
         <p>Every app is a web app first, so laptops, desktops and tablets connect through a browser — no install on the client.</p>
-        <span class="pill ok">works today</span><span class="note">desktop downloads planned</span>
+        <span class="pill ok">works today</span><span class="note">browser access requires Studio; standalone supports Windows and Mac</span>
       </div>
       <div class="feature">
         <h3>Built-in AI</h3>
         <p>Connect ChatGPT, Claude or Gemini once in Studio. Each app&#x27;s AI advisor edits your open document with the app&#x27;s own tools — and AI is never required to open or play your work.</p>
-        <span class="pill ok">works today</span>
+        <span class="pill ok">works today</span><span class="note">Studio service; not included in the offline app</span>
       </div>
       <div class="feature">
         <h3>PDM and version control</h3>
         <p>Versions, branches, releases and obsolescence for every document, with a visual version graph and restore.</p>
-        <span class="pill ok">works today</span>
+        <span class="pill ok">works today</span><span class="note">Studio service; not included in the offline app</span>
       </div>
       <div class="feature">
         <h3>Multi-user</h3>
         <p>One account across every app, shared workspaces, permissions, comments and tasks.</p>
-        <span class="pill ok">works today</span><span class="note">real-time co-editing in progress</span>
+        <span class="pill ok">works today</span><span class="note">Studio service; not included in the offline app</span>
       </div>
       <div class="feature">
         <h3>Command line and MCP</h3>
@@ -596,7 +602,7 @@
     </div>
     <div class="family">
       <a href="https://jenkinsrobotics.github.io/Aether-CAD/" class="here"><img src="assets/branding/suite/aether-cad-icon.png" alt=""><span><b>Aether CAD</b><small>3D parametric parts, assemblies and production drawings.</small></span></a>
-      <a href="https://jenkinsrobotics.github.io/Aether-Animation/"><img src="assets/branding/suite/aether-animation-icon.png" alt=""><span><b>Aether Animation</b><small>Animate characters and animatronics, then play the motion on real servos.</small></span></a>
+      <a href="https://jenkinsrobotics.github.io/Aether-Animation/"><img src="assets/branding/suite/aether-animation-icon.png" alt=""><span><b>Aether Animation</b><small>Animatronics and rig control: model, rehearse and operate physical mechanisms.</small></span></a>
       <a href="https://jenkinsrobotics.github.io/Aether-Map/"><img src="assets/branding/suite/aether-map-icon.png" alt=""><span><b>Aether Map</b><small>Projection mapping and unattended show playback on Raspberry Pi players.</small></span></a>
       <a href="https://jenkinsrobotics.github.io/Aether-Sketch/"><img src="assets/branding/suite/aether-sketch-icon.png" alt=""><span><b>Aether Sketch</b><small>Drawing and sketching — clean vector paths today, expressive brushes next.</small></span></a>
       <a href="https://jenkinsrobotics.github.io/Aether-IO/"><img src="assets/branding/suite/aether-io-icon.png" alt=""><span><b>Aether IO</b><small>Electronics and wiring for motion hardware.</small></span></a>
