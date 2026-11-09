@@ -8,9 +8,9 @@ Studio collaboration, PDM and accounts remain server services.
 
 ## Install and use
 
-Use the matching alpha release: Windows x64 `.exe`, Apple Silicon Mac `arm64.dmg`,
+Use the matching release: Windows x64 `.exe`, Apple Silicon Mac `arm64.dmg`,
 or Intel Mac `x64.dmg`. On Windows, run the installer; on Mac, open the DMG and
-copy Aether CAD into Applications. Alpha builds are unsigned on Windows and
+copy Aether CAD into Applications. Builds are unsigned on Windows and
 ad-hoc signed (not notarized) on Mac, so system approval may be required.
 
 Launch Aether CAD and choose a local folder. Create or open a `.aethercad` design;
@@ -55,7 +55,7 @@ create/edit/save/reopen, installation/uninstallation, and disconnected networkin
 on each target platform. Preserve feature history and compare with hosted CAD.
 
 Developer ID signing/notarization and Windows signing are not configured here.
-Unsigned alpha artifacts are test candidates, not a signed public release.
+These installers do not carry a verified publisher signature. Intel Mac viewport rendering and native install/uninstall flows still need hardware acceptance testing.
 Never instruct users to disable system security globally.
 
 After qualification, upload `.dmg` (arm64/x64) and `.exe` (x64) plus checksums to
