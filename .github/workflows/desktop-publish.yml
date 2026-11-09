@@ -1,4 +1,4 @@
-name: Publish qualified standalone alpha
+name: Publish qualified standalone release
 on:
   push:
     tags: ['publish-desktop-v*']
@@ -31,4 +31,7 @@ jobs:
           runs=json.load(open('checks.json'))['workflow_runs']
           assert any(r['conclusion']=='success' for r in runs), 'Installer qualification has not passed'
           PY
-          gh release edit "$TAG" --draft=false --prerelease --latest=false
+          case "$TAG" in
+            *-alpha.*|*-beta.*|*-rc.*) gh release edit "$TAG" --draft=false --prerelease --latest=false ;;
+            *) gh release edit "$TAG" --draft=false --prerelease=false --latest ;;
+          esac
