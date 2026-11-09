@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const runner = fileURLToPath(new URL('../service/aether_cad_service/runtime/runner.mjs', import.meta.url));
 const fixtures = JSON.parse(readFileSync(new URL('../aether-engine/src/kernel/oracle/fixtures.json', import.meta.url)));
-const references = JSON.parse(readFileSync(new URL('../aether-engine/src/kernel/oracle/freecad-references.json', import.meta.url)));
+const references = JSON.parse(readFileSync(new URL('../test-fixtures/reference-measurements/solid-measurements.json', import.meta.url)));
 const close = (actual, expected, label, tolerance = Math.max(1, Math.abs(expected)) * 1e-7) => assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: ${actual} != ${expected}`);
 function run(document, phase = 'build', options, entry = runner) {
   const process = spawnSync(globalThis.process.execPath, ['--max-old-space-size=512', entry], {

@@ -11,7 +11,7 @@ import fixtures from "./oracle/assembly-fixtures.json";
 
 type Fixture = { name: string; fullyConstrained?: boolean; expectRefusal?: boolean; instances: AssemblyJobInput["instances"]; joints: AssemblyJobInput["joints"] };
 const job = (fixture: Fixture): AssemblyJobInput => ({ parts: [{ id: "plate" }], instances: fixture.instances, joints: fixture.joints });
-const referencePath = new URL("./oracle/freecad-assembly-references.json", import.meta.url);
+const referencePath = new URL("../../../test-fixtures/reference-measurements/assembly-measurements.json", import.meta.url);
 const references: Record<string, AssemblySolution> | undefined = existsSync(referencePath) ? JSON.parse(readFileSync(referencePath, "utf8")) : undefined;
 
 const worstResidual = (fixture: Fixture, solution: AssemblySolution) => {

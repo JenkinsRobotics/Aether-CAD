@@ -1,6 +1,6 @@
 # Aether-CAD releases
 
-This repository owns the `cad` source. Development branch: `alpha-0.1`.
+This repository owns the `cad` source. Development branch: `alpha-0.2` (0.1.0 is released on `master`).
 Each independently staged release receives the next `alpha-0.1.N` index.
 Package-manager versions and the shared UI dependency version are separate.
 
@@ -229,7 +229,8 @@ Package-manager versions and the shared UI dependency version are separate.
 
 
 Current source setup is local. Installed app bytes remain unchanged.
-Stable `0.1` on `master` and remote publication are later release operations.
+Version 0.1.0 is published on `master`; new development belongs on `alpha-0.2`.
+Do not activate a 0.2 candidate in Studio or replace 0.1 downloads merely by building it.
 
 Hybrid design browser changes require `scripts/verify-hybrid-files-browser.mjs`
 through the disposable authenticated fixture with the matching CAD worker. It

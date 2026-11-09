@@ -164,3 +164,12 @@ There are no "non-goals" in the FreeCAD comparison: every row FreeCAD 1.1 provid
 The reference is archived only when nothing of value remains to learn from or compare with it;
 until then `dev/docs/roadmap/FreeCAD_Comparison_2026_10_30.md` keeps the open rows and §7 plan.
 The same rule applies afterwards to the SolidCraft 0.23.0 pass.
+
+## 0.2 development — 2026-11-08
+
+The 0.1.0 release is on `master`. Active development and testing now use
+`alpha-0.2`, superseding the earlier `alpha-0.1` branch instruction. Do not
+change the published 0.1 tags or installers. FreeCAD gap closure precedes
+SolidCraft parity work; retain reference provenance and independent expected
+measurements when retiring executable reference tooling. See
+`dev/docs/roadmap/CAD_0_2.md` for the current baseline and retirement gates.

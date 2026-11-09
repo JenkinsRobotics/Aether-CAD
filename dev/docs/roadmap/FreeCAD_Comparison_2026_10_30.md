@@ -11,6 +11,17 @@ Both run OpenCASCADE, which is why FreeCAD's answers were usable as an oracle. T
 SolidCraft 0.23 comparison (`SolidCraft_0_23_Foundations.md`, `Tool_Parity_Tracker.md`)
 continues separately; nothing below promotes a SolidCraft row.
 
+## 0.2 baseline — 2026-11-08
+
+Active work now lives on `alpha-0.2`; see `CAD_0_2.md`. Frozen solid and
+assembly measurements moved from engine source to
+`test-fixtures/reference-measurements/` with unchanged bytes and explicit
+provenance. Their consumers were updated; 143 focused oracle/assembly tests
+passed. This removes reference data from product source, not a functional gap.
+FreeCAD executable benchmark tools and the installed reference remain until the
+retirement gate is met. Historical paths in the table below describe the old
+layout. TypeScript checking also passed for the branch baseline.
+
 ## Drawing continuation — 2026-11-06
 
 Chain dimensions now use `add-dimension-chain`: 3–64 ordered picks expand into

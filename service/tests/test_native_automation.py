@@ -223,7 +223,7 @@ def test_noop_and_invalid_geometry_preserve_document(tmp_path):
 def test_installed_runner_loads_full_kernel_on_demand(tmp_path, name):
     oracle = ROOT.parents[1] / "aether-engine/src/kernel/oracle"
     fixtures = json.loads((oracle / "fixtures.json").read_text())
-    references = json.loads((oracle / "freecad-references.json").read_text())[name]
+    references = json.loads((oracle.parents[3] / "test-fixtures" / "reference-measurements" / "solid-measurements.json").read_text())[name]
     document = next(fixture for fixture in fixtures if fixture["name"] == name)
     answer = invoke(tmp_path, "cad.part.evaluate", json.dumps(document), {})
     assert "error" not in answer, answer

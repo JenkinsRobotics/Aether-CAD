@@ -1,0 +1,14 @@
+{
+  "source": "Historical FreeCAD 1.1.3 comparison captures; measurements only, not executable reference code",
+  "policy": "Do not regenerate from a reference application. New features require analytic or self-consistency expectations. Preserve independent truth and source attribution.",
+  "files": {
+    "assembly-measurements.json": {
+      "cases": 16,
+      "sha256": "52bfe28068ad21fb8a77a4b98d95aa0c078ceb228a0677b1ae3ccdbafbd633fd"
+    },
+    "solid-measurements.json": {
+      "cases": 113,
+      "sha256": "a42003d19fe04e302f9f74ece3a70da2e28a14d88aa6a28a79df6e103fffe1f2"
+    }
+  }
+}

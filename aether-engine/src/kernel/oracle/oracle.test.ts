@@ -31,7 +31,7 @@ export function measureBodies(document: PartDocument): BodyReference[] {
   return out;
 }
 
-const referencesPath = new URL("./freecad-references.json", import.meta.url);
+const referencesPath = new URL("../../../../test-fixtures/reference-measurements/solid-measurements.json", import.meta.url);
 const references: References | null = existsSync(referencesPath) ? JSON.parse(readFileSync(referencesPath, "utf8")) : null;
 
 beforeAll(async () => {
