@@ -41,6 +41,7 @@ import {
 } from "@aether/ui";
 import { CadIcon } from "./CadIcon";
 import { DrawingWorkspaceRoute, StartCenter, useCADEnvironment, useCADViewCube, ViewportSurface } from "./chrome";
+import { useFileTrayPreference } from "./chrome/use-file-tray-preference";
 import { AssemblyInstanceDialog } from "./dialogs/instance";
 import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog, AssemblyContactSetDialog, PartPropertiesDialog, BodiesToComponentDialog, AsBuiltJointDialog, ReachPointDialog, StandardPartDialog } from "./dialogs";
 import {
@@ -400,6 +401,10 @@ export function AetherCADShell() {
   const toolbar = useCADToolbar({ documentType, sketchEditing, activeWorkspace: ribbonWorkspace, partOpen: presentation.partOpen,
     onSelectWorkspace: setRibbonWorkspace, onAction: runRibbonAction, onOpenLayout: openLayout });
   const centerTools = useCADCenterTools();
+  const { visible: showFileTabs, toggle: toggleFileTabs } = useFileTrayPreference();
+  // The bottom tray shows one item at a time, like a side tray: File tabs or the history editor.
+  const fileTabsOn = showFileTabs && !!documentConnection;
+  const historyOn = !drawingMode && !presentation.bottomPanelCollapsed && !fileTabsOn;
   const viewCube = useCADViewCube();
   const environment = useCADEnvironment();
   const commandOff = (id: string) => !(commands as Record<string, CADCommandState | undefined>)[id]?.enabled;
@@ -416,7 +421,8 @@ export function AetherCADShell() {
   ];
   const runCenterTray = (id: string) => {
     if (centerTools.run(id)) return;
-    if (id === "history") cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed: !presentation.bottomPanelCollapsed });
+    if (id === "file-tabs") { if (!fileTabsOn) cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed: true }); toggleFileTabs(); }
+    else if (id === "history") { if (fileTabsOn) toggleFileTabs(); cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed: historyOn }); }
     else if (id === "window:create-version") setCreatingVersion(true);
     else if (id === "window:plugins") setPluginsOpen(true);
     else if (id === "window:layout") openLayout();
@@ -480,10 +486,15 @@ export function AetherCADShell() {
             ]}/>,
           }}
           centerTray={{ tools: centerTools.tools, onAction: runCenterTray, windowCommands,
-            toggles: [{ id: "history", label: "Feature history", icon: <CadIcon name="history" />, pressed: !presentation.bottomPanelCollapsed }] }}
+            toggles: [
+              { id: "history", label: "Feature history", icon: <CadIcon name="history" />, pressed: historyOn },
+              // ponytail: the legacy document tab tray, kept beside History for now (Jonathan, 2026-11-12).
+              ...(documentConnection ? [{ id: "file-tabs", label: "File tabs", icon: <AetherIcon name="part-manager" />, pressed: fileTabsOn }] : []),
+            ] }}
           environment={drawingMode ? undefined : environment}
           cube={drawingMode ? undefined : viewCube}
-          bottom={drawingMode || presentation.bottomPanelCollapsed ? undefined : <WorkbenchBottomPanel presentation={presentation} />}
+          bottom={fileTabsOn ? <CADDocumentTabs connection={documentConnection!} docked={presentation.workspaceLayout === "docked"} />
+            : historyOn ? <WorkbenchBottomPanel presentation={presentation} /> : undefined}
           panelState={visiblePanelState}
           onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries(drawingHiddenPanels.map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}
           sidebarSizing={{width:280,minWidth:240,maxWidth:520,minCenterWidth:240}}

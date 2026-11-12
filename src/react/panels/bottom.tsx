@@ -14,18 +14,17 @@ export function WorkbenchBottomPanel({ presentation }: { presentation: CADPresen
   const historyTimeline = <div id="history-list" className="cad-history-timeline-wrap"><CADHistoryTimeline items={workspace.historyItems} rollbackIndex={workspace.rollbackIndex} /></div>;
   const problems = <div className="problems-list"><ListBox ariaLabel="Rebuild problems" items={workspace.problemItems} selectedIDs={new Set()} selectionMode="none" emptyState="No rebuild problems." /></div>;
   return (
-    <div className="cad-bottom-workbench">
-      <BottomPanel
-        ariaLabel="Rebuild workbench"
-        activeID={presentation.bottomPanelActiveID}
-        collapsed={presentation.bottomPanelCollapsed}
-        onSelect={(id) => cadPresentation.dispatch({ type: "select-bottom-panel", id: id as "history" | "problems" })}
-        onCollapsedChange={(collapsed) => cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed })}
-        tabs={[
-          { id: "history", label: "History", badge: workspace.historyItems.length, icon: "↺", content: historyTimeline },
-          { id: "problems", label: "Problems", badge: workspace.problemItems.length || undefined, icon: "!", content: problems },
-        ]}
-      />
-    </div>
+    // A direct child of the shell's bottom slot, so the shell lays it out per layout (a card in floating).
+    <BottomPanel
+      ariaLabel="Rebuild workbench"
+      activeID={presentation.bottomPanelActiveID}
+      collapsed={presentation.bottomPanelCollapsed}
+      onSelect={(id) => cadPresentation.dispatch({ type: "select-bottom-panel", id: id as "history" | "problems" })}
+      onCollapsedChange={(collapsed) => cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed })}
+      tabs={[
+        { id: "history", label: "History", badge: workspace.historyItems.length, icon: "↺", content: historyTimeline },
+        { id: "problems", label: "Problems", badge: workspace.problemItems.length || undefined, icon: "!", content: problems },
+      ]}
+    />
   );
 }

@@ -225,9 +225,7 @@
 .sidebar > .cad-panel-placement-menu { position: absolute; z-index: 24; top: 13px; right: 8px; }
 .cad-bottom-workbench { position: relative; }
 .cad-bottom-workbench > .cad-panel-placement-menu { position: absolute; z-index: 24; top: 5px; right: 8px; }
-.cad-bottom-workbench .aui-bottom-panel { height: 100%; min-height: 32px; }
-.cad-bottom-workbench .aui-bottom-panel:not(.aui-bottom-panel--collapsed) { height: 88px; }
-.cad-bottom-workbench .history-list, .cad-bottom-workbench .problems-list { min-height: 0; padding: 6px 10px 10px; }
+.studio-shell .aui-shell-bottom .problems-list { min-height: 0; padding: 6px 10px 10px; }
 
 .shapr-shell .browser-title { min-height: 50px; padding: 10px 13px; border-color: var(--aether-color-border); }
 .shapr-shell .browser-title strong { color: var(--aether-color-text); font-size: 12px; }
@@ -518,7 +516,6 @@
   .cad-document-bar .aui-tab:disabled, .cad-document-identity, .cad-header-divider { display: none; }
   .document-toolbar { gap: 2px; }
   .cad-bottom-workbench { max-height: 154px; }
-  .cad-bottom-workbench .aui-bottom-panel:not(.aui-bottom-panel--collapsed) { height: 154px; }
   .cad-start-center { padding-inline: 14px; }
   .workspace.layout-expanded .cad-bottom-workbench { left: calc(var(--cad-left-width) + 18px); }
   .workspace.layout-expanded .viewport-mode-tools { left: calc(var(--cad-left-width) + 26px); }
@@ -574,7 +571,6 @@
 .studio-shell .browser-title strong { color: var(--aether-color-text); }
 .studio-shell .browser-title small { color: var(--aether-color-text-dim); }
 .studio-shell .inspector-sidebar .aui-panel-heading { min-height: 34px; background: var(--aether-color-bg-panel); border-color: var(--aether-color-border); color: var(--aether-color-text); }
-.studio-shell .cad-bottom-workbench { flex: 0 0 auto; border-color: var(--aether-color-border); }
 
 /* The suite shell's ribbon carries the modelling tools, so the floating rails
    stand down — except the View rail, which is the View tray's only home. */

@@ -1,6 +1,6 @@
 ### Standard Aether app shell — 2026-11-11
 
-CAD renders `StandardAppShell` from `@aether/ui` 0.2.0-alpha.288 instead of its
+CAD renders `StandardAppShell` from `@aether/ui` 0.2.0-alpha.291 instead of its
 own composition. Header: document menu, state, undo/redo and the shared command
 search; the floating ↔ docked ↔ canvas switch is the header mode button. The
 CAD ribbon (workspace selector, tabs, tool variants, tool bar options) is the
@@ -10,12 +10,14 @@ Assemblies and Drawings) | Drive (the shared `DriveBrowser`; CAD's own Drive
 browser is removed). Right side tray: Inspector (Analysis, Performance),
 Properties (Properties, Configurations), Materials and appearance, Transform
 (Assembly mates) and Effects (Environment, Camera). Center icon tray: Selection
-tools, Measure, Section view, the Feature history toggle, and a More menu with
+tools, Measure, Section view, the Feature history and File tabs toggles, and a More menu with
 Open file, Import, Export, Create version, Document notes, Reminders, Action
 items, Plugins and Panel layout. The environment stack holds the view-cube
 switch, Fit view, snapping, grid and display; the view cube collapses to the
-orientation compass. Feature history and rebuild problems are the bottom editor;
-bottom document tabs are retired. Saved presentation layouts load unchanged and
+orientation compass. Feature history and rebuild problems are the bottom editor,
+a floating card sized to its timeline in floating layout. The File tabs toggle
+keeps the bottom document tab tray for now (remembered per device). The bottom tray
+shows one item at a time, like a side tray: turning one on turns the other off. Saved presentation layouts load unchanged and
 a tab's v1 open-panel state is renamed to the new tab ids. The view cube's
 expanded state is no longer remembered across reloads (the shell owns it).
 
