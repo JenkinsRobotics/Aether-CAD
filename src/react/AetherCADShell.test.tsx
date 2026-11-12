@@ -125,15 +125,15 @@ describe("AetherCADShell", () => {
     } finally { vi.unstubAllGlobals(); }
   });
 
-  it("normalizes legacy floating panels into the shared combined sidebar and preserves bottom placement", () => {
+  it("normalizes legacy floating panels into the shared combined sidebar; a saved hidden bottom placement no longer hides history", () => {
     cadPresentation.patch({
-      panelPlacements: { browser: "floating", inspector: "hidden", bottom: "docked" },
+      panelPlacements: { browser: "floating", inspector: "hidden", bottom: "hidden" },
     });
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).not.toContain("aui-float-panel");
     expect(html).toContain("aui-tabbed-sidebar");
     expect(html).toContain("aui-shell");
-    expect(html).toContain("panel-bottom-docked");
+    expect(html).toContain('aria-label="Rebuild workbench"');
     expect(html).not.toContain('aria-label="Model placement"');
     expect(html).toContain("Features and parts");
     expect(html).toContain('aria-label="Properties tabs"');

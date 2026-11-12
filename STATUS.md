@@ -1,6 +1,6 @@
 ### Standard Aether app shell — 2026-11-11
 
-CAD renders `StandardAppShell` from `@aether/ui` 0.2.0-alpha.286 instead of its
+CAD renders `StandardAppShell` from `@aether/ui` 0.2.0-alpha.287 instead of its
 own composition. Header: document menu, state, undo/redo and the shared command
 search; the floating ↔ docked ↔ canvas switch is the header mode button. The
 CAD ribbon (workspace selector, tabs, tool variants, tool bar options) is the

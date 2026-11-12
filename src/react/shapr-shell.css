@@ -562,7 +562,6 @@
 .cad-studio-viewport { position: absolute; inset: 0; }
 .cad-studio-viewport > .viewport { width: 100%; height: 100%; }
 .studio-shell .cad-start-center { inset: var(--aether-size-topbar) 0 0; }
-.studio-shell .aui-shell-fltoolbar:not(:has(.aui-workspace-ribbon[data-variant="docked"])) { max-width: calc(100% - 112px); }
 .studio-shell .aui-shell-fltoolbar > .aui-float { max-width: 100%; overflow: hidden; }
 .studio-shell .cad-document-strip { background: var(--aether-color-bg-bar); border-color: var(--aether-color-border); }
 .studio-shell .cad-document-strip button { color: var(--aether-color-text-dim); border-color: var(--aether-color-border); }
@@ -576,8 +575,6 @@
 .studio-shell .browser-title small { color: var(--aether-color-text-dim); }
 .studio-shell .inspector-sidebar .aui-panel-heading { min-height: 34px; background: var(--aether-color-bg-panel); border-color: var(--aether-color-border); color: var(--aether-color-text); }
 .studio-shell .cad-bottom-workbench { flex: 0 0 auto; border-color: var(--aether-color-border); }
-.cad-studio-workspace.panel-bottom-hidden .cad-bottom-workbench { display: none; }
-.cad-studio-workspace.panel-bottom-floating .cad-bottom-workbench { position: absolute; z-index: 20; left: 10%; right: 10%; bottom: 12px; border: 1px solid var(--aether-color-border); border-radius: var(--aether-radius-control); overflow: hidden; }
 
 /* The suite shell's ribbon carries the modelling tools, so the floating rails
    stand down — except the View rail, which is the View tray's only home. */
@@ -911,34 +908,12 @@
 /* Shared Alpha studio chrome owns header geometry and surface. */
 .shapr-shell.aui-studio-app > .aui-studio-document-bar { height: var(--aui-studio-header-height); padding: 0 var(--aui-studio-inset); background: transparent; border: 0; box-shadow: none; }
 
-/* Camera controls occupy the viewport beside the matched floating side cards. */
-.cad-studio-camera-navigation { position: absolute; z-index: 5; top: calc(var(--aui-studio-header-height, 56px) + 72px); right: var(--aui-workspace-inset-right, 12px); width: 126px; height: 126px; pointer-events: auto; }
-.cad-studio-camera-navigation > .aui-viewport-cube { transform: scale(.7); transform-origin: top left; }
-.cad-studio-workspace .aui-shell[data-content-presentation="canvas"] .cad-studio-camera-navigation > .view-cube { position: absolute; inset: 0 auto auto 0; }
 .cad-studio-workspace .aui-shell[data-design="studio"] .selection-filter-hud { min-width: 0; width: var(--aui-sidebar-expanded-width, 216px); max-width: 100%; box-sizing: border-box; }
 .cad-studio-workspace .aui-shell[data-design="studio"] .selection-filter-hud > small { white-space: normal; }
 
-/* Model Studio uses its small camera launcher; the complete navigation cube
-   and all camera actions remain available in the shared popover. */
-.cad-studio-camera-navigation { top:calc(var(--aui-studio-header-height,56px) + 82px); width:40px; height:auto; }
-.cad-studio-camera-button { width:40px; height:40px; flex:none; border:0; border-radius:50%; background:#292e30; color:#c2d0d6; display:grid; place-items:center; }
-.cad-studio-camera-button svg { width:24px; height:24px; }
-.cad-studio-camera-label { font-size:8px; color:#657277; text-transform:capitalize; }
-.cad-studio-workspace-controls { display:flex; align-items:center; gap:6px; }
-.cad-studio-control-divider { height:24px; width:1px; background:var(--aether-color-border); margin:0 4px; }
-.cad-studio-workspace-controls .aui-workspace-switcher { height:30px; padding:0 9px; border:1px solid var(--aether-color-border); border-radius:8px; background:var(--aether-color-bg-app); font:12px var(--aether-font-family); }
-.cad-studio-view-tools { width:252px; max-width:100%; }
-.cad-studio-view-tools > .aui-floating-toolbar { width:100%; }
-.cad-studio-view-tools .aui-floating-toolbar-strip { padding:0; gap:0; border-radius:9px; }
-.cad-studio-view-tools .aui-floating-toolbar-group { flex:1; gap:0; align-items:stretch; }
-.cad-studio-view-tools .aui-floating-toolbar-group > .aui-icon-button { --aui-icon-button-size:40px; flex:1 1 0; width:0; min-width:0; }
 .shapr-shell .viewport canvas { filter:none; }
 
-.cad-studio-workspace-controls > .aui-icon-button:is([data-active="true"],[aria-pressed="true"]) { color:var(--aether-color-accent); background:transparent; }
-.cad-studio-view-tools .aui-floating-toolbar-strip { min-height:42px; }
 
-.cad-studio-view-tools .aui-floating-toolbar[data-variant="document"] .aui-floating-toolbar-strip { height:42px; min-height:42px; padding:0; gap:0; border-radius:9px; }
-.cad-studio-workspace-controls .aui-workspace-switcher { min-width:82px; }
 
 .cad-document-bar .cad-link-feedback:empty { display:none; }
 

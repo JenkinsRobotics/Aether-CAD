@@ -440,7 +440,7 @@ export function AetherCADShell() {
       <input id="step-picker" type="file" accept={CAD_IMPORT_ACCEPT} multiple hidden />
       {centerTools.overlays}
       <section
-        className={`cad-studio-workspace panel-bottom-${presentation.panelPlacements.bottom}`}
+        className="cad-studio-workspace"
         data-layout={presentation.workspaceLayout}
         data-toolbar-mode={suite ? "traditional" : presentation.toolbarMode}
         data-workspace-mode={presentation.workspaceMode}
