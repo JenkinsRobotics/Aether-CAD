@@ -71,7 +71,7 @@ const rendered = async () => {
     .waitFor({ timeout: 90000 });
   await page.waitForTimeout(3500);
   await page
-    .locator(".cad-studio-view-tools")
+    .locator(".aui-studio-center-tray")
     .getByRole("button", { name: "Fit view", exact: true })
     .click();
   await page.waitForTimeout(400);
@@ -131,7 +131,7 @@ try {
       path: join(root, "public/examples", example.thumbnail),
       clip: { x: 400, y: 130, width: 1000, height: 620 },
       style:
-        ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube { visibility:hidden!important; }",
+        ".aui-studio-camera-surface,.view-cube,.aui-viewport-cube { visibility:hidden!important; }",
     });
     }
     if (example.id === "scifirobot") {
@@ -179,7 +179,7 @@ try {
         ),
         clip: { x: 400, y: 130, width: 1000, height: 620 },
         style:
-          ".cad-studio-camera-navigation,.view-cube,.aui-viewport-cube {visibility:hidden!important;}",
+          ".aui-studio-camera-surface,.view-cube,.aui-viewport-cube {visibility:hidden!important;}",
       });
       assert.equal(
         writes.length,

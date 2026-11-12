@@ -14,7 +14,6 @@ import { CADTabActionDialog, type CADTabActionResult } from './CADTabActionDialo
 import { CADFileManagerWindow } from "./CADFileManagerWindow";
 import { CADTabFolders } from "./CADTabFolders";
 import { browserTabStorage, OPEN_FILES_KEY, readTabFolders, type TabFolder } from "../cad-tab-session";
-import { CADFilesPanel } from "./CADFilesPanel";
 import { CADTabStrip } from "./CADTabStrip";
 import { orderedTabs, readTabOrder, reorderTabs } from "../document-tab-state";
 import { documentSession } from "../document-session";
@@ -45,7 +44,7 @@ const assemblyIcon = <AetherIcon name="layers" data-design-kind="assembly" />;
  * design?" dialog; in a project, parts and assemblies are created inside it.
  */
 
-/** `variant="browser"` draws the same tabs, folders and controls as the left Files panel. */
+/** `variant="browser"` is the Files panel's "This design" list: the same tabs, folders and controls. */
 export function CADDocumentTabs({ connection, placement = "bottom", variant = "tray", docked = false }: { connection: DocumentConnection; placement?: "bottom" | "header"; variant?: "tray" | "browser"; docked?: boolean }) {
   const [revisions,setRevisions]=useState<Record<string,{label:string;title:string}>>({});
   const [tabAction,setTabAction]=useState<{target:CADTabTarget;action:CADTabAction}|null>(null);
@@ -280,9 +279,9 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
   const controls={creation,revisionForTab:(id:string)=>revisions[id]??{label:'V1.0',title:'Working version V1.0'},tabActions:(id:string)=>tabActionItems(targetFor(id)),onTabAction:runTabAction,saveStatus,tabs,
     label:project ? "Project tabs" : "Open files",folders,onFoldersChange:updateFolders,onOrganize:()=>setOrganizing(true),onManage:() => setManaging(true),onAdd:() => setChoosing(true),onReorder:reorder,onDetach:detach};
   return <>
-    {variant !== "browser" && <PanelNotice message={error}/>}
+    <PanelNotice message={error}/>
     {variant === "browser"
-      ? <CADFilesPanel error={error} documentID={documentID} connection={connection} onDesignDragStart={event => {
+      ? <div className="cad-design-contents" onDragStart={event => {
           const id = (event.target as Element).closest('[data-document-tab-id]')?.getAttribute('data-document-tab-id');
           if (!id || !project?.id || !project.parts.some(part => part.id === id)) return;
           event.dataTransfer.setData(ASSEMBLY_PART_MIME, JSON.stringify({ kind: 'design-part', workspaceId: project.id, partId: id }));
@@ -293,7 +292,7 @@ export function CADDocumentTabs({ connection, placement = "bottom", variant = "t
             folders={project ? folders : []} onFoldersChange={project ? updateFolders : undefined} onOrganize={project ? controls.onOrganize : undefined}
             onManage={project ? controls.onManage : undefined}
             tabs={designTabs.map(tab=>({...tab,thumbnail:thumbnails[tab.id]}))} />
-        </CADFilesPanel>
+        </div>
       : <CADTabStrip {...controls} leading={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly />} placement={placement} docked={docked} />}
     {managing && <CADFileManagerWindow tabs={tabs} project={project ? {name:projectName,linkedIds:project.parts.filter(part=>part.source?.kind==='linked').map(part=>part.id)} : null} standaloneTabs={project ? openFiles.map(file=>({id:file.id,label:file.name,detail:file.kind==='drawing'?'Drawing':file.kind==='assembly'?'Assembly':'Part Studio',icon:file.kind==='drawing'?drawingIcon:file.kind==='assembly'?assemblyIcon:partIcon,onSelect:()=>void go(`/cad/index.html?document=${encodeURIComponent(file.id)}`)})) : []} connection={connection} onClose={() => setManaging(false)} />}
     {organizing && <CADTabFolders tabs={tabs} folders={folders} onChange={updateFolders} onClose={()=>setOrganizing(false)}/>}

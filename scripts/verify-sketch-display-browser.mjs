@@ -140,7 +140,7 @@ try {
   await page.waitForTimeout(2500);
   // Look straight at the sketch plane and frame it.
   await page.keyboard.press('Escape');
-  const fit = page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true });
+  const fit = page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true });
   if (await fit.isEnabled().catch(() => false)) await fit.click();
   await page.waitForTimeout(1200);
   const at = async (x, y) => { const p = await page.evaluate(([id, px, py]) => window.__aetherFinishedSketchClientPoint?.(id, px, py), [sketchId, x, y]); assert.ok(p, `sketch point ${x},${y} is on screen`); return p; };

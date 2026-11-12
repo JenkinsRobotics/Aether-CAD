@@ -46,7 +46,7 @@ try{
   const play=()=>panel.getByRole('button',{name:'Play feature history',exact:true});
   const progress=()=>panel.getByRole('progressbar',{name:'Feature playback progress'});
   await expect(play()).toBeEnabled();
-  await page.locator('.cad-studio-view-tools').getByRole('button',{name:'Fit view',exact:true}).click();await button('Top view').press('Enter');
+  await page.locator('.aui-studio-center-tray').getByRole('button',{name:'Fit view',exact:true}).click();await button('Top view').press('Enter');
   await page.mouse.move(800,450);for(let i=0;i<11;i++){await page.mouse.wheel(0,400);await page.waitForTimeout(80);}await page.waitForTimeout(300);
   await expect.poll(()=>solidAt([25,10,5])).toBe(true);
   const saved=await read(file.id);

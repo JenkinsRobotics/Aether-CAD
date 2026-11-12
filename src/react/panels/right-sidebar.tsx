@@ -1,13 +1,15 @@
-/** Four sidebar destinations, composed from the same shared panel controls. */
+/** The five standard object tabs, composed from the same shared panel controls. */
 import { useEffect, useState, type ReactNode } from 'react';
 import { SegmentedControl } from '@aether/ui';
 import '../CADInspector.css';
 
+// Object tab (StandardAppShell id) → the CAD panel requests it answers.
 export const rightSidebarGroups = {
-  inspector: ['inspector', 'visualization'],
-  inspect: ['inspect', 'performance'],
-  mates: ['mates', 'parameters'],
-  view: ['view', 'rendering'],
+  inspector: ['inspect', 'performance'],
+  properties: ['inspector', 'parameters'],
+  appearance: ['visualization'],
+  transform: ['mates'],
+  effects: ['rendering', 'view'],
 } as const;
 
 export function rightSidebarGroup(id: string): string {
@@ -25,10 +27,10 @@ export function RightSidebarPanel({ label, tabs, request }: {
     if (tabs.some(tab => tab.id === request.id)) setActive(request.id);
   }, [request.id, request.sequence]);
   return <section className="cad-sidebar-panel" aria-label={label}>
-    <div className="cad-sidebar-tabs">
+    {tabs.length > 1 && <div className="cad-sidebar-tabs">
       <SegmentedControl variant="panel" ariaLabel={`${label} tabs`} value={active}
         options={tabs.map(({id,label})=>({id,label}))} onChange={setActive}/>
-    </div>
+    </div>}
     {tabs.map(tab => <div key={tab.id} hidden={active !== tab.id} className="cad-sidebar-content" aria-label={tab.label}>
       {tab.content}
     </div>)}

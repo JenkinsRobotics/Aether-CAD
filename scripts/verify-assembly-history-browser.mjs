@@ -33,7 +33,7 @@ try {
   const progress = () => panel.getByRole('progressbar', { name: 'Feature playback progress' });
   await expect(play()).toBeEnabled();
   await expect.poll(() => page.evaluate(() => window.__aetherPartVisibility?.().length ?? 0), { timeout: 120000 }).toBe(65);
-  await page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true }).click();
+  await page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true }).click();
   await page.waitForTimeout(800);
   const original = await capture('original');
   page.on('request', request => { if (request.method() !== 'GET' && /\/api\/library\/(save|update|create|project_save)/.test(request.url())) writes.push(request.url()); });

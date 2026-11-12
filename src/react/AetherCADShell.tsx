@@ -2,7 +2,7 @@ import { RightSidebarPanel, rightSidebarGroup } from './panels/right-sidebar';
 import { CADSaveGuard } from './CADSaveGuard';
 import { CADShareDocument } from "./CADShareDocument";
 import { CADDocumentControls } from "./CADDocumentControls";
-import { CADStudioWorkspaceControls, CADStudioViewTools } from "./CADStudioControls";
+import { useCADCenterTools } from "./CADStudioControls";
 import { cadFeaturePalette } from './cad-feature-tray';
 import type { CADToolContext } from '../tools/availability';
 import { CADStatusNotice } from "./CADStatusNotice";
@@ -15,7 +15,7 @@ import {CAD_IMPORT_ACCEPT} from "../modeling/cad-import";
 import { CADWorkspaceLayoutPopover } from "./CADWorkspaceLayoutPopover";
 import { CADPluginsIcon, CADPluginsWindow } from "./CADPluginsWindow";
 import { CADDocumentTabs } from "./CADDocumentTabs";
-import { useFileTrayPreference } from "./chrome/use-file-tray-preference";
+import { CADDrive } from "./CADFilesPanel";
 import { useStudioApplications } from "@aether/session/applications";
 import { useDocumentConnection } from "@aether/session/useDocumentConnection";
 import "./CADViewportLayout.css";
@@ -27,37 +27,28 @@ import { CADViewPanel } from "./CADViewPanel";
 import { CADMetricsOverlay, CADPerformancePanel } from "./CADPerformancePanel";
 import type { CADDocumentType } from "../cad-toolbar-layouts";
 import { CADHistoryPanel } from "./panels/history";
-import { auxToolbarItems, subscribeAuxToolbarItems } from "../aux-toolbar-preferences";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   AetherIcon,
-  IconButton,
-  CommandSearch,
   DocumentCreateDialog,
-  StudioDocumentBar as DocumentBar,
-  WorkspaceWindowMenu,
-  StudioWorkspace as WorkspaceShell,
-  standardWorkspacePanels,
+  StandardAppShell,
+  STANDARD_OBJECT_TABS,
+  type LayoutPreset,
+  type MenuItem,
   type WorkspacePanelState,
-  type WorkspacePanel,
   type CommandPaletteCommand,
 } from "@aether/ui";
 import { CadIcon } from "./CadIcon";
-import { DrawingWorkspaceRoute, StartCenter, ViewportCameraNavigation, ViewportSurface } from "./chrome";
+import { DrawingWorkspaceRoute, StartCenter, useCADEnvironment, useCADViewCube, ViewportSurface } from "./chrome";
 import { AssemblyInstanceDialog } from "./dialogs/instance";
 import { AssemblyComponentDialog, AssemblyConnectorDialog, AssemblyMateDOFDialog, AssemblyMateDialog, AssemblyRelationDialog, AssemblyContactSetDialog, PartPropertiesDialog, BodiesToComponentDialog, AsBuiltJointDialog, ReachPointDialog, StandardPartDialog } from "./dialogs";
 import {
-  ActionItemsPanel,
   AdvisorPanel,
-  CommentsPanel,
-  CreateVersionPanel,
-  DocumentNotesPanel,
   InspectPanel,
   InspectorPanel,
   ItemsPanel,
   MatesPanel,
-  RemindersPanel,
   VisualizationPanel,
   WorkbenchBottomPanel,
 } from "./panels";
@@ -69,7 +60,7 @@ import {
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 
 
-import { CADHeaderControls, CADTraditionalRibbon } from "./CADTraditionalRibbon";
+import { CADHeaderControls, useCADToolbar } from "./CADTraditionalRibbon";
 import type { CADRibbonWorkspaceID, CADToolActionID } from "../cad-tool-catalog";
 import {
   cadPresentation,
@@ -154,7 +145,7 @@ const cadCommandCatalog: readonly Omit<CommandPaletteCommand, "disabled" | "disa
 ];
 
 function focusCommandSearch() {
-  const field = document.querySelector<HTMLInputElement>('.aui-studio-header-search input');
+  const field = document.querySelector<HTMLInputElement>('.aui-studio-document-bar .aui-command-search input');
   field?.focus(); field?.select();
 }
 
@@ -182,7 +173,21 @@ export function buildCADCommandPaletteCommands(
 
 
 // Shell chrome lives in ./chrome; the Assembly dialogs in ./dialogs.
-const OPEN_PANELS_KEY = "aether-cad.open-panels.v1";
+// v2: the standard shell's panel ids (tree, five object tabs). v1 sessions are renamed on read.
+const OPEN_PANELS_KEY = "aether-cad.open-panels.v2";
+const LEGACY_OPEN_PANELS_KEY = "aether-cad.open-panels.v1";
+const LEGACY_PANEL_IDS: Record<string, string> = { browser: "tree", inspector: "properties", inspect: "inspector", mates: "transform", view: "effects" };
+export function readOpenPanels(): WorkspacePanelState {
+  try {
+    const own = sessionStorage.getItem(OPEN_PANELS_KEY);
+    const saved: unknown = JSON.parse(own ?? sessionStorage.getItem(LEGACY_OPEN_PANELS_KEY) ?? "{}");
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+    return own ? saved as WorkspacePanelState : Object.fromEntries(Object.entries(saved).map(([id, state]) => [LEGACY_PANEL_IDS[id] ?? id, state]));
+  } catch { return {}; }
+}
+const OBJECT_TAB_IDS: readonly string[] = STANDARD_OBJECT_TABS.map(tab => tab.id);
+const panelSide = (id: string) => id === "tree" || id === "tree-toggle" ? null : OBJECT_TAB_IDS.includes(id) ? "right" : "left";
+const shown = (state: WorkspacePanelState, id: string) => (state[id]?.placement ?? "hidden") !== "hidden";
 
 export function AetherCADShell() {
   const applications = useStudioApplications();
@@ -213,7 +218,11 @@ export function AetherCADShell() {
   const [ribbonWorkspace, setRibbonWorkspace] = useState<CADRibbonWorkspaceID>("solid");
   const [sketchEditing, setSketchEditing] = useState(false);
   useEffect(() => {
-    const onSketchMode = (event: Event) => setSketchEditing(Boolean((event as CustomEvent).detail));
+    const onSketchMode = (event: Event) => {
+      const editing = Boolean((event as CustomEvent).detail);
+      setSketchEditing(editing);
+      setRibbonWorkspace(editing ? "sketch" : "solid");
+    };
     window.addEventListener("aether-sketch-mode", onSketchMode);
     return () => window.removeEventListener("aether-sketch-mode", onSketchMode);
   }, []);
@@ -231,21 +240,6 @@ export function AetherCADShell() {
       : presentation.partOpen
         ? "part"
         : "project";
-  useEffect(() => {
-    const onSketchMode=(event:Event)=>setRibbonWorkspace((event as CustomEvent).detail ? "sketch" : "solid");
-    window.addEventListener("aether-sketch-mode",onSketchMode);
-    return ()=>window.removeEventListener("aether-sketch-mode",onSketchMode);
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.defaultPrevented || !(event.metaKey || event.ctrlKey) || event.key.toLocaleLowerCase() !== "k") return;
-      event.preventDefault();
-      focusCommandSearch();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   const runRibbonAction = (action: CADToolActionID) => {
     if (action in commands) {
@@ -297,7 +291,7 @@ export function AetherCADShell() {
         cadPresentation.dispatch({ type: "select-workspace-mode", mode: "assembly" });
         break;
       case "show-items":
-        openLeftPanel("browser");
+        updateStudioPanels({ ...studioPanelState, tree: { ...studioPanelState.tree, placement: "docked" } });
         break;
       case "show-parameters":
       case "show-mates":
@@ -310,8 +304,7 @@ export function AetherCADShell() {
         });
         break;
       case "show-history":
-        if (suite) openLeftPanel("history");
-        else cadPresentation.dispatch({ type: "toggle-history" });
+        cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed: false });
         break;
       case "reset-panels":
         setPanelPositions({});
@@ -320,32 +313,13 @@ export function AetherCADShell() {
     }
   };
 
-  const selectRibbonWorkspace = (workspace: CADRibbonWorkspaceID) => {
-    setRibbonWorkspace(workspace);
-
-  };
-
-  const { visible: showFileTray, toggle: toggleFileTray } = useFileTrayPreference();
   // Per tab: the panel you work in (e.g. Version control) stays open when a
   // restore, merge, branch switch or refresh reloads the editor.
-  const [panelPositions, setPanelPositions] = useState<WorkspacePanelState>(() => {
-    try { const saved: unknown = JSON.parse(sessionStorage.getItem(OPEN_PANELS_KEY) ?? "{}"); return saved && typeof saved === "object" && !Array.isArray(saved) ? saved as WorkspacePanelState : {}; } catch { return {}; }
-  });
+  const [panelPositions, setPanelPositions] = useState<WorkspacePanelState>(readOpenPanels);
   useEffect(() => { try { sessionStorage.setItem(OPEN_PANELS_KEY, JSON.stringify(panelPositions)); } catch { /* layout convenience only */ } }, [panelPositions]);
-  const previousHistoryCollapsed = useRef(presentation.bottomPanelCollapsed);
-  useEffect(() => {
-    if (suite && previousHistoryCollapsed.current !== presentation.bottomPanelCollapsed) {
-      openLeftPanel("history");
-    }
-    previousHistoryCollapsed.current = presentation.bottomPanelCollapsed;
-  }, [suite, presentation.bottomPanelCollapsed]);
 
-  // History shares the Version control slot; product panels keep their own commands.
-  const auxItems = useSyncExternalStore(subscribeAuxToolbarItems, auxToolbarItems, auxToolbarItems);
   const hostedConnection = useDocumentConnection({app:"cad",name:presentation.documentName,flush:async()=>{const {flushAutosaveNow}=await import("../host-library");await flushAutosaveNow();},saveCopy:async()=>{const {copyHostedSnapshot}=await import("../host-library");await copyHostedSnapshot();}});
-  // Version snapshots use the same renderer as Drive's CAD file icons, so a
-  // version's picture and the file's thumbnail always agree.
-  // "Create version" from any entry point (document menu, command palette) uses
+  // "Create version" from any entry point (document menu, command palette, window menu) uses
   // the same dialog and validated operation as Version control.
   const [creatingVersion, setCreatingVersion] = useState(false);
   useEffect(() => {
@@ -353,6 +327,8 @@ export function AetherCADShell() {
     window.addEventListener("aether-create-version", open);
     return () => window.removeEventListener("aether-create-version", open);
   }, []);
+  // Version snapshots use the same renderer as Drive's CAD file icons, so a
+  // version's picture and the file's thumbnail always agree.
   const documentConnection = useMemo(() => hostedConnection && ({
     ...hostedConnection,
     previewRevision: async (revision: number) => {
@@ -362,100 +338,45 @@ export function AetherCADShell() {
       return previewDocument(new TextDecoder().decode(bytes));
     },
   }), [hostedConnection]);
-  const hasDeviceReminders=(()=>{try{return typeof location!=="undefined"&&Array.isArray(JSON.parse(localStorage.getItem(`aether-cad.reminders.${new URLSearchParams(location.search).get('document')??'draft'}`)??'null'));}catch{return false;}})();
-  const leftPanels: WorkspacePanel[] = standardWorkspacePanels([
-    { id: "browser", title: "Features and parts", icon: <AetherIcon name="features-parts" />, chromeless: true, content: <ItemsPanel active onShowAppearance={() => requestCADPropertyPanel("visualization")} /> },
-    { id: "versions", title: "Version control", icon: <AetherIcon name="version-control" />, content: null },
-    { id: "create-version", title: "Create version", icon: <AetherIcon name="version-create" />, floatingHeight: "content", content: <CreateVersionPanel /> },
-    { id: "comments", title: "Comments", icon: <AetherIcon name="comment" />, content: <CommentsPanel /> },
-    { id: "notes", title: "Document notes", icon: <AetherIcon name="notes" />, content: <DocumentNotesPanel /> },
-    { id: "reminders", title: "Reminders", icon: <AetherIcon name="stopwatch" />, content: <RemindersPanel /> },
-    { id: "advisor", title: "AI advisor", icon: <AetherIcon name="advisor" />, content: <AdvisorPanel connection={documentConnection} /> },
-    { id: "tasks", title: "Action items", icon: <AetherIcon name="tasks" />, content: <ActionItemsPanel /> },
-    ...(hasDeviceReminders?[{id:'device-reminders',title:'Device reminders',icon:<AetherIcon name="stopwatch"/>,content:<RemindersPanel/>}]:[]),
-    ...(suite ? [{ id: "history", title: "History", icon: <CadIcon name="history" />, content: <WorkbenchBottomPanel presentation={presentation} sidebar /> }] : []),
-  ], { features: "browser" }, documentConnection, { historyTabStorageKey: "aether-cad.history-tab", history: <CADHistoryPanel key={documentConnection?.key ?? presentation.documentName}/> }).filter(panel => panel.id !== "part-manager" && panel.id !== "tasks");
-  // Files (Jonathan, 2026-10-25): the bottom tray's tabs as a Fusion-style data panel.
-  // The tray itself stays at the bottom; its toggle is in the right-hand view tools.
-  leftPanels.push({id:"files",title:"Files",icon:<AetherIcon name="folder"/>,content:documentConnection?<CADDocumentTabs connection={documentConnection} variant="browser"/>:null});
-  // The aux toolbar controls the auxiliary card and the part list (Model Studio
-  // demo); the tree is the standard column. Users choose its buttons in Settings › Layout.
-  // Only the Settings-chosen aux items have buttons; other aux panels (Create version,
-  // notes, reminders, history) still open from their own commands and headers.
-  for (const panel of leftPanels) if (panel.id !== "browser" && panel.id !== "feature-tree") panel.inToolbar = auxItems.includes(panel.id as never);
-  if (auxItems.includes("feature-tree")) leftPanels.push({id:"feature-tree",title:"Feature tree",icon:<AetherIcon name="list-tree"/>,content:null,
-    toggle:{pressed:presentation.panelPlacements.browser !== "hidden",onToggle:()=>cadPresentation.dispatch({type:"set-panel-placement",panel:"browser",placement:presentation.panelPlacements.browser === "hidden" ? "docked" : "hidden"})}});
-  const studioRailOrder = ["comments","advisor","versions","files","feature-tree","browser","create-version","notes","reminders","tasks","device-reminders","history"];
-  leftPanels.sort((a,b)=>studioRailOrder.indexOf(a.id)-studioRailOrder.indexOf(b.id));
-  const [rightRequest, setRightRequest] = useState({id: "inspector", sequence: 0});
-  const rightPanels: WorkspacePanel[] = [
-    { id: "inspector", title: "Properties", icon: <AetherIcon name="sliders" />, content: <RightSidebarPanel label="Properties" request={rightRequest} tabs={[
-      {id:"inspector",label:"Properties",content:<InspectorPanel placement={presentation.panelPlacements.inspector}/>},
-      {id:"visualization",label:"Material",content:<PartAppearancePanel/>},
-    ]}/> },
-    { id: "inspect", title: "Inspect", icon: <AetherIcon name="info" />, content: <RightSidebarPanel label="Inspect" request={rightRequest} tabs={[
-      {id:"inspect",label:"Analysis",content:<InspectPanel active/>},
-      {id:"performance",label:"Performance",content:<CADPerformancePanel active/>},
-    ]}/> },
-    { id: "mates", title: "Assembly", icon: <AetherIcon name="cube" />, content: <RightSidebarPanel label="Assembly" request={rightRequest} tabs={[
-      {id:"mates",label:"Assembly",content:<MatesPanel active/>},
-      {id:"parameters",label:"Configurations",content:<ConfigurationsPanel/>},
-    ]}/> },
-    { id: "view", title: "View", icon: <AetherIcon name="cube-transparent" />, content: <RightSidebarPanel label="View" request={rightRequest} tabs={[
-      {id:"view",label:"Camera",content:<CADViewPanel active/>},
-      {id:"rendering",label:"Environment",content:<VisualizationPanel active/>},
-    ]}/> },
-  ];
+  const documentID = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("document");
 
+  const [rightRequest, setRightRequest] = useState({id: "inspector", sequence: 0});
+  // The tree and the right tray's open/closed state persist in the presentation store (saved
+  // layouts): `browser` is the item tree; `inspector` is whichever object tab is open.
+  const rightOpen = OBJECT_TAB_IDS.some(id => shown(panelPositions, id));
   const studioPanelState: WorkspacePanelState = useMemo(() => ({
     ...panelPositions,
-    browser: { ...panelPositions.browser, placement: presentation.panelPlacements.browser },
-    inspector: { ...panelPositions.inspector, placement: presentation.panelPlacements.inspector },
-  }), [panelPositions, presentation.panelPlacements.browser, presentation.panelPlacements.inspector]);
+    tree: { ...panelPositions.tree, placement: presentation.panelPlacements.browser },
+    ...(rightOpen ? {} : { properties: { ...panelPositions.properties, placement: presentation.panelPlacements.inspector } }),
+  }), [panelPositions, rightOpen, presentation.panelPlacements.browser, presentation.panelPlacements.inspector]);
   const drawingMode = presentation.workspaceMode === "drawing";
-  // The Commands toggle places the ribbon: docked full width on top, or the floating card at the bottom.
-  const ribbonPlacement = presentation.toolbarMode === "traditional" ? "docked" : "floating";
   // Drawing owns its sheet tree and inspector. Keep the model panels mounted
   // and retain their layout so returning to the Part restores the same workspace.
-  const drawingHiddenPanels = new Set(["browser", "feature-tree", ...rightPanels.map(panel => panel.id)]);
+  const drawingHiddenPanels = ["tree", ...OBJECT_TAB_IDS];
   const visiblePanelState: WorkspacePanelState = drawingMode
-    ? { ...studioPanelState, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, { ...studioPanelState[id], placement: "hidden" as const }])) }
+    ? { ...studioPanelState, ...Object.fromEntries(drawingHiddenPanels.map(id => [id, { ...studioPanelState[id], placement: "hidden" as const }])) }
     : studioPanelState;
-  // Derive routing groups from the actual rails so new panels cannot bypass
-  // same-side exclusivity (Comments/Notes/Tasks and View/Performance did).
-  // Features and parts is pinned (Onshape): it keeps its column while the
-  // rail's other panels open beside it, so it is outside this exclusivity.
-  const leftPanelIDs = leftPanels.map(panel => panel.id).filter(id => id !== "browser" && id !== "feature-tree");
-  const rightPanelIDs = rightPanels.map(panel => panel.id);
-  const openLeftPanel = (id: string) => {
-    const next = { ...studioPanelState };
-    for (const key of leftPanelIDs) next[key] = { ...next[key], placement: key === id ? "docked" : "hidden" };
-    updateStudioPanels(next);
+  const updateStudioPanels = (state: WorkspacePanelState) => {
+    const next = { ...state };
+    // Each side tray shows one panel: opening one closes the others on its side. The item tree is pinned beside them.
+    for (const side of ["left", "right"] as const) {
+      const opened = Object.keys(state).find(id => panelSide(id) === side && shown(state, id) && !shown(studioPanelState, id));
+      if (opened) for (const id of Object.keys(next)) if (panelSide(id) === side && id !== opened) next[id] = { ...next[id], placement: "hidden" };
+    }
+    setPanelPositions(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+    const placements = {
+      browser: next.tree?.placement ?? "hidden",
+      inspector: OBJECT_TAB_IDS.map(id => next[id]?.placement).find(placement => placement && placement !== "hidden") ?? "hidden",
+    } as const;
+    for (const panel of ["browser", "inspector"] as const)
+      if (placements[panel] !== presentation.panelPlacements[panel]) cadPresentation.dispatch({ type: "set-panel-placement", panel, placement: placements[panel] });
   };
+  const openLeftPanel = (id: string) => updateStudioPanels({ ...studioPanelState, [id]: { ...studioPanelState[id], placement: "docked" } });
   const openRightPanel = (id: string) => {
     if (id === "material") id = "visualization";
     const requested = id;
     setRightRequest(previous => ({id: requested, sequence: previous.sequence + 1}));
-    id = rightSidebarGroup(id);
-    const next = { ...studioPanelState };
-    for (const key of rightPanelIDs) next[key] = { ...next[key], placement: key === id ? "docked" : "hidden" };
-    updateStudioPanels(next);
-  };
-  const updateStudioPanels = (state: WorkspacePanelState) => {
-    const next = { ...state };
-    // Rails select a view within their side, rather than stacking competing views.
-    for (const ids of [leftPanelIDs, rightPanelIDs]) {
-      const opened = ids.find(id => state[id]?.placement && state[id].placement !== "hidden"
-        && (!studioPanelState[id] || studioPanelState[id].placement === "hidden"));
-      if (opened) for (const id of ids) if (id !== opened) next[id] = { ...next[id], placement: "hidden" };
-    }
-    setPanelPositions(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
-    for (const panel of ["browser", "inspector"] as const) {
-      const placement = next[panel]?.placement ?? "hidden";
-      if (placement !== presentation.panelPlacements[panel]) {
-        cadPresentation.dispatch({ type: "set-panel-placement", panel, placement });
-      }
-    }
+    openLeftPanel(rightSidebarGroup(id));
   };
   // Authoring commands may request a property view; this never changes the model tree.
   useEffect(() => {
@@ -463,9 +384,10 @@ export function AetherCADShell() {
   }, [presentation.activePanel, presentation.propertyPanelRequest]);
 
   // Docked and floating are whole workspaces: panels and tool bar move together.
-  const switchPlacement = (placement: "docked" | "floating") => {
-    cadPresentation.dispatch({ type: "select-layout", layout: placement === "docked" ? "docked" : "expanded" });
-    cadPresentation.dispatch({ type: "select-toolbar-mode", mode: placement === "docked" ? "traditional" : "floating" });
+  const layout: LayoutPreset = presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout;
+  const switchLayout = (next: LayoutPreset) => {
+    cadPresentation.dispatch({ type: "select-layout", layout: next === "floating" ? "expanded" : next });
+    cadPresentation.dispatch({ type: "select-toolbar-mode", mode: next === "docked" ? "traditional" : "floating" });
     // Both layouts keep the feature tree in its column.
     if (presentation.panelPlacements.browser === "hidden") cadPresentation.dispatch({ type: "set-panel-placement", panel: "browser", placement: "docked" });
   };
@@ -474,6 +396,33 @@ export function AetherCADShell() {
     const command = searchCommands.find(item => item.id === id);
     if (command && !command.disabled && !id.startsWith('unavailable:')) runRibbonAction(id as CADToolActionID);
   };
+  const openLayout = () => setLayoutAnchor(document.querySelector<HTMLElement>('.aui-workspace-ribbon-overflow'));
+  const toolbar = useCADToolbar({ documentType, sketchEditing, activeWorkspace: ribbonWorkspace, partOpen: presentation.partOpen,
+    onSelectWorkspace: setRibbonWorkspace, onAction: runRibbonAction, onOpenLayout: openLayout });
+  const centerTools = useCADCenterTools();
+  const viewCube = useCADViewCube();
+  const environment = useCADEnvironment();
+  const commandOff = (id: string) => !(commands as Record<string, CADCommandState | undefined>)[id]?.enabled;
+  const windowCommands: MenuItem[] = [
+    { id: "open-part", label: "Open file…", icon: <AetherIcon name="open" />, disabled: commandOff("open-part") },
+    { id: "insert-step", label: "Import…", icon: <AetherIcon name="import" />, disabled: commandOff("insert-step") },
+    { id: "show-export", label: "Export…", icon: <AetherIcon name="export" /> },
+    { id: "window:create-version", label: "Create version…", icon: <AetherIcon name="version-create" />, separatorBefore: true, disabled: !documentConnection },
+    { id: "window:notes", label: "Document notes", icon: <AetherIcon name="notes" /> },
+    { id: "window:reminders", label: "Reminders", icon: <AetherIcon name="stopwatch" /> },
+    { id: "window:tasks", label: "Action items", icon: <AetherIcon name="tasks" /> },
+    { id: "window:plugins", label: "Plugins…", icon: <CADPluginsIcon /> },
+    { id: "window:layout", label: "Panel layout…", icon: <AetherIcon name="layout" /> },
+  ];
+  const runCenterTray = (id: string) => {
+    if (centerTools.run(id)) return;
+    if (id === "history") cadPresentation.dispatch({ type: "set-bottom-panel-collapsed", collapsed: !presentation.bottomPanelCollapsed });
+    else if (id === "window:create-version") setCreatingVersion(true);
+    else if (id === "window:plugins") setPluginsOpen(true);
+    else if (id === "window:layout") openLayout();
+    else if (id.startsWith("window:")) openLeftPanel(id.slice("window:".length));
+    else runRibbonAction(id as CADToolActionID);
+  };
 
   return (
     <main className={`shell shapr-shell studio-shell aui-studio-app chrome-${chromeTheme} toolbar-${suite ? "traditional" : presentation.toolbarMode}`}>
@@ -481,94 +430,69 @@ export function AetherCADShell() {
       {creatingVersion && documentConnection && <DocumentCreateDialog connection={documentConnection} mode="version" onClose={() => setCreatingVersion(false)}/>}
       {pluginsOpen && <CADPluginsWindow onClose={() => setPluginsOpen(false)}/>}
       <CADWorkspaceLayoutPopover anchor={layoutAnchor} onClose={() => setLayoutAnchor(null)}
-        toolbarMode={presentation.toolbarMode}
-        onToolbarMode={mode => cadPresentation.dispatch({type:'select-toolbar-mode',mode})}
         panels={[
-          {id:'browser',label:'Features and parts',placement:studioPanelState.browser.placement},
-          {id:'inspector',label:'Properties',placement:studioPanelState.inspector.placement},
-          ...(suite ? [{id:'history',label:'Feature history',placement:studioPanelState.history?.placement ?? 'hidden' as const}] : []),
+          {id:'tree',label:'Features and parts',placement:studioPanelState.tree.placement},
+          {id:'properties',label:'Properties',placement:studioPanelState.properties?.placement ?? 'hidden'},
         ]}
         onPlacement={(id,placement)=>updateStudioPanels({...studioPanelState,[id]:{...studioPanelState[id],placement}})}
         onReset={()=>runRibbonAction('reset-panels')} />
-      <DocumentBar
-        className="cad-document-bar"
-        documentName={presentation.documentName}
-        search={<CommandSearch className="aui-studio-header-search" ariaLabel="Search CAD commands" commands={searchCommands}
-          onSelect={runSearchCommand}/> }
-        trailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/></div>}
-        defaultHeaderPins={["layout","tabs","theme","notifications","comments","apps","share"]}
-        documentMenu={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly/>}
-        documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
-        application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
-          onHome: event => { if (!window.location.pathname.startsWith("/cad/")) { event.preventDefault(); cadPresentation.dispatch({type: "show-start-screen", screen: "home"}); } } }}
-        leading={
-          <>
-            
-            {/* Application and workspace controls. Document controls live with the bottom tabs. */}
-            <input id="document-picker" type="file" accept=".aethercad,application/vnd.aether.workspace+zip" hidden />
-            <input id="step-picker" type="file" accept={CAD_IMPORT_ACCEPT} multiple hidden />
-          </>
-        }
-        viewControls={
-            <div className="aui-studio-chrome-group">
-              {/* Docked and floating are whole-app workspaces, so the switch is a header pin ("layout"), beside the
-                  Windows menu ("tabs") and the app tray ("apps"); each is an option of the header's icon list (Jonathan, 2026-11-02). */}
-              <button type="button" className="aui-icon-button cad-header-placement" aria-label="Workspace layout"
-                title={presentation.workspaceLayout === "docked" ? "Switch to the floating layout" : "Switch to the docked layout"}
-                onClick={() => switchPlacement(presentation.workspaceLayout === "docked" ? "floating" : "docked")}>
-                <AetherIcon name={presentation.workspaceLayout === "docked" ? "mode-floating" : "mode-docked"}/></button>
-              <WorkspaceWindowMenu/>
-              <IconButton label="Notifications" disabled title="Notifications require a connected Aether Studio account."><AetherIcon name="bell"/></IconButton>
-              <button className="aui-menu-trigger" aria-label="Plugins" title="Plugins" onClick={() => setPluginsOpen(true)}><CADPluginsIcon/></button>
-              <button className="aui-menu-trigger" aria-label="Comments" title="Comments" aria-pressed={!!studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden'} onClick={()=>studioPanelState.comments?.placement && studioPanelState.comments.placement !== 'hidden' ? updateStudioPanels({...studioPanelState,comments:{...studioPanelState.comments,placement:'hidden'}}) : openLeftPanel('comments')}><AetherIcon name="comment"/></button>
-              <button className="aui-menu-trigger" aria-label="Reminders" title="Reminders" onClick={()=>openLeftPanel('reminders')}><AetherIcon name="stopwatch"/></button>
-            </div>
-        }
-      />
+      <input id="document-picker" type="file" accept=".aethercad,application/vnd.aether.workspace+zip" hidden />
+      <input id="step-picker" type="file" accept={CAD_IMPORT_ACCEPT} multiple hidden />
+      {centerTools.overlays}
       <section
         className={`cad-studio-workspace panel-bottom-${presentation.panelPlacements.bottom}`}
         data-layout={presentation.workspaceLayout}
         data-toolbar-mode={suite ? "traditional" : presentation.toolbarMode}
         data-workspace-mode={presentation.workspaceMode}
         aria-label="CAD workspace"
-        aria-hidden={presentation.startScreen !== "workspace"}
-        inert={presentation.startScreen !== "workspace"}
       >
         <CADSaveGuard />
-        <WorkspaceShell
-          sidebarSizing={{width:280,minWidth:240,maxWidth:520,minCenterWidth:240}}
-          workspaceControls={drawingMode ? <CADStudioWorkspaceControls documentType={documentType} onAction={runRibbonAction} /> : undefined}
-          contentPresentation={presentation.workspaceMode === "drawing" ? "framed" : "canvas"}
-          preset={presentation.workspaceLayout === "expanded" ? "floating" : presentation.workspaceLayout}
-          preservePanelContent
-          toolbarSpan={ribbonPlacement === "docked" ? "window" : "center"}
-          toolPosition={ribbonPlacement === "docked" ? "top" : "bottom"}
-          pinnedPanels={drawingMode ? [] : ["browser"]}
-          sideBottom={{ right: drawingMode ? null : <CADStudioViewTools partTray={{shown:showFileTray,onToggle:toggleFileTray}} /> }}
-          style={{ height: "100%" }}
+        <StandardAppShell
+          application={{ apps: applications, id: "cad", name: "Aether CAD", onShare:()=>setShareOpen(true), onSettings: () => cadPresentation.dispatch({ type: "show-start-dialog", dialog: "preferences" }),
+            onHome: event => { if (!window.location.pathname.startsWith("/cad/")) { event.preventDefault(); cadPresentation.dispatch({type: "show-start-screen", screen: "home"}); } } }}
+          documentName={presentation.documentName}
+          documentMenu={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} menuOnly/>}
+          documentState={<CADDocumentControls name={presentation.documentName} partOpen={presentation.partOpen} workspaceOnly/>}
+          headerTrailing={drawingMode ? undefined : <div className="cad-header-controls"><CADHeaderControls documentType={documentType} sketchEditing={sketchEditing} partOpen={presentation.partOpen}/></div>}
+          commands={searchCommands} onCommand={runSearchCommand}
+          layout={layout} onLayoutChange={switchLayout}
+          toolbar={toolbar}
+          tree={{ title: "Features and parts", icon: <AetherIcon name="features-parts" />, content: <ItemsPanel active onShowAppearance={() => requestCADPropertyPanel("visualization")} /> }}
+          advisor={<AdvisorPanel connection={documentConnection} />}
+          connection={documentConnection ?? undefined}
+          history={<CADHistoryPanel key={documentConnection?.key ?? presentation.documentName}/>} historyTabStorageKey="aether-cad.history-tab"
+          files={{ local: { label: "This design", icon: <AetherIcon name="cube" />, content: documentConnection ? <CADDocumentTabs connection={documentConnection} variant="browser"/> : null },
+            drive: documentConnection ? <CADDrive documentID={documentID} connection={documentConnection}/> : null }}
+          objectTabs={{
+            inspector: <RightSidebarPanel label="Inspector" request={rightRequest} tabs={[
+              {id:"inspect",label:"Analysis",content:<InspectPanel active/>},
+              {id:"performance",label:"Performance",content:<CADPerformancePanel active/>},
+            ]}/>,
+            properties: <RightSidebarPanel label="Properties" request={rightRequest} tabs={[
+              {id:"inspector",label:"Properties",content:<InspectorPanel placement={presentation.panelPlacements.inspector}/>},
+              {id:"parameters",label:"Configurations",content:<ConfigurationsPanel/>},
+            ]}/>,
+            appearance: <RightSidebarPanel label="Materials and appearance" request={rightRequest} tabs={[{id:"visualization",label:"Material",content:<PartAppearancePanel/>}]}/>,
+            transform: <RightSidebarPanel label="Transform" request={rightRequest} tabs={[{id:"mates",label:"Assembly",content:<MatesPanel active/>}]}/>,
+            effects: <RightSidebarPanel label="Effects" request={rightRequest} tabs={[
+              {id:"rendering",label:"Environment",content:<VisualizationPanel active/>},
+              {id:"view",label:"Camera",content:<CADViewPanel active/>},
+            ]}/>,
+          }}
+          centerTray={{ tools: centerTools.tools, onAction: runCenterTray, windowCommands,
+            toggles: [{ id: "history", label: "Feature history", icon: <CadIcon name="history" />, pressed: !presentation.bottomPanelCollapsed }] }}
+          environment={drawingMode ? undefined : environment}
+          cube={drawingMode ? undefined : viewCube}
+          bottom={drawingMode || presentation.bottomPanelCollapsed ? undefined : <WorkbenchBottomPanel presentation={presentation} />}
           panelState={visiblePanelState}
-          onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries([...drawingHiddenPanels].map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}
-          toolbar={drawingMode ? null : <CADTraditionalRibbon
-            suite={suite}
-            documentType={documentType}
-            sketchEditing={sketchEditing}
-            activeWorkspace={ribbonWorkspace}
-            partOpen={presentation.partOpen}
-            onSelectWorkspace={selectRibbonWorkspace}
-            onAction={runRibbonAction}
-            placement={ribbonPlacement}
-            onOpenLayout={() => setLayoutAnchor(document.querySelector<HTMLElement>('.cad-traditional-ribbon .aui-workspace-ribbon-overflow'))}
-          />}
-          leftPanels={drawingMode ? leftPanels.map(panel => drawingHiddenPanels.has(panel.id) ? { ...panel, inToolbar: false } : panel) : leftPanels}
-          rightPanels={drawingMode ? rightPanels.map(panel => ({ ...panel, inToolbar: false })) : rightPanels}
-          bottom={<>{suite || drawingMode ? null : <WorkbenchBottomPanel presentation={presentation} />}<div className="cad-document-tray-slot" hidden={!showFileTray}><CADDocumentTabs connection={documentConnection} docked={presentation.workspaceLayout === "docked"} /></div></>}
+          onPanelStateChange={state => updateStudioPanels(drawingMode ? { ...state, ...Object.fromEntries(drawingHiddenPanels.map(id => [id, studioPanelState[id] ?? { placement: "hidden" as const }])) } : state)}
+          sidebarSizing={{width:280,minWidth:240,maxWidth:520,minCenterWidth:240}}
         >
-          <div className="cad-studio-viewport" aria-hidden={presentation.workspaceMode === "drawing"} inert={presentation.workspaceMode === "drawing"}>
+          <div className="cad-studio-viewport" aria-hidden={drawingMode} inert={drawingMode}>
             <ViewportSurface presentation={presentation} />
           </div>
-          <DrawingWorkspaceRoute active={presentation.workspaceMode === "drawing"} />
-          {presentation.workspaceMode !== "drawing" && <div className="cad-studio-camera-navigation"><ViewportCameraNavigation /></div>}
-        </WorkspaceShell>
+          <DrawingWorkspaceRoute active={drawingMode} />
+        </StandardAppShell>
       </section>
       <StartCenter presentation={presentation} />
       <AssemblyInstanceDialog presentation={presentation} />

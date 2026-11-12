@@ -20,7 +20,7 @@ page.on('pageerror', error => errors.push(error.message));
 page.on('request', request => {
   if (/\/api\/library\/(create|save|project_part_save|project_assembly_save)$/.test(request.url())) writes.push(request.url());
 });
-const tool = name => page.locator('.cad-studio-view-tools').getByRole('button', { name, exact: true });
+const tool = name => page.locator('.aui-studio-center-tray').getByRole('button', { name, exact: true });
 const button = name => page.getByRole('button', { name, exact: true });
 const project = point => page.evaluate(point => {
   let result;

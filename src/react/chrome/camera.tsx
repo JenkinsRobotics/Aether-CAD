@@ -1,11 +1,11 @@
 import { cadSnapping } from "../../cad-snapping-store";
 import { cameraMenuItems, selectCameraMenuItem } from "./camera-menu";
 import { useEnvironmentMenu } from "./environment-menu";
-import { useViewCubePreference } from "./use-view-cube-preference";
+import { cadCommands } from "../../cad-command-registry";
 /** Camera navigation and the viewport surface itself. */
 import { cadCameraPresentation } from "../../cad-camera-presentation-store";
 import { type CADPresentationSnapshot, cadPresentation } from "../../cad-presentation-store";
-import { AetherIcon, EnvironmentControl, StudioCameraControl, StudioViewportControls, ProgressOverlay, ViewportNavigationCube } from "@aether/ui";
+import { AetherIcon, ProgressOverlay, ViewportNavigationCube, type EnvironmentControlAction } from "@aether/ui";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import { bindViewportContextGesture } from "../../viewport/context-menu-gesture";
 import { cadViewportContext } from "../../viewport/context-menu";
@@ -13,53 +13,45 @@ import { ViewportContextMenu } from "./viewport-context-menu";
 import { SelectionControls } from "./viewport";
 import { ViewportTools } from "./viewport";
 
-export function ViewportCameraNavigation() {
-  const cube = useViewCubePreference();
+/** The view cube for the standard shell: the full cube and the orientation its collapsed compass shows. */
+export function useCADViewCube() {
+  const camera = useSyncExternalStore(cadCameraPresentation.subscribe, cadCameraPresentation.snapshot, cadCameraPresentation.snapshot);
+  return { orientation: camera.orientation, content: <ViewportNavigationCube
+    id="view-cube"
+    homeMenuItems={cameraMenuItems(camera.projection)}
+    onHomeMenuSelect={selectCameraMenuItem}
+    appearance="studio"
+    orientation={camera.orientation}
+    upAxis={camera.upAxis}
+    onSelectView={(view) => cadCameraPresentation.dispatch({ type: "select-view", view })}
+    onFit={() => cadCameraPresentation.dispatch({ type: "fit-isometric" })}
+    onSelectDirection={(direction) => cadCameraPresentation.dispatch({ type: "select-direction", direction })}
+    onNudge={(horizontalSteps, verticalSteps) => cadCameraPresentation.dispatch({ type: "nudge", horizontalSteps, verticalSteps })}
+    onRoll={(quarterTurns) => cadCameraPresentation.dispatch({ type: "roll", quarterTurns })}
+  /> };
+}
+
+/** The environment stack's workspace controls: fit, snapping, grid and display. */
+export function useCADEnvironment(): { actions: EnvironmentControlAction[]; onSelect: (id: string) => void } {
   const menu = useEnvironmentMenu();
   const snapping = useSyncExternalStore(cadSnapping.subscribe, cadSnapping.snapshot, cadSnapping.snapshot);
-  const camera = useSyncExternalStore(
-    cadCameraPresentation.subscribe,
-    cadCameraPresentation.snapshot,
-    cadCameraPresentation.snapshot,
-  );
-  return (<StudioViewportControls><StudioCameraControl projection={camera.projection === "perspective" ? "Perspective" : "Orthographic"} expanded={cube.visible} onExpandedChange={cube.setVisible}><ViewportNavigationCube
-      id="view-cube"
-      homeMenuItems={cameraMenuItems(camera.projection)}
-      onHomeMenuSelect={selectCameraMenuItem}
-      appearance="studio"
-      orientation={camera.orientation}
-      upAxis={camera.upAxis}
-      onSelectView={(view) =>
-        cadCameraPresentation.dispatch({ type: "select-view", view })
-      }
-      onFit={() => cadCameraPresentation.dispatch({ type: "fit-isometric" })}
-      onSelectDirection={(direction) => cadCameraPresentation.dispatch({ type: "select-direction", direction })}
-      onNudge={(horizontalSteps, verticalSteps) =>
-        cadCameraPresentation.dispatch({
-          type: "nudge",
-          horizontalSteps,
-          verticalSteps,
-        })
-      }
-      onRoll={(quarterTurns) =>
-        cadCameraPresentation.dispatch({ type: "roll", quarterTurns })
-      }
-    /></StudioCameraControl>
-    <EnvironmentControl actions={[
-      {id:"snap",label:"Snapping",icon:<AetherIcon name="timeline-snap"/>,pressed:snapping.enabled},
-      {id:"snap-options",label:"Snapping options",icon:<AetherIcon name="sliders"/>,items:[
-        {id:"snap-geometry",label:"Snap to geometry",kind:"checkbox",checked:snapping.geometry,disabled:!snapping.enabled},
-        {id:"snap-grid",label:"Snap to grid",kind:"checkbox",checked:snapping.grid,disabled:!snapping.enabled},
-      ]},
-      {id:"grid",label:"Show grid",icon:<AetherIcon name="grid-3"/>,pressed:["grid","both"].includes(menu.appearance.floorMode)},
-      {id:"display",label:"Display and environment",icon:<AetherIcon name="cube-transparent"/>,items:menu.items},
-    ]} onSelect={id => {
-      if(id==="snap") cadSnapping.set({enabled:!snapping.enabled});
-      else if(id==="snap-geometry") cadSnapping.set({geometry:!snapping.geometry});
-      else if(id==="snap-grid") cadSnapping.set({grid:!snapping.grid});
-      else menu.onSelect(id);
-    }}/></StudioViewportControls>
-  );
+  const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
+  return { actions: [
+    {id:"fit",label:"Fit view",icon:<AetherIcon name="fit"/>,disabled:!commands["fit-view"].enabled},
+    {id:"snap",label:"Snapping",icon:<AetherIcon name="timeline-snap"/>,pressed:snapping.enabled},
+    {id:"snap-options",label:"Snapping options",icon:<AetherIcon name="sliders"/>,items:[
+      {id:"snap-geometry",label:"Snap to geometry",kind:"checkbox",checked:snapping.geometry,disabled:!snapping.enabled},
+      {id:"snap-grid",label:"Snap to grid",kind:"checkbox",checked:snapping.grid,disabled:!snapping.enabled},
+    ]},
+    {id:"grid",label:"Show grid",icon:<AetherIcon name="grid-3"/>,pressed:["grid","both"].includes(menu.appearance.floorMode)},
+    {id:"display",label:"Display and environment",icon:<AetherIcon name="cube-transparent"/>,items:menu.items},
+  ], onSelect: id => {
+    if(id==="fit") cadCommands.execute("fit-view");
+    else if(id==="snap") cadSnapping.set({enabled:!snapping.enabled});
+    else if(id==="snap-geometry") cadSnapping.set({geometry:!snapping.geometry});
+    else if(id==="snap-grid") cadSnapping.set({grid:!snapping.grid});
+    else menu.onSelect(id);
+  } };
 }
 
 export function ViewportSurface({

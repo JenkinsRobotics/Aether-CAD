@@ -15,7 +15,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.setDefaultTimeout(15000);
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
-const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.cad-studio-view-tools') : page).getByRole('button', { name, exact: true });
+const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.aui-studio-center-tray') : page).getByRole('button', { name, exact: true });
 const options = async () => { await button('Environment options').click(); };
 
 try {
@@ -52,7 +52,7 @@ try {
   await button('Fit view').click();
   await page.mouse.move(720, 480); await page.mouse.wheel(0, 650); await page.waitForTimeout(800);
   await button('Measure').click();
-  await expect(page.locator('.cad-studio-view-tools [data-icon="tape-measure"]')).toHaveCount(1);
+  await expect(page.locator('.aui-studio-center-tray [data-icon="tape-measure"]')).toHaveCount(1);
   await choose('Measure selection', 'Bodies');
   await pick([5,10,5]);
   await expect(page.getByRole('region', { name: 'Measurements' })).toContainText('1000', { timeout: 30000 });

@@ -380,7 +380,7 @@ try {
       .waitFor({ timeout: 90000 });
     await page.waitForTimeout(9000);
     await page
-      .locator(".cad-studio-view-tools")
+      .locator(".aui-studio-center-tray")
       .getByRole("button", { name: "Fit view", exact: true })
       .click();
     await page.waitForTimeout(500);

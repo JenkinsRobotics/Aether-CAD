@@ -49,7 +49,7 @@ try {
   const file = await request('library/create', { app: 'cad', kind: 'file', scope: 'personal', operation_id: randomUUID(), name: 'Legacy moves.aethercad', data_base64: partDocumentBase64(data) });
   await page.goto(`${origin}/cad/index.html?document=${file.id}`); await features().getByRole('treeitem', { name: /^Extrude/ }).first().waitFor({ timeout: 90000 });
   await button('Version control').click(); await page.getByRole('radio', { name: 'History', exact: true }).click();
-  await page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true }).click(); await button('Top view').press('Enter');
+  await page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true }).click(); await button('Top view').press('Enter');
   await page.mouse.move(800, 450);
   for (let i = 0; i < 5; i++) { await page.mouse.wheel(0, 400); await page.waitForTimeout(80); }
   await page.waitForTimeout(300);

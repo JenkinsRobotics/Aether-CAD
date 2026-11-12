@@ -39,7 +39,7 @@ const pixel = async point => {
 };
 const isSolid = p => Math.max(...p.slice(0, 3)) > 90;
 const button = name => page.getByRole('button', { name, exact: true });
-const fit = async () => { await page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true }).click(); await button('Top view').press('Enter'); await page.waitForTimeout(450); };
+const fit = async () => { await page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true }).click(); await button('Top view').press('Enter'); await page.waitForTimeout(450); };
 const step = async (name, run) => { console.log('Begin ' + name); await run(); steps.push(name); await page.screenshot({ path: join(evidence, name + '.png') }); console.log('Passed ' + name); };
 let agent;
 try {

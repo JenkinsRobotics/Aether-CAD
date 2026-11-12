@@ -15,7 +15,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.setDefaultTimeout(15000);
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
-const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.cad-studio-view-tools') : page).getByRole('button', { name, exact: true });
+const button = name => (['Measure','Section view','Fit view'].includes(name) ? page.locator('.aui-studio-center-tray') : page).getByRole('button', { name, exact: true });
 
 
 try {

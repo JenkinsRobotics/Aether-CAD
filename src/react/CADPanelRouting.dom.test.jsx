@@ -6,7 +6,6 @@ import { cadWorkspace } from '../cad-workspace-store';
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 let root, container, Shell, unlisten, dom;
-const fileTrayPreference = 'aether-cad.file-tray-visible';
 beforeAll(async () => {
   dom = new JSDOM('<!doctype html><html><body></body></html>', {url:'http://localhost/cad/index.html', pretendToBeVisual:true});
   for (const key of ['window','document','navigator','HTMLElement','Element','Node','HTMLInputElement','Event','MouseEvent','KeyboardEvent','localStorage','location']) vi.stubGlobal(key,dom.window[key]);
@@ -18,7 +17,6 @@ beforeAll(async () => {
   Shell=(await import('./AetherCADShell')).AetherCADShell;
 });
 beforeEach(async () => {
-  localStorage.removeItem(fileTrayPreference);
   cadPresentation.patch({partOpen:true,activePanel:'items',startScreen:'workspace',workspaceMode:'modeling',workspaceLayout:'docked',panelPlacements:{browser:'docked',inspector:'docked',bottom:'hidden'}});
   unlisten=cadPresentation.registerActionHandler(action => {
     if(action.type==='set-panel-placement') cadPresentation.patch({panelPlacements:{...cadPresentation.snapshot().panelPlacements,[action.panel]:action.placement}});
@@ -30,7 +28,7 @@ beforeEach(async () => {
   const {createRoot}=await import('react-dom/client'); root=createRoot(container);
   await act(async()=>root.render(<Shell/>));
 });
-afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();vi.restoreAllMocks();localStorage.removeItem(fileTrayPreference);});
+afterEach(async()=>{await act(async()=>root.unmount());container.remove();unlisten();vi.restoreAllMocks();});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 const railButton = label => [...container.querySelectorAll('.aui-tabbed-sidebar-tabs button, .aui-studio-aux-toolbar button')].find(b=>b.getAttribute('aria-label')===label);
 async function click(label){const button=railButton(label);expect(button).toBeTruthy();await act(async()=>button.click());}
@@ -48,21 +46,17 @@ it('retains the same camera navigation through sketch entry and exit', async()=>
     expect(isVisible(cube)).toBe(true);
   }
 });
-it('toggles the same view cube directly and persists visibility independently of the document', async()=>{
+it('collapses the view cube to its compass and expands the same cube', async()=>{
   const toggle=container.querySelector('[aria-label="Camera view"]');
-  const cube=container.querySelector('#view-cube');
   expect(toggle).toBeTruthy();
   if (toggle.getAttribute('aria-expanded') !== 'true') await act(async()=>toggle.click());
+  const cube=container.querySelector('#view-cube');
   expect(isVisible(cube)).toBe(true);
-  expect(toggle.getAttribute('aria-expanded')).toBe('true');
   await act(async()=>toggle.click());
-  expect(isVisible(cube)).toBe(false);
-  expect(localStorage.getItem('aether-cad.view-cube-visible')).toBe('false');
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
   await act(async()=>toggle.click());
   expect(container.querySelector('#view-cube')).toBe(cube);
   expect(isVisible(cube)).toBe(true);
-  expect(localStorage.getItem('aether-cad.view-cube-visible')).toBe('true');
-  localStorage.removeItem('aether-cad.view-cube-visible');
 });
 it('keeps the pinned Feature tree beside History and Version control, which replace each other', async()=>{
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
@@ -79,7 +73,7 @@ it('keeps the pinned Feature tree beside History and Version control, which repl
   expect(isVisible(container.querySelector('[aria-label="Versions and history"]'))).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
 });
-it('opens Files as a left panel and moves the part tray toggle to the view tools', async()=>{
+it('opens Files as a left panel and has no bottom document tabs', async()=>{
   await click('Files');
   const files=container.querySelector('.aui-tab-browser');
   expect(isVisible(files)).toBe(true);
@@ -87,63 +81,10 @@ it('opens Files as a left panel and moves the part tray toggle to the view tools
   expect(isVisible(container.querySelector('[data-panel="items"]'))).toBe(true);
   await click('Comments');
   expect(isVisible(container.querySelector('.aui-tab-browser'))).toBe(false);
-  const tray=()=>container.querySelector('.cad-document-tray-slot');
-  const toggle=container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]');
-  expect(toggle.getAttribute('aria-pressed')).toBe('false');
-  expect(tray().hidden).toBe(true);
-  await act(async()=>toggle.click());
-  expect(tray().hidden).toBe(false);
-  await act(async()=>container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]').click());
-  expect(tray().hidden).toBe(true);
+  expect(container.querySelector('.cad-document-tray-slot')).toBeNull();
+  expect(container.querySelector('button[aria-label="Part tray"]')).toBeNull();
 });
 
-async function remountShell() {
-  await act(async()=>root.render(null));
-  await act(async()=>root.render(<Shell/>));
-}
-const fileTray = () => container.querySelector('.cad-document-tray-slot');
-const fileTrayToggle = () => container.querySelector('.cad-studio-view-tools button[aria-label="Part tray"]');
-
-it('keeps the file tray closed by default and remembers explicit choices across editor remounts', async()=>{
-  expect(fileTray().hidden).toBe(true);
-  expect(localStorage.getItem(fileTrayPreference)).toBeNull();
-  for (const visible of [true, false]) {
-    await act(async()=>fileTrayToggle().click());
-    expect(fileTray().hidden).toBe(!visible);
-    expect(localStorage.getItem(fileTrayPreference)).toBe(String(visible));
-    await remountShell();
-    expect(fileTray().hidden).toBe(!visible);
-    expect(fileTrayToggle().getAttribute('aria-pressed')).toBe(String(visible));
-    await act(async()=>cadPresentation.patch({partOpen:false}));
-    await act(async()=>cadPresentation.patch({partOpen:true}));
-    await click('Files');
-    await click('Comments');
-    expect(fileTray().hidden).toBe(!visible);
-  }
-});
-
-it.each(['false', '', 'invalid'])('does not open the file tray for a stored %j value', async value=>{
-  localStorage.setItem(fileTrayPreference, value);
-  await remountShell();
-  expect(fileTray().hidden).toBe(true);
-  expect(fileTrayToggle().getAttribute('aria-pressed')).toBe('false');
-});
-
-it('defaults the file tray closed and permits manual toggling when browser storage is blocked', async()=>{
-  for (const method of ['getItem', 'setItem']) {
-    const original = dom.window.Storage.prototype[method];
-    vi.spyOn(dom.window.Storage.prototype, method).mockImplementation(function(key, ...args) {
-      if (key === fileTrayPreference) throw new Error('Storage blocked');
-      return original.call(this, key, ...args);
-    });
-  }
-  await remountShell();
-  expect(fileTray().hidden).toBe(true);
-  await act(async()=>fileTrayToggle().click());
-  expect(fileTray().hidden).toBe(false);
-  await act(async()=>fileTrayToggle().click());
-  expect(fileTray().hidden).toBe(true);
-});
 it('ribbon category changes preserve the chosen left view and right appearance is independent',async()=>{
   await click('Version control');
   await act(async()=>[...container.querySelectorAll('[role="radio"]')].find(button=>button.textContent==='History').click());
@@ -153,14 +94,13 @@ it('ribbon category changes preserve the chosen left view and right appearance i
     expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
     expect(cadPresentation.snapshot().activePanel).toBe('items');
   }
-  if(railButton('Properties').getAttribute('aria-pressed')!=='true')await click('Properties');
-  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
+  await click('Materials and appearance');
   const appearance=container.querySelector('[data-panel="visualization"]');
   expect(isVisible(appearance)).toBe(true);
   expect(appearance.closest('.aui-shell-side--right')).toBeTruthy();
   expect(isVisible(container.querySelector('[aria-label="Editing history"]'))).toBe(true);
-  await click('Assembly');
-  await act(async()=>[...container.querySelectorAll('[aria-label="Assembly tabs"] [role="radio"]')].find(b=>b.textContent==='Configurations').click());
+  await click('Properties');
+  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Configurations').click());
   expect(isVisible(appearance)).toBe(false);
   expect(isVisible(container.querySelector('[data-panel="configurations"]'))).toBe(true);
 });
@@ -253,8 +193,8 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   // the feature tree is the standard left column and never one of its buttons.
   const left=['Comments','AI advisor','Version control','Files'];
   expect(container.querySelector('[aria-label="Left sidebar"] [aria-label="Part manager"]')).toBeNull();
-  for(const label of ['Features and parts','Document notes','Reminders','Create version']) expect(railButton(label)).toBeUndefined();
-  const right=['Properties','Inspect','Assembly','View'];
+  for(const label of ['Document notes','Reminders','Create version']) expect(railButton(label)).toBeUndefined();
+  const right=['Inspector','Properties','Materials and appearance','Transform','Effects'];
   const active=labels=>labels.filter(label=>railButton(label)?.getAttribute('aria-pressed')==='true');
   const tree=()=>container.querySelector('[data-panel="items"]');
   const visiblePanels=side=>[...container.querySelectorAll(`[aria-label="${side} sidebar"] .aui-shell-panel, .aui-studio-aux-sidebar .aui-shell-panel`)].filter(isVisible).filter(panel=>!panel.contains(tree()));
@@ -266,7 +206,7 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
     expect(visiblePanels('Left')).toHaveLength(1);
     expect(isVisible(tree())).toBe(true);
   }
-  for(const label of right.slice(1)) {
+  for(const label of right.filter(label=>label!=='Properties')) {
     await click(label);
     expect(active(right)).toEqual([label]);
     expect(active(left)).toEqual([left.at(-1)]);
@@ -276,7 +216,7 @@ it.each(['suite','classic'])('floating %s rails keep the feature tree alongside 
   expect(tree()).toBe(itemTree);
   await click(left.at(-1));
   expect(active(left)).toEqual([]);
-  expect(active(right)).toEqual(['View']);
+  expect(active(right)).toEqual(['Effects']);
   expect(isVisible(tree())).toBe(true);
   await click('Comments');
   // Aux cards close from the aux toolbar; they have no float/close chrome.
@@ -354,20 +294,19 @@ it('shows draft and assembly states as accessible SVG icons rather than status w
   }
 });
 
-it('provides four right sidebar destinations and retains every tool through inner tabs', async () => {
+it('provides the five standard object tabs and retains every tool through inner tabs', async () => {
   const toolbar=container.querySelector('[aria-label="Right sidebar tabs"]');
-  expect([...toolbar.querySelectorAll('button')].map(b=>b.getAttribute('aria-label'))).toEqual(['Properties','Inspect','Assembly','View']);
-  const routes=[['Properties','Material','visualization'],['View','Environment','rendering'],['View','Camera','view'],['Assembly','Configurations','configurations']];
+  expect([...toolbar.querySelectorAll('button')].map(b=>b.getAttribute('aria-label'))).toEqual(['Inspector','Properties','Materials and appearance','Transform','Effects']);
+  const routes=[['Materials and appearance',null,'visualization'],['Effects','Environment','rendering'],['Effects','Camera','view'],['Properties','Configurations','configurations'],['Inspector','Analysis','inspect'],['Transform',null,'mates']];
   for(const [group,tab,id] of routes){
     if(railButton(group).getAttribute('aria-pressed')!=='true')await click(group);
-    await act(async()=>[...container.querySelectorAll(`[aria-label="${group} tabs"] [role="radio"]`)].find(b=>b.textContent===tab).click());
+    if(tab)await act(async()=>[...container.querySelectorAll(`[aria-label="${group} tabs"] [role="radio"]`)].find(b=>b.textContent===tab).click());
     expect(isVisible(container.querySelector(`[data-panel="${id}"]`))).toBe(true);
   }
 });
 
 it('exposes the real shared appearance palette and drives body color', async () => {
-  await click('Properties');
-  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
+  await click('Materials and appearance');
   const panel=container.querySelector('[data-panel="visualization"]');
   await act(async()=>{const target=panel.querySelector('[aria-label="Appearance target"]');target.value='defaults';target.dispatchEvent(new Event('change',{bubbles:true}));});
   const {cadAppearance}=await import('../cad-appearance-store');
@@ -416,51 +355,30 @@ it('presents real parts with shared tree controls and opens appearance from thei
   };
   await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
-  await click('Properties');
-  await act(async()=>[...container.querySelectorAll('[aria-label="Properties tabs"] [role="radio"]')].find(b=>b.textContent==='Material').click());
+  await click('Materials and appearance');
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(false);
   await openAppearance();
   expect(isVisible(container.querySelector('[data-panel="visualization"]'))).toBe(true);
   unregister();
 });
 
-it('keeps only app-wide header icons and switches docked and floating from the header', async()=>{
-  await act(async()=>container.querySelector('.aui-workspace-quick-controls [aria-label="Settings"]').click());
-  const settings=document.querySelector('.aui-settings-window');
-  expect(settings).toBeTruthy();
-  await act(async()=>[...settings.querySelectorAll('button')].find(button=>button.textContent==='Header').click());
-  // The layout switch and the Windows menu are header pin options again (Jonathan, 2026-11-02);
-  // workspace arrangement (panels) stays with the ribbon's tool bar options.
-  for (const label of ['Workspace layout','Windows and tabs']) expect(settings.querySelector(`[aria-label="Show ${label} in header"]`)).toBeTruthy();
-  expect(settings.querySelector('[aria-label="Show Workspace mode in header"]')).toBeNull();
-  for (const label of ['Comments','Reminders']) {
-    const checkbox=settings.querySelector(`[aria-label="Show ${label} in header"]`);
-    expect(checkbox).toBeTruthy();
-    if (!checkbox.checked) await act(async()=>checkbox.click());
-  }
-  await act(async()=>settings.querySelector('[aria-label^="Close "]').click());
-  const header=container.querySelector('.aui-workspace-quick-controls');
-  await act(async()=>header.querySelector('[aria-label="Comments"]').click());
-  expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(true);
-  await act(async()=>header.querySelector('[aria-label="Comments"]').click());
-  expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
-  await act(async()=>header.querySelector('[aria-label="Comments"]').click());
-  await act(async()=>header.querySelector('[aria-label="Reminders"]').click());
-  expect(isVisible(container.querySelector('section[aria-label="Reminders"]'))).toBe(true);
-  expect(isVisible(container.querySelector('section[aria-label="Comments"]'))).toBe(false);
-  const toggle=container.querySelector('.cad-header-placement');
+it('switches docked, canvas and floating from the header mode button', async()=>{
+  const toggle=()=>container.querySelector('[aria-label^="Studio mode"]');
   // The header is the only layout switch (Jonathan, 2026-11-01): the tool bar carries none.
   expect(container.querySelector('.aui-workspace-ribbon-placement')).toBeNull();
   // main.ts applies the actions; here they are recorded and applied the same way.
   const dispatch=vi.spyOn(cadPresentation,'dispatch').mockImplementation(action=>cadPresentation.patch(action.type==='select-layout'?{workspaceLayout:action.layout}:action.type==='select-toolbar-mode'?{toolbarMode:action.mode}:{}));
-  const flip=async()=>{const docked=cadPresentation.snapshot().workspaceLayout==='docked';dispatch.mockClear();await act(async()=>toggle.click());
-    expect(dispatch.mock.calls.map(([action])=>action)).toEqual(docked?[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}]:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]);
-    // The pin keeps one name ("Workspace layout"); its title names the layout it opens.
-    expect(toggle.getAttribute('aria-label')).toBe('Workspace layout');expect(toggle.getAttribute('title')).toContain(docked?'docked':'floating');};
-  await flip(); await flip();
-  // A hidden tree comes back with either layout: both keep it in its column.
+  const expected={docked:[{type:'select-layout',layout:'canvas'},{type:'select-toolbar-mode',mode:'floating'}],
+    canvas:[{type:'select-layout',layout:'expanded'},{type:'select-toolbar-mode',mode:'floating'}],
+    expanded:[{type:'select-layout',layout:'docked'},{type:'select-toolbar-mode',mode:'traditional'}]};
+  for (let step=0; step<3; step++) {
+    const from=cadPresentation.snapshot().workspaceLayout; dispatch.mockClear();
+    await act(async()=>toggle().click());
+    expect(dispatch.mock.calls.map(([action])=>action)).toEqual(expected[from]);
+  }
+  // A hidden tree comes back with any layout: each keeps it in its column.
   await act(async()=>cadPresentation.patch({panelPlacements:{...cadPresentation.snapshot().panelPlacements,browser:'hidden'}})); dispatch.mockClear();
-  await act(async()=>toggle.click());
+  await act(async()=>toggle().click());
   expect(dispatch.mock.calls.map(([action])=>action)).toContainEqual({type:'set-panel-placement',panel:'browser',placement:'docked'});
   dispatch.mockRestore();
 });
@@ -477,7 +395,7 @@ it('formats inspector quantities in document units',async()=>{
       cadWorkspace.publish({...cadWorkspace.snapshot(),inspectorSections:[{id:'parameters',label:'Dimensions',properties:[{id:'width',label:'Width',value:'25.4 mm',quantity:{si:.0254,family:'length'}}]}]});
       cadSelection.dispatch({type:'replace',items:[{id:'a',partId:'part',kind:'vertex',label:'A'},{id:'b',partId:'part',kind:'vertex',label:'B'}]});
     });
-    await click('Inspect');
+    await click('Inspector');
     const inspection=container.querySelector('[aria-label="Exact model inspection"]');
     expect(inspection.textContent).toContain('1.000 in');
     await act(async()=>applyDocumentUnits({length:{unit:'mm',decimals:2}}));
@@ -496,7 +414,8 @@ it('switches the camera projection through the viewer action and disables perspe
     if(action.type==='set-projection')cadCameraPresentation.setProjection(action.projection);
   });
   try {
-    await click('View');
+    await click('Effects');
+    await act(async()=>[...container.querySelectorAll('[aria-label="Effects tabs"] [role="radio"]')].find(b=>b.textContent==='Camera').click());
     const projection=container.querySelector('[aria-label="Camera projection"]');
     const fov=container.querySelector('[aria-label="Camera field of view"]');
     expect(projection.disabled).toBe(false);
@@ -513,7 +432,7 @@ it('opens related rendering tools repeatedly without leaving the assembly worksp
  await act(async()=>cadPresentation.patch({workspaceMode:'assembly'}));
  await act(async()=>requestCADPropertyPanel('rendering'));
  expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(true);
- await click('View');expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(false);
+ await click('Effects');expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(false);
  await act(async()=>requestCADPropertyPanel('rendering'));
  expect(isVisible(container.querySelector('[data-panel="rendering"]'))).toBe(true);
  expect(cadPresentation.snapshot().workspaceMode).toBe('assembly');

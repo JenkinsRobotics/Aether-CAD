@@ -65,7 +65,7 @@ try {
   await featureRow(/Revolve 1/).waitFor({ timeout: 90000 });
   await page.waitForTimeout(2500);
   await page.keyboard.press('Escape');
-  const fit = page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true });
+  const fit = page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true });
   if (await fit.isEnabled().catch(() => false)) await fit.click();
   await page.waitForTimeout(1200);
 

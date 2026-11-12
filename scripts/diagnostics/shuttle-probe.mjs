@@ -133,7 +133,7 @@ try {
   await page.getByRole('link', { name: 'Open Space Shuttle — Launch and Orbiter', exact: true }).click({ timeout: 60000 });
   let readyMs = null;
   for (let i = 0; i < 180; i++) {
-    const ready = await page.evaluate(() => { const b = document.querySelector('.cad-studio-view-tools [aria-label="Fit view"]'); return Boolean(b) && !b.disabled; });
+    const ready = await page.evaluate(() => { const b = document.querySelector('.aui-studio-center-tray [aria-label="Fit view"]'); return Boolean(b) && !b.disabled; });
     if (ready) { readyMs = Date.now() - started; break; }
     await page.waitForTimeout(500);
   }
@@ -143,7 +143,7 @@ try {
     status: [...document.querySelectorAll('[role="status"], [role="alert"], .aui-toast, .aui-feature-notice')].map(e => e.textContent.trim()).filter(Boolean).slice(0, 8),
     redRows: [...document.querySelectorAll('[role="treeitem"]')].filter(e => e.querySelector('[data-tone="error"], .tone-error, [aria-invalid="true"]') || /error/i.test(e.className)).map(e => e.textContent.trim().slice(0, 60)).slice(0, 12),
     rows: document.querySelectorAll('[role="treeitem"]').length,
-    fitEnabled: !document.querySelector('.cad-studio-view-tools [aria-label="Fit view"]')?.disabled,
+    fitEnabled: !document.querySelector('.aui-studio-center-tray [aria-label="Fit view"]')?.disabled,
   }));
   console.log('SHUTTLE ' + JSON.stringify({ report, errors: errors.slice(0, 6), consoleErrors: consoleErrors.slice(0, 10) }));
   await page.screenshot({ path: join(evidence, 'shuttle.png') });

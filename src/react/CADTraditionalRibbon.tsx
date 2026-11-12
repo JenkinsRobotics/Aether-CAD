@@ -4,8 +4,8 @@ import { selectionMenu } from "./cad-selection-menu";
 import { toolHelpFor } from "../tools/tool-help";
 import { useState, useSyncExternalStore } from "react";
 import {
-  ToolIcon, InspectionIcon, SelectionIcon, WorkspaceRibbon, WorkspaceSwitcher,
-  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonTab,
+  ToolIcon, InspectionIcon, SelectionIcon, WorkspaceRibbon,
+  type MenuItem, type WorkspaceRibbonCommand, type WorkspaceRibbonProps, type WorkspaceRibbonTab,
 } from "@aether/ui";
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 import { cadCommands, isCADCommandID } from "../cad-command-registry";
@@ -65,6 +65,8 @@ const WORKSPACE_ACTIONS: Record<string, CADToolActionID> = {
 };
 
 
+export type CADToolbarData = Pick<WorkspaceRibbonProps, "workspaces" | "workspaceID" | "onWorkspaceSelect" | "tabs" | "activeTabID" | "onTabSelect" | "onCommand" | "onVariantSelect" | "moreItems">;
+
 export interface CADTraditionalRibbonProps {
   /** Follows the workspace layout: docked draws the full-width ribbon on top,
    *  floating the compact card above the bottom of the canvas. */
@@ -83,9 +85,19 @@ export interface CADTraditionalRibbonProps {
   onAction: (action: CADToolActionID) => void;
 }
 
-export function CADTraditionalRibbon({
-  placement = "floating",
-  suite = false,
+export function CADTraditionalRibbon({ placement = "floating", suite = false, ...props }: CADTraditionalRibbonProps) {
+  const toolbar = useCADToolbar(props);
+  const fusion = Boolean(fusionTabsFor(props.documentType ?? "project"));
+  return (
+    <section className={`cad-traditional-ribbon${fusion ? " cad-fusion-ribbon" : ""} placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
+      aria-label={fusion ? "Part tools" : "Traditional CAD tools"} data-ribbon-workspace={toolbar.activeTabID}>
+      <WorkspaceRibbon variant={placement} {...toolbar} workspaceLayout="column" appearance="glass" moreLabel="Tool bar options" />
+    </section>
+  );
+}
+
+/** The CAD tool bar as data for the standard shell's WorkspaceRibbon: workspaces, tabs, tools and handlers. */
+export function useCADToolbar({
   documentType = "project",
   sketchEditing = false,
   activeWorkspace,
@@ -93,7 +105,7 @@ export function CADTraditionalRibbon({
   onSelectWorkspace,
   onAction,
   onOpenLayout,
-}: CADTraditionalRibbonProps) {
+}: Omit<CADTraditionalRibbonProps, "placement" | "suite">): CADToolbarData {
   const commands = useSyncExternalStore(cadCommands.subscribe, cadCommands.snapshot, cadCommands.snapshot);
   const workspaceMode = useSyncExternalStore(
     cadPresentation.subscribe,
@@ -217,6 +229,8 @@ export function CADTraditionalRibbon({
     { id: 'toolbar:reset-panels', label: 'Reset panel placements' },
   ];
 
+  const common = { moreItems: toolbarOptions, workspaces, workspaceID: WORKSPACE_IDS[activeMode], onWorkspaceSelect: selectWorkspaceMode,
+    onCommand: runTool, onVariantSelect: chooseVariant };
   if (fusionTabs) {
     const tabs: CADToolbarTab[] = sketchEditing ? [...fusionTabs, sketchContextTab()] : [...fusionTabs];
     const ribbonTabs: WorkspaceRibbonTab[] = tabs.map((tab) => ({
@@ -229,16 +243,7 @@ export function CADTraditionalRibbon({
     }));
     // No catch-all Features tab (Jonathan, 2026-11-02): every tool is listed once, on its own tab; search still reaches all of them.
     const active = ribbonTabs.find(tab => tab.id === fusionTab) ?? ribbonTabs[0];
-    return (
-      <section className={`cad-traditional-ribbon cad-fusion-ribbon placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
-        aria-label="Part tools" data-ribbon-workspace={active.id}>
-        <WorkspaceRibbon variant={placement} moreItems={toolbarOptions}
-          workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
-          tabs={ribbonTabs} activeTabID={active.id} onTabSelect={setFusionTab}
-          onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-          moreLabel="Tool bar options" />
-      </section>
-    );
+    return { ...common, tabs: ribbonTabs, activeTabID: active.id, onTabSelect: setFusionTab };
   }
 
   const ribbonTabs: WorkspaceRibbonTab[] = toolbarTabsFor(documentType).map((tab) => {
@@ -253,28 +258,7 @@ export function CADTraditionalRibbon({
       })),
     };
   });
-  return (
-    <section className={`cad-traditional-ribbon placement-${placement}${suite ? " cad-suite-ribbon" : ""}`}
-      aria-label="Traditional CAD tools" data-ribbon-workspace={workspace.id}>
-      <WorkspaceRibbon variant={placement} moreItems={toolbarOptions}
-        workspaces={workspaces} workspaceID={WORKSPACE_IDS[activeMode]} onWorkspaceSelect={selectWorkspaceMode}
-        tabs={ribbonTabs} activeTabID={workspace.id} onTabSelect={(id) => onSelectWorkspace(id as CADRibbonWorkspaceID)}
-        onCommand={runTool} onVariantSelect={chooseVariant} workspaceLayout="column" appearance="glass"
-        moreLabel="Tool bar options" />
-    </section>
-  );
-}
-
-/**
- * The workspace switcher (Design, Assembly, Drawing…), shown in the document
- * header rather than the ribbon, since not every workspace has a ribbon.
- */
-export function CADWorkspaceSwitcher({ documentType = "project", onAction }: { documentType?: string; onAction: (action: CADToolActionID) => void }) {
-  const workspaceMode = useSyncExternalStore(cadPresentation.subscribe, cadPresentation.snapshot, cadPresentation.snapshot).workspaceMode;
-  const activeMode: CADWorkspaceMode = workspaceMode === "drawing" ? "drawing" : documentType === "assembly" ? "assembly" : workspaceMode;
-  const ids: Record<CADWorkspaceMode, string> = { modeling: "design", assembly: "assembly", drawing: "drawing" };
-  return <WorkspaceSwitcher workspaces={workspaceModes(activeMode, documentType as CADDocumentType).map((item) => ({ id: item.id, label: item.label, disabled: item.disabled, disabledReason: item.disabledReason }))}
-    workspaceID={ids[activeMode]} onSelect={(id) => { const action = WORKSPACE_ACTIONS[id]; if (action) onAction(action); }} menuClassName="aui-tool-menu" />;
+  return { ...common, tabs: ribbonTabs, activeTabID: workspace.id, onTabSelect: (id) => onSelectWorkspace(id as CADRibbonWorkspaceID) };
 }
 
 // An open assembly *is* the Assembly workspace, however you got there:

@@ -7,4 +7,4 @@ export { FloatingCommand, CommandIconButton } from "./commands";
 export { ViewportTools, SelectionControls, SelectionFilterHud } from "./viewport";
 export { DrawingWorkspaceRoute } from "./routes";
 export { StartCenter } from "./start";
-export { ViewportCameraNavigation, ViewportSurface } from "./camera";
+export { useCADEnvironment, useCADViewCube, ViewportSurface } from "./camera";

@@ -61,7 +61,7 @@ try {
   assert.ok(images.every(image => image.width === 320 && image.height === 240 && image.opaque > 10));
   assert.ok(new Set(images.map(image => image.src)).size > 5);
   assert.equal(page.url(), url); assert.deepEqual(writes, []); assert.deepEqual(projectReads, []);
-  await page.locator('.cad-studio-view-tools').getByRole('button', { name: 'Fit view', exact: true }).click();
+  await page.locator('.aui-studio-center-tray').getByRole('button', { name: 'Fit view', exact: true }).click();
   await button('Top view').press('Enter');
   await expect.poll(visibleShell, { message: 'Main viewport remains rendered after all thumbnails' }).toBe(true);
   await page.screenshot({ path: join(evidence, 'all-unopened-parts.png') });

@@ -1,9 +1,8 @@
 import { AetherIcon, Button, Popover, SelectField, type PanelPlacement } from '@aether/ui';
 
 /** Presentation controls only; the CAD shell owns the actual layout state. */
-export function CADWorkspaceLayoutPopover({anchor,onClose,toolbarMode,onToolbarMode,panels,onPlacement,onReset}: {
+export function CADWorkspaceLayoutPopover({anchor,onClose,panels,onPlacement,onReset}: {
   anchor: HTMLElement | null; onClose: () => void;
-  toolbarMode: 'traditional' | 'floating'; onToolbarMode: (mode:'traditional'|'floating')=>void;
   panels: readonly {id:string;label:string;placement:PanelPlacement}[];
   onPlacement: (id:string,placement:PanelPlacement)=>void; onReset:()=>void;
 }) {
@@ -13,14 +12,10 @@ export function CADWorkspaceLayoutPopover({anchor,onClose,toolbarMode,onToolbarM
         <strong>Workspace layout</strong>
         <Button aria-label="Close workspace layout" onClick={onClose}><AetherIcon name="close"/></Button>
       </div>
-      <label style={{display:'grid',gridTemplateColumns:'1fr 140px',alignItems:'center',gap:10}}>
-        Commands
-        <SelectField aria-label="Commands presentation" value={toolbarMode} options={[{value:'traditional',label:'Docked (top)'},{value:'floating',label:'Floating (bottom)'}]} onChange={event=>onToolbarMode(event.target.value as 'traditional'|'floating')}/>
-      </label>
       {panels.map(panel=><label key={panel.id} style={{display:'grid',gridTemplateColumns:'1fr 140px',alignItems:'center',gap:10}}>
         {panel.label}
         <SelectField aria-label={`${panel.label} placement`} value={panel.placement}
-          options={[{value:'docked',label:panel.id==='inspector'?'Dock right':'Dock left'},{value:'floating',label:'Float'},{value:'hidden',label:'Hidden'}]}
+          options={[{value:'docked',label:panel.id==='properties'?'Dock right':'Dock left'},{value:'floating',label:'Float'},{value:'hidden',label:'Hidden'}]}
           onChange={event=>onPlacement(panel.id,event.target.value as PanelPlacement)}/>
       </label>)}
       <Button onClick={onReset}>Reset panel placements</Button>

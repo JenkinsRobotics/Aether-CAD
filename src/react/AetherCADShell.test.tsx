@@ -5,7 +5,7 @@ import type { CADAssemblyPresentationProjection } from "../cad-assembly-presenta
 import { cadAssemblyWorkspace } from "../cad-assembly-workspace-store";
 import { cadDrawingWorkspace } from "../cad-drawing-workspace-store";
 import { cadPresentation } from "../cad-presentation-store";
-import { AetherCADShell, buildCADCommandPaletteCommands } from "./AetherCADShell";
+import { AetherCADShell, buildCADCommandPaletteCommands, readOpenPanels } from "./AetherCADShell";
 import { cadCommands } from "../cad-command-registry";
 import { cadAppearance } from "../cad-appearance-store";
 import { cadSelection } from "../cad-selection-store";
@@ -85,7 +85,7 @@ describe("AetherCADShell", () => {
     expect(html).toContain('aria-label="Settings"');
   });
 
-  it("defaults to the standard floating workspace with left history and version controls", () => {
+  it("renders the standard shell with version controls on the left and feature history in the bottom editors", () => {
     const html = renderToStaticMarkup(<AetherCADShell />);
     expect(html).toContain("chrome-suite toolbar-traditional");
     expect(html).toContain('data-variant="docked"');
@@ -99,7 +99,11 @@ describe("AetherCADShell", () => {
     expect(html).toContain('aria-label="Comments"');
     expect(html).toContain('aria-label="Document notes"');
     expect(html).toContain('aria-label="Tasks"');
-    expect(html).not.toContain('aria-label="Rebuild workbench"');
+    expect(html).toContain('aria-label="Center icon tray"');
+    expect(html).toContain('aria-label="Feature history"');
+    expect(html).toContain('aria-label="Rebuild workbench"');
+    cadPresentation.patch({ bottomPanelCollapsed: true });
+    expect(renderToStaticMarkup(<AetherCADShell />)).not.toContain('aria-label="Rebuild workbench"');
   });
 
   it("retains the classic chrome and bottom history as a saved alternative", () => {
@@ -113,10 +117,10 @@ describe("AetherCADShell", () => {
       expect(html).toContain('aria-label="Version control"');
       expect(html).toContain('aria-label="Comments"');
       expect(html).toContain('aria-label="Features and parts"');
-      cadPresentation.patch({toolbarMode: "floating"});
+      cadPresentation.patch({workspaceLayout: "expanded", toolbarMode: "floating"});
       const floating = renderToStaticMarkup(<AetherCADShell />);
       expect(floating).toContain("chrome-classic toolbar-floating");
-      // The Commands toggle moves the tool bar: docked on top, floating card at the bottom.
+      // The layout sets the tool bar's look: docked flush on top, floating glass card.
       expect(floating).toContain('data-variant="floating"');
     } finally { vi.unstubAllGlobals(); }
   });
@@ -135,6 +139,16 @@ describe("AetherCADShell", () => {
     expect(html).toContain('aria-label="Properties tabs"');
     expect(html).toContain('aria-label="History"');
     expect(html).toContain('aria-label="Workspace modes"');
+  });
+
+  it("renames a v1 session's open panels to the standard shell's tabs", () => {
+    const saved: Record<string, string> = { "aether-cad.open-panels.v1": JSON.stringify({ browser: { placement: "docked" }, inspect: { placement: "docked" }, inspector: { placement: "hidden" }, mates: { placement: "hidden" }, view: { placement: "hidden" }, versions: { placement: "docked" } }) };
+    vi.stubGlobal("sessionStorage", { getItem: (key: string) => saved[key] ?? null });
+    try {
+      expect(readOpenPanels()).toEqual({ tree: { placement: "docked" }, inspector: { placement: "docked" }, properties: { placement: "hidden" }, transform: { placement: "hidden" }, effects: { placement: "hidden" }, versions: { placement: "docked" } });
+      saved["aether-cad.open-panels.v2"] = JSON.stringify({ effects: { placement: "docked" } });
+      expect(readOpenPanels()).toEqual({ effects: { placement: "docked" } });
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it("projects the typed command registry into the shared palette without inventing handlers", () => {

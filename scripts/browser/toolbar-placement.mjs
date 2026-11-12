@@ -2,10 +2,10 @@
  *  header search and view controls, and the Commands toggle that docks the
  *  ribbon on top or floats it at the bottom. */
 export async function verifyToolbarPlacement(page, expect, screenshot) {
-  const ribbon = page.locator('.cad-traditional-ribbon .aui-workspace-ribbon');
+  const ribbon = page.locator('.aui-workspace-ribbon');
   const header = page.locator('.cad-header-controls');
   const placement = async mode => {
-    await page.locator('.cad-traditional-ribbon .aui-workspace-ribbon-overflow').click();
+    await page.locator('.aui-workspace-ribbon-overflow').click();
     await page.getByRole('menuitem', {name:'Panel visibility and layout…',exact:true}).click();
     await page.getByLabel('Commands presentation',{exact:true}).selectOption(mode);
     await page.keyboard.press('Escape');
@@ -44,8 +44,8 @@ export async function verifyToolbarPlacement(page, expect, screenshot) {
   // Narrow windows move the groups that do not fit into the overflow menu.
   const wide = page.viewportSize();
   await page.setViewportSize({width:900,height:wide.height});
-  await expect(page.locator('.cad-traditional-ribbon .aui-workspace-ribbon-group[data-overflowed]').first()).toBeAttached();
-  await page.locator('.cad-traditional-ribbon .aui-workspace-ribbon-overflow').click();
+  await expect(page.locator('.aui-workspace-ribbon-group[data-overflowed]').first()).toBeAttached();
+  await page.locator('.aui-workspace-ribbon-overflow').click();
   await expect(page.getByRole('menuitem', {name:'Settings…',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await page.setViewportSize(wide);
