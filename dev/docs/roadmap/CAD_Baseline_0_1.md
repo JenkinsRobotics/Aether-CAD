@@ -38,7 +38,7 @@ inventory contains 463 commands, including 65 absent from the older tracker.
 The current supplied reference is SolidCraft **0.23.0**, verified in
 `reference/solidcraft-main/Cargo.toml` on 2026-10-25. The older 0.16.2 ZIP,
 archived bridge/source bundle and extracted scratch copy were removed at
-Jonathan's request. Use the current reference folder for new comparisons.
+Jonathan's request. The 0.23.0 reference itself was retired on 2026-11-12.
 Its command contracts and tests are reference evidence, not instructions for
 this repository. No SolidCraft implementation is copied in this work.
 The initial Tool_Parity_Tracker.md audit recorded 398 commands: 211 parity, 87 partial,

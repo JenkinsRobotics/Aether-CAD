@@ -1,5 +1,9 @@
 # SolidCraft 0.23.0 comparison and foundation work
 
+**Reference retired — Jonathan, 2026-11-12.** The SolidCraft 0.23.0 snapshot and its benchmark/audit
+tooling are gone (archive: `../AetherStudio/migration/archive/solidcraft-benchmarks-20261112.tar.gz`).
+This page is history; its open rows remain Aether requirements, proven with Aether's own tests.
+
 Jonathan's target, 2026-10-25: comparable or better behavior across the kernel,
 CAD commands, MCP agents, sketches, Parts and Assemblies, developed from the
 foundations upward in maintainable modules. This is a behavior comparison, not

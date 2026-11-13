@@ -1,5 +1,9 @@
 # SolidCraft tool review — what its tools do that ours do not (2026-10-21)
 
+**Reference retired — Jonathan, 2026-11-12.** The SolidCraft 0.23.0 snapshot and its benchmark/audit
+tooling are gone (archive: `../AetherStudio/migration/archive/solidcraft-benchmarks-20261112.tar.gz`).
+This page is history; its open rows remain Aether requirements, proven with Aether's own tests.
+
 This is the historical review of SolidCraft 0.16.2. That snapshot's ZIP, archive
 and scratch extraction were removed on 2026-10-25 at Jonathan's request.
 The current reference is **0.23.0** in `reference/solidcraft-main/`; use it for

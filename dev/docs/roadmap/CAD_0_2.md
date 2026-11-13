@@ -29,7 +29,7 @@ or interpret an old checkbox as current qualification.
    and annular-shell fixtures; no universal faster-than-FreeCAD claim without data.
 6. Review remaining FreeCAD workbench coverage, then retire executable comparison
    scripts and the downloaded reference. Keep fixture measurements, licenses and
-   provenance. SolidCraft comparison follows this FreeCAD pass.
+   provenance. The SolidCraft reference was retired the same way on 2026-11-12.
 
 ## Reference retirement gate
 
@@ -37,7 +37,7 @@ or interpret an old checkbox as current qualification.
 The FreeCAD source snapshot (Aether Local Archives) was moved to the Trash;
 scripts/benchmarks/native/freecad.py, solver-freecad.py and warm.py were removed
 (archive: ../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz)
-and run.py/summarize.py now compare Aether with SolidCraft only.
+and run.py/summarize.py now measure Aether only (SolidCraft retired the same day).
 The same day the vestigial `freecad` key left the installed Studio products.json
 (app-update registry re-baselined, every app selection preserved) and
 /Applications/FreeCAD.app went to the Trash. The open rows in

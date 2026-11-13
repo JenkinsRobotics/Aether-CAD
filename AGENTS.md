@@ -176,6 +176,16 @@ reinstall FreeCAD or capture new answers from it. Captured reference measurement
 import fixtures, licenses and provenance stay; open comparison rows are Aether
 requirements, proven with analytic or self-consistency tests.
 
+## SolidCraft reference retired — Jonathan, 2026-11-12
+
+Supersedes the SolidCraft 0.23.0 pass above. The `reference/solidcraft-main/`
+snapshot, its build output, `scripts/audit-solidcraft-reference.mjs` and the
+benchmark's SolidCraft runners are gone (archive:
+`../AetherStudio/migration/archive/solidcraft-benchmarks-20261112.tar.gz`); the
+benchmark measures Aether only. Open tracker rows are Aether requirements. The
+five gallery examples recreated from SolidCraft designs still ship, so keep
+`public/examples/SOLIDCRAFT-LICENSE.txt` and the collection's license with them.
+
 ## 0.2 development — 2026-11-08
 
 The 0.1.0 release is on `master`. Active development and testing now use

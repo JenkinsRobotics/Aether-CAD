@@ -1,12 +1,13 @@
-# Native construction comparison
+# Native construction benchmark
 
-This is developer tooling, outside the product runtime. It constructs editable
-sketch/extrude/revolve histories in Aether and SolidCraft 0.23.0. The FreeCAD 1.1.3
-runners were retired on 2026-11-12 (archive:
-`../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz`); their
-recorded results stay in `dev/docs/reality/data/`.
-No imported solids stand in for authored features. The robot front Part comes
-from `public/examples/scifirobot.aethercad.bin`; it is never rewritten by a benchmark.
+This is developer tooling, outside the product runtime. It times editable
+sketch/extrude/revolve histories on the Aether engine. The FreeCAD 1.1.3 and
+SolidCraft 0.23.0 reference runners were retired on 2026-11-12 (archives:
+`../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz` and
+`solidcraft-benchmarks-20261112.tar.gz`); their recorded results stay in
+`dev/docs/reality/data/`. No imported solids stand in for authored features. The
+robot front Part comes from `public/examples/scifirobot.aethercad.bin`; it is
+never rewritten by a benchmark.
 
 From the CAD repository, with dependencies installed:
 
@@ -16,57 +17,39 @@ node scripts/benchmarks/native/build-aether.mjs
 BENCH_VARIANT=obb node scripts/benchmarks/native/build-aether.mjs
 BENCH_VARIANT=no-history node scripts/benchmarks/native/build-aether.mjs
 BENCH_VARIANT=no-simplify node scripts/benchmarks/native/build-aether.mjs
-```
-
-Build the supplied reference separately (Rust and network package access needed):
-
-```sh
-CARGO_TARGET_DIR="$PWD/build/comparison-solidcraft-target" cargo build --manifest-path reference/solidcraft-main/Cargo.toml --release --locked -p solidcraft-cli --no-default-features
-python3 scripts/benchmarks/native/prepare-solidcraft.py
 python3 scripts/benchmarks/native/run.py
 python3 scripts/benchmarks/native/summarize.py
 ```
 
-The matched sketch-solver benchmark solves the same constrained sketches (a
-dimensioned rectangle plus 0, 20 and 100 circles with radius and two distances)
-after a width edit, in our solver and in FreeCAD's PlaneGCS compiled to wasm;
+The sketch-solver benchmark solves the same constrained sketches (a dimensioned
+rectangle plus 0, 20 and 100 circles with radius and two distances) after a
+width edit, in our solver and in FreeCAD's PlaneGCS compiled to wasm;
 `BENCH_CIRCLES` and `BENCH_RUNS` change the sizes and rounds:
 
 ```sh
 npx vite-node scripts/benchmarks/native/solver.ts
 ```
 
-`BENCH_CASES` selects fixtures and
-`BENCH_SAMPLES` changes the sample count; the qualification summarizer deliberately
-requires all five samples of the four fixed fixtures. `BENCH_RUNS` controls the
-standalone Aether runner, not the coordinator's number of processes.
+`BENCH_CASES` selects fixtures and `BENCH_SAMPLES` changes the sample count; the
+summarizer deliberately requires all five samples of the four fixed fixtures.
+`BENCH_RUNS` controls the standalone Aether runner, not the coordinator's number
+of processes.
 
 The constructor timers exclude imports, WASM initialization, input file reads,
-fixture authoring and final display generation. Aether clears its replay cache;
-SolidCraft opens
-its saved native history with `SOLIDCRAFT_NO_MODEL_CACHE=1` and must report every
-feature recomputed. Each sample runs in a fresh process; cold JIT/thread-pool
-costs can therefore be inside the first construction timer. Samples run serially.
-Other desktop applications are not closed.
+fixture authoring and final display generation. Aether clears its replay cache.
+Each sample runs in a fresh process; cold JIT/thread-pool costs can therefore be
+inside the first construction timer. Samples run serially. Other desktop
+applications are not closed.
 
 Aether's display timer includes analytic faces, snapping anchors, surface/edge
-meshes and buffer copies. SolidCraft uses its normal body mesh preparation. These columns describe different
-work and are **not a matched viewport/FPS contest**. Aether uses 0.1 mm
-maximum linear deflection and 0.2 rad angular deflection here; SolidCraft retains
-its native defaults. GPU, app-shell loading, picking, RAM and large-assembly
-throughput require separate matched workflows.
+meshes and buffer copies, at 0.1 mm maximum linear deflection and 0.2 rad
+angular deflection. It is **not a viewport/FPS measurement**. GPU, app-shell
+loading, picking, RAM and large-assembly throughput require separate workflows.
 
-Aether repeat is same-process cache reuse. SolidCraft cachedOpen is a new
-process adopting a saved model; these are intentionally distinct series. The
-same extrusion length edits are timed across the three small fixtures. The robot
-edit raises its final gasket plane from 0.6 to 1.6 mm and must change volume.
-
-All reference sketches are fixed to the supplied coordinates. The three basic
-Aether fixtures are fixed too; the robot retains its existing center/diameter and
-fixed-meridian constraints. This is not a matched sketch-solver benchmark.
-Simple fixtures have independent analytic volume checks. SolidCraft's reported
-volumes come from tessellation: the summarizer retains the actual error rather
-than claiming exact equality. Failed reference commands remain failures, with their logs retained.
+Repeat is same-process cache reuse. The same extrusion length edits are timed
+across the three small fixtures. The robot edit raises its final gasket plane
+from 0.6 to 1.6 mm and must change volume. Simple fixtures have independent
+analytic volume checks.
 
 The OBB, no-history and no-simplify variants modify the **benchmark bundle only**, through a
 checked Vite transform at the OCCT boolean configuration. They do not change

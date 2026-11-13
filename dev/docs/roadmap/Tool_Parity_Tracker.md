@@ -1,5 +1,9 @@
 # Tool parity tracker: every SolidCraft command against ours (2026-10-21)
 
+**Reference retired — Jonathan, 2026-11-12.** The SolidCraft 0.23.0 snapshot and its benchmark/audit
+tooling are gone (archive: `../AetherStudio/migration/archive/solidcraft-benchmarks-20261112.tar.gz`).
+This page is history; its open rows remain Aether requirements, proven with Aether's own tests.
+
 Current reference (2026-10-25): **SolidCraft 0.23.0**, supplied in
 `reference/solidcraft-main/`. The older reference copies have been removed.
 This checklist retains its 0.16.2 audit provenance; its counts do not measure

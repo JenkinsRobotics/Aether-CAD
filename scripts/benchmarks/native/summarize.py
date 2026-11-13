@@ -3,7 +3,7 @@ import hashlib,json,statistics,sys
 from pathlib import Path
 root=Path('build/native-comparison');r=root/'measured'
 median=statistics.median
-out=dict(method='Fresh headless processes, five samples, serial execution. Construction excludes kernel import/init, file IO and final display generation. No model-cache adoption in full rebuilds.',metadata=json.loads((r/'run.json').read_text()),reference=json.loads((root/'reference-source.json').read_text()),fixtures=[],experiments=[])
+out=dict(method='Fresh headless processes, five samples, serial execution. Construction excludes kernel import/init, file IO and final display generation. No model-cache adoption in full rebuilds.',metadata=json.loads((r/'run.json').read_text()),fixtures=[],experiments=[])
 assert not out['metadata']['failures'],out['metadata']['failures']
 for name in ['plate','ten-bores','annular-shell','robot-front']:
     source=json.loads((root/'fixtures'/f'{name}.json').read_text())
@@ -22,26 +22,6 @@ for name in ['plate','ten-bores','annular-shell','robot-front']:
         if 'expectedVolume' in source: assert abs(cold-source['expectedVolume'])<1e-5
         result['version']=samples[0].get('version',samples[0].get('node'));result['initMs']=[s['initMs'] for s in samples]
         fixture['engines'][engine]=result
-    if name=='robot-front':
-        assert not (root/f'{name}.solidcraft').exists()
-        failure=(root/f'{name}-solidcraft-author.log').read_text().strip()
-        assert 'step 35 (solid.extrude)' in failure and 'no result' in failure
-        fixture['engines']['solidcraft']=dict(status='failed',feature='Left hub — passage',featureIndex=9,commandIndex=34,error=failure)
-    else:
-        measures=json.loads((root/f'{name}-measure.json').read_text());assert measures['body_count']==1 and measures['bodies'][0]['closed']
-        assert len(measures['timeline'])==fixture['features'] and all(not f['error'] for f in measures['timeline'])
-        assert all(s['dof']==0 for s in measures['sketches'])
-        phases={}
-        for phase,pattern in [('cold',f'solidcraft-{name}'),('cachedOpen',f'solidcraft-cached-edit-{name}')]:
-            samples=[]
-            for i in range(5):
-                events=[json.loads(l) for l in (r/f'{pattern}-{i}.log').read_text().splitlines() if l.startswith('{')]
-                e=next(x for x in events if x['step']=='evaluate');m=next(x for x in events if x['step']=='mesh')
-                assert e['adopted']==(phase=='cachedOpen'),(name,phase,e)
-                samples.append(dict(solidMs=e['ms'],displayMs=m['ms'],triangles=m['triangles'],recomputed=e['recomputed'],ops=[x for x in events if x['step']=='op']))
-            phases[phase]=dict(solidMedianMs=median(s['solidMs'] for s in samples),displayMedianMs=median(s['displayMs'] for s in samples),samples=samples)
-        phases['edit']=dict(commandMedianMs=median(next(o['ms'] for o in s['ops'] if o['command']=='timeline.edit') for s in phases['cachedOpen']['samples']))
-        fixture['engines']['solidcraft']=dict(status='completed',phases=phases,measures=measures['bodies'][0],reportedVolumeErrorMm3=measures['bodies'][0]['volume_mm3']-source['expectedVolume'])
     out['fixtures'].append(fixture)
 for variant,pattern,count in [('obb','measured/obb-robot-front',5),('no-history','no-history-pair',3),('history-control','runner-pair',3)]:
     samples=[]
