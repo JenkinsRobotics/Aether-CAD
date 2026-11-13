@@ -6,8 +6,7 @@ from pathlib import Path
 OUT=Path(sys.argv[1] if len(sys.argv)>1 else 'build/native-comparison/measured');OUT.mkdir(parents=True,exist_ok=True)
 ROOT=Path.cwd(); fixtures=ROOT/'build/native-comparison/fixtures'
 cli=ROOT/'build/comparison-solidcraft-target/release/solidcraft-cli'
-fc=Path(os.environ.get('FREECAD_PYTHON','/Applications/FreeCAD.app/Contents/Resources/bin/python'))
-env=dict(os.environ,BENCH_RUNS='1',PYTHONPATH=str(fc.parent.parent/'lib'))
+env=dict(os.environ,BENCH_RUNS='1')
 metadata=dict(platform=platform.platform(),machine=platform.machine(),cpu=subprocess.check_output(['sysctl','-n','machdep.cpu.brand_string'],text=True).strip(),memoryBytes=int(subprocess.check_output(['sysctl','-n','hw.memsize'],text=True)),cadCommit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),sourceDirty=bool(subprocess.check_output(['git','status','--porcelain','--untracked-files=no'],text=True).strip()),solidcraftVersion='0.23.0',solidcraftCargoLockSha256=hashlib.sha256((ROOT/'reference/solidcraft-main/Cargo.lock').read_bytes()).hexdigest(),samples=[],failures=[])
 def run(args,name,extra={}):
     start=time.perf_counter()
@@ -24,11 +23,8 @@ def run(args,name,extra={}):
     return code==0
 for round in range(int(os.environ.get('BENCH_SAMPLES','5'))):
     for name in os.environ.get('BENCH_CASES','plate,ten-bores,annular-shell,robot-front').split(','):
-        engines=['aether','freecad'] if round%2==0 else ['freecad','aether']
-        for engine in engines:
-            label=f'{engine}-{name}-{round}'
-            command=['node','build/native-comparison/aether-runner/run.mjs'] if engine=='aether' else [fc,'scripts/benchmarks/native/freecad.py']
-            run(command+[fixtures/f'{name}.json',OUT/f'{label}.json'],label)
+        label=f'aether-{name}-{round}'
+        run(['node','build/native-comparison/aether-runner/run.mjs',fixtures/f'{name}.json',OUT/f'{label}.json'],label)
         design=ROOT/'build/native-comparison'/f'{name}.solidcraft'
         if design.exists():
             run([cli,'bench-open',design],f'solidcraft-{name}-{round}',dict(SOLIDCRAFT_NO_MODEL_CACHE='1'))

@@ -9,7 +9,7 @@ for name in ['plate','ten-bores','annular-shell','robot-front']:
     source=json.loads((root/'fixtures'/f'{name}.json').read_text())
     fixture=dict(name=name,sourceSha256=hashlib.sha256((root/'fixtures'/f'{name}.json').read_bytes()).hexdigest(),features=len(source['document']['features']),engines={})
     if 'sourceArchiveSha256' in source: fixture['sourceArchiveSha256']=source['sourceArchiveSha256']
-    for engine in ['aether','freecad']:
+    for engine in ['aether']:
         samples=[json.loads((r/f'{engine}-{name}-{i}.json').read_text()) for i in range(5)]
         result=dict(phases={})
         for phase in ['cold','repeat','edit']:
@@ -27,8 +27,6 @@ for name in ['plate','ten-bores','annular-shell','robot-front']:
         failure=(root/f'{name}-solidcraft-author.log').read_text().strip()
         assert 'step 35 (solid.extrude)' in failure and 'no result' in failure
         fixture['engines']['solidcraft']=dict(status='failed',feature='Left hub — passage',featureIndex=9,commandIndex=34,error=failure)
-        x=fixture['engines']['aether']['phases']['cold']['samples'][0]['measures']['volume_mm3'];y=fixture['engines']['freecad']['phases']['cold']['samples'][0]['measures']['volume_mm3']
-        fixture['reportedVolumeDifferenceMm3']=x-y
     else:
         measures=json.loads((root/f'{name}-measure.json').read_text());assert measures['body_count']==1 and measures['bodies'][0]['closed']
         assert len(measures['timeline'])==fixture['features'] and all(not f['error'] for f in measures['timeline'])

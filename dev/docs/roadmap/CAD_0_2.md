@@ -6,7 +6,7 @@ Started 2026-11-08 from released master (815ab4b). Development: alpha-0.2.
 ## Baseline
 
 FreeCAD is not a shipped CAD runtime dependency. Its installed application and
-benchmark scripts remain comparison tools. Historical measurements have moved
+benchmark scripts were retired on 2026-11-12 (see the gate below). Historical measurements have moved
 out of engine source into test-fixtures/reference-measurements, with provenance
 and unchanged bytes. This is reference isolation, not a parity claim.
 
@@ -33,12 +33,16 @@ or interpret an old checkbox as current qualification.
 
 ## Reference retirement gate
 
-The installed FreeCAD reference has not been deleted. Its location is
-/Applications/FreeCAD.app; it is not part of this repository or an installer.
-Remaining comparison tools are scripts/benchmarks/native/freecad.py,
-solver-freecad.py and their orchestration scripts. Removal waits for the gaps
-above to be reconciled and any useful behavior captured as independent Aether
-requirements/tests. Captured numerical expectations remain test assets; deleting
+**Retired — Jonathan, 2026-11-12.** The FreeCAD reference has served its month.
+The FreeCAD source snapshot (Aether Local Archives) was moved to the Trash;
+scripts/benchmarks/native/freecad.py, solver-freecad.py and warm.py were removed
+(archive: ../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz)
+and run.py/summarize.py now compare Aether with SolidCraft only.
+/Applications/FreeCAD.app stays until the installed Studio products.json stops
+naming it: the host rejects a Python product whose configured `freecad` path is
+not a file, although the worker ignores that argument. The open rows in
+FreeCAD_Comparison_2026_10_30.md stay as Aether requirements; they are closed
+with analytic or self-consistency tests, never new FreeCAD captures. Captured numerical expectations remain test assets; deleting
 or renaming them is not a substitute for closing functional gaps.
 
 Detailed evidence and historical cases: FreeCAD_Comparison_2026_10_30.md,

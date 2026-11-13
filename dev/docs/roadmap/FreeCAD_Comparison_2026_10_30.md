@@ -320,12 +320,12 @@ remains, and what each needs before it can go:
 | --- | --- | --- |
 | `aether-engine/src/kernel/oracle/freecad-references.json` (113), `freecad-assembly-references.json` (16) | Frozen measurements; the only independent truth the oracle compares against; no FreeCAD needed to run | Keep as data, renamed to reference measurements with provenance; or replace each with an analytic expectation. Never delete without a replacement truth |
 | `service/tests/test_native_*.py` passing `freecadcmd` to `runner.pyz`; `AETHER_TEST_FREECAD=1` gate; `test_native_program.FREECAD` | Vestigial positional argument (the runner builds in Node; `native_worker.py` says the path is unused) and a misnamed gate | Drop the argument from the runner contract, rename the env var (e.g. `AETHER_TEST_NATIVE`), update README/RELEASING |
-| `scripts/benchmarks/native/freecad.py` + README (uncommitted, other agent) | The three-way performance reference | Keep until §7's performance gate is met with a warm phase; then archive with the SolidCraft adapter |
+| ~~`scripts/benchmarks/native/freecad.py` + README~~ | Retired 2026-11-12 with `solver-freecad.py` and `warm.py`; archived at `../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz` | Done |
 | `PART_FORMAT.md` sections describing FreeCAD's conversion behaviour (lines ~195–401) | Historical semantics the port followed | Rewrite as Aether's own rules; keep one provenance line |
 | `test-fixtures/imports/` (box fixtures generated with FreeCAD) | Independent import fixtures | Keep; provenance only |
 | Docs: `Aether_Engine_Design.md`, `Tool_Parity_Tracker.md`, `SolidCraft_*`, `ClassCAD_*`, `CAD_Engine_Evolution.md`, README, ALPHA_0_1, RELEASING, `aether-engine/STATUS-OF-THIS-ENGINE.md` (still says "parked, FreeCAD default") | History and one stale status page | Update the engine STATUS page now (it is wrong); leave history docs |
 | `../AetherStudio/migration/archive/freecad-reference-20261020/` (1.1 MB) | Archive | Keep outside the product |
-| `/Applications/FreeCAD.app` | Benchmark and oracle capture only | User's choice after the gate |
+| `/Applications/FreeCAD.app` | Nothing but the installed Studio `products.json` `freecad` key (validated by the host, ignored by the worker) | Drop that key from the live installation, then delete the app |
 
 ## 6. Open functional defects (user-facing)
 
@@ -403,5 +403,6 @@ Order by user impact, each with the evidence that closes it.
   service runner and tests~~ done 2026-10-31: the gate is `AETHER_TEST_NATIVE`, tests pass
   Node alone; the worker still ignores a second argument from Studio installations that
   configure one (`crates/server/src/products.rs` keeps `freecad` optional);
-- then `scripts/benchmarks/native/freecad.py` is archived beside the SolidCraft adapter
-  and FreeCAD may be uninstalled from the Mac.
+- ~~then `scripts/benchmarks/native/freecad.py` is archived beside the SolidCraft adapter~~
+  done 2026-11-12 on Jonathan's call, ahead of the performance gate: the open rows above remain Aether requirements. FreeCAD
+  itself is uninstalled once the live `products.json` no longer names it.

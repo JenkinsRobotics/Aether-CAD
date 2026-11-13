@@ -1,8 +1,7 @@
 /** Matched sketch-solver benchmark. The same constrained sketches (a dimensioned
  *  rectangle plus a grid of circles, each with a radius and two distances) are
  *  solved after a width-dimension edit by our solver and by FreeCAD's PlaneGCS
- *  (the wasm spike); solver-freecad.py runs FreeCAD's own Sketcher on the fixtures
- *  this script writes. Run from the repository root with vite-node. */
+ *  (the wasm spike). Run from the repository root with vite-node. */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { solveDrawingConstraints } from '../../../aether-engine/src/sketch/drawing-constraints';
 import { initPlanegcsSpike, solveDrawingConstraintsWithPlanegcs } from '../../../aether-engine/src/sketch/solver/planegcs-spike';

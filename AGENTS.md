@@ -165,6 +165,17 @@ The reference is archived only when nothing of value remains to learn from or co
 until then `dev/docs/roadmap/FreeCAD_Comparison_2026_10_30.md` keeps the open rows and §7 plan.
 The same rule applies afterwards to the SolidCraft 0.23.0 pass.
 
+## FreeCAD reference retired — Jonathan, 2026-11-12
+
+Supersedes "FreeCAD reference stays until exhausted" above. The
+FreeCAD benchmark runners are gone (archive:
+`../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz`);
+`/Applications/FreeCAD.app` goes once the installed Studio `products.json` drops
+its vestigial `freecad` key (see `dev/docs/roadmap/CAD_0_2.md`). Do not
+reinstall FreeCAD or capture new answers from it. Captured reference measurements,
+import fixtures, licenses and provenance stay; open comparison rows are Aether
+requirements, proven with analytic or self-consistency tests.
+
 ## 0.2 development — 2026-11-08
 
 The 0.1.0 release is on `master`. Active development and testing now use

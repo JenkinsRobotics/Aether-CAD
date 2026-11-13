@@ -185,7 +185,7 @@ Run from this repository using the platform development environment:
 
 ```sh
 node scripts/build-automation.mjs
-PYTHONPATH=service:../AetherStudio AETHER_TEST_FREECAD=1 ../AetherStudio/.venv/bin/python -m pytest service/tests -q
+PYTHONPATH=service:../AetherStudio AETHER_TEST_NATIVE=1 ../AetherStudio/.venv/bin/python -m pytest service/tests -q
 ```
 
 The service release test builds and extracts a wheel, imports it in an isolated
