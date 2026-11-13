@@ -38,9 +38,9 @@ The FreeCAD source snapshot (Aether Local Archives) was moved to the Trash;
 scripts/benchmarks/native/freecad.py, solver-freecad.py and warm.py were removed
 (archive: ../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz)
 and run.py/summarize.py now compare Aether with SolidCraft only.
-/Applications/FreeCAD.app stays until the installed Studio products.json stops
-naming it: the host rejects a Python product whose configured `freecad` path is
-not a file, although the worker ignores that argument. The open rows in
+The same day the vestigial `freecad` key left the installed Studio products.json
+(app-update registry re-baselined, every app selection preserved) and
+/Applications/FreeCAD.app went to the Trash. The open rows in
 FreeCAD_Comparison_2026_10_30.md stay as Aether requirements; they are closed
 with analytic or self-consistency tests, never new FreeCAD captures. Captured numerical expectations remain test assets; deleting
 or renaming them is not a substitute for closing functional gaps.

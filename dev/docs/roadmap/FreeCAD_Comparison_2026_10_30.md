@@ -325,7 +325,7 @@ remains, and what each needs before it can go:
 | `test-fixtures/imports/` (box fixtures generated with FreeCAD) | Independent import fixtures | Keep; provenance only |
 | Docs: `Aether_Engine_Design.md`, `Tool_Parity_Tracker.md`, `SolidCraft_*`, `ClassCAD_*`, `CAD_Engine_Evolution.md`, README, ALPHA_0_1, RELEASING, `aether-engine/STATUS-OF-THIS-ENGINE.md` (still says "parked, FreeCAD default") | History and one stale status page | Update the engine STATUS page now (it is wrong); leave history docs |
 | `../AetherStudio/migration/archive/freecad-reference-20261020/` (1.1 MB) | Archive | Keep outside the product |
-| `/Applications/FreeCAD.app` | Nothing but the installed Studio `products.json` `freecad` key (validated by the host, ignored by the worker) | Drop that key from the live installation, then delete the app |
+| ~~`/Applications/FreeCAD.app`~~ | Moved to the Trash 2026-11-12 after the installed Studio `products.json` dropped its `freecad` key | Done |
 
 ## 6. Open functional defects (user-facing)
 
@@ -405,4 +405,4 @@ Order by user impact, each with the evidence that closes it.
   configure one (`crates/server/src/products.rs` keeps `freecad` optional);
 - ~~then `scripts/benchmarks/native/freecad.py` is archived beside the SolidCraft adapter~~
   done 2026-11-12 on Jonathan's call, ahead of the performance gate: the open rows above remain Aether requirements. FreeCAD
-  itself is uninstalled once the live `products.json` no longer names it.
+  itself was uninstalled the same day.
