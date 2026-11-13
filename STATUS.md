@@ -1,3 +1,18 @@
+### Chamfer: faces show while picking; angled chamfers on revolve faces build — 2026-11-13
+
+Feature windows that take faces and edges together (Chamfer, Fillet) now light the
+hovered face while their preview is showing. The preview hides the model the face
+highlight was painted on, so only edge outlines appeared and faces looked unpickable
+after the first pick; the hovered source face is now drawn on the overlay. Several
+faces, and faces mixed with edges, go into one feature; each face stands for all of its
+edges. Distance-and-angle and two-distance chamfers pick the first-leg face per edge
+(the reference face, else the adjacent face facing up most, flip and overrides as
+before) instead of one face for every edge, and retry corners in the same order-sensitive
+recovery as equal-distance finishes. A 0.05 in, 45° chamfer on any curved face of a
+revolve (quarter or full 360°, whose seam edges are skipped), on both tapered faces at once,
+or after a fillet, now builds a valid solid; where the fillet has consumed the chamfered
+edges, or the size cannot be built, it still refuses with "Chamfer did not produce a valid solid".
+
 ### Standard Aether app shell — 2026-11-11
 
 CAD renders `StandardAppShell` from `@aether/ui` 0.2.0-alpha.294 instead of its

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BufferGeometry, Uint32BufferAttribute } from 'three/webgpu';
-import { paintSurfaceFace, setSurfaceGroups } from './surface-groups';
+import { BufferGeometry, Float32BufferAttribute, Uint32BufferAttribute } from 'three/webgpu';
+import { faceGeometry, paintSurfaceFace, setSurfaceGroups } from './surface-groups';
 import { faceIdForTriangle } from './picking-math';
 
 describe('batched surface appearance', () => {
@@ -33,5 +33,20 @@ describe('batched surface appearance', () => {
     expect(geometry.groups).toEqual([{start:0,count:3,materialIndex:1}]);
     setSurfaceGroups(geometry, [{start:0,count:3,faceId:1},{start:6,count:3,faceId:2}], () => 0);
     expect(geometry.groups).toHaveLength(2);
+  });
+});
+
+describe('faceGeometry', () => {
+  it('copies exactly one face so a hidden model can still show its hovered face', () => {
+    const geometry = new BufferGeometry();
+    // Two quads (faces 7 and 9) sharing vertices 1 and 2.
+    geometry.setAttribute('position', new Float32BufferAttribute([0,0,0, 1,0,0, 1,1,0, 0,1,0, 2,0,0, 2,1,0], 3));
+    geometry.setIndex([0,1,2, 0,2,3, 1,4,5, 1,5,2]);
+    const face = faceGeometry(geometry, { faceId: 9, start: 6, count: 6 });
+    expect(face.index!.count).toBe(6);
+    expect(face.getAttribute('position').count).toBe(4);
+    const xs = Array.from({ length: 4 }, (_, i) => face.getAttribute('position').getX(i)).sort();
+    expect(xs).toEqual([1, 1, 2, 2]);
+    expect(geometry.index!.count).toBe(12);
   });
 });

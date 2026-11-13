@@ -39,3 +39,57 @@ for (const type of ['fillet', 'chamfer'] as const) for (const radius of [.254, .
   }
   expect(serializePartDocument(doc)).toBe(before);
 });
+
+// Jonathan, 2026-11-13: Onshape builds a 0.05 in (1.27 mm) distance-and-angle chamfer on faces of a
+// revolve; Aether refused it as an invalid shape. A face pick expands to edges that share no
+// single neighbour, so each edge needs its own first-leg face, and corners need the same
+// ordered recovery as the equal-distance chamfer.
+const validSolid = (d: ReturnType<typeof fixture>) => {
+  let checked = 0;
+  evaluatePartDocument(d, { withBodies: bodies => { for (const b of bodies.values()) {
+    const analyzer = new (getOC().BRepCheck_Analyzer)(b.wrapped, true, false);
+    try { expect(analyzer.IsValid_2()).toBe(true); checked++; } finally { analyzer.delete(); }
+  } } });
+  expect(checked).toBe(1);
+};
+const faceRef = (face: { surfaceType: string; measurements?: { centerMillimeters?: unknown; areaSquareMillimeters?: unknown } }, bodyId: string) => ({
+  kind: 'face-edges', sourceFeatureId: 'r', bodyId, label: 'Face of Revolve', surfaceType: face.surfaceType.toLowerCase(),
+  faceAnchor: { centerMillimeters: face.measurements!.centerMillimeters, areaSquareMillimeters: face.measurements!.areaSquareMillimeters },
+});
+const angledChamfer = (doc: ReturnType<typeof fixture>, bodyId: string, faces: Parameters<typeof faceRef>[0][]) => ({ ...doc, features: [...doc.features, {
+  id: 'c', name: 'Chamfer', type: 'chamfer', suppressed: false, radiusMillimeters: 1.27, angleDegrees: 45, targetBodyId: bodyId, tangentChain: true,
+  edges: faces.map(face => faceRef(face, bodyId)),
+} as PartFeature] });
+
+it('distance-and-angle chamfer of 0.05 in on each curved face of a revolve is a valid solid', () => {
+  const doc = fixture(), body = evaluatePartDocument(doc).parts[0];
+  const curved = body.topology.filter(f => f.surfaceType !== 'PLANE');
+  expect(curved.length).toBeGreaterThan(3);
+  for (const face of curved) validSolid(angledChamfer(doc, body.id, [face]));
+});
+
+it('one distance-and-angle chamfer takes both tapered faces of a revolve', () => {
+  const doc = fixture(), body = evaluatePartDocument(doc).parts[0];
+  const cones = body.topology.filter(f => f.surfaceType === 'CONE');
+  expect(cones).toHaveLength(2);
+  validSolid(angledChamfer(doc, body.id, cones));
+});
+
+it('Sketch → Revolve → Fillet → one distance-and-angle chamfer on both tapered faces builds', () => {
+  const doc = fixture(), body = evaluatePartDocument(doc).parts[0];
+  const bore = body.topology.find(f => f.surfaceType === 'CYLINDER' && Math.abs(f.measurements!.centerMillimeters![0] - 35) < 1e-6)!;
+  const filleted = { ...doc, features: [...doc.features, {
+    id: 'f', name: 'Fillet', type: 'fillet', suppressed: false, radiusMillimeters: 2, targetBodyId: body.id, tangentChain: true, edges: [faceRef(bore, body.id)],
+  } as PartFeature] };
+  const result = evaluatePartDocument(filleted).parts[0];
+  validSolid(angledChamfer(filleted, result.id, result.topology.filter(f => f.surfaceType === 'CONE')));
+}, 60000);
+
+it('distance-and-angle chamfer on a full-revolve face skips its seam and builds', () => {
+  const doc = { ...createEmptyPartDocument('Full revolve'), features: [fixture().features[0],
+    { id: 'r', name: 'Revolve', type: 'revolve', profileFeatureId: 's', axis: 'X', angleDegrees: 360, operation: 'new', suppressed: false }] as PartFeature[] };
+  const body = evaluatePartDocument(doc).parts[0];
+  const cones = body.topology.filter(f => f.surfaceType === 'CONE');
+  expect(cones).toHaveLength(2);
+  for (const cone of cones) validSolid(angledChamfer(doc, body.id, [cone]));
+});

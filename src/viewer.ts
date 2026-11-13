@@ -1,7 +1,7 @@
 import type { PlaybackModel } from "./history/playback";
 import { cadSnapping } from './cad-snapping-store';
 import { pickBoundarySelection } from './viewport/boundary-selection';
-import { paintSurfaceFace, setSurfaceGroups } from './viewport/surface-groups';
+import { faceGeometry, paintSurfaceFace, setSurfaceGroups } from './viewport/surface-groups';
 import { samePartGeometry } from './viewport/assembly-geometry';
 import { projectSelectionManipulator, transformMatrix, type Point3 } from './viewport/selection-manipulator-math';
 import type { NumericPartTransform } from '@aether/core/document';
@@ -300,6 +300,7 @@ export class MateViewport {
     this.featurePreview.setVisibility(id=>this.parts.get(id)?.group.visible??true);
     this.modelRoot.visible = !this.historyEditing && !this.featurePreview.active;
     this.historyPreview.group.visible = this.historyEditing && !this.featurePreview.active;
+    this.overlayHoveredFace();
   }
   setFeaturePreview(model: ImportedModelData | null): void {
     if (!this.featurePreview.group.parent) this.scene.add(this.featurePreview.group);
@@ -2689,10 +2690,34 @@ export class MateViewport {
       const capHover = this.selectionHover?.part === part ? this.selectionHover.faceId : this.anchorFace?.part.data.id === part.data.id ? this.anchorFace.faceId : undefined;
       this.section.highlight(part.group, selectedFaces, capHover, selectsWholePart);
     });
+    this.overlayHoveredFace();
     if (this.anchorFace) {
       const part = this.parts.get(this.anchorFace.part.data.id);
       if (part) this.setFaceMaterial(part, this.anchorFace.faceId, 1);
     }
+  }
+
+  /** A feature preview hides the model, and with it the face highlights painted on it; edges
+   *  outline on an overlay. Draw the hovered source face on that overlay too, or a feature
+   *  window that takes faces (Chamfer, Fillet) looks as if it picks only edges. */
+  private hoverFaceOverlay: THREE.Mesh | null = null;
+  private overlayHoveredFace(): void {
+    const hover = this.tool === 'none' && this.selectionHover?.item.kind === 'face' && this.selectionHover.faceId !== undefined && !this.modelRoot.visible ? this.selectionHover : null;
+    const key = hover ? `${hover.part.data.id}:${hover.faceId}` : '';
+    if ((this.hoverFaceOverlay?.userData.key ?? '') === key) return;
+    if (this.hoverFaceOverlay) {
+      this.hoverFaceOverlay.geometry.dispose(); (this.hoverFaceOverlay.material as THREE.Material).dispose();
+      this.hoverFaceOverlay.removeFromParent(); this.hoverFaceOverlay = null;
+    }
+    const range = hover?.part.faceRanges.find((face) => face.faceId === hover.faceId);
+    if (!hover || !range) return;
+    const mesh = new THREE.Mesh(faceGeometry(hover.part.surface.geometry, range), new THREE.MeshBasicMaterial({
+      color: viewportMaterials.hoveredFace.color, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    }));
+    hover.part.surface.updateWorldMatrix(true, false);
+    mesh.matrixAutoUpdate = false; mesh.matrix.copy(hover.part.surface.matrixWorld); mesh.renderOrder = 11; mesh.userData.key = key;
+    this.referenceRoot.add(mesh); this.hoverFaceOverlay = mesh;
   }
 
   /** Draw the outline for these edge items (their candidates carry sampled polylines). */

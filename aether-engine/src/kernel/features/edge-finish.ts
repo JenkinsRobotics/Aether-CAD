@@ -4,7 +4,8 @@ import type { PreviewHandle } from "../../contracts/geometry";
 import { deleteAfterVectorTuple } from "../../geometry/index";
 import { straightEdgeMidpoint } from "../native-straight-edge";
 import { add, scale, norm, unit, dot, type V3 } from "../vector";
-import { recoverConstantEdgeFinish, validFinishSolid } from './edge-finish-recovery';
+import { recoverEdgeFinish, validFinishSolid, type AddFinishEdge } from './edge-finish-recovery';
+import type { BRepFilletAPI_MakeChamfer } from 'replicad-opencascadejs';
 type EdgeFinishFeature = Extract<PartFeature, {
   type: "fillet" | "chamfer";
 }>;
@@ -166,57 +167,73 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
       return made;
     } finally { edges.forEach((edge) => edge.delete()); temps.reverse().forEach((t) => t.delete()); builder.delete(); progress.delete(); }
   };
-  // An asymmetric chamfer needs the face its first leg lies on: the picked
-  // reference face, else the adjacent face facing up most (SolidCraft's default).
-  const chamferRadius = (): RadiusConfig<ChamferRadius> => {
-    if (feature.type !== "chamfer" || (feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined))
-      return feature.measurement === "tangent" && chainPoints
-        ? (edge) => { const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; const hit = chainPoints.some((p) => near(p, m)); m.delete(); return hit ? measured(at, size) : null; }
-        : size;
-    // The faces meeting at a point, the one facing up most first.
-    const adjacentTo = (point: V3): Face[] => {
-      const adjacent = body.faces.filter((face) => {
-        const edges = face.edges;
-        const hit = edges.some((edge) => { const m = edge.pointAt(0.5); const h = near(point, m); m.delete(); return h; });
-        edges.forEach((edge) => edge.delete());
-        return hit;
-      });
-      const up = (face: Face) => { const center = deleteAfterVectorTuple(face.center); return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2]; };
-      return adjacent.sort((a, b) => up(b) - up(a));
-    };
-    const config = (reference: Face): ChamferRadius => {
-      const selectedFace = (f: FaceFinder) => f.inList([reference]);
-      return feature.angleDegrees !== undefined ? { distance: size, angle: feature.angleDegrees, selectedFace } : { distances: [size, feature.secondDistanceMillimeters!], selectedFace };
-    };
-    // Onshape's direction: the first leg lies on the reference face, or the adjacent face facing up most;
-    // the flip moves it to the other adjacent face, and Direction overrides flip single edges.
-    const overrides = feature.flippedEdges?.length ? feature.flippedEdges.flatMap((pick) => {
+  // An asymmetric chamfer needs, per edge, the face its first leg lies on: the picked reference
+  // face, else the adjacent face facing up most (SolidCraft's default); the flip moves it to the
+  // other adjacent face, and Direction overrides flip single edges. Kept as that face's normal at
+  // the edge midpoint, so a recovery pass on a partly finished body finds the same side again.
+  const asymmetric = feature.type === "chamfer" && (feature.secondDistanceMillimeters !== undefined || feature.angleDegrees !== undefined) ? feature : undefined;
+  const legNormals = asymmetric && chainPoints && (() => {
+    const overrides = asymmetric.flippedEdges?.flatMap((pick): V3[] => {
       if (pick.kind === "face-edges") { const face = faceByReference(body, pick, "Direction override"), edges = face.edges; const points = edges.map((edge) => { const m = edge.pointAt(0.5), q: V3 = [m.x, m.y, m.z]; m.delete(); return q; }); edges.forEach((edge) => edge.delete()); face.delete(); return points; }
       if (pick.kind === "solid-edge") { const a = pick.anchor.start.positionMillimeters, b = pick.anchor.end.positionMillimeters; return [scale(add(a as V3, b as V3), 0.5)]; }
       return [pick.midpointMillimeters as V3];
-    }) : [];
-    const explicit = feature.referenceFace ? faceByReference(body, feature.referenceFace, "Chamfer reference face") : undefined;
-    if (!feature.flipped && !overrides.length) {
-      if (explicit) return config(explicit);
-      const point = pickedPoints?.[0];
-      if (!point) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
-      const adjacent = adjacentTo(point);
-      if (!adjacent.length) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
-      adjacent.slice(1).forEach((face) => face.delete());
-      return config(adjacent[0]);
+    }) ?? [];
+    const explicit = asymmetric.referenceFace ? faceByReference(body, asymmetric.referenceFace, "Chamfer reference face") : undefined;
+    try {
+      return chainPoints.map((point): V3 | null => {
+        // The faces meeting at the edge, the one facing up most first.
+        const adjacent = new FaceFinder().containsPoint(point).find(body);
+        // A full revolve's centre of mass is off its surface (on the axis): use the normal at the edge there.
+        const up = (face: Face) => { try { const center = deleteAfterVectorTuple(face.center); return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2]; } catch { return deleteAfterVectorTuple(face.normalAt(point))[2]; } };
+        adjacent.sort((a, b) => up(b) - up(a));
+        try {
+          if (adjacent.length < 2) return null; // a seam: one face on both sides, nothing to chamfer
+          const here = { x: point[0], y: point[1], z: point[2] };
+          const flip = Boolean(asymmetric.flipped) !== overrides.some((p) => near(p, here));
+          const first = explicit ? Math.max(0, adjacent.findIndex((face) => face.isSame(explicit))) : 0;
+          return [...deleteAfterVectorTuple(adjacent[flip ? 1 - Math.min(first, 1) : first].normalAt(point))] as V3;
+        } finally { adjacent.forEach((face) => face.delete()); }
+      });
+    } finally { explicit?.delete(); }
+  })();
+  // The face at `point` on `shape` whose normal there matches the recorded first-leg side; null on a seam.
+  const legFace = (shape: Shape3D, point: V3): Face | null => {
+    const normal = legNormals?.[chainPoints!.findIndex((p) => near(p, { x: point[0], y: point[1], z: point[2] }))];
+    if (!normal) return null;
+    const faces = new FaceFinder().containsPoint(point).find(shape);
+    const score = (face: Face) => dot([...deleteAfterVectorTuple(face.normalAt(point))] as V3, normal);
+    faces.sort((a, b) => score(b) - score(a));
+    faces.slice(1).forEach((face) => face.delete());
+    if (!faces[0]) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
+    return own(faces[0]);
+  };
+  const chamferRadius = (): RadiusConfig<ChamferRadius> => {
+    if (!asymmetric)
+      return feature.measurement === "tangent" && chainPoints
+        ? (edge) => { const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; const hit = chainPoints.some((p) => near(p, m)); m.delete(); return hit ? measured(at, size) : null; }
+        : size;
+    const config = (reference: Face): ChamferRadius => {
+      const selectedFace = (f: FaceFinder) => f.inList([reference]);
+      return asymmetric.angleDegrees !== undefined ? { distance: size, angle: asymmetric.angleDegrees, selectedFace } : { distances: [size, asymmetric.secondDistanceMillimeters!], selectedFace };
+    };
+    // Every edge in a plane (saved documents): one picked reference face for all of them.
+    if (!chainPoints) {
+      if (!asymmetric.referenceFace) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+      return config(own(faceByReference(body, asymmetric.referenceFace, "Chamfer reference face")));
     }
     return (edge) => {
       const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z]; m.delete();
-      const here = { x: at[0], y: at[1], z: at[2] };
-      if (!chainPoints?.some((p) => near(p, here))) return null;
-      const adjacent = adjacentTo(at);
-      if (adjacent.length < 2) { adjacent.forEach((face) => face.delete()); return null; }
-      const flip = Boolean(feature.flipped) !== overrides.some((p) => near(p, here));
-      const first = explicit && adjacent.some((face) => face.isSame(explicit)) ? adjacent.findIndex((face) => face.isSame(explicit)) : 0;
-      const chosen = adjacent[flip ? 1 - Math.min(first, 1) : first];
-      adjacent.forEach((face) => { if (face !== chosen) face.delete(); });
-      return config(chosen);
+      if (!chainPoints!.some((p) => near(p, { x: at[0], y: at[1], z: at[2] }))) return null;
+      const reference = legFace(body, at);
+      return reference ? config(reference) : null;
     };
+  };
+  const addEdge: AddFinishEdge = (builder, edge, point, shape) => {
+    if (!asymmetric) { builder.Add_2(size, edge.wrapped); return; }
+    const chamfer = builder as BRepFilletAPI_MakeChamfer, face = legFace(shape, point);
+    if (!face) return;
+    if (asymmetric.angleDegrees !== undefined) chamfer.AddDA(size, asymmetric.angleDegrees * Math.PI / 180, edge.wrapped, face.wrapped);
+    else chamfer.Add_3(size, asymmetric.secondDistanceMillimeters!, edge.wrapped, face.wrapped);
   };
   let rounded: Shape3D;
   try {
@@ -224,11 +241,11 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
     if (!validFinishSolid(rounded)) { rounded.delete(); throw new Error("Invalid finished solid."); }
   }
   catch (error) {
-    const constantSize = feature.type === 'fillet'
+    const constantSize = asymmetric !== undefined || (feature.type === 'fillet'
       ? feature.endRadiusMillimeters === undefined && !feature.points?.length && feature.measurement !== 'width'
-      : feature.secondDistanceMillimeters === undefined && feature.angleDegrees === undefined && feature.measurement !== 'tangent';
+      : feature.measurement !== 'tangent');
     if (constantSize && chainPoints && chainPoints.length > 1 && !picks?.some(p => p.size !== undefined)) {
-      try { return recoverConstantEdgeFinish(feature.type, body, chainPoints, size); }
+      try { return recoverEdgeFinish(feature.type, body, chainPoints, addEdge); }
       catch { /* Preserve the failure; never commit a partial edge set. */ }
     }
     throw new Error(`${feature.type === "fillet" ? "Fillet" : "Chamfer"} did not produce a valid solid. Reduce the size or choose fewer edges.`, { cause: error });

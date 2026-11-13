@@ -40636,18 +40636,26 @@ function validFinishSolid(shape) {
     check2.delete();
   }
 }
-function recoverConstantEdgeFinish(kind, body, points, radius) {
+function recoverEdgeFinish(kind, body, points, add2) {
   const source = body.clone().translate(0, 0, 0);
   let selected = [];
   try {
     selected = new EdgeFinder().either(points.map((p2) => (f2) => f2.containsPoint(p2))).find(source);
     if (selected.length < 2) throw new Error("No multi-edge corner to recover.");
+    const oc = getOC(), builderOn = (shape) => kind === "fillet" ? new oc.BRepFilletAPI_MakeFillet(shape.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational) : new oc.BRepFilletAPI_MakeChamfer(shape.wrapped);
+    const midpoint = (edge) => {
+      const p2 = edge.pointAt(0.5);
+      try {
+        return [p2.x, p2.y, p2.z];
+      } finally {
+        p2.delete();
+      }
+    };
     const ordered2 = [...selected].sort((a2, b) => Number(b.geomType === "LINE") - Number(a2.geomType === "LINE") || a2.length - b.length);
-    const oc = getOC(), builder = kind === "fillet" ? new oc.BRepFilletAPI_MakeFillet(source.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational) : new oc.BRepFilletAPI_MakeChamfer(source.wrapped);
-    const progress = new oc.Message_ProgressRange_1();
+    const builder = builderOn(source), progress = new oc.Message_ProgressRange_1();
     let trial;
     try {
-      for (const edge of ordered2) builder.Add_2(radius, edge.wrapped);
+      for (const edge of ordered2) add2(builder, edge, midpoint(edge), source);
       builder.Build(progress);
       trial = cast(builder.Shape());
       if (isShape3D(trial) && validFinishSolid(trial)) {
@@ -40661,20 +40669,12 @@ function recoverConstantEdgeFinish(kind, body, points, radius) {
       builder.delete();
       progress.delete();
     }
-    const midpoint = (edge) => {
-      const p2 = edge.pointAt(0.5);
-      try {
-        return [p2.x, p2.y, p2.z];
-      } finally {
-        p2.delete();
-      }
-    };
     const groups = [selected.filter((e) => e.geomType !== "LINE"), selected.filter((e) => e.geomType === "LINE")].map((edges) => edges.map(midpoint));
     if (groups.some((group) => !group.length)) throw new Error("The selected corner could not be built.");
     let result = body.clone().translate(0, 0, 0);
     try {
       for (const group of groups) {
-        const edges = [];
+        const edges = [], pass = builderOn(result), passProgress = new oc.Message_ProgressRange_1();
         try {
           for (const point2 of group) {
             const hits = new EdgeFinder().containsPoint(point2).find(result);
@@ -40683,13 +40683,21 @@ function recoverConstantEdgeFinish(kind, body, points, radius) {
               throw new Error("An earlier finish consumed another selected edge.");
             }
             edges.push(hits[0]);
+            add2(pass, hits[0], point2, result);
           }
-          const next = kind === "fillet" ? result.fillet(radius, (finder) => finder.inList(edges)) : result.chamfer(radius, (finder) => finder.inList(edges));
+          pass.Build(passProgress);
+          const next = cast(pass.Shape());
+          if (!isShape3D(next)) {
+            next.delete();
+            throw new Error("The selected corner did not produce a solid.");
+          }
           result.delete();
           result = next;
           if (!validFinishSolid(result)) throw new Error("The selected corner produces an invalid solid.");
         } finally {
           edges.forEach((e) => e.delete());
+          pass.delete();
+          passProgress.delete();
         }
       }
       return result;
@@ -40847,37 +40855,9 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
       progress.delete();
     }
   };
-  const chamferRadius = () => {
-    if (feature3.type !== "chamfer" || feature3.secondDistanceMillimeters === void 0 && feature3.angleDegrees === void 0)
-      return feature3.measurement === "tangent" && chainPoints ? (edge) => {
-        const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
-        const hit = chainPoints.some((p2) => near(p2, m2));
-        m2.delete();
-        return hit ? measured(at, size) : null;
-      } : size;
-    const adjacentTo = (point2) => {
-      const adjacent = body.faces.filter((face) => {
-        const edges = face.edges;
-        const hit = edges.some((edge) => {
-          const m2 = edge.pointAt(0.5);
-          const h = near(point2, m2);
-          m2.delete();
-          return h;
-        });
-        edges.forEach((edge) => edge.delete());
-        return hit;
-      });
-      const up = (face) => {
-        const center = deleteAfterVectorTuple(face.center);
-        return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2];
-      };
-      return adjacent.sort((a2, b) => up(b) - up(a2));
-    };
-    const config2 = (reference) => {
-      const selectedFace = (f2) => f2.inList([reference]);
-      return feature3.angleDegrees !== void 0 ? { distance: size, angle: feature3.angleDegrees, selectedFace } : { distances: [size, feature3.secondDistanceMillimeters], selectedFace };
-    };
-    const overrides = feature3.flippedEdges?.length ? feature3.flippedEdges.flatMap((pick) => {
+  const asymmetric = feature3.type === "chamfer" && (feature3.secondDistanceMillimeters !== void 0 || feature3.angleDegrees !== void 0) ? feature3 : void 0;
+  const legNormals = asymmetric && chainPoints && (() => {
+    const overrides = asymmetric.flippedEdges?.flatMap((pick) => {
       if (pick.kind === "face-edges") {
         const face = faceByReference(body, pick, "Direction override"), edges = face.edges;
         const points = edges.map((edge) => {
@@ -40894,35 +40874,77 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
         return [scale$1(add$4(a2, b), 0.5)];
       }
       return [pick.midpointMillimeters];
-    }) : [];
-    const explicit = feature3.referenceFace ? faceByReference(body, feature3.referenceFace, "Chamfer reference face") : void 0;
-    if (!feature3.flipped && !overrides.length) {
-      if (explicit) return config2(explicit);
-      const point2 = pickedPoints?.[0];
-      if (!point2) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
-      const adjacent = adjacentTo(point2);
-      if (!adjacent.length) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
-      adjacent.slice(1).forEach((face) => face.delete());
-      return config2(adjacent[0]);
+    }) ?? [];
+    const explicit = asymmetric.referenceFace ? faceByReference(body, asymmetric.referenceFace, "Chamfer reference face") : void 0;
+    try {
+      return chainPoints.map((point2) => {
+        const adjacent = new FaceFinder().containsPoint(point2).find(body);
+        const up = (face) => {
+          try {
+            const center = deleteAfterVectorTuple(face.center);
+            return deleteAfterVectorTuple(face.normalAt([center[0], center[1], center[2]]))[2];
+          } catch {
+            return deleteAfterVectorTuple(face.normalAt(point2))[2];
+          }
+        };
+        adjacent.sort((a2, b) => up(b) - up(a2));
+        try {
+          if (adjacent.length < 2) return null;
+          const here = { x: point2[0], y: point2[1], z: point2[2] };
+          const flip = Boolean(asymmetric.flipped) !== overrides.some((p2) => near(p2, here));
+          const first = explicit ? Math.max(0, adjacent.findIndex((face) => face.isSame(explicit))) : 0;
+          return [...deleteAfterVectorTuple(adjacent[flip ? 1 - Math.min(first, 1) : first].normalAt(point2))];
+        } finally {
+          adjacent.forEach((face) => face.delete());
+        }
+      });
+    } finally {
+      explicit?.delete();
+    }
+  })();
+  const legFace = (shape, point2) => {
+    const normal = legNormals?.[chainPoints.findIndex((p2) => near(p2, { x: point2[0], y: point2[1], z: point2[2] }))];
+    if (!normal) return null;
+    const faces = new FaceFinder().containsPoint(point2).find(shape);
+    const score = (face) => dot$6([...deleteAfterVectorTuple(face.normalAt(point2))], normal);
+    faces.sort((a2, b) => score(b) - score(a2));
+    faces.slice(1).forEach((face) => face.delete());
+    if (!faces[0]) throw new Error("Chamfer reference face could not be found. Pick the reference face.");
+    return own(faces[0]);
+  };
+  const chamferRadius = () => {
+    if (!asymmetric)
+      return feature3.measurement === "tangent" && chainPoints ? (edge) => {
+        const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
+        const hit = chainPoints.some((p2) => near(p2, m2));
+        m2.delete();
+        return hit ? measured(at, size) : null;
+      } : size;
+    const config2 = (reference) => {
+      const selectedFace = (f2) => f2.inList([reference]);
+      return asymmetric.angleDegrees !== void 0 ? { distance: size, angle: asymmetric.angleDegrees, selectedFace } : { distances: [size, asymmetric.secondDistanceMillimeters], selectedFace };
+    };
+    if (!chainPoints) {
+      if (!asymmetric.referenceFace) throw new Error("An asymmetric chamfer needs picked edges or a reference face.");
+      return config2(own(faceByReference(body, asymmetric.referenceFace, "Chamfer reference face")));
     }
     return (edge) => {
       const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
       m2.delete();
-      const here = { x: at[0], y: at[1], z: at[2] };
-      if (!chainPoints?.some((p2) => near(p2, here))) return null;
-      const adjacent = adjacentTo(at);
-      if (adjacent.length < 2) {
-        adjacent.forEach((face) => face.delete());
-        return null;
-      }
-      const flip = Boolean(feature3.flipped) !== overrides.some((p2) => near(p2, here));
-      const first = explicit && adjacent.some((face) => face.isSame(explicit)) ? adjacent.findIndex((face) => face.isSame(explicit)) : 0;
-      const chosen = adjacent[flip ? 1 - Math.min(first, 1) : first];
-      adjacent.forEach((face) => {
-        if (face !== chosen) face.delete();
-      });
-      return config2(chosen);
+      if (!chainPoints.some((p2) => near(p2, { x: at[0], y: at[1], z: at[2] }))) return null;
+      const reference = legFace(body, at);
+      return reference ? config2(reference) : null;
     };
+  };
+  const addEdge = (builder, edge, point2, shape) => {
+    if (!asymmetric) {
+      builder.Add_2(size, edge.wrapped);
+      return;
+    }
+    const chamfer = builder, face = legFace(shape, point2);
+    if (!face) return;
+    if (asymmetric.angleDegrees !== void 0) chamfer.AddDA(size, asymmetric.angleDegrees * Math.PI / 180, edge.wrapped, face.wrapped);
+    else chamfer.Add_3(size, asymmetric.secondDistanceMillimeters, edge.wrapped, face.wrapped);
   };
   let rounded;
   try {
@@ -40932,10 +40954,10 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
       throw new Error("Invalid finished solid.");
     }
   } catch (error2) {
-    const constantSize = feature3.type === "fillet" ? feature3.endRadiusMillimeters === void 0 && !feature3.points?.length && feature3.measurement !== "width" : feature3.secondDistanceMillimeters === void 0 && feature3.angleDegrees === void 0 && feature3.measurement !== "tangent";
+    const constantSize = asymmetric !== void 0 || (feature3.type === "fillet" ? feature3.endRadiusMillimeters === void 0 && !feature3.points?.length && feature3.measurement !== "width" : feature3.measurement !== "tangent");
     if (constantSize && chainPoints && chainPoints.length > 1 && !picks?.some((p2) => p2.size !== void 0)) {
       try {
-        return recoverConstantEdgeFinish(feature3.type, body, chainPoints, size);
+        return recoverEdgeFinish(feature3.type, body, chainPoints, addEdge);
       } catch {
       }
     }
