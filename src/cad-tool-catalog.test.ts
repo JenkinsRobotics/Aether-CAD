@@ -17,7 +17,7 @@ describe("CAD tool catalog", () => {
       "surface",
       "mesh",
       "sheet-metal",
-      "framing",
+      // No Framing tray: none of its tools is built yet, and release builds show no placeholders.
       "plastic",
       "assembly-build",
       "assembly-mates",
@@ -62,28 +62,18 @@ describe("CAD tool catalog", () => {
       "solid-pattern",
       "assembly-revolute",
       "assembly-slider",
-      "assembly-interference",
       "assembly-ground",
       "assembly-suppress",
       "assembly-remove",
       "view-wireframe",
       "manage-configurations",
       "output-step",
-      "output-dxf",
-      "output-cut-list",
-      // Onshape's sheet metal list, greyed until the engine can build it.
       "sheet-model",
       "sheet-hem",
-      "sheet-jog",
-      "sheet-corner-break",
-      "sheet-finish-flex-pcb",
-      // Onshape's framing list, greyed until there is a profile library.
-      "framing-frame",
-      "framing-trim",
-      "framing-gusset",
-      "framing-end-cap",
-      "framing-cut-list",
     ]) expect(ids.has(id)).toBe(true);
+    // Recorded gaps stay in the tray files but never reach the ribbon (no placeholders, 2026-11-26).
+    for (const id of ["assembly-interference", "output-dxf", "output-cut-list", "sheet-jog", "sheet-corner-break",
+      "sheet-finish-flex-pcb", "framing-frame", "framing-cut-list", "solid-wrap-emboss", "mesh-close-holes"]) expect(ids.has(id), id).toBe(false);
     expect(cadRibbonWorkspace("view").groups.flatMap((group) => group.tools)
       .find(({ id }) => id === "view-hidden-line")?.action).toBe("display-hidden-line");
     expect(cadRibbonWorkspace("view").groups.flatMap((group) => group.tools)

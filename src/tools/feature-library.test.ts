@@ -17,7 +17,7 @@ it('keeps the six domains reachable and expands hidden variants into search with
   }
 });
 
-it('search follows command availability, preserving named gaps', () => {
+it('search follows command availability and lists no unbuilt tools', () => {
   const unregister = cadCommands.register('feature-extrude', () => {});
   try {
     for (const enabled of [true, false]) {
@@ -25,20 +25,22 @@ it('search follows command availability, preserving named gaps', () => {
       const context = { commands: cadCommands.snapshot(), partOpen: true, assemblyReady: false };
       const palette = cadFeaturePalette(context, []);
       expect(palette.find(command => command.id === 'feature-extrude')?.disabled).toBe(!enabled);
-      expect(palette.find(command => command.id === 'unavailable:assembly-assembly-template')?.disabled).toBe(true);
+      expect(palette.find(command => command.id === 'unavailable:assembly-assembly-template')).toBeUndefined();
       expect(palette.find(command => command.id === 'assembly-from-json')?.disabled).toBe(true);
     }
   } finally { cadCommands.setEnabled('feature-extrude', true); unregister(); }
 });
 
-it('keeps all fifteen referenced assembly features discoverable without promising missing solvers', () => {
+it('keeps the built assembly features discoverable and leaves unbuilt ones out', () => {
   const tools = cadFeatureGroups('assembly').flatMap(group => expandFeatureTools(group.tools));
-  for (const id of ['assembly-part-template','assembly-insert','assembly-assembly-template','assembly-from-json',
+  for (const id of ['assembly-part-template','assembly-insert','assembly-from-json',
     'assembly-ground','assembly-fixed','assembly-revolute','assembly-slider','assembly-concentric','assembly-coincident',
-    'assembly-parallel','assembly-mate-ball','assembly-group','assembly-linear-pattern','assembly-circular-pattern'])
+    'assembly-parallel','assembly-mate-ball'])
     expect(tools.some(tool => tool.id === id), id).toBe(true);
+  for (const id of ['assembly-assembly-template','assembly-group','assembly-linear-pattern','assembly-circular-pattern'])
+    expect(tools.some(tool => tool.id === id), id).toBe(false);
   expect(cadFeatureToolById('assembly-concentric')?.action).toBe('assembly-mate-cylindrical');
-  expect(cadFeatureToolById('assembly-width')?.action).toBeUndefined();
+  expect(cadFeatureToolById('assembly-width')).toBeUndefined();
   expect(cadFeatureToolById('solid-pipe')?.action).toBe('feature-pipe');
   expect(cadFeatureToolById('solid-box')).toBeUndefined(); // No premade shapes: sketch and build them.
 });

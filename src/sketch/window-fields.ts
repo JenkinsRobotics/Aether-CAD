@@ -18,7 +18,6 @@ export function mountSketchWindowFields(win: FeatureWindow, options: {
     else input.title = 'Not available yet.';
     win.row(label, input);
   };
-  checkbox('Disable imprinting', false);
   checkbox('Show constraints', true, options.onConstraintsChange);
   checkbox('Show expressions', false, options.onExpressionsChange);
   checkbox('Show errors', true, options.onErrorsChange);

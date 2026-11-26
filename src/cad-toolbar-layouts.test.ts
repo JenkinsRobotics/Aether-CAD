@@ -16,7 +16,7 @@ describe("per-document-type toolbar layouts", () => {
 
   it("part drops the assembly tab and assembly-scoped home tools", () => {
     const tabs = toolbarTabsFor("part").map((w) => w.id);
-    expect(tabs).toEqual(["solid", "surface", "mesh", "sheet-metal", "framing", "plastic", "manage", "output"]);
+    expect(tabs).toEqual(["solid", "surface", "mesh", "sheet-metal", "plastic", "manage", "output"]);
     // One Sketch tab, and it is the contextual one.
     expect(tabs).not.toContain("sketch");
     expect(sketchContextTab().sections.flatMap((s) => s.menu)).toContain("sketch-line");
@@ -151,21 +151,9 @@ describe("the Assembly tab", () => {
     expect(enabled.sort()).toEqual(["Ball", "Cylindrical", "Fastened", "Parallel", "Pin Slot", "Planar", "Revolute", "Slider"]);
   });
 
-  it("greys the rest, and says which of the two reasons applies", () => {
-    const tools = assemblyTools();
-    // Solvable but not yet authorable.
-    for (const mate of ["Distance", "Angle", "Perpendicular"]) {
-      const tool = tools.find((entry) => entry.label === mate);
-      expect(tool, `${mate} should be listed`).toBeTruthy();
-      expect(tool!.action).toBeUndefined();
-      expect(tool!.unavailableReason).toMatch(/cannot author it yet/);
-    }
-    // Not solvable at all: the solver has no joint for these.
-    for (const mate of ["Tangent", "Width"]) {
-      const tool = tools.find((entry) => entry.label === mate);
-      expect(tool!.action).toBeUndefined();
-      expect(tool!.unavailableReason).toMatch(/no joint for this mate/);
-    }
+  it("leaves out mates it cannot author or solve (no placeholders, 2026-11-26)", () => {
+    const labels = assemblyTools().map((tool) => tool.label);
+    for (const mate of ["Distance", "Angle", "Perpendicular", "Tangent", "Width"]) expect(labels, mate).not.toContain(mate);
   });
 
   it("is kept out of a Part document, where assembly tools do not belong", () => {
@@ -265,7 +253,7 @@ it("offers only implemented, distinct Insert commands with two primary tools", (
 
 it("lists Construct, Inspect, Insert and Select once, on Solid, while omitting unimplemented commands", () => {
  // A tool appears once per workspace (Jonathan, 2026-11-02): the shared sections live on Solid only.
- for (const id of ['solid','surface','mesh','sheet-metal','framing','plastic']) {
+ for (const id of ['solid','surface','mesh','sheet-metal','plastic']) {
   const tab=fusionTabsFor('part').find(tab=>tab.id===id)!;
   const labels=tab.sections.map(section=>section.label);
   expect(labels).toEqual(id==='solid'?['Create','Modify','Construct','Inspect','Insert','Select']:['Create','Modify']);
@@ -275,7 +263,7 @@ it("lists Construct, Inspect, Insert and Select once, on Solid, while omitting u
  expect(toolbarWorkspaceFor('part','surface').groups[0].tools.map(tool=>tool.action)).toEqual(['feature-surface-extrude','feature-surface-revolve','feature-surface-sweep','feature-surface-loft','feature-surface-patch','feature-surface-offset','feature-surface-ruled','feature-surface-boundary','feature-surface-blend']);
  const solid=toolbarWorkspaceFor('part','solid');
  expect(solid.groups.find(group=>group.label==='Construct')?.tools.map(tool=>tool.action)).toContain('feature-plane');
- expect(toolbarWorkspaceFor('part','framing').groups.find(group=>group.label==='Construct')).toBeUndefined();
+ expect(toolbarWorkspaceFor('part','plastic').groups.find(group=>group.label==='Construct')).toBeUndefined();
  expect(solid.groups.find(group=>group.label==='Inspect')?.tools.map(tool=>tool.action)).toContain('part-interference');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-mirror');
  expect(toolbarWorkspaceFor('part','solid').groups[1].tools.map(tool=>tool.id)).toContain('solid-draft');

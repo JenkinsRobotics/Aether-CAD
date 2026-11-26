@@ -138,7 +138,7 @@ export const patternEditor:FeatureEditor={
       box.element.hidden=!parts;sourceRow.hidden=parts;
       // A feature pattern has Onshape's one result (its feature's own); the other tabs apply to parts.
       if(!parts)controls.result.value='new';
-      [...results.children].forEach((tab,i)=>{tab.classList.toggle('active',i===resultValues.indexOf(controls.result.value));if(i>0)planned(tab as HTMLButtonElement,resultGap);if(parts&&i>0){tab.removeAttribute('disabled');tab.removeAttribute('aria-disabled');tab.removeAttribute('title');}});
+      [...results.children].forEach((tab,i)=>{tab.classList.toggle('active',i===resultValues.indexOf(controls.result.value));if(i>0)planned(tab as HTMLButtonElement,resultGap);if(parts&&i>0){(tab as HTMLElement).hidden=false;tab.removeAttribute('disabled');tab.removeAttribute('aria-disabled');tab.removeAttribute('title');}});
       faces.element.hidden=isPath;const caption=faces.element.querySelector('.aui-feature-entities-caption');if(caption)caption.textContent=polar?'Axis face (cylindrical)':'Direction (plane, face or line)';
       scope.element.hidden=parts?controls.result.value==='new':false;
       directionRow.hidden=isPath;directionRow.querySelector('span')!.textContent=polar?'Axis of pattern':'Direction';

@@ -174,7 +174,8 @@ describe("AetherCADShell", () => {
     ]));
     expect(disconnected.find(command => command.id === 'feature-extrude')?.disabled).toBe(true);
     expect(disconnected.find(command => command.id === 'insert-canvas')?.disabled).toBe(false);
-    expect(disconnected.find(command => command.id === 'unavailable:solid-twist')?.disabledReason).toContain('Not implemented');
+    // Unbuilt tools are not listed at all (no placeholders, 2026-11-26).
+    expect(disconnected.find(command => command.id === 'unavailable:solid-twist')).toBeUndefined();
 
     const unregister = cadCommands.register("fit-view", () => {});
     const connected = buildCADCommandPaletteCommands(cadCommands.snapshot());

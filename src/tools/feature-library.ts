@@ -1,6 +1,6 @@
 /** CAD-owned discovery taxonomy. A category does not imply engine/API support.
  * Existing tool definitions remain authoritative for labels, actions and gaps. */
-import { cadRibbonWorkspaces } from './index';
+import { cadRibbonWorkspaces, shippedGroups } from './index';
 import { tool, type CADToolDefinition, type CADToolGroupDefinition } from './shared';
 
 export type CADFeatureDomainID = 'part' | 'assembly' | 'sketch' | 'curve' | 'solid' | 'drawing';
@@ -76,7 +76,7 @@ export function expandFeatureTools(tools: readonly CADToolDefinition[]): CADTool
 }
 
 export function cadFeatureGroups(domain: CADFeatureDomainID): CADToolGroupDefinition[] {
-  const groups: CADToolGroupDefinition[] = domain === 'part' ? [...additions.part] : [];
+  const groups: CADToolGroupDefinition[] = domain === 'part' ? shippedGroups(additions.part) : [];
   for (const workspace of cadRibbonWorkspaces) {
     for (const group of workspace.groups) {
       if (domainFor(workspace.id, group.id) !== domain) continue;
@@ -87,7 +87,7 @@ export function cadFeatureGroups(domain: CADFeatureDomainID): CADToolGroupDefini
   if (domain === 'sketch') groups.unshift({ id: 'sketch-start', label: 'Setup', tools: [
     cadRibbonWorkspaces.find(workspace => workspace.id === 'solid')!.groups[0].tools.find(tool => tool.id === 'solid-sketch')!,
   ] });
-  if (domain !== 'part') groups.push(...additions[domain]);
+  if (domain !== 'part') groups.push(...shippedGroups(additions[domain]));
   return groups;
 }
 

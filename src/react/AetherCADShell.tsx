@@ -18,6 +18,7 @@ import { CADDocumentTabs } from "./CADDocumentTabs";
 import { CADDrive } from "./CADFilesPanel";
 import { useStudioApplications } from "@aether/session/applications";
 import { useDocumentConnection } from "@aether/session/useDocumentConnection";
+import { isStudioHosted } from "@aether/session/home/runtime";
 import "./CADViewportLayout.css";
 import { ExportCenter } from "./CADPartExportDialog";
 import { CADSettingsWindow } from "./CADSettingsWindow";
@@ -340,6 +341,7 @@ export function AetherCADShell() {
     },
   }), [hostedConnection]);
   const documentID = typeof location === "undefined" ? null : new URLSearchParams(location.search).get("document");
+  const studioHosted = isStudioHosted();
 
   const [rightRequest, setRightRequest] = useState({id: "inspector", sequence: 0});
   // The tree and the right tray's open/closed state persist in the presentation store (saved
@@ -412,11 +414,14 @@ export function AetherCADShell() {
     { id: "open-part", label: "Open file…", icon: <AetherIcon name="open" />, disabled: commandOff("open-part") },
     { id: "insert-step", label: "Import…", icon: <AetherIcon name="import" />, disabled: commandOff("insert-step") },
     { id: "show-export", label: "Export…", icon: <AetherIcon name="export" /> },
-    { id: "window:create-version", label: "Create version…", icon: <AetherIcon name="version-create" />, separatorBefore: true, disabled: !documentConnection },
-    { id: "window:notes", label: "Document notes", icon: <AetherIcon name="notes" /> },
-    { id: "window:reminders", label: "Reminders", icon: <AetherIcon name="stopwatch" /> },
-    { id: "window:tasks", label: "Action items", icon: <AetherIcon name="tasks" /> },
-    { id: "window:plugins", label: "Plugins…", icon: <CADPluginsIcon /> },
+    // Versions, notes, reminders and action items are Studio services: listed only inside Studio.
+    ...(studioHosted ? [
+      { id: "window:create-version", label: "Create version…", icon: <AetherIcon name="version-create" />, separatorBefore: true },
+      { id: "window:notes", label: "Document notes", icon: <AetherIcon name="notes" /> },
+      { id: "window:reminders", label: "Reminders", icon: <AetherIcon name="stopwatch" /> },
+      { id: "window:tasks", label: "Action items", icon: <AetherIcon name="tasks" /> },
+    ] : []),
+    { id: "window:plugins", label: "Plugins…", icon: <CADPluginsIcon />, separatorBefore: !studioHosted },
     { id: "window:layout", label: "Panel layout…", icon: <AetherIcon name="layout" /> },
   ];
   const runCenterTray = (id: string) => {
@@ -466,6 +471,8 @@ export function AetherCADShell() {
           tree={{ title: "Features and parts", icon: <AetherIcon name="features-parts" />, content: <ItemsPanel active onShowAppearance={() => requestCADPropertyPanel("visualization")} /> }}
           advisor={<AdvisorPanel connection={documentConnection} />}
           connection={documentConnection ?? undefined}
+          // Comments, versions and Files are Studio services; outside Studio their icons stay, greyed out with the reason.
+          unavailable={studioHosted ? undefined : { comments: "Comments need Aether Studio. Connect to Studio to discuss this design.", versions: "Versions need Aether Studio. Feature history is on the History button below.", files: "Files need Aether Studio. Connect to Studio to browse this design's files and Drive." }}
           history={<CADHistoryPanel key={documentConnection?.key ?? presentation.documentName}/>} historyTabStorageKey="aether-cad.history-tab"
           files={{ local: { label: "This design", icon: <AetherIcon name="cube" />, content: documentConnection ? <CADDocumentTabs connection={documentConnection} variant="browser"/> : null },
             drive: documentConnection ? <CADDrive documentID={documentID} connection={documentConnection}/> : null }}

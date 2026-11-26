@@ -24,6 +24,8 @@ beforeEach(async () => {
     if(action.type==='show-start-dialog') cadPresentation.patch({startDialog:action.dialog});
     if(action.type==='close-start-dialog') cadPresentation.patch({startDialog:null});
   });
+  // These panels are Studio services; the shell runs as it does on a Studio host.
+  if(!document.querySelector('meta[name="aether-runtime"]')){const meta=document.createElement('meta');meta.name='aether-runtime';meta.content='studio';document.head.append(meta);}
   container=document.createElement('div');document.body.append(container);
   const {createRoot}=await import('react-dom/client'); root=createRoot(container);
   await act(async()=>root.render(<Shell/>));
@@ -105,6 +107,17 @@ it('ribbon category changes preserve the chosen left view and right appearance i
   expect(isVisible(container.querySelector('[data-panel="configurations"]'))).toBe(true);
 });
 
+it('outside Studio, Comments, Version control and Files stay as greyed icons with the reason, never empty panels', async()=>{
+  document.querySelector('meta[name="aether-runtime"]').remove();
+  await act(async()=>root.unmount()); const {createRoot}=await import('react-dom/client'); root=createRoot(container);
+  await act(async()=>root.render(<Shell/>));
+  for (const label of ['Comments','Version control','Files']) {
+    // The shared tray names the reason in the icon's label: "Comments (Comments need Aether Studio…)".
+    const button=[...container.querySelectorAll('.aui-studio-aux-toolbar button, .aui-tabbed-sidebar-tabs button')].find(b=>b.getAttribute('aria-label')?.startsWith(`${label} (`));
+    expect(button, label).toBeTruthy(); expect(button.disabled, label).toBe(true);
+    expect(button.getAttribute('aria-label'), label).toMatch(/Aether Studio/);
+  }
+});
 it('right-click on a feature row offers its real controls without generic or placeholder commands', async () => {
   const { cadWorkspace } = await import('../cad-workspace-store');
   await act(async () => cadWorkspace.publish({

@@ -48,11 +48,12 @@ describe("CADTraditionalRibbon", () => {
     // The Fusion layout is a presentation of the same catalog, not a second
     // taxonomy. It used to invent Solid/Surface/Mesh/Sheet Metal/Plastic and
     // named 69 of 205 tools, with no View tab at all.
-    for (const label of ["Solid", "Surface", "Mesh", "Sheet Metal", "Framing", "Plastic", "Manage", "Output"])
+    for (const label of ["Solid", "Surface", "Mesh", "Sheet Metal", "Plastic", "Manage", "Output"])
       expect(html).toContain(`aria-label="${label}"`);
     // One Sketch tab, and it is the contextual one: a permanent tab of tools
     // that only apply inside a sketch put two "Sketch" tabs on the ribbon.
     expect(html).not.toContain('aria-label="Sketch"');
+    expect(html).not.toContain('aria-label="Framing"'); // no framing tool is built yet
     // View is not a modelling tab; it is the viewport's right-hand rail.
     expect(html).not.toContain('aria-label="View"');
     // A Part is not an Assembly; those tabs are excluded by the layout, not
@@ -80,7 +81,7 @@ describe("CADTraditionalRibbon", () => {
   it("keeps Create and Modify on every design tab and the shared sections on Solid alone", () => {
     const solid = renderToStaticMarkup(<CADTraditionalRibbon documentType="part" activeWorkspace="solid" partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()} />);
     for (const category of ["Create", "Modify", "Construct", "Inspect", "Insert", "Select"]) expect(solid, `solid/${category}`).toContain(`aria-label="${category} tools"`);
-    for (const activeWorkspace of ["surface", "mesh", "sheet-metal", "framing", "plastic"] as const) {
+    for (const activeWorkspace of ["surface", "mesh", "sheet-metal", "plastic"] as const) {
       const html = renderToStaticMarkup(<CADTraditionalRibbon documentType="part"
         activeWorkspace={activeWorkspace} partOpen onSelectWorkspace={vi.fn()} onAction={vi.fn()} />);
       for (const category of ["Create", "Modify"]) expect(html, `${activeWorkspace}/${category}`).toContain(`aria-label="${category} tools"`);

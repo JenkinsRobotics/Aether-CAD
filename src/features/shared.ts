@@ -81,9 +81,11 @@ export function unitSuffix(text: string): HTMLElement {
   return unit;
 }
 
-/** A control the gallery shows live but this engine cannot honour yet. Visible
- *  and disabled beats quietly absent: the shape of the feature stays legible. */
-export function planned<T extends HTMLElement>(control: T, reason = "Planned — not functional yet."): T {
+/** A control this engine cannot honour yet. Release builds ship no placeholders
+ *  (Jonathan, 2026-11-26), so it is hidden as well as disabled; `reason` stays
+ *  on the element as the recorded gap. */
+export function planned<T extends HTMLElement>(control: T, reason = "Not available in this kernel."): T {
+  control.hidden = true;
   (control as unknown as { disabled: boolean }).disabled = true;
   control.title = reason;
   control.setAttribute("aria-disabled", "true");

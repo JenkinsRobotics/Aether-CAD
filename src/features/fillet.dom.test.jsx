@@ -31,18 +31,19 @@ it("Fillet carries Onshape's Edge controls in order, names each kernel gap, and 
   const win = document.querySelector('.cad-feature-dialog');
   expect([...win.querySelectorAll('.aui-feature-tabs button, [role="tablist"] button')].map((b) => b.textContent.trim())).toEqual(['Edge', 'Full round']);
   const seen = captions(win).join(' | ');
-  for (const expected of ['Entities to fillet', 'Tangent propagation', 'Measurement', 'Control', 'Radius', 'Asymmetric', 'Partial fillet', 'Variable fillet', 'Allow edge overflow', 'Smooth fillet corners']) expect(seen).toContain(expected);
+  for (const expected of ['Entities to fillet', 'Tangent propagation', 'Measurement', 'Radius', 'Variable fillet']) expect(seen).toContain(expected);
+  // Unbuilt options are not shown (no placeholders, 2026-11-26).
+  for (const gap of ['Control', 'Asymmetric', 'Partial fillet', 'Allow edge overflow', 'Smooth fillet corners']) expect(seen).not.toContain(gap);
   expect(seen).not.toContain('Target body');
   // The Entities box takes the picks on the Edge tab, not the Full round face boxes mounted after it.
   expect(win.querySelector('.aui-feature-entities[aria-label^="Entities to fillet"]').dataset.picking).toBe('true');
   expect(win.querySelector('.aui-feature-entities[aria-label^="Side face"]').dataset.picking).toBe('false');
   const index = (label) => captions(win).findIndex((c) => c.startsWith(label));
-  expect(index('Measurement')).toBeLessThan(index('Control')); expect(index('Control')).toBeLessThan(index('Radius'));
-  expect(index('Asymmetric')).toBeLessThan(index('Partial fillet')); expect(index('Variable fillet')).toBeLessThan(index('Allow edge overflow'));
-  // Gaps are present, disabled and explained; nothing is silently inert.
+  expect(index('Measurement')).toBeLessThan(index('Radius')); expect(index('Radius')).toBeLessThan(index('Variable fillet'));
+  // Gaps are recorded (disabled, explained) and hidden: release builds show no placeholders.
   const gaps = [...win.querySelectorAll('[aria-disabled="true"]')];
   expect(gaps.length).toBeGreaterThanOrEqual(5);
-  for (const gap of gaps) expect(gap.title).toMatch(/kernel/);
+  for (const gap of gaps) { expect(gap.title).toMatch(/kernel/); expect(gap.hidden).toBe(true); }
   // Choosing Conic refuses with the gap named, never a silent circular fillet.
   const control = win.querySelector('select[aria-label="Control"]');
   control.value = 'conic'; control.dispatchEvent(new Event('change'));

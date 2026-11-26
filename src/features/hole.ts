@@ -132,7 +132,7 @@ export const holeEditor: FeatureEditor = {
     controls.mergeScope.addEventListener("change", () => { const id = JSON.parse(controls.mergeScope.value || "[]")[0]; if (id) { controls.target.value = id; controls.target.dispatchEvent(new Event("change")); } });
 
     // Hole type and its standard, size, fit and class.
-    picker("Hole type", controls.holeType, { Drilled: "drilled", Clearance: "clearance", Tapped: "tapped", "PEM®": "pem" }, "Hole type menu", () => { familyChanged(); });
+    picker("Hole type", controls.holeType, { Drilled: "drilled", Clearance: "clearance", Tapped: "tapped" }, "Hole type menu", () => { familyChanged(); });
     const tapRow = picker("Tap type", controls.tapType, { "Straight tap": "straight", "Straight pipe tap": "straight-pipe", "Tapered pipe tap": "tapered-pipe" }, "Tap type menu");
     const standardRow = row("Standard", controls.profile);
     const sizeRow = row("Size", controls.size);

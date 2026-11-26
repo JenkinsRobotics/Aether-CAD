@@ -68,10 +68,10 @@ describe("Sketch feature", () => {
     const panel = document.querySelector(".cad-sketch-window");
     expect(panel, "sketch feature window did not open").toBeTruthy();
 
-    // Gallery: an "Sketch plane" entities box, then exactly four display rows.
+    // Gallery: an "Sketch plane" entities box, then exactly three display rows.
     expect(panel.textContent).toContain("Sketch plane");
+    expect(panel.querySelector('[aria-label="Disable imprinting"]'), "imprinting is not built: no placeholder row").toBeNull();
     for (const label of [
-      "Disable imprinting",
       "Show constraints",
       "Show expressions",
       "Show errors",

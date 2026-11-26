@@ -20,14 +20,16 @@ afterEach(async () => {
 });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });
 const captions = (win) => [...win.querySelectorAll('.aui-feature-entities, .aui-feature-row, [class*="subsection"]')].filter((el) => !el.closest('[hidden]')).map((el) => el.firstElementChild?.textContent?.trim() ?? '');
-const tabs = (win) => [...win.querySelectorAll('.aui-feature-tabs, [role="tablist"]')].map((row) => [...row.querySelectorAll('button')].map((b) => b.textContent.trim()));
+const tabs = (win) => [...win.querySelectorAll('.aui-feature-tabs, [role="tablist"]')].map((row) => [...row.querySelectorAll('button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()));
 
 it("Pattern shows Linear's Direction, Distance, Instance count, Centered and Second direction, then Circular's Axis, Angle and Equal spacing", async () => {
   cadCommands.execute('feature-pattern');
   const win = document.querySelector('.cad-feature-dialog');
-  expect(tabs(win)).toEqual([['Linear', 'Circular', 'Curve'], ['Part', 'Feature', 'Face'], ['New', 'Add', 'Remove', 'Intersect']]);
+  // Face patterns and feature-pattern results other than New are not built, so they are not shown.
+  expect(tabs(win)).toEqual([['Linear', 'Circular', 'Curve'], ['Part', 'Feature'], ['New']]);
   let seen = captions(win).join(' | ');
-  for (const label of ['Entities to pattern', 'Direction', 'Distance', 'Instance count', 'Centered', 'Second direction', 'Skip instances', 'Reapply features', 'Merge scope']) expect(seen).toContain(label);
+  for (const label of ['Entities to pattern', 'Direction', 'Distance', 'Instance count', 'Centered', 'Second direction', 'Skip instances', 'Merge scope']) expect(seen).toContain(label);
+  expect(seen).not.toContain('Reapply features');
   expect(seen).not.toContain('Target body');
   const gaps = [...win.querySelectorAll('[aria-disabled="true"]')].map((el) => el.textContent.trim());
   expect(gaps).toEqual(expect.arrayContaining(['Face', 'Add', 'Remove', 'Intersect']));

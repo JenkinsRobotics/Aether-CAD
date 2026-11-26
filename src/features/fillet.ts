@@ -60,10 +60,7 @@ export const filletEditor: FeatureEditor = {
     measurement.setValue(controls.measurement.value === "width" ? "Width" : "Radius");
     edge.append(rowIn("Measurement", measurement.element));
     hide(controls.control);
-    const controlModes = { Distance: "distance", Conic: "conic", Curvature: "curvature" } as const;
-    const control = win.picker(Object.keys(controlModes), { ariaLabel: "Control menu", onChange: (value) => { controls.control.value = controlModes[value as keyof typeof controlModes]; sync(); controls.control.dispatchEvent(new Event("change")); } });
-    control.setValue("Distance");
-    edge.append(rowIn("Control", control.element));
+    // Distance is the only control this kernel builds (circularOnly); release builds show no Control row.
     const size = row("Radius", controls.radius);
     edge.append(size);
     const rho = gapInput("Rho", circularOnly), magnitude = gapInput("Magnitude", circularOnly);

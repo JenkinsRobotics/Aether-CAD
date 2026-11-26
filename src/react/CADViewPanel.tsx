@@ -74,9 +74,6 @@ export function CADViewPanel({ active }: { active: boolean }) {
                 >
                   <AetherIcon name="cube" />
                 </IconButton>
-                <Button disabled title="Named views require saved camera bookmarks.">
-                  Named views
-                </Button>
               </div>
             </FieldRow>
             <p className="cad-form-note">
