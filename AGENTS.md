@@ -23,7 +23,7 @@ Report any remaining gaps in dimensional or constraint coverage explicitly.
 
 ## Independent app releases — Jonathan, 2026-10-24
 
-This repository is the authoritative source for this app. Develop on `alpha-0.1`.
+This repository is the authoritative source for this app. Develop on `alpha-0.2` (0.1.0 is released; `aether-release.json` keeps `alpha-0.1` as the release line Studio checks).
 `aether-release.json` identifies its frontend and optional worker/player outputs.
 Build and verify here, commit the source locally, then stage an immutable
 `alpha-0.1.N` package through Studio's operator tooling. Studio serves the selected

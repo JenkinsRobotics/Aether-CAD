@@ -148,7 +148,7 @@ checkout.** Read `MIGRATION.md` before switching development to this folder.
 Use Node 22.12+, npm and Git LFS. For the current development branch:
 
 ```sh
-git clone --branch alpha-0.1 https://github.com/JenkinsRobotics/Aether-CAD.git
+git clone --branch alpha-0.2 https://github.com/JenkinsRobotics/Aether-CAD.git
 cd Aether-CAD
 git lfs install --local
 git lfs pull
@@ -157,6 +157,35 @@ npm --prefix aether-engine ci
 npm ci
 npm run build
 ```
+
+### Work with only this repository
+
+A clone of this repository is enough to build, test, run and package Aether CAD. No Aether Studio server and no
+sibling repository is needed (checked 2026-11-22 from a fresh clone: install, build, `npm test` and the macOS package).
+
+```sh
+npm test                               # unit tests
+npm --prefix aether-engine test        # engine tests
+python3 -m pip install pyinstaller==6.16.0
+python3 desktop/build-service.py       # the local CAD service the desktop app starts
+npm run desktop:start                  # the standalone app, from dist/ (run `npm run build` after source changes)
+npm run desktop:package -- --mac --arm64   # installer in build/installers; see desktop/README.md
+```
+
+The browser checks in `scripts/verify-*.mjs` need Playwright. They look for it in a sibling Studio checkout unless told
+otherwise; with only this repository:
+
+```sh
+npm install --no-save --ignore-scripts @playwright/test@1.65.0
+AETHER_PLAYWRIGHT_PACKAGE="$PWD/package.json" node scripts/verify-desktop.mjs
+```
+
+Electron downloads its program the first time `npm run desktop:start` runs (it needs the internet once). Start the app
+once, or run `node node_modules/electron/install.js`, before `verify-desktop.mjs` in a new clone.
+
+`npm run dev` proxies `/api` and `/icons` to a Studio server (`AETHER_DEV_SERVER`, default `https://localhost:8780`);
+without one, use `npm run desktop:start` or `npm run dev:test-window`. Scripts under `scripts/examples/collection/`
+that start an isolated host are Studio integration checks and need the Studio checkout.
 
 Shared Aether packages are versioned archives under `vendor/`, with lockfile
 integrity checks. Large assets archives use Git LFS; all six current packages are
