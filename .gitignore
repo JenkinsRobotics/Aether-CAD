@@ -26,3 +26,5 @@ engine-solidcraft/pkg-node/
 public/engine/solidcraft/*.wasm
 public/engine/solidcraft/*.js
 public/engine/solidcraft/*.d.ts
+# Kept local: over GitHub's 100 MB limit, private, or other checkouts (2026-11-26)
+/vendor/aether-assets-0.2.0-alpha.28.tgz
