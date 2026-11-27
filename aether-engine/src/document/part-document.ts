@@ -15,7 +15,11 @@ import {type ExtrusionFaceReference} from './extrusion-face-reference';
 import { validateDocumentTextExpressions } from "./text-expressions";
 import { resolveProfileDrawing } from "./profile-projection";
 import {evaluateDocumentVariables,type DocumentVariable} from "./variables";
-import {validatePlasticRules} from "./plastic-rules";
+import { validatePlasticRules } from "./plastic-rules";
+import { validateSheetMetalRules } from "./sheet-metal-rules";
+import { validateConfigurations } from "./configurations";
+import { validateConfigRules } from "./config-rules";
+import { validateDocumentNotes, type DocumentNote } from "./notes";
 import { validateSketchPresentation } from "./sketch-presentation";
 import { validateSolidFeature, type SolidFeature } from "./solid-features";
 export * from "./solid-features";
@@ -146,6 +150,10 @@ export interface PartDocument {
   configurations?: import("./configurations").ConfigurationTable;
   /** Plastic rules: moulding defaults (wall, draft, radius, clearance) by body. */
   plasticRules?: import("./plastic-rules").PlasticRulesTable;
+  /** Sheet metal rules: gauge thickness, bend radius, and K-factor presets by body. */
+  sheetMetalRules?: import("./sheet-metal-rules").SheetMetalRulesTable;
+  /** Persisted 3D viewport notes / PMI annotations attached to the Part. */
+  notes?: DocumentNote[];
 }
 
 export interface RectanglePartParameters {
@@ -340,6 +348,7 @@ export function validatePartDocument(
   validateImageCanvases(document.imageCanvases);
   validateTreeOrganization(document.organization);
   validatePlasticRules(document.plasticRules);
+  validateSheetMetalRules(document.sheetMetalRules);
   if (!document.documentId || typeof document.documentId !== "string") {
     throw new Error("Part documentId is required.");
   }
@@ -402,7 +411,7 @@ export function validatePartDocument(
       const outputs=feature.copyBodyIds?Object.values(feature.copyBodyIds):[];
       for(const id of outputs){if(bodies.has(id))throw Error('Copy outputs need new body identities.');bodies.add(id);}
     } else if (
-      (isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "shape-binder" || feature.type === "import-step" || feature.type === "import-cad") &&
+      (isSurfaceBodyMaker(feature) || feature.type === "extrude" || feature.type === "revolve" || feature.type === "sweep" || feature.type === "loft" || feature.type === "pipe" || feature.type === "coil" || feature.type === "boundary-fill" || feature.type === "bounding-solid" || feature.type === "primitive" || feature.type === "shape-binder" || feature.type === "frame-member" || feature.type === "frame-end-cap" || feature.type === "frame-gusset" || feature.type === "import-step" || feature.type === "import-cad") &&
       "operation" in feature && feature.operation === "new"
     ) {
       const id =
@@ -440,6 +449,11 @@ export function validatePartDocument(
     earlier.set(feature.id, feature.type);
   });
   validateDocumentTextExpressions(document.features, expressionVariables);
+  if (document.configurations !== undefined) {
+    validateConfigurations(document.configurations, document as PartDocument);
+    validateConfigRules(document.configurations.rules, document as PartDocument);
+  }
+  validateDocumentNotes(document.notes);
   // Hidden history is still saveable when a valid source reference is lost.
   // Runtime availability remains bounded by the actual rollback position.
   const referenceErrors = featureReferenceErrors({ ...document, rollbackIndex: undefined } as PartDocument);

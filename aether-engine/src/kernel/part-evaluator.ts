@@ -1,4 +1,4 @@
-import { sectionLoft } from "./features/section-loft";
+import { guidedSectionLoft, sectionLoft } from "./features/section-loft";
 import { curvedDraftPrism, hasCurvedDraftBoundary } from './extrusion-curved-draft';
 import { featureKeyJSON } from './history-key';
 import { extrusionProfileGroups } from './extrusion-profile-groups';
@@ -18,6 +18,12 @@ import { buildEdgeFinish, pickedEdgePoints } from "./features/edge-finish";
 import { buildFullRound } from "./features/full-round";
 import { applyBooleanFeature, offsetSolid } from "./features/boolean";
 import { applyPatternFeature } from "./features/pattern";
+import { buildModeledThreadCutter } from "./features/thread";
+import { applyEmbossFeature } from "./features/emboss";
+import { buildFrameEndCaps, buildFrameGusset, buildFrameMembers, trimFrameBody } from "./features/frame";
+import { buildPrimitiveShape } from "./features/primitive";
+import { buildSurfaceBlend, buildSurfaceFillet, buildSurfaceMatch, trimSurfaceByBody } from "./features/surface-advanced";
+import { resolveThreadGeometry } from "../document/thread";
 import { scopedRemoval } from './scoped-removal';
 import { sketchRegionGroups } from "../sketch/regions/groups";
 import { connectedSketchRegions, sketchFaceRegions } from "../sketch/reference/connected-sketch-regions";
@@ -47,6 +53,7 @@ import {
   makeFace,
   makeNonPlanarFace,
   makeLine,
+  makeThreePointArc,
   makeSphere,
   makePolygon,
   revolution,
@@ -764,8 +771,8 @@ export function evaluatePartDocument(
         }
       }
       if (feature.suppressed || feature.type === "plane" || feature.type === "axis" || feature.type === "point" || feature.type === "curve3d") continue;
-      // A cosmetic thread changes nothing; one with a chamfer, undercut or split face is built below.
-      if (feature.type === "thread" && !feature.chamfer && !feature.undercut && !feature.splitFace) continue;
+      // A cosmetic thread changes nothing; one with a chamfer, undercut, split face or modelled geometry is built below.
+      if (feature.type === "thread" && !feature.chamfer && !feature.undercut && !feature.splitFace && !feature.modeled) continue;
       try {
         if (feature.type === "sketch") {
           const state = rectangleSketchRevision(feature);
@@ -795,10 +802,14 @@ export function evaluatePartDocument(
           return Math.hypot(center[0] - anchor.centerMillimeters[0], center[1] - anchor.centerMillimeters[1], center[2] - anchor.centerMillimeters[2]) <= 1e-6
             && Math.abs(measureArea(face) - anchor.areaSquareMillimeters) <= Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9);
         };
-        const uniqueFace = (body: Shape3D, matches: (face: Face) => boolean, label: string, hasAnchor: boolean, fallback?: (face: Face) => boolean): Face => {
+        const uniqueFace = (body: Shape3D, matches: (face: Face) => boolean, label: string, hasAnchor: boolean, ...fallbacks: (((face: Face) => boolean) | undefined)[]): Face => {
           const faces = facesOf(body).map(({ face }) => face);
           let found = faces.filter(matches);
-          if (!found.length && fallback) found = faces.filter(fallback);
+          for (const fallback of fallbacks) {
+            if (found.length || !fallback) continue;
+            const candidate = faces.filter(fallback);
+            if (candidate.length === 1) found = candidate;
+          }
           const selected = found.length === 1 ? found[0] : undefined;
           faces.forEach((face) => { if (face !== selected) face.delete(); });
           if (!selected) throw new Error(`${label} ${hasAnchor ? "changed or is ambiguous" : "is missing or ambiguous"}. Reselect the face on the earlier geometry.`);
@@ -812,8 +823,8 @@ export function evaluatePartDocument(
             return outward[0] * normal[0] + outward[1] * normal[1] + outward[2] * normal[2] > 1 - 1e-7;
           };
           // An upstream depth edit can move a sketch's supporting face along its
-          // normal. Follow only a unique face with the same area and in-plane
-          // centroid; lateral changes or multiple matches require reselection.
+          // normal. Follow a unique face with the same area and in-plane centroid,
+          // or (when a resize changed its area/centroid) a unique face with the exact same normal.
           const translated = followNormalTranslation && anchor ? (face: Face) => {
             if (!aligned(face) || Math.abs(measureArea(face) - anchor.areaSquareMillimeters) > Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9)) return false;
             const center = deleteAfterVectorTuple(face.center);
@@ -821,7 +832,8 @@ export function evaluatePartDocument(
             const along = delta[0] * normal[0] + delta[1] * normal[1] + delta[2] * normal[2];
             return norm(sub(delta, scale(normal, along))) <= 1e-6;
           } : undefined;
-          return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated);
+          const uniqueAligned = anchor ? aligned : undefined;
+          return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated, uniqueAligned);
         };
         const surfaceKinds: Record<string, string[]> = { cylinder: ["CYLINDRE", "CYLINDER"], cone: ["CONE"], sphere: ["SPHERE"], torus: ["TORUS"], bspline: ["BSPLINE_SURFACE"], bezier: ["BEZIER_SURFACE"], extrusion: ["EXTRUSION_SURFACE"], revolution: ["REVOLUTION_SURFACE"] };
         const surfaceFaceOf = (body: Shape3D, surfaceType: string, anchor: { centerMillimeters: number[]; areaSquareMillimeters: number } | undefined, label: string): Face => {
@@ -954,7 +966,12 @@ export function evaluatePartDocument(
           if (curve3d && curve3d.type === "curve3d") {
             if (curve3d.kind === "point") throw new Error(`${label}: a 3D point is not a path.`);
             const pts = curve3d.pointsMillimeters;
-            const edges = curve3d.kind === "line" ? pts.slice(1).map((p, i) => own(makeLine3D(pts[i], p))) : [own(approximateBSpline(pts, { tolerance: 1e-4 }))];
+            const edges =
+              curve3d.kind === "line"
+                ? pts.slice(1).map((p, i) => own(makeLine3D(pts[i], p)))
+                : curve3d.kind === "arc"
+                  ? [own(makeThreePointArc(pts[0], pts[1], pts[2]))]
+                  : [own(approximateBSpline(pts, { tolerance: 1e-4 }))];
             return own(assembleWire(edges));
           }
           const sketchProfile = profiles.get(sourceId);
@@ -1224,8 +1241,195 @@ export function evaluatePartDocument(
               result = own(sewn as Shape3D);
             } finally { progress.delete(); sewing.delete(); }
           }
+          if (feature.modeled) {
+            const { pitchMillimeters } = resolveThreadGeometry(feature);
+            // Determine external vs internal cylinder by probing outward normal at cylinder midpoint.
+            const midFace = faceByReference(result, feature.face, "Thread face");
+            let isExternal = true;
+            try {
+              const pMid = deleteAfterVectorTuple(midFace.pointOnSurface(0.5, 0.5)) as V3;
+              const nMid = deleteAfterVectorTuple(midFace.normalAt(pMid)) as V3;
+              const radial = sub(pMid, add(q.at, scale(q.along, dot(sub(pMid, q.at), q.along))));
+              isExternal = dot(nMid, radial) >= 0;
+            } finally {
+              midFace.delete();
+            }
+            const cutter = buildModeledThreadCutter(
+              {
+                startCenter: start.centre,
+                inwardDirection: inward,
+                faceRadius: start.radius,
+                isExternal,
+                pitchMillimeters,
+                lengthMillimeters: length,
+                leftHand: Boolean(feature.leftHand),
+                starts: feature.starts ?? 1,
+                form: feature.form ?? "v60",
+              },
+              own,
+            );
+            const threaded = result.cut(cutter);
+            if (!isShape3D(threaded) || measureVolume(threaded) >= measureVolume(result) - 1e-9) {
+              throw new Error("The modelled thread removed no material. Check cylinder size and pitch.");
+            }
+            result = own(threaded);
+          }
           bodies.set(id, result);
           currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "emboss") {
+          const id = feature.targetBodyId ?? feature.face.bodyId, body = bodies.get(id);
+          if (!body) throw new Error("The emboss target body is unavailable. Reselect the face.");
+          const wire = sketchWire(feature.profileFeatureId, feature.profileContourId, "Emboss", false);
+          const skFrame = sketchFrameOf(feature.profileFeatureId);
+          const face = faceByReference(body, feature.face, "Emboss face");
+          let cyl: { at: V3; along: V3; radius: number } | undefined;
+          try {
+            if (face.geomType !== "PLANE") {
+              const q = quadricOf(face, [...deleteAfterVectorTuple(face.pointOnSurface(0.5, 0.5))] as V3);
+              if (q.kind !== "CYLINDER") throw new Error("Emboss currently supports planar and cylindrical faces.");
+              cyl = { at: q.at, along: q.along, radius: q.r };
+            }
+            const embossed = applyEmbossFeature(feature, {
+              body,
+              face,
+              wire,
+              wirePlaneNormal: unit(skFrame.normal as V3),
+              wirePlaneOrigin: skFrame.originMillimeters as V3,
+              cylinder: cyl,
+              own,
+            });
+            bodies.set(id, embossed);
+            currentBodyID = id;
+          } finally {
+            face.delete();
+          }
+          continue;
+        }
+        if (feature.type === "frame-member") {
+          const resolveSegments = (member: import("../document/frame").FrameMemberFeature): [V3, V3][] => {
+            if (member.segmentsMillimeters?.length) return member.segmentsMillimeters;
+            const pathFeat = history.find((f) => f.id === member.pathFeatureId && !f.suppressed);
+            if (!pathFeat) throw new Error("Frame path feature is unavailable.");
+            if (pathFeat.type === "curve3d") {
+              const pts = pathFeat.pointsMillimeters;
+              return pts.slice(1).map((p, i) => [pts[i], p] as [V3, V3]);
+            }
+            const skFrame = sketchFrameOf(pathFeat.id);
+            const xDir = unit(skFrame.xDirection as V3);
+            const nDir = unit(skFrame.normal as V3);
+            const yDir = unit(cross(nDir, xDir));
+            const toWorld = (p: [number, number]): V3 => [
+              skFrame.originMillimeters[0] + xDir[0] * p[0] + yDir[0] * p[1],
+              skFrame.originMillimeters[1] + xDir[1] * p[0] + yDir[1] * p[1],
+              skFrame.originMillimeters[2] + xDir[2] * p[0] + yDir[2] * p[1],
+            ];
+            const drawing = pathFeat.type === "profile" ? resolveProfileDrawing(history.slice(0, index + 1), pathFeat.id) : undefined;
+            if (!drawing) throw new Error("Frame member path requires a sketch drawing or 3D line curve.");
+            const segs: [V3, V3][] = [];
+            for (const c of drawing.contours) {
+              if (c.type !== "path" || c.construction) continue;
+              let prev = c.start;
+              for (const s of c.segments) {
+                if (s.type === "line") segs.push([toWorld(prev), toWorld(s.end)]);
+                prev = s.end;
+              }
+            }
+            return segs;
+          };
+          const segs = resolveSegments(feature);
+          const built = buildFrameMembers(feature, segs, own);
+          const bodyId = bodyIDForFeature(document, feature);
+          bodies.set(bodyId, built);
+          currentBodyID = bodyId;
+          continue;
+        }
+        if (feature.type === "frame-end-cap") {
+          const member = history.find((f) => f.id === feature.frameFeatureId && f.type === "frame-member" && !f.suppressed);
+          if (!member || member.type !== "frame-member") throw new Error("Frame end cap requires an unsuppressed frame member.");
+          let segs: [V3, V3][] = member.segmentsMillimeters ?? [];
+          if (!segs.length && member.pathFeatureId) {
+            const pathFeat = history.find((f) => f.id === member.pathFeatureId && !f.suppressed);
+            if (pathFeat?.type === "curve3d") segs = pathFeat.pointsMillimeters.slice(1).map((p, i) => [pathFeat.pointsMillimeters[i], p]);
+            else if (pathFeat?.type === "profile") {
+              const skFrame = sketchFrameOf(pathFeat.id);
+              const xDir = unit(skFrame.xDirection as V3), nDir = unit(skFrame.normal as V3), yDir = unit(cross(nDir, xDir));
+              const toWorld = (p: [number, number]): V3 => [
+                skFrame.originMillimeters[0] + xDir[0] * p[0] + yDir[0] * p[1],
+                skFrame.originMillimeters[1] + xDir[1] * p[0] + yDir[1] * p[1],
+                skFrame.originMillimeters[2] + xDir[2] * p[0] + yDir[2] * p[1],
+              ];
+              const drawing = resolveProfileDrawing(history.slice(0, index + 1), pathFeat.id);
+              for (const c of drawing?.contours ?? []) {
+                if (c.type !== "path" || c.construction) continue;
+                let prev = c.start;
+                for (const s of c.segments) { if (s.type === "line") segs.push([toWorld(prev), toWorld(s.end)]); prev = s.end; }
+              }
+            }
+          }
+          const caps = buildFrameEndCaps(feature, member, segs, own);
+          if (feature.operation === "add") {
+            const targetId = feature.targetBodyId ?? bodyIDForFeature(document, member);
+            const target = bodies.get(targetId);
+            if (!target) throw new Error("Frame end cap target body is unavailable.");
+            const fused = target.fuse(caps);
+            bodies.set(targetId, isShape3D(fused) ? own(fused) : target);
+            currentBodyID = targetId;
+          } else {
+            const bodyId = bodyIDForFeature(document, feature);
+            bodies.set(bodyId, caps);
+            currentBodyID = bodyId;
+          }
+          continue;
+        }
+        if (feature.type === "frame-trim") {
+          const planeObj = feature.plane
+            ? (() => {
+                const p = mirrorPlaneOf(feature.plane);
+                return { origin: [p.origin.x, p.origin.y, p.origin.z] as V3, normal: [p.zDir.x, p.zDir.y, p.zDir.z] as V3 };
+              })()
+            : undefined;
+          const explicitTool = feature.toolBodyId ? bodies.get(feature.toolBodyId) : undefined;
+          if (feature.toolBodyId && !explicitTool) throw new Error("Frame trim tool body is unavailable.");
+          const snapshots = new Map<string, Shape3D>();
+          for (const id of feature.targetBodyIds) {
+            const b = bodies.get(id);
+            if (!b) throw new Error(`Frame trim target body "${id}" is unavailable.`);
+            snapshots.set(id, b);
+          }
+          for (let ti = 0; ti < feature.targetBodyIds.length; ti++) {
+            const id = feature.targetBodyIds[ti];
+            const target = snapshots.get(id)!;
+            const toolBody = explicitTool ?? (feature.mode === "miter" && feature.targetBodyIds.length >= 2 ? snapshots.get(feature.targetBodyIds[(ti + 1) % feature.targetBodyIds.length]) : undefined);
+            const trimmed = trimFrameBody(target, {
+              mode: feature.mode,
+              toolBody,
+              plane: planeObj,
+              keepPoint: feature.keepPointMillimeters as V3 | undefined,
+              weldGapMillimeters: feature.weldGapMillimeters,
+              solidsOf,
+              own,
+            });
+            bodies.set(id, trimmed);
+            currentBodyID = id;
+          }
+          continue;
+        }
+        if (feature.type === "frame-gusset") {
+          const gusset = buildFrameGusset(feature, own);
+          if (feature.operation === "add") {
+            const targetId = feature.targetBodyId ?? currentBodyID;
+            const target = targetId ? bodies.get(targetId) : undefined;
+            if (!target || !targetId) throw new Error("Frame gusset Add requires an available target body.");
+            const fused = target.fuse(gusset);
+            bodies.set(targetId, isShape3D(fused) ? own(fused) : target);
+            currentBodyID = targetId;
+          } else {
+            const bodyId = bodyIDForFeature(document, feature);
+            bodies.set(bodyId, gusset);
+            currentBodyID = bodyId;
+          }
           continue;
         }
         if (feature.type === "rib") {
@@ -1445,6 +1649,31 @@ export function evaluatePartDocument(
           if (feature.type === "boss") {
             const r = feature.diameterMillimeters / 2;
             tool = frustum(r, taper(r), height);
+            if (feature.ribs) {
+              const yDir = unit(cross(outward, xDir));
+              const ribH = feature.ribs.heightMillimeters ?? height * 0.75;
+              const ribLen = feature.ribs.lengthMillimeters;
+              const ribT = feature.ribs.thicknessMillimeters;
+              const o = getOC();
+              for (let k = 0; k < feature.ribs.count; k++) {
+                const ang = (k * 2 * Math.PI) / feature.ribs.count;
+                const radDir = add(scale(xDir, Math.cos(ang)), scale(yDir, Math.sin(ang)));
+                const tanDir = add(scale(xDir, -Math.sin(ang)), scale(yDir, Math.cos(ang)));
+                const p0 = add(add(base, scale(radDir, r * 0.6)), scale(tanDir, -ribT / 2));
+                const p1 = add(add(base, scale(radDir, r + ribLen)), scale(tanDir, -ribT / 2));
+                const p2 = add(add(add(base, scale(radDir, r * 0.6)), scale(outward, ribH)), scale(tanDir, -ribT / 2));
+                const rw = own(assembleWire([own(makeLine(p0, p1)), own(makeLine(p1, p2)), own(makeLine(p2, p0))]));
+                const rf = own(makeFace(rw));
+                const vec = new o.gp_Vec_4(tanDir[0] * ribT, tanDir[1] * ribT, tanDir[2] * ribT);
+                try {
+                  const ribSolid = cast(new o.BRepPrimAPI_MakePrism_1(rf.wrapped, vec, false, true).Shape());
+                  if (isShape3D(ribSolid)) {
+                    const fused = tool.fuse(own(ribSolid));
+                    if (isShape3D(fused)) tool = own(fused);
+                  }
+                } finally { vec.delete(); }
+              }
+            }
             if (feature.holeDiameterMillimeters !== undefined && feature.holeDepthMillimeters !== undefined) {
               const topPoint = add(base, scale(outward, height));
               const bore = own(makeCylinder(feature.holeDiameterMillimeters / 2, feature.holeDepthMillimeters + 1e-3, add(topPoint, scale(outward, 1e-3)), [-outward[0], -outward[1], -outward[2]] as V3));
@@ -1453,6 +1682,14 @@ export function evaluatePartDocument(
           } else if (feature.lengthMillimeters === undefined) {
             const r = feature.widthMillimeters / 2;
             tool = frustum(r, taper(r), height);
+            if (feature.wallThicknessMillimeters !== undefined) {
+              const innerR = r - feature.wallThicknessMillimeters;
+              const pocketH = Math.max(0.2, height - feature.wallThicknessMillimeters);
+              const topPoint = add(base, scale(outward, height + 1e-3));
+              const core = own(makeCylinder(innerR, pocketH + 1e-3, topPoint, [-outward[0], -outward[1], -outward[2]] as V3));
+              const hollowed = tool.cut(core);
+              if (isShape3D(hollowed)) tool = own(hollowed);
+            }
           } else {
             // A rectangular pad: lofted between its base and (drafted) top rectangle.
             const along = feature.alongMillimeters ? unit(feature.alongMillimeters) : xDir;
@@ -1466,6 +1703,17 @@ export function evaluatePartDocument(
             const lofted = loft([rect(feature.widthMillimeters, feature.lengthMillimeters, base), rect(topW, topL, add(base, scale(outward, height)))], { ruled: true });
             if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("The rest is not a valid solid.");
             tool = own(lofted);
+            if (feature.wallThicknessMillimeters !== undefined) {
+              const wt = feature.wallThicknessMillimeters;
+              const floorZ = Math.min(wt, height * 0.4);
+              const innerW = Math.max(0.2, topW - 2 * wt);
+              const innerL = Math.max(0.2, topL - 2 * wt);
+              const core = loft([rect(innerW, innerL, add(base, scale(outward, floorZ))), rect(innerW, innerL, add(base, scale(outward, height + 1e-2)))], { ruled: true });
+              if (isShape3D(core)) {
+                const hollowed = tool.cut(own(core));
+                if (isShape3D(hollowed)) tool = own(hollowed);
+              }
+            }
           }
           const before = measureVolume(body);
           const joined = body.fuse(tool);
@@ -1508,10 +1756,12 @@ export function evaluatePartDocument(
             const raw = feature.hookDirectionMillimeters as V3, hook = unit(sub(raw, scale(n, dot(raw, n))));
             if (norm(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
             const across = unit(cross(n, hook));
-            const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature;
+            const { lengthMillimeters: L, thicknessMillimeters: t, widthMillimeters: w, catchDepthMillimeters: cd, catchLengthMillimeters: cl, baseHeightMillimeters: bh } = feature;
             const at = (x: number, y: number): V3 => add(add(add(base, scale(hook, x)), scale(n, y)), scale(across, -w / 2));
-            // Side profile: the arm, then a ledge out to the catch depth and a ramp back to the tip.
-            const pts = [at(0, 0), at(t, 0), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L)];
+            // Side profile: optional thickened base pedestal, cantilever arm, ledge out to catch depth, and ramp back to tip.
+            const pts = bh
+              ? [at(-t * 0.25, 0), at(t * 1.25, 0), at(t * 1.25, bh), at(t, bh), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L), at(0, bh), at(-t * 0.25, bh)]
+              : [at(0, 0), at(t, 0), at(t, L - cl), at(t + cd, L - cl), at(t, L), at(0, L)];
             const wire = own(assembleWire(pts.map((p, i) => own(makeLine(p, pts[(i + 1) % pts.length])))));
             tool = prism(own(makeFace(wire)), scale(across, w));
             publish(feature, { parameter: "length", kind: "linear", originMillimeters: add(base, scale(n, L)), direction: n, label: "Arm length" });
@@ -1603,10 +1853,19 @@ export function evaluatePartDocument(
           continue;
         }
         if (feature.type === "surface-trim") {
-          // Trim: the sheet's faces split by a large face on the plane; the pieces on the keep
+          // Trim: the sheet's faces split by a large face on the plane or by another body; the pieces on the keep
           // point's side stay, sewn back into one sheet.
           const id = feature.bodyIds[0], body = bodies.get(id);
           if (!body) throw new Error("Trim needs an available surface body.");
+          if (feature.toolBodyId) {
+            const toolBody = bodies.get(feature.toolBodyId);
+            if (!toolBody) throw new Error("Trim tool body is unavailable.");
+            const trimmed = trimSurfaceByBody(body, toolBody, feature.keepPointMillimeters as V3);
+            bodies.set(id, own(trimmed));
+            currentBodyID = id;
+            continue;
+          }
+          if (!feature.plane) throw new Error("Trim needs a trimming plane or a trimming body.");
           const o = getOC() as any, plane = mirrorPlaneOf(feature.plane);
           const origin: V3 = [plane.origin.x, plane.origin.y, plane.origin.z], normal: V3 = [plane.zDir.x, plane.zDir.y, plane.zDir.z];
           const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin));
@@ -2286,11 +2545,50 @@ export function evaluatePartDocument(
           }
           return own(assembleWire(order.map((i) => edges[i])));
         };
-        /** The sheet metal rule of a body: the base feature that made it carries it. */
-        const sheetRuleOf = (bodyId: string): { base: import("../document/sheet-metal").SheetBaseFeature; index: number } => {
-          const index = document.features.findIndex((f) => f.type === "sheet-base" && !f.suppressed && bodyIDForFeature(document, f) === bodyId);
-          if (index < 0) throw new Error("This body is not a sheet metal body. Start with a sheet metal base.");
-          return { base: document.features[index] as import("../document/sheet-metal").SheetBaseFeature, index };
+        /** Measure uniform plate thickness between a reference planar face and its nearest parallel opposite face. */
+        const measurePlateThickness = (body: Shape3D, refFace?: import("../document/solid-face-reference").SolidFaceReference): number => {
+          const allFaces = body.faces;
+          try {
+            const planes = allFaces.filter((f) => f.geomType === "PLANE");
+            if (planes.length < 2) throw new Error("Convert to sheet metal needs a thin plate solid with opposing planar faces.");
+            const baseFace = refFace
+              ? faceByReference(body, refFace, "Convert base face")
+              : planes.reduce((big, f) => (measureArea(f) > measureArea(big) ? f : big));
+            const c0 = deleteAfterVectorTuple(baseFace.center);
+            const n0 = unit([...deleteAfterVectorTuple(baseFace.normalAt([c0[0], c0[1], c0[2]]))] as V3);
+            let best = Infinity;
+            for (const f of planes) {
+              if (f.isSame(baseFace)) continue;
+              const cf = deleteAfterVectorTuple(f.center);
+              const nf = unit([...deleteAfterVectorTuple(f.normalAt([cf[0], cf[1], cf[2]]))] as V3);
+              if (dot(n0, nf) < -0.999) {
+                const gap = Math.abs(dot(sub(cf as V3, c0 as V3), n0));
+                if (gap > 1e-4 && gap < best) best = gap;
+              }
+            }
+            if (refFace) baseFace.delete();
+            if (!Number.isFinite(best)) throw new Error("Could not detect opposing parallel plate face; specify thicknessMillimeters explicitly.");
+            return best;
+          } finally {
+            allFaces.forEach((f) => f.delete());
+          }
+        };
+        /** The sheet metal rule of a body: carried by either `sheet-base` or `sheet-convert`. */
+        const sheetRuleOf = (bodyId: string): { base: SheetMetalRule & { id: string }; index: number } => {
+          for (let i = index - 1; i >= 0; i--) {
+            const f = document.features[i];
+            if (f.suppressed) continue;
+            if (f.type === "sheet-convert" && f.bodyIds[0] === bodyId) {
+              const b = bodyAt(f.id, bodyId) ?? bodies.get(bodyId);
+              const t = f.thicknessMillimeters ?? (b ? measurePlateThickness(b, f.baseFace) : undefined);
+              if (!t || !(t > 0)) throw new Error("Converted sheet body thickness could not be determined.");
+              return { base: { id: f.id, thicknessMillimeters: t, bendRadiusMillimeters: f.bendRadiusMillimeters, kFactor: f.kFactor }, index: i };
+            }
+            if (f.type === "sheet-base" && bodyIDForFeature(document, f) === bodyId) {
+              return { base: f, index: i };
+            }
+          }
+          throw new Error("This body is not a sheet metal body. Start with a sheet metal base or Convert to Sheet Metal.");
         };
         /** A bend from an edge of a plate: the cross-section in the plane square to the edge
          *  (u out of the plate, v along the big face's normal; the material fills v ∈ [-t, 0]),
@@ -2350,6 +2648,67 @@ export function evaluatePartDocument(
           }
           return result;
         };
+        if (feature.type === "sheet-convert") {
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Convert to sheet metal needs an available solid body.");
+          const measured = feature.thicknessMillimeters ?? measurePlateThickness(body, feature.baseFace);
+          if (!(measured > 0)) throw new Error("Convert to sheet metal needs a positive plate thickness.");
+          currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "sheet-path-flange") {
+          const id = feature.bodyIds[0], body = bodies.get(id);
+          if (!body) throw new Error("Contour flange needs an available sheet metal body.");
+          const { base } = sheetRuleOf(id);
+          const t = feature.thicknessMillimeters ?? base.thicknessMillimeters;
+          const prof = profiles.get(feature.profileFeatureId);
+          if (!prof) throw new Error("Contour flange needs an earlier profile sketch.");
+          const frame = sketchFrameOf(feature.profileFeatureId);
+          const n = unit(frame.normal as V3);
+          const contour = feature.profileContourId
+            ? prof.contours.find((c) => c.id === feature.profileContourId)
+            : prof.contours[0];
+          if (!contour) throw new Error("Contour flange sketch has no curve.");
+          const wire = sketchWire(feature.profileFeatureId, contour.id, "Contour flange", true);
+          const sectionFace = contourClosed(contour)
+            ? own(makeFace(wire))
+            : openWallFace(wire, n, feature.inward ? t : 0, feature.inward ? 0 : t, own).face;
+          let result = body;
+          if (feature.edges?.length) {
+            for (const edge of pickedEdgesOf(body, id, feature.edges, "Contour flange")) {
+              const s = deleteAfterVectorTuple(edge.startPoint) as V3;
+              const e = deleteAfterVectorTuple(edge.endPoint) as V3;
+              const delta = sub(e, s);
+              const sweepVec = new Vector(delta);
+              let piece: Shape3D;
+              try {
+                piece = own(basicFaceExtrusion(sectionFace, sweepVec));
+              } finally {
+                sweepVec.delete();
+              }
+              if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error("Contour flange produced no solid along the edge.");
+              const fused = result.fuse(piece);
+              if (!isShape3D(fused)) throw new Error("Contour flange did not join the sheet body.");
+              result = own(fused);
+            }
+          } else {
+            const w = feature.widthMillimeters ?? 10;
+            const sweepVec = new Vector(scale(n, w));
+            let piece: Shape3D;
+            try {
+              piece = own(basicFaceExtrusion(sectionFace, sweepVec));
+            } finally {
+              sweepVec.delete();
+            }
+            if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error("Contour flange produced no solid.");
+            const fused = result.fuse(piece);
+            if (!isShape3D(fused)) throw new Error("Contour flange did not join the sheet body.");
+            result = own(fused);
+          }
+          bodies.set(id, result);
+          currentBodyID = id;
+          continue;
+        }
         if (feature.type === "sheet-flange" || feature.type === "sheet-hem") {
           const id = feature.bodyIds[0], body = bodies.get(id);
           if (!body) throw new Error("The sheet metal body is unavailable.");
@@ -2468,18 +2827,78 @@ export function evaluatePartDocument(
           continue;
         }
         if (feature.type === "sheet-unfold") {
-          // Unfold: the plate as the base made it, plus each bend laid flat (leg + bend
-          // allowance) from the edge it was bent from. Bends on bends are not laid out yet.
+          // Unfold: the plate as the base/convert made it (which already holds the exact flat
+          // blank for any `sheet-fold` bends along sketch lines), plus each edge flange/hem laid
+          // flat (leg + bend allowance). Flanges added after a `sheet-fold` on its moving side are
+          // inverse-mapped back onto the flat plate before laying out.
           const id = feature.bodyIds[0];
           const { base, index: baseIndex } = sheetRuleOf(id);
           const plate = bodyAt(base.id, id);
           if (!plate) throw new Error("The sheet metal base is unavailable.");
           let flat: Shape3D = own(plate.clone());
+          type FoldInverse = { p: V3; tdir: V3; o: V3; ba: number; axisOrigin: V3; angleDeg: number };
+          const foldInverses: FoldInverse[] = [];
+          const rotateAround = (pt: V3, origin: V3, axis: V3, deg: number): V3 => {
+            const rad = deg * Math.PI / 180;
+            const c = Math.cos(rad), s = Math.sin(rad);
+            const v = sub(pt, origin);
+            const kDotV = dot(axis, v);
+            const kCrossV = cross(axis, v);
+            return add(origin, add(add(scale(v, c), scale(kCrossV, s)), scale(axis, kDotV * (1 - c))));
+          };
+          const unmapEdge = (edge: import("../document/solid-edge-reference").EdgeFinishEdge): import("../document/solid-edge-reference").EdgeFinishEdge => {
+            if (!foldInverses.length || edge.kind !== "solid-edge") return edge;
+            const unmapPt = (pt: V3): V3 => {
+              let cur = pt;
+              for (let fi = foldInverses.length - 1; fi >= 0; fi--) {
+                const inv = foldInverses[fi];
+                const unrot = rotateAround(cur, inv.axisOrigin, inv.tdir, -inv.angleDeg);
+                if (dot(sub(unrot, inv.p), inv.o) > -1e-4) {
+                  cur = add(unrot, scale(inv.o, inv.ba));
+                }
+              }
+              return cur;
+            };
+            const s = unmapPt(edge.anchor.start.positionMillimeters as V3);
+            const e = unmapPt(edge.anchor.end.positionMillimeters as V3);
+            return {
+              ...edge,
+              anchor: {
+                start: { ...edge.anchor.start, positionMillimeters: s },
+                end: { ...edge.anchor.end, positionMillimeters: e },
+              },
+            };
+          };
           for (let k = baseIndex + 1; k < index; k++) {
             const f = document.features[k];
+            if (f.suppressed) continue;
+            if (f.type === "sheet-fold" && f.bodyIds[0] === id) {
+              const beforeFold = bodyAt(document.features[k - 1].id, id);
+              if (beforeFold) {
+                try {
+                  const [p, q] = sketchLine(f.line, "Fold line");
+                  const tdir = unit(sub(q, p));
+                  const faces = beforeFold.faces.filter((fc) => fc.geomType === "PLANE");
+                  const onFace = faces.filter((fc) => { const c = fc.center, nv = fc.normalAt(c); const fn: V3 = [nv.x, nv.y, nv.z]; const d = Math.abs(dot(fn, sub(p, [c.x, c.y, c.z]))); c.delete(); nv.delete(); return d < 1e-4; });
+                  if (onFace.length) {
+                    const fc = onFace.reduce((big, cand) => (measureArea(cand) > measureArea(big) ? cand : big));
+                    const nv = fc.normalAt(fc.center); const fn: V3 = unit([nv.x, nv.y, nv.z]); nv.delete();
+                    let o = unit(cross(fn, tdir));
+                    if (f.otherSide) o = neg(o);
+                    const r = f.bendRadiusMillimeters ?? base.bendRadiusMillimeters;
+                    const ba = bendAllowanceMillimeters(f.angleDegrees, r, base);
+                    const axisOrigin = add(p, scale(fn, f.inward ? r : -(base.thicknessMillimeters + r)));
+                    const sign = f.inward ? 1 : -1;
+                    foldInverses.push({ p, tdir, o, ba, axisOrigin, angleDeg: sign * f.angleDegrees });
+                  }
+                  faces.forEach((fc) => fc.delete());
+                } catch { /* ignore fold line lookup failure during unfold */ }
+              }
+              continue;
+            }
             // Perforations on the base plate are cut again where the plate lies flat; holes on
             // flanges are not laid out (the plate is the only face that keeps its place).
-            if (f.type === "sheet-perforate" && !f.suppressed && f.bodyIds[0] === id) {
+            if (f.type === "sheet-perforate" && f.bodyIds[0] === id) {
               const before = bodyAt(document.features[k - 1].id, id);
               if (!before) continue;
               const { tools, points } = perforations(before, f, base.thicknessMillimeters);
@@ -2487,10 +2906,11 @@ export function evaluatePartDocument(
               if (onPlate.length) { const cut = flat.cut(own(makeCompound(onPlate) as Shape3D)); if (isShape3D(cut)) flat = own(cut); }
               continue;
             }
-            if (f.suppressed || (f.type !== "sheet-flange" && f.type !== "sheet-hem") || f.bodyIds[0] !== id) continue;
+            if ((f.type !== "sheet-flange" && f.type !== "sheet-hem") || f.bodyIds[0] !== id) continue;
+            const mappedEdges = f.edges.map(unmapEdge);
             flat = f.type === "sheet-flange"
-              ? bendFromEdges(flat, id, f.edges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" })
-              : bendFromEdges(flat, id, f.edges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
+              ? bendFromEdges(flat, id, mappedEdges, base, { leg: f.distanceMillimeters, angleDegrees: f.angleDegrees, innerRadius: f.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" })
+              : bendFromEdges(flat, id, mappedEdges, base, { leg: f.lengthMillimeters, angleDegrees: 180, innerRadius: f.gapMillimeters ?? base.bendRadiusMillimeters, inward: f.inward, flat: true, what: "Unfold" });
           }
           bodies.set(id, flat); currentBodyID = id;
           continue;
@@ -2529,6 +2949,16 @@ export function evaluatePartDocument(
             result = measureVolume(solid) < 0 ? cast(solid.wrapped.Reversed()) : solid;
           }
           bodies.set(id, own(result as Shape3D)); currentBodyID = id;
+          continue;
+        }
+        if (feature.type === "surface-match") {
+          const id = feature.bodyIds[0], src = bodies.get(id), tgt = bodies.get(feature.targetBodyId);
+          if (!src || !tgt) throw new Error("Match surface needs available source and target surface bodies.");
+          const srcEdges = pickedEdgesOf(src, id, feature.sourceEdges, "Match surface source");
+          const tgtEdges = pickedEdgesOf(tgt, feature.targetBodyId, feature.targetEdges, "Match surface target");
+          const matched = buildSurfaceMatch(src, srcEdges, tgt, tgtEdges, feature.continuity);
+          bodies.set(id, own(matched));
+          currentBodyID = id;
           continue;
         }
         if (feature.type === "surface-extend") {
@@ -2650,6 +3080,15 @@ export function evaluatePartDocument(
               lofted = cast(builder.Shape());
             } catch (error) { throw new Error(error instanceof Error && error.message.startsWith("Loft") ? error.message : "Loft could not follow that path. Check that every section crosses the path.", { cause: error }); }
             finally { builder.delete(); progress.delete(); }
+          } else if (feature.guideRails?.length) {
+            const railWires = feature.guideRails.map((rail) => {
+              const railProf = pathSource(rail.pathFeatureId);
+              if (!railProf) throw new Error("Loft guide rail sketch or curve is unavailable.");
+              const railId = rail.pathContourId ?? (railProf.contours.length === 1 ? railProf.contours[0].id : undefined);
+              if (railId === undefined && railProf.contours.length !== 1) throw new Error("Loft guide rail sketch has several curves — choose which one to use.");
+              return sketchWire(rail.pathFeatureId, railId, "Loft guide rail", true);
+            });
+            lofted = guidedSectionLoft(wires, railWires, Boolean(feature.ruled));
           } else if (feature.connections?.length) {
             // Connections decide the pairing: OCCT's own compatibility reordering is off, the wires are taken as chained.
             const oc = getOC(), builder = new oc.BRepOffsetAPI_ThruSections(true, Boolean(feature.ruled), 1e-6), progress = new oc.Message_ProgressRange_1();
@@ -2842,15 +3281,18 @@ export function evaluatePartDocument(
             tool = own(cast(shell) as Shape3D);
           } else tool = own(source.clone());
         } else if (feature.type === "bounding-solid") {
-          // The axis-aligned box around the chosen parts, grown by the margin.
+          // The axis-aligned box around the chosen parts, grown by uniform or 6-side margins [-X,+X,-Y,+Y,-Z,+Z].
           const chosen = feature.bodyIds ?? [...bodies.keys()];
           const shapes = chosen.map((id) => bodies.get(id)).filter((b): b is Shape3D => Boolean(b));
           if (!shapes.length) throw new Error("Bounding solid needs at least one part.");
           const min: V3 = [Infinity, Infinity, Infinity], max: V3 = [-Infinity, -Infinity, -Infinity];
           for (const shape of shapes) { const b = shape.boundingBox.bounds; for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i], b[0][i]); max[i] = Math.max(max[i], b[1][i]); } }
           const m = feature.marginMillimeters;
-          publish(feature, { parameter: "margin", kind: "linear", originMillimeters: [max[0] + m, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2], direction: [1, 0, 0], label: "Margin" });
-          tool = own(makeBaseBox(max[0] - min[0] + 2 * m, max[1] - min[1] + 2 * m, max[2] - min[2] + 2 * m).translate(min[0] - m, min[1] - m, min[2] - m));
+          const [mx0, mx1, my0, my1, mz0, mz1] = feature.marginsMillimeters ?? [m, m, m, m, m, m];
+          publish(feature, { parameter: "margin", kind: "linear", originMillimeters: [max[0] + mx1, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2], direction: [1, 0, 0], label: "Margin" });
+          tool = own(makeBaseBox(max[0] - min[0] + mx0 + mx1, max[1] - min[1] + my0 + my1, max[2] - min[2] + mz0 + mz1).translate(min[0] - mx0, min[1] - my0, min[2] - mz0));
+        } else if (feature.type === "primitive") {
+          tool = own(buildPrimitiveShape(feature));
         } else if (feature.type === "import-step" || feature.type === "import-cad") {
           // Saved sources become bodies as FreeCAD's base features did: STEP as is,
           // meshes (STL, OBJ, PLY, OFF) as faceted solids or as mesh references.
@@ -2894,6 +3336,18 @@ export function evaluatePartDocument(
               const shape = extendedSolids(reader.OneShape());
               tool = sewn(own(fromExtended(shape)));
             } finally { progress.delete(); reader.delete(); f.FS.unlink(name); }
+          } else if (format === "brep") {
+            if (feature.type === "import-cad" && (feature.meshMode !== undefined || feature.meshUnits !== undefined)) throw new Error("Exact CAD imports use their embedded source units.");
+            const f = extendedKernel();
+            if (!f) throw new UnsupportedFeature(feature.id, "BREP imports");
+            const name = `/import-${Math.random().toString(36).slice(2)}.brep`;
+            f.FS.writeFile(name, bytes);
+            const result = new f.TopoDS_Shape(), builder = new f.BRep_Builder(), progress = new f.Message_ProgressRange_1();
+            try {
+              if (!f.BRepTools.Read_2(result, name, builder, progress)) throw new Error("BREP could not be read.");
+              const shape = extendedSolids(result);
+              tool = sewn(own(fromExtended(shape)));
+            } finally { progress.delete(); builder.delete(); result.delete(); f.FS.unlink(name); }
           } else throw new UnsupportedFeature(feature.id, `${String(format).toUpperCase()} imports`);
         } else if (feature.type === "sheet-base") {
           // The plate: the sketch region extruded by the rule's thickness along the sketch normal.
@@ -2916,25 +3370,24 @@ export function evaluatePartDocument(
           if (!(measureArea(sheet as never) > 1e-9)) throw new Error("The boundary surface has no area.");
           tool = own(sheet);
         } else if (feature.type === "surface-blend") {
-          // Blend (position continuity): one face filled across chain A, a line to chain B's
-          // end, chain B back, and a line to A's start — B taken the way round that keeps the lines apart.
           const bodyA = bodies.get(feature.from.bodyId), bodyB = bodies.get(feature.to.bodyId);
           if (!bodyA || !bodyB) throw new Error("Blend surface needs two available bodies.");
-          const o = getOC() as any;
           const a = chainWire(pickedEdgesOf(bodyA, feature.from.bodyId, feature.from.edges, "Blend surface"), "Blend surface");
           const b = chainWire(pickedEdgesOf(bodyB, feature.to.bodyId, feature.to.edges, "Blend surface"), "Blend surface");
-          const pt = (v: { x: number; y: number; z: number; delete(): void }): V3 => { const p: V3 = [v.x, v.y, v.z]; v.delete(); return p; };
-          const a0 = pt(a.startPoint), a1 = pt(a.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
-          const dist = (p: V3, q: V3) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-          const straight = dist(a1, b1) + dist(a0, b0) <= dist(a1, b0) + dist(a0, b1);
-          const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
-          const back = straight ? own(cast(b.wrapped.Reversed()) as Wire) : b;
-          const loop = own(assembleWire([a, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
-          const face = own(makeNonPlanarFace(loop));
-          const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell(); builder.MakeShell(shell); builder.Add(shell, face.wrapped);
-          const sheet = cast(shell) as Shape3D;
-          if (!(measureArea(sheet as never) > 1e-9)) throw new Error("The blend surface has no area.");
-          tool = own(sheet);
+          tool = own(buildSurfaceBlend(bodyA, a, bodyB, b, feature.continuity ?? "g0"));
+        } else if (feature.type === "surface-fillet") {
+          const sheets = feature.bodyIds.map((id) => {
+            const b = bodies.get(id);
+            if (!b) throw new Error("Surface fillet needs available surface bodies.");
+            return b;
+          });
+          const picked = feature.edges?.length
+            ? feature.edges.flatMap((edge) => {
+                const host = bodies.get(edge.bodyId);
+                return host ? pickedEdgesOf(host, edge.bodyId, [edge], "Surface fillet") : [];
+              })
+            : undefined;
+          tool = own(buildSurfaceFillet(sheets, picked, feature.radiusMillimeters));
         } else if (feature.type === "surface-ruled") {
           const body = bodies.get(feature.bodyIds[0]);
           if (!body) throw new Error("Ruled surface needs an available body.");

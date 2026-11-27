@@ -15,9 +15,10 @@ export * from "./file-types";
 
 export * from "./feature-history";
 export * from "./component-split";
-export { validateCurve3D, curve3dPolylines, moveCurve3DPoint, type Curve3DFeature } from "./curve3d";
+export { validateCurve3D, curve3dPolylines, moveCurve3DPoint, arc3dGeometry, solve3DConstraints, type Curve3DFeature, type Constraint3D, type Constraint3DKind, type Solve3DReport } from "./curve3d";
+export { replaceSketchDrawing } from "./sketch-replace";
 export { breakProjectionLink } from "./break-link";
-export { STANDARD_PARTS, standardPartLibrary, standardPartDocument, standardPartIssues, standardPartLabel, standardPartVolume, standardPartProperties, standardPartFromProperties, type StandardPartFamily, type StandardPartRequest } from "./standard-parts";
+export { STANDARD_PARTS, standardPartLibrary, standardPartDocument, standardPartIssues, standardPartLabel, standardPartVolume, standardPartProperties, standardPartFromProperties, resolveFastenerSeats, type StandardPartFamily, type StandardPartRequest, type FastenerSeat } from "./standard-parts";
 export { validateConfigRules, applyConfigRules, activateConfiguration, previewConfiguration, setConfigRule, removeConfigRule, type ConfigRule, type RuleCondition, type RuleEffect, type RuleOperator, type RuleTrace } from "./config-rules";
 export { PLASTIC_RULE_LIBRARY, validatePlasticRules, plasticRuleFor, setPlasticRule, removePlasticRule, setActivePlasticRule, assignPlasticRule, type PlasticRule, type PlasticRulesTable } from "./plastic-rules";
 
@@ -56,7 +57,10 @@ export {validateSplit,type SplitFeature} from './split';
 export {validateDeleteFace,type DeleteFaceFeature} from './delete-face';
 export {validatePipe,type PipeFeature} from './pipe';
 export {validateBoundingSolid,type BoundingSolidFeature} from './bounding-solid';
-export {validateThread,type ThreadFeature} from './thread';
+export {validatePrimitive,type PrimitiveFeature,type PrimitiveKind} from './primitive';
+export { validateThread, resolveThreadGeometry, type ThreadFeature, type ThreadForm } from './thread';
+export { validateEmboss, type EmbossFeature } from './emboss';
+export { FRAME_PROFILE_LIBRARY, findFrameProfile, resolveFrameProfile, validateFrameMember, validateFrameEndCap, validateFrameTrim, validateFrameGusset, frameCutList, frameCutListCSV, type FrameProfileKind, type FrameProfileSpec, type CustomFrameProfile, type FrameMemberFeature, type FrameEndCapFeature, type FrameTrimFeature, type FrameGussetFeature, type FrameCutListRow } from './frame';
 export {validateCoil,type CoilFeature} from './coil';
 export {validateRemoveBody,type RemoveBodyFeature} from './remove-body';
 export {validateBoss,validateRest,type BossFeature,type RestFeature} from './plastic';
@@ -65,12 +69,18 @@ export {resolveAxisLine,validateAxisDefinition,type AxisDefinition,type Construc
 export {validateSolidEdgeReference,validateEdgeFinishEdge,type SolidEdgeReference,type SolidEdgeAnchor,type CurvedEdgeReference,type EdgeFinishEdge} from './solid-edge-reference';
 export * from "./sketch-regions";
 export { patternCopyIds } from "./pattern";
-export { surfaceFeatureTypes, surfaceCreatorTypes, validateSurfaceFeature, type SurfaceFeature, type SurfaceExtrudeFeature, type SurfaceRuledFeature, type SurfaceExtendFeature, type SurfaceBoundaryFeature, type SurfaceBlendFeature, type SurfaceUntrimFeature, type SurfaceRevolveFeature, type SurfaceLoftFeature, type SurfacePatchFeature, type SurfaceSweepFeature, type SurfaceOffsetFeature, type SurfaceThickenFeature, type SurfaceStitchFeature, type SurfaceUnstitchFeature, type SurfaceReverseNormalFeature } from "./surface";
+export { surfaceFeatureTypes, surfaceCreatorTypes, validateSurfaceFeature, type SurfaceFeature, type SurfaceExtrudeFeature, type SurfaceRuledFeature, type SurfaceExtendFeature, type SurfaceBoundaryFeature, type SurfaceBlendFeature, type SurfaceMatchFeature, type SurfaceFilletFeature, type SurfaceUntrimFeature, type SurfaceRevolveFeature, type SurfaceLoftFeature, type SurfacePatchFeature, type SurfaceSweepFeature, type SurfaceOffsetFeature, type SurfaceThickenFeature, type SurfaceStitchFeature, type SurfaceUnstitchFeature, type SurfaceReverseNormalFeature } from "./surface";
 export { sheetBendTable, bendTableCSV, type BendTableRow, type SheetPerforateFeature } from "./sheet-metal";
-export { sheetMetalFeatureTypes, defaultSheetMetalRule, bendAllowanceMillimeters, validateSheetMetalFeature, validateSheetMetalRule, type SheetMetalRule, type SheetMetalFeature, type SheetBaseFeature, type SheetFlangeFeature, type SheetHemFeature, type SheetFoldFeature, type SheetUnfoldFeature, type SheetRefoldFeature } from "./sheet-metal";
-export { addConfigurationColumn, removeConfigurationColumn, addConfigurationRow, removeConfigurationRow, setConfigurationValue, applyConfigurationRow, configurationMatches, configurationColumnKey, currentConfigurationValue, validateConfigurations, type ConfigurationColumn, type ConfigurationRow, type ConfigurationTable } from "./configurations";
+export { sheetMetalFeatureTypes, defaultSheetMetalRule, SHEET_METAL_RULE_LIBRARY, bendAllowanceMillimeters, validateSheetMetalFeature, validateSheetMetalRule, type NamedSheetMetalRule, type SheetMetalRule, type SheetMetalFeature, type SheetBaseFeature, type SheetConvertFeature, type SheetPathFlangeFeature, type SheetFlangeFeature, type SheetHemFeature, type SheetFoldFeature, type SheetUnfoldFeature, type SheetRefoldFeature } from "./sheet-metal";
+export { validateSheetMetalRules, validateNamedSheetMetalRule, sheetMetalRuleFor, setSheetMetalRule, removeSheetMetalRule, setActiveSheetMetalRule, assignSheetMetalRule, type SheetMetalRulesTable } from "./sheet-metal-rules";
+export { addConfigurationColumn, removeConfigurationColumn, addConfigurationRow, removeConfigurationRow, setConfigurationValue, applyConfigurationRow, updateConfigurationFromDesign, configurationMatches, configurationColumnKey, currentConfigurationValue, validateConfigurations, type ConfigurationColumn, type ConfigurationRow, type ConfigurationTable } from "./configurations";
 
-export { variableUsers, variableGraph, setVariableComment, setVariableFavorite, moveVariable, exportVariables, importVariables, completeExpression, referencedVariables, expressionFunctions, expressionUnits, type VariableUsers, type VariableGraph, type CompletionSuggestion } from "./variable-tools";
+export { variableUsers, variableGraph, setVariableComment, setVariableFavorite, moveVariable, renameVariable, safeDeleteVariable, exportVariables, importVariables, completeExpression, referencedVariables, expressionFunctions, expressionUnits, type VariableUsers, type VariableGraph, type CompletionSuggestion } from "./variable-tools";
+export { PHYSICAL_MATERIAL_LIBRARY, findPhysicalMaterial, assignBodyMaterial, clearBodyMaterial, materialForBody, validateMaterialCard, directionalElasticModulus, type PhysicalMaterialCard, type MaterialValidationReport } from "./physical-materials";
+export { applyFeatureExpressions, evaluateFeatureExpression } from "./feature-expressions";
+export { evaluateExpression } from "../expressions/evaluate";
+export { validateDocumentNotes, addDocumentNote, updateDocumentNote, deleteDocumentNote, listDocumentNotes, type DocumentNote } from "./notes";
 export { copyFeatures, pastePosition } from "./timeline-clipboard";
+export { exportPartScript } from "./script-export";
 
 export { identifySurfaceExtrusionProfiles } from './surface-extrusion-identities';

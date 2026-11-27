@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {scopeAssemblyProjection} from './projection-scope';
-import type {AssemblyProjectionV1} from '../cad-assembly-bridge';
+import type {AssemblyProjectionV1} from '../core/cad-assembly-bridge';
 
 it('keeps broken references visible and scopes other assemblies without mutating the archive projection',()=>{
  const mate=(id:string,a:string,b:string)=>({id,endpoint_a:{instance_id:a},endpoint_b:{instance_id:b},dofs:[{id:id+'-dof'}]});

@@ -15,7 +15,7 @@ import {
   serializePartDocument,
   resolveProfileDrawing,
 } from "@aether/core/document";
-import { openSketchWorkspace } from "../sketch-workspace";
+import { openSketchWorkspace } from "../ui/windows/sketch-workspace";
 const require = createRequire(
   import.meta.url,
 );

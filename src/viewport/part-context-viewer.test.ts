@@ -1,11 +1,11 @@
-import {cadSelection} from '../cad-selection-store';
+import {cadSelection} from '../core/stores/cad-selection-store';
 import { SectionLayer } from './section-layer';
 import { TopologyAnchorPicker } from './topology-anchors';
 import {expect,it,vi} from 'vitest';
 import * as THREE from 'three/webgpu';
 import {FeaturePreviewLayer} from '../modeling/feature-preview-layer';
-import {MateViewport} from '../viewer';
-import {defaultCADAppearance} from '../cad-appearance-store';
+import {MateViewport} from './viewer';
+import {defaultCADAppearance} from '../core/stores/cad-appearance-store';
 import {resolveAppearance} from './appearance-themes';
 import {resolvePartDisplay} from './part-display';
 

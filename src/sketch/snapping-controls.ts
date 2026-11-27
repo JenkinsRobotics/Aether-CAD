@@ -1,4 +1,4 @@
-import { cadSnapping } from '../cad-snapping-store';
+import { cadSnapping } from '../core/stores/cad-snapping-store';
 /** The tool popup and floating magnet share one preference and live state. */
 export function mountSketchSnappingControls(parent: HTMLElement, change: {
   geometrySnap(value: boolean): void; gridSnap(value: boolean): void;

@@ -2,7 +2,7 @@ import type { SketchDrawing } from "../drawing";
 import type { DrawingConstraint } from "./types";
 import { measuredDimensionValue } from "./measured-dimension";
 export const dimensionUnit = (c: DrawingConstraint) =>
-  c.kind === 'conic-rho' ? 'scalar' : c.kind === "angle"
+  c.kind === 'conic-rho' || c.kind === 'point-along' ? 'scalar' : c.kind === "angle" || c.kind === "arc-sweep" || c.kind === "line-angle"
     ? "angle"
     : [
           "distance",
@@ -11,6 +11,12 @@ export const dimensionUnit = (c: DrawingConstraint) =>
           "length",
           "radius",
           "diameter",
+          "arc-length",
+          "linear-diameter",
+          "point-circle-distance",
+          "line-circle-distance",
+          "circle-circle-distance",
+          "slot-overall-length",
           "offset",
           "slot",
         ].includes(c.kind)

@@ -21,7 +21,7 @@ it("builds every family at one size with the volume its dimensions give", () => 
 it("lists the catalogue, refuses unknown sizes and round-trips its properties", () => {
   expect(standardPartLibrary().map((f) => f.family)).toEqual(Object.keys(STANDARD_PARTS));
   expect(standardPartLibrary("bearing")[0].dimensions?.["608"]).toEqual({ d: 8, D: 22, B: 7 });
-  expect(standardPartIssues({ family: "hex_nut", size: "M7" })[0]).toMatch(/comes in M3/);
+  expect(standardPartIssues({ family: "hex_nut", size: "M7" })[0]).toMatch(/comes in M2, M2\.5, M3/);
   expect(standardPartIssues({ family: "hex_bolt", size: "M6" })[0]).toMatch(/needs a length/);
   const r: StandardPartRequest = { family: "hex_bolt", size: "M6", length: 25 };
   expect(standardPartFromProperties(standardPartProperties(r))).toEqual(r);

@@ -1,6 +1,7 @@
 import type { BuiltPartsList } from "./build";
 import { drawingCurvePath, sheetPoint, type BuiltDrawing } from "./build";
 import type { DrawingSheet } from "./document";
+import { revisionTableGrid } from "./templates-and-audit";
 const xml = (text: string) => text.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]!));
 /** Editable title-block rows sit in a box above the footer; the fixed footer stays. */
 export function titleBlockRows(sheet: DrawingSheet): { x: number; y: number; width: number; height: number; rows: [string, string][] } | null {
@@ -21,7 +22,7 @@ export function partsListGrid(list: BuiltPartsList): { lines: [number, number, n
 const sheetOf = (drawing: BuiltDrawing, id: string) => { const sheet = drawing.sheets.find(s => s.sheet.id === id); if (!sheet) throw Error("Drawing sheet does not exist."); return sheet; };
 
 export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.document.activeSheetId): string {
-  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList, revisionTable } = sheetOf(drawing, sheetId);
   const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
   for (const view of views) {
     for (const curve of view.geometry.hatch ?? []) elements.push(`<path data-layer="hatch" d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="0.15"/>`);
@@ -39,6 +40,11 @@ export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.docume
     grid.lines.forEach(([x0, y0, x1, y1]) => elements.push(`<line data-layer="parts-list" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#222" stroke-width="0.25"/>`));
     grid.texts.forEach(t => elements.push(`<text x="${t.x}" y="${t.y}" font-size="2.8"${t.bold ? ' font-weight="700"' : ""}>${xml(t.text)}</text>`));
   }
+  if (revisionTable) {
+    const grid = revisionTableGrid(revisionTable.revisions, revisionTable.originMm, revisionTable.widthMm);
+    grid.lines.forEach(([x0, y0, x1, y1]) => elements.push(`<line data-layer="revision-table" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#222" stroke-width="0.25"/>`));
+    grid.texts.forEach(t => elements.push(`<text x="${t.x}" y="${t.y}" font-size="2.8"${t.bold ? ' font-weight="700"' : ""}>${xml(t.text)}</text>`));
+  }
   const block = titleBlockRows(sheet);
   if (block) {
     elements.push(`<rect x="${block.x}" y="${block.y}" width="${block.width}" height="${block.height}" fill="none" stroke="#222" stroke-width="0.3"/>`);
@@ -51,7 +57,7 @@ export function exportDrawingSVG(drawing: BuiltDrawing, sheetId = drawing.docume
 /** R2000 ASCII DXF, in physical sheet millimeters. Lines/circles/arcs remain
  * analytic. Other curves retain their explicitly bounded display tessellation. */
 export function exportDrawingDXF(drawing: BuiltDrawing, sheetId = drawing.document.activeSheetId): string {
-  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList, revisionTable } = sheetOf(drawing, sheetId);
   const out: (string | number)[] = [0, "SECTION", 2, "HEADER", 9, "$ACADVER", 1, "AC1015", 9, "$INSUNITS", 70, 4, 0, "ENDSEC", 0, "SECTION", 2, "TABLES", 0, "TABLE", 2, "LTYPE", 70, 2, 0, "LTYPE", 2, "CONTINUOUS", 70, 0, 3, "Solid", 72, 65, 73, 0, 40, 0, 0, "LTYPE", 2, "HIDDEN", 70, 0, 3, "Hidden", 72, 65, 73, 2, 40, 5, 49, 3, 74, 0, 49, -2, 74, 0, 0, "ENDTAB", 0, "ENDSEC", 0, "SECTION", 2, "ENTITIES"];
   const line = (a: readonly number[], b: readonly number[], hidden = false, layer = hidden ? "HIDDEN" : "VISIBLE") => out.push(0, "LINE", 100, "AcDbEntity", 8, layer, 6, hidden ? "HIDDEN" : "CONTINUOUS", 100, "AcDbLine", 10, a[0], 20, sheet.heightMm - a[1], 30, 0, 11, b[0], 21, sheet.heightMm - b[1], 31, 0);
   const text = (value: string, position: readonly number[], align: "left" | "center" = "left") => {
@@ -81,6 +87,11 @@ export function exportDrawingDXF(drawing: BuiltDrawing, sheetId = drawing.docume
   if (partsList) {
     const grid = partsListGrid(partsList);
     grid.lines.forEach(([x0, y0, x1, y1]) => line([x0, y0], [x1, y1], false, "PARTS_LIST"));
+    grid.texts.forEach(t => text(t.text, [t.x, t.y]));
+  }
+  if (revisionTable) {
+    const grid = revisionTableGrid(revisionTable.revisions, revisionTable.originMm, revisionTable.widthMm);
+    grid.lines.forEach(([x0, y0, x1, y1]) => line([x0, y0], [x1, y1], false, "REVISION_TABLE"));
     grid.texts.forEach(t => text(t.text, [t.x, t.y]));
   }
   const block = titleBlockRows(sheet);

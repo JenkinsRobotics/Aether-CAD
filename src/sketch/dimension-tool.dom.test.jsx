@@ -2,14 +2,14 @@ import { clickSketchControl, querySketchControl, querySketchControls } from "./t
 import { createRequire } from 'node:module';
 import { beforeAll, beforeEach, afterEach, afterAll, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, serializePartDocument, parsePartDocument } from '@aether/core/document';
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 const require = createRequire(import.meta.url);
 const { JSDOM } = require('jsdom');
 let dom, open, doc, apply, unregister, svg;
 beforeAll(async () => {
   dom = new JSDOM('<body></body>', { url: 'http://localhost/cad/' });
   for (const key of ['window', 'document', 'HTMLElement', 'CustomEvent', 'Event', 'location']) vi.stubGlobal(key, dom.window[key]);
-  open = (await import('../sketch-workspace')).openSketchWorkspace;
+  open = (await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(() => {
   document.body.innerHTML = '<button id="ribbon">Dimension</button><div class="cad-studio-viewport"></div>';

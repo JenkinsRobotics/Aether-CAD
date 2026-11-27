@@ -14,7 +14,7 @@ const face=z=>window.dispatchEvent(new CustomEvent('aether-sketch-face',{detail:
 beforeAll(async()=>{
  dom=new JSDOM('<html><body></body></html>',{url:'http://localhost/cad/'});
  for(const key of ['window','document','HTMLElement','CustomEvent','Event','location'])vi.stubGlobal(key,dom.window[key]);
- open=(await import('../sketch-workspace')).openSketchWorkspace;
+ open=(await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"></div>';

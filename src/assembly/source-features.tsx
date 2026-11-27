@@ -1,7 +1,7 @@
 import { AetherIcon, FeatureTypeIcon, type ListBoxItem, type TreeNode } from '@aether/ui';
 import { parsePartDocument, rollbackPosition } from '@aether/core/document';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import { isPartPlacementAction } from '../part-history';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
+import { isPartPlacementAction } from '../app/part-history';
 
 /** Navigation references, never features inserted into the assembly document. */
 export function sourceFeatureTarget(id: string): { partID: string; featureID?: string } | null {

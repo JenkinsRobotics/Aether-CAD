@@ -1,6 +1,7 @@
 import type { PDFFont, PDFPage, RGB } from "pdf-lib";
 import { drawingCurvePath, type BuiltDrawing, type BuiltDrawingSheet } from "./build";
 import { partsListGrid, titleBlockRows } from "./export";
+import { revisionTableGrid } from "./templates-and-audit";
 
 export interface DrawingPDFOptions {
   /** Runtime adapter supplies the product's bundled Noto Sans font. */
@@ -74,6 +75,11 @@ export async function exportDrawingPDF(drawing: BuiltDrawing, options: DrawingPD
     }
     if (built.partsList) {
       const grid = partsListGrid(built.partsList);
+      grid.lines.forEach(([x0, y0, x1, y1]) => stroke(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
+      grid.texts.forEach(t => label(t.text, t.x, t.y, 2.8));
+    }
+    if (built.revisionTable) {
+      const grid = revisionTableGrid(built.revisionTable.revisions, built.revisionTable.originMm, built.revisionTable.widthMm);
       grid.lines.forEach(([x0, y0, x1, y1]) => stroke(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
       grid.texts.forEach(t => label(t.text, t.x, t.y, 2.8));
     }

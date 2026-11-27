@@ -1,6 +1,6 @@
 /** Bill-of-materials table helpers shared by the Assembly panel, the agent and CSV export:
  *  item numbers from the row tree and an RFC 4180 CSV with FreeCAD's BOM columns. */
-import type { BOMRowProjection } from "../cad-assembly-bridge";
+import type { BOMRowProjection } from "../core/cad-assembly-bridge";
 
 export interface BOMTableRow extends BOMRowProjection {
   /** "3" for a top-level row, "3.2" for the second child of row 3, and so on. */

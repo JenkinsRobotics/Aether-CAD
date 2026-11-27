@@ -5,7 +5,7 @@ sketch/extrude/revolve histories on the Aether engine. The FreeCAD 1.1.3 and
 SolidCraft 0.23.0 reference runners were retired on 2026-11-12 (archives:
 `../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz` and
 `solidcraft-benchmarks-20261112.tar.gz`); their recorded results stay in
-`dev/docs/reality/data/`. No imported solids stand in for authored features. The
+`docs/reality/data/`. No imported solids stand in for authored features. The
 robot front Part comes from `public/examples/scifirobot.aethercad.bin`; it is
 never rewritten by a benchmark.
 
@@ -55,5 +55,5 @@ The OBB, no-history and no-simplify variants modify the **benchmark bundle only*
 checked Vite transform at the OCCT boolean configuration. They do not change
 production defaults, tolerance, saved features or app installations. Preserve
 raw evidence under `build/native-comparison/`; the portable results are `summary.json`
-and `front-shell-profile.json`, copied into `dev/docs/reality/data/` for each report
-(`dev/docs/reality/Native_Comparison_2026_10_31.md`).
+and `front-shell-profile.json`, copied into `docs/reality/data/` for each report
+(`docs/reality/Native_Comparison_2026_10_31.md`).

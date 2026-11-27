@@ -1,9 +1,9 @@
 import {createRequire} from 'node:module';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {bodyContextFeatures,cadViewportContext,configureViewportContext} from './context-menu';
-import {cadCommands} from '../cad-command-registry';
-import {cadSelection} from '../cad-selection-store';
-import {cadPresentation} from '../cad-presentation-store';
+import {cadCommands} from '../core/cad-command-registry';
+import {cadSelection} from '../core/stores/cad-selection-store';
+import {cadPresentation} from '../core/stores/cad-presentation-store';
 import {configurePartExport,consumeExportBody} from '../modeling/part-export';
 const {JSDOM}=createRequire(import.meta.url)('jsdom');
 let dom,dispose,viewer,doc,apply,status;

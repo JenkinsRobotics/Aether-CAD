@@ -9,8 +9,8 @@
  *  minor/major grid colours, and the CAD Light intensity boost.
  */
 import { modelStudioEnvironment as studioLook } from '@aether/assets/themes/rendering/model-studio';
-import { modelStudioLighting } from '../model-studio-environment';
-import type { CADAppearanceSnapshot } from "../cad-appearance-store";
+import { modelStudioLighting } from './model-studio-environment';
+import type { CADAppearanceSnapshot } from "../core/stores/cad-appearance-store";
 import type { ViewportThemeOverride } from "./suite-viewport-theme";
 
 export type RenderEnvironment = CADAppearanceSnapshot["background"];

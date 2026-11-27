@@ -1,5 +1,6 @@
 import { beforeAll, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { inflateRawSync } from "node:zlib";
 import init from "replicad-opencascadejs";
 import { setOC } from "replicad";
 import { exportPart } from "./export";
@@ -46,15 +47,36 @@ it("writes a valid GLB in metres with Y up, flat normals and per-body nodes", as
   expect(json.bufferViews.every((b: { byteOffset: number }) => b.byteOffset % 4 === 0)).toBe(true);
 });
 
-it("writes 3MF as a stored OPC zip whose model is in millimetres", async () => {
+function readZipEntries(bytes: Uint8Array): Map<string, { method: number; text: string }> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const entries = new Map<string, { method: number; text: string }>();
+  let pos = 0;
+  while (pos + 30 <= bytes.byteLength && view.getUint32(pos, true) === 0x04034b50) {
+    const method = view.getUint16(pos + 8, true);
+    const compSize = view.getUint32(pos + 18, true);
+    const nameLen = view.getUint16(pos + 26, true);
+    const extraLen = view.getUint16(pos + 28, true);
+    const name = new TextDecoder().decode(bytes.subarray(pos + 30, pos + 30 + nameLen));
+    const dataStart = pos + 30 + nameLen + extraLen;
+    const raw = bytes.subarray(dataStart, dataStart + compSize);
+    const inflated = method === 8 ? inflateRawSync(raw) : raw;
+    entries.set(name, { method, text: new TextDecoder().decode(inflated) });
+    pos = dataStart + compSize;
+  }
+  return entries;
+}
+
+it("writes 3MF as a valid deflated OPC zip whose model is in millimetres", async () => {
   const result = await exportPart(plate(), { format: "3mf", toleranceMillimeters: 0.05 });
   const bytes = new Uint8Array(result.bytes);
   expect(Array.from(bytes.slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04]);
-  const archive = text(result.bytes);
-  expect(archive).toContain("3D/3dmodel.model");
-  expect(archive).toContain('unit="millimeter"');
-  expect(archive.match(/<triangle /g)).toHaveLength(12);
-  expect(archive).toContain('<object id="1" name="Body 1"');
+  const entries = readZipEntries(bytes);
+  const model = entries.get("3D/3dmodel.model");
+  expect(model).toBeDefined();
+  expect(model!.method).toBe(8);
+  expect(model!.text).toContain('unit="millimeter"');
+  expect(model!.text.match(/<triangle /g)).toHaveLength(12);
+  expect(model!.text).toContain('<object id="1" name="Body 1"');
   // The end-of-central-directory record counts the three parts.
   const view = new DataView(result.bytes);
   expect(view.getUint32(result.bytes.byteLength - 22, true)).toBe(0x06054b50);

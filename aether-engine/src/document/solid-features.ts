@@ -18,9 +18,15 @@ import {validateSplit, type SplitFeature} from './split';
 import {validateDeleteFace, type DeleteFaceFeature} from './delete-face';
 import {validatePipe, type PipeFeature} from './pipe';
 import {validateBoundingSolid, type BoundingSolidFeature} from './bounding-solid';
+import {validatePrimitive, type PrimitiveFeature} from './primitive';
+export type {PrimitiveFeature, PrimitiveKind} from './primitive';
 import {validateShapeBinder, type ShapeBinderFeature} from './shape-binder';
 export type {ShapeBinderFeature} from './shape-binder';
 import {validateThread, type ThreadFeature} from './thread';
+import {validateEmboss, type EmbossFeature} from './emboss';
+import {validateFrameEndCap, validateFrameGusset, validateFrameMember, validateFrameTrim, type FrameEndCapFeature, type FrameGussetFeature, type FrameMemberFeature, type FrameTrimFeature} from './frame';
+export type {EmbossFeature} from './emboss';
+export type {FrameMemberFeature, FrameEndCapFeature, FrameTrimFeature, FrameGussetFeature} from './frame';
 import {validateCoil, type CoilFeature} from './coil';
 import {validateCurve3D, type Curve3DFeature} from './curve3d';
 import {validateBoundaryFill, type BoundaryFillFeature} from './boundary-fill';
@@ -169,6 +175,8 @@ export type EdgeFinishFeature = {
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -228,13 +236,19 @@ export interface ShellFeature {
 }
 export type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;
 export const isShellFaceReference = (face: ShellOpenFace): face is SolidFaceReference => "sourceFeatureId" in face;
-export type SolidFeature = RibFeature | SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ShapeBinderFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
+export type SolidFeature = PrimitiveFeature | EmbossFeature | FrameMemberFeature | FrameEndCapFeature | FrameTrimFeature | FrameGussetFeature | RibFeature | SplitFaceFeature | BoundaryFillFeature | Curve3DFeature | LipFeature | SnapFitFeature | SheetMetalFeature | SurfaceFeature | TransformFeature | ConstructionAxisFeature | ConstructionPointFeature | SplitFeature | DeleteFaceFeature | PipeFeature | BoundingSolidFeature | ShapeBinderFeature | ThreadFeature | CoilFeature | RemoveBodyFeature | BossFeature | RestFeature |
   OffsetFaceFeature | FaceExtrudeFeature | BooleanFeature | PatternFeature | DraftFeature | LoftFeature | HoleFeature | ImportCADFeature | ImportSTEPFeature | PlaneFeature | ProfileFeature | RevolveFeature | SweepFeature | MirrorFeature | EdgeFinishFeature | ShellFeature;
 export function validateSolidFeature(
   feature: SolidFeature,
   earlier: Map<string, string>,
   missingReference: (id: unknown) => boolean = () => false,
 ): void {
+  if (feature.type === "primitive") return validatePrimitive(feature);
+  if (feature.type === "emboss") return validateEmboss(feature, earlier, missingReference);
+  if (feature.type === "frame-member") return validateFrameMember(feature, earlier, missingReference);
+  if (feature.type === "frame-end-cap") return validateFrameEndCap(feature, earlier, missingReference);
+  if (feature.type === "frame-trim") return validateFrameTrim(feature, earlier, missingReference);
+  if (feature.type === "frame-gusset") return validateFrameGusset(feature);
   if (feature.type === "transform") return validateTransform(feature,earlier,missingReference);
   if (feature.type === "split") return validateSplit(feature,earlier,missingReference as (id:string)=>boolean);
   if (feature.type === "pipe") return validatePipe(feature,earlier,missingReference);
@@ -443,6 +457,14 @@ export function validateSolidFeature(
     if (feature.type === "fillet") {
       if (feature.endRadiusMillimeters !== undefined) positive(feature.endRadiusMillimeters, "Fillet end size");
       if (feature.measurement !== undefined && !["radius", "width"].includes(feature.measurement)) throw new Error("Fillet measurement must be radius or width.");
+      if (feature.continuity !== undefined && !["g1", "g2"].includes(feature.continuity)) throw new Error("Fillet continuity must be g1 or g2.");
+      if (feature.setbacks !== undefined) {
+        if (!Array.isArray(feature.setbacks)) throw new Error("Fillet setbacks must be a list of vertex distances.");
+        for (const s of feature.setbacks) {
+          if (!s || !Array.isArray(s.vertexMillimeters) || s.vertexMillimeters.length !== 3 || !s.vertexMillimeters.every(Number.isFinite)) throw new Error("Fillet setback needs a finite 3D vertex position.");
+          positive(s.distanceMillimeters, "Fillet setback distance");
+        }
+      }
       if (feature.points !== undefined) {
         if (!Array.isArray(feature.points) || !feature.points.length || !feature.edges) throw new Error("Points on the edge need picked edges and at least one point.");
         for (const point of feature.points) { if (!(point.position > 0 && point.position < 1)) throw new Error("A point on the edge sits strictly between its ends (0 to 1)."); positive(point.radiusMillimeters, "Point radius"); }

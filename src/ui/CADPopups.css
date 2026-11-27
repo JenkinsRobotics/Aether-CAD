@@ -1,0 +1,305 @@
+/* Unified popup, modal dialog, popover, and floating inspector window styling.
+   Consumes shared --aether-* tokens so every surface matches every Aether theme. */
+
+/* ---- Modal dialog forms & sections --------------------------------------- */
+.cad-dialog-form {
+  display: grid;
+  gap: 12px;
+  min-width: min(460px, 78vw);
+  max-width: 600px;
+  max-height: min(72vh, 660px);
+  overflow-y: auto;
+  padding-right: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--aether-color-text);
+}
+.cad-dialog-form--wide {
+  min-width: min(540px, 84vw);
+  max-width: 680px;
+}
+.cad-dialog-lead {
+  margin: 0;
+  color: var(--aether-color-text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cad-dialog-section {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+}
+.cad-dialog-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--aether-color-text-dim);
+  text-transform: uppercase;
+}
+.cad-dialog-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.cad-dialog-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 520px) {
+  .cad-dialog-grid-2,
+  .cad-dialog-grid-3 { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cad-dialog-form .cad-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--aether-color-border-control, var(--aether-color-border));
+  border-radius: 6px;
+  background: var(--aether-color-bg-inset, color-mix(in srgb, var(--aether-color-text) 5%, var(--aether-color-bg-panel)));
+  color: var(--aether-color-text);
+  font: 12px/1.45 var(--aether-font-family);
+  resize: vertical;
+}
+.cad-dialog-form .cad-textarea:focus-visible {
+  border-color: var(--aether-color-border-focus);
+  outline: 2px solid var(--aether-color-border-focus);
+  outline-offset: -2px;
+}
+
+.cad-file-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--aether-color-border-control, var(--aether-color-border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+}
+.cad-file-field input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--aether-color-text);
+}
+
+.cad-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.cad-file-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--aether-color-border-subtle);
+  background: var(--aether-color-bg-panel);
+  font-size: 12px;
+}
+.cad-file-list-meta {
+  color: var(--aether-color-text-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cad-dialog-preview-frame {
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 7px;
+  background: var(--aether-color-bg-inset);
+}
+.cad-dialog-preview-frame img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.cad-dialog-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--aether-color-text);
+}
+.cad-dialog-steps a {
+  color: var(--aether-color-accent-icon, var(--aether-color-accent));
+  text-decoration: underline;
+}
+
+.cad-dialog-alert,
+.cad-dialog-status {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.cad-dialog-alert {
+  border: 1px solid color-mix(in srgb, var(--aether-color-error, #e04f5f) 45%, var(--aether-color-border));
+  background: color-mix(in srgb, var(--aether-color-error, #e04f5f) 10%, var(--aether-color-bg-panel));
+  color: var(--aether-color-error, #e04f5f);
+}
+.cad-dialog-status {
+  border: 1px solid color-mix(in srgb, var(--aether-color-accent) 35%, var(--aether-color-border));
+  background: color-mix(in srgb, var(--aether-color-accent) 10%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text);
+}
+
+/* ---- Layout popover ------------------------------------------------------ */
+.cad-layout-popover {
+  width: 296px;
+  max-width: calc(100vw - 48px);
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.cad-layout-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--aether-color-border-subtle);
+}
+.cad-layout-popover-header strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---- Floating CAD feature, analysis, configuration & rule windows -------- */
+.shapr-shell .aui-feature-window {
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--aether-color-shadow, #000) 28%, transparent),
+              0 1px 3px color-mix(in srgb, var(--aether-color-shadow, #000) 14%, transparent);
+  max-height: min(78vh, 680px);
+}
+.shapr-shell .aui-feature-window > .aui-float-panel-body {
+  scrollbar-width: thin;
+}
+
+/* Wider ergonomic footprints for multi-column floating editors & analysis tables. */
+.shapr-shell .aui-feature-window.cad-analysis-dialog { width: 344px; }
+.shapr-shell .aui-feature-window.cad-configurations-window { width: 372px; }
+.shapr-shell .aui-feature-window.cad-plastic-rules-window { width: 352px; }
+.shapr-shell .aui-feature-window.cad-motion-window { width: 344px; }
+
+.cad-window-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.cad-window-actions .aui-button {
+  flex: 1 1 auto;
+  min-height: 26px;
+  padding: 3px 10px;
+  font-size: 11px;
+  justify-content: center;
+}
+.cad-window-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+.cad-window-pair > * { min-width: 0; width: 100%; }
+
+/* ---- Floating analysis popup tables & cards ------------------------------ */
+.cad-analysis-status {
+  margin: 0 0 6px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--aether-color-border-subtle);
+  background: color-mix(in srgb, var(--aether-color-text) 4%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text-dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.cad-analysis-results {
+  display: grid;
+  gap: 8px;
+  max-height: 44vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.cad-analysis-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px 9px;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--aether-color-text) 2%, var(--aether-color-bg-panel));
+}
+.cad-analysis-card h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aether-color-text);
+}
+.cad-analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.cad-analysis-table thead th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--aether-color-text-faint);
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--aether-color-border);
+}
+.cad-analysis-table tbody th {
+  text-align: left;
+  vertical-align: top;
+  font-weight: 400;
+  color: var(--aether-color-text-dim);
+  padding: 4px 6px 4px 0;
+  border-bottom: 1px solid var(--aether-color-border-subtle);
+}
+.cad-analysis-table tbody td {
+  padding: 4px 6px;
+  color: var(--aether-color-text);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--aether-color-border-subtle);
+  overflow-wrap: anywhere;
+}
+.cad-analysis-table tbody tr:last-child th,
+.cad-analysis-table tbody tr:last-child td { border-bottom: 0; }
+.cad-analysis-table td[data-numeric="true"],
+.cad-analysis-table th[data-numeric="true"] { text-align: right; white-space: nowrap; }
+.cad-analysis-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.cad-analysis-badge[data-tone="ok"] {
+  background: color-mix(in srgb, var(--aether-color-ok, #2ea043) 18%, var(--aether-color-bg-panel));
+  color: var(--aether-color-ok, #2ea043);
+}
+.cad-analysis-badge[data-tone="warn"] {
+  background: color-mix(in srgb, #e59c24 20%, var(--aether-color-bg-panel));
+  color: #d98a0b;
+}
+.cad-analysis-badge[data-tone="error"] {
+  background: color-mix(in srgb, var(--aether-color-error, #e04f5f) 18%, var(--aether-color-bg-panel));
+  color: var(--aether-color-error, #e04f5f);
+}

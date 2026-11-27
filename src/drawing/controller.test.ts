@@ -1,8 +1,8 @@
 import { expect, it, vi } from "vitest";
 import { createRectanglePartDocument } from "@aether/core/document";
 import { createDrawingDocument, serializeDrawingDocument, type PartDrawingProjection } from "@aether/core/drawing";
-import { CADDrawingWorkspaceStore } from "../cad-drawing-workspace-store";
-import { decodeDrawingProjection } from "../cad-drawing-bridge";
+import { CADDrawingWorkspaceStore } from "../core/stores/cad-drawing-workspace-store";
+import { decodeDrawingProjection } from "../core/cad-drawing-bridge";
 import { DrawingEditor } from "./controller";
 
 const source = () => createRectanglePartDocument("Part", { widthMillimeters: 40, heightMillimeters: 20, depthMillimeters: 10 });

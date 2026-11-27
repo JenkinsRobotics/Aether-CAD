@@ -2,7 +2,7 @@
  *  flow can raise (no planar frame, an indistinguishable face, no source
  *  feature) must all stay silent for the simplest part there is. */
 import { describe, expect, it } from "vitest";
-import { evaluatePart } from "../engine/evaluate-part";
+import { evaluatePart } from "../core/engine/evaluate-part";
 import { anchorForPlanarFace } from "../viewport/planar-face-reference";
 import { supportForFace } from "./sketch-support";
 import { PART_DOCUMENT_VERSION, type PartDocument } from "@aether/core/document";

@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { TransparentViewportOutput } from '../../src/viewport/transparent-output';
 import { StageRig } from '../../src/viewport/stage-rig';
 import { resolveAppearance } from '../../src/viewport/appearance-themes';
-import { defaultCADAppearance } from '../../src/cad-appearance-store';
+import { defaultCADAppearance } from '../../src/core/stores/cad-appearance-store';
 
 const renderer = new THREE.WebGPURenderer({ antialias: true, alpha: true, forceWebGL: new URLSearchParams(location.search).has('webgl') });
 renderer.setSize(1000, 800); renderer.setPixelRatio(1);

@@ -1,5 +1,5 @@
 import { sketchContourPolyline, type SketchDrawing, type SketchEntityRef, type SketchPoint } from "@aether/core/sketch";
-import { relationshipInteraction, type Relationship } from "../relationships/interaction";
+import { relationshipInteraction, type Relationship } from "../assembly/relationships/interaction";
 import { constraintGeometry, constraintParticipants } from "./constraint-geometry";
 import { isDimensionConstraint, sketchConstraintEntry } from "./constraint-catalog";
 import { constraintIcon } from "./constraint-icons";

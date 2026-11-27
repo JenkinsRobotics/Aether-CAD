@@ -1,0 +1,135 @@
+import { cadAssemblyWorkspace } from "../../core/stores/cad-assembly-workspace-store";
+/** Items — the feature tree, the left rail's main panel. */
+import { cadPresentation } from "../../core/stores/cad-presentation-store";
+import { cadWorkspace } from "../../core/stores/cad-workspace-store";
+import { AetherIcon, featureTreeMenuItems, TreePanel, TreePanelSplit, type TreeControl } from "@aether/ui";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { itemTreePresentation } from "./item-tree";
+import "./items.css";
+import { cadFeatureActions, cadTreeCommand, cadHistoryCount } from "./feature-tree-commands";
+import { CADPartsPanel, CADAssemblyPartsPanel } from "./parts";
+import { useCADPanelContext } from "./panel-context-commands";
+import { findTreeNode } from "./shared";
+
+export function ItemsPanel({ active, onShowAppearance = () => { cadPresentation.dispatch({ type: "select-panel", panel: "visualization" }); } }: { active: boolean; onShowAppearance?: () => void }) {
+  const workspace = useSyncExternalStore(
+    cadWorkspace.subscribe,
+    cadWorkspace.snapshot,
+    cadWorkspace.snapshot,
+  );
+  const assembly = useSyncExternalStore(cadAssemblyWorkspace.subscribe, cadAssemblyWorkspace.snapshot, cadAssemblyWorkspace.snapshot);
+  const [filter, setFilter] = useState("");
+  const [category, setCategory] = useState("all");
+  const presentation = useSyncExternalStore(
+    cadPresentation.subscribe,
+    cadPresentation.snapshot,
+    cadPresentation.snapshot,
+  );
+  const showAssembly = !presentation.partOpen && presentation.workspaceMode !== "drawing" && assembly.loadState === "ready";
+  const filterRef = useRef<HTMLInputElement>(null);
+  const nodes = useMemo(() => itemTreePresentation(workspace.itemNodes), [workspace.itemNodes]);
+  const bodies = useMemo(() => itemTreePresentation(workspace.bodyNodes ?? []), [workspace.bodyNodes]);
+  // Folders and collection headings have no geometric counterpart. Keep their
+  // tree-only selection here; any external geometry selection supersedes it.
+  const [branchSelection, setBranchSelection] = useState<{ id: string; geometryKey: string } | null>(null);
+  const geometryKey = [...workspace.selectedItemIDs].sort().join("\n");
+  const branch = branchSelection && branchSelection.geometryKey === geometryKey
+    ? findTreeNode([...nodes, ...bodies], branchSelection.id) : null;
+  if (branchSelection && !branch) setBranchSelection(null);
+  const selectedIDs = branch ? new Set([branch.id]) : workspace.selectedItemIDs;
+  const selectRows = (ids: readonly string[], mode: "single" | "toggle" | "range" = "single") => {
+    const rows = ids.filter((id) => id !== "rollback-bar");
+    const id = rows[0];
+    if (!id) return;
+    if (id.startsWith("source-") || id.startsWith("folder/") || id === "reference-folder" || id.startsWith("bodies/")) {
+      setBranchSelection({ id, geometryKey });
+    } else {
+      setBranchSelection(null);
+      cadWorkspace.dispatch({ type: "select-item", id, ids: rows, mode });
+    }
+  };
+  const dispatch = (id: string, actionID: string) => { cadWorkspace.dispatch({ type: "item-action", id, actionID }); };
+  const controls: TreeControl[] = [{
+    id: "folder", label: "New folder", icon: <AetherIcon name="plus" />, disabled: !presentation.partOpen,
+    onClick: () => cadWorkspace.dispatch({
+      type: "create-folder",
+      memberIDs: [...selectedIDs].filter(id => id.startsWith("feature/") && !id.startsWith("feature/body/")),
+    }),
+  }];
+  const rawNodes = [...workspace.itemNodes, ...(workspace.bodyNodes ?? [])];
+  const panelMenu = useCADPanelContext(rawNodes);
+  const menuActions = (id: string) => {
+    const node = findTreeNode(rawNodes, id);
+    return node && id !== "rollback-bar" && id !== "reference-folder" ? cadFeatureActions(node, rawNodes, selectedIDs, workspace.rollbackIndex, presentation.partOpen, workspace.historyItems.filter(row => row.id.startsWith("history/feature/")).map(row => row.id.slice("history/feature/".length)), workspace.historyNodes) : [];
+  };
+  const extraActions = (id: string) => (findTreeNode(rawNodes, id)?.actions ?? [])
+    .filter(action => ['break-link', 'folder-unnest'].includes(action.id));
+  const menuItems = (id: string) => id.startsWith("source-") ? [{ id: "open-source-part", label: "Open source Part" }] : [...featureTreeMenuItems(menuActions(id)),
+    ...extraActions(id).map(action => ({...action, id:`row:${action.id}`, separatorBefore:true, disabled:!presentation.partOpen}))];
+  const runMenu = (id: string, commandID: string) => {
+    if (id.startsWith("source-") && commandID === "open-source-part") { dispatch(id, commandID); return; }
+    if (commandID.startsWith('row:') && presentation.partOpen && extraActions(id).some(action => action.id === commandID.slice(4))) {
+      dispatch(id,commandID.slice(4)); return;
+    }
+    const node = findTreeNode(rawNodes, id), action = menuActions(id).find(entry => entry.item.id === commandID);
+    if (!node || !action || action.item.disabled) return;
+    if (action.request.command === "appearance") { selectRows([id]); onShowAppearance(); return; }
+    const command = cadTreeCommand(action.request, node);
+    if (command) cadWorkspace.dispatch(command);
+  };
+  useEffect(() => {
+    if (presentation.itemFilterFocusSerial > 0) filterRef.current?.focus();
+  }, [presentation.itemFilterFocusSerial]);
+  return (
+    <section className={`browser-panel${active ? " active" : ""}`} data-panel="items" onKeyDownCapture={event=>{
+      if (!(event.target instanceof HTMLElement) || !event.target.classList.contains("aui-feature-tree-rollback") || filter || category !== "all") return;
+      const count=workspace.historyItems.filter(row=>row.id.startsWith("history/feature/")).length;
+      const index=event.key==="ArrowUp"?workspace.rollbackIndex-1:event.key==="ArrowDown"?workspace.rollbackIndex+1:event.key==="Home"?0:event.key==="End"?count:null;
+      if(index!==null){event.preventDefault();event.stopPropagation();cadWorkspace.dispatch({type:"rollback-to",index:Math.max(0,Math.min(count,index))});}
+    }}>
+      <TreePanelSplit primaryLabel="Features" secondaryLabel={showAssembly ? "Components" : "Parts"} defaultRatio={0.77} storageKey="aether-cad.studio-feature-parts-split" primary={<TreePanel actionPlacement="header"
+          ariaLabel="CAD features" title={`Features (${cadHistoryCount(workspace.itemNodes)})`} headerControls={[controls[0]]}
+          onCategoryChange={setCategory} filterLabel="Filter Features" filterInputID="items-filter" filterInputRef={filterRef} onFilterChange={setFilter}
+          filterOptions={[
+            { id: "body", label: "Bodies", icon: <AetherIcon name="cube" /> },
+            { id: "sketch", label: "Sketches", icon: <AetherIcon name="sketch-nodes" /> },
+            { id: "plane", label: "Planes and Axes", icon: <AetherIcon name="planes-axes" /> },
+            { id: "image", label: "Images", icon: <AetherIcon name="image" /> },
+          ]}
+          id="parts-list" className="cad-items-tree"
+          nodes={nodes}
+          controls={controls} controlsLabel="Feature tree controls"
+          backgroundItems={panelMenu.items} onBackgroundCommand={panelMenu.run}
+          menuItems={menuItems} menuLabel="Feature actions" onCommand={runMenu}
+          onActivate={id=>cadWorkspace.dispatch({type:"item-action",id,actionID:"edit-feature"})}
+          onMove={(id,targetID,position)=>cadWorkspace.dispatch({type:"move-item",id,targetID,position})}
+          canMove={(id,target,position)=>{
+            // Bodies left the feature list, so the last feature row is the end
+            // of the list; dropping "after" it must latch at the very end.
+            if(filter || category !== "all")return false;
+            if(id==="rollback-bar")return position!=="inside"&&target.startsWith("feature/")&&!target.startsWith("feature/body/");
+            if(id.startsWith("folder/"))return position==="inside"&&target.startsWith("folder/")&&id!==target;
+            if(id.startsWith("feature/")&&!id.startsWith("feature/body/")){
+              if(position==="inside")return target.startsWith("folder/");
+              return target.startsWith("feature/")&&!target.startsWith("feature/body/");
+            }
+            return false;
+          }}
+
+          selectedIDs={selectedIDs}
+          expandedIDs={workspace.expandedItemIDs}
+          filter={filter}
+          onSelect={selectRows}
+          onToggle={(id) => cadWorkspace.dispatch({ type: "toggle-item", id })}
+          onAction={(id, actionID) => cadWorkspace.dispatch({ type: "item-action", id, actionID })}
+          emptyState={presentation.backendState === "failed" && !workspace.itemNodes.length
+            ? "Aether CAD could not start — see the status bar and browser console."
+            : "No matching items"}
+
+        />} secondary={showAssembly ? <CADAssemblyPartsPanel /> : <CADPartsPanel
+          nodes={bodies} selectedIDs={selectedIDs} onSelect={selectRows}
+          onAction={dispatch} onShowAppearance={onShowAppearance}
+        />} />
+    </section>
+  );
+}

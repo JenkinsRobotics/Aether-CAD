@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { expect, it, vi } from 'vitest';
-import { cadSnapping } from '../cad-snapping-store';
+import { cadSnapping } from '../core/stores/cad-snapping-store';
 import { mountSketchSnappingControls } from './snapping-controls';
 const {JSDOM} = createRequire(import.meta.url)('jsdom');
 it('floating preference changes and sketch controls stay synchronized, then unsubscribe', () => {

@@ -1,0 +1,89 @@
+/** Solid — Fusion's SOLID tab: modelling, solid editing, reference geometry,
+ *  transforms. The tab every Design workspace opens on, and the only one of
+ *  the five whose tools mostly run. */
+import { homeWorkspace } from "./home";
+import { solidProducer, tool, type CADRibbonWorkspaceDefinition } from "./shared";
+
+export const solidWorkspace: CADRibbonWorkspaceDefinition = {
+  id: "solid",
+  label: "Solid",
+  groups: [
+    { id: "solid-create", label: "Create", tools: [
+      // Fusion opens its Create list with Create Sketch, and it is the first
+      // thing a new part needs. The Sketch tray itself is contextual.
+      // 3D Sketch is the sketch gesture with no plane; the model-curve tools live in
+      // its strip (Jonathan, 2026-11-01).
+      {...tool("solid-sketch", "Sketch", "sketch", "sketch"), variants: [
+        tool("solid-curve3d", "3D Sketch", "curve", "feature-curve3d"),
+      ]},
+      // Distinct creation operations are peers, not variants of Extrude.
+      tool("solid-extrude", "Extrude", "extrude", "feature-extrude"),
+      tool("solid-revolve", "Revolve", "revolve", "feature-revolve"),
+      tool("solid-sweep", "Sweep", "sweep", "feature-sweep"),
+      tool("solid-loft", "Loft", "loft", "feature-loft"),
+      tool("solid-hole", "Hole", "hole", "feature-hole"),
+      tool("solid-pipe", "Pipe", "sweep", "feature-pipe"),
+      tool("solid-thread", "Thread", "thread", "feature-thread"),
+      tool("solid-coil", "Coil", "sweep", "feature-coil"),
+      tool("solid-primitive", "Primitive", "extrude", "feature-primitive"),
+      tool("solid-bounding-solid", "Bounding solid", "extrude", "feature-bounding-solid"),
+      tool("solid-weld", "Weld", "weld", undefined, solidProducer),
+    ] },
+    { id: "solid-edit", label: "Modify", tools: [
+      // Every way of finishing an edge, behind one button.
+      {...tool("solid-fillet", "Fillet", "fillet", "feature-fillet"), variants:[
+        tool("solid-chamfer", "Chamfer", "chamfer", "feature-chamfer"),
+        tool("solid-variable-fillet", "Variable Fillet", "fillet", "feature-fillet"),
+        tool("solid-face-fillet", "Face Fillet", "fillet", "feature-fillet"),
+      ]},
+      // Union, Subtract and Intersect are the Operation field of this one editor (Jonathan, 2026-11-01).
+      {...tool("solid-boolean", "Boolean", "boolean", "feature-boolean"), variants: [
+        tool("solid-boundary-fill", "Enclose", "boolean", "feature-boundary-fill"),
+      ]},
+      tool("solid-shell", "Shell", "shell", "feature-shell"),
+      // Part or Face is the Split window's first row (Jonathan, 2026-11-01).
+      tool("solid-split", "Split", "split", "feature-split"),
+      {...tool("solid-push-pull", "Push/Pull", "push-pull", "feature-face-extrude"), variants:[
+        tool("solid-offset-face", "Offset Face", "offset", "feature-offset-face"),
+      ]},
+      // Replace Face is Offset Face's "Replace with plane" row.
+      tool("solid-wrap-emboss", "Wrap & Emboss", "emboss", "feature-emboss"),
+      tool("solid-delete-face", "Delete", "remove", "feature-delete-face"),
+      tool("solid-remove-body", "Remove part", "remove", "feature-remove-body"),
+    ] },
+    // Measure and Section view are the view tools beside the viewport (Jonathan, 2026-11-01):
+    // the ribbon carried a panel opener and a duplicate entry under those names, not variants.
+    { id: "solid-analysis", label: "Inspection", visibleToolCount: 2, tools: [
+      tool("solid-interference", "Interference Analysis", "split", "part-interference"),
+      tool("solid-clearance", "Clearance", "measure", "part-clearance"),
+      tool("solid-compare", "Compare Bodies", "measure", "part-compare"),
+      tool("solid-properties", "Physical properties", "measure", "part-properties"),
+      tool("solid-continuity", "Continuity", "curve", "part-continuity"),
+      tool("solid-curvature-comb", "Curvature Comb", "curve", "part-curvature-comb"),
+      tool("solid-isocurve", "Isocurves", "curve", "part-isocurve"),
+      tool("solid-minimum-radius", "Minimum Radius", "curve", "part-minimum-radius"),
+      tool("solid-silhouette", "Silhouette", "curve", "part-silhouette"),
+    ] },
+    // Plane, Axis and Point are three features; the construction method is the
+    // first field of each editor, not a separate button (Jonathan, 2026-11-01).
+    { id: "solid-reference", label: "Construction", tools: [
+      tool("solid-plane", "Plane", "plane", "feature-plane"),
+      tool("solid-axis", "Axis", "axis", "construction-axis-edge"),
+      tool("solid-point", "Point", "point", "construction-point-vertex"),
+    ] },
+    // Partial Revolve is Revolve with an angle; Thicken lives on the Surface tab.
+    // Design tabs show this group and Transform under Modify (Jonathan, 2026-11-01).
+    { id: "solid-advanced", label: "Advanced Shape", tools: [
+      tool("solid-draft", "Draft", "draft", "feature-draft"),
+      tool("solid-rib", "Rib", "extrude", "feature-rib"),
+      tool("solid-pattern", "Pattern", "pattern", "feature-pattern"),
+    ] },
+    { id: "solid-transform", label: "Transform", tools: [
+      // Moving a body is one gesture with several kinds.
+      // Translate, rotate, scale, copy and align are the Transform window's type row.
+      tool("solid-transform", "Transform", "move", "transform-translate"),
+      tool("solid-mirror", "Mirror", "mirror", "feature-mirror"),
+    ] },
+    ...homeWorkspace.groups,
+  ],
+};

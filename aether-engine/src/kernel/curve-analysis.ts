@@ -2,7 +2,7 @@
  *  isocurve and minimum_radius): exact derivatives from OCCT's adaptors, the
  *  arithmetic in TypeScript because the wasm build carries no LProp classes.
  *  Results are measurements plus world polylines for the viewport to draw. */
-import { getOC, type AnyShape, type Edge, type Face, type Shape3D } from "replicad";
+import { getOC, makeVertex, measureDistanceBetween, type AnyShape, type Edge, type Face, type Shape3D } from "replicad";
 import type { MeasureEntity } from "../contracts/index";
 import { facesOf } from "./exact-topology";
 import { clipToFace } from "./derived-curves";
@@ -19,6 +19,12 @@ export interface CurveAnalysisOptions {
   scale?: number;
   /** minimum_radius: radii below this (mm) are flagged. */
   radius_mm?: number;
+  /** continuity: G0 gap tolerance in mm (default 1e-3). */
+  position_tol_mm?: number;
+  /** continuity: G1 tangent angle tolerance in degrees (default 0.5). */
+  tangent_tol_deg?: number;
+  /** continuity: G2 normal curvature gap tolerance in 1/mm (default 1e-3). */
+  curvature_tol?: number;
 }
 export interface CurveAnalysisResult { measurements: Record<string, unknown>[]; curves: CurveOverlay[] }
 
@@ -161,6 +167,11 @@ export function analyzeCurves(bodies: ReadonlyMap<string, Shape3D>, options: Cur
           const n = 16;
           for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
             const s = sampleSurface(adaptor, uMin + (uMax - uMin) * (i / n), vMin + (vMax - vMin) * (j / n), scratch);
+            // Filter out UV samples that fall inside cutouts or outside the trimmed face boundary.
+            const vtx = makeVertex(s.point);
+            let onFace = false;
+            try { onFace = measureDistanceBetween(f.face, vtx) <= 1e-3; } finally { vtx.delete(); }
+            if (!onFace) continue;
             const k = Math.max(...principalCurvatures(s).map(Math.abs));
             if (k > 1e-9 && (!found || 1 / k < found.radius)) found = { radius: 1 / k, at: s.point };
           }
@@ -205,6 +216,9 @@ export function analyzeCurves(bodies: ReadonlyMap<string, Shape3D>, options: Cur
     } else if (options.kind === "continuity") {
       const edges = pickEdges(bodies, options.entities, own);
       if (!edges.length) throw new Error("Continuity needs an edge between two faces.");
+      const posTol = options.position_tol_mm ?? 1e-3;
+      const tanTol = options.tangent_tol_deg ?? 0.5;
+      const curvTol = options.curvature_tol ?? 1e-3;
       // Both faces along each edge, found by identity among the body's faces.
       const facesByBody = new Map<string, { id: number; face: Face }[]>();
       for (const [bodyId, body] of bodies) { const list = facesOf(body).map((i) => ({ id: i.id, face: i.face })); list.forEach((i) => own(i.face)); facesByBody.set(bodyId, list); }
@@ -212,21 +226,26 @@ export function analyzeCurves(bodies: ReadonlyMap<string, Shape3D>, options: Cur
         const adjacent = (facesByBody.get(e.bodyId) ?? []).filter((f) => { const edges = f.face.edges; const hit = edges.some((x) => x.isSame(e.edge)); edges.forEach((x) => x.delete()); return hit; });
         if (adjacent.length !== 2) { measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity: "open", faces: adjacent.map((f) => f.id) }); continue; }
         const samples = sampleEdge(e.edge, 8).slice(1, -1);
-        let maxAngle = 0, maxCurvatureGap = 0;
+        let maxGap = 0, maxAngle = 0, maxCurvatureGap = 0;
         for (const s of samples) {
+          const pts = adjacent.map((f) => withSurface(f.face, (adaptor, scratch) => {
+            const [u, v] = f.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
+            return sampleSurface(adaptor, u, v, scratch);
+          }));
+          maxGap = Math.max(maxGap, norm(sub(pts[0].point, pts[1].point)));
           const normals = adjacent.map((f) => { const n = f.face.normalAt([s.point[0], s.point[1], s.point[2]]); const v: V3 = [n.x, n.y, n.z]; n.delete(); return unit(v); });
           const angle = Math.acos(Math.max(-1, Math.min(1, dot(normals[0], normals[1])))) * 180 / Math.PI;
           maxAngle = Math.max(maxAngle, angle);
-          if (angle < 0.5) {
+          if (angle < tanTol) {
             // Across the edge, inside the shared tangent plane: compare normal curvatures.
             const across = unit(cross(normals[0], s.tangent));
-            const kappas = adjacent.map((f) => withSurface(f.face, (adaptor, scratch) => { const [u, v] = f.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]); return normalCurvature(sampleSurface(adaptor, u, v, scratch), across); }));
+            const kappas = pts.map((sf) => normalCurvature(sf, across));
             maxCurvatureGap = Math.max(maxCurvatureGap, Math.abs(Math.abs(kappas[0]) - Math.abs(kappas[1])));
           }
         }
-        const continuity = maxAngle >= 0.5 ? "G0" : maxCurvatureGap > 1e-3 ? "G1" : "G2";
-        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f) => f.id) });
-        curves.push({ label: `${continuity} ${e.bodyId} face ${e.faceId} edge ${e.edgeIndex}`, color: continuity === "G0" ? "#e5484d" : continuity === "G1" ? "#f2b134" : "#30a46c", polylines: [sampleEdge(e.edge, 24).map((s) => s.point)] });
+        const continuity = maxGap > posTol ? "discontinuous" : maxAngle >= tanTol ? "G0" : maxCurvatureGap > curvTol ? "G1" : "G2";
+        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_gap_mm: maxGap, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f) => f.id) });
+        curves.push({ label: `${continuity} ${e.bodyId} face ${e.faceId} edge ${e.edgeIndex}`, color: continuity === "discontinuous" || continuity === "G0" ? "#e5484d" : continuity === "G1" ? "#f2b134" : "#30a46c", polylines: [sampleEdge(e.edge, 24).map((s) => s.point)] });
       }
     } else throw new Error("Choose continuity, curvature comb, isocurve or minimum radius.");
     return { measurements, curves };

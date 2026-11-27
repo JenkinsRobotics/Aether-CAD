@@ -44,6 +44,8 @@ export type SketchContour = { sourceLayer?: string } & (
       /** SolidCraft's infinite line: a one-line construction path drawn across the
        *  whole view through its two points. The points stay the solver's entities. */
       infinite?: boolean;
+      /** Dash-dot centerline (construction axis eligible for revolve & linear-diameter). */
+      centerline?: boolean;
     }
 );
 export interface SketchDrawing {
@@ -107,6 +109,8 @@ export function validateSketchDrawing(input: SketchDrawing) {
       throw new Error("Construction flag must be boolean.");
     if (c.type === "path" && c.infinite !== undefined && (typeof c.infinite !== "boolean" || (c.infinite && (c.segments.length !== 1 || c.segments[0].type !== "line" || !c.construction))))
       throw new Error("An infinite line is a single construction line.");
+    if (c.type === "path" && c.centerline !== undefined && (typeof c.centerline !== "boolean" || (c.centerline && (!c.construction || c.segments.length === 0 || !c.segments.every((s) => s.type === "line")))))
+      throw new Error("A centerline must be a construction line.");
     if (c.type === "circle") {
       point(c.center);
       if (!Number.isFinite(c.radius) || c.radius <= 0)

@@ -28,7 +28,8 @@ export function featureInputDependencies(
 
   if ('profileFeatureId' in feature && feature.profileFeatureId) inputs.add(feature.profileFeatureId);
   if ('sourceFeatureId' in feature && feature.sourceFeatureId) inputs.add(feature.sourceFeatureId);
-  if ('pathFeatureId' in feature) inputs.add(feature.pathFeatureId);
+  if ('pathFeatureId' in feature && feature.pathFeatureId) inputs.add(feature.pathFeatureId);
+  if ('frameFeatureId' in feature && feature.frameFeatureId) inputs.add(feature.frameFeatureId);
   if ('bodyIds' in feature) feature.bodyIds?.forEach(body);
   if ('toolBodyIds' in feature) feature.toolBodyIds.forEach(body);
   if ('definition' in feature) reference(feature.definition);
@@ -68,16 +69,31 @@ export function featureInputDependencies(
       if (feature.patternType === 'polar') reference(feature.axisReference);
       break;
     case 'split': reference(feature.plane); reference(feature.tool); break;
-    case 'split-face': case 'surface-trim': reference(feature.plane); break;
+    case 'split-face': reference(feature.plane); break;
+    case 'surface-trim':
+      if (feature.plane) reference(feature.plane);
+      if (feature.toolBodyId) body(feature.toolBodyId);
+      break;
+    case 'surface-match':
+      body(feature.targetBodyId);
+      reference(feature.sourceEdges);
+      reference(feature.targetEdges);
+      break;
     case 'mirror': reference(feature.mirrorPlane); break;
     case 'offset-face': reference(feature.replaceWith); break;
     case 'chamfer': reference(feature.referenceFace); break;
     case 'shell': reference(feature.removedFaces); break;
     case 'draft': reference(feature.neutralFace); reference(feature.pullPlane); reference(feature.partingEdges); break;
-    case 'loft': reference(feature.startPoint); reference(feature.endPoint); reference(feature.path); reference(feature.connections); break;
+    case 'loft': reference(feature.startPoint); reference(feature.endPoint); reference(feature.path); reference(feature.guideRails); reference(feature.connections); break;
+    case 'frame-trim':
+      feature.targetBodyIds.forEach(body);
+      if (feature.toolBodyId) body(feature.toolBodyId);
+      if (feature.plane) reference(feature.plane);
+      break;
     case 'sweep': reference(feature.rail); reference(feature.orientation); break;
     case 'hole': reference(feature.placement); reference(feature.endReference); if (typeof feature.startFrom === 'object') reference(feature.startFrom.plane); break;
     case 'sheet-fold': reference(feature.line); break;
+    case 'sheet-convert': if (feature.baseFace) reference(feature.baseFace); break;
     case 'surface-blend':
       for (const side of [feature.from, feature.to]) { body(side.bodyId); reference(side.edges); }
       break;

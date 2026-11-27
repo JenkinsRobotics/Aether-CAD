@@ -1,4 +1,4 @@
-import type { FeatureWindow } from "../features/shared";
+import type { FeatureWindow } from "./features/shared";
 
 /** Explicit camera action; opening a sketch preserves the operator's view. */
 export function addSketchNormalControl(win: FeatureWindow): void {

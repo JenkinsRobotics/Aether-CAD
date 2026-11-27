@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { CADCommandRegistry } from "../cad-command-registry";
+import { CADCommandRegistry } from "../core/cad-command-registry";
 import { registerSketchToolCommands } from "./tool-commands";
 
 it("makes Include and related tools available only during sketch editing", () => {

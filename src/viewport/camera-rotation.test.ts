@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { PerspectiveCamera, Vector3 } from 'three/webgpu';
-import { cameraViewDefinition, nudgeCameraBasis, rollCameraBasis } from '../camera-view';
+import { cameraViewDefinition, nudgeCameraBasis, rollCameraBasis } from './camera-view';
 import { CameraRotationMotion } from './camera-rotation';
 
 it.each(['y', 'z'] as const)('rolls on the viewing axis through intermediate angles without moving the eye (%s-up)', axis => {

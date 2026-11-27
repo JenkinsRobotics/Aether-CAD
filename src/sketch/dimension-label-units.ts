@@ -1,5 +1,5 @@
 import { unitChoice } from "@aether/core/units";
-import { documentUnits, subscribeDocumentUnits } from "../document-preferences";
+import { documentUnits, subscribeDocumentUnits } from "../app/document-preferences";
 import { spaceDimensionLabels } from "./dimension-label-spacing";
 
 export function formatDimensionLabel(value: number, angle = false): string {

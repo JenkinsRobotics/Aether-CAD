@@ -1,4 +1,4 @@
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 
 /** Both viewport menus project the same live, validated sketch commands. */
 export function sketchContextCommands() {

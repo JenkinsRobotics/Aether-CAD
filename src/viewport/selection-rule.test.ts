@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { ConnectorCandidate } from '../aether-core';
+import type { ConnectorCandidate } from '../core/aether-core';
 import { resolveSelection } from './selection-rule';
 
 const candidate = (id: string, kind: ConnectorCandidate['kind']) => ({ id, kind, faceId: 1, label: id, origin: [0, 0, 0], xAxis: [1, 0, 0], yAxis: [0, 1, 0], zAxis: [0, 0, 1] }) as unknown as ConnectorCandidate;

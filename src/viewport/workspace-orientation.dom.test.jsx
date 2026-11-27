@@ -11,8 +11,8 @@ beforeAll(()=>{
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT",true);
 });
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
-import { WorkspaceOrientationSettings } from "../react/chrome/WorkspaceOrientationSettings";
-import { cadCameraPresentation } from "../cad-camera-presentation-store";
+import { WorkspaceOrientationSettings } from "../ui/chrome/WorkspaceOrientationSettings";
+import { cadCameraPresentation } from "../core/stores/cad-camera-presentation-store";
 import { readWorkspaceUpAxis, saveWorkspaceUpAxis } from "./workspace-orientation";
 
 afterEach(()=>{ localStorage.clear(); cadCameraPresentation.setUpAxis("z"); vi.restoreAllMocks(); });

@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import type { CADScreenPoint, CADSelectionItem, CADSelectionKind } from '../cad-selection-store';
+import type { CADScreenPoint, CADSelectionItem, CADSelectionKind } from '../core/stores/cad-selection-store';
 import type { SelectablePart, ScreenProjector } from './box-selection';
 
 const cross = (a: CADScreenPoint, b: CADScreenPoint, c: CADScreenPoint) =>

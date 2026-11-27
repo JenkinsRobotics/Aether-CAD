@@ -10,13 +10,13 @@ import {
   type SketchEntityRef,
   type DrawingConstraint,
 } from "../drawing-constraints";
+import { solveConstrainedSoftTargets } from "../solver/solve";
 import { translateRetainedTextForDrag } from "../text/drag";
 import { prepareSplineEndDrag } from "../reference/spline-end-tangents";
 /** Solve a pointer move with temporary point targets; no drag constraints are persisted. */
-/** Drag as far as the constraints allow: the full pointer delta first, then the
- * largest feasible fraction of it, and the unchanged drawing when nothing can move
- * (Jonathan, 2026-11-01: a free entity must follow the pointer, a bound one stays put,
- * neither is an error). ponytail: bisection over the delta, not a weighted solve. */
+/** Drag as far as the constraints allow: the full pointer delta first, then feasible-manifold
+ * weighted least-motion tracking (smooth along angled lines, circles, arcs, and linkages),
+ * then axis-aligned bisection fallback, and unchanged when fully locked. */
 export function dragSketchEntity(
   source: SketchDrawing,
   ref: SketchEntityRef,
@@ -27,6 +27,9 @@ export function dragSketchEntity(
   try { return dragSketchEntityExactly(source, ref, delta); } catch (error) {
     if (!(error instanceof Error) || /must be finite|Select existing|Select an existing|cannot be moved/.test(error.message)) throw error;
   }
+  // Feasible-manifold drag: pull dragged vertices smoothly toward cursor along the constraint manifold.
+  const manifold = dragSketchEntityManifold(source, ref, delta);
+  if (manifold) return manifold;
   const along = (direction: SketchPoint): { drawing: SketchDrawing; fraction: number } | null => {
     try { return { drawing: dragSketchEntityExactly(source, ref, direction), fraction: 1 }; } catch { /* bisect below */ }
     let low = 0, high = 1, best: SketchDrawing | null = null;
@@ -37,9 +40,6 @@ export function dragSketchEntity(
     }
     return best ? { drawing: best, fraction: low } : null;
   };
-  // The full delta first; then, when the constraints forbid that direction (a horizontal line's
-  // free end dragged diagonally), the larger feasible axis component, so the point still follows
-  // the pointer as far as the sketch allows (Jonathan, 2026-11-02).
   const whole = along(delta);
   if (whole?.fraction === 1) return whole.drawing;
   const candidates = [whole, along([delta[0], 0]), along([0, delta[1]])]
@@ -47,6 +47,52 @@ export function dragSketchEntity(
     .filter((item): item is NonNullable<typeof item> => !!item && item.reach > 1e-9)
     .sort((a, b) => b.reach - a.reach);
   return candidates[0]?.drawing ?? source;
+}
+function dragSketchEntityManifold(
+  source: SketchDrawing,
+  ref: SketchEntityRef,
+  delta: SketchPoint,
+): SketchDrawing | null {
+  try {
+    const splineDrag = prepareSplineEndDrag(source, ref);
+    const base = splineDrag?.drawing ?? source;
+    const path = base.contours[ref.contour];
+    if (!path) return null;
+    const refs: SketchEntityRef[] =
+      ref.kind === "point"
+        ? [ref]
+        : path.type === "circle"
+          ? [{ contour: ref.contour, kind: "point", index: 0 }]
+          : [
+              { contour: ref.contour, kind: "point", index: ref.index! },
+              { contour: ref.contour, kind: "point", index: ref.index! + 1 },
+            ];
+    const targets: { ref: SketchEntityRef; target: SketchPoint }[] = [];
+    for (const r of refs) {
+      const old = sketchEntityPoint(base, r);
+      if (!old) return null;
+      targets.push({ ref: r, target: [old[0] + delta[0], old[1] + delta[1]] });
+    }
+    const solved = solveConstrainedSoftTargets(base, targets);
+    if (splineDrag?.temporaryIds.size && solved.constraints) {
+      solved.constraints = solved.constraints.filter((c) => !splineDrag.temporaryIds.has(c.id));
+    }
+    validateSketchDrawing(solved);
+    // Confirm the dragged point actually moved closer to target.
+    let improved = false;
+    for (const t of targets) {
+      const before = sketchEntityPoint(base, t.ref);
+      const after = sketchEntityPoint(solved, t.ref);
+      if (before && after) {
+        const dBefore = Math.hypot(before[0] - t.target[0], before[1] - t.target[1]);
+        const dAfter = Math.hypot(after[0] - t.target[0], after[1] - t.target[1]);
+        if (dAfter + 1e-7 < dBefore) improved = true;
+      }
+    }
+    return improved ? solved : null;
+  } catch {
+    return null;
+  }
 }
 function dragSketchEntityExactly(
   source: SketchDrawing,

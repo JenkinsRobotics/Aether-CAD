@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Euler, Quaternion } from 'three';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { instanceDraft, instanceUpdate } from './instance-edit';
 import { captureInstanceEdit, configureInstanceEditing, saveInstanceEdit } from './instance-session';
 const pose = { position_m: [.02, -.04, .1], rotation_quaternion_xyzw: [0, 0, 0, 1] } as const;

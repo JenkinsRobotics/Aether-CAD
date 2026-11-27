@@ -1,5 +1,5 @@
 import { evaluateQuantityExpression, unitChoice } from "@aether/core/units";
-import { documentUnits, subscribeDocumentUnits } from "../document-preferences";
+import { documentUnits, subscribeDocumentUnits } from "../app/document-preferences";
 
 /** UI conversion only. Solver values remain millimeters or degrees. Each owner
  * must dispose the binding before replacing the input or closing its panel. */

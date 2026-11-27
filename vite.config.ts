@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   base: "./",
   build: {
     rollupOptions: {
-      input: { app: 'index.html', gallery: 'gallery/index.html', 'test-window': 'gallery/test-window.html', 'preview-document': 'src/preview-document.ts' },
+      input: { app: 'index.html', gallery: 'gallery/index.html', 'test-window': 'gallery/test-window.html', 'preview-document': 'src/app/preview-document.ts' },
       preserveEntrySignatures: 'strict',
       output: { entryFileNames: chunk => chunk.name === 'preview-document' ? `${chunk.name}.js` : 'assets/[name]-[hash].js' },
     },

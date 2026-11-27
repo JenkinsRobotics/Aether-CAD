@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { createRectanglePartDocument } from "@aether/core/document";
 import { DrawingEditor } from "../drawing/controller";
-import { CADDrawingWorkspaceStore } from "../cad-drawing-workspace-store";
+import { CADDrawingWorkspaceStore } from "../core/stores/cad-drawing-workspace-store";
 import { drawingAgentInteraction } from "./drawing-agent";
 
 const loader = vi.hoisted(() => ({ loadDrawingFont: vi.fn() }));

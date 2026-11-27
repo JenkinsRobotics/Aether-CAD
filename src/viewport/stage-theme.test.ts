@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { modelStudioEnvironment as look } from '@aether/assets/themes/rendering/model-studio';
 import { resolveAppearance, stageFor, stageFromRenderingTheme } from './appearance-themes';
-import { defaultCADAppearance } from '../cad-appearance-store';
+import { defaultCADAppearance } from '../core/stores/cad-appearance-store';
 
 it('derives the stage from the shared rendering theme data, as the demo applies it', () => {
   expect(stageFromRenderingTheme(look)).toEqual({ horizonFade: true, floor: 'shadow', gridFitsModel: true, toneMapped: true });

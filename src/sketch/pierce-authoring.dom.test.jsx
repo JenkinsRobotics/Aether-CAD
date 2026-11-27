@@ -4,15 +4,15 @@ import {beforeAll,beforeEach,afterEach,afterAll,expect,it,vi} from 'vitest';
 import {parsePartDocument,serializePartDocument} from '@aether/core/document';
 import cases from '../../service/tests/fixtures/pierce-documents.json';
 import {clickSketchControl as click,querySketchControl as q} from './test-controls';
-import {cadCommands} from '../cad-command-registry';
-import {applyDocumentUnits} from '../document-preferences';
+import {cadCommands} from '../core/cad-command-registry';
+import {applyDocumentUnits} from '../app/document-preferences';
 const {JSDOM}=createRequire(import.meta.url)('jsdom');
 let dom,open,doc,apply,disposeCommand;const captures=[];
 const command=()=>window.dispatchEvent(new CustomEvent('aether-sketch-constraint',{detail:'pierce'}));
 beforeAll(async()=>{
  dom=new JSDOM('<!doctype html><body></body>',{url:'http://localhost/cad/'});
  for(const key of ['window','document','HTMLElement','CustomEvent','Event','location'])vi.stubGlobal(key,dom.window[key]);
- open=(await import('../sketch-workspace')).openSketchWorkspace;
+ open=(await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
  // This is the same dynamic event bridge installed by main.ts for every
  // declared constraint; the actual workspace shortcut/command path is tested.
  disposeCommand=cadCommands.register('sketch-constraint-pierce',command);

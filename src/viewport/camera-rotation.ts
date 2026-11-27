@@ -1,5 +1,5 @@
 import { Matrix4, Camera, Quaternion, Vector3 } from 'three/webgpu';
-import type { CameraOrientationBasis } from '../camera-view';
+import type { CameraOrientationBasis } from './camera-view';
 
 /** Animate a ViewCube rotation as a rigid camera basis. A roll rotates only
  * screen-up, never the eye around a world axis or through a pole. */

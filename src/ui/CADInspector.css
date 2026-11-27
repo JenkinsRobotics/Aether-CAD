@@ -1,0 +1,452 @@
+/* Product composition. Shared Inspector owns rows, controls, typography and theme. */
+.cad-property-sheet { min-width: 0; }
+.cad-property-sheet .parameter-grid { display: block; padding: 0; }
+.cad-property-sheet .visualization-panel-scroll,
+.cad-property-sheet .inspect-panel-scroll { height: auto; overflow: visible; padding: 0; }
+.cad-property-sheet .visualization-fields { display: grid; gap: 0; padding: 0; }
+.cad-property-sheet .feature-help { margin: 8px 0 0; padding: 8px 0; }
+.cad-property-sheet .cad-view-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.cad-drawing-inspector.cad-drawing-property-sheet { display: block; overflow: auto; }
+
+/* Product layout only; the shared Inspector provides the visual language. */
+.aui-inspector .canonical-assembly-tree,
+.aui-inspector .canonical-bom-table { padding: 0; }
+.aui-inspector .canonical-assembly-constraints .aui-listbox { margin: 0; width: 100%; }
+.aui-inspector .assembly-workbench-tabs { padding: 0; }
+.aui-inspector .browser-title { padding: 0 0 8px; min-height: 36px; background: transparent; }
+.aui-inspector .inspect-capability-list { padding: 0; gap: 0; }
+.aui-inspector .inspect-capability { padding: 10px 0; border: 0; border-bottom: 1px solid var(--aether-color-border-subtle); border-radius: 0; background: transparent; }
+.aui-inspector .inspect-capability strong { font-size: 12px; }
+.aui-inspector .inspect-capability p { font-size: 11px; line-height: 1.5; }
+
+.cad-material-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.cad-material-fields:disabled { opacity: .55; }
+.cad-material-fields .aui-material-browser { min-width: 0; width: 100%; box-sizing: border-box; }
+
+/* Consistent inner navigation and content rhythm for right-sidebar panels. */
+.cad-sidebar-panel { min-width: 0; display: flex; flex-direction: column; }
+.cad-sidebar-tabs { padding: 0 0 12px; }
+.cad-sidebar-tabs .aui-segmented-control { width: 100%; }
+.cad-sidebar-content { min-width: 0; }
+.cad-sidebar-content[hidden] { display: none; }
+.cad-sidebar-analysis-actions { display: grid; gap: 6px; }
+.cad-sidebar-analysis-actions button { width: 100%; justify-content: flex-start; gap: 8px; }
+
+/* Dynamic context header card (reacts to active sketch, feature, body, or assembly selection). */
+.cad-context-banner {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--aether-color-text) 4%, var(--aether-color-bg-panel));
+}
+.cad-context-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.cad-context-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--aether-color-accent) 14%, var(--aether-color-bg-panel));
+  color: var(--aether-color-accent-icon, var(--aether-color-accent));
+}
+.cad-context-icon svg { width: 16px; height: 16px; }
+.cad-context-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.cad-context-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cad-context-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aether-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cad-context-subtitle {
+  font-size: 11px;
+  color: var(--aether-color-text-dim);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.cad-context-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cad-context-actions .aui-button {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 11px;
+  gap: 5px;
+}
+
+/* Status, category, and diagnostic pills. */
+.cad-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--aether-color-text) 9%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text-dim);
+}
+.cad-pill--accent {
+  background: color-mix(in srgb, var(--aether-color-accent) 16%, var(--aether-color-bg-panel));
+  color: var(--aether-color-accent-icon, var(--aether-color-accent));
+}
+.cad-pill--ok {
+  background: color-mix(in srgb, var(--aether-color-ok, #2ea043) 16%, var(--aether-color-bg-panel));
+  color: var(--aether-color-ok, #2ea043);
+}
+.cad-pill--warn {
+  background: color-mix(in srgb, #e59c24 18%, var(--aether-color-bg-panel));
+  color: #d98a0b;
+}
+.cad-pill--error {
+  background: color-mix(in srgb, var(--aether-color-error, #e04f5f) 16%, var(--aether-color-bg-panel));
+  color: var(--aether-color-error, #e04f5f);
+}
+
+/* Compact live monitoring KPI tiles. */
+.cad-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.cad-metric-tile {
+  display: grid;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--aether-color-border-subtle);
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+  min-width: 0;
+}
+.cad-metric-tile span {
+  font-size: 10px;
+  color: var(--aether-color-text-faint);
+}
+.cad-metric-tile strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--aether-color-text);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Structured card lists (document parameters, pinned params, notes, config values). */
+.cad-inspector-card-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.cad-inspector-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+  min-width: 0;
+}
+.cad-inspector-card[data-resolved="true"] { opacity: 0.68; }
+.cad-inspector-card[data-selected="true"] {
+  border-color: var(--aether-color-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aether-color-accent) 45%, transparent);
+}
+.cad-inspector-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cad-inspector-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aether-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.cad-inspector-card-value {
+  font-size: 11px;
+  color: var(--aether-color-text-dim);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.cad-inspector-card-value code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--aether-color-text) 7%, var(--aether-color-bg-panel));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--aether-color-text);
+}
+.cad-inspector-card-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--aether-color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cad-inspector-card-meta {
+  font-size: 10px;
+  color: var(--aether-color-text-faint);
+}
+.cad-inspector-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cad-inspector-card-actions .aui-button {
+  min-height: 24px;
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+/* Inline quick-edit row for pinned parameters / inline rename. */
+.cad-inline-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cad-inline-edit-row > :first-child { flex: 1; min-width: 0; }
+
+/* Physical material spec card. */
+.cad-spec-card {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  margin: 8px 0;
+  border: 1px solid var(--aether-color-border-subtle);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+}
+.cad-spec-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cad-swatch-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--aether-color-text) 25%, transparent);
+}
+.cad-spec-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 11px;
+}
+.cad-spec-grid dt { color: var(--aether-color-text-dim); }
+.cad-spec-grid dd {
+  margin: 0;
+  color: var(--aether-color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 500;
+}
+
+/* Surface analysis legend chips. */
+.cad-shader-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border-radius: 7px;
+  border: 1px solid var(--aether-color-border-subtle);
+  background: color-mix(in srgb, var(--aether-color-text) 3%, var(--aether-color-bg-panel));
+  font-size: 11px;
+  color: var(--aether-color-text-dim);
+}
+.cad-shader-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cad-shader-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+/* Quick camera strip in View panel. */
+.cad-camera-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.cad-camera-strip .aui-button {
+  min-width: 0;
+  padding: 4px 4px;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* Inspector callouts & textarea styling matching @aether/ui fields. */
+.cad-callout {
+  margin: 6px 0;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  border: 1px solid var(--aether-color-border-subtle);
+  background: color-mix(in srgb, var(--aether-color-text) 4%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text-dim);
+}
+.cad-callout--error {
+  border-color: color-mix(in srgb, var(--aether-color-error, #e04f5f) 45%, var(--aether-color-border));
+  background: color-mix(in srgb, var(--aether-color-error, #e04f5f) 10%, var(--aether-color-bg-panel));
+  color: var(--aether-color-error, #e04f5f);
+}
+.cad-callout--ok {
+  border-color: color-mix(in srgb, var(--aether-color-ok, #2ea043) 40%, var(--aether-color-border));
+  background: color-mix(in srgb, var(--aether-color-ok, #2ea043) 10%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text);
+}
+
+.aui-inspector .cad-textarea,
+.cad-property-sheet .cad-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 68px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--aether-color-text) 6%, var(--aether-color-bg-panel));
+  color: var(--aether-color-text);
+  font: 12px/1.45 var(--aether-font-family);
+  resize: vertical;
+}
+.aui-inspector .cad-textarea:focus-visible,
+.cad-property-sheet .cad-textarea:focus-visible {
+  border-color: var(--aether-color-border-focus);
+  outline: 2px solid var(--aether-color-border-focus);
+  outline-offset: -2px;
+}
+
+.cad-notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 16px;
+  min-width: 0;
+}
+
+/* 3D viewport PMI / Document Note callout pins. */
+.cad-notes-3d-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  overflow: hidden;
+}
+.viewport.sketching > .cad-notes-3d-overlay {
+  display: none;
+}
+.cad-note-3d-pin {
+  position: absolute;
+  transform: translate(-10px, -100%) translateY(-6px);
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 240px;
+  padding: 4px 8px 4px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--aether-color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--aether-color-bg-panel) 92%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--aether-color-text);
+  font: 11px/1.2 var(--aether-font-family);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+.cad-note-3d-pin::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  bottom: -5px;
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: inherit;
+  border-right: 1px solid color-mix(in srgb, var(--aether-color-border) 85%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--aether-color-border) 85%, transparent);
+}
+.cad-note-3d-pin:hover {
+  border-color: var(--aether-color-accent);
+}
+.cad-note-3d-pin[data-selected="true"] {
+  border-color: var(--aether-color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--aether-color-accent) 40%, transparent), 0 4px 12px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+}
+.cad-note-3d-pin[data-resolved="true"] {
+  opacity: 0.62;
+}
+.cad-note-3d-pin-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--aether-color-accent);
+}
+.cad-note-3d-pin[data-category="pmi"] .cad-note-3d-pin-dot { background: #3b82f6; }
+.cad-note-3d-pin[data-category="callout"] .cad-note-3d-pin-dot { background: #f59e0b; }
+.cad-note-3d-pin[data-category="review"] .cad-note-3d-pin-dot { background: #ec4899; }
+.cad-note-3d-pin[data-resolved="true"] .cad-note-3d-pin-dot { background: var(--aether-color-ok, #2ea043); }
+.cad-note-3d-pin-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--aether-color-text-dim);
+  flex: none;
+}
+.cad-note-3d-pin-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}

@@ -1,6 +1,6 @@
 import { createProjectionWindow } from "./projection-window";
 import { mountEditHistory } from "../modeling/edit-history";
-import { openSketchWorkspace } from "../sketch-workspace";
+import { openSketchWorkspace } from "../ui/windows/sketch-workspace";
 import {
   insertFeature,
   rollbackPosition,
@@ -13,7 +13,7 @@ import {
   populateProjectionGeometry,
   projectionGeometryReference,
 } from "./projection-source-selection";
-import "../sketch-workspace.css";
+import "../ui/windows/sketch-workspace.css";
 /** Source projection editing persists references rather than preview geometry. */
 export function openProjectionEditor(
   getDocument: () => PartDocument | null,

@@ -1,5 +1,5 @@
 /** Thin live-editor adapter shared by the picker and Files drag/drop. */
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { designInsertCandidates, insertionRecipe, needsAssemblyAnchor, type InsertPlacement, type InsertSource } from './insertion';
 import { readInsertSource } from './insertion-sources';
 interface InsertionHost {

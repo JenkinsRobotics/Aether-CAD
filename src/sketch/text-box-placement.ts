@@ -3,7 +3,7 @@ import {
   type SketchDrawing,
   type SketchPoint,
 } from "@aether/core/sketch";
-import { snapSketchPoint } from "../sketch-snapping";
+import { snapSketchPoint } from "./sketch-snapping";
 
 /** Two-corner text layout gesture; font outlines remain cached by the panel. */
 export function mountTextBoxPlacement(

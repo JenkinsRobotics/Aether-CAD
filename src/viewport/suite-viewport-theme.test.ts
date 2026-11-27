@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readViewportThemeOverride } from "./suite-viewport-theme";
 import { resolveAppearance } from "./appearance-themes";
-import { defaultCADAppearance as defaults } from "../cad-appearance-store";
+import { defaultCADAppearance as defaults } from "../core/stores/cad-appearance-store";
 
 // A manual colour outranks the theme (appearance-themes.test), so the theme is tested on an
 // appearance that sets none.

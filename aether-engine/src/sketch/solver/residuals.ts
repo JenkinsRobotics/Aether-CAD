@@ -30,6 +30,7 @@ import { curveContinuityResiduals } from "./curve-continuity";
 import type { SketchDrawing, SketchPoint } from "../drawing";
 import type { DrawingConstraint } from "./types";
 import { resolve } from "./entities";
+import { pointAtArcLengthFraction } from "./point-along";
 import { pierceResiduals } from '../reference/pierce-constraints';
 import { validatePierceConstraint } from '../reference/pierce-context';
 export function constraintResiduals(
@@ -144,6 +145,66 @@ export function constraintResiduals(
       return [circle(a).radius - positive()];
     case "diameter":
       return [2 * circle(a).radius - positive()];
+    case "arc-length": {
+      if (!a.arc) throw new Error("Arc length requires an arc.");
+      return [a.arc.radius * Math.abs(a.arc.sweep) - positive()];
+    }
+    case "arc-sweep": {
+      if (!a.arc) throw new Error("Arc sweep requires an arc.");
+      const target = positive();
+      if (target >= 360) throw new Error("Arc sweep must be strictly less than 360 degrees.");
+      return [(Math.abs(a.arc.sweep) * 180) / Math.PI - target];
+    }
+    case "line-angle": {
+      const u = delta(line(a));
+      if (Math.hypot(...u) < 1e-10) throw new Error("Cannot measure a zero-length line angle.");
+      const diff = Math.atan2(u[1], u[0]) - (value() * Math.PI) / 180;
+      return [Math.atan2(Math.sin(diff), Math.cos(diff))];
+    }
+    case "linear-diameter": {
+      const p = a.point ?? b?.point;
+      const l = a.line ?? b?.line;
+      if (!p || !l) throw new Error("Linear diameter requires a point and a centerline.");
+      return [2 * pointLineMeasurement(p, l).distance - positive()];
+    }
+    case "point-circle-distance": {
+      const p = a.point ?? b?.point;
+      const circ = a.circle ?? b?.circle;
+      if (!p || !circ) throw new Error("Point-circle distance requires a point and a circle or arc.");
+      const centerDist = Math.hypot(p[0] - circ.center[0], p[1] - circ.center[1]);
+      const gap = c.gapMode === "inner" ? circ.radius - centerDist : centerDist - circ.radius;
+      return [gap - value()];
+    }
+    case "line-circle-distance": {
+      const l = a.line ?? b?.line;
+      const circ = a.circle ?? b?.circle;
+      if (!l || !circ) throw new Error("Line-circle distance requires a line and a circle or arc.");
+      const dLine = pointLineMeasurement(circ.center, l).distance;
+      const gap = c.gapMode === "inner" ? dLine + circ.radius : dLine - circ.radius;
+      return [gap - value()];
+    }
+    case "circle-circle-distance": {
+      const ca = circle(a), cb = circle(b);
+      const centerDist = Math.hypot(ca.center[0] - cb.center[0], ca.center[1] - cb.center[1]);
+      const gap =
+        c.gapMode === "nested"
+          ? Math.abs(ca.radius - cb.radius) - centerDist
+          : c.gapMode === "inner"
+            ? centerDist + ca.radius + cb.radius
+            : centerDist - (ca.radius + cb.radius);
+      return [gap - value()];
+    }
+    case "slot-overall-length": {
+      const ca = circle(a), cb = circle(b);
+      const centerDist = Math.hypot(ca.center[0] - cb.center[0], ca.center[1] - cb.center[1]);
+      return [centerDist + ca.radius + cb.radius - positive()];
+    }
+    case "point-along": {
+      if (!c.b) throw new Error("Point-along requires a point and a curve.");
+      const p = point(a);
+      const target = pointAtArcLengthFraction(d, c.b, value());
+      return [p[0] - target[0], p[1] - target[1]];
+    }
     case "distance": {
       if (a.line && b?.line) {
         const m = lineLineMeasurement(a.line, b.line);

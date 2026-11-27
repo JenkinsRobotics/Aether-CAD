@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {assemblyAgentInteraction,assemblyAgentTools,inspectAssembly} from './assembly-agent';
-import type {CADAssemblyController} from '../cad-assembly-controller';
+import type {CADAssemblyController} from '../assembly/cad-assembly-controller';
 
 function setup() {
   let key='assembly-a',writable=true;
@@ -10,7 +10,7 @@ function setup() {
   return {controller,interaction,switch:()=>{key='other';},lock:()=>{writable=false;},execute:(name:string,args={})=>interaction.execute({id:'call',name,arguments:{...(name==='aether_cad_assembly_inspect'?{}:{expected_revision:inspectAssembly(controller as unknown as CADAssemblyController).revision}),...args}},new AbortController().signal)};
 }
 it('offers only implemented assembly tools and bounded recipe input',()=>{
-  expect(assemblyAgentTools.map(t=>t.name)).toEqual(['aether_cad_docs','aether_cad_assembly_inspect','aether_cad_assembly_compose','aether_cad_assembly_edit','aether_cad_assembly_undo','aether_cad_assembly_redo']);
+  expect(assemblyAgentTools.map(t=>t.name)).toEqual(['aether_cad_docs','aether_cad_assembly_inspect','aether_cad_assembly_compose','aether_cad_assembly_edit','aether_cad_assembly_undo','aether_cad_assembly_redo','aether_cad_assembly_mass','aether_cad_assembly_ik','aether_cad_assembly_sweep','aether_cad_assembly_find_limits','aether_cad_assembly_urdf']);
   expect(assemblyAgentTools.every(t=>t.inputSchema.additionalProperties===false)).toBe(true);
 });
 it('inspects reusable template IDs and uses the same controller as the UI',async()=>{

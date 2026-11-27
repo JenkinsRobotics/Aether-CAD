@@ -1,5 +1,5 @@
 /** The component dialog, row menu and ribbon share one live-editor adapter. */
-import type { AssemblyMutationMethod, AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyMutationMethod, AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { instanceUpdate, type InstanceDraft } from './instance-edit';
 
 interface InstanceHost {

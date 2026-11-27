@@ -1,9 +1,11 @@
 import {validateSolidFaceReference,type SolidFaceReference} from './solid-face-reference';
 import {isHoleThreadStandard,threadClasses,threadSpecification,type HoleThreadStandard} from './hole-standards';
 
-/** Cosmetic Thread (SolidCraft's solid.thread, modeled: false): a thread
- *  designation recorded on a cylindrical face. The model is unchanged; the
- *  tree and part inspection list it. A modelled thread is not provided yet. */
+export type ThreadForm = "v60" | "trapezoidal" | "acme" | "buttress";
+
+/** Cosmetic or Modelled Thread (SolidCraft's `solid.thread`): records a thread designation on
+ *  a cylindrical face, with optional physical chamfer, undercut, face split, or full helical
+ *  modelled thread (V60, trapezoidal, ACME, buttress; right/left hand; 1..8 starts). */
 export interface ThreadFeature {
   id:string;type:'thread';name:string;suppressed:boolean;
   face:SolidFaceReference;
@@ -14,7 +16,16 @@ export interface ThreadFeature {
   /** Tolerance class ("6H", "6g" is external: use "6H"/"6G"/"2B" as the hole tables list). */
   threadClass?:string;
   lengthMillimeters?:number;
-  modeled?:false;
+  /** When true, cuts an exact helical thread groove into the cylinder. */
+  modeled?:boolean;
+  /** Left-hand helix direction when modeled (default false = right-hand). */
+  leftHand?:boolean;
+  /** Multi-start thread count (1..8, default 1). */
+  starts?:number;
+  /** Thread tooth profile form (default "v60"). */
+  form?:ThreadForm;
+  /** Override pitch in mm (otherwise taken from standard/designation). */
+  pitchMillimeters?:number;
   /** Onshape's size from the cylinder: the designation is the standard's size whose major diameter is nearest the picked face's, re-read when the face changes. */
   sizeFromFace?:boolean;
   /** Onshape's Add chamfer: a chamfer on the circular edge where the thread starts (distance along the cylinder, angle from it). */
@@ -26,6 +37,29 @@ export interface ThreadFeature {
   /** The part carrying the face (the window sets it from the pick). */
   targetBodyId?:string;
 }
+
+const ISO_COARSE_PITCH: Record<number, number> = {
+  2: 0.4, 2.5: 0.45, 3: 0.5, 4: 0.7, 5: 0.8, 6: 1.0, 8: 1.25, 10: 1.5,
+  12: 1.75, 14: 2.0, 16: 2.0, 18: 2.5, 20: 2.5, 22: 2.5, 24: 3.0, 27: 3.0, 30: 3.5,
+};
+
+/** Resolve pitch (mm) and nominal major diameter (mm) for a ThreadFeature. */
+export function resolveThreadGeometry(feature: ThreadFeature): { majorDiameterMillimeters: number; pitchMillimeters: number } {
+  if (feature.standard) {
+    const spec = threadSpecification(feature.standard, feature.designation);
+    if (spec) {
+      return {
+        majorDiameterMillimeters: spec.majorDiameterMillimeters,
+        pitchMillimeters: feature.pitchMillimeters ?? spec.pitchMillimeters,
+      };
+    }
+  }
+  const match = /^M(\d+(?:\.\d+)?)(?:x(\d+(?:\.\d+)?))?$/i.exec(feature.designation.trim());
+  const major = match ? Number(match[1]) : 8;
+  const pitch = feature.pitchMillimeters ?? (match?.[2] ? Number(match[2]) : (ISO_COARSE_PITCH[major] ?? Math.max(0.4, major * 0.15)));
+  return { majorDiameterMillimeters: major, pitchMillimeters: pitch };
+}
+
 export function validateThread(feature:ThreadFeature,earlier:ReadonlyMap<string,string>,missing:(id:string)=>boolean) {
   validateSolidFaceReference(feature.face,earlier,missing,'Thread face');
   if(feature.face.surfaceType!=='cylinder')throw Error('A thread goes on a cylindrical face.');
@@ -41,5 +75,9 @@ export function validateThread(feature:ThreadFeature,earlier:ReadonlyMap<string,
   if((feature.undercut||feature.splitFace)&&feature.lengthMillimeters===undefined)throw Error('An undercut or split face needs a Blind thread length.');
   if(feature.sizeFromFace!==undefined&&typeof feature.sizeFromFace!=='boolean')throw Error('sizeFromFace must be true or false.');
   if(feature.sizeFromFace&&feature.standard===undefined)throw Error('Size from the face needs a thread standard.');
-  if(feature.modeled)throw Error('Modelled threads are not provided yet; the thread is cosmetic.');
+  if(feature.modeled!==undefined&&typeof feature.modeled!=='boolean')throw Error('modeled must be true or false.');
+  if(feature.leftHand!==undefined&&typeof feature.leftHand!=='boolean')throw Error('leftHand must be true or false.');
+  if(feature.starts!==undefined&&(!Number.isInteger(feature.starts)||feature.starts<1||feature.starts>8))throw Error('Thread starts must be an integer from 1 to 8.');
+  if(feature.form!==undefined&&!["v60","trapezoidal","acme","buttress"].includes(feature.form))throw Error('Unknown thread form.');
+  if(feature.pitchMillimeters!==undefined&&!positive(feature.pitchMillimeters))throw Error('Thread pitch must be positive.');
 }

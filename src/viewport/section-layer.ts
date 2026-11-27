@@ -3,10 +3,10 @@
  *  Display only — it never reads or changes the CAD document. */
 import * as THREE from "three/webgpu";
 import { color, float, fract, mix, screenCoordinate, step, uniform } from "three/tsl";
-import { isSectioned, sectionClipPlane, sectionClipPlanes, type SectionView } from "../section/section-view-store";
+import { isSectioned, sectionClipPlane, sectionClipPlanes, type SectionView } from "./section/section-view-store";
 import { styledLines } from "./styled-lines";
 import { sectionCapGeometry } from "./section-caps";
-import { sectionInspectionGeometry } from '../section/section-topology';
+import { sectionInspectionGeometry } from './section/section-topology';
 import type { PartGeometryData } from '@aether/core/contracts';
 import type { AnchorPart } from './topology-anchors';
 

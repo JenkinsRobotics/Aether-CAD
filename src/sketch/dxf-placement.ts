@@ -1,4 +1,4 @@
-import { snapSketchPoint } from "../sketch-snapping";
+import { snapSketchPoint } from "./sketch-snapping";
 import { dxfAnchorChoices } from "./dxf-anchor";
 import {
   similarityTransform,

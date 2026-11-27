@@ -1,4 +1,5 @@
 import { regenerateDimensionExpressions } from "../sketch/operations/dimension-expression";
+import { applyFeatureExpressions } from "./feature-expressions";
 import { validatePartDocument, type PartDocument } from "./part-document";
 import { evaluateDocumentVariables, type DocumentVariable } from "./variables";
 import { authoredTextDrawing } from "./text-expressions";
@@ -41,6 +42,7 @@ export async function updatePartDocumentVariables(
   if (variables === undefined) delete next.variables;
   else next.variables = structuredClone([...variables]);
   const resolved = evaluateDocumentVariables(next.variables);
+  applyFeatureExpressions(next, resolved);
   for (const feature of next.features) {
     const drawing = authoredTextDrawing(feature);
     if (

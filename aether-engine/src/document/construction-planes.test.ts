@@ -77,7 +77,7 @@ describe("construction plane definitions", () => {
     });
   });
 
-  it("rejects a mid plane between non-parallel planes", () => {
+  it("bisects non-parallel planes with a mid plane through their intersection line", () => {
     const mid = plane({
       id: "mid",
       name: "Mid",
@@ -89,7 +89,11 @@ describe("construction plane definitions", () => {
         ],
       },
     });
-    expect(() => resolvePlaneFrame(mid, [])).toThrow(/parallel/);
+    const frame = resolvePlaneFrame(mid, []);
+    expect(frame.originMillimeters.map((v) => Math.abs(v))).toEqual([0, 0, 0]);
+    expect(Math.abs(frame.normal[0])).toBeCloseTo(0, 6);
+    expect(Math.abs(frame.normal[1])).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(Math.abs(frame.normal[2])).toBeCloseTo(Math.SQRT1_2, 6);
   });
 
   it("validation preserves missing references and rejects later planes and round-trips definitions", () => {

@@ -2,15 +2,16 @@ import { inspectNativeTopology } from './topology-inspection';
 import {resolveExtrusionScopes} from '../modeling/extrusion-scope-resolution';
 import { serializePartDocument, type PartDocument } from '@aether/core/document';
 import type { AgentInteraction, AgentToolCall } from '@aether/ui/AgentServices';
-import type { ImportedModelData } from '@aether/core/contracts';
+import type { AnalysisOptions, AnalysisResult, ImportedModelData } from '@aether/core/contracts';
 import { resolveBodyOutputs } from '../modeling/body-outputs';
 import { resolveSketchFrames } from '../modeling/sketch-support';
 import { cadAgentTools, inspectPart, preparePartEdit, validateLiveArguments } from './live-commands';
+import { buildAnalysisOptions, handleModelQuery, handleParityReadTool, runAgentParameterSweep } from './parity-tools';
 import { inspectSketch } from './sketch-edit';
 import { inspectFeatureReferences } from './feature-inspection';
 import { discoverCAD } from '../ai/knowledge';
 import { executeProgram } from '../ai/program';
-import { readFeatureCatalog } from '../operations/feature-operations';
+import { readFeatureCatalog } from '../core/operations/feature-operations';
 import { prepareModelProjection } from './model-projection';
 import type { ModelIncludeKernel } from '../sketch/model-include';
 
@@ -20,6 +21,7 @@ export interface CADAgentWorkspace {
   available:()=>boolean;
   writable:()=>boolean;
   evaluate:(doc:PartDocument)=>Promise<ImportedModelData>;
+  analyze?:(doc:PartDocument,options:AnalysisOptions,signal:AbortSignal)=>Promise<AnalysisResult>;
   projectModelGeometry?: ModelIncludeKernel['projectModelGeometry'];
   commit:(doc:PartDocument,model:ImportedModelData)=>void;
   verify?:(doc:PartDocument,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>;
@@ -35,16 +37,24 @@ export class CADAgentEditor {
     if(contextKey!==w.contextKey())throw Error('The active Part changed.');
     validateLiveArguments(call.name,call.arguments);
     if(call.name==='aether_cad_docs')return discoverCAD(cadAgentTools,call.arguments,'part');
+    if(call.name==='aether_cad_commands'||call.name==='aether_cad_describe'||call.name==='aether_cad_standard_parts')return handleParityReadTool(cadAgentTools,w.current(),call.name,call.arguments);
     if(call.name==='aether_cad_feature_types'||call.name==='aether_cad_feature_schema')return readFeatureCatalog(call.name,call.arguments);
     const source=w.current();
     if(!source)throw Error('Create or open a Part first.');
     if(call.name==='aether_cad_inspect')return {...inspectPart(source,call.arguments),writable:w.writable(),can_undo:!!w.history.candidate(-1),can_redo:!!w.history.candidate(1)};
     if(call.name==='aether_cad_sketch_inspect')return inspectSketch(source,call.arguments);
     if(call.name==='aether_cad_feature_references')return inspectFeatureReferences(source,call.arguments);
+    if(call.name==='aether_cad_parameters_inspect'||call.name==='aether_cad_material_library'||call.name==='aether_cad_configurations_inspect'||call.name==='aether_cad_notes_inspect')return handleParityReadTool(cadAgentTools,source,call.name,call.arguments);
     if(this.busy)throw Error('Another agent edit is rebuilding.');
     if(!w.available())throw Error('Finish or cancel the open sketch/feature and return to Modeling first.');
-    if(call.name==='aether_cad_verify'||call.name==='aether_cad_preview'||call.name==='aether_cad_topology'){
-      const operation=call.name==='aether_cad_topology'?async()=>inspectNativeTopology(source,await w.evaluate(source),call.arguments):call.name==='aether_cad_verify'?()=>w.verify?.(source,call.arguments,signal):()=>w.preview?.(source,signal);
+    if(call.name==='aether_cad_verify'||call.name==='aether_cad_preview'||call.name==='aether_cad_topology'||call.name==='aether_cad_model_query'||call.name==='aether_cad_analyze'||call.name==='aether_cad_parameter_sweep'){
+      const operation =
+        call.name==='aether_cad_topology' ? async()=>inspectNativeTopology(source,await w.evaluate(source),call.arguments)
+        : call.name==='aether_cad_model_query' ? async()=>handleModelQuery(source,await w.evaluate(source),call.arguments)
+        : call.name==='aether_cad_analyze' ? async()=>w.analyze ? { changed: false, ...(await w.analyze(source, buildAnalysisOptions(call.arguments), signal)) } : undefined
+        : call.name==='aether_cad_parameter_sweep' ? async()=>w.analyze ? runAgentParameterSweep(source, call.arguments, (cand, opts) => w.analyze!(cand, opts, signal)) : undefined
+        : call.name==='aether_cad_verify' ? ()=>w.verify?.(source,call.arguments,signal)
+        : ()=>w.preview?.(source,signal);
       this.busy=true;
       const signature=serializePartDocument(source);
       try {

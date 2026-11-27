@@ -1,0 +1,1943 @@
+import type { AssemblyProjectionV1 } from "../core/cad-assembly-bridge";
+import { assemblyPlayback } from "../modeling/history/assembly-playback";
+import type { PlaybackSequence } from "../modeling/history/playback";
+import { auxToolbarItems } from "./aux-toolbar-preferences";
+import { sourceFeatureTarget } from "../assembly/source-features";
+import { AssemblyGeometryCache } from '../assembly/geometry-cache';
+import { mountAssemblyPlacementManipulator } from '../assembly/placement-manipulator';
+import { configureAssemblyInsertion, installAssemblyInsertionDrop } from "../assembly/insertion-session";
+import { installAssemblyHistoryShortcuts } from "./startup/assembly-history";
+import { toggleMeasureWindow } from "../viewport/measure/MeasureWindow";
+import { openSectionView, turnOffSectionView } from "../viewport/section/SectionViewWindow";
+import { sectionView } from "../viewport/section/section-view-store";
+import { cadObjectAppearance } from '../viewport/cad-object-appearance';
+import { configureImageFacePicker } from "../modeling/cad-import-service";
+import { configureDocumentNavigation, navigateDocument } from "./document-navigation";
+import { rebuildRecovering, recordFeatureErrors, renderableDocument } from "../modeling/feature-errors";
+import { configureEditHistory, editingDocument } from "../modeling/edit-history";
+import { historyPlayback } from '../modeling/history/playback';
+import { supportForFace, sourceFeatureForBody } from "../modeling/sketch-support";
+import { openPartAnalysis } from "../modeling/part-analysis";
+import { configureCADImport, queueCADImport } from "../modeling/cad-import-service";
+import { importFormat } from "../modeling/cad-import";
+import type { ImportedModelData } from "@aether/core/contracts";
+import { configureFeaturePreview } from "../modeling/feature-preview";
+import { configurePartExport } from "../modeling/part-export";
+import { configureViewportContext } from "../viewport/context-menu";
+import { installPartUndo } from "../modeling/part-undo";
+import { verifyPart, viewportProof } from '../ai/proof';
+import { configureCADAgentWorkspace, configureAssemblyAgentWorkspace, configureDrawingAgentWorkspace } from '../automation/live-workspace';
+import { drawingAgentInteraction } from '../automation/drawing-agent';
+import { assemblyAgentInteraction } from '../automation/assembly-agent';
+import { openAssemblyRecipeDialog } from '../ui/assembly-recipe-dialog';
+import { documentSession } from './document-session';
+import { hostedPartEditable, syncHostedAssemblyProject } from './host-library';
+import { registerSketchTextCommand } from "../sketch/text-command";
+import { registerSketchImportCommand } from "../sketch/import-command";
+import { registerSketchToolCommands } from "../sketch/tool-commands";
+import { constructionPlaneFrame } from "@aether/core/document";
+import { sketchProfilePolylines, sketchProfileStrokes } from "@aether/core/sketch";
+import { profileFrame, rollbackPosition, curve3dPolylines, identifyDocumentSketches, featureDependencies } from "@aether/core/document";
+import { sketchConstraintCommandKinds } from "../core/cad-command-registry";
+import { registerViewCommands } from "./startup/view-commands";
+import { configureInstanceEditing, captureInstanceEdit, saveInstanceEdit, openSelectedComponentPart } from "../assembly/instance-session";
+import { instanceDraft } from "../assembly/instance-edit";
+import { projectItemURL } from "./host-library";
+import { registerAssemblyCommands } from "./startup/assembly-commands";
+import { solveAssemblyJob } from "@aether/core/kernel";
+import { bodiesForPlacements, describeSolve, solveAssemblyProjection } from "./startup/assembly-solve";
+import { documentBodyAppearance } from '../viewport/document-appearance';
+import { assemblyMeasurementSource, configureMeasurementSources } from '../viewport/measure/measurement-source';
+import { explodedPlacements } from "./startup/assembly-motion";
+import { checkAssemblyContacts, describeOverlaps, liveContactSets } from "./startup/assembly-contacts";
+import { aetherKernel } from "../core/engine/aether/kernel";
+import { drawingEditor } from "../drawing/controller";
+import { activeProject, createHostedDesignDrawing } from "./host-library";
+import { configureDrawingFiles, downloadDrawingFile } from "../drawing/files";
+import { createDrawingDocument, parseDrawingDocument, serializeDrawingDocument, type DrawingDocument } from "@aether/core/drawing";
+import { AETHER_CAD_EXTENSION, isAetherCADFile } from "@aether/core/document/file-types";
+import { partGraph, readAetherCAD, tabArchive, writeAetherCAD } from "../document/aethercad-archive";
+import { openMotionStudyWindow } from "../ui/windows/assembly-motion-window";
+import { mountDerivedCurveCommands } from "../ui/windows/derived-curves-window";
+import { mountSketch3DWorkspace } from "../ui/windows/sketch3d-workspace";
+import { mountTimelineCopy } from "../modeling/commands/timeline-clipboard-commands";
+import {
+  beginMateAuthoring,
+  registerMateCommands,
+  syncMateAvailability,
+} from "./startup/mate-commands";
+import { unitChoice } from "@aether/core/units";
+import { documentUnits, subscribeDocumentUnits } from "./document-preferences";
+import { configureDocumentPrint } from "./document-print";
+import { mountFeatureAuthoring, mountProjectTabs } from "../ui/windows/feature-authoring";
+import { documentNotesBridge } from "../ui/panels/notes";
+import { mountDocumentNotesOverlay } from "../viewport/notes-3d-overlay";
+import { documentParametersBridge } from "../ui/panels/parameters";
+import { runAssemblyMassReport, runAssemblyURDFExport } from "../automation/assembly-parity-tools";
+import { createEmptyPartDocument, validatePartDocument } from "@aether/core/document";
+import "../ui/style.css";
+import {
+  createRectanglePartDocument,
+  parsePartDocument,
+  rectanglePartParameters,
+  reviseRectanglePartDocument,
+  type AppliedMate,
+  type PartDocument,
+  type SketchPlane,
+} from "../core/aether-core";
+import { createHostAetherCoreClient } from "../core/host-aether-core-client";
+import { savePartDocument } from "./part-file";
+import { hostedCAD, loadHostedFile, switchHostedDocument, saveHostedFile, detachHostedFile, markHostedDirty, markHostedClean, configureAutosave, flushAutosaveNow, hostedSourceReference, hostedSourceURL, readHostedSource } from "./host-library";
+import {
+  sketchPlaneForReference,
+  parseReferenceVisibility,
+  type ReferenceGeometryId,
+} from "../viewport/reference-geometry";
+import { SketchEditor } from "../sketch/sketch-editor";
+import { MateViewport, type AuthoringTool } from "../viewport/viewer";
+import { type CADCommandID, cadCommands } from "../core/cad-command-registry";
+import { buildCADWorkspaceProjection } from "../core/cad-workspace-projection";
+import { cadWorkspace } from "../core/stores/cad-workspace-store";
+import {
+  cadPresentation,
+  parseCADPresentationPreferences,
+  serializeCADPresentationPreferences,
+  type CADBrowserPanel,
+  type CADStatusTone,
+} from "../core/stores/cad-presentation-store";
+import { cadAppearance } from "../core/stores/cad-appearance-store";
+import { cadSelection } from "../core/stores/cad-selection-store";
+import { measureReference, type MeasureReference } from "../viewport/measure/measure-reference";
+import { CADAssemblyController } from "../assembly/cad-assembly-controller";
+import { cadAssemblyWorkspace } from "../core/stores/cad-assembly-workspace-store";
+import { readWorkspaceUpAxis, saveWorkspaceUpAxis } from "../viewport/workspace-orientation";
+import { cadCameraPresentation } from "../core/stores/cad-camera-presentation-store";
+import type { StandardCameraView } from "../viewport/camera-view";
+
+const app = document.querySelector<HTMLDivElement>("#app");
+if (!app) throw new Error("Missing #app root");
+if (!app.querySelector(".shapr-shell")) throw new Error("React CAD shell did not mount");
+
+const viewportElement = document.querySelector<HTMLElement>("#viewport")!;
+const picker = document.querySelector<HTMLInputElement>("#step-picker")!;
+const documentPicker = document.querySelector<HTMLInputElement>("#document-picker")!;
+const partNameInput = document.querySelector<HTMLInputElement>("#part-name") ?? { value: "Part 1" };
+const partWidthInput = document.querySelector<HTMLInputElement>("#part-width") ?? { value: "60" };
+const partHeightInput = document.querySelector<HTMLInputElement>("#part-height") ?? { value: "40" };
+const partDepthInput = document.querySelector<HTMLInputElement>("#part-depth") ?? { value: "20" };
+const mates: AppliedMate[] = [];
+const expandedDocuments = new Set<string>();
+const collapsedFolders = new Set<string>();
+const knownDocuments = new Set<string>();
+let activePartDocument: PartDocument | null = null;
+const selectedFeatureIDs = new Set<string>();
+let untitledPartNumber = 1;
+let awaitingSketchPlane = false;
+let pendingPartName: string | null = null;
+let selectedSketchPlane: SketchPlane | null = null;
+let sketchEditor: SketchEditor | null = null;
+let activeWorkspaceKind: "part" | "assembly" | "drawing" = "part";
+// Drawing files have their own save identity. A source Part is only a snapshot
+// plus an optional Studio locator; it is never saved into the drawing's file.
+const drawingURLs = new Map<string, string>();
+const drawingSourceKey = (sourceId: string, reference?: DrawingDocument["sourceReference"]) => JSON.stringify([sourceId, reference ?? null]);
+const drawingContextKey = () => `drawing:${drawingEditor.snapshot()?.document.documentId ?? "none"}:${documentSession()?.id ?? "local"}:${location.search}`;
+let drawingFileBusy = false;
+drawingEditor.configure(() => activePartDocument, {
+  writable: () => activeWorkspaceKind === "drawing" && hostedPartEditable() && !drawingFileBusy,
+  contextKey: drawingContextKey,
+  changed: kind => {
+    if (kind === "edited" && activeWorkspaceKind === "drawing") {
+      if (hostedCAD) markHostedDirty();
+      window.dispatchEvent(new Event("aether-drawing-updated"));
+    }
+  },
+  readSource: async drawing => {
+    if (hostedCAD && drawing.sourceReference) return readHostedSource(drawing.sourceReference);
+    if (activePartDocument?.documentId === drawing.source.documentId) return activePartDocument;
+    throw Error("This drawing contains a source snapshot. Open its original Part to rebuild from newer geometry.");
+  },
+});
+configureDrawingAgentWorkspace({
+  active: () => activeWorkspaceKind === "drawing",
+  contextKey: drawingContextKey,
+  interaction: key => drawingAgentInteraction(drawingEditor, key, () => activeWorkspaceKind === "drawing" ? drawingContextKey() : "inactive-drawing"),
+});
+function drawingSnapshot() {
+  return tabArchive(drawingEditor.snapshot()!.document, "drawing");
+}
+async function saveDrawing(): Promise<void> {
+  const value = drawingSnapshot();
+  if (hostedCAD) await saveHostedFile(value.name, value.bytes);
+  else downloadDrawingFile(value.name, value.bytes, "application/vnd.aether.workspace+zip");
+}
+function rememberDrawing(): void {
+  const drawing = drawingEditor.snapshot()?.document;
+  if (activeWorkspaceKind === "drawing" && drawing && new URLSearchParams(location.search).has("document")) {
+    drawingURLs.set(drawingSourceKey(drawing.source.documentId, drawing.sourceReference), location.href);
+  }
+}
+function presentDrawing(): void {
+  activeWorkspaceKind = "drawing";
+  cadPresentation.patch({ startScreen: "workspace", startDialog: null, workspaceMode: "drawing" });
+  updateLists();
+  window.dispatchEvent(new Event("aether-drawing-updated"));
+}
+async function drawingFileOperation(run: () => Promise<void>): Promise<void> {
+  if (drawingFileBusy || drawingEditor.history().busy) throw Error("Wait for the current drawing operation.");
+  drawingFileBusy = true; const inert = document.body.inert; document.body.inert = true;
+  try { if (hostedCAD) await flushAutosaveNow(); await run(); }
+  finally { drawingFileBusy = false; document.body.inert = inert; if (activeWorkspaceKind === "drawing") await drawingEditor.enter(); }
+}
+async function newDrawing(file?: File, name?: string): Promise<void> {
+  await drawingFileOperation(async () => {
+    let text: string;
+    if (file) {
+      if (file.size > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
+      const entry = readAetherCAD(new Uint8Array(await file.arrayBuffer())).graph.drawings?.[0];
+      if (!entry) throw Error("This document has no Drawing.");
+      text = JSON.stringify(entry.document);
+    } else {
+      const old = drawingEditor.snapshot()?.document;
+      const source = activeWorkspaceKind === "drawing" ? old?.source : activeWorkspaceKind === "part" ? activePartDocument : null;
+      if (!source) throw Error("Open a source Part first.");
+      const drawing = createDrawingDocument(source);
+      if (name !== undefined) drawing.name = name.trim();
+      drawing.sourceReference = activeWorkspaceKind === "drawing" ? old?.sourceReference : hostedCAD ? hostedSourceReference() : undefined;
+      text = serializeDrawingDocument(drawing);
+    }
+    // Build before changing storage identity: failed files preserve the old editor.
+    await drawingEditor.open(text);
+    if (hostedCAD && activeProject && !file) {
+      const contained = await createHostedDesignDrawing(parseDrawingDocument(text));
+      await drawingEditor.open(serializeDrawingDocument(contained));
+    } else if (hostedCAD) detachHostedFile();
+    presentDrawing();
+    // The document navigation event fired while the Part tab was still current; remember the
+    // Drawing tab now so returning from the 3D model reopens it instead of creating another.
+    rememberDrawing();
+    if (hostedCAD) markHostedDirty();
+  });
+}
+async function enterDrawing(): Promise<void> {
+  if (activeWorkspaceKind === "drawing") { await drawingEditor.enter(); return; }
+  const source = activeWorkspaceKind === "part" ? activePartDocument : null;
+  const previousURL = source && drawingURLs.get(drawingSourceKey(source.documentId, hostedCAD ? hostedSourceReference() : undefined));
+  if (hostedCAD && previousURL) { await navigateDocument(previousURL); return; }
+  if (!hostedCAD && source && drawingEditor.snapshot()?.document.source.documentId === source.documentId) { presentDrawing(); await drawingEditor.enter(); return; }
+  await newDrawing();
+}
+async function leaveDrawing(): Promise<void> {
+  if (drawingEditor.history().busy || drawingFileBusy) throw Error("Wait for the drawing rebuild before opening its source.");
+  const drawing = drawingEditor.snapshot()?.document;
+  if (!drawing) return;
+  if (hostedCAD && drawing.sourceReference) { await navigateDocument(hostedSourceURL(drawing.sourceReference)); return; }
+  await drawingFileOperation(async () => {
+    const source = structuredClone(activePartDocument?.documentId === drawing.source.documentId ? activePartDocument : drawing.source);
+    const model = await worker.evaluatePart(source);
+    if (hostedCAD) detachHostedFile();
+    activeWorkspaceKind = "part";
+    showEvaluatedPart(source, model, new Map(), "Opened the drawing source snapshot.");
+    cadPresentation.patch({ workspaceMode: "modeling" }); updateLists();
+  });
+}
+configureDrawingFiles({ create: name => newDrawing(undefined, name), open: newDrawing, save: saveDrawing, leave: leaveDrawing });
+const referenceVisibility: Record<ReferenceGeometryId, boolean> = {
+  origin: false,
+  axes: false,
+  "top-plane": false,
+  "front-plane": false,
+  "right-plane": false,
+};
+// Show/hide of reference geometry is a workspace preference, not document data:
+// it must survive a reload, like the panel layout next to it.
+const referenceVisibilityKey = "aether-cad.reference-visibility.v1";
+let sketchPlaneVisibilityBefore: typeof referenceVisibility | null = null;
+try {
+  Object.assign(referenceVisibility, parseReferenceVisibility(localStorage.getItem(referenceVisibilityKey)));
+} catch {
+  // Storage is an optional presentation convenience, never a CAD dependency.
+}
+function persistReferenceVisibility(): void {
+  try {
+    localStorage.setItem(referenceVisibilityKey, JSON.stringify(referenceVisibility));
+  } catch {
+    // Storage is an optional presentation convenience, never a CAD dependency.
+  }
+}
+// The new layout has its own preferences; keep legacy settings available for rollback.
+const presentationPreferenceKey = "aether-cad.presentation.studio-v2";
+
+try {
+  const saved = parseCADPresentationPreferences(localStorage.getItem(presentationPreferenceKey));
+  // v1 layouts could hide the feature tree through the old aux-toolbar toggle, which
+  // no longer exists; carry them over with the tree back in its standard column.
+  const legacy = saved ? null : parseCADPresentationPreferences(localStorage.getItem("aether-cad.presentation.studio-v1"));
+  const preferences = saved ?? (legacy && { ...legacy, panelPlacements: { ...legacy.panelPlacements, browser: "docked" as const } });
+  // The tree is the standard column of both layouts (Jonathan, 2026-11-01): only the
+  // Settings › Layout tree toggle may keep it hidden across sessions.
+  if (preferences?.panelPlacements.browser === "hidden" && !auxToolbarItems().includes("feature-tree"))
+    preferences.panelPlacements = { ...preferences.panelPlacements, browser: "docked" };
+  if (preferences) cadPresentation.patch(preferences);
+} catch {
+  // The standalone app can run with storage disabled; session state still works.
+}
+
+function persistPresentationPreferences(): void {
+  try {
+    localStorage.setItem(
+      presentationPreferenceKey,
+      serializeCADPresentationPreferences(cadPresentation.snapshot()),
+    );
+  } catch {
+    // Storage is an optional presentation convenience, never a CAD dependency.
+  }
+}
+
+function setStatus(
+  message: string,
+  tone: CADStatusTone = "normal",
+): void {
+  cadPresentation.patch({ statusMessage: message, statusTone: tone });
+}
+
+let assemblyRenderTask = Promise.resolve();
+const assemblyController = new CADAssemblyController({
+  async validateContacts(projection) {
+    const solved = await solveAssemblyProjection(projection, {
+      solve: async (job) => solveAssemblyJob(job),
+      evaluate: (document) => aetherKernel().evaluatePart(document), parseDocument: parsePartDocument
+    });
+    const overlaps = await checkAssemblyContacts(projection, solved.solution.instances, {
+      parseDocument: parsePartDocument, checkContacts: (input) => aetherKernel().checkContacts(input),
+    });
+    if (overlaps.length) throw Error(`${describeOverlaps(overlaps)} No edit was applied.`);
+  },
+  writable: () => !drawingFileBusy && activeWorkspaceKind === 'assembly' && hostedPartEditable(),
+  ...(hostedCAD ? { saveFile: saveHostedFile } : {}),
+  onDocumentChanged(document) {
+    if (!document) return;
+    activeWorkspaceKind = "assembly";
+    activePartDocument = null;
+    window.dispatchEvent(new Event('aether-part-updated'));
+    if (hostedCAD) markHostedDirty();
+    assemblyRenderTask = renderCanonicalAssembly();
+    cadPresentation.patch({
+      documentName: document.name,
+      activePanel: "mates",
+      workspaceMode: "modeling",
+      startScreen: "workspace",
+      startDialog: null,
+    });
+    syncAssemblyCommands();
+    const projection = assemblyController.geometryProjection;
+    if (projection) { syncHostedAssemblyProject(projection); mountProjectTabs(); }
+  },
+  onStatus: setStatus,
+});
+configureMeasurementSources(id => assemblyMeasurementSource(activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null, id, viewer.measurementPlacement(id)));
+configureAssemblyInsertion({
+  projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+  editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && assemblyController.canEditInstances,
+  insert: (recipe, signal, assertCurrent) => assemblyController.composeRecipe(recipe, signal, assertCurrent),
+});
+installAssemblyInsertionDrop(viewportElement, error => setStatus(String(error), 'error'));
+configureInstanceEditing({
+  projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+  selectedID: () => assemblyController.selectedInstance?.id ?? null,
+  editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && assemblyController.canEditInstances,
+  edit: (...args) => assemblyController.editAtomically(...args),
+  openPart: async id => {
+    if (!hostedCAD || !activeProject) throw Error('Save this Assembly in Studio before opening its source Part.');
+    await navigateDocument(projectItemURL(id, 'part'));
+  },
+});
+cadCommands.register('assembly-edit-component', () => { cadPresentation.dispatch({ type: 'show-start-dialog', dialog: 'edit-component' }); });
+cadCommands.register('assembly-open-component-part', () => void openSelectedComponentPart().catch(error => setStatus(String(error), 'error')));
+cadCommands.register('assembly-toggle-visible', () => {
+  try {
+    const captured = captureInstanceEdit(), draft = instanceDraft(captured.instance);
+    void saveInstanceEdit(captured, { ...draft, visible: !draft.visible }, new AbortController().signal).catch(error => setStatus(String(error), 'error'));
+  } catch (error) { setStatus(String(error), 'error'); }
+});
+
+const assemblyContextKey = () => `assembly:${assemblyController.document?.workspaceID ?? 'none'}:${assemblyController.document?.assemblyID ?? 'none'}:${location.search}`;
+configureAssemblyAgentWorkspace({
+  active: () => activeWorkspaceKind === 'assembly', contextKey: assemblyContextKey,
+  interaction: key => assemblyAgentInteraction(assemblyController, key, () => activeWorkspaceKind === 'assembly' ? assemblyContextKey() : 'inactive-assembly',
+    () => hostedPartEditable() && !document.querySelector('[data-assembly-recipe],.cad-feature-dialog')),
+});
+for (const [command, kind] of [['assembly-part-template', 'template'], ['assembly-from-json', 'single'], ['assembly-linear-array', 'linear'], ['assembly-circular-array', 'circular']] as const)
+  cadCommands.register(command, () => openAssemblyRecipeDialog(assemblyController, kind));
+for (const [command, direction] of [['assembly-undo-recipe', -1], ['assembly-redo-recipe', 1]] as const)
+  cadCommands.register(command, () => void assemblyController.undoRecipe(direction).then(syncAssemblyCommands).catch(error => setStatus(String(error), 'error')));
+installAssemblyHistoryShortcuts({
+  active: () => activeWorkspaceKind === "assembly" && hostedPartEditable(),
+  canStep: direction => direction === -1 ? assemblyController.canUndoRecipe : assemblyController.canRedoRecipe,
+  step: async direction => { await assemblyController.undoRecipe(direction); syncAssemblyCommands(); },
+  onError: error => setStatus(String(error), "error"),
+});
+let matePreviewSerial = 0;
+
+function syncAssemblyCommands(): void {
+  const recipeEditable = assemblyController.canEditInstances && activeWorkspaceKind === 'assembly' && hostedPartEditable();
+  for (const command of ['assembly-part-template', 'assembly-from-json', 'assembly-linear-array', 'assembly-circular-array'] as const) cadCommands.setEnabled(command, recipeEditable);
+  cadCommands.setEnabled('assembly-undo-recipe', recipeEditable && assemblyController.canUndoRecipe);
+  cadCommands.setEnabled('assembly-redo-recipe', recipeEditable && assemblyController.canRedoRecipe);
+  const instance = assemblyController.selectedInstance;
+  const mate = assemblyController.selectedMate;
+  const enabled = recipeEditable && assemblyController.canEditSelectedInstance;
+  const mateEnabled = recipeEditable && assemblyController.canEditSelectedMate;
+  cadCommands.setEnabled("assembly-insert-component", recipeEditable);
+  for (const id of ['assembly-edit-component', 'assembly-toggle-visible', 'assembly-make-independent', 'assembly-linked-copy', 'assembly-part-properties', 'assembly-bodies-to-component', 'assembly-resize-standard-part'] as const)
+    cadCommands.setEnabled(id, enabled);
+  cadCommands.setEnabled('assembly-open-component-part', activeWorkspaceKind === 'assembly' && !!instance && instance.definition_kind === 'part' && !!activeProject?.parts.some(part => part.id === instance.definition_id && part.document));
+  cadCommands.setEnabled('assembly-insert-standard-part', recipeEditable);
+  cadCommands.setEnabled('assembly-as-built-joint', recipeEditable && (assemblyController.geometryProjection?.instances.filter(item => !item.suppressed).length ?? 0) >= 2);
+  cadCommands.setEnabled('assembly-reach-point', enabled);
+  cadCommands.setEnabled('assembly-rigid-group', recipeEditable && cadAssemblyWorkspace.snapshot().selectedEntityIDs.size >= 2);
+  cadCommands.setEnabled('assembly-unlock', enabled);
+  cadCommands.setEnabled("assembly-add-connector", assemblyController.canAddConnector);
+  cadCommands.setEnabled("assembly-create-mate", recipeEditable && assemblyController.canAddMate);
+  syncMateAvailability(recipeEditable && assemblyController.canAddMate,
+    recipeEditable && !!assemblyController.geometryProjection?.instances.some(item => !item.suppressed),
+    assemblyController.geometryProjection?.capabilities.supported_mate_type_ids);
+  cadCommands.setEnabled("assembly-set-mate-dof-value", assemblyController.canEditSelectedMateDOF);
+  cadCommands.setEnabled("assembly-edit-mate-dof-limits", assemblyController.canEditSelectedMateDOF);
+  cadCommands.setEnabled("assembly-create-relation", assemblyController.canAddRelation);
+  cadCommands.setEnabled("assembly-create-contact-set", assemblyController.canEditContacts);
+  cadCommands.setEnabled("assembly-toggle-contacts", !!assemblyController.geometryProjection?.capabilities.can_edit_contacts && hostedPartEditable());
+  cadCommands.setEnabled("assembly-check-contacts", !!assemblyController.geometryProjection);
+  cadCommands.setActive("assembly-toggle-contacts", assemblyController.contactsEnabled);
+  cadCommands.setEnabled("assembly-toggle-grounded", enabled);
+  cadCommands.setEnabled("assembly-toggle-suppressed", enabled);
+  cadCommands.setEnabled("assembly-remove-instance", enabled);
+  cadCommands.setEnabled("assembly-toggle-mate-suppressed", mateEnabled);
+  cadCommands.setEnabled("assembly-remove-mate", mateEnabled);
+  cadCommands.setActive("assembly-toggle-grounded", Boolean(enabled && instance?.grounded));
+  cadCommands.setActive("assembly-toggle-suppressed", Boolean(enabled && instance?.suppressed));
+  cadCommands.setActive("assembly-toggle-mate-suppressed", Boolean(mateEnabled && mate?.suppressed));
+}
+
+// One section tool: the live Section view (display only, like Onshape's).
+cadCommands.register("section-view", () => openSectionView());
+cadCommands.register("part-section", () => openSectionView());
+const applySection = () => { viewer.setSection(sectionView.snapshot(), sectionView.editing()); window.dispatchEvent(new Event('aether-inspection-geometry-updated')); };
+sectionView.subscribe(applySection);
+window.addEventListener("aether-part-updated", applySection);
+window.addEventListener('aether-assembly-geometry-updated', applySection);
+window.addEventListener("cad-document-navigation", () => turnOffSectionView());
+window.addEventListener("aether-section-face", event => { const { item, respond } = (event as CustomEvent).detail; respond(viewer.selectedSectionFrame(item)); });
+window.addEventListener("aether-section-handle", event => { const { view, respond } = (event as CustomEvent).detail; respond(viewer.projectSectionHandle(view)); });
+window.addEventListener('aether-section-pivot', event => { const { pointer, origin, respond } = (event as CustomEvent).detail; respond(viewer.pickManipulatorPivot(pointer, origin)); });
+window.addEventListener('aether-section-drag-end', () => viewer.clearInteractionAnchors());
+window.addEventListener('aether-section-normal', event => viewer.setCameraDirection((event as CustomEvent).detail.normal));
+window.addEventListener('aether-measure-frame', event => { const { item, respond } = (event as CustomEvent).detail; respond(viewer.measurementFrame(item)); });
+for (const kind of ["interference", "properties", "clearance", "compare", "continuity", "curvature_comb", "isocurve", "minimum_radius", "silhouette", "mesh_inspect"] as const) cadCommands.register(`part-${kind.replaceAll("_", "-")}` as CADCommandID, () => {
+  try { openPartAnalysis(kind, activePartDocument, model => viewer.setFeaturePreview(model), curves => viewer.setAnalysisCurves(curves), () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null)); }
+  catch (error) { setStatus(error instanceof Error ? error.message : String(error), "error"); }
+});
+
+cadCommands.register("measure", () => toggleMeasureWindow(() => activePartDocument));
+
+cadCommands.register("engine-build", () => {
+  if (!activePartDocument) {
+    setStatus("Open a Part before rebuilding it.", "error");
+    return;
+  }
+  // Use the same recovery/replacement path as edits; never append geometry
+  // returned by a failed native build alongside the previous Part.
+  return evaluateAndShowPart(activePartDocument, "Rebuilt Part.");
+});
+
+// The Assembly authoring commands live in ./startup/assembly-commands.
+registerAssemblyCommands({
+  toggleSelectedInstanceGrounded: () => assemblyController.toggleSelectedInstanceGrounded(),
+  toggleSelectedInstanceSuppressed: () => assemblyController.toggleSelectedInstanceSuppressed(),
+  removeSelectedInstance: () => assemblyController.removeSelectedInstance(),
+  copySelectedInstanceIndependent: () => assemblyController.copySelectedInstanceIndependent(),
+  addLinkedCopyOfSelectedInstance: () => assemblyController.addLinkedCopyOfSelectedInstance(),
+  addRigidGroupFromSelection: () => assemblyController.addRigidGroupFromSelection(),
+  unlockSelection: () => assemblyController.unlockSelection(),
+  toggleSelectedMateSuppressed: () => assemblyController.toggleSelectedMateSuppressed(),
+  removeSelectedMate: () => assemblyController.removeSelectedMate(),
+  resetMatePreview: () => {
+    matePreviewSerial += 1;
+    cadPresentation.patch({ matePreview: null });
+  },
+});
+
+// One command per mate kind, and the solve. Which kinds are offered comes
+// from the engine rather than a hard-coded list, so a mate can never reach
+// the ribbon before the solver can build it.
+registerMateCommands({
+  beginMate: (kind) => beginMateAuthoring(kind),
+  solve: () => {
+    void solveOpenAssembly();
+  },
+});
+cadAssemblyWorkspace.subscribe(syncAssemblyCommands);
+syncAssemblyCommands();
+
+function syncToolUI(): void {
+  const tool = viewer.activeTool;
+  cadCommands.setActive("connector", tool === "connector");
+  cadCommands.setActive("fastened", tool === "fastened");
+  cadCommands.setActive(
+    "sketch",
+    awaitingSketchPlane || Boolean(sketchEditor?.active),
+  );
+  cadPresentation.patch({
+    activeTool: tool,
+    awaitingSketchPlane,
+    hover: tool === "none" ? null : cadPresentation.snapshot().hover,
+  });
+}
+
+function showBrowserPanel(panel: CADBrowserPanel): void {
+  if (activeWorkspaceKind === "drawing") { void leaveDrawing().then(() => showBrowserPanel(panel)).catch(error => setStatus(String(error), "error")); return; }
+  const presentation = cadPresentation.snapshot();
+  cadPresentation.patch({
+    activePanel: panel,
+    workspaceMode: "modeling",
+    panelPlacements: panel === "items" && presentation.panelPlacements.browser === "hidden"
+      ? Object.freeze({ ...presentation.panelPlacements, browser: "docked" })
+      : presentation.panelPlacements,
+  });
+}
+
+function syncRibbonAvailability(): void {
+  const rows = viewer.getPartRows();
+  const connectors = viewer.getConnectorRows();
+  cadCommands.setEnabled("save-part", activeWorkspaceKind === "drawing" || activePartDocument !== null);
+  cadCommands.setEnabled("commit-part", (activeWorkspaceKind === "drawing" || activePartDocument !== null) && hostedCAD);
+  cadCommands.setEnabled("connector", rows.length > 0);
+  cadCommands.setEnabled("fastened", connectors.length >= 2);
+  cadCommands.setEnabled("fit-view", rows.length > 0);
+  cadCommands.setEnabled("clear-mates", mates.length > 0);
+}
+
+// Draft feature being authored (declared before updateLists reads it).
+let draftSketch: { id: string; name: string; hasPlane: boolean; existing: boolean } | null = null;
+let draftFeature: { id: string; name: string; kind: string; invalid?: boolean } | null = null;
+function canPlayHistory(): boolean {
+  const state = cadPresentation.snapshot();
+  return (activeWorkspaceKind === 'part' || activeWorkspaceKind === 'assembly') && !state.loading && !state.startDialog && !state.awaitingSketchPlane && !draftSketch &&
+    editingDocument(activePartDocument) === activePartDocument && !document.querySelector('.cad-feature-dialog,.cad-sketch-workspace,.cad-plane-window,.cad-axis-window,.cad-point-window');
+}
+// A feature window that picks sketch geometry shows every sketch while it is open, hidden ones
+// included (Onshape): the consumed sketch's regions and lines stay clickable for the next feature.
+let revealHiddenSketches = false;
+window.addEventListener("aether-region-mode", (event) => {
+  const next = Boolean((event as CustomEvent).detail?.active);
+  if (next === revealHiddenSketches) return;
+  revealHiddenSketches = next;
+  updateLists(false);
+});
+let playbackProjection: AssemblyProjectionV1 | null = null;
+let playbackSequence: PlaybackSequence | null = null;
+function syncHistoryPlayback(): void {
+  const projection = activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null;
+  if (projection !== playbackProjection) {
+    playbackProjection = projection;
+    playbackSequence = projection ? assemblyPlayback(projection, doc => worker.evaluatePart(doc, { transient: true })) : null;
+  }
+  historyPlayback.sync(activeWorkspaceKind === 'part' ? activePartDocument : null, canPlayHistory(), playbackSequence);
+}
+function updateLists(notifyDocumentChange = true): void {
+  syncHistoryPlayback();
+  const displayedDocument = historyPlayback.project(editingDocument(activePartDocument));
+  const visibleDocument = renderableDocument(displayedDocument);
+  viewer.setConstructionPlanes(visibleDocument);
+  viewer.setRegionDocument(visibleDocument);
+  viewer.setImageCanvases(visibleDocument?.imageCanvases);
+  // Finished sketches stay visible in the viewport (native parity): every
+  // unsuppressed sketch before the rollback line renders its curves.
+  viewer.setSketchCurves(
+    visibleDocument
+      ? visibleDocument.features
+        .slice(0, rollbackPosition(visibleDocument))
+        .filter((feature) => (feature.type === "sketch" || feature.type === "profile") && !feature.suppressed && (revealHiddenSketches || !visibleDocument.sketchPresentation?.[feature.id]?.hidden))
+        .map((feature) => ({
+          id: feature.id,
+          frame: profileFrame({ plane: ("plane" in feature ? feature.plane : "XY") as "XY" | "XZ" | "YZ", offsetMillimeters: "offsetMillimeters" in feature ? feature.offsetMillimeters : 0, frame: "frame" in feature ? feature.frame : undefined, flip: "flip" in feature ? feature.flip : undefined }),
+          // Faithful to the sketch: construction geometry shows too, it is what later features reference (Jonathan, 2026-11-01).
+          polylines: "profile" in feature ? sketchProfilePolylines(feature.profile, { includeConstruction: true }) : [],
+          strokes: "profile" in feature ? sketchProfileStrokes(feature.profile) : [],
+        }))
+      : [],
+  );
+  // 3D sketches are world polylines already.
+  viewer.setSpaceCurves(
+    visibleDocument
+      ? visibleDocument.features.slice(0, rollbackPosition(visibleDocument)).filter((feature) => feature.type === "curve3d" && !feature.suppressed)
+        .map((feature) => ({ id: feature.id, polylines: feature.type === "curve3d" ? curve3dPolylines(feature) : [] }))
+      : [],
+  );
+  if (notifyDocumentChange) window.dispatchEvent(new Event("aether-part-updated"));
+  documentNotesBridge.bind(activePartDocument?.notes ?? [], (nextNotes) => {
+    if (!activePartDocument) return;
+    const updated: PartDocument = { ...activePartDocument, ...(nextNotes.length ? { notes: nextNotes } : { notes: undefined }) };
+    if (!nextNotes.length) delete updated.notes;
+    void evaluateAndShowPart(updated, "Document notes updated.", false, { overlay: false });
+  });
+  documentParametersBridge.bind(activePartDocument, async (nextDoc) => {
+    await evaluateAndShowPart(nextDoc, "Parameters updated.", false, { overlay: false });
+  });
+  const rows = viewer.getPartRows();
+  const importedRows = activePartDocument
+    ? rows.filter((row) => row.sourceDocumentId !== activePartDocument?.documentId)
+    : rows;
+  const connectors = viewer.getConnectorRows();
+  const topology = viewer.getTopologyInferenceSummary();
+  const first = viewer.firstMateConnector;
+  rows.forEach((row) => {
+    if (knownDocuments.has(row.sourceDocumentId)) return;
+    knownDocuments.add(row.sourceDocumentId);
+    expandedDocuments.add(row.sourceDocumentId);
+  });
+  cadWorkspace.publish(
+    buildCADWorkspaceProjection(
+      displayedDocument,
+      importedRows,
+      expandedDocuments,
+      referenceVisibility,
+      selectedSketchPlane,
+      connectors,
+      mates,
+      first?.id ?? null,
+      topology,
+      new Set(rows.filter((row) => row.selected).map((row) => row.id)),
+      selectedFeatureIDs,
+      collapsedFolders,
+      draftSketch && !draftSketch.existing ? draftSketch : null,
+      activeWorkspaceKind === "assembly" ? assemblyController.geometryProjection : null,
+      draftFeature,
+    ),
+  );
+
+  cadPresentation.patch({
+    documentName: activeWorkspaceKind === "drawing" ? drawingEditor.snapshot()?.document.name ?? "Drawing" : activeWorkspaceKind === "assembly"
+      ? assemblyController.document?.name ?? "Untitled Assembly"
+      : activePartDocument?.name ?? "Untitled Part",
+    partOpen: activeWorkspaceKind === "part" && activePartDocument !== null,
+    metricsText: `${activePartDocument?.name ?? "No Part open"} · ${rows.length} bodies · ${topology.faceCount} faces · ${topology.candidateCount} exact snaps · ${connectors.length} connectors · ${mates.length} mates`,
+    cylinderAxisCandidates: topology.candidatesByKind["cylinder-axis"],
+    analyticCenterCandidates:
+      topology.candidatesByKind["circle-center"] +
+      topology.candidatesByKind["ellipse-center"] +
+      topology.candidatesByKind["sphere-center"] +
+      topology.candidatesByKind["torus-center"],
+    movingPick: first
+      ? `${first.name} · ${first.partName}`
+      : "Select a saved connector",
+    targetPick: first
+      ? "Choose a connector on another Part"
+      : "Waiting for first connector",
+  });
+  syncToolUI();
+  syncRibbonAvailability();
+}
+
+const viewer = new MateViewport(viewportElement, {
+  onHover(target) {
+    cadPresentation.patch({
+      hover: target
+        ? { partName: target.partName, label: target.label, detail: target.detail }
+        : null,
+    });
+  },
+  onStatus: setStatus,
+  // Viewport selection/visibility changes do not edit the document. Sending
+  // part-updated here would close the feature preview as soon as a face is picked.
+  onStateChanged: () => updateLists(false),
+  onMateApplied(mate) {
+    mates.push(mate);
+    updateLists();
+  },
+  onCameraChanged(orientation) {
+    cadCameraPresentation.setOrientation(orientation);
+  },
+});
+window.addEventListener("aether-extrusion-handle", event => {
+  const request = (event as CustomEvent).detail;
+  request.respond(viewer.projectExtrusionHandle(request.featureId, request.depth, request.directionVector));
+});
+window.addEventListener("aether-face-extrusion-handle", event => {
+  const request = (event as CustomEvent).detail;
+  request.respond(viewer.projectFaceExtrusionHandle(request.bodyId, request.normal, request.depth, request.faceAnchor));
+});
+window.addEventListener('aether-native-extrusion-handle', event => {
+  const request = (event as CustomEvent).detail;
+  request.respond(viewer.projectEvaluatedExtrusionHandle(request.origin, request.direction, request.depth));
+});
+window.addEventListener('aether-native-angle-handle', event => {
+  const request = (event as CustomEvent).detail;
+  request.respond(viewer.projectAngleHandle(request.origin, request.axis, request.angle, request.start, request.screenRadius));
+});
+window.addEventListener('aether-transform-handles', event => {
+  const request = (event as CustomEvent).detail;
+  request.respond(viewer.projectTransformHandles(request));
+});
+const workspaceUpAxis = readWorkspaceUpAxis();
+viewer.setWorkspaceUpAxis(workspaceUpAxis);
+cadCameraPresentation.setUpAxis(workspaceUpAxis);
+cadCameraPresentation.registerActionHandler((action) => {
+  switch (action.type) {
+    case "select-view":
+      viewer.setCameraView(action.view);
+      break;
+    case "select-direction":
+      viewer.setCameraDirection(action.direction);
+      break;
+    case "fit-isometric":
+      viewer.setCameraView("isometric");
+      viewer.zoomToFit();
+      break;
+    case "zoom-to-fit":
+      viewer.zoomToFit();
+      break;
+    case "nudge":
+      viewer.nudgeCamera(action.horizontalSteps, action.verticalSteps);
+      break;
+    case "roll":
+      viewer.rollCamera(action.quarterTurns);
+      break;
+    case "set-up-axis":
+      viewer.setWorkspaceUpAxis(action.upAxis);
+      cadCameraPresentation.setUpAxis(action.upAxis);
+      saveWorkspaceUpAxis(action.upAxis);
+      break;
+    case "set-projection":
+      viewer.setProjection(action.projection);
+      cadCameraPresentation.setProjection(action.projection);
+      break;
+    case "set-field-of-view":
+      viewer.setFieldOfView(action.degrees);
+      cadCameraPresentation.setFieldOfView(action.degrees);
+      break;
+  }
+});
+let appearanceInitialized = false;
+cadAppearance.registerApplyHandler((appearance) => {
+  viewer.setAppearance(appearance);
+  const displayCommands = {
+    shaded: "display-shaded",
+    "shaded-edges": "display-shaded-edges",
+    wireframe: "display-wireframe",
+    "hidden-line": "display-hidden-line",
+    ghost: "display-ghost",
+    zebra: "display-zebra",
+    "draft-analysis": "display-draft-analysis",
+    "curvature-map": "display-curvature-map",
+    "accessibility": "display-accessibility",
+  } as const;
+  Object.entries(displayCommands).forEach(([style, command]) => {
+    cadCommands.setActive(command, appearance.displayStyle === style);
+  });
+  const lightingCommands = {
+    studio: "lighting-studio",
+    softbox: "lighting-softbox",
+    daylight: "lighting-daylight",
+    "dark-room": "lighting-dark-room",
+  } as const;
+  Object.entries(lightingCommands).forEach(([preset, command]) => {
+    cadCommands.setActive(command, appearance.lightingPreset === preset);
+  });
+  const backgroundCommands = {
+    graphite: "background-graphite",
+    midnight: "background-midnight",
+    "cad-light": "background-cad-light",
+    blueprint: "background-blueprint",
+  } as const;
+  Object.entries(backgroundCommands).forEach(([background, command]) => {
+    cadCommands.setActive(command, appearance.background === background);
+  });
+  const finishCommands = {
+    matte: "finish-matte",
+    satin: "finish-satin",
+    gloss: "finish-gloss",
+  } as const;
+  Object.entries(finishCommands).forEach(([finish, command]) => {
+    cadCommands.setActive(command, appearance.materialFinish === finish);
+  });
+  const groundCommands = {
+    none: "ground-none",
+    grid: "ground-grid",
+    floor: "ground-floor",
+    both: "ground-both",
+  } as const;
+  Object.entries(groundCommands).forEach(([mode, command]) => {
+    cadCommands.setActive(command, appearance.floorMode === mode);
+  });
+  cadCommands.setActive("toggle-contact-shadows", appearance.contactShadowsVisible);
+  cadCommands.setActive("toggle-feature-edges", appearance.edgesVisible);
+  if (appearanceInitialized) {
+    setStatus("Viewport appearance updated for this session.");
+  }
+  appearanceInitialized = true;
+});
+const selectionCommands = {
+  auto: "selection-auto",
+  component: "selection-component",
+} as const;
+const syncSelectionPresentation = (): void => {
+  viewer.refreshSelectionAppearance();
+  const { filter: activeFilter, dragMode } = cadSelection.snapshot();
+  for (const mode of ["directional", "window", "crossing", "freeform", "paint"] as const)
+    cadCommands.setActive(`selection-${mode}`, dragMode === mode);
+  Object.entries(selectionCommands).forEach(([filter, command]) => {
+    cadCommands.setActive(command, activeFilter === filter);
+  });
+};
+cadSelection.subscribe(syncSelectionPresentation);
+sketchEditor = new SketchEditor(viewportElement, {
+  async onCommit(document) {
+    const wasNew = activePartDocument === null;
+    sketchEditor?.close();
+    viewportElement.classList.remove("sketching");
+    await evaluateAndShowPart(
+      document,
+      wasNew ? `Created ${document.name}.` : `Rebuilt ${document.name}.`,
+    );
+    selectedSketchPlane = null;
+    updateLists();
+  },
+  onCancel() {
+    viewportElement.classList.remove("sketching");
+    selectedSketchPlane = null;
+    setStatus("Sketch edit cancelled.");
+    updateLists();
+  },
+  onStatus: setStatus,
+});
+function toggleReferenceVisibility(id: ReferenceGeometryId): void {
+  referenceVisibility[id] = !referenceVisibility[id];
+  viewer.setReferenceGeometryVisibility(id, referenceVisibility[id]);
+  persistReferenceVisibility();
+  // Picking a sketch plane force-shows the planes and restores the previous
+  // state on exit. Toggling during that window is the user overriding it, so it
+  // becomes the state to restore — otherwise finishing the sketch undoes it.
+  if (sketchPlaneVisibilityBefore) sketchPlaneVisibilityBefore[id] = referenceVisibility[id];
+  if (id === "origin") cadCommands.setActive("toggle-origin", referenceVisibility.origin);
+  updateLists(false);
+}
+
+function selectReference(id: ReferenceGeometryId): void {
+  const plane = sketchPlaneForReference(id);
+  // A principal plane picked while a sketch is choosing its plane, or while any feature
+  // window is open (Mirror plane, Entity to split with, …), is that pick — not a visibility toggle.
+  if (plane && document.querySelector(".cad-sketch-workspace.choosing-plane, .cad-plane-window, .cad-feature-dialog")) {
+    window.dispatchEvent(new CustomEvent("aether-sketch-plane", { detail: plane }));
+    return;
+  }
+  if (awaitingSketchPlane && plane) {
+    awaitingSketchPlane = false;
+    selectedSketchPlane = plane;
+    const name = pendingPartName ?? `Part ${untitledPartNumber++}`;
+    pendingPartName = null;
+    const document = createRectanglePartDocument(
+      name,
+      readPartParameters(),
+      undefined,
+      { plane, fullyDefinedSketch: false },
+    );
+    viewportElement.classList.add("sketching");
+    sketchEditor?.open(document);
+    updateLists();
+    return;
+  }
+  toggleReferenceVisibility(id);
+}
+
+cadWorkspace.registerActionHandler((action) => {
+  historyPlayback.stop();
+  const source = 'id' in action ? sourceFeatureTarget(action.id) : null;
+  if (source) {
+    if (action.type === 'toggle-item') {
+      if (collapsedFolders.has(action.id)) collapsedFolders.delete(action.id);
+      else collapsedFolders.add(action.id);
+      updateLists(false);
+    } else if (action.type === 'item-action' || action.type === 'activate-history') {
+      const part = activeProject?.parts.find(part => part.id === source.partID);
+      if (part?.document) void navigateDocument(projectItemURL(source.partID, 'part')).then(() => {
+        if (source.featureID && activePartDocument?.features.some(feature => feature.id === source.featureID)) {
+          selectedFeatureIDs.clear(); selectedFeatureIDs.add(source.featureID);
+          showBrowserPanel('items'); updateLists(false);
+        }
+      }).catch(error => setStatus(String(error), 'error'));
+    }
+    return;
+  }
+  if (action.type === "move-item" || action.type === "create-folder" || action.type === "rollback-to" || (action.type === "item-action" && ["edit-feature", "suppress-feature", "rollback-before", "rollback-start", "rollback-end", "body-visibility", "sketch-visibility", "body-rename", "folder-rename", "folder-delete", "folder-unnest", "rollback-back", "rollback-forward", "rename-feature", "delete-feature", "break-link"].includes(action.actionID))) {
+    window.dispatchEvent(new CustomEvent('aether-feature-action', { detail: { ...action, selectedFeatureIDs: [...selectedFeatureIDs] } })); return;
+  }
+
+  if (action.type === "toggle-item"
+    && (action.id === "reference-folder" || action.id.startsWith("bodies/"))) {
+    if (collapsedFolders.has(action.id)) collapsedFolders.delete(action.id);
+    else collapsedFolders.add(action.id);
+    updateLists(false);
+    return;
+  }
+  if (action.type === "toggle-item" && action.id.startsWith("folder/")) {
+    if (collapsedFolders.has(action.id)) collapsedFolders.delete(action.id);
+    else collapsedFolders.add(action.id);
+    updateLists(false);
+    return;
+  }
+  if (action.type === "toggle-item" && action.id.startsWith("document/")) {
+    const id = action.id.slice("document/".length);
+    if (expandedDocuments.has(id)) expandedDocuments.delete(id);
+    else expandedDocuments.add(id);
+    updateLists(false);
+    return;
+  }
+  if (action.type === "select-item") {
+    const mode = action.mode ?? "single";
+    const rowFeatureIDs = (action.ids ?? [action.id])
+      .filter((id) => id.startsWith("feature/") && !id.startsWith("feature/body/"))
+      .map((id) => id.split("/").slice(2).join("/"))
+      .filter((id) => activePartDocument?.features.some((feature) => feature.id === id));
+    // ponytail: only feature rows multi-select; a modified click anywhere else
+    // behaves like a plain click rather than growing a second selection model.
+    if (rowFeatureIDs.length && (mode !== "single" || rowFeatureIDs.length > 1)) {
+      if (mode === "range" || mode === "single") {
+        selectedFeatureIDs.clear();
+        rowFeatureIDs.forEach((id) => selectedFeatureIDs.add(id));
+      } else
+        rowFeatureIDs.forEach((id) =>
+          selectedFeatureIDs.has(id) ? selectedFeatureIDs.delete(id) : selectedFeatureIDs.add(id),
+        );
+      cadSelection.dispatch({ type: "replace", items: [] });
+      setStatus(selectedFeatureIDs.size === 1
+        ? `1 feature selected.`
+        : `${selectedFeatureIDs.size} features selected.`);
+      updateLists(false);
+      return;
+    }
+    selectedFeatureIDs.clear();
+    if (action.id.startsWith("reference/")) {
+      selectReference(action.id.slice("reference/".length) as ReferenceGeometryId);
+    } else if (action.id.startsWith("part/")) {
+      viewer.selectPart(action.id.slice("part/".length));
+    } else if (action.id.startsWith("feature/") && activePartDocument) {
+      const [, kind, ...idParts] = action.id.split("/");
+      const featureID = idParts.join("/");
+      if (kind === "body") viewer.selectPart(featureID);
+      else {
+        const feature = activePartDocument.features.find((item) => item.id === featureID);
+        if (feature?.type === 'plane' && !feature.suppressed && document.querySelector('.cad-plane-window') && activePartDocument.features.indexOf(feature) < (activePartDocument.rollbackIndex ?? activePartDocument.features.length)) {
+          window.dispatchEvent(new CustomEvent('aether-plane-feature-picked', { detail: { featureId: feature.id } })); return;
+        }
+        if (feature?.type === 'plane' && !feature.suppressed && document.querySelector('.cad-sketch-workspace.choosing-plane') && activePartDocument.features.indexOf(feature) < (activePartDocument.rollbackIndex ?? activePartDocument.features.length)) {
+          window.dispatchEvent(new CustomEvent('aether-sketch-face', { detail: { frame: constructionPlaneFrame(feature, activePartDocument.features.slice(0, activePartDocument.features.indexOf(feature))) } })); return;
+        }
+        if (feature) { selectedFeatureIDs.add(feature.id); cadSelection.dispatch({ type: "replace", items: [] }); setStatus(`${feature.name} selected. Double-click or press Enter to edit.`); updateLists(false); }
+      }
+    }
+    return;
+  }
+  if (action.type === "item-action" && action.actionID === "toggle-visibility") {
+    if (action.id.startsWith("reference/")) {
+      toggleReferenceVisibility(action.id.slice("reference/".length) as ReferenceGeometryId);
+    } else if (action.id.startsWith("part/")) {
+      const id = action.id.slice("part/".length);
+      const row = viewer.getPartRows().find((part) => part.id === id);
+      if (row) viewer.setPartVisibility(id, !row.visible);
+    }
+    return;
+  }
+  if (action.type === "activate-history") {
+    if (action.id.startsWith("history/feature/")) {
+      showBrowserPanel("parameters");
+      const id = action.id.slice("history/feature/".length);
+      const feature = activePartDocument?.features.find((item) => item.id === id);
+      if (feature) window.dispatchEvent(new CustomEvent("aether-feature-action", { detail: { type: "item-action", id: `feature/${feature.type}/${feature.id}`, actionID: "edit-feature" } }));
+    } else if (action.id.startsWith("history/document/")) {
+      showBrowserPanel("items");
+    } else if (action.id.startsWith("history/mate/")) {
+      showBrowserPanel("mates");
+    }
+    return;
+  }
+  if (action.type === "select-connector") {
+    viewer.selectConnectorForMate(action.id.slice("connector/".length));
+    return;
+  }
+  if (action.type === "connector-action") {
+    const id = action.id.slice("connector/".length);
+    if (action.actionID === "pick") viewer.selectConnectorForMate(id);
+    if (action.actionID === "delete") viewer.removeConnector(id);
+  }
+});
+
+cadPresentation.registerActionHandler((action) => {
+  if (action.type === "show-start-screen") {
+    if (hostedCAD && action.screen === "home") { location.assign(new URL("./", location.href).href); return; }
+    cadPresentation.patch({ startScreen: action.screen, startDialog: null });
+    return;
+  }
+  if (action.type === "show-start-dialog") {
+    cadPresentation.patch({ startDialog: action.dialog });
+    return;
+  }
+  if (action.type === "create-part-workspace") {
+    void createBlankPart(action.name);
+    return;
+  }
+  if (action.type === "create-assembly-workspace") {
+    void (async () => {
+      if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); }
+      cadPresentation.patch({ startScreen: "workspace", startDialog: null, workspaceMode: "modeling", activePanel: "mates" });
+      await assemblyController.newWorkspace(action.name);
+    })().catch(error => setStatus(String(error), "error"));
+    return;
+  }
+  if (action.type === "insert-assembly-component") {
+    void assemblyController.insertComponent(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "add-assembly-connector") {
+    void assemblyController.addConnector(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "clear-assembly-mate-preview") {
+    matePreviewSerial += 1;
+    cadPresentation.patch({ matePreview: null });
+    return;
+  }
+  if (action.type === "preview-assembly-mate") {
+    const previewSerial = ++matePreviewSerial;
+    cadPresentation.patch({ matePreview: { state: "loading", message: "Solving non-mutating Core preview…" } });
+    void assemblyController.previewMate(action.draft)
+      .then((preview) => {
+        if (previewSerial !== matePreviewSerial) return;
+        cadPresentation.patch({
+          matePreview: {
+            state: "ready",
+            revision: preview.revision,
+            solveStatus: preview.solution.status,
+            remainingFreeDOFCount: preview.solution.remaining_free_dof_count,
+            residual: preview.solution.residual,
+            diagnosticMessages: preview.diagnostics.map(({ message }) => message),
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        if (previewSerial !== matePreviewSerial) return;
+        cadPresentation.patch({
+          matePreview: {
+            state: "error",
+            message: error instanceof Error ? error.message : String(error),
+          },
+        });
+      });
+    return;
+  }
+  if (action.type === "commit-assembly-mate") {
+    matePreviewSerial += 1;
+    void assemblyController.addMate(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, matePreview: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "set-assembly-mate-dof-value") {
+    void assemblyController.setSelectedMateDOFValue(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "update-assembly-mate-dof-limits") {
+    void assemblyController.updateSelectedMateDOFLimits(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "create-assembly-contact-set") {
+    void assemblyController.addContactSet(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "update-assembly-contact-set") {
+    void assemblyController.updateContactSet(action.source, action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "remove-assembly-contact-set") {
+    void assemblyController.removeContactSet(action.source.id, action.source).catch(() => undefined);
+    return;
+  }
+  if (action.type === "update-part-properties") {
+    void assemblyController.updatePartProperties(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "create-assembly-as-built-joint") {
+    void assemblyController.addAsBuiltJoint(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "insert-standard-part") {
+    const { request, positionMillimeters, resize } = action.draft;
+    void (resize ? assemblyController.resizeSelectedStandardPart(request) : assemblyController.insertStandardPart(request, positionMillimeters))
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "reach-assembly-point") {
+    void assemblyController.reachPoint(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "move-bodies-to-component") {
+    void assemblyController.moveBodiesToComponent(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "create-assembly-relation") {
+    void assemblyController.addRelation(action.draft)
+      .then(() => cadPresentation.patch({ startDialog: null, activePanel: "mates" }))
+      .catch(() => undefined);
+    return;
+  }
+  if (action.type === "open-assembly-workspace") {
+    documentPicker.click();
+    return;
+  }
+  if (action.type === "save-assembly-workspace") {
+    void assemblyController.save().catch(() => undefined);
+    return;
+  }
+  if (action.type === "select-panel") {
+    showBrowserPanel(action.panel);
+    return;
+  }
+  if (action.type === "select-workspace-mode") {
+    if (action.mode === "drawing" && document.querySelector(".cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window")) {
+      setStatus("Finish or cancel the current sketch or feature before opening its drawing.");
+      return;
+    }
+    if (action.mode === "drawing") void enterDrawing().catch(error => setStatus(String(error), "error"));
+    else if (activeWorkspaceKind === "drawing") void leaveDrawing().catch(error => setStatus(String(error), "error"));
+    else { cadPresentation.patch({ workspaceMode: action.mode, startScreen: "workspace" }); setStatus("3D modeling workspace opened."); }
+    return;
+  }
+  if (action.type === "select-layout") {
+    cadPresentation.patch({ workspaceLayout: action.layout });
+    persistPresentationPreferences();
+    setStatus(`${action.layout[0].toUpperCase()}${action.layout.slice(1)} workspace layout.`);
+    return;
+  }
+  if (action.type === "select-toolbar-mode") {
+    cadPresentation.patch({ toolbarMode: action.mode });
+    persistPresentationPreferences();
+    setStatus(action.mode === "traditional" ? "Tool bar docked at the top." : "Tool bar floating at the bottom.");
+    return;
+  }
+  if (action.type === "set-panel-placement") {
+    cadPresentation.patch({
+      panelPlacements: Object.freeze({
+        ...cadPresentation.snapshot().panelPlacements,
+        [action.panel]: action.placement,
+      }),
+    });
+    persistPresentationPreferences();
+    setStatus(`${action.panel[0].toUpperCase()}${action.panel.slice(1)} panel ${action.placement}.`);
+    return;
+  }
+  if (action.type === "reset-panel-placements") {
+    cadPresentation.patch({
+      workspaceLayout: "docked",
+      panelPlacements: Object.freeze({ browser: "docked", inspector: "docked", bottom: "docked" }),
+    });
+    persistPresentationPreferences();
+    setStatus("Panel placements reset to the docked workbench.");
+    return;
+  }
+  if (action.type === "cancel-loading") {
+    const loading = cadPresentation.snapshot().loading;
+    if (!loading?.canCancel) return;
+    cadPresentation.patch({
+      loading: {
+        ...loading,
+        canCancel: false,
+        backgrounded: false,
+        detail: "Stopping after the current geometry operation…",
+      },
+    });
+    return;
+  }
+  if (action.type === "background-loading") {
+    const loading = cadPresentation.snapshot().loading;
+    if (!loading?.canBackground) return;
+    cadPresentation.patch({ loading: { ...loading, backgrounded: true } });
+    setStatus("CAD import continues in the background.");
+    return;
+  }
+  if (action.type === "show-loading") {
+    const loading = cadPresentation.snapshot().loading;
+    if (loading) cadPresentation.patch({ loading: { ...loading, backgrounded: false } });
+    return;
+  }
+  if (action.type === "focus-items-filter") {
+    cadPresentation.patch({
+      activePanel: "items",
+      workspaceMode: "modeling",
+      itemFilterFocusSerial: cadPresentation.snapshot().itemFilterFocusSerial + 1,
+    });
+    return;
+  }
+  if (action.type === "toggle-history") {
+    const presentation = cadPresentation.snapshot();
+    cadPresentation.patch({
+      bottomPanelActiveID: "history",
+      panelPlacements: presentation.panelPlacements.bottom === "hidden"
+        ? Object.freeze({ ...presentation.panelPlacements, bottom: "docked" })
+        : presentation.panelPlacements,
+      bottomPanelCollapsed:
+        presentation.panelPlacements.bottom === "hidden"
+          ? false
+          : presentation.bottomPanelActiveID === "history"
+            ? !presentation.bottomPanelCollapsed
+            : false,
+    });
+    return;
+  }
+  if (action.type === "select-bottom-panel") {
+    cadPresentation.patch({ bottomPanelActiveID: action.id });
+    return;
+  }
+  if (action.type === "set-bottom-panel-collapsed") {
+    cadPresentation.patch({ bottomPanelCollapsed: action.collapsed });
+    return;
+  }
+  if (action.type === "cancel-sketch-plane") {
+    cancelPlaneSelection();
+    return;
+  }
+  if (action.type === "cancel-tool") {
+    viewer.setTool("none");
+    updateLists();
+  }
+});
+
+const worker = createHostAetherCoreClient();
+const assemblyGeometry = new AssemblyGeometryCache({ evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument });
+historyPlayback.configure({
+  evaluate: doc => worker.evaluatePart(doc, { transient: true }),
+  show: (model, active) => viewer.setHistoryPreview(model, active),
+  changed: () => updateLists(false),
+  presented: () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+});
+window.addEventListener('aether-feature-preview-start', () => historyPlayback.stop());
+window.addEventListener('aether-sketch-editing', () => historyPlayback.stop());
+window.addEventListener('keydown', event => { if (event.key === 'Escape') historyPlayback.stop(); });
+cadPresentation.subscribe(() => {
+  syncHistoryPlayback();
+});
+configureEditHistory({
+  // Features that already fail in the full rebuild (and are red in the tree) must not
+  // turn the rolled-back editing view into an error: recover past them as a rebuild does.
+  evaluate: doc => rebuildRecovering(doc, d => worker.evaluatePart(d)).then(r => r.model),
+  show: (model, active) => { if (active) historyPlayback.stop(); viewer.setHistoryPreview(model, active); },
+  changed: () => updateLists(false),
+  error: message => setStatus(`Could not roll back the editing view: ${message}`, "error"),
+});
+// Gates read the rendered finished sketch through this projection (verify-sketch-display-browser.mjs).
+(window as unknown as { __aetherFinishedSketchClientPoint?: unknown }).__aetherFinishedSketchClientPoint = (sketch: string, x: number, y: number) => viewer.clientFromFinishedSketchPoint(activePartDocument?.features.find(f => f.name === sketch)?.id ?? sketch, [x, y]);
+// Gates set a standard view so geometry picks land where they expect (verify-edge-finish-browser.mjs).
+(window as unknown as { __aetherSetView?: unknown }).__aetherSetView = (view: StandardCameraView) => cadCameraPresentation.dispatch({ type: "select-view", view });
+// Gates read what the pointer hovers (verify-region-pick-browser.mjs).
+(window as unknown as { __aetherHover?: unknown }).__aetherHover = () => { const item = cadSelection.snapshot().hovered; return item ? { kind: item.kind, label: item.label } : null; };
+// Gates read the selection (kind and label) to explain a pick that did not fill a box.
+(window as unknown as { __aetherSelection?: unknown }).__aetherSelection = () => cadSelection.snapshot().items.map(item => `${item.kind}:${item.label}`);
+// Gates click world points through this projection (verify-edge-finish-browser.mjs).
+(window as unknown as { __aetherClientPoint?: unknown }).__aetherClientPoint = (x: number, y: number, z: number) => viewer.clientFromPoint([x, y, z]);
+// Gates read which bodies the viewport shows (verify-region-pick-browser.mjs).
+(window as unknown as { __aetherPartVisibility?: unknown }).__aetherPartVisibility = () => viewer.getPartRows().map(row => row.visible);
+configureFeaturePreview({ evaluate: doc => worker.evaluatePart(doc, { preview: true }), show: model => viewer.setFeaturePreview(model), feedback: state => viewer.setFeatureInputFeedback(state), warm: doc => worker.evaluatePart(doc) });
+worker.ready
+  .then(async () => {
+    const label = "Aether engine (OpenCASCADE)";
+    cadPresentation.patch({
+      backendLabel: `${viewer.backendLabel} · ${label}`,
+      backendState: "ready",
+    });
+    setStatus("Create a Part, open a .aethercad document, or import CAD geometry.");
+  })
+  .catch((error: unknown) => {
+    cadPresentation.patch({ backendState: "failed" });
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+  });
+
+configureImageFacePicker(() => viewer.selectedImageFace(activePartDocument?.documentId));
+configureCADImport({
+  commitPresentation: doc => { if (!activePartDocument) { activePartDocument = { ...doc, imageCanvases: [] }; updateLists(); } activePartDocument = doc; if (hostedCAD) markHostedDirty(); updateLists(); setStatus('Image presentation updated.', 'success'); },
+  current: () => activePartDocument,
+  available: () => hostedPartEditable() && activeWorkspaceKind === 'part' && !document.querySelector('.cad-sketch-window,.cad-feature-dialog,.cad-plane-window'),
+  evaluate: doc => worker.evaluatePart(doc),
+  commit: (doc, model, message) => { showEvaluatedPart(doc, model, new Map(), message ?? 'Imported CAD geometry.'); viewer.frameAll(); updateLists(); },
+});
+picker.addEventListener('change', () => { const files = [...(picker.files ?? [])]; if (files.length) queueCADImport(files); picker.value = ''; });
+viewportElement.addEventListener('dragover', event => { if (event.dataTransfer?.types.includes('Files')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } });
+viewportElement.addEventListener('drop', event => { if (event.dataTransfer?.files.length) { event.preventDefault(); queueCADImport([...event.dataTransfer.files]); } });
+
+function readPartParameters(): {
+  widthMillimeters: number;
+  heightMillimeters: number;
+  depthMillimeters: number;
+} {
+  return {
+    widthMillimeters: Number(partWidthInput.value) * (unitChoice(documentUnits(), "length").factor / 0.001),
+    heightMillimeters: Number(partHeightInput.value) * (unitChoice(documentUnits(), "length").factor / 0.001),
+    depthMillimeters: Number(partDepthInput.value) * (unitChoice(documentUnits(), "length").factor / 0.001),
+  };
+}
+
+subscribeDocumentUnits(() => {
+  if (activePartDocument?.features.some(f => f.type === "sketch")) updatePartEditor(activePartDocument);
+  else { const factor = unitChoice(documentUnits(), "length").factor / 0.001; partWidthInput.value = String(60 / factor); partHeightInput.value = String(40 / factor); partDepthInput.value = String(20 / factor); }
+});
+
+function updatePartEditor(document: PartDocument): void {
+  partNameInput.value = document.name;
+  if (!document.features.some(feature => feature.type === "sketch")) return;
+  const parameters = rectanglePartParameters(document);
+  partWidthInput.value = String(parameters.widthMillimeters / (unitChoice(documentUnits(), "length").factor / 0.001));
+  partHeightInput.value = String(parameters.heightMillimeters / (unitChoice(documentUnits(), "length").factor / 0.001));
+  partDepthInput.value = String(parameters.depthMillimeters / (unitChoice(documentUnits(), "length").factor / 0.001));
+}
+
+function showEvaluatedPart(document: PartDocument, result: ImportedModelData, failures: ReadonlyMap<string, string>, successMessage: string, shouldFrame = true): void {
+  for (const row of viewer.getPartRows()) if (row.sourceDocumentId === activePartDocument?.documentId) viewer.removeAuthoredPart(row.id);
+  for (const body of result.parts) {
+    viewer.replaceAuthoredPart(body);
+    viewer.setDocumentPartDisplay(body.id, documentBodyAppearance(document, body.id));
+    if (document.bodyProperties?.[body.id]?.visible === false) viewer.setPartVisibility(body.id, false);
+  }
+  cadSelection.dispatch({ type: "replace", items: [] });
+  activePartDocument = document;
+  recordFeatureErrors(document, failures);
+  if (hostedCAD) markHostedDirty();
+  expandedDocuments.add(document.documentId);
+  updatePartEditor(document);
+  if (shouldFrame && result.parts.length) viewer.frameAll();
+  setStatus(
+    failures.size ? `${failures.size} feature${failures.size === 1 ? "" : "s"} could not be rebuilt. ${[...failures.values()][0]}` : `${successMessage} Rebuilt ${rollbackPosition(document)} history entries in ${result.parseMilliseconds.toFixed(1)} ms${result.replayedFeatures !== undefined ? ` (${result.replayedFeatures} replayed)` : ""}.`,
+    // Failures show on their tree rows; the status line says so without a toast.
+    failures.size ? "normal" : "success",
+  );
+}
+
+async function evaluateAndShowPart(
+  document: PartDocument,
+  successMessage: string,
+  propagateError = false,
+  // Opening and importing block the workspace while they run; a feature edit does
+  // not — the current model stays in view and the status tray shows the rebuild.
+  options: { overlay?: boolean } = {},
+): Promise<void> {
+  historyPlayback.stop();
+  if (options.overlay ?? true) cadPresentation.patch({ loading: { label: "Rebuilding exact feature history", detail: document.name } });
+  else setStatus(`Rebuilding ${document.name}…`);
+  try {
+    validatePartDocument(document);
+    // Every drawn contour and segment carries an identity before the engine and the viewer see
+    // it, so any line, point or region can be referenced by a later feature.
+    identifyDocumentSketches(document);
+    const shouldFrame = activePartDocument?.documentId !== document.documentId || !viewer.getPartRows().some(row => row.sourceDocumentId === document.documentId);
+    const { model: result, failures, document: resolved } = await rebuildRecovering(document, doc => worker.evaluatePart(doc));
+    document.features = resolved.features;
+    showEvaluatedPart(document, result, failures, successMessage, shouldFrame);
+  } catch (error) {
+    if (propagateError) throw error;
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+  } finally {
+    if (options.overlay ?? true) cadPresentation.patch({ loading: null });
+    updateLists();
+  }
+}
+
+function cancelPlaneSelection(): void {
+  awaitingSketchPlane = false;
+  pendingPartName = null;
+  selectedSketchPlane = null;
+  setStatus("Sketch creation cancelled.");
+  updateLists();
+}
+
+async function createBlankPart(name: string): Promise<void> {
+  try {
+    if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); } activeWorkspaceKind = 'part'; cadPresentation.patch({ startScreen: 'workspace', startDialog: null, workspaceMode: 'modeling' });
+    const doc = createEmptyPartDocument(name); await evaluateAndShowPart(doc, 'Created an empty Part. Add a sketch profile to begin.');
+    if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage);
+    if (hostedCAD) { await saveHostedFile(doc.name + AETHER_CAD_EXTENSION, writeAetherCAD(partGraph(doc))); setStatus('Created ' + doc.name + ' on your server. Add a sketch profile to begin.', 'success'); }
+  } catch (e) { setStatus((e as Error).message, 'error'); }
+}
+
+cadCommands.register("new-part", () => createBlankPart(`Part ${untitledPartNumber++}`));
+cadCommands.register("open-part", () => hostedCAD ? location.assign(new URL("./", location.href).href) : documentPicker.click());
+cadCommands.register("insert-step", () => cadPresentation.patch({ startScreen: "workspace", startDialog: "import" }));
+cadCommands.register("sketch", () => { cadCommands.execute("feature-profile"); });
+
+cadCommands.register("rebuild-part", async () => {
+  try {
+    if (activePartDocument && !activePartDocument.features.some(f => f.type === "sketch")) { await evaluateAndShowPart(activePartDocument, "Rebuilt feature history."); return; }
+    const document = activePartDocument
+      ? reviseRectanglePartDocument(
+        activePartDocument,
+        partNameInput.value,
+        readPartParameters(),
+      )
+      : createRectanglePartDocument(partNameInput.value, readPartParameters());
+    await evaluateAndShowPart(
+      document,
+      activePartDocument ? `Rebuilt ${document.name}.` : `Created ${document.name}.`,
+    );
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+  }
+});
+
+documentPicker.addEventListener("change", async () => {
+  const file = documentPicker.files?.[0];
+  if (!file) return;
+  try {
+    if (hostedCAD) { await flushAutosaveNow(); detachHostedFile(); }
+    await openLibraryDocument(file, new URL(location.href));
+    if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+  } finally {
+    documentPicker.value = "";
+  }
+});
+
+configureDocumentPrint(() => viewer.capturePrintImage());
+
+// Continuous saving: every edit autosaves as a revision. The command is a
+// PDM Commit — it flushes the autosave and names an annotated checkpoint.
+if (hostedCAD) configureAutosave(async () => {
+  try {
+    if (activeWorkspaceKind === "drawing") { await saveDrawing(); return; }
+    if (activeWorkspaceKind === "assembly") { await assemblyController.save(); return; }
+    if (!activePartDocument) return;
+    const archive = tabArchive(activePartDocument, "part");
+    await saveHostedFile(archive.name, archive.bytes);
+    document.dispatchEvent(new CustomEvent("aether-save-state", { detail: { phase: "saved", durable: true } }));
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+    throw error;
+  }
+}, () => activeWorkspaceKind === "drawing" && drawingEditor.snapshot() ? drawingSnapshot() : activePartDocument && activeWorkspaceKind === "part"
+  ? tabArchive(activePartDocument, "part") : null);
+cadCommands.register("save-part", async () => {
+  // Save persists the working state (VS Code ⌘S); it never prompts. Commits
+  // are the separate, deliberate checkpoints.
+  if (activeWorkspaceKind === "drawing") { await saveDrawing().catch(error => setStatus(String(error), "error")); return; }
+  if (!activePartDocument) return;
+  try {
+    if (hostedCAD) { const archive = tabArchive(activePartDocument, "part"); await saveHostedFile(archive.name, archive.bytes); }
+    else await savePartDocument(activePartDocument);
+    document.dispatchEvent(new CustomEvent("aether-save-state", { detail: { phase: hostedCAD ? "saved" : "downloaded", durable: true, message: hostedCAD ? "Saved" : "Downloaded" } }));
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    setStatus(error instanceof Error ? error.message : String(error), "error");
+  }
+});
+cadCommands.register("commit-part", () => {
+  // The shell shows the shared Create version dialog (same as Version control).
+  if ((activeWorkspaceKind === "drawing" || activePartDocument) && hostedCAD) window.dispatchEvent(new Event("aether-create-version"));
+});
+
+function toggleTool(tool: AuthoringTool): void {
+  window.dispatchEvent(new CustomEvent("aether-inspection-tool-open", { detail: tool }));
+  viewer.setTool(viewer.activeTool === tool ? "none" : tool);
+  updateLists();
+}
+
+cadCommands.register("connector", () => toggleTool("connector"));
+cadCommands.register("fastened", () => toggleTool("fastened"));
+// Camera, display style, lighting, background, finish, ground and selection
+// filter all live in ./startup/view-commands.
+registerViewCommands({
+  setCameraView: (view) => viewer.setCameraView(view),
+  frameAll: () => viewer.zoomToFit(),
+  setStatus,
+});
+syncSelectionPresentation();
+cadCommands.register("clear-mates", () => {
+  mates.splice(0);
+  viewer.clearMates();
+  updateLists();
+});
+window.addEventListener("keydown", (event) => {
+  const target = event.target as HTMLElement | null;
+  const isEditingText =
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target?.isContentEditable === true || Boolean(target?.closest?.('[contenteditable="true"], [contenteditable=""]'));
+  if (isEditingText || event.defaultPrevented) return;
+  if (cadPresentation.snapshot().workspaceMode === "drawing") return;
+  const selectionShortcut = ({ "1": "selection-window", "2": "selection-freeform", "3": "selection-paint" } as const)[event.key as "1" | "2" | "3"];
+  if (selectionShortcut && !event.metaKey && !event.ctrlKey && !event.altKey && !event.isComposing && !sketchEditor?.active && !document.querySelector('.cad-feature-dialog, .cad-plane-window, [role="dialog"], [role="menu"]')) {
+    event.preventDefault();
+    cadCommands.execute(selectionShortcut);
+  }
+  if (event.key === "F6") {
+    event.preventDefault();
+    cadCommands.execute("selection-next-filter");
+  }
+  if (event.key.toLowerCase() === "f") cadCommands.execute("fit-view");
+  if (event.key === " " && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing && !target?.closest?.('button, [role="button"], select')) {
+    // Space opens the shared navigation cube at world origin.
+    event.preventDefault();
+    if (!event.repeat) viewer.toggleOrientationBox();
+  }
+  if (event.key === "Escape") viewer.hideOrientationBox();
+  if (event.key.toLowerCase() === "r" && !sketchEditor?.active) {
+    event.preventDefault();
+    cadCommands.execute("sketch");
+  }
+  if (event.key === "Escape" && awaitingSketchPlane) cancelPlaneSelection();
+  if (event.key === "Escape" && viewer.activeTool !== "none") viewer.setTool("none");
+});
+
+updateLists();
+
+// Reuse the document loader while the React shell, ribbon and viewport stay mounted.
+async function openLibraryDocument(file: File, url: URL) {
+  if (sketchEditor?.active) throw new Error("Finish or cancel the active sketch before switching tabs.");
+  cadPresentation.patch({ startScreen: "workspace", startDialog: null });
+  if (!isAetherCADFile(file.name)) {
+    if ((() => { try { importFormat(file.name); return true; } catch { return false; } })())
+      throw new Error("Create or open a document, then use Import CAD to add this file. Mesh files require explicit source units before import.");
+    throw new Error("This file type cannot be opened in CAD.");
+  }
+  // One file type; the tab to show comes from what the document holds.
+  const opened = readAetherCAD(new Uint8Array(await file.arrayBuffer()));
+  const drawing = opened.graph.drawings?.[0];
+  const part = opened.graph.part_definitions.find((item) => item.feature_document);
+  // An Assembly tab is asked for by address; otherwise the document's kind picks the tab.
+  const wantsAssembly = url.searchParams.has("assembly");
+  if (!wantsAssembly && opened.kind === "drawing" && drawing) {
+    await drawingEditor.open(JSON.stringify(drawing.document));
+    presentDrawing(); rememberDrawing();
+  } else if (!wantsAssembly && opened.kind === "part" && part) {
+    const document = parsePartDocument(JSON.stringify(part.feature_document));
+    await evaluateAndShowPart(document, `Opened ${file.name} from your server.`, true);
+    activeWorkspaceKind = "part";
+    ++assemblyRenderSerial;
+    assemblyGeometry.clear();
+    await assemblyController.close();
+    viewer.replaceAssemblyBodies([]);
+    cadPresentation.patch({ workspaceMode: "modeling" });
+    updateLists();
+  } else {
+    const oldPart = activePartDocument;
+    await assemblyController.openFile(file, url.searchParams.get("assembly") ?? undefined);
+    if (oldPart) for (const row of viewer.getPartRows()) {
+      if (row.sourceDocumentId === oldPart.documentId) viewer.removeAuthoredPart(row.id);
+    }
+    updateLists();
+  }
+}
+if (hostedCAD) {
+  window.addEventListener("cad-document-navigation-error", event => setStatus((event as CustomEvent<string>).detail, "error"));
+  window.addEventListener("cad-document-navigation", () => { updateLists(); mountProjectTabs(); rememberDrawing(); });
+  window.addEventListener("cad-document-saved", () => { rememberDrawing(); cadPresentation.patch({}); });
+  configureDocumentNavigation(async url => {
+    if (drawingEditor.history().busy) throw new Error("Wait for the drawing rebuild before switching tabs.");
+    if (sketchEditor?.active || document.querySelector(".cad-feature-dialog,.cad-plane-window")) throw new Error("Finish or cancel the active sketch or feature before switching tabs.");
+    await worker.ready;
+    await switchHostedDocument(url, openLibraryDocument);
+    if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
+    syncAssemblyCommands();
+    selectedFeatureIDs.clear(); selectedSketchPlane = null;
+    viewer.setTool("none");
+    mountProjectTabs();
+  });
+  void Promise.all([loadHostedFile(), worker.ready]).then(async ([file]) => {
+    if (file) {
+      await openLibraryDocument(file, new URL(location.href));
+      markHostedClean(); if (activeWorkspaceKind === "drawing") await drawingEditor.enter();
+      syncAssemblyCommands(); mountProjectTabs();
+    } else if (new URLSearchParams(location.search).get("new") === "part") {
+      cadPresentation.patch({ startScreen: "workspace", startDialog: "new-workspace" });
+    }
+  }).catch(error => setStatus(error instanceof Error ? error.message : String(error), "error"));
+}
+
+let assemblyRenderSerial = 0;
+let framedAssembly: string | null = null;
+async function renderCanonicalAssembly(): Promise<void> {
+  const serial = ++assemblyRenderSerial;
+  const projection = assemblyController.geometryProjection;
+  if (!projection) return;
+  try {
+    const bodies = await bodiesForPlacements(projection, projection.instances.map(instance => ({
+      id: instance.id,
+      placement_mm: instance.solved_world_transform.position_m.map(v => v * 1000) as [number, number, number],
+      rotation: [...instance.solved_world_transform.rotation_quaternion_xyzw],
+    })), {
+      evaluate: doc => worker.evaluatePart(doc), parseDocument: parsePartDocument,
+      geometryCache: assemblyGeometry, isCurrent: () => serial === assemblyRenderSerial
+    });
+    if (serial !== assemblyRenderSerial) return;
+    const hadBodies = viewer.getPartRows().some(row => row.id.startsWith('assembly:'));
+    viewer.replaceAssemblyBodies(bodies);
+    const frameKey = `${projection.workspace_id}:${projection.assembly_id}`;
+    if (!hadBodies || frameKey !== framedAssembly) { viewer.frameAll(); framedAssembly = frameKey; }
+  } catch (error) {
+    if (serial === assemblyRenderSerial) setStatus('Assembly geometry: ' + (error as Error).message, 'error');
+  }
+}
+
+/** Solve the open assembly with the engine and show the result.
+ *
+ *  The canonical render above places each instance at the transform the
+ *  projection carries. This solves the same parts and mates with the engine's
+ *  solver and places them at its answer instead.
+ */
+async function solveOpenAssembly(): Promise<void> {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) {
+    setStatus("Open an assembly before solving it.", "error");
+    return;
+  }
+  const serial = ++assemblyRenderSerial;
+  setStatus("Solving the assembly…");
+  try {
+    const result = await solveAssemblyProjection(projection, {
+      // Coupled mates (gears, belt, screw, rack and pinion) are refused by the solver.
+      solve: async (job) => solveAssemblyJob(job),
+      evaluate: (document) => worker.evaluatePart(document),
+      parseDocument: (source) => parsePartDocument(source),
+      geometryCache: assemblyGeometry, isCurrent: () => serial === assemblyRenderSerial,
+    });
+    if (serial !== assemblyRenderSerial) return;
+    viewer.replaceAssemblyBodies(result.bodies);
+    viewer.frameAll();
+    const failed = result.solution.status !== "ok"
+      || result.solution.diagnostics.some((d) => d.severity === "error");
+    setStatus(describeSolve(result), failed ? "error" : "success");
+  } catch (error) {
+    setStatus(`Assembly solve: ${(error as Error).message}`, "error");
+  }
+}
+
+/** Exploded view (SolidCraft's explode.*): the solved assembly with every instance pushed
+ *  away from the centre; the design's placements are untouched. Shown or hidden, no state. */
+let exploded = false;
+async function toggleExplodedView(): Promise<void> {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before exploding it.", "error"); return; }
+  if (exploded) { exploded = false; await solveOpenAssembly(); return; }
+  const serial = ++assemblyRenderSerial;
+  setStatus("Solving the assembly for the exploded view…");
+  try {
+    const result = await solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry });
+    if (serial !== assemblyRenderSerial) return;
+    const bodies = await bodiesForPlacements(projection, explodedPlacements(result.solution.instances, 1), { evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry });
+    if (serial !== assemblyRenderSerial) return;
+    viewer.replaceAssemblyBodies(bodies); viewer.frameAll(); exploded = true;
+    setStatus(`Exploded view: ${bodies.length} bodies pushed from the centre. Explode again to assemble.`, "success");
+  } catch (error) { setStatus(`Exploded view: ${(error as Error).message}`, "error"); }
+}
+mountTimelineCopy(() => [...selectedFeatureIDs]);
+cadCommands.register("assembly-check-contacts", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before checking contacts.", "error"); return; }
+  if (!liveContactSets(projection).length) { setStatus("Contacts are off. Turn them on, or add a contact set, then check.", "error"); return; }
+  setStatus("Checking contacts…");
+  void solveAssemblyProjection(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry })
+    .then((result) => checkAssemblyContacts(projection, result.solution.instances, { parseDocument: (source) => parsePartDocument(source), checkContacts: (input) => aetherKernel().checkContacts(input) }))
+    .then((overlaps) => setStatus(describeOverlaps(overlaps), overlaps.length ? "error" : "success"))
+    .catch((error: unknown) => setStatus(`Contact check: ${(error as Error).message}`, "error"));
+});
+cadCommands.setEnabled("assembly-check-contacts", !!assemblyController.geometryProjection);
+cadCommands.register("assembly-toggle-contacts", () => { void assemblyController.setContactsEnabled(!assemblyController.contactsEnabled).catch(() => undefined); });
+cadCommands.setEnabled("assembly-toggle-contacts", !!assemblyController.geometryProjection?.capabilities.can_edit_contacts && hostedPartEditable());
+cadCommands.register("assembly-explode", () => { void toggleExplodedView(); });
+cadCommands.setEnabled("assembly-explode", true);
+cadCommands.register("assembly-mass", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an Assembly to inspect mass properties.", "error"); return; }
+  const report = runAssemblyMassReport(projection);
+  const [cx, cy, cz] = report.centerOfMassWorldMm;
+  setStatus(`Assembly mass: ${report.totalMassKg.toFixed(4)} kg (${report.includedCount} parts) · COM (${cx.toFixed(1)}, ${cy.toFixed(1)}, ${cz.toFixed(1)}) mm.`, "success");
+});
+cadCommands.register("assembly-clearance", () => { cadCommands.execute("assembly-check-contacts"); });
+cadCommands.register("assembly-interference", () => { cadCommands.execute("assembly-check-contacts"); });
+cadCommands.register("assembly-export-urdf", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an Assembly to export URDF.", "error"); return; }
+  const urdf = runAssemblyURDFExport(projection);
+  const url = URL.createObjectURL(new Blob([urdf], { type: "application/xml" }));
+  const a = document.createElement("a"); a.href = url; a.download = `${projection.assemblies?.[0]?.name || "assembly"}.urdf`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus("Exported ROS/Gazebo URDF.", "success");
+});
+for (const cmd of ["assembly-mass", "assembly-clearance", "assembly-interference", "assembly-export-urdf"] as const) cadCommands.setEnabled(cmd, true);
+cadCommands.register("assembly-motion-study", () => {
+  const projection = assemblyController.geometryProjection;
+  if (!projection) { setStatus("Open an assembly before running a motion study.", "error"); return; }
+  openMotionStudyWindow(projection, { solve: async (job) => solveAssemblyJob(job), evaluate: (document) => worker.evaluatePart(document), parseDocument: (source) => parsePartDocument(source), geometryCache: assemblyGeometry }, (bodies) => viewer.replaceAssemblyBodies(bodies), (message, tone) => setStatus(message, tone === "error" ? "error" : "success"), (curves) => viewer.setAnalysisCurves(curves));
+});
+cadCommands.setEnabled("assembly-motion-study", true);
+
+configurePartExport(() => activePartDocument);
+cadObjectAppearance.attach(viewer);
+cadWorkspace.subscribe(cadObjectAppearance.refresh);
+// A sketch selected in the tree lights up in the viewport.
+cadWorkspace.subscribe(() => {
+  const ids = [...cadWorkspace.snapshot().selectedItemIDs].map(id => /^feature\/(?:profile|sketch)\/(.+)$/.exec(id)?.[1]).filter((id): id is string => Boolean(id));
+  viewer.setHighlightedSketches(ids);
+});
+configureViewportContext({
+  viewer,
+  document: () => activePartDocument,
+  apply: async doc => {
+    await evaluateAndShowPart(doc, "Part visibility updated.");
+    if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage);
+  },
+  status: message => setStatus(message, "error"),
+});
+const partUndo: ReturnType<typeof installPartUndo> = installPartUndo(() => activePartDocument, async doc => {
+  const withoutImages = (value: PartDocument) => { const { imageCanvases, ...rest } = value; return JSON.stringify(rest); };
+  if (activePartDocument && withoutImages(activePartDocument) === withoutImages(doc)) {
+    activePartDocument = doc; if (hostedCAD) markHostedDirty(); updateLists(); setStatus('Image history restored.', 'success'); return;
+  }
+
+  await evaluateAndShowPart(doc, "Document history restored.", false, { overlay: false });
+  if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage);
+}, () => { cadCommands.setEnabled("part-undo", partUndo?.canStep(-1) ?? false); cadCommands.setEnabled("part-redo", partUndo?.canStep(1) ?? false); }, () => activeWorkspaceKind === "part" && hostedPartEditable()
+  && cadPresentation.snapshot().workspaceMode === "modeling" && !sketchEditor?.active);
+// Part undo/redo as commands: the same history as ⌘Z / ⌘⇧Z.
+cadCommands.register("part-undo", () => void partUndo.step(-1));
+cadCommands.register("part-redo", () => void partUndo.step(1));
+cadCommands.setEnabled("part-undo", false);
+cadCommands.setEnabled("part-redo", false);
+configureCADAgentWorkspace({
+  current: () => activePartDocument,
+  contextKey: () => `${documentSession()?.id ?? 'local'}:${activePartDocument?.documentId ?? 'no-part'}:${location.search}`,
+  available: () => !drawingFileBusy && activeWorkspaceKind === 'part' && cadPresentation.snapshot().workspaceMode === 'modeling' && !cadPresentation.snapshot().loading && !document.querySelector('.cad-sketch-workspace,.cad-feature-dialog,.cad-plane-window'),
+  writable: hostedPartEditable,
+  verify: verifyPart,
+  preview: (doc, signal) => viewportProof(viewer.captureViewport(1024), doc.documentId, signal),
+  evaluate: doc => worker.evaluatePart(doc),
+  analyze: (doc, options) => aetherKernel().analyzePart(doc, options),
+  projectModelGeometry: (...args) => aetherKernel().projectModelGeometry(...args),
+  commit: (doc, model) => { showEvaluatedPart(doc, model, new Map(), 'Agent edit applied.'); updateLists(); },
+  history: partUndo,
+});
+
+mountFeatureAuthoring(() => activePartDocument, async doc => {
+  // A sketch is hidden once a new feature consumes it (Onshape); the tree's Show brings it back.
+  const before = new Set(activePartDocument?.features.map(f => f.id) ?? []);
+  const dependencies = featureDependencies(doc);
+  for (const feature of doc.features) {
+    if (before.has(feature.id)) continue;
+    for (const id of dependencies.get(feature.id) ?? []) {
+      if (["plane", "axis", "point", "profile", "sketch", "curve3d"].includes(feature.type) || doc.features.find(f => f.id === id)?.type !== "profile") continue;
+      doc.sketchPresentation = { ...doc.sketchPresentation, [id]: { dimensionLabelPositionsMillimeters: {}, ...doc.sketchPresentation?.[id], hidden: true } };
+    }
+  }
+  await evaluateAndShowPart(doc, "Feature history updated.", false, { overlay: false });
+  if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage);
+});
+mountAssemblyPlacementManipulator({
+  viewport: viewportElement, viewer,
+  projection: () => activeWorkspaceKind === 'assembly' ? assemblyController.geometryProjection : null,
+  editable: () => activeWorkspaceKind === 'assembly' && hostedPartEditable() && !cadPresentation.snapshot().loading && !exploded,
+  edit: (params, revision, signal, assertCurrent) => assemblyController.editAtomically('update_instance', params, revision, signal, assertCurrent),
+  rendered: () => assemblyRenderTask,
+  status: (message, error) => setStatus(message, error ? 'error' : 'normal'),
+});
+mountDocumentNotesOverlay(viewportElement);
+// Curves from the model (intersection, isoparametric, projection) become 3D sketch features.
+const curveDeps: Parameters<typeof mountDerivedCurveCommands>[0] = {
+  getDocument: () => activePartDocument,
+  apply: async doc => { await evaluateAndShowPart(doc, "Curves added as 3D sketch features.", false, { overlay: false }); if (activePartDocument !== doc) throw new Error(cadPresentation.snapshot().statusMessage); },
+  selection: () => cadSelection.snapshot().items.map(measureReference).filter((ref): ref is MeasureReference => ref !== null),
+  showCurves: curves => viewer.setAnalysisCurves(curves),
+};
+mountDerivedCurveCommands(curveDeps);
+mountSketch3DWorkspace({ ...curveDeps, pickPoint: (event, origin) => viewer.pickManipulatorPivot(event, origin) as { point: [number, number, number]; label?: string } | null });
+
+// Point and edge picks for the plane methods that need them (Three point,
+// Angle). Selection already produces vertex/edge items; this hands back their
+// exact topology geometry so a feature can store the reference.
+window.addEventListener("aether-plane-geometry-request", event => {
+  const request = (event as CustomEvent).detail;
+  if (request?.respond) {
+    request.respond({ points: viewer.selectedPoints(request.items), measurements: viewer.selectedTopologyMeasurements(request.items) });
+    return;
+  }
+  window.dispatchEvent(new CustomEvent("aether-plane-geometry", {
+    detail: { points: viewer.selectedPoints(), axis: viewer.selectedAxis(), surface: viewer.selectedSurfacePoint(), measurements: viewer.selectedTopologyMeasurements() },
+  }));
+});
+
+window.addEventListener('aether-extrude-point-request', event => {
+  const picked = activePartDocument ? viewer.selectedExtrusionVertex(activePartDocument.documentId) : null;
+  const sourceFeatureId = picked && activePartDocument ? sourceFeatureForBody(activePartDocument, picked.bodyId, (event as CustomEvent).detail?.beforeFeatureId) : undefined;
+  window.dispatchEvent(new CustomEvent('aether-extrude-point', { detail: picked && sourceFeatureId ? { reference: { kind: 'solid-vertex', sourceFeatureId, ...picked } } : { error: 'Select a vertex on an earlier solid part in this document.' } }));
+});
+
+window.addEventListener('aether-transform-edge-request', event => {
+  const picked = activePartDocument ? viewer.selectedTransformEdge(activePartDocument.documentId, (event as CustomEvent).detail?.selection) : null;
+  const sourceFeatureId = picked && activePartDocument ? sourceFeatureForBody(activePartDocument, picked.bodyId, (event as CustomEvent).detail?.beforeFeatureId) : undefined;
+  window.dispatchEvent(new CustomEvent('aether-transform-edge', { detail: picked && sourceFeatureId ? { reference: { kind: 'solid-edge', sourceFeatureId, ...picked } } : { error: 'Select one straight edge on an earlier native part. Curved edges and mesh edges cannot define a direction.' } }));
+});
+window.addEventListener('aether-finish-edges-request', event => {
+  const doc = activePartDocument;
+  const picked = doc ? viewer.selectedFinishEdges(doc.documentId, (event as CustomEvent).detail?.selection) : null;
+  // Picks read like Onshape's: "Edge of Revolve 1", the feature that made the body.
+  const edges = picked?.map(edge => { const sourceFeatureId = sourceFeatureForBody(doc!, edge.bodyId, (event as CustomEvent).detail?.beforeFeatureId); return sourceFeatureId ? { ...edge, sourceFeatureId, label: `Edge of ${doc!.features.find(f => f.id === sourceFeatureId)?.name ?? edge.label}` } : null; });
+  window.dispatchEvent(new CustomEvent('aether-finish-edges', { detail: edges?.length && edges.every(e => e !== null) ? { edges } : { error: 'Select edges on an earlier solid part in this document.' } }));
+});
+window.addEventListener('aether-source-edge-picking', event => viewer.setSourceEdgePicking((event as CustomEvent).detail === true));
+window.addEventListener('aether-source-entity-picking', event => viewer.setSourceEntityPicking((event as CustomEvent).detail === true));
+window.addEventListener('aether-source-vertex-picking', event => viewer.setSourceVertexPicking((event as CustomEvent).detail === true));
+window.addEventListener('aether-measure-picking', event => {
+  const { active, points } = (event as CustomEvent<{ active: boolean; points: boolean }>).detail;
+  viewer.setMeasurePicking(active, points);
+});
+window.addEventListener('aether-measure-project', event => {
+  const { points, respond } = (event as CustomEvent).detail;
+  respond(viewer.projectMeasurementPoints(points));
+});
+window.addEventListener('aether-source-body-picking', event => viewer.setSourceBodyPicking((event as CustomEvent).detail === true));
+window.addEventListener('aether-source-face-picking', event => viewer.setSourceFacePicking((event as CustomEvent).detail === true));
+window.addEventListener('aether-offset-faces-request', event => {
+  const doc = activePartDocument;
+  const faces = doc ? viewer.selectedOffsetFaces(doc.documentId, (event as CustomEvent).detail?.selection) : null;
+  const references = faces?.map(face => {
+    const sourceFeatureId = sourceFeatureForBody(doc!, face.bodyId, (event as CustomEvent).detail?.beforeFeatureId);
+    return sourceFeatureId ? { ...face, sourceFeatureId, label: `Face of ${doc!.features.find(f => f.id === sourceFeatureId)?.name ?? face.label}` } : null;
+  });
+  window.dispatchEvent(new CustomEvent('aether-offset-faces', { detail: references?.length && references.every(ref => ref !== null) ? { faces: references } : { error: 'Select native faces on earlier solid parts in this document. Rebuild or reselect unavailable faces.' } }));
+});
+
+window.addEventListener('aether-extrude-face-request', event => {
+  const face = activePartDocument ? viewer.selectedStoppingFace(activePartDocument.documentId) : null;
+  const sourceFeatureId = face && activePartDocument ? sourceFeatureForBody(activePartDocument, face.bodyId, (event as CustomEvent).detail?.beforeFeatureId) : undefined;
+  const source = activePartDocument?.features.find(f => f.id === sourceFeatureId);
+  window.dispatchEvent(new CustomEvent('aether-extrude-face', { detail: face && sourceFeatureId ? { support: { ...face, sourceFeatureId, label: source ? `Face of ${source.name}` : face.label } } : { error: 'Select an unambiguous native face on an earlier part. Rebuild or reselect if its surface is unavailable.' } }));
+});
+
+window.addEventListener('aether-extrude-direction-face-request', event => {
+  const detail = (event as CustomEvent).detail;
+  const face = activePartDocument && viewer.selectedExtrusionAxisFace(activePartDocument.documentId, detail?.selection);
+  const sourceFeatureId = face && activePartDocument && sourceFeatureForBody(activePartDocument, face.bodyId, detail?.beforeFeatureId);
+  window.dispatchEvent(new CustomEvent('aether-extrude-direction-face', {
+    detail: face && sourceFeatureId
+      ? { reference: { ...face, sourceFeatureId, label: `Axis of ${face.label}` } }
+      : { error: 'Select a cylindrical or conical face on an earlier native part.' }
+  }));
+});
+
+window.addEventListener("aether-sketch-face-request", (event) => {
+  const frame = viewer.selectedSketchFrame();
+  // Carry WHICH face was picked, not only its frame: a sketch needs the frame,
+  // but a plane feature stores the reference so the tree can name it.
+  const face = viewer.selectedFaceIdentity();
+  const anchor = viewer.selectedFaceAnchor();
+  if (frame && anchor === null) { window.dispatchEvent(new CustomEvent('aether-sketch-face', { detail: { error: 'This face cannot be distinguished from the other planar faces. Rebuild or choose a different face, or use its plane as a fixed plane.', fixedFrame: frame, label: face?.label } })); return; }
+  const beforeFeatureId = (event as CustomEvent).detail?.beforeFeatureId ?? (draftSketch?.existing ? draftSketch.id : undefined);
+  const support = frame && face && activePartDocument ? supportForFace(activePartDocument, face.partId, frame, face.label, beforeFeatureId, anchor ?? undefined) : undefined;
+  window.dispatchEvent(new CustomEvent("aether-sketch-face", { detail: frame && support ? { frame, ...face, support } : { error: frame ? "Select a face on an earlier body in this Part's history, or use its plane as a fixed plane." : "Select a flat face first. Curved surfaces cannot support a planar sketch.", ...(frame ? { fixedFrame: frame, label: face?.label } : {}) } }));
+});
+const sketchToolCommands = registerSketchToolCommands(cadCommands, tool => {
+  window.dispatchEvent(new CustomEvent("aether-sketch-tool", { detail: tool }));
+});
+window.addEventListener("aether-sketch-editing", event => {
+  const detail = (event as CustomEvent).detail as typeof draftSketch;
+  draftSketch = detail;
+  viewer.setEditingSketch(detail?.id ?? null);
+  updateLists();
+});
+window.addEventListener("aether-feature-editing", event => {
+  draftFeature = (event as CustomEvent).detail as typeof draftFeature;
+  // A draft row is not a document change: no part-updated event, which would close the open preview.
+  updateLists(false);
+});
+window.addEventListener("aether-sketch-mode", event => {
+  sketchToolCommands.setEditing(Boolean((event as CustomEvent).detail));
+});
+
+window.addEventListener("aether-sketch-surface", event => {
+  const detail = (event as CustomEvent).detail;
+  if (!detail?.svg || !detail.frame || typeof detail.connect !== "function") return;
+  viewer.beginSketchSurface(detail.frame, detail.svg, detail.bounds);
+  detail.connect({
+    toSketch: (clientX: number, clientY: number) => viewer.sketchPointFromClient(clientX, clientY),
+    toClient: (point: [number, number]) => viewer.sketchClientFromPoint(point),
+    scaleAt: (clientX?: number, clientY?: number) => viewer.sketchScaleAt(clientX, clientY),
+    updateBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
+      viewer.updateSketchSurfaceBounds(bounds),
+  });
+});
+window.addEventListener("aether-sketch-surface-end", () => viewer.endSketchSurface());
+
+// Plane previews remain transient until Apply. Closing restores saved frames
+// and removes draft geometry without adding a history entry.
+// Orange = selected, everywhere. A feature window says what it is using; the
+// viewport highlights exactly that.
+window.addEventListener("aether-plane-highlight", event => {
+  const detail = (event as CustomEvent).detail;
+  if (Array.isArray(detail?.references)) viewer.setHighlightedPlanes(detail.references);
+});
+window.addEventListener("aether-plane-preview", event => {
+  const detail = (event as CustomEvent).detail;
+  if (typeof detail?.featureId !== "string") return;
+  if (detail.finished) viewer.clearConstructionPlanePreview(activePartDocument);
+  else viewer.setConstructionPlanePreview(detail.featureId, detail.frame ?? null);
+});
+
+window.addEventListener("aether-sketch-plane-selection", event => {
+  const selecting = Boolean((event as CustomEvent).detail);
+  viewer.setSketchPlaneSelection(selecting);
+  if (selecting && !sketchPlaneVisibilityBefore) {
+    sketchPlaneVisibilityBefore = { ...referenceVisibility };
+    for (const id of ["top-plane", "front-plane", "right-plane"] as const) { referenceVisibility[id] = true; viewer.setReferenceGeometryVisibility(id, true); }
+  } else if (!selecting && sketchPlaneVisibilityBefore) {
+    for (const id of ["top-plane", "front-plane", "right-plane"] as const) { referenceVisibility[id] = sketchPlaneVisibilityBefore[id]; viewer.setReferenceGeometryVisibility(id, referenceVisibility[id]); }
+    sketchPlaneVisibilityBefore = null;
+    persistReferenceVisibility();
+  }
+  updateLists();
+});
+
+for (const kind of sketchConstraintCommandKinds) {
+  cadCommands.register(`sketch-constraint-${kind}`, () => { window.dispatchEvent(new CustomEvent("aether-sketch-constraint", { detail: kind })); });
+  cadCommands.setEnabled(`sketch-constraint-${kind}`, false);
+}
+window.addEventListener("aether-sketch-mode", event => {
+  for (const kind of sketchConstraintCommandKinds) cadCommands.setEnabled(`sketch-constraint-${kind}`, Boolean((event as CustomEvent).detail));
+});
+
+// Reference-geometry visibility as commands: the camera + display panel
+// toggles them and reads their state from the registry.
+cadCommands.register("toggle-origin", () => toggleReferenceVisibility("origin"));
+cadCommands.setActive("toggle-origin", referenceVisibility.origin);
+// Push the restored preference into the viewer, which starts everything hidden.
+for (const id of Object.keys(referenceVisibility) as ReferenceGeometryId[])
+  viewer.setReferenceGeometryVisibility(id, referenceVisibility[id]);
+cadCommands.register("toggle-axes", () => { });
+cadCommands.setEnabled("toggle-axes", false);
+
+registerSketchImportCommand();
+registerSketchTextCommand();

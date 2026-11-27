@@ -1,6 +1,6 @@
 import { Raycaster, Vector2, Vector3, type Camera, type Group, type Mesh } from 'three/webgpu';
-import { connectorKindPreference, type ConnectorCandidate, type FaceRangeData, type FaceTopologyData } from '../aether-core';
-import type { CADSelectionItem, CADScreenPoint } from '../cad-selection-store';
+import { connectorKindPreference, type ConnectorCandidate, type FaceRangeData, type FaceTopologyData } from '../core/aether-core';
+import type { CADSelectionItem, CADScreenPoint } from '../core/stores/cad-selection-store';
 import { faceIdForTriangle, projectScreenPoint } from './picking-math';
 
 export interface AnchorPart {

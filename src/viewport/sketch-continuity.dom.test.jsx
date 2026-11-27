@@ -1,14 +1,14 @@
 import { createRequire } from 'node:module';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { defaultCADAppearance } from '../cad-appearance-store';
+import { defaultCADAppearance } from '../core/stores/cad-appearance-store';
 import { StageRig } from './stage-rig';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, MateViewport;
 beforeAll(async()=>{
   dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'http://localhost/'});
   for(const key of ['window','document','Element','HTMLElement'])vi.stubGlobal(key,dom.window[key]);
-  MateViewport=(await import('../viewer')).MateViewport;
+  MateViewport=(await import('./viewer')).MateViewport;
 });
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});
 

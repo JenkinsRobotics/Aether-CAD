@@ -1,6 +1,6 @@
 // Extracts each canonical Part feature type's TypeScript declaration (plus the
 // exported helper types it references) from the document core, so agents read
-// the exact format the editor writes. Output: src/operations/feature-schemas.generated.ts
+// the exact format the editor writes. Output: src/core/operations/feature-schemas.generated.ts
 //   node scripts/generate-feature-schemas.mjs          # write
 //   node scripts/generate-feature-schemas.mjs --check  # exit 1 when stale
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sources = ["aether-engine/src/document", "aether-engine/src/sketch", "aether-engine/src/sketch/reference"];
-export const OUTPUT = join(root, "src/operations/feature-schemas.generated.ts");
+export const OUTPUT = join(root, "src/core/operations/feature-schemas.generated.ts");
 
 /** Every exported interface/type declaration in the core, by name. */
 export function declarations(files) {

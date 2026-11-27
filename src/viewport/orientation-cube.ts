@@ -1,7 +1,7 @@
 /** The Space navigator is the shared navigation cube, rendered at world origin. */
 import * as THREE from "three/webgpu";
 import { viewportCubeRegionsForUpAxis, viewportCubeColorTokens, type ViewportUpAxis } from "@aether/ui";
-import type { StandardCameraView } from "../camera-view";
+import type { StandardCameraView } from "./camera-view";
 
 export interface OrientationCube {
   group: THREE.Group;

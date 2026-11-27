@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { OrthographicCamera, PerspectiveCamera, Scene, Vector3 } from 'three/webgpu';
-import { defaultCADAppearance } from '../cad-appearance-store';
+import { defaultCADAppearance } from '../core/stores/cad-appearance-store';
 import { resolveAppearance } from './appearance-themes';
 import { perspectiveDepthRange, StageRig } from './stage-rig';
 

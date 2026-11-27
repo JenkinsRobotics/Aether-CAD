@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three/webgpu';
-import type { ConnectorCandidate } from '../aether-core';
+import type { ConnectorCandidate } from '../core/aether-core';
 import { anchorSelection, anchorWorldPoint, TopologyAnchorPicker, type AnchorPart } from './topology-anchors';
 import { projectScreenPoint } from './picking-math';
 import { selectedCandidateId } from './topology-selection';

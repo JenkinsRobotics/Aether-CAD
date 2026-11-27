@@ -1,6 +1,6 @@
 import {Mesh, type Group, type Raycaster} from 'three/webgpu';
 import type {ImportedModelData} from '@aether/core/contracts';
-import type {CADScreenPoint, CADSelectionItem} from '../cad-selection-store';
+import type {CADScreenPoint, CADSelectionItem} from '../core/stores/cad-selection-store';
 import {faceIdForTriangle} from './picking-math';
 import type {ScreenProjector} from './box-selection';
 import {selectionCandidateDistance} from './selection-proximity';

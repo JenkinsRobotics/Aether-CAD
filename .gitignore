@@ -18,6 +18,8 @@ dist-lib/
 .verification/
 dist-library/
 build/
+cad-build.log
+solidcraft-main/
 *.egg-info/
  REFERENCE CAD/
 # Supplied comparison sources (SolidCraft for scripts/benchmarks/native); never vendored.
@@ -29,3 +31,6 @@ engine-solidcraft/pkg-node/
 public/engine/solidcraft/*.wasm
 public/engine/solidcraft/*.js
 public/engine/solidcraft/*.d.ts
+# Kept local: over GitHub's 100 MB limit, private, or other checkouts (2026-11-26)
+/.claude/worktrees/
+/solidcraft-main-2.zip

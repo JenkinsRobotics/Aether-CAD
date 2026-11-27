@@ -1,4 +1,4 @@
-import type { PartDocument } from "../aether-core";
+import type { PartDocument } from "../core/aether-core";
 import type { PartDisplayOverride } from "./part-display";
 
 /** Physical density remains separate from the saved visual finish. */

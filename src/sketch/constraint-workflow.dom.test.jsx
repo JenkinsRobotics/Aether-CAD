@@ -2,13 +2,13 @@ import { createRequire } from 'node:module';
 import { beforeAll, beforeEach, afterEach, afterAll, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { querySketchControl as q, clickSketchControl as click } from './test-controls';
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, open, doc, apply;
 beforeAll(async () => {
   dom = new JSDOM('<div class="cad-studio-viewport"></div>', { url: 'http://localhost/cad/' });
   for (const key of ['window', 'document', 'HTMLElement', 'CustomEvent', 'Event', 'location']) vi.stubGlobal(key, dom.window[key]);
-  open = (await import('../sketch-workspace')).openSketchWorkspace;
+  open = (await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 }, 30000);
 beforeEach(() => {
   document.body.innerHTML = '<div class="cad-studio-viewport"></div>';
@@ -116,7 +116,7 @@ it('stops tool-first picking when the shared editor is closed or switched', () =
 });
 
 it.each(['idle','equal'])('hands every closed region to the next solid feature after finishing with %s tool state', async state => {
-  const { takePickedSketchRegion } = await import('../sketch-region-selection');
+  const { takePickedSketchRegion } = await import('./sketch-region-selection');
   takePickedSketchRegion();
   if (state === 'equal') { command('equal'); pick(4,0); pick(36,0); }
   await finish(1);

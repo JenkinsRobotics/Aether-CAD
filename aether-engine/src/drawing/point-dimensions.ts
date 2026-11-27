@@ -2,6 +2,7 @@ import type { DrawingAnnotation, DrawingPoint } from './document';
 import { sheetPoint, type BuiltDrawingAnnotation, type BuiltDrawingView } from './build';
 import { angularDimension, arcPolyline, arrowheadLines, linearDimension } from '../annotation/dimension-geometry';
 import { sheetLines, sheetStyle } from './attached-dimensions';
+import { formatDimensionText } from './standards-annotations';
 
 type PointDimension = Extract<DrawingAnnotation, { kind: 'point-distance' | 'point-angle' }>;
 /** Deduplicate shared edge endpoints, but never turn tessellation samples into
@@ -33,9 +34,9 @@ export function pointDimension(annotation: PointDimension, view: BuiltDrawingVie
     const [a, b] = points, delta = [b[0] - a[0], b[1] - a[1]];
     const valueMm = (annotation.axis ? Math.abs(delta[annotation.axis === 'x' ? 0 : 1]) : Math.hypot(...delta)) / view.view.scale;
     if (valueMm < 1e-9) throw Error('The selected points have zero distance along the chosen direction.');
-    const text = valueMm.toFixed(annotation.decimals);
+    const text = formatDimensionText(valueMm, annotation.decimals, '', '', annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const graphics = linearDimension(a, b, annotation.positionMm, sheetStyle, annotation.axis);
-    return { ...common, text, valueMm, measure: 'length', positionMm: graphics.text.at, lines: sheetLines(graphics, text) };
+    return { ...common, text, valueMm, measure: 'length', positionMm: graphics.text.at, lines: sheetLines(graphics, text), ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}), ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}), ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}) };
   }
   const [a, vertex, b] = points;
   const v1: DrawingPoint = [a[0] - vertex[0], a[1] - vertex[1]], v2: DrawingPoint = [b[0] - vertex[0], b[1] - vertex[1]];
@@ -46,6 +47,8 @@ export function pointDimension(annotation: PointDimension, view: BuiltDrawingVie
   if (Math.abs(cross) < 1e-9) throw Error('An angle needs three non-collinear points.');
   const valueDeg = Math.acos(Math.max(-1, Math.min(1, r1[0] * r2[0] + r1[1] * r2[1]))) * 180 / Math.PI;
   const graphics = angularDimension(vertex, r1, r2, Math.sign(cross) as 1 | -1, annotation.positionMm, sheetStyle, [l1, l2]);
-  return { ...common, text: `${valueDeg.toFixed(annotation.decimals)}°`, valueDeg, measure: 'angle', positionMm: graphics.text.at,
-    lines: [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap(arrow => arrowheadLines(arrow, sheetStyle))] };
+  const text = formatDimensionText(valueDeg, annotation.decimals, '', '°', annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
+  return { ...common, text, valueDeg, measure: 'angle', positionMm: graphics.text.at,
+    lines: [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap(arrow => arrowheadLines(arrow, sheetStyle))],
+    ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}), ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}), ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}) };
 }

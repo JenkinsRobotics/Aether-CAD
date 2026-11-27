@@ -1,0 +1,63 @@
+import {identifyProfileContours,type ExtrusionPointReference} from '@aether/core/document';
+import {cadSelection} from '../../core/stores/cad-selection-store';
+import {extrusionSketchPoints} from '../extrude-point-reference';
+import {activateAvailableReferencePicker,referencePickerLifecycle} from './reference-picker-lifecycle';
+import {rowIn,type Control,type FeatureEditorContext} from './shared';
+
+export function serializeExtrusionPoint(value:string,context:FeatureEditorContext):ExtrusionPointReference {
+  const ref=JSON.parse(value);
+  if(ref.kind!=='sketch-choice')return ref;
+  const identified=identifyProfileContours(context.doc,ref.sourceFeatureId);
+  context.doc.features=identified.features;
+  const point=extrusionSketchPoints(context.doc,context.feature?.id).find(p=>p.sourceFeatureId===ref.sourceFeatureId&&p.contourIndex===ref.contourIndex&&p.index===ref.index);
+  if(!point?.contourId||(point.point==='vertex'&&!point.vertexId))throw Error('Reselect the stopping sketch point.');
+  return {kind:'sketch-point',sourceFeatureId:point.sourceFeatureId,contourId:point.contourId,point:point.point,
+    ...(point.point==='vertex'?{vertexId:point.vertexId}:{}),label:point.label};
+}
+
+export function extrusionPointPicker(context:FeatureEditorContext,control:Control,title:string,noteText='Stops at a plane through this point, parallel to the sketch. Changed or ambiguous vertices require reselection.') {
+  const {win,form,doc,feature}=context;
+  control.closest('label')?.remove();control.hidden=true;control.setAttribute('form',form.id);form.append(control);
+  const element=document.createElement('div'),box=win.entitiesBox(title);
+  element.append(box.element);win.body.append(element);
+  const select=document.createElement('select');select.setAttribute('aria-label',title+' sketch point');
+  const empty=document.createElement('option');empty.value='';empty.textContent='Choose a sketch point';select.append(empty);
+  for(const point of extrusionSketchPoints(doc,feature?.id)){
+    const option=document.createElement('option');option.value=JSON.stringify({kind:'sketch-choice',sourceFeatureId:point.sourceFeatureId,contourIndex:point.contourIndex,index:point.index,label:point.label});option.textContent=point.label;select.append(option);
+  }
+  let enabled=false,active=false;
+  const read=()=>control.value?JSON.parse(control.value):undefined;
+  const render=()=>{const ref=read();box.render(ref?[{label:ref.label,onRemove:()=>set('')}]:[]);};
+  const set=(value:string)=>{control.value=value;select.value='';render();control.dispatchEvent(new Event('change'));};
+  select.onchange=()=>{if(select.value)set(select.value);};const listRow=rowIn('Sketch point',select);listRow.hidden=true;element.append(listRow); // ponytail: the list stays for the suite; points are picked in the viewport
+  const lifecycle=referencePickerLifecycle('vertex',()=>enabled&&win.panel.isConnected,value=>{active=value;window.dispatchEvent(new CustomEvent('aether-source-vertex-picking',{detail:value}));window.dispatchEvent(new CustomEvent('aether-sketch-point-picking',{detail:value}));element.dataset.picking=String(value);});
+  box.element.tabIndex=0;
+  const activate=()=>{if(enabled)lifecycle.setActive(true);};
+  element.addEventListener('pointerdown',activate);element.addEventListener('focusin',activate);
+  const request=()=>{
+    if(!enabled||!active||!win.panel.isConnected)return;
+    const items=cadSelection.snapshot().items;
+    if(items.length!==1||items[0].kind!=='vertex'){win.setError('Select one vertex on an earlier part, or choose a sketch point.');return;}
+    window.dispatchEvent(new CustomEvent('aether-extrude-point-request',{detail:{beforeFeatureId:feature?.id}}));
+  };
+  const receive=(event:Event)=>{
+    if(!enabled||!active||!win.panel.isConnected)return;
+    const result=(event as CustomEvent).detail;
+    if(!result?.reference){win.setError(result?.error??'Select a vertex on an earlier solid.');return;}
+    set(JSON.stringify(result.reference));
+  };
+  window.addEventListener('aether-extrude-point',receive);
+  // A sketch point clicked in the viewport: the matching list entry (its exact choice) is taken.
+  const receiveSketch=(event:Event)=>{
+    if(!enabled||!active||!win.panel.isConnected)return;
+    const pick=(event as CustomEvent).detail as {sourceFeatureId:string;contourIndex:number;index:number}|undefined;
+    const option=pick&&[...select.options].find(o=>{if(!o.value)return false;const c=JSON.parse(o.value);return c.sourceFeatureId===pick.sourceFeatureId&&c.contourIndex===pick.contourIndex&&c.index===pick.index;});
+    if(option)set(option.value);
+  };
+  window.addEventListener('aether-sketch-point',receiveSketch);
+  let items=cadSelection.snapshot().items;
+  const unsubscribe=cadSelection.subscribe(()=>{const next=cadSelection.snapshot().items;if(next===items)return;items=next;if(items.length===1&&items[0].kind==='vertex')request();});
+  const note=document.createElement('p');note.textContent=noteText;win.addHelp(note);
+  const observer=new window.MutationObserver(()=>{if(win.panel.isConnected)return;observer.disconnect();unsubscribe();window.removeEventListener('aether-extrude-point',receive);window.removeEventListener('aether-sketch-point',receiveSketch);lifecycle.dispose();});observer.observe(document.body,{childList:true,subtree:true});
+  render();return {element,setEnabled:(value:boolean)=>{element.hidden=!value;note.hidden=!value;if(enabled!==value){enabled=value;lifecycle.setActive(value);}activateAvailableReferencePicker();}};
+}

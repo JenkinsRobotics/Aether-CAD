@@ -11,6 +11,14 @@ export const referenceDimensionKinds = [
   "vertical-distance",
   "radius",
   "diameter",
+  "arc-length",
+  "arc-sweep",
+  "line-angle",
+  "linear-diameter",
+  "point-circle-distance",
+  "line-circle-distance",
+  "circle-circle-distance",
+  "slot-overall-length",
   "angle",
   "conic-rho",
 ] as const;
@@ -32,6 +40,44 @@ export function measuredDimensionValue(
     b = c.b ? resolve(d, c.b) : undefined;
   if ((c.kind === "radius" || c.kind === "diameter") && a.circle)
     return a.circle.radius * (c.kind === "diameter" ? 2 : 1);
+  if (c.kind === "arc-length" && a.arc)
+    return a.arc.radius * Math.abs(a.arc.sweep);
+  if (c.kind === "arc-sweep" && a.arc)
+    return (Math.abs(a.arc.sweep) * 180) / Math.PI;
+  if (c.kind === "line-angle" && a.line) {
+    const dx = a.line[1][0] - a.line[0][0], dy = a.line[1][1] - a.line[0][1];
+    if (Math.hypot(dx, dy) < 1e-10) throw Error("Cannot measure a zero-length line angle.");
+    return (Math.atan2(dy, dx) * 180) / Math.PI;
+  }
+  if (c.kind === "linear-diameter") {
+    const p = a.point ?? b?.point, l = a.line ?? b?.line;
+    if (p && l) return 2 * pointLineMeasurement(p, l).distance;
+  }
+  if (c.kind === "point-circle-distance") {
+    const p = a.point ?? b?.point, circ = a.circle ?? b?.circle;
+    if (p && circ) {
+      const centerDist = Math.hypot(p[0] - circ.center[0], p[1] - circ.center[1]);
+      return c.gapMode === "inner" ? circ.radius - centerDist : centerDist - circ.radius;
+    }
+  }
+  if (c.kind === "line-circle-distance") {
+    const l = a.line ?? b?.line, circ = a.circle ?? b?.circle;
+    if (l && circ) {
+      const dLine = pointLineMeasurement(circ.center, l).distance;
+      return c.gapMode === "inner" ? dLine + circ.radius : dLine - circ.radius;
+    }
+  }
+  if (c.kind === "circle-circle-distance" && a.circle && b?.circle) {
+    const centerDist = Math.hypot(a.circle.center[0] - b.circle.center[0], a.circle.center[1] - b.circle.center[1]);
+    return c.gapMode === "nested"
+      ? Math.abs(a.circle.radius - b.circle.radius) - centerDist
+      : c.gapMode === "inner"
+        ? centerDist + a.circle.radius + b.circle.radius
+        : centerDist - (a.circle.radius + b.circle.radius);
+  }
+  if (c.kind === "slot-overall-length" && a.circle && b?.circle) {
+    return Math.hypot(a.circle.center[0] - b.circle.center[0], a.circle.center[1] - b.circle.center[1]) + a.circle.radius + b.circle.radius;
+  }
   if (c.kind === "length" && a.line)
     return Math.hypot(a.line[1][0] - a.line[0][0], a.line[1][1] - a.line[0][1]);
   if (a.point && b?.point) {

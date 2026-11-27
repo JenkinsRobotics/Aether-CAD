@@ -1,5 +1,5 @@
-import { onEngine } from "../engine/evaluate-part";
-import { exportOnAether } from "../engine/aether/evaluator";
+import { onEngine } from "../core/engine/evaluate-part";
+import { exportOnAether } from "../core/engine/aether/evaluator";
 import { availableBodies, type PartDocument } from "@aether/core/document";
 import type { ExportFormat } from "@aether/core/contracts";
 
@@ -11,7 +11,7 @@ export const PART_EXPORT_FILES: Record<ExportFormat, { extension: string; type: 
   gltf: { extension: "glb", type: "model/gltf-binary", label: "glTF — binary mesh for previews and animation (.glb)" },
   "3mf": { extension: "3mf", type: "model/3mf", label: "3MF — printing mesh (.3mf)" },
 };
-import { cadPresentation } from "../cad-presentation-store";
+import { cadPresentation } from "../core/stores/cad-presentation-store";
 
 let currentDocument: () => PartDocument | null = () => null;
 let requestedBody: string | undefined;

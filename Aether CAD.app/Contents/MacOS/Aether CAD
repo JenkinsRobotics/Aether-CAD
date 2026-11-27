@@ -1,0 +1,54 @@
+#!/bin/zsh
+set -euo pipefail
+
+# Lightweight macOS launcher for the local Aether CAD desktop checkout.
+# Always runs Electron against the repository's live dist/ frontend and local cad-service.
+APP_CONTENTS="${0:A:h:h}"
+APP_BUNDLE="${APP_CONTENTS:h}"
+REPO_ROOT="${APP_BUNDLE:h}"
+
+# Finder launches apps with a minimal PATH; add standard macOS Node/Python locations.
+export PATH="/opt/homebrew/bin:/usr/local/bin:${HOME}/.pyenv/shims:${HOME}/.volta/bin:${PATH}"
+if [[ -d "${HOME}/.nvm/versions/node" ]]; then
+  latest_nvm=("${HOME}/.nvm/versions/node"/*/bin(NOn))
+  (( ${#latest_nvm} > 0 )) && export PATH="${latest_nvm[1]}:${PATH}"
+fi
+
+LOG_DIR="${HOME}/Library/Logs/Aether-CAD"
+mkdir -p "${LOG_DIR}"
+LOG_FILE="${LOG_DIR}/launcher.log"
+exec >> "${LOG_FILE}" 2>&1
+echo "=== Aether CAD launch $(date -Iseconds) from ${REPO_ROOT} ==="
+
+alert_and_exit() {
+  local msg="$1"
+  echo "ERROR: ${msg}"
+  /usr/bin/osascript -e "display alert \"Aether CAD Could Not Launch\" message \"${msg//\"/\\\"}\" as critical" >/dev/null 2>&1 || true
+  exit 1
+}
+
+cd "${REPO_ROOT}"
+
+ELECTRON_BIN="${REPO_ROOT}/node_modules/.bin/electron"
+if [[ ! -x "${ELECTRON_BIN}" ]]; then
+  alert_and_exit "Electron is not installed in node_modules. Run 'npm ci' inside ${REPO_ROOT} first."
+fi
+
+if [[ ! -f "${REPO_ROOT}/dist/index.html" ]]; then
+  echo "dist/index.html missing; running npm run build..."
+  npm run build || alert_and_exit "Frontend build failed. Check ${LOG_FILE} for details."
+fi
+
+SERVICE_BIN="${REPO_ROOT}/build/desktop-service/cad-service/cad-service"
+if [[ ! -x "${SERVICE_BIN}" ]]; then
+  echo "cad-service binary missing; building local desktop service..."
+  PY_BIN="${REPO_ROOT}/.venv-desktop/bin/python"
+  [[ -x "${PY_BIN}" ]] || PY_BIN="$(command -v python3 || true)"
+  [[ -n "${PY_BIN}" ]] || alert_and_exit "Python 3 not found to build desktop CAD service."
+  "${PY_BIN}" "${REPO_ROOT}/desktop/build-service.py" || alert_and_exit "Building local CAD service failed. Check ${LOG_FILE}."
+fi
+
+# Ensure IDE/agent shells (which export ELECTRON_RUN_AS_NODE=1) never force Electron into Node-only mode.
+unset ELECTRON_RUN_AS_NODE
+
+exec "${ELECTRON_BIN}" "${REPO_ROOT}/desktop"

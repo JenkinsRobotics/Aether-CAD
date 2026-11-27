@@ -1,5 +1,5 @@
 import type { ImportedModelData } from '@aether/core/contracts';
-import type { PartDocument } from '../aether-core';
+import type { PartDocument } from '../core/aether-core';
 
 export interface AssemblyGeometryDependencies {
   evaluate(document: PartDocument): Promise<ImportedModelData>;

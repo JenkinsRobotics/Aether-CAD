@@ -1,4 +1,4 @@
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 /** The ribbon command is enabled only after the sketch plane is selected. */
 export function registerSketchTextCommand() {
   const unregister = cadCommands.register("sketch-text", () => {

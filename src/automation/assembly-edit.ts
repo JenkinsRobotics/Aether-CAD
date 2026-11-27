@@ -1,7 +1,7 @@
-import type { AssemblyMutationMethod, AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import { assemblyMateDOFEditorDraft, assemblyMateDOFLimitsPayload, assemblyMateDOFValuePayload, assemblyMatePayload, assemblyMateTypeOptions, assemblyMateUpdatePayload } from '../cad-mate-authoring';
-import { connectorAxisOptions, normalizeAssemblyConnectorDraft, type ConnectorAxisID } from '../cad-connector-authoring';
-import { assemblyRelationKindOptions, assemblyRelationPayload, type AssemblyRelationKind } from '../cad-relation-authoring';
+import type { AssemblyMutationMethod, AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
+import { assemblyMateDOFEditorDraft, assemblyMateDOFLimitsPayload, assemblyMateDOFValuePayload, assemblyMatePayload, assemblyMateTypeOptions, assemblyMateUpdatePayload } from '../assembly/cad-mate-authoring';
+import { connectorAxisOptions, normalizeAssemblyConnectorDraft, type ConnectorAxisID } from '../assembly/cad-connector-authoring';
+import { assemblyRelationKindOptions, assemblyRelationPayload, type AssemblyRelationKind } from '../assembly/cad-relation-authoring';
 
 type ObjectValue = Record<string, unknown>;
 function object(value: unknown): ObjectValue { if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('An Assembly command object is required.'); return value as ObjectValue; }

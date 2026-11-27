@@ -14,7 +14,9 @@
     "build:automation": "node scripts/build-automation.mjs",
     "test:headless": "npm run build:automation && node scripts/verify-headless-kernel.mjs",
     "desktop:start": "electron desktop",
+    "desktop:launch": "open 'Aether CAD.app'",
     "desktop:service": "python3 desktop/build-service.py",
+    "desktop:refresh": "npm run build && ([ -x .venv-desktop/bin/python ] && .venv-desktop/bin/python desktop/build-service.py || python3 desktop/build-service.py)",
     "desktop:package": "electron-builder --config desktop/electron-builder.json --publish never",
     "desktop:test": "node --test desktop/server.test.cjs"
   },

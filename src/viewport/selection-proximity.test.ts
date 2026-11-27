@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import * as THREE from 'three/webgpu';
-import type {ConnectorCandidate} from '../aether-core';
+import type {ConnectorCandidate} from '../core/aether-core';
 import {selectionCandidateDistance} from './selection-proximity';
 const edge={id:'e',faceId:1,label:'Edge',xAxis:[1,0,0],yAxis:[0,1,0],zAxis:[0,0,1],kind:'edge-midpoint',origin:[0,0,0],measurements:{linearDirection:[1,0,0],lengthMillimeters:100}} as ConnectorCandidate;
 const project=(p:THREE.Vector3)=>({x:p.x,y:p.y});

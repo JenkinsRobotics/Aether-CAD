@@ -1,4 +1,4 @@
-import type { CADScreenPoint, CADSelectionItem, CADSelectionStroke } from '../cad-selection-store';
+import type { CADScreenPoint, CADSelectionItem, CADSelectionStroke } from '../core/stores/cad-selection-store';
 
 /** Collects a gesture without mutating selection. Releasing commits; cancellation is lossless. */
 export class SelectionStroke {

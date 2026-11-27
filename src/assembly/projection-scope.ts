@@ -1,4 +1,4 @@
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 
 /** The portable codec projects active instances but retains workspace-wide mate
  * metadata. Ignore only entities proven to belong to another assembly. Unknown

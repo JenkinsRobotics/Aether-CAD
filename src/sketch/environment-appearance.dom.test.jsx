@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { updateSketchEnvironment } from './environment-appearance';
 import { renderSketchCanvas } from './canvas-renderer';
-import { defaultCADAppearance } from '../cad-appearance-store';
+import { defaultCADAppearance } from '../core/stores/cad-appearance-store';
 import { resolveAppearance } from '../viewport/appearance-themes';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom;

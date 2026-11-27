@@ -5,7 +5,7 @@ import {
   type SketchEntityRef,
 } from "@aether/core/sketch";
 import { evaluateQuantityExpression, unitChoice } from "@aether/core/units";
-import { documentUnits, subscribeDocumentUnits } from "../document-preferences";
+import { documentUnits, subscribeDocumentUnits } from "../app/document-preferences";
 interface Options {
   parent: HTMLElement;
   drawing(): SketchDrawing;

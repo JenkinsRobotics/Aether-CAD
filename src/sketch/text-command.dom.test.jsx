@@ -1,6 +1,6 @@
 import { createRequire as createAssetRequire } from "node:module";
 import { clickSketchControl, querySketchControl, querySketchControls } from "./test-controls";
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 import { registerSketchTextCommand } from "./text-command";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,7 +28,7 @@ beforeAll(async () => {
     "location",
   ])
     vi.stubGlobal(key, dom.window[key]);
-  open = (await import("../sketch-workspace")).openSketchWorkspace;
+  open = (await import("../ui/windows/sketch-workspace")).openSketchWorkspace;
 });
 afterAll(async () => {
   await new Promise(resolve => setImmediate(resolve)); dom.window.close();

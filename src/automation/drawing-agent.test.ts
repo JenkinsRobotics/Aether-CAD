@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { createRectanglePartDocument } from "@aether/core/document";
 import { DrawingEditor } from "../drawing/controller";
-import { CADDrawingWorkspaceStore } from "../cad-drawing-workspace-store";
+import { CADDrawingWorkspaceStore } from "../core/stores/cad-drawing-workspace-store";
 import { drawingAgentInteraction } from "./drawing-agent";
 const make = async () => {
   const editor = new DrawingEditor(new CADDrawingWorkspaceStore(), async () => ({ visible: [{ kind: "line" as const, start: [0, 0], end: [40, 10] }], hidden: [], bounds: [0, 0, 40, 10], bodyIds: ["body"] }));

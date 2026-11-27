@@ -3,7 +3,7 @@
  *  own tip-by-tip proof in the engine package. */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { evaluatePart } from "../engine/evaluate-part";
+import { evaluatePart } from "../core/engine/evaluate-part";
 import { parsePartDocument } from "@aether/core/document";
 
 const examples = ["examples/Train-Cart-Wheel.part.json", "examples/Bracket.part.json"];

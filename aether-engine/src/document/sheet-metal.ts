@@ -18,8 +18,35 @@ export interface SheetBaseFeature extends SheetMetalRule {
   id: string; type: "sheet-base"; name: string; suppressed: boolean; operation: "new";
   profileFeatureId: string;
   profileContourId?: string;
+  /** Optional named sheet metal rule ID from document rules or library. */
+  ruleId?: string;
   /** Build the plate behind the sketch instead of in front of it. */
   reversed?: boolean;
+}
+/** Convert to Sheet Metal (SolidCraft's `sheet.convert`): attaches a sheet metal rule
+ *  to an existing uniform-thickness solid body (auto-measuring plate thickness from
+ *  opposing parallel faces if omitted) so flanges, hems, folds, and flat patterns work on it. */
+export interface SheetConvertFeature {
+  id: string; type: "sheet-convert"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  baseFace?: import("./solid-face-reference").SolidFaceReference;
+  thicknessMillimeters?: number;
+  bendRadiusMillimeters: number;
+  kFactor: number;
+  ruleId?: string;
+}
+/** Contour / Edge-Path Flange (SolidCraft's `sheet.contour_flange`): sweeps or extrudes
+ *  an open or closed multi-segment sheet cross-section profile thickened by the sheet rule. */
+export interface SheetPathFlangeFeature {
+  id: string; type: "sheet-path-flange"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  profileFeatureId: string;
+  profileContourId?: string;
+  edges?: EdgeFinishEdge[];
+  widthMillimeters?: number;
+  thicknessMillimeters?: number;
+  bendRadiusMillimeters?: number;
+  inward?: boolean;
 }
 export interface SheetFlangeFeature {
   id: string; type: "sheet-flange"; name: string; suppressed: boolean;
@@ -56,9 +83,27 @@ export interface SheetFoldFeature {
 }
 export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }
 export interface SheetRefoldFeature { id: string; type: "sheet-refold"; name: string; suppressed: boolean; bodyIds: [string] }
-export type SheetMetalFeature = SheetBaseFeature | SheetFlangeFeature | SheetHemFeature | SheetFoldFeature | SheetUnfoldFeature | SheetRefoldFeature | SheetPerforateFeature;
-export const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"] as const;
+export type SheetMetalFeature = SheetBaseFeature | SheetConvertFeature | SheetPathFlangeFeature | SheetFlangeFeature | SheetHemFeature | SheetFoldFeature | SheetUnfoldFeature | SheetRefoldFeature | SheetPerforateFeature;
+export const sheetMetalFeatureTypes = ["sheet-base", "sheet-convert", "sheet-path-flange", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"] as const;
 export const defaultSheetMetalRule: SheetMetalRule = { thicknessMillimeters: 1.5, bendRadiusMillimeters: 1.5, kFactor: 0.44 };
+
+export interface NamedSheetMetalRule extends SheetMetalRule {
+  id: string;
+  name: string;
+  material: string;
+  densityKgPerM3: number;
+}
+
+/** Standard sheet metal gauge & K-factor library (`sheet.rule_library`). */
+export const SHEET_METAL_RULE_LIBRARY: readonly NamedSheetMetalRule[] = [
+  { id: "steel-1.0", name: "Steel 1.0 mm (20 ga)", material: "Mild Steel", densityKgPerM3: 7850, thicknessMillimeters: 1.0, bendRadiusMillimeters: 1.0, kFactor: 0.44 },
+  { id: "steel-1.5", name: "Steel 1.5 mm (16 ga)", material: "Mild Steel", densityKgPerM3: 7850, thicknessMillimeters: 1.5, bendRadiusMillimeters: 1.5, kFactor: 0.44 },
+  { id: "steel-2.0", name: "Steel 2.0 mm (14 ga)", material: "Mild Steel", densityKgPerM3: 7850, thicknessMillimeters: 2.0, bendRadiusMillimeters: 2.0, kFactor: 0.44 },
+  { id: "stainless-1.2", name: "Stainless 304 1.2 mm (18 ga)", material: "Stainless Steel 304", densityKgPerM3: 8000, thicknessMillimeters: 1.2, bendRadiusMillimeters: 1.5, kFactor: 0.45 },
+  { id: "aluminum-1.5", name: "Aluminum 5052 1.5 mm", material: "Aluminum 5052", densityKgPerM3: 2680, thicknessMillimeters: 1.5, bendRadiusMillimeters: 1.5, kFactor: 0.40 },
+  { id: "aluminum-2.0", name: "Aluminum 5052 2.0 mm", material: "Aluminum 5052", densityKgPerM3: 2680, thicknessMillimeters: 2.0, bendRadiusMillimeters: 2.0, kFactor: 0.40 },
+  { id: "copper-1.0", name: "Copper C110 1.0 mm", material: "Copper", densityKgPerM3: 8960, thicknessMillimeters: 1.0, bendRadiusMillimeters: 1.0, kFactor: 0.38 },
+] as const;
 
 /** The unfolded length a bend of this angle takes: the arc at the neutral axis. */
 export const bendAllowanceMillimeters = (angleDegrees: number, innerRadius: number, rule: SheetMetalRule) =>
@@ -81,6 +126,20 @@ export function validateSheetMetalFeature(feature: SheetMetalFeature, earlier: R
     case "sheet-base":
       if (typeof feature.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) ?? "")) throw new Error("Sheet metal base needs an earlier sketch.");
       validateSheetMetalRule(feature, "Sheet metal base");
+      return;
+    case "sheet-convert":
+      oneBody(feature.bodyIds, "Convert to sheet metal");
+      if (feature.thicknessMillimeters !== undefined && (!finite(feature.thicknessMillimeters) || feature.thicknessMillimeters <= 0)) throw new Error("Convert thickness must be positive.");
+      if (!finite(feature.bendRadiusMillimeters) || feature.bendRadiusMillimeters <= 0) throw new Error("Convert bend radius must be positive.");
+      if (!finite(feature.kFactor) || feature.kFactor <= 0 || feature.kFactor > 1) throw new Error("Convert K factor must be between 0 and 1.");
+      return;
+    case "sheet-path-flange":
+      oneBody(feature.bodyIds, "Contour flange");
+      if (typeof feature.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature.profileFeatureId) ?? "")) throw new Error("Contour flange needs an earlier profile sketch.");
+      if (feature.edges?.length) pickedEdges(feature.edges, "Contour flange", earlier, missingId);
+      else if (!finite(feature.widthMillimeters) || feature.widthMillimeters <= 0) throw new Error("Contour flange needs picked edges or a positive extrusion width.");
+      if (feature.thicknessMillimeters !== undefined && (!finite(feature.thicknessMillimeters) || feature.thicknessMillimeters <= 0)) throw new Error("Contour flange thickness must be positive.");
+      if (feature.bendRadiusMillimeters !== undefined && (!finite(feature.bendRadiusMillimeters) || feature.bendRadiusMillimeters <= 0)) throw new Error("Contour flange bend radius must be positive.");
       return;
     case "sheet-flange":
       oneBody(feature.bodyIds, "Flange"); pickedEdges(feature.edges, "Flange", earlier, missingId);
@@ -141,7 +200,7 @@ export interface BendTableRow {
   direction: "up" | "down";
 }
 /** sheet.export_bend_table: every bend of a sheet body in history order, with its rule. */
-export function sheetBendTable(doc: { features: { id: string; type: string; suppressed?: boolean }[] }, bodyId: string, base: SheetBaseFeature): BendTableRow[] {
+export function sheetBendTable(doc: { features: { id: string; type: string; suppressed?: boolean }[] }, bodyId: string, base: SheetMetalRule): BendTableRow[] {
   const rows: BendTableRow[] = [];
   for (const f of doc.features as SheetMetalFeature[]) {
     if (f.suppressed || (f.type !== "sheet-flange" && f.type !== "sheet-hem" && f.type !== "sheet-fold") || f.bodyIds[0] !== bodyId) continue;

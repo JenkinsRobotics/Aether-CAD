@@ -39,7 +39,7 @@ it('only a successful rebuild commits, and readonly/open dialogs are respected',
 });
 
 it('offers no premade shapes: bodies come from sketches',()=>{
-  expect(cadAgentTools).toHaveLength(26); // Includes validated model projection.
+  expect(cadAgentTools).toHaveLength(42); // Includes validated model projection, SolidCraft parity tools, and script export.
   expect(cadAgentTools.some(t=>t.name==='aether_cad_solid_primitive')).toBe(false);
 });
 

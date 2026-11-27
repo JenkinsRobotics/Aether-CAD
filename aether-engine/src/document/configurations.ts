@@ -1,19 +1,25 @@
 import type { PartDocument } from "./part-document";
 import { setFeatureSuppressed } from "./feature-history";
+import { assignBodyMaterial, materialForBody } from "./physical-materials";
 
 /** Configurations (SolidCraft's `config.*`): a table whose columns are variables
- *  (their expressions) and features (suppressed or not), and whose rows are named
+ *  (their expressions), features (suppressed or not), and body materials, and whose rows are named
  *  sets of values. Activating a row writes its values into the document; the
  *  table remembers which row is active and whether the design still matches it. */
-export type ConfigurationColumn = { kind: "param"; name: string } | { kind: "suppress"; featureId: string };
+export type ConfigurationColumn =
+  | { kind: "param"; name: string }
+  | { kind: "suppress"; featureId: string }
+  | { kind: "material"; bodyId: string };
 export interface ConfigurationRow { name: string; values: Record<string, string | boolean> }
 export interface ConfigurationTable { columns: ConfigurationColumn[]; rows: ConfigurationRow[]; activeRow?: string; /** Ordered rules run after a row is activated (config-rules.ts). */ rules?: import("./config-rules").ConfigRule[] }
 
-export const configurationColumnKey = (column: ConfigurationColumn) => column.kind === "param" ? `param:${column.name}` : `suppress:${column.featureId}`;
+export const configurationColumnKey = (column: ConfigurationColumn) =>
+  column.kind === "param" ? `param:${column.name}` : column.kind === "suppress" ? `suppress:${column.featureId}` : `material:${column.bodyId}`;
 
 /** The value the document holds today for a column. */
 export function currentConfigurationValue(doc: PartDocument, column: ConfigurationColumn): string | boolean | undefined {
   if (column.kind === "param") return doc.variables?.find((v) => v.name === column.name)?.expression;
+  if (column.kind === "material") return materialForBody(doc, column.bodyId)?.name ?? "";
   return doc.features.find((f) => f.id === column.featureId)?.suppressed;
 }
 const table = (doc: PartDocument): ConfigurationTable => structuredClone(doc.configurations ?? { columns: [], rows: [] });
@@ -67,9 +73,20 @@ export function applyConfigurationRow(doc: PartDocument, name: string): PartDocu
   for (const column of current.columns) {
     const value = row.values[configurationColumnKey(column)];
     if (column.kind === "param") { const variable = next.variables?.find((v) => v.name === column.name); if (variable && typeof value === "string") variable.expression = value; }
+    else if (column.kind === "material") { if (typeof value === "string" && value.trim()) next = assignBodyMaterial(next, column.bodyId, value); }
     else if (typeof value === "boolean") { const feature = next.features.find((f) => f.id === column.featureId); if (feature && feature.suppressed !== value) next = setFeatureSuppressed(next, column.featureId, value); }
   }
   return { ...next, configurations: { ...current, activeRow: name } };
+}
+/** Capture current design parameter, suppression, and material values back into a row (`config.update_from_design`). */
+export function updateConfigurationFromDesign(doc: PartDocument, name = doc.configurations?.activeRow): PartDocument {
+  const current = table(doc), row = current.rows.find((r) => r.name === name);
+  if (!row) throw new Error(`No configuration named ${name ?? "(none)"}.`);
+  for (const column of current.columns) {
+    const val = currentConfigurationValue(doc, column);
+    if (val !== undefined) row.values[configurationColumnKey(column)] = val;
+  }
+  return { ...doc, configurations: current };
 }
 /** Does the design still hold the active row's values? */
 export function configurationMatches(doc: PartDocument, name = doc.configurations?.activeRow): boolean {
@@ -84,7 +101,8 @@ export function validateConfigurations(value: unknown, doc: { features: { id: st
   for (const c of t.columns) {
     if (c.kind === "param") { if (typeof c.name !== "string" || !doc.variables?.some((v) => v.name === c.name)) throw new Error(`Configuration column names an unknown variable.`); }
     else if (c.kind === "suppress") { if (typeof c.featureId !== "string" || !doc.features.some((f) => f.id === c.featureId)) throw new Error("Configuration column names an unknown feature."); }
-    else throw new Error("Configuration columns are parameters or suppressions.");
+    else if (c.kind === "material") { if (typeof c.bodyId !== "string" || !c.bodyId.trim()) throw new Error("Configuration material column needs a body ID."); }
+    else throw new Error("Configuration columns are parameters, materials or suppressions.");
   }
   const names = new Set<string>();
   for (const r of t.rows) { if (typeof r.name !== "string" || !r.name.trim() || names.has(r.name) || typeof r.values !== "object") throw new Error("Configuration rows need distinct names and values."); names.add(r.name); }

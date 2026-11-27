@@ -27,6 +27,15 @@ export const drawingConstraintKinds = [
   "length",
   "radius",
   "diameter",
+  "arc-length",
+  "arc-sweep",
+  "line-angle",
+  "linear-diameter",
+  "point-circle-distance",
+  "line-circle-distance",
+  "circle-circle-distance",
+  "slot-overall-length",
+  "point-along",
   "conic-rho",
   "angle",
   "fix",
@@ -95,4 +104,6 @@ export interface DrawingConstraint {
   /** Closed slot boundary relative to its source centerline. */
   slotBoundary?: "inner" | "outer";
   tangentMode?: "external" | "internal";
+  /** Edge-gap convention for circle-edge distance dimensions. */
+  gapMode?: "outer" | "inner" | "nested";
 }

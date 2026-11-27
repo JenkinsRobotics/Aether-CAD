@@ -1,8 +1,8 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import * as THREE from 'three/webgpu';
-import type {ConnectorCandidate} from '../aether-core';
-import {MateViewport} from '../viewer';
-import {cadSelection} from '../cad-selection-store';
+import type {ConnectorCandidate} from '../core/aether-core';
+import {MateViewport} from './viewer';
+import {cadSelection} from '../core/stores/cad-selection-store';
 import {createEmptyPartDocument} from '@aether/core/document';
 const frame=(z:number)=>({originMillimeters:[0,0,z] as [number,number,number],xDirection:[1,0,0] as [number,number,number],normal:[0,0,1] as [number,number,number]});
 afterEach(()=>{cadSelection.dispatch({type:'clear'});vi.unstubAllGlobals();});

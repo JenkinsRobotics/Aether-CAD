@@ -1,14 +1,70 @@
 import { getOC, makeCompound, type Shape3D } from "replicad";
 import type { TopoDS_Shape, TopAbs_ShapeEnum } from "replicad-opencascadejs";
-import type { PartDocument } from "../document/part-document";
+import type { PartDocument, ProfileFeature } from "../document/part-document";
+import { bodyIDForFeature, rollbackPosition } from "../document/feature-history";
+import { profileFrame } from "../document/construction-planes";
+import type { SheetBaseFeature } from "../document/sheet-metal";
 import { drawingViewFrame, type PartDrawingOptions, type PartDrawingProjection, type ProjectedDrawingCurve } from "../drawing/projection";
 import { evaluatePartDocument } from "./part-evaluator";
 import { withDrawingSection } from "./drawing-section";
 import { withHiddenLineProjection } from "./hidden-line";
+import { extractSheetFlatPattern } from "./features/sheet-metal-flat";
 
 /** Projects all selected bodies together: nearer solids must occlude farther
  * ones. Source shapes remain owned by the evaluator cache. */
 export function projectPartDrawing(document: PartDocument, options: PartDrawingOptions): PartDrawingProjection {
+  if (options.flatPattern) {
+    const active = document.features.slice(0, rollbackPosition(document));
+    const bases = active.filter((f): f is SheetBaseFeature => f.type === "sheet-base" && !f.suppressed);
+    const targetBodyId = options.bodyIds?.[0];
+    const base = targetBodyId ? bases.find((f) => bodyIDForFeature(document, f) === targetBodyId) : bases[0];
+    if (!base) throw Error("A flat-pattern view requires an unsuppressed sheet-metal base feature.");
+    const bodyId = bodyIDForFeature(document, base);
+    const profile = active.find((f): f is ProfileFeature => f.type === "profile" && f.id === base.profileFeatureId);
+    const baseNormal: [number, number, number] = profile ? profileFrame(profile).normal : [0, 0, 1];
+    let hasBends = false;
+    let unfolded = false;
+    for (const f of active) {
+      if (f.suppressed) continue;
+      if ((f.type === "sheet-flange" || f.type === "sheet-hem") && f.bodyIds[0] === bodyId) { hasBends = true; unfolded = false; }
+      else if (f.type === "sheet-refold" && f.bodyIds[0] === bodyId) unfolded = false;
+      else if (f.type === "sheet-unfold" && f.bodyIds[0] === bodyId) unfolded = true;
+    }
+    const evalDoc: PartDocument = hasBends && !unfolded
+      ? {
+          ...document,
+          rollbackIndex: undefined,
+          features: [
+            ...active,
+            { id: "__flat_pattern_unfold__", type: "sheet-unfold", name: "Flat Pattern Unfold", suppressed: false, bodyIds: [bodyId] },
+          ],
+        }
+      : document;
+    let flatResult: PartDrawingProjection | undefined;
+    evaluatePartDocument(evalDoc, {
+      withBodies: (bodies) => {
+        const flatBody = bodies.get(bodyId);
+        if (!flatBody) throw Error(`Flat pattern body ${bodyId} is unavailable.`);
+        const flat = extractSheetFlatPattern(document, bodyId, flatBody, base, baseNormal);
+        const visible: ProjectedDrawingCurve[] = [];
+        const hidden: ProjectedDrawingCurve[] = [];
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const seg of flat.lines) {
+          const curve: ProjectedDrawingCurve = { kind: "line", start: seg.start, end: seg.end };
+          if (seg.layer === "BEND_UP" || seg.layer === "BEND_DOWN") hidden.push(curve);
+          else visible.push(curve);
+          for (const [x, y] of [seg.start, seg.end]) {
+            minX = Math.min(minX, x); minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+          }
+        }
+        if (!Number.isFinite(minX)) throw Error("Flat pattern has no projectable lines.");
+        flatResult = { visible, hidden, bounds: [minX, minY, maxX, maxY], bodyIds: [flat.bodyId] };
+      },
+    });
+    if (!flatResult) throw Error("Flat pattern could not be extracted.");
+    return flatResult;
+  }
   const { normal, up } = drawingViewFrame(options.orientation, options.direction);
   let result: PartDrawingProjection | undefined;
   evaluatePartDocument(document, { withBodies: bodies => {

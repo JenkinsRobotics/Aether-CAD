@@ -1,0 +1,15 @@
+import type { CADCommandID } from '../../core/cad-command-registry';
+
+/** Toolbar shortcuts initialize existing editors; saved features keep canonical types. */
+export interface FeatureLaunchOptions {
+  title?: string;
+  initialOperation?: 'cut';
+  initialTransform?: 'translate' | 'rotate' | 'scale' | 'copy' | 'mirror' | 'align';
+}
+
+export const featureToolbarPresets: ReadonlyArray<{
+  command: CADCommandID;
+  type: string;
+  options: FeatureLaunchOptions;
+}> = [
+];

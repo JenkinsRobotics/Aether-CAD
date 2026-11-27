@@ -1,12 +1,13 @@
 import { numberedBOMRows } from '../assembly/bom-table';
 import type { AgentInteraction, AgentTool } from '@aether/ui/AgentServices';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import type { CADAssemblyController } from '../cad-assembly-controller';
-import { exampleAssemblyRecipe } from '../assembly-recipe';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
+import type { CADAssemblyController } from '../assembly/cad-assembly-controller';
+import { exampleAssemblyRecipe } from '../assembly/assembly-recipe';
 import { knowledgeTool } from '../ai/catalog';
 import { discoverCAD } from '../ai/knowledge';
 import { prepareAssemblyEdit } from './assembly-edit';
 import { validateToolArguments } from './tool-arguments';
+import { runAssemblyFindLimitsQuery, runAssemblyIKQuery, runAssemblyMassReport, runAssemblySweepQuery, runAssemblyURDFExport } from './assembly-parity-tools';
 
 const tool=(name:string,description:string,properties:Record<string,unknown>={},required:string[]=[]):AgentTool=>({
   name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
@@ -26,6 +27,11 @@ export const assemblyAgentTools:AgentTool[]=[
   tool('aether_cad_assembly_edit','Edit existing entities by explicit IDs as one atomic, solved edit. command_json types: instance-update {id,name?,position_mm?:[x,y,z],rotation_xyzw?:unitQuaternion,visible?}; instance-grounded {id,grounded}; instance-suppressed {id,suppressed}; mate-update {id,name?,suppressed?}; dof-value {id,value,unit:deg|mm}; dof-limits {id,minimum,maximum,unit:deg|mm} (both null removes limits); connector-add {part_id,name,origin_mm?,primary_axis?,secondary_axis?} (axes positive-x/negative-x/positive-y/negative-y/positive-z/negative-z); mate-add {kind,name,a:{instance_id,connector_id},b:{instance_id,connector_id}}; relation-add or relation-update {id for update,kind:gear|rack_pinion|screw|linear,driver_dof_id,driven_dof_id,ratio,offset,unit,reversed?,suppressed?} (ratio is positive driven SI units per driver SI units; offset unit matches driven DOF); contact-add or contact-update {id for update,name,instance_ids,suppressed?}; contacts-enabled {enabled}; remove {entity:instance|mate|connector|relation|contact,id}. Inspect capabilities first. Direct DOF edits require an active free DOF; edit the relation to change a dependent value. Dependency/solve failures preserve the Assembly; deletion never implicitly removes dependents.',{...revision,command_json:{type:'string'}},['expected_revision','command_json']),
   tool('aether_cad_assembly_undo','Undo the latest Assembly edit or recipe. UI and agent edits share session history, bounded to 64 steps and 64 MiB of archive text; saved reopen clears it.',revision,['expected_revision']),
   tool('aether_cad_assembly_redo','Redo the next undone Assembly edit or recipe. A new edit after undo discards the redo branch.',revision,['expected_revision']),
+  tool('aether_cad_assembly_mass','Compute world-space combined mass, center of mass, and parallel-axis 3x3 inertia tensor across non-reference assembly occurrences.',{}),
+  tool('aether_cad_assembly_ik','Solve damped Levenberg-Marquardt Inverse Kinematics (joint.reach) to bring a local point on an occurrence to a world target (mm) while respecting mates and joint limits.',{instance_id:{type:'string'},target_mm:{type:'array',items:{type:'number'},minItems:3,maxItems:3},local_point_mm:{type:'array',items:{type:'number'},minItems:3,maxItems:3},tolerance_mm:{type:'number',exclusiveMinimum:0}},['instance_id','target_mm']),
+  tool('aether_cad_assembly_sweep','Sweep a mate degree of freedom across [from, to] in steps (deg or mm) to inspect solved mechanism motion.',{mate_id:{type:'string'},dof_name:{type:'string'},from:{type:'number'},to:{type:'number'},steps:{type:'integer',minimum:2,maximum:100}},['mate_id','dof_name','from','to']),
+  tool('aether_cad_assembly_find_limits','Binary-search the feasible minimum and maximum kinematic range of a mate DOF.',{mate_id:{type:'string'},dof_name:{type:'string'},search_min:{type:'number'},search_max:{type:'number'},origin_value:{type:'number'}},['mate_id','dof_name','search_min','search_max']),
+  tool('aether_cad_assembly_urdf','Generate a ROS/Gazebo URDF XML description (SI meters/radians) for the open assembly.',{robot_name:{type:'string'}}),
 ];
 export function inspectAssembly(controller: CADAssemblyController, args: Record<string,unknown> = {}) {
   const p = controller.geometryProjection;
@@ -62,6 +68,11 @@ export function assemblyAgentInteraction(controller:CADAssemblyController, conte
     const projection=controller.geometryProjection;
     if(!projection)throw Error('Open an Assembly first.');
     if(call.name==='aether_cad_assembly_inspect')return {...inspectAssembly(controller,call.arguments),writable:writable()};
+    if(call.name==='aether_cad_assembly_mass')return {changed:false,revision:editorRevision(projection),...runAssemblyMassReport(projection)};
+    if(call.name==='aether_cad_assembly_ik')return {changed:false,revision:editorRevision(projection),...runAssemblyIKQuery(projection,call.arguments as unknown as Parameters<typeof runAssemblyIKQuery>[1])};
+    if(call.name==='aether_cad_assembly_sweep')return {changed:false,revision:editorRevision(projection),...runAssemblySweepQuery(projection,call.arguments as unknown as Parameters<typeof runAssemblySweepQuery>[1])};
+    if(call.name==='aether_cad_assembly_find_limits')return {changed:false,revision:editorRevision(projection),...runAssemblyFindLimitsQuery(projection,call.arguments as unknown as Parameters<typeof runAssemblyFindLimitsQuery>[1])};
+    if(call.name==='aether_cad_assembly_urdf')return {changed:false,revision:editorRevision(projection),urdf:runAssemblyURDFExport(projection,typeof call.arguments.robot_name==='string'?call.arguments.robot_name:undefined)};
     const check = () => {
       checkContext(); if(!writable())throw Error('This Assembly is read-only or another editor is active.');
       if(controller.geometryProjection!==projection || typeof call.arguments.expected_revision!=='string' || call.arguments.expected_revision!==editorRevision(projection)) throw Error('The Assembly revision changed. Inspect it before editing.');

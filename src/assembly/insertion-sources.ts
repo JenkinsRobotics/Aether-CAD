@@ -2,7 +2,7 @@
 import { cadDocumentRequest as documentRequest } from '../document/local-project';
 import { isAetherCADFile } from '@aether/core/document/file-types';
 import { insertionPart, type InsertCandidate, type InsertSource } from './insertion';
-import type { Project } from '../host-library';
+import type { Project } from '../app/host-library';
 export interface SavedInsertFile { id: string; name: string; revision: number; data_base64?: string }
 export async function listInsertFiles(): Promise<SavedInsertFile[]> {
   const groups = await Promise.all(['personal', 'workspace'].map(view =>

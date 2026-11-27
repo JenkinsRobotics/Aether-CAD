@@ -1,5 +1,5 @@
 import type { SketchDrawing, SketchPoint } from "@aether/core/sketch";
-import { snapSketchPoint } from "../sketch-snapping";
+import { snapSketchPoint } from "./sketch-snapping";
 
 /** Preview-only baseline picking. Insertion remains the panel's explicit commit. */
 export function mountTextPlacement(

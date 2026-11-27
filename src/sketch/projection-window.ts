@@ -1,6 +1,6 @@
-import { openCADFeatureWindow } from "../features/feature-window-style";
-import { addFeatureViewControls } from "../features/view-controls";
-import "../sketch-workspace.css";
+import { openCADFeatureWindow } from "../modeling/features/feature-window-style";
+import { addFeatureViewControls } from "../modeling/features/view-controls";
+import "../ui/windows/sketch-workspace.css";
 import "./projection-window.css";
 
 /** Projection settings use the same floating container and field rows as other

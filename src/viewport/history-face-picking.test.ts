@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import {Raycaster,Vector3} from 'three/webgpu';
 import type {ImportedModelData,PartGeometryData} from '@aether/core/contracts';
 import {FeaturePreviewLayer} from '../modeling/feature-preview-layer';
-import type {ConnectorCandidate} from '../aether-core';
+import type {ConnectorCandidate} from '../core/aether-core';
 import {pickHistoryFace} from './history-face-picking';
 
 it('picks exact face ranges on visible earlier geometry and refuses hidden history',()=>{

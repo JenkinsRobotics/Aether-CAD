@@ -145,10 +145,65 @@ function resolvePlaneFrame(feature3, earlier = []) {
     const o = definition.axis.originMillimeters, along = (definition.t - 0.5) * length;
     return maybeFlip({ originMillimeters: [o[0] + d2[0] * along, o[1] + d2[1] * along, o[2] + d2[2] * along], normal: d2, xDirection: canonicalPlaneXDirection(d2) });
   }
+  if (definition.method === "square-to-line") {
+    const d2 = unitOf(definition.axis.directionMillimeters, "the line");
+    return maybeFlip({
+      originMillimeters: [...definition.point.positionMillimeters],
+      normal: d2,
+      xDirection: canonicalPlaneXDirection(d2)
+    });
+  }
+  if (definition.method === "axis-point") {
+    const d2 = unitOf(definition.axis.directionMillimeters, "the axis");
+    const o = definition.axis.originMillimeters;
+    const p2 = definition.point.positionMillimeters;
+    const v2 = [p2[0] - o[0], p2[1] - o[1], p2[2] - o[2]];
+    const n = [
+      d2[1] * v2[2] - d2[2] * v2[1],
+      d2[2] * v2[0] - d2[0] * v2[2],
+      d2[0] * v2[1] - d2[1] * v2[0]
+    ];
+    if (Math.hypot(...n) < 1e-8) throw new Error(`${feature3.name}: the point lies on the axis.`);
+    const unitN = unitOf(n, "the plane normal");
+    return maybeFlip({
+      originMillimeters: [...p2],
+      normal: unitN,
+      xDirection: d2
+    });
+  }
   const [a2, b] = definition.references.map(frameOf2);
   const alignment = a2.normal[0] * b.normal[0] + a2.normal[1] * b.normal[1] + a2.normal[2] * b.normal[2];
-  if (Math.abs(alignment) < 1 - 1e-6)
-    throw new Error(`${feature3.name}: mid plane needs two parallel planes.`);
+  if (Math.abs(alignment) < 1 - 1e-6) {
+    const lineDir = [
+      a2.normal[1] * b.normal[2] - a2.normal[2] * b.normal[1],
+      a2.normal[2] * b.normal[0] - a2.normal[0] * b.normal[2],
+      a2.normal[0] * b.normal[1] - a2.normal[1] * b.normal[0]
+    ];
+    const u2 = unitOf(lineDir, "plane intersection");
+    const inA = [
+      a2.normal[1] * u2[2] - a2.normal[2] * u2[1],
+      a2.normal[2] * u2[0] - a2.normal[0] * u2[2],
+      a2.normal[0] * u2[1] - a2.normal[1] * u2[0]
+    ];
+    const diff = [
+      b.originMillimeters[0] - a2.originMillimeters[0],
+      b.originMillimeters[1] - a2.originMillimeters[1],
+      b.originMillimeters[2] - a2.originMillimeters[2]
+    ];
+    const denom = inA[0] * b.normal[0] + inA[1] * b.normal[1] + inA[2] * b.normal[2];
+    const t2 = (diff[0] * b.normal[0] + diff[1] * b.normal[1] + diff[2] * b.normal[2]) / denom;
+    const origin2 = [
+      a2.originMillimeters[0] + inA[0] * t2,
+      a2.originMillimeters[1] + inA[1] * t2,
+      a2.originMillimeters[2] + inA[2] * t2
+    ];
+    const sign = alignment < 0 ? -1 : 1;
+    const bisector = unitOf(
+      [a2.normal[0] + sign * b.normal[0], a2.normal[1] + sign * b.normal[1], a2.normal[2] + sign * b.normal[2]],
+      "the bisector normal"
+    );
+    return maybeFlip({ originMillimeters: origin2, normal: bisector, xDirection: u2 });
+  }
   const gap = (b.originMillimeters[0] - a2.originMillimeters[0]) * a2.normal[0] + (b.originMillimeters[1] - a2.originMillimeters[1]) * a2.normal[1] + (b.originMillimeters[2] - a2.originMillimeters[2]) * a2.normal[2];
   return maybeFlip({
     originMillimeters: a2.originMillimeters.map(
@@ -210,6 +265,14 @@ function validatePlaneDefinition(feature3, earlierPlaneIds, missingReference = (
     if (!Number.isFinite(definition.t) || definition.t < 0 || definition.t > 1) throw new Error("The path fraction must be between 0 and 1.");
     return;
   }
+  if (definition.method === "axis-point" || definition.method === "square-to-line") {
+    const label = definition.method === "axis-point" ? "A plane through axis and point" : "A plane square to line";
+    checkAxis(definition.axis, label);
+    const pt2 = definition.point;
+    if (pt2?.kind !== "point" || typeof pt2.partId !== "string" || typeof pt2.candidateId !== "string" || pt2.positionMillimeters?.length !== 3 || !pt2.positionMillimeters.every(Number.isFinite))
+      throw new Error(`${label} needs a picked point with finite coordinates.`);
+    return;
+  }
   if (definition.method === "angle") {
     const axis = definition.axis;
     if (axis?.kind !== "axis" || typeof axis.partId !== "string" || typeof axis.candidateId !== "string" || axis.originMillimeters?.length !== 3 || axis.directionMillimeters?.length !== 3 || !axis.originMillimeters.every(Number.isFinite) || !axis.directionMillimeters.every(Number.isFinite))
@@ -233,6 +296,9 @@ function flipSketchFrame(frame, flip) {
   if (!flip) return frame;
   const neg2 = (v2) => [-v2[0], -v2[1], -v2[2]];
   return { ...frame, normal: neg2(frame.normal), xDirection: flip === "y" ? neg2(frame.xDirection) : frame.xDirection };
+}
+function profileFrame(feature3) {
+  return flipSketchFrame(feature3.frame ?? principalFrame(feature3.plane, feature3.offsetMillimeters ?? 0), feature3.flip);
 }
 function validateExtrusionPointReference(ref, earlier, missing) {
   const id2 = (v2, max2 = 128) => typeof v2 === "string" && !!v2.trim() && v2.length <= max2;
@@ -586,9 +652,9 @@ function validateTransform(feature3, earlier = /* @__PURE__ */ new Map(), missin
     if (t2.combine && copies) throw Error("A combined mirror joins the original; it makes no copies.");
   } else throw Error("Choose Translate, Rotate, Scale, Mirror, Align or Copy in place.");
 }
-const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
-const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
-const finite$2 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
+const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-match", "surface-fillet", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"];
+const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-fillet", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"];
+const finite$4 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
 const sketchRef = (id2, earlier, what) => {
   if (typeof id2 !== "string" || !["profile", "sketch"].includes(earlier.get(id2) ?? "")) throw new Error(`${what} needs an earlier sketch.`);
 };
@@ -607,17 +673,34 @@ function validateSurfaceFeature(feature3, earlier, missing) {
         if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
         for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing);
       }
+      if (feature3.continuity !== void 0 && !["g0", "g1", "g2"].includes(feature3.continuity)) throw new Error("Blend continuity must be g0, g1, or g2.");
+      if (feature3.tangentWeight !== void 0 && !(finite$4(feature3.tangentWeight) && feature3.tangentWeight > 0)) throw new Error("Blend tangent weight must be positive.");
+      return;
+    case "surface-match":
+      ids(feature3.bodyIds, "Match surface", 1);
+      if (typeof feature3.targetBodyId !== "string" || !feature3.targetBodyId) throw new Error("Match surface needs a target surface body.");
+      if (!Array.isArray(feature3.sourceEdges) || !feature3.sourceEdges.length || !Array.isArray(feature3.targetEdges) || !feature3.targetEdges.length) throw new Error("Match surface needs source and target edges.");
+      for (const edge of [...feature3.sourceEdges, ...feature3.targetEdges]) validateEdgeFinishEdge(edge, earlier, missing);
+      if (!["g0", "g1", "g2"].includes(feature3.continuity)) throw new Error("Match continuity must be g0, g1, or g2.");
+      return;
+    case "surface-fillet":
+      ids(feature3.bodyIds, "Surface fillet");
+      if (feature3.bodyIds.length > 2) throw new Error("Surface fillet takes one or two surface bodies.");
+      for (const edge of feature3.edges ?? []) validateEdgeFinishEdge(edge, earlier, missing);
+      if (!finite$4(feature3.radiusMillimeters) || feature3.radiusMillimeters <= 0) throw new Error("Surface fillet needs a positive radius.");
       return;
     case "surface-fair":
       ids(feature3.bodyIds, "Fair", 1);
       for (const face of feature3.faces ?? []) validateSolidFaceReference(face, earlier, missing);
-      if (feature3.strength !== void 0 && !(finite$2(feature3.strength) && feature3.strength > 0 && feature3.strength <= 1)) throw new Error("Fair strength is more than 0 and at most 1.");
-      if (feature3.toleranceMillimeters !== void 0 && !(finite$2(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Fair's largest move must be positive.");
+      if (feature3.strength !== void 0 && !(finite$4(feature3.strength) && feature3.strength > 0 && feature3.strength <= 1)) throw new Error("Fair strength is more than 0 and at most 1.");
+      if (feature3.toleranceMillimeters !== void 0 && !(finite$4(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Fair's largest move must be positive.");
       return;
     case "surface-trim":
       ids(feature3.bodyIds, "Trim", 1);
-      validateMirrorPlane(feature3.plane, earlier, missing, "Trim plane");
-      if (!Array.isArray(feature3.keepPointMillimeters) || feature3.keepPointMillimeters.length !== 3 || !feature3.keepPointMillimeters.every(finite$2)) throw new Error("Trim needs a keep point on the side to keep.");
+      if (!feature3.plane && !feature3.toolBodyId) throw new Error("Trim needs a trimming plane or a trimming body.");
+      if (feature3.plane) validateMirrorPlane(feature3.plane, earlier, missing, "Trim plane");
+      if (feature3.toolBodyId !== void 0 && (typeof feature3.toolBodyId !== "string" || !feature3.toolBodyId.trim())) throw new Error("Trim tool body must be a valid body ID.");
+      if (!Array.isArray(feature3.keepPointMillimeters) || feature3.keepPointMillimeters.length !== 3 || !feature3.keepPointMillimeters.every(finite$4)) throw new Error("Trim needs a keep point on the side to keep.");
       return;
     case "surface-untrim":
       ids(feature3.bodyIds, "Untrim", 1);
@@ -628,7 +711,7 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       ids(feature3.bodyIds, feature3.type === "surface-ruled" ? "Ruled surface" : "Extend", 1);
       if (!Array.isArray(feature3.edges) || !feature3.edges.length) throw new Error(`${feature3.type === "surface-ruled" ? "Ruled surface" : "Extend"} needs picked edges.`);
       for (const edge of feature3.edges) validateEdgeFinishEdge(edge, earlier, missing);
-      if (!finite$2(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
+      if (!finite$4(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Enter a positive distance.");
       if (feature3.type === "surface-ruled") {
         if (!["normal", "tangent", "direction"].includes(feature3.mode)) throw new Error("Ruled surface reaches square to the surface, along it, or in a direction.");
         if (feature3.mode === "direction" && !(Array.isArray(feature3.direction) && feature3.direction.length === 3 && feature3.direction.every(Number.isFinite) && Math.hypot(...feature3.direction) > 1e-9)) throw new Error("Ruled surface direction needs a nonzero vector.");
@@ -645,7 +728,7 @@ function validateSurfaceFeature(feature3, earlier, missing) {
     }
     case "surface-revolve":
       sketchRef(feature3.profileFeatureId, earlier, "Surface revolve");
-      if (!finite$2(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
+      if (!finite$4(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 360) throw new Error("Surface revolve angle must be between 0 and 360 degrees.");
       if (!["X", "Y", "Z"].includes(feature3.axis)) throw new Error("Surface revolve axis must be X, Y or Z.");
       if (feature3.axisReference) {
         const a2 = feature3.axisReference, missingId = missing;
@@ -672,19 +755,19 @@ function validateSurfaceFeature(feature3, earlier, missing) {
       return;
     case "surface-offset":
       ids(feature3.bodyIds, "Offset surface", 1);
-      if (!finite$2(feature3.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
+      if (!finite$4(feature3.distanceMillimeters)) throw new Error("Offset surface needs a finite distance.");
       return;
     case "surface-thicken":
       ids(feature3.bodyIds, "Thicken");
-      if (!finite$2(feature3.thicknessMillimeters) || feature3.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
-      if (feature3.secondThicknessMillimeters !== void 0 && (!finite$2(feature3.secondThicknessMillimeters) || feature3.secondThicknessMillimeters <= 0 || feature3.symmetric)) throw new Error("Thickness 2 must be positive, and not with Mid plane.");
+      if (!finite$4(feature3.thicknessMillimeters) || feature3.thicknessMillimeters === 0) throw new Error("Thicken needs a nonzero thickness.");
+      if (feature3.secondThicknessMillimeters !== void 0 && (!finite$4(feature3.secondThicknessMillimeters) || feature3.secondThicknessMillimeters <= 0 || feature3.symmetric)) throw new Error("Thickness 2 must be positive, and not with Mid plane.");
       if (feature3.keepTools !== void 0 && typeof feature3.keepTools !== "boolean") throw new Error("Keep tools must be true or false.");
       if (!["new", "add", "cut"].includes(feature3.operation)) throw new Error("Thicken makes a new body, adds or cuts.");
       return;
     case "surface-stitch":
       ids(feature3.bodyIds, "Stitch");
       if (feature3.bodyIds.length < 2) throw new Error("Stitch needs two or more surface bodies.");
-      if (feature3.toleranceMillimeters !== void 0 && !(finite$2(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
+      if (feature3.toleranceMillimeters !== void 0 && !(finite$4(feature3.toleranceMillimeters) && feature3.toleranceMillimeters > 0)) throw new Error("Stitch tolerance must be positive.");
       return;
     case "surface-unstitch":
       ids(feature3.bodyIds, "Unstitch", 1);
@@ -1353,6 +1436,12 @@ function resolveVertexReference(contour, ref) {
     throw Error(`Broken vertex reference: ${ref.vertexId}.`);
   return { ...ref, index: indices[0] };
 }
+function identifyVertexReference(contour, ref) {
+  if (contour.type !== "path" || ref.kind !== "point" || ref.control !== void 0)
+    return ref;
+  const id2 = ref.index === 0 ? contour.startVertexId : contour.segments[ref.index - 1]?.endVertexId;
+  return id2 === void 0 ? ref : { ...ref, vertexId: id2 };
+}
 function resolveSegmentReference(contour, ref) {
   ref = resolveVertexReference(contour, ref);
   if (ref.segmentId === void 0) return ref;
@@ -1362,6 +1451,13 @@ function resolveSegmentReference(contour, ref) {
   if (matches.length !== 1)
     throw Error(`Broken segment reference: ${ref.segmentId}.`);
   return { ...ref, index: matches[0].index };
+}
+function identifySegmentReference(contour, ref) {
+  ref = identifyVertexReference(contour, ref);
+  if (contour.type !== "path" || ref.kind === "contour" || ref.kind === "point" && ref.control === void 0)
+    return ref;
+  const id2 = contour.segments[ref.index]?.id;
+  return id2 === void 0 ? ref : { ...ref, segmentId: id2 };
 }
 function curveJet(curve) {
   const s = curve.segment;
@@ -1547,6 +1643,40 @@ function measuredDimensionValue(d2, c2) {
   const a2 = resolve$1(d2, c2.a), b = c2.b ? resolve$1(d2, c2.b) : void 0;
   if ((c2.kind === "radius" || c2.kind === "diameter") && a2.circle)
     return a2.circle.radius * (c2.kind === "diameter" ? 2 : 1);
+  if (c2.kind === "arc-length" && a2.arc)
+    return a2.arc.radius * Math.abs(a2.arc.sweep);
+  if (c2.kind === "arc-sweep" && a2.arc)
+    return Math.abs(a2.arc.sweep) * 180 / Math.PI;
+  if (c2.kind === "line-angle" && a2.line) {
+    const dx = a2.line[1][0] - a2.line[0][0], dy = a2.line[1][1] - a2.line[0][1];
+    if (Math.hypot(dx, dy) < 1e-10) throw Error("Cannot measure a zero-length line angle.");
+    return Math.atan2(dy, dx) * 180 / Math.PI;
+  }
+  if (c2.kind === "linear-diameter") {
+    const p2 = a2.point ?? b?.point, l = a2.line ?? b?.line;
+    if (p2 && l) return 2 * pointLineMeasurement(p2, l).distance;
+  }
+  if (c2.kind === "point-circle-distance") {
+    const p2 = a2.point ?? b?.point, circ = a2.circle ?? b?.circle;
+    if (p2 && circ) {
+      const centerDist = Math.hypot(p2[0] - circ.center[0], p2[1] - circ.center[1]);
+      return c2.gapMode === "inner" ? circ.radius - centerDist : centerDist - circ.radius;
+    }
+  }
+  if (c2.kind === "line-circle-distance") {
+    const l = a2.line ?? b?.line, circ = a2.circle ?? b?.circle;
+    if (l && circ) {
+      const dLine = pointLineMeasurement(circ.center, l).distance;
+      return c2.gapMode === "inner" ? dLine + circ.radius : dLine - circ.radius;
+    }
+  }
+  if (c2.kind === "circle-circle-distance" && a2.circle && b?.circle) {
+    const centerDist = Math.hypot(a2.circle.center[0] - b.circle.center[0], a2.circle.center[1] - b.circle.center[1]);
+    return c2.gapMode === "nested" ? Math.abs(a2.circle.radius - b.circle.radius) - centerDist : c2.gapMode === "inner" ? centerDist + a2.circle.radius + b.circle.radius : centerDist - (a2.circle.radius + b.circle.radius);
+  }
+  if (c2.kind === "slot-overall-length" && a2.circle && b?.circle) {
+    return Math.hypot(a2.circle.center[0] - b.circle.center[0], a2.circle.center[1] - b.circle.center[1]) + a2.circle.radius + b.circle.radius;
+  }
   if (c2.kind === "length" && a2.line)
     return Math.hypot(a2.line[1][0] - a2.line[0][0], a2.line[1][1] - a2.line[0][1]);
   if (a2.point && b?.point) {
@@ -1575,13 +1705,19 @@ function measuredDimensionValue(d2, c2) {
   }
   throw Error("Select compatible geometry for a reference dimension.");
 }
-const dimensionUnit = (c2) => c2.kind === "conic-rho" ? "scalar" : c2.kind === "angle" ? "angle" : [
+const dimensionUnit = (c2) => c2.kind === "conic-rho" || c2.kind === "point-along" ? "scalar" : c2.kind === "angle" || c2.kind === "arc-sweep" || c2.kind === "line-angle" ? "angle" : [
   "distance",
   "horizontal-distance",
   "vertical-distance",
   "length",
   "radius",
   "diameter",
+  "arc-length",
+  "linear-diameter",
+  "point-circle-distance",
+  "line-circle-distance",
+  "circle-circle-distance",
+  "slot-overall-length",
   "offset",
   "slot"
 ].includes(c2.kind) ? "length" : void 0;
@@ -1776,6 +1912,45 @@ function fixedGeometryResiduals(drawing, constraint) {
       const rotation = (a2.rotationDegrees - b.rotationDegrees) * Math.PI / 180;
       residual.push(a2.radiusX - b.radiusX, a2.radiusY - b.radiusY, Math.atan2(Math.sin(rotation), Math.cos(rotation)) * Math.max(b.radiusX, b.radiusY));
     }
+  }
+  return residual;
+}
+function fixedGeometryDiagnosticResiduals(drawing, constraint) {
+  const full2 = fixedGeometryResiduals(drawing, constraint);
+  const a2 = fixedEntityGeometry(drawing, constraint.a), b = constraint.fixedGeometry;
+  if (a2.type !== "path" || b.type !== "path") return full2;
+  const point2 = (p2, q) => [p2[0] - q[0], p2[1] - q[1]];
+  const shape = constraint.a.kind === "contour" && drawing.constraints?.find((c2) => ["spline-shape", "ellipse-shape"].includes(c2.kind) && c2.a.contour === constraint.a.contour);
+  if (shape && shape.kind === "ellipse-shape") {
+    const x2 = a2.segments[0], y2 = b.segments[0];
+    if (x2.type !== "ellipse" || y2.type !== "ellipse") return full2;
+    const center = (p2) => [(p2.start[0] + p2.segments[0].end[0]) / 2, (p2.start[1] + p2.segments[0].end[1]) / 2];
+    const rotation = (x2.rotationDegrees - y2.rotationDegrees) * Math.PI / 180;
+    return [...point2(center(a2), center(b)), x2.radiusX - y2.radiusX, x2.radiusY - y2.radiusY, Math.atan2(Math.sin(rotation), Math.cos(rotation)) * Math.max(y2.radiusX, y2.radiusY)];
+  }
+  const residual = point2(a2.start, b.start), closed = contourClosed(b);
+  let startA = a2.start, startB = b.start;
+  for (let i2 = 0; i2 < a2.segments.length; i2++) {
+    const x2 = a2.segments[i2], y2 = b.segments[i2];
+    if (!(closed && i2 === a2.segments.length - 1)) residual.push(...point2(x2.end, y2.end));
+    if (!shape) {
+      if (x2.type === "arc" && y2.type === "arc") {
+        const first = sketchArcGeometry(startA, x2.middle, x2.end), second = sketchArcGeometry(startB, y2.middle, y2.end);
+        residual.push((Math.tan(first.sweep / 4) - Math.tan(second.sweep / 4)) * Math.hypot(y2.end[0] - startB[0], y2.end[1] - startB[1]));
+      }
+      if (x2.type === "bezier" && y2.type === "bezier") for (const j of [0, 1]) residual.push(...point2(x2.controls[j], y2.controls[j]));
+      if (x2.type === "conic" && y2.type === "conic") residual.push(...point2(x2.control, y2.control), x2.rho - y2.rho);
+      if (x2.type === "ellipse" && y2.type === "ellipse") {
+        const rotation = (x2.rotationDegrees - y2.rotationDegrees) * Math.PI / 180;
+        residual.push(x2.radiusX - y2.radiusX, x2.radiusY - y2.radiusY, Math.atan2(Math.sin(rotation), Math.cos(rotation)) * Math.max(y2.radiusX, y2.radiusY));
+      }
+    }
+    if (shape && shape.kind === "spline-shape" && x2.type === "bezier" && y2.type === "bezier") {
+      if (i2 === 0 && shape.splineFreeEnds?.includes("start")) residual.push(...point2(x2.controls[0], y2.controls[0]));
+      if (i2 === a2.segments.length - 1 && shape.splineFreeEnds?.includes("end")) residual.push(...point2(x2.controls[1], y2.controls[1]));
+    }
+    startA = x2.end;
+    startB = y2.end;
   }
   return residual;
 }
@@ -2046,6 +2221,7 @@ function splineShapeResiduals(path, spanIntervals) {
   const closed = contourClosed(path), points = [path.start, ...path.segments.map((s) => s.end)];
   if (closed) points.pop();
   const expected = fitSketchSpline(points, { closed, spanIntervals });
+  if (expected.type !== "path") throw Error("Invalid fit spline.");
   return path.segments.flatMap((segment, i2) => {
     const target = expected.segments[i2];
     if (segment.type !== "bezier" || target.type !== "bezier")
@@ -2171,14 +2347,14 @@ function symmetricResiduals(a2, b, axis, splineReversed = false) {
     "Select two points, two lines, or two circles/circular arcs, or two ellipses."
   );
 }
-const sub$8 = (a2, b) => [
+const sub$9 = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
 ];
-const cross$d = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
+const cross$e = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
 function offsetCarrier(start, segment, distance2) {
   if (segment.type === "line") {
-    const v2 = sub$8(segment.end, start), length = Math.hypot(...v2);
+    const v2 = sub$9(segment.end, start), length = Math.hypot(...v2);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction2 = [v2[0] / length, v2[1] / length];
     const shift2 = (p2) => [
@@ -2210,18 +2386,18 @@ function offsetCarrier(start, segment, distance2) {
   };
 }
 function joinOffsetCarriers(a2, b, corner) {
-  if (Math.hypot(...sub$8(a2.end, b.start)) < 1e-8) return a2.end;
+  if (Math.hypot(...sub$9(a2.end, b.start)) < 1e-8) return a2.end;
   let candidates = [];
   if (a2.kind === "line" && b.kind === "line") {
-    const det = cross$d(a2.direction, b.direction);
+    const det = cross$e(a2.direction, b.direction);
     if (Math.abs(det) < 1e-10)
       throw Error("Offset corner is parallel or reversing.");
-    const t2 = cross$d(sub$8(b.start, a2.end), b.direction) / det;
+    const t2 = cross$e(sub$9(b.start, a2.end), b.direction) / det;
     candidates = [
       [a2.end[0] + t2 * a2.direction[0], a2.end[1] + t2 * a2.direction[1]]
     ];
   } else if (a2.kind === "arc" && b.kind === "arc") {
-    const v2 = sub$8(b.center, a2.center), length = Math.hypot(...v2);
+    const v2 = sub$9(b.center, a2.center), length = Math.hypot(...v2);
     if (length < 1e-10) throw Error("Offset arcs have no unique corner.");
     const along = (a2.radius * a2.radius - b.radius * b.radius + length * length) / (2 * length), height2 = a2.radius * a2.radius - along * along;
     if (height2 >= -1e-9) {
@@ -2234,7 +2410,7 @@ function joinOffsetCarriers(a2, b, corner) {
   } else {
     const line2 = a2.kind === "line" ? a2 : b, arc = a2.kind === "arc" ? a2 : b;
     if (line2.kind !== "line" || arc.kind !== "arc") throw Error();
-    const v2 = sub$8(line2.start, arc.center), projection = v2[0] * line2.direction[0] + v2[1] * line2.direction[1], discriminant = projection * projection - (v2[0] * v2[0] + v2[1] * v2[1] - arc.radius * arc.radius);
+    const v2 = sub$9(line2.start, arc.center), projection = v2[0] * line2.direction[0] + v2[1] * line2.direction[1], discriminant = projection * projection - (v2[0] * v2[0] + v2[1] * v2[1] - arc.radius * arc.radius);
     if (discriminant >= -1e-9)
       for (const t2 of [
         -projection - Math.sqrt(Math.max(0, discriminant)),
@@ -2250,12 +2426,12 @@ function joinOffsetCarriers(a2, b, corner) {
       "Offset curves do not meet; this corner requires a topology change."
     );
   return candidates.sort(
-    (p2, q) => Math.hypot(...sub$8(p2, corner)) - Math.hypot(...sub$8(q, corner))
+    (p2, q) => Math.hypot(...sub$9(p2, corner)) - Math.hypot(...sub$9(q, corner))
   )[0];
 }
 function offsetCarrierSegment(c2, start, end) {
   if (c2.kind === "line") {
-    const v2 = sub$8(end, start);
+    const v2 = sub$9(end, start);
     if (v2[0] * c2.direction[0] + v2[1] * c2.direction[1] <= 1e-8)
       throw Error("Offset reverses or collapses an edge.");
     return { type: "line", end };
@@ -2313,7 +2489,7 @@ function cubicOverlap(first, second) {
   ))
     return [a2, b];
 }
-const cross$c = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
+const cross$d = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
 const subtract = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
@@ -2362,13 +2538,13 @@ function lineSegmentIntersections(lineStart, lineEnd, start, segment) {
   if (segment.type === "conic") return lineConicIntersections(lineStart, lineEnd, start, segment);
   const parameter2 = (p2) => ((p2[0] - lineStart[0]) * direction2[0] + (p2[1] - lineStart[1]) * direction2[1]) / lengthSquared;
   if (segment.type === "line") {
-    const other = subtract(segment.end, start), den = cross$c(direction2, other);
+    const other = subtract(segment.end, start), den = cross$d(direction2, other);
     if (Math.abs(den) < 1e-12) return [];
-    const delta2 = subtract(start, lineStart), u2 = cross$c(delta2, direction2) / den;
-    return u2 >= -1e-9 && u2 <= 1 + 1e-9 ? [cross$c(delta2, other) / den] : [];
+    const delta2 = subtract(start, lineStart), u2 = cross$d(delta2, direction2) / den;
+    return u2 >= -1e-9 && u2 <= 1 + 1e-9 ? [cross$d(delta2, other) / den] : [];
   }
   if (segment.type === "bezier") {
-    const points = [start, ...segment.controls, segment.end], f2 = points.map((p2) => cross$c(subtract(p2, lineStart), direction2));
+    const points = [start, ...segment.controls, segment.end], f2 = points.map((p2) => cross$d(subtract(p2, lineStart), direction2));
     const roots22 = polynomialRoots([
       f2[0],
       3 * (f2[1] - f2[0]),
@@ -2825,8 +3001,8 @@ function collinearLineContact(a2, b, c2, d2, tolerance2 = 1e-8) {
   const t2 = project(c2), u2 = project(d2);
   return Math.max(0, Math.min(t2, u2)) <= Math.min(length, Math.max(t2, u2)) + tolerance2;
 }
-const cross$b = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
-const sub$7 = (a2, b) => [
+const cross$c = (a2, b) => a2[0] * b[1] - a2[1] * b[0];
+const sub$8 = (a2, b) => [
   a2[0] - b[0],
   a2[1] - b[1]
 ];
@@ -2861,7 +3037,7 @@ function offsetSketchContour(source, distance2) {
     );
   const closed = contourClosed(out), points = [out.start, ...out.segments.map((s) => s.end)];
   const edges = out.segments.map((_2, i2) => {
-    const delta2 = sub$7(points[i2 + 1], points[i2]), length = Math.hypot(...delta2);
+    const delta2 = sub$8(points[i2 + 1], points[i2]), length = Math.hypot(...delta2);
     if (length < 1e-8) throw Error("Cannot offset a zero-length edge.");
     const direction2 = [delta2[0] / length, delta2[1] / length];
     const shift = (p2) => [
@@ -2871,13 +3047,13 @@ function offsetSketchContour(source, distance2) {
     return { direction: direction2, start: shift(points[i2]), end: shift(points[i2 + 1]) };
   });
   const join = (before, after) => {
-    const det = cross$b(before.direction, after.direction);
+    const det = cross$c(before.direction, after.direction);
     if (Math.abs(det) < 1e-10) {
       if (before.direction[0] * after.direction[0] + before.direction[1] * after.direction[1] < 0)
         throw Error("Cannot offset a reversing corner.");
       return before.end;
     }
-    const t2 = cross$b(sub$7(after.start, before.end), after.direction) / det;
+    const t2 = cross$c(sub$8(after.start, before.end), after.direction) / det;
     return [
       before.end[0] + t2 * before.direction[0],
       before.end[1] + t2 * before.direction[1]
@@ -2890,12 +3066,12 @@ function offsetSketchContour(source, distance2) {
     result.push(join(edges[i2 - 1], edges[i2]));
   result.push(closed ? [...result[0]] : edges.at(-1).end);
   for (let i2 = 0; i2 < edges.length; i2++) {
-    const delta2 = sub$7(result[i2 + 1], result[i2]);
+    const delta2 = sub$8(result[i2 + 1], result[i2]);
     if (delta2[0] * edges[i2].direction[0] + delta2[1] * edges[i2].direction[1] <= 1e-8)
       throw Error("Offset collapses or reverses an edge.");
     for (let j = i2 + 2; j < edges.length; j++) {
       if (closed && i2 === 0 && j === edges.length - 1) continue;
-      const v2 = sub$7(result[j + 1], result[j]), det = cross$b(delta2, v2);
+      const v2 = sub$8(result[j + 1], result[j]), det = cross$c(delta2, v2);
       if (Math.abs(det) < 1e-10) {
         if (collinearLineContact(
           result[i2],
@@ -2906,7 +3082,7 @@ function offsetSketchContour(source, distance2) {
           throw Error("Offset would self-intersect.");
         continue;
       }
-      const between = sub$7(result[j], result[i2]), t2 = cross$b(between, v2) / det, u2 = cross$b(between, delta2) / det;
+      const between = sub$8(result[j], result[i2]), t2 = cross$c(between, v2) / det, u2 = cross$c(between, delta2) / det;
       if (t2 >= 0 && t2 <= 1 && u2 >= 0 && u2 <= 1)
         throw Error("Offset would self-intersect.");
     }
@@ -3342,6 +3518,64 @@ function curveContinuityResiduals(p2, q, curvature = false) {
     residuals.push((kp - orientation * kq) * Math.sqrt(lp * lq));
   }
   return residuals;
+}
+function pointAtArcLengthFraction(d2, ref, fraction) {
+  if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1)
+    throw new Error("Curve fraction must be between 0 and 1.");
+  const contour = referencedContour(d2, ref);
+  if (!contour) throw new Error("Constraint references missing geometry.");
+  const r = resolveSegmentReference(contour, ref);
+  if (contour.type === "circle" && r.kind === "circle") {
+    const angle2 = fraction * 2 * Math.PI;
+    return [
+      contour.center[0] + contour.radius * Math.cos(angle2),
+      contour.center[1] + contour.radius * Math.sin(angle2)
+    ];
+  }
+  if (contour.type !== "path")
+    throw new Error("Point-along requires a line, arc, circle or curve segment.");
+  const segIndex = r.index;
+  if (!Number.isInteger(segIndex) || segIndex < 0 || segIndex >= contour.segments.length)
+    throw new Error("Point-along requires a valid curve segment.");
+  const start = segIndex === 0 ? contour.start : contour.segments[segIndex - 1].end;
+  const segment = contour.segments[segIndex];
+  if (segment.type === "line") {
+    return [
+      start[0] + (segment.end[0] - start[0]) * fraction,
+      start[1] + (segment.end[1] - start[1]) * fraction
+    ];
+  }
+  if (segment.type === "arc") {
+    const arc = sketchArcGeometry(start, segment.middle, segment.end);
+    const angle2 = arc.startAngle + arc.sweep * fraction;
+    return [
+      arc.center[0] + arc.radius * Math.cos(angle2),
+      arc.center[1] + arc.radius * Math.sin(angle2)
+    ];
+  }
+  const jet = curveJet({ start, segment });
+  const steps2 = 32;
+  const cum = [0];
+  let prev = jet(0).point;
+  for (let i2 = 1; i2 <= steps2; i2++) {
+    const pt2 = jet(i2 / steps2).point;
+    cum.push(cum[i2 - 1] + Math.hypot(pt2[0] - prev[0], pt2[1] - prev[1]));
+    prev = pt2;
+  }
+  const total = cum[steps2];
+  if (total < 1e-12) return [...start];
+  const target = fraction * total;
+  let lo = 0;
+  let hi = steps2;
+  while (lo + 1 < hi) {
+    const mid = lo + hi >> 1;
+    if (cum[mid] <= target) lo = mid;
+    else hi = mid;
+  }
+  const span = cum[hi] - cum[lo];
+  const local2 = span > 1e-12 ? (target - cum[lo]) / span : 0;
+  const u2 = (lo + local2) / steps2;
+  return jet(u2).point;
 }
 function expressionFunction(name5, args) {
   const arity = (n) => {
@@ -4087,36 +4321,31 @@ function contactParameterCoordinates(d2) {
     }
   return coordinates2;
 }
-function solveDrawingConstraints(source, options = {}) {
-  if (source.constraints?.some((c2) => c2.kind === "pierce")) return solveSavedPierceConstraints(source, options);
-  const compare = globalThis.__aetherSolverComparison;
-  if (!compare) return solveDrawingConstraintsCore(source, options);
-  const given = structuredClone(source);
-  try {
-    const solved = solveDrawingConstraintsCore(source, options);
-    compare(given, options, solved);
-    return solved;
-  } catch (error2) {
-    compare(given, options, error2);
-    throw error2;
+const MAX_CONSTRAINTS = 4096;
+const MAX_COMPONENT_VARS = 2048;
+function linearSolve(a2, b) {
+  const n = b.length;
+  for (let i2 = 0; i2 < n; i2++) {
+    let pivot = i2;
+    for (let j = i2 + 1; j < n; j++)
+      if (Math.abs(a2[j][i2]) > Math.abs(a2[pivot][i2])) pivot = j;
+    [a2[i2], a2[pivot]] = [a2[pivot], a2[i2]];
+    [b[i2], b[pivot]] = [b[pivot], b[i2]];
+    const q = a2[i2][i2];
+    if (Math.abs(q) < 1e-18)
+      throw new Error("Constraint system is singular.");
+    for (let k2 = i2; k2 < n; k2++) a2[i2][k2] /= q;
+    b[i2] /= q;
+    for (let j = 0; j < n; j++)
+      if (j !== i2) {
+        const f2 = a2[j][i2];
+        for (let k2 = i2; k2 < n; k2++) a2[j][k2] -= f2 * a2[i2][k2];
+        b[j] -= f2 * b[i2];
+      }
   }
+  return b;
 }
-function solveDrawingConstraintsCore(source, options = {}) {
-  const d2 = structuredClone(source), constraints = d2.constraints ?? [];
-  const parameters2 = contactParameterCoordinates(d2);
-  if (!constraints.length) return d2;
-  if (constraints.length > 512)
-    throw new Error("This sketch supports up to 512 constraints.");
-  if (new Set(constraints.map((c2) => c2.id)).size !== constraints.length)
-    throw new Error("Duplicate constraint IDs.");
-  captureDistanceSides(d2);
-  for (const c2 of constraints) validateDimensionExpression(c2);
-  for (const c2 of constraints)
-    if (c2.valueFrom !== void 0 || c2.valueSign !== void 0 || c2.valueScale !== void 0 || c2.valueOffset !== void 0)
-      dimensionDriver(d2, c2);
-  const initial = constraints.flatMap((c2) => constraintResiduals(d2, c2));
-  if (!initial.every(Number.isFinite)) throw new Error("Invalid constraint geometry.");
-  if (Math.max(...initial.map(Math.abs)) < 1e-7) return d2;
+function collectContourVars(d2, usedContours, fixedContours, textGroups, linkedEllipses, parameters2, includeGlobalGroups) {
   const vars = [];
   const addPoint = (p2, alias) => {
     for (let k2 = 0; k2 < 2; k2++)
@@ -4128,15 +4357,12 @@ function solveDrawingConstraintsCore(source, options = {}) {
         }
       });
   };
-  const used = new Set(
-    constraints.filter((c2) => !c2.reference).flatMap((c2) => [c2.a.contour, ...c2.b ? [c2.b.contour] : [], ...c2.axis ? [c2.axis.contour] : []])
-  );
-  const textGroups = textSimilarityCoordinates(d2, { fixed: options.fixedContours, used });
-  vars.push(...textGroups.coordinates);
-  const linkedEllipses = ellipseLocusCoordinates(d2, options.fixedContours);
-  vars.push(...linkedEllipses.coordinates);
+  if (includeGlobalGroups) {
+    vars.push(...textGroups.coordinates);
+    vars.push(...linkedEllipses.coordinates);
+  }
   d2.contours.forEach((c2, i2) => {
-    if (!used.has(i2) || options.fixedContours?.has(i2) || linkedEllipses.covered.has(i2) || textGroups.covered.has(i2)) return;
+    if (!usedContours.has(i2) || fixedContours?.has(i2) || linkedEllipses.covered.has(i2) || textGroups.covered.has(i2)) return;
     if (c2.type === "circle") {
       addPoint(c2.center);
       vars.push({ get: () => c2.radius, set: (v2) => c2.radius = v2 });
@@ -4147,9 +4373,10 @@ function solveDrawingConstraintsCore(source, options = {}) {
       c2.segments.forEach((s, j) => {
         if (!(closed && j === c2.segments.length - 1)) addPoint(s.end);
         if (s.type === "ellipse") {
-          for (const key2 of ["radiusX", "radiusY"]) vars.push({ get: () => Math.log(s[key2]), set: (v2) => {
-            s[key2] = Math.exp(v2);
-          } });
+          for (const key2 of ["radiusX", "radiusY"])
+            vars.push({ get: () => Math.log(s[key2]), set: (v2) => {
+              s[key2] = Math.exp(v2);
+            } });
           vars.push({ get: () => s.rotationDegrees * Math.PI / 180, set: (v2) => {
             s.rotationDegrees = v2 * 180 / Math.PI;
           } });
@@ -4160,39 +4387,79 @@ function solveDrawingConstraintsCore(source, options = {}) {
       });
     }
   });
-  vars.push(...parameters2);
-  if (vars.length > 512)
-    throw new Error("Too many constrained sketch coordinates (maximum 512).");
-  const residual = () => constraints.flatMap((c2) => constraintResiduals(d2, c2));
-  const norm2 = (r) => r.reduce((n, v2) => n + v2 * v2, 0);
-  const linearSolve = (a2, b) => {
-    const n = b.length;
-    for (let i2 = 0; i2 < n; i2++) {
-      let pivot = i2;
-      for (let j = i2 + 1; j < n; j++)
-        if (Math.abs(a2[j][i2]) > Math.abs(a2[pivot][i2])) pivot = j;
-      [a2[i2], a2[pivot]] = [a2[pivot], a2[i2]];
-      [b[i2], b[pivot]] = [b[pivot], b[i2]];
-      const q = a2[i2][i2];
-      if (Math.abs(q) < 1e-18)
-        throw new Error("Constraint system is singular.");
-      for (let k2 = i2; k2 < n; k2++) a2[i2][k2] /= q;
-      b[i2] /= q;
-      for (let j = 0; j < n; j++)
-        if (j !== i2) {
-          const f2 = a2[j][i2];
-          for (let k2 = i2; k2 < n; k2++) a2[j][k2] -= f2 * a2[i2][k2];
-          b[j] -= f2 * b[i2];
-        }
-    }
-    return b;
+  if (includeGlobalGroups) vars.push(...parameters2);
+  return vars;
+}
+function constraintContours$1(c2) {
+  const list2 = [];
+  if (c2.a.contour >= 0) list2.push(c2.a.contour);
+  if (c2.b && c2.b.contour >= 0) list2.push(c2.b.contour);
+  if (c2.axis && c2.axis.contour >= 0) list2.push(c2.axis.contour);
+  return list2;
+}
+function partitionConstraints(_d, constraints, globalCoupledContours) {
+  const n = constraints.length;
+  if (n <= 1) {
+    const contours = /* @__PURE__ */ new Set();
+    for (const c2 of constraints) for (const idx2 of constraintContours$1(c2)) contours.add(idx2);
+    return [{ contours, constraints, includesGlobal: true }];
+  }
+  const parent = Array.from({ length: n }, (_2, i2) => i2);
+  const find = (x2) => parent[x2] === x2 ? x2 : parent[x2] = find(parent[x2]);
+  const union = (a2, b) => {
+    const ra = find(a2), rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
   };
+  const byContour = /* @__PURE__ */ new Map();
+  const byId = /* @__PURE__ */ new Map();
+  const byPatternGroup = /* @__PURE__ */ new Map();
+  let firstGlobal = -1;
+  constraints.forEach((c2, i2) => byId.set(c2.id, i2));
+  constraints.forEach((c2, i2) => {
+    const contours = constraintContours$1(c2);
+    let touchesGlobal = c2.a.sliding || c2.b?.sliding || false;
+    for (const idx2 of contours) {
+      if (globalCoupledContours.has(idx2)) touchesGlobal = true;
+      const prev = byContour.get(idx2);
+      if (prev !== void 0) union(prev, i2);
+      else byContour.set(idx2, i2);
+    }
+    if (c2.valueFrom !== void 0) {
+      const driverIdx = byId.get(c2.valueFrom);
+      if (driverIdx !== void 0) union(driverIdx, i2);
+    }
+    if (c2.patternGroup !== void 0) {
+      const prev = byPatternGroup.get(c2.patternGroup);
+      if (prev !== void 0) union(prev, i2);
+      else byPatternGroup.set(c2.patternGroup, i2);
+    }
+    if (touchesGlobal) {
+      if (firstGlobal >= 0) union(firstGlobal, i2);
+      else firstGlobal = i2;
+    }
+  });
+  const groups = /* @__PURE__ */ new Map();
+  constraints.forEach((c2, i2) => {
+    const root = find(i2);
+    let g2 = groups.get(root);
+    if (!g2) {
+      g2 = { contours: /* @__PURE__ */ new Set(), constraints: [], includesGlobal: firstGlobal >= 0 && find(firstGlobal) === root };
+      groups.set(root, g2);
+    }
+    g2.constraints.push(c2);
+    for (const idx2 of constraintContours$1(c2)) g2.contours.add(idx2);
+  });
+  if (firstGlobal < 0 && groups.size > 0) ;
+  return [...groups.values()];
+}
+function solveComponentLM(vars, residual, maxIterations = 100) {
+  const norm2 = (r) => r.reduce((n, v2) => n + v2 * v2, 0);
   let damping = 1e-5;
-  for (let iteration = 0; iteration < 100; iteration++) {
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
     const r = residual();
     if (!r.every(Number.isFinite))
       throw new Error("Invalid constraint geometry.");
-    if (Math.max(...r.map(Math.abs)) < 1e-7) return textGroups.finish();
+    if (!r.length || Math.max(...r.map(Math.abs)) < 1e-7) return true;
     const before = vars.map((v2) => v2.get());
     const columns = vars.map((v2, j) => {
       const h = v2.differenceStep?.() ?? 1e-5 * Math.max(1, Math.abs(before[j]));
@@ -4220,9 +4487,65 @@ function solveDrawingConstraintsCore(source, options = {}) {
       damping *= 10;
     }
   }
-  throw new Error(
-    "Constraints conflict or cannot converge. No geometry was changed."
-  );
+  return false;
+}
+function solveDrawingConstraints(source, options = {}) {
+  if (source.constraints?.some((c2) => c2.kind === "pierce")) return solveSavedPierceConstraints(source, options);
+  const compare = globalThis.__aetherSolverComparison;
+  if (!compare) return solveDrawingConstraintsCore(source, options);
+  const given = structuredClone(source);
+  try {
+    const solved = solveDrawingConstraintsCore(source, options);
+    compare(given, options, solved);
+    return solved;
+  } catch (error2) {
+    compare(given, options, error2);
+    throw error2;
+  }
+}
+function solveDrawingConstraintsCore(source, options = {}) {
+  const d2 = structuredClone(source), constraints = d2.constraints ?? [];
+  const parameters2 = contactParameterCoordinates(d2);
+  if (!constraints.length) return d2;
+  if (constraints.length > MAX_CONSTRAINTS)
+    throw new Error(`This sketch supports up to ${MAX_CONSTRAINTS} constraints.`);
+  if (new Set(constraints.map((c2) => c2.id)).size !== constraints.length)
+    throw new Error("Duplicate constraint IDs.");
+  captureDistanceSides(d2);
+  for (const c2 of constraints) validateDimensionExpression(c2);
+  for (const c2 of constraints)
+    if (c2.valueFrom !== void 0 || c2.valueSign !== void 0 || c2.valueScale !== void 0 || c2.valueOffset !== void 0)
+      dimensionDriver(d2, c2);
+  const initial = constraints.flatMap((c2) => constraintResiduals(d2, c2));
+  if (!initial.every(Number.isFinite)) throw new Error("Invalid constraint geometry.");
+  if (!initial.length || Math.max(...initial.map(Math.abs)) < 1e-7) return d2;
+  const activeConstraints = constraints.filter((c2) => !c2.reference);
+  const usedAll = new Set(activeConstraints.flatMap(constraintContours$1));
+  const textGroups = textSimilarityCoordinates(d2, { fixed: options.fixedContours, used: usedAll });
+  const linkedEllipses = ellipseLocusCoordinates(d2, options.fixedContours);
+  const globalCoupled = /* @__PURE__ */ new Set([...textGroups.covered, ...linkedEllipses.covered]);
+  const components = partitionConstraints(d2, activeConstraints, globalCoupled);
+  for (const component of components) {
+    const compInitial = component.constraints.flatMap((c2) => constraintResiduals(d2, c2));
+    if (!compInitial.length || Math.max(...compInitial.map(Math.abs)) < 1e-7) continue;
+    const vars = collectContourVars(
+      d2,
+      component.contours,
+      options.fixedContours,
+      textGroups,
+      linkedEllipses,
+      parameters2,
+      component.includesGlobal
+    );
+    if (vars.length > MAX_COMPONENT_VARS)
+      throw new Error(`Too many constrained sketch coordinates in one component (maximum ${MAX_COMPONENT_VARS}).`);
+    const ok = solveComponentLM(vars, () => component.constraints.flatMap((c2) => constraintResiduals(d2, c2)));
+    if (!ok) {
+      throw new Error("Constraints conflict or cannot converge. No geometry was changed.");
+    }
+  }
+  for (const c2 of constraints) if (c2.reference) constraintResiduals(d2, c2);
+  return textGroups.finish();
 }
 function solveProjectedConstraints(authored, projected) {
   const next = structuredClone(authored), count = next.contours.length;
@@ -4305,8 +4628,8 @@ function collapsedInterval(points) {
   const sorted = [...points].sort((a2, b) => a2[axis] - b[axis]);
   return [sorted[0], sorted[sorted.length - 1]];
 }
-const dot$9 = (a2, b) => a2.reduce((s, v2, i2) => s + v2 * b[i2], 0);
-const cross$a = (a2, b) => [
+const dot$a = (a2, b) => a2.reduce((s, v2, i2) => s + v2 * b[i2], 0);
+const cross$b = (a2, b) => [
   a2[1] * b[2] - a2[2] * b[1],
   a2[2] * b[0] - a2[0] * b[2],
   a2[0] * b[1] - a2[1] * b[0]
@@ -4315,19 +4638,19 @@ function basis(frame) {
   const { originMillimeters: o, xDirection: x2, normal: n } = frame;
   if (![o, x2, n].every(
     (v2) => Array.isArray(v2) && v2.length === 3 && v2.every(Number.isFinite)
-  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$9(x2, n)) > 1e-6)
+  ) || Math.abs(Math.hypot(...x2) - 1) > 1e-6 || Math.abs(Math.hypot(...n) - 1) > 1e-6 || Math.abs(dot$a(x2, n)) > 1e-6)
     throw Error("Projection needs valid orthonormal sketch frames.");
-  return { o, x: x2, y: cross$a(n, x2) };
+  return { o, x: x2, y: cross$b(n, x2) };
 }
 function sketchFrameMap(source, target) {
   const a2 = basis(source), b = basis(target), delta2 = a2.o.map((v2, i2) => v2 - b.o[i2]);
   const m2 = [
-    dot$9(a2.x, b.x),
-    dot$9(a2.y, b.x),
-    dot$9(a2.x, b.y),
-    dot$9(a2.y, b.y)
+    dot$a(a2.x, b.x),
+    dot$a(a2.y, b.x),
+    dot$a(a2.x, b.y),
+    dot$a(a2.y, b.y)
   ];
-  const offset2 = [dot$9(delta2, b.x), dot$9(delta2, b.y)];
+  const offset2 = [dot$a(delta2, b.x), dot$a(delta2, b.y)];
   const vector2 = (p2) => [
     m2[0] * p2[0] + m2[1] * p2[1],
     m2[2] * p2[0] + m2[3] * p2[1]
@@ -4635,8 +4958,8 @@ class PierceReferenceError extends Error {
     this.name = "PierceReferenceError";
   }
 }
-const dot$8 = (a2, b) => a2.reduce((sum2, value2, i2) => sum2 + value2 * b[i2], 0);
-const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const dot$9 = (a2, b) => a2.reduce((sum2, value2, i2) => sum2 + value2 * b[i2], 0);
+const cross$a = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
 const value = (coefficients, t2) => coefficients.reduceRight((sum2, n) => sum2 * t2 + n, 0);
 const unique = (values2) => values2.sort((a2, b) => a2 - b).filter((t2, i2, list2) => i2 === 0 || Math.abs(t2 - list2[i2 - 1]) > 8 * Number.EPSILON);
 function distanceRoots(coefficients) {
@@ -4677,8 +5000,8 @@ function polynomialDirection(coefficients, t2) {
 function pierceCurvePlane(curve, source, target) {
   const map = sketchFrameMap(source, target);
   validateSketchDrawing({ type: "drawing", contours: [curve.type === "circle" ? curve : { type: "path", start: curve.start, segments: [curve.segment] }] });
-  const y2 = cross$9(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v2, i2) => v2 - target.originMillimeters[i2]);
-  const a2 = dot$8(source.xDirection, target.normal), b = dot$8(y2, target.normal), c2 = dot$8(delta2, target.normal);
+  const y2 = cross$a(source.normal, source.xDirection), delta2 = source.originMillimeters.map((v2, i2) => v2 - target.originMillimeters[i2]);
+  const a2 = dot$9(source.xDirection, target.normal), b = dot$9(y2, target.normal), c2 = dot$9(delta2, target.normal);
   const depth = (p2) => a2 * p2[0] + b * p2[1] + c2;
   const world = (p2) => source.originMillimeters.map((v2, i2) => v2 + source.xDirection[i2] * p2[0] + y2[i2] * p2[1]);
   let coefficients, frame, poleDepths = [];
@@ -4999,6 +5322,61 @@ function constraintResiduals(d2, c2) {
       return [circle(a2).radius - positive()];
     case "diameter":
       return [2 * circle(a2).radius - positive()];
+    case "arc-length": {
+      if (!a2.arc) throw new Error("Arc length requires an arc.");
+      return [a2.arc.radius * Math.abs(a2.arc.sweep) - positive()];
+    }
+    case "arc-sweep": {
+      if (!a2.arc) throw new Error("Arc sweep requires an arc.");
+      const target = positive();
+      if (target >= 360) throw new Error("Arc sweep must be strictly less than 360 degrees.");
+      return [Math.abs(a2.arc.sweep) * 180 / Math.PI - target];
+    }
+    case "line-angle": {
+      const u2 = delta2(line2(a2));
+      if (Math.hypot(...u2) < 1e-10) throw new Error("Cannot measure a zero-length line angle.");
+      const diff = Math.atan2(u2[1], u2[0]) - value2() * Math.PI / 180;
+      return [Math.atan2(Math.sin(diff), Math.cos(diff))];
+    }
+    case "linear-diameter": {
+      const p2 = a2.point ?? b?.point;
+      const l = a2.line ?? b?.line;
+      if (!p2 || !l) throw new Error("Linear diameter requires a point and a centerline.");
+      return [2 * pointLineMeasurement(p2, l).distance - positive()];
+    }
+    case "point-circle-distance": {
+      const p2 = a2.point ?? b?.point;
+      const circ = a2.circle ?? b?.circle;
+      if (!p2 || !circ) throw new Error("Point-circle distance requires a point and a circle or arc.");
+      const centerDist = Math.hypot(p2[0] - circ.center[0], p2[1] - circ.center[1]);
+      const gap = c2.gapMode === "inner" ? circ.radius - centerDist : centerDist - circ.radius;
+      return [gap - value2()];
+    }
+    case "line-circle-distance": {
+      const l = a2.line ?? b?.line;
+      const circ = a2.circle ?? b?.circle;
+      if (!l || !circ) throw new Error("Line-circle distance requires a line and a circle or arc.");
+      const dLine = pointLineMeasurement(circ.center, l).distance;
+      const gap = c2.gapMode === "inner" ? dLine + circ.radius : dLine - circ.radius;
+      return [gap - value2()];
+    }
+    case "circle-circle-distance": {
+      const ca = circle(a2), cb = circle(b);
+      const centerDist = Math.hypot(ca.center[0] - cb.center[0], ca.center[1] - cb.center[1]);
+      const gap = c2.gapMode === "nested" ? Math.abs(ca.radius - cb.radius) - centerDist : c2.gapMode === "inner" ? centerDist + ca.radius + cb.radius : centerDist - (ca.radius + cb.radius);
+      return [gap - value2()];
+    }
+    case "slot-overall-length": {
+      const ca = circle(a2), cb = circle(b);
+      const centerDist = Math.hypot(ca.center[0] - cb.center[0], ca.center[1] - cb.center[1]);
+      return [centerDist + ca.radius + cb.radius - positive()];
+    }
+    case "point-along": {
+      if (!c2.b) throw new Error("Point-along requires a point and a curve.");
+      const p2 = point2(a2);
+      const target = pointAtArcLengthFraction(d2, c2.b, value2());
+      return [p2[0] - target[0], p2[1] - target[1]];
+    }
     case "distance": {
       if (a2.line && b?.line) {
         const m2 = lineLineMeasurement(a2.line, b.line);
@@ -5149,6 +5527,8 @@ function validateSketchDrawing(input) {
       throw new Error("Construction flag must be boolean.");
     if (c2.type === "path" && c2.infinite !== void 0 && (typeof c2.infinite !== "boolean" || c2.infinite && (c2.segments.length !== 1 || c2.segments[0].type !== "line" || !c2.construction)))
       throw new Error("An infinite line is a single construction line.");
+    if (c2.type === "path" && c2.centerline !== void 0 && (typeof c2.centerline !== "boolean" || c2.centerline && (!c2.construction || c2.segments.length === 0 || !c2.segments.every((s) => s.type === "line"))))
+      throw new Error("A centerline must be a construction line.");
     if (c2.type === "circle") {
       point2(c2.center);
       if (!Number.isFinite(c2.radius) || c2.radius <= 0)
@@ -5298,7 +5678,8 @@ function featureInputDependencies(feature3, bodyProducers) {
   };
   if ("profileFeatureId" in feature3 && feature3.profileFeatureId) inputs.add(feature3.profileFeatureId);
   if ("sourceFeatureId" in feature3 && feature3.sourceFeatureId) inputs.add(feature3.sourceFeatureId);
-  if ("pathFeatureId" in feature3) inputs.add(feature3.pathFeatureId);
+  if ("pathFeatureId" in feature3 && feature3.pathFeatureId) inputs.add(feature3.pathFeatureId);
+  if ("frameFeatureId" in feature3 && feature3.frameFeatureId) inputs.add(feature3.frameFeatureId);
   if ("bodyIds" in feature3) feature3.bodyIds?.forEach(body);
   if ("toolBodyIds" in feature3) feature3.toolBodyIds.forEach(body);
   if ("definition" in feature3) reference(feature3.definition);
@@ -5340,8 +5721,16 @@ function featureInputDependencies(feature3, bodyProducers) {
       reference(feature3.tool);
       break;
     case "split-face":
-    case "surface-trim":
       reference(feature3.plane);
+      break;
+    case "surface-trim":
+      if (feature3.plane) reference(feature3.plane);
+      if (feature3.toolBodyId) body(feature3.toolBodyId);
+      break;
+    case "surface-match":
+      body(feature3.targetBodyId);
+      reference(feature3.sourceEdges);
+      reference(feature3.targetEdges);
       break;
     case "mirror":
       reference(feature3.mirrorPlane);
@@ -5364,7 +5753,13 @@ function featureInputDependencies(feature3, bodyProducers) {
       reference(feature3.startPoint);
       reference(feature3.endPoint);
       reference(feature3.path);
+      reference(feature3.guideRails);
       reference(feature3.connections);
+      break;
+    case "frame-trim":
+      feature3.targetBodyIds.forEach(body);
+      if (feature3.toolBodyId) body(feature3.toolBodyId);
+      if (feature3.plane) reference(feature3.plane);
       break;
     case "sweep":
       reference(feature3.rail);
@@ -5378,6 +5773,9 @@ function featureInputDependencies(feature3, bodyProducers) {
     case "sheet-fold":
       reference(feature3.line);
       break;
+    case "sheet-convert":
+      if (feature3.baseFace) reference(feature3.baseFace);
+      break;
     case "surface-blend":
       for (const side of [feature3.from, feature3.to]) {
         body(side.bodyId);
@@ -5389,10 +5787,10 @@ function featureInputDependencies(feature3, bodyProducers) {
 }
 const rollbackPosition = (doc) => doc.rollbackIndex ?? doc.features.length;
 function bodyIDForFeature(doc, feature3) {
-  if ((!surfaceCreatorTypes.includes(feature3.type) || feature3.type === "surface-extrude") && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
+  if ((!surfaceCreatorTypes.includes(feature3.type) || feature3.type === "surface-extrude") && feature3.type !== "surface-thicken" && feature3.type !== "sheet-base" && (feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "primitive" || feature3.type === "shape-binder" || feature3.type === "frame-member" || feature3.type === "frame-end-cap" || feature3.type === "frame-gusset" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.bodyId)
     return feature3.bodyId;
   const first = doc.features.find(
-    (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
+    (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "primitive" || f2.type === "import-step" || f2.type === "import-cad" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "sheet-base") && "operation" in f2 && f2.operation === "new"
   );
   return first?.id === feature3.id ? `${doc.documentId}:body-1` : `${doc.documentId}:body-${feature3.id}`;
 }
@@ -5439,7 +5837,7 @@ function stableBodies(doc) {
       }
       if (feature3.type === "offset-face") return feature3;
       if (consumedBodyIDs(feature3).length && "targetBodyId" in feature3) targetBody = feature3.targetBodyId;
-      if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
+      if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "primitive" || feature3.type === "shape-binder" || feature3.type === "frame-member" || feature3.type === "frame-end-cap" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new") {
         targetBody = bodyIDsForFeature(doc, feature3).at(-1);
         return { ...feature3, bodyId: bodyIDForFeature(doc, feature3) };
       }
@@ -5463,7 +5861,7 @@ function featureDependencies(doc, includeSuppressedModifiers = false) {
       result.set(f2.id, [...new Set(refs)]);
       continue;
     }
-    if ((f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "mirror" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "shape-binder" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
+    if ((f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "mirror" || f2.type === "import-step" || f2.type === "import-cad" || f2.type === "pipe" || f2.type === "coil" || f2.type === "boundary-fill" || f2.type === "bounding-solid" || f2.type === "primitive" || f2.type === "shape-binder" || f2.type === "frame-member" || f2.type === "frame-end-cap" || f2.type === "frame-gusset" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken") && "operation" in f2 && f2.operation === "new") {
       for (const id2 of bodyIDsForFeature(doc, f2)) {
         lastBody = id2;
         bodyProducers.set(id2, f2.id);
@@ -5520,11 +5918,11 @@ function insertFeature(doc, feature3) {
   if ((feature3.type === "extrude" || feature3.type === "surface-extrude") && feature3.separateBodies)
     feature3 = { ...feature3, outputProfileId: feature3.outputProfileId ?? feature3.profileFeatureId };
   const next = identifySurfaceExtrusionProfiles(stableBodies(doc), feature3), index2 = rollbackPosition(doc);
-  if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
+  if ((feature3.type === "surface-extrude" || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "primitive" || feature3.type === "shape-binder" || feature3.type === "frame-member" || feature3.type === "frame-end-cap" || feature3.type === "frame-gusset" || feature3.type === "import-step" || feature3.type === "import-cad") && feature3.operation === "new")
     feature3 = {
       ...feature3,
       bodyId: feature3.bodyId ?? (doc.features.some(
-        (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "import-step" || f2.type === "import-cad") && f2.operation === "new"
+        (f2) => (f2.type === "surface-extrude" || f2.type === "extrude" || f2.type === "revolve" || f2.type === "sweep" || f2.type === "loft" || f2.type === "primitive" || f2.type === "bounding-solid" || f2.type === "frame-member" || f2.type === "frame-end-cap" || f2.type === "frame-gusset" || f2.type === "sheet-base" || surfaceCreatorTypes.includes(f2.type) || f2.type === "surface-thicken" || f2.type === "import-step" || f2.type === "import-cad") && "operation" in f2 && f2.operation === "new"
       ) ? `${doc.documentId}:body-${feature3.id}` : `${doc.documentId}:body-1`)
     };
   next.features.splice(index2, 0, feature3);
@@ -5692,13 +6090,13 @@ function evaluateDocumentVariables(value2) {
   for (const name5 of definitions.keys()) resolve2(name5);
   return resolved;
 }
-const pos$1 = (v2) => typeof v2 === "number" && Number.isFinite(v2) && v2 > 0;
+const pos$3 = (v2) => typeof v2 === "number" && Number.isFinite(v2) && v2 > 0;
 function validatePlasticRule(rule) {
   if (!rule.name?.trim()) throw new Error("A plastic rule needs a name.");
-  if (!pos$1(rule.thicknessMillimeters) || !pos$1(rule.nominalRadiusMillimeters)) throw new Error("Rule thickness and radius must be positive.");
+  if (!pos$3(rule.thicknessMillimeters) || !pos$3(rule.nominalRadiusMillimeters)) throw new Error("Rule thickness and radius must be positive.");
   if (!(Number.isFinite(rule.draftDegrees) && rule.draftDegrees >= 0 && rule.draftDegrees < 45)) throw new Error("Rule draft must be between 0 and 45 degrees.");
   if (!(Number.isFinite(rule.clearanceMillimeters) && rule.clearanceMillimeters >= 0)) throw new Error("Rule clearance must be zero or more.");
-  if (rule.knifeEdgeMillimeters !== void 0 && !pos$1(rule.knifeEdgeMillimeters)) throw new Error("Rule knife edge must be positive.");
+  if (rule.knifeEdgeMillimeters !== void 0 && !pos$3(rule.knifeEdgeMillimeters)) throw new Error("Rule knife edge must be positive.");
 }
 function validatePlasticRules(table10) {
   if (table10 === void 0) return;
@@ -5708,6 +6106,501 @@ function validatePlasticRules(table10) {
   if (new Set(t2.rules.map((r) => r.name)).size !== t2.rules.length) throw new Error("Plastic rule names must be unique.");
   if (t2.active !== void 0 && !t2.rules.some((r) => r.name === t2.active)) throw new Error("The active plastic rule is not defined.");
   for (const name5 of Object.values(t2.assignments ?? {})) if (!t2.rules.some((r) => r.name === name5)) throw new Error(`Assigned plastic rule ${name5} is not defined.`);
+}
+const sheetMetalFeatureTypes = ["sheet-base", "sheet-convert", "sheet-path-flange", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"];
+const bendAllowanceMillimeters = (angleDegrees, innerRadius, rule) => angleDegrees * Math.PI / 180 * (innerRadius + rule.kFactor * rule.thicknessMillimeters);
+const finite$3 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
+function validateSheetMetalRule(rule, what) {
+  if (!finite$3(rule.thicknessMillimeters) || rule.thicknessMillimeters <= 0) throw new Error(`${what} needs a positive thickness.`);
+  if (!finite$3(rule.bendRadiusMillimeters) || rule.bendRadiusMillimeters <= 0) throw new Error(`${what} needs a positive bend radius.`);
+  if (!finite$3(rule.kFactor) || rule.kFactor <= 0 || rule.kFactor > 1) throw new Error(`${what} needs a K factor between 0 and 1.`);
+}
+const oneBody = (ids2, what) => {
+  if (!Array.isArray(ids2) || ids2.length !== 1 || typeof ids2[0] !== "string") throw new Error(`${what} needs one sheet metal body.`);
+};
+const pickedEdges = (edges, what, earlier, missing) => {
+  if (!Array.isArray(edges) || !edges.length) throw new Error(`${what} needs picked edges.`);
+  for (const edge of edges) validateEdgeFinishEdge(edge, earlier, missing);
+};
+function validateSheetMetalFeature(feature3, earlier, missing) {
+  const missingId = missing;
+  switch (feature3.type) {
+    case "sheet-base":
+      if (typeof feature3.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature3.profileFeatureId) ?? "")) throw new Error("Sheet metal base needs an earlier sketch.");
+      validateSheetMetalRule(feature3, "Sheet metal base");
+      return;
+    case "sheet-convert":
+      oneBody(feature3.bodyIds, "Convert to sheet metal");
+      if (feature3.thicknessMillimeters !== void 0 && (!finite$3(feature3.thicknessMillimeters) || feature3.thicknessMillimeters <= 0)) throw new Error("Convert thickness must be positive.");
+      if (!finite$3(feature3.bendRadiusMillimeters) || feature3.bendRadiusMillimeters <= 0) throw new Error("Convert bend radius must be positive.");
+      if (!finite$3(feature3.kFactor) || feature3.kFactor <= 0 || feature3.kFactor > 1) throw new Error("Convert K factor must be between 0 and 1.");
+      return;
+    case "sheet-path-flange":
+      oneBody(feature3.bodyIds, "Contour flange");
+      if (typeof feature3.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature3.profileFeatureId) ?? "")) throw new Error("Contour flange needs an earlier profile sketch.");
+      if (feature3.edges?.length) pickedEdges(feature3.edges, "Contour flange", earlier, missingId);
+      else if (!finite$3(feature3.widthMillimeters) || feature3.widthMillimeters <= 0) throw new Error("Contour flange needs picked edges or a positive extrusion width.");
+      if (feature3.thicknessMillimeters !== void 0 && (!finite$3(feature3.thicknessMillimeters) || feature3.thicknessMillimeters <= 0)) throw new Error("Contour flange thickness must be positive.");
+      if (feature3.bendRadiusMillimeters !== void 0 && (!finite$3(feature3.bendRadiusMillimeters) || feature3.bendRadiusMillimeters <= 0)) throw new Error("Contour flange bend radius must be positive.");
+      return;
+    case "sheet-flange":
+      oneBody(feature3.bodyIds, "Flange");
+      pickedEdges(feature3.edges, "Flange", earlier, missingId);
+      if (!finite$3(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Flange needs a positive length.");
+      if (!finite$3(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 180) throw new Error("Flange angle must be between 0 and 180 degrees.");
+      if (feature3.bendRadiusMillimeters !== void 0 && !(finite$3(feature3.bendRadiusMillimeters) && feature3.bendRadiusMillimeters > 0)) throw new Error("Flange bend radius must be positive.");
+      return;
+    case "sheet-hem":
+      oneBody(feature3.bodyIds, "Hem");
+      pickedEdges(feature3.edges, "Hem", earlier, missingId);
+      if (!finite$3(feature3.lengthMillimeters) || feature3.lengthMillimeters <= 0) throw new Error("Hem needs a positive length.");
+      if (feature3.gapMillimeters !== void 0 && !(finite$3(feature3.gapMillimeters) && feature3.gapMillimeters > 0)) throw new Error("Hem gap must be positive.");
+      return;
+    case "sheet-fold":
+      oneBody(feature3.bodyIds, "Fold");
+      if (!feature3.line || feature3.line.kind !== "sketch-line" || typeof feature3.line.sourceFeatureId !== "string" || !missing(feature3.line.sourceFeatureId) && !["profile", "sketch"].includes(earlier.get(feature3.line.sourceFeatureId) ?? "")) throw new Error("Fold needs a sketch line on the sheet.");
+      if (!finite$3(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 180) throw new Error("Fold angle must be between 0 and 180 degrees.");
+      if (feature3.bendRadiusMillimeters !== void 0 && !(finite$3(feature3.bendRadiusMillimeters) && feature3.bendRadiusMillimeters > 0)) throw new Error("Fold bend radius must be positive.");
+      return;
+    case "sheet-unfold":
+      oneBody(feature3.bodyIds, "Unfold");
+      return;
+    case "sheet-refold":
+      oneBody(feature3.bodyIds, "Refold");
+      return;
+    case "sheet-perforate":
+      validateSheetPerforate(feature3);
+      return;
+  }
+}
+function validateSheetPerforate(feature3) {
+  oneBody(feature3.bodyIds, "Perforate");
+  if (!feature3.face || typeof feature3.face.sourceFeatureId !== "string") throw new Error("Perforate needs a picked face.");
+  if (feature3.face.surfaceType) throw new Error("Perforate goes on a planar face.");
+  if (!finite$3(feature3.diameterMillimeters) || feature3.diameterMillimeters <= 0) throw new Error("Perforate needs a positive hole diameter.");
+  if (!finite$3(feature3.pitchMillimeters) || feature3.pitchMillimeters <= feature3.diameterMillimeters) throw new Error("The pitch must be larger than the hole diameter.");
+  if (feature3.marginMillimeters !== void 0 && !(finite$3(feature3.marginMillimeters) && feature3.marginMillimeters >= 0)) throw new Error("The margin must be zero or more.");
+  if (feature3.pattern !== void 0 && feature3.pattern !== "staggered" && feature3.pattern !== "square") throw new Error("Perforate pattern is staggered or square.");
+}
+function sheetBendTable(doc, bodyId, base) {
+  const rows = [];
+  for (const f2 of doc.features) {
+    if (f2.suppressed || f2.type !== "sheet-flange" && f2.type !== "sheet-hem" && f2.type !== "sheet-fold" || f2.bodyIds[0] !== bodyId) continue;
+    const angle2 = f2.type === "sheet-hem" ? 180 : f2.angleDegrees;
+    const radius = f2.type === "sheet-hem" ? f2.gapMillimeters ?? base.bendRadiusMillimeters : f2.bendRadiusMillimeters ?? base.bendRadiusMillimeters;
+    const allowance = bendAllowanceMillimeters(angle2, radius, base);
+    rows.push({
+      feature_id: f2.id,
+      name: f2.name,
+      kind: f2.type === "sheet-flange" ? "flange" : f2.type === "sheet-hem" ? "hem" : "fold",
+      edges: f2.type === "sheet-fold" ? "sketch line" : f2.edges.map((e) => e.label).join("; "),
+      angle_deg: angle2,
+      inner_radius_mm: radius,
+      thickness_mm: base.thicknessMillimeters,
+      k_factor: base.kFactor,
+      bend_allowance_mm: allowance,
+      bend_deduction_mm: angle2 >= 180 - 1e-9 ? null : 2 * (radius + base.thicknessMillimeters) * Math.tan(angle2 * Math.PI / 360) - allowance,
+      leg_mm: f2.type === "sheet-flange" ? f2.distanceMillimeters : f2.type === "sheet-hem" ? f2.lengthMillimeters : null,
+      direction: f2.inward ? "up" : "down"
+    });
+  }
+  return rows;
+}
+function validateNamedSheetMetalRule(rule) {
+  if (!rule.id?.trim()) throw new Error("A sheet metal rule needs an ID.");
+  if (!rule.name?.trim()) throw new Error("A sheet metal rule needs a name.");
+  if (!rule.material?.trim()) throw new Error("A sheet metal rule needs a material.");
+  if (!(typeof rule.densityKgPerM3 === "number" && Number.isFinite(rule.densityKgPerM3) && rule.densityKgPerM3 > 0)) {
+    throw new Error("Sheet metal rule density must be positive.");
+  }
+  validateSheetMetalRule(rule, `Sheet metal rule ${rule.name}`);
+}
+function validateSheetMetalRules(table10) {
+  if (table10 === void 0) return;
+  const t2 = table10;
+  if (!t2 || typeof t2 !== "object" || !Array.isArray(t2.rules)) {
+    throw new Error("Sheet metal rules must list rules.");
+  }
+  t2.rules.forEach(validateNamedSheetMetalRule);
+  if (new Set(t2.rules.map((r) => r.id)).size !== t2.rules.length) {
+    throw new Error("Sheet metal rule IDs must be unique.");
+  }
+  if (t2.active !== void 0 && !t2.rules.some((r) => r.id === t2.active)) {
+    throw new Error("The active sheet metal rule is not defined.");
+  }
+  for (const id2 of Object.values(t2.assignments ?? {})) {
+    if (!t2.rules.some((r) => r.id === id2)) {
+      throw new Error(`Assigned sheet metal rule ${id2} is not defined.`);
+    }
+  }
+}
+function validateBodyProperties(value2) {
+  if (!value2 || typeof value2.name !== "string" || !value2.name.trim() || typeof value2.visible !== "boolean")
+    throw Error("Bodies need a name and visibility state.");
+  if (value2.material !== void 0) {
+    const material = value2.material;
+    if (!material || typeof material.name !== "string" || !material.name.trim() || !Number.isFinite(material.densityKgPerM3) || material.densityKgPerM3 <= 0)
+      throw Error("A material needs a name and positive density in kg/m³.");
+  }
+  if (value2.appearance !== void 0) {
+    const appearance = value2.appearance;
+    if (!appearance || typeof appearance !== "object" || Array.isArray(appearance))
+      throw Error("Invalid body appearance.");
+    for (const key2 of ["color", "emissiveColor"])
+      if (appearance[key2] !== void 0 && !/^#[0-9a-f]{6}$/i.test(appearance[key2]))
+        throw Error("Appearance colors must use six-digit hex values.");
+    for (const key2 of [
+      "opacity",
+      "roughness",
+      "metalness",
+      "emissiveIntensity"
+    ]) {
+      const n = appearance[key2];
+      if (n !== void 0 && (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > (key2 === "emissiveIntensity" ? 5 : 1)))
+        throw Error(`Invalid body appearance ${key2}.`);
+    }
+  }
+}
+const PHYSICAL_MATERIAL_LIBRARY = [
+  { id: "steel-1018", name: "Mild Steel 1018", category: "metal", densityKgPerM3: 7870, youngsModulusGPa: 205, poissonRatio: 0.29, yieldStrengthMPa: 370, thermalConductivityWPerMK: 51.9, colorHex: "#8c96a0" },
+  { id: "stainless-304", name: "Stainless Steel 304", category: "metal", densityKgPerM3: 8e3, youngsModulusGPa: 193, poissonRatio: 0.29, yieldStrengthMPa: 215, thermalConductivityWPerMK: 16.2, colorHex: "#b8c0c8" },
+  { id: "aluminum-6061", name: "Aluminum 6061-T6", category: "metal", densityKgPerM3: 2700, youngsModulusGPa: 68.9, poissonRatio: 0.33, yieldStrengthMPa: 276, thermalConductivityWPerMK: 167, colorHex: "#cfd6dc" },
+  { id: "aluminum-7075", name: "Aluminum 7075-T6", category: "metal", densityKgPerM3: 2810, youngsModulusGPa: 71.7, poissonRatio: 0.33, yieldStrengthMPa: 503, thermalConductivityWPerMK: 130, colorHex: "#c6ced6" },
+  { id: "brass-c360", name: "Brass C360", category: "metal", densityKgPerM3: 8490, youngsModulusGPa: 97, poissonRatio: 0.31, yieldStrengthMPa: 310, thermalConductivityWPerMK: 115, colorHex: "#d4af52" },
+  { id: "copper-c110", name: "Copper C110", category: "metal", densityKgPerM3: 8960, youngsModulusGPa: 117, poissonRatio: 0.34, yieldStrengthMPa: 220, thermalConductivityWPerMK: 388, colorHex: "#c9744d" },
+  { id: "titanium-6al4v", name: "Titanium Ti-6Al-4V", category: "metal", densityKgPerM3: 4430, youngsModulusGPa: 113.8, poissonRatio: 0.342, yieldStrengthMPa: 880, thermalConductivityWPerMK: 6.7, colorHex: "#9aa0a6" },
+  { id: "cast-iron", name: "Gray Cast Iron", category: "metal", densityKgPerM3: 7200, youngsModulusGPa: 110, poissonRatio: 0.26, yieldStrengthMPa: 150, thermalConductivityWPerMK: 50, colorHex: "#5d6166" },
+  { id: "abs", name: "ABS Plastic", category: "polymer", densityKgPerM3: 1040, youngsModulusGPa: 2.3, poissonRatio: 0.35, yieldStrengthMPa: 42, thermalConductivityWPerMK: 0.17, colorHex: "#d9d4c7" },
+  { id: "petg", name: "PETG", category: "polymer", densityKgPerM3: 1270, youngsModulusGPa: 2.1, poissonRatio: 0.38, yieldStrengthMPa: 50, thermalConductivityWPerMK: 0.2, colorHex: "#7db8d6" },
+  { id: "pla", name: "PLA", category: "polymer", densityKgPerM3: 1240, youngsModulusGPa: 3.5, poissonRatio: 0.36, yieldStrengthMPa: 60, thermalConductivityWPerMK: 0.13, colorHex: "#e6e2d8" },
+  { id: "polycarbonate", name: "Polycarbonate (PC)", category: "polymer", densityKgPerM3: 1200, youngsModulusGPa: 2.4, poissonRatio: 0.37, yieldStrengthMPa: 62, thermalConductivityWPerMK: 0.2, colorHex: "#dceaf2" },
+  { id: "nylon-pa66", name: "Nylon PA66", category: "polymer", densityKgPerM3: 1140, youngsModulusGPa: 2.8, poissonRatio: 0.39, yieldStrengthMPa: 75, thermalConductivityWPerMK: 0.25, colorHex: "#e8e3d5" },
+  { id: "acetal-delrin", name: "Acetal (Delrin / POM)", category: "polymer", densityKgPerM3: 1410, youngsModulusGPa: 3.1, poissonRatio: 0.35, yieldStrengthMPa: 69, thermalConductivityWPerMK: 0.31, colorHex: "#f0f0ec" },
+  { id: "oak-wood", name: "White Oak (Orthotropic)", category: "wood", densityKgPerM3: 750, orthotropicModuliGPa: [12.3, 1.1, 0.7], shearModuliGPa: [0.9, 0.7, 0.25], orthotropicPoisson: [0.37, 0.43, 0.3], colorHex: "#b3834f" }
+];
+function findPhysicalMaterial(idOrName) {
+  const lower = idOrName.trim().toLowerCase();
+  if (!lower) return void 0;
+  const exact = PHYSICAL_MATERIAL_LIBRARY.find((m2) => m2.id.toLowerCase() === lower || m2.name.toLowerCase() === lower);
+  if (exact) return exact;
+  const partial = PHYSICAL_MATERIAL_LIBRARY.filter((m2) => m2.id.toLowerCase().includes(lower) || m2.name.toLowerCase().includes(lower));
+  return partial.length === 1 ? partial[0] : void 0;
+}
+function assignBodyMaterial(doc, bodyId, material) {
+  const resolved = typeof material === "string" ? findPhysicalMaterial(material) : material;
+  if (!resolved) throw new Error(`Unknown physical material "${String(material)}".`);
+  const next = structuredClone(doc);
+  next.bodyProperties ??= {};
+  const existing2 = next.bodyProperties[bodyId] ?? { name: bodyId, visible: true };
+  existing2.material = { name: resolved.name, densityKgPerM3: resolved.densityKgPerM3 };
+  validateBodyProperties(existing2);
+  next.bodyProperties[bodyId] = existing2;
+  return next;
+}
+function clearBodyMaterial(doc, bodyId) {
+  const next = structuredClone(doc);
+  if (next.bodyProperties?.[bodyId]) {
+    delete next.bodyProperties[bodyId].material;
+  }
+  return next;
+}
+function materialForBody(doc, bodyId) {
+  return doc.bodyProperties?.[bodyId]?.material;
+}
+const configurationColumnKey = (column) => column.kind === "param" ? `param:${column.name}` : column.kind === "suppress" ? `suppress:${column.featureId}` : `material:${column.bodyId}`;
+function currentConfigurationValue(doc, column) {
+  if (column.kind === "param") return doc.variables?.find((v2) => v2.name === column.name)?.expression;
+  if (column.kind === "material") return materialForBody(doc, column.bodyId)?.name ?? "";
+  return doc.features.find((f2) => f2.id === column.featureId)?.suppressed;
+}
+const table$2 = (doc) => structuredClone(doc.configurations ?? { columns: [], rows: [] });
+function addConfigurationColumn(doc, column) {
+  const next = table$2(doc), key2 = configurationColumnKey(column);
+  if (next.columns.some((c2) => configurationColumnKey(c2) === key2)) throw new Error("That column is already in the table.");
+  if (currentConfigurationValue(doc, column) === void 0) throw new Error(column.kind === "param" ? `No variable named ${column.name}.` : "That feature is not in the document.");
+  next.columns.push(column);
+  for (const row of next.rows) row.values[key2] = currentConfigurationValue(doc, column);
+  return { ...doc, configurations: next };
+}
+function addConfigurationRow(doc, name5, from) {
+  const next = table$2(doc);
+  if (!name5.trim()) throw new Error("A configuration needs a name.");
+  if (next.rows.some((r) => r.name === name5)) throw new Error(`A configuration named ${name5} already exists.`);
+  const source = from ? next.rows.find((r) => r.name === from) : void 0;
+  if (from && !source) throw new Error(`No configuration named ${from}.`);
+  const values2 = {};
+  for (const column of next.columns) {
+    const key2 = configurationColumnKey(column);
+    values2[key2] = source ? source.values[key2] : currentConfigurationValue(doc, column);
+  }
+  next.rows.push({ name: name5, values: values2 });
+  if (!next.activeRow && !source) next.activeRow = name5;
+  return { ...doc, configurations: next };
+}
+function setConfigurationValue(doc, row, key2, value2) {
+  const next = table$2(doc), target = next.rows.find((r) => r.name === row);
+  if (!target) throw new Error(`No configuration named ${row}.`);
+  if (!next.columns.some((c2) => configurationColumnKey(c2) === key2)) throw new Error("That column is not in the table.");
+  target.values[key2] = value2;
+  return { ...doc, configurations: next };
+}
+function removeConfigurationRow(doc, name5) {
+  const next = table$2(doc);
+  next.rows = next.rows.filter((r) => r.name !== name5);
+  if (next.activeRow === name5) delete next.activeRow;
+  return { ...doc, configurations: next };
+}
+function applyConfigurationRow(doc, name5) {
+  const current2 = table$2(doc), row = current2.rows.find((r) => r.name === name5);
+  if (!row) throw new Error(`No configuration named ${name5}.`);
+  let next = { ...doc, variables: doc.variables?.map((v2) => ({ ...v2 })) };
+  for (const column of current2.columns) {
+    const value2 = row.values[configurationColumnKey(column)];
+    if (column.kind === "param") {
+      const variable = next.variables?.find((v2) => v2.name === column.name);
+      if (variable && typeof value2 === "string") variable.expression = value2;
+    } else if (column.kind === "material") {
+      if (typeof value2 === "string" && value2.trim()) next = assignBodyMaterial(next, column.bodyId, value2);
+    } else if (typeof value2 === "boolean") {
+      const feature3 = next.features.find((f2) => f2.id === column.featureId);
+      if (feature3 && feature3.suppressed !== value2) next = setFeatureSuppressed(next, column.featureId, value2);
+    }
+  }
+  return { ...next, configurations: { ...current2, activeRow: name5 } };
+}
+function updateConfigurationFromDesign(doc, name5 = doc.configurations?.activeRow) {
+  const current2 = table$2(doc), row = current2.rows.find((r) => r.name === name5);
+  if (!row) throw new Error(`No configuration named ${name5 ?? "(none)"}.`);
+  for (const column of current2.columns) {
+    const val = currentConfigurationValue(doc, column);
+    if (val !== void 0) row.values[configurationColumnKey(column)] = val;
+  }
+  return { ...doc, configurations: current2 };
+}
+function validateConfigurations(value2, doc) {
+  if (value2 === void 0) return;
+  const t2 = value2;
+  if (!t2 || typeof t2 !== "object" || !Array.isArray(t2.columns) || !Array.isArray(t2.rows)) throw new Error("Configurations must have columns and rows.");
+  for (const c2 of t2.columns) {
+    if (c2.kind === "param") {
+      if (typeof c2.name !== "string" || !doc.variables?.some((v2) => v2.name === c2.name)) throw new Error(`Configuration column names an unknown variable.`);
+    } else if (c2.kind === "suppress") {
+      if (typeof c2.featureId !== "string" || !doc.features.some((f2) => f2.id === c2.featureId)) throw new Error("Configuration column names an unknown feature.");
+    } else if (c2.kind === "material") {
+      if (typeof c2.bodyId !== "string" || !c2.bodyId.trim()) throw new Error("Configuration material column needs a body ID.");
+    } else throw new Error("Configuration columns are parameters, materials or suppressions.");
+  }
+  const names = /* @__PURE__ */ new Set();
+  for (const r of t2.rows) {
+    if (typeof r.name !== "string" || !r.name.trim() || names.has(r.name) || typeof r.values !== "object") throw new Error("Configuration rows need distinct names and values.");
+    names.add(r.name);
+  }
+  if (t2.activeRow !== void 0 && !names.has(t2.activeRow)) throw new Error("The active configuration is not a row.");
+}
+const MAX_RULES = 128, MAX_NODES = 64, MAX_DEPTH = 8;
+const close = (a2, b) => Math.abs(a2 - b) <= 1e-9 * Math.max(1, Math.abs(a2), Math.abs(b));
+function validateConfigRules(rules, doc) {
+  if (rules === void 0) return;
+  if (!Array.isArray(rules) || rules.length > MAX_RULES) throw new Error(`Configuration rules are a list of at most ${MAX_RULES}.`);
+  const ids2 = /* @__PURE__ */ new Set();
+  const variable = (name5) => {
+    if (typeof name5 !== "string" || !doc.variables?.some((v2) => v2.name === name5)) throw new Error(`Rule references unknown variable ${String(name5)}.`);
+  };
+  const feature3 = (id2) => {
+    if (typeof id2 !== "string" || !doc.features.some((f2) => f2.id === id2)) throw new Error("Rule references a feature that is gone.");
+  };
+  const text2 = (value2) => {
+    if (typeof value2 !== "string" || !value2.trim() || value2.length > 512) throw new Error("Rule expressions must be text.");
+  };
+  for (const rule of rules) {
+    if (!rule || typeof rule.id !== "string" || !rule.id.trim() || typeof rule.name !== "string" || !rule.name.trim()) throw new Error("A rule needs an id and a name.");
+    if (ids2.has(rule.id)) throw new Error("Rule ids must be unique.");
+    ids2.add(rule.id);
+    if (typeof rule.enabled !== "boolean") throw new Error(`Rule ${rule.name} needs enabled true or false.`);
+    let nodes = 0;
+    const visit = (c2, depth) => {
+      if (++nodes > MAX_NODES || depth > MAX_DEPTH) throw new Error(`Rule ${rule.name}: the condition is too large or too deep.`);
+      if (!c2 || typeof c2 !== "object") throw new Error(`Rule ${rule.name}: a condition is missing.`);
+      if (c2.type === "always") return;
+      if (c2.type === "all" || c2.type === "any") {
+        if (!Array.isArray(c2.conditions) || !c2.conditions.length) throw new Error(`Rule ${rule.name}: an empty condition group.`);
+        c2.conditions.forEach((x2) => visit(x2, depth + 1));
+        return;
+      }
+      if (c2.type === "not") {
+        visit(c2.condition, depth + 1);
+        return;
+      }
+      if (c2.type === "parameter") {
+        variable(c2.parameter);
+        text2(c2.expression);
+        if (!["eq", "ne", "lt", "le", "gt", "ge"].includes(c2.operator)) throw new Error(`Rule ${rule.name}: unknown comparison.`);
+        return;
+      }
+      if (c2.type === "suppression") {
+        feature3(c2.featureId);
+        if (typeof c2.value !== "boolean") throw new Error(`Rule ${rule.name}: suppression is true or false.`);
+        return;
+      }
+      throw new Error(`Rule ${rule.name}: unknown condition.`);
+    };
+    visit(rule.condition, 1);
+    const e = rule.effect;
+    const columns = new Set((doc.configurations?.columns ?? []).map(configurationColumnKey));
+    if (!e || typeof e !== "object") throw new Error(`Rule ${rule.name} needs an effect.`);
+    if (e.type === "drive_suppression") {
+      feature3(e.featureId);
+      if (!columns.has(`suppress:${e.featureId}`)) throw new Error(`Rule ${rule.name}: its feature is not a configuration column.`);
+      continue;
+    }
+    variable(e.parameter);
+    if (!columns.has(`param:${e.parameter}`)) throw new Error(`Rule ${rule.name}: ${e.parameter} is not a configuration column.`);
+    if (e.type === "drive_parameter") text2(e.expression);
+    else if (e.type === "parameter_range") {
+      text2(e.minimum);
+      text2(e.maximum);
+    } else if (e.type === "allow_parameter_values") {
+      if (!Array.isArray(e.expressions) || !e.expressions.length || e.expressions.length > 128) throw new Error(`Rule ${rule.name}: list one to 128 allowed values.`);
+      e.expressions.forEach(text2);
+    } else throw new Error(`Rule ${rule.name}: unknown effect.`);
+  }
+}
+function operands(values2, parameter2, expression) {
+  const a2 = values2.get(parameter2);
+  if (a2 === void 0) throw new Error(`No variable ${parameter2}.`);
+  const b = evaluateExpression(expression, { resolveVariable: (name5) => {
+    const v2 = values2.get(name5);
+    if (v2 === void 0) throw new Error(`No variable ${name5}.`);
+    return v2;
+  } });
+  const qa = numeric(a2), qb = numeric(b);
+  const scale2 = qb.lengthPower === 0 && qb.anglePower === 0 && (qa.lengthPower !== 0 || qa.anglePower !== 0) ? qa.lengthPower !== 0 ? 1e-3 : Math.PI / 180 : 1;
+  const bSI = qb.magnitudeSI * scale2;
+  if (scale2 === 1 && (qa.lengthPower !== qb.lengthPower || qa.anglePower !== qb.anglePower)) throw new Error(`${parameter2} and ${expression} have different units.`);
+  if (!Number.isFinite(qa.magnitudeSI) || !Number.isFinite(bSI)) throw new Error("Comparisons need finite values.");
+  return [qa.magnitudeSI, bSI];
+}
+function holds(doc, values2, c2) {
+  switch (c2.type) {
+    case "always":
+      return true;
+    case "all":
+      return c2.conditions.every((x2) => holds(doc, values2, x2));
+    case "any":
+      return c2.conditions.some((x2) => holds(doc, values2, x2));
+    case "not":
+      return !holds(doc, values2, c2.condition);
+    case "suppression": {
+      const f2 = doc.features.find((x2) => x2.id === c2.featureId);
+      if (!f2) throw new Error("A rule's feature is gone.");
+      return Boolean(f2.suppressed) === c2.value;
+    }
+    case "parameter": {
+      const [a2, b] = operands(values2, c2.parameter, c2.expression);
+      return c2.operator === "eq" ? close(a2, b) : c2.operator === "ne" ? !close(a2, b) : c2.operator === "lt" ? a2 < b && !close(a2, b) : c2.operator === "le" ? a2 <= b || close(a2, b) : c2.operator === "gt" ? a2 > b && !close(a2, b) : a2 >= b || close(a2, b);
+    }
+  }
+}
+function applyConfigRules(doc) {
+  const rules = doc.configurations?.rules ?? [];
+  validateConfigRules(rules, doc);
+  let next = doc;
+  let values2 = evaluateDocumentVariables(next.variables);
+  const trace = [], restrictions = [];
+  for (const rule of rules) {
+    let matched = false;
+    try {
+      matched = rule.enabled && holds(next, values2, rule.condition);
+    } catch (error2) {
+      throw new Error(`Rule ${rule.name}: ${error2.message}`);
+    }
+    trace.push({ id: rule.id, name: rule.name, matched, effect: rule.effect });
+    if (!matched) continue;
+    const e = rule.effect;
+    if (e.type === "drive_parameter") {
+      next = { ...next, variables: next.variables?.map((v2) => v2.name === e.parameter ? { ...v2, expression: e.expression } : v2) };
+      try {
+        values2 = evaluateDocumentVariables(next.variables);
+      } catch (error2) {
+        throw new Error(`Rule ${rule.name}: ${error2.message}`);
+      }
+    } else if (e.type === "drive_suppression") {
+      const f2 = next.features.find((x2) => x2.id === e.featureId);
+      if (f2 && Boolean(f2.suppressed) !== e.value) next = setFeatureSuppressed(next, e.featureId, e.value);
+    } else restrictions.push(rule);
+  }
+  for (const rule of restrictions) {
+    const e = rule.effect;
+    if (e.type === "parameter_range") {
+      const [value2, min] = operands(values2, e.parameter, e.minimum), [, max2] = operands(values2, e.parameter, e.maximum);
+      if (!(min <= max2 && (value2 >= min || close(value2, min)) && (value2 <= max2 || close(value2, max2)))) throw new Error(`Rule ${rule.name}: ${e.parameter} must lie between ${e.minimum} and ${e.maximum}.`);
+    } else if (e.type === "allow_parameter_values") {
+      if (!e.expressions.some((x2) => {
+        const [a2, b] = operands(values2, e.parameter, x2);
+        return close(a2, b);
+      })) throw new Error(`Rule ${rule.name}: ${e.parameter} must be one of ${e.expressions.join(", ")}.`);
+    }
+  }
+  return { document: next, trace };
+}
+function activateConfiguration(doc, row) {
+  return applyConfigRules(applyConfigurationRow(doc, row));
+}
+function validateDocumentNotes(notes) {
+  if (notes === void 0) return;
+  if (!Array.isArray(notes) || notes.length > 500)
+    throw new Error("Document notes must be an array of at most 500 entries.");
+  const ids2 = /* @__PURE__ */ new Set();
+  for (const n of notes) {
+    if (!n || typeof n !== "object") throw new Error("Invalid document note.");
+    if (typeof n.id !== "string" || !n.id.trim() || ids2.has(n.id))
+      throw new Error("Document notes need unique non-empty IDs.");
+    ids2.add(n.id);
+    if (typeof n.text !== "string" || !n.text.trim() || n.text.length > 4e3)
+      throw new Error("Document note text must be 1–4000 characters.");
+    if (n.positionMillimeters !== void 0) {
+      if (!Array.isArray(n.positionMillimeters) || n.positionMillimeters.length !== 3 || !n.positionMillimeters.every((v2) => typeof v2 === "number" && Number.isFinite(v2)))
+        throw new Error("Note 3D position must be finite [x, y, z] millimeters.");
+    }
+    if (n.category !== void 0 && !["note", "pmi", "callout", "review"].includes(n.category))
+      throw new Error("Unknown note category.");
+    if (n.resolved !== void 0 && typeof n.resolved !== "boolean")
+      throw new Error("Note resolved state must be boolean.");
+  }
+}
+function addDocumentNote(doc, note) {
+  const next = structuredClone(doc);
+  const existing2 = next.notes ?? [];
+  const used = new Set(existing2.map((n) => n.id));
+  let id2 = note.id?.trim() || `note-${existing2.length + 1}`;
+  while (used.has(id2)) id2 += "-1";
+  const created = {
+    id: id2,
+    text: note.text.trim(),
+    ...note.positionMillimeters ? { positionMillimeters: [...note.positionMillimeters] } : {},
+    ...note.targetBodyId ? { targetBodyId: note.targetBodyId } : {},
+    ...note.category ? { category: note.category } : {},
+    ...note.resolved !== void 0 ? { resolved: note.resolved } : {},
+    createdAt: note.createdAt ?? (/* @__PURE__ */ new Date()).toISOString()
+  };
+  next.notes = [...existing2, created];
+  validateDocumentNotes(next.notes);
+  return { document: next, note: created };
+}
+function updateDocumentNote(doc, id2, changes) {
+  const next = structuredClone(doc);
+  const index2 = (next.notes ?? []).findIndex((n) => n.id === id2);
+  if (index2 < 0) throw new Error(`Note "${id2}" does not exist.`);
+  next.notes[index2] = { ...next.notes[index2], ...changes, id: id2 };
+  validateDocumentNotes(next.notes);
+  return next;
+}
+function deleteDocumentNote(doc, id2) {
+  const next = structuredClone(doc);
+  if (!(next.notes ?? []).some((n) => n.id === id2)) throw new Error(`Note "${id2}" does not exist.`);
+  next.notes = next.notes.filter((n) => n.id !== id2);
+  if (!next.notes.length) delete next.notes;
+  return next;
 }
 function validateSketchPresentation(value2) {
   if (value2 === void 0) return;
@@ -5751,9 +6644,9 @@ function validateFaceExtrude(feature3, earlier, missingReference) {
   if (typeof feature3.faceLabel !== "string" || !feature3.faceLabel.trim()) throw Error("Push/Pull needs a face label.");
   if (!Number.isFinite(feature3.distanceMillimeters) || Math.abs(feature3.distanceMillimeters) < 1e-6) throw Error("Push/Pull distance must be finite and nonzero.");
 }
-const sub$6 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const cross$8 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const dot$7 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const sub$7 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const cross$9 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const dot$8 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
 const unit$4 = (v2, what) => {
   const l = Math.hypot(v2[0], v2[1], v2[2]);
   if (!(l > 1e-9)) throw new Error(`${what} has no direction.`);
@@ -5769,19 +6662,20 @@ function resolveAxisLine(feature3, earlier = []) {
     return resolvePlaneFrame(target, earlier.slice(0, index2));
   };
   if (d2.method === "edge") return { originMillimeters: [...d2.axis.originMillimeters], directionMillimeters: unit$4(d2.axis.directionMillimeters, `${feature3.name}: edge`) };
+  if (d2.method === "through-cylinder") return { originMillimeters: [...d2.originMillimeters], directionMillimeters: unit$4(d2.directionMillimeters, `${feature3.name}: cylinder axis`) };
   if (d2.method === "two-points") {
     const [a22, b2] = d2.points.map((p2) => p2.positionMillimeters);
-    return { originMillimeters: [...a22], directionMillimeters: unit$4(sub$6(b2, a22), `${feature3.name}: the two points coincide and`) };
+    return { originMillimeters: [...a22], directionMillimeters: unit$4(sub$7(b2, a22), `${feature3.name}: the two points coincide and`) };
   }
   if (d2.method === "normal-to-plane") {
     const frame = frameOf2(d2.reference);
     return { originMillimeters: [...d2.point.positionMillimeters], directionMillimeters: unit$4(frame.normal, `${feature3.name}: plane`) };
   }
   const [a2, b] = d2.references.map(frameOf2);
-  const direction2 = cross$8(a2.normal, b.normal);
+  const direction2 = cross$9(a2.normal, b.normal);
   if (Math.hypot(...direction2) < 1e-9) throw new Error(`${feature3.name}: the two planes are parallel and do not meet.`);
-  const u2 = unit$4(direction2, `${feature3.name}: planes`), inA = cross$8(a2.normal, u2);
-  const t2 = dot$7(sub$6(b.originMillimeters, a2.originMillimeters), b.normal) / dot$7(inA, b.normal);
+  const u2 = unit$4(direction2, `${feature3.name}: planes`), inA = cross$9(a2.normal, u2);
+  const t2 = dot$8(sub$7(b.originMillimeters, a2.originMillimeters), b.normal) / dot$8(inA, b.normal);
   const origin2 = [a2.originMillimeters[0] + inA[0] * t2, a2.originMillimeters[1] + inA[1] * t2, a2.originMillimeters[2] + inA[2] * t2];
   return { originMillimeters: origin2, directionMillimeters: u2 };
 }
@@ -5827,6 +6721,10 @@ function validateAxisDefinition(feature3, earlierPlanes, missing = () => false) 
   if (d2.method === "two-planes") {
     if (!Array.isArray(d2.references) || d2.references.length !== 2) throw new Error("Axis through two planes needs exactly two planes.");
     d2.references.forEach(plane2);
+    return;
+  }
+  if (d2.method === "through-cylinder") {
+    if (!v3(d2.originMillimeters) || !v3(d2.directionMillimeters) || Math.hypot(...d2.directionMillimeters) < 1e-9) throw new Error("Axis through cylinder needs a finite origin and non-zero axis direction.");
     return;
   }
   throw new Error("Unknown axis method.");
@@ -5921,7 +6819,63 @@ function validatePipe(feature3, earlier, missing) {
 function validateBoundingSolid(feature3) {
   if (feature3.bodyIds !== void 0 && (!Array.isArray(feature3.bodyIds) || !feature3.bodyIds.length || !feature3.bodyIds.every((id2) => typeof id2 === "string"))) throw Error("Choose the parts to bound, or leave the list empty for all.");
   if (!(Number.isFinite(feature3.marginMillimeters) && feature3.marginMillimeters >= 0)) throw Error("Bounding margin must be zero or positive.");
+  if (feature3.marginsMillimeters !== void 0 && (!Array.isArray(feature3.marginsMillimeters) || feature3.marginsMillimeters.length !== 6 || !feature3.marginsMillimeters.every((v2) => typeof v2 === "number" && Number.isFinite(v2) && v2 >= 0))) throw Error("Per-side bounding margins must be six non-negative numbers [-X, +X, -Y, +Y, -Z, +Z].");
   if (feature3.operation !== "new") throw Error("A bounding solid is always a new part.");
+}
+const finite$2 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
+const pos$2 = (v2, label) => {
+  if (!finite$2(v2) || v2 <= 0) throw new Error(`${label} must be positive.`);
+};
+function validatePrimitive(feature3) {
+  if (!["box", "cylinder", "sphere", "cone", "torus"].includes(feature3.kind)) {
+    throw new Error("Primitive kind must be box, cylinder, sphere, cone, or torus.");
+  }
+  if (!["new", "add", "cut", "intersect"].includes(feature3.operation)) {
+    throw new Error("Primitive operation must be new, add, cut, or intersect.");
+  }
+  if (feature3.originMillimeters !== void 0) {
+    if (!Array.isArray(feature3.originMillimeters) || feature3.originMillimeters.length !== 3 || !feature3.originMillimeters.every(finite$2)) {
+      throw new Error("Primitive origin must be three finite coordinates in mm.");
+    }
+  }
+  if (feature3.axis !== void 0 && !["X", "Y", "Z"].includes(feature3.axis)) {
+    throw new Error("Primitive axis must be X, Y, or Z.");
+  }
+  if (feature3.direction !== void 0) {
+    if (!Array.isArray(feature3.direction) || feature3.direction.length !== 3 || !feature3.direction.every(finite$2) || Math.hypot(...feature3.direction) < 1e-9) {
+      throw new Error("Primitive direction must be a non-zero 3D vector.");
+    }
+  }
+  switch (feature3.kind) {
+    case "box":
+      pos$2(feature3.widthMillimeters, "Box width");
+      pos$2(feature3.depthMillimeters, "Box depth");
+      pos$2(feature3.heightMillimeters, "Box height");
+      break;
+    case "cylinder":
+      pos$2(feature3.radiusMillimeters, "Cylinder radius");
+      pos$2(feature3.heightMillimeters, "Cylinder height");
+      break;
+    case "sphere":
+      pos$2(feature3.radiusMillimeters, "Sphere radius");
+      break;
+    case "cone": {
+      const r0 = feature3.bottomRadiusMillimeters ?? 0;
+      const r1 = feature3.topRadiusMillimeters ?? 0;
+      if (!finite$2(r0) || r0 < 0 || !finite$2(r1) || r1 < 0 || r0 === 0 && r1 === 0) {
+        throw new Error("Cone needs non-negative radii with at least one positive radius.");
+      }
+      pos$2(feature3.heightMillimeters, "Cone height");
+      break;
+    }
+    case "torus":
+      pos$2(feature3.majorRadiusMillimeters, "Torus major radius");
+      pos$2(feature3.minorRadiusMillimeters, "Torus minor radius");
+      if ((feature3.minorRadiusMillimeters ?? 0) >= (feature3.majorRadiusMillimeters ?? 0)) {
+        throw new Error("Torus minor radius must be smaller than major radius.");
+      }
+      break;
+  }
 }
 function validateShapeBinder(feature3, earlier, missing) {
   if (typeof feature3.sourceBodyId !== "string" || !feature3.sourceBodyId.trim()) throw Error("Shape binder needs a source part.");
@@ -6045,18 +6999,18 @@ const metricIntermediateClearance = {
 const metricClearance = (size) => {
   const row = metricCoarse.find((r) => r[0] === size);
   if (row) return { close: row[3], normal: row[4], loose: row[5] };
-  const [close, normal, loose] = metricIntermediateClearance[size];
-  return { close, normal, loose };
+  const [close2, normal, loose] = metricIntermediateClearance[size];
+  return { close: close2, normal, loose };
 };
 const table$1 = new Map([
-  ["iso-metric-coarse", metricCoarse.map(([size, pitch, tapDrill, close, normal, loose]) => ({
+  ["iso-metric-coarse", metricCoarse.map(([size, pitch, tapDrill, close2, normal, loose]) => ({
     standard: "iso-metric-coarse",
     designation: `M${size}`,
     majorDiameterMillimeters: size,
     pitchMillimeters: pitch,
     tapDrillMillimeters: tapDrill,
     minorDiameterMillimeters: minorDiameter(size, pitch),
-    clearanceMillimeters: { close, normal, loose }
+    clearanceMillimeters: { close: close2, normal, loose }
   }))],
   ["iso-metric-fine", metricFine.map(([size, pitch]) => ({
     standard: "iso-metric-fine",
@@ -6067,14 +7021,14 @@ const table$1 = new Map([
     minorDiameterMillimeters: minorDiameter(size, pitch),
     clearanceMillimeters: metricClearance(size)
   }))],
-  ...["unc", "unf"].map((standard) => [standard, unified[standard].map(([designation, inches, tpi, tapDrill, close, normal, loose]) => ({
+  ...["unc", "unf"].map((standard) => [standard, unified[standard].map(([designation, inches, tpi, tapDrill, close2, normal, loose]) => ({
     standard,
     designation,
     majorDiameterMillimeters: round$1(inches * INCH),
     pitchMillimeters: round$1(INCH / tpi),
     tapDrillMillimeters: tapDrill,
     minorDiameterMillimeters: minorDiameter(round$1(inches * INCH), round$1(INCH / tpi)),
-    clearanceMillimeters: { close: round$1(close * INCH, 2), normal: round$1(normal * INCH, 2), loose: round$1(loose * INCH, 2) }
+    clearanceMillimeters: { close: round$1(close2 * INCH, 2), normal: round$1(normal * INCH, 2), loose: round$1(loose * INCH, 2) }
   }))]),
   // ponytail: clearance columns are filled with the major diameter so the record shape holds; validation refuses clearance use.
   ["bsp", bsp.map(([designation, major, tpi, tapDrill]) => ({
@@ -6111,6 +7065,40 @@ function threadClasses(standard) {
   if (standard === "unc" || standard === "unf") return ["1B", "2B", "3B"];
   return [];
 }
+const ISO_COARSE_PITCH = {
+  2: 0.4,
+  2.5: 0.45,
+  3: 0.5,
+  4: 0.7,
+  5: 0.8,
+  6: 1,
+  8: 1.25,
+  10: 1.5,
+  12: 1.75,
+  14: 2,
+  16: 2,
+  18: 2.5,
+  20: 2.5,
+  22: 2.5,
+  24: 3,
+  27: 3,
+  30: 3.5
+};
+function resolveThreadGeometry(feature3) {
+  if (feature3.standard) {
+    const spec = threadSpecification(feature3.standard, feature3.designation);
+    if (spec) {
+      return {
+        majorDiameterMillimeters: spec.majorDiameterMillimeters,
+        pitchMillimeters: feature3.pitchMillimeters ?? spec.pitchMillimeters
+      };
+    }
+  }
+  const match = /^M(\d+(?:\.\d+)?)(?:x(\d+(?:\.\d+)?))?$/i.exec(feature3.designation.trim());
+  const major = match ? Number(match[1]) : 8;
+  const pitch = feature3.pitchMillimeters ?? (match?.[2] ? Number(match[2]) : ISO_COARSE_PITCH[major] ?? Math.max(0.4, major * 0.15));
+  return { majorDiameterMillimeters: major, pitchMillimeters: pitch };
+}
 function validateThread(feature3, earlier, missing) {
   validateSolidFaceReference(feature3.face, earlier, missing, "Thread face");
   if (feature3.face.surfaceType !== "cylinder") throw Error("A thread goes on a cylindrical face.");
@@ -6126,7 +7114,167 @@ function validateThread(feature3, earlier, missing) {
   if ((feature3.undercut || feature3.splitFace) && feature3.lengthMillimeters === void 0) throw Error("An undercut or split face needs a Blind thread length.");
   if (feature3.sizeFromFace !== void 0 && typeof feature3.sizeFromFace !== "boolean") throw Error("sizeFromFace must be true or false.");
   if (feature3.sizeFromFace && feature3.standard === void 0) throw Error("Size from the face needs a thread standard.");
-  if (feature3.modeled) throw Error("Modelled threads are not provided yet; the thread is cosmetic.");
+  if (feature3.modeled !== void 0 && typeof feature3.modeled !== "boolean") throw Error("modeled must be true or false.");
+  if (feature3.leftHand !== void 0 && typeof feature3.leftHand !== "boolean") throw Error("leftHand must be true or false.");
+  if (feature3.starts !== void 0 && (!Number.isInteger(feature3.starts) || feature3.starts < 1 || feature3.starts > 8)) throw Error("Thread starts must be an integer from 1 to 8.");
+  if (feature3.form !== void 0 && !["v60", "trapezoidal", "acme", "buttress"].includes(feature3.form)) throw Error("Unknown thread form.");
+  if (feature3.pitchMillimeters !== void 0 && !positive(feature3.pitchMillimeters)) throw Error("Thread pitch must be positive.");
+}
+function validateEmboss(feature3, earlier, missing = () => false) {
+  const missingId = missing;
+  if (typeof feature3.profileFeatureId !== "string" || !missing(feature3.profileFeatureId) && !["profile", "sketch"].includes(earlier.get(feature3.profileFeatureId) ?? "")) {
+    throw new Error("Emboss requires an earlier sketch.");
+  }
+  validateSolidFaceReference(feature3.face, earlier, missingId, "Emboss face");
+  if (feature3.face.surfaceType !== void 0 && feature3.face.surfaceType !== "cylinder") {
+    throw new Error("Emboss supports planar and cylindrical faces.");
+  }
+  if (feature3.mode !== "emboss" && feature3.mode !== "deboss") {
+    throw new Error("Emboss mode must be 'emboss' or 'deboss'.");
+  }
+  if (typeof feature3.depthMillimeters !== "number" || !Number.isFinite(feature3.depthMillimeters) || feature3.depthMillimeters <= 0) {
+    throw new Error("Emboss depth must be positive.");
+  }
+  if (feature3.angleDegrees !== void 0 && (typeof feature3.angleDegrees !== "number" || !Number.isFinite(feature3.angleDegrees))) {
+    throw new Error("Emboss angle must be finite.");
+  }
+}
+const FRAME_PROFILE_LIBRARY = [
+  { id: "shs-20x20x2", label: "SHS 20×20×2", standard: "EN", kind: "rect-tube", widthMillimeters: 20, heightMillimeters: 20, wallMillimeters: 2, areaSquareMillimeters: 144 },
+  { id: "shs-30x30x2.5", label: "SHS 30×30×2.5", standard: "EN", kind: "rect-tube", widthMillimeters: 30, heightMillimeters: 30, wallMillimeters: 2.5, areaSquareMillimeters: 275 },
+  { id: "shs-40x40x3", label: "SHS 40×40×3", standard: "EN", kind: "rect-tube", widthMillimeters: 40, heightMillimeters: 40, wallMillimeters: 3, areaSquareMillimeters: 444 },
+  { id: "shs-50x50x3", label: "SHS 50×50×3", standard: "EN", kind: "rect-tube", widthMillimeters: 50, heightMillimeters: 50, wallMillimeters: 3, areaSquareMillimeters: 564 },
+  { id: "rhs-60x40x3", label: "RHS 60×40×3", standard: "EN", kind: "rect-tube", widthMillimeters: 60, heightMillimeters: 40, wallMillimeters: 3, areaSquareMillimeters: 564 },
+  { id: "rhs-80x40x4", label: "RHS 80×40×4", standard: "EN", kind: "rect-tube", widthMillimeters: 80, heightMillimeters: 40, wallMillimeters: 4, areaSquareMillimeters: 896 },
+  { id: "chs-26.9x2.6", label: "CHS 26.9×2.6", standard: "EN", kind: "round-tube", widthMillimeters: 26.9, heightMillimeters: 26.9, wallMillimeters: 2.6, areaSquareMillimeters: 198.5 },
+  { id: "chs-42.4x3.2", label: "CHS 42.4×3.2", standard: "EN", kind: "round-tube", widthMillimeters: 42.4, heightMillimeters: 42.4, wallMillimeters: 3.2, areaSquareMillimeters: 394.1 },
+  { id: "rsa-40x40x4", label: "RSA 40×40×4 Angle", standard: "EN", kind: "angle", widthMillimeters: 40, heightMillimeters: 40, wallMillimeters: 4, areaSquareMillimeters: 304 },
+  { id: "rsa-50x50x5", label: "RSA 50×50×5 Angle", standard: "EN", kind: "angle", widthMillimeters: 50, heightMillimeters: 50, wallMillimeters: 5, areaSquareMillimeters: 475 },
+  { id: "pfc-100x50", label: "PFC 100×50 Channel", standard: "EN", kind: "channel", widthMillimeters: 50, heightMillimeters: 100, webMillimeters: 5, flangeMillimeters: 8.5, areaSquareMillimeters: 1265 },
+  { id: "ipe-100", label: "IPE 100 I-Beam", standard: "EN", kind: "i-beam", widthMillimeters: 55, heightMillimeters: 100, webMillimeters: 4.1, flangeMillimeters: 5.7, areaSquareMillimeters: 990 },
+  { id: "bar-40x6", label: "Flat Bar 40×6", standard: "ISO", kind: "bar", widthMillimeters: 40, heightMillimeters: 6, areaSquareMillimeters: 240 },
+  { id: "round-bar-20", label: "Round Bar Ø20", standard: "ISO", kind: "round-bar", widthMillimeters: 20, heightMillimeters: 20, areaSquareMillimeters: 314.159 }
+];
+function findFrameProfile(id2) {
+  return FRAME_PROFILE_LIBRARY.find((p2) => p2.id === id2);
+}
+const pos$1 = (v2) => typeof v2 === "number" && Number.isFinite(v2) && v2 > 0;
+const finite$1 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
+function resolveFrameProfile(feature3) {
+  if (feature3.profileId) {
+    const found = findFrameProfile(feature3.profileId);
+    if (!found) throw new Error(`Unknown frame profile "${feature3.profileId}".`);
+    return found;
+  }
+  const c2 = feature3.customProfile;
+  if (!c2) throw new Error("Frame member requires a profileId or customProfile.");
+  const w2 = c2.widthMillimeters, h = c2.heightMillimeters, t2 = c2.wallMillimeters ?? Math.min(w2, h) * 0.1;
+  let area = w2 * h;
+  if (c2.kind === "round-bar") area = Math.PI * (w2 / 2) ** 2;
+  else if (c2.kind === "rect-tube") area = w2 * h - Math.max(0, w2 - 2 * t2) * Math.max(0, h - 2 * t2);
+  else if (c2.kind === "round-tube") area = Math.PI * ((w2 / 2) ** 2 - Math.max(0, w2 / 2 - t2) ** 2);
+  else if (c2.kind === "angle") area = w2 * t2 + Math.max(0, h - t2) * t2;
+  else if (c2.kind === "channel" || c2.kind === "i-beam") {
+    const web = c2.webMillimeters ?? t2, fl = c2.flangeMillimeters ?? t2;
+    area = 2 * w2 * fl + Math.max(0, h - 2 * fl) * web;
+  }
+  return {
+    id: `custom-${c2.kind}`,
+    label: `Custom ${c2.kind} ${w2}×${h}`,
+    standard: "Custom",
+    kind: c2.kind,
+    widthMillimeters: w2,
+    heightMillimeters: h,
+    wallMillimeters: c2.wallMillimeters,
+    flangeMillimeters: c2.flangeMillimeters,
+    webMillimeters: c2.webMillimeters,
+    areaSquareMillimeters: area
+  };
+}
+function validateFrameMember(feature3, earlier, missing = () => false) {
+  if (feature3.operation !== "new") throw new Error("Frame member always creates a structural body.");
+  const spec = resolveFrameProfile(feature3);
+  if (!pos$1(spec.widthMillimeters) || !pos$1(spec.heightMillimeters)) throw new Error("Frame profile dimensions must be positive.");
+  if (spec.kind === "rect-tube" || spec.kind === "round-tube" || spec.kind === "angle") {
+    const t2 = spec.wallMillimeters;
+    if (!pos$1(t2) || t2 * 2 >= Math.min(spec.widthMillimeters, spec.heightMillimeters)) {
+      throw new Error("Tube/angle wall thickness must be positive and less than half the outer width.");
+    }
+  }
+  if (!feature3.pathFeatureId && !feature3.segmentsMillimeters?.length) {
+    throw new Error("Frame member requires a pathFeatureId (sketch/curve3d) or explicit segmentsMillimeters.");
+  }
+  if (feature3.pathFeatureId && !missing(feature3.pathFeatureId) && !["profile", "sketch", "curve3d"].includes(earlier.get(feature3.pathFeatureId) ?? "")) {
+    throw new Error("Frame path must reference an earlier sketch or 3D curve.");
+  }
+  if (feature3.segmentsMillimeters) {
+    for (const seg of feature3.segmentsMillimeters) {
+      if (!Array.isArray(seg) || seg.length !== 2 || !seg.every((p2) => Array.isArray(p2) && p2.length === 3 && p2.every(finite$1))) {
+        throw new Error("Frame segments must be pairs of finite [x, y, z] coordinates.");
+      }
+      if (Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1], seg[1][2] - seg[0][2]) < 1e-4) {
+        throw new Error("Frame member segment must have non-zero length.");
+      }
+    }
+  }
+  if (feature3.rotationDegrees !== void 0 && !finite$1(feature3.rotationDegrees)) throw new Error("Frame rotation must be finite.");
+  if (feature3.offsetXMillimeters !== void 0 && !finite$1(feature3.offsetXMillimeters)) throw new Error("Frame X offset must be finite.");
+  if (feature3.offsetYMillimeters !== void 0 && !finite$1(feature3.offsetYMillimeters)) throw new Error("Frame Y offset must be finite.");
+  if (feature3.trimMode !== void 0 && !["none", "miter", "butt"].includes(feature3.trimMode)) throw new Error("Unknown frame trim mode.");
+  if (feature3.weldGapMillimeters !== void 0 && (!finite$1(feature3.weldGapMillimeters) || feature3.weldGapMillimeters < 0)) throw new Error("Weld gap must be zero or positive.");
+}
+function validateFrameEndCap(feature3, earlier, missing = () => false) {
+  if (!missing(feature3.frameFeatureId) && earlier.get(feature3.frameFeatureId) !== "frame-member") {
+    throw new Error("Frame end cap requires an earlier frame-member feature.");
+  }
+  if (!["start", "end", "both"].includes(feature3.end)) throw new Error("Frame end cap end must be start, end, or both.");
+  if (!pos$1(feature3.thicknessMillimeters)) throw new Error("End cap thickness must be positive.");
+  if (feature3.insetMillimeters !== void 0 && (!finite$1(feature3.insetMillimeters) || feature3.insetMillimeters < 0)) {
+    throw new Error("End cap inset must be zero or positive.");
+  }
+}
+function validateFrameTrim(feature3, earlier, missing = () => false) {
+  if (!Array.isArray(feature3.targetBodyIds) || !feature3.targetBodyIds.length || feature3.targetBodyIds.some((id2) => typeof id2 !== "string" || !id2.trim())) {
+    throw new Error("Frame trim requires at least one target member body.");
+  }
+  if (!["butt", "cope", "miter"].includes(feature3.mode)) throw new Error("Frame trim mode must be butt, cope, or miter.");
+  if (!feature3.toolBodyId && !feature3.plane && !(feature3.mode === "miter" && feature3.targetBodyIds.length >= 2)) {
+    throw new Error("Frame trim requires a tool body, a trimming plane, or two bodies to miter.");
+  }
+  if (feature3.plane) {
+    if (feature3.plane.kind === "feature" && !missing(feature3.plane.featureId) && earlier.get(feature3.plane.featureId) !== "plane") {
+      throw new Error("Frame trim plane must reference an earlier construction plane.");
+    }
+  }
+  if (feature3.keepPointMillimeters !== void 0 && (!Array.isArray(feature3.keepPointMillimeters) || feature3.keepPointMillimeters.length !== 3 || !feature3.keepPointMillimeters.every(finite$1))) {
+    throw new Error("Frame trim keep point must be a finite [x, y, z] coordinate.");
+  }
+  if (feature3.weldGapMillimeters !== void 0 && (!finite$1(feature3.weldGapMillimeters) || feature3.weldGapMillimeters < 0)) {
+    throw new Error("Frame trim weld gap must be zero or positive.");
+  }
+}
+function validateFrameGusset(feature3) {
+  if (!["new", "add"].includes(feature3.operation)) throw new Error("Frame gusset operation must be new or add.");
+  for (const [vec2, label] of [[feature3.originMillimeters, "origin"], [feature3.axisA, "axisA"], [feature3.axisB, "axisB"]]) {
+    if (!Array.isArray(vec2) || vec2.length !== 3 || !vec2.every(finite$1)) throw new Error(`Frame gusset ${label} must be finite [x, y, z].`);
+  }
+  const lenA = Math.hypot(...feature3.axisA), lenB = Math.hypot(...feature3.axisB);
+  if (lenA < 1e-9 || lenB < 1e-9) throw new Error("Frame gusset axes must be non-zero.");
+  const cx2 = feature3.axisA[1] * feature3.axisB[2] - feature3.axisA[2] * feature3.axisB[1];
+  const cy2 = feature3.axisA[2] * feature3.axisB[0] - feature3.axisA[0] * feature3.axisB[2];
+  const cz = feature3.axisA[0] * feature3.axisB[1] - feature3.axisA[1] * feature3.axisB[0];
+  if (Math.hypot(cx2, cy2, cz) / (lenA * lenB) < 1e-6) throw new Error("Frame gusset axes must not be collinear.");
+  if (!pos$1(feature3.legAMillimeters) || !pos$1(feature3.legBMillimeters) || !pos$1(feature3.thicknessMillimeters)) {
+    throw new Error("Frame gusset legs and thickness must be positive.");
+  }
+  if (feature3.chamferMillimeters !== void 0) {
+    if (!finite$1(feature3.chamferMillimeters) || feature3.chamferMillimeters < 0 || feature3.chamferMillimeters >= Math.min(feature3.legAMillimeters, feature3.legBMillimeters)) {
+      throw new Error("Frame gusset chamfer must be zero or less than the shorter leg.");
+    }
+  }
+  if (feature3.shape !== void 0 && !["triangle", "polygon"].includes(feature3.shape)) {
+    throw new Error("Frame gusset shape must be triangle or polygon.");
+  }
 }
 function validateCoil(feature3) {
   const pos2 = (v2) => typeof v2 === "number" && Number.isFinite(v2) && v2 > 0;
@@ -6137,16 +7285,248 @@ function validateCoil(feature3) {
   if (feature3.axis !== void 0 && !["X", "Y", "Z"].includes(feature3.axis)) throw Error("Coil axis must be X, Y or Z.");
   if (!["new", "add", "cut"].includes(feature3.operation)) throw Error("Invalid coil operation.");
 }
+function sub$6(a2, b) {
+  return [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+}
+function dot$7(a2, b) {
+  return a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+}
+function cross$8(a2, b) {
+  return [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+}
+function len$4(a2) {
+  return Math.hypot(a2[0], a2[1], a2[2]);
+}
+function arc3dGeometry(p0, p1, p2) {
+  const a2 = sub$6(p1, p0);
+  const b = sub$6(p2, p0);
+  const n = cross$8(a2, b);
+  const nLen = len$4(n);
+  if (nLen < 1e-9) throw new Error("3D arc points must not be collinear.");
+  const normal = [n[0] / nLen, n[1] / nLen, n[2] / nLen];
+  const a22 = dot$7(a2, a2), b2 = dot$7(b, b);
+  const aCrossB = n;
+  const term1 = cross$8(aCrossB, a2);
+  const term2 = cross$8(b, aCrossB);
+  const denom = 2 * nLen * nLen;
+  const center = [
+    p0[0] + (b2 * term1[0] + a22 * term2[0]) / denom,
+    p0[1] + (b2 * term1[1] + a22 * term2[1]) / denom,
+    p0[2] + (b2 * term1[2] + a22 * term2[2]) / denom
+  ];
+  const r0 = sub$6(p0, center);
+  const radius = len$4(r0);
+  const u2 = [r0[0] / radius, r0[1] / radius, r0[2] / radius];
+  const v2 = cross$8(normal, u2);
+  const ang = (p3) => {
+    const d2 = sub$6(p3, center);
+    return Math.atan2(dot$7(d2, v2), dot$7(d2, u2));
+  };
+  const tau2 = 2 * Math.PI;
+  const mod = (x2) => (x2 % tau2 + tau2) % tau2;
+  const aMid = mod(ang(p1));
+  const aEnd = mod(ang(p2));
+  const sweep = aMid <= aEnd ? aEnd : aEnd - tau2;
+  return { center, radius, normal, u: u2, v: v2, sweep };
+}
+function residual3D(pts, c2) {
+  const pt2 = (idx2) => {
+    if (typeof idx2 !== "number" || !pts[idx2]) throw new Error("3D constraint requires a valid point index.");
+    return pts[idx2];
+  };
+  const seg = (pair) => {
+    if (!Array.isArray(pair) || pair.length !== 2 || !pts[pair[0]] || !pts[pair[1]])
+      throw new Error("3D constraint requires a valid [start, end] segment.");
+    return [pts[pair[0]], pts[pair[1]]];
+  };
+  switch (c2.kind) {
+    case "fix": {
+      const p2 = pt2(c2.a);
+      if (!c2.point || c2.point.length !== 3 || !c2.point.every(Number.isFinite))
+        throw new Error("3D fix constraint requires a finite [x, y, z] target.");
+      return [p2[0] - c2.point[0], p2[1] - c2.point[1], p2[2] - c2.point[2]];
+    }
+    case "coincident": {
+      const p2 = pt2(c2.a), q = pt2(c2.b);
+      return [p2[0] - q[0], p2[1] - q[1], p2[2] - q[2]];
+    }
+    case "along-axis": {
+      const [p2, q] = seg(c2.a);
+      const d2 = sub$6(q, p2);
+      if (c2.axis === "X") return [d2[1], d2[2]];
+      if (c2.axis === "Y") return [d2[0], d2[2]];
+      if (c2.axis === "Z") return [d2[0], d2[1]];
+      throw new Error("along-axis requires axis X, Y, or Z.");
+    }
+    case "on-plane": {
+      const offset2 = c2.value ?? 0;
+      let idx2;
+      if (c2.plane === "XY") idx2 = 2;
+      else if (c2.plane === "XZ") idx2 = 1;
+      else if (c2.plane === "YZ") idx2 = 0;
+      else throw new Error("on-plane requires plane XY, XZ, or YZ.");
+      if (Array.isArray(c2.a)) return c2.a.map((i2) => pt2(i2)[idx2] - offset2);
+      return [pt2(c2.a)[idx2] - offset2];
+    }
+    case "distance": {
+      const [p2, q] = Array.isArray(c2.a) ? seg(c2.a) : [pt2(c2.a), pt2(c2.b)];
+      if (!Number.isFinite(c2.value) || c2.value <= 0) throw new Error("3D distance must be positive.");
+      return [len$4(sub$6(q, p2)) - c2.value];
+    }
+    case "equal": {
+      const [a0, a1] = seg(c2.a), [b0, b1] = seg(c2.b);
+      return [len$4(sub$6(a1, a0)) - len$4(sub$6(b1, b0))];
+    }
+    case "parallel": {
+      const [a0, a1] = seg(c2.a), [b0, b1] = seg(c2.b);
+      const u2 = sub$6(a1, a0), v2 = sub$6(b1, b0);
+      const s = Math.max(len$4(u2) * len$4(v2), 1e-10);
+      const cr = cross$8(u2, v2);
+      return [cr[0] / s, cr[1] / s, cr[2] / s];
+    }
+    case "perpendicular": {
+      const [a0, a1] = seg(c2.a), [b0, b1] = seg(c2.b);
+      const u2 = sub$6(a1, a0), v2 = sub$6(b1, b0);
+      const s = Math.max(len$4(u2) * len$4(v2), 1e-10);
+      return [dot$7(u2, v2) / s];
+    }
+    case "angle": {
+      const [a0, a1] = seg(c2.a), [b0, b1] = seg(c2.b);
+      if (!Number.isFinite(c2.value) || c2.value < 0 || c2.value > 180)
+        throw new Error("3D angle must be between 0 and 180 degrees.");
+      const u2 = sub$6(a1, a0), v2 = sub$6(b1, b0);
+      const s = Math.max(len$4(u2) * len$4(v2), 1e-10);
+      return [dot$7(u2, v2) / s - Math.cos(c2.value * Math.PI / 180)];
+    }
+    case "radius": {
+      if (!Array.isArray(c2.a) || c2.a.length !== 3) throw new Error("3D radius requires a 3-point arc [i0, i1, i2].");
+      if (!Number.isFinite(c2.value) || c2.value <= 0) throw new Error("3D radius must be positive.");
+      const g2 = arc3dGeometry(pt2(c2.a[0]), pt2(c2.a[1]), pt2(c2.a[2]));
+      return [g2.radius - c2.value];
+    }
+  }
+}
+function solveLinear$1(a2, b) {
+  const n = b.length;
+  for (let i2 = 0; i2 < n; i2++) {
+    let pivot = i2;
+    for (let j = i2 + 1; j < n; j++) if (Math.abs(a2[j][i2]) > Math.abs(a2[pivot][i2])) pivot = j;
+    [a2[i2], a2[pivot]] = [a2[pivot], a2[i2]];
+    [b[i2], b[pivot]] = [b[pivot], b[i2]];
+    const q = a2[i2][i2];
+    if (Math.abs(q) < 1e-18) throw new Error("3D constraint system is singular.");
+    for (let k2 = i2; k2 < n; k2++) a2[i2][k2] /= q;
+    b[i2] /= q;
+    for (let j = 0; j < n; j++) {
+      if (j === i2) continue;
+      const f2 = a2[j][i2];
+      for (let k2 = i2; k2 < n; k2++) a2[j][k2] -= f2 * a2[i2][k2];
+      b[j] -= f2 * b[i2];
+    }
+  }
+  return b;
+}
+function solve3DConstraints(sourcePoints, constraints) {
+  const pts = sourcePoints.map((p2) => [...p2]);
+  if (!constraints.length) return { points: pts, degreesOfFreedom: pts.length * 3, maxResidual: 0 };
+  const residual = () => constraints.flatMap((c2) => residual3D(pts, c2));
+  const norm2 = (r) => r.reduce((s, v2) => s + v2 * v2, 0);
+  const nVars = pts.length * 3;
+  const getVar = (k2) => pts[k2 / 3 | 0][k2 % 3];
+  const setVar = (k2, v2) => {
+    pts[k2 / 3 | 0][k2 % 3] = v2;
+  };
+  let damping = 1e-5;
+  for (let iter = 0; iter < 120; iter++) {
+    const r = residual();
+    if (!r.every(Number.isFinite)) throw new Error("Invalid 3D constraint geometry.");
+    const maxR = Math.max(...r.map(Math.abs), 0);
+    if (maxR < 1e-7) {
+      const rows = computeJacobianRows(pts, residual, nVars, r);
+      const rank = matrixRank(rows);
+      return { points: pts, degreesOfFreedom: Math.max(0, nVars - rank), maxResidual: maxR };
+    }
+    const before = Array.from({ length: nVars }, (_2, k2) => getVar(k2));
+    const cols = [];
+    for (let k2 = 0; k2 < nVars; k2++) {
+      const h = 1e-5 * Math.max(1, Math.abs(before[k2]));
+      setVar(k2, before[k2] + h);
+      const plus = residual();
+      setVar(k2, before[k2]);
+      cols.push(plus.map((p2, i2) => (p2 - r[i2]) / h));
+    }
+    const m2 = r.length;
+    const jjt = Array.from(
+      { length: m2 },
+      (_2, i2) => Array.from({ length: m2 }, (_22, j) => cols.reduce((s, col) => s + col[i2] * col[j], 0) + (i2 === j ? damping : 0))
+    );
+    const step = solveLinear$1(jjt, r.map((v2) => -v2));
+    for (let k2 = 0; k2 < nVars; k2++) {
+      let delta2 = 0;
+      for (let i2 = 0; i2 < m2; i2++) delta2 += cols[k2][i2] * step[i2];
+      setVar(k2, before[k2] + delta2);
+    }
+    if (norm2(residual()) < norm2(r)) damping = Math.max(1e-10, damping * 0.3);
+    else {
+      for (let k2 = 0; k2 < nVars; k2++) setVar(k2, before[k2]);
+      damping *= 10;
+    }
+  }
+  throw new Error("3D sketch constraints conflict or cannot converge.");
+}
+function computeJacobianRows(pts, residual, nVars, r0) {
+  const cols = [];
+  for (let k2 = 0; k2 < nVars; k2++) {
+    const i2 = k2 / 3 | 0, j = k2 % 3;
+    const orig = pts[i2][j], h = 1e-5 * Math.max(1, Math.abs(orig));
+    pts[i2][j] = orig + h;
+    const plus = residual();
+    pts[i2][j] = orig - h;
+    const minus = residual();
+    pts[i2][j] = orig;
+    cols.push(plus.map((p2, idx2) => (p2 - minus[idx2]) / (2 * h)));
+  }
+  return r0.map((_2, row) => cols.map((col) => col[row]));
+}
+function matrixRank(input) {
+  const rows = input.filter((r) => Math.hypot(...r) > 1e-8).map((r) => {
+    const n = Math.hypot(...r);
+    return r.map((x2) => x2 / n);
+  });
+  const width = rows[0]?.length ?? 0;
+  let rank = 0;
+  for (let col = 0; col < width && rank < rows.length; col++) {
+    let pivot = rank;
+    for (let i2 = rank + 1; i2 < rows.length; i2++) if (Math.abs(rows[i2][col]) > Math.abs(rows[pivot][col])) pivot = i2;
+    if (Math.abs(rows[pivot][col]) < 1e-6) continue;
+    [rows[rank], rows[pivot]] = [rows[pivot], rows[rank]];
+    const s = rows[rank][col];
+    for (let k2 = col; k2 < width; k2++) rows[rank][k2] /= s;
+    for (let i2 = rank + 1; i2 < rows.length; i2++) {
+      const f2 = rows[i2][col];
+      for (let k2 = col; k2 < width; k2++) rows[i2][k2] -= f2 * rows[rank][k2];
+    }
+    rank++;
+  }
+  return rank;
+}
 const finite3 = (p2) => Array.isArray(p2) && p2.length === 3 && p2.every((n) => typeof n === "number" && Number.isFinite(n));
 function validateCurve3D(feature3) {
-  if (!["line", "spline", "point"].includes(feature3.kind)) throw new Error("A 3D sketch is lines, a spline or a point.");
+  if (!["line", "arc", "spline", "point"].includes(feature3.kind)) throw new Error("A 3D sketch is lines, an arc, a spline or a point.");
   if (!Array.isArray(feature3.pointsMillimeters) || !feature3.pointsMillimeters.every(finite3)) throw new Error("3D sketch points must be finite [x, y, z] millimetres.");
-  const needed = feature3.kind === "point" ? 1 : 2;
-  if (feature3.pointsMillimeters.length < needed) throw new Error(feature3.kind === "point" ? "A 3D point needs one point." : "A 3D curve needs two or more points.");
+  const needed = feature3.kind === "point" ? 1 : feature3.kind === "arc" ? 3 : 2;
+  if (feature3.pointsMillimeters.length < needed) throw new Error(feature3.kind === "point" ? "A 3D point needs one point." : feature3.kind === "arc" ? "A 3D arc needs exactly three non-collinear points." : "A 3D curve needs two or more points.");
   if (feature3.kind === "point" && feature3.pointsMillimeters.length !== 1) throw new Error("A 3D point is one point; use lines for several.");
+  if (feature3.kind === "arc" && feature3.pointsMillimeters.length !== 3) throw new Error("A 3D arc needs exactly three points [start, through, end].");
   for (let i2 = 1; i2 < feature3.pointsMillimeters.length; i2++) {
     const [a2, b] = [feature3.pointsMillimeters[i2 - 1], feature3.pointsMillimeters[i2]];
     if (Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]) < 1e-6) throw new Error("Consecutive 3D sketch points must be distinct.");
+  }
+  if (feature3.kind === "arc") {
+    arc3dGeometry(feature3.pointsMillimeters[0], feature3.pointsMillimeters[1], feature3.pointsMillimeters[2]);
+  }
+  if (feature3.constraints?.length) {
+    solve3DConstraints(feature3.pointsMillimeters, feature3.constraints);
   }
 }
 function validateBoundaryFill(feature3) {
@@ -6161,67 +7541,6 @@ function validateSplitFace(feature3, earlier, missing) {
   if (!Array.isArray(feature3.faces) || !feature3.faces.length) throw new Error("Pick the faces to split.");
   for (const face of feature3.faces) validateSolidFaceReference(face, earlier, missing, "Face to split");
   validateMirrorPlane(feature3.plane, earlier, missing, "Split face plane");
-}
-const sheetMetalFeatureTypes = ["sheet-base", "sheet-flange", "sheet-hem", "sheet-fold", "sheet-unfold", "sheet-refold", "sheet-perforate"];
-const bendAllowanceMillimeters = (angleDegrees, innerRadius, rule) => angleDegrees * Math.PI / 180 * (innerRadius + rule.kFactor * rule.thicknessMillimeters);
-const finite$1 = (v2) => typeof v2 === "number" && Number.isFinite(v2);
-function validateSheetMetalRule(rule, what) {
-  if (!finite$1(rule.thicknessMillimeters) || rule.thicknessMillimeters <= 0) throw new Error(`${what} needs a positive thickness.`);
-  if (!finite$1(rule.bendRadiusMillimeters) || rule.bendRadiusMillimeters <= 0) throw new Error(`${what} needs a positive bend radius.`);
-  if (!finite$1(rule.kFactor) || rule.kFactor <= 0 || rule.kFactor > 1) throw new Error(`${what} needs a K factor between 0 and 1.`);
-}
-const oneBody = (ids2, what) => {
-  if (!Array.isArray(ids2) || ids2.length !== 1 || typeof ids2[0] !== "string") throw new Error(`${what} needs one sheet metal body.`);
-};
-const pickedEdges = (edges, what, earlier, missing) => {
-  if (!Array.isArray(edges) || !edges.length) throw new Error(`${what} needs picked edges.`);
-  for (const edge of edges) validateEdgeFinishEdge(edge, earlier, missing);
-};
-function validateSheetMetalFeature(feature3, earlier, missing) {
-  const missingId = missing;
-  switch (feature3.type) {
-    case "sheet-base":
-      if (typeof feature3.profileFeatureId !== "string" || !["profile", "sketch"].includes(earlier.get(feature3.profileFeatureId) ?? "")) throw new Error("Sheet metal base needs an earlier sketch.");
-      validateSheetMetalRule(feature3, "Sheet metal base");
-      return;
-    case "sheet-flange":
-      oneBody(feature3.bodyIds, "Flange");
-      pickedEdges(feature3.edges, "Flange", earlier, missingId);
-      if (!finite$1(feature3.distanceMillimeters) || feature3.distanceMillimeters <= 0) throw new Error("Flange needs a positive length.");
-      if (!finite$1(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 180) throw new Error("Flange angle must be between 0 and 180 degrees.");
-      if (feature3.bendRadiusMillimeters !== void 0 && !(finite$1(feature3.bendRadiusMillimeters) && feature3.bendRadiusMillimeters > 0)) throw new Error("Flange bend radius must be positive.");
-      return;
-    case "sheet-hem":
-      oneBody(feature3.bodyIds, "Hem");
-      pickedEdges(feature3.edges, "Hem", earlier, missingId);
-      if (!finite$1(feature3.lengthMillimeters) || feature3.lengthMillimeters <= 0) throw new Error("Hem needs a positive length.");
-      if (feature3.gapMillimeters !== void 0 && !(finite$1(feature3.gapMillimeters) && feature3.gapMillimeters > 0)) throw new Error("Hem gap must be positive.");
-      return;
-    case "sheet-fold":
-      oneBody(feature3.bodyIds, "Fold");
-      if (!feature3.line || feature3.line.kind !== "sketch-line" || typeof feature3.line.sourceFeatureId !== "string" || !missing(feature3.line.sourceFeatureId) && !["profile", "sketch"].includes(earlier.get(feature3.line.sourceFeatureId) ?? "")) throw new Error("Fold needs a sketch line on the sheet.");
-      if (!finite$1(feature3.angleDegrees) || feature3.angleDegrees <= 0 || feature3.angleDegrees > 180) throw new Error("Fold angle must be between 0 and 180 degrees.");
-      if (feature3.bendRadiusMillimeters !== void 0 && !(finite$1(feature3.bendRadiusMillimeters) && feature3.bendRadiusMillimeters > 0)) throw new Error("Fold bend radius must be positive.");
-      return;
-    case "sheet-unfold":
-      oneBody(feature3.bodyIds, "Unfold");
-      return;
-    case "sheet-refold":
-      oneBody(feature3.bodyIds, "Refold");
-      return;
-    case "sheet-perforate":
-      validateSheetPerforate(feature3);
-      return;
-  }
-}
-function validateSheetPerforate(feature3) {
-  oneBody(feature3.bodyIds, "Perforate");
-  if (!feature3.face || typeof feature3.face.sourceFeatureId !== "string") throw new Error("Perforate needs a picked face.");
-  if (feature3.face.surfaceType) throw new Error("Perforate goes on a planar face.");
-  if (!finite$1(feature3.diameterMillimeters) || feature3.diameterMillimeters <= 0) throw new Error("Perforate needs a positive hole diameter.");
-  if (!finite$1(feature3.pitchMillimeters) || feature3.pitchMillimeters <= feature3.diameterMillimeters) throw new Error("The pitch must be larger than the hole diameter.");
-  if (feature3.marginMillimeters !== void 0 && !(finite$1(feature3.marginMillimeters) && feature3.marginMillimeters >= 0)) throw new Error("The margin must be zero or more.");
-  if (feature3.pattern !== void 0 && feature3.pattern !== "staggered" && feature3.pattern !== "square") throw new Error("Perforate pattern is staggered or square.");
 }
 function validateRemoveBody(feature3) {
   if (!Array.isArray(feature3.bodyIds) || !feature3.bodyIds.length || !feature3.bodyIds.every((id2) => typeof id2 === "string" && id2.trim())) throw Error("Choose the parts to remove.");
@@ -6239,12 +7558,22 @@ function validateBoss(feature3, earlier, missing) {
   if (!pos(feature3.diameterMillimeters) || !pos(feature3.heightMillimeters)) throw Error("Boss diameter and height must be positive.");
   if (feature3.holeDiameterMillimeters === void 0 !== (feature3.holeDepthMillimeters === void 0)) throw Error("A boss hole needs a diameter and a depth.");
   if (feature3.holeDiameterMillimeters !== void 0 && (!pos(feature3.holeDiameterMillimeters) || feature3.holeDiameterMillimeters >= feature3.diameterMillimeters || !pos(feature3.holeDepthMillimeters))) throw Error("Boss hole must be positive and narrower than the boss.");
+  if (feature3.ribs !== void 0) {
+    const r = feature3.ribs;
+    if (!Number.isInteger(r.count) || r.count < 2 || r.count > 12) throw Error("Boss ribs count must be an integer between 2 and 12.");
+    if (!pos(r.thicknessMillimeters) || !pos(r.lengthMillimeters)) throw Error("Boss rib thickness and length must be positive.");
+    if (r.heightMillimeters !== void 0 && (!pos(r.heightMillimeters) || r.heightMillimeters > feature3.heightMillimeters)) throw Error("Boss rib height must be positive and not exceed the boss height.");
+  }
 }
 function validateRest(feature3, earlier, missing) {
   validateOnFace(feature3, earlier, missing, "Rest");
   if (!pos(feature3.widthMillimeters) || !pos(feature3.heightMillimeters)) throw Error("Rest width and height must be positive.");
   if (feature3.lengthMillimeters !== void 0 && !pos(feature3.lengthMillimeters)) throw Error("Rest length must be positive.");
   if (feature3.alongMillimeters !== void 0 && !(Array.isArray(feature3.alongMillimeters) && feature3.alongMillimeters.length === 3 && feature3.alongMillimeters.every(Number.isFinite) && Math.hypot(...feature3.alongMillimeters) > 1e-9)) throw Error("Rest direction must be a nonzero vector.");
+  if (feature3.wallThicknessMillimeters !== void 0) {
+    const minSpan = feature3.lengthMillimeters !== void 0 ? Math.min(feature3.widthMillimeters, feature3.lengthMillimeters) : feature3.widthMillimeters;
+    if (!pos(feature3.wallThicknessMillimeters) || feature3.wallThicknessMillimeters * 2 >= minSpan) throw Error("Rest wall thickness must be positive and less than half the pad width.");
+  }
 }
 function validateLip(feature3, earlier, missing) {
   if (typeof feature3.targetBodyId !== "string") throw Error("Lip needs a target part.");
@@ -6260,6 +7589,7 @@ function validateSnapFit(feature3, earlier, missing) {
   if (!Array.isArray(h) || h.length !== 3 || !h.every(Number.isFinite) || Math.hypot(...h) < 1e-9) throw Error("Snap fit needs a hook direction.");
   if (![feature3.lengthMillimeters, feature3.thicknessMillimeters, feature3.widthMillimeters, feature3.catchDepthMillimeters, feature3.catchLengthMillimeters].every(pos)) throw Error("Snap fit sizes must be positive.");
   if (feature3.catchLengthMillimeters >= feature3.lengthMillimeters) throw Error("The catch must be shorter than the arm.");
+  if (feature3.baseHeightMillimeters !== void 0 && (!pos(feature3.baseHeightMillimeters) || feature3.baseHeightMillimeters >= feature3.lengthMillimeters - feature3.catchLengthMillimeters)) throw Error("Snap fit base height must be positive and shorter than the arm below the catch.");
 }
 function validateBoolean(feature3) {
   if (!["union", "cut", "intersection"].includes(feature3.operation))
@@ -6334,6 +7664,14 @@ function validateLoft(feature3, earlier, missing) {
   if (feature3.path !== void 0) {
     if (typeof feature3.path.pathFeatureId !== "string" || !missing(feature3.path.pathFeatureId) && !["sketch", "profile", "curve3d"].includes(earlier.get(feature3.path.pathFeatureId) ?? "")) throw new Error("Loft path needs a curve of an earlier sketch.");
     if (apexes.length || feature3.ruled) throw new Error("A loft along a path takes closed sections only, smooth, without an apex.");
+  }
+  if (feature3.guideRails !== void 0) {
+    if (!Array.isArray(feature3.guideRails) || !feature3.guideRails.length) throw new Error("Loft guide rails must be a non-empty list of curve references.");
+    for (const rail of feature3.guideRails) {
+      if (!rail || typeof rail.pathFeatureId !== "string" || !missing(rail.pathFeatureId) && !["sketch", "profile", "curve3d"].includes(earlier.get(rail.pathFeatureId) ?? "")) {
+        throw new Error("Each loft guide rail needs an earlier sketch or 3D curve.");
+      }
+    }
   }
   if (feature3.connections !== void 0) {
     if (!Array.isArray(feature3.connections) || !feature3.connections.length) throw new Error("Loft connections need at least one set of points.");
@@ -6416,6 +7754,12 @@ function constructionPlaneFrame(plane2, earlier = []) {
 const revolveEndTypes = ["blind", "up-to-next", "up-to-face", "up-to-part", "up-to-vertex"];
 const isShellFaceReference = (face) => "sourceFeatureId" in face;
 function validateSolidFeature(feature3, earlier, missingReference = () => false) {
+  if (feature3.type === "primitive") return validatePrimitive(feature3);
+  if (feature3.type === "emboss") return validateEmboss(feature3, earlier, missingReference);
+  if (feature3.type === "frame-member") return validateFrameMember(feature3, earlier, missingReference);
+  if (feature3.type === "frame-end-cap") return validateFrameEndCap(feature3, earlier, missingReference);
+  if (feature3.type === "frame-trim") return validateFrameTrim(feature3, earlier, missingReference);
+  if (feature3.type === "frame-gusset") return validateFrameGusset(feature3);
   if (feature3.type === "transform") return validateTransform(feature3, earlier, missingReference);
   if (feature3.type === "split") return validateSplit(feature3, earlier, missingReference);
   if (feature3.type === "pipe") return validatePipe(feature3, earlier, missingReference);
@@ -6628,6 +7972,14 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     if (feature3.type === "fillet") {
       if (feature3.endRadiusMillimeters !== void 0) positive(feature3.endRadiusMillimeters, "Fillet end size");
       if (feature3.measurement !== void 0 && !["radius", "width"].includes(feature3.measurement)) throw new Error("Fillet measurement must be radius or width.");
+      if (feature3.continuity !== void 0 && !["g1", "g2"].includes(feature3.continuity)) throw new Error("Fillet continuity must be g1 or g2.");
+      if (feature3.setbacks !== void 0) {
+        if (!Array.isArray(feature3.setbacks)) throw new Error("Fillet setbacks must be a list of vertex distances.");
+        for (const s of feature3.setbacks) {
+          if (!s || !Array.isArray(s.vertexMillimeters) || s.vertexMillimeters.length !== 3 || !s.vertexMillimeters.every(Number.isFinite)) throw new Error("Fillet setback needs a finite 3D vertex position.");
+          positive(s.distanceMillimeters, "Fillet setback distance");
+        }
+      }
       if (feature3.points !== void 0) {
         if (!Array.isArray(feature3.points) || !feature3.points.length || !feature3.edges) throw new Error("Points on the edge need picked edges and at least one point.");
         for (const point2 of feature3.points) {
@@ -6651,7 +8003,52 @@ function validateSolidFeature(feature3, earlier, missingReference = () => false)
     }
   } else throw new Error("Unsupported solid feature.");
 }
-function editDrawingDimension(source, id2, value2) {
+function scaleDrawingUniformly(d2, factor, origin2) {
+  const scalePt = (p2) => {
+    p2[0] = origin2[0] + (p2[0] - origin2[0]) * factor;
+    p2[1] = origin2[1] + (p2[1] - origin2[1]) * factor;
+  };
+  for (const c2 of d2.contours) {
+    if (c2.type === "circle") {
+      scalePt(c2.center);
+      c2.radius *= factor;
+    } else {
+      scalePt(c2.start);
+      for (const s of c2.segments) {
+        scalePt(s.end);
+        if (s.type === "arc") scalePt(s.middle);
+        if (s.type === "bezier") s.controls.forEach(scalePt);
+        if (s.type === "conic") scalePt(s.control);
+        if (s.type === "ellipse") {
+          s.radiusX *= factor;
+          s.radiusY *= factor;
+        }
+      }
+    }
+  }
+}
+function sketchPivot(d2) {
+  const fixed = d2.constraints?.find((c2) => c2.kind === "fix" && c2.point);
+  if (fixed?.point) return [...fixed.point];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const visit = (p2) => {
+    if (p2[0] < minX) minX = p2[0];
+    if (p2[0] > maxX) maxX = p2[0];
+    if (p2[1] < minY) minY = p2[1];
+    if (p2[1] > maxY) maxY = p2[1];
+  };
+  for (const c2 of d2.contours) {
+    if (c2.type === "circle") {
+      visit([c2.center[0] - c2.radius, c2.center[1] - c2.radius]);
+      visit([c2.center[0] + c2.radius, c2.center[1] + c2.radius]);
+    } else {
+      visit(c2.start);
+      for (const s of c2.segments) visit(s.end);
+    }
+  }
+  return Number.isFinite(minX) ? [(minX + maxX) / 2, (minY + maxY) / 2] : [0, 0];
+}
+function editDrawingDimension(source, id2, value2, options = {}) {
   const next = structuredClone(source), constraint = next.constraints?.find((c2) => c2.id === id2);
   if (!constraint) throw new Error("Select an existing dimension.");
   if (!Number.isFinite(value2))
@@ -6661,7 +8058,24 @@ function editDrawingDimension(source, id2, value2) {
     throw Error(
       "Edit or remove the dimension formula before entering a numeric value."
     );
-  driver.value = (value2 - offset2) / sign;
+  const newDriverValue = (value2 - offset2) / sign;
+  if (options.autoScaleFirst && dimensionUnit(driver) === "length" && newDriverValue > 0) {
+    const drivingLengths = (next.constraints ?? []).filter((c2) => !c2.reference && dimensionUnit(c2) === "length");
+    if (drivingLengths.length === 1 && drivingLengths[0].id === driver.id) {
+      let current2 = driver.value ?? 0;
+      try {
+        current2 = Math.abs(measuredDimensionValue(next, { ...driver, reference: true, value: void 0, valueExpression: void 0 }));
+      } catch {
+      }
+      if (current2 > 1e-6) {
+        const factor = newDriverValue / current2;
+        if (Number.isFinite(factor) && factor > 1e-4 && factor < 1e4) {
+          scaleDrawingUniformly(next, factor, sketchPivot(next));
+        }
+      }
+    }
+  }
+  driver.value = newDriverValue;
   const solved = solveDrawingConstraints(next);
   validateSketchDrawing(solved);
   return solved;
@@ -7066,6 +8480,314 @@ function classifySketchContourPoint(contour, point2) {
   }
   return "ambiguous";
 }
+function diagnosticResiduals(drawing, constraint) {
+  if (constraint.fixedGeometry !== void 0) return fixedGeometryDiagnosticResiduals(drawing, constraint);
+  const residual = constraintResiduals(drawing, constraint);
+  return constraint.kind === "quadrant" ? residual.slice(0, 2) : residual;
+}
+function diagnosticRank(input) {
+  const rows = input.filter((row) => Math.hypot(...row) > 1e-8).map((row) => {
+    const n = Math.hypot(...row);
+    return row.map((x2) => x2 / n);
+  });
+  const width = rows[0]?.length ?? 0;
+  let rank = 0;
+  for (let col = 0; col < width && rank < rows.length; col++) {
+    let pivot = rank;
+    for (let i2 = rank + 1; i2 < rows.length; i2++)
+      if (Math.abs(rows[i2][col]) > Math.abs(rows[pivot][col])) pivot = i2;
+    if (Math.abs(rows[pivot][col]) < 1e-7) continue;
+    [rows[rank], rows[pivot]] = [rows[pivot], rows[rank]];
+    const scale2 = rows[rank][col];
+    for (let k2 = col; k2 < width; k2++) rows[rank][k2] /= scale2;
+    for (let i2 = rank + 1; i2 < rows.length; i2++) {
+      const f2 = rows[i2][col];
+      for (let k2 = col; k2 < width; k2++) rows[i2][k2] -= f2 * rows[rank][k2];
+    }
+    rank++;
+  }
+  return rank;
+}
+function classifyConstraintRows(rows) {
+  const basis2 = [];
+  const redundantSet = /* @__PURE__ */ new Set();
+  const determinedBy = {};
+  for (const row of rows) {
+    const rawNorm = Math.hypot(...row.values);
+    if (rawNorm <= 1e-8) continue;
+    const v2 = row.values.map((x2) => x2 / rawNorm);
+    const contributors = /* @__PURE__ */ new Set();
+    for (let pass = 0; pass < 2; pass++) {
+      for (const b of basis2) {
+        let dot2 = 0;
+        for (let k2 = 0; k2 < v2.length; k2++) dot2 += v2[k2] * b.vec[k2];
+        if (Math.abs(dot2) > 1e-7) {
+          contributors.add(b.id);
+          for (const d2 of b.deps) contributors.add(d2);
+          for (let k2 = 0; k2 < v2.length; k2++) v2[k2] -= dot2 * b.vec[k2];
+        }
+      }
+    }
+    const remNorm = Math.hypot(...v2);
+    if (remNorm < 1e-6) {
+      redundantSet.add(row.id);
+      const prev = new Set(determinedBy[row.id] ?? []);
+      for (const id2 of contributors) if (id2 !== row.id) prev.add(id2);
+      determinedBy[row.id] = [...prev];
+    } else {
+      for (let k2 = 0; k2 < v2.length; k2++) v2[k2] /= remNorm;
+      basis2.push({ id: row.id, vec: v2, deps: contributors });
+    }
+  }
+  return { rank: basis2.length, redundantIds: [...redundantSet], determinedBy };
+}
+function entityObservables(d2, ref) {
+  const contour = referencedContour(d2, ref);
+  ref = resolveSegmentReference(contour, ref);
+  const e = resolve$1(d2, ref);
+  if (e.point) return [...e.point];
+  if (e.line) return e.line.flat();
+  if (e.arc) {
+    const c2 = contour;
+    if (c2?.type !== "path") throw Error("Missing arc.");
+    return [
+      ...ref.index === 0 ? c2.start : c2.segments[ref.index - 1].end,
+      ...c2.segments[ref.index].end,
+      ...e.arc.center,
+      e.arc.radius
+    ];
+  }
+  if (e.circle) return [...e.circle.center, e.circle.radius];
+  if (e.ellipse) {
+    const c2 = contour;
+    if (c2?.type !== "path") throw Error("Missing ellipse.");
+    return [
+      ...ref.index === 0 ? c2.start : c2.segments[ref.index - 1].end,
+      ...c2.segments[ref.index].end,
+      ...e.ellipse.center,
+      e.ellipse.radiusX,
+      e.ellipse.radiusY,
+      e.ellipse.rotation
+    ];
+  }
+  if (e.curve) return [...e.curve.point, ...e.curve.first, ...e.curve.second];
+  if (e.contour)
+    return diagnosticCoordinates({
+      contours: [structuredClone(e.contour)]
+    }).map((v2) => v2.get());
+  throw Error("Unsupported entity for constraint analysis.");
+}
+function sketchConstraintState(source, entity) {
+  return sketchConstraintStates(source, [entity])[0];
+}
+function sketchConstraintStates(source, entities) {
+  const common2 = (state) => entities.map(() => ({ ...state }));
+  const base = {
+    degreesOfFreedom: null,
+    redundantEquations: 0,
+    conflictingConstraints: []
+  };
+  try {
+    if (!source.contours.length && entities.every((entity) => !entity))
+      return common2({ ...base, state: "empty", degreesOfFreedom: 0 });
+    const d2 = structuredClone(source), linkedEllipses = ellipseLocusCoordinates(d2), textGroups = textSimilarityCoordinates(d2), geometry = [
+      ...linkedEllipses.coordinates,
+      ...textGroups.coordinates,
+      ...diagnosticCoordinates(d2, /* @__PURE__ */ new Set([...linkedEllipses.covered, ...textGroups.covered]))
+    ], vars = [...geometry, ...contactParameterCoordinates(d2)], constraints = d2.constraints ?? [];
+    if (vars.length > 2048)
+      throw new Error(
+        "Constraint-state analysis supports up to 2048 geometric coordinates."
+      );
+    const conflicts = constraints.filter(
+      (c2) => constraintResiduals(d2, c2).some(
+        (v2) => !Number.isFinite(v2) || Math.abs(v2) > 1e-6
+      )
+    ).map((c2) => c2.id);
+    if (conflicts.length) {
+      try {
+        return sketchConstraintStates(solveDrawingConstraints(d2), entities);
+      } catch {
+        return common2({
+          ...base,
+          state: "over-constrained",
+          conflictingConstraints: conflicts,
+          message: "The solver cannot satisfy these constraints."
+        });
+      }
+    }
+    const intrinsic = constraints.filter(
+      (c2) => c2.kind === "ellipse-locus" && !c2.reference && linkedEllipses.covered.has(c2.a.contour) && c2.b?.contour === c2.a.contour
+    );
+    const intrinsicSet = new Set(intrinsic);
+    const activeConstraints = constraints.filter((c2) => !intrinsicSet.has(c2));
+    let intrinsicRedundancy = 0;
+    for (const contour of linkedEllipses.covered) {
+      const path = d2.contours[contour];
+      if (path.type === "path")
+        intrinsicRedundancy += 5 * Math.max(
+          0,
+          intrinsic.filter((c2) => c2.a.contour === contour).length - (path.segments.length - 1)
+        );
+    }
+    const lengths2 = entities.map(
+      (entity) => entity ? entityObservables(d2, entity).length : 0
+    );
+    const constraintRowIds = [];
+    for (const c2 of activeConstraints) {
+      const count = diagnosticResiduals(d2, c2).length;
+      for (let k2 = 0; k2 < count; k2++) constraintRowIds.push(c2.id);
+    }
+    const equationCount = constraintRowIds.length, residual = () => [
+      ...activeConstraints.flatMap((c2) => diagnosticResiduals(d2, c2)),
+      ...entities.flatMap(
+        (entity) => entity ? entityObservables(d2, entity) : []
+      )
+    ], r = residual();
+    const columns = vars.map((v2) => {
+      const value2 = v2.get(), h = 1e-5 * Math.max(1, Math.abs(value2));
+      v2.set(value2 + h);
+      const plus = residual();
+      v2.set(value2 - h);
+      const minus = residual();
+      v2.set(value2);
+      return plus.map((x2, i2) => (x2 - minus[i2]) / (2 * h));
+    });
+    const rows = r.map((_2, i2) => columns.map((col) => col[i2]));
+    const constraintRows = rows.slice(0, equationCount);
+    const rank = diagnosticRank(constraintRows);
+    const classification = classifyConstraintRows(
+      constraintRows.map((values2, i2) => ({ id: constraintRowIds[i2], values: values2 }))
+    );
+    const redundant = intrinsicRedundancy + constraintRows.filter((row) => Math.hypot(...row) > 1e-8).length - rank;
+    let offset2 = equationCount;
+    return entities.map((entity, index2) => {
+      const selectedRows = rows.slice(offset2, offset2 + lengths2[index2]);
+      offset2 += lengths2[index2];
+      const dof = entity ? diagnosticRank([...constraintRows, ...selectedRows]) - rank : geometry.length - rank + diagnosticRank(
+        constraintRows.map((row) => row.slice(geometry.length))
+      );
+      return {
+        ...base,
+        state: !entity && !source.contours.length ? "empty" : redundant ? "over-constrained" : dof ? "under-constrained" : "fully-constrained",
+        degreesOfFreedom: dof,
+        redundantEquations: redundant,
+        ...classification.redundantIds.length ? {
+          redundantConstraints: classification.redundantIds,
+          determinedBy: classification.determinedBy
+        } : {}
+      };
+    });
+  } catch (error2) {
+    return common2({
+      ...base,
+      state: "invalid",
+      message: error2.message
+    });
+  }
+}
+function appendOffsetRelations(source, next, unique2, distance2) {
+  let driver;
+  unique2.forEach((index2, position) => {
+    const contour = source.contours[index2];
+    const kind = contour.type === "circle" ? "circle" : contour.segments.length === 1 && (contour.segments[0].type === "line" || contour.segments[0].type === "arc") ? contour.segments[0].type : contour.segments.length > 1 && contour.segments.every(
+      (s) => s.type === "line" || s.type === "arc"
+    ) ? "contour" : void 0;
+    if (!kind) return;
+    const id2 = appendOffsetRelation(
+      next,
+      {
+        contour: index2,
+        kind,
+        ...kind !== "circle" && kind !== "contour" ? { index: 0 } : {}
+      },
+      {
+        contour: source.contours.length + position,
+        kind,
+        ...kind !== "circle" && kind !== "contour" ? { index: 0 } : {}
+      },
+      distance2,
+      driver
+    );
+    driver ??= id2;
+  });
+}
+function appendOffsetRelation(next, a2, b, distance2, driver) {
+  for (const key2 of ["a", "b"]) {
+    const ref = key2 === "a" ? a2 : b, contour = next.contours[ref.contour];
+    if (!contour) continue;
+    const captured = identifySegmentReference(
+      contour,
+      resolveSegmentReference(contour, ref)
+    );
+    if (key2 === "a") a2 = captured;
+    else b = captured;
+  }
+  const used = new Set(next.constraints?.map((c2) => c2.id));
+  let n = 1;
+  while (used.has(`offset-${n}`)) n++;
+  const id2 = `offset-${n}`;
+  (next.constraints ??= []).push({
+    id: id2,
+    kind: "offset",
+    a: a2,
+    b,
+    ...driver ? { valueFrom: driver } : { value: distance2 }
+  });
+  return id2;
+}
+function offsetSketch(source, indices, distance2) {
+  if (!indices.length) throw Error("Select contours to offset.");
+  const unique2 = [...new Set(indices)];
+  if (unique2.some((i2) => !Number.isInteger(i2) || !source.contours[i2]))
+    throw Error("Invalid offset contour.");
+  const next = structuredClone(source);
+  next.contours.push(
+    ...unique2.map((i2) => offsetSketchContour(source.contours[i2], distance2))
+  );
+  appendOffsetRelations(source, next, unique2, distance2);
+  validateSketchDrawing(next);
+  return next;
+}
+function offsetSketchAdvanced(source, indices, options) {
+  const { distance: distance2, symmetric = false, distance2: distance22, instances = 1 } = options;
+  if (!Number.isFinite(distance2) || Math.abs(distance2) < 1e-8)
+    throw new Error("Offset distance must be finite and nonzero.");
+  if (!Number.isInteger(instances) || instances < 1 || instances > 100)
+    throw new Error("Offset instances must be an integer between 1 and 100.");
+  let current2 = structuredClone(source);
+  for (let step = 1; step <= instances; step++) {
+    current2 = offsetSketch(current2, indices, distance2 * step);
+    if (symmetric) {
+      current2 = offsetSketch(current2, indices, -distance2 * step);
+    }
+  }
+  if (distance22 !== void 0 && !symmetric) {
+    if (!Number.isFinite(distance22) || Math.abs(distance22) < 1e-8)
+      throw new Error("Second offset distance must be finite and nonzero.");
+    for (let step = 1; step <= instances; step++) {
+      current2 = offsetSketch(current2, indices, -Math.abs(distance22) * Math.sign(distance2) * step);
+    }
+  }
+  return current2;
+}
+function breakOffsetAssociation(source, contourIndices) {
+  const next = structuredClone(source);
+  if (!next.constraints?.length) return { drawing: next, brokenCount: 0 };
+  const filterSet = contourIndices?.length ? new Set(contourIndices) : void 0;
+  let brokenCount = 0;
+  next.constraints = next.constraints.filter((c2) => {
+    if (c2.kind !== "offset") return true;
+    const matches = !filterSet || filterSet.has(c2.a.contour) || c2.b !== void 0 && filterSet.has(c2.b.contour);
+    if (matches) {
+      brokenCount++;
+      return false;
+    }
+    return true;
+  });
+  validateSketchDrawing(next);
+  return { drawing: next, brokenCount };
+}
 function curves(c2) {
   if (c2.type === "circle") return circleSegments(c2.center, c2.radius);
   return c2.segments.map((segment, i2) => ({
@@ -7166,6 +8888,155 @@ function sketchRegionOrder(contours) {
     (a2, b) => depths ? depths[a2] - depths[b] : Number(Boolean(contours[a2].hole)) - Number(Boolean(contours[b].hole))
   );
 }
+function regenerateDimensionExpressions(source, variables) {
+  validateSketchDrawing(source);
+  const next = structuredClone(source);
+  for (const constraint of next.constraints ?? []) {
+    if (constraint.valueExpression !== void 0)
+      constraint.value = resolveDimensionExpression(
+        constraint,
+        constraint.valueExpression,
+        variables
+      );
+  }
+  const solved = solveDrawingConstraints(next);
+  validateSketchDrawing(solved);
+  return solved;
+}
+const SCALED_DIMENSION_KINDS = /* @__PURE__ */ new Set([
+  "distance",
+  "horizontal-distance",
+  "vertical-distance",
+  "length",
+  "radius",
+  "diameter",
+  "arc-length",
+  "linear-diameter",
+  "point-circle-distance",
+  "line-circle-distance",
+  "circle-circle-distance",
+  "slot-overall-length",
+  "offset"
+]);
+function constraintContours(c2) {
+  const out = [c2.a.contour];
+  if (c2.b) out.push(c2.b.contour);
+  if (c2.axis) out.push(c2.axis.contour);
+  return out;
+}
+function rotateSketchContours(drawing, selection, center, angleDegrees, options) {
+  validateSketchDrawing(drawing);
+  if (!Number.isFinite(angleDegrees)) throw new Error("Rotation angle must be finite.");
+  const indices = selectedContours(drawing, selection);
+  const selSet = new Set(indices);
+  const rad = angleDegrees * Math.PI / 180;
+  const xform = similarityTransform(center, center, rad, 1);
+  const next = structuredClone(drawing);
+  for (const i2 of indices) next.contours[i2] = transformContour(drawing.contours[i2], xform);
+  const mod180 = (angleDegrees % 180 + 180) % 180;
+  const isParallelTurn = Math.abs(mod180) < 1e-4 || Math.abs(mod180 - 180) < 1e-4;
+  const isQuarterTurn = Math.abs(mod180 - 90) < 1e-4;
+  let adaptedConstraints = 0;
+  let droppedConstraints = 0;
+  if (next.constraints?.length) {
+    const kept = [];
+    for (const c2 of next.constraints) {
+      const refs = constraintContours(c2);
+      const touchesSel = refs.some((idx2) => selSet.has(idx2));
+      if (!touchesSel) {
+        kept.push(c2);
+        continue;
+      }
+      const allSel = refs.every((idx2) => selSet.has(idx2));
+      if (c2.kind === "fix" && allSel) {
+        if (options?.adaptFixed && c2.point) {
+          kept.push({ ...c2, point: transformPoint(c2.point, xform) });
+          adaptedConstraints++;
+        } else {
+          droppedConstraints++;
+        }
+        continue;
+      }
+      if ((c2.kind === "horizontal" || c2.kind === "vertical" || c2.kind === "horizontal-distance" || c2.kind === "vertical-distance") && allSel) {
+        if (isParallelTurn) {
+          kept.push(c2);
+        } else if (isQuarterTurn) {
+          const swapped = c2.kind === "horizontal" ? "vertical" : c2.kind === "vertical" ? "horizontal" : c2.kind === "horizontal-distance" ? "vertical-distance" : "horizontal-distance";
+          kept.push({ ...c2, kind: swapped });
+          adaptedConstraints++;
+        } else {
+          droppedConstraints++;
+        }
+        continue;
+      }
+      if (c2.kind === "line-angle" && allSel && c2.value !== void 0) {
+        const nextAngle = ((c2.value + angleDegrees) % 360 + 360) % 360;
+        const copy = { ...c2, value: nextAngle };
+        delete copy.valueExpression;
+        kept.push(copy);
+        adaptedConstraints++;
+        continue;
+      }
+      const res = constraintResiduals(next, c2);
+      if (res.every((r) => Number.isFinite(r) && Math.abs(r) < 1e-4)) {
+        kept.push(c2);
+      } else {
+        droppedConstraints++;
+      }
+    }
+    next.constraints = kept;
+  }
+  validateSketchDrawing(next);
+  return { drawing: next, adaptedConstraints, droppedConstraints };
+}
+function scaleSketchContours(drawing, selection, center, factor, options) {
+  validateSketchDrawing(drawing);
+  if (!Number.isFinite(factor) || factor <= 0 || factor > 1e5)
+    throw new Error("Scale factor must be finite and greater than zero.");
+  const indices = selectedContours(drawing, selection);
+  const selSet = new Set(indices);
+  const xform = similarityTransform(center, center, 0, factor);
+  const next = structuredClone(drawing);
+  for (const i2 of indices) next.contours[i2] = transformContour(drawing.contours[i2], xform);
+  let scaledDimensions = 0;
+  let droppedConstraints = 0;
+  if (next.constraints?.length) {
+    const kept = [];
+    for (const c2 of next.constraints) {
+      const refs = constraintContours(c2);
+      const touchesSel = refs.some((idx2) => selSet.has(idx2));
+      if (!touchesSel) {
+        kept.push(c2);
+        continue;
+      }
+      const allSel = refs.every((idx2) => selSet.has(idx2));
+      if (c2.kind === "fix" && allSel) {
+        if (options?.adaptFixed && c2.point) {
+          kept.push({ ...c2, point: transformPoint(c2.point, xform) });
+        } else {
+          droppedConstraints++;
+        }
+        continue;
+      }
+      if (allSel && SCALED_DIMENSION_KINDS.has(c2.kind) && c2.value !== void 0) {
+        const scaled2 = { ...c2, value: c2.value * factor };
+        delete scaled2.valueExpression;
+        kept.push(scaled2);
+        scaledDimensions++;
+        continue;
+      }
+      const res = constraintResiduals(next, c2);
+      if (res.every((r) => Number.isFinite(r) && Math.abs(r) < 1e-4)) {
+        kept.push(c2);
+      } else {
+        droppedConstraints++;
+      }
+    }
+    next.constraints = kept;
+  }
+  validateSketchDrawing(next);
+  return { drawing: next, scaledDimensions, droppedConstraints };
+}
 const TAU = Math.PI * 2;
 function ellipsePoints(start, segment, steps2) {
   const phi = segment.rotationDegrees * Math.PI / 180;
@@ -7246,6 +9117,403 @@ function sketchContourPolyline(contour, arcSteps = 24) {
   }
   return points;
 }
+function collectOpenEnds(drawing) {
+  const ends = [];
+  drawing.contours.forEach((contour, index2) => {
+    if (contour.type !== "path" || contour.construction || contourClosed(contour) || !contour.segments.length) return;
+    ends.push({ ref: { contour: index2, kind: "point", index: 0 }, at: contour.start });
+    ends.push({
+      ref: { contour: index2, kind: "point", index: contour.segments.length },
+      at: contour.segments[contour.segments.length - 1].end
+    });
+  });
+  return ends;
+}
+function refKey(r) {
+  return `${r.contour}:${r.index}`;
+}
+function tiedPairKeys(drawing) {
+  const tiedEndpoints = /* @__PURE__ */ new Set();
+  const pairs = /* @__PURE__ */ new Set();
+  for (const c2 of drawing.constraints ?? []) {
+    if (c2.kind === "coincident" && c2.b && c2.a.kind === "point" && c2.b.kind === "point") {
+      const ka = refKey(c2.a), kb = refKey(c2.b);
+      tiedEndpoints.add(ka);
+      tiedEndpoints.add(kb);
+      pairs.add(ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`);
+    } else if (c2.kind === "coincident" && c2.b) {
+      if (c2.a.kind === "point") tiedEndpoints.add(refKey(c2.a));
+      if (c2.b.kind === "point") tiedEndpoints.add(refKey(c2.b));
+    }
+  }
+  return { tiedEndpoints, pairs };
+}
+function inspectLooseEnds(drawing, toleranceMillimeters = 1e-3) {
+  const ends = collectOpenEnds(drawing);
+  const { tiedEndpoints, pairs } = tiedPairKeys(drawing);
+  const open = [];
+  const untied = [];
+  const touching = /* @__PURE__ */ new Set();
+  for (let i2 = 0; i2 < ends.length; i2++) {
+    for (let j = i2 + 1; j < ends.length; j++) {
+      const dist2 = Math.hypot(ends[i2].at[0] - ends[j].at[0], ends[i2].at[1] - ends[j].at[1]);
+      if (dist2 <= toleranceMillimeters) {
+        touching.add(i2);
+        touching.add(j);
+        const ka = refKey(ends[i2].ref), kb = refKey(ends[j].ref);
+        const pk = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+        if (!pairs.has(pk)) {
+          untied.push({
+            a: ends[i2].ref,
+            b: ends[j].ref,
+            at: [(ends[i2].at[0] + ends[j].at[0]) / 2, (ends[i2].at[1] + ends[j].at[1]) / 2],
+            distanceMillimeters: dist2
+          });
+        }
+      }
+    }
+  }
+  for (let i2 = 0; i2 < ends.length; i2++) {
+    if (!touching.has(i2) && !tiedEndpoints.has(refKey(ends[i2].ref))) {
+      open.push(ends[i2]);
+    }
+  }
+  return { open, untied };
+}
+function tieLooseEnds(source, toleranceMillimeters = 0.01) {
+  const report = inspectLooseEnds(source, toleranceMillimeters);
+  if (!report.untied.length) return { drawing: structuredClone(source), tiedCount: 0 };
+  const next = structuredClone(source);
+  next.constraints ??= [];
+  const used = new Set(next.constraints.map((c2) => c2.id));
+  let counter2 = 1;
+  let tiedCount = 0;
+  for (const pair of report.untied) {
+    while (used.has(`tie-${counter2}`)) counter2++;
+    const id2 = `tie-${counter2++}`;
+    used.add(id2);
+    next.constraints.push({ id: id2, kind: "coincident", a: pair.a, b: pair.b });
+    tiedCount++;
+  }
+  const solved = solveDrawingConstraints(next);
+  validateSketchDrawing(solved);
+  return { drawing: solved, tiedCount };
+}
+function toggleRadiusDiameter(source, constraintId2) {
+  const next = structuredClone(source);
+  const c2 = next.constraints?.find((item) => item.id === constraintId2);
+  if (!c2) throw new Error("Select an existing radius, diameter, or point-line distance dimension.");
+  if (c2.kind === "radius" || c2.kind === "diameter") {
+    const toDiameter = c2.kind === "radius";
+    c2.kind = toDiameter ? "diameter" : "radius";
+    if (!c2.reference && c2.value !== void 0) {
+      c2.value = toDiameter ? c2.value * 2 : c2.value / 2;
+    }
+    if (!c2.reference && c2.valueExpression !== void 0) {
+      c2.valueExpression = toDiameter ? `(${c2.valueExpression}) * 2` : `(${c2.valueExpression}) / 2`;
+    }
+  } else if (c2.kind === "distance" && (c2.a.kind === "point" && c2.b?.kind === "line" || c2.a.kind === "line" && c2.b?.kind === "point") || c2.kind === "linear-diameter") {
+    const toDiameter = c2.kind === "distance";
+    c2.kind = toDiameter ? "linear-diameter" : "distance";
+    if (toDiameter) delete c2.distanceSide;
+    if (!c2.reference && c2.value !== void 0) {
+      c2.value = toDiameter ? c2.value * 2 : c2.value / 2;
+    }
+    if (!c2.reference && c2.valueExpression !== void 0) {
+      c2.valueExpression = toDiameter ? `(${c2.valueExpression}) * 2` : `(${c2.valueExpression}) / 2`;
+    }
+  } else {
+    throw new Error("Only radius, diameter, linear-diameter, and point-to-line distance dimensions can toggle radius/diameter.");
+  }
+  const solved = solveDrawingConstraints(next);
+  validateSketchDrawing(solved);
+  return solved;
+}
+function setSketchCenterline(source, contourIndices, value2) {
+  if (!contourIndices.length) throw new Error("Select at least one line to mark as a centerline.");
+  const next = structuredClone(source);
+  const targets = [...new Set(contourIndices)].map((i2) => {
+    const c2 = next.contours[i2];
+    if (!c2 || c2.type !== "path" || !c2.segments.length || !c2.segments.every((s) => s.type === "line"))
+      throw new Error("Centerline requires straight line paths.");
+    return c2;
+  });
+  const enable = value2 ?? !targets.every((c2) => Boolean(c2.centerline));
+  for (const c2 of targets) {
+    if (enable) {
+      c2.construction = true;
+      c2.centerline = true;
+    } else {
+      delete c2.centerline;
+    }
+  }
+  validateSketchDrawing(next);
+  return next;
+}
+function segmentFromDir(center, dir, length) {
+  const half = length / 2;
+  return [
+    [center[0] - dir[0] * half, center[1] - dir[1] * half],
+    [center[0] + dir[0] * half, center[1] + dir[1] * half]
+  ];
+}
+function linePointDistance(p2, a2, b) {
+  const dx = b[0] - a2[0], dy = b[1] - a2[1], len3 = Math.hypot(dx, dy);
+  if (len3 < 1e-12) return Math.hypot(p2[0] - a2[0], p2[1] - a2[1]);
+  return Math.abs(dx * (p2[1] - a2[1]) - dy * (p2[0] - a2[0])) / len3;
+}
+function createConstructionLine(source, request) {
+  const next = structuredClone(source);
+  const length = request.mode === "free" ? void 0 : request.length ?? 40;
+  if (length !== void 0 && (!Number.isFinite(length) || length <= 0))
+    throw new Error("Construction line length must be positive.");
+  let start;
+  let end;
+  switch (request.mode) {
+    case "free":
+      start = [...request.start];
+      end = [...request.end];
+      break;
+    case "horizontal":
+      [start, end] = segmentFromDir(request.through, [1, 0], length);
+      break;
+    case "vertical":
+      [start, end] = segmentFromDir(request.through, [0, 1], length);
+      break;
+    case "angle": {
+      const rad = request.angleDegrees * Math.PI / 180;
+      [start, end] = segmentFromDir(request.through, [Math.cos(rad), Math.sin(rad)], length);
+      break;
+    }
+    case "parallel": {
+      const l = resolve$1(next, request.line).line;
+      if (!l) throw new Error("Parallel construction line requires a line reference.");
+      const dx = l[1][0] - l[0][0], dy = l[1][1] - l[0][1], len3 = Math.hypot(dx, dy);
+      if (len3 < 1e-10) throw new Error("Reference line has zero length.");
+      const u2 = [dx / len3, dy / len3];
+      const n = [-u2[1], u2[0]];
+      const center = request.through ? [...request.through] : [(l[0][0] + l[1][0]) / 2 + n[0] * (request.offsetMillimeters ?? 10), (l[0][1] + l[1][1]) / 2 + n[1] * (request.offsetMillimeters ?? 10)];
+      [start, end] = segmentFromDir(center, u2, request.length ?? len3);
+      break;
+    }
+    case "perpendicular": {
+      const l = resolve$1(next, request.line).line;
+      if (!l) throw new Error("Perpendicular construction line requires a line reference.");
+      const dx = l[1][0] - l[0][0], dy = l[1][1] - l[0][1], len3 = Math.hypot(dx, dy);
+      if (len3 < 1e-10) throw new Error("Reference line has zero length.");
+      [start, end] = segmentFromDir(request.through, [-dy / len3, dx / len3], length);
+      break;
+    }
+    case "bisector": {
+      const la = resolve$1(next, request.lineA).line, lb = resolve$1(next, request.lineB).line;
+      if (!la || !lb) throw new Error("Angle bisector requires two lines.");
+      const da = [la[1][0] - la[0][0], la[1][1] - la[0][1]];
+      const db = [lb[1][0] - lb[0][0], lb[1][1] - lb[0][1]];
+      const lenA = Math.hypot(...da), lenB = Math.hypot(...db);
+      if (lenA < 1e-10 || lenB < 1e-10) throw new Error("Reference lines must have positive length.");
+      const ua = [da[0] / lenA, da[1] / lenA];
+      const ub = [db[0] / lenB, db[1] / lenB];
+      const cross2 = ua[0] * ub[1] - ua[1] * ub[0];
+      if (Math.abs(cross2) < 1e-9) {
+        const mid = [(la[0][0] + la[1][0] + lb[0][0] + lb[1][0]) / 4, (la[0][1] + la[1][1] + lb[0][1] + lb[1][1]) / 4];
+        [start, end] = segmentFromDir(mid, ua, length);
+      } else {
+        const t2 = ((lb[0][0] - la[0][0]) * ub[1] - (lb[0][1] - la[0][1]) * ub[0]) / cross2;
+        const inter = [la[0][0] + t2 * ua[0], la[0][1] + t2 * ua[1]];
+        const sum2 = [ua[0] + ub[0], ua[1] + ub[1]];
+        const diff = [ua[0] - ub[0], ua[1] - ub[1]];
+        const norm2 = (v2) => {
+          const l = Math.hypot(...v2);
+          return [v2[0] / l, v2[1] / l];
+        };
+        const d1 = norm2(sum2), d2 = norm2(diff);
+        const c1 = segmentFromDir(inter, d1, length);
+        const c2 = segmentFromDir(inter, d2, length);
+        if (request.near && linePointDistance(request.near, c2[0], c2[1]) < linePointDistance(request.near, c1[0], c1[1])) {
+          [start, end] = c2;
+        } else {
+          [start, end] = c1;
+        }
+      }
+      break;
+    }
+    case "tangent-at": {
+      const c2 = resolve$1(next, request.circle).circle;
+      if (!c2) throw new Error("Tangent construction line requires a circle or arc.");
+      const rad = request.angleDegrees * Math.PI / 180;
+      const pt2 = [c2.center[0] + c2.radius * Math.cos(rad), c2.center[1] + c2.radius * Math.sin(rad)];
+      [start, end] = segmentFromDir(pt2, [-Math.sin(rad), Math.cos(rad)], length);
+      break;
+    }
+    case "tangent-external": {
+      const c2 = resolve$1(next, request.circle).circle;
+      if (!c2) throw new Error("External tangent requires a circle or arc.");
+      const dx = request.through[0] - c2.center[0], dy = request.through[1] - c2.center[1];
+      const dist2 = Math.hypot(dx, dy);
+      if (dist2 <= c2.radius + 1e-8) throw new Error("Point must lie outside the circle.");
+      const baseAngle = Math.atan2(dy, dx);
+      const offset2 = Math.acos(c2.radius / dist2);
+      const candidates = [baseAngle + offset2, baseAngle - offset2].map((ang) => [
+        [...request.through],
+        [c2.center[0] + c2.radius * Math.cos(ang), c2.center[1] + c2.radius * Math.sin(ang)]
+      ]);
+      const chosen = request.near && linePointDistance(request.near, candidates[1][0], candidates[1][1]) < linePointDistance(request.near, candidates[0][0], candidates[0][1]) ? candidates[1] : candidates[0];
+      [start, end] = chosen;
+      break;
+    }
+    case "tangent-two": {
+      const ca = resolve$1(next, request.circleA).circle, cb = resolve$1(next, request.circleB).circle;
+      if (!ca || !cb) throw new Error("Common tangent requires two circles or arcs.");
+      const dx = cb.center[0] - ca.center[0], dy = cb.center[1] - ca.center[1];
+      const dist2 = Math.hypot(dx, dy);
+      const rDiff = request.internal ? ca.radius + cb.radius : ca.radius - cb.radius;
+      if (dist2 <= Math.abs(rDiff) + 1e-8) throw new Error("No common tangent exists for these circles.");
+      const baseAngle = Math.atan2(dy, dx);
+      const alpha = Math.acos(rDiff / dist2);
+      const candidates = [1, -1].map((s) => {
+        const thetaA = baseAngle + s * alpha;
+        const thetaB = request.internal ? thetaA + Math.PI : thetaA;
+        return [
+          [ca.center[0] + ca.radius * Math.cos(thetaA), ca.center[1] + ca.radius * Math.sin(thetaA)],
+          [cb.center[0] + cb.radius * Math.cos(thetaB), cb.center[1] + cb.radius * Math.sin(thetaB)]
+        ];
+      });
+      const chosen = request.near && linePointDistance(request.near, candidates[1][0], candidates[1][1]) < linePointDistance(request.near, candidates[0][0], candidates[0][1]) ? candidates[1] : candidates[0];
+      [start, end] = chosen;
+      break;
+    }
+  }
+  const contourIndex = next.contours.length;
+  next.contours.push({
+    type: "path",
+    start,
+    segments: [{ type: "line", end }],
+    construction: true,
+    ...request.infinite ? { infinite: true } : {},
+    ...request.centerline ? { centerline: true } : {}
+  });
+  validateSketchDrawing(next);
+  return { drawing: next, contourIndex };
+}
+function createTwoPointCircle(p0, p1, construction = false) {
+  const radius = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / 2;
+  if (!Number.isFinite(radius) || radius < 1e-8) throw new Error("Diameter endpoints must be distinct.");
+  return {
+    type: "circle",
+    center: [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2],
+    radius,
+    ...construction ? { construction: true } : {}
+  };
+}
+function createRoundedRectangle(p0, p1, radius, construction = false) {
+  const x0 = Math.min(p0[0], p1[0]), x1 = Math.max(p0[0], p1[0]);
+  const y0 = Math.min(p0[1], p1[1]), y1 = Math.max(p0[1], p1[1]);
+  const w2 = x1 - x0, h = y1 - y0;
+  if (!Number.isFinite(w2) || !Number.isFinite(h) || w2 < 1e-6 || h < 1e-6)
+    throw new Error("Rounded rectangle needs positive width and height.");
+  if (!Number.isFinite(radius) || radius <= 0 || radius >= Math.min(w2, h) / 2 - 1e-6)
+    throw new Error("Corner radius must be positive and less than half the shorter side.");
+  const k2 = Math.SQRT1_2;
+  const r = radius;
+  const cBR = [x1 - r, y0 + r];
+  const cTR = [x1 - r, y1 - r];
+  const cTL = [x0 + r, y1 - r];
+  const cBL = [x0 + r, y0 + r];
+  return {
+    type: "path",
+    start: [x0 + r, y0],
+    segments: [
+      { type: "line", end: [x1 - r, y0] },
+      { type: "arc", middle: [cBR[0] + r * k2, cBR[1] - r * k2], end: [x1, y0 + r] },
+      { type: "line", end: [x1, y1 - r] },
+      { type: "arc", middle: [cTR[0] + r * k2, cTR[1] + r * k2], end: [x1 - r, y1] },
+      { type: "line", end: [x0 + r, y1] },
+      { type: "arc", middle: [cTL[0] - r * k2, cTL[1] + r * k2], end: [x0, y1 - r] },
+      { type: "line", end: [x0, y0 + r] },
+      { type: "arc", middle: [cBL[0] - r * k2, cBL[1] - r * k2], end: [x0 + r, y0] }
+    ],
+    ...construction ? { construction: true } : {}
+  };
+}
+function divideSketchCurve(source, curveRef, segments) {
+  if (!Number.isInteger(segments) || segments < 2 || segments > 200)
+    throw new Error("Divide curve requires an integer segment count from 2 to 200.");
+  const next = structuredClone(source);
+  const contour = referencedContour(next, curveRef);
+  if (!contour) throw new Error("Select an existing curve to divide.");
+  const isClosedCircle = contour.type === "circle" && curveRef.kind === "circle";
+  const count = isClosedCircle ? segments : segments - 1;
+  const usedIds = new Set(next.constraints?.map((c2) => c2.id));
+  const nextId = () => {
+    let i2 = 1;
+    while (usedIds.has(`divide-${i2}`)) i2++;
+    const id2 = `divide-${i2}`;
+    usedIds.add(id2);
+    return id2;
+  };
+  const pointContourIndices = [];
+  next.constraints ??= [];
+  for (let k2 = 1; k2 <= count; k2++) {
+    const frac = isClosedCircle ? (k2 - 1) / segments : k2 / segments;
+    const pt2 = pointAtArcLengthFraction(next, curveRef, frac);
+    const pointContourIndex = next.contours.length;
+    next.contours.push({ type: "path", start: pt2, segments: [], construction: true });
+    pointContourIndices.push(pointContourIndex);
+    next.constraints.push({
+      id: nextId(),
+      kind: "point-along",
+      a: { contour: pointContourIndex, kind: "point", index: 0 },
+      b: structuredClone(curveRef),
+      value: frac
+    });
+  }
+  validateSketchDrawing(next);
+  return { drawing: next, pointContourIndices };
+}
+function evalScalarOrMm(expr, paramName, paramValue, variables) {
+  const value2 = numeric(
+    evaluateExpression(expr, {
+      allowText: false,
+      resolveVariable(name5) {
+        if (name5 === paramName) return quantity(paramValue, 0, 0);
+        const found = variables?.get(name5);
+        if (found === void 0) throw new Error(`Unknown variable #${name5} in equation curve.`);
+        return found;
+      }
+    })
+  );
+  const out = value2.lengthPower === 1 ? value2.magnitudeSI * 1e3 : value2.magnitudeSI;
+  if (!Number.isFinite(out)) throw new Error("Equation curve evaluated to a non-finite coordinate.");
+  return out;
+}
+function createEquationCurve(request) {
+  const { mode, tMin, tMax, periodic = false, construction = false, variables } = request;
+  if (!Number.isFinite(tMin) || !Number.isFinite(tMax) || tMax <= tMin)
+    throw new Error("Equation curve range requires finite tMin < tMax.");
+  const samples2 = request.samples ?? 32;
+  if (!Number.isInteger(samples2) || samples2 < 2 || samples2 > 500)
+    throw new Error("Equation curve samples must be an integer between 2 and 500.");
+  if (mode === "parametric" && !request.xExpression?.trim())
+    throw new Error("Parametric equation curve requires both xExpression and yExpression.");
+  if (!request.yExpression?.trim())
+    throw new Error("Equation curve requires yExpression.");
+  const paramName = mode === "explicit" ? "x" : "t";
+  const points = [];
+  const total = periodic ? samples2 : samples2 + 1;
+  for (let i2 = 0; i2 < total; i2++) {
+    const u2 = periodic ? i2 / samples2 : i2 / samples2;
+    const t2 = tMin + (tMax - tMin) * u2;
+    const x2 = mode === "explicit" ? t2 : evalScalarOrMm(request.xExpression, paramName, t2, variables);
+    const y2 = evalScalarOrMm(request.yExpression, paramName, t2, variables);
+    if (!points.length || Math.hypot(x2 - points[points.length - 1][0], y2 - points[points.length - 1][1]) > 1e-6) {
+      points.push([x2, y2]);
+    }
+  }
+  if (points.length < (periodic ? 3 : 2))
+    throw new Error("Equation curve collapsed to fewer than the minimum distinct points.");
+  const contour = fitSketchSpline(points, { closed: periodic });
+  return construction ? { ...contour, construction: true } : contour;
+}
 function validateModelProjection(frame, options) {
   sketchFrameMap(frame, frame);
   if (!options || typeof options !== "object" || Array.isArray(options))
@@ -7320,33 +9588,6 @@ function validateTreeOrganization(value2) {
     }
   }
 }
-function validateBodyProperties(value2) {
-  if (!value2 || typeof value2.name !== "string" || !value2.name.trim() || typeof value2.visible !== "boolean")
-    throw Error("Bodies need a name and visibility state.");
-  if (value2.material !== void 0) {
-    const material = value2.material;
-    if (!material || typeof material.name !== "string" || !material.name.trim() || !Number.isFinite(material.densityKgPerM3) || material.densityKgPerM3 <= 0)
-      throw Error("A material needs a name and positive density in kg/m³.");
-  }
-  if (value2.appearance !== void 0) {
-    const appearance = value2.appearance;
-    if (!appearance || typeof appearance !== "object" || Array.isArray(appearance))
-      throw Error("Invalid body appearance.");
-    for (const key2 of ["color", "emissiveColor"])
-      if (appearance[key2] !== void 0 && !/^#[0-9a-f]{6}$/i.test(appearance[key2]))
-        throw Error("Appearance colors must use six-digit hex values.");
-    for (const key2 of [
-      "opacity",
-      "roughness",
-      "metalness",
-      "emissiveIntensity"
-    ]) {
-      const n = appearance[key2];
-      if (n !== void 0 && (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > (key2 === "emissiveIntensity" ? 5 : 1)))
-        throw Error(`Invalid body appearance ${key2}.`);
-    }
-  }
-}
 const isSurfaceBodyMaker = (feature3) => surfaceCreatorTypes.includes(feature3.type) || feature3.type === "surface-thicken" && feature3.operation === "new" || feature3.type === "sheet-base";
 const PART_DOCUMENT_FORMAT = "aether-part";
 const LEGACY_PART_DOCUMENT_FORMAT = "open-cad-part";
@@ -7389,6 +9630,7 @@ function validatePartDocument(value2) {
   validateImageCanvases(document2.imageCanvases);
   validateTreeOrganization(document2.organization);
   validatePlasticRules(document2.plasticRules);
+  validateSheetMetalRules(document2.sheetMetalRules);
   if (!document2.documentId || typeof document2.documentId !== "string") {
     throw new Error("Part documentId is required.");
   }
@@ -7442,7 +9684,7 @@ function validatePartDocument(value2) {
         if (bodies.has(id2)) throw Error("Copy outputs need new body identities.");
         bodies.add(id2);
       }
-    } else if ((isSurfaceBodyMaker(feature3) || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "shape-binder" || feature3.type === "import-step" || feature3.type === "import-cad") && "operation" in feature3 && feature3.operation === "new") {
+    } else if ((isSurfaceBodyMaker(feature3) || feature3.type === "extrude" || feature3.type === "revolve" || feature3.type === "sweep" || feature3.type === "loft" || feature3.type === "pipe" || feature3.type === "coil" || feature3.type === "boundary-fill" || feature3.type === "bounding-solid" || feature3.type === "primitive" || feature3.type === "shape-binder" || feature3.type === "frame-member" || feature3.type === "frame-end-cap" || feature3.type === "frame-gusset" || feature3.type === "import-step" || feature3.type === "import-cad") && "operation" in feature3 && feature3.operation === "new") {
       const id2 = ("bodyId" in feature3 ? feature3.bodyId : void 0) ?? (bodies.size === 0 ? `${document2.documentId}:body-1` : `${document2.documentId}:body-${feature3.id}`);
       if (typeof id2 !== "string" || !id2 || bodies.has(id2))
         throw new Error("Body IDs must be unique.");
@@ -7470,6 +9712,11 @@ function validatePartDocument(value2) {
     earlier.set(feature3.id, feature3.type);
   });
   validateDocumentTextExpressions(document2.features, expressionVariables);
+  if (document2.configurations !== void 0) {
+    validateConfigurations(document2.configurations, document2);
+    validateConfigRules(document2.configurations.rules, document2);
+  }
+  validateDocumentNotes(document2.notes);
   const referenceErrors = featureReferenceErrors({ ...document2, rollbackIndex: void 0 });
   for (const feature3 of document2.features) {
     if (!feature3.suppressed && !referenceErrors.has(feature3.id) && feature3.type === "profile") {
@@ -7573,51 +9820,281 @@ function editProfileDimension(document2, featureId2, dimensionId2, value2) {
   return next;
 }
 const AETHER_CAD_EXTENSION = ".aethercad";
-const metric = ["M3", "M4", "M5", "M6", "M8", "M10", "M12"];
-const zip$1 = (keys3, rows) => Object.fromEntries(metric.map((m2, i2) => [m2, Object.fromEntries(keys3.map((k2, j) => [k2, rows[i2][j]]))]));
+const metric = ["M2", "M2.5", "M3", "M4", "M5", "M6", "M8", "M10", "M12", "M14", "M16", "M20", "M24", "M30"];
+const zip$1 = (names, keys3, rows) => Object.fromEntries(names.map((m2, i2) => [m2, Object.fromEntries(keys3.map((k2, j) => [k2, rows[i2][j]]))]));
+const inchSizes = ["#6-32", "#8-32", "#10-24", "1/4-20", "5/16-18", "3/8-16", "1/2-13"];
+const IN = 25.4;
 Object.freeze({
   socket_head_cap_screw: {
     name: "Socket head cap screw",
     standard: "ISO 4762",
-    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100],
-    sizes: zip$1(["d", "dk", "k", "s", "t"], [[3, 5.5, 3, 2.5, 1.3], [4, 7, 4, 3, 2], [5, 8.5, 5, 4, 2.5], [6, 10, 6, 5, 3], [8, 13, 8, 6, 4], [10, 16, 10, 8, 5], [12, 18, 12, 10, 6]])
+    lengths: [4, 5, 6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150],
+    sizes: zip$1(metric, ["d", "dk", "k", "s", "t"], [
+      [2, 3.8, 2, 1.5, 1],
+      [2.5, 4.5, 2.5, 2, 1.1],
+      [3, 5.5, 3, 2.5, 1.3],
+      [4, 7, 4, 3, 2],
+      [5, 8.5, 5, 4, 2.5],
+      [6, 10, 6, 5, 3],
+      [8, 13, 8, 6, 4],
+      [10, 16, 10, 8, 5],
+      [12, 18, 12, 10, 6],
+      [14, 21, 14, 12, 7],
+      [16, 24, 16, 14, 8],
+      [20, 30, 20, 17, 10],
+      [24, 36, 24, 19, 12],
+      [30, 45, 30, 22, 15]
+    ])
+  },
+  button_head_screw: {
+    name: "Hex socket button head screw",
+    standard: "ISO 7380-1",
+    lengths: [4, 5, 6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 50],
+    sizes: zip$1(metric, ["d", "dk", "k", "s", "t"], [
+      [2, 3.5, 1.3, 1.3, 0.7],
+      [2.5, 4.5, 1.5, 1.5, 0.8],
+      [3, 5.7, 1.65, 2, 1.04],
+      [4, 7.6, 2.2, 2.5, 1.3],
+      [5, 9.5, 2.75, 3, 1.56],
+      [6, 10.5, 3.3, 4, 2.08],
+      [8, 14, 4.4, 5, 2.6],
+      [10, 17.5, 5.5, 6, 3.12],
+      [12, 21, 6.6, 8, 4.16],
+      [14, 24.5, 7.7, 10, 5],
+      [16, 28, 8.8, 10, 5.2],
+      [20, 35, 11, 12, 6.2],
+      [24, 42, 13.2, 14, 7.2],
+      [30, 52, 16.5, 17, 9]
+    ])
+  },
+  countersunk_screw: {
+    name: "Hex socket countersunk flat head screw",
+    standard: "ISO 10642",
+    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 50, 60],
+    sizes: zip$1(metric, ["d", "dk", "k", "s", "t"], [
+      [2, 4, 1.2, 1.3, 0.7],
+      [2.5, 5, 1.5, 1.5, 0.9],
+      [3, 6, 1.7, 2, 1.1],
+      [4, 8, 2.3, 2.5, 1.5],
+      [5, 10, 2.8, 3, 1.9],
+      [6, 12, 3.3, 4, 2.2],
+      [8, 16, 4.4, 5, 3],
+      [10, 20, 5.5, 6, 3.6],
+      [12, 24, 6.5, 8, 4.3],
+      [14, 27, 7, 10, 4.5],
+      [16, 30, 7.5, 10, 4.8],
+      [20, 36, 8.5, 12, 5.6],
+      [24, 39, 10, 14, 6.4],
+      [30, 48, 12, 17, 8]
+    ])
   },
   hex_bolt: {
     name: "Hex head bolt",
     standard: "ISO 4017",
-    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100],
-    sizes: zip$1(["d", "s", "k"], [[3, 5.5, 2], [4, 7, 2.8], [5, 8, 3.5], [6, 10, 4], [8, 13, 5.3], [10, 16, 6.4], [12, 18, 7.5]])
+    lengths: [6, 8, 10, 12, 16, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 100, 120, 150],
+    sizes: zip$1(metric, ["d", "s", "k"], [
+      [2, 4, 1.4],
+      [2.5, 5, 1.7],
+      [3, 5.5, 2],
+      [4, 7, 2.8],
+      [5, 8, 3.5],
+      [6, 10, 4],
+      [8, 13, 5.3],
+      [10, 16, 6.4],
+      [12, 18, 7.5],
+      [14, 21, 8.8],
+      [16, 24, 10],
+      [20, 30, 12.5],
+      [24, 36, 15],
+      [30, 46, 18.7]
+    ])
   },
   hex_nut: {
     name: "Hex nut",
     standard: "ISO 4032",
-    sizes: zip$1(["d", "s", "m"], [[3, 5.5, 2.4], [4, 7, 3.2], [5, 8, 4.7], [6, 10, 5.2], [8, 13, 6.8], [10, 16, 8.4], [12, 18, 10.8]])
+    sizes: zip$1(metric, ["d", "s", "m"], [
+      [2, 4, 1.6],
+      [2.5, 5, 2],
+      [3, 5.5, 2.4],
+      [4, 7, 3.2],
+      [5, 8, 4.7],
+      [6, 10, 5.2],
+      [8, 13, 6.8],
+      [10, 16, 8.4],
+      [12, 18, 10.8],
+      [14, 21, 12.8],
+      [16, 24, 14.8],
+      [20, 30, 18],
+      [24, 36, 21.5],
+      [30, 46, 25.6]
+    ])
   },
   washer: {
     name: "Plain washer",
     standard: "ISO 7089",
-    sizes: zip$1(["d1", "d2", "h"], [[3.2, 7, 0.5], [4.3, 9, 0.8], [5.3, 10, 1], [6.4, 12, 1.6], [8.4, 16, 1.6], [10.5, 20, 2], [13, 24, 2.5]])
+    sizes: zip$1(metric, ["d1", "d2", "h"], [
+      [2.2, 5, 0.3],
+      [2.7, 6, 0.5],
+      [3.2, 7, 0.5],
+      [4.3, 9, 0.8],
+      [5.3, 10, 1],
+      [6.4, 12, 1.6],
+      [8.4, 16, 1.6],
+      [10.5, 20, 2],
+      [13, 24, 2.5],
+      [15, 28, 2.5],
+      [17, 30, 3],
+      [21, 37, 3],
+      [25, 44, 4],
+      [31, 56, 4]
+    ])
   },
   set_screw: {
     name: "Hex socket set screw, flat point",
     standard: "ISO 4026",
-    lengths: [3, 4, 5, 6, 8, 10, 12, 16, 20, 25],
-    sizes: zip$1(["d", "s", "t"], [[3, 1.5, 1.2], [4, 2, 1.5], [5, 2.5, 2], [6, 3, 2], [8, 4, 3], [10, 5, 4], [12, 6, 4.8]])
+    lengths: [3, 4, 5, 6, 8, 10, 12, 16, 20, 25, 30],
+    sizes: zip$1(metric, ["d", "s", "t"], [
+      [2, 0.9, 0.8],
+      [2.5, 1.3, 1],
+      [3, 1.5, 1.2],
+      [4, 2, 1.5],
+      [5, 2.5, 2],
+      [6, 3, 2],
+      [8, 4, 3],
+      [10, 5, 4],
+      [12, 6, 4.8],
+      [14, 6, 5.5],
+      [16, 8, 6.4],
+      [20, 10, 8],
+      [24, 12, 10],
+      [30, 14, 12]
+    ])
   },
   dowel_pin: {
     name: "Dowel pin",
     standard: "ISO 8734",
-    lengths: [6, 8, 10, 12, 16, 20, 24, 30, 40, 50],
-    sizes: Object.fromEntries([3, 4, 5, 6, 8, 10, 12].map((d2) => [`${d2}`, { d: d2 }]))
+    lengths: [6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80],
+    sizes: Object.fromEntries([2, 2.5, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 30].map((d2) => [`${d2}`, { d: d2 }]))
   },
   bearing: {
     name: "Deep groove ball bearing",
     standard: "ISO 15",
-    sizes: { "623": { d: 3, D: 10, B: 4 }, "625": { d: 5, D: 16, B: 5 }, "608": { d: 8, D: 22, B: 7 }, "6000": { d: 10, D: 26, B: 8 }, "6001": { d: 12, D: 28, B: 8 }, "6200": { d: 10, D: 30, B: 9 }, "6201": { d: 12, D: 32, B: 10 }, "6202": { d: 15, D: 35, B: 11 }, "6203": { d: 17, D: 40, B: 12 } }
+    sizes: {
+      "623": { d: 3, D: 10, B: 4 },
+      "625": { d: 5, D: 16, B: 5 },
+      "608": { d: 8, D: 22, B: 7 },
+      "6000": { d: 10, D: 26, B: 8 },
+      "6001": { d: 12, D: 28, B: 8 },
+      "6200": { d: 10, D: 30, B: 9 },
+      "6201": { d: 12, D: 32, B: 10 },
+      "6202": { d: 15, D: 35, B: 11 },
+      "6203": { d: 17, D: 40, B: 12 },
+      "6204": { d: 20, D: 47, B: 14 },
+      "6205": { d: 25, D: 52, B: 15 },
+      "6206": { d: 30, D: 62, B: 16 }
+    }
+  },
+  asme_hex_bolt: {
+    name: "ASME UNC hex cap screw",
+    standard: "ASME B18.2.1",
+    lengths: [6.35, 9.525, 12.7, 15.875, 19.05, 25.4, 31.75, 38.1, 50.8, 63.5, 76.2],
+    sizes: zip$1(inchSizes, ["d", "s", "k"], [
+      [0.138 * IN, 0.25 * IN, 0.094 * IN],
+      [0.164 * IN, 0.25 * IN, 0.11 * IN],
+      [0.19 * IN, 0.3125 * IN, 0.125 * IN],
+      [0.25 * IN, 0.4375 * IN, 0.163 * IN],
+      [0.3125 * IN, 0.5 * IN, 0.211 * IN],
+      [0.375 * IN, 0.5625 * IN, 0.243 * IN],
+      [0.5 * IN, 0.75 * IN, 0.323 * IN]
+    ])
+  },
+  asme_socket_screw: {
+    name: "ASME UNC socket head cap screw",
+    standard: "ASME B18.3",
+    lengths: [6.35, 9.525, 12.7, 15.875, 19.05, 25.4, 31.75, 38.1, 50.8, 63.5, 76.2],
+    sizes: zip$1(inchSizes, ["d", "dk", "k", "s", "t"], [
+      [0.138 * IN, 0.226 * IN, 0.138 * IN, 0.109 * IN, 0.068 * IN],
+      [0.164 * IN, 0.27 * IN, 0.164 * IN, 0.141 * IN, 0.08 * IN],
+      [0.19 * IN, 0.312 * IN, 0.19 * IN, 0.156 * IN, 0.095 * IN],
+      [0.25 * IN, 0.375 * IN, 0.25 * IN, 0.1875 * IN, 0.12 * IN],
+      [0.3125 * IN, 0.469 * IN, 0.3125 * IN, 0.25 * IN, 0.151 * IN],
+      [0.375 * IN, 0.562 * IN, 0.375 * IN, 0.3125 * IN, 0.182 * IN],
+      [0.5 * IN, 0.75 * IN, 0.5 * IN, 0.375 * IN, 0.245 * IN]
+    ])
+  },
+  asme_hex_nut: {
+    name: "ASME UNC hex nut",
+    standard: "ASME B18.2.2",
+    sizes: zip$1(inchSizes, ["d", "s", "m"], [
+      [0.138 * IN, 0.3125 * IN, 0.114 * IN],
+      [0.164 * IN, 0.34375 * IN, 0.13 * IN],
+      [0.19 * IN, 0.375 * IN, 0.13 * IN],
+      [0.25 * IN, 0.4375 * IN, 0.226 * IN],
+      [0.3125 * IN, 0.5 * IN, 0.273 * IN],
+      [0.375 * IN, 0.5625 * IN, 0.337 * IN],
+      [0.5 * IN, 0.75 * IN, 0.448 * IN]
+    ])
+  },
+  asme_washer: {
+    name: "ASME plain flat washer",
+    standard: "ASME B18.21.1",
+    sizes: zip$1(inchSizes, ["d1", "d2", "h"], [
+      [0.156 * IN, 0.375 * IN, 0.049 * IN],
+      [0.188 * IN, 0.438 * IN, 0.049 * IN],
+      [0.219 * IN, 0.5 * IN, 0.049 * IN],
+      [0.281 * IN, 0.625 * IN, 0.065 * IN],
+      [0.344 * IN, 0.688 * IN, 0.065 * IN],
+      [0.406 * IN, 0.812 * IN, 0.065 * IN],
+      [0.531 * IN, 1.062 * IN, 0.095 * IN]
+    ])
   }
 });
+function featureFieldUnit(key2) {
+  if (key2.endsWith("Millimeters")) return "length";
+  if (key2.endsWith("Degrees")) return "angle";
+  if (key2 === "count" || key2 === "turns" || key2 === "starts" || key2 === "kFactor" || key2 === "endScale" || key2 === "strength") return "scalar";
+  return void 0;
+}
+function evaluateFeatureExpression(key2, expression, variables) {
+  const family = featureFieldUnit(key2);
+  if (!family) throw new Error(`Field "${key2}" does not support parametric expressions.`);
+  const val = numeric(
+    evaluateExpression(expression, {
+      allowText: false,
+      resolveVariable(name5) {
+        const found = variables.get(name5);
+        if (found === void 0) throw new Error(`Unknown variable #${name5}.`);
+        return found;
+      }
+    })
+  );
+  if (family === "length") {
+    if (val.lengthPower !== 1 || val.anglePower !== 0)
+      throw new Error(`Expression for ${key2} must resolve to a length (e.g. mm).`);
+    return val.magnitudeSI * 1e3;
+  }
+  if (family === "angle") {
+    if (val.lengthPower !== 0 || val.anglePower !== 1)
+      throw new Error(`Expression for ${key2} must resolve to an angle (e.g. deg).`);
+    return val.magnitudeSI * 180 / Math.PI;
+  }
+  if (val.lengthPower !== 0 || val.anglePower !== 0)
+    throw new Error(`Expression for ${key2} must resolve to a dimensionless number.`);
+  return val.magnitudeSI;
+}
+function applyFeatureExpressions(doc, variables) {
+  for (const feature3 of doc.features) {
+    const expressions = feature3.expressions;
+    if (!expressions || typeof expressions !== "object") continue;
+    for (const [key2, expr] of Object.entries(expressions)) {
+      if (typeof expr !== "string" || !expr.trim()) continue;
+      const computed = evaluateFeatureExpression(key2, expr, variables);
+      feature3[key2] = key2 === "count" || key2 === "starts" ? Math.round(computed) : computed;
+    }
+  }
+}
 similarityTransform([0, 0], [0, 0], 0);
-const dist = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]);
+const dist$1 = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1]);
 function reversed(curve) {
   const s = curve.segment;
   const { id: _id, endVertexId: _v, ...rest } = structuredClone(s);
@@ -7712,7 +10189,7 @@ function sketchArrangement(drawing) {
     let previous = 0;
     for (const parameter2 of ts) {
       const p2 = segmentPoint(s.curve.start, s.curve.segment, parameter2);
-      if (dist(p2, rest.start) <= tol || dist(p2, rest.segment.end) <= tol) continue;
+      if (dist$1(p2, rest.start) <= tol || dist$1(p2, rest.segment.end) <= tol) continue;
       const t2 = s.curve.segment.type === "conic" ? conicSubspanParameter(s.curve.segment.rho, parameter2, previous, 1) : (parameter2 - previous) / (1 - previous);
       if (t2 <= 1e-9 || t2 >= 1 - 1e-9) continue;
       const [a2, b] = subdivideSegment(rest.start, rest.segment, t2);
@@ -7724,7 +10201,7 @@ function sketchArrangement(drawing) {
   });
   const nodes = [];
   const node2 = (p2) => {
-    const k2 = nodes.findIndex((n) => dist(n, p2) <= tol);
+    const k2 = nodes.findIndex((n) => dist$1(n, p2) <= tol);
     if (k2 >= 0) return k2;
     nodes.push(p2);
     return nodes.length - 1;
@@ -7738,12 +10215,12 @@ function sketchArrangement(drawing) {
     const match = unique2.find((other) => {
       const forward = other.from === piece.from && other.to === piece.to;
       if (!forward && !(other.from === piece.to && other.to === piece.from)) return false;
-      return [0.25, 0.5, 0.75].every((t2) => dist(segmentPoint(piece.curve.start, piece.curve.segment, t2), segmentPoint(other.curve.start, other.curve.segment, forward ? t2 : 1 - t2)) <= tol);
+      return [0.25, 0.5, 0.75].every((t2) => dist$1(segmentPoint(piece.curve.start, piece.curve.segment, t2), segmentPoint(other.curve.start, other.curve.segment, forward ? t2 : 1 - t2)) <= tol);
     });
     if (match) match.sources.push(...piece.sources.map((side) => ({ ...side, forward: match.from === piece.from ? side.forward : !side.forward })));
     else unique2.push(piece);
   }
-  let live = unique2.filter((p2) => p2.from !== p2.to || samples$1(p2.curve, 4).some((q) => dist(q, p2.curve.start) > tol));
+  let live = unique2.filter((p2) => p2.from !== p2.to || samples$1(p2.curve, 4).some((q) => dist$1(q, p2.curve.start) > tol));
   for (let changed = true; changed; ) {
     changed = false;
     const degree = /* @__PURE__ */ new Map();
@@ -7800,7 +10277,7 @@ function sketchArrangement(drawing) {
   const closed = drawing.contours.flatMap((c2, index2) => {
     if (c2.construction) return [];
     if (c2.type === "circle") return [{ index: index2, poly: polyline(circleSegments(c2.center, c2.radius)) }];
-    if (!c2.segments.length || dist(c2.start, c2.segments.at(-1).end) > 1e-6) return [];
+    if (!c2.segments.length || dist$1(c2.start, c2.segments.at(-1).end) > 1e-6) return [];
     let start = c2.start;
     return [{ index: index2, poly: polyline(c2.segments.map((segment) => {
       const curve = { start, segment };
@@ -8131,6 +10608,83 @@ function sketchRegions(feature3, includeOpen = false, history) {
   }
   return regions.filter((region) => includeOpen ? !region.sourceContourIndices : region.closed !== false);
 }
+const referencePattern = (name5) => new RegExp(`#${name5}(?![A-Za-z0-9_])`);
+const mentions = (text2, name5) => referencePattern(name5).test(text2);
+function variableUsers(doc, name5) {
+  const parameters2 = (doc.variables ?? []).filter((v2) => v2.name !== name5 && mentions(v2.expression, name5)).map((v2) => v2.name);
+  const features2 = doc.features.filter((f2) => mentions(JSON.stringify(f2), name5)).map((f2) => ({ id: f2.id, name: f2.name }));
+  return { parameters: parameters2, features: features2 };
+}
+function setVariableComment(doc, name5, comment) {
+  return updateVariable(doc, name5, (v2) => ({ ...v2, ...comment.trim() ? { comment: comment.trim() } : { comment: void 0 } }));
+}
+function setVariableFavorite(doc, name5, favorite = true) {
+  return updateVariable(doc, name5, (v2) => ({ ...v2, ...favorite ? { favorite: true } : { favorite: void 0 } }));
+}
+function updateVariable(doc, name5, change) {
+  const variables = doc.variables ?? [];
+  if (!variables.some((v2) => v2.name === name5)) throw new Error(`No variable named #${name5}.`);
+  return { ...doc, variables: variables.map((v2) => v2.name === name5 ? strip(change(v2)) : v2) };
+}
+const strip = (v2) => Object.fromEntries(Object.entries(v2).filter(([, value2]) => value2 !== void 0));
+function renameVariable(doc, oldName, newName) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(newName)) throw new Error("Variable name must be an identifier (letters, digits, underscore).");
+  const variables = doc.variables ?? [];
+  if (!variables.some((v2) => v2.name === oldName)) throw new Error(`No variable named #${oldName}.`);
+  if (oldName === newName) return structuredClone(doc);
+  if (variables.some((v2) => v2.name === newName)) throw new Error(`A variable named #${newName} already exists.`);
+  const re = new RegExp(`#${oldName}(?![A-Za-z0-9_])`, "g");
+  const rewriteText = (text2) => text2.replace(re, `#${newName}`);
+  const rewriteDeep = (obj) => {
+    if (typeof obj === "string") return rewriteText(obj);
+    if (Array.isArray(obj)) return obj.map(rewriteDeep);
+    if (obj && typeof obj === "object") {
+      const out = {};
+      for (const [k2, v2] of Object.entries(obj)) out[k2] = rewriteDeep(v2);
+      return out;
+    }
+    return obj;
+  };
+  const next = structuredClone(doc);
+  next.variables = (next.variables ?? []).map((v2) => ({
+    ...v2,
+    name: v2.name === oldName ? newName : v2.name,
+    expression: rewriteText(v2.expression)
+  }));
+  next.features = next.features.map((f2) => {
+    if (!mentions(JSON.stringify(f2), oldName)) return f2;
+    return rewriteDeep(f2);
+  });
+  if (next.configurations) {
+    const oldKey = `param:${oldName}`, newKey = `param:${newName}`;
+    next.configurations.columns = next.configurations.columns.map(
+      (c2) => c2.kind === "param" && c2.name === oldName ? { ...c2, name: newName } : c2
+    );
+    next.configurations.rows = next.configurations.rows.map((r) => {
+      const values2 = { ...r.values };
+      if (oldKey in values2) {
+        values2[newKey] = values2[oldKey];
+        delete values2[oldKey];
+      }
+      for (const [k2, val] of Object.entries(values2)) {
+        if (typeof val === "string") values2[k2] = rewriteText(val);
+      }
+      return { ...r, values: values2 };
+    });
+  }
+  return next;
+}
+function safeDeleteVariable(doc, name5) {
+  const variables = doc.variables ?? [];
+  if (!variables.some((v2) => v2.name === name5)) throw new Error(`No variable named #${name5}.`);
+  const users = variableUsers(doc, name5);
+  const refs = [...users.parameters.map((p2) => `#${p2}`), ...users.features.map((f2) => f2.name)];
+  if (refs.length) throw new Error(`Cannot delete #${name5} while referenced by: ${refs.join(", ")}.`);
+  const next = structuredClone(doc);
+  next.variables = variables.filter((v2) => v2.name !== name5);
+  if (!next.variables.length) delete next.variables;
+  return next;
+}
 function isAuthoredProjectionRegion(feature3, resolvedCount, region) {
   if (feature3.profile.type !== "projection" || !feature3.profile.authored || region.ordinal !== void 0) return false;
   const count = feature3.profile.authored.contours.length;
@@ -8214,6 +10768,8 @@ function inspectSketch(doc, args) {
       total_constraints: drawing.constraints?.length ?? 0,
       contours: drawing.contours.slice(offset2, offset2 + limit).map((contour, i2) => ({ index: offset2 + i2, ...contour })),
       constraints: (drawing.constraints ?? []).slice(offset2, offset2 + limit),
+      diagnostics: sketchConstraintState(drawing),
+      loose_ends: inspectLooseEnds(drawing),
       next_offset: offset2 + limit < Math.max(drawing.contours.length, drawing.constraints?.length ?? 0) ? offset2 + limit : null
     } : profile,
     ...feature3.type === "sketch" ? { constraints: feature3.constraints, dimensions: feature3.dimensions } : {},
@@ -12790,30 +15346,30 @@ function selectAgentProfileRegions(doc, featureId2, point2, all = false) {
   }
   return selected.map((region) => stampResolvedProfileSelection(doc, feature3, region));
 }
-const tool$2 = (name5, description, properties, required = []) => ({
+const tool$3 = (name5, description, properties, required = []) => ({
   name: `aether_cad_${name5}`,
   description,
   inputSchema: { type: "object", properties, required, additionalProperties: false }
 });
-const knowledgeTool = tool$2(
+const knowledgeTool = tool$3(
   "docs",
   "Discover the actual tools and examples available in this CAD editor. Search by query or describe one exact tool name. Results include input schemas and honest runtime limits; discovering a tool does not execute it.",
   { query: { type: "string", maxLength: 200 }, name: { type: "string", maxLength: 100 }, offset: { type: "integer", minimum: 0 } }
 );
 const partAITools = [
   knowledgeTool,
-  tool$2(
+  tool$3(
     "run_program",
     'Run 1–16 existing Part editing commands as one transaction and one undo step. program_json is {version:1,steps:[{id,tool,arguments}]}. Tool names are existing aether_cad_* editing tools. Later arguments may use {"$ref":"step_id.feature_id"} or {"$ref":"step_id.body_id"}. Exact rebuilds resolve identities between steps; only the completed program commits. No arbitrary JavaScript, loops, filesystem or network access. Use docs for examples, then verify and preview the result.',
     { program_json: { type: "string", maxLength: 65536 } },
     ["program_json"]
   ),
-  tool$2(
+  tool$3(
     "verify",
     "Rebuild and inspect exact native solid properties without editing. Returns volume in mm³, area in mm², center and bounds in mm; optional density in kg/m³ adds mass and inertia. Meshes and invalid geometry are refused. This is geometry evidence, not engineering certification.",
     { density_kg_m3: { type: "number", exclusiveMinimum: 0, maximum: 1e6 }, offset: { type: "integer", minimum: 0, maximum: 512 } }
   ),
-  tool$2(
+  tool$3(
     "preview",
     "Inspect a PNG of the current CAD viewport without changing camera, selection or history. Includes visible bodies, current display settings and overlays; hidden/off-screen geometry is not shown. A visual check complements exact verify measurements. No app panels or desktop capture.",
     {}
@@ -13008,7 +15564,8 @@ export type AxisDefinition =
   | { method: "edge"; axis: AxisReference }
   | { method: "two-points"; points: [PointReference, PointReference] }
   | { method: "normal-to-plane"; reference: PlaneReference; point: PointReference }
-  | { method: "two-planes"; references: [PlaneReference, PlaneReference] };
+  | { method: "two-planes"; references: [PlaneReference, PlaneReference] }
+  | { method: "through-cylinder"; originMillimeters: [number, number, number]; directionMillimeters: [number, number, number]; label?: string };
 
 export type PlaneReference =
   | { kind: "principal"; plane: SketchPlane }
@@ -13038,9 +15595,9 @@ export interface AxisReference {
   lengthMillimeters?: number;
 }`,
   "boolean": "export interface BooleanFeature {\n  id: string;\n  type: 'boolean';\n  name: string;\n  suppressed: boolean;\n  operation: 'union' | 'cut' | 'intersection';\n  targetBodyId: string;\n  toolBodyIds: string[];\n  keepTools: boolean;\n  /** Onshape's Subtract offset (Offset all): the tools grow by this before cutting, leaving a gap of\n   *  that width around them; negative shrinks them. */\n  offsetMillimeters?: number;\n}",
-  "boss": "export interface BossFeature extends OnFace {\n  id:string;type:'boss';name:string;suppressed:boolean;\n  diameterMillimeters:number;heightMillimeters:number;\n  holeDiameterMillimeters?:number;holeDepthMillimeters?:number;\n}",
+  "boss": "export interface BossFeature extends OnFace {\n  id:string;type:'boss';name:string;suppressed:boolean;\n  diameterMillimeters:number;heightMillimeters:number;\n  holeDiameterMillimeters?:number;holeDepthMillimeters?:number;\n  /** Optional radial mounting gusset ribs around the boss. */\n  ribs?:BossRibsSpec;\n}\n\nexport interface BossRibsSpec {\n  /** Number of radial stiffening gusset ribs around the boss (2–12). */\n  count: number;\n  thicknessMillimeters: number;\n  /** Radial protrusion beyond the boss outer surface (mm). */\n  lengthMillimeters: number;\n  /** Rib height along the boss (defaults to 75% of boss height). */\n  heightMillimeters?: number;\n}",
   "boundary-fill": 'export interface BoundaryFillFeature {\n  id: string; type: "boundary-fill"; name: string; suppressed: boolean;\n  toolBodyIds: string[];\n  /** A point inside each cell to fill, mm. */\n  cellPointsMillimeters: V3[];\n  operation: "new" | "add" | "cut" | "intersect";\n  targetBodyId?: string;\n  bodyId?: string;\n  /** Remove the tool bodies afterwards. */\n  removeTools?: boolean;\n}\n\nexport type V3 = [number, number, number];',
-  "bounding-solid": "export interface BoundingSolidFeature {\n  id:string;type:'bounding-solid';name:string;suppressed:boolean;\n  bodyIds?:string[];marginMillimeters:number;operation:'new';bodyId?:string;\n}",
+  "bounding-solid": "export interface BoundingSolidFeature {\n  id:string;type:'bounding-solid';name:string;suppressed:boolean;\n  bodyIds?:string[];marginMillimeters:number;\n  /** Optional per-side margins [-X, +X, -Y, +Y, -Z, +Z] in mm (overrides uniform margin). */\n  marginsMillimeters?:[number,number,number,number,number,number];\n  operation:'new';bodyId?:string;\n}",
   "chamfer": `export type EdgeFinishFeature = {
   id: string;
   name: string;
@@ -13057,6 +15614,8 @@ export interface AxisReference {
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13089,7 +15648,7 @@ export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "coil": "export interface CoilFeature {\n  id:string;type:'coil';name:string;suppressed:boolean;\n  radiusMillimeters:number;pitchMillimeters:number;turns:number;wireDiameterMillimeters:number;\n  centerMillimeters?:[number,number,number];axis?:'X'|'Y'|'Z';leftHand?:boolean;\n  operation:'new'|'add'|'cut';bodyId?:string;targetBodyId?:string;\n}",
-  "curve3d": 'export interface Curve3DFeature {\n  id: string;\n  type: "curve3d";\n  name: string;\n  suppressed: boolean;\n  /** Straight segments end to end, a smooth curve through the points, or a lone point. */\n  kind: "line" | "spline" | "point";\n  pointsMillimeters: V3[];\n}\n\nexport type V3 = [number, number, number];',
+  "curve3d": 'export interface Curve3DFeature {\n  id: string;\n  type: "curve3d";\n  name: string;\n  suppressed: boolean;\n  /** Straight segments end to end, a 3-point circular arc, a smooth spline, or a lone point. */\n  kind: "line" | "arc" | "spline" | "point";\n  pointsMillimeters: V3[];\n  /** Optional 3D sketch constraints solved automatically on validation and edits. */\n  constraints?: Constraint3D[];\n}\n\nexport type V3 = [number, number, number];',
   "delete-face": "export interface DeleteFaceFeature {\n  id:string;type:'delete-face';name:string;suppressed:boolean;\n  targetBodyId:string;\n  faces:SolidFaceReference[];\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
   "draft": `export interface DraftFeature {
   id: string;
@@ -13162,6 +15721,8 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13193,6 +15754,7 @@ export interface CurvedEdgeReference {
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "emboss": 'export interface EmbossFeature {\n  id: string;\n  type: "emboss";\n  name: string;\n  suppressed: boolean;\n  profileFeatureId: string;\n  profileContourId?: string;\n  face: SolidFaceReference;\n  targetBodyId?: string;\n  mode: "emboss" | "deboss";\n  depthMillimeters: number;\n  /** Optional lateral rotation on cylindrical wrap, in degrees. */\n  angleDegrees?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "extrude": `export interface ExtrudeFeature {
   id: string;
   type: "extrude";
@@ -13338,6 +15900,8 @@ export interface PlanarFaceAnchor {
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13369,6 +15933,36 @@ export interface CurvedEdgeReference {
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "frame-end-cap": 'export interface FrameEndCapFeature {\n  id: string;\n  type: "frame-end-cap";\n  name: string;\n  suppressed: boolean;\n  operation: "new" | "add";\n  bodyId?: string;\n  targetBodyId?: string;\n  frameFeatureId: string;\n  end: "start" | "end" | "both";\n  thicknessMillimeters: number;\n  insetMillimeters?: number;\n}',
+  "frame-gusset": 'export interface FrameGussetFeature {\n  id: string;\n  type: "frame-gusset";\n  name: string;\n  suppressed: boolean;\n  operation: "new" | "add";\n  bodyId?: string;\n  targetBodyId?: string;\n  originMillimeters: V3;\n  axisA: V3;\n  axisB: V3;\n  legAMillimeters: number;\n  legBMillimeters: number;\n  thicknessMillimeters: number;\n  chamferMillimeters?: number;\n  shape?: "triangle" | "polygon";\n}\n\nexport type V3 = [number, number, number];',
+  "frame-member": 'export interface FrameMemberFeature {\n  id: string;\n  type: "frame-member";\n  name: string;\n  suppressed: boolean;\n  operation: "new";\n  bodyId?: string;\n  /** Standard library profile ID (e.g. "shs-40x40x3") OR inline custom section. */\n  profileId?: string;\n  customProfile?: CustomFrameProfile;\n  /** Source sketch or 3D curve feature supplying straight path segments. */\n  pathFeatureId?: string;\n  /** Or explicit 3D segments [[start, end], ...] in world mm. */\n  segmentsMillimeters?: [V3, V3][];\n  rotationDegrees?: number;\n  offsetXMillimeters?: number;\n  offsetYMillimeters?: number;\n  trimMode?: "none" | "miter" | "butt";\n  weldGapMillimeters?: number;\n}\n\nexport type V3 = [number, number, number];\n\nexport interface CustomFrameProfile {\n  kind: FrameProfileKind;\n  widthMillimeters: number;\n  heightMillimeters: number;\n  wallMillimeters?: number;\n  flangeMillimeters?: number;\n  webMillimeters?: number;\n}\n\nexport type FrameProfileKind =\n  | "bar"\n  | "round-bar"\n  | "rect-tube"\n  | "round-tube"\n  | "angle"\n  | "channel"\n  | "i-beam";',
+  "frame-trim": `export interface FrameTrimFeature {
+  id: string;
+  type: "frame-trim";
+  name: string;
+  suppressed: boolean;
+  targetBodyIds: string[];
+  toolBodyId?: string;
+  plane?: import("./mirror-plane").MirrorPlaneReference;
+  mode: "butt" | "cope" | "miter";
+  keepPointMillimeters?: V3;
+  weldGapMillimeters?: number;
+}
+
+export type V3 = [number, number, number];
+
+export type MirrorPlaneReference=
+ | {kind:'principal';plane:SketchPlane;offsetMillimeters:number}
+ | {kind:'feature';featureId:string}
+ | ({kind:'face'}&SolidFaceReference)
+ /** A straight sketch line: the plane through it along the sketch's normal. */
+ | {kind:'sketch-line';sourceFeatureId:string;contourId:string;segmentId:string};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";`,
   "full-round": `export type EdgeFinishFeature = {
   id: string;
   name: string;
@@ -13385,6 +15979,106 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "g1": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
+      /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
+      sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
+  | { type: "chamfer";
+      /** How an equal-distance chamfer is measured: along the faces from the edge (default) or across the chamfer face. */ measurement?: "offset" | "tangent";
+      /** The second leg, measured on the reference face; blank keeps the chamfer symmetric. */ secondDistanceMillimeters?: number;
+      /** Alternative to the second leg: the angle from the reference face. */ angleDegrees?: number;
+      /** The face the first leg lies on; default: the adjacent face facing up most. */ referenceFace?: SolidFaceReference;
+      /** Onshape's direction flip: the first leg moves to the other adjacent face on every edge. */ flipped?: boolean;
+      /** Direction overrides: these picked edges flip individually (relative to \`flipped\`). */ flippedEdges?: EdgeFinishEdge[] }
+);
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export type SolidFaceReference=FaceSource & (
+  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
+);
+
+export type SketchPlane = "XY" | "XZ" | "YZ";
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
+
+export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
+  "g2": `export type EdgeFinishFeature = {
+  id: string;
+  name: string;
+  /** The fillet radius or chamfer distance; absent only for a Full round, whose blend radius is half the side spacing. */
+  radiusMillimeters?: number;
+  targetBodyId?: string;
+  edgePlane?: { plane: SketchPlane; offsetMillimeters: number };
+  /** Picked edges; when present they replace the plane pin. */
+  edges?: EdgeFinishEdge[];
+  /** Also finish every edge tangent-continuous with a picked one (SolidCraft's tangent chain). */
+  tangentChain?: boolean;
+  suppressed: boolean;
+} & (
+  | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
+      /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
+      /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13488,7 +16182,7 @@ export type SketchPlane = "XY" | "XZ" | "YZ";`,
   "import-cad": "export interface ImportCADFeature {\n  id:string; type:'import-cad'; name:string; suppressed:boolean; operation:'new';\n  bodyId:string; sourceName:string; dataBase64:string; format:CADImportFormat;\n  meshMode?:'reference'|'solid'; meshUnits?:MeshImportUnits;\n}\n\nexport type CADImportFormat = 'step' | 'iges' | 'brep' | 'stl' | 'obj' | 'ply' | 'off';\n\nexport type MeshImportUnits = 'mm' | 'cm' | 'm' | 'in' | 'ft';",
   "import-step": 'export interface ImportSTEPFeature {\n  id: string;\n  type: "import-step";\n  name: string;\n  suppressed: boolean;\n  operation: "new";\n  bodyId: string;\n  sourceName: string;\n  dataBase64: string;\n}',
   "lip": "export interface LipFeature {\n  id:string;type:'lip';name:string;suppressed:boolean;\n  targetBodyId:string;\n  face:SolidFaceReference;\n  shape:'lip'|'groove';\n  side:'inside'|'outside';\n  widthMillimeters:number;heightMillimeters:number;\n  /** Groove clearance added to the width; default: none. */\n  gapMillimeters?:number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
-  "loft": "export interface LoftFeature {\n  id: string;\n  type: 'loft';\n  name: string;\n  suppressed: boolean;\n  sections: ({profileFeatureId: string} & ProfileRegionSelection)[];\n  /** Apex before the first section / after the last (SolidCraft's point sections). */\n  startPoint?: LoftApex;\n  endPoint?: LoftApex;\n  /** Onshape's Path: the sections are swept along this curve of an earlier sketch (OCCT's pipe shell through several profiles). */\n  path?: { pathFeatureId: string; pathContourId?: string };\n  /** Onshape's Connections: one sketch point per section, in section order; each section's boundary starts at its point so the vertices pair up. */\n  connections?: ExtrusionPointReference[][];\n  operation: 'new' | 'add' | 'cut';\n  ruled: boolean;\n  bodyId?: string;\n  targetBodyId?: string;\n}\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type LoftApex = ExtrusionPointReference | { kind: 'point'; positionMillimeters: [number, number, number] };\n\nexport interface ProfileRegionSelection {\n  profileContourId?: string;\n  profileRegion?: ProfileRegionReference;\n}\n\nexport interface SolidVertexAnchor {\n  positionMillimeters: [number, number, number];\n  signature: string;\n  /** Refusal guard against symmetric corner permutations, not a selector. */\n  incidence: string;\n  shapeFingerprint: string;\n}\n\nexport interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }",
+  "loft": "export interface LoftFeature {\n  id: string;\n  type: 'loft';\n  name: string;\n  suppressed: boolean;\n  sections: ({profileFeatureId: string} & ProfileRegionSelection)[];\n  /** Apex before the first section / after the last (SolidCraft's point sections). */\n  startPoint?: LoftApex;\n  endPoint?: LoftApex;\n  /** Onshape's Path: the sections are swept along this curve of an earlier sketch (OCCT's pipe shell through several profiles). */\n  path?: { pathFeatureId: string; pathContourId?: string };\n  /** Guide rails (SolidCraft's loft guide curves): 1+ curves guiding intermediate loft profiles between sections. */\n  guideRails?: { pathFeatureId: string; pathContourId?: string }[];\n  /** Onshape's Connections: one sketch point per section, in section order; each section's boundary starts at its point so the vertices pair up. */\n  connections?: ExtrusionPointReference[][];\n  operation: 'new' | 'add' | 'cut';\n  ruled: boolean;\n  bodyId?: string;\n  targetBodyId?: string;\n}\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type LoftApex = ExtrusionPointReference | { kind: 'point'; positionMillimeters: [number, number, number] };\n\nexport interface ProfileRegionSelection {\n  profileContourId?: string;\n  profileRegion?: ProfileRegionReference;\n}\n\nexport interface SolidVertexAnchor {\n  positionMillimeters: [number, number, number];\n  signature: string;\n  /** Refusal guard against symmetric corner permutations, not a selector. */\n  incidence: string;\n  shapeFingerprint: string;\n}\n\nexport interface ProfileRegionReference { contourIds: string[]; inside?: string[]; ordinal?: number; boundary?: string[] }",
   "mirror": `export interface MirrorFeature {
   id: string;
   type: "mirror";
@@ -13536,6 +16230,8 @@ export type SolidFaceReference=FaceSource & (
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13617,7 +16313,11 @@ export type PlaneDefinition =
   /** SolidCraft "Tangent Plane": touches a curved face at the picked point. */
   | { method: "tangent"; surface: SurfacePointReference; flip?: boolean }
   /** SolidCraft "Plane Along Path": square to a straight edge at a fraction along it. */
-  | { method: "along-path"; axis: AxisReference; t: number; flip?: boolean };
+  | { method: "along-path"; axis: AxisReference; t: number; flip?: boolean }
+  /** SolidCraft "Plane Through Axis And Point": holds a line/axis and passes through a point off it. */
+  | { method: "axis-point"; axis: AxisReference; point: PointReference; flip?: boolean }
+  /** SolidCraft "Plane Through Point, Square To Line": passes through a point, normal to a line/axis. */
+  | { method: "square-to-line"; axis: AxisReference; point: PointReference; flip?: boolean };
 
 export type SketchPlane = "XY" | "XZ" | "YZ";
 
@@ -13700,6 +16400,7 @@ export interface AxisReference {
   /** The edge's length, when it is straight; lets a plane sit at a fraction along it. */
   lengthMillimeters?: number;
 }`,
+  "primitive": 'export interface PrimitiveFeature {\n  id: string;\n  type: "primitive";\n  name: string;\n  suppressed: boolean;\n  kind: PrimitiveKind;\n  operation: "new" | "add" | "cut" | "intersect";\n  bodyId?: string;\n  targetBodyId?: string;\n  /** Origin point in world mm (default [0, 0, 0]). */\n  originMillimeters?: [number, number, number];\n  /** Principal orientation axis for cylinder/cone/torus/box (default "Z"). */\n  axis?: "X" | "Y" | "Z";\n  /** Optional custom unit/non-zero orientation axis vector (overrides `axis`). */\n  direction?: [number, number, number];\n  /** Box: center around origin in X, Y, Z instead of corner at origin (default true). */\n  centered?: boolean;\n  /** Box dimensions (mm). */\n  widthMillimeters?: number;\n  depthMillimeters?: number;\n  heightMillimeters?: number;\n  /** Cylinder / Sphere radius (mm). */\n  radiusMillimeters?: number;\n  /** Cone bottom & top radii (mm); topRadius = 0 gives a sharp cone, > 0 gives a frustum. */\n  bottomRadiusMillimeters?: number;\n  topRadiusMillimeters?: number;\n  /** Torus major & minor radii (mm). */\n  majorRadiusMillimeters?: number;\n  minorRadiusMillimeters?: number;\n}\n\nexport type PrimitiveKind = "box" | "cylinder" | "sphere" | "cone" | "torus";',
   "profile": `export interface ProfileFeature {
   id: string;
   type: "profile";
@@ -13779,6 +16480,8 @@ export type SketchContour = { sourceLayer?: string } & (
       /** SolidCraft's infinite line: a one-line construction path drawn across the
        *  whole view through its two points. The points stay the solver's entities. */
       infinite?: boolean;
+      /** Dash-dot centerline (construction axis eligible for revolve & linear-diameter). */
+      centerline?: boolean;
     }
 );
 
@@ -13814,6 +16517,8 @@ export type PierceContext = Record<string, { source: SketchPierceReference; poin
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -13846,7 +16551,7 @@ export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "remove-body": "export interface RemoveBodyFeature { id:string;type:'remove-body';name:string;suppressed:boolean;bodyIds:string[] }",
-  "rest": "export interface RestFeature extends OnFace {\n  id:string;type:'rest';name:string;suppressed:boolean;\n  /** Round: the diameter. Rectangular (with a length): the width. */\n  widthMillimeters:number;lengthMillimeters?:number;heightMillimeters:number;\n  /** A rectangle's length direction (in the face); default: the face's x direction. */\n  alongMillimeters?:[number,number,number];\n}",
+  "rest": "export interface RestFeature extends OnFace {\n  id:string;type:'rest';name:string;suppressed:boolean;\n  /** Round: the diameter. Rectangular (with a length): the width. */\n  widthMillimeters:number;lengthMillimeters?:number;heightMillimeters:number;\n  /** A rectangle's length direction (in the face); default: the face's x direction. */\n  alongMillimeters?:[number,number,number];\n  /** Optional hollow wall thickness (mm); removes the core from the top leaving walls of this thickness. */\n  wallThicknessMillimeters?:number;\n}",
   "revolve": `export interface RevolveFeature {
   id: string;
   type: "revolve";
@@ -13952,7 +16657,8 @@ export interface SolidEdgeReference {
 
 export type SketchPlane = "XY" | "XZ" | "YZ";`,
   "shape-binder": "export interface ShapeBinderFeature {\n  id:string;type:'shape-binder';name:string;suppressed:boolean;\n  sourceBodyId:string;\n  /** Picked faces to bind as a sheet; absent binds the whole solid. */\n  faces?:SolidFaceReference[];\n  operation:'new';bodyId?:string;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];",
-  "sheet-base": 'export interface SheetBaseFeature extends SheetMetalRule {\n  id: string; type: "sheet-base"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  profileContourId?: string;\n  /** Build the plate behind the sketch instead of in front of it. */\n  reversed?: boolean;\n}\n\nexport interface SheetMetalRule {\n  thicknessMillimeters: number;\n  bendRadiusMillimeters: number;\n  kFactor: number;\n}',
+  "sheet-base": 'export interface SheetBaseFeature extends SheetMetalRule {\n  id: string; type: "sheet-base"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  profileContourId?: string;\n  /** Optional named sheet metal rule ID from document rules or library. */\n  ruleId?: string;\n  /** Build the plate behind the sketch instead of in front of it. */\n  reversed?: boolean;\n}\n\nexport interface SheetMetalRule {\n  thicknessMillimeters: number;\n  bendRadiusMillimeters: number;\n  kFactor: number;\n}',
+  "sheet-convert": 'export interface SheetConvertFeature {\n  id: string; type: "sheet-convert"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  baseFace?: import("./solid-face-reference").SolidFaceReference;\n  thicknessMillimeters?: number;\n  bendRadiusMillimeters: number;\n  kFactor: number;\n  ruleId?: string;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
   "sheet-flange": `export interface SheetFlangeFeature {
   id: string; type: "sheet-flange"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -14001,6 +16707,30 @@ export interface CurvedEdgeReference {
 }
 
 export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
+  "sheet-path-flange": `export interface SheetPathFlangeFeature {
+  id: string; type: "sheet-path-flange"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  profileFeatureId: string;
+  profileContourId?: string;
+  edges?: EdgeFinishEdge[];
+  widthMillimeters?: number;
+  thicknessMillimeters?: number;
+  bendRadiusMillimeters?: number;
+  inward?: boolean;
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "sheet-perforate": `export interface SheetPerforateFeature {
   id: string; type: "sheet-perforate"; name: string; suppressed: boolean;
   bodyIds: [string];
@@ -14022,7 +16752,7 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "sheet-unfold": 'export interface SheetUnfoldFeature { id: string; type: "sheet-unfold"; name: string; suppressed: boolean; bodyIds: [string] }',
   "shell": 'export interface ShellFeature {\n  id: string;\n  type: "shell";\n  name: string;\n  targetBodyId?: string;\n  thicknessMillimeters: number;\n  /** Faces left open. Prefer a face reference (the face of an earlier solid by\n   *  outward normal or surface type), which survives upstream dimension edits;\n   *  the plane/offset form matches a fixed coordinate and is kept for older files. */\n  removedFaces?: ShellOpenFace[];\n  /** Which side of the original surface the wall takes; default inside. */\n  direction?: "inside" | "outside" | "both";\n  /** Also open every face tangent-continuous with a picked one. */\n  tangentChain?: boolean;\n  suppressed: boolean;\n}\n\nexport type ShellOpenFace = { plane: SketchPlane; offsetMillimeters: number } | SolidFaceReference;\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";',
   "sketch": 'export interface SketchFeature {\n  id: string;\n  type: "sketch";\n  name: string;\n  plane: SketchPlane;\n  profile: RectangleProfile;\n  constraints: SketchConstraint[];\n  dimensions: SketchDimension[];\n  suppressed: boolean;\n}\n\nexport type SketchPlane = "XY" | "XZ" | "YZ";\n\nexport interface RectangleProfile {\n  type: "center-rectangle";\n  widthMillimeters: number;\n  heightMillimeters: number;\n  centerXMillimeters: number;\n  centerYMillimeters: number;\n  construction: boolean;\n}\n\nexport interface SketchConstraint {\n  id: string;\n  type: SketchConstraintType;\n  target: "center-rectangle";\n}\n\nexport interface SketchDimension {\n  id: string;\n  type: SketchDimensionType;\n  target: "center-rectangle";\n  valueMillimeters: number;\n}\n\nexport type SketchConstraintType =\n  | "horizontal"\n  | "vertical"\n  | "coincident-origin";\n\nexport type SketchDimensionType = "width" | "height";',
-  "snap-fit": "export interface SnapFitFeature extends OnFace {\n  id:string;type:'snap-fit';name:string;suppressed:boolean;\n  /** Which way the catch faces, across the face. */\n  hookDirectionMillimeters:[number,number,number];\n  lengthMillimeters:number;thicknessMillimeters:number;widthMillimeters:number;\n  catchDepthMillimeters:number;catchLengthMillimeters:number;\n}",
+  "snap-fit": "export interface SnapFitFeature extends OnFace {\n  id:string;type:'snap-fit';name:string;suppressed:boolean;\n  /** Which way the catch faces, across the face. */\n  hookDirectionMillimeters:[number,number,number];\n  lengthMillimeters:number;thicknessMillimeters:number;widthMillimeters:number;\n  catchDepthMillimeters:number;catchLengthMillimeters:number;\n  /** Optional thickened base pedestal height at the root of the cantilever arm (mm). */\n  baseHeightMillimeters?:number;\n}",
   "split": `export interface SplitFeature {
   id:string;type:'split';name:string;suppressed:boolean;
   bodyIds:[string];
@@ -14076,6 +16806,8 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   id: string; type: "surface-blend"; name: string; suppressed: boolean; operation: "new";
   from: { bodyId: string; edges: EdgeFinishEdge[] };
   to: { bodyId: string; edges: EdgeFinishEdge[] };
+  continuity?: "g0" | "g1" | "g2";
+  tangentWeight?: number;
 }
 
 export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
@@ -14240,7 +16972,47 @@ export interface ProfileRegionSelection {
   profileRegion?: ProfileRegionReference;
 }`,
   "surface-fair": 'export interface SurfaceFairFeature {\n  id: string; type: "surface-fair"; name: string; suppressed: boolean;\n  bodyIds: [string];\n  faces?: SolidFaceReference[];\n  strength?: number;\n  toleranceMillimeters?: number;\n}\n\nexport type SolidFaceReference=FaceSource & (\n  {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}\n);\n\nexport type CurvedSurfaceType=typeof curvedSurfaceTypes[number];',
+  "surface-fillet": `export interface SurfaceFilletFeature {
+  id: string; type: "surface-fillet"; name: string; suppressed: boolean; operation: "new";
+  bodyIds: string[];
+  edges?: EdgeFinishEdge[];
+  radiusMillimeters: number;
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-loft": 'export interface SurfaceLoftFeature {\n  id: string; type: "surface-loft"; name: string; suppressed: boolean; operation: "new";\n  sections: { profileFeatureId: string; contourId?: string }[];\n  ruled?: boolean;\n}',
+  "surface-match": `export interface SurfaceMatchFeature {
+  id: string; type: "surface-match"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  sourceEdges: EdgeFinishEdge[];
+  targetBodyId: string;
+  targetEdges: EdgeFinishEdge[];
+  continuity: "g0" | "g1" | "g2";
+}
+
+export type EdgeFinishEdge=(SolidEdgeReference|CurvedEdgeReference|FaceEdgesReference)&{radiusMillimeters?:number};
+
+export interface SolidEdgeReference {
+ kind:'solid-edge';sourceFeatureId:string;bodyId:string;anchor:SolidEdgeAnchor;label:string;
+}
+
+export interface CurvedEdgeReference {
+ kind:'curved-edge';sourceFeatureId:string;bodyId:string;label:string;
+ midpointMillimeters:[number,number,number];lengthMillimeters:number;radiusMillimeters?:number;
+}
+
+export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-offset": 'export interface SurfaceOffsetFeature {\n  id: string; type: "surface-offset"; name: string; suppressed: boolean; operation: "new";\n  bodyIds: [string];\n  distanceMillimeters: number;\n}',
   "surface-patch": 'export interface SurfacePatchFeature {\n  id: string; type: "surface-patch"; name: string; suppressed: boolean; operation: "new";\n  profileFeatureId: string;\n  /** The closed curves to fill; every closed curve when absent. */\n  contourIds?: string[];\n}',
   "surface-reverse-normal": 'export interface SurfaceReverseNormalFeature {\n  id: string; type: "surface-reverse-normal"; name: string; suppressed: boolean;\n  bodyIds: [string];\n}',
@@ -14295,7 +17067,8 @@ export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;`,
   "surface-trim": `export interface SurfaceTrimFeature {
   id: string; type: "surface-trim"; name: string; suppressed: boolean;
   bodyIds: [string];
-  plane: import("./mirror-plane").MirrorPlaneReference;
+  plane?: import("./mirror-plane").MirrorPlaneReference;
+  toolBodyId?: string;
   keepPointMillimeters: [number, number, number];
 }
 
@@ -14366,6 +17139,8 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -14407,7 +17182,16 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   /** Tolerance class ("6H", "6g" is external: use "6H"/"6G"/"2B" as the hole tables list). */
   threadClass?:string;
   lengthMillimeters?:number;
-  modeled?:false;
+  /** When true, cuts an exact helical thread groove into the cylinder. */
+  modeled?:boolean;
+  /** Left-hand helix direction when modeled (default false = right-hand). */
+  leftHand?:boolean;
+  /** Multi-start thread count (1..8, default 1). */
+  starts?:number;
+  /** Thread tooth profile form (default "v60"). */
+  form?:ThreadForm;
+  /** Override pitch in mm (otherwise taken from standard/designation). */
+  pitchMillimeters?:number;
   /** Onshape's size from the cylinder: the designation is the standard's size whose major diameter is nearest the picked face's, re-read when the face changes. */
   sizeFromFace?:boolean;
   /** Onshape's Add chamfer: a chamfer on the circular edge where the thread starts (distance along the cylinder, angle from it). */
@@ -14425,6 +17209,8 @@ export type HoleThreadStandard = "iso-metric-coarse" | "iso-metric-fine" | "unc"
 export type SolidFaceReference=FaceSource & (
   {normal:[number,number,number];surfaceType?:never} | {surfaceType:CurvedSurfaceType;normal?:never}
 );
+
+export type ThreadForm = "v60" | "trapezoidal" | "acme" | "buttress";
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   "transform": "export interface TransformFeature {\n id:string;type:'transform';name:string;suppressed:boolean;\n bodyIds:string[];\n transform:PartTransform;\n /** Stable output IDs for copies. Omitted for in-place transformations. */\n copyBodyIds?:Record<string,string>;\n}\n\nexport type PartTransform=NumericPartTransform\n | {kind:'translate-reference';reference:TransformVectorReference;distanceMillimeters?:number;reversed?:boolean}\n | {kind:'rotate-reference';reference:TransformVectorReference;angleDegrees:number}\n | {kind:'scale-reference';centerReference:ExtrusionPointReference;scaleFactors:Vector3}\n | {kind:'mirror';plane:MirrorPlaneReference;/** Join the image with the original instead of making a new part. */combine?:boolean}\n /** Align (SolidCraft's solid.align): move the parts so `from` meets `to`;\n\nexport type ExtrusionPointReference = {\n  kind: 'sketch-point'; sourceFeatureId: string; contourId: string;\n  point: 'vertex' | 'center'; vertexId?: string; label: string;\n} | {\n  kind: 'solid-vertex'; sourceFeatureId: string; bodyId: string;\n  anchor: SolidVertexAnchor; label: string;\n};\n\nexport type MirrorPlaneReference=\n | {kind:'principal';plane:SketchPlane;offsetMillimeters:number}\n | {kind:'feature';featureId:string}\n | ({kind:'face'}&SolidFaceReference)\n /** A straight sketch line: the plane through it along the sketch's normal. */\n | {kind:'sketch-line';sourceFeatureId:string;contourId:string;segmentId:string};\n\nexport type NumericPartTransform=\n | {kind:'translate';translationMillimeters:Vector3}\n | {kind:'rotate';axisOriginMillimeters:Vector3;axisDirection:Vector3;angleDegrees:number}\n | {kind:'scale';centerMillimeters:Vector3;scaleFactors:Vector3}\n | {kind:'copy'};\n\nexport type TransformVectorReference=SketchLineDirectionReference|SolidEdgeReference|{kind:'two-points';from:ExtrusionPointReference;to:ExtrusionPointReference};",
@@ -14444,6 +17230,8 @@ export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`,
   | { type: "fillet"; /** A variable fillet runs from the size to this at the edge's far end. */ endRadiusMillimeters?: number;
       /** Onshape's points on the edge: the radius law passes through these (position 0…1 along each picked edge, the same law on every edge). */ points?: { position: number; radiusMillimeters: number }[];
       /** How the size is measured: the arc's radius (default) or the width between its tangent lines (Onshape's Width). */ measurement?: "radius" | "width";
+      /** Fillet cross-section continuity: G1 tangent circular (default) or G2 curvature-continuous polynomial/quasi-angular blend (SolidCraft's continuity). */ continuity?: "g1" | "g2";
+      /** Optional per-vertex corner setback / radius overrides in world mm (SolidCraft's setbacks). */ setbacks?: { vertexMillimeters: [number, number, number]; distanceMillimeters: number }[];
       /** Onshape's Full round: the faces between two side faces are replaced by a blend tangent to both. This kernel builds it for two parallel planar side faces and planar faces between them (the inscribed cylinder); other arrangements are refused, not approximated. */ filletType?: "edge" | "full-round";
       sideFace?: SolidFaceReference; oppositeSideFace?: SolidFaceReference; replacedFaces?: SolidFaceReference[] }
   | { type: "chamfer";
@@ -14476,7 +17264,7 @@ export type FaceEdgesReference={kind:'face-edges'}&SolidFaceReference;
 
 export type CurvedSurfaceType=typeof curvedSurfaceTypes[number];`
 };
-const tool$1 = (name5, description, properties, required = []) => ({
+const tool$2 = (name5, description, properties, required = []) => ({
   name: `aether_cad_${name5}`,
   description,
   inputSchema: { type: "object", properties, required, additionalProperties: false }
@@ -14484,14 +17272,14 @@ const tool$1 = (name5, description, properties, required = []) => ({
 const featureId = { type: "string", maxLength: 200 };
 const json = { type: ["string", "object"], maxLength: 262144 };
 const featureReadTools = [
-  tool$1("feature_types", "List every canonical Part feature type this editor can author (sketch, profile, extrude, revolve, sweep, loft, fillet, chamfer, shell, hole, pattern, mirror, draft, boolean, transform, plane…). Read-only.", {}),
-  tool$1("feature_schema", "Return the exact TypeScript declaration of one feature type and the helper types it uses, generated from the document core. Lengths are millimeters, angles degrees. Use it before feature_add/feature_update; inspect existing features for live examples. Read-only.", { type: { type: "string", maxLength: 40 } }, ["type"])
+  tool$2("feature_types", "List every canonical Part feature type this editor can author (sketch, profile, extrude, revolve, sweep, loft, fillet, chamfer, shell, hole, pattern, mirror, draft, boolean, transform, plane…). Read-only.", {}),
+  tool$2("feature_schema", "Return the exact TypeScript declaration of one feature type and the helper types it uses, generated from the document core. Lengths are millimeters, angles degrees. Use it before feature_add/feature_update; inspect existing features for live examples. Read-only.", { type: { type: "string", maxLength: 40 } }, ["type"])
 ];
 const featureEditTools = [
-  tool$1("feature_add", 'Add one canonical feature (the same record the feature editors commit) at the rollback position. feature_json is the feature object WITHOUT "id"; include "type", "name" and every required field from feature_schema. References use existing feature and body IDs from inspect; inside run_program, pass feature_json as an object so {"$ref":"step.feature_id"} values resolve. The core validator and an exact native rebuild must pass before anything commits; one undo step.', { feature_json: json }, ["feature_json"]),
-  tool$1("feature_update", 'Change fields of an existing feature. changes_json is an object of top-level fields to replace (nested objects are replaced whole); "id" and "type" cannot change. Validated and natively rebuilt before commit; one undo step.', { feature_id: featureId, changes_json: json }, ["feature_id", "changes_json"]),
-  tool$1("feature_delete", "Delete one feature. Refused while other features depend on it (use feature_references to see them) — delete or repoint dependents first. One undo step.", { feature_id: featureId }, ["feature_id"]),
-  tool$1("feature_move", "Move one feature earlier (negative delta) or later in the history. Refused when it would break references. One undo step.", { feature_id: featureId, delta: { type: "integer", minimum: -511, maximum: 511 } }, ["feature_id", "delta"])
+  tool$2("feature_add", 'Add one canonical feature (the same record the feature editors commit) at the rollback position. feature_json is the feature object WITHOUT "id"; include "type", "name" and every required field from feature_schema. References use existing feature and body IDs from inspect; inside run_program, pass feature_json as an object so {"$ref":"step.feature_id"} values resolve. The core validator and an exact native rebuild must pass before anything commits; one undo step.', { feature_json: json }, ["feature_json"]),
+  tool$2("feature_update", 'Change fields of an existing feature. changes_json is an object of top-level fields to replace (nested objects are replaced whole); "id" and "type" cannot change. Validated and natively rebuilt before commit; one undo step.', { feature_id: featureId, changes_json: json }, ["feature_id", "changes_json"]),
+  tool$2("feature_delete", "Delete one feature. Refused while other features depend on it (use feature_references to see them) — delete or repoint dependents first. One undo step.", { feature_id: featureId }, ["feature_id"]),
+  tool$2("feature_move", "Move one feature earlier (negative delta) or later in the history. Refused when it would break references. One undo step.", { feature_id: featureId, delta: { type: "integer", minimum: -511, maximum: 511 } }, ["feature_id", "delta"])
 ];
 const featureEditToolNames = featureEditTools.map((t2) => t2.name);
 const object$2 = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
@@ -14553,6 +17341,393 @@ function prepareFeatureOperation(doc, name5, args) {
   }
   throw Error("Unknown feature operation.");
 }
+const num = { type: "number" };
+const str = { type: "string" };
+const bool = { type: "boolean" };
+const pt3 = { type: "array", items: num, minItems: 3, maxItems: 3 };
+const tool$1 = (name5, description, properties, required = []) => ({
+  name: `aether_cad_${name5}`,
+  description,
+  inputSchema: { type: "object", properties, required, additionalProperties: false }
+});
+const parityEditToolNames = [
+  "aether_cad_parameters_edit",
+  "aether_cad_material_assign",
+  "aether_cad_configuration_edit",
+  "aether_cad_notes_edit",
+  "aether_cad_sketch_operation"
+];
+const parityAgentTools = [
+  tool$1(
+    "commands",
+    "List all available CAD agent commands with short summaries, optionally filtered by keyword query.",
+    { query: str }
+  ),
+  tool$1(
+    "describe",
+    "Return the complete JSON input schema and documentation for a single CAD agent command.",
+    { name: str },
+    ["name"]
+  ),
+  tool$1(
+    "model_query",
+    "Query exact evaluated model geometry or metadata: faces, edges, body_features, threads, or cylindrical fastener_seats.",
+    {
+      query: { type: "string", enum: ["faces", "edges", "body_features", "threads", "fastener_seats"] },
+      body_id: str,
+      offset: { type: "integer", minimum: 0 },
+      limit: { type: "integer", minimum: 1, maximum: 100 }
+    },
+    ["query"]
+  ),
+  tool$1(
+    "analyze",
+    "Run exact OpenCASCADE engineering analysis on the Part: properties, center_of_mass, classify_points, interference, clearance, compare, section, continuity, curvature_comb, isocurve, or minimum_radius.",
+    {
+      kind: {
+        type: "string",
+        enum: [
+          "properties",
+          "center_of_mass",
+          "classify_points",
+          "interference",
+          "clearance",
+          "compare",
+          "section",
+          "continuity",
+          "curvature_comb",
+          "isocurve",
+          "minimum_radius",
+          "silhouette",
+          "mesh_inspect"
+        ]
+      },
+      body_ids: { type: "array", items: str, minItems: 1, maxItems: 100 },
+      against_body_ids: { type: "array", items: str, minItems: 1, maxItems: 100 },
+      density_kg_m3: { type: "number", exclusiveMinimum: 0 },
+      points_mm: { type: "array", items: pt3, minItems: 1, maxItems: 500 },
+      direction: pt3,
+      position_tol_mm: { type: "number", exclusiveMinimum: 0 },
+      tangent_tol_deg: { type: "number", exclusiveMinimum: 0 },
+      curvature_tol: { type: "number", exclusiveMinimum: 0 },
+      clearance_mm: { type: "number", minimum: 0 },
+      nearest: { type: "integer", minimum: 1, maximum: 50 },
+      plane: { type: "string", enum: ["XY", "XZ", "YZ"] },
+      offset_mm: num,
+      radius_mm: { type: "number", exclusiveMinimum: 0 },
+      count: { type: "integer", minimum: 1, maximum: 100 },
+      scale: { type: "number", exclusiveMinimum: 0 }
+    },
+    ["kind"]
+  ),
+  tool$1(
+    "parameter_sweep",
+    "Evaluate mass, volume, surface area, and bounds across a range of values for one document variable without modifying the Part.",
+    {
+      variable_name: str,
+      from: num,
+      to: num,
+      steps: { type: "integer", minimum: 2, maximum: 50 },
+      density_kg_m3: { type: "number", exclusiveMinimum: 0 }
+    },
+    ["variable_name", "from", "to", "steps"]
+  ),
+  tool$1(
+    "parameters_inspect",
+    "Inspect all document variables, evaluated SI values, dependency graph, optional users of one variable, or test an expression.",
+    { variable_name: str, expression: str }
+  ),
+  tool$1(
+    "parameters_edit",
+    "Edit document variables: set (add/update), rename (rewrites all #references), delete (refuses while used), comment, or favorite.",
+    {
+      action: { type: "string", enum: ["set", "rename", "delete", "comment", "favorite"] },
+      name: str,
+      expression: str,
+      kind: { type: "string", enum: ["length", "angle", "number", "string"] },
+      new_name: str,
+      comment: str,
+      favorite: bool
+    },
+    ["action", "name"]
+  ),
+  tool$1(
+    "material_library",
+    "List built-in engineering materials (density, elastic modulus, Poisson ratio, yield strength) and current body material assignments.",
+    { query: str }
+  ),
+  tool$1(
+    "material_assign",
+    "Assign a built-in engineering material (by ID or name) to a body, or clear its material assignment.",
+    { body_id: str, material: str, clear: bool },
+    ["body_id"]
+  ),
+  tool$1(
+    "configurations_inspect",
+    "Inspect the Part's configuration table: columns, rows, active row, rules, and whether current values match the active row.",
+    {}
+  ),
+  tool$1(
+    "configuration_edit",
+    "Manage Part configurations: add_column, add_row, remove_row, set_value, activate, or update_from_design.",
+    {
+      action: { type: "string", enum: ["add_column", "add_row", "remove_row", "set_value", "activate", "update_from_design"] },
+      row_name: str,
+      from_row: str,
+      column_kind: { type: "string", enum: ["param", "suppress", "material"] },
+      column_target: str,
+      column_key: str,
+      value_string: str,
+      value_boolean: bool
+    },
+    ["action"]
+  ),
+  tool$1(
+    "notes_inspect",
+    "List persisted 3D viewport notes and PMI annotations stored on the open Part.",
+    {}
+  ),
+  tool$1(
+    "notes_edit",
+    "Add, update, resolve, or delete a persisted 3D note / PMI annotation on the open Part.",
+    {
+      action: { type: "string", enum: ["add", "update", "delete"] },
+      note_id: str,
+      text: str,
+      position_mm: pt3,
+      target_body_id: str,
+      category: { type: "string", enum: ["note", "pmi", "callout", "review"] },
+      resolved: bool
+    },
+    ["action"]
+  ),
+  tool$1(
+    "sketch_operation",
+    "Apply an advanced sketch authoring or solver operation to an existing drawing sketch: construction_line, rounded_rectangle, two_point_circle, equation_curve, divide_curve, set_centerline, toggle_diameter, tie_loose_ends, offset_advanced, break_offset, or add_constraint.",
+    {
+      feature_id: str,
+      action: {
+        type: "string",
+        enum: [
+          "construction_line",
+          "rounded_rectangle",
+          "two_point_circle",
+          "equation_curve",
+          "divide_curve",
+          "set_centerline",
+          "toggle_diameter",
+          "tie_loose_ends",
+          "offset_advanced",
+          "break_offset",
+          "rotate_contours",
+          "scale_contours",
+          "add_constraint"
+        ]
+      },
+      params_json: str
+    },
+    ["feature_id", "action"]
+  ),
+  tool$1(
+    "standard_parts",
+    "Query the ISO metric (M2–M30) and ASME inch UNC standard parts catalogue, or compute specs and volume for a specific fastener/bearing.",
+    {
+      family: str,
+      size: str,
+      length_mm: { type: "number", exclusiveMinimum: 0 }
+    }
+  ),
+  tool$1(
+    "export_script",
+    "Export the open Part's complete parametric timeline, variables, materials, rules, and configurations as a runnable TypeScript build script.",
+    {}
+  )
+];
+function applyVariablesSync(source, variables) {
+  const next = structuredClone(source);
+  next.variables = structuredClone([...variables]);
+  const resolved = evaluateDocumentVariables(next.variables);
+  applyFeatureExpressions(next, resolved);
+  for (const feat2 of next.features) {
+    if (feat2.type === "profile" && feat2.profile.type === "drawing" && feat2.profile.constraints?.some((c2) => c2.valueExpression !== void 0)) {
+      feat2.profile = regenerateDimensionExpressions(feat2.profile, resolved);
+    }
+  }
+  return next;
+}
+function prepareParityEdit(doc, name5, args) {
+  if (name5 === "aether_cad_parameters_edit") {
+    const action = String(args.action);
+    const varName = String(args.name);
+    let next;
+    if (action === "set") {
+      if (typeof args.expression !== "string" || !args.expression.trim()) throw new Error("set requires a non-empty expression.");
+      const existing2 = doc.variables ?? [];
+      const idx2 = existing2.findIndex((v2) => v2.name === varName);
+      const kind = args.kind ?? existing2[idx2]?.kind ?? "length";
+      const updatedVar = {
+        ...idx2 >= 0 ? existing2[idx2] : {},
+        name: varName,
+        expression: args.expression.trim(),
+        kind,
+        ...typeof args.comment === "string" ? { comment: args.comment } : {},
+        ...typeof args.favorite === "boolean" ? { favorite: args.favorite } : {}
+      };
+      const vars = idx2 >= 0 ? existing2.map((v2, i2) => i2 === idx2 ? updatedVar : v2) : [...existing2, updatedVar];
+      next = applyVariablesSync(doc, vars);
+    } else if (action === "rename") {
+      if (typeof args.new_name !== "string" || !args.new_name.trim()) throw new Error("rename requires new_name.");
+      next = renameVariable(doc, varName, args.new_name.trim());
+    } else if (action === "delete") {
+      next = safeDeleteVariable(doc, varName);
+    } else if (action === "comment") {
+      next = setVariableComment(doc, varName, typeof args.comment === "string" ? args.comment : "");
+    } else if (action === "favorite") {
+      next = setVariableFavorite(doc, varName, args.favorite !== false);
+    } else {
+      throw new Error(`Unknown parameters_edit action "${action}".`);
+    }
+    validatePartDocument(next);
+    return { document: next, featureID: `var:${varName}` };
+  }
+  if (name5 === "aether_cad_material_assign") {
+    const bodyId = String(args.body_id);
+    const next = args.clear ? clearBodyMaterial(doc, bodyId) : assignBodyMaterial(doc, bodyId, String(args.material ?? ""));
+    validatePartDocument(next);
+    return { document: next, featureID: `material:${bodyId}` };
+  }
+  if (name5 === "aether_cad_configuration_edit") {
+    const action = String(args.action);
+    let next;
+    if (action === "add_column") {
+      const kind = String(args.column_kind ?? "");
+      const target = String(args.column_target ?? "");
+      const col = kind === "param" ? { kind: "param", name: target } : kind === "suppress" ? { kind: "suppress", featureId: target } : kind === "material" ? { kind: "material", bodyId: target } : (() => {
+        throw new Error("column_kind must be param, suppress, or material.");
+      })();
+      next = addConfigurationColumn(doc, col);
+    } else if (action === "add_row") {
+      next = addConfigurationRow(doc, String(args.row_name ?? ""), typeof args.from_row === "string" ? args.from_row : void 0);
+    } else if (action === "remove_row") {
+      next = removeConfigurationRow(doc, String(args.row_name ?? ""));
+    } else if (action === "set_value") {
+      const val = args.value_boolean !== void 0 ? Boolean(args.value_boolean) : String(args.value_string ?? "");
+      next = setConfigurationValue(doc, String(args.row_name ?? ""), String(args.column_key ?? ""), val);
+    } else if (action === "activate") {
+      const activated = activateConfiguration(doc, String(args.row_name ?? "")).document;
+      next = applyVariablesSync(activated, activated.variables ?? []);
+    } else if (action === "update_from_design") {
+      next = updateConfigurationFromDesign(doc, typeof args.row_name === "string" ? args.row_name : void 0);
+    } else {
+      throw new Error(`Unknown configuration_edit action "${action}".`);
+    }
+    validatePartDocument(next);
+    return { document: next, featureID: `config:${String(args.row_name ?? action)}` };
+  }
+  if (name5 === "aether_cad_notes_edit") {
+    const action = String(args.action);
+    let next;
+    let noteId = typeof args.note_id === "string" ? args.note_id : "";
+    if (action === "add") {
+      if (typeof args.text !== "string" || !args.text.trim()) throw new Error("add note requires text.");
+      const res = addDocumentNote(doc, {
+        ...noteId ? { id: noteId } : {},
+        text: args.text,
+        ...Array.isArray(args.position_mm) ? { positionMillimeters: args.position_mm } : {},
+        ...typeof args.target_body_id === "string" ? { targetBodyId: args.target_body_id } : {},
+        ...typeof args.category === "string" ? { category: args.category } : {},
+        ...typeof args.resolved === "boolean" ? { resolved: args.resolved } : {}
+      });
+      next = res.document;
+      noteId = res.note.id;
+    } else if (action === "update") {
+      if (!noteId) throw new Error("update note requires note_id.");
+      next = updateDocumentNote(doc, noteId, {
+        ...typeof args.text === "string" ? { text: args.text } : {},
+        ...Array.isArray(args.position_mm) ? { positionMillimeters: args.position_mm } : {},
+        ...typeof args.category === "string" ? { category: args.category } : {},
+        ...typeof args.resolved === "boolean" ? { resolved: args.resolved } : {}
+      });
+    } else if (action === "delete") {
+      if (!noteId) throw new Error("delete note requires note_id.");
+      next = deleteDocumentNote(doc, noteId);
+    } else {
+      throw new Error(`Unknown notes_edit action "${action}".`);
+    }
+    validatePartDocument(next);
+    return { document: next, featureID: noteId };
+  }
+  if (name5 === "aether_cad_sketch_operation") {
+    const featureId2 = String(args.feature_id);
+    const action = String(args.action);
+    const params = typeof args.params_json === "string" ? JSON.parse(args.params_json) : {};
+    const next = structuredClone(doc);
+    const feat2 = next.features.find((f2) => f2.id === featureId2);
+    if (!feat2 || feat2.type !== "profile" || feat2.profile.type !== "drawing") {
+      throw new Error("sketch_operation requires an existing drawing ProfileFeature.");
+    }
+    let drawing = feat2.profile;
+    if (action === "construction_line") {
+      drawing = createConstructionLine(drawing, params).drawing;
+    } else if (action === "rounded_rectangle") {
+      const contour = createRoundedRectangle(
+        params.cornerA,
+        params.cornerB,
+        Number(params.filletRadius ?? 2),
+        Boolean(params.construction)
+      );
+      drawing = { ...drawing, contours: [...drawing.contours, contour] };
+    } else if (action === "two_point_circle") {
+      const contour = createTwoPointCircle(params.a, params.b, Boolean(params.construction));
+      drawing = { ...drawing, contours: [...drawing.contours, contour] };
+    } else if (action === "equation_curve") {
+      const vars = evaluateDocumentVariables(next.variables ?? []);
+      const contour = createEquationCurve({
+        ...params,
+        variables: vars
+      });
+      drawing = { ...drawing, contours: [...drawing.contours, contour] };
+    } else if (action === "divide_curve") {
+      const curveRef = params.curve ?? {
+        contour: Number(params.contourIndex),
+        kind: "segment",
+        index: Number(params.segmentIndex ?? 0)
+      };
+      drawing = divideSketchCurve(drawing, curveRef, Number(params.count ?? 2)).drawing;
+    } else if (action === "set_centerline") {
+      const indices = Array.isArray(params.contourIndices) ? params.contourIndices.map(Number) : [Number(params.contourIndex)];
+      drawing = setSketchCenterline(drawing, indices, params.enabled !== false);
+    } else if (action === "toggle_diameter") {
+      drawing = toggleRadiusDiameter(drawing, String(params.constraintId));
+    } else if (action === "tie_loose_ends") {
+      drawing = tieLooseEnds(drawing, typeof params.toleranceMm === "number" ? params.toleranceMm : void 0).drawing;
+    } else if (action === "offset_advanced") {
+      const indices = Array.isArray(params.contourIndices) ? params.contourIndices.map(Number) : [Number(params.contourIndex)];
+      drawing = offsetSketchAdvanced(drawing, indices, params);
+    } else if (action === "break_offset") {
+      const indices = Array.isArray(params.contourIndices) ? params.contourIndices.map(Number) : params.contourIndex !== void 0 ? [Number(params.contourIndex)] : void 0;
+      drawing = breakOffsetAssociation(drawing, indices).drawing;
+    } else if (action === "rotate_contours") {
+      const indices = Array.isArray(params.contourIndices) ? params.contourIndices.map(Number) : drawing.contours.map((_2, i2) => i2);
+      const center = Array.isArray(params.center) ? params.center : [0, 0];
+      drawing = rotateSketchContours(drawing, indices, center, Number(params.angleDegrees ?? 0), { adaptFixed: Boolean(params.adaptFixed) }).drawing;
+    } else if (action === "scale_contours") {
+      const indices = Array.isArray(params.contourIndices) ? params.contourIndices.map(Number) : drawing.contours.map((_2, i2) => i2);
+      const center = Array.isArray(params.center) ? params.center : [0, 0];
+      drawing = scaleSketchContours(drawing, indices, center, Number(params.factor ?? 1), { adaptFixed: Boolean(params.adaptFixed) }).drawing;
+    } else if (action === "add_constraint") {
+      const constraint = params;
+      const withConstraint = { ...drawing, constraints: [...drawing.constraints ?? [], constraint] };
+      drawing = solveDrawingConstraints(withConstraint);
+    } else {
+      throw new Error(`Unknown sketch_operation action "${action}".`);
+    }
+    feat2.profile = drawing;
+    validatePartDocument(next);
+    return { document: next, featureID: featureId2 };
+  }
+  throw new Error(`Unknown parity edit tool "${name5}".`);
+}
 const number$1 = { type: "number" }, string = { type: "string" }, boolean = { type: "boolean" };
 const tool = (name5, description, properties, required = []) => ({ name: "aether_cad_" + name5, description, inputSchema: { type: "object", properties, required, additionalProperties: false } });
 const vector3 = { type: "array", items: number$1, minItems: 3, maxItems: 3 };
@@ -14577,7 +17752,8 @@ const cadAgentTools = [
   tool("extrude_depth", "Change an existing blind/symmetric extrusion depth, then rebuild.", { feature_id: string, depth_mm: number$1 }, ["feature_id", "depth_mm"]),
   tool("suppress", "Suppress or unsuppress an existing feature. Rebuild must succeed.", { feature_id: string, suppressed: boolean }, ["feature_id", "suppressed"]),
   tool("undo", "Undo one successful Part edit, using the same history as the editor.", {}),
-  tool("redo", "Redo one Part edit, using the same history as the editor.", {})
+  tool("redo", "Redo one Part edit, using the same history as the editor.", {}),
+  ...parityAgentTools
 ];
 function numberValue(a2, key2, fallback, positive = false) {
   const v2 = a2[key2] ?? fallback;
@@ -14608,6 +17784,7 @@ function preparePartEdit(doc, name5, args) {
   if (doc.features.length >= 512) throw Error("Agent editing supports at most 512 features.");
   if (name5 === "aether_cad_sketch_translate" || name5 === "aether_cad_sketch_dimension") return editSketch(doc, name5, args);
   if (featureEditToolNames.includes(name5)) return prepareFeatureOperation(doc, name5, args);
+  if (parityEditToolNames.includes(name5)) return prepareParityEdit(doc, name5, args);
   if (name5 === "aether_cad_extrude_depth" || name5 === "aether_cad_suppress") {
     if (typeof args.feature_id !== "string") throw Error("Inspect the part for its feature ID.");
     if (name5 === "aether_cad_suppress" && typeof args.suppressed !== "boolean") throw Error("suppressed must be true or false.");
@@ -14938,16 +18115,16 @@ var Module$1 = (() => {
       if (endPtr - idx2 > 16 && heapOrArray.buffer && UTF8Decoder) {
         return UTF8Decoder.decode(heapOrArray.subarray(idx2, endPtr));
       } else {
-        var str = "";
+        var str2 = "";
         while (idx2 < endPtr) {
           var u0 = heapOrArray[idx2++];
           if (!(u0 & 128)) {
-            str += String.fromCharCode(u0);
+            str2 += String.fromCharCode(u0);
             continue;
           }
           var u1 = heapOrArray[idx2++] & 63;
           if ((u0 & 224) == 192) {
-            str += String.fromCharCode((u0 & 31) << 6 | u1);
+            str2 += String.fromCharCode((u0 & 31) << 6 | u1);
             continue;
           }
           var u2 = heapOrArray[idx2++] & 63;
@@ -14957,26 +18134,26 @@ var Module$1 = (() => {
             u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heapOrArray[idx2++] & 63;
           }
           if (u0 < 65536) {
-            str += String.fromCharCode(u0);
+            str2 += String.fromCharCode(u0);
           } else {
             var ch = u0 - 65536;
-            str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+            str2 += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
           }
         }
       }
-      return str;
+      return str2;
     }
     function UTF8ToString(ptr2, maxBytesToRead) {
       return ptr2 ? UTF8ArrayToString(HEAPU8, ptr2, maxBytesToRead) : "";
     }
-    function stringToUTF8Array(str, heap, outIdx, maxBytesToWrite) {
+    function stringToUTF8Array(str2, heap, outIdx, maxBytesToWrite) {
       if (!(maxBytesToWrite > 0)) return 0;
       var startIdx = outIdx;
       var endIdx = outIdx + maxBytesToWrite - 1;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var u2 = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var u2 = str2.charCodeAt(i3);
         if (u2 >= 55296 && u2 <= 57343) {
-          var u1 = str.charCodeAt(++i3);
+          var u1 = str2.charCodeAt(++i3);
           u2 = 65536 + ((u2 & 1023) << 10) | u1 & 1023;
         }
         if (u2 <= 127) {
@@ -15002,14 +18179,14 @@ var Module$1 = (() => {
       heap[outIdx] = 0;
       return outIdx - startIdx;
     }
-    function stringToUTF8(str, outPtr, maxBytesToWrite) {
-      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+    function stringToUTF8(str2, outPtr, maxBytesToWrite) {
+      return stringToUTF8Array(str2, HEAPU8, outPtr, maxBytesToWrite);
     }
-    function lengthBytesUTF8(str) {
+    function lengthBytesUTF8(str2) {
       var len3 = 0;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var u2 = str.charCodeAt(i3);
-        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str.charCodeAt(++i3) & 1023;
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var u2 = str2.charCodeAt(i3);
+        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str2.charCodeAt(++i3) & 1023;
         if (u2 <= 127) ++len3;
         else if (u2 <= 2047) len3 += 2;
         else if (u2 <= 65535) len3 += 3;
@@ -15027,61 +18204,61 @@ var Module$1 = (() => {
       if (endPtr - ptr2 > 32 && UTF16Decoder) {
         return UTF16Decoder.decode(HEAPU8.subarray(ptr2, endPtr));
       } else {
-        var str = "";
+        var str2 = "";
         for (var i3 = 0; !(i3 >= maxBytesToRead / 2); ++i3) {
           var codeUnit = HEAP16[ptr2 + i3 * 2 >> 1];
           if (codeUnit == 0) break;
-          str += String.fromCharCode(codeUnit);
+          str2 += String.fromCharCode(codeUnit);
         }
-        return str;
+        return str2;
       }
     }
-    function stringToUTF16(str, outPtr, maxBytesToWrite) {
+    function stringToUTF16(str2, outPtr, maxBytesToWrite) {
       if (maxBytesToWrite === void 0) {
         maxBytesToWrite = 2147483647;
       }
       if (maxBytesToWrite < 2) return 0;
       maxBytesToWrite -= 2;
       var startPtr = outPtr;
-      var numCharsToWrite = maxBytesToWrite < str.length * 2 ? maxBytesToWrite / 2 : str.length;
+      var numCharsToWrite = maxBytesToWrite < str2.length * 2 ? maxBytesToWrite / 2 : str2.length;
       for (var i3 = 0; i3 < numCharsToWrite; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+        var codeUnit = str2.charCodeAt(i3);
         HEAP16[outPtr >> 1] = codeUnit;
         outPtr += 2;
       }
       HEAP16[outPtr >> 1] = 0;
       return outPtr - startPtr;
     }
-    function lengthBytesUTF16(str) {
-      return str.length * 2;
+    function lengthBytesUTF16(str2) {
+      return str2.length * 2;
     }
     function UTF32ToString(ptr2, maxBytesToRead) {
       var i3 = 0;
-      var str = "";
+      var str2 = "";
       while (!(i3 >= maxBytesToRead / 4)) {
         var utf32 = HEAP32[ptr2 + i3 * 4 >> 2];
         if (utf32 == 0) break;
         ++i3;
         if (utf32 >= 65536) {
           var ch = utf32 - 65536;
-          str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+          str2 += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
         } else {
-          str += String.fromCharCode(utf32);
+          str2 += String.fromCharCode(utf32);
         }
       }
-      return str;
+      return str2;
     }
-    function stringToUTF32(str, outPtr, maxBytesToWrite) {
+    function stringToUTF32(str2, outPtr, maxBytesToWrite) {
       if (maxBytesToWrite === void 0) {
         maxBytesToWrite = 2147483647;
       }
       if (maxBytesToWrite < 4) return 0;
       var startPtr = outPtr;
       var endPtr = startPtr + maxBytesToWrite - 4;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var codeUnit = str2.charCodeAt(i3);
         if (codeUnit >= 55296 && codeUnit <= 57343) {
-          var trailSurrogate = str.charCodeAt(++i3);
+          var trailSurrogate = str2.charCodeAt(++i3);
           codeUnit = 65536 + ((codeUnit & 1023) << 10) | trailSurrogate & 1023;
         }
         HEAP32[outPtr >> 2] = codeUnit;
@@ -15091,27 +18268,27 @@ var Module$1 = (() => {
       HEAP32[outPtr >> 2] = 0;
       return outPtr - startPtr;
     }
-    function lengthBytesUTF32(str) {
+    function lengthBytesUTF32(str2) {
       var len3 = 0;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var codeUnit = str2.charCodeAt(i3);
         if (codeUnit >= 55296 && codeUnit <= 57343) ++i3;
         len3 += 4;
       }
       return len3;
     }
-    function allocateUTF8(str) {
-      var size = lengthBytesUTF8(str) + 1;
+    function allocateUTF8(str2) {
+      var size = lengthBytesUTF8(str2) + 1;
       var ret = _malloc(size);
-      if (ret) stringToUTF8Array(str, HEAP8, ret, size);
+      if (ret) stringToUTF8Array(str2, HEAP8, ret, size);
       return ret;
     }
     function writeArrayToMemory(array, buffer3) {
       HEAP8.set(array, buffer3);
     }
-    function writeAsciiToMemory(str, buffer3, dontAddNull) {
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        HEAP8[buffer3++ >> 0] = str.charCodeAt(i3);
+    function writeAsciiToMemory(str2, buffer3, dontAddNull) {
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        HEAP8[buffer3++ >> 0] = str2.charCodeAt(i3);
       }
       HEAP8[buffer3 >> 0] = 0;
     }
@@ -16021,10 +19198,10 @@ var Module$1 = (() => {
       return (mode & 61440) === 4096;
     }, isSocket: (mode) => {
       return (mode & 49152) === 49152;
-    }, flagModes: { "r": 0, "r+": 2, "w": 577, "w+": 578, "a": 1089, "a+": 1090 }, modeStringToFlags: (str) => {
-      var flags2 = FS.flagModes[str];
+    }, flagModes: { "r": 0, "r+": 2, "w": 577, "w+": 578, "a": 1089, "a+": 1090 }, modeStringToFlags: (str2) => {
+      var flags2 = FS.flagModes[str2];
       if (typeof flags2 == "undefined") {
-        throw new Error("Unknown file open mode: " + str);
+        throw new Error("Unknown file open mode: " + str2);
       }
       return flags2;
     }, flagsToPermissionString: (flag2) => {
@@ -18565,7 +21742,7 @@ var Module$1 = (() => {
       var stdStringIsUTF8 = name5 === "std::string";
       registerType(rawType, { name: name5, "fromWireType": function(value2) {
         var length = HEAPU32[value2 >> 2];
-        var str;
+        var str2;
         if (stdStringIsUTF8) {
           var decodeStartPtr = value2 + 4;
           for (var i3 = 0; i3 <= length; ++i3) {
@@ -18573,11 +21750,11 @@ var Module$1 = (() => {
             if (i3 == length || HEAPU8[currentBytePtr] == 0) {
               var maxRead = currentBytePtr - decodeStartPtr;
               var stringSegment = UTF8ToString(decodeStartPtr, maxRead);
-              if (str === void 0) {
-                str = stringSegment;
+              if (str2 === void 0) {
+                str2 = stringSegment;
               } else {
-                str += String.fromCharCode(0);
-                str += stringSegment;
+                str2 += String.fromCharCode(0);
+                str2 += stringSegment;
               }
               decodeStartPtr = currentBytePtr + 1;
             }
@@ -18587,10 +21764,10 @@ var Module$1 = (() => {
           for (var i3 = 0; i3 < length; ++i3) {
             a2[i3] = String.fromCharCode(HEAPU8[value2 + 4 + i3]);
           }
-          str = a2.join("");
+          str2 = a2.join("");
         }
         _free(value2);
-        return str;
+        return str2;
       }, "toWireType": function(destructors, value2) {
         if (value2 instanceof ArrayBuffer) {
           value2 = new Uint8Array(value2);
@@ -18653,24 +21830,24 @@ var Module$1 = (() => {
       registerType(rawType, { name: name5, "fromWireType": function(value2) {
         var length = HEAPU32[value2 >> 2];
         var HEAP = getHeap();
-        var str;
+        var str2;
         var decodeStartPtr = value2 + 4;
         for (var i3 = 0; i3 <= length; ++i3) {
           var currentBytePtr = value2 + 4 + i3 * charSize;
           if (i3 == length || HEAP[currentBytePtr >> shift] == 0) {
             var maxReadBytes = currentBytePtr - decodeStartPtr;
             var stringSegment = decodeString(decodeStartPtr, maxReadBytes);
-            if (str === void 0) {
-              str = stringSegment;
+            if (str2 === void 0) {
+              str2 = stringSegment;
             } else {
-              str += String.fromCharCode(0);
-              str += stringSegment;
+              str2 += String.fromCharCode(0);
+              str2 += stringSegment;
             }
             decodeStartPtr = currentBytePtr + charSize;
           }
         }
         _free(value2);
-        return str;
+        return str2;
       }, "toWireType": function(destructors, value2) {
         if (!(typeof value2 == "string")) {
           throwBindingError("Cannot pass non-string to C++ string type " + name5);
@@ -18904,8 +22081,8 @@ var Module$1 = (() => {
     function _emscripten_get_heap_max() {
       return getHeapMax();
     }
-    function _emscripten_memcpy_big(dest, src2, num) {
-      HEAPU8.copyWithin(dest, src2, src2 + num);
+    function _emscripten_memcpy_big(dest, src2, num2) {
+      HEAPU8.copyWithin(dest, src2, src2 + num2);
     }
     function emscripten_realloc_buffer(size) {
       try {
@@ -19003,8 +22180,8 @@ var Module$1 = (() => {
     function _fd_read(fd, iov, iovcnt, pnum) {
       try {
         var stream2 = SYSCALLS.getStreamFromFD(fd);
-        var num = doReadv(stream2, iov, iovcnt);
-        HEAP32[pnum >> 2] = num;
+        var num2 = doReadv(stream2, iov, iovcnt);
+        HEAP32[pnum >> 2] = num2;
         return 0;
       } catch (e) {
         if (typeof FS == "undefined" || !(e instanceof FS.ErrnoError)) throw e;
@@ -19043,16 +22220,16 @@ var Module$1 = (() => {
     function _fd_write(fd, iov, iovcnt, pnum) {
       try {
         var stream2 = SYSCALLS.getStreamFromFD(fd);
-        var num = doWritev(stream2, iov, iovcnt);
-        HEAPU32[pnum >> 2] = num;
+        var num2 = doWritev(stream2, iov, iovcnt);
+        HEAPU32[pnum >> 2] = num2;
         return 0;
       } catch (e) {
         if (typeof FS == "undefined" || !(e instanceof FS.ErrnoError)) throw e;
         return e.errno;
       }
     }
-    function inetPton4(str) {
-      var b = str.split(".");
+    function inetPton4(str2) {
+      var b = str2.split(".");
       for (var i3 = 0; i3 < 4; i3++) {
         var tmp = Number(b[i3]);
         if (isNaN(tmp)) return null;
@@ -19060,33 +22237,33 @@ var Module$1 = (() => {
       }
       return (b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24) >>> 0;
     }
-    function jstoi_q(str) {
-      return parseInt(str);
+    function jstoi_q(str2) {
+      return parseInt(str2);
     }
-    function inetPton6(str) {
+    function inetPton6(str2) {
       var words;
       var w2, offset2, z2;
       var valid6regx = /^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$/i;
       var parts = [];
-      if (!valid6regx.test(str)) {
+      if (!valid6regx.test(str2)) {
         return null;
       }
-      if (str === "::") {
+      if (str2 === "::") {
         return [0, 0, 0, 0, 0, 0, 0, 0];
       }
-      if (str.startsWith("::")) {
-        str = str.replace("::", "Z:");
+      if (str2.startsWith("::")) {
+        str2 = str2.replace("::", "Z:");
       } else {
-        str = str.replace("::", ":Z:");
+        str2 = str2.replace("::", ":Z:");
       }
-      if (str.indexOf(".") > 0) {
-        str = str.replace(new RegExp("[.]", "g"), ":");
-        words = str.split(":");
+      if (str2.indexOf(".") > 0) {
+        str2 = str2.replace(new RegExp("[.]", "g"), ":");
+        words = str2.split(":");
         words[words.length - 4] = jstoi_q(words[words.length - 4]) + jstoi_q(words[words.length - 3]) * 256;
         words[words.length - 3] = jstoi_q(words[words.length - 2]) + jstoi_q(words[words.length - 1]) * 256;
         words = words.slice(0, words.length - 2);
       } else {
-        words = str.split(":");
+        words = str2.split(":");
       }
       offset2 = 0;
       z2 = 0;
@@ -19462,11 +22639,11 @@ var Module$1 = (() => {
       var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       function leadingSomething(value2, digits, character) {
-        var str = typeof value2 == "number" ? value2.toString() : value2 || "";
-        while (str.length < digits) {
-          str = character[0] + str;
+        var str2 = typeof value2 == "number" ? value2.toString() : value2 || "";
+        while (str2.length < digits) {
+          str2 = character[0] + str2;
         }
-        return str;
+        return str2;
       }
       function leadingNulls(value2, digits) {
         return leadingSomething(value2, digits, "0");
@@ -20417,10 +23594,10 @@ const reprPnt = ([x2, y2]) => {
   return `(${round2(x2)},${round2(y2)})`;
 };
 const asFixed = (p2, precision = 1e-9) => {
-  let num = p2;
+  let num2 = p2;
   if (Math.abs(p2) < precision)
-    num = 0;
-  return num.toFixed(-Math.log10(precision));
+    num2 = 0;
+  return num2.toFixed(-Math.log10(precision));
 };
 const removeDuplicatePoints = (points, precision = 1e-9) => {
   return Array.from(
@@ -27278,14 +30455,14 @@ var getMacEncodingTable = function(encoding) {
   }
   return encodingTable;
 };
-encode.MACSTRING = function(str, encoding) {
+encode.MACSTRING = function(str2, encoding) {
   var table22 = getMacEncodingTable(encoding);
   if (table22 === void 0) {
     return void 0;
   }
   var result = [];
-  for (var i2 = 0; i2 < str.length; i2++) {
-    var c2 = str.charCodeAt(i2);
+  for (var i2 = 0; i2 < str2.length; i2++) {
+    var c2 = str2.charCodeAt(i2);
     if (c2 >= 128) {
       c2 = table22[c2];
       if (c2 === void 0) {
@@ -27296,8 +30473,8 @@ encode.MACSTRING = function(str, encoding) {
   }
   return result;
 };
-sizeOf.MACSTRING = function(str, encoding) {
-  var b = encode.MACSTRING(str, encoding);
+sizeOf.MACSTRING = function(str2, encoding) {
+  var b = encode.MACSTRING(str2, encoding);
   if (b !== void 0) {
     return b.length;
   } else {
@@ -29700,9 +32877,9 @@ Glyph$1.prototype.getContours = function() {
   var contours = [];
   var currentContour = [];
   for (var i2 = 0; i2 < this.points.length; i2 += 1) {
-    var pt = this.points[i2];
-    currentContour.push(pt);
-    if (pt.lastPointOfContour) {
+    var pt2 = this.points[i2];
+    currentContour.push(pt2);
+    if (pt2.lastPointOfContour) {
       contours.push(currentContour);
       currentContour = [];
     }
@@ -30060,7 +33237,7 @@ function parseCFFDict(data2, start, size) {
   start = start !== void 0 ? start : 0;
   var parser = new parse$1.Parser(data2, start);
   var entries = [];
-  var operands = [];
+  var operands2 = [];
   size = size !== void 0 ? size : data2.length;
   while (parser.relativeOffset < size) {
     var op = parser.parseByte();
@@ -30068,10 +33245,10 @@ function parseCFFDict(data2, start, size) {
       if (op === 12) {
         op = 1200 + parser.parseByte();
       }
-      entries.push([op, operands]);
-      operands = [];
+      entries.push([op, operands2]);
+      operands2 = [];
     } else {
-      operands.push(parseOperand(parser, op));
+      operands2.push(parseOperand(parser, op));
     }
   }
   return entriesToObject(entries);
@@ -33867,12 +37044,12 @@ function parseGlyph(glyph, data2, start) {
 function transformPoints(points, transform2) {
   var newPoints = [];
   for (var i2 = 0; i2 < points.length; i2 += 1) {
-    var pt = points[i2];
+    var pt2 = points[i2];
     var newPt = {
-      x: transform2.xScale * pt.x + transform2.scale01 * pt.y + transform2.dx,
-      y: transform2.scale10 * pt.x + transform2.yScale * pt.y + transform2.dy,
-      onCurve: pt.onCurve,
-      lastPointOfContour: pt.lastPointOfContour
+      x: transform2.xScale * pt2.x + transform2.scale01 * pt2.y + transform2.dx,
+      y: transform2.scale10 * pt2.x + transform2.yScale * pt2.y + transform2.dy,
+      onCurve: pt2.onCurve,
+      lastPointOfContour: pt2.lastPointOfContour
     };
     newPoints.push(newPt);
   }
@@ -33882,9 +37059,9 @@ function getContours(points) {
   var contours = [];
   var currentContour = [];
   for (var i2 = 0; i2 < points.length; i2 += 1) {
-    var pt = points[i2];
-    currentContour.push(pt);
-    if (pt.lastPointOfContour) {
+    var pt2 = points[i2];
+    currentContour.push(pt2);
+    if (pt2.lastPointOfContour) {
       contours.push(currentContour);
       currentContour = [];
     }
@@ -38688,6 +41865,14 @@ function extendedSolids(shape) {
   if (!solids) throw new Error("Geometry could not be sewn into closed shells. Import a mesh as a reference or repair the source.");
   return compound;
 }
+const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
+const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
+const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
+const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
+const neg = (a2) => scale$1(a2, -1);
+const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
+const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
+const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
 function sectionLoft(wires, options) {
   const original = loft(wires, options);
   const volume = measureVolume(original);
@@ -38725,14 +41910,203 @@ function sectionLoft(wires, options) {
     progress.delete();
   }
 }
-const dot$6 = (a2, b) => a2[0] * b[0] + a2[1] * b[1] + a2[2] * b[2];
-const sub$5 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
-const add$4 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
-const scale$1 = (a2, s) => [a2[0] * s, a2[1] * s, a2[2] * s];
-const neg = (a2) => scale$1(a2, -1);
-const cross$4 = (a2, b) => [a2[1] * b[2] - a2[2] * b[1], a2[2] * b[0] - a2[0] * b[2], a2[0] * b[1] - a2[1] * b[0]];
-const norm$4 = (a2) => Math.hypot(a2[0], a2[1], a2[2]);
-const unit$3 = (a2) => scale$1(a2, 1 / norm$4(a2));
+function sampleWirePoints(wire, count) {
+  const edges = wire.edges;
+  const lengths2 = edges.map((e) => e.length);
+  const total = lengths2.reduce((a2, b) => a2 + b, 0);
+  const pts = [];
+  for (let i2 = 0; i2 < count; i2++) {
+    const target = total * (i2 / count);
+    let acc = 0;
+    let chosen = edges[edges.length - 1];
+    let localT = 1;
+    for (let k2 = 0; k2 < edges.length; k2++) {
+      if (acc + lengths2[k2] >= target - 1e-9 || k2 === edges.length - 1) {
+        chosen = edges[k2];
+        localT = lengths2[k2] > 1e-9 ? Math.max(0, Math.min(1, (target - acc) / lengths2[k2])) : 0;
+        break;
+      }
+      acc += lengths2[k2];
+    }
+    const p2 = chosen.pointAt(localT);
+    pts.push([p2.x, p2.y, p2.z]);
+    p2.delete();
+  }
+  edges.forEach((e) => e.delete());
+  return pts;
+}
+function sampleOpenWireAt(wire, t2) {
+  const edges = wire.edges;
+  const lengths2 = edges.map((e) => e.length);
+  const total = lengths2.reduce((a2, b) => a2 + b, 0);
+  const target = Math.max(0, Math.min(1, t2)) * total;
+  let acc = 0;
+  let chosen = edges[edges.length - 1];
+  let localT = 1;
+  for (let k2 = 0; k2 < edges.length; k2++) {
+    if (acc + lengths2[k2] >= target - 1e-9 || k2 === edges.length - 1) {
+      chosen = edges[k2];
+      localT = lengths2[k2] > 1e-9 ? Math.max(0, Math.min(1, (target - acc) / lengths2[k2])) : 0;
+      break;
+    }
+    acc += lengths2[k2];
+  }
+  const p2 = chosen.pointAt(localT);
+  const out = [p2.x, p2.y, p2.z];
+  p2.delete();
+  edges.forEach((e) => e.delete());
+  return out;
+}
+function centroid(pts) {
+  const s = [0, 0, 0];
+  for (const p2 of pts) {
+    s[0] += p2[0];
+    s[1] += p2[1];
+    s[2] += p2[2];
+  }
+  return [s[0] / pts.length, s[1] / pts.length, s[2] / pts.length];
+}
+function closestRailParam(rail, target, steps2 = 40) {
+  let bestT = 0, bestPt = sampleOpenWireAt(rail, 0), bestD = norm$4(sub$5(bestPt, target));
+  for (let i2 = 1; i2 <= steps2; i2++) {
+    const t2 = i2 / steps2;
+    const pt2 = sampleOpenWireAt(rail, t2);
+    const d2 = norm$4(sub$5(pt2, target));
+    if (d2 < bestD) {
+      bestD = d2;
+      bestT = t2;
+      bestPt = pt2;
+    }
+  }
+  return { t: bestT, point: bestPt, dist: bestD };
+}
+function guidedSectionLoft(wires, rails, ruled) {
+  if (!rails.length) return sectionLoft(wires, { ruled });
+  const sampleCount = 32;
+  const subStations = 5;
+  const sectionLoops = wires.map((w2) => sampleWirePoints(w2, sampleCount));
+  const sectionCenters = sectionLoops.map(centroid);
+  for (let k2 = 1; k2 < sectionLoops.length; k2++) {
+    const prev = sectionLoops[k2 - 1];
+    const curr = sectionLoops[k2];
+    let bestShift = 0, bestReverse = false, bestScore = Infinity;
+    for (const rev of [false, true]) {
+      const arr = rev ? [...curr].reverse() : curr;
+      for (let shift = 0; shift < sampleCount; shift++) {
+        let score = 0;
+        for (let i2 = 0; i2 < sampleCount; i2++) {
+          score += norm$4(sub$5(prev[i2], arr[(i2 + shift) % sampleCount]));
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          bestShift = shift;
+          bestReverse = rev;
+        }
+      }
+    }
+    const base = bestReverse ? [...curr].reverse() : curr;
+    sectionLoops[k2] = base.map((_2, i2) => base[(i2 + bestShift) % sampleCount]);
+  }
+  const railParams = rails.map(
+    (rail) => sectionCenters.map((c2, idx2) => {
+      let bestT = idx2 / Math.max(1, sectionCenters.length - 1);
+      let bestDist = Infinity;
+      for (let i2 = 0; i2 < sampleCount; i2 += 2) {
+        const hit = closestRailParam(rail, sectionLoops[idx2][i2], 24);
+        if (hit.dist < bestDist) {
+          bestDist = hit.dist;
+          bestT = hit.t;
+        }
+      }
+      const railPt = sampleOpenWireAt(rail, bestT);
+      return { t: bestT, radial: Math.max(norm$4(sub$5(railPt, c2)), 1e-4), point: railPt };
+    })
+  );
+  const allWires = [];
+  const tempWires = [];
+  const makeClosedLoopWire = (pts) => {
+    try {
+      const edge = makeBSplineApproximation([...pts, pts[0]], { tolerance: 1e-3, degMin: 2, degMax: 3 });
+      const w2 = assembleWire([edge]);
+      edge.delete();
+      return w2;
+    } catch {
+      const edges = pts.map((p2, i2) => makeLine(p2, pts[(i2 + 1) % pts.length]));
+      const w2 = assembleWire(edges);
+      edges.forEach((e) => e.delete());
+      return w2;
+    }
+  };
+  try {
+    for (let k2 = 0; k2 < wires.length; k2++) {
+      allWires.push(wires[k2]);
+      if (k2 === wires.length - 1) break;
+      const loopA = sectionLoops[k2], loopB = sectionLoops[k2 + 1];
+      const cA = sectionCenters[k2], cB = sectionCenters[k2 + 1];
+      for (let s = 1; s <= subStations; s++) {
+        const u2 = s / (subStations + 1);
+        const linCenter = [
+          cA[0] + (cB[0] - cA[0]) * u2,
+          cA[1] + (cB[1] - cA[1]) * u2,
+          cA[2] + (cB[2] - cA[2]) * u2
+        ];
+        let scaleSum = 0;
+        let shiftSum = [0, 0, 0];
+        for (let r = 0; r < rails.length; r++) {
+          const pA = railParams[r][k2], pB = railParams[r][k2 + 1];
+          const railT = pA.t + (pB.t - pA.t) * u2;
+          const actualPt = sampleOpenWireAt(rails[r], railT);
+          const linRailPt = [
+            pA.point[0] + (pB.point[0] - pA.point[0]) * u2,
+            pA.point[1] + (pB.point[1] - pA.point[1]) * u2,
+            pA.point[2] + (pB.point[2] - pA.point[2]) * u2
+          ];
+          const linRad = Math.max(norm$4(sub$5(linRailPt, linCenter)), 1e-4);
+          const actRad = Math.max(norm$4(sub$5(actualPt, linCenter)), 1e-4);
+          scaleSum += actRad / linRad;
+          if (rails.length >= 2) {
+            shiftSum = add$4(shiftSum, sub$5(actualPt, linRailPt));
+          }
+        }
+        const radialScale = Math.max(0.1, scaleSum / rails.length);
+        const centerShift = rails.length >= 2 ? scale$1(shiftSum, 1 / rails.length) : [0, 0, 0];
+        const targetCenter = add$4(linCenter, centerShift);
+        const stationPts = loopA.map((pa, i2) => {
+          const pb = loopB[i2];
+          const linP = [
+            pa[0] + (pb[0] - pa[0]) * u2,
+            pa[1] + (pb[1] - pa[1]) * u2,
+            pa[2] + (pb[2] - pa[2]) * u2
+          ];
+          const offset2 = sub$5(linP, linCenter);
+          return add$4(targetCenter, scale$1(offset2, radialScale));
+        });
+        const w2 = makeClosedLoopWire(stationPts);
+        tempWires.push(w2);
+        allWires.push(w2);
+      }
+    }
+    const oc = getOC();
+    const builder = new oc.BRepOffsetAPI_ThruSections(true, ruled, 1e-6);
+    const progress = new oc.Message_ProgressRange_1();
+    try {
+      if (!ruled) builder.SetMaxDegree(3);
+      for (const wire of allWires) builder.AddWire(wire.wrapped);
+      builder.Build(progress);
+      const candidate = cast(builder.Shape());
+      if (!isShape3D(candidate) || !(measureVolume(candidate) > 1e-9)) {
+        if (candidate && typeof candidate.delete === "function") candidate.delete();
+        throw new Error("Guided loft did not produce a valid closed solid.");
+      }
+      return candidate;
+    } finally {
+      builder.delete();
+      progress.delete();
+    }
+  } finally {
+    tempWires.forEach((w2) => w2.delete());
+  }
+}
 function extrusionDraftWallNormal(outward, sketchNormal, pull, degrees2) {
   const tangent = unit$3(cross$4(sketchNormal, outward));
   const perpendicular = sub$5(pull, scale$1(tangent, dot$6(pull, tangent)));
@@ -40811,33 +44185,72 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
       return end !== void 0 && own2 === void 0 ? [start, measured(at, end)] : start;
     };
   };
-  const filletThroughPoints = () => {
-    if (feature3.type !== "fillet" || !chainPoints) throw new Error("A fillet through points on the edge needs picked edges.");
-    const oc = getOC(), law = [{ position: 0, radiusMillimeters: size }, ...feature3.points.slice().sort((a2, b) => a2.position - b.position), { position: 1, radiusMillimeters: feature3.endRadiusMillimeters ?? size }];
-    const builder = new oc.BRepFilletAPI_MakeFillet(body.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational), progress = new oc.Message_ProgressRange_1();
+  const filletAdvanced = () => {
+    if (feature3.type !== "fillet") throw new Error("Advanced fillet requires a fillet feature.");
+    const oc = getOC();
+    const isG2 = feature3.continuity === "g2";
+    const filletShape = isG2 ? oc.ChFi3d_FilletShape.ChFi3d_QuasiAngular : oc.ChFi3d_FilletShape.ChFi3d_Rational;
+    const builder = new oc.BRepFilletAPI_MakeFillet(body.wrapped, filletShape);
+    if (isG2) builder.SetContinuity(oc.GeomAbs_Shape.GeomAbs_G2, 0.01);
+    const progress = new oc.Message_ProgressRange_1();
     const temps = [], edges = body.edges;
+    const planeMatch = (edge) => {
+      if (!edgePlane) return true;
+      const m2 = edge.pointAt(0.5);
+      const axis = { XY: [0, 0, 1], XZ: [0, 1, 0], YZ: [1, 0, 0] }[feature3.edgePlane.plane];
+      const d2 = Math.abs(m2.x * axis[0] + m2.y * axis[1] + m2.z * axis[2] - feature3.edgePlane.offsetMillimeters);
+      m2.delete();
+      return d2 < 1e-3;
+    };
     try {
       let added = 0;
+      const hasPoints = Boolean(feature3.points?.length);
+      const law = hasPoints ? [{ position: 0, radiusMillimeters: size }, ...feature3.points.slice().sort((a2, b) => a2.position - b.position), { position: 1, radiusMillimeters: feature3.endRadiusMillimeters ?? size }] : null;
       for (const edge of edges) {
-        const m2 = edge.pointAt(0.5), hit = chainPoints.some((p2) => near(p2, m2));
+        const m2 = edge.pointAt(0.5), at = [m2.x, m2.y, m2.z];
+        const hit = chainPoints ? chainPoints.some((p2) => near(p2, m2)) : planeMatch(edge);
         m2.delete();
         if (!hit) continue;
-        const table10 = new oc.TColgp_Array1OfPnt2d_2(1, law.length);
-        temps.push(table10);
-        law.forEach((row, index2) => {
-          const p2 = new oc.gp_Pnt2d_3(row.position, row.radiusMillimeters);
-          temps.push(p2);
-          table10.SetValue(index2 + 1, p2);
-        });
-        builder.Add_5(table10, edge.wrapped);
+        if (law) {
+          const table10 = new oc.TColgp_Array1OfPnt2d_2(1, law.length);
+          temps.push(table10);
+          law.forEach((row, index2) => {
+            const p2 = new oc.gp_Pnt2d_3(row.position, measured(at, row.radiusMillimeters));
+            temps.push(p2);
+            table10.SetValue(index2 + 1, p2);
+          });
+          builder.Add_5(table10, edge.wrapped);
+        } else if (feature3.endRadiusMillimeters !== void 0) {
+          builder.Add_3(measured(at, size), measured(at, feature3.endRadiusMillimeters), edge.wrapped);
+        } else {
+          const pickIdx = picks ? picks.findIndex((pk) => Math.hypot(pk.point[0] - at[0], pk.point[1] - at[1], pk.point[2] - at[2]) < 1e-3) : -1;
+          const r = measured(at, (pickIdx >= 0 ? picks[pickIdx].size : void 0) ?? size);
+          builder.Add_2(r, edge.wrapped);
+        }
         added++;
       }
       if (!added) throw new Error("Could not fillet, no edge was selected");
+      if (feature3.setbacks?.length) {
+        const nbContours = builder.NbContours();
+        for (const sb of feature3.setbacks) {
+          const target = sb.vertexMillimeters;
+          for (let ic = 1; ic <= nbContours; ic++) {
+            for (const v2 of [builder.FirstVertex(ic), builder.LastVertex(ic)]) {
+              temps.push(v2);
+              const gp = oc.BRep_Tool.Pnt(v2);
+              temps.push(gp);
+              if (Math.hypot(gp.X() - target[0], gp.Y() - target[1], gp.Z() - target[2]) < 0.01) {
+                builder.SetRadius_6(sb.distanceMillimeters, ic, v2);
+              }
+            }
+          }
+        }
+      }
       builder.Build(progress);
       const made = cast(builder.Shape());
       if (!isShape3D(made)) {
         made.delete();
-        throw new Error("Fillet through points did not produce a solid.");
+        throw new Error("Advanced fillet did not produce a solid.");
       }
       return made;
     } finally {
@@ -40926,7 +44339,8 @@ function buildEdgeFinish(feature3, bodyId, body, context2) {
   };
   let rounded;
   try {
-    rounded = feature3.type === "fillet" && feature3.points?.length ? filletThroughPoints() : feature3.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
+    const useAdvancedFillet = feature3.type === "fillet" && (Boolean(feature3.points?.length) || feature3.continuity === "g2" || Boolean(feature3.setbacks?.length));
+    rounded = useAdvancedFillet ? filletAdvanced() : feature3.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
     if (!validFinishSolid(rounded)) {
       rounded.delete();
       throw new Error("Invalid finished solid.");
@@ -41054,11 +44468,11 @@ function applyPatternFeature(feature3, context2) {
   const tool2 = partPattern ? void 0 : tools.get(feature3.sourceFeatureId);
   let root = source;
   while (root && !("operation" in root) && "sourceFeatureId" in root) root = history.find((f2) => f2.id === root.sourceFeatureId);
-  const rootOperation = root && "operation" in root ? root.operation : void 0;
+  const rootOperation = root?.type === "hole" ? "cut" : root && "operation" in root ? root.operation : void 0;
   if (!partPattern) {
     if (!source || !tool2 || !rootOperation)
       throw new Error("Choose a source feature in the selected target body.");
-    if (!["extrude", "revolve", "pattern", "mirror"].includes(source.type))
+    if (!["extrude", "revolve", "sweep", "loft", "hole", "pattern", "mirror"].includes(source.type))
       throw new Error("Choose an additive or subtractive profile feature to pattern.");
     if (rootOperation === "intersect")
       throw new UnsupportedFeature(feature3.id, "patterns of intersect features");
@@ -41260,6 +44674,1023 @@ function applyPatternFeature(feature3, context2) {
   currentBodyID = id2;
   tools.set(feature3.id, own(copies.reduce((all, copy) => own(all.fuse(copy)), tool2)));
   return currentBodyID;
+}
+function buildModeledThreadCutter(params, own) {
+  const { startCenter, inwardDirection, faceRadius, isExternal, pitchMillimeters: pitch, lengthMillimeters: length, leftHand, starts, form } = params;
+  const lead = pitch * starts;
+  const rawDepth = form === "trapezoidal" || form === "acme" ? 0.5 * pitch : form === "buttress" ? 0.6 * pitch : 0.6134 * pitch;
+  const depth = Math.min(rawDepth, faceRadius * 0.45);
+  if (depth <= 1e-5) throw new Error("Thread depth is too small for this cylinder.");
+  const halfAngle = form === "trapezoidal" ? 15 * Math.PI / 180 : form === "acme" ? 14.5 * Math.PI / 180 : 30 * Math.PI / 180;
+  const maxHalfBase = pitch * 0.44;
+  const halfBase = Math.min(depth * Math.tan(halfAngle) + (form === "v60" ? 0 : pitch * 0.14), maxHalfBase);
+  const halfCrest = form === "v60" ? 0 : Math.min(pitch * 0.15, halfBase * 0.6);
+  const clearance = Math.min(0.08, faceRadius * 0.08);
+  let combined;
+  for (let s = 0; s < starts; s++) {
+    const origin2 = add$4(startCenter, scale$1(inwardDirection, -lead + s * pitch));
+    const helix = own(makeHelix(lead, length + 2 * lead, faceRadius, origin2, inwardDirection, leftHand));
+    const first = helix.edges[0];
+    const startPoint = deleteAfterVectorTuple(first.startPoint);
+    helix.edges.forEach((e) => e.delete());
+    const radialOut = unit$3(sub$5(startPoint, origin2));
+    const planeX = isExternal ? scale$1(radialOut, -1) : radialOut;
+    const planeY = inwardDirection;
+    const plane2 = own(new Plane(startPoint, planeX, cross$4(planeX, planeY)));
+    let sketchBuilder;
+    if (form === "buttress") {
+      sketchBuilder = draw([-clearance, -halfBase * 0.4]).lineTo([depth, -halfCrest]).lineTo([depth, halfCrest]).lineTo([-clearance, halfBase]).close();
+    } else if (form === "trapezoidal" || form === "acme") {
+      sketchBuilder = draw([-clearance, -halfBase]).lineTo([depth, -halfCrest]).lineTo([depth, halfCrest]).lineTo([-clearance, halfBase]).close();
+    } else {
+      sketchBuilder = draw([-clearance, -halfBase]).lineTo([depth, 0]).lineTo([-clearance, halfBase]).close();
+    }
+    const section2 = own(sketchBuilder.sketchOnPlane(plane2));
+    const swept = genericSweep(section2.wire, helix, {
+      frenet: true,
+      transitionMode: "transformed"
+    });
+    if (!isShape3D(swept) || measureVolume(swept) <= 1e-9) {
+      throw new Error("The modelled thread groove could not be swept along this cylinder.");
+    }
+    const ownedSwept = own(swept);
+    combined = combined ? own(combined.fuse(ownedSwept)) : ownedSwept;
+  }
+  return combined;
+}
+function applyEmbossFeature(feature3, context2) {
+  const { body, face, wire, wirePlaneOrigin, cylinder, own } = context2;
+  const depth = feature3.depthMillimeters;
+  const isDeboss = feature3.mode === "deboss";
+  if (face.geomType === "PLANE") {
+    const faceCenter = deleteAfterVectorTuple(face.center);
+    const outward = unit$3(deleteAfterVectorTuple(face.normalAt(faceCenter)));
+    const delta2 = dot$6(sub$5(faceCenter, wirePlaneOrigin), outward);
+    const placedWire = Math.abs(delta2) > 1e-7 ? own(wire.clone().translate(scale$1(outward, delta2))) : wire;
+    const baseFace = own(makeFace(placedWire));
+    const overlap = Math.min(0.05, depth * 0.25);
+    const startShift = isDeboss ? scale$1(outward, overlap) : scale$1(outward, -overlap);
+    const shiftedFace = own(baseFace.clone().translate(startShift));
+    const extrudeDir = isDeboss ? neg(outward) : outward;
+    const sweepVec = new Vector(scale$1(extrudeDir, depth + overlap));
+    let prism;
+    try {
+      prism = own(basicFaceExtrusion(shiftedFace, sweepVec));
+    } finally {
+      sweepVec.delete();
+    }
+    const result = isDeboss ? body.cut(prism) : body.fuse(prism);
+    if (!isShape3D(result)) throw new Error("Emboss failed to modify the target body.");
+    return own(result);
+  }
+  if (cylinder) {
+    const { at, along, radius } = cylinder;
+    const overlap = Math.min(0.05, depth * 0.25);
+    const baseFace = own(makeFace(wire));
+    const radialDir = unit$3(sub$5(wirePlaneOrigin, add$4(at, scale$1(along, dot$6(sub$5(wirePlaneOrigin, at), along)))));
+    const span = radius * 2.5 + depth * 2;
+    const startFace = own(baseFace.clone().translate(scale$1(radialDir, -span * 0.5)));
+    const sweepVec = new Vector(scale$1(radialDir, span));
+    let rawPrism;
+    try {
+      rawPrism = own(basicFaceExtrusion(startFace, sweepVec));
+    } finally {
+      sweepVec.delete();
+    }
+    const bounds2 = body.boundingBox.bounds;
+    const cylHeight = Math.hypot(bounds2[1][0] - bounds2[0][0], bounds2[1][1] - bounds2[0][1], bounds2[1][2] - bounds2[0][2]) + 20;
+    const cylStart = add$4(at, scale$1(along, -cylHeight * 0.5));
+    const rInner = isDeboss ? Math.max(1e-3, radius - depth) : Math.max(1e-3, radius - overlap);
+    const rOuter = isDeboss ? radius + overlap : radius + depth;
+    const outerCyl = own(makeCylinder(rOuter, cylHeight, cylStart, along));
+    const innerCyl = own(makeCylinder(rInner, cylHeight + 2, add$4(cylStart, scale$1(along, -1)), along));
+    const shell = own(outerCyl.cut(innerCyl));
+    const wrapped = own(rawPrism.intersect(shell));
+    if (!isShape3D(wrapped) || measureVolume(wrapped) < 1e-9) {
+      throw new Error("Emboss profile does not intersect the target cylindrical face.");
+    }
+    const result = isDeboss ? body.cut(wrapped) : body.fuse(wrapped);
+    if (!isShape3D(result)) throw new Error("Cylindrical emboss failed to modify the target body.");
+    return own(result);
+  }
+  throw new Error("Emboss currently supports planar and cylindrical faces.");
+}
+function perpAxes(dir, rotationDegrees) {
+  const ref = Math.abs(dir[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+  const x0 = unit$3(cross$4(ref, dir));
+  const y0 = unit$3(cross$4(dir, x0));
+  if (Math.abs(rotationDegrees) < 1e-9) return { x: x0, y: y0 };
+  const rad = rotationDegrees * Math.PI / 180;
+  const c2 = Math.cos(rad), s = Math.sin(rad);
+  return {
+    x: [c2 * x0[0] + s * y0[0], c2 * x0[1] + s * y0[1], c2 * x0[2] + s * y0[2]],
+    y: [-s * x0[0] + c2 * y0[0], -s * x0[1] + c2 * y0[1], -s * x0[2] + c2 * y0[2]]
+  };
+}
+function buildSectionPrism(spec, origin2, dir, length, rotationDegrees, ox, oy, own) {
+  const { x: x2 } = perpAxes(dir, rotationDegrees);
+  const plane2 = own(new Plane(origin2, x2, dir));
+  const w2 = spec.widthMillimeters, h = spec.heightMillimeters;
+  const hw = w2 / 2, hh = h / 2;
+  const extrudeDrawing = (drawing) => {
+    const sk = own(drawing.sketchOnPlane(plane2));
+    const face = own(sk.face());
+    const vec2 = new Vector(scale$1(dir, length));
+    try {
+      return own(basicFaceExtrusion(face, vec2));
+    } finally {
+      vec2.delete();
+    }
+  };
+  if (spec.kind === "round-bar") {
+    return extrudeDrawing(drawCircle(hw).translate(ox, oy));
+  }
+  if (spec.kind === "round-tube") {
+    const t2 = spec.wallMillimeters;
+    const outer = extrudeDrawing(drawCircle(hw).translate(ox, oy));
+    const inner = extrudeDrawing(drawCircle(hw - t2).translate(ox, oy));
+    const tube = outer.cut(inner);
+    if (!isShape3D(tube)) throw new Error("Failed to hollow round tube profile.");
+    return own(tube);
+  }
+  if (spec.kind === "bar") {
+    return extrudeDrawing(
+      draw([ox - hw, oy - hh]).lineTo([ox + hw, oy - hh]).lineTo([ox + hw, oy + hh]).lineTo([ox - hw, oy + hh]).close()
+    );
+  }
+  if (spec.kind === "rect-tube") {
+    const t2 = spec.wallMillimeters;
+    const outer = extrudeDrawing(
+      draw([ox - hw, oy - hh]).lineTo([ox + hw, oy - hh]).lineTo([ox + hw, oy + hh]).lineTo([ox - hw, oy + hh]).close()
+    );
+    const iw = hw - t2, ih = hh - t2;
+    const inner = extrudeDrawing(
+      draw([ox - iw, oy - ih]).lineTo([ox + iw, oy - ih]).lineTo([ox + iw, oy + ih]).lineTo([ox - iw, oy + ih]).close()
+    );
+    const tube = outer.cut(inner);
+    if (!isShape3D(tube)) throw new Error("Failed to hollow rectangular tube profile.");
+    return own(tube);
+  }
+  if (spec.kind === "angle") {
+    const t2 = spec.wallMillimeters;
+    return extrudeDrawing(
+      draw([ox - hw, oy - hh]).lineTo([ox + hw, oy - hh]).lineTo([ox + hw, oy - hh + t2]).lineTo([ox - hw + t2, oy - hh + t2]).lineTo([ox - hw + t2, oy + hh]).lineTo([ox - hw, oy + hh]).close()
+    );
+  }
+  if (spec.kind === "channel") {
+    const web2 = spec.webMillimeters ?? spec.wallMillimeters ?? Math.min(w2, h) * 0.1;
+    const fl2 = spec.flangeMillimeters ?? spec.wallMillimeters ?? Math.min(w2, h) * 0.12;
+    return extrudeDrawing(
+      draw([ox - hw, oy - hh]).lineTo([ox + hw, oy - hh]).lineTo([ox + hw, oy - hh + fl2]).lineTo([ox - hw + web2, oy - hh + fl2]).lineTo([ox - hw + web2, oy + hh - fl2]).lineTo([ox + hw, oy + hh - fl2]).lineTo([ox + hw, oy + hh]).lineTo([ox - hw, oy + hh]).close()
+    );
+  }
+  const web = spec.webMillimeters ?? Math.min(w2, h) * 0.08;
+  const fl = spec.flangeMillimeters ?? Math.min(w2, h) * 0.1;
+  const hweb = web / 2;
+  return extrudeDrawing(
+    draw([ox - hw, oy - hh]).lineTo([ox + hw, oy - hh]).lineTo([ox + hw, oy - hh + fl]).lineTo([ox + hweb, oy - hh + fl]).lineTo([ox + hweb, oy + hh - fl]).lineTo([ox + hw, oy + hh - fl]).lineTo([ox + hw, oy + hh]).lineTo([ox - hw, oy + hh]).lineTo([ox - hw, oy + hh - fl]).lineTo([ox - hweb, oy + hh - fl]).lineTo([ox - hweb, oy - hh + fl]).lineTo([ox - hw, oy - hh + fl]).close()
+  );
+}
+function buildFrameMembers(feature3, segments, own) {
+  if (!segments.length) throw new Error("Frame member has no straight segments to sweep.");
+  const spec = resolveFrameProfile(feature3);
+  const rot = feature3.rotationDegrees ?? 0;
+  const ox = feature3.offsetXMillimeters ?? 0;
+  const oy = feature3.offsetYMillimeters ?? 0;
+  const gap = feature3.weldGapMillimeters ?? 0;
+  const solids = [];
+  for (const [start, end] of segments) {
+    const rawVec = sub$5(end, start);
+    const totalLen = norm$4(rawVec);
+    if (totalLen <= gap + 1e-4) throw new Error("Frame segment is shorter than weld gap.");
+    const dir = unit$3(rawVec);
+    const trimmedStart = gap > 0 ? add$4(start, scale$1(dir, gap / 2)) : start;
+    const trimmedLen = totalLen - gap;
+    solids.push(buildSectionPrism(spec, trimmedStart, dir, trimmedLen, rot, ox, oy, own));
+  }
+  if (solids.length === 1) return solids[0];
+  if (feature3.trimMode === "miter" || feature3.trimMode === "butt") {
+    let acc = solids[0];
+    for (let i2 = 1; i2 < solids.length; i2++) {
+      const fused = acc.fuse(solids[i2]);
+      acc = isShape3D(fused) ? own(fused) : acc;
+    }
+    return acc;
+  }
+  return own(makeCompound(solids));
+}
+function buildFrameEndCaps(cap, member, segments, own) {
+  if (!segments.length) throw new Error("Frame end cap target has no segments.");
+  const spec = resolveFrameProfile(member);
+  const inset = cap.insetMillimeters ?? 0;
+  const plateW = Math.max(1e-3, spec.widthMillimeters - 2 * inset);
+  const plateH = Math.max(1e-3, spec.heightMillimeters - 2 * inset);
+  const capSpec = {
+    ...spec,
+    kind: spec.kind === "round-tube" || spec.kind === "round-bar" ? "round-bar" : "bar",
+    widthMillimeters: plateW,
+    heightMillimeters: plateH
+  };
+  const rot = member.rotationDegrees ?? 0;
+  const ox = member.offsetXMillimeters ?? 0;
+  const oy = member.offsetYMillimeters ?? 0;
+  const caps = [];
+  const first = segments[0], last2 = segments[segments.length - 1];
+  if (cap.end === "start" || cap.end === "both") {
+    const dir = unit$3(sub$5(first[0], first[1]));
+    caps.push(buildSectionPrism(capSpec, first[0], dir, cap.thicknessMillimeters, rot, ox, oy, own));
+  }
+  if (cap.end === "end" || cap.end === "both") {
+    const dir = unit$3(sub$5(last2[1], last2[0]));
+    caps.push(buildSectionPrism(capSpec, last2[1], dir, cap.thicknessMillimeters, rot, ox, oy, own));
+  }
+  return caps.length === 1 ? caps[0] : own(makeCompound(caps));
+}
+function boxCenter(shape) {
+  const b = shape.boundingBox.bounds;
+  return [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2, (b[0][2] + b[1][2]) / 2];
+}
+function boxSpan(shape) {
+  const b = shape.boundingBox.bounds;
+  return Math.max(10, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]));
+}
+function halfSpaceBox(origin2, normal, span, own) {
+  const n = unit$3(normal);
+  const { x: x2 } = perpAxes(n, 0);
+  const plane2 = own(new Plane(origin2, x2, n));
+  const rect = draw([-span, -span]).lineTo([span, -span]).lineTo([span, span]).lineTo([-span, span]).close();
+  const sk = own(rect.sketchOnPlane(plane2));
+  const face = own(sk.face());
+  const vec2 = new Vector(scale$1(n, span * 2));
+  try {
+    return own(basicFaceExtrusion(face, vec2));
+  } finally {
+    vec2.delete();
+  }
+}
+function trimFrameBody(target, options) {
+  const { mode, toolBody, plane: plane2, keepPoint, solidsOf: solidsOf2, own } = options;
+  const gap = options.weldGapMillimeters ?? 0;
+  const targetCenter = boxCenter(target);
+  const keepPt = keepPoint ?? targetCenter;
+  const span = Math.max(boxSpan(target), toolBody ? boxSpan(toolBody) : 10) * 3;
+  const choosePiece = (shape) => {
+    const pieces = solidsOf2(shape);
+    if (pieces.length <= 1) return shape;
+    if (keepPoint) {
+      const probe = makeVertex(keepPoint);
+      let best = pieces[0], bestDist = Infinity;
+      try {
+        for (const p2 of pieces) {
+          const d2 = measureDistanceBetween(probe, p2);
+          if (d2 < bestDist) {
+            bestDist = d2;
+            best = p2;
+          }
+        }
+      } finally {
+        probe.delete();
+      }
+      return own(best);
+    }
+    pieces.sort((a2, b) => measureVolume(b) - measureVolume(a2));
+    return own(pieces[0]);
+  };
+  if (plane2) {
+    let n = unit$3(plane2.normal);
+    if (dot$6(sub$5(keepPt, plane2.origin), n) > 0) n = neg(n);
+    const shifted = gap > 0 ? add$4(plane2.origin, scale$1(neg(n), gap)) : plane2.origin;
+    const cutter2 = halfSpaceBox(shifted, n, span, own);
+    const cut2 = target.cut(cutter2);
+    if (!isShape3D(cut2) || !(measureVolume(cut2) > 1e-9)) throw new Error("Frame trim removed the entire member.");
+    return choosePiece(own(cut2));
+  }
+  if (!toolBody) throw new Error("Frame trim needs a tool body or a plane.");
+  if (mode === "cope") {
+    const cutter2 = gap > 0 ? own(offsetSolid(toolBody, gap)) : toolBody;
+    const cut2 = target.cut(cutter2);
+    if (!isShape3D(cut2) || !(measureVolume(cut2) > 1e-9)) throw new Error("Cope trim removed the entire member.");
+    return choosePiece(own(cut2));
+  }
+  const toolCenter = boxCenter(toolBody);
+  if (mode === "miter") {
+    const common2 = target.intersect(toolBody);
+    const pivot = isShape3D(common2) && measureVolume(common2) > 1e-9 ? boxCenter(common2) : scale$1(add$4(targetCenter, toolCenter), 0.5);
+    if (isShape3D(common2)) own(common2);
+    const dirA = unit$3(sub$5(targetCenter, pivot));
+    const dirB = unit$3(sub$5(toolCenter, pivot));
+    const diff = sub$5(dirB, dirA);
+    const normal = norm$4(diff) > 1e-6 ? unit$3(diff) : unit$3(sub$5(toolCenter, targetCenter));
+    const shifted = gap > 0 ? add$4(pivot, scale$1(neg(normal), gap / 2)) : pivot;
+    const cutter2 = halfSpaceBox(shifted, normal, span, own);
+    const cut2 = target.cut(cutter2);
+    if (!isShape3D(cut2) || !(measureVolume(cut2) > 1e-9)) throw new Error("Miter trim removed the entire member.");
+    return choosePiece(own(cut2));
+  }
+  const faces = toolBody.faces;
+  let bestFaceOrigin = null;
+  let bestFaceNormal = null;
+  let bestScore = Infinity;
+  const toTarget = unit$3(sub$5(targetCenter, toolCenter));
+  for (const f2 of faces) {
+    if (f2.geomType === "PLANE") {
+      const c2 = f2.center;
+      const nv = f2.normalAt(c2);
+      const fc = [c2.x, c2.y, c2.z];
+      const fn = unit$3([nv.x, nv.y, nv.z]);
+      c2.delete();
+      nv.delete();
+      const align = dot$6(fn, toTarget);
+      if (align > 0.3) {
+        const d2 = norm$4(sub$5(targetCenter, fc)) / align;
+        if (d2 < bestScore) {
+          bestScore = d2;
+          bestFaceOrigin = fc;
+          bestFaceNormal = fn;
+        }
+      }
+    }
+    f2.delete();
+  }
+  if (bestFaceOrigin && bestFaceNormal) {
+    const discardDir = neg(bestFaceNormal);
+    const shifted = gap > 0 ? add$4(bestFaceOrigin, scale$1(bestFaceNormal, gap)) : bestFaceOrigin;
+    const cutter2 = halfSpaceBox(shifted, discardDir, span, own);
+    const cut2 = target.cut(cutter2);
+    if (!isShape3D(cut2) || !(measureVolume(cut2) > 1e-9)) throw new Error("Butt trim removed the entire member.");
+    return choosePiece(own(cut2));
+  }
+  const cutter = gap > 0 ? own(offsetSolid(toolBody, gap)) : toolBody;
+  const cut = target.cut(cutter);
+  if (!isShape3D(cut) || !(measureVolume(cut) > 1e-9)) throw new Error("Butt trim removed the entire member.");
+  return choosePiece(own(cut));
+}
+function buildFrameGusset(feature3, own) {
+  const u2 = unit$3(feature3.axisA);
+  const bRaw = unit$3(feature3.axisB);
+  const n = unit$3(cross$4(u2, bRaw));
+  const v2 = unit$3(cross$4(n, u2));
+  const b2 = [dot$6(bRaw, u2), dot$6(bRaw, v2)];
+  const legA = feature3.legAMillimeters;
+  const legB = feature3.legBMillimeters;
+  const c2 = feature3.chamferMillimeters ?? 0;
+  const pA = [legA, 0];
+  const pB = [b2[0] * legB, b2[1] * legB];
+  const pen = c2 > 1e-6 ? draw([c2, 0]) : draw([0, 0]);
+  pen.lineTo(pA);
+  if (feature3.shape === "polygon") {
+    const tabA = [pA[0] + b2[0] * (legB * 0.25), pA[1] + b2[1] * (legB * 0.25)];
+    const tabB = [pB[0] + legA * 0.25, pB[1]];
+    pen.lineTo(tabA);
+    pen.lineTo(tabB);
+  }
+  pen.lineTo(pB);
+  if (c2 > 1e-6) pen.lineTo([b2[0] * c2, b2[1] * c2]);
+  const profile = own(pen.close());
+  const startOrigin = add$4(feature3.originMillimeters, scale$1(n, -feature3.thicknessMillimeters / 2));
+  const plane2 = own(new Plane(startOrigin, u2, n));
+  const sk = own(profile.sketchOnPlane(plane2));
+  const face = own(sk.face());
+  const vec2 = new Vector(scale$1(n, feature3.thicknessMillimeters));
+  try {
+    const solid = own(basicFaceExtrusion(face, vec2));
+    if (!isShape3D(solid) || !(measureVolume(solid) > 1e-9)) throw new Error("Frame gusset produced no solid.");
+    return solid;
+  } finally {
+    vec2.delete();
+  }
+}
+function resolveAxes(feature3) {
+  const origin2 = feature3.originMillimeters ? [...feature3.originMillimeters] : [0, 0, 0];
+  let zDir = [0, 0, 1];
+  if (feature3.direction) zDir = unit$3(feature3.direction);
+  else if (feature3.axis === "X") zDir = [1, 0, 0];
+  else if (feature3.axis === "Y") zDir = [0, 1, 0];
+  const ref = Math.abs(zDir[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+  const xDir = unit$3(cross$4(ref, zDir));
+  return { origin: origin2, zDir, xDir };
+}
+function buildPrimitiveShape(feature3) {
+  const oc = getOC();
+  const { origin: origin2, zDir, xDir } = resolveAxes(feature3);
+  const yDir = unit$3(cross$4(zDir, xDir));
+  const makeAx22 = (o) => {
+    const p4 = new oc.gp_Pnt_3(o[0], o[1], o[2]);
+    const dz = new oc.gp_Dir_4(zDir[0], zDir[1], zDir[2]);
+    const dx = new oc.gp_Dir_4(xDir[0], xDir[1], xDir[2]);
+    try {
+      return new oc.gp_Ax2_2(p4, dz, dx);
+    } finally {
+      p4.delete();
+      dz.delete();
+      dx.delete();
+    }
+  };
+  if (feature3.kind === "box") {
+    const w2 = feature3.widthMillimeters, d2 = feature3.depthMillimeters, h2 = feature3.heightMillimeters;
+    const centered = feature3.centered !== false;
+    const corner = centered ? add$4(add$4(add$4(origin2, scale$1(xDir, -w2 / 2)), scale$1(yDir, -d2 / 2)), scale$1(zDir, -h2 / 2)) : origin2;
+    const ax2 = makeAx22(corner);
+    const maker = new oc.BRepPrimAPI_MakeBox_5(ax2, w2, d2, h2);
+    try {
+      const shape = cast(maker.Shape());
+      if (!isShape3D(shape)) throw new Error("Box primitive failed to build a solid.");
+      return shape;
+    } finally {
+      maker.delete();
+      ax2.delete();
+    }
+  }
+  if (feature3.kind === "cylinder") {
+    const r = feature3.radiusMillimeters, h2 = feature3.heightMillimeters;
+    const ax2 = makeAx22(origin2);
+    const maker = new oc.BRepPrimAPI_MakeCylinder_3(ax2, r, h2);
+    try {
+      const shape = cast(maker.Shape());
+      if (!isShape3D(shape)) throw new Error("Cylinder primitive failed to build a solid.");
+      return shape;
+    } finally {
+      maker.delete();
+      ax2.delete();
+    }
+  }
+  if (feature3.kind === "sphere") {
+    const r = feature3.radiusMillimeters;
+    const ax2 = makeAx22(origin2);
+    const maker = new oc.BRepPrimAPI_MakeSphere_9(ax2, r);
+    try {
+      const shape = cast(maker.Shape());
+      if (!isShape3D(shape)) throw new Error("Sphere primitive failed to build a solid.");
+      return shape;
+    } finally {
+      maker.delete();
+      ax2.delete();
+    }
+  }
+  if (feature3.kind === "torus") {
+    const rMaj = feature3.majorRadiusMillimeters, rMin = feature3.minorRadiusMillimeters;
+    const ax2 = makeAx22(origin2);
+    const maker = new oc.BRepPrimAPI_MakeTorus_5(ax2, rMaj, rMin);
+    try {
+      const shape = cast(maker.Shape());
+      if (!isShape3D(shape)) throw new Error("Torus primitive failed to build a solid.");
+      return shape;
+    } finally {
+      maker.delete();
+      ax2.delete();
+    }
+  }
+  const r0 = feature3.bottomRadiusMillimeters ?? 0;
+  const r1 = feature3.topRadiusMillimeters ?? 0;
+  const h = feature3.heightMillimeters;
+  const p0 = origin2;
+  const p1 = add$4(origin2, scale$1(xDir, r0));
+  const p2 = add$4(add$4(origin2, scale$1(zDir, h)), scale$1(xDir, r1));
+  const p3 = add$4(origin2, scale$1(zDir, h));
+  const pts = r0 > 1e-9 && r1 > 1e-9 ? [p0, p1, p2, p3] : r0 > 1e-9 ? [p0, p1, p3] : [p0, p2, p3];
+  const edges = pts.map((a2, i2) => makeLine(a2, pts[(i2 + 1) % pts.length]));
+  const wire = assembleWire(edges);
+  const face = makeFace(wire);
+  const pAx = new oc.gp_Pnt_3(origin2[0], origin2[1], origin2[2]);
+  const dAx = new oc.gp_Dir_4(zDir[0], zDir[1], zDir[2]);
+  const ax1 = new oc.gp_Ax1_2(pAx, dAx);
+  const revol = new oc.BRepPrimAPI_MakeRevol_1(face.wrapped, ax1, Math.PI * 2, true);
+  try {
+    const shape = cast(revol.Shape());
+    if (!isShape3D(shape)) throw new Error("Cone primitive failed to build a solid.");
+    return shape;
+  } finally {
+    revol.delete();
+    ax1.delete();
+    dAx.delete();
+    pAx.delete();
+    face.delete();
+    wire.delete();
+    edges.forEach((e) => e.delete());
+  }
+}
+const pt = (v2) => {
+  const p2 = [v2.x, v2.y, v2.z];
+  v2.delete();
+  return p2;
+};
+const dist = (a2, b) => Math.hypot(a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]);
+function toSheet(raw) {
+  const o = getOC();
+  const shape = cast(raw);
+  if (isShape3D(shape)) return shape;
+  const builder = new o.TopoDS_Builder();
+  const shell = new o.TopoDS_Shell();
+  builder.MakeShell(shell);
+  builder.Add(shell, raw);
+  return cast(shell);
+}
+function sewFaces(faces, tolerance2 = 1e-4) {
+  const o = getOC();
+  if (faces.length === 1) return toSheet(faces[0]);
+  const sewing = new o.BRepBuilderAPI_Sewing(tolerance2, true, true, true, false);
+  const progress = new o.Message_ProgressRange_1();
+  try {
+    for (const f2 of faces) sewing.Add(f2);
+    sewing.Perform(progress);
+    return toSheet(sewing.SewedShape());
+  } finally {
+    progress.delete();
+    sewing.delete();
+  }
+}
+function adjacentFaceForEdge(body, edge) {
+  const mid = pt(edge.pointAt(0.5));
+  const faces = body.faces;
+  let match;
+  let bestDist = Infinity;
+  for (const face of faces) {
+    let hit = false;
+    const faceEdges = face.edges;
+    for (const fe of faceEdges) {
+      if (fe.isSame(edge)) {
+        hit = true;
+      } else {
+        const fm = pt(fe.pointAt(0.5));
+        const d2 = dist(mid, fm);
+        if (d2 < 1e-3 && d2 < bestDist) {
+          bestDist = d2;
+          hit = true;
+        }
+      }
+      fe.delete();
+    }
+    if (hit && !match) {
+      match = face;
+    } else if (hit && match) {
+      face.delete();
+    } else {
+      face.delete();
+    }
+  }
+  return match;
+}
+function orderedWireEdges(wire) {
+  const edges = wire.edges;
+  if (edges.length <= 1) return edges;
+  const start = pt(wire.startPoint);
+  const endpoints = edges.map((e) => [pt(e.startPoint), pt(e.endPoint)]);
+  const used = /* @__PURE__ */ new Set();
+  const ordered2 = [];
+  let cur = start;
+  while (ordered2.length < edges.length) {
+    let best = -1, bestDist = Infinity, nextPt = cur;
+    for (let i2 = 0; i2 < edges.length; i2++) {
+      if (used.has(i2)) continue;
+      const d0 = dist(cur, endpoints[i2][0]);
+      const d1 = dist(cur, endpoints[i2][1]);
+      if (d0 < bestDist) {
+        bestDist = d0;
+        best = i2;
+        nextPt = endpoints[i2][1];
+      }
+      if (d1 < bestDist) {
+        bestDist = d1;
+        best = i2;
+        nextPt = endpoints[i2][0];
+      }
+    }
+    if (best < 0) break;
+    used.add(best);
+    ordered2.push(edges[best]);
+    cur = nextPt;
+  }
+  return ordered2;
+}
+function buildSurfaceBlend(bodyA, wireA, bodyB, wireB, continuity = "g0") {
+  const o = getOC();
+  const a0 = pt(wireA.startPoint);
+  const a1 = pt(wireA.endPoint);
+  const b0 = pt(wireB.startPoint);
+  const b1 = pt(wireB.endPoint);
+  const straight = dist(a1, b1) + dist(a0, b0) <= dist(a1, b0) + dist(a0, b1);
+  const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
+  const back = straight ? cast(wireB.wrapped.Reversed()) : wireB;
+  const side1 = makeLine(a1, bEnd);
+  const side2 = makeLine(bStart, a0);
+  try {
+    if (continuity === "g0") {
+      const loop = assembleWire([wireA, side1, back, side2]);
+      try {
+        const face = makeNonPlanarFace(loop);
+        const sheet = toSheet(face.wrapped);
+        face.delete();
+        if (!(measureArea(sheet) > 1e-9)) throw new Error("The blend surface has no area.");
+        return sheet;
+      } finally {
+        loop.delete();
+      }
+    }
+    const order = continuity === "g2" ? o.GeomAbs_Shape.GeomAbs_G2 : o.GeomAbs_Shape.GeomAbs_G1;
+    const edgesA = orderedWireEdges(wireA);
+    const edgesB = orderedWireEdges(back);
+    const facesA = edgesA.map((e) => adjacentFaceForEdge(bodyA, e));
+    const facesB = edgesB.map((e) => adjacentFaceForEdge(bodyB, e));
+    const degree = continuity === "g2" ? 4 : 3;
+    const tryFill = (ord, deg) => {
+      const filling = new o.BRepOffsetAPI_MakeFilling(deg, 15, 2, false, 1e-4, 1e-3, 0.01, 0.1, 8, 9);
+      const progress = new o.Message_ProgressRange_1();
+      try {
+        for (let i2 = 0; i2 < edgesA.length; i2++) {
+          if (facesA[i2]) filling.Add_2(edgesA[i2].wrapped, facesA[i2].wrapped, ord, true);
+          else filling.Add_1(edgesA[i2].wrapped, o.GeomAbs_Shape.GeomAbs_C0, true);
+        }
+        filling.Add_1(side1.wrapped, o.GeomAbs_Shape.GeomAbs_C0, true);
+        for (let i2 = 0; i2 < edgesB.length; i2++) {
+          if (facesB[i2]) filling.Add_2(edgesB[i2].wrapped, facesB[i2].wrapped, ord, true);
+          else filling.Add_1(edgesB[i2].wrapped, o.GeomAbs_Shape.GeomAbs_C0, true);
+        }
+        filling.Add_1(side2.wrapped, o.GeomAbs_Shape.GeomAbs_C0, true);
+        filling.Build(progress);
+        if (!filling.IsDone()) return null;
+        const sheet = toSheet(filling.Shape());
+        if (!(measureArea(sheet) > 1e-9)) {
+          sheet.delete();
+          return null;
+        }
+        return sheet;
+      } catch {
+        return null;
+      } finally {
+        progress.delete();
+        filling.delete();
+      }
+    };
+    try {
+      const built = tryFill(order, degree) ?? (continuity === "g2" ? tryFill(o.GeomAbs_Shape.GeomAbs_G1, 3) : null) ?? tryFill(o.GeomAbs_Shape.GeomAbs_C0, 3);
+      if (built) return built;
+      const loop = assembleWire([wireA, side1, back, side2]);
+      try {
+        const face = makeNonPlanarFace(loop);
+        const sheet = toSheet(face.wrapped);
+        face.delete();
+        if (!(measureArea(sheet) > 1e-9)) throw new Error("The blend surface has no area.");
+        return sheet;
+      } finally {
+        loop.delete();
+      }
+    } finally {
+      edgesA.forEach((e) => e.delete());
+      edgesB.forEach((e) => e.delete());
+      facesA.forEach((f2) => f2?.delete());
+      facesB.forEach((f2) => f2?.delete());
+    }
+  } finally {
+    side1.delete();
+    side2.delete();
+    if (straight) back.delete();
+  }
+}
+function buildSurfaceMatch(sourceBody, sourceEdges, targetBody, targetEdges, continuity = "g1") {
+  if (!sourceEdges.length || !targetEdges.length) {
+    throw new Error("Surface match needs a source boundary edge and a target edge.");
+  }
+  const srcEdge = sourceEdges[0];
+  const tgtEdge = targetEdges[0];
+  const srcFace = adjacentFaceForEdge(sourceBody, srcEdge);
+  if (!srcFace) throw new Error("Could not find the source face for the picked edge.");
+  const tgtFace = adjacentFaceForEdge(targetBody, tgtEdge);
+  const o = getOC();
+  const allFaces = sourceBody.faces;
+  try {
+    let handle;
+    try {
+      handle = o.GeomConvert.SurfaceToBSplineSurface(o.BRep_Tool.Surface_2(srcFace.wrapped));
+    } catch {
+      const nGrid = 6;
+      const grid = new o.TColgp_Array2OfPnt_2(1, nGrid, 1, nGrid);
+      const api = new o.GeomAPI_PointsToBSplineSurface_1();
+      try {
+        for (let i2 = 0; i2 < nGrid; i2++) {
+          for (let j = 0; j < nGrid; j++) {
+            const p2 = srcFace.pointOnSurface(i2 / (nGrid - 1), j / (nGrid - 1));
+            const gp = new o.gp_Pnt_3(p2.x, p2.y, p2.z);
+            grid.SetValue(i2 + 1, j + 1, gp);
+            gp.delete();
+            p2.delete();
+          }
+        }
+        api.Interpolate_1(grid, false);
+        if (!api.IsDone()) throw new Error("Surface match could not build B-spline patch.");
+        handle = api.Surface();
+      } finally {
+        api.delete();
+        grid.delete();
+      }
+    }
+    const s = handle.get();
+    const minDeg = continuity === "g2" ? 3 : continuity === "g1" ? 2 : 1;
+    if (s.UDegree() < minDeg || s.VDegree() < minDeg) {
+      s.IncreaseDegree(Math.max(s.UDegree(), minDeg), Math.max(s.VDegree(), minDeg));
+    }
+    const u0 = s.UKnot(s.FirstUKnotIndex());
+    const u1 = s.UKnot(s.LastUKnotIndex());
+    const v0 = s.VKnot(s.FirstVKnotIndex());
+    const v1 = s.VKnot(s.LastVKnotIndex());
+    const needed = continuity === "g2" ? 5 : continuity === "g1" ? 4 : 2;
+    while (s.NbUPoles() < needed) s.InsertUKnot(u0 + (u1 - u0) * (s.NbUPoles() / (needed + 1)), 1, 1e-7, true);
+    while (s.NbVPoles() < needed) s.InsertVKnot(v0 + (v1 - v0) * (s.NbVPoles() / (needed + 1)), 1, 1e-7, true);
+    const nu = s.NbUPoles();
+    const nv = s.NbVPoles();
+    const pole = (i2, j) => {
+      const p2 = s.Pole(i2, j);
+      const out = [p2.X(), p2.Y(), p2.Z()];
+      p2.delete();
+      return out;
+    };
+    const setPole = (i2, j, v2) => {
+      const q = new o.gp_Pnt_3(v2[0], v2[1], v2[2]);
+      s.SetPole_1(i2, j, q);
+      q.delete();
+    };
+    const eStart = pt(srcEdge.startPoint);
+    const eMid = pt(srcEdge.pointAt(0.5));
+    const eEnd = pt(srcEdge.endPoint);
+    const evalSurf = (u2, v2) => {
+      const p2 = s.Value(u2, v2);
+      const out = [p2.X(), p2.Y(), p2.Z()];
+      p2.delete();
+      return out;
+    };
+    const candidates = [
+      { side: "uMin", err: dist(evalSurf(u0, (v0 + v1) / 2), eMid) + Math.min(dist(evalSurf(u0, v0), eStart) + dist(evalSurf(u0, v1), eEnd), dist(evalSurf(u0, v0), eEnd) + dist(evalSurf(u0, v1), eStart)) },
+      { side: "uMax", err: dist(evalSurf(u1, (v0 + v1) / 2), eMid) + Math.min(dist(evalSurf(u1, v0), eStart) + dist(evalSurf(u1, v1), eEnd), dist(evalSurf(u1, v0), eEnd) + dist(evalSurf(u1, v1), eStart)) },
+      { side: "vMin", err: dist(evalSurf((u0 + u1) / 2, v0), eMid) + Math.min(dist(evalSurf(u0, v0), eStart) + dist(evalSurf(u1, v0), eEnd), dist(evalSurf(u0, v0), eEnd) + dist(evalSurf(u1, v0), eStart)) },
+      { side: "vMax", err: dist(evalSurf((u0 + u1) / 2, v1), eMid) + Math.min(dist(evalSurf(u0, v1), eStart) + dist(evalSurf(u1, v1), eEnd), dist(evalSurf(u0, v1), eEnd) + dist(evalSurf(u1, v1), eStart)) }
+    ];
+    candidates.sort((a2, b) => a2.err - b.err);
+    const side = candidates[0].side;
+    const alongCount = side === "uMin" || side === "uMax" ? nv : nu;
+    const getRow = (depth, k2) => {
+      if (side === "uMin") return pole(1 + depth, k2 + 1);
+      if (side === "uMax") return pole(nu - depth, k2 + 1);
+      if (side === "vMin") return pole(k2 + 1, 1 + depth);
+      return pole(k2 + 1, nv - depth);
+    };
+    const setRow = (depth, k2, v2) => {
+      if (side === "uMin") setPole(1 + depth, k2 + 1, v2);
+      else if (side === "uMax") setPole(nu - depth, k2 + 1, v2);
+      else if (side === "vMin") setPole(k2 + 1, 1 + depth, v2);
+      else setPole(k2 + 1, nv - depth, v2);
+    };
+    const t0 = pt(tgtEdge.startPoint);
+    const t1 = pt(tgtEdge.endPoint);
+    const pStart = getRow(0, 0);
+    const pEnd = getRow(0, alongCount - 1);
+    const flipTarget = dist(pStart, t1) + dist(pEnd, t0) < dist(pStart, t0) + dist(pEnd, t1);
+    for (let k2 = 0; k2 < alongCount; k2++) {
+      const frac = alongCount === 1 ? 0.5 : k2 / (alongCount - 1);
+      const t2 = flipTarget ? 1 - frac : frac;
+      const targetPt = pt(tgtEdge.pointAt(t2));
+      const old0 = getRow(0, k2);
+      const old1 = getRow(1, k2);
+      const shift = sub$5(targetPt, old0);
+      setRow(0, k2, targetPt);
+      if (continuity === "g0") {
+        continue;
+      }
+      let row1 = add$4(old1, scale$1(shift, 0.5));
+      if (tgtFace) {
+        const nvVec = tgtFace.normalAt(targetPt);
+        const tgtNormal = unit$3([nvVec.x, nvVec.y, nvVec.z]);
+        nvVec.delete();
+        const delta2 = sub$5(row1, targetPt);
+        const proj = sub$5(delta2, scale$1(tgtNormal, dot$6(delta2, tgtNormal)));
+        const projLen = norm$4(proj);
+        const origLen = Math.max(norm$4(sub$5(old1, old0)), 1e-3);
+        if (projLen > 1e-9) {
+          row1 = add$4(targetPt, scale$1(proj, origLen / projLen));
+        } else {
+          const tang = pt(tgtEdge.tangentAt(t2));
+          const inPlane = unit$3(cross$4(tgtNormal, unit$3(tang)));
+          const sign = dot$6(sub$5(old1, old0), inPlane) >= 0 ? 1 : -1;
+          row1 = add$4(targetPt, scale$1(inPlane, sign * origLen));
+        }
+      }
+      setRow(1, k2, row1);
+      if (continuity === "g2" && tgtFace) {
+        const old2 = getRow(2, k2);
+        const nvVec = tgtFace.normalAt(targetPt);
+        const tgtNormal = unit$3([nvVec.x, nvVec.y, nvVec.z]);
+        nvVec.delete();
+        const delta2 = sub$5(old2, row1);
+        const proj2 = sub$5(delta2, scale$1(tgtNormal, dot$6(delta2, tgtNormal)));
+        const origLen2 = Math.max(norm$4(sub$5(old2, old1)), 1e-3);
+        const row2 = norm$4(proj2) > 1e-9 ? add$4(row1, scale$1(proj2, origLen2 / norm$4(proj2))) : add$4(row1, sub$5(row1, targetPt));
+        setRow(2, k2, row2);
+      }
+    }
+    const maker = new o.BRepBuilderAPI_MakeFace_8(new o.Handle_Geom_Surface_2(s), 1e-6);
+    if (!maker.IsDone()) throw new Error("Surface match could not rebuild the matched face.");
+    const matchedFace = maker.Face();
+    maker.delete();
+    const kept = [];
+    for (const f2 of allFaces) {
+      if (!f2.isSame(srcFace)) kept.push(f2.wrapped);
+    }
+    kept.push(matchedFace);
+    return sewFaces(kept, 1e-4);
+  } finally {
+    allFaces.forEach((f2) => f2.delete());
+    srcFace.delete();
+    tgtFace?.delete();
+  }
+}
+function buildSurfaceFillet(bodiesList, pickedEdges2, radiusMillimeters) {
+  if (!bodiesList.length || bodiesList.length > 2) {
+    throw new Error("Surface fillet needs one or two surface bodies.");
+  }
+  const o = getOC();
+  let combined;
+  if (bodiesList.length === 1) {
+    combined = bodiesList[0].clone();
+  } else {
+    const facesA = bodiesList[0].faces;
+    const facesB = bodiesList[1].faces;
+    const sewn = sewFaces([...facesA.map((f2) => f2.wrapped), ...facesB.map((f2) => f2.wrapped)], 0.01);
+    facesA.forEach((f2) => f2.delete());
+    facesB.forEach((f2) => f2.delete());
+    const countShared = (shape) => {
+      const counts = /* @__PURE__ */ new Map();
+      const fs = shape.faces;
+      for (const f2 of fs) {
+        const es = f2.edges;
+        for (const e of es) {
+          const m2 = pt(e.pointAt(0.5));
+          const key2 = m2.map((v2) => Math.round(v2 * 100)).join(",");
+          const prev = counts.get(key2);
+          if (prev) {
+            prev.count++;
+            e.delete();
+          } else {
+            counts.set(key2, { edge: e, count: 1 });
+          }
+        }
+        f2.delete();
+      }
+      const shared = [];
+      for (const entry of counts.values()) {
+        if (entry.count >= 2) shared.push(entry.edge);
+        else entry.edge.delete();
+      }
+      return shared;
+    };
+    const directShared = countShared(sewn);
+    if (directShared.length > 0) {
+      directShared.forEach((e) => e.delete());
+      combined = sewn;
+    } else {
+      sewn.delete();
+      const fa = bodiesList[0].faces;
+      const fb = bodiesList[1].faces;
+      try {
+        const piecesA = splitFacesByTool(fa, bodiesList[1]).flat();
+        const piecesB = splitFacesByTool(fb, bodiesList[0]).flat();
+        piecesA.sort((x2, y2) => measureArea(y2) - measureArea(x2));
+        piecesB.sort((x2, y2) => measureArea(y2) - measureArea(x2));
+        combined = sewFaces([piecesA[0].wrapped, piecesB[0].wrapped], 0.01);
+        piecesA.forEach((p2) => p2.delete());
+        piecesB.forEach((p2) => p2.delete());
+      } finally {
+        fa.forEach((f2) => f2.delete());
+        fb.forEach((f2) => f2.delete());
+      }
+    }
+  }
+  try {
+    const targetEdges = [];
+    const seenKeys = /* @__PURE__ */ new Map();
+    const fs = combined.faces;
+    for (const f2 of fs) {
+      const es = f2.edges;
+      for (const e of es) {
+        const m2 = pt(e.pointAt(0.5));
+        const key2 = m2.map((v2) => Math.round(v2 * 100)).join(",");
+        const prev = seenKeys.get(key2);
+        if (prev) {
+          prev.count++;
+          e.delete();
+        } else {
+          seenKeys.set(key2, { edge: e, count: 1 });
+        }
+      }
+      f2.delete();
+    }
+    const pickedMids = (pickedEdges2 ?? []).map((e) => pt(e.pointAt(0.5)));
+    for (const entry of seenKeys.values()) {
+      if (entry.count >= 2) {
+        if (!pickedMids.length) {
+          targetEdges.push(entry.edge);
+        } else {
+          const m2 = pt(entry.edge.pointAt(0.5));
+          if (pickedMids.some((pm) => dist(m2, pm) < 0.01)) targetEdges.push(entry.edge);
+          else entry.edge.delete();
+        }
+      } else {
+        entry.edge.delete();
+      }
+    }
+    if (!targetEdges.length) {
+      throw new Error("Surface fillet needs a shared seam edge between two adjacent surface faces.");
+    }
+    const builder = new o.BRepFilletAPI_MakeFillet(combined.wrapped, o.ChFi3d_FilletShape.ChFi3d_Rational);
+    const progress = new o.Message_ProgressRange_1();
+    try {
+      for (const e of targetEdges) builder.Add_2(radiusMillimeters, e.wrapped);
+      builder.Build(progress);
+      if (!builder.IsDone()) throw new Error("Surface fillet failed — reduce radius or verify that the surfaces meet cleanly.");
+      const sheet = toSheet(builder.Shape());
+      if (!(measureArea(sheet) > 1e-9)) {
+        sheet.delete();
+        throw new Error("Surface fillet produced no surface area.");
+      }
+      return sheet;
+    } finally {
+      progress.delete();
+      builder.delete();
+      targetEdges.forEach((e) => e.delete());
+    }
+  } finally {
+    combined.delete();
+  }
+}
+function trimSurfaceByBody(body, toolBody, keepPointMillimeters) {
+  const faces = body.faces;
+  let pieces = [];
+  try {
+    pieces = splitFacesByTool(faces, toolBody).flat();
+  } finally {
+    faces.forEach((f2) => f2.delete());
+  }
+  if (pieces.length <= 1) {
+    pieces.forEach((p2) => p2.delete());
+    throw new Error("The trimming body does not split the surface.");
+  }
+  const probe = makeVertex(keepPointMillimeters);
+  let seedIndex = 0;
+  let bestDist = Infinity;
+  try {
+    pieces.forEach((p2, idx2) => {
+      const d2 = measureDistanceBetween(probe, p2);
+      if (d2 < bestDist) {
+        bestDist = d2;
+        seedIndex = idx2;
+      }
+    });
+  } finally {
+    probe.delete();
+  }
+  const edgeKeys = /* @__PURE__ */ new Map();
+  pieces.forEach((p2, idx2) => {
+    const es = p2.edges;
+    for (const e of es) {
+      const mid = pt(e.pointAt(0.5));
+      const mv = makeVertex(mid);
+      const onCut = measureDistanceBetween(mv, toolBody) < 0.01;
+      mv.delete();
+      e.delete();
+      if (onCut) continue;
+      const key2 = mid.map((v2) => Math.round(v2 * 50)).join(",");
+      const list2 = edgeKeys.get(key2) ?? [];
+      list2.push(idx2);
+      edgeKeys.set(key2, list2);
+    }
+  });
+  const adj = pieces.map(() => /* @__PURE__ */ new Set());
+  for (const list2 of edgeKeys.values()) {
+    for (let i2 = 0; i2 < list2.length; i2++) {
+      for (let j = i2 + 1; j < list2.length; j++) {
+        adj[list2[i2]].add(list2[j]);
+        adj[list2[j]].add(list2[i2]);
+      }
+    }
+  }
+  const visited = /* @__PURE__ */ new Set([seedIndex]);
+  const queue2 = [seedIndex];
+  while (queue2.length) {
+    const cur = queue2.shift();
+    for (const next of adj[cur]) {
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue2.push(next);
+      }
+    }
+  }
+  if (visited.size === pieces.length) {
+    visited.clear();
+    visited.add(seedIndex);
+  }
+  try {
+    const kept = [...visited].map((i2) => pieces[i2].wrapped);
+    return sewFaces(kept, 1e-4);
+  } finally {
+    pieces.forEach((p2) => p2.delete());
+  }
 }
 function scopedRemoval(target, tool2, operation2, own) {
   const before = measureVolume(target);
@@ -42236,7 +46667,7 @@ function evaluatePartDocument(document2, options = {}) {
           }
         }
         if (feature3.suppressed || feature3.type === "plane" || feature3.type === "axis" || feature3.type === "point" || feature3.type === "curve3d") continue;
-        if (feature3.type === "thread" && !feature3.chamfer && !feature3.undercut && !feature3.splitFace) continue;
+        if (feature3.type === "thread" && !feature3.chamfer && !feature3.undercut && !feature3.splitFace && !feature3.modeled) continue;
         try {
           if (feature3.type === "sketch") {
             const state = rectangleSketchRevision(feature3);
@@ -42261,10 +46692,14 @@ function evaluatePartDocument(document2, options = {}) {
             const center = deleteAfterVectorTuple(face.center);
             return Math.hypot(center[0] - anchor.centerMillimeters[0], center[1] - anchor.centerMillimeters[1], center[2] - anchor.centerMillimeters[2]) <= 1e-6 && Math.abs(measureArea(face) - anchor.areaSquareMillimeters) <= Math.max(1e-6, anchor.areaSquareMillimeters * 1e-9);
           };
-          const uniqueFace = (body, matches, label, hasAnchor, fallback) => {
+          const uniqueFace = (body, matches, label, hasAnchor, ...fallbacks) => {
             const faces = facesOf(body).map(({ face }) => face);
             let found = faces.filter(matches);
-            if (!found.length && fallback) found = faces.filter(fallback);
+            for (const fallback of fallbacks) {
+              if (found.length || !fallback) continue;
+              const candidate = faces.filter(fallback);
+              if (candidate.length === 1) found = candidate;
+            }
             const selected = found.length === 1 ? found[0] : void 0;
             faces.forEach((face) => {
               if (face !== selected) face.delete();
@@ -42286,7 +46721,8 @@ function evaluatePartDocument(document2, options = {}) {
               const along = delta2[0] * normal[0] + delta2[1] * normal[1] + delta2[2] * normal[2];
               return norm$4(sub$5(delta2, scale$1(normal, along))) <= 1e-6;
             } : void 0;
-            return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated);
+            const uniqueAligned = anchor ? aligned : void 0;
+            return uniqueFace(body, (face) => aligned(face) && anchored(face, anchor), `${label} face`, Boolean(anchor), translated, uniqueAligned);
           };
           const surfaceKinds = { cylinder: ["CYLINDRE", "CYLINDER"], cone: ["CONE"], sphere: ["SPHERE"], torus: ["TORUS"], bspline: ["BSPLINE_SURFACE"], bezier: ["BEZIER_SURFACE"], extrusion: ["EXTRUSION_SURFACE"], revolution: ["REVOLUTION_SURFACE"] };
           const surfaceFaceOf = (body, surfaceType, anchor, label) => {
@@ -42413,7 +46849,7 @@ function evaluatePartDocument(document2, options = {}) {
             if (curve3d && curve3d.type === "curve3d") {
               if (curve3d.kind === "point") throw new Error(`${label}: a 3D point is not a path.`);
               const pts = curve3d.pointsMillimeters;
-              const edges = curve3d.kind === "line" ? pts.slice(1).map((p2, i2) => own(makeLine(pts[i2], p2))) : [own(makeBSplineApproximation(pts, { tolerance: 1e-4 }))];
+              const edges = curve3d.kind === "line" ? pts.slice(1).map((p2, i2) => own(makeLine(pts[i2], p2))) : curve3d.kind === "arc" ? [own(makeThreePointArc(pts[0], pts[1], pts[2]))] : [own(makeBSplineApproximation(pts, { tolerance: 1e-4 }))];
               return own(assembleWire(edges));
             }
             const sketchProfile = profiles.get(sourceId);
@@ -42711,8 +47147,195 @@ function evaluatePartDocument(document2, options = {}) {
                 sewing.delete();
               }
             }
+            if (feature3.modeled) {
+              const { pitchMillimeters } = resolveThreadGeometry(feature3);
+              const midFace = faceByReference(result, feature3.face, "Thread face");
+              let isExternal = true;
+              try {
+                const pMid = deleteAfterVectorTuple(midFace.pointOnSurface(0.5, 0.5));
+                const nMid = deleteAfterVectorTuple(midFace.normalAt(pMid));
+                const radial = sub$5(pMid, add$4(q.at, scale$1(q.along, dot$6(sub$5(pMid, q.at), q.along))));
+                isExternal = dot$6(nMid, radial) >= 0;
+              } finally {
+                midFace.delete();
+              }
+              const cutter = buildModeledThreadCutter(
+                {
+                  startCenter: start.centre,
+                  inwardDirection: inward,
+                  faceRadius: start.radius,
+                  isExternal,
+                  pitchMillimeters,
+                  lengthMillimeters: length,
+                  leftHand: Boolean(feature3.leftHand),
+                  starts: feature3.starts ?? 1,
+                  form: feature3.form ?? "v60"
+                },
+                own
+              );
+              const threaded = result.cut(cutter);
+              if (!isShape3D(threaded) || measureVolume(threaded) >= measureVolume(result) - 1e-9) {
+                throw new Error("The modelled thread removed no material. Check cylinder size and pitch.");
+              }
+              result = own(threaded);
+            }
             bodies.set(id2, result);
             currentBodyID = id2;
+            continue;
+          }
+          if (feature3.type === "emboss") {
+            const id2 = feature3.targetBodyId ?? feature3.face.bodyId, body = bodies.get(id2);
+            if (!body) throw new Error("The emboss target body is unavailable. Reselect the face.");
+            const wire = sketchWire(feature3.profileFeatureId, feature3.profileContourId, "Emboss", false);
+            const skFrame = sketchFrameOf(feature3.profileFeatureId);
+            const face = faceByReference(body, feature3.face, "Emboss face");
+            let cyl;
+            try {
+              if (face.geomType !== "PLANE") {
+                const q = quadricOf(face, [...deleteAfterVectorTuple(face.pointOnSurface(0.5, 0.5))]);
+                if (q.kind !== "CYLINDER") throw new Error("Emboss currently supports planar and cylindrical faces.");
+                cyl = { at: q.at, along: q.along, radius: q.r };
+              }
+              const embossed = applyEmbossFeature(feature3, {
+                body,
+                face,
+                wire,
+                wirePlaneNormal: unit$3(skFrame.normal),
+                wirePlaneOrigin: skFrame.originMillimeters,
+                cylinder: cyl,
+                own
+              });
+              bodies.set(id2, embossed);
+              currentBodyID = id2;
+            } finally {
+              face.delete();
+            }
+            continue;
+          }
+          if (feature3.type === "frame-member") {
+            const resolveSegments = (member) => {
+              if (member.segmentsMillimeters?.length) return member.segmentsMillimeters;
+              const pathFeat = history.find((f2) => f2.id === member.pathFeatureId && !f2.suppressed);
+              if (!pathFeat) throw new Error("Frame path feature is unavailable.");
+              if (pathFeat.type === "curve3d") {
+                const pts = pathFeat.pointsMillimeters;
+                return pts.slice(1).map((p2, i2) => [pts[i2], p2]);
+              }
+              const skFrame = sketchFrameOf(pathFeat.id);
+              const xDir = unit$3(skFrame.xDirection);
+              const nDir = unit$3(skFrame.normal);
+              const yDir = unit$3(cross$4(nDir, xDir));
+              const toWorld = (p2) => [
+                skFrame.originMillimeters[0] + xDir[0] * p2[0] + yDir[0] * p2[1],
+                skFrame.originMillimeters[1] + xDir[1] * p2[0] + yDir[1] * p2[1],
+                skFrame.originMillimeters[2] + xDir[2] * p2[0] + yDir[2] * p2[1]
+              ];
+              const drawing = pathFeat.type === "profile" ? resolveProfileDrawing(history.slice(0, index2 + 1), pathFeat.id) : void 0;
+              if (!drawing) throw new Error("Frame member path requires a sketch drawing or 3D line curve.");
+              const segs2 = [];
+              for (const c2 of drawing.contours) {
+                if (c2.type !== "path" || c2.construction) continue;
+                let prev = c2.start;
+                for (const s of c2.segments) {
+                  if (s.type === "line") segs2.push([toWorld(prev), toWorld(s.end)]);
+                  prev = s.end;
+                }
+              }
+              return segs2;
+            };
+            const segs = resolveSegments(feature3);
+            const built = buildFrameMembers(feature3, segs, own);
+            const bodyId = bodyIDForFeature(document2, feature3);
+            bodies.set(bodyId, built);
+            currentBodyID = bodyId;
+            continue;
+          }
+          if (feature3.type === "frame-end-cap") {
+            const member = history.find((f2) => f2.id === feature3.frameFeatureId && f2.type === "frame-member" && !f2.suppressed);
+            if (!member || member.type !== "frame-member") throw new Error("Frame end cap requires an unsuppressed frame member.");
+            let segs = member.segmentsMillimeters ?? [];
+            if (!segs.length && member.pathFeatureId) {
+              const pathFeat = history.find((f2) => f2.id === member.pathFeatureId && !f2.suppressed);
+              if (pathFeat?.type === "curve3d") segs = pathFeat.pointsMillimeters.slice(1).map((p2, i2) => [pathFeat.pointsMillimeters[i2], p2]);
+              else if (pathFeat?.type === "profile") {
+                const skFrame = sketchFrameOf(pathFeat.id);
+                const xDir = unit$3(skFrame.xDirection), nDir = unit$3(skFrame.normal), yDir = unit$3(cross$4(nDir, xDir));
+                const toWorld = (p2) => [
+                  skFrame.originMillimeters[0] + xDir[0] * p2[0] + yDir[0] * p2[1],
+                  skFrame.originMillimeters[1] + xDir[1] * p2[0] + yDir[1] * p2[1],
+                  skFrame.originMillimeters[2] + xDir[2] * p2[0] + yDir[2] * p2[1]
+                ];
+                const drawing = resolveProfileDrawing(history.slice(0, index2 + 1), pathFeat.id);
+                for (const c2 of drawing?.contours ?? []) {
+                  if (c2.type !== "path" || c2.construction) continue;
+                  let prev = c2.start;
+                  for (const s of c2.segments) {
+                    if (s.type === "line") segs.push([toWorld(prev), toWorld(s.end)]);
+                    prev = s.end;
+                  }
+                }
+              }
+            }
+            const caps = buildFrameEndCaps(feature3, member, segs, own);
+            if (feature3.operation === "add") {
+              const targetId = feature3.targetBodyId ?? bodyIDForFeature(document2, member);
+              const target = bodies.get(targetId);
+              if (!target) throw new Error("Frame end cap target body is unavailable.");
+              const fused = target.fuse(caps);
+              bodies.set(targetId, isShape3D(fused) ? own(fused) : target);
+              currentBodyID = targetId;
+            } else {
+              const bodyId = bodyIDForFeature(document2, feature3);
+              bodies.set(bodyId, caps);
+              currentBodyID = bodyId;
+            }
+            continue;
+          }
+          if (feature3.type === "frame-trim") {
+            const planeObj = feature3.plane ? (() => {
+              const p2 = mirrorPlaneOf(feature3.plane);
+              return { origin: [p2.origin.x, p2.origin.y, p2.origin.z], normal: [p2.zDir.x, p2.zDir.y, p2.zDir.z] };
+            })() : void 0;
+            const explicitTool = feature3.toolBodyId ? bodies.get(feature3.toolBodyId) : void 0;
+            if (feature3.toolBodyId && !explicitTool) throw new Error("Frame trim tool body is unavailable.");
+            const snapshots = /* @__PURE__ */ new Map();
+            for (const id2 of feature3.targetBodyIds) {
+              const b = bodies.get(id2);
+              if (!b) throw new Error(`Frame trim target body "${id2}" is unavailable.`);
+              snapshots.set(id2, b);
+            }
+            for (let ti = 0; ti < feature3.targetBodyIds.length; ti++) {
+              const id2 = feature3.targetBodyIds[ti];
+              const target = snapshots.get(id2);
+              const toolBody = explicitTool ?? (feature3.mode === "miter" && feature3.targetBodyIds.length >= 2 ? snapshots.get(feature3.targetBodyIds[(ti + 1) % feature3.targetBodyIds.length]) : void 0);
+              const trimmed = trimFrameBody(target, {
+                mode: feature3.mode,
+                toolBody,
+                plane: planeObj,
+                keepPoint: feature3.keepPointMillimeters,
+                weldGapMillimeters: feature3.weldGapMillimeters,
+                solidsOf,
+                own
+              });
+              bodies.set(id2, trimmed);
+              currentBodyID = id2;
+            }
+            continue;
+          }
+          if (feature3.type === "frame-gusset") {
+            const gusset = buildFrameGusset(feature3, own);
+            if (feature3.operation === "add") {
+              const targetId = feature3.targetBodyId ?? currentBodyID;
+              const target = targetId ? bodies.get(targetId) : void 0;
+              if (!target || !targetId) throw new Error("Frame gusset Add requires an available target body.");
+              const fused = target.fuse(gusset);
+              bodies.set(targetId, isShape3D(fused) ? own(fused) : target);
+              currentBodyID = targetId;
+            } else {
+              const bodyId = bodyIDForFeature(document2, feature3);
+              bodies.set(bodyId, gusset);
+              currentBodyID = bodyId;
+            }
             continue;
           }
           if (feature3.type === "rib") {
@@ -42946,6 +47569,33 @@ function evaluatePartDocument(document2, options = {}) {
             if (feature3.type === "boss") {
               const r = feature3.diameterMillimeters / 2;
               tool3 = frustum(r, taper(r), height);
+              if (feature3.ribs) {
+                const yDir = unit$3(cross$4(outward, xDir));
+                const ribH = feature3.ribs.heightMillimeters ?? height * 0.75;
+                const ribLen = feature3.ribs.lengthMillimeters;
+                const ribT = feature3.ribs.thicknessMillimeters;
+                const o = getOC();
+                for (let k2 = 0; k2 < feature3.ribs.count; k2++) {
+                  const ang = k2 * 2 * Math.PI / feature3.ribs.count;
+                  const radDir = add$4(scale$1(xDir, Math.cos(ang)), scale$1(yDir, Math.sin(ang)));
+                  const tanDir = add$4(scale$1(xDir, -Math.sin(ang)), scale$1(yDir, Math.cos(ang)));
+                  const p0 = add$4(add$4(base, scale$1(radDir, r * 0.6)), scale$1(tanDir, -ribT / 2));
+                  const p1 = add$4(add$4(base, scale$1(radDir, r + ribLen)), scale$1(tanDir, -ribT / 2));
+                  const p2 = add$4(add$4(add$4(base, scale$1(radDir, r * 0.6)), scale$1(outward, ribH)), scale$1(tanDir, -ribT / 2));
+                  const rw = own(assembleWire([own(makeLine(p0, p1)), own(makeLine(p1, p2)), own(makeLine(p2, p0))]));
+                  const rf = own(makeFace(rw));
+                  const vec2 = new o.gp_Vec_4(tanDir[0] * ribT, tanDir[1] * ribT, tanDir[2] * ribT);
+                  try {
+                    const ribSolid = cast(new o.BRepPrimAPI_MakePrism_1(rf.wrapped, vec2, false, true).Shape());
+                    if (isShape3D(ribSolid)) {
+                      const fused = tool3.fuse(own(ribSolid));
+                      if (isShape3D(fused)) tool3 = own(fused);
+                    }
+                  } finally {
+                    vec2.delete();
+                  }
+                }
+              }
               if (feature3.holeDiameterMillimeters !== void 0 && feature3.holeDepthMillimeters !== void 0) {
                 const topPoint = add$4(base, scale$1(outward, height));
                 const bore = own(makeCylinder(feature3.holeDiameterMillimeters / 2, feature3.holeDepthMillimeters + 1e-3, add$4(topPoint, scale$1(outward, 1e-3)), [-outward[0], -outward[1], -outward[2]]));
@@ -42956,6 +47606,14 @@ function evaluatePartDocument(document2, options = {}) {
             } else if (feature3.lengthMillimeters === void 0) {
               const r = feature3.widthMillimeters / 2;
               tool3 = frustum(r, taper(r), height);
+              if (feature3.wallThicknessMillimeters !== void 0) {
+                const innerR = r - feature3.wallThicknessMillimeters;
+                const pocketH = Math.max(0.2, height - feature3.wallThicknessMillimeters);
+                const topPoint = add$4(base, scale$1(outward, height + 1e-3));
+                const core = own(makeCylinder(innerR, pocketH + 1e-3, topPoint, [-outward[0], -outward[1], -outward[2]]));
+                const hollowed = tool3.cut(core);
+                if (isShape3D(hollowed)) tool3 = own(hollowed);
+              }
             } else {
               const along = feature3.alongMillimeters ? unit$3(feature3.alongMillimeters) : xDir;
               const across = unit$3(cross$4(outward, along));
@@ -42968,6 +47626,17 @@ function evaluatePartDocument(document2, options = {}) {
               const lofted = loft([rect(feature3.widthMillimeters, feature3.lengthMillimeters, base), rect(topW, topL, add$4(base, scale$1(outward, height)))], { ruled: true });
               if (!isShape3D(lofted) || measureVolume(lofted) <= 1e-9) throw new Error("The rest is not a valid solid.");
               tool3 = own(lofted);
+              if (feature3.wallThicknessMillimeters !== void 0) {
+                const wt = feature3.wallThicknessMillimeters;
+                const floorZ = Math.min(wt, height * 0.4);
+                const innerW = Math.max(0.2, topW - 2 * wt);
+                const innerL = Math.max(0.2, topL - 2 * wt);
+                const core = loft([rect(innerW, innerL, add$4(base, scale$1(outward, floorZ))), rect(innerW, innerL, add$4(base, scale$1(outward, height + 0.01)))], { ruled: true });
+                if (isShape3D(core)) {
+                  const hollowed = tool3.cut(own(core));
+                  if (isShape3D(hollowed)) tool3 = own(hollowed);
+                }
+              }
             }
             const before = measureVolume(body);
             const joined = body.fuse(tool3);
@@ -43022,9 +47691,9 @@ function evaluatePartDocument(document2, options = {}) {
               const raw2 = feature3.hookDirectionMillimeters, hook = unit$3(sub$5(raw2, scale$1(n, dot$6(raw2, n))));
               if (norm$4(hook) < 0.5) throw new Error("The hook direction must lie across the face, not along its normal.");
               const across = unit$3(cross$4(n, hook));
-              const { lengthMillimeters: L2, thicknessMillimeters: t2, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl } = feature3;
+              const { lengthMillimeters: L2, thicknessMillimeters: t2, widthMillimeters: w2, catchDepthMillimeters: cd, catchLengthMillimeters: cl, baseHeightMillimeters: bh } = feature3;
               const at = (x2, y2) => add$4(add$4(add$4(base, scale$1(hook, x2)), scale$1(n, y2)), scale$1(across, -w2 / 2));
-              const pts = [at(0, 0), at(t2, 0), at(t2, L2 - cl), at(t2 + cd, L2 - cl), at(t2, L2), at(0, L2)];
+              const pts = bh ? [at(-t2 * 0.25, 0), at(t2 * 1.25, 0), at(t2 * 1.25, bh), at(t2, bh), at(t2, L2 - cl), at(t2 + cd, L2 - cl), at(t2, L2), at(0, L2), at(0, bh), at(-t2 * 0.25, bh)] : [at(0, 0), at(t2, 0), at(t2, L2 - cl), at(t2 + cd, L2 - cl), at(t2, L2), at(0, L2)];
               const wire = own(assembleWire(pts.map((p2, i2) => own(makeLine(p2, pts[(i2 + 1) % pts.length])))));
               tool3 = prism(own(makeFace(wire)), scale$1(across, w2));
               publish(feature3, { parameter: "length", kind: "linear", originMillimeters: add$4(base, scale$1(n, L2)), direction: n, label: "Arm length" });
@@ -43141,6 +47810,15 @@ function evaluatePartDocument(document2, options = {}) {
           if (feature3.type === "surface-trim") {
             const id2 = feature3.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("Trim needs an available surface body.");
+            if (feature3.toolBodyId) {
+              const toolBody = bodies.get(feature3.toolBodyId);
+              if (!toolBody) throw new Error("Trim tool body is unavailable.");
+              const trimmed = trimSurfaceByBody(body, toolBody, feature3.keepPointMillimeters);
+              bodies.set(id2, own(trimmed));
+              currentBodyID = id2;
+              continue;
+            }
+            if (!feature3.plane) throw new Error("Trim needs a trimming plane or a trimming body.");
             const o = getOC(), plane2 = mirrorPlaneOf(feature3.plane);
             const origin2 = [plane2.origin.x, plane2.origin.y, plane2.origin.z], normal = [plane2.zDir.x, plane2.zDir.y, plane2.zDir.z];
             const b = body.boundingBox.bounds, size = 4 * Math.max(1, Math.hypot(b[1][0] - b[0][0], b[1][1] - b[0][1], b[1][2] - b[0][2]) + Math.hypot(...origin2));
@@ -43812,8 +48490,8 @@ function evaluatePartDocument(document2, options = {}) {
                       const sample = (surface) => {
                         const adaptor = new f2.GeomAdaptor_Surface_2(surface), u2 = (adaptor.FirstUParameter() + adaptor.LastUParameter()) / 2, v2 = (adaptor.FirstVParameter() + adaptor.LastVParameter()) / 2;
                         const uu = Number.isFinite(u2) ? u2 : 0, vv = Number.isFinite(v2) ? v2 : 0;
-                        const pt = adaptor.Value(uu, vv), q = [pt.X(), pt.Y(), pt.Z()];
-                        pt.delete();
+                        const pt2 = adaptor.Value(uu, vv), q = [pt2.X(), pt2.Y(), pt2.Z()];
+                        pt2.delete();
                         adaptor.delete();
                         return q;
                       };
@@ -43979,10 +48657,46 @@ function evaluatePartDocument(document2, options = {}) {
             }
             return own(assembleWire(order.map((i2) => edges[i2])));
           };
+          const measurePlateThickness = (body, refFace) => {
+            const allFaces = body.faces;
+            try {
+              const planes = allFaces.filter((f2) => f2.geomType === "PLANE");
+              if (planes.length < 2) throw new Error("Convert to sheet metal needs a thin plate solid with opposing planar faces.");
+              const baseFace = refFace ? faceByReference(body, refFace, "Convert base face") : planes.reduce((big, f2) => measureArea(f2) > measureArea(big) ? f2 : big);
+              const c0 = deleteAfterVectorTuple(baseFace.center);
+              const n0 = unit$3([...deleteAfterVectorTuple(baseFace.normalAt([c0[0], c0[1], c0[2]]))]);
+              let best = Infinity;
+              for (const f2 of planes) {
+                if (f2.isSame(baseFace)) continue;
+                const cf = deleteAfterVectorTuple(f2.center);
+                const nf = unit$3([...deleteAfterVectorTuple(f2.normalAt([cf[0], cf[1], cf[2]]))]);
+                if (dot$6(n0, nf) < -0.999) {
+                  const gap = Math.abs(dot$6(sub$5(cf, c0), n0));
+                  if (gap > 1e-4 && gap < best) best = gap;
+                }
+              }
+              if (refFace) baseFace.delete();
+              if (!Number.isFinite(best)) throw new Error("Could not detect opposing parallel plate face; specify thicknessMillimeters explicitly.");
+              return best;
+            } finally {
+              allFaces.forEach((f2) => f2.delete());
+            }
+          };
           const sheetRuleOf = (bodyId) => {
-            const index22 = document2.features.findIndex((f2) => f2.type === "sheet-base" && !f2.suppressed && bodyIDForFeature(document2, f2) === bodyId);
-            if (index22 < 0) throw new Error("This body is not a sheet metal body. Start with a sheet metal base.");
-            return { base: document2.features[index22], index: index22 };
+            for (let i2 = index2 - 1; i2 >= 0; i2--) {
+              const f2 = document2.features[i2];
+              if (f2.suppressed) continue;
+              if (f2.type === "sheet-convert" && f2.bodyIds[0] === bodyId) {
+                const b = bodyAt(f2.id, bodyId) ?? bodies.get(bodyId);
+                const t2 = f2.thicknessMillimeters ?? (b ? measurePlateThickness(b, f2.baseFace) : void 0);
+                if (!t2 || !(t2 > 0)) throw new Error("Converted sheet body thickness could not be determined.");
+                return { base: { id: f2.id, thicknessMillimeters: t2, bendRadiusMillimeters: f2.bendRadiusMillimeters, kFactor: f2.kFactor }, index: i2 };
+              }
+              if (f2.type === "sheet-base" && bodyIDForFeature(document2, f2) === bodyId) {
+                return { base: f2, index: i2 };
+              }
+            }
+            throw new Error("This body is not a sheet metal body. Start with a sheet metal base or Convert to Sheet Metal.");
           };
           const bendFromEdges = (body, bodyId, picks, rule, options2) => {
             const t2 = rule.thicknessMillimeters, r = options2.innerRadius, alpha = options2.angleDegrees * Math.PI / 180;
@@ -44042,6 +48756,63 @@ function evaluatePartDocument(document2, options = {}) {
             }
             return result;
           };
+          if (feature3.type === "sheet-convert") {
+            const id2 = feature3.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("Convert to sheet metal needs an available solid body.");
+            const measured = feature3.thicknessMillimeters ?? measurePlateThickness(body, feature3.baseFace);
+            if (!(measured > 0)) throw new Error("Convert to sheet metal needs a positive plate thickness.");
+            currentBodyID = id2;
+            continue;
+          }
+          if (feature3.type === "sheet-path-flange") {
+            const id2 = feature3.bodyIds[0], body = bodies.get(id2);
+            if (!body) throw new Error("Contour flange needs an available sheet metal body.");
+            const { base } = sheetRuleOf(id2);
+            const t2 = feature3.thicknessMillimeters ?? base.thicknessMillimeters;
+            const prof = profiles.get(feature3.profileFeatureId);
+            if (!prof) throw new Error("Contour flange needs an earlier profile sketch.");
+            const frame = sketchFrameOf(feature3.profileFeatureId);
+            const n = unit$3(frame.normal);
+            const contour = feature3.profileContourId ? prof.contours.find((c2) => c2.id === feature3.profileContourId) : prof.contours[0];
+            if (!contour) throw new Error("Contour flange sketch has no curve.");
+            const wire = sketchWire(feature3.profileFeatureId, contour.id, "Contour flange", true);
+            const sectionFace = contourClosed(contour) ? own(makeFace(wire)) : openWallFace(wire, n, feature3.inward ? t2 : 0, feature3.inward ? 0 : t2, own).face;
+            let result = body;
+            if (feature3.edges?.length) {
+              for (const edge of pickedEdgesOf(body, id2, feature3.edges, "Contour flange")) {
+                const s = deleteAfterVectorTuple(edge.startPoint);
+                const e = deleteAfterVectorTuple(edge.endPoint);
+                const delta2 = sub$5(e, s);
+                const sweepVec = new Vector(delta2);
+                let piece;
+                try {
+                  piece = own(basicFaceExtrusion(sectionFace, sweepVec));
+                } finally {
+                  sweepVec.delete();
+                }
+                if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error("Contour flange produced no solid along the edge.");
+                const fused = result.fuse(piece);
+                if (!isShape3D(fused)) throw new Error("Contour flange did not join the sheet body.");
+                result = own(fused);
+              }
+            } else {
+              const w2 = feature3.widthMillimeters ?? 10;
+              const sweepVec = new Vector(scale$1(n, w2));
+              let piece;
+              try {
+                piece = own(basicFaceExtrusion(sectionFace, sweepVec));
+              } finally {
+                sweepVec.delete();
+              }
+              if (!isShape3D(piece) || !(measureVolume(piece) > 1e-9)) throw new Error("Contour flange produced no solid.");
+              const fused = result.fuse(piece);
+              if (!isShape3D(fused)) throw new Error("Contour flange did not join the sheet body.");
+              result = own(fused);
+            }
+            bodies.set(id2, result);
+            currentBodyID = id2;
+            continue;
+          }
           if (feature3.type === "sheet-flange" || feature3.type === "sheet-hem") {
             const id2 = feature3.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("The sheet metal body is unavailable.");
@@ -44083,10 +48854,10 @@ function evaluatePartDocument(document2, options = {}) {
               const piece = own(d2.sketchOnPlane(plane2)).extrude(span * 2);
               return own(piece.translate(tdir[0] * span, tdir[1] * span, tdir[2] * span));
             };
-            const fixed = own(body.intersect(slab(-span, 0))), strip = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
+            const fixed = own(body.intersect(slab(-span, 0))), strip2 = own(body.intersect(slab(0, ba))), moving = own(body.intersect(slab(ba, span)));
             if (!isShape3D(fixed) || !isShape3D(moving) || !(measureVolume(moving) > 1e-9) || !(measureVolume(fixed) > 1e-9)) throw new Error("The fold line must cross the sheet, leaving material on both sides.");
-            const sb = strip.boundingBox.bounds;
-            const along = (pt) => dot$6(sub$5(pt, p2), tdir);
+            const sb = strip2.boundingBox.bounds;
+            const along = (pt2) => dot$6(sub$5(pt2, p2), tdir);
             const corners2 = [];
             for (const x2 of [sb[0][0], sb[1][0]]) for (const y2 of [sb[0][1], sb[1][1]]) for (const z2 of [sb[0][2], sb[1][2]]) corners2.push([x2, y2, z2]);
             const s0 = Math.min(...corners2.map(along)), s1 = Math.max(...corners2.map(along));
@@ -44181,9 +48952,76 @@ function evaluatePartDocument(document2, options = {}) {
             const plate = bodyAt(base.id, id2);
             if (!plate) throw new Error("The sheet metal base is unavailable.");
             let flat = own(plate.clone());
+            const foldInverses = [];
+            const rotateAround = (pt2, origin2, axis, deg) => {
+              const rad = deg * Math.PI / 180;
+              const c2 = Math.cos(rad), s = Math.sin(rad);
+              const v2 = sub$5(pt2, origin2);
+              const kDotV = dot$6(axis, v2);
+              const kCrossV = cross$4(axis, v2);
+              return add$4(origin2, add$4(add$4(scale$1(v2, c2), scale$1(kCrossV, s)), scale$1(axis, kDotV * (1 - c2))));
+            };
+            const unmapEdge = (edge) => {
+              if (!foldInverses.length || edge.kind !== "solid-edge") return edge;
+              const unmapPt = (pt2) => {
+                let cur = pt2;
+                for (let fi = foldInverses.length - 1; fi >= 0; fi--) {
+                  const inv = foldInverses[fi];
+                  const unrot = rotateAround(cur, inv.axisOrigin, inv.tdir, -inv.angleDeg);
+                  if (dot$6(sub$5(unrot, inv.p), inv.o) > -1e-4) {
+                    cur = add$4(unrot, scale$1(inv.o, inv.ba));
+                  }
+                }
+                return cur;
+              };
+              const s = unmapPt(edge.anchor.start.positionMillimeters);
+              const e = unmapPt(edge.anchor.end.positionMillimeters);
+              return {
+                ...edge,
+                anchor: {
+                  start: { ...edge.anchor.start, positionMillimeters: s },
+                  end: { ...edge.anchor.end, positionMillimeters: e }
+                }
+              };
+            };
             for (let k2 = baseIndex + 1; k2 < index2; k2++) {
               const f2 = document2.features[k2];
-              if (f2.type === "sheet-perforate" && !f2.suppressed && f2.bodyIds[0] === id2) {
+              if (f2.suppressed) continue;
+              if (f2.type === "sheet-fold" && f2.bodyIds[0] === id2) {
+                const beforeFold = bodyAt(document2.features[k2 - 1].id, id2);
+                if (beforeFold) {
+                  try {
+                    const [p2, q] = sketchLine(f2.line, "Fold line");
+                    const tdir = unit$3(sub$5(q, p2));
+                    const faces = beforeFold.faces.filter((fc) => fc.geomType === "PLANE");
+                    const onFace = faces.filter((fc) => {
+                      const c2 = fc.center, nv = fc.normalAt(c2);
+                      const fn = [nv.x, nv.y, nv.z];
+                      const d2 = Math.abs(dot$6(fn, sub$5(p2, [c2.x, c2.y, c2.z])));
+                      c2.delete();
+                      nv.delete();
+                      return d2 < 1e-4;
+                    });
+                    if (onFace.length) {
+                      const fc = onFace.reduce((big, cand) => measureArea(cand) > measureArea(big) ? cand : big);
+                      const nv = fc.normalAt(fc.center);
+                      const fn = unit$3([nv.x, nv.y, nv.z]);
+                      nv.delete();
+                      let o = unit$3(cross$4(fn, tdir));
+                      if (f2.otherSide) o = neg(o);
+                      const r = f2.bendRadiusMillimeters ?? base.bendRadiusMillimeters;
+                      const ba = bendAllowanceMillimeters(f2.angleDegrees, r, base);
+                      const axisOrigin = add$4(p2, scale$1(fn, f2.inward ? r : -(base.thicknessMillimeters + r)));
+                      const sign = f2.inward ? 1 : -1;
+                      foldInverses.push({ p: p2, tdir, o, ba, axisOrigin, angleDeg: sign * f2.angleDegrees });
+                    }
+                    faces.forEach((fc) => fc.delete());
+                  } catch {
+                  }
+                }
+                continue;
+              }
+              if (f2.type === "sheet-perforate" && f2.bodyIds[0] === id2) {
                 const before = bodyAt(document2.features[k2 - 1].id, id2);
                 if (!before) continue;
                 const { tools: tools2, points } = perforations(before, f2, base.thicknessMillimeters);
@@ -44197,8 +49035,9 @@ function evaluatePartDocument(document2, options = {}) {
                 }
                 continue;
               }
-              if (f2.suppressed || f2.type !== "sheet-flange" && f2.type !== "sheet-hem" || f2.bodyIds[0] !== id2) continue;
-              flat = f2.type === "sheet-flange" ? bendFromEdges(flat, id2, f2.edges, base, { leg: f2.distanceMillimeters, angleDegrees: f2.angleDegrees, innerRadius: f2.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, f2.edges, base, { leg: f2.lengthMillimeters, angleDegrees: 180, innerRadius: f2.gapMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" });
+              if (f2.type !== "sheet-flange" && f2.type !== "sheet-hem" || f2.bodyIds[0] !== id2) continue;
+              const mappedEdges = f2.edges.map(unmapEdge);
+              flat = f2.type === "sheet-flange" ? bendFromEdges(flat, id2, mappedEdges, base, { leg: f2.distanceMillimeters, angleDegrees: f2.angleDegrees, innerRadius: f2.bendRadiusMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" }) : bendFromEdges(flat, id2, mappedEdges, base, { leg: f2.lengthMillimeters, angleDegrees: 180, innerRadius: f2.gapMillimeters ?? base.bendRadiusMillimeters, inward: f2.inward, flat: true, what: "Unfold" });
             }
             bodies.set(id2, flat);
             currentBodyID = id2;
@@ -44254,13 +49093,23 @@ function evaluatePartDocument(document2, options = {}) {
             currentBodyID = id2;
             continue;
           }
+          if (feature3.type === "surface-match") {
+            const id2 = feature3.bodyIds[0], src2 = bodies.get(id2), tgt = bodies.get(feature3.targetBodyId);
+            if (!src2 || !tgt) throw new Error("Match surface needs available source and target surface bodies.");
+            const srcEdges = pickedEdgesOf(src2, id2, feature3.sourceEdges, "Match surface source");
+            const tgtEdges = pickedEdgesOf(tgt, feature3.targetBodyId, feature3.targetEdges, "Match surface target");
+            const matched = buildSurfaceMatch(src2, srcEdges, tgt, tgtEdges, feature3.continuity);
+            bodies.set(id2, own(matched));
+            currentBodyID = id2;
+            continue;
+          }
           if (feature3.type === "surface-extend") {
             const id2 = feature3.bodyIds[0], body = bodies.get(id2);
             if (!body) throw new Error("Extend needs an available surface body.");
             const o = getOC();
             const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
             sewing.Add(body.wrapped);
-            for (const strip of ruledStrips(body, id2, feature3.edges, feature3.distanceMillimeters, "tangent", void 0, "Extend")) sewing.Add(strip);
+            for (const strip2 of ruledStrips(body, id2, feature3.edges, feature3.distanceMillimeters, "tangent", void 0, "Extend")) sewing.Add(strip2);
             sewing.Perform(new o.Message_ProgressRange_1());
             const sewn = cast(sewing.SewedShape());
             if (!isShape3D(sewn)) throw new Error("Extend could not sew the strip onto the surface.");
@@ -44388,6 +49237,15 @@ function evaluatePartDocument(document2, options = {}) {
                 builder.delete();
                 progress.delete();
               }
+            } else if (feature3.guideRails?.length) {
+              const railWires = feature3.guideRails.map((rail) => {
+                const railProf = pathSource(rail.pathFeatureId);
+                if (!railProf) throw new Error("Loft guide rail sketch or curve is unavailable.");
+                const railId = rail.pathContourId ?? (railProf.contours.length === 1 ? railProf.contours[0].id : void 0);
+                if (railId === void 0 && railProf.contours.length !== 1) throw new Error("Loft guide rail sketch has several curves — choose which one to use.");
+                return sketchWire(rail.pathFeatureId, railId, "Loft guide rail", true);
+              });
+              lofted = guidedSectionLoft(wires, railWires, Boolean(feature3.ruled));
             } else if (feature3.connections?.length) {
               const oc = getOC(), builder = new oc.BRepOffsetAPI_ThruSections(true, Boolean(feature3.ruled), 1e-6), progress = new oc.Message_ProgressRange_1();
               try {
@@ -44613,8 +49471,11 @@ function evaluatePartDocument(document2, options = {}) {
               }
             }
             const m2 = feature3.marginMillimeters;
-            publish(feature3, { parameter: "margin", kind: "linear", originMillimeters: [max2[0] + m2, (min[1] + max2[1]) / 2, (min[2] + max2[2]) / 2], direction: [1, 0, 0], label: "Margin" });
-            tool22 = own(makeBaseBox(max2[0] - min[0] + 2 * m2, max2[1] - min[1] + 2 * m2, max2[2] - min[2] + 2 * m2).translate(min[0] - m2, min[1] - m2, min[2] - m2));
+            const [mx0, mx1, my0, my1, mz0, mz1] = feature3.marginsMillimeters ?? [m2, m2, m2, m2, m2, m2];
+            publish(feature3, { parameter: "margin", kind: "linear", originMillimeters: [max2[0] + mx1, (min[1] + max2[1]) / 2, (min[2] + max2[2]) / 2], direction: [1, 0, 0], label: "Margin" });
+            tool22 = own(makeBaseBox(max2[0] - min[0] + mx0 + mx1, max2[1] - min[1] + my0 + my1, max2[2] - min[2] + mz0 + mz1).translate(min[0] - mx0, min[1] - my0, min[2] - mz0));
+          } else if (feature3.type === "primitive") {
+            tool22 = own(buildPrimitiveShape(feature3));
           } else if (feature3.type === "import-step" || feature3.type === "import-cad") {
             const format2 = feature3.type === "import-step" ? "step" : feature3.format;
             const bytes = Uint8Array.from(atob(feature3.dataBase64), (c2) => c2.charCodeAt(0));
@@ -44667,6 +49528,23 @@ function evaluatePartDocument(document2, options = {}) {
                 reader.delete();
                 f2.FS.unlink(name5);
               }
+            } else if (format2 === "brep") {
+              if (feature3.type === "import-cad" && (feature3.meshMode !== void 0 || feature3.meshUnits !== void 0)) throw new Error("Exact CAD imports use their embedded source units.");
+              const f2 = extendedKernel();
+              if (!f2) throw new UnsupportedFeature(feature3.id, "BREP imports");
+              const name5 = `/import-${Math.random().toString(36).slice(2)}.brep`;
+              f2.FS.writeFile(name5, bytes);
+              const result = new f2.TopoDS_Shape(), builder = new f2.BRep_Builder(), progress = new f2.Message_ProgressRange_1();
+              try {
+                if (!f2.BRepTools.Read_2(result, name5, builder, progress)) throw new Error("BREP could not be read.");
+                const shape = extendedSolids(result);
+                tool22 = sewn(own(fromExtended(shape)));
+              } finally {
+                progress.delete();
+                builder.delete();
+                result.delete();
+                f2.FS.unlink(name5);
+              }
             } else throw new UnsupportedFeature(feature3.id, `${String(format2).toUpperCase()} imports`);
           } else if (feature3.type === "sheet-base") {
             const frame = sketchFrameOf(feature3.profileFeatureId);
@@ -44696,27 +49574,20 @@ function evaluatePartDocument(document2, options = {}) {
           } else if (feature3.type === "surface-blend") {
             const bodyA = bodies.get(feature3.from.bodyId), bodyB = bodies.get(feature3.to.bodyId);
             if (!bodyA || !bodyB) throw new Error("Blend surface needs two available bodies.");
-            const o = getOC();
             const a2 = chainWire(pickedEdgesOf(bodyA, feature3.from.bodyId, feature3.from.edges, "Blend surface"), "Blend surface");
             const b = chainWire(pickedEdgesOf(bodyB, feature3.to.bodyId, feature3.to.edges, "Blend surface"), "Blend surface");
-            const pt = (v2) => {
-              const p2 = [v2.x, v2.y, v2.z];
-              v2.delete();
-              return p2;
-            };
-            const a0 = pt(a2.startPoint), a1 = pt(a2.endPoint), b0 = pt(b.startPoint), b1 = pt(b.endPoint);
-            const dist2 = (p2, q) => Math.hypot(p2[0] - q[0], p2[1] - q[1], p2[2] - q[2]);
-            const straight = dist2(a1, b1) + dist2(a0, b0) <= dist2(a1, b0) + dist2(a0, b1);
-            const [bEnd, bStart] = straight ? [b1, b0] : [b0, b1];
-            const back = straight ? own(cast(b.wrapped.Reversed())) : b;
-            const loop = own(assembleWire([a2, own(makeLine(a1, bEnd)), back, own(makeLine(bStart, a0))]));
-            const face = own(makeNonPlanarFace(loop));
-            const builder = new o.TopoDS_Builder(), shell = new o.TopoDS_Shell();
-            builder.MakeShell(shell);
-            builder.Add(shell, face.wrapped);
-            const sheet = cast(shell);
-            if (!(measureArea(sheet) > 1e-9)) throw new Error("The blend surface has no area.");
-            tool22 = own(sheet);
+            tool22 = own(buildSurfaceBlend(bodyA, a2, bodyB, b, feature3.continuity ?? "g0"));
+          } else if (feature3.type === "surface-fillet") {
+            const sheets = feature3.bodyIds.map((id2) => {
+              const b = bodies.get(id2);
+              if (!b) throw new Error("Surface fillet needs available surface bodies.");
+              return b;
+            });
+            const picked = feature3.edges?.length ? feature3.edges.flatMap((edge) => {
+              const host = bodies.get(edge.bodyId);
+              return host ? pickedEdgesOf(host, edge.bodyId, [edge], "Surface fillet") : [];
+            }) : void 0;
+            tool22 = own(buildSurfaceFillet(sheets, picked, feature3.radiusMillimeters));
           } else if (feature3.type === "surface-ruled") {
             const body = bodies.get(feature3.bodyIds[0]);
             if (!body) throw new Error("Ruled surface needs an available body.");
@@ -44725,7 +49596,7 @@ function evaluatePartDocument(document2, options = {}) {
             let raw2 = strips[0];
             if (strips.length > 1) {
               const sewing = new o.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
-              for (const strip of strips) sewing.Add(strip);
+              for (const strip2 of strips) sewing.Add(strip2);
               sewing.Perform(new o.Message_ProgressRange_1());
               raw2 = sewing.SewedShape();
             }
@@ -45925,6 +50796,12 @@ function solidMeasures(shape) {
   edges.forEach((e) => e.delete());
   return measures;
 }
+function projectHiddenLineView(shape, options = {}) {
+  return withHiddenLineProjection(shape, options, (result) => {
+    const read3 = (compound) => polylinesOf(compound, options.angularToleranceRadians ?? 0.1, options.chordalToleranceMillimeters ?? 0.01);
+    return { visible: read3(result.visible), hidden: read3(result.hidden), visibleOutline: read3(result.visibleOutline), hiddenOutline: read3(result.hiddenOutline) };
+  });
+}
 function withHiddenLineProjection(shape, options, read3) {
   const oc = getOC();
   const {
@@ -45968,6 +50845,40 @@ function withHiddenLineProjection(shape, options, read3) {
   } finally {
     for (const resource of owned.reverse()) resource.delete();
   }
+}
+function polylinesOf(compound, angular, chordal) {
+  const oc = getOC();
+  if (!compound || compound.IsNull()) return [];
+  const polylines = [];
+  const explorer = new oc.TopExp_Explorer_2(
+    compound,
+    oc.TopAbs_ShapeEnum.TopAbs_EDGE,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE
+  );
+  while (explorer.More()) {
+    const edge = oc.TopoDS.Edge_1(explorer.Current());
+    const adaptor = new oc.BRepAdaptor_Curve_2(edge);
+    const sampler = new oc.GCPnts_TangentialDeflection_2(
+      adaptor,
+      angular,
+      chordal,
+      2,
+      1e-9,
+      1e-7
+    );
+    const points = [];
+    for (let index2 = 1; index2 <= sampler.NbPoints(); index2++) {
+      const point2 = sampler.Value(index2);
+      points.push([point2.X(), point2.Y()]);
+      point2.delete();
+    }
+    if (points.length > 1) polylines.push(points);
+    sampler.delete();
+    adaptor.delete();
+    explorer.Next();
+  }
+  explorer.delete();
+  return polylines;
 }
 const add$3 = (a2, b) => [a2[0] + b[0], a2[1] + b[1], a2[2] + b[2]];
 const sub$4 = (a2, b) => [a2[0] - b[0], a2[1] - b[1], a2[2] - b[2]];
@@ -46070,14 +50981,52 @@ function orientationResidual(target, actual, hemisphere) {
   const scale2 = length < 1e-12 ? 2 : 2 * Math.atan2(length, error2[3]) / length;
   return error2.slice(0, 3).map((v2) => ORIENTATION_SCALE * scale2 * v2);
 }
+function evaluateCamTable(table10, x2, periodic = false) {
+  if (table10.length < 2) throw new Error("A cam table needs at least two [driver, driven] samples.");
+  let u2 = x2;
+  const x0 = table10[0][0], xN = table10[table10.length - 1][0];
+  const span = xN - x0;
+  if (periodic && span > 1e-9) {
+    u2 = x0 + ((u2 - x0) % span + span) % span;
+  }
+  if (u2 <= x0) return table10[0][1];
+  if (u2 >= xN) return table10[table10.length - 1][1];
+  for (let i2 = 1; i2 < table10.length; i2++) {
+    const [a0, b0] = table10[i2 - 1], [a1, b1] = table10[i2];
+    if (u2 <= a1) {
+      const t2 = a1 === a0 ? 0 : (u2 - a0) / (a1 - a0);
+      return b0 + (b1 - b0) * t2;
+    }
+  }
+  return table10[table10.length - 1][1];
+}
+function limitResiduals(a2, b, kind, parameters2 = {}) {
+  const limits = parameters2.limits ?? [];
+  if (!limits.length) return [];
+  const out = [];
+  for (const lim of limits) {
+    const template = templateDof(kind, lim.dof);
+    if (!template) continue;
+    const current2 = dofValue(template.kind, template.axis, a2, b);
+    const scale2 = template.kind === "translation" ? 1 : ORIENTATION_SCALE * Math.PI / 180;
+    if (lim.min !== void 0 && current2 < lim.min) out.push((lim.min - current2) * scale2);
+    else if (lim.max !== void 0 && current2 > lim.max) out.push((current2 - lim.max) * scale2);
+    else out.push(0);
+  }
+  return out;
+}
 function valueResiduals(a2, b, kind, parameters2 = {}, hemisphere = 1) {
   const values2 = kind === "sweep" ? [] : parameters2.dofs ?? [];
   const rotation = heldRotation(kind, values2);
   const orientation = rotation ? orientationResidual(qmul(a2.q, rotation), b.q, hemisphere) : [];
-  return [...orientation, ...values2.filter((dof) => !rotation || dof.kind !== "rotation").map((dof) => {
-    const current2 = dofValue(dof.kind, dof.axis, a2, b);
-    return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current2 - dof.value);
-  })];
+  return [
+    ...orientation,
+    ...values2.filter((dof) => !rotation || dof.kind !== "rotation").map((dof) => {
+      const current2 = dofValue(dof.kind, dof.axis, a2, b);
+      return dof.kind === "translation" ? current2 - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current2 - dof.value);
+    }),
+    ...limitResiduals(a2, b, kind, parameters2)
+  ];
 }
 function jointResiduals(kind, a2, b, parameters2 = {}) {
   const d2 = sub$4(b.o, a2.o), S = ORIENTATION_SCALE;
@@ -46180,6 +51129,14 @@ function solveAssemblyJob(job) {
       diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" });
       continue;
     }
+    if (relation.kind === "cam") {
+      if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof) || !Array.isArray(relation.camTable) || relation.camTable.length < 2 || relation.camTable.some((row) => !Array.isArray(row) || row.length !== 2 || !Number.isFinite(row[0]) || !Number.isFinite(row[1]))) {
+        diagnostics.push({ feature_id: relation.id, severity: "error", message: "a cam relation needs valid driver/driven coordinates and at least two finite [driver, driven] points" });
+        continue;
+      }
+      relations.push(relation);
+      continue;
+    }
     if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof) || !Number.isFinite(relation.ratio) || !Number.isFinite(relation.offset ?? 0)) {
       diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation has an invalid coordinate, ratio or offset" });
       continue;
@@ -46187,7 +51144,7 @@ function solveAssemblyJob(job) {
     relations.push(relation);
   }
   const heldValue = (joint, name5) => joint.parameters.dofs.find((d2) => d2.name === name5);
-  const relationTarget = (relation, x2) => (relation.reversed ? -relation.ratio : relation.ratio) * x2 + (relation.offset ?? 0);
+  const relationTarget = (relation, x2) => relation.kind === "cam" ? evaluateCamTable(relation.camTable, x2, Boolean(relation.periodic)) + (relation.offset ?? 0) : (relation.reversed ? -relation.ratio : relation.ratio) * x2 + (relation.offset ?? 0);
   for (let pass = 0; pass < relations.length; pass++) {
     let added = false;
     for (const relation of relations) {
@@ -46207,6 +51164,23 @@ function solveAssemblyJob(job) {
       const expected = templateDof(joint.kind, d2.name);
       return !Number.isFinite(d2.value) || !expected || expected.kind !== d2.kind || expected.axis !== d2.axis;
     })) diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate coordinate is invalid, duplicate or not finite" });
+    for (const d2 of values2) {
+      if (d2.min_value !== void 0 && d2.max_value !== void 0 && d2.min_value > d2.max_value) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit min (${d2.min_value}) exceeds max (${d2.max_value}) on ${d2.name}.` });
+      } else if (d2.min_value !== void 0 && d2.value < d2.min_value - 1e-4 || d2.max_value !== void 0 && d2.value > d2.max_value + 1e-4) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit violated on ${d2.name}: ${d2.value} outside [${d2.min_value ?? "-∞"}, ${d2.max_value ?? "∞"}].` });
+      }
+    }
+    const limits = joint.parameters?.limits ?? [];
+    for (const lim of limits) {
+      if (lim.min !== void 0 && lim.max !== void 0 && lim.min > lim.max) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit min (${lim.min}) exceeds max (${lim.max}) on ${lim.dof}.` });
+      }
+      const held = values2.find((d2) => d2.name === lim.dof);
+      if (held && (lim.min !== void 0 && held.value < lim.min - 1e-4 || lim.max !== void 0 && held.value > lim.max + 1e-4)) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit violated on ${lim.dof}: ${held.value} outside [${lim.min ?? "-∞"}, ${lim.max ?? "∞"}].` });
+      }
+    }
     const ballConstrained = values2.length || relations.some((r) => r.driver.joint === joint.id || r.driven.joint === joint.id);
     if (joint.kind === "ball" && ballConstrained && (values2.length !== 3 || DOF_TEMPLATES.ball.some((d2) => !values2.some((v2) => v2.name === d2.name && v2.kind === d2.kind && v2.axis === d2.axis))))
       diagnostics.push({ feature_id: joint.id, severity: "error", message: "a driven ball mate requires resolved X, Y and Z rotation coordinates" });
@@ -46651,6 +51625,14 @@ function analyzeCurves(bodies, options) {
           const n = 16;
           for (let i2 = 0; i2 <= n; i2++) for (let j = 0; j <= n; j++) {
             const s = sampleSurface(adaptor, uMin + (uMax - uMin) * (i2 / n), vMin + (vMax - vMin) * (j / n), scratch);
+            const vtx = makeVertex(s.point);
+            let onFace = false;
+            try {
+              onFace = measureDistanceBetween(f2.face, vtx) <= 1e-3;
+            } finally {
+              vtx.delete();
+            }
+            if (!onFace) continue;
             const k2 = Math.max(...principalCurvatures(s).map(Math.abs));
             if (k2 > 1e-9 && (!found || 1 / k2 < found.radius)) found = { radius: 1 / k2, at: s.point };
           }
@@ -46694,6 +51676,9 @@ function analyzeCurves(bodies, options) {
     } else if (options.kind === "continuity") {
       const edges = pickEdges(bodies, options.entities, own);
       if (!edges.length) throw new Error("Continuity needs an edge between two faces.");
+      const posTol = options.position_tol_mm ?? 1e-3;
+      const tanTol = options.tangent_tol_deg ?? 0.5;
+      const curvTol = options.curvature_tol ?? 1e-3;
       const facesByBody = /* @__PURE__ */ new Map();
       for (const [bodyId, body] of bodies) {
         const list2 = facesOf(body).map((i2) => ({ id: i2.id, face: i2.face }));
@@ -46712,8 +51697,13 @@ function analyzeCurves(bodies, options) {
           continue;
         }
         const samples2 = sampleEdge(e.edge, 8).slice(1, -1);
-        let maxAngle = 0, maxCurvatureGap = 0;
+        let maxGap = 0, maxAngle = 0, maxCurvatureGap = 0;
         for (const s of samples2) {
+          const pts = adjacent.map((f2) => withSurface(f2.face, (adaptor, scratch) => {
+            const [u2, v2] = f2.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
+            return sampleSurface(adaptor, u2, v2, scratch);
+          }));
+          maxGap = Math.max(maxGap, norm$2(sub$3(pts[0].point, pts[1].point)));
           const normals = adjacent.map((f2) => {
             const n = f2.face.normalAt([s.point[0], s.point[1], s.point[2]]);
             const v2 = [n.x, n.y, n.z];
@@ -46722,18 +51712,15 @@ function analyzeCurves(bodies, options) {
           });
           const angle2 = Math.acos(Math.max(-1, Math.min(1, dot$3(normals[0], normals[1])))) * 180 / Math.PI;
           maxAngle = Math.max(maxAngle, angle2);
-          if (angle2 < 0.5) {
+          if (angle2 < tanTol) {
             const across = unit$2(cross$1(normals[0], s.tangent));
-            const kappas = adjacent.map((f2) => withSurface(f2.face, (adaptor, scratch) => {
-              const [u2, v2] = f2.face.uvCoordinates([s.point[0], s.point[1], s.point[2]]);
-              return normalCurvature(sampleSurface(adaptor, u2, v2, scratch), across);
-            }));
+            const kappas = pts.map((sf) => normalCurvature(sf, across));
             maxCurvatureGap = Math.max(maxCurvatureGap, Math.abs(Math.abs(kappas[0]) - Math.abs(kappas[1])));
           }
         }
-        const continuity = maxAngle >= 0.5 ? "G0" : maxCurvatureGap > 1e-3 ? "G1" : "G2";
-        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f2) => f2.id) });
-        curves2.push({ label: `${continuity} ${e.bodyId} face ${e.faceId} edge ${e.edgeIndex}`, color: continuity === "G0" ? "#e5484d" : continuity === "G1" ? "#f2b134" : "#30a46c", polylines: [sampleEdge(e.edge, 24).map((s) => s.point)] });
+        const continuity = maxGap > posTol ? "discontinuous" : maxAngle >= tanTol ? "G0" : maxCurvatureGap > curvTol ? "G1" : "G2";
+        measurements.push({ body_id: e.bodyId, face_id: e.faceId, edge_index: e.edgeIndex, continuity, max_gap_mm: maxGap, max_normal_angle_deg: maxAngle, max_curvature_gap_per_mm: maxCurvatureGap, faces: adjacent.map((f2) => f2.id) });
+        curves2.push({ label: `${continuity} ${e.bodyId} face ${e.faceId} edge ${e.edgeIndex}`, color: continuity === "discontinuous" || continuity === "G0" ? "#e5484d" : continuity === "G1" ? "#f2b134" : "#30a46c", polylines: [sampleEdge(e.edge, 24).map((s) => s.point)] });
       }
     } else throw new Error("Choose continuity, curvature comb, isocurve or minimum radius.");
     return { measurements, curves: curves2 };
@@ -46905,6 +51892,23 @@ function optimalBounds(shape) {
   box.delete();
   return bounds2;
 }
+function closestPointsBetween(a2, b) {
+  const query = new DistanceQuery(a2);
+  try {
+    const distance2 = query.distanceTo(b);
+    const raw = query.wrapped;
+    const p1 = raw.PointOnShape1(1), p2 = raw.PointOnShape2(1);
+    const from = [p1.X(), p1.Y(), p1.Z()];
+    const to = [p2.X(), p2.Y(), p2.Z()];
+    p1.delete();
+    p2.delete();
+    return { distance: distance2, from, to };
+  } catch {
+    return { distance: measureDistanceBetween(a2, b), from: [0, 0, 0], to: [0, 0, 0] };
+  } finally {
+    query.delete();
+  }
+}
 function volumeProperties(shape, about) {
   const oc = getOC();
   const props = new oc.GProp_GProps_1();
@@ -46929,6 +51933,81 @@ function volumeProperties(shape, about) {
   props.delete();
   return { mass, center, inertia: [[xx, xy, xz], [xy, yy, yz], [xz, yz, zz]] };
 }
+function classifyPointInShape(shape, pt2, tolerance2 = 1e-6) {
+  const vertex = makeVertex(pt2);
+  try {
+    const solidDist = measureDistanceBetween(shape, vertex);
+    if (solidDist > tolerance2) return "outside";
+    const faces = shape.faces;
+    let onBoundary = false;
+    try {
+      for (const face of faces) {
+        if (measureDistanceBetween(face, vertex) <= tolerance2) {
+          onBoundary = true;
+          break;
+        }
+      }
+    } finally {
+      faces.forEach((f2) => f2.delete());
+    }
+    return onBoundary ? "on" : "inside";
+  } finally {
+    vertex.delete();
+  }
+}
+function inspectTriangleMesh(vertices, triangles) {
+  const vertexCount = Math.floor(vertices.length / 3);
+  const triangleCount = Math.floor(triangles.length / 3);
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i2 = 0; i2 < vertexCount; i2++) {
+    const x2 = vertices[i2 * 3], y2 = vertices[i2 * 3 + 1], z2 = vertices[i2 * 3 + 2];
+    if (x2 < minX) minX = x2;
+    if (x2 > maxX) maxX = x2;
+    if (y2 < minY) minY = y2;
+    if (y2 > maxY) maxY = y2;
+    if (z2 < minZ) minZ = z2;
+    if (z2 > maxZ) maxZ = z2;
+  }
+  const edgeCounts = /* @__PURE__ */ new Map();
+  let area = 0, vol6 = 0;
+  const vKey = (idx2) => `${Math.round(vertices[idx2 * 3] * 1e4)},${Math.round(vertices[idx2 * 3 + 1] * 1e4)},${Math.round(vertices[idx2 * 3 + 2] * 1e4)}`;
+  const bumpEdge = (a2, b) => {
+    const key2 = a2 < b ? `${a2}|${b}` : `${b}|${a2}`;
+    edgeCounts.set(key2, (edgeCounts.get(key2) ?? 0) + 1);
+  };
+  for (let t2 = 0; t2 < triangleCount; t2++) {
+    const i0 = triangles[t2 * 3], i1 = triangles[t2 * 3 + 1], i2 = triangles[t2 * 3 + 2];
+    const ax = vertices[i0 * 3], ay = vertices[i0 * 3 + 1], az = vertices[i0 * 3 + 2];
+    const bx = vertices[i1 * 3], by = vertices[i1 * 3 + 1], bz = vertices[i1 * 3 + 2];
+    const cx2 = vertices[i2 * 3], cy2 = vertices[i2 * 3 + 1], cz = vertices[i2 * 3 + 2];
+    const ux = bx - ax, uy = by - ay, uz = bz - az;
+    const vx = cx2 - ax, vy = cy2 - ay, vz = cz - az;
+    area += 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    vol6 += ax * (by * cz - bz * cy2) + ay * (bz * cx2 - bx * cz) + az * (bx * cy2 - by * cx2);
+    const k0 = vKey(i0), k1 = vKey(i1), k2 = vKey(i2);
+    bumpEdge(k0, k1);
+    bumpEdge(k1, k2);
+    bumpEdge(k2, k0);
+  }
+  let boundaryEdges = 0, nonManifoldEdges = 0;
+  for (const count of edgeCounts.values()) {
+    if (count === 1) boundaryEdges++;
+    else if (count > 2) nonManifoldEdges++;
+  }
+  return {
+    vertex_count: vertexCount,
+    triangle_count: triangleCount,
+    bounds_min_mm: [minX, minY, minZ],
+    bounds_max_mm: [maxX, maxY, maxZ],
+    bounding_box_mm: [maxX - minX, maxY - minY, maxZ - minZ],
+    surface_area_mm2: area,
+    signed_volume_mm3: Math.abs(vol6) / 6,
+    boundary_edge_count: boundaryEdges,
+    non_manifold_edge_count: nonManifoldEdges,
+    watertight: triangleCount > 0 && boundaryEdges === 0 && nonManifoldEdges === 0
+  };
+}
 function analyzePart(document2, options) {
   let shapes = /* @__PURE__ */ new Map();
   let meshes2 = /* @__PURE__ */ new Map();
@@ -46942,6 +52021,24 @@ function analyzePart(document2, options) {
     if (!mesh) throw new Error("Choose a mesh reference body to convert.");
     return { status: "ok", kind: options.kind, bodies: [], measurements: [{ body_id: id2, ...prismaticMeshProfile(mesh, options.tolerance_mm ?? 0.05) }] };
   }
+  if (options.kind === "mesh_inspect") {
+    const out = [];
+    const targetIds = options.bodyIds?.length ? options.bodyIds : [...meshes2.keys(), ...shapes.keys()];
+    for (const id2 of targetIds) {
+      const m2 = meshes2.get(id2);
+      if (m2) {
+        out.push({ body_id: id2, source: "reference-mesh", ...inspectTriangleMesh(m2.vertices, m2.triangles) });
+        continue;
+      }
+      const s = shapes.get(id2);
+      if (s) {
+        const tess = s.mesh({ tolerance: options.tolerance_mm ?? 0.1, angularTolerance: 0.35 });
+        out.push({ body_id: id2, source: "solid-tessellation", ...inspectTriangleMesh(tess.vertices, tess.triangles) });
+      }
+    }
+    if (!out.length) throw new Error("Mesh inspection requires at least one mesh or solid body.");
+    return { status: "ok", kind: options.kind, bodies: [], measurements: out };
+  }
   if (!shapes.size) throw new Error("Analysis needs at least one solid body.");
   const bodies = [], measurements = [];
   const render = (shape, id2) => {
@@ -46951,10 +52048,14 @@ function analyzePart(document2, options) {
       release$1(shape);
     }
   };
-  if (options.kind === "properties") {
-    const density = options.density_kg_m3;
-    if (density !== void 0 && !(Number.isFinite(density) && density > 0)) throw new Error("Density must be a positive finite value in kg/m³.");
-    for (const [key2, shape] of shapes) {
+  if (options.kind === "properties" || options.kind === "center_of_mass") {
+    const overrideDensity = options.density_kg_m3;
+    if (overrideDensity !== void 0 && !(Number.isFinite(overrideDensity) && overrideDensity > 0))
+      throw new Error("Density must be a positive finite value in kg/m³.");
+    const entries = options.bodyIds?.length ? [...shapes].filter(([key2]) => options.bodyIds.includes(key2)) : [...shapes];
+    if (!entries.length) throw new Error("No matching solid bodies found for properties analysis.");
+    const perBody = [];
+    for (const [key2, shape] of entries) {
       const solids = solidsOf(shape);
       try {
         if (!solids.length) throw new Error("Physical properties require valid solid geometry.");
@@ -46964,20 +52065,103 @@ function analyzePart(document2, options) {
         const centers = solids.map((solid) => volumeProperties(solid).center);
         const center = [0, 1, 2].map((i2) => volumes.reduce((sum2, v2, k2) => sum2 + v2 * centers[k2][i2], 0) / volume);
         const [lo, hi] = optimalBounds(shape);
-        const measurement = { body_id: key2, volume_mm3: volume, area_mm2: measureArea(shape), center_mm: center, bounds_mm: [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]] };
-        if (density !== void 0) {
-          const inertia = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-          solids.forEach((solid, k2) => {
-            const tensor = volumeProperties(solid, centers[k2]).inertia;
-            const d2 = centers[k2].map((c2, i2) => c2 - center[i2]), d22 = d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2];
-            for (let i2 = 0; i2 < 3; i2++) for (let j = 0; j < 3; j++) inertia[i2][j] += tensor[i2][j] + volumes[k2] * ((i2 === j ? d22 : 0) - d2[i2] * d2[j]);
-          });
-          Object.assign(measurement, { density_kg_m3: density, mass_kg: volume * density * 1e-9, inertia_kg_m2: inertia.map((row) => row.map((v2) => v2 * density * 1e-15)) });
-        }
-        measurements.push(measurement);
+        const savedMat = document2.bodyProperties?.[key2]?.material;
+        const density = overrideDensity ?? savedMat?.densityKgPerM3;
+        const unitInertia = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        solids.forEach((solid, k2) => {
+          const tensor = volumeProperties(solid, centers[k2]).inertia;
+          const d2 = centers[k2].map((c2, i2) => c2 - center[i2]), d22 = d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2];
+          for (let i2 = 0; i2 < 3; i2++) for (let j = 0; j < 3; j++) unitInertia[i2][j] += tensor[i2][j] + volumes[k2] * ((i2 === j ? d22 : 0) - d2[i2] * d2[j]);
+        });
+        const massKg = density !== void 0 ? volume * density * 1e-9 : void 0;
+        const inertiaKgM2 = density !== void 0 ? unitInertia.map((row) => row.map((v2) => v2 * density * 1e-15)) : void 0;
+        perBody.push({
+          bodyId: key2,
+          volume,
+          area: measureArea(shape),
+          center,
+          bounds: [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]],
+          density,
+          materialName: overrideDensity !== void 0 ? void 0 : savedMat?.name,
+          massKg,
+          inertiaKgM2,
+          unitInertia
+        });
       } finally {
         solids.forEach(release$1);
       }
+    }
+    if (options.kind === "properties") {
+      for (const b of perBody) {
+        const measurement = {
+          body_id: b.bodyId,
+          volume_mm3: b.volume,
+          area_mm2: b.area,
+          center_mm: b.center,
+          bounds_mm: b.bounds
+        };
+        if (b.materialName) measurement.material = b.materialName;
+        if (b.density !== void 0) {
+          Object.assign(measurement, {
+            density_kg_m3: b.density,
+            mass_kg: b.massKg,
+            inertia_kg_m2: b.inertiaKgM2
+          });
+        }
+        measurements.push(measurement);
+      }
+    } else {
+      const totalVolume = perBody.reduce((s, b) => s + b.volume, 0);
+      const allHaveMass = perBody.every((b) => b.massKg !== void 0);
+      const weights = perBody.map((b) => allHaveMass ? b.massKg : b.volume);
+      const totalWeight = weights.reduce((s, w2) => s + w2, 0);
+      const combinedCenter = [0, 1, 2].map(
+        (i2) => perBody.reduce((sum2, b, k2) => sum2 + weights[k2] * b.center[i2], 0) / totalWeight
+      );
+      const entry = {
+        body_ids: perBody.map((b) => b.bodyId),
+        center_mm: combinedCenter,
+        total_volume_mm3: totalVolume,
+        weighted_by: allHaveMass ? "mass" : "volume"
+      };
+      if (allHaveMass) {
+        const combinedInertia = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        for (const b of perBody) {
+          const d2 = b.center.map((c2, i2) => (c2 - combinedCenter[i2]) * 1e-3);
+          const d22 = d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2];
+          for (let i2 = 0; i2 < 3; i2++) {
+            for (let j = 0; j < 3; j++) {
+              combinedInertia[i2][j] += b.inertiaKgM2[i2][j] + b.massKg * ((i2 === j ? d22 : 0) - d2[i2] * d2[j]);
+            }
+          }
+        }
+        entry.total_mass_kg = totalWeight;
+        entry.inertia_kg_m2 = combinedInertia;
+      }
+      measurements.push(entry);
+    }
+  } else if (options.kind === "classify_points") {
+    const queryPoints = options.points_mm ?? [];
+    if (!queryPoints.length) throw new Error("classify_points requires at least one [x, y, z] point.");
+    const entries = options.bodyIds?.length ? [...shapes].filter(([key2]) => options.bodyIds.includes(key2)) : [...shapes];
+    const tol = options.tolerance_mm ?? 1e-6;
+    for (let idx2 = 0; idx2 < queryPoints.length; idx2++) {
+      const pt2 = queryPoints[idx2];
+      let overall = "outside";
+      let hitBody = null;
+      for (const [key2, shape] of entries) {
+        const cls = classifyPointInShape(shape, pt2, tol);
+        if (cls === "inside") {
+          overall = "inside";
+          hitBody = key2;
+          break;
+        }
+        if (cls === "on" && overall === "outside") {
+          overall = "on";
+          hitBody = key2;
+        }
+      }
+      measurements.push({ index: idx2, point_mm: pt2, classification: overall, body_id: hitBody });
     }
   } else if (options.kind === "section") {
     const axis = { XY: 2, XZ: 1, YZ: 0 }[options.plane ?? "XY"];
@@ -47001,29 +52185,67 @@ function analyzePart(document2, options) {
       render(cut, key2);
     }
   } else if (options.kind === "interference") {
-    if (shapes.size < 2) throw new Error("Interference needs at least two body features.");
-    const items = [...shapes];
-    if (items.length > 64) throw new Error("Interference supports up to 64 bodies per check.");
-    for (let i2 = 0; i2 < items.length; i2++) for (let j = i2 + 1; j < items.length; j++) {
-      const overlap = items[i2][1].intersect(items[j][1]);
+    const primary = options.bodyIds?.length ? [...shapes].filter(([id2]) => options.bodyIds.includes(id2)) : [...shapes];
+    const against = options.againstBodyIds?.length ? [...shapes].filter(([id2]) => options.againstBodyIds.includes(id2)) : null;
+    if (!against && primary.length < 2) throw new Error("Interference needs at least two body features.");
+    if (primary.length > 64) throw new Error("Interference supports up to 64 bodies per check.");
+    const seenPairs = /* @__PURE__ */ new Set();
+    const pairs = [];
+    if (against) {
+      for (const [idA, sA] of primary) for (const [idB, sB] of against) {
+        if (idA === idB) continue;
+        const pk = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+        if (!seenPairs.has(pk)) {
+          seenPairs.add(pk);
+          pairs.push([idA, sA, idB, sB]);
+        }
+      }
+    } else {
+      for (let i2 = 0; i2 < primary.length; i2++) for (let j = i2 + 1; j < primary.length; j++) {
+        pairs.push([primary[i2][0], primary[i2][1], primary[j][0], primary[j][1]]);
+      }
+    }
+    const minVol = options.tolerance_mm3 ?? 1e-7;
+    for (const [idA, sA, idB, sB] of pairs) {
+      const overlap = sA.intersect(sB);
       let volume = 0;
       try {
         volume = isShape3D(overlap) ? measureVolume(overlap) : 0;
       } catch {
         volume = 0;
       }
-      if (volume <= 1e-7) {
+      if (volume <= minVol) {
         release$1(overlap);
         continue;
       }
-      measurements.push({ first_body_id: items[i2][0], second_body_id: items[j][0], volume_mm3: volume });
-      render(overlap, `${items[i2][0]}|${items[j][0]}`);
+      const [lo, hi] = optimalBounds(overlap);
+      const center = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+      measurements.push({ first_body_id: idA, second_body_id: idB, volume_mm3: volume, center_mm: center, bounds_mm: [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]] });
+      render(overlap, `${idA}|${idB}`);
     }
   } else if (options.kind === "clearance") {
-    const chosen = options.bodyIds?.length ? [...shapes].filter(([id2]) => options.bodyIds.includes(id2)) : [...shapes];
-    if (chosen.length < 2) throw new Error("Clearance needs at least two bodies.");
-    for (let i2 = 0; i2 < chosen.length; i2++) for (let j = i2 + 1; j < chosen.length; j++) {
-      const overlap = chosen[i2][1].intersect(chosen[j][1]);
+    const primary = options.bodyIds?.length ? [...shapes].filter(([id2]) => options.bodyIds.includes(id2)) : [...shapes];
+    const against = options.againstBodyIds?.length ? [...shapes].filter(([id2]) => options.againstBodyIds.includes(id2)) : null;
+    if (!against && primary.length < 2) throw new Error("Clearance needs at least two bodies.");
+    const seenPairs = /* @__PURE__ */ new Set();
+    const pairs = [];
+    if (against) {
+      for (const [idA, sA] of primary) for (const [idB, sB] of against) {
+        if (idA === idB) continue;
+        const pk = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+        if (!seenPairs.has(pk)) {
+          seenPairs.add(pk);
+          pairs.push([idA, sA, idB, sB]);
+        }
+      }
+    } else {
+      for (let i2 = 0; i2 < primary.length; i2++) for (let j = i2 + 1; j < primary.length; j++) {
+        pairs.push([primary[i2][0], primary[i2][1], primary[j][0], primary[j][1]]);
+      }
+    }
+    const raw = [];
+    for (const [idA, sA, idB, sB] of pairs) {
+      const overlap = sA.intersect(sB);
       let overlapping = false;
       try {
         overlapping = isShape3D(overlap) && measureVolume(overlap) > 1e-7;
@@ -47031,8 +52253,21 @@ function analyzePart(document2, options) {
         overlapping = false;
       }
       release$1(overlap);
-      measurements.push({ first_body_id: chosen[i2][0], second_body_id: chosen[j][0], distance_mm: overlapping ? 0 : measureDistanceBetween(chosen[i2][1], chosen[j][1]), overlapping });
+      const closest = overlapping ? { distance: 0, from: [0, 0, 0], to: [0, 0, 0] } : closestPointsBetween(sA, sB);
+      if (options.clearance_mm !== void 0 && closest.distance > options.clearance_mm) continue;
+      raw.push({
+        first_body_id: idA,
+        second_body_id: idB,
+        distance_mm: closest.distance,
+        overlapping,
+        from_mm: closest.from,
+        to_mm: closest.to,
+        ...meshes2.size ? { unchecked_meshes: [...meshes2.keys()] } : {}
+      });
     }
+    raw.sort((a2, b) => Number(a2.distance_mm) - Number(b.distance_mm));
+    const limited = options.nearest && options.nearest > 0 ? raw.slice(0, options.nearest) : raw;
+    measurements.push(...limited);
   } else if (options.kind === "compare") {
     const chosen = options.bodyIds?.length === 2 ? options.bodyIds.map((id2) => [id2, shapes.get(id2)]) : [...shapes].slice(0, 2);
     if (chosen.length < 2 || chosen.some(([, shape]) => !shape)) throw new Error("Compare needs two bodies.");
@@ -47064,12 +52299,94 @@ function analyzePart(document2, options) {
     release$1(common2);
     measurements.push({ first_body_id: aId, second_body_id: bId, only_in_first_mm3: onlyA, only_in_second_mm3: onlyB, common_mm3: shared, identical: onlyA <= tolerance2 && onlyB <= tolerance2 });
   } else if (options.kind === "continuity" || options.kind === "curvature_comb" || options.kind === "isocurve" || options.kind === "minimum_radius") {
-    const result = analyzeCurves(shapes, { kind: options.kind, entities: options.entities, count: options.count, scale: options.scale, radius_mm: options.radius_mm });
+    const result = analyzeCurves(shapes, {
+      kind: options.kind,
+      entities: options.entities,
+      count: options.count,
+      scale: options.scale,
+      radius_mm: options.radius_mm,
+      position_tol_mm: options.position_tol_mm,
+      tangent_tol_deg: options.tangent_tol_deg,
+      curvature_tol: options.curvature_tol
+    });
     return { status: "ok", kind: options.kind, bodies, measurements: result.measurements, curves: result.curves };
+  } else if (options.kind === "silhouette") {
+    const rawDir = options.direction ?? [0, 0, 1];
+    const dirLen = Math.hypot(rawDir[0], rawDir[1], rawDir[2]);
+    if (!(dirLen > 1e-9)) throw new Error("Silhouette analysis needs a non-zero pull direction.");
+    const dir = [rawDir[0] / dirLen, rawDir[1] / dirLen, rawDir[2] / dirLen];
+    const xDir = canonicalPlaneXDirection(dir);
+    const yDir = [
+      dir[1] * xDir[2] - dir[2] * xDir[1],
+      dir[2] * xDir[0] - dir[0] * xDir[2],
+      dir[0] * xDir[1] - dir[1] * xDir[0]
+    ];
+    const entries = options.bodyIds?.length ? [...shapes].filter(([id2]) => options.bodyIds.includes(id2)) : [...shapes];
+    const curves2 = [];
+    for (const [id2, shape] of entries) {
+      const [lo, hi] = optimalBounds(shape);
+      const midDepth = (lo[0] + hi[0]) * 0.5 * dir[0] + (lo[1] + hi[1]) * 0.5 * dir[1] + (lo[2] + hi[2]) * 0.5 * dir[2];
+      const view = projectHiddenLineView(shape, {
+        viewNormal: dir,
+        upDirection: yDir,
+        chordalToleranceMillimeters: 0.05
+      });
+      const sourcePolys = view.visibleOutline.length ? view.visibleOutline : view.visible;
+      let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+      const worldPolys = [];
+      for (const poly of [...view.visibleOutline, ...view.visible]) {
+        for (const [u2, v2] of poly) {
+          if (u2 < minU) minU = u2;
+          if (u2 > maxU) maxU = u2;
+          if (v2 < minV) minV = v2;
+          if (v2 > maxV) maxV = v2;
+        }
+      }
+      for (const poly of sourcePolys) {
+        if (poly.length < 2) continue;
+        worldPolys.push(
+          poly.map(([u2, v2]) => [
+            xDir[0] * u2 + yDir[0] * v2 + dir[0] * midDepth,
+            xDir[1] * u2 + yDir[1] * v2 + dir[1] * midDepth,
+            xDir[2] * u2 + yDir[2] * v2 + dir[2] * midDepth
+          ])
+        );
+      }
+      const meshData = shape.mesh({ tolerance: 0.1, angularTolerance: 0.35 });
+      let projectedArea = 0;
+      const verts = meshData.vertices;
+      const tris = meshData.triangles;
+      for (let t2 = 0; t2 < tris.length; t2 += 3) {
+        const i0 = tris[t2] * 3, i1 = tris[t2 + 1] * 3, i2 = tris[t2 + 2] * 3;
+        const abx = verts[i1] - verts[i0], aby = verts[i1 + 1] - verts[i0 + 1], abz = verts[i1 + 2] - verts[i0 + 2];
+        const acx = verts[i2] - verts[i0], acy = verts[i2 + 1] - verts[i0 + 1], acz = verts[i2 + 2] - verts[i0 + 2];
+        const nx = aby * acz - abz * acy;
+        const ny = abz * acx - abx * acz;
+        const nz = abx * acy - aby * acx;
+        projectedArea += Math.abs(nx * dir[0] + ny * dir[1] + nz * dir[2]) * 0.25;
+      }
+      if (!Number.isFinite(minU)) {
+        minU = 0;
+        maxU = 0;
+        minV = 0;
+        maxV = 0;
+      }
+      measurements.push({
+        body_id: id2,
+        direction: dir,
+        width_mm: Math.max(0, maxU - minU),
+        height_mm: Math.max(0, maxV - minV),
+        projected_area_mm2: projectedArea,
+        silhouette_curve_count: worldPolys.length,
+        bounds_2d_mm: [minU, minV, maxU, maxV]
+      });
+      if (worldPolys.length) curves2.push({ label: `silhouette ${id2}`, color: "#0ea5e9", polylines: worldPolys });
+    }
+    return { status: "ok", kind: options.kind, bodies, measurements, curves: curves2 };
   } else if (options.kind === "intersection_curve" || options.kind === "isoparametric_curve" || options.kind === "project_curve") {
     const polylines = deriveCurves(shapes, { kind: options.kind, entities: options.entities, uv: options.uv, point_mm: options.point_mm, polylines: options.polylines, direction: options.direction });
     return { status: "ok", kind: options.kind, bodies, measurements: polylines.map((p2, i2) => ({ curve: i2, points: p2.length })), curves: polylines.map((p2, i2) => ({ label: `curve ${i2 + 1}`, color: "#3e8ef7", polylines: [p2] })) };
-  } else throw new Error("Choose section, interference, clearance, compare, properties, a curve analysis or distance.");
+  } else throw new Error("Choose section, interference, clearance, compare, properties, center_of_mass, classify_points, a curve analysis or distance.");
   return { status: "ok", kind: options.kind, bodies, measurements };
 }
 const safeName = (name5) => name5.replace(/[\r\n]/g, " ").trim() || "Body";
@@ -47216,30 +52533,164 @@ function storedZip(entries) {
   }
   return out;
 }
+async function mesh3MFCompressed(meshes2) {
+  if (typeof CompressionStream === "undefined") return mesh3MF(meshes2);
+  const objects = meshes2.map(({ name: name5, mesh }, index2) => {
+    const vertices = [], triangles = [];
+    for (let i2 = 0; i2 < mesh.vertices.length; i2 += 3) vertices.push(`<vertex x="${mesh.vertices[i2]}" y="${mesh.vertices[i2 + 1]}" z="${mesh.vertices[i2 + 2]}"/>`);
+    for (let i2 = 0; i2 < mesh.triangles.length; i2 += 3) triangles.push(`<triangle v1="${mesh.triangles[i2]}" v2="${mesh.triangles[i2 + 1]}" v3="${mesh.triangles[i2 + 2]}"/>`);
+    return `<object id="${index2 + 1}" name="${xml$1(safeName(name5))}" type="model"><mesh><vertices>${vertices.join("")}</vertices><triangles>${triangles.join("")}</triangles></mesh></object>`;
+  });
+  const model = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Aether CAD</metadata><resources>${objects.join("")}</resources><build>${meshes2.map((_2, i2) => `<item objectid="${i2 + 1}"/>`).join("")}</build></model>`;
+  const entries = [
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.microsoft.com/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`],
+    ["3D/3dmodel.model", model]
+  ];
+  const deflateRaw = async (data2) => {
+    const stream2 = new Blob([data2.buffer.slice(data2.byteOffset, data2.byteOffset + data2.byteLength)]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream2).arrayBuffer());
+  };
+  const encoder = new TextEncoder(), locals = [], centrals = [];
+  let offset2 = 0;
+  for (const [name5, content] of entries) {
+    const nameBytes = encoder.encode(name5), raw = encoder.encode(content), crc = crc32(raw);
+    const compressed = await deflateRaw(raw);
+    const useDeflate = compressed.length < raw.length;
+    const payload = useDeflate ? compressed : raw;
+    const method2 = useDeflate ? 8 : 0;
+    const local2 = new Uint8Array(30 + nameBytes.length + payload.length), lv = new DataView(local2.buffer);
+    lv.setUint32(0, 67324752, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(8, method2, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, payload.length, true);
+    lv.setUint32(22, raw.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    local2.set(nameBytes, 30);
+    local2.set(payload, 30 + nameBytes.length);
+    const central = new Uint8Array(46 + nameBytes.length), cv = new DataView(central.buffer);
+    cv.setUint32(0, 33639248, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(10, method2, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, payload.length, true);
+    cv.setUint32(24, raw.length, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset2, true);
+    central.set(nameBytes, 46);
+    locals.push(local2);
+    centrals.push(central);
+    offset2 += local2.length;
+  }
+  const centralSize = centrals.reduce((n, c2) => n + c2.length, 0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 101010256, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset2, true);
+  const out = new Uint8Array(offset2 + centralSize + 22);
+  let at = 0;
+  for (const part of [...locals, ...centrals, end]) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
 const FORMATS = ["step", "stl", "obj", "gltf", "3mf"];
+function asciiSTL(meshes2) {
+  const lines = ["solid aether"];
+  for (const { mesh } of meshes2) {
+    const v2 = mesh.vertices, t2 = mesh.triangles;
+    for (let i2 = 0; i2 < t2.length; i2 += 3) {
+      const i0 = t2[i2] * 3, i1 = t2[i2 + 1] * 3, i22 = t2[i2 + 2] * 3;
+      const ax = v2[i1] - v2[i0], ay = v2[i1 + 1] - v2[i0 + 1], az = v2[i1 + 2] - v2[i0 + 2];
+      const bx = v2[i22] - v2[i0], by = v2[i22 + 1] - v2[i0 + 1], bz = v2[i22 + 2] - v2[i0 + 2];
+      let nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+      const len3 = Math.hypot(nx, ny, nz);
+      if (len3 > 1e-12) {
+        nx /= len3;
+        ny /= len3;
+        nz /= len3;
+      }
+      lines.push(
+        `  facet normal ${nx.toExponential(6)} ${ny.toExponential(6)} ${nz.toExponential(6)}`,
+        `    outer loop`,
+        `      vertex ${v2[i0]} ${v2[i0 + 1]} ${v2[i0 + 2]}`,
+        `      vertex ${v2[i1]} ${v2[i1 + 1]} ${v2[i1 + 2]}`,
+        `      vertex ${v2[i22]} ${v2[i22 + 1]} ${v2[i22 + 2]}`,
+        `    endloop`,
+        `  endfacet`
+      );
+    }
+  }
+  lines.push("endsolid aether", "");
+  return new TextEncoder().encode(lines.join("\n"));
+}
 async function exportPart(document2, options) {
   if (!FORMATS.includes(options.format)) throw new Error("Choose STEP, STL, OBJ, glTF or 3MF.");
   let shapes = /* @__PURE__ */ new Map();
-  evaluatePartDocument(document2, { withBodies: (bodies) => {
-    shapes = new Map(bodies);
-  } });
+  let refMeshes = /* @__PURE__ */ new Map();
+  evaluatePartDocument(document2, {
+    withBodies: (bodies) => {
+      shapes = new Map(bodies);
+    },
+    withMeshes: (meshes2) => {
+      refMeshes = new Map(meshes2);
+    }
+  });
   const ids2 = options.bodyIds ?? null;
-  if (ids2 !== null && (!ids2.length || ids2.some((id2) => !shapes.has(id2)))) throw new Error("An export body is unavailable.");
+  const availableKeys = /* @__PURE__ */ new Set([...shapes.keys(), ...options.format === "step" ? [] : refMeshes.keys()]);
+  if (ids2 !== null && (!ids2.length || ids2.some((id2) => !availableKeys.has(id2)))) throw new Error("An export body is unavailable.");
   const selectedEntries = [...shapes].filter(([id2]) => ids2 === null || ids2.includes(id2));
-  const selected = selectedEntries.map(([, shape]) => shape);
-  if (!selected.length) throw new Error("Import or create geometry before exporting.");
+  const selectedRefEntries = options.format === "step" ? [] : [...refMeshes].filter(([id2]) => !shapes.has(id2) && (ids2 === null || ids2.includes(id2)));
+  const totalBodies = selectedEntries.length + selectedRefEntries.length;
+  if (!totalBodies) throw new Error("Import or create geometry before exporting.");
   const tolerance2 = options.toleranceMillimeters ?? 0.1;
   if (!Number.isFinite(tolerance2) || tolerance2 < 1e-3 || tolerance2 > 5) throw new Error("Mesh tolerance must be between 0.001 and 5 mm.");
-  if (options.format === "obj" || options.format === "gltf" || options.format === "3mf") {
-    const names = new Map(availableBodies(document2).map((body) => [body.id, body.name]));
-    const meshes2 = selectedEntries.map(([id2, shape]) => {
+  const names = new Map(availableBodies(document2).map((body) => [body.id, body.name]));
+  const collectMeshes = () => [
+    ...selectedEntries.map(([id2, shape]) => {
       const mesh = shape.mesh({ tolerance: tolerance2, angularTolerance: 0.35 });
       return { name: names.get(id2) ?? id2, mesh: { vertices: Float32Array.from(mesh.vertices), triangles: Uint32Array.from(mesh.triangles) } };
-    });
-    const bytes = options.format === "obj" ? new TextEncoder().encode(meshOBJ(meshes2)) : options.format === "gltf" ? meshGLB(meshes2) : mesh3MF(meshes2);
+    }),
+    ...selectedRefEntries.map(([id2, mesh]) => ({ name: names.get(id2) ?? id2, mesh }))
+  ];
+  if (options.format === "obj" || options.format === "gltf" || options.format === "3mf") {
+    const meshes2 = collectMeshes();
+    const bytes = options.format === "obj" ? new TextEncoder().encode(meshOBJ(meshes2)) : options.format === "gltf" ? meshGLB(meshes2) : await mesh3MFCompressed(meshes2);
     if (bytes.byteLength > 64 * 1024 * 1024) throw new Error("Export exceeds the 64 MB download limit.");
-    return { format: options.format, units: "mm", body_count: selected.length, bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+    return { format: options.format, units: "mm", body_count: totalBodies, bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
   }
+  if (options.format === "stl" && (options.ascii || selectedRefEntries.length > 0)) {
+    const meshes2 = collectMeshes();
+    let bytes;
+    if (options.ascii) {
+      bytes = asciiSTL(meshes2);
+    } else {
+      const totalV = meshes2.reduce((s, m2) => s + m2.mesh.vertices.length, 0);
+      const totalT = meshes2.reduce((s, m2) => s + m2.mesh.triangles.length, 0);
+      const verts = new Float32Array(totalV);
+      const tris = new Uint32Array(totalT);
+      let vOff = 0, tOff = 0;
+      for (const m2 of meshes2) {
+        verts.set(m2.mesh.vertices, vOff);
+        const baseVert = vOff / 3;
+        for (let i2 = 0; i2 < m2.mesh.triangles.length; i2++) tris[tOff + i2] = m2.mesh.triangles[i2] + baseVert;
+        vOff += m2.mesh.vertices.length;
+        tOff += m2.mesh.triangles.length;
+      }
+      bytes = binarySTL({ vertices: verts, triangles: tris }, 1);
+    }
+    if (bytes.byteLength > 64 * 1024 * 1024) throw new Error("Export exceeds the 64 MB download limit.");
+    return { format: "stl", units: "mm", body_count: totalBodies, bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
+  }
+  const selected = selectedEntries.map(([, shape]) => shape);
   const whole = selected.length === 1 ? selected[0] : makeCompound(selected.map((shape) => shape.clone()));
   try {
     const blob = options.format === "step" ? whole.blobSTEP() : whole.blobSTL({ tolerance: tolerance2, angularTolerance: 0.35, binary: true });
@@ -47249,6 +52700,174 @@ async function exportPart(document2, options) {
   } finally {
     if (whole !== selected[0]) whole.delete();
   }
+}
+function sampleWire2D(wire, project) {
+  const polylines = [];
+  const edges = wire.edges;
+  for (const edge of edges) {
+    const geom = edge.geomType;
+    const steps2 = geom === "LINE" ? 1 : 24;
+    const pts = [];
+    for (let i2 = 0; i2 <= steps2; i2++) {
+      const p2 = edge.pointAt(i2 / steps2);
+      pts.push(project([p2.x, p2.y, p2.z]));
+      p2.delete();
+    }
+    polylines.push(pts);
+    edge.delete();
+  }
+  return polylines;
+}
+function resolveFoldLineEndpoints(document2, ref) {
+  const source = document2.features.find((f2) => f2.id === ref.sourceFeatureId);
+  if (!source || source.type !== "profile" || source.profile.type !== "drawing") return null;
+  const contour = source.profile.contours.find((c2) => c2.id === ref.contourId);
+  if (!contour || contour.type !== "path") return null;
+  let prev = contour.start;
+  let start2 = null;
+  let end2 = null;
+  for (const seg of contour.segments) {
+    if (seg.id === ref.segmentId && seg.type === "line") {
+      start2 = prev;
+      end2 = seg.end;
+      break;
+    }
+    prev = seg.end;
+  }
+  if (!start2 || !end2) return null;
+  const frame = profileFrame({
+    plane: source.plane,
+    offsetMillimeters: source.offsetMillimeters ?? 0,
+    frame: source.frame,
+    flip: source.flip
+  });
+  const x2 = unit$3(frame.xDirection);
+  const n = unit$3(frame.normal);
+  const y2 = [
+    n[1] * x2[2] - n[2] * x2[1],
+    n[2] * x2[0] - n[0] * x2[2],
+    n[0] * x2[1] - n[1] * x2[0]
+  ];
+  const o = frame.originMillimeters;
+  const map = ([u2, v2]) => [
+    o[0] + x2[0] * u2 + y2[0] * v2,
+    o[1] + x2[1] * u2 + y2[1] * v2,
+    o[2] + x2[2] * u2 + y2[2] * v2
+  ];
+  return [map(start2), map(end2)];
+}
+function extractSheetFlatPattern(document2, bodyId, flatBody, base, baseNormal = [0, 0, 1]) {
+  const bends = sheetBendTable(document2, bodyId, base);
+  const n = unit$3(baseNormal);
+  const xDir = unit$3(canonicalPlaneXDirection(n));
+  const up = [
+    n[1] * xDir[2] - n[2] * xDir[1],
+    n[2] * xDir[0] - n[0] * xDir[2],
+    n[0] * xDir[1] - n[1] * xDir[0]
+  ];
+  const project = (p2) => [dot$6(p2, xDir), dot$6(p2, up)];
+  const lines = [];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const pushSegment = (layer, a2, b) => {
+    if (Math.hypot(b[0] - a2[0], b[1] - a2[1]) < 1e-6) return;
+    minX = Math.min(minX, a2[0], b[0]);
+    maxX = Math.max(maxX, a2[0], b[0]);
+    minY = Math.min(minY, a2[1], b[1]);
+    maxY = Math.max(maxY, a2[1], b[1]);
+    lines.push({ layer, start: a2, end: b });
+  };
+  const faces = flatBody.faces;
+  let mainFace;
+  let mainArea = 0;
+  for (const f2 of faces) {
+    if (f2.geomType === "PLANE") {
+      const c2 = f2.center;
+      const nv = f2.normalAt(c2);
+      const align = Math.abs(dot$6(unit$3([nv.x, nv.y, nv.z]), n));
+      c2.delete();
+      nv.delete();
+      if (align > 0.999) {
+        const area = measureArea(f2);
+        if (area > mainArea) {
+          mainArea = area;
+          mainFace = f2;
+        }
+      }
+    }
+  }
+  if (mainFace) {
+    const outer = mainFace.clone().outerWire();
+    for (const poly of sampleWire2D(outer, project)) {
+      for (let i2 = 1; i2 < poly.length; i2++) pushSegment("OUTLINE", poly[i2 - 1], poly[i2]);
+    }
+    outer.delete();
+    const inners = mainFace.clone().innerWires();
+    for (const hole of inners) {
+      for (const poly of sampleWire2D(hole, project)) {
+        for (let i2 = 1; i2 < poly.length; i2++) pushSegment("CUT", poly[i2 - 1], poly[i2]);
+      }
+      hole.delete();
+    }
+    faces.forEach((f2) => f2.delete());
+  } else {
+    faces.forEach((f2) => f2.delete());
+    const view = projectHiddenLineView(flatBody, {
+      viewNormal: baseNormal,
+      upDirection: up,
+      chordalToleranceMillimeters: 0.05
+    });
+    for (const poly of [...view.visible, ...view.visibleOutline]) {
+      for (let i2 = 1; i2 < poly.length; i2++) {
+        pushSegment("OUTLINE", [poly[i2 - 1][0], poly[i2 - 1][1]], [poly[i2][0], poly[i2][1]]);
+      }
+    }
+  }
+  const flatBounds2D = [minX, minY, maxX, maxY];
+  const emitBendEdge = (layer, edge) => {
+    if (edge.kind === "solid-edge") {
+      pushSegment(layer, project(edge.anchor.start.positionMillimeters), project(edge.anchor.end.positionMillimeters));
+      return;
+    }
+    if (edge.kind === "curved-edge") {
+      const m2 = project(edge.midpointMillimeters);
+      const half = edge.lengthMillimeters / 2;
+      const cx2 = (flatBounds2D[0] + flatBounds2D[2]) / 2;
+      const cy2 = (flatBounds2D[1] + flatBounds2D[3]) / 2;
+      const dx = m2[0] - cx2, dy = m2[1] - cy2;
+      const dLen = Math.hypot(dx, dy);
+      const dir = dLen > 1e-6 ? [-dy / dLen, dx / dLen] : [0, 1];
+      pushSegment(layer, [m2[0] - dir[0] * half, m2[1] - dir[1] * half], [m2[0] + dir[0] * half, m2[1] + dir[1] * half]);
+    }
+  };
+  for (const f2 of document2.features) {
+    if (f2.suppressed) continue;
+    if (f2.type === "sheet-flange" || f2.type === "sheet-hem") {
+      if (f2.bodyIds[0] !== bodyId) continue;
+      const layer = f2.inward ? "BEND_UP" : "BEND_DOWN";
+      for (const edge of f2.edges) emitBendEdge(layer, edge);
+    } else if (f2.type === "sheet-fold") {
+      if (f2.bodyIds[0] !== bodyId) continue;
+      const layer = f2.inward ? "BEND_UP" : "BEND_DOWN";
+      const pts = resolveFoldLineEndpoints(document2, f2.line);
+      if (pts) {
+        pushSegment(layer, project(pts[0]), project(pts[1]));
+      }
+    }
+  }
+  if (!Number.isFinite(minX)) {
+    minX = 0;
+    maxX = 0;
+    minY = 0;
+    maxY = 0;
+  }
+  return {
+    bodyId,
+    widthMillimeters: Math.max(0, maxX - minX),
+    heightMillimeters: Math.max(0, maxY - minY),
+    thicknessMillimeters: base.thicknessMillimeters,
+    lines,
+    bends
+  };
 }
 function drawingViewFrame(orientation, direction2) {
   if (direction2) return { normal: [...direction2], up: Math.abs(direction2[2]) > 0.999 * Math.hypot(...direction2) ? [0, 1, 0] : [0, 0, 1] };
@@ -47408,6 +53027,60 @@ function hatchFace(face, right, up, spacing2, out, budget) {
   return Math.max(0, count);
 }
 function projectPartDrawing(document2, options) {
+  if (options.flatPattern) {
+    const active = document2.features.slice(0, rollbackPosition(document2));
+    const bases = active.filter((f2) => f2.type === "sheet-base" && !f2.suppressed);
+    const targetBodyId = options.bodyIds?.[0];
+    const base = targetBodyId ? bases.find((f2) => bodyIDForFeature(document2, f2) === targetBodyId) : bases[0];
+    if (!base) throw Error("A flat-pattern view requires an unsuppressed sheet-metal base feature.");
+    const bodyId = bodyIDForFeature(document2, base);
+    const profile = active.find((f2) => f2.type === "profile" && f2.id === base.profileFeatureId);
+    const baseNormal = profile ? profileFrame(profile).normal : [0, 0, 1];
+    let hasBends = false;
+    let unfolded = false;
+    for (const f2 of active) {
+      if (f2.suppressed) continue;
+      if ((f2.type === "sheet-flange" || f2.type === "sheet-hem") && f2.bodyIds[0] === bodyId) {
+        hasBends = true;
+        unfolded = false;
+      } else if (f2.type === "sheet-refold" && f2.bodyIds[0] === bodyId) unfolded = false;
+      else if (f2.type === "sheet-unfold" && f2.bodyIds[0] === bodyId) unfolded = true;
+    }
+    const evalDoc = hasBends && !unfolded ? {
+      ...document2,
+      rollbackIndex: void 0,
+      features: [
+        ...active,
+        { id: "__flat_pattern_unfold__", type: "sheet-unfold", name: "Flat Pattern Unfold", suppressed: false, bodyIds: [bodyId] }
+      ]
+    } : document2;
+    let flatResult;
+    evaluatePartDocument(evalDoc, {
+      withBodies: (bodies) => {
+        const flatBody = bodies.get(bodyId);
+        if (!flatBody) throw Error(`Flat pattern body ${bodyId} is unavailable.`);
+        const flat = extractSheetFlatPattern(document2, bodyId, flatBody, base, baseNormal);
+        const visible = [];
+        const hidden = [];
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const seg of flat.lines) {
+          const curve = { kind: "line", start: seg.start, end: seg.end };
+          if (seg.layer === "BEND_UP" || seg.layer === "BEND_DOWN") hidden.push(curve);
+          else visible.push(curve);
+          for (const [x2, y2] of [seg.start, seg.end]) {
+            minX = Math.min(minX, x2);
+            minY = Math.min(minY, y2);
+            maxX = Math.max(maxX, x2);
+            maxY = Math.max(maxY, y2);
+          }
+        }
+        if (!Number.isFinite(minX)) throw Error("Flat pattern has no projectable lines.");
+        flatResult = { visible, hidden, bounds: [minX, minY, maxX, maxY], bodyIds: [flat.bodyId] };
+      }
+    });
+    if (!flatResult) throw Error("Flat pattern could not be extracted.");
+    return flatResult;
+  }
   const { normal, up } = drawingViewFrame(options.orientation, options.direction);
   let result;
   evaluatePartDocument(document2, { withBodies: (bodies) => {
@@ -47776,290 +53449,6 @@ function dimensionChainAnnotations(chain) {
     };
   });
 }
-const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
-const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"];
-function object(value2) {
-  if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
-}
-function text(value2) {
-  if (typeof value2 !== "string" || !value2.trim() || value2.length > 1e3) throw Error("Drawing names and IDs must contain 1–1000 characters.");
-}
-function number(value2, min, max2) {
-  if (typeof value2 !== "number" || !Number.isFinite(value2) || value2 < min || value2 > max2) throw Error(`Drawing value must be between ${min} and ${max2}.`);
-}
-function point(value2) {
-  if (!Array.isArray(value2) || value2.length !== 2) throw Error("Drawing positions need two millimeter coordinates.");
-  value2.forEach((v2) => number(v2, -1e5, 1e5));
-}
-function list(value2, limit) {
-  if (!Array.isArray(value2) || value2.length > limit) throw Error(`Drawing list exceeds ${limit} entries or is not an array.`);
-}
-function direction$1(value2) {
-  if (!Array.isArray(value2) || value2.length !== 3) throw Error("A view direction needs three model coordinates.");
-  value2.forEach((v2) => number(v2, -1e6, 1e6));
-  if (Math.hypot(...value2) < 1e-9) throw Error("A view direction cannot be zero.");
-}
-function atLeast(value2, version2, what) {
-  if (value2 < version2) throw Error(`${what} require Drawing format version ${version2}.`);
-}
-function validateDrawingDocument(value2) {
-  object(value2);
-  if (value2.format !== "aether-drawing" || ![1, 2, 3, 4, 5].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
-  text(value2.documentId);
-  text(value2.name);
-  text(value2.activeSheetId);
-  validatePartDocument(value2.source);
-  if (value2.sourceReference !== void 0) {
-    const ref = value2.sourceReference;
-    object(ref);
-    text(ref.fileId);
-    if (Object.keys(ref).some((key2) => !["fileId", "partId", "branch", "revision"].includes(key2))) throw Error("Unknown drawing source reference field.");
-    if (ref.partId !== void 0) text(ref.partId);
-    if (ref.branch !== void 0) text(ref.branch);
-    if (ref.revision !== void 0) {
-      number(ref.revision, 1, Number.MAX_SAFE_INTEGER);
-      if (!Number.isSafeInteger(ref.revision)) throw Error("Source revision must be an integer.");
-    }
-  }
-  list(value2.sheets, 100);
-  const ids2 = /* @__PURE__ */ new Set();
-  let totalViews = 0;
-  const id2 = (value22) => {
-    text(value22);
-    if (ids2.has(value22)) throw Error(`Duplicate drawing ID: ${value22}`);
-    ids2.add(value22);
-  };
-  id2(value2.documentId);
-  for (const sheet of value2.sheets) {
-    object(sheet);
-    id2(sheet.id);
-    text(sheet.name);
-    number(sheet.widthMm, 25, 2e3);
-    number(sheet.heightMm, 25, 2e3);
-    if (!["first_angle", "third_angle"].includes(sheet.projection)) throw Error("Choose first-angle or third-angle projection.");
-    list(sheet.views, 100);
-    list(sheet.annotations, 1e3);
-    if (sheet.titleBlock !== void 0) {
-      atLeast(value2.formatVersion, 4, "Title-block fields");
-      list(sheet.titleBlock, 12);
-      for (const row of sheet.titleBlock) {
-        object(row);
-        text(row.label);
-        if (typeof row.value !== "string" || row.value.length > 200) throw Error("Title-block values are strings of at most 200 characters.");
-        if (Object.keys(row).length !== 2) throw Error("Title-block rows have a label and a value only.");
-      }
-    }
-    if (sheet.partsList !== void 0) {
-      atLeast(value2.formatVersion, 4, "Parts lists");
-      object(sheet.partsList);
-      point(sheet.partsList.originMm);
-      if (sheet.partsList.widthMm !== void 0) number(sheet.partsList.widthMm, 40, 400);
-      if (Object.keys(sheet.partsList).some((key2) => !["originMm", "widthMm"].includes(key2))) throw Error("Unknown parts-list field.");
-    }
-    totalViews += sheet.views.length;
-    if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
-    const views = /* @__PURE__ */ new Map();
-    for (const view of sheet.views) {
-      object(view);
-      id2(view.id);
-      text(view.name);
-      point(view.originMm);
-      number(view.scale, 1e-3, 1e3);
-      if (!drawingOrientations.includes(view.orientation)) throw Error("Unknown drawing view orientation.");
-      if (typeof view.hiddenLines !== "boolean") throw Error("Hidden-line visibility must be a boolean.");
-      if (view.parentId !== void 0) text(view.parentId);
-      if (view.bodyIds !== void 0) {
-        list(view.bodyIds, 500);
-        view.bodyIds.forEach(text);
-        if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies.");
-      }
-      if (view.direction != null) {
-        atLeast(value2.formatVersion, 4, "Auxiliary views");
-        direction$1(view.direction);
-        if (view.parentId || view.section != null || view.detail != null) throw Error("An auxiliary view is an independent view without a section.");
-      }
-      if (view.detail != null) {
-        atLeast(value2.formatVersion, 4, "Detail views");
-        object(view.detail);
-        if (Object.keys(view.detail).some((key2) => !["parentId", "centerMm", "radiusMm", "label"].includes(key2))) throw Error("Unknown detail property.");
-        text(view.detail.parentId);
-        point(view.detail.centerMm);
-        number(view.detail.radiusMm, 1, 1e3);
-        text(view.detail.label);
-        if (view.parentId || view.section != null) throw Error("A detail view enlarges another view; it has no projection parent or section of its own.");
-      }
-      if (view.section != null) {
-        atLeast(value2.formatVersion, 2, "Section views");
-        object(view.section);
-        if (Object.keys(view.section).some((key2) => !["offsetMm", "hatchSpacingMm"].includes(key2))) throw Error("Unknown section property.");
-        number(view.section.offsetMm, -1e5, 1e5);
-        if (view.section.hatchSpacingMm !== void 0) number(view.section.hatchSpacingMm, 0.5, 10);
-        if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
-      }
-      views.set(view.id, view);
-    }
-    for (const view of views.values()) if (view.detail) {
-      const parent = views.get(view.detail.parentId);
-      if (!parent || parent.detail) throw Error("A detail view must reference a non-detail view on the same sheet.");
-    }
-    for (const view of views.values()) if (view.parentId) {
-      const parent = views.get(view.parentId);
-      if (!parent || parent.parentId || parent.section || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
-        throw Error("A projected view must reference a base front view on the same sheet.");
-      }
-    }
-    for (const annotation of sheet.annotations) {
-      object(annotation);
-      id2(annotation.id);
-      point(annotation.positionMm);
-      if (annotation.kind === "note") text(annotation.text);
-      else if (annotation.kind === "balloon") {
-        atLeast(value2.formatVersion, 4, "Balloons");
-        text(annotation.text);
-        point(annotation.leaderMm);
-      } else if (annotation.kind === "center-mark") {
-        atLeast(value2.formatVersion, 4, "Centre marks");
-        text(annotation.viewId);
-        if (!views.has(annotation.viewId)) throw Error("The centre mark's view does not exist.");
-        point(annotation.atMm);
-      } else if (drawingDimensionKinds.includes(annotation.kind)) {
-        text(annotation.viewId);
-        if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
-        number(annotation.decimals, 0, 6);
-        if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
-        if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
-          atLeast(value2.formatVersion, 5, "Point dimensions");
-          list(annotation.pointsMm, 3);
-          if (annotation.pointsMm.length !== (annotation.kind === "point-angle" ? 3 : 2)) throw Error("Choose two distance points or three angle points.");
-          annotation.pointsMm.forEach(point);
-          if (annotation.axis !== void 0 && (annotation.kind === "point-angle" || !["x", "y"].includes(annotation.axis))) throw Error("Point distance axis must be x or y; point angles have no axis.");
-        } else if (annotation.kind === "length") {
-          atLeast(value2.formatVersion, 4, "Edge length dimensions");
-          point(annotation.atMm);
-        } else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
-          atLeast(value2.formatVersion, 3, "Diameter, radius and angle dimensions");
-          point(annotation.atMm);
-          if (annotation.kind === "angle") point(annotation.toMm);
-        }
-      } else throw Error("Unsupported drawing annotation.");
-    }
-  }
-  if (!value2.sheets.some((s) => s.id === value2.activeSheetId)) throw Error("The active drawing sheet does not exist.");
-}
-function createDrawingDocument(source, id2 = crypto.randomUUID()) {
-  const doc = {
-    format: "aether-drawing",
-    formatVersion: 1,
-    documentId: id2,
-    name: `${source.name} Drawing`,
-    source: structuredClone(source),
-    activeSheetId: `${id2}/sheet1`,
-    sheets: [{ id: `${id2}/sheet1`, name: "Sheet 1", widthMm: 297, heightMm: 210, projection: "third_angle", views: [], annotations: [] }]
-  };
-  validateDrawingDocument(doc);
-  return doc;
-}
-function serializeDrawingDocument(doc) {
-  validateDrawingDocument(doc);
-  return JSON.stringify(doc, null, 2);
-}
-function parseDrawingDocument(source) {
-  if (source.length > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
-  const doc = JSON.parse(source);
-  validateDrawingDocument(doc);
-  return doc;
-}
-function applyDrawingCommand(source, command) {
-  validateDrawingDocument(source);
-  const doc = structuredClone(source);
-  if (command.type === "refresh-source") {
-    if (command.source.documentId !== doc.source.documentId) throw Error("Refresh requires the same source Part document.");
-    doc.source = structuredClone(command.source);
-  } else if (command.type === "add-sheet") {
-    doc.sheets.push(structuredClone(command.sheet));
-    doc.activeSheetId = command.sheet.id;
-  } else {
-    const sheet = doc.sheets.find((s) => s.id === command.sheetId);
-    if (!sheet) throw Error("Drawing sheet does not exist.");
-    switch (command.type) {
-      case "select-sheet":
-        doc.activeSheetId = sheet.id;
-        break;
-      case "remove-sheet": {
-        if (doc.sheets.length === 1) throw Error("Keep at least one drawing sheet.");
-        doc.sheets = doc.sheets.filter((s) => s.id !== sheet.id);
-        if (doc.activeSheetId === sheet.id) doc.activeSheetId = doc.sheets[0].id;
-        break;
-      }
-      case "update-sheet":
-        for (const key2 of ["name", "widthMm", "heightMm", "projection", "titleBlock"]) if (command[key2] !== void 0) Object.assign(sheet, { [key2]: command[key2] });
-        if (command.partsList === null) delete sheet.partsList;
-        else if (command.partsList !== void 0) sheet.partsList = command.partsList;
-        break;
-      case "add-view":
-        sheet.views.push(structuredClone(command.view));
-        break;
-      case "update-view": {
-        const view = sheet.views.find((v2) => v2.id === command.viewId);
-        if (!view) throw Error("Drawing view does not exist.");
-        if (Object.keys(command.changes).some((key2) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section", "direction", "detail"].includes(key2))) throw Error("Unknown drawing view property.");
-        Object.assign(view, structuredClone(command.changes));
-        break;
-      }
-      case "remove-view": {
-        if (!sheet.views.some((v2) => v2.id === command.viewId)) throw Error("Drawing view does not exist.");
-        if (sheet.views.some((v2) => v2.parentId === command.viewId || v2.detail?.parentId === command.viewId) || sheet.annotations.some((a2) => a2.kind !== "note" && a2.kind !== "balloon" && a2.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
-        sheet.views = sheet.views.filter((v2) => v2.id !== command.viewId);
-        break;
-      }
-      case "add-dimension-chain":
-        sheet.annotations.push(...structuredClone(dimensionChainAnnotations(command.chain)));
-        break;
-      case "add-annotation":
-        sheet.annotations.push(structuredClone(command.annotation));
-        break;
-      case "update-annotation": {
-        const index2 = sheet.annotations.findIndex((a2) => a2.id === command.annotation.id);
-        if (index2 < 0) throw Error("Drawing annotation does not exist.");
-        sheet.annotations[index2] = structuredClone(command.annotation);
-        break;
-      }
-      case "remove-annotation": {
-        if (!sheet.annotations.some((a2) => a2.id === command.annotationId)) throw Error("Drawing annotation does not exist.");
-        sheet.annotations = sheet.annotations.filter((a2) => a2.id !== command.annotationId);
-        break;
-      }
-      default:
-        throw Error("Unknown drawing command.");
-    }
-  }
-  const previousVersion = doc.formatVersion;
-  if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
-  else if (doc.sheets.some((sheet) => sheet.titleBlock || sheet.partsList || sheet.views.some((view) => view.direction || view.detail) || sheet.annotations.some((annotation) => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
-  else if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
-  else if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
-  doc.formatVersion = Math.max(previousVersion, doc.formatVersion);
-  validateDrawingDocument(doc);
-  return doc;
-}
-function resolvedDrawingView(sheet, view) {
-  if (view.detail) {
-    const parent2 = resolvedDrawingView(sheet, sheet.views.find((v2) => v2.id === view.detail.parentId));
-    return { ...view, orientation: parent2.orientation, bodyIds: parent2.bodyIds, section: parent2.section, direction: parent2.direction };
-  }
-  if (!view.parentId) return view;
-  const parent = sheet.views.find((v2) => v2.id === view.parentId);
-  const vertical = view.orientation === "top" || view.orientation === "bottom";
-  const negative = view.orientation === "top" || view.orientation === "left";
-  const sign = (negative ? -1 : 1) * (sheet.projection === "third_angle" ? 1 : -1);
-  const distance2 = Math.max(10, Math.abs(view.originMm[vertical ? 1 : 0] - parent.originMm[vertical ? 1 : 0]));
-  return {
-    ...view,
-    scale: parent.scale,
-    bodyIds: parent.bodyIds,
-    originMm: vertical ? [parent.originMm[0], parent.originMm[1] + sign * distance2] : [parent.originMm[0] + sign * distance2, parent.originMm[1]]
-  };
-}
 const dimensionStyle = (unit2 = 1, extensionGap = unit2) => ({ arrow: 2 * unit2, arrowWidth: 0.7 * unit2, extensionGap, extensionBeyond: 2 * unit2 });
 const sub$1 = (p2, q) => [p2[0] - q[0], p2[1] - q[1]];
 const add$1 = (p2, q) => [p2[0] + q[0], p2[1] + q[1]];
@@ -48230,15 +53619,16 @@ function attachedDimension(annotation, view) {
     const sign = Math.sign(r1[0] * r2[1] - r1[1] * r2[0]) || 1;
     const reach = (segment, ray2) => Math.max(0, sub(segment.a, vertex)[0] * ray2[0] + sub(segment.a, vertex)[1] * ray2[1], sub(segment.b, vertex)[0] * ray2[0] + sub(segment.b, vertex)[1] * ray2[1]);
     const graphics2 = angularDimension(vertex, r1, r2, sign, label, sheetStyle, [reach(first, r1), reach(second, r2)]);
-    const text22 = `${valueDeg.toFixed(annotation.decimals)}°`;
+    const text22 = formatDimensionText(valueDeg, annotation.decimals, "", "°", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const lines = [...graphics2.extensions, ...arcPolyline(graphics2.arc), ...graphics2.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))];
-    return { id: annotation.id, viewId: annotation.viewId, text: text22, valueDeg, measure: "angle", textAlign: "center", positionMm: graphics2.text.at, lines };
+    return { id: annotation.id, viewId: annotation.viewId, text: text22, valueDeg, measure: "angle", textAlign: "center", positionMm: graphics2.text.at, lines, ...annotation.overrideText !== void 0 ? { overriddenText: true } : {}, ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}, ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {} };
   }
   if (annotation.kind === "length") {
     const edge = nearestSegment(segments, annotation.atMm, name5);
-    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale, text22 = valueMm.toFixed(annotation.decimals);
+    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale;
+    const text22 = formatDimensionText(valueMm, annotation.decimals, "", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const graphics2 = linearDimension(edge.a, edge.b, label, sheetStyle);
-    return { id: annotation.id, viewId: annotation.viewId, text: text22, valueMm, measure: "length", textAlign: "center", positionMm: graphics2.text.at, lines: sheetLines(graphics2, text22) };
+    return { id: annotation.id, viewId: annotation.viewId, text: text22, valueMm, measure: "length", textAlign: "center", positionMm: graphics2.text.at, lines: sheetLines(graphics2, text22), ...annotation.overrideText !== void 0 ? { overriddenText: true } : {}, ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}, ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {} };
   }
   const round4 = nearestRound(rounds, annotation.atMm, name5);
   if (annotation.kind === "center-mark") {
@@ -48246,9 +53636,9 @@ function attachedDimension(annotation, view) {
     return { id: annotation.id, viewId: annotation.viewId, symbol: "center-mark", text: "", textAlign: "left", positionMm: round4.center, lines: [[[cx2 - reach, cy2], [cx2 + reach, cy2]], [[cx2, cy2 - reach], [cx2, cy2 + reach]]] };
   }
   const value2 = annotation.kind === "diameter" ? 2 * round4.modelRadius : round4.modelRadius;
-  const text2 = `${annotation.kind === "diameter" ? "Ø" : "R"}${value2.toFixed(annotation.decimals)}`;
+  const text2 = formatDimensionText(value2, annotation.decimals, annotation.kind === "diameter" ? "Ø" : "R", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
   const graphics = radialDimension(round4.center, round4.radiusMm, label, annotation.kind);
-  return { id: annotation.id, viewId: annotation.viewId, text: text2, valueMm: value2, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text2) };
+  return { id: annotation.id, viewId: annotation.viewId, text: text2, valueMm: value2, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text2), ...annotation.overrideText !== void 0 ? { overriddenText: true } : {}, ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}, ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {} };
 }
 function projectedDimensionPoint(view, pick) {
   const candidates = [];
@@ -48280,9 +53670,9 @@ function pointDimension(annotation, view) {
     const [a22, b2] = points, delta2 = [b2[0] - a22[0], b2[1] - a22[1]];
     const valueMm = (annotation.axis ? Math.abs(delta2[annotation.axis === "x" ? 0 : 1]) : Math.hypot(...delta2)) / view.view.scale;
     if (valueMm < 1e-9) throw Error("The selected points have zero distance along the chosen direction.");
-    const text2 = valueMm.toFixed(annotation.decimals);
+    const text22 = formatDimensionText(valueMm, annotation.decimals, "", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const graphics2 = linearDimension(a22, b2, annotation.positionMm, sheetStyle, annotation.axis);
-    return { ...common2, text: text2, valueMm, measure: "length", positionMm: graphics2.text.at, lines: sheetLines(graphics2, text2) };
+    return { ...common2, text: text22, valueMm, measure: "length", positionMm: graphics2.text.at, lines: sheetLines(graphics2, text22), ...annotation.overrideText !== void 0 ? { overriddenText: true } : {}, ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}, ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {} };
   }
   const [a2, vertex, b] = points;
   const v1 = [a2[0] - vertex[0], a2[1] - vertex[1]], v2 = [b[0] - vertex[0], b[1] - vertex[1]];
@@ -48293,13 +53683,17 @@ function pointDimension(annotation, view) {
   if (Math.abs(cross2) < 1e-9) throw Error("An angle needs three non-collinear points.");
   const valueDeg = Math.acos(Math.max(-1, Math.min(1, r1[0] * r2[0] + r1[1] * r2[1]))) * 180 / Math.PI;
   const graphics = angularDimension(vertex, r1, r2, Math.sign(cross2), annotation.positionMm, sheetStyle, [l1, l2]);
+  const text2 = formatDimensionText(valueDeg, annotation.decimals, "", "°", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
   return {
     ...common2,
-    text: `${valueDeg.toFixed(annotation.decimals)}°`,
+    text: text2,
     valueDeg,
     measure: "angle",
     positionMm: graphics.text.at,
-    lines: [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))]
+    lines: [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))],
+    ...annotation.overrideText !== void 0 ? { overriddenText: true } : {},
+    ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {},
+    ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}
   };
 }
 const TOLERANCE_MM = 0.01;
@@ -48364,7 +53758,7 @@ function circleChords(center, radius, count = 32) {
   return Array.from({ length: count }, (_2, i2) => [at(i2), at(i2 + 1)]);
 }
 const partsListColumns = ["item", "part", "quantity", "material"];
-async function buildDrawing(input, project) {
+async function buildDrawing(input, project, options) {
   const document2 = structuredClone(input);
   validateDrawingDocument(document2);
   const result = { document: document2, revision: sha256Hex(JSON.stringify(document2)), sourceHash: sha256Hex(JSON.stringify(document2.source)), sheets: [], approximatedCurveCount: 0 };
@@ -48381,11 +53775,11 @@ async function buildDrawing(input, project) {
         geometry = clipProjectionToCircle(parent.geometry, modelCenter, radiusMm / ps);
         built.annotations.push({ id: `${view.id}/marker`, symbol: "detail-marker", viewId: parent.view.id, text: label, textAlign: "left", positionMm: [centerMm[0] + radiusMm * 0.75, centerMm[1] - radiusMm * 0.75 - 1], lines: circleChords(centerMm, radiusMm) });
       } else {
-        const options = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {}, ...view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}, ...view.direction ? { direction: view.direction } : {} };
-        const key2 = JSON.stringify(options);
+        const options2 = { orientation: view.orientation, ...view.bodyIds ? { bodyIds: view.bodyIds } : {}, ...view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}, ...view.direction ? { direction: view.direction } : {}, ...view.flatPattern ? { flatPattern: true } : {} };
+        const key2 = JSON.stringify(options2);
         geometry = cache2.get(key2);
         if (!geometry) {
-          geometry = await project(document2.source, options);
+          geometry = await project(document2.source, options2);
           cache2.set(key2, geometry);
         }
       }
@@ -48395,6 +53789,13 @@ async function buildDrawing(input, project) {
       built.views.push({ view, geometry, translationMm, boundsMm: [translationMm[0] + s * x0, translationMm[1] - s * y1, translationMm[0] + s * x1, translationMm[1] - s * y0] });
       result.approximatedCurveCount += geometry.visible.concat(view.hiddenLines ? geometry.hidden : []).filter((c2) => c2.kind === "polyline").length;
     }
+    const templateFields = {
+      name: document2.name,
+      part: document2.source.name,
+      sheet: sheet.name,
+      projection: sheet.projection.replace("_", " "),
+      rev: sheet.revisions?.length ? sheet.revisions[sheet.revisions.length - 1].rev : "A"
+    };
     for (const annotation of sheet.annotations) {
       if (annotation.kind === "note") {
         built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] });
@@ -48404,28 +53805,105 @@ async function buildDrawing(input, project) {
         built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm));
         continue;
       }
+      if (annotation.kind === "leader-note") {
+        const builtNote = buildLeaderNote(annotation.id, annotation.text, annotation.positionMm, annotation.leaderPointsMm, templateFields);
+        if (annotation.viewId) builtNote.viewId = annotation.viewId;
+        built.annotations.push(builtNote);
+        continue;
+      }
+      if (annotation.kind === "gdt") {
+        const builtGdt = buildGdtFrame(annotation.id, annotation.characteristic, annotation.tolerance, annotation.datums, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtGdt.viewId = annotation.viewId;
+        built.annotations.push(builtGdt);
+        continue;
+      }
+      if (annotation.kind === "datum") {
+        const builtDatum = buildDatumSymbol(annotation.id, annotation.label, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtDatum.viewId = annotation.viewId;
+        built.annotations.push(builtDatum);
+        continue;
+      }
+      if (annotation.kind === "surface-texture") {
+        const builtSurf = buildSurfaceTextureSymbol(annotation.id, annotation.ra, annotation.process, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtSurf.viewId = annotation.viewId;
+        built.annotations.push(builtSurf);
+        continue;
+      }
+      if (annotation.kind === "weld-symbol") {
+        const builtWeld = buildWeldSymbol(annotation.id, annotation.weldType, annotation.size, annotation.allAround, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtWeld.viewId = annotation.viewId;
+        built.annotations.push(builtWeld);
+        continue;
+      }
+      if (annotation.kind === "revision-tag") {
+        built.annotations.push(buildRevisionTag(annotation.id, annotation.revision, annotation.positionMm));
+        continue;
+      }
       const view = built.views.find((v2) => v2.view.id === annotation.viewId);
+      if (annotation.kind === "centerline") {
+        built.annotations.push(buildCenterline(annotation.id, annotation.viewId, annotation.startMm, annotation.endMm));
+        continue;
+      }
+      if (annotation.kind === "ordinate") {
+        const ord = buildOrdinateDimension(annotation.id, view, annotation.axis, annotation.datumMm, annotation.targetMm, annotation.positionMm, annotation.decimals, annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
+        if (annotation.overrideText !== void 0) ord.overriddenText = true;
+        if (annotation.toleranceUpperMm !== void 0) ord.toleranceUpperMm = annotation.toleranceUpperMm;
+        if (annotation.toleranceLowerMm !== void 0) ord.toleranceLowerMm = annotation.toleranceLowerMm;
+        built.annotations.push(ord);
+        continue;
+      }
+      if (annotation.kind === "hole-callout") {
+        built.annotations.push(buildHoleCallout(annotation.id, view, annotation.atMm, annotation.positionMm, annotation.decimals, annotation.text));
+        continue;
+      }
+      if (annotation.kind === "chamfer-note") {
+        built.annotations.push(buildChamferNote(annotation.id, annotation.viewId, annotation.atMm, annotation.positionMm, annotation.text));
+        continue;
+      }
       if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") {
-        built.annotations.push(attachedDimension(annotation, view));
+        try {
+          built.annotations.push(attachedDimension(annotation, view));
+        } catch (err) {
+          throw err;
+        }
         continue;
       }
       if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
-        built.annotations.push(pointDimension(annotation, view));
+        try {
+          built.annotations.push(pointDimension(annotation, view));
+        } catch (err) {
+          throw err;
+        }
         continue;
       }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
-      const text2 = valueMm.toFixed(annotation.decimals);
+      const text2 = formatDimensionText(valueMm, annotation.decimals, "", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
       const [x2, y2] = annotation.positionMm;
       const near = horizontal ? [x0, y2 < y0 ? y0 : y1] : [x2 < x0 ? x0 : x1, y0];
       const far = horizontal ? [x1, near[1]] : [near[0], y1];
       const graphics = linearDimension(near, far, annotation.positionMm, sheetStyle, horizontal ? "x" : "y");
-      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: text2, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text2) });
+      built.annotations.push({
+        id: annotation.id,
+        viewId: annotation.viewId,
+        text: text2,
+        valueMm,
+        measure: "length",
+        textAlign: "center",
+        positionMm: graphics.text.at,
+        lines: sheetLines(graphics, text2),
+        ...annotation.overrideText !== void 0 ? { overriddenText: true } : {},
+        ...annotation.toleranceUpperMm !== void 0 ? { toleranceUpperMm: annotation.toleranceUpperMm } : {},
+        ...annotation.toleranceLowerMm !== void 0 ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}
+      });
     }
     if (sheet.partsList) {
       const rows = availableBodies(document2.source).map((body, i2) => ({ key: body.id, bodyId: body.id, cells: [String(i2 + 1), body.name, "1", document2.source.bodyProperties?.[body.id]?.material?.name ?? ""] }));
       built.partsList = { originMm: sheet.partsList.originMm, widthMm: sheet.partsList.widthMm ?? 120, columns: partsListColumns, rows };
+    }
+    if (sheet.revisionTable && sheet.revisions?.length) {
+      built.revisionTable = { originMm: sheet.revisionTable.originMm, widthMm: sheet.revisionTable.widthMm ?? 120, revisions: structuredClone(sheet.revisions) };
     }
     result.sheets.push(built);
   }
@@ -48458,6 +53936,656 @@ function drawingCurvePath(curve, view) {
   const sweep = ((curve.ccw ? curve.end - curve.start : curve.start - curve.end) + 2 * Math.PI) % (2 * Math.PI);
   return `M ${p2(start)} A ${r} ${r} 0 ${sweep > Math.PI ? 1 : 0} ${curve.ccw ? 0 : 1} ${p2(end)}`;
 }
+const gdtCharacteristicCodes = {
+  flatness: "FLT",
+  straightness: "STR",
+  circularity: "CIR",
+  cylindricity: "CYL",
+  "profile-line": "PRL",
+  "profile-surface": "PRS",
+  perpendicularity: "PERP",
+  angularity: "ANG",
+  parallelism: "PAR",
+  position: "POS",
+  concentricity: "CON",
+  symmetry: "SYM",
+  runout: "RUN",
+  "total-runout": "TRUN"
+};
+function arrowhead(tip, from) {
+  const dx = tip[0] - from[0], dy = tip[1] - from[1], d2 = Math.hypot(dx, dy);
+  if (d2 < 1e-6) return [];
+  const ux = dx / d2, uy = dy / d2;
+  const base = [tip[0] - ux * 2.2, tip[1] - uy * 2.2];
+  const p2 = [base[0] - uy * 0.7, base[1] + ux * 0.7];
+  const q = [base[0] + uy * 0.7, base[1] - ux * 0.7];
+  return [[tip, p2], [p2, q], [q, tip]];
+}
+function formatDimensionText(value2, decimals, prefix2 = "", suffix = "", toleranceUpper, toleranceLower, overrideText) {
+  const base = `${prefix2}${value2.toFixed(decimals)}${suffix}`;
+  let formatted = overrideText ? overrideText.replace(/\{value\}/g, base) : base;
+  if (toleranceUpper !== void 0 || toleranceLower !== void 0) {
+    const up = toleranceUpper ?? 0;
+    const lo = toleranceLower ?? 0;
+    if (Math.abs(up + lo) < 1e-9 && up > 0) {
+      formatted += ` +/-${up.toFixed(decimals)}`;
+    } else {
+      const sUp = up >= 0 ? `+${up.toFixed(decimals)}` : up.toFixed(decimals);
+      const sLo = lo >= 0 ? `+${lo.toFixed(decimals)}` : lo.toFixed(decimals);
+      formatted += ` (${sUp}/${sLo})`;
+    }
+  }
+  return formatted;
+}
+function buildOrdinateDimension(id2, view, axis, datumMm, targetMm, positionMm, decimals, toleranceUpperMm, toleranceLowerMm, overrideText) {
+  const s = view.view.scale;
+  const valMm = axis === "x" ? Math.abs(targetMm[0] - datumMm[0]) / s : Math.abs(targetMm[1] - datumMm[1]) / s;
+  const text2 = formatDimensionText(valMm, decimals, "", "", toleranceUpperMm, toleranceLowerMm, overrideText);
+  const lines = axis === "x" ? [[targetMm, [targetMm[0], positionMm[1]]]] : [[targetMm, [positionMm[0], targetMm[1]]]];
+  return {
+    id: id2,
+    viewId: view.view.id,
+    text: text2,
+    valueMm: valMm,
+    measure: "length",
+    symbol: "ordinate",
+    textAlign: "center",
+    positionMm: axis === "x" ? [targetMm[0], positionMm[1] - 1.5] : [positionMm[0] + 1.5, targetMm[1] + 1],
+    lines
+  };
+}
+function buildCenterline(id2, viewId, startMm, endMm) {
+  const dx = endMm[0] - startMm[0], dy = endMm[1] - startMm[1], len3 = Math.hypot(dx, dy);
+  const lines = [];
+  if (len3 > 1e-6) {
+    const ux = dx / len3, uy = dy / len3;
+    let t2 = -2;
+    const total = len3 + 2;
+    let longDash = true;
+    while (t2 < total) {
+      const dash = longDash ? 8 : 2;
+      const tEnd = Math.min(total, t2 + dash);
+      lines.push([
+        [startMm[0] + ux * t2, startMm[1] + uy * t2],
+        [startMm[0] + ux * tEnd, startMm[1] + uy * tEnd]
+      ]);
+      t2 = tEnd + 2;
+      longDash = !longDash;
+    }
+  }
+  return { id: id2, viewId, symbol: "centerline", text: "", textAlign: "left", positionMm: startMm, lines };
+}
+function buildLeaderNote(id2, text2, positionMm, leaderPointsMm, fields2) {
+  const resolved = text2.replace(/\{\{(\w+)\}\}/g, (_2, k2) => fields2[k2] ?? `{{${k2}}}`);
+  const lines = [];
+  const chain = [...leaderPointsMm, positionMm];
+  for (let i2 = 1; i2 < chain.length; i2++) lines.push([chain[i2 - 1], chain[i2]]);
+  if (chain.length >= 2) lines.push(...arrowhead(chain[0], chain[1]));
+  return { id: id2, symbol: "leader-note", text: resolved, textAlign: "left", positionMm: [positionMm[0] + 1.5, positionMm[1] - 1], lines };
+}
+function buildHoleCallout(id2, view, atMm, positionMm, decimals, customText) {
+  let bestRadius;
+  let bestDist = Infinity;
+  let targetPt = atMm;
+  for (const c2 of view.geometry.visible) {
+    if (c2.kind !== "circle" && c2.kind !== "arc") continue;
+    const center = sheetPoint(view, c2.center);
+    const rSheet = c2.radius * view.view.scale;
+    const dCenter = Math.hypot(atMm[0] - center[0], atMm[1] - center[1]);
+    const dRim = Math.abs(dCenter - rSheet);
+    if (dRim < bestDist) {
+      bestDist = dRim;
+      bestRadius = c2.radius;
+      const ang = Math.atan2(positionMm[1] - center[1], positionMm[0] - center[0]);
+      targetPt = [center[0] + rSheet * Math.cos(ang), center[1] + rSheet * Math.sin(ang)];
+    }
+  }
+  const dia = bestRadius !== void 0 ? 2 * bestRadius : void 0;
+  const text2 = customText ?? (dia !== void 0 ? `DIA ${dia.toFixed(decimals)} THRU` : "HOLE");
+  const lines = [[targetPt, positionMm], ...arrowhead(targetPt, positionMm)];
+  return {
+    id: id2,
+    viewId: view.view.id,
+    symbol: "hole-callout",
+    text: text2,
+    valueMm: dia,
+    measure: dia !== void 0 ? "diameter" : void 0,
+    textAlign: "left",
+    positionMm: [positionMm[0] + 1.5, positionMm[1] - 1],
+    lines
+  };
+}
+function buildChamferNote(id2, viewId, atMm, positionMm, text2) {
+  const lines = [[atMm, positionMm], ...arrowhead(atMm, positionMm)];
+  return { id: id2, viewId, symbol: "chamfer-note", text: text2, textAlign: "left", positionMm: [positionMm[0] + 1.5, positionMm[1] - 1], lines };
+}
+function buildGdtFrame(id2, characteristic, tolerance2, datums, positionMm, leaderMm) {
+  const cells = [gdtCharacteristicCodes[characteristic], tolerance2, ...datums ?? []];
+  const label = cells.join(" | ");
+  const boxW = Math.max(24, label.length * 2.1 + 4);
+  const boxH = 6;
+  const [x2, y2] = positionMm;
+  const lines = [
+    [[x2, y2 - boxH], [x2 + boxW, y2 - boxH]],
+    [[x2 + boxW, y2 - boxH], [x2 + boxW, y2]],
+    [[x2 + boxW, y2], [x2, y2]],
+    [[x2, y2], [x2, y2 - boxH]]
+  ];
+  if (leaderMm) {
+    lines.push([[x2, y2 - boxH / 2], leaderMm], ...arrowhead(leaderMm, [x2, y2 - boxH / 2]));
+  }
+  return { id: id2, symbol: "gdt", text: label, textAlign: "left", positionMm: [x2 + 1.5, y2 - 1.5], lines };
+}
+function buildDatumSymbol(id2, label, positionMm, leaderMm) {
+  const [x2, y2] = positionMm;
+  const s = 6;
+  const lines = [
+    [[x2 - s / 2, y2 - s], [x2 + s / 2, y2 - s]],
+    [[x2 + s / 2, y2 - s], [x2 + s / 2, y2]],
+    [[x2 + s / 2, y2], [x2 - s / 2, y2]],
+    [[x2 - s / 2, y2], [x2 - s / 2, y2 - s]],
+    [[x2, y2], leaderMm],
+    ...arrowhead(leaderMm, [x2, y2])
+  ];
+  return { id: id2, symbol: "datum", text: label, textAlign: "center", positionMm: [x2, y2 - 1.6], lines };
+}
+function buildSurfaceTextureSymbol(id2, ra, process2, positionMm, leaderMm) {
+  const [x2, y2] = positionMm;
+  const lines = [
+    [[x2 - 2, y2 - 3.5], [x2, y2]],
+    [[x2, y2], [x2 + 4, y2 - 7]],
+    [[x2 + 4, y2 - 7], [x2 + 14, y2 - 7]]
+  ];
+  if (process2 === "machined") lines.push([[x2 - 2, y2 - 3.5], [x2 + 2, y2 - 3.5]]);
+  else if (process2 === "unmachined") lines.push(...circleChords([x2, y2 - 2.3], 1.1));
+  if (leaderMm) lines.push([[x2, y2], leaderMm], ...arrowhead(leaderMm, [x2, y2]));
+  return { id: id2, symbol: "surface-texture", text: `Ra ${ra}`, textAlign: "left", positionMm: [x2 + 4.5, y2 - 8], lines };
+}
+function buildWeldSymbol(id2, weldType, size, allAround, positionMm, leaderMm) {
+  const [x2, y2] = positionMm;
+  const lines = [
+    [leaderMm, [x2, y2]],
+    [[x2, y2], [x2 + 18, y2]],
+    ...arrowhead(leaderMm, [x2, y2])
+  ];
+  if (allAround) lines.push(...circleChords([x2, y2], 1.5));
+  if (weldType === "fillet") {
+    lines.push([[x2 + 6, y2], [x2 + 6, y2 + 3.5]], [[x2 + 6, y2 + 3.5], [x2 + 10, y2]]);
+  } else if (weldType === "spot") {
+    lines.push(...circleChords([x2 + 8, y2], 1.4));
+  }
+  const text2 = size ? `${size} ${weldType.toUpperCase()}` : weldType.toUpperCase();
+  return { id: id2, symbol: "weld-symbol", text: text2, textAlign: "left", positionMm: [x2 + 2, y2 - 1.5], lines };
+}
+function buildRevisionTag(id2, revision, positionMm) {
+  const [x2, y2] = positionMm;
+  const r = 4.2;
+  const top = [x2, y2 - r];
+  const left = [x2 - r * 0.9, y2 + r * 0.65];
+  const right = [x2 + r * 0.9, y2 + r * 0.65];
+  return {
+    id: id2,
+    symbol: "revision-tag",
+    text: revision,
+    textAlign: "center",
+    positionMm: [x2, y2 + 1.5],
+    lines: [[top, right], [right, left], [left, top]]
+  };
+}
+const drawingOrientations = ["front", "back", "top", "bottom", "left", "right", "isometric"];
+const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"];
+const drawingV6AnnotationKinds = ["ordinate", "centerline", "leader-note", "hole-callout", "chamfer-note", "gdt", "datum", "surface-texture", "weld-symbol", "revision-tag"];
+function object(value2) {
+  if (!value2 || typeof value2 !== "object" || Array.isArray(value2)) throw Error("Expected a drawing object.");
+}
+function text(value2) {
+  if (typeof value2 !== "string" || !value2.trim() || value2.length > 1e3) throw Error("Drawing names and IDs must contain 1–1000 characters.");
+}
+function number(value2, min, max2) {
+  if (typeof value2 !== "number" || !Number.isFinite(value2) || value2 < min || value2 > max2) throw Error(`Drawing value must be between ${min} and ${max2}.`);
+}
+function point(value2) {
+  if (!Array.isArray(value2) || value2.length !== 2) throw Error("Drawing positions need two millimeter coordinates.");
+  value2.forEach((v2) => number(v2, -1e5, 1e5));
+}
+function list(value2, limit) {
+  if (!Array.isArray(value2) || value2.length > limit) throw Error(`Drawing list exceeds ${limit} entries or is not an array.`);
+}
+function direction$1(value2) {
+  if (!Array.isArray(value2) || value2.length !== 3) throw Error("A view direction needs three model coordinates.");
+  value2.forEach((v2) => number(v2, -1e6, 1e6));
+  if (Math.hypot(...value2) < 1e-9) throw Error("A view direction cannot be zero.");
+}
+function atLeast(value2, version2, what) {
+  if (value2 < version2) throw Error(`${what} require Drawing format version ${version2}.`);
+}
+function validateDrawingDocument(value2) {
+  object(value2);
+  if (value2.format !== "aether-drawing" || ![1, 2, 3, 4, 5, 6].includes(value2.formatVersion)) throw Error("Unsupported Drawing file format or version.");
+  text(value2.documentId);
+  text(value2.name);
+  text(value2.activeSheetId);
+  validatePartDocument(value2.source);
+  if (value2.sourceReference !== void 0) {
+    const ref = value2.sourceReference;
+    object(ref);
+    text(ref.fileId);
+    if (Object.keys(ref).some((key2) => !["fileId", "partId", "branch", "revision"].includes(key2))) throw Error("Unknown drawing source reference field.");
+    if (ref.partId !== void 0) text(ref.partId);
+    if (ref.branch !== void 0) text(ref.branch);
+    if (ref.revision !== void 0) {
+      number(ref.revision, 1, Number.MAX_SAFE_INTEGER);
+      if (!Number.isSafeInteger(ref.revision)) throw Error("Source revision must be an integer.");
+    }
+  }
+  list(value2.sheets, 100);
+  const ids2 = /* @__PURE__ */ new Set();
+  let totalViews = 0;
+  const id2 = (value22) => {
+    text(value22);
+    if (ids2.has(value22)) throw Error(`Duplicate drawing ID: ${value22}`);
+    ids2.add(value22);
+  };
+  id2(value2.documentId);
+  for (const sheet of value2.sheets) {
+    object(sheet);
+    id2(sheet.id);
+    text(sheet.name);
+    number(sheet.widthMm, 25, 2e3);
+    number(sheet.heightMm, 25, 2e3);
+    if (!["first_angle", "third_angle"].includes(sheet.projection)) throw Error("Choose first-angle or third-angle projection.");
+    list(sheet.views, 100);
+    list(sheet.annotations, 1e3);
+    if (sheet.titleBlock !== void 0) {
+      atLeast(value2.formatVersion, 4, "Title-block fields");
+      list(sheet.titleBlock, 12);
+      for (const row of sheet.titleBlock) {
+        object(row);
+        text(row.label);
+        if (typeof row.value !== "string" || row.value.length > 200) throw Error("Title-block values are strings of at most 200 characters.");
+        if (Object.keys(row).length !== 2) throw Error("Title-block rows have a label and a value only.");
+      }
+    }
+    if (sheet.partsList !== void 0) {
+      atLeast(value2.formatVersion, 4, "Parts lists");
+      object(sheet.partsList);
+      point(sheet.partsList.originMm);
+      if (sheet.partsList.widthMm !== void 0) number(sheet.partsList.widthMm, 40, 400);
+      if (Object.keys(sheet.partsList).some((key2) => !["originMm", "widthMm"].includes(key2))) throw Error("Unknown parts-list field.");
+    }
+    if (sheet.revisions !== void 0) {
+      atLeast(value2.formatVersion, 6, "Revision tables");
+      list(sheet.revisions, 100);
+      for (const row of sheet.revisions) {
+        object(row);
+        text(row.rev);
+        text(row.description);
+        text(row.date);
+        if (row.author !== void 0 && (typeof row.author !== "string" || row.author.length > 200)) throw Error("Revision author must be a string.");
+      }
+    }
+    if (sheet.revisionTable !== void 0) {
+      atLeast(value2.formatVersion, 6, "Revision tables");
+      object(sheet.revisionTable);
+      point(sheet.revisionTable.originMm);
+      if (sheet.revisionTable.widthMm !== void 0) number(sheet.revisionTable.widthMm, 40, 400);
+      if (Object.keys(sheet.revisionTable).some((key2) => !["originMm", "widthMm"].includes(key2))) throw Error("Unknown revision-table field.");
+    }
+    totalViews += sheet.views.length;
+    if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
+    const views = /* @__PURE__ */ new Map();
+    for (const view of sheet.views) {
+      object(view);
+      id2(view.id);
+      text(view.name);
+      point(view.originMm);
+      number(view.scale, 1e-3, 1e3);
+      if (!drawingOrientations.includes(view.orientation)) throw Error("Unknown drawing view orientation.");
+      if (typeof view.hiddenLines !== "boolean") throw Error("Hidden-line visibility must be a boolean.");
+      if (view.parentId !== void 0) text(view.parentId);
+      if (view.bodyIds !== void 0) {
+        list(view.bodyIds, 500);
+        view.bodyIds.forEach(text);
+        if (!view.bodyIds.length || new Set(view.bodyIds).size !== view.bodyIds.length) throw Error("Choose distinct drawing bodies.");
+      }
+      if (view.direction != null) {
+        atLeast(value2.formatVersion, 4, "Auxiliary views");
+        direction$1(view.direction);
+        if (view.parentId || view.section != null || view.detail != null) throw Error("An auxiliary view is an independent view without a section.");
+      }
+      if (view.detail != null) {
+        atLeast(value2.formatVersion, 4, "Detail views");
+        object(view.detail);
+        if (Object.keys(view.detail).some((key2) => !["parentId", "centerMm", "radiusMm", "label"].includes(key2))) throw Error("Unknown detail property.");
+        text(view.detail.parentId);
+        point(view.detail.centerMm);
+        number(view.detail.radiusMm, 1, 1e3);
+        text(view.detail.label);
+        if (view.parentId || view.section != null) throw Error("A detail view enlarges another view; it has no projection parent or section of its own.");
+      }
+      if (view.section != null) {
+        atLeast(value2.formatVersion, 2, "Section views");
+        object(view.section);
+        if (Object.keys(view.section).some((key2) => !["offsetMm", "hatchSpacingMm"].includes(key2))) throw Error("Unknown section property.");
+        number(view.section.offsetMm, -1e5, 1e5);
+        if (view.section.hatchSpacingMm !== void 0) number(view.section.hatchSpacingMm, 0.5, 10);
+        if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
+      }
+      if (view.flatPattern !== void 0) {
+        if (typeof view.flatPattern !== "boolean") throw Error("Flat-pattern flag must be boolean.");
+        if (view.flatPattern) {
+          atLeast(value2.formatVersion, 6, "Flat-pattern views");
+          if (view.parentId || view.section != null || view.detail != null || view.direction != null) {
+            throw Error("A flat-pattern view must be an independent base view.");
+          }
+        }
+      }
+      views.set(view.id, view);
+    }
+    for (const view of views.values()) if (view.detail) {
+      const parent = views.get(view.detail.parentId);
+      if (!parent || parent.detail) throw Error("A detail view must reference a non-detail view on the same sheet.");
+    }
+    for (const view of views.values()) if (view.parentId) {
+      const parent = views.get(view.parentId);
+      if (!parent || parent.parentId || parent.section || parent.orientation !== "front" || !["top", "bottom", "left", "right"].includes(view.orientation)) {
+        throw Error("A projected view must reference a base front view on the same sheet.");
+      }
+    }
+    for (const annotation of sheet.annotations) {
+      object(annotation);
+      id2(annotation.id);
+      point(annotation.positionMm);
+      if (annotation.kind === "note") text(annotation.text);
+      else if (annotation.kind === "balloon") {
+        atLeast(value2.formatVersion, 4, "Balloons");
+        text(annotation.text);
+        point(annotation.leaderMm);
+      } else if (annotation.kind === "center-mark") {
+        atLeast(value2.formatVersion, 4, "Centre marks");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The centre mark's view does not exist.");
+        point(annotation.atMm);
+      } else if (drawingDimensionKinds.includes(annotation.kind)) {
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
+        number(annotation.decimals, 0, 6);
+        if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.toleranceUpperMm !== void 0 || annotation.toleranceLowerMm !== void 0 || annotation.overrideText !== void 0) {
+          atLeast(value2.formatVersion, 6, "Dimension tolerances and overrides");
+          if (annotation.toleranceUpperMm !== void 0) number(annotation.toleranceUpperMm, -1e3, 1e3);
+          if (annotation.toleranceLowerMm !== void 0) number(annotation.toleranceLowerMm, -1e3, 1e3);
+          if (annotation.overrideText !== void 0) text(annotation.overrideText);
+        }
+        if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
+          atLeast(value2.formatVersion, 5, "Point dimensions");
+          list(annotation.pointsMm, 3);
+          if (annotation.pointsMm.length !== (annotation.kind === "point-angle" ? 3 : 2)) throw Error("Choose two distance points or three angle points.");
+          annotation.pointsMm.forEach(point);
+          if (annotation.axis !== void 0 && (annotation.kind === "point-angle" || !["x", "y"].includes(annotation.axis))) throw Error("Point distance axis must be x or y; point angles have no axis.");
+        } else if (annotation.kind === "length") {
+          atLeast(value2.formatVersion, 4, "Edge length dimensions");
+          point(annotation.atMm);
+        } else if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle") {
+          atLeast(value2.formatVersion, 3, "Diameter, radius and angle dimensions");
+          point(annotation.atMm);
+          if (annotation.kind === "angle") point(annotation.toMm);
+        }
+      } else if (annotation.kind === "ordinate") {
+        atLeast(value2.formatVersion, 6, "Ordinate dimensions");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The ordinate dimension's view does not exist.");
+        if (!["x", "y"].includes(annotation.axis)) throw Error("Ordinate axis must be x or y.");
+        point(annotation.datumMm);
+        point(annotation.targetMm);
+        number(annotation.decimals, 0, 6);
+        if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.toleranceUpperMm !== void 0) number(annotation.toleranceUpperMm, -1e3, 1e3);
+        if (annotation.toleranceLowerMm !== void 0) number(annotation.toleranceLowerMm, -1e3, 1e3);
+        if (annotation.overrideText !== void 0) text(annotation.overrideText);
+      } else if (annotation.kind === "centerline") {
+        atLeast(value2.formatVersion, 6, "Centerlines");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The centerline's view does not exist.");
+        point(annotation.startMm);
+        point(annotation.endMm);
+      } else if (annotation.kind === "leader-note") {
+        atLeast(value2.formatVersion, 6, "Leader notes");
+        text(annotation.text);
+        list(annotation.leaderPointsMm, 16);
+        if (!annotation.leaderPointsMm.length) throw Error("Leader notes require at least one leader point.");
+        annotation.leaderPointsMm.forEach(point);
+        if (annotation.viewId !== void 0) {
+          text(annotation.viewId);
+          if (!views.has(annotation.viewId)) throw Error("The leader note's view does not exist.");
+        }
+      } else if (annotation.kind === "hole-callout") {
+        atLeast(value2.formatVersion, 6, "Hole callouts");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The hole callout's view does not exist.");
+        point(annotation.atMm);
+        number(annotation.decimals, 0, 6);
+        if (!Number.isInteger(annotation.decimals)) throw Error("Hole callout precision must be an integer.");
+        if (annotation.text !== void 0) text(annotation.text);
+      } else if (annotation.kind === "chamfer-note") {
+        atLeast(value2.formatVersion, 6, "Chamfer notes");
+        text(annotation.viewId);
+        if (!views.has(annotation.viewId)) throw Error("The chamfer note's view does not exist.");
+        point(annotation.atMm);
+        text(annotation.text);
+      } else if (annotation.kind === "gdt") {
+        atLeast(value2.formatVersion, 6, "GD&T feature control frames");
+        if (typeof annotation.characteristic !== "string" || !(annotation.characteristic in gdtCharacteristicCodes)) throw Error("Unknown GD&T characteristic.");
+        text(annotation.tolerance);
+        if (annotation.datums !== void 0) {
+          list(annotation.datums, 6);
+          annotation.datums.forEach(text);
+        }
+        if (annotation.leaderMm !== void 0) point(annotation.leaderMm);
+        if (annotation.viewId !== void 0) {
+          text(annotation.viewId);
+          if (!views.has(annotation.viewId)) throw Error("The GD&T frame's view does not exist.");
+        }
+      } else if (annotation.kind === "datum") {
+        atLeast(value2.formatVersion, 6, "Datum symbols");
+        text(annotation.label);
+        point(annotation.leaderMm);
+        if (annotation.viewId !== void 0) {
+          text(annotation.viewId);
+          if (!views.has(annotation.viewId)) throw Error("The datum's view does not exist.");
+        }
+      } else if (annotation.kind === "surface-texture") {
+        atLeast(value2.formatVersion, 6, "Surface texture symbols");
+        text(annotation.ra);
+        if (annotation.process !== void 0 && !["machined", "unmachined", "any"].includes(annotation.process)) throw Error("Unknown surface texture process.");
+        if (annotation.leaderMm !== void 0) point(annotation.leaderMm);
+        if (annotation.viewId !== void 0) {
+          text(annotation.viewId);
+          if (!views.has(annotation.viewId)) throw Error("The surface texture's view does not exist.");
+        }
+      } else if (annotation.kind === "weld-symbol") {
+        atLeast(value2.formatVersion, 6, "Weld symbols");
+        if (!["fillet", "butt", "groove", "plug", "spot"].includes(annotation.weldType)) throw Error("Unknown weld symbol type.");
+        if (annotation.size !== void 0) text(annotation.size);
+        if (annotation.allAround !== void 0 && typeof annotation.allAround !== "boolean") throw Error("Weld allAround must be boolean.");
+        point(annotation.leaderMm);
+        if (annotation.viewId !== void 0) {
+          text(annotation.viewId);
+          if (!views.has(annotation.viewId)) throw Error("The weld symbol's view does not exist.");
+        }
+      } else if (annotation.kind === "revision-tag") {
+        atLeast(value2.formatVersion, 6, "Revision tags");
+        text(annotation.revision);
+      } else throw Error("Unsupported drawing annotation.");
+    }
+  }
+  if (!value2.sheets.some((s) => s.id === value2.activeSheetId)) throw Error("The active drawing sheet does not exist.");
+}
+function createDrawingDocument(source, id2 = crypto.randomUUID()) {
+  const doc = {
+    format: "aether-drawing",
+    formatVersion: 1,
+    documentId: id2,
+    name: `${source.name} Drawing`,
+    source: structuredClone(source),
+    activeSheetId: `${id2}/sheet1`,
+    sheets: [{ id: `${id2}/sheet1`, name: "Sheet 1", widthMm: 297, heightMm: 210, projection: "third_angle", views: [], annotations: [] }]
+  };
+  validateDrawingDocument(doc);
+  return doc;
+}
+function serializeDrawingDocument(doc) {
+  validateDrawingDocument(doc);
+  return JSON.stringify(doc, null, 2);
+}
+function parseDrawingDocument(source) {
+  if (source.length > 32 * 1024 * 1024) throw Error("Drawing file exceeds 32 MiB.");
+  const doc = JSON.parse(source);
+  validateDrawingDocument(doc);
+  return doc;
+}
+function applyDrawingCommand(source, command) {
+  validateDrawingDocument(source);
+  const doc = structuredClone(source);
+  if (command.type === "refresh-source") {
+    if (command.source.documentId !== doc.source.documentId) throw Error("Refresh requires the same source Part document.");
+    doc.source = structuredClone(command.source);
+  } else if (command.type === "add-sheet") {
+    doc.sheets.push(structuredClone(command.sheet));
+    doc.activeSheetId = command.sheet.id;
+  } else if (command.type === "reorder-sheets") {
+    if (command.sheetIds.length !== doc.sheets.length || new Set(command.sheetIds).size !== command.sheetIds.length)
+      throw Error("Provide every existing sheet ID once to reorder sheets.");
+    const byId = new Map(doc.sheets.map((s) => [s.id, s]));
+    doc.sheets = command.sheetIds.map((id2) => {
+      const found = byId.get(id2);
+      if (!found) throw Error(`Unknown sheet ID "${id2}".`);
+      return found;
+    });
+  } else {
+    const sheet = doc.sheets.find((s) => s.id === command.sheetId);
+    if (!sheet) throw Error("Drawing sheet does not exist.");
+    switch (command.type) {
+      case "select-sheet":
+        doc.activeSheetId = sheet.id;
+        break;
+      case "remove-sheet": {
+        if (doc.sheets.length === 1) throw Error("Keep at least one drawing sheet.");
+        doc.sheets = doc.sheets.filter((s) => s.id !== sheet.id);
+        if (doc.activeSheetId === sheet.id) doc.activeSheetId = doc.sheets[0].id;
+        break;
+      }
+      case "update-sheet":
+        for (const key2 of ["name", "widthMm", "heightMm", "projection", "titleBlock"]) if (command[key2] !== void 0) Object.assign(sheet, { [key2]: command[key2] });
+        if (command.partsList === null) delete sheet.partsList;
+        else if (command.partsList !== void 0) sheet.partsList = command.partsList;
+        if (command.revisions === null) delete sheet.revisions;
+        else if (command.revisions !== void 0) sheet.revisions = structuredClone(command.revisions);
+        if (command.revisionTable === null) delete sheet.revisionTable;
+        else if (command.revisionTable !== void 0) sheet.revisionTable = structuredClone(command.revisionTable);
+        break;
+      case "add-view":
+        sheet.views.push(structuredClone(command.view));
+        break;
+      case "update-view": {
+        const view = sheet.views.find((v2) => v2.id === command.viewId);
+        if (!view) throw Error("Drawing view does not exist.");
+        if (Object.keys(command.changes).some((key2) => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section", "direction", "detail", "flatPattern"].includes(key2))) throw Error("Unknown drawing view property.");
+        Object.assign(view, structuredClone(command.changes));
+        break;
+      }
+      case "remove-view": {
+        if (!sheet.views.some((v2) => v2.id === command.viewId)) throw Error("Drawing view does not exist.");
+        if (sheet.views.some((v2) => v2.parentId === command.viewId || v2.detail?.parentId === command.viewId) || sheet.annotations.some((a2) => "viewId" in a2 && a2.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
+        sheet.views = sheet.views.filter((v2) => v2.id !== command.viewId);
+        break;
+      }
+      case "add-dimension-chain":
+        sheet.annotations.push(...structuredClone(dimensionChainAnnotations(command.chain)));
+        break;
+      case "add-annotation":
+        sheet.annotations.push(structuredClone(command.annotation));
+        break;
+      case "update-annotation": {
+        const index2 = sheet.annotations.findIndex((a2) => a2.id === command.annotation.id);
+        if (index2 < 0) throw Error("Drawing annotation does not exist.");
+        sheet.annotations[index2] = structuredClone(command.annotation);
+        break;
+      }
+      case "remove-annotation": {
+        if (!sheet.annotations.some((a2) => a2.id === command.annotationId)) throw Error("Drawing annotation does not exist.");
+        sheet.annotations = sheet.annotations.filter((a2) => a2.id !== command.annotationId);
+        break;
+      }
+      default:
+        throw Error("Unknown drawing command.");
+    }
+  }
+  const previousVersion = doc.formatVersion;
+  const usesV6 = doc.sheets.some(
+    (sheet) => sheet.revisions !== void 0 || sheet.revisionTable !== void 0 || sheet.views.some((view) => view.flatPattern === true) || sheet.annotations.some(
+      (annotation) => drawingV6AnnotationKinds.includes(annotation.kind) || "toleranceUpperMm" in annotation && annotation.toleranceUpperMm !== void 0 || "toleranceLowerMm" in annotation && annotation.toleranceLowerMm !== void 0 || "overrideText" in annotation && annotation.overrideText !== void 0
+    )
+  );
+  if (usesV6) doc.formatVersion = 6;
+  else if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
+  else if (doc.sheets.some((sheet) => sheet.titleBlock || sheet.partsList || sheet.views.some((view) => view.direction || view.detail) || sheet.annotations.some((annotation) => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
+  else if (doc.sheets.some((sheet) => sheet.annotations.some((annotation) => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
+  else if (doc.sheets.some((sheet) => sheet.views.some((view) => view.section))) doc.formatVersion = 2;
+  doc.formatVersion = Math.max(previousVersion, doc.formatVersion);
+  validateDrawingDocument(doc);
+  return doc;
+}
+function resolvedDrawingView(sheet, view) {
+  if (view.detail) {
+    const parent2 = resolvedDrawingView(sheet, sheet.views.find((v2) => v2.id === view.detail.parentId));
+    return { ...view, orientation: parent2.orientation, bodyIds: parent2.bodyIds, section: parent2.section, direction: parent2.direction };
+  }
+  if (!view.parentId) return view;
+  const parent = sheet.views.find((v2) => v2.id === view.parentId);
+  const vertical = view.orientation === "top" || view.orientation === "bottom";
+  const negative = view.orientation === "top" || view.orientation === "left";
+  const sign = (negative ? -1 : 1) * (sheet.projection === "third_angle" ? 1 : -1);
+  const distance2 = Math.max(10, Math.abs(view.originMm[vertical ? 1 : 0] - parent.originMm[vertical ? 1 : 0]));
+  return {
+    ...view,
+    scale: parent.scale,
+    bodyIds: parent.bodyIds,
+    originMm: vertical ? [parent.originMm[0], parent.originMm[1] + sign * distance2] : [parent.originMm[0] + sign * distance2, parent.originMm[1]]
+  };
+}
+function revisionTableGrid(revisions, originMm, widthMm = 120) {
+  const columns = ["Rev", "Description", "Date", "Author"];
+  const [x2, y2] = originMm;
+  const rows = revisions.length + 1;
+  const h = 5 * rows;
+  const colWidths = [widthMm * 0.14, widthMm * 0.48, widthMm * 0.2, widthMm * 0.18];
+  const lines = [
+    [x2, y2, x2 + widthMm, y2],
+    [x2 + widthMm, y2, x2 + widthMm, y2 + h],
+    [x2 + widthMm, y2 + h, x2, y2 + h],
+    [x2, y2 + h, x2, y2]
+  ];
+  for (let r = 1; r < rows; r++) lines.push([x2, y2 + 5 * r, x2 + widthMm, y2 + 5 * r]);
+  let cx2 = x2;
+  const colX = [x2];
+  for (let c2 = 0; c2 < columns.length - 1; c2++) {
+    cx2 += colWidths[c2];
+    colX.push(cx2);
+    lines.push([cx2, y2, cx2, y2 + h]);
+  }
+  const texts = columns.map((label, c2) => ({
+    x: colX[c2] + 1,
+    y: y2 + 3.6,
+    text: label,
+    bold: true
+  }));
+  revisions.forEach((rev, r) => {
+    const vals = [rev.rev, rev.description, rev.date, rev.author ?? ""];
+    vals.forEach((val, c2) => texts.push({ x: colX[c2] + 1, y: y2 + 5 * (r + 1) + 3.6, text: val, bold: false }));
+  });
+  return { lines, texts };
+}
 const xml = (text2) => text2.replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[c2]);
 function titleBlockRows(sheet) {
   if (!sheet.titleBlock?.length) return null;
@@ -48479,7 +54607,7 @@ const sheetOf = (drawing, id2) => {
   return sheet;
 };
 function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
-  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList, revisionTable } = sheetOf(drawing, sheetId);
   const elements = [`<title>${xml(drawing.document.name)} — ${xml(sheet.name)}</title>`, `<rect width="100%" height="100%" fill="white"/>`, `<rect x="10" y="10" width="${sheet.widthMm - 20}" height="${sheet.heightMm - 20}" fill="none" stroke="#222" stroke-width="0.35"/>`];
   for (const view of views) {
     for (const curve of view.geometry.hatch ?? []) elements.push(`<path data-layer="hatch" d="${drawingCurvePath(curve, view)}" fill="none" stroke="#222" stroke-width="0.15"/>`);
@@ -48497,6 +54625,11 @@ function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
     grid.lines.forEach(([x0, y0, x1, y1]) => elements.push(`<line data-layer="parts-list" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#222" stroke-width="0.25"/>`));
     grid.texts.forEach((t2) => elements.push(`<text x="${t2.x}" y="${t2.y}" font-size="2.8"${t2.bold ? ' font-weight="700"' : ""}>${xml(t2.text)}</text>`));
   }
+  if (revisionTable) {
+    const grid = revisionTableGrid(revisionTable.revisions, revisionTable.originMm, revisionTable.widthMm);
+    grid.lines.forEach(([x0, y0, x1, y1]) => elements.push(`<line data-layer="revision-table" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#222" stroke-width="0.25"/>`));
+    grid.texts.forEach((t2) => elements.push(`<text x="${t2.x}" y="${t2.y}" font-size="2.8"${t2.bold ? ' font-weight="700"' : ""}>${xml(t2.text)}</text>`));
+  }
   const block = titleBlockRows(sheet);
   if (block) {
     elements.push(`<rect x="${block.x}" y="${block.y}" width="${block.width}" height="${block.height}" fill="none" stroke="#222" stroke-width="0.3"/>`);
@@ -48506,7 +54639,7 @@ function exportDrawingSVG(drawing, sheetId = drawing.document.activeSheetId) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.widthMm}mm" height="${sheet.heightMm}mm" viewBox="0 0 ${sheet.widthMm} ${sheet.heightMm}" font-family="sans-serif">${elements.join("\n")}</svg>`;
 }
 function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
-  const { sheet, views, annotations, partsList } = sheetOf(drawing, sheetId);
+  const { sheet, views, annotations, partsList, revisionTable } = sheetOf(drawing, sheetId);
   const out = [0, "SECTION", 2, "HEADER", 9, "$ACADVER", 1, "AC1015", 9, "$INSUNITS", 70, 4, 0, "ENDSEC", 0, "SECTION", 2, "TABLES", 0, "TABLE", 2, "LTYPE", 70, 2, 0, "LTYPE", 2, "CONTINUOUS", 70, 0, 3, "Solid", 72, 65, 73, 0, 40, 0, 0, "LTYPE", 2, "HIDDEN", 70, 0, 3, "Hidden", 72, 65, 73, 2, 40, 5, 49, 3, 74, 0, 49, -2, 74, 0, 0, "ENDTAB", 0, "ENDSEC", 0, "SECTION", 2, "ENTITIES"];
   const line2 = (a2, b, hidden = false, layer = hidden ? "HIDDEN" : "VISIBLE") => out.push(0, "LINE", 100, "AcDbEntity", 8, layer, 6, hidden ? "HIDDEN" : "CONTINUOUS", 100, "AcDbLine", 10, a2[0], 20, sheet.heightMm - a2[1], 30, 0, 11, b[0], 21, sheet.heightMm - b[1], 31, 0);
   const text2 = (value2, position, align = "left") => {
@@ -48553,6 +54686,11 @@ function exportDrawingDXF(drawing, sheetId = drawing.document.activeSheetId) {
   if (partsList) {
     const grid = partsListGrid(partsList);
     grid.lines.forEach(([x0, y0, x1, y1]) => line2([x0, y0], [x1, y1], false, "PARTS_LIST"));
+    grid.texts.forEach((t2) => text2(t2.text, [t2.x, t2.y]));
+  }
+  if (revisionTable) {
+    const grid = revisionTableGrid(revisionTable.revisions, revisionTable.originMm, revisionTable.widthMm);
+    grid.lines.forEach(([x0, y0, x1, y1]) => line2([x0, y0], [x1, y1], false, "REVISION_TABLE"));
     grid.texts.forEach((t2) => text2(t2.text, [t2.x, t2.y]));
   }
   const block = titleBlockRows(sheet);
@@ -48632,6 +54770,11 @@ async function exportDrawingPDF(drawing, options) {
       grid.lines.forEach(([x0, y0, x1, y1]) => stroke2(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
       grid.texts.forEach((t2) => label(t2.text, t2.x, t2.y, 2.8));
     }
+    if (built.revisionTable) {
+      const grid = revisionTableGrid(built.revisionTable.revisions, built.revisionTable.originMm, built.revisionTable.widthMm);
+      grid.lines.forEach(([x0, y0, x1, y1]) => stroke2(`M ${x0} ${y0} L ${x1} ${y1}`, 0.25));
+      grid.texts.forEach((t2) => label(t2.text, t2.x, t2.y, 2.8));
+    }
     const block = titleBlockRows(sheet);
     if (block) {
       stroke2(`M ${block.x} ${block.y} L ${block.x + block.width} ${block.y} L ${block.x + block.width} ${block.y + block.height} L ${block.x} ${block.y + block.height} Z`, 0.3);
@@ -48691,9 +54834,9 @@ const drawingCommandDocs = {
   phase: "drawing",
   operations: ["create", "mutate", "inspect", "export"],
   content: "create: the source Part document JSON; other operations: the Drawing document JSON. Returned content is a complete drawing including its source snapshot.",
-  command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "add-view", "update-view", "remove-view", "add-annotation", "add-dimension-chain", "update-annotation", "remove-annotation", "refresh-source"],
+  command_types: ["add-sheet", "select-sheet", "update-sheet", "remove-sheet", "reorder-sheets", "add-view", "update-view", "remove-view", "add-annotation", "add-dimension-chain", "update-annotation", "remove-annotation", "refresh-source"],
   orientations: ["front", "back", "top", "bottom", "left", "right", "isometric"],
-  annotations: ["note", "width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle", "balloon", "center-mark"],
+  annotations: ["note", "width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle", "balloon", "center-mark", "ordinate", "centerline", "leader-note", "hole-callout", "chamfer-note", "gdt", "datum", "surface-texture", "weld-symbol", "revision-tag"],
   exports: ["svg", "dxf", "pdf"],
   rules: ["add-dimension-chain takes sheetId and chain:{id,viewId,pointsMm,positionMm,decimals,axis?}; 3–64 ordered points create consecutive independently editable dimensions in one transaction. axis is x or y, or omitted for aligned distances.", "Coordinates and paper sizes are millimeters; scale is paper/model.", "A projected view references an independent front view, inherits scale and follows its sheet's first/third-angle alignment.", "Overall width/height dimensions reference view IDs and measure model geometry, never page pixels.", "Refresh requires a Part with the same documentId. Build failure returns no changed content.", "An independent principal view can set section:{offsetMm,hatchSpacingMm?}. Offset is world X for left/right, Y for front/back or Z for top/bottom in model mm; nearer material is removed. Hatch spacing is paper mm (default 2). Sections require format 2. Clear with section:null. A section cannot be a projection parent.", "PDF returns data_base64 and mime_type; SVG/DXF return text. all_sheets:true exports PDF pages in document order and cannot be combined with sheet_id. PDF embeds the bundled Noto Sans font; unsupported glyphs are refused. Assembly sources are not implemented yet. Attached edge and point dimensions measure projected model geometry. Point-distance (two endpoint/centre picks) and point-angle (endpoint, vertex, endpoint) require Drawing format 5; ambiguous or missing picks are refused."]
 };
@@ -49009,16 +55152,16 @@ var Module = (() => {
       if (endPtr - idx2 > 16 && heapOrArray.buffer && UTF8Decoder) {
         return UTF8Decoder.decode(heapOrArray.subarray(idx2, endPtr));
       } else {
-        var str = "";
+        var str2 = "";
         while (idx2 < endPtr) {
           var u0 = heapOrArray[idx2++];
           if (!(u0 & 128)) {
-            str += String.fromCharCode(u0);
+            str2 += String.fromCharCode(u0);
             continue;
           }
           var u1 = heapOrArray[idx2++] & 63;
           if ((u0 & 224) == 192) {
-            str += String.fromCharCode((u0 & 31) << 6 | u1);
+            str2 += String.fromCharCode((u0 & 31) << 6 | u1);
             continue;
           }
           var u2 = heapOrArray[idx2++] & 63;
@@ -49028,28 +55171,28 @@ var Module = (() => {
             u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heapOrArray[idx2++] & 63;
           }
           if (u0 < 65536) {
-            str += String.fromCharCode(u0);
+            str2 += String.fromCharCode(u0);
           } else {
             var ch = u0 - 65536;
-            str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+            str2 += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
           }
         }
       }
-      return str;
+      return str2;
     }
     function UTF8ToString(ptr2, maxBytesToRead) {
       ptr2 >>>= 0;
       return ptr2 ? UTF8ArrayToString(HEAPU8, ptr2, maxBytesToRead) : "";
     }
-    function stringToUTF8Array(str, heap, outIdx, maxBytesToWrite) {
+    function stringToUTF8Array(str2, heap, outIdx, maxBytesToWrite) {
       outIdx >>>= 0;
       if (!(maxBytesToWrite > 0)) return 0;
       var startIdx = outIdx;
       var endIdx = outIdx + maxBytesToWrite - 1;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var u2 = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var u2 = str2.charCodeAt(i3);
         if (u2 >= 55296 && u2 <= 57343) {
-          var u1 = str.charCodeAt(++i3);
+          var u1 = str2.charCodeAt(++i3);
           u2 = 65536 + ((u2 & 1023) << 10) | u1 & 1023;
         }
         if (u2 <= 127) {
@@ -49075,14 +55218,14 @@ var Module = (() => {
       heap[outIdx >>> 0] = 0;
       return outIdx - startIdx;
     }
-    function stringToUTF8(str, outPtr, maxBytesToWrite) {
-      return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+    function stringToUTF8(str2, outPtr, maxBytesToWrite) {
+      return stringToUTF8Array(str2, HEAPU8, outPtr, maxBytesToWrite);
     }
-    function lengthBytesUTF8(str) {
+    function lengthBytesUTF8(str2) {
       var len3 = 0;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var u2 = str.charCodeAt(i3);
-        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str.charCodeAt(++i3) & 1023;
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var u2 = str2.charCodeAt(i3);
+        if (u2 >= 55296 && u2 <= 57343) u2 = 65536 + ((u2 & 1023) << 10) | str2.charCodeAt(++i3) & 1023;
         if (u2 <= 127) ++len3;
         else if (u2 <= 2047) len3 += 2;
         else if (u2 <= 65535) len3 += 3;
@@ -49100,51 +55243,51 @@ var Module = (() => {
       if (endPtr - ptr2 > 32 && UTF16Decoder) {
         return UTF16Decoder.decode(HEAPU8.subarray(ptr2 >>> 0, endPtr >>> 0));
       } else {
-        var str = "";
+        var str2 = "";
         for (var i3 = 0; !(i3 >= maxBytesToRead / 2); ++i3) {
           var codeUnit = HEAP16[ptr2 + i3 * 2 >>> 1];
           if (codeUnit == 0) break;
-          str += String.fromCharCode(codeUnit);
+          str2 += String.fromCharCode(codeUnit);
         }
-        return str;
+        return str2;
       }
     }
-    function stringToUTF16(str, outPtr, maxBytesToWrite) {
+    function stringToUTF16(str2, outPtr, maxBytesToWrite) {
       if (maxBytesToWrite === void 0) {
         maxBytesToWrite = 2147483647;
       }
       if (maxBytesToWrite < 2) return 0;
       maxBytesToWrite -= 2;
       var startPtr = outPtr;
-      var numCharsToWrite = maxBytesToWrite < str.length * 2 ? maxBytesToWrite / 2 : str.length;
+      var numCharsToWrite = maxBytesToWrite < str2.length * 2 ? maxBytesToWrite / 2 : str2.length;
       for (var i3 = 0; i3 < numCharsToWrite; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+        var codeUnit = str2.charCodeAt(i3);
         HEAP16[outPtr >>> 1] = codeUnit;
         outPtr += 2;
       }
       HEAP16[outPtr >>> 1] = 0;
       return outPtr - startPtr;
     }
-    function lengthBytesUTF16(str) {
-      return str.length * 2;
+    function lengthBytesUTF16(str2) {
+      return str2.length * 2;
     }
     function UTF32ToString(ptr2, maxBytesToRead) {
       var i3 = 0;
-      var str = "";
+      var str2 = "";
       while (!(i3 >= maxBytesToRead / 4)) {
         var utf32 = HEAP32[ptr2 + i3 * 4 >>> 2];
         if (utf32 == 0) break;
         ++i3;
         if (utf32 >= 65536) {
           var ch = utf32 - 65536;
-          str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+          str2 += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
         } else {
-          str += String.fromCharCode(utf32);
+          str2 += String.fromCharCode(utf32);
         }
       }
-      return str;
+      return str2;
     }
-    function stringToUTF32(str, outPtr, maxBytesToWrite) {
+    function stringToUTF32(str2, outPtr, maxBytesToWrite) {
       outPtr >>>= 0;
       if (maxBytesToWrite === void 0) {
         maxBytesToWrite = 2147483647;
@@ -49152,10 +55295,10 @@ var Module = (() => {
       if (maxBytesToWrite < 4) return 0;
       var startPtr = outPtr;
       var endPtr = startPtr + maxBytesToWrite - 4;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var codeUnit = str2.charCodeAt(i3);
         if (codeUnit >= 55296 && codeUnit <= 57343) {
-          var trailSurrogate = str.charCodeAt(++i3);
+          var trailSurrogate = str2.charCodeAt(++i3);
           codeUnit = 65536 + ((codeUnit & 1023) << 10) | trailSurrogate & 1023;
         }
         HEAP32[outPtr >>> 2] = codeUnit;
@@ -49165,27 +55308,27 @@ var Module = (() => {
       HEAP32[outPtr >>> 2] = 0;
       return outPtr - startPtr;
     }
-    function lengthBytesUTF32(str) {
+    function lengthBytesUTF32(str2) {
       var len3 = 0;
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        var codeUnit = str.charCodeAt(i3);
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        var codeUnit = str2.charCodeAt(i3);
         if (codeUnit >= 55296 && codeUnit <= 57343) ++i3;
         len3 += 4;
       }
       return len3;
     }
-    function allocateUTF8(str) {
-      var size = lengthBytesUTF8(str) + 1;
+    function allocateUTF8(str2) {
+      var size = lengthBytesUTF8(str2) + 1;
       var ret = _malloc(size);
-      if (ret) stringToUTF8Array(str, HEAP8, ret, size);
+      if (ret) stringToUTF8Array(str2, HEAP8, ret, size);
       return ret;
     }
     function writeArrayToMemory(array, buffer3) {
       HEAP8.set(array, buffer3 >>> 0);
     }
-    function writeAsciiToMemory(str, buffer3, dontAddNull) {
-      for (var i3 = 0; i3 < str.length; ++i3) {
-        HEAP8[buffer3++ >>> 0] = str.charCodeAt(i3);
+    function writeAsciiToMemory(str2, buffer3, dontAddNull) {
+      for (var i3 = 0; i3 < str2.length; ++i3) {
+        HEAP8[buffer3++ >>> 0] = str2.charCodeAt(i3);
       }
       HEAP8[buffer3 >>> 0] = 0;
     }
@@ -50310,10 +56453,10 @@ var Module = (() => {
       return (mode & 61440) === 4096;
     }, isSocket: (mode) => {
       return (mode & 49152) === 49152;
-    }, flagModes: { "r": 0, "r+": 2, "w": 577, "w+": 578, "a": 1089, "a+": 1090 }, modeStringToFlags: (str) => {
-      var flags2 = FS.flagModes[str];
+    }, flagModes: { "r": 0, "r+": 2, "w": 577, "w+": 578, "a": 1089, "a+": 1090 }, modeStringToFlags: (str2) => {
+      var flags2 = FS.flagModes[str2];
       if (typeof flags2 == "undefined") {
-        throw new Error("Unknown file open mode: " + str);
+        throw new Error("Unknown file open mode: " + str2);
       }
       return flags2;
     }, flagsToPermissionString: (flag2) => {
@@ -53042,7 +59185,7 @@ var Module = (() => {
       var stdStringIsUTF8 = name5 === "std::string";
       registerType(rawType, { name: name5, "fromWireType": function(value2) {
         var length = HEAPU32[value2 >>> 2];
-        var str;
+        var str2;
         if (stdStringIsUTF8) {
           var decodeStartPtr = value2 + 4;
           for (var i3 = 0; i3 <= length; ++i3) {
@@ -53050,11 +59193,11 @@ var Module = (() => {
             if (i3 == length || HEAPU8[currentBytePtr >>> 0] == 0) {
               var maxRead = currentBytePtr - decodeStartPtr;
               var stringSegment = UTF8ToString(decodeStartPtr, maxRead);
-              if (str === void 0) {
-                str = stringSegment;
+              if (str2 === void 0) {
+                str2 = stringSegment;
               } else {
-                str += String.fromCharCode(0);
-                str += stringSegment;
+                str2 += String.fromCharCode(0);
+                str2 += stringSegment;
               }
               decodeStartPtr = currentBytePtr + 1;
             }
@@ -53064,10 +59207,10 @@ var Module = (() => {
           for (var i3 = 0; i3 < length; ++i3) {
             a2[i3] = String.fromCharCode(HEAPU8[value2 + 4 + i3 >>> 0]);
           }
-          str = a2.join("");
+          str2 = a2.join("");
         }
         _free(value2);
-        return str;
+        return str2;
       }, "toWireType": function(destructors, value2) {
         if (value2 instanceof ArrayBuffer) {
           value2 = new Uint8Array(value2);
@@ -53131,24 +59274,24 @@ var Module = (() => {
       registerType(rawType, { name: name5, "fromWireType": function(value2) {
         var length = HEAPU32[value2 >>> 2];
         var HEAP = getHeap();
-        var str;
+        var str2;
         var decodeStartPtr = value2 + 4;
         for (var i3 = 0; i3 <= length; ++i3) {
           var currentBytePtr = value2 + 4 + i3 * charSize;
           if (i3 == length || HEAP[currentBytePtr >>> shift] == 0) {
             var maxReadBytes = currentBytePtr - decodeStartPtr;
             var stringSegment = decodeString(decodeStartPtr, maxReadBytes);
-            if (str === void 0) {
-              str = stringSegment;
+            if (str2 === void 0) {
+              str2 = stringSegment;
             } else {
-              str += String.fromCharCode(0);
-              str += stringSegment;
+              str2 += String.fromCharCode(0);
+              str2 += stringSegment;
             }
             decodeStartPtr = currentBytePtr + charSize;
           }
         }
         _free(value2);
-        return str;
+        return str2;
       }, "toWireType": function(destructors, value2) {
         if (!(typeof value2 == "string")) {
           throwBindingError("Cannot pass non-string to C++ string type " + name5);
@@ -54420,25 +60563,25 @@ var Module = (() => {
       }
       args.callee.toString();
       var funcname = args.callee.name;
-      var str = "(";
+      var str2 = "(";
       var first = true;
       for (var i3 in args) {
         var a2 = args[i3];
         if (!first) {
-          str += ", ";
+          str2 += ", ";
         }
         first = false;
         if (typeof a2 == "number" || typeof a2 == "string") {
-          str += a2;
+          str2 += a2;
         } else {
-          str += "(" + typeof a2 + ")";
+          str2 += "(" + typeof a2 + ")";
         }
       }
-      str += ")";
+      str2 += ")";
       var caller = args.callee.caller;
       args = caller ? caller.arguments : [];
-      if (first) str = "";
-      return [args, funcname, str];
+      if (first) str2 = "";
+      return [args, funcname, str2];
     }
     function _emscripten_get_callstack_js(flags2) {
       var callstack = jsStackTrace();
@@ -54517,12 +60660,12 @@ var Module = (() => {
       callstack = callstack.replace(/\s+$/, "");
       return callstack;
     }
-    function _emscripten_get_callstack(flags2, str, maxbytes) {
+    function _emscripten_get_callstack(flags2, str2, maxbytes) {
       var callstack = _emscripten_get_callstack_js(flags2);
-      if (!str || maxbytes <= 0) {
+      if (!str2 || maxbytes <= 0) {
         return lengthBytesUTF8(callstack) + 1;
       }
-      var bytesWrittenExcludingNull = stringToUTF8(callstack, str, maxbytes);
+      var bytesWrittenExcludingNull = stringToUTF8(callstack, str2, maxbytes);
       return bytesWrittenExcludingNull + 1;
     }
     var JSEvents2 = { inEventHandler: 0, removeAllEventListeners: function() {
@@ -54977,9 +61120,9 @@ var Module = (() => {
     function _emscripten_glGetAttribLocation(program, name5) {
       return GLctx.getAttribLocation(GL.programs[program], UTF8ToString(name5));
     }
-    function writeI53ToI64(ptr2, num) {
-      HEAPU32[ptr2 >>> 2] = num;
-      HEAPU32[ptr2 + 4 >>> 2] = (num - HEAPU32[ptr2 >>> 2]) / 4294967296;
+    function writeI53ToI64(ptr2, num2) {
+      HEAPU32[ptr2 >>> 2] = num2;
+      HEAPU32[ptr2 + 4 >>> 2] = (num2 - HEAPU32[ptr2 >>> 2]) / 4294967296;
     }
     function emscriptenWebGLGet(name_, p2, type) {
       if (!p2) {
@@ -55335,8 +61478,8 @@ var Module = (() => {
       }
       HEAP32[params >>> 2] = GLctx.getTexParameter(target, pname);
     }
-    function jstoi_q(str) {
-      return parseInt(str);
+    function jstoi_q(str2) {
+      return parseInt(str2);
     }
     function webglGetLeftBracePos(name5) {
       return name5.slice(-1) == "]" && name5.lastIndexOf("[");
@@ -55879,8 +62022,8 @@ var Module = (() => {
     function _emscripten_glViewport(x0, x1, x2, x3) {
       GLctx["viewport"](x0, x1, x2, x3);
     }
-    function _emscripten_memcpy_big(dest, src2, num) {
-      HEAPU8.copyWithin(dest >>> 0, src2 >>> 0, src2 + num >>> 0);
+    function _emscripten_memcpy_big(dest, src2, num2) {
+      HEAPU8.copyWithin(dest >>> 0, src2 >>> 0, src2 + num2 >>> 0);
     }
     function emscripten_realloc_buffer(size) {
       try {
@@ -56039,8 +62182,8 @@ var Module = (() => {
     function _fd_read(fd, iov, iovcnt, pnum) {
       try {
         var stream2 = SYSCALLS.getStreamFromFD(fd);
-        var num = doReadv(stream2, iov, iovcnt);
-        HEAP32[pnum >>> 2] = num;
+        var num2 = doReadv(stream2, iov, iovcnt);
+        HEAP32[pnum >>> 2] = num2;
         return 0;
       } catch (e) {
         if (typeof FS == "undefined" || !(e instanceof FS.ErrnoError)) throw e;
@@ -56079,8 +62222,8 @@ var Module = (() => {
     function _fd_write(fd, iov, iovcnt, pnum) {
       try {
         var stream2 = SYSCALLS.getStreamFromFD(fd);
-        var num = doWritev(stream2, iov, iovcnt);
-        HEAPU32[pnum >>> 2] = num;
+        var num2 = doWritev(stream2, iov, iovcnt);
+        HEAPU32[pnum >>> 2] = num2;
         return 0;
       } catch (e) {
         if (typeof FS == "undefined" || !(e instanceof FS.ErrnoError)) throw e;
@@ -56090,8 +62233,8 @@ var Module = (() => {
     function _getTempRet0() {
       return getTempRet0();
     }
-    function inetPton4(str) {
-      var b = str.split(".");
+    function inetPton4(str2) {
+      var b = str2.split(".");
       for (var i3 = 0; i3 < 4; i3++) {
         var tmp = Number(b[i3]);
         if (isNaN(tmp)) return null;
@@ -56099,30 +62242,30 @@ var Module = (() => {
       }
       return (b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24) >>> 0;
     }
-    function inetPton6(str) {
+    function inetPton6(str2) {
       var words;
       var w2, offset2, z2;
       var valid6regx = /^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$/i;
       var parts = [];
-      if (!valid6regx.test(str)) {
+      if (!valid6regx.test(str2)) {
         return null;
       }
-      if (str === "::") {
+      if (str2 === "::") {
         return [0, 0, 0, 0, 0, 0, 0, 0];
       }
-      if (str.startsWith("::")) {
-        str = str.replace("::", "Z:");
+      if (str2.startsWith("::")) {
+        str2 = str2.replace("::", "Z:");
       } else {
-        str = str.replace("::", ":Z:");
+        str2 = str2.replace("::", ":Z:");
       }
-      if (str.indexOf(".") > 0) {
-        str = str.replace(new RegExp("[.]", "g"), ":");
-        words = str.split(":");
+      if (str2.indexOf(".") > 0) {
+        str2 = str2.replace(new RegExp("[.]", "g"), ":");
+        words = str2.split(":");
         words[words.length - 4] = jstoi_q(words[words.length - 4]) + jstoi_q(words[words.length - 3]) * 256;
         words[words.length - 3] = jstoi_q(words[words.length - 2]) + jstoi_q(words[words.length - 1]) * 256;
         words = words.slice(0, words.length - 2);
       } else {
-        words = str.split(":");
+        words = str2.split(":");
       }
       offset2 = 0;
       z2 = 0;
@@ -57038,11 +63181,11 @@ var Module = (() => {
       var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       function leadingSomething(value2, digits, character) {
-        var str = typeof value2 == "number" ? value2.toString() : value2 || "";
-        while (str.length < digits) {
-          str = character[0] + str;
+        var str2 = typeof value2 == "number" ? value2.toString() : value2 || "";
+        while (str2.length < digits) {
+          str2 = character[0] + str2;
         }
-        return str;
+        return str2;
       }
       function leadingNulls(value2, digits) {
         return leadingSomething(value2, digits, "0");
@@ -64469,11 +70612,11 @@ var toCharCode = function(character) {
 var toCodePoint = function(character) {
   return character.codePointAt(0);
 };
-var toHexStringOfMinLength = function(num, minLength) {
-  return padStart$1(num.toString(16), minLength, "0").toUpperCase();
+var toHexStringOfMinLength = function(num2, minLength) {
+  return padStart$1(num2.toString(16), minLength, "0").toUpperCase();
 };
-var toHexString = function(num) {
-  return toHexStringOfMinLength(num, 2);
+var toHexString = function(num2) {
+  return toHexStringOfMinLength(num2, 2);
 };
 var charFromCode = function(code2) {
   return String.fromCharCode(code2);
@@ -64488,10 +70631,10 @@ var padStart$1 = function(value2, length, padChar) {
   }
   return padding + value2;
 };
-var copyStringIntoBuffer = function(str, buffer2, offset2) {
-  var length = str.length;
+var copyStringIntoBuffer = function(str2, buffer2, offset2) {
+  var length = str2.length;
   for (var idx2 = 0; idx2 < length; idx2++) {
-    buffer2[offset2++] = str.charCodeAt(idx2);
+    buffer2[offset2++] = str2.charCodeAt(idx2);
   }
   return length;
 };
@@ -64501,8 +70644,8 @@ var addRandomSuffix = function(prefix2, suffixLength) {
   }
   return prefix2 + "-" + Math.floor(Math.random() * Math.pow(10, suffixLength));
 };
-var escapeRegExp = function(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+var escapeRegExp = function(str2) {
+  return str2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 var cleanText = function(text2) {
   return text2.replace(/\t|\u0085|\u2028|\u2029/g, "    ").replace(/[\b\v]/g, "");
@@ -64659,11 +70802,11 @@ var mergeUint8Arrays = function(arrays) {
   return mergedBuffer;
 };
 var arrayAsString = function(array) {
-  var str = "";
+  var str2 = "";
   for (var idx2 = 0, len3 = array.length; idx2 < len3; idx2++) {
-    str += charFromCode(array[idx2]);
+    str2 += charFromCode(array[idx2]);
   }
-  return str;
+  return str2;
 };
 var byAscendingId = function(a2, b) {
   return a2.id - b.id;
@@ -64864,25 +71007,25 @@ var hasUtf16LittleEndianBOM = function(bytes) {
 var hasUtf16BOM = function(bytes) {
   return hasUtf16BigEndianBOM(bytes) || hasUtf16LittleEndianBOM(bytes);
 };
-var numberToString = function(num) {
-  var numStr = String(num);
-  if (Math.abs(num) < 1) {
-    var e = parseInt(num.toString().split("e-")[1]);
+var numberToString = function(num2) {
+  var numStr = String(num2);
+  if (Math.abs(num2) < 1) {
+    var e = parseInt(num2.toString().split("e-")[1]);
     if (e) {
-      var negative = num < 0;
+      var negative = num2 < 0;
       if (negative)
-        num *= -1;
-      num *= Math.pow(10, e - 1);
-      numStr = "0." + new Array(e).join("0") + num.toString().substring(2);
+        num2 *= -1;
+      num2 *= Math.pow(10, e - 1);
+      numStr = "0." + new Array(e).join("0") + num2.toString().substring(2);
       if (negative)
         numStr = "-" + numStr;
     }
   } else {
-    var e = parseInt(num.toString().split("+")[1]);
+    var e = parseInt(num2.toString().split("+")[1]);
     if (e > 20) {
       e -= 20;
-      num /= Math.pow(10, e);
-      numStr = num.toString() + new Array(e + 1).join("0");
+      num2 /= Math.pow(10, e);
+      numStr = num2.toString() + new Array(e + 1).join("0");
     }
   }
   return numStr;
@@ -65878,7 +72021,7 @@ function requireDeflate$1() {
   }
   function fill_window(s) {
     var _w_size = s.w_size;
-    var p2, n, m2, more, str;
+    var p2, n, m2, more, str2;
     do {
       more = s.window_size - s.lookahead - s.strstart;
       if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD)) {
@@ -65906,14 +72049,14 @@ function requireDeflate$1() {
       n = read_buf(s.strm, s.window, s.strstart + s.lookahead, more);
       s.lookahead += n;
       if (s.lookahead + s.insert >= MIN_MATCH) {
-        str = s.strstart - s.insert;
-        s.ins_h = s.window[str];
-        s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str + 1]) & s.hash_mask;
+        str2 = s.strstart - s.insert;
+        s.ins_h = s.window[str2];
+        s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + 1]) & s.hash_mask;
         while (s.insert) {
-          s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str + MIN_MATCH - 1]) & s.hash_mask;
-          s.prev[str & s.w_mask] = s.head[s.ins_h];
-          s.head[s.ins_h] = str;
-          str++;
+          s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + MIN_MATCH - 1]) & s.hash_mask;
+          s.prev[str2 & s.w_mask] = s.head[s.ins_h];
+          s.head[s.ins_h] = str2;
+          str2++;
           s.insert--;
           if (s.lookahead + s.insert < MIN_MATCH) {
             break;
@@ -66689,7 +72832,7 @@ function requireDeflate$1() {
   function deflateSetDictionary(strm, dictionary2) {
     var dictLength = dictionary2.length;
     var s;
-    var str, n;
+    var str2, n;
     var wrap;
     var avail;
     var next;
@@ -66727,15 +72870,15 @@ function requireDeflate$1() {
     strm.input = dictionary2;
     fill_window(s);
     while (s.lookahead >= MIN_MATCH) {
-      str = s.strstart;
+      str2 = s.strstart;
       n = s.lookahead - (MIN_MATCH - 1);
       do {
-        s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str + MIN_MATCH - 1]) & s.hash_mask;
-        s.prev[str & s.w_mask] = s.head[s.ins_h];
-        s.head[s.ins_h] = str;
-        str++;
+        s.ins_h = (s.ins_h << s.hash_shift ^ s.window[str2 + MIN_MATCH - 1]) & s.hash_mask;
+        s.prev[str2 & s.w_mask] = s.head[s.ins_h];
+        s.head[s.ins_h] = str2;
+        str2++;
       } while (--n);
-      s.strstart = str;
+      s.strstart = str2;
       s.lookahead = MIN_MATCH - 1;
       fill_window(s);
     }
@@ -66785,12 +72928,12 @@ function requireStrings() {
     _utf8len[q] = q >= 252 ? 6 : q >= 248 ? 5 : q >= 240 ? 4 : q >= 224 ? 3 : q >= 192 ? 2 : 1;
   }
   _utf8len[254] = _utf8len[254] = 1;
-  strings.string2buf = function(str) {
-    var buf, c2, c22, m_pos, i2, str_len = str.length, buf_len = 0;
+  strings.string2buf = function(str2) {
+    var buf, c2, c22, m_pos, i2, str_len = str2.length, buf_len = 0;
     for (m_pos = 0; m_pos < str_len; m_pos++) {
-      c2 = str.charCodeAt(m_pos);
+      c2 = str2.charCodeAt(m_pos);
       if ((c2 & 64512) === 55296 && m_pos + 1 < str_len) {
-        c22 = str.charCodeAt(m_pos + 1);
+        c22 = str2.charCodeAt(m_pos + 1);
         if ((c22 & 64512) === 56320) {
           c2 = 65536 + (c2 - 55296 << 10) + (c22 - 56320);
           m_pos++;
@@ -66800,9 +72943,9 @@ function requireStrings() {
     }
     buf = new utils2.Buf8(buf_len);
     for (i2 = 0, m_pos = 0; i2 < buf_len; m_pos++) {
-      c2 = str.charCodeAt(m_pos);
+      c2 = str2.charCodeAt(m_pos);
       if ((c2 & 64512) === 55296 && m_pos + 1 < str_len) {
-        c22 = str.charCodeAt(m_pos + 1);
+        c22 = str2.charCodeAt(m_pos + 1);
         if ((c22 & 64512) === 56320) {
           c2 = 65536 + (c2 - 55296 << 10) + (c22 - 56320);
           m_pos++;
@@ -66841,10 +72984,10 @@ function requireStrings() {
   strings.buf2binstring = function(buf) {
     return buf2binstring(buf, buf.length);
   };
-  strings.binstring2buf = function(str) {
-    var buf = new utils2.Buf8(str.length);
+  strings.binstring2buf = function(str2) {
+    var buf = new utils2.Buf8(str2.length);
     for (var i2 = 0, len3 = buf.length; i2 < len3; i2++) {
-      buf[i2] = str.charCodeAt(i2);
+      buf[i2] = str2.charCodeAt(i2);
     }
     return buf;
   };
@@ -69155,11 +75298,11 @@ var decodeFromBase64 = function(base64) {
   return bytes;
 };
 var arrayToString = function(array) {
-  var str = "";
+  var str2 = "";
   for (var i2 = 0; i2 < array.length; i2++) {
-    str += String.fromCharCode(array[i2]);
+    str2 += String.fromCharCode(array[i2]);
   }
-  return str;
+  return str2;
 };
 var decompressJson = function(compressedJson) {
   return arrayToString(pako.inflate(decodeFromBase64(compressedJson)));
@@ -69268,9 +75411,9 @@ var Encoding = (
       this.encodeUnicodeCodePoint = function(codePoint) {
         var mapped = _this.unicodeMappings[codePoint];
         if (!mapped) {
-          var str = String.fromCharCode(codePoint);
+          var str2 = String.fromCharCode(codePoint);
           var hexCode = "0x" + padStart(codePoint.toString(16), 4, "0");
-          var msg = _this.name + ' cannot encode "' + str + '" (' + hexCode + ")";
+          var msg = _this.name + ' cannot encode "' + str2 + '" (' + hexCode + ")";
           throw new Error(msg);
         }
         return { code: mapped[0], name: mapped[1] };
@@ -75350,7 +81493,7 @@ var FlateStream = (
     FlateStream2.prototype.readBlock = function() {
       var buffer2;
       var len3;
-      var str = this.stream;
+      var str2 = this.stream;
       var hdr = this.getBits(3);
       if (hdr & 1) {
         this.eof = true;
@@ -75358,19 +81501,19 @@ var FlateStream = (
       hdr >>= 1;
       if (hdr === 0) {
         var b = void 0;
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           throw new Error("Bad block header in flate stream");
         }
         var blockLen = b;
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           throw new Error("Bad block header in flate stream");
         }
         blockLen |= b << 8;
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           throw new Error("Bad block header in flate stream");
         }
         var check2 = b;
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           throw new Error("Bad block header in flate stream");
         }
         check2 |= b << 8;
@@ -75384,12 +81527,12 @@ var FlateStream = (
         var end = bufferLength + blockLen;
         this.bufferLength = end;
         if (blockLen === 0) {
-          if (str.peekByte() === -1) {
+          if (str2.peekByte() === -1) {
             this.eof = true;
           }
         } else {
           for (var n = bufferLength; n < end; ++n) {
-            if ((b = str.getByte()) === -1) {
+            if ((b = str2.getByte()) === -1) {
               this.eof = true;
               break;
             }
@@ -75489,12 +81632,12 @@ var FlateStream = (
       }
     };
     FlateStream2.prototype.getBits = function(bits3) {
-      var str = this.stream;
+      var str2 = this.stream;
       var codeSize = this.codeSize;
       var codeBuf = this.codeBuf;
       var b;
       while (codeSize < bits3) {
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           throw new Error("Bad encoding in flate stream");
         }
         codeBuf |= b << codeSize;
@@ -75506,14 +81649,14 @@ var FlateStream = (
       return b;
     };
     FlateStream2.prototype.getCode = function(table10) {
-      var str = this.stream;
+      var str2 = this.stream;
       var codes = table10[0];
       var maxLen = table10[1];
       var codeSize = this.codeSize;
       var codeBuf = this.codeBuf;
       var b;
       while (codeSize < maxLen) {
-        if ((b = str.getByte()) === -1) {
+        if ((b = str2.getByte()) === -1) {
           break;
         }
         codeBuf |= b << codeSize;
@@ -78384,11 +84527,11 @@ var AnnotationFlags;
 var asPDFName = function(name5) {
   return name5 instanceof PDFName ? name5 : PDFName.of(name5);
 };
-var asPDFNumber = function(num) {
-  return num instanceof PDFNumber ? num : PDFNumber.of(num);
+var asPDFNumber = function(num2) {
+  return num2 instanceof PDFNumber ? num2 : PDFNumber.of(num2);
 };
-var asNumber = function(num) {
-  return num instanceof PDFNumber ? num.asNumber() : num;
+var asNumber = function(num2) {
+  return num2 instanceof PDFNumber ? num2.asNumber() : num2;
 };
 var RotationTypes;
 (function(RotationTypes2) {
@@ -83974,8 +90117,8 @@ function toByteArray(b64) {
   }
   return arr;
 }
-function tripletToBase64(num) {
-  return lookup[num >> 18 & 63] + lookup[num >> 12 & 63] + lookup[num >> 6 & 63] + lookup[num & 63];
+function tripletToBase64(num2) {
+  return lookup[num2 >> 18 & 63] + lookup[num2 >> 12 & 63] + lookup[num2 >> 6 & 63] + lookup[num2 & 63];
 }
 function encodeChunk(uint8, start, end) {
   var tmp;
@@ -84497,11 +90640,11 @@ var buffer = createCommonjsModule(function(module, exports2) {
     return Buffer2.compare(this, b) === 0;
   };
   Buffer2.prototype.inspect = function inspect2() {
-    var str = "";
+    var str2 = "";
     var max2 = exports2.INSPECT_MAX_BYTES;
-    str = this.toString("hex", 0, max2).replace(/(.{2})/g, "$1 ").trim();
-    if (this.length > max2) str += " ... ";
-    return "<Buffer " + str + ">";
+    str2 = this.toString("hex", 0, max2).replace(/(.{2})/g, "$1 ").trim();
+    if (this.length > max2) str2 += " ... ";
+    return "<Buffer " + str2 + ">";
   };
   if (customInspectSymbol) {
     Buffer2.prototype[customInspectSymbol] = Buffer2.prototype.inspect;
@@ -85303,14 +91446,14 @@ var buffer = createCommonjsModule(function(module, exports2) {
     return this;
   };
   var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g;
-  function base64clean(str) {
-    str = str.split("=")[0];
-    str = str.trim().replace(INVALID_BASE64_RE, "");
-    if (str.length < 2) return "";
-    while (str.length % 4 !== 0) {
-      str = str + "=";
+  function base64clean(str2) {
+    str2 = str2.split("=")[0];
+    str2 = str2.trim().replace(INVALID_BASE64_RE, "");
+    if (str2.length < 2) return "";
+    while (str2.length % 4 !== 0) {
+      str2 = str2 + "=";
     }
-    return str;
+    return str2;
   }
   function utf8ToBytes(string2, units) {
     units = units || Infinity;
@@ -85360,19 +91503,19 @@ var buffer = createCommonjsModule(function(module, exports2) {
     }
     return bytes;
   }
-  function asciiToBytes(str) {
+  function asciiToBytes(str2) {
     var byteArray = [];
-    for (var i2 = 0; i2 < str.length; ++i2) {
-      byteArray.push(str.charCodeAt(i2) & 255);
+    for (var i2 = 0; i2 < str2.length; ++i2) {
+      byteArray.push(str2.charCodeAt(i2) & 255);
     }
     return byteArray;
   }
-  function utf16leToBytes(str, units) {
+  function utf16leToBytes(str2, units) {
     var c2, hi, lo;
     var byteArray = [];
-    for (var i2 = 0; i2 < str.length; ++i2) {
+    for (var i2 = 0; i2 < str2.length; ++i2) {
       if ((units -= 2) < 0) break;
-      c2 = str.charCodeAt(i2);
+      c2 = str2.charCodeAt(i2);
       hi = c2 >> 8;
       lo = c2 % 256;
       byteArray.push(lo);
@@ -85380,8 +91523,8 @@ var buffer = createCommonjsModule(function(module, exports2) {
     }
     return byteArray;
   }
-  function base64ToBytes(str) {
-    return base64Js.toByteArray(base64clean(str));
+  function base64ToBytes(str2) {
+    return base64Js.toByteArray(base64clean(str2));
   }
   function blitBuffer(src2, dst, offset2, length) {
     for (var i2 = 0; i2 < length; ++i2) {
@@ -85981,7 +92124,7 @@ function format(f2) {
   var i2 = 1;
   var args = arguments;
   var len3 = args.length;
-  var str = String(f2).replace(formatRegExp, function(x3) {
+  var str2 = String(f2).replace(formatRegExp, function(x3) {
     if (x3 === "%%") return "%";
     if (i2 >= len3) return x3;
     switch (x3) {
@@ -86001,12 +92144,12 @@ function format(f2) {
   });
   for (var x2 = args[i2]; i2 < len3; x2 = args[++i2]) {
     if (isNull(x2) || !isObject(x2)) {
-      str += " " + x2;
+      str2 += " " + x2;
     } else {
-      str += " " + inspect(x2);
+      str2 += " " + inspect(x2);
     }
   }
-  return str;
+  return str2;
 }
 function deprecate(fn, msg) {
   if (isUndefined(global$1.process)) {
@@ -86097,16 +92240,16 @@ inspect.styles = {
   // "name": intentionally not styling
   "regexp": "red"
 };
-function stylizeWithColor(str, styleType) {
+function stylizeWithColor(str2, styleType) {
   var style = inspect.styles[styleType];
   if (style) {
-    return "\x1B[" + inspect.colors[style][0] + "m" + str + "\x1B[" + inspect.colors[style][1] + "m";
+    return "\x1B[" + inspect.colors[style][0] + "m" + str2 + "\x1B[" + inspect.colors[style][1] + "m";
   } else {
-    return str;
+    return str2;
   }
 }
-function stylizeNoColor(str, styleType) {
-  return str;
+function stylizeNoColor(str2, styleType) {
+  return str2;
 }
 function arrayToHash(array) {
   var hash = {};
@@ -86222,49 +92365,49 @@ function formatArray(ctx, value2, recurseTimes, visibleKeys, keys3) {
   return output;
 }
 function formatProperty(ctx, value2, recurseTimes, visibleKeys, key2, array) {
-  var name5, str, desc;
+  var name5, str2, desc;
   desc = Object.getOwnPropertyDescriptor(value2, key2) || {
     value: value2[key2]
   };
   if (desc.get) {
     if (desc.set) {
-      str = ctx.stylize("[Getter/Setter]", "special");
+      str2 = ctx.stylize("[Getter/Setter]", "special");
     } else {
-      str = ctx.stylize("[Getter]", "special");
+      str2 = ctx.stylize("[Getter]", "special");
     }
   } else {
     if (desc.set) {
-      str = ctx.stylize("[Setter]", "special");
+      str2 = ctx.stylize("[Setter]", "special");
     }
   }
   if (!hasOwnProperty(visibleKeys, key2)) {
     name5 = "[" + key2 + "]";
   }
-  if (!str) {
+  if (!str2) {
     if (ctx.seen.indexOf(desc.value) < 0) {
       if (isNull(recurseTimes)) {
-        str = formatValue(ctx, desc.value, null);
+        str2 = formatValue(ctx, desc.value, null);
       } else {
-        str = formatValue(ctx, desc.value, recurseTimes - 1);
+        str2 = formatValue(ctx, desc.value, recurseTimes - 1);
       }
-      if (str.indexOf("\n") > -1) {
+      if (str2.indexOf("\n") > -1) {
         if (array) {
-          str = str.split("\n").map(function(line2) {
+          str2 = str2.split("\n").map(function(line2) {
             return "  " + line2;
           }).join("\n").substr(2);
         } else {
-          str = "\n" + str.split("\n").map(function(line2) {
+          str2 = "\n" + str2.split("\n").map(function(line2) {
             return "   " + line2;
           }).join("\n");
         }
       }
     } else {
-      str = ctx.stylize("[Circular]", "special");
+      str2 = ctx.stylize("[Circular]", "special");
     }
   }
   if (isUndefined(name5)) {
     if (array && key2.match(/^\d+$/)) {
-      return str;
+      return str2;
     }
     name5 = JSON.stringify("" + key2);
     if (name5.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
@@ -86275,7 +92418,7 @@ function formatProperty(ctx, value2, recurseTimes, visibleKeys, key2, array) {
       name5 = ctx.stylize(name5, "string");
     }
   }
-  return name5 + ": " + str;
+  return name5 + ": " + str2;
 }
 function reduceToSingleString(output, base, braces) {
   var length = output.reduce(function(prev, cur) {
@@ -87059,19 +93202,19 @@ function copyFromBufferString(n, list2) {
   var ret = p2.data;
   n -= ret.length;
   while (p2 = p2.next) {
-    var str = p2.data;
-    var nb = n > str.length ? str.length : n;
-    if (nb === str.length) ret += str;
-    else ret += str.slice(0, n);
+    var str2 = p2.data;
+    var nb = n > str2.length ? str2.length : n;
+    if (nb === str2.length) ret += str2;
+    else ret += str2.slice(0, n);
     n -= nb;
     if (n === 0) {
-      if (nb === str.length) {
+      if (nb === str2.length) {
         ++c2;
         if (p2.next) list2.head = p2.next;
         else list2.head = list2.tail = null;
       } else {
         list2.head = p2;
-        p2.data = str.slice(nb);
+        p2.data = str2.slice(nb);
       }
       break;
     }
@@ -87691,12 +93834,12 @@ function PrependBOMWrapper(encoder, options) {
   this.encoder = encoder;
   this.addBOM = true;
 }
-PrependBOMWrapper.prototype.write = function(str) {
+PrependBOMWrapper.prototype.write = function(str2) {
   if (this.addBOM) {
-    str = BOMChar + str;
+    str2 = BOMChar + str2;
     this.addBOM = false;
   }
-  return this.encoder.write(str);
+  return this.encoder.write(str2);
 };
 PrependBOMWrapper.prototype.end = function() {
   return this.encoder.end();
@@ -87779,30 +93922,30 @@ InternalDecoder.prototype = StringDecoder.prototype;
 function InternalEncoder(options, codec) {
   this.enc = codec.enc;
 }
-InternalEncoder.prototype.write = function(str) {
-  return Buffer$1$1.from(str, this.enc);
+InternalEncoder.prototype.write = function(str2) {
+  return Buffer$1$1.from(str2, this.enc);
 };
 InternalEncoder.prototype.end = function() {
 };
 function InternalEncoderBase64(options, codec) {
   this.prevStr = "";
 }
-InternalEncoderBase64.prototype.write = function(str) {
-  str = this.prevStr + str;
-  var completeQuads = str.length - str.length % 4;
-  this.prevStr = str.slice(completeQuads);
-  str = str.slice(0, completeQuads);
-  return Buffer$1$1.from(str, "base64");
+InternalEncoderBase64.prototype.write = function(str2) {
+  str2 = this.prevStr + str2;
+  var completeQuads = str2.length - str2.length % 4;
+  this.prevStr = str2.slice(completeQuads);
+  str2 = str2.slice(0, completeQuads);
+  return Buffer$1$1.from(str2, "base64");
 };
 InternalEncoderBase64.prototype.end = function() {
   return Buffer$1$1.from(this.prevStr, "base64");
 };
 function InternalEncoderCesu8(options, codec) {
 }
-InternalEncoderCesu8.prototype.write = function(str) {
-  var buf = Buffer$1$1.alloc(str.length * 3), bufIdx = 0;
-  for (var i2 = 0; i2 < str.length; i2++) {
-    var charCode = str.charCodeAt(i2);
+InternalEncoderCesu8.prototype.write = function(str2) {
+  var buf = Buffer$1$1.alloc(str2.length * 3), bufIdx = 0;
+  for (var i2 = 0; i2 < str2.length; i2++) {
+    var charCode = str2.charCodeAt(i2);
     if (charCode < 128) buf[bufIdx++] = charCode;
     else if (charCode < 2048) {
       buf[bufIdx++] = 192 + (charCode >>> 6);
@@ -87880,8 +94023,8 @@ Utf16BECodec.prototype.decoder = Utf16BEDecoder;
 Utf16BECodec.prototype.bomAware = true;
 function Utf16BEEncoder() {
 }
-Utf16BEEncoder.prototype.write = function(str) {
-  var buf = Buffer$2.from(str, "ucs2");
+Utf16BEEncoder.prototype.write = function(str2) {
+  var buf = Buffer$2.from(str2, "ucs2");
   for (var i2 = 0; i2 < buf.length; i2 += 2) {
     var tmp = buf[i2];
     buf[i2] = buf[i2 + 1];
@@ -87923,8 +94066,8 @@ function Utf16Encoder(options, codec) {
   if (options.addBOM === void 0) options.addBOM = true;
   this.encoder = codec.iconv.getEncoder("utf-16le", options);
 }
-Utf16Encoder.prototype.write = function(str) {
-  return this.encoder.write(str);
+Utf16Encoder.prototype.write = function(str2) {
+  return this.encoder.write(str2);
 };
 Utf16Encoder.prototype.end = function() {
   return this.encoder.end();
@@ -87993,8 +94136,8 @@ var nonDirectChars = /[^A-Za-z0-9'\(\),-\.\/:\? \n\r\t]+/g;
 function Utf7Encoder(options, codec) {
   this.iconv = codec.iconv;
 }
-Utf7Encoder.prototype.write = function(str) {
-  return Buffer$3.from(str.replace(nonDirectChars, (function(chunk) {
+Utf7Encoder.prototype.write = function(str2) {
+  return Buffer$3.from(str2.replace(nonDirectChars, (function(chunk) {
     return "+" + (chunk === "+" ? "" : this.iconv.encode(chunk, "utf16-be").toString("base64").replace(/=+$/, "")) + "-";
   }).bind(this)));
 };
@@ -88069,10 +94212,10 @@ function Utf7IMAPEncoder(options, codec) {
   this.base64Accum = Buffer$3.alloc(6);
   this.base64AccumIdx = 0;
 }
-Utf7IMAPEncoder.prototype.write = function(str) {
-  var inBase64 = this.inBase64, base64Accum = this.base64Accum, base64AccumIdx = this.base64AccumIdx, buf = Buffer$3.alloc(str.length * 5 + 10), bufIdx = 0;
-  for (var i2 = 0; i2 < str.length; i2++) {
-    var uChar = str.charCodeAt(i2);
+Utf7IMAPEncoder.prototype.write = function(str2) {
+  var inBase64 = this.inBase64, base64Accum = this.base64Accum, base64AccumIdx = this.base64AccumIdx, buf = Buffer$3.alloc(str2.length * 5 + 10), bufIdx = 0;
+  for (var i2 = 0; i2 < str2.length; i2++) {
+    var uChar = str2.charCodeAt(i2);
     if (32 <= uChar && uChar <= 126) {
       if (inBase64) {
         if (base64AccumIdx > 0) {
@@ -88199,10 +94342,10 @@ SBCSCodec.prototype.decoder = SBCSDecoder;
 function SBCSEncoder(options, codec) {
   this.encodeBuf = codec.encodeBuf;
 }
-SBCSEncoder.prototype.write = function(str) {
-  var buf = Buffer$4.alloc(str.length);
-  for (var i2 = 0; i2 < str.length; i2++) {
-    buf[i2] = this.encodeBuf[str.charCodeAt(i2)];
+SBCSEncoder.prototype.write = function(str2) {
+  var buf = Buffer$4.alloc(str2.length);
+  for (var i2 = 0; i2 < str2.length; i2++) {
+    buf[i2] = this.encodeBuf[str2.charCodeAt(i2)];
   }
   return buf;
 };
@@ -88982,12 +95125,12 @@ function DBCSEncoder(options, codec) {
   this.defaultCharSingleByte = codec.defCharSB;
   this.gb18030 = codec.gb18030;
 }
-DBCSEncoder.prototype.write = function(str) {
-  var newBuf = Buffer$5.alloc(str.length * (this.gb18030 ? 4 : 3)), leadSurrogate = this.leadSurrogate, seqObj = this.seqObj, nextChar = -1, i2 = 0, j = 0;
+DBCSEncoder.prototype.write = function(str2) {
+  var newBuf = Buffer$5.alloc(str2.length * (this.gb18030 ? 4 : 3)), leadSurrogate = this.leadSurrogate, seqObj = this.seqObj, nextChar = -1, i2 = 0, j = 0;
   while (true) {
     if (nextChar === -1) {
-      if (i2 == str.length) break;
-      var uCode = str.charCodeAt(i2++);
+      if (i2 == str2.length) break;
+      var uCode = str2.charCodeAt(i2++);
     } else {
       var uCode = nextChar;
       nextChar = -1;
@@ -97838,10 +103981,10 @@ var extendNode = function extendNode2(iconv) {
       return Buffer$7.isNativeEncoding(encoding) || iconv.encodingExists(encoding);
     };
     original.BufferByteLength = Buffer$7.byteLength;
-    Buffer$7.byteLength = SlowBuffer.byteLength = function(str, encoding) {
+    Buffer$7.byteLength = SlowBuffer.byteLength = function(str2, encoding) {
       encoding = String(encoding || "utf8").toLowerCase();
-      if (Buffer$7.isNativeEncoding(encoding)) return original.BufferByteLength.call(this, str, encoding);
-      return iconv.encode(str, encoding).length;
+      if (Buffer$7.isNativeEncoding(encoding)) return original.BufferByteLength.call(this, str2, encoding);
+      return iconv.encode(str2, encoding).length;
     };
     original.BufferToString = Buffer$7.prototype.toString;
     Buffer$7.prototype.toString = function(encoding, start, end) {
@@ -97918,10 +104061,10 @@ var lib = createCommonjsModule(function(module) {
   iconv.encodings = null;
   iconv.defaultCharUnicode = "�";
   iconv.defaultCharSingleByte = "?";
-  iconv.encode = function encode2(str, encoding, options) {
-    str = "" + (str || "");
+  iconv.encode = function encode2(str2, encoding, options) {
+    str2 = "" + (str2 || "");
     var encoder = iconv.getEncoder(encoding, options);
-    var res = encoder.write(str);
+    var res = encoder.write(str2);
     var trail = encoder.end();
     return trail && trail.length > 0 ? Buffer2.concat([res, trail]) : res;
   };
@@ -100472,10 +106615,10 @@ var CFFIndex = /* @__PURE__ */ (function() {
 })();
 var toStr = Object.prototype.toString;
 var isArguments = function isArguments2(value2) {
-  var str = toStr.call(value2);
-  var isArgs2 = str === "[object Arguments]";
+  var str2 = toStr.call(value2);
+  var isArgs2 = str2 === "[object Arguments]";
   if (!isArgs2) {
-    isArgs2 = str !== "[object Array]" && value2 !== null && typeof value2 === "object" && typeof value2.length === "number" && value2.length >= 0 && toStr.call(value2.callee) === "[object Function]";
+    isArgs2 = str2 !== "[object Array]" && value2 !== null && typeof value2 === "object" && typeof value2.length === "number" && value2.length >= 0 && toStr.call(value2.callee) === "[object Function]";
   }
   return isArgs2;
 };
@@ -101259,21 +107402,21 @@ var CFFOperand = /* @__PURE__ */ (function() {
       return stream2.readInt32BE();
     }
     if (value2 === 30) {
-      var str = "";
+      var str2 = "";
       while (true) {
         var b = stream2.readUInt8();
         var n1 = b >> 4;
         if (n1 === FLOAT_EOF) {
           break;
         }
-        str += FLOAT_LOOKUP[n1];
+        str2 += FLOAT_LOOKUP[n1];
         var n2 = b & 15;
         if (n2 === FLOAT_EOF) {
           break;
         }
-        str += FLOAT_LOOKUP[n2];
+        str2 += FLOAT_LOOKUP[n2];
       }
-      return parseFloat(str);
+      return parseFloat(str2);
     }
     return null;
   };
@@ -101282,8 +107425,8 @@ var CFFOperand = /* @__PURE__ */ (function() {
       value2 = 32768;
     }
     if ((value2 | 0) !== value2) {
-      var str = "" + value2;
-      return 1 + Math.ceil((str.length + 1) / 2);
+      var str2 = "" + value2;
+      return 1 + Math.ceil((str2.length + 1) / 2);
     } else if (-107 <= value2 && value2 <= 107) {
       return 1;
     } else if (108 <= value2 && value2 <= 1131 || -1131 <= value2 && value2 <= -108) {
@@ -101301,14 +107444,14 @@ var CFFOperand = /* @__PURE__ */ (function() {
       return stream2.writeInt32BE(val);
     } else if ((val | 0) !== val) {
       stream2.writeUInt8(30);
-      var str = "" + val;
-      for (var i2 = 0; i2 < str.length; i2 += 2) {
-        var c1 = str[i2];
+      var str2 = "" + val;
+      for (var i2 = 0; i2 < str2.length; i2 += 2) {
+        var c1 = str2[i2];
         var n1 = FLOAT_ENCODE_LOOKUP[c1] || +c1;
-        if (i2 === str.length - 1) {
+        if (i2 === str2.length - 1) {
           var n2 = FLOAT_EOF;
         } else {
-          var c2 = str[i2 + 1];
+          var c2 = str2[i2 + 1];
           var n2 = FLOAT_ENCODE_LOOKUP[c2] || +c2;
         }
         stream2.writeUInt8(n1 << 4 | n2 & 15);
@@ -101377,49 +107520,49 @@ var CFFDict = /* @__PURE__ */ (function() {
     }
   }
   var _proto = CFFDict2.prototype;
-  _proto.decodeOperands = function decodeOperands(type, stream2, ret, operands) {
+  _proto.decodeOperands = function decodeOperands(type, stream2, ret, operands2) {
     var _this = this;
     if (Array.isArray(type)) {
-      return operands.map(function(op, i2) {
+      return operands2.map(function(op, i2) {
         return _this.decodeOperands(type[i2], stream2, ret, [op]);
       });
     } else if (type.decode != null) {
-      return type.decode(stream2, ret, operands);
+      return type.decode(stream2, ret, operands2);
     } else {
       switch (type) {
         case "number":
         case "offset":
         case "sid":
-          return operands[0];
+          return operands2[0];
         case "boolean":
-          return !!operands[0];
+          return !!operands2[0];
         default:
-          return operands;
+          return operands2;
       }
     }
   };
-  _proto.encodeOperands = function encodeOperands(type, stream2, ctx, operands) {
+  _proto.encodeOperands = function encodeOperands(type, stream2, ctx, operands2) {
     var _this2 = this;
     if (Array.isArray(type)) {
-      return operands.map(function(op, i2) {
+      return operands2.map(function(op, i2) {
         return _this2.encodeOperands(type[i2], stream2, ctx, op)[0];
       });
     } else if (type.encode != null) {
-      return type.encode(stream2, operands, ctx);
-    } else if (typeof operands === "number") {
-      return [operands];
-    } else if (typeof operands === "boolean") {
-      return [+operands];
-    } else if (Array.isArray(operands)) {
-      return operands;
+      return type.encode(stream2, operands2, ctx);
+    } else if (typeof operands2 === "number") {
+      return [operands2];
+    } else if (typeof operands2 === "boolean") {
+      return [+operands2];
+    } else if (Array.isArray(operands2)) {
+      return operands2;
     } else {
-      return [operands];
+      return [operands2];
     }
   };
   _proto.decode = function decode3(stream2, parent) {
     var end = stream2.pos + parent.length;
     var ret = {};
-    var operands = [];
+    var operands2 = [];
     Object.defineProperties(ret, {
       parent: {
         value: parent
@@ -101442,7 +107585,7 @@ var CFFDict = /* @__PURE__ */ (function() {
         if (!_field) {
           throw new Error("Unknown operator " + b);
         }
-        var val = this.decodeOperands(_field[2], stream2, ret, operands);
+        var val = this.decodeOperands(_field[2], stream2, ret, operands2);
         if (val != null) {
           if (val instanceof utils_2) {
             Object.defineProperty(ret, _field[1], val);
@@ -101450,9 +107593,9 @@ var CFFDict = /* @__PURE__ */ (function() {
             ret[_field[1]] = val;
           }
         }
-        operands = [];
+        operands2 = [];
       } else {
-        operands.push(CFFOperand.decode(stream2, b));
+        operands2.push(CFFOperand.decode(stream2, b));
       }
     }
     return ret;
@@ -101474,8 +107617,8 @@ var CFFDict = /* @__PURE__ */ (function() {
       if (val == null || deepEqual_1(val, field[3])) {
         continue;
       }
-      var operands = this.encodeOperands(field[2], null, ctx, val);
-      for (var _iterator2 = _createForOfIteratorHelperLoose$2(operands), _step2; !(_step2 = _iterator2()).done; ) {
+      var operands2 = this.encodeOperands(field[2], null, ctx, val);
+      for (var _iterator2 = _createForOfIteratorHelperLoose$2(operands2), _step2; !(_step2 = _iterator2()).done; ) {
         var op = _step2.value;
         len3 += CFFOperand.size(op);
       }
@@ -101502,8 +107645,8 @@ var CFFDict = /* @__PURE__ */ (function() {
       if (val == null || deepEqual_1(val, field[3])) {
         continue;
       }
-      var operands = this.encodeOperands(field[2], stream2, ctx, val);
-      for (var _iterator4 = _createForOfIteratorHelperLoose$2(operands), _step4; !(_step4 = _iterator4()).done; ) {
+      var operands2 = this.encodeOperands(field[2], stream2, ctx, val);
+      for (var _iterator4 = _createForOfIteratorHelperLoose$2(operands2), _step4; !(_step4 = _iterator4()).done; ) {
         var op = _step4.value;
         CFFOperand.encode(stream2, op);
       }
@@ -101539,13 +107682,13 @@ var CFFPointer = /* @__PURE__ */ (function(_r$Pointer) {
     return _r$Pointer.call(this, null, type, options) || this;
   }
   var _proto = CFFPointer2.prototype;
-  _proto.decode = function decode3(stream2, parent, operands) {
+  _proto.decode = function decode3(stream2, parent, operands2) {
     this.offsetType = {
       decode: function decode4() {
-        return operands[0];
+        return operands2[0];
       }
     };
-    return _r$Pointer.prototype.decode.call(this, stream2, parent, operands);
+    return _r$Pointer.prototype.decode.call(this, stream2, parent, operands2);
   };
   _proto.encode = function encode2(stream2, value2, ctx) {
     if (!stream2) {
@@ -101582,10 +107725,10 @@ var Ptr = /* @__PURE__ */ (function() {
 var CFFBlendOp = /* @__PURE__ */ (function() {
   function CFFBlendOp2() {
   }
-  CFFBlendOp2.decode = function decode3(stream2, parent, operands) {
-    var numBlends = operands.pop();
-    while (operands.length > numBlends) {
-      operands.pop();
+  CFFBlendOp2.decode = function decode3(stream2, parent, operands2) {
+    var numBlends = operands2.pop();
+    while (operands2.length > numBlends) {
+      operands2.pop();
     }
   };
   return CFFBlendOp2;
@@ -101879,11 +108022,11 @@ var PredefinedOp = /* @__PURE__ */ (function() {
     this.type = type;
   }
   var _proto = PredefinedOp2.prototype;
-  _proto.decode = function decode3(stream2, parent, operands) {
-    if (this.predefinedOps[operands[0]]) {
-      return this.predefinedOps[operands[0]];
+  _proto.decode = function decode3(stream2, parent, operands2) {
+    if (this.predefinedOps[operands2[0]]) {
+      return this.predefinedOps[operands2[0]];
     }
-    return this.type.decode(stream2, parent, operands);
+    return this.type.decode(stream2, parent, operands2);
   };
   _proto.size = function size(value2, ctx) {
     return this.type.size(value2, ctx);
@@ -102000,9 +108143,9 @@ var CFFPrivateOp = /* @__PURE__ */ (function() {
   function CFFPrivateOp2() {
   }
   var _proto4 = CFFPrivateOp2.prototype;
-  _proto4.decode = function decode3(stream2, parent, operands) {
-    parent.length = operands[0];
-    return ptr.decode(stream2, parent, [operands[1]]);
+  _proto4.decode = function decode3(stream2, parent, operands2) {
+    parent.length = operands2[0];
+    return ptr.decode(stream2, parent, [operands2[1]]);
   };
   _proto4.size = function size(dict, ctx) {
     return [CFFPrivateDict.size(dict, ctx, false), ptr.size(dict, ctx)[0]];
@@ -104298,12 +110441,12 @@ function tinf_build_fixed_trees(lt, dt) {
   }
 }
 var offs = new Uint16Array(16);
-function tinf_build_tree(t2, lengths2, off3, num) {
+function tinf_build_tree(t2, lengths2, off3, num2) {
   var i2, sum2;
   for (i2 = 0; i2 < 16; ++i2) {
     t2.table[i2] = 0;
   }
-  for (i2 = 0; i2 < num; ++i2) {
+  for (i2 = 0; i2 < num2; ++i2) {
     t2.table[lengths2[off3 + i2]]++;
   }
   t2.table[0] = 0;
@@ -104311,7 +110454,7 @@ function tinf_build_tree(t2, lengths2, off3, num) {
     offs[i2] = sum2;
     sum2 += t2.table[i2];
   }
-  for (i2 = 0; i2 < num; ++i2) {
+  for (i2 = 0; i2 < num2; ++i2) {
     if (lengths2[off3 + i2]) t2.trans[offs[lengths2[off3 + i2]]++] = i2;
   }
 }
@@ -104324,15 +110467,15 @@ function tinf_getbit(d2) {
   d2.tag >>>= 1;
   return bit;
 }
-function tinf_read_bits(d2, num, base) {
-  if (!num) return base;
+function tinf_read_bits(d2, num2, base) {
+  if (!num2) return base;
   while (d2.bitcount < 24) {
     d2.tag |= d2.source[d2.sourceIndex++] << d2.bitcount;
     d2.bitcount += 8;
   }
-  var val = d2.tag & 65535 >>> 16 - num;
-  d2.tag >>>= num;
-  d2.bitcount -= num;
+  var val = d2.tag & 65535 >>> 16 - num2;
+  d2.tag >>>= num2;
+  d2.bitcount -= num2;
   return val + base;
 }
 function tinf_decode_symbol(d2, t2) {
@@ -104355,7 +110498,7 @@ function tinf_decode_symbol(d2, t2) {
 }
 function tinf_decode_trees(d2, lt, dt) {
   var hlit, hdist, hclen;
-  var i2, num, length;
+  var i2, num2, length;
   hlit = tinf_read_bits(d2, 5, 257);
   hdist = tinf_read_bits(d2, 5, 1);
   hclen = tinf_read_bits(d2, 4, 4);
@@ -104367,27 +110510,27 @@ function tinf_decode_trees(d2, lt, dt) {
     lengths[clcidx[i2]] = clen;
   }
   tinf_build_tree(code_tree, lengths, 0, 19);
-  for (num = 0; num < hlit + hdist; ) {
+  for (num2 = 0; num2 < hlit + hdist; ) {
     var sym = tinf_decode_symbol(d2, code_tree);
     switch (sym) {
       case 16:
-        var prev = lengths[num - 1];
+        var prev = lengths[num2 - 1];
         for (length = tinf_read_bits(d2, 2, 3); length; --length) {
-          lengths[num++] = prev;
+          lengths[num2++] = prev;
         }
         break;
       case 17:
         for (length = tinf_read_bits(d2, 3, 3); length; --length) {
-          lengths[num++] = 0;
+          lengths[num2++] = 0;
         }
         break;
       case 18:
         for (length = tinf_read_bits(d2, 7, 11); length; --length) {
-          lengths[num++] = 0;
+          lengths[num2++] = 0;
         }
         break;
       default:
-        lengths[num++] = sym;
+        lengths[num2++] = sym;
         break;
     }
   }
@@ -104624,26 +110767,26 @@ var getEastAsianWidth = function getEastAsianWidth2(codePoint) {
 };
 var getNumericValue = function getNumericValue2(codePoint) {
   var val = trie.get(codePoint);
-  var num = val & NUMBER_MASK;
-  if (num === 0) {
+  var num2 = val & NUMBER_MASK;
+  if (num2 === 0) {
     return null;
-  } else if (num <= 50) {
-    return num - 1;
-  } else if (num < 480) {
-    var numerator = (num >> 4) - 12;
-    var denominator = (num & 15) + 1;
+  } else if (num2 <= 50) {
+    return num2 - 1;
+  } else if (num2 < 480) {
+    var numerator = (num2 >> 4) - 12;
+    var denominator = (num2 & 15) + 1;
     return numerator / denominator;
-  } else if (num < 768) {
-    val = (num >> 5) - 14;
-    var exp = (num & 31) + 2;
+  } else if (num2 < 768) {
+    val = (num2 >> 5) - 14;
+    var exp = (num2 & 31) + 2;
     while (exp > 0) {
       val *= 10;
       exp--;
     }
     return val;
   } else {
-    val = (num >> 2) - 191;
-    var _exp = (num & 3) + 1;
+    val = (num2 >> 2) - 191;
+    var _exp = (num2 & 3) + 1;
     while (_exp > 0) {
       val *= 60;
       _exp--;
@@ -107705,7 +113848,7 @@ var StateMachine = /* @__PURE__ */ (function() {
     this.tags = dfa2.tags;
   }
   var _proto = StateMachine2.prototype;
-  _proto.match = function match(str) {
+  _proto.match = function match(str2) {
     var _ref;
     var self2 = this;
     return _ref = {}, _ref[Symbol.iterator] = /* @__PURE__ */ regeneratorRuntime.mark(function _callee() {
@@ -107720,11 +113863,11 @@ var StateMachine = /* @__PURE__ */ (function() {
               lastState = null;
               p2 = 0;
             case 5:
-              if (!(p2 < str.length)) {
+              if (!(p2 < str2.length)) {
                 _context.next = 21;
                 break;
               }
-              c2 = str[p2];
+              c2 = str2[p2];
               lastState = state;
               state = self2.stateTable[state][c2];
               if (!(state === FAIL_STATE)) {
@@ -107769,13 +113912,13 @@ var StateMachine = /* @__PURE__ */ (function() {
       }, _callee);
     }), _ref;
   };
-  _proto.apply = function apply2(str, actions) {
-    for (var _iterator2 = _createForOfIteratorHelperLoose$e(this.match(str)), _step2; !(_step2 = _iterator2()).done; ) {
+  _proto.apply = function apply2(str2, actions) {
+    for (var _iterator2 = _createForOfIteratorHelperLoose$e(this.match(str2)), _step2; !(_step2 = _iterator2()).done; ) {
       var _step$value = _step2.value, start = _step$value[0], end = _step$value[1], tags = _step$value[2];
       for (var _iterator22 = _createForOfIteratorHelperLoose$e(tags), _step22; !(_step22 = _iterator22()).done; ) {
         var tag3 = _step22.value;
         if (typeof actions[tag3] === "function") {
-          actions[tag3](start, end, str.slice(start, end + 1));
+          actions[tag3](start, end, str2.slice(start, end + 1));
         }
       }
     }
@@ -110325,19 +116468,19 @@ var TTFGlyph = /* @__PURE__ */ (function(_Glyph) {
       }
       path.moveTo(firstPt.x, firstPt.y);
       for (var j = start; j < contour.length; j++) {
-        var pt = contour[j];
+        var pt2 = contour[j];
         var prevPt = j === 0 ? firstPt : contour[j - 1];
-        if (prevPt.onCurve && pt.onCurve) {
-          path.lineTo(pt.x, pt.y);
-        } else if (prevPt.onCurve && !pt.onCurve) {
-          var curvePt = pt;
-        } else if (!prevPt.onCurve && !pt.onCurve) {
-          var midX = (prevPt.x + pt.x) / 2;
-          var midY = (prevPt.y + pt.y) / 2;
+        if (prevPt.onCurve && pt2.onCurve) {
+          path.lineTo(pt2.x, pt2.y);
+        } else if (prevPt.onCurve && !pt2.onCurve) {
+          var curvePt = pt2;
+        } else if (!prevPt.onCurve && !pt2.onCurve) {
+          var midX = (prevPt.x + pt2.x) / 2;
+          var midY = (prevPt.y + pt2.y) / 2;
           path.quadraticCurveTo(prevPt.x, prevPt.y, midX, midY);
-          var curvePt = pt;
-        } else if (!prevPt.onCurve && pt.onCurve) {
-          path.quadraticCurveTo(curvePt.x, curvePt.y, pt.x, pt.y);
+          var curvePt = pt2;
+        } else if (!prevPt.onCurve && pt2.onCurve) {
+          path.quadraticCurveTo(curvePt.x, curvePt.y, pt2.x, pt2.y);
           var curvePt = null;
         } else {
           throw new Error("Unknown TTF path state");
@@ -110382,9 +116525,9 @@ var CFFGlyph = /* @__PURE__ */ (function(_Glyph) {
     var stream2 = this._font.stream;
     stream2.pos;
     var cff2 = this._font.CFF2 || this._font["CFF "];
-    var str = cff2.topDict.CharStrings[this.id];
-    var end = str.offset + str.length;
-    stream2.pos = str.offset;
+    var str2 = cff2.topDict.CharStrings[this.id];
+    var end = str2.offset + str2.length;
+    stream2.pos = str2.offset;
     var path = new Path();
     var stack = [];
     var trans = [];
@@ -111104,8 +117247,8 @@ var GlyphVariationProcessor = /* @__PURE__ */ (function() {
       offsetToData = stream2.pos;
       stream2.pos = here;
     }
-    var origPoints = glyphPoints.map(function(pt) {
-      return pt.copy();
+    var origPoints = glyphPoints.map(function(pt2) {
+      return pt2.copy();
     });
     tupleCount &= TUPLE_COUNT_MASK;
     for (var i2 = 0; i2 < tupleCount; i2++) {
@@ -111154,8 +117297,8 @@ var GlyphVariationProcessor = /* @__PURE__ */ (function() {
           point2.y += Math.round(yDeltas[_i2] * factor);
         }
       } else {
-        var outPoints = origPoints.map(function(pt) {
-          return pt.copy();
+        var outPoints = origPoints.map(function(pt2) {
+          return pt2.copy();
         });
         var hasDelta = glyphPoints.map(function() {
           return false;
@@ -111255,9 +117398,9 @@ var GlyphVariationProcessor = /* @__PURE__ */ (function() {
     while (point2 < points.length) {
       var firstPoint = point2;
       var endPoint = point2;
-      var pt = points[endPoint];
-      while (!pt.endContour) {
-        pt = points[++endPoint];
+      var pt2 = points[endPoint];
+      while (!pt2.endContour) {
+        pt2 = points[++endPoint];
       }
       while (point2 <= endPoint && !hasDelta[point2]) {
         point2++;
@@ -112573,12 +118716,12 @@ function tinf_build_fixed_trees$1(lt, dt) {
   }
 }
 var offs$1 = new Uint16Array(16);
-function tinf_build_tree$1(t2, lengths2, off3, num) {
+function tinf_build_tree$1(t2, lengths2, off3, num2) {
   var i2, sum2;
   for (i2 = 0; i2 < 16; ++i2) {
     t2.table[i2] = 0;
   }
-  for (i2 = 0; i2 < num; ++i2) {
+  for (i2 = 0; i2 < num2; ++i2) {
     t2.table[lengths2[off3 + i2]]++;
   }
   t2.table[0] = 0;
@@ -112586,7 +118729,7 @@ function tinf_build_tree$1(t2, lengths2, off3, num) {
     offs$1[i2] = sum2;
     sum2 += t2.table[i2];
   }
-  for (i2 = 0; i2 < num; ++i2) {
+  for (i2 = 0; i2 < num2; ++i2) {
     if (lengths2[off3 + i2]) t2.trans[offs$1[lengths2[off3 + i2]]++] = i2;
   }
 }
@@ -112599,15 +118742,15 @@ function tinf_getbit$1(d2) {
   d2.tag >>>= 1;
   return bit;
 }
-function tinf_read_bits$1(d2, num, base) {
-  if (!num) return base;
+function tinf_read_bits$1(d2, num2, base) {
+  if (!num2) return base;
   while (d2.bitcount < 24) {
     d2.tag |= d2.source[d2.sourceIndex++] << d2.bitcount;
     d2.bitcount += 8;
   }
-  var val = d2.tag & 65535 >>> 16 - num;
-  d2.tag >>>= num;
-  d2.bitcount -= num;
+  var val = d2.tag & 65535 >>> 16 - num2;
+  d2.tag >>>= num2;
+  d2.bitcount -= num2;
   return val + base;
 }
 function tinf_decode_symbol$1(d2, t2) {
@@ -112630,7 +118773,7 @@ function tinf_decode_symbol$1(d2, t2) {
 }
 function tinf_decode_trees$1(d2, lt, dt) {
   var hlit, hdist, hclen;
-  var i2, num, length;
+  var i2, num2, length;
   hlit = tinf_read_bits$1(d2, 5, 257);
   hdist = tinf_read_bits$1(d2, 5, 1);
   hclen = tinf_read_bits$1(d2, 4, 4);
@@ -112642,27 +118785,27 @@ function tinf_decode_trees$1(d2, lt, dt) {
     lengths$1[clcidx$1[i2]] = clen;
   }
   tinf_build_tree$1(code_tree$1, lengths$1, 0, 19);
-  for (num = 0; num < hlit + hdist; ) {
+  for (num2 = 0; num2 < hlit + hdist; ) {
     var sym = tinf_decode_symbol$1(d2, code_tree$1);
     switch (sym) {
       case 16:
-        var prev = lengths$1[num - 1];
+        var prev = lengths$1[num2 - 1];
         for (length = tinf_read_bits$1(d2, 2, 3); length; --length) {
-          lengths$1[num++] = prev;
+          lengths$1[num2++] = prev;
         }
         break;
       case 17:
         for (length = tinf_read_bits$1(d2, 3, 3); length; --length) {
-          lengths$1[num++] = 0;
+          lengths$1[num2++] = 0;
         }
         break;
       case 18:
         for (length = tinf_read_bits$1(d2, 7, 11); length; --length) {
-          lengths$1[num++] = 0;
+          lengths$1[num2++] = 0;
         }
         break;
       default:
-        lengths$1[num++] = sym;
+        lengths$1[num2++] = sym;
         break;
     }
   }
@@ -112937,8 +119080,8 @@ function toByteArray$1(b64) {
   }
   return arr;
 }
-function tripletToBase64$1(num) {
-  return lookup$1[num >> 18 & 63] + lookup$1[num >> 12 & 63] + lookup$1[num >> 6 & 63] + lookup$1[num & 63];
+function tripletToBase64$1(num2) {
+  return lookup$1[num2 >> 18 & 63] + lookup$1[num2 >> 12 & 63] + lookup$1[num2 >> 6 & 63] + lookup$1[num2 & 63];
 }
 function encodeChunk$1(uint8, start, end) {
   var tmp;

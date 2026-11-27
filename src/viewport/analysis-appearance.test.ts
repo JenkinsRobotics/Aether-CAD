@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 import { MeshStandardMaterial } from "three/webgpu";
 import { applySurfaceAppearance } from "./surface-appearance";
-import { cadDisplayStylePolicy } from "../viewport-appearance";
+import { cadDisplayStylePolicy } from "./viewport-appearance";
 import { resolveAppearance } from "./appearance-themes";
-import { cadAppearance } from "../cad-appearance-store";
+import { cadAppearance } from "../core/stores/cad-appearance-store";
 
 it("installs and removes the analysis shader patch as the display style changes", () => {
   const material = new MeshStandardMaterial();

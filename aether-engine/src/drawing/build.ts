@@ -7,6 +7,19 @@ import { pointDimension } from "./point-dimensions";
 import { attachedDimension, sheetLines, sheetStyle } from "./attached-dimensions";
 import { linearDimension } from "../annotation/dimension-geometry";
 import { circleChords, clipProjectionToCircle } from "./detail-view";
+import {
+  buildCenterline,
+  buildChamferNote,
+  buildDatumSymbol,
+  buildGdtFrame,
+  buildHoleCallout,
+  buildLeaderNote,
+  buildOrdinateDimension,
+  buildRevisionTag,
+  buildSurfaceTextureSymbol,
+  buildWeldSymbol,
+  formatDimensionText,
+} from "./standards-annotations";
 
 export type DrawingProjector = (source: PartDocument, options: PartDrawingOptions) => Promise<PartDrawingProjection>;
 export interface BuiltDrawingView {
@@ -25,18 +38,40 @@ export interface BuiltDrawingAnnotation {
   /** Angle dimensions carry degrees; `valueMm` stays undefined. */
   valueDeg?: number;
   measure?: "length" | "diameter" | "radius" | "angle";
-  /** Symbol annotations carry no measurement; detail markers are generated per detail view. */
-  symbol?: "balloon" | "center-mark" | "detail-marker";
+  /** Symbol annotations carry no measurement (except ordinate & hole-callout); detail markers are generated per detail view. */
+  symbol?:
+    | "balloon"
+    | "center-mark"
+    | "detail-marker"
+    | "ordinate"
+    | "centerline"
+    | "leader-note"
+    | "hole-callout"
+    | "chamfer-note"
+    | "gdt"
+    | "datum"
+    | "surface-texture"
+    | "weld-symbol"
+    | "revision-tag";
   viewId?: string;
   lines: [DrawingPoint, DrawingPoint][];
+  dangling?: boolean;
+  overriddenText?: boolean;
+  toleranceUpperMm?: number;
+  toleranceLowerMm?: number;
 }
 /** The parts list as built: one row per available part of the source, in tree order. */
 export interface BuiltPartsList { originMm: DrawingPoint; widthMm: number; columns: readonly string[]; rows: { key: string; bodyId: string; cells: string[] }[] }
+export interface BuiltRevisionTable { originMm: DrawingPoint; widthMm: number; revisions: NonNullable<DrawingSheet["revisions"]> }
 export const partsListColumns = ["item", "part", "quantity", "material"] as const;
-export interface BuiltDrawingSheet { sheet: DrawingSheet; views: BuiltDrawingView[]; annotations: BuiltDrawingAnnotation[]; partsList?: BuiltPartsList }
+export interface BuiltDrawingSheet { sheet: DrawingSheet; views: BuiltDrawingView[]; annotations: BuiltDrawingAnnotation[]; partsList?: BuiltPartsList; revisionTable?: BuiltRevisionTable }
 export interface BuiltDrawing { document: DrawingDocument; revision: string; sourceHash: string; sheets: BuiltDrawingSheet[]; approximatedCurveCount: number }
 
-export async function buildDrawing(input: DrawingDocument, project: DrawingProjector): Promise<BuiltDrawing> {
+export async function buildDrawing(
+  input: DrawingDocument,
+  project: DrawingProjector,
+  options?: { allowDangling?: boolean },
+): Promise<BuiltDrawing> {
   const document = structuredClone(input);
   validateDrawingDocument(document);
   const result: BuiltDrawing = { document, revision: sha256Hex(JSON.stringify(document)), sourceHash: sha256Hex(JSON.stringify(document.source)), sheets: [], approximatedCurveCount: 0 };
@@ -54,7 +89,7 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
         geometry = clipProjectionToCircle(parent.geometry, modelCenter, radiusMm / ps);
         built.annotations.push({ id: `${view.id}/marker`, symbol: "detail-marker", viewId: parent.view.id, text: label, textAlign: "left", positionMm: [centerMm[0] + radiusMm * 0.75, centerMm[1] - radiusMm * 0.75 - 1], lines: circleChords(centerMm, radiusMm) });
       } else {
-        const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}), ...(view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}), ...(view.direction ? { direction: view.direction } : {}) };
+        const options = { orientation: view.orientation, ...(view.bodyIds ? { bodyIds: view.bodyIds } : {}), ...(view.section ? { section: { ...view.section, modelSpacingMm: (view.section.hatchSpacingMm ?? 2) / view.scale } } : {}), ...(view.direction ? { direction: view.direction } : {}), ...(view.flatPattern ? { flatPattern: true } : {}) };
         const key = JSON.stringify(options);
         geometry = cache.get(key);
         if (!geometry) { geometry = await project(document.source, options); cache.set(key, geometry); }
@@ -65,27 +100,110 @@ export async function buildDrawing(input: DrawingDocument, project: DrawingProje
       built.views.push({ view, geometry, translationMm, boundsMm: [translationMm[0] + s * x0, translationMm[1] - s * y1, translationMm[0] + s * x1, translationMm[1] - s * y0] });
       result.approximatedCurveCount += geometry.visible.concat(view.hiddenLines ? geometry.hidden : []).filter(c => c.kind === "polyline").length;
     }
+    const templateFields: Record<string, string> = {
+      name: document.name,
+      part: document.source.name,
+      sheet: sheet.name,
+      projection: sheet.projection.replace("_", " "),
+      rev: sheet.revisions?.length ? sheet.revisions[sheet.revisions.length - 1].rev : "A",
+    };
     for (const annotation of sheet.annotations) {
       if (annotation.kind === "note") { built.annotations.push({ id: annotation.id, text: annotation.text, positionMm: annotation.positionMm, textAlign: "left", lines: [] }); continue; }
       if (annotation.kind === "balloon") { built.annotations.push(balloon(annotation.id, annotation.text, annotation.positionMm, annotation.leaderMm)); continue; }
+      if (annotation.kind === "leader-note") {
+        const builtNote = buildLeaderNote(annotation.id, annotation.text, annotation.positionMm, annotation.leaderPointsMm, templateFields);
+        if (annotation.viewId) builtNote.viewId = annotation.viewId;
+        built.annotations.push(builtNote);
+        continue;
+      }
+      if (annotation.kind === "gdt") {
+        const builtGdt = buildGdtFrame(annotation.id, annotation.characteristic, annotation.tolerance, annotation.datums, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtGdt.viewId = annotation.viewId;
+        built.annotations.push(builtGdt);
+        continue;
+      }
+      if (annotation.kind === "datum") {
+        const builtDatum = buildDatumSymbol(annotation.id, annotation.label, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtDatum.viewId = annotation.viewId;
+        built.annotations.push(builtDatum);
+        continue;
+      }
+      if (annotation.kind === "surface-texture") {
+        const builtSurf = buildSurfaceTextureSymbol(annotation.id, annotation.ra, annotation.process, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtSurf.viewId = annotation.viewId;
+        built.annotations.push(builtSurf);
+        continue;
+      }
+      if (annotation.kind === "weld-symbol") {
+        const builtWeld = buildWeldSymbol(annotation.id, annotation.weldType, annotation.size, annotation.allAround, annotation.positionMm, annotation.leaderMm);
+        if (annotation.viewId) builtWeld.viewId = annotation.viewId;
+        built.annotations.push(builtWeld);
+        continue;
+      }
+      if (annotation.kind === "revision-tag") {
+        built.annotations.push(buildRevisionTag(annotation.id, annotation.revision, annotation.positionMm));
+        continue;
+      }
       const view = built.views.find(v => v.view.id === annotation.viewId)!;
-      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") { built.annotations.push(attachedDimension(annotation, view)); continue; }
-      if (annotation.kind === "point-distance" || annotation.kind === "point-angle") { built.annotations.push(pointDimension(annotation, view)); continue; }
+      if (annotation.kind === "centerline") {
+        built.annotations.push(buildCenterline(annotation.id, annotation.viewId, annotation.startMm, annotation.endMm));
+        continue;
+      }
+      if (annotation.kind === "ordinate") {
+        const ord = buildOrdinateDimension(annotation.id, view, annotation.axis, annotation.datumMm, annotation.targetMm, annotation.positionMm, annotation.decimals, annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
+        if (annotation.overrideText !== undefined) ord.overriddenText = true;
+        if (annotation.toleranceUpperMm !== undefined) ord.toleranceUpperMm = annotation.toleranceUpperMm;
+        if (annotation.toleranceLowerMm !== undefined) ord.toleranceLowerMm = annotation.toleranceLowerMm;
+        built.annotations.push(ord);
+        continue;
+      }
+      if (annotation.kind === "hole-callout") {
+        built.annotations.push(buildHoleCallout(annotation.id, view, annotation.atMm, annotation.positionMm, annotation.decimals, annotation.text));
+        continue;
+      }
+      if (annotation.kind === "chamfer-note") {
+        built.annotations.push(buildChamferNote(annotation.id, annotation.viewId, annotation.atMm, annotation.positionMm, annotation.text));
+        continue;
+      }
+      if (annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle" || annotation.kind === "center-mark" || annotation.kind === "length") {
+        try { built.annotations.push(attachedDimension(annotation, view)); }
+        catch (err) {
+          if (!options?.allowDangling) throw err;
+          built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: "? (dangling)", positionMm: annotation.positionMm, textAlign: "center", lines: [], dangling: true });
+        }
+        continue;
+      }
+      if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
+        try { built.annotations.push(pointDimension(annotation, view)); }
+        catch (err) {
+          if (!options?.allowDangling) throw err;
+          built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text: "? (dangling)", positionMm: annotation.positionMm, textAlign: "center", lines: [], dangling: true });
+        }
+        continue;
+      }
       const [x0, y0, x1, y1] = view.boundsMm;
       const horizontal = annotation.kind === "width";
       const valueMm = horizontal ? view.geometry.bounds[2] - view.geometry.bounds[0] : view.geometry.bounds[3] - view.geometry.bounds[1];
-      const text = valueMm.toFixed(annotation.decimals);
+      const text = formatDimensionText(valueMm, annotation.decimals, "", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
       // The view's extent along one axis, dimensioned from the bounds corner nearest the label.
       const [x, y] = annotation.positionMm;
       const near: DrawingPoint = horizontal ? [x0, y < y0 ? y0 : y1] : [x < x0 ? x0 : x1, y0];
       const far: DrawingPoint = horizontal ? [x1, near[1]] : [near[0], y1];
       const graphics = linearDimension(near, far, annotation.positionMm, sheetStyle, horizontal ? "x" : "y");
-      built.annotations.push({ id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text) });
+      built.annotations.push({
+        id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text),
+        ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}),
+        ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}),
+        ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}),
+      });
     }
     if (sheet.partsList) {
       // Every part is one item, quantity 1: a Part drawing lists its own parts (assembly sources are not drawn yet).
       const rows = availableBodies(document.source).map((body, i) => ({ key: body.id, bodyId: body.id, cells: [String(i + 1), body.name, "1", document.source.bodyProperties?.[body.id]?.material?.name ?? ""] }));
       built.partsList = { originMm: sheet.partsList.originMm, widthMm: sheet.partsList.widthMm ?? 120, columns: partsListColumns, rows };
+    }
+    if (sheet.revisionTable && sheet.revisions?.length) {
+      built.revisionTable = { originMm: sheet.revisionTable.originMm, widthMm: sheet.revisionTable.widthMm ?? 120, revisions: structuredClone(sheet.revisions) };
     }
     result.sheets.push(built);
   }

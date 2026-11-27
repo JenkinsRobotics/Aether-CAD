@@ -1,0 +1,115 @@
+import {displayQuantity, unitChoice} from "@aether/core/units";
+import {documentUnits, subscribeDocumentUnits} from "../../app/document-preferences";
+/** Pieces more than one panel needs: the placement menu every panel
+ *  header carries, the tree helpers, and the read-only property grid. */
+import { type CADPanelID, type CADPanelPlacement, cadPresentation } from "../../core/stores/cad-presentation-store";
+import { type CADInspectorSection, cadWorkspace } from "../../core/stores/cad-workspace-store";
+import { Button, PanelPlacementMenu, PropertyGrid, type TreeNode } from "@aether/ui";
+import { useSyncExternalStore } from "react";
+import { cadCommands, type CADCommandID } from "../../core/cad-command-registry";
+import type { ReactNode } from "react";
+
+export function CADPanelPlacementMenu({ panel, label, placement }: { panel: CADPanelID; label: string; placement: CADPanelPlacement }) {
+  return <PanelPlacementMenu
+    className="cad-panel-placement-menu"
+    label={label}
+    placement={placement}
+    onChange={(nextPlacement) => cadPresentation.dispatch({
+      type: "set-panel-placement",
+      panel,
+      placement: nextPlacement,
+    })}
+  />;
+}
+
+
+/* ponytail: static mockups — greyed-out until each workflow gets real host backing. */
+
+export function MockNote() { return <p className="cad-mock-note">Planned — not functional yet.</p>; }
+
+export function findTreeNode(nodes: readonly TreeNode[], id: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const child = node.children ? findTreeNode(node.children, id) : null;
+    if (child) return child;
+  }
+  return null;
+}
+export function ReadOnlyPropertyGrid({
+  ariaLabel,
+  emptyState,
+}: {
+  ariaLabel: string;
+  emptyState: string;
+}) {
+  const workspace = useSyncExternalStore(
+    cadWorkspace.subscribe,
+    cadWorkspace.snapshot,
+    cadWorkspace.snapshot,
+  );
+  return (
+    <ReadOnlyPropertySections sections={workspace.inspectorSections} ariaLabel={ariaLabel} emptyState={emptyState} />
+  );
+}
+
+export function ReadOnlyPropertySections({
+  sections,
+  ariaLabel,
+  emptyState,
+}: {
+  sections: readonly CADInspectorSection[];
+  ariaLabel: string;
+  emptyState: string;
+}) {
+  const units = useSyncExternalStore(subscribeDocumentUnits, documentUnits, documentUnits);
+  return <PropertyGrid
+      ariaLabel={ariaLabel}
+      sections={sections.map((section) => ({
+        ...section,
+        properties: section.properties.map((property) => ({
+          ...property,
+          editor: <output>{property.quantity ? `${displayQuantity(property.quantity.si,units,property.quantity.family)} ${unitChoice(units,property.quantity.family).unit}` : property.displayUnit ? unitChoice(units,property.displayUnit).unit : property.value}</output>,
+          readOnly: true,
+        })),
+      }))}
+      emptyState={emptyState}
+    />;
+}
+
+
+/** A command as a primary button. Two panels drive commands this way, so it
+ *  sits here rather than in the shell it was lifted out of. */
+export function CommandButton({
+  command,
+  id,
+  className,
+  children,
+  disabled = false,
+  primary = true,
+}: {
+  primary?: boolean;
+  disabled?: boolean;
+  command: CADCommandID;
+  id?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const commands = useSyncExternalStore(
+    cadCommands.subscribe,
+    cadCommands.snapshot,
+    cadCommands.snapshot,
+  );
+  const state = commands[command];
+  return (
+    <Button
+      id={id}
+      className={className}
+      primary={primary}
+      active={state.active}
+      disabled={disabled || !state.enabled || !state.registered}
+      onClick={() => cadCommands.execute(command)}
+    >
+      {children}
+    </Button>
+  );
+}

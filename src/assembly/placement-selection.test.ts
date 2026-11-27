@@ -1,8 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import { cadSelection } from '../cad-selection-store';
-import { cadAssemblyWorkspace } from '../cad-assembly-workspace-store';
-vi.mock('../features/selection-manipulator', () => ({ mountSelectionManipulator: () => () => {} }));
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
+import { cadSelection } from '../core/stores/cad-selection-store';
+import { cadAssemblyWorkspace } from '../core/stores/cad-assembly-workspace-store';
+vi.mock('../modeling/features/selection-manipulator', () => ({ mountSelectionManipulator: () => () => {} }));
 import { mountAssemblyPlacementManipulator } from './placement-manipulator';
 let dispose: (() => void) | undefined;
 afterEach(() => { dispose?.(); cadSelection.dispatch({ type: 'clear' }); cadAssemblyWorkspace.setUnavailable(); });

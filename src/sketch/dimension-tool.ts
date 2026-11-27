@@ -1,5 +1,5 @@
 import { dimensionValue, distanceSideOf, dragSketchEntity, editDrawingDimension, resolveSketchEntity, sketchEntityPoint, solveDrawingConstraints, type DrawingConstraint, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 import { pickSelectableSketchEntity } from './projected-picking';
 import { bindDimensionInput } from './dimension-input';
 import { inferDimension } from './dimension-inference';

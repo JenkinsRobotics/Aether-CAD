@@ -1,4 +1,4 @@
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 /** Regression helpers exercise public commands and attached, visible editors. */
 export function showSketchEditor(editor) {
   if (!document.querySelector('.cad-sketch-workspace')) return;

@@ -24,7 +24,7 @@ beforeAll(async () => {
     "location",
   ])
     vi.stubGlobal(key, dom.window[key]);
-  open = (await import("../sketch-workspace")).openSketchWorkspace;
+  open = (await import("../ui/windows/sketch-workspace")).openSketchWorkspace;
 });
 afterAll(() => {
   dom.window.close();
@@ -39,7 +39,7 @@ const point = (x, y) => {
   click("Place point");
 };
 it("evaluates a fractional radius in inches, rejects bad arithmetic, and persists the driver", async () => {
-  const { applyDocumentUnits } = await import("../document-preferences");
+  const { applyDocumentUnits } = await import("../app/document-preferences");
   let doc = createEmptyPartDocument("Calculated radius");
   const apply = vi.fn(async (next) => {
     doc = next;

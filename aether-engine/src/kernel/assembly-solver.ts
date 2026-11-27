@@ -5,7 +5,7 @@
  *  one and says so, every mate is checked after the solve as FreeCAD's
  *  acceptance did (`assembly_residuals.py`), and a partial solve publishes no
  *  placements. */
-import type { AssemblyDiagnostic, AssemblyJobInput, AssemblyJoint, AssemblyJointEnd, AssemblyJointValue, AssemblyMateKind, AssemblyRelation, AssemblySolution } from "../contracts/assembly";
+import type { AssemblyDiagnostic, AssemblyJobInput, AssemblyJoint, AssemblyJointEnd, AssemblyJointLimit, AssemblyJointValue, AssemblyMateKind, AssemblyRelation, AssemblySolution } from "../contracts/assembly";
 
 type V3 = [number, number, number];
 type Q = [number, number, number, number];
@@ -132,16 +132,58 @@ function orientationResidual(target: Q, actual: Q, hemisphere: number): number[]
   return error.slice(0, 3).map(v => ORIENTATION_SCALE * scale * v);
 }
 
+/** Evaluate a piecewise-linear cam table `[[driver, driven], ...]`. */
+export function evaluateCamTable(table: readonly (readonly [number, number])[], x: number, periodic = false): number {
+  if (table.length < 2) throw new Error("A cam table needs at least two [driver, driven] samples.");
+  let u = x;
+  const x0 = table[0][0], xN = table[table.length - 1][0];
+  const span = xN - x0;
+  if (periodic && span > 1e-9) {
+    u = x0 + ((((u - x0) % span) + span) % span);
+  }
+  if (u <= x0) return table[0][1];
+  if (u >= xN) return table[table.length - 1][1];
+  for (let i = 1; i < table.length; i++) {
+    const [a0, b0] = table[i - 1], [a1, b1] = table[i];
+    if (u <= a1) {
+      const t = a1 === a0 ? 0 : (u - a0) / (a1 - a0);
+      return b0 + (b1 - b0) * t;
+    }
+  }
+  return table[table.length - 1][1];
+}
+
+/** One-sided limit violation residuals on a mate's free DOFs (`parameters.limits`). */
+function limitResiduals(a: OrientedFrame, b: OrientedFrame, kind: AssemblyMateKind, parameters: Record<string, unknown> = {}): number[] {
+  const limits = (parameters.limits as AssemblyJointLimit[] | undefined) ?? [];
+  if (!limits.length) return [];
+  const out: number[] = [];
+  for (const lim of limits) {
+    const template = templateDof(kind, lim.dof);
+    if (!template) continue;
+    const current = dofValue(template.kind, template.axis, a, b);
+    const scale = template.kind === "translation" ? 1 : ORIENTATION_SCALE * Math.PI / 180;
+    if (lim.min !== undefined && current < lim.min) out.push((lim.min - current) * scale);
+    else if (lim.max !== undefined && current > lim.max) out.push((current - lim.max) * scale);
+    else out.push(0);
+  }
+  return out;
+}
+
 /** Residuals holding authored or relation-resolved coordinates. Full ball
  * orientation avoids Euler branch ambiguity and works at gimbal lock. */
 function valueResiduals(a: OrientedFrame, b: OrientedFrame, kind: AssemblyMateKind, parameters: Record<string, unknown> = {}, hemisphere = 1): number[] {
   const values = kind === "sweep" ? [] : (parameters.dofs as AssemblyJointValue[] | undefined) ?? [];
   const rotation = heldRotation(kind, values);
   const orientation = rotation ? orientationResidual(qmul(a.q, rotation), b.q, hemisphere) : [];
-  return [...orientation, ...values.filter(dof => !rotation || dof.kind !== "rotation").map(dof => {
-    const current = dofValue(dof.kind, dof.axis, a, b);
-    return dof.kind === "translation" ? current - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current - dof.value);
-  })];
+  return [
+    ...orientation,
+    ...values.filter(dof => !rotation || dof.kind !== "rotation").map(dof => {
+      const current = dofValue(dof.kind, dof.axis, a, b);
+      return dof.kind === "translation" ? current - dof.value : ORIENTATION_SCALE * Math.PI / 180 * angleGap(current - dof.value);
+    }),
+    ...limitResiduals(a, b, kind, parameters),
+  ];
 }
 export function jointResiduals(kind: AssemblyMateKind, a: Frame, b: Frame, parameters: Record<string, unknown> = {}): number[] {
   const d = sub(b.o, a.o), S = ORIENTATION_SCALE;
@@ -215,6 +257,15 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
   for (const relation of job.relations ?? []) {
     const driver = byId.get(relation.driver.joint), driven = byId.get(relation.driven.joint);
     if (!driver || !driven) { diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation couples a mate that is not solved" }); continue; }
+    if (relation.kind === "cam") {
+      if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof)
+          || !Array.isArray(relation.camTable) || relation.camTable.length < 2
+          || relation.camTable.some((row) => !Array.isArray(row) || row.length !== 2 || !Number.isFinite(row[0]) || !Number.isFinite(row[1]))) {
+        diagnostics.push({ feature_id: relation.id, severity: "error", message: "a cam relation needs valid driver/driven coordinates and at least two finite [driver, driven] points" }); continue;
+      }
+      relations.push(relation);
+      continue;
+    }
     if (!dofOf(driver, relation.driver.dof) || !dofOf(driven, relation.driven.dof)
         || !Number.isFinite(relation.ratio) || !Number.isFinite(relation.offset ?? 0)) {
       diagnostics.push({ feature_id: relation.id, severity: "error", message: "a relation has an invalid coordinate, ratio or offset" }); continue;
@@ -222,7 +273,10 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
     relations.push(relation);
   }
   const heldValue = (joint: AssemblyJoint, name: string) => (joint.parameters!.dofs as AssemblyJointValue[]).find(d => d.name === name);
-  const relationTarget = (relation: AssemblyRelation, x: number) => (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
+  const relationTarget = (relation: AssemblyRelation, x: number) =>
+    relation.kind === "cam"
+      ? evaluateCamTable(relation.camTable!, x, Boolean(relation.periodic)) + (relation.offset ?? 0)
+      : (relation.reversed ? -relation.ratio : relation.ratio) * x + (relation.offset ?? 0);
   // Carry scalar coordinates through relations before solving poses. This
   // preserves multi-turn values and supplies a ball's dependent XYZ coordinate
   // without trying to infer a unique Euler branch from its rendered quaternion.
@@ -245,6 +299,23 @@ export function solveAssemblyJob(job: AssemblyJobInput): AssemblySolution {
       const expected = templateDof(joint.kind, d.name);
       return !Number.isFinite(d.value) || !expected || expected.kind !== d.kind || expected.axis !== d.axis;
     })) diagnostics.push({ feature_id: joint.id, severity: "error", message: "a mate coordinate is invalid, duplicate or not finite" });
+    for (const d of values) {
+      if (d.min_value !== undefined && d.max_value !== undefined && d.min_value > d.max_value) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit min (${d.min_value}) exceeds max (${d.max_value}) on ${d.name}.` });
+      } else if ((d.min_value !== undefined && d.value < d.min_value - 1e-4) || (d.max_value !== undefined && d.value > d.max_value + 1e-4)) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit violated on ${d.name}: ${d.value} outside [${d.min_value ?? "-∞"}, ${d.max_value ?? "∞"}].` });
+      }
+    }
+    const limits = (joint.parameters?.limits as AssemblyJointLimit[] | undefined) ?? [];
+    for (const lim of limits) {
+      if (lim.min !== undefined && lim.max !== undefined && lim.min > lim.max) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit min (${lim.min}) exceeds max (${lim.max}) on ${lim.dof}.` });
+      }
+      const held = values.find(d => d.name === lim.dof);
+      if (held && ((lim.min !== undefined && held.value < lim.min - 1e-4) || (lim.max !== undefined && held.value > lim.max + 1e-4))) {
+        diagnostics.push({ feature_id: joint.id, severity: "error", message: `Joint limit violated on ${lim.dof}: ${held.value} outside [${lim.min ?? "-∞"}, ${lim.max ?? "∞"}].` });
+      }
+    }
     const ballConstrained = values.length || relations.some(r => r.driver.joint === joint.id || r.driven.joint === joint.id);
     if (joint.kind === "ball" && ballConstrained && (values.length !== 3 || DOF_TEMPLATES.ball.some(d => !values.some(v => v.name === d.name && v.kind === d.kind && v.axis === d.axis))))
       diagnostics.push({ feature_id: joint.id, severity: "error", message: "a driven ball mate requires resolved X, Y and Z rotation coordinates" });

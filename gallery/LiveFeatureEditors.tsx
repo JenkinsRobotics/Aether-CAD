@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createRectanglePartDocument, type PartDocument } from '@aether/core/document';
-import { cadCommands, isCADCommandID, type CADCommandID } from '../src/cad-command-registry';
-import { cadRibbonWorkspaces, type CADToolDefinition } from '../src/tools';
-import { mountFeatureAuthoring } from '../src/feature-authoring';
-import { mountSketch3DWorkspace } from '../src/sketch3d-workspace';
-import { featureWindowStyle, previewFeatureWindowStyle, type FeatureWindowStyle } from '../src/features/feature-window-style';
+import { cadCommands, isCADCommandID, type CADCommandID } from '../src/core/cad-command-registry';
+import { cadRibbonWorkspaces, type CADToolDefinition } from '../src/modeling/tools';
+import { mountFeatureAuthoring } from '../src/ui/windows/feature-authoring';
+import { mountSketch3DWorkspace } from '../src/ui/windows/sketch3d-workspace';
+import { featureWindowStyle, previewFeatureWindowStyle, type FeatureWindowStyle } from '../src/modeling/features/feature-window-style';
 
 /** The live CAD feature windows, opened by the same commands the ribbon runs,
  *  on a sample box Part, every one in its own card so the whole set reads at a

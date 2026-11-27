@@ -4,6 +4,7 @@
 import type { DrawingAnnotation, DrawingPoint } from "./document";
 import { sheetPoint, type BuiltDrawingAnnotation, type BuiltDrawingView } from "./build";
 import { angularDimension, arcPolyline, arrowheadLines, dimensionStyle, linearDimension, radialDimension, splitAroundText, type DimensionGraphics } from "../annotation/dimension-geometry";
+import { formatDimensionText } from "./standards-annotations";
 
 /** Sheet millimetres: 2 mm arrowheads, 1 mm extension gap, 2 mm overshoot, 3.5 mm text. */
 export const sheetStyle = dimensionStyle(1);
@@ -82,15 +83,16 @@ export function attachedDimension(annotation: Attached, view: BuiltDrawingView):
     const sign = (Math.sign(r1[0] * r2[1] - r1[1] * r2[0]) || 1) as 1 | -1;
     const reach = (segment: Segment, ray: DrawingPoint): number => Math.max(0, (sub(segment.a, vertex)[0] * ray[0] + sub(segment.a, vertex)[1] * ray[1]), (sub(segment.b, vertex)[0] * ray[0] + sub(segment.b, vertex)[1] * ray[1]));
     const graphics = angularDimension(vertex, r1, r2, sign, label, sheetStyle, [reach(first, r1), reach(second, r2)]);
-    const text = `${valueDeg.toFixed(annotation.decimals)}°`;
+    const text = formatDimensionText(valueDeg, annotation.decimals, "", "°", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const lines: Line[] = [...graphics.extensions, ...arcPolyline(graphics.arc), ...graphics.arrows.flatMap((arrow) => arrowheadLines(arrow, sheetStyle))];
-    return { id: annotation.id, viewId: annotation.viewId, text, valueDeg, measure: "angle", textAlign: "center", positionMm: graphics.text.at, lines };
+    return { id: annotation.id, viewId: annotation.viewId, text, valueDeg, measure: "angle", textAlign: "center", positionMm: graphics.text.at, lines, ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}), ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}), ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}) };
   }
   if (annotation.kind === "length") {
     const edge = nearestSegment(segments, annotation.atMm, name);
-    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale, text = valueMm.toFixed(annotation.decimals);
+    const valueMm = norm(sub(edge.b, edge.a)) / view.view.scale;
+    const text = formatDimensionText(valueMm, annotation.decimals, "", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
     const graphics = linearDimension(edge.a, edge.b, label, sheetStyle);
-    return { id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text) };
+    return { id: annotation.id, viewId: annotation.viewId, text, valueMm, measure: "length", textAlign: "center", positionMm: graphics.text.at, lines: sheetLines(graphics, text), ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}), ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}), ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}) };
   }
   const round = nearestRound(rounds, annotation.atMm, name);
   if (annotation.kind === "center-mark") {
@@ -98,7 +100,7 @@ export function attachedDimension(annotation: Attached, view: BuiltDrawingView):
     return { id: annotation.id, viewId: annotation.viewId, symbol: "center-mark", text: "", textAlign: "left", positionMm: round.center, lines: [[[cx - reach, cy], [cx + reach, cy]], [[cx, cy - reach], [cx, cy + reach]]] };
   }
   const value = annotation.kind === "diameter" ? 2 * round.modelRadius : round.modelRadius;
-  const text = `${annotation.kind === "diameter" ? "Ø" : "R"}${value.toFixed(annotation.decimals)}`;
+  const text = formatDimensionText(value, annotation.decimals, annotation.kind === "diameter" ? "Ø" : "R", "", annotation.toleranceUpperMm, annotation.toleranceLowerMm, annotation.overrideText);
   const graphics = radialDimension(round.center, round.radiusMm, label, annotation.kind);
-  return { id: annotation.id, viewId: annotation.viewId, text, valueMm: value, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text) };
+  return { id: annotation.id, viewId: annotation.viewId, text, valueMm: value, measure: annotation.kind, textAlign: "left", positionMm: label, lines: sheetLines(graphics, text), ...(annotation.overrideText !== undefined ? { overriddenText: true } : {}), ...(annotation.toleranceUpperMm !== undefined ? { toleranceUpperMm: annotation.toleranceUpperMm } : {}), ...(annotation.toleranceLowerMm !== undefined ? { toleranceLowerMm: annotation.toleranceLowerMm } : {}) };
 }

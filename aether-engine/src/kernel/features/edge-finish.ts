@@ -143,26 +143,68 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
       return end !== undefined && own === undefined ? [start, measured(at, end)] : start;
     };
   };
-  // Onshape's points on the edge: OCCT's fillet takes a (position, radius) law per edge, here the
-  // same law on every picked edge: the size at the start, the points in order, the end radius at the end.
-  const filletThroughPoints = (): Shape3D => {
-    if (feature.type !== "fillet" || !chainPoints) throw new Error("A fillet through points on the edge needs picked edges.");
-    const oc = getOC(), law = [{ position: 0, radiusMillimeters: size }, ...feature.points!.slice().sort((a, b) => a.position - b.position), { position: 1, radiusMillimeters: feature.endRadiusMillimeters ?? size }];
-    const builder = new oc.BRepFilletAPI_MakeFillet(body.wrapped, oc.ChFi3d_FilletShape.ChFi3d_Rational as never), progress = new oc.Message_ProgressRange_1();
+  // Advanced OCCT fillet path: points-on-edge law, G2 curvature continuity, or vertex setbacks.
+  const filletAdvanced = (): Shape3D => {
+    if (feature.type !== "fillet") throw new Error("Advanced fillet requires a fillet feature.");
+    const oc = getOC();
+    const isG2 = feature.continuity === "g2";
+    const filletShape = isG2 ? oc.ChFi3d_FilletShape.ChFi3d_QuasiAngular : oc.ChFi3d_FilletShape.ChFi3d_Rational;
+    const builder = new oc.BRepFilletAPI_MakeFillet(body.wrapped, filletShape as never);
+    if (isG2) builder.SetContinuity(oc.GeomAbs_Shape.GeomAbs_G2 as never, 1e-2);
+    const progress = new oc.Message_ProgressRange_1();
     const temps: { delete(): void }[] = [], edges = body.edges;
+    const planeMatch = (edge: import("replicad").Edge): boolean => {
+      if (!edgePlane) return true;
+      const m = edge.pointAt(0.5);
+      const axis = ({ XY: [0, 0, 1], XZ: [0, 1, 0], YZ: [1, 0, 0] } as Record<string, V3>)[feature.edgePlane!.plane];
+      const d = Math.abs(m.x * axis[0] + m.y * axis[1] + m.z * axis[2] - feature.edgePlane!.offsetMillimeters);
+      m.delete();
+      return d < 1e-3;
+    };
     try {
       let added = 0;
+      const hasPoints = Boolean(feature.points?.length);
+      const law = hasPoints
+        ? [{ position: 0, radiusMillimeters: size }, ...feature.points!.slice().sort((a, b) => a.position - b.position), { position: 1, radiusMillimeters: feature.endRadiusMillimeters ?? size }]
+        : null;
       for (const edge of edges) {
-        const m = edge.pointAt(0.5), hit = chainPoints.some((p) => near(p, m)); m.delete();
+        const m = edge.pointAt(0.5), at: V3 = [m.x, m.y, m.z];
+        const hit = chainPoints ? chainPoints.some((p) => near(p, m)) : planeMatch(edge);
+        m.delete();
         if (!hit) continue;
-        const table = new oc.TColgp_Array1OfPnt2d_2(1, law.length); temps.push(table);
-        law.forEach((row, index) => { const p = new oc.gp_Pnt2d_3(row.position, row.radiusMillimeters); temps.push(p); table.SetValue(index + 1, p); });
-        builder.Add_5(table, edge.wrapped); added++;
+        if (law) {
+          const table = new oc.TColgp_Array1OfPnt2d_2(1, law.length); temps.push(table);
+          law.forEach((row, index) => { const p = new oc.gp_Pnt2d_3(row.position, measured(at, row.radiusMillimeters)); temps.push(p); table.SetValue(index + 1, p); });
+          builder.Add_5(table, edge.wrapped);
+        } else if (feature.endRadiusMillimeters !== undefined) {
+          builder.Add_3(measured(at, size), measured(at, feature.endRadiusMillimeters), edge.wrapped);
+        } else {
+          const pickIdx = picks ? picks.findIndex((pk) => Math.hypot(pk.point[0] - at[0], pk.point[1] - at[1], pk.point[2] - at[2]) < 1e-3) : -1;
+          const r = measured(at, (pickIdx >= 0 ? picks![pickIdx].size : undefined) ?? size);
+          builder.Add_2(r, edge.wrapped);
+        }
+        added++;
       }
       if (!added) throw new Error("Could not fillet, no edge was selected");
+      // Apply per-vertex corner radius / setback overrides if specified.
+      if (feature.setbacks?.length) {
+        const nbContours = builder.NbContours();
+        for (const sb of feature.setbacks) {
+          const target = sb.vertexMillimeters;
+          for (let ic = 1; ic <= nbContours; ic++) {
+            for (const v of [builder.FirstVertex(ic), builder.LastVertex(ic)]) {
+              temps.push(v);
+              const gp = oc.BRep_Tool.Pnt(v); temps.push(gp);
+              if (Math.hypot(gp.X() - target[0], gp.Y() - target[1], gp.Z() - target[2]) < 1e-2) {
+                builder.SetRadius_6(sb.distanceMillimeters, ic, v);
+              }
+            }
+          }
+        }
+      }
       builder.Build(progress);
       const made = cast(builder.Shape());
-      if (!isShape3D(made)) { made.delete(); throw new Error("Fillet through points did not produce a solid."); }
+      if (!isShape3D(made)) { made.delete(); throw new Error("Advanced fillet did not produce a solid."); }
       return made;
     } finally { edges.forEach((edge) => edge.delete()); temps.reverse().forEach((t) => t.delete()); builder.delete(); progress.delete(); }
   };
@@ -220,7 +262,8 @@ export function buildEdgeFinish(feature: EdgeFinishFeature, bodyId: string, body
   };
   let rounded: Shape3D;
   try {
-    rounded = feature.type === "fillet" && feature.points?.length ? filletThroughPoints() : feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
+    const useAdvancedFillet = feature.type === "fillet" && (Boolean(feature.points?.length) || feature.continuity === "g2" || Boolean(feature.setbacks?.length));
+    rounded = useAdvancedFillet ? filletAdvanced() : feature.type === "fillet" ? body.fillet(filletRadius(), filter) : body.chamfer(chamferRadius(), filter);
     if (!validFinishSolid(rounded)) { rounded.delete(); throw new Error("Invalid finished solid."); }
   }
   catch (error) {

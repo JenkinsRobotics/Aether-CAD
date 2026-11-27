@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
-import type {ConnectorCandidate} from '../aether-core';
-import type {CADScreenPoint} from '../cad-selection-store';
+import type {ConnectorCandidate} from '../core/aether-core';
+import type {CADScreenPoint} from '../core/stores/cad-selection-store';
 import type {ScreenProjector} from './box-selection';
 
 /** The pointer's screen distance to an exact edge or vertex: to the edge itself (a line,

@@ -8,7 +8,7 @@ let dom,open,doc,apply;
 beforeAll(async()=>{
  dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'http://localhost/cad/index.html'});
  for(const key of ['window','document','HTMLElement','CustomEvent','Event','location'])vi.stubGlobal(key,dom.window[key]);
- open=(await import('../sketch-workspace')).openSketchWorkspace;
+ open=(await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(()=>{
  document.body.innerHTML='<div class="cad-studio-viewport"></div>';

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createRectanglePartDocument, serializePartDocument } from '@aether/core/document';
 import { inspectFeatureReferences } from './feature-inspection';
-import { prepareFeatureOperation } from '../operations/feature-operations';
+import { prepareFeatureOperation } from '../core/operations/feature-operations';
 
 const fixture = () => createRectanglePartDocument('Graph', { widthMillimeters: 10, heightMillimeters: 20, depthMillimeters: 5 },
   { documentId: 'doc', sketchId: 'sketch', extrudeId: 'pad' });

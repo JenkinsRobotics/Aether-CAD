@@ -5,8 +5,8 @@ import { initNodeKernel, solidMeasures } from '@aether/core/kernel/node';
 import { evaluatePartDocument } from '@aether/core/kernel';
 import { preparePartEdit } from './live-commands';
 import { inspectSketch } from './sketch-edit';
-import { stampProfileSelections } from '../features/regions';
-import type { FeatureEditorContext } from '../features/shared';
+import { stampProfileSelections } from '../modeling/features/regions';
+import type { FeatureEditorContext } from '../modeling/features/shared';
 import { profileRegionIdentity } from '@aether/core/sketch/reference/profile-region-reference';
 
 beforeAll(async()=>{await initNodeKernel(readFileSync(new URL('../../aether-engine/node_modules/replicad-opencascadejs/src/replicad_single.wasm',import.meta.url)));});

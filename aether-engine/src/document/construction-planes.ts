@@ -62,7 +62,11 @@ export type PlaneDefinition =
   /** SolidCraft "Tangent Plane": touches a curved face at the picked point. */
   | { method: "tangent"; surface: SurfacePointReference; flip?: boolean }
   /** SolidCraft "Plane Along Path": square to a straight edge at a fraction along it. */
-  | { method: "along-path"; axis: AxisReference; t: number; flip?: boolean };
+  | { method: "along-path"; axis: AxisReference; t: number; flip?: boolean }
+  /** SolidCraft "Plane Through Axis And Point": holds a line/axis and passes through a point off it. */
+  | { method: "axis-point"; axis: AxisReference; point: PointReference; flip?: boolean }
+  /** SolidCraft "Plane Through Point, Square To Line": passes through a point, normal to a line/axis. */
+  | { method: "square-to-line"; axis: AxisReference; point: PointReference; flip?: boolean };
 
 export interface ConstructionPlaneFeature {
   id: string;
@@ -242,11 +246,67 @@ export function resolvePlaneFrame(
     const o = definition.axis.originMillimeters, along = (definition.t - 0.5) * length;
     return maybeFlip({ originMillimeters: [o[0] + d[0] * along, o[1] + d[1] * along, o[2] + d[2] * along], normal: d, xDirection: canonicalPlaneXDirection(d) });
   }
+  if (definition.method === "square-to-line") {
+    const d = unitOf(definition.axis.directionMillimeters, "the line");
+    return maybeFlip({
+      originMillimeters: [...definition.point.positionMillimeters],
+      normal: d,
+      xDirection: canonicalPlaneXDirection(d),
+    });
+  }
+  if (definition.method === "axis-point") {
+    const d = unitOf(definition.axis.directionMillimeters, "the axis");
+    const o = definition.axis.originMillimeters;
+    const p = definition.point.positionMillimeters;
+    const v: [number, number, number] = [p[0] - o[0], p[1] - o[1], p[2] - o[2]];
+    const n: [number, number, number] = [
+      d[1] * v[2] - d[2] * v[1],
+      d[2] * v[0] - d[0] * v[2],
+      d[0] * v[1] - d[1] * v[0],
+    ];
+    if (Math.hypot(...n) < 1e-8) throw new Error(`${feature.name}: the point lies on the axis.`);
+    const unitN = unitOf(n, "the plane normal");
+    return maybeFlip({
+      originMillimeters: [...p],
+      normal: unitN,
+      xDirection: d,
+    });
+  }
   const [a, b] = definition.references.map(frameOf);
   const alignment =
     a.normal[0] * b.normal[0] + a.normal[1] * b.normal[1] + a.normal[2] * b.normal[2];
-  if (Math.abs(alignment) < 1 - 1e-6)
-    throw new Error(`${feature.name}: mid plane needs two parallel planes.`);
+  if (Math.abs(alignment) < 1 - 1e-6) {
+    // Non-parallel planes: construct the exact bisecting plane through their line of intersection!
+    const lineDir: [number, number, number] = [
+      a.normal[1] * b.normal[2] - a.normal[2] * b.normal[1],
+      a.normal[2] * b.normal[0] - a.normal[0] * b.normal[2],
+      a.normal[0] * b.normal[1] - a.normal[1] * b.normal[0],
+    ];
+    const u = unitOf(lineDir, "plane intersection");
+    const inA: [number, number, number] = [
+      a.normal[1] * u[2] - a.normal[2] * u[1],
+      a.normal[2] * u[0] - a.normal[0] * u[2],
+      a.normal[0] * u[1] - a.normal[1] * u[0],
+    ];
+    const diff: [number, number, number] = [
+      b.originMillimeters[0] - a.originMillimeters[0],
+      b.originMillimeters[1] - a.originMillimeters[1],
+      b.originMillimeters[2] - a.originMillimeters[2],
+    ];
+    const denom = inA[0] * b.normal[0] + inA[1] * b.normal[1] + inA[2] * b.normal[2];
+    const t = (diff[0] * b.normal[0] + diff[1] * b.normal[1] + diff[2] * b.normal[2]) / denom;
+    const origin: [number, number, number] = [
+      a.originMillimeters[0] + inA[0] * t,
+      a.originMillimeters[1] + inA[1] * t,
+      a.originMillimeters[2] + inA[2] * t,
+    ];
+    const sign = alignment < 0 ? -1 : 1;
+    const bisector = unitOf(
+      [a.normal[0] + sign * b.normal[0], a.normal[1] + sign * b.normal[1], a.normal[2] + sign * b.normal[2]],
+      "the bisector normal",
+    );
+    return maybeFlip({ originMillimeters: origin, normal: bisector, xDirection: u });
+  }
   const gap =
     (b.originMillimeters[0] - a.originMillimeters[0]) * a.normal[0] +
     (b.originMillimeters[1] - a.originMillimeters[1]) * a.normal[1] +
@@ -325,6 +385,14 @@ export function validatePlaneDefinition(
     return;
   }
   if (definition.method === "along-path") { checkAxis(definition.axis, "A plane along a path"); if (definition.axis.lengthMillimeters === undefined) throw new Error("A plane along a path needs a straight edge with a length."); if (!Number.isFinite(definition.t) || definition.t < 0 || definition.t > 1) throw new Error("The path fraction must be between 0 and 1."); return; }
+  if (definition.method === "axis-point" || definition.method === "square-to-line") {
+    const label = definition.method === "axis-point" ? "A plane through axis and point" : "A plane square to line";
+    checkAxis(definition.axis, label);
+    const pt = definition.point;
+    if (pt?.kind !== "point" || typeof pt.partId !== "string" || typeof pt.candidateId !== "string" || pt.positionMillimeters?.length !== 3 || !pt.positionMillimeters.every(Number.isFinite))
+      throw new Error(`${label} needs a picked point with finite coordinates.`);
+    return;
+  }
   if (definition.method === "angle") {
     const axis = definition.axis;
     if (

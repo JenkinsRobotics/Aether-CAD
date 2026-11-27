@@ -28,7 +28,7 @@ This repository is the authoritative source for this app. Develop on `alpha-0.2`
 Build and verify here, commit the source locally, then stage an immutable
 `alpha-0.1.N` package through Studio's operator tooling. Studio serves the selected
 release; it must not run a development checkout or overwrite another app.
-See `RELEASING.md`. Do not push or promote to master without separate approval.
+See `docs/releases/RELEASING.md`. Do not push or promote to master without separate approval.
 
 ## GitHub checkout handoff — 2026-10-10
 
@@ -90,7 +90,7 @@ native) and a parametric edit in 1 ms, against ~800 ms per FreeCAD request over 
 What stays ours: the Aether UI shell and widgets, Studio (PDM, Drive, versions, comments),
 the agent protocol. What changes: `engine-solidcraft/` wraps the engine for our app; the FreeCAD
 worker and `/api/cad/*` geometry services are retired as features move over, one tool at a time
-(plan: `dev/docs/roadmap/SolidCraft_Engine_Adoption.md`). SolidCraft's egui UI is not used.
+(plan: `docs/roadmap/SolidCraft_Engine_Adoption.md`). SolidCraft's egui UI is not used.
 Keep its NOTICE and THIRD-PARTY-LICENSES with every build (`engine-solidcraft/ATTRIBUTION.md`).
 This supersedes the FreeCAD-default and "no Rust engine" lines above.
 
@@ -109,7 +109,7 @@ Python feature modules are the specification for the TypeScript ports; SolidCraf
 (command registry, stable naming, replay timeline, oracle tests) is taken as practice, not code.
 No Python in the product. TypeScript and Rust each where they are strongest (Rust: server,
 desktop shell, hot numeric routines if profiling shows one; TypeScript: modeling layer,
-document, sketch solver, UI). Design: `dev/docs/roadmap/Aether_Engine_Design.md`.
+document, sketch solver, UI). Design: `docs/roadmap/Aether_Engine_Design.md`.
 
 ## Releases — 2026-10-20
 
@@ -124,7 +124,7 @@ measurement, previews included. The SolidCraft bridge (`engine-solidcraft/`, `sr
 `public/engine/solidcraft/`, the `solidcraft-main/` snapshot) is removed; its sources are archived at
 `../AetherStudio/migration/archive/solidcraft-bridge-20261020.tar.gz` (build output excluded). The
 engine selector offers Automatic, Aether and FreeCAD. FreeCAD remains the reference until every
-feature is proven; see `dev/docs/roadmap/Aether_Engine_Design.md` for what it still carries.
+feature is proven; see `docs/roadmap/Aether_Engine_Design.md` for what it still carries.
 
 ## FreeCAD reference deleted — 2026-10-20 (night)
 
@@ -138,7 +138,7 @@ worker (`service/aether_cad_service`) builds with the Aether engine in its Node 
 `/api/cad/geometry`, `export` and `analysis` routes answer 410 and the host needs no FreeCAD path.
 No Python computes geometry anywhere in the product; the Python archive that remains orchestrates
 agent commands and project containers (the shared workspace codec) only. The engine is the Aether
-engine, full stop; the benchmark tables in `dev/docs/roadmap/Aether_Engine_Design.md` record why.
+engine, full stop; the benchmark tables in `docs/roadmap/Aether_Engine_Design.md` record why.
 
 
 ## Oracle truth without FreeCAD — Jonathan, 2026-10-31
@@ -162,7 +162,7 @@ See `../AetherStudio/dev/rebuild/app-owned-homes/README.md` for runtime boundari
 
 There are no "non-goals" in the FreeCAD comparison: every row FreeCAD 1.1 provides is wanted.
 The reference is archived only when nothing of value remains to learn from or compare with it;
-until then `dev/docs/roadmap/FreeCAD_Comparison_2026_10_30.md` keeps the open rows and §7 plan.
+until then `docs/roadmap/FreeCAD_Comparison_2026_10_30.md` keeps the open rows and §7 plan.
 The same rule applies afterwards to the SolidCraft 0.23.0 pass.
 
 ## FreeCAD reference retired — Jonathan, 2026-11-12
@@ -171,7 +171,7 @@ Supersedes "FreeCAD reference stays until exhausted" above. The
 FreeCAD benchmark runners are gone (archive:
 `../AetherStudio/migration/archive/freecad-benchmarks-20261112.tar.gz`), and
 FreeCAD 1.1.3 is uninstalled; the installed Studio `products.json` no longer
-sets `freecad` (see `dev/docs/roadmap/CAD_0_2.md`). Do not
+sets `freecad` (see `docs/roadmap/CAD_0_2.md`). Do not
 reinstall FreeCAD or capture new answers from it. Captured reference measurements,
 import fixtures, licenses and provenance stay; open comparison rows are Aether
 requirements, proven with analytic or self-consistency tests.
@@ -193,4 +193,4 @@ The 0.1.0 release is on `master`. Active development and testing now use
 change the published 0.1 tags or installers. FreeCAD gap closure precedes
 SolidCraft parity work; retain reference provenance and independent expected
 measurements when retiring executable reference tooling. See
-`dev/docs/roadmap/CAD_0_2.md` for the current baseline and retirement gates.
+`docs/roadmap/CAD_0_2.md` for the current baseline and retirement gates.

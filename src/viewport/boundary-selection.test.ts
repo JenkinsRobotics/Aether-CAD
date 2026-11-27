@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { OrthographicCamera, PerspectiveCamera, Raycaster, Vector2, Vector3 } from 'three/webgpu';
 import type { ImportedModelData, PartGeometryData } from '@aether/core/contracts';
-import type { ConnectorCandidate } from '../aether-core';
+import type { ConnectorCandidate } from '../core/aether-core';
 import { FeaturePreviewLayer } from '../modeling/feature-preview-layer';
 import { pickHistoryFace } from './history-face-picking';
 import { pickBoundarySelection } from './boundary-selection';

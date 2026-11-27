@@ -16,8 +16,8 @@ import {
   type CADScreenRect,
   type CADSelectionItem,
   type CADSelectionKind,
-} from "../cad-selection-store";
-import type { FaceRangeData, FaceTopologyData, PartGeometryData } from "../aether-core";
+} from "../core/stores/cad-selection-store";
+import type { FaceRangeData, FaceTopologyData, PartGeometryData } from "../core/aether-core";
 import { projectedFaceBounds, screenRectForPoints } from "./picking-math";
 
 /** The part shape this needs, structurally, so the viewport keeps owning the

@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { Euler, Quaternion, Vector3 } from 'three';
 import type { NumericPartTransform } from '@aether/core/document';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { captureAssemblyPlacement, movableOccurrence, placementUpdate } from './placement-manipulator';
 const pose = { position_m: [.02, -.04, .1], rotation_quaternion_xyzw: [0, 0, 0, 1] } as const;
 const instance = { id: 'moving', name: 'Block:2', definition_id: 'part', definition_kind: 'part', parent_assembly_id: 'assembly',

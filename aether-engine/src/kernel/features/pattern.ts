@@ -50,11 +50,11 @@ export function applyPatternFeature(feature: PatternFeature, context: PatternCon
   // A pattern of a pattern repeats the earlier copies the way their root feature was applied.
   let root = source;
   while (root && !("operation" in root) && "sourceFeatureId" in root) root = history.find((f) => f.id === (root as { sourceFeatureId: string }).sourceFeatureId);
-  const rootOperation = root && "operation" in root ? (root as { operation: string }).operation : undefined;
+  const rootOperation = root?.type === "hole" ? "cut" : root && "operation" in root ? (root as { operation: string }).operation : undefined;
   if (!partPattern) {
     if (!source || !tool || !rootOperation)
       throw new Error("Choose a source feature in the selected target body.");
-    if (!["extrude", "revolve", "pattern", "mirror"].includes(source.type))
+    if (!["extrude", "revolve", "sweep", "loft", "hole", "pattern", "mirror"].includes(source.type))
       throw new Error("Choose an additive or subtractive profile feature to pattern.");
     if (rootOperation === "intersect")
       throw new UnsupportedFeature(feature.id, "patterns of intersect features");

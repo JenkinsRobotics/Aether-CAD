@@ -1,6 +1,6 @@
-import { openCADFeatureWindow } from "../features/feature-window-style";
+import { openCADFeatureWindow } from "../modeling/features/feature-window-style";
 import type { FeatureWindow } from "@aether/ui";
-import { cadCommands, type CADCommandID } from "../cad-command-registry";
+import { cadCommands, type CADCommandID } from "../core/cad-command-registry";
 import "./tool-window.css";
 
 type Editor = "coordinates" | "modify" | "constraints" | "variables" | "clipboard" | "text" | "import" | "vector";

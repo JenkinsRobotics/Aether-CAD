@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createRectanglePartDocument } from '../aether-core';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import { createRectanglePartDocument } from '../core/aether-core';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { assemblySourceFeatures, sourceFeatureTarget } from './source-features';
-import { buildCADWorkspaceProjection } from '../cad-workspace-projection';
-import { cadHistoryCount } from '../react/panels/feature-tree-commands';
+import { buildCADWorkspaceProjection } from '../core/cad-workspace-projection';
+import { cadHistoryCount } from '../ui/panels/feature-tree-commands';
 
 const document = createRectanglePartDocument('Panel', { widthMillimeters: 30, heightMillimeters: 20, depthMillimeters: 2 });
 const assembly = {

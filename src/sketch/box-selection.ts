@@ -1,5 +1,5 @@
 import { sketchEntities, sketchEntityPoint, sketchContourPolyline, type SketchDrawing, type SketchEntityRef, type SketchPoint } from '@aether/core/sketch';
-import { boxSelectionMode, normalizedSelectionBox, type CADScreenRect } from '../cad-selection-store';
+import { boxSelectionMode, normalizedSelectionBox, type CADScreenRect } from '../core/stores/cad-selection-store';
 import { pickSketchEditEntity } from './edit-picking';
 import './box-selection.css';
 

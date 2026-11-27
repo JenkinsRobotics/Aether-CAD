@@ -1,10 +1,10 @@
 import { stdin, stdout } from 'node:process';
 import { inspectSketch } from './sketch-edit';
 import { prepareCommand, finalizeCandidate } from './commands';
-import { assemblyJobFor } from '../assembly-job';
+import { assemblyJobFor } from '../assembly/assembly-job';
 import { parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { beginSavedProgram, prepareSavedProgramStep, acceptSavedProgramStep, savedProgramDocs } from './saved-program';
-import { exampleAssemblyRecipe } from '../assembly-recipe';
+import { exampleAssemblyRecipe } from '../assembly/assembly-recipe';
 import { buildPhase, analyzePhase, exportPhase, assemblyPhase, engineDescription, drawingPhase, modelProjectionPhase } from './engine-node';
 async function main() {
 try {

@@ -52,7 +52,15 @@ it("section keeps the material on one side of a principal plane, capped, and ren
 it("interference reports each overlapping pair's exact volume and shows the overlap", () => {
   expect(() => analyzePart(plate(), { kind: "interference" })).toThrow(/at least two/);
   const result = analyzePart(withSecond(), { kind: "interference" });
-  expect(result.measurements).toEqual([{ first_body_id: "doc:body-1", second_body_id: "doc:body-e2", volume_mm3: expect.closeTo(4000, 6) }]);
+  expect(result.measurements).toEqual([
+    expect.objectContaining({
+      first_body_id: "doc:body-1",
+      second_body_id: "doc:body-e2",
+      volume_mm3: expect.closeTo(4000, 6),
+      center_mm: [0, 0, 15],
+      bounds_mm: [20, 20, 10],
+    }),
+  ]);
   expect(result.bodies.map((b) => b.id)).toEqual(["doc:body-1|doc:body-e2"]);
 });
 

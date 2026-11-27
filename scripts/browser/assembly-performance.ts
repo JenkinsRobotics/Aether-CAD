@@ -1,12 +1,12 @@
 /** Real worker + viewport fixture. No Studio files or server geometry involved. */
-import { MateViewport } from '../../src/viewer';
+import { MateViewport } from '../../src/viewport/viewer';
 import { OCCTWorkerClient } from '@aether/core/kernel';
-import { createRectanglePartDocument, parsePartDocument } from '../../src/aether-core';
-import { bodiesForPlacements } from '../../src/startup/assembly-solve';
-import type { AssemblyProjectionV1 } from '../../src/cad-assembly-bridge';
-import { cadViewportMetrics } from '../../src/cad-viewport-metrics-store';
+import { createRectanglePartDocument, parsePartDocument } from '../../src/core/aether-core';
+import { bodiesForPlacements } from '../../src/app/startup/assembly-solve';
+import type { AssemblyProjectionV1 } from '../../src/core/cad-assembly-bridge';
+import { cadViewportMetrics } from '../../src/core/stores/cad-viewport-metrics-store';
 import { AssemblyGeometryCache } from '../../src/assembly/geometry-cache';
-import { cadSelection } from '../../src/cad-selection-store';
+import { cadSelection } from '../../src/core/stores/cad-selection-store';
 
 document.body.style.cssText = 'margin:0;height:100vh';
 const viewport = new MateViewport(document.body, {

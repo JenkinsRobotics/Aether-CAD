@@ -2,14 +2,14 @@ import { PART_DOCUMENT_VERSION } from "@aether/core/document";
 import { createRequire } from 'node:module';
 import { beforeAll, afterAll, afterEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
-import { applyDocumentUnits } from '../document-preferences';
+import { applyDocumentUnits } from '../app/document-preferences';
 import { clickSketchControl as click, querySketchControl as q } from './test-controls';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, open;
 beforeAll(async () => {
   dom = new JSDOM('<div class="cad-studio-viewport"></div>', { url: 'http://localhost/cad/' });
   for (const key of ['window', 'document', 'HTMLElement', 'CustomEvent', 'Event', 'location']) vi.stubGlobal(key, dom.window[key]);
-  open = (await import('../sketch-workspace')).openSketchWorkspace;
+  open = (await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 afterEach(() => { if (q('.cad-sketch-workspace')) click('Cancel'); applyDocumentUnits({}); });
 afterAll(() => { dom.window.close(); vi.unstubAllGlobals(); });

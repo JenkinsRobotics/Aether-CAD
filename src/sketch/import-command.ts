@@ -1,4 +1,4 @@
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 /** App-lifetime command wiring; the mounted sketch panel owns the file picker. */
 export function registerSketchImportCommand() {
   cadCommands.register("sketch-import-dxf", () => {

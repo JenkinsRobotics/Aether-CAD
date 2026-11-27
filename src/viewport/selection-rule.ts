@@ -3,8 +3,8 @@
  *  no body/face/edge/vertex filters in the UI; a feature window may restrict the kind while it
  *  picks (faces for a stop face, edges for a fillet), and that restriction only narrows. Hover
  *  and click resolve through this same function, so what is highlighted is what a click selects. */
-import type { ConnectorCandidate } from '../aether-core';
-import type { CADSelectionFilter } from '../cad-selection-store';
+import type { ConnectorCandidate } from '../core/aether-core';
+import type { CADSelectionFilter } from '../core/stores/cad-selection-store';
 
 export const VERTEX_REACH_PX = 6;
 export const EDGE_REACH_PX = 12;

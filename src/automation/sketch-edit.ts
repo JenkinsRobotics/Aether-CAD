@@ -1,7 +1,7 @@
 /** Existing-sketch adapters reuse the editor operations and retain feature IDs. */
 import { validatePartDocument, resolveProfileDrawing, editProfileDimension, sketchRegions, type PartDocument } from '@aether/core/document';
 import { isAuthoredProjectionRegion } from '../modeling/projected-profile-selection';
-import { moveSketchContours, similarityTransform, rectangleSketchRevision, reviseCenterRectangleSketch } from '@aether/core/sketch';
+import { moveSketchContours, similarityTransform, rectangleSketchRevision, reviseCenterRectangleSketch, sketchConstraintState, inspectLooseEnds } from '@aether/core/sketch';
 
 function sketch(doc:PartDocument,id:unknown) {
   const feature=doc.features.find(feature=>feature.id===id);
@@ -33,6 +33,8 @@ export function inspectSketch(doc:PartDocument,args:Record<string,unknown>) {
     profile:drawing?{type:profile.type,total_contours:drawing.contours.length,total_constraints:drawing.constraints?.length??0,
       contours:drawing.contours.slice(offset,offset+limit).map((contour,i)=>({index:offset+i,...contour})),
       constraints:(drawing.constraints??[]).slice(offset,offset+limit),
+      diagnostics:sketchConstraintState(drawing),
+      loose_ends:inspectLooseEnds(drawing),
       next_offset:offset+limit<Math.max(drawing.contours.length,drawing.constraints?.length??0)?offset+limit:null}:profile,
     ...(feature.type==='sketch'?{constraints:feature.constraints,dimensions:feature.dimensions}:{}),
     regions:feature.suppressed?{total:0,offset,items:[],next_offset:null}:inspectRegions(doc,feature,offset,limit),

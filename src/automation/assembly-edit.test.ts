@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { prepareAssemblyEdit } from './assembly-edit';
 
 const transform = {position_m:[0.01,0.02,0.03],rotation_quaternion_xyzw:[0,0,0,1]};

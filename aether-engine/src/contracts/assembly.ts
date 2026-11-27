@@ -32,19 +32,35 @@ export interface AssemblyInstance {
 }
 
 /** A mate's degree of freedom held at a value: a rotation about, or a travel along,
- *  one axis of the first end's frame (degrees or millimetres). */
-export interface AssemblyJointValue { name: string; kind: "rotation" | "translation"; axis: "x" | "y" | "z"; value: number }
+ *  one axis of the first end's frame (degrees or millimetres). Optional min/max enforce joint limits. */
+export interface AssemblyJointValue {
+  name: string;
+  kind: "rotation" | "translation";
+  axis: "x" | "y" | "z";
+  value: number;
+  min_value?: number;
+  max_value?: number;
+}
+/** Optional limits enforced on a free (unheld) joint DOF during solving. */
+export interface AssemblyJointLimit {
+  dof: string;
+  min?: number;
+  max?: number;
+}
 /** A coupling between two mates' degrees of freedom: driven = ratio · driver + offset
- *  (reversed negates the ratio); gears turn two rotations, rack and pinion and screw turn
- *  a rotation into a travel, linear couples two travels. */
+ *  (reversed negates the ratio), or a piecewise-linear cam lift table (`kind: "cam"`). */
 export interface AssemblyRelation {
   id: string;
-  kind: "gear" | "rack_pinion" | "screw" | "linear";
+  kind: "gear" | "rack_pinion" | "screw" | "linear" | "cam";
   driver: { joint: string; dof: string };
   driven: { joint: string; dof: string };
   ratio: number;
   offset?: number;
   reversed?: boolean;
+  /** For `kind: "cam"`: sorted `[driverValue, drivenValue]` pairs interpolated linearly. */
+  camTable?: readonly (readonly [number, number])[];
+  /** Wrap driver input modulo period (e.g. 360 deg) for cyclic cams. */
+  periodic?: boolean;
 }
 export interface AssemblyJobInput {
   parts: { id: string; features?: unknown[] }[];

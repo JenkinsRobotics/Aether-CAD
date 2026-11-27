@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {SelectionStroke} from './selection-stroke';
-import {CADSelectionStore,effectiveSelectionKind} from '../cad-selection-store';
+import {CADSelectionStore,effectiveSelectionKind} from '../core/stores/cad-selection-store';
 it('paints between sparse events and deduplicates repeated hits',()=>{
  const pick=vi.fn(({x}:{x:number})=>x>=48&&x<=52?{id:'body:a',kind:'body' as const,partId:'a',label:'A'}:null);
  const stroke=new SelectionStroke('paint',{x:0,y:0},pick);stroke.append({x:100,y:0});stroke.append({x:0,y:0});

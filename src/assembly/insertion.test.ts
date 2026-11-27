@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { appendSolidPrimitive, defaultPrimitiveDimensions } from '../modeling/solid-primitives';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 import { designInsertCandidates, insertionRecipe, type InsertSource } from './insertion';
 import { configureAssemblyInsertion, insertAssemblySource, parseInsertDrag } from './insertion-session';
 import { readInsertSource } from './insertion-sources';

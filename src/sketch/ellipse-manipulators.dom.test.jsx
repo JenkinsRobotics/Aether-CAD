@@ -11,7 +11,7 @@ let dom,open;
 beforeAll(async()=>{
  dom=new JSDOM('<div class="cad-studio-viewport"></div>',{url:'http://localhost/cad/'});
  for(const key of ['window','document','HTMLElement','CustomEvent','Event','location'])vi.stubGlobal(key,dom.window[key]);
- open=(await import('../sketch-workspace')).openSketchWorkspace;
+ open=(await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 afterEach(()=>{if(q('.cad-sketch-workspace'))click('Cancel');});
 afterAll(()=>{dom.window.close();vi.unstubAllGlobals();});

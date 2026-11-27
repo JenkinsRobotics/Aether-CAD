@@ -6,8 +6,8 @@
  *  scene, so all of it is.
  */
 import * as THREE from "three/webgpu";
-import type { CADScreenRect } from "../cad-selection-store";
-import type { FaceRangeData, PartGeometryData } from "../aether-core";
+import type { CADScreenRect } from "../core/stores/cad-selection-store";
+import type { FaceRangeData, PartGeometryData } from "../core/aether-core";
 
 /** Where a world point lands on the canvas, or null when it is behind the
  *  camera or beyond the far plane. */

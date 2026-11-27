@@ -117,7 +117,7 @@ export {
   type SketchConstraintState,
 } from "./solver/diagnostics";
 
-export { offsetSketch, offsetSketchContour } from "./operations/offset";
+export { offsetSketch, offsetSketchAdvanced, breakOffsetAssociation, offsetSketchContour, type OffsetSketchOptions } from "./operations/offset";
 
 export {
   offsetDistanceHandle,
@@ -221,6 +221,7 @@ export { setDimensionExpression, regenerateDimensionExpressions } from "./operat
 export { resolveDimensionExpression } from "./solver/dimension-expressions";
 
 export { copySketchContours } from "./operations/transform";
+export { rotateSketchContours, scaleSketchContours } from "./operations/transform-contours";
 export { sketchContourPolyline, sketchDrawingPolylines, sketchProfilePolylines, sketchProfileStrokes, type SketchStroke } from "./sample";
 
 export { contourNestingDepths } from "./regions/nesting";
@@ -228,6 +229,15 @@ export { autoConstrainDrawing, autoConstrainFromDatum } from "./operations/auto-
 export { blendCurve } from "./operations/blend-curve";
 export { controlPointSpline } from "./curves/control-spline";
 export { sketchDrawingToDXF } from "./export/dxf";
-export { looseEnds } from "./operations/loose-ends";
+export { looseEnds, inspectLooseEnds, tieLooseEnds, type LooseEndEntry, type UntiedEndEntry, type LooseEndsReport } from "./operations/loose-ends";
+export { toggleRadiusDiameter } from "./operations/toggle-diameter";
+export { setSketchCenterline } from "./operations/centerline";
+export { createConstructionLine, type ConstructionLineRequest } from "./operations/construction-line";
+export { createTwoPointCircle, createTwoTangentCircle, createThreeTangentCircle, createRoundedRectangle } from "./operations/tangent-circle";
+export { divideSketchCurve } from "./operations/divide-curve";
+export { createEquationCurve, type EquationCurveRequest } from "./curves/equation-curve";
+export { solveConstrainedSoftTargets } from "./solver/solve";
+export { classifyConstraintRows, type RedundancyClassification } from "./solver/diagnostic-rank";
+export { arc3dGeometry, solve3DConstraints, type Constraint3D, type Constraint3DKind, type Solve3DReport } from "./solver3d/solve3d";
 export { validateModelProjection, type ModelProjectionOptions, type ModelProjectionResult } from "./model-projection";
 export { distanceSideOf } from "./solver/distance-side";

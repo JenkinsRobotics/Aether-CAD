@@ -3,7 +3,7 @@ import {
   type SketchDrawing,
   type SketchPoint,
 } from "@aether/core/sketch";
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 import { addSplineContour, splineContour } from "./spline-mode";
 /** UI lifecycle only; interpolation belongs to Core. Pending points do not
  * enter the document until this explicit finish action succeeds. */

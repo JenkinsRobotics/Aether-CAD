@@ -1,5 +1,5 @@
 import type { AgentInteraction, AgentTool } from "@aether/ui/AgentServices";
-import { drawingExportResult, type DrawingCommand, type BuiltDrawing } from "@aether/core/drawing";
+import { auditDrawing, DRAWING_SHEET_TEMPLATES, drawingExportResult, drawingHitTest, drawingLineAt, type DrawingCommand, type BuiltDrawing } from "@aether/core/drawing";
 import { loadDrawingFont } from "../drawing/pdf-export";
 import type { DrawingEditor } from "../drawing/controller";
 import { knowledgeTool } from "../ai/catalog";
@@ -16,6 +16,8 @@ export const drawingAgentTools: AgentTool[] = [
   tool("aether_cad_drawing_undo", "Undo one drawing edit; source refresh is undoable.", revision, ["expected_revision"]),
   tool("aether_cad_drawing_redo", "Redo one drawing edit.", revision, ["expected_revision"]),
   tool("aether_cad_drawing_export", "Return SVG/DXF text or PDF data_base64 and mime_type, in physical millimeters, with the inspected revision. Defaults to the active sheet. PDF can export all sheets in document order. Does not save or publish a file. Larger exports remain available from the UI.", { ...revision, format: { type: "string", enum: ["svg", "dxf", "pdf"] }, sheet_id: { type: "string" }, all_sheets: { type: "boolean", description: "PDF only; mutually exclusive with sheet_id." } }, ["expected_revision", "format"]),
+  tool("aether_cad_drawing_audit", "Run quality audit checks across all drawing sheets (off-sheet views/annotations, view overlaps, dangling attachments, blank title-block fields, undimensioned views) and list standard ISO/ANSI sheet templates.", {}),
+  tool("aether_cad_drawing_hit_test", "Hit-test sheet coordinates (mm) to find the nearest projected snap point, view, annotation, and visible curve edge.", { sheet_id: { type: "string" }, point_mm: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }, radius_mm: { type: "number", exclusiveMinimum: 0 } }, ["point_mm"]),
 ];
 export function inspectDrawing(built: BuiltDrawing, args: Record<string, unknown> = {}) {
   const sheet = built.sheets.find(s => s.sheet.id === (args.sheet_id ?? built.document.activeSheetId));
@@ -28,7 +30,7 @@ export function inspectDrawing(built: BuiltDrawing, args: Record<string, unknown
     sheet: { ...sheet.sheet, views: sheet.views.map(v => ({ ...v.view, hatch_lines: v.geometry.hatch?.length ?? 0, model_bounds_mm: v.geometry.bounds, body_ids: v.geometry.bodyIds })),
       annotations: sheet.sheet.annotations.slice(Number(offset), Number(offset) + 50).map(a => { const built = sheet.annotations.find(p => p.id === a.id); return { ...a, value_mm: built?.valueMm, value_deg: built?.valueDeg, text: built?.text ?? (a.kind === "note" ? a.text : undefined) }; }),
       annotation_count: sheet.sheet.annotations.length, next_offset: Number(offset) + 50 < sheet.sheet.annotations.length ? Number(offset) + 50 : null },
-    limits: ["Part sources only; base/projected/principal section/detail/auxiliary views; overall width/height, edge length, diameter, radius, angle, point-to-point and three-point angle dimensions; notes, balloons, centre marks, title-block rows, a parts list (BOM table) of the Part's parts; SVG/DXF/PDF.", "No stepped/isometric sections, cutting-line annotations, assembly sources (the parts list is per Part), ordinate dimensions yet; picks are sheet coordinates."],
+    limits: ["Part sources only; base/projected/principal section/detail/auxiliary views; overall width/height, edge length, diameter, radius, angle, point-to-point, three-point angle, and ordinate dimensions with tolerances and overrides; notes, leader notes, hole/chamfer callouts, GD&T frames, datums, surface texture, weld symbols, revision tags/tables, balloons, centre marks, centerlines, title-block rows, parts list (BOM table); SVG/DXF/PDF.", "No stepped/isometric sections or native assembly sources yet; picks are sheet coordinates."],
   };
 }
 export function drawingAgentInteraction(editor: DrawingEditor, contextKey: string, currentKey: () => string): AgentInteraction {
@@ -40,6 +42,25 @@ export function drawingAgentInteraction(editor: DrawingEditor, contextKey: strin
     const before = editor.snapshot(); if (!before) throw Error("Open a Drawing first.");
     if (call.arguments.sheet_id !== undefined && typeof call.arguments.sheet_id !== "string") throw Error("sheet_id must be a string.");
     if (call.name === "aether_cad_drawing_inspect") return { ...inspectDrawing(before, call.arguments), writable: editor.writable(), ...editor.history() };
+    if (call.name === "aether_cad_drawing_audit") {
+      return {
+        changed: false,
+        revision: before.revision,
+        ...auditDrawing(before),
+        templates: DRAWING_SHEET_TEMPLATES.map((t) => ({ id: t.id, name: t.name, standard: t.standard, width_mm: t.widthMm, height_mm: t.heightMm, projection: t.projection })),
+      };
+    }
+    if (call.name === "aether_cad_drawing_hit_test") {
+      const sheetId = typeof call.arguments.sheet_id === "string" ? call.arguments.sheet_id : before.document.activeSheetId;
+      const point = call.arguments.point_mm as [number, number];
+      const radius = typeof call.arguments.radius_mm === "number" ? call.arguments.radius_mm : 5;
+      return {
+        changed: false,
+        revision: before.revision,
+        hits: drawingHitTest(before, sheetId, point, radius),
+        nearest_line: drawingLineAt(before, sheetId, point, radius),
+      };
+    }
     const check = () => { checkContext(); if (editor.snapshot() !== before || typeof call.arguments.expected_revision !== "string" || call.arguments.expected_revision !== before.revision) throw Error("The drawing revision changed. Inspect it before editing or exporting."); };
     check();
     if (call.name === "aether_cad_drawing_export") {

@@ -3,16 +3,16 @@ import { beforeAll, beforeEach, afterEach, afterAll, expect, it, vi } from 'vite
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument } from '@aether/core/document';
 import { editDrawingDimension, sketchConstraintState, dragSketchEntity } from '@aether/core/sketch';
 import { querySketchControl as q, clickSketchControl as click } from './test-controls';
-import { snapSketchPoint } from '../sketch-snapping';
+import { snapSketchPoint } from './sketch-snapping';
 import { pickSketchEntity } from './picking';
 import { sketchPointRole } from './point-roles';
-import { applyDocumentUnits } from '../document-preferences';
+import { applyDocumentUnits } from '../app/document-preferences';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');
 let dom, open, doc, apply;
 beforeAll(async () => {
   dom = new JSDOM('<div class="cad-studio-viewport"></div>', { url: 'http://localhost/cad/' });
   for (const key of ['window', 'document', 'HTMLElement', 'CustomEvent', 'Event', 'location']) vi.stubGlobal(key, dom.window[key]);
-  open = (await import('../sketch-workspace')).openSketchWorkspace;
+  open = (await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
 });
 beforeEach(() => {
   document.body.innerHTML = '<div class="cad-studio-viewport"></div>';

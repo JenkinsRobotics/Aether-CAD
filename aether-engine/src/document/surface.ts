@@ -110,11 +110,31 @@ export interface SurfaceBoundaryFeature {
   bodyIds: [string];
   edges: EdgeFinishEdge[];
 }
-/** Blend Surface: a face between two edge chains (position continuity), each chain on one body. */
+/** Blend Surface: a face between two edge chains (G0, G1, or G2 continuity), each chain on one body. */
 export interface SurfaceBlendFeature {
   id: string; type: "surface-blend"; name: string; suppressed: boolean; operation: "new";
   from: { bodyId: string; edges: EdgeFinishEdge[] };
   to: { bodyId: string; edges: EdgeFinishEdge[] };
+  continuity?: "g0" | "g1" | "g2";
+  tangentWeight?: number;
+}
+/** Match Surface (SolidCraft's surface.match): deforms a source sheet boundary to meet a
+ *  target surface edge with G0, G1, or G2 continuity. */
+export interface SurfaceMatchFeature {
+  id: string; type: "surface-match"; name: string; suppressed: boolean;
+  bodyIds: [string];
+  sourceEdges: EdgeFinishEdge[];
+  targetBodyId: string;
+  targetEdges: EdgeFinishEdge[];
+  continuity: "g0" | "g1" | "g2";
+}
+/** Surface Fillet (SolidCraft's surface.fillet): constant-radius rolling-ball fillet across
+ *  a shared or intersecting seam between one or two surface sheets. */
+export interface SurfaceFilletFeature {
+  id: string; type: "surface-fillet"; name: string; suppressed: boolean; operation: "new";
+  bodyIds: string[];
+  edges?: EdgeFinishEdge[];
+  radiusMillimeters: number;
 }
 /** Fair (SolidCraft's surface.fair): a sheet's untrimmed faces with their interior control
  *  points relaxed, border rows held; strength scales the step, the tolerance caps any move. */
@@ -125,11 +145,13 @@ export interface SurfaceFairFeature {
   strength?: number;
   toleranceMillimeters?: number;
 }
-/** Trim (SolidCraft's surface.trim): the sheet cut at a plane, the side holding the keep point kept. */
+/** Trim (SolidCraft's surface.trim): the sheet cut at a plane or another surface/solid body,
+ *  the side holding the keep point kept. */
 export interface SurfaceTrimFeature {
   id: string; type: "surface-trim"; name: string; suppressed: boolean;
   bodyIds: [string];
-  plane: import("./mirror-plane").MirrorPlaneReference;
+  plane?: import("./mirror-plane").MirrorPlaneReference;
+  toolBodyId?: string;
   keepPointMillimeters: [number, number, number];
 }
 /** Untrim: a picked face rebuilt from its outer boundary alone, its holes gone, in place. */
@@ -138,13 +160,13 @@ export interface SurfaceUntrimFeature {
   bodyIds: [string];
   face: SolidFaceReference;
 }
-export type SurfaceFeature = SurfaceFairFeature | SurfaceTrimFeature | SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
+export type SurfaceFeature = SurfaceFairFeature | SurfaceTrimFeature | SurfaceBoundaryFeature | SurfaceBlendFeature | SurfaceMatchFeature | SurfaceFilletFeature | SurfaceUntrimFeature | SurfaceRuledFeature | SurfaceExtendFeature
   | SurfaceExtrudeFeature | SurfaceRevolveFeature | SurfaceLoftFeature | SurfacePatchFeature | SurfaceSweepFeature
   | SurfaceOffsetFeature | SurfaceThickenFeature | SurfaceStitchFeature | SurfaceUnstitchFeature | SurfaceReverseNormalFeature;
 
-export const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
+export const surfaceFeatureTypes = ["surface-fair", "surface-trim", "surface-boundary", "surface-blend", "surface-match", "surface-fillet", "surface-untrim", "surface-ruled", "surface-extend", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-thicken", "surface-stitch", "surface-unstitch", "surface-reverse-normal"] as const;
 /** The surface features that make a new sheet (or, for Thicken with "new", a solid). */
-export const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
+export const surfaceCreatorTypes = ["surface-boundary", "surface-blend", "surface-fillet", "surface-ruled", "surface-extrude", "surface-revolve", "surface-loft", "surface-patch", "surface-sweep", "surface-offset", "surface-unstitch"] as const;
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const sketchRef = (id: unknown, earlier: ReadonlyMap<string, string>, what: string) => {
@@ -165,6 +187,21 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
         if (!side || typeof side.bodyId !== "string" || !Array.isArray(side.edges) || !side.edges.length) throw new Error("Blend surface needs picked edges on each of its two bodies.");
         for (const edge of side.edges) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
       }
+      if (feature.continuity !== undefined && !["g0", "g1", "g2"].includes(feature.continuity)) throw new Error("Blend continuity must be g0, g1, or g2.");
+      if (feature.tangentWeight !== undefined && !(finite(feature.tangentWeight) && feature.tangentWeight > 0)) throw new Error("Blend tangent weight must be positive.");
+      return;
+    case "surface-match":
+      ids(feature.bodyIds, "Match surface", 1);
+      if (typeof feature.targetBodyId !== "string" || !feature.targetBodyId) throw new Error("Match surface needs a target surface body.");
+      if (!Array.isArray(feature.sourceEdges) || !feature.sourceEdges.length || !Array.isArray(feature.targetEdges) || !feature.targetEdges.length) throw new Error("Match surface needs source and target edges.");
+      for (const edge of [...feature.sourceEdges, ...feature.targetEdges]) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
+      if (!["g0", "g1", "g2"].includes(feature.continuity)) throw new Error("Match continuity must be g0, g1, or g2.");
+      return;
+    case "surface-fillet":
+      ids(feature.bodyIds, "Surface fillet");
+      if (feature.bodyIds.length > 2) throw new Error("Surface fillet takes one or two surface bodies.");
+      for (const edge of feature.edges ?? []) validateEdgeFinishEdge(edge, earlier, missing as (id: string) => boolean);
+      if (!finite(feature.radiusMillimeters) || feature.radiusMillimeters <= 0) throw new Error("Surface fillet needs a positive radius.");
       return;
     case "surface-fair":
       ids(feature.bodyIds, "Fair", 1);
@@ -174,7 +211,9 @@ export function validateSurfaceFeature(feature: SurfaceFeature, earlier: Readonl
       return;
     case "surface-trim":
       ids(feature.bodyIds, "Trim", 1);
-      validateMirrorPlane(feature.plane, earlier, missing as (id: string) => boolean, "Trim plane");
+      if (!feature.plane && !feature.toolBodyId) throw new Error("Trim needs a trimming plane or a trimming body.");
+      if (feature.plane) validateMirrorPlane(feature.plane, earlier, missing as (id: string) => boolean, "Trim plane");
+      if (feature.toolBodyId !== undefined && (typeof feature.toolBodyId !== "string" || !feature.toolBodyId.trim())) throw new Error("Trim tool body must be a valid body ID.");
       if (!Array.isArray(feature.keepPointMillimeters) || feature.keepPointMillimeters.length !== 3 || !feature.keepPointMillimeters.every(finite)) throw new Error("Trim needs a keep point on the side to keep.");
       return;
     case "surface-untrim":

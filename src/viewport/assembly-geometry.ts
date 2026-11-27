@@ -1,4 +1,4 @@
-import type { PartGeometryData } from '../aether-core';
+import type { PartGeometryData } from '../core/aether-core';
 
 /** Definitions keep immutable geometry buffers. Names and placements belong to
  * occurrences; changing either does not invalidate their GPU resources. */

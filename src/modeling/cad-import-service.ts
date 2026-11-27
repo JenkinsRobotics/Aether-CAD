@@ -1,7 +1,7 @@
 import {serializePartDocument,type PartDocument} from '@aether/core/document';
 import type {ImportedModelData} from '@aether/core/contracts';
 import {appendCAD,type CADImportOptions} from './cad-import';
-import {cadPresentation} from '../cad-presentation-store';
+import {cadPresentation} from '../core/stores/cad-presentation-store';
 
 type ImportService={current:()=>PartDocument|null; available:()=>boolean; evaluate:(doc:PartDocument)=>Promise<ImportedModelData>; commit:(doc:PartDocument,model:ImportedModelData,message?:string)=>void; commitPresentation?:(doc:PartDocument)=>void};
 let service:ImportService|undefined;

@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three/webgpu';
-import { defaultCADAppearance } from '../cad-appearance-store';
-import { tintPlane, updatePlaneVisual } from '../plane-visual';
+import { defaultCADAppearance } from '../core/stores/cad-appearance-store';
+import { tintPlane, updatePlaneVisual } from './plane-visual';
 import { resolveAppearance } from './appearance-themes';
 import { EnvironmentGrid, gridSegments } from './environment-grid';
 import { gradientBackground } from './environment-background';

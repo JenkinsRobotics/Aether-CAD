@@ -1,7 +1,7 @@
 /** Source insertion reuses the validated assembly recipe command. It does not
  * create a parallel document model or a metadata-only component. */
-import { availableBodies, parsePartDocument, type PartDocument } from '../aether-core';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import { availableBodies, parsePartDocument, type PartDocument } from '../core/aether-core';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 
 export type InsertSource =
   | { kind: 'design-part'; workspaceId: string; partId: string }

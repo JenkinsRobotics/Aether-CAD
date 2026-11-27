@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { MeshStandardMaterial } from "three";
-import { defaultCADAppearance } from "../cad-appearance-store";
-import { cadDisplayStylePolicy } from "../viewport-appearance";
+import { defaultCADAppearance } from "../core/stores/cad-appearance-store";
+import { cadDisplayStylePolicy } from "./viewport-appearance";
 import { resolveAppearance } from "./appearance-themes";
 import { applySurfaceAppearance } from "./surface-appearance";
 

@@ -5,7 +5,7 @@ vi.mock('@aether/core/kernel', () => ({ OCCTWorkerClient: class { ready = Promis
 import { afterEach, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, featureReferenceErrors, insertFeature, removeFeature, serializePartDocument, type PartDocument } from '@aether/core/document';
 import { FeatureBuildError, rebuildRecovering, recordFeatureErrors } from './feature-errors';
-import { buildPartFeatureTree } from '../part-feature-tree';
+import { buildPartFeatureTree } from '../app/part-feature-tree';
 
 export function referenceFixture(): PartDocument {
   let doc = createEmptyPartDocument('Reference recovery');

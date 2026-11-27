@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { Group, Mesh, BoxGeometry, MeshBasicMaterial, Vector3, Matrix4 } from 'three/webgpu';
-import { MateViewport } from '../viewer';
+import { MateViewport } from './viewer';
 function fixture() {
   const viewer = Object.create(MateViewport.prototype) as any;
   const root = new Group(), group = new Group(), geometry = new BoxGeometry(10, 20, 5), material = new MeshBasicMaterial();

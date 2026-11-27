@@ -143,7 +143,7 @@ it("leaves text-field clipboard behavior alone and discards an async read after 
 
 it("integrates paste with workspace undo, redo and native document saving", async () => {
   document.body.innerHTML = '<div class="cad-studio-viewport"></div>';
-  const { openSketchWorkspace } = await import("../sketch-workspace");
+  const { openSketchWorkspace } = await import("../ui/windows/sketch-workspace");
   let doc = createEmptyPartDocument("Clipboard project");
   const apply = vi.fn(async (next) => {
     doc = next;

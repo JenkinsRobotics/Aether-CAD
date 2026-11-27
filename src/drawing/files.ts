@@ -1,7 +1,7 @@
 /** File lifecycle is provided by CAD's existing document/session adapter. Keeping
  * this separate lets the presentation use the same route in local previews. */
 import { drawingEditor } from "./controller";
-import { cadPresentation } from "../cad-presentation-store";
+import { cadPresentation } from "../core/stores/cad-presentation-store";
 import { readAetherCAD, tabArchive } from "../document/aethercad-archive";
 export function downloadDrawingFile(name: string, content: string | Uint8Array, type = "application/json"): void {
   const bytes = typeof content === "string" ? content : Uint8Array.from(content).buffer;

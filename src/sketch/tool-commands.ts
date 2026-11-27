@@ -1,5 +1,5 @@
 import { sketchVariantTools } from "@aether/core/sketch";
-import type { CADCommandRegistry } from "../cad-command-registry";
+import type { CADCommandRegistry } from "../core/cad-command-registry";
 import { contextualDrawingTools } from "./tangent-arc-tool";
 import { directModificationTools, modificationTools } from "./tool-instructions";
 

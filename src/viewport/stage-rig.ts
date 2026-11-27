@@ -4,8 +4,8 @@
  *  Extracted unchanged from MateViewport so theme work happens here, not in
  *  the 2,000-line viewer. */
 import * as THREE from "three/webgpu";
-import type { CADAppearanceSnapshot } from "../cad-appearance-store";
-import { cadFloorVisibility } from "../viewport-appearance";
+import type { CADAppearanceSnapshot } from "../core/stores/cad-appearance-store";
+import { cadFloorVisibility } from "./viewport-appearance";
 import type { ResolvedAppearance } from "./appearance-themes";
 import { applyContactShadows } from "./contact-shadows";
 import { EnvironmentGrid } from "./environment-grid";

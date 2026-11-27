@@ -1,4 +1,4 @@
-import { cadCommands } from "../cad-command-registry";
+import { cadCommands } from "../core/cad-command-registry";
 import type { createSketchHistory, SketchSnapshot } from "./history";
 /** Commands and keyboard use the same sketch history, independent of DOM buttons. */
 export function mountSketchHistoryActions(o: {

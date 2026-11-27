@@ -2,7 +2,7 @@ import { textSimilarityCoordinates } from "./text-coordinates";
 import { diagnosticResiduals } from "./diagnostic-residuals";
 import { ellipseLocusCoordinates } from "./ellipse-locus-coordinates";
 import { contactParameterCoordinates } from "./contact-parameters";
-import { diagnosticRank } from "./diagnostic-rank";
+import { classifyConstraintRows, diagnosticRank } from "./diagnostic-rank";
 import { entityObservables } from "./entity-observables";
 import type { SketchEntityRef } from "./types";
 import { solveDrawingConstraints } from "./solve";
@@ -19,6 +19,10 @@ export interface SketchConstraintState {
   degreesOfFreedom: number | null;
   redundantEquations: number;
   conflictingConstraints: string[];
+  /** Exact constraint IDs linearly determined by earlier constraints. */
+  redundantConstraints?: string[];
+  /** Map from redundant constraint ID to the earlier constraint IDs that determine it. */
+  determinedBy?: Record<string, string[]>;
   message?: string;
 }
 /** Local Jacobian rank; optional entity DOF measures its mobility in the whole constraint system.
@@ -54,9 +58,9 @@ export function sketchConstraintStates(
       ],
       vars = [...geometry, ...contactParameterCoordinates(d)],
       constraints = d.constraints ?? [];
-    if (vars.length > 256)
+    if (vars.length > 2048)
       throw new Error(
-        "Constraint-state analysis supports up to 256 geometric coordinates.",
+        "Constraint-state analysis supports up to 2048 geometric coordinates.",
       );
     const conflicts = constraints
       .filter((c) =>
@@ -103,15 +107,18 @@ export function sketchConstraintStates(
     const lengths = entities.map((entity) =>
       entity ? entityObservables(d, entity).length : 0,
     );
-    const residual = () => [
+    const constraintRowIds: string[] = [];
+    for (const c of activeConstraints) {
+      const count = diagnosticResiduals(d, c).length;
+      for (let k = 0; k < count; k++) constraintRowIds.push(c.id);
+    }
+    const equationCount = constraintRowIds.length,
+      residual = () => [
         ...activeConstraints.flatMap((c) => diagnosticResiduals(d, c)),
         ...entities.flatMap((entity) =>
           entity ? entityObservables(d, entity) : [],
         ),
       ],
-      equationCount = activeConstraints.flatMap((c) =>
-        diagnosticResiduals(d, c),
-      ).length,
       r = residual();
     const columns = vars.map((v) => {
       const value = v.get(),
@@ -126,6 +133,9 @@ export function sketchConstraintStates(
     const rows = r.map((_, i) => columns.map((col) => col[i]));
     const constraintRows = rows.slice(0, equationCount);
     const rank = diagnosticRank(constraintRows);
+    const classification = classifyConstraintRows(
+      constraintRows.map((values, i) => ({ id: constraintRowIds[i], values })),
+    );
 
     const redundant =
       intrinsicRedundancy +
@@ -154,6 +164,12 @@ export function sketchConstraintStates(
                 : "fully-constrained",
         degreesOfFreedom: dof,
         redundantEquations: redundant,
+        ...(classification.redundantIds.length
+          ? {
+              redundantConstraints: classification.redundantIds,
+              determinedBy: classification.determinedBy,
+            }
+          : {}),
       } as SketchConstraintState;
     });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { removeDrawingConstraint, editSketchSelection, setSketchInfinite, constrainRegularPolygon, chainSketchSelection, autoConstrainDrawing, autoConstrainFromDatum, blendCurve, sketchDrawingToDXF, looseEnds, type SketchDrawing, type SketchEntityRef } from '@aether/core/sketch';
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 import { fixedConstraintMatches } from '@aether/core/sketch/reference/fixed-geometry';
 
 export function mountSketchSelectionActions(o: {

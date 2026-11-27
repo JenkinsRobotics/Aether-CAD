@@ -8,9 +8,9 @@ let dom, open, commands, doc, apply;
 beforeAll(async () => {
   dom = new JSDOM('<div class="cad-studio-viewport"></div>', {url:'http://localhost/cad/'});
   for (const key of ['window','document','HTMLElement','CustomEvent','Event','location','crypto']) vi.stubGlobal(key,dom.window[key]);
-  open = (await import('../sketch-workspace')).openSketchWorkspace;
-  commands = (await import('../cad-command-registry')).cadCommands;
-  (await import('../feature-authoring')).mountFeatureAuthoring(()=>doc,next=>apply(next));
+  open = (await import('../ui/windows/sketch-workspace')).openSketchWorkspace;
+  commands = (await import('../core/cad-command-registry')).cadCommands;
+  (await import('../ui/windows/feature-authoring')).mountFeatureAuthoring(()=>doc,next=>apply(next));
 });
 beforeEach(() => {
   document.body.innerHTML='<div class="cad-studio-viewport"></div>';

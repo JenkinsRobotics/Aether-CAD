@@ -1,5 +1,5 @@
 import { Raycaster, Vector2, type Camera } from 'three/webgpu';
-import type { CADSelectionFilter } from '../cad-selection-store';
+import type { CADSelectionFilter } from '../core/stores/cad-selection-store';
 
 /** A projected edge can round just outside its adjacent triangle. Check the
  * surrounding pixel footprint only when the ordinary pick misses. Every probe uses

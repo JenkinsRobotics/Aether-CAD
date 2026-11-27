@@ -8,7 +8,8 @@ import { partAITools } from '../ai/catalog';
 import { editSketch } from './sketch-edit';
 import { modelProjectionTool } from './model-projection';
 import { validateToolArguments } from './tool-arguments';
-import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatureOperation } from '../operations/feature-operations';
+import { featureEditToolNames, featureEditTools, featureReadTools, prepareFeatureOperation } from '../core/operations/feature-operations';
+import { parityAgentTools, parityEditToolNames, prepareParityEdit } from './parity-tools';
 
 const number={type:'number'},string={type:'string'},boolean={type:'boolean'};
 const tool=(name:string,description:string,properties:Record<string,unknown>,required:string[]=[]):AgentTool=>({name:'aether_cad_'+name,description,inputSchema:{type:'object',properties,required,additionalProperties:false}});
@@ -35,6 +36,7 @@ export const cadAgentTools:AgentTool[]=[
   tool('suppress','Suppress or unsuppress an existing feature. Rebuild must succeed.',{feature_id:string,suppressed:boolean},['feature_id','suppressed']),
   tool('undo','Undo one successful Part edit, using the same history as the editor.',{}),
   tool('redo','Redo one Part edit, using the same history as the editor.',{}),
+  ...parityAgentTools,
 ];
 type Args=Record<string,unknown>;
 function numberValue(a:Args,key:string,fallback?:number,positive=false):number {
@@ -65,6 +67,7 @@ export function preparePartEdit(doc:PartDocument,name:string,args:Args):{documen
   if(doc.features.length>=512)throw Error('Agent editing supports at most 512 features.');
   if(name==='aether_cad_sketch_translate'||name==='aether_cad_sketch_dimension')return editSketch(doc,name,args);
   if(featureEditToolNames.includes(name))return prepareFeatureOperation(doc,name,args);
+  if((parityEditToolNames as readonly string[]).includes(name))return prepareParityEdit(doc,name,args);
   if(name==='aether_cad_extrude_depth'||name==='aether_cad_suppress') {
     if(typeof args.feature_id!=='string')throw Error('Inspect the part for its feature ID.');
     if(name==='aether_cad_suppress'&&typeof args.suppressed!=='boolean')throw Error('suppressed must be true or false.');

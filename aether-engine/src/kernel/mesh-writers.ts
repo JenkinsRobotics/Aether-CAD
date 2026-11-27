@@ -2,9 +2,17 @@
  *  Each takes the kernel's tessellation; none reads a display mesh. Units in: mm. */
 import { flatNormals, type TriangleMesh } from "./mesh-formats";
 
-export interface NamedMesh { name: string; mesh: TriangleMesh }
+export interface NamedMesh { name: string; mesh: TriangleMesh; materialName?: string; colorHex?: string }
 
 const safeName = (name: string) => name.replace(/[\r\n]/g, " ").trim() || "Body";
+const safeId = (name: string) => safeName(name).replace(/[^A-Za-z0-9_.-]+/g, "_") || "Material";
+
+function hexToRgb01(hex?: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex?.trim() ?? "");
+  if (!m) return [0.76, 0.78, 0.82];
+  const n = parseInt(m[1], 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
 
 /** OBJ in millimetres: one object per body, 1-based shared vertex indices. */
 export function meshOBJ(meshes: NamedMesh[]): string {
@@ -17,6 +25,35 @@ export function meshOBJ(meshes: NamedMesh[]): string {
     offset += mesh.vertices.length / 3;
   }
   return lines.join("\n") + "\n";
+}
+
+/** Wavefront OBJ + accompanying `.mtl` material library preserving body materials and colors. */
+export function meshOBJWithMTL(meshes: NamedMesh[], mtlFileName = "materials.mtl"): { obj: string; mtl: string } {
+  const objLines = ["# Aether CAD export, millimetres", `mtllib ${safeName(mtlFileName)}`];
+  const mtlLines = ["# Aether CAD material library"];
+  const emittedMaterials = new Set<string>();
+  let offset = 1;
+  for (const { name, mesh, materialName, colorHex } of meshes) {
+    const matKey = safeId(materialName || name);
+    if (!emittedMaterials.has(matKey)) {
+      emittedMaterials.add(matKey);
+      const [r, g, b] = hexToRgb01(colorHex);
+      mtlLines.push(
+        `newmtl ${matKey}`,
+        `Ka ${(r * 0.2).toFixed(4)} ${(g * 0.2).toFixed(4)} ${(b * 0.2).toFixed(4)}`,
+        `Kd ${r.toFixed(4)} ${g.toFixed(4)} ${b.toFixed(4)}`,
+        `Ks 0.2500 0.2500 0.2500`,
+        `Ns 64.0`,
+        `d 1.0`,
+        "",
+      );
+    }
+    objLines.push(`o ${safeName(name)}`, `usemtl ${matKey}`);
+    for (let i = 0; i < mesh.vertices.length; i += 3) objLines.push(`v ${mesh.vertices[i]} ${mesh.vertices[i + 1]} ${mesh.vertices[i + 2]}`);
+    for (let i = 0; i < mesh.triangles.length; i += 3) objLines.push(`f ${mesh.triangles[i] + offset} ${mesh.triangles[i + 1] + offset} ${mesh.triangles[i + 2] + offset}`);
+    offset += mesh.vertices.length / 3;
+  }
+  return { obj: objLines.join("\n") + "\n", mtl: mtlLines.join("\n") + "\n" };
 }
 
 /** GLB in metres with +Y up (glTF convention): CAD (x, y, z) becomes (x, z, -y).
@@ -102,6 +139,53 @@ export function storedZip(entries: [name: string, content: string][]): Uint8Arra
     const central = new Uint8Array(46 + nameBytes.length), cv = new DataView(central.buffer);
     cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint32(16, crc, true);
     cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true); cv.setUint16(28, nameBytes.length, true); cv.setUint32(42, offset, true);
+    central.set(nameBytes, 46);
+    locals.push(local); centrals.push(central); offset += local.length;
+  }
+  const centralSize = centrals.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true); ev.setUint32(12, centralSize, true); ev.setUint32(16, offset, true);
+  const out = new Uint8Array(offset + centralSize + 22);
+  let at = 0;
+  for (const part of [...locals, ...centrals, end]) { out.set(part, at); at += part.length; }
+  return out;
+}
+
+/** Deflate-compressed OPC 3MF using Web standard `CompressionStream("deflate-raw")`,
+ *  falling back to uncompressed `mesh3MF` if streaming deflate is unavailable. */
+export async function mesh3MFCompressed(meshes: NamedMesh[]): Promise<Uint8Array> {
+  if (typeof CompressionStream === "undefined") return mesh3MF(meshes);
+  const objects = meshes.map(({ name, mesh }, index) => {
+    const vertices: string[] = [], triangles: string[] = [];
+    for (let i = 0; i < mesh.vertices.length; i += 3) vertices.push(`<vertex x="${mesh.vertices[i]}" y="${mesh.vertices[i + 1]}" z="${mesh.vertices[i + 2]}"/>`);
+    for (let i = 0; i < mesh.triangles.length; i += 3) triangles.push(`<triangle v1="${mesh.triangles[i]}" v2="${mesh.triangles[i + 1]}" v3="${mesh.triangles[i + 2]}"/>`);
+    return `<object id="${index + 1}" name="${xml(safeName(name))}" type="model"><mesh><vertices>${vertices.join("")}</vertices><triangles>${triangles.join("")}</triangles></mesh></object>`;
+  });
+  const model = `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Aether CAD</metadata><resources>${objects.join("")}</resources><build>${meshes.map((_, i) => `<item objectid="${i + 1}"/>`).join("")}</build></model>`;
+  const entries: [string, string][] = [
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.microsoft.com/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`],
+    ["3D/3dmodel.model", model],
+  ];
+  const deflateRaw = async (data: Uint8Array): Promise<Uint8Array> => {
+    const stream = new Blob([data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  };
+  const encoder = new TextEncoder(), locals: Uint8Array[] = [], centrals: Uint8Array[] = [];
+  let offset = 0;
+  for (const [name, content] of entries) {
+    const nameBytes = encoder.encode(name), raw = encoder.encode(content), crc = crc32(raw);
+    const compressed = await deflateRaw(raw);
+    const useDeflate = compressed.length < raw.length;
+    const payload = useDeflate ? compressed : raw;
+    const method = useDeflate ? 8 : 0;
+    const local = new Uint8Array(30 + nameBytes.length + payload.length), lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(8, method, true); lv.setUint32(14, crc, true);
+    lv.setUint32(18, payload.length, true); lv.setUint32(22, raw.length, true); lv.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30); local.set(payload, 30 + nameBytes.length);
+    const central = new Uint8Array(46 + nameBytes.length), cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(10, method, true); cv.setUint32(16, crc, true);
+    cv.setUint32(20, payload.length, true); cv.setUint32(24, raw.length, true); cv.setUint16(28, nameBytes.length, true); cv.setUint32(42, offset, true);
     central.set(nameBytes, 46);
     locals.push(local); centrals.push(central); offset += local.length;
   }

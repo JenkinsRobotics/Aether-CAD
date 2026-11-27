@@ -1,9 +1,24 @@
 import { dimensionChainAnnotations, type DimensionChain } from './dimension-chain';
 import { validatePartDocument, type PartDocument } from "../document/part-document";
+import { gdtCharacteristicCodes, type GdtCharacteristic } from "./standards-annotations";
 
 export type DrawingPoint = [number, number];
 export type DrawingOrientation = "front" | "back" | "top" | "bottom" | "left" | "right" | "isometric";
 export const drawingOrientations: readonly DrawingOrientation[] = ["front", "back", "top", "bottom", "left", "right", "isometric"];
+
+export interface DrawingRevisionEntry {
+  rev: string;
+  description: string;
+  date: string;
+  author?: string;
+}
+
+/** Optional tolerances & `{value}` display override supported on drawing dimensions (Format version 6). */
+export interface DrawingDimensionOverrides {
+  toleranceUpperMm?: number;
+  toleranceLowerMm?: number;
+  overrideText?: string;
+}
 
 /** A storage locator, interpreted by the app transport only. Geometry always
  * rebuilds from the embedded snapshot, including when this source is offline. */
@@ -19,7 +34,7 @@ export interface DrawingSourceReference {
  * Refresh explicitly replaces that snapshot with the same document's new revision. */
 export interface DrawingDocument {
   format: "aether-drawing";
-  formatVersion: 1 | 2 | 3 | 4 | 5;
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6;
   documentId: string;
   name: string;
   source: PartDocument;
@@ -40,6 +55,10 @@ export interface DrawingSheet {
   /** A parts list (BOM table) of the source's parts at `originMm` (top-left, sheet mm): item, part,
    *  quantity, material; rows come from the source on every build. Format version 4. */
   partsList?: { originMm: DrawingPoint; widthMm?: number };
+  /** Revision history entries for the sheet. Format version 6. */
+  revisions?: DrawingRevisionEntry[];
+  /** Placed revision table origin & width (mm). Format version 6. */
+  revisionTable?: { originMm: DrawingPoint; widthMm?: number };
 }
 export type DrawingDirection = [number, number, number];
 export interface DrawingDetail {
@@ -72,31 +91,33 @@ export interface DrawingView {
   direction?: DrawingDirection | null;
   /** Detail view: an enlarged circular region of another view on the sheet. Format version 4. */
   detail?: DrawingDetail | null;
+  /** Sheet metal flat-pattern view with bend lines. Format version 6. */
+  flatPattern?: boolean;
 }
 export type DrawingAnnotation = {
   id: string;
   positionMm: DrawingPoint;
-} & ({ kind: "note"; text: string } | {
+} & ({ kind: "note"; text: string } | ({
   /** Overall dimensions reference the view's exact projected extents, not mesh
    * vertices or transient HLR edge indices. Values regenerate on every rebuild. */
   kind: "width" | "height";
   viewId: string;
   decimals: number;
-} | {
+} & DrawingDimensionOverrides) | ({
   /** Attached to the visible circle or arc nearest `atMm` (sheet mm) when the view
    * is rebuilt, so the reference survives edge renumbering. Format version 3. */
   kind: "diameter" | "radius";
   viewId: string;
   decimals: number;
   atMm: DrawingPoint;
-} | {
+} & DrawingDimensionOverrides) | ({
   /** The model length of the visible straight edge nearest `atMm`; the dimension line
    * runs parallel to the edge through the label. Format version 4. */
   kind: "length";
   viewId: string;
   decimals: number;
   atMm: DrawingPoint;
-} | {
+} & DrawingDimensionOverrides) | ({
   /** The angle between the visible straight edges nearest `atMm` and `toMm`,
    * measured in the sector that contains those two points. Format version 3. */
   kind: "angle";
@@ -104,7 +125,7 @@ export type DrawingAnnotation = {
   decimals: number;
   atMm: DrawingPoint;
   toMm: DrawingPoint;
-} | {
+} & DrawingDimensionOverrides) | ({
   /** Native projected endpoints or circle centres, selected by sheet-space picks.
    * Point-distance uses two points; point-angle uses endpoint, vertex, endpoint. */
   kind: "point-distance" | "point-angle";
@@ -112,7 +133,7 @@ export type DrawingAnnotation = {
   decimals: number;
   pointsMm: DrawingPoint[];
   axis?: "x" | "y";
-} | {
+} & DrawingDimensionOverrides) | {
   /** Circled item text with a leader to `leaderMm`. Format version 4. */
   kind: "balloon";
   text: string;
@@ -122,14 +143,82 @@ export type DrawingAnnotation = {
   kind: "center-mark";
   viewId: string;
   atMm: DrawingPoint;
+} | ({
+  /** Ordinate X or Y dimension from a datum point in sheet mm. Format version 6. */
+  kind: "ordinate";
+  viewId: string;
+  axis: "x" | "y";
+  datumMm: DrawingPoint;
+  targetMm: DrawingPoint;
+  decimals: number;
+} & DrawingDimensionOverrides) | {
+  /** Dashed ISO 128 centerline between two sheet points. Format version 6. */
+  kind: "centerline";
+  viewId: string;
+  startMm: DrawingPoint;
+  endMm: DrawingPoint;
+} | {
+  /** Leader note supporting `{{name}}`, `{{sheet}}`, `{{projection}}` dynamic fields. Format version 6. */
+  kind: "leader-note";
+  text: string;
+  leaderPointsMm: DrawingPoint[];
+  viewId?: string;
+} | {
+  /** Hole callout attached to the circle/arc nearest `atMm`. Format version 6. */
+  kind: "hole-callout";
+  viewId: string;
+  atMm: DrawingPoint;
+  decimals: number;
+  text?: string;
+} | {
+  /** Chamfer callout with leader arrow. Format version 6. */
+  kind: "chamfer-note";
+  viewId: string;
+  atMm: DrawingPoint;
+  text: string;
+} | {
+  /** GD&T Feature Control Frame. Format version 6. */
+  kind: "gdt";
+  characteristic: GdtCharacteristic;
+  tolerance: string;
+  datums?: string[];
+  leaderMm?: DrawingPoint;
+  viewId?: string;
+} | {
+  /** Datum Feature Symbol. Format version 6. */
+  kind: "datum";
+  label: string;
+  leaderMm: DrawingPoint;
+  viewId?: string;
+} | {
+  /** ISO 1302 Surface Texture / Roughness symbol. Format version 6. */
+  kind: "surface-texture";
+  ra: string;
+  process?: "machined" | "unmachined" | "any";
+  leaderMm?: DrawingPoint;
+  viewId?: string;
+} | {
+  /** Weld Symbol. Format version 6. */
+  kind: "weld-symbol";
+  weldType: "fillet" | "butt" | "groove" | "plug" | "spot";
+  size?: string;
+  allAround?: boolean;
+  leaderMm: DrawingPoint;
+  viewId?: string;
+} | {
+  /** Triangular Revision Callout Tag. Format version 6. */
+  kind: "revision-tag";
+  revision: string;
 });
 export const drawingDimensionKinds = ["width", "height", "diameter", "radius", "angle", "length", "point-distance", "point-angle"] as const;
+const drawingV6AnnotationKinds = ["ordinate", "centerline", "leader-note", "hole-callout", "chamfer-note", "gdt", "datum", "surface-texture", "weld-symbol", "revision-tag"] as const;
 
 export type DrawingCommand =
   | { type: "add-sheet"; sheet: DrawingSheet }
   | { type: "select-sheet"; sheetId: string }
   | { type: "remove-sheet"; sheetId: string }
-  | { type: "update-sheet"; sheetId: string; name?: string; widthMm?: number; heightMm?: number; projection?: DrawingSheet["projection"]; titleBlock?: DrawingSheet["titleBlock"]; partsList?: DrawingSheet["partsList"] | null }
+  | { type: "reorder-sheets"; sheetIds: string[] }
+  | { type: "update-sheet"; sheetId: string; name?: string; widthMm?: number; heightMm?: number; projection?: DrawingSheet["projection"]; titleBlock?: DrawingSheet["titleBlock"]; partsList?: DrawingSheet["partsList"] | null; revisions?: DrawingRevisionEntry[] | null; revisionTable?: DrawingSheet["revisionTable"] | null }
   | { type: "add-view"; sheetId: string; view: DrawingView }
   | { type: "update-view"; sheetId: string; viewId: string; changes: Partial<Omit<DrawingView, "id">> }
   | { type: "remove-view"; sheetId: string; viewId: string }
@@ -166,7 +255,7 @@ function atLeast(value: unknown, version: number, what: string): void {
 
 export function validateDrawingDocument(value: unknown): asserts value is DrawingDocument {
   object(value);
-  if (value.format !== "aether-drawing" || ![1, 2, 3, 4, 5].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
+  if (value.format !== "aether-drawing" || ![1, 2, 3, 4, 5, 6].includes(value.formatVersion as number)) throw Error("Unsupported Drawing file format or version.");
   text(value.documentId); text(value.name); text(value.activeSheetId);
   validatePartDocument(value.source);
   if (value.sourceReference !== undefined) {
@@ -197,6 +286,20 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       if (sheet.partsList.widthMm !== undefined) number(sheet.partsList.widthMm, 40, 400);
       if (Object.keys(sheet.partsList).some(key => !["originMm", "widthMm"].includes(key))) throw Error("Unknown parts-list field.");
     }
+    if (sheet.revisions !== undefined) {
+      atLeast(value.formatVersion, 6, "Revision tables");
+      list(sheet.revisions, 100);
+      for (const row of sheet.revisions) {
+        object(row); text(row.rev); text(row.description); text(row.date);
+        if (row.author !== undefined && (typeof row.author !== "string" || row.author.length > 200)) throw Error("Revision author must be a string.");
+      }
+    }
+    if (sheet.revisionTable !== undefined) {
+      atLeast(value.formatVersion, 6, "Revision tables");
+      object(sheet.revisionTable); point(sheet.revisionTable.originMm);
+      if (sheet.revisionTable.widthMm !== undefined) number(sheet.revisionTable.widthMm, 40, 400);
+      if (Object.keys(sheet.revisionTable).some(key => !["originMm", "widthMm"].includes(key))) throw Error("Unknown revision-table field.");
+    }
     totalViews += sheet.views.length;
     if (totalViews > 100) throw Error("A drawing supports at most 100 views across its sheets.");
     const views = new Map<string, DrawingView>();
@@ -226,6 +329,15 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
         if (view.section.hatchSpacingMm !== undefined) number(view.section.hatchSpacingMm, 0.5, 10);
         if (view.orientation === "isometric" || view.parentId) throw Error("A section requires an independent principal view.");
       }
+      if (view.flatPattern !== undefined) {
+        if (typeof view.flatPattern !== "boolean") throw Error("Flat-pattern flag must be boolean.");
+        if (view.flatPattern) {
+          atLeast(value.formatVersion, 6, "Flat-pattern views");
+          if (view.parentId || view.section != null || view.detail != null || view.direction != null) {
+            throw Error("A flat-pattern view must be an independent base view.");
+          }
+        }
+      }
       views.set(view.id as string, view as unknown as DrawingView);
     }
     for (const view of views.values()) if (view.detail) {
@@ -249,6 +361,12 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
       else if (drawingDimensionKinds.includes(annotation.kind as never)) {
         text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The dimension's view does not exist.");
         number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.toleranceUpperMm !== undefined || annotation.toleranceLowerMm !== undefined || annotation.overrideText !== undefined) {
+          atLeast(value.formatVersion, 6, "Dimension tolerances and overrides");
+          if (annotation.toleranceUpperMm !== undefined) number(annotation.toleranceUpperMm, -1000, 1000);
+          if (annotation.toleranceLowerMm !== undefined) number(annotation.toleranceLowerMm, -1000, 1000);
+          if (annotation.overrideText !== undefined) text(annotation.overrideText);
+        }
         if (annotation.kind === "point-distance" || annotation.kind === "point-angle") {
           atLeast(value.formatVersion, 5, "Point dimensions");
           list(annotation.pointsMm, 3);
@@ -262,6 +380,62 @@ export function validateDrawingDocument(value: unknown): asserts value is Drawin
           point(annotation.atMm);
           if (annotation.kind === "angle") point(annotation.toMm);
         }
+      } else if (annotation.kind === "ordinate") {
+        atLeast(value.formatVersion, 6, "Ordinate dimensions");
+        text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The ordinate dimension's view does not exist.");
+        if (!["x", "y"].includes(annotation.axis as string)) throw Error("Ordinate axis must be x or y.");
+        point(annotation.datumMm); point(annotation.targetMm);
+        number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Dimension precision must be an integer.");
+        if (annotation.toleranceUpperMm !== undefined) number(annotation.toleranceUpperMm, -1000, 1000);
+        if (annotation.toleranceLowerMm !== undefined) number(annotation.toleranceLowerMm, -1000, 1000);
+        if (annotation.overrideText !== undefined) text(annotation.overrideText);
+      } else if (annotation.kind === "centerline") {
+        atLeast(value.formatVersion, 6, "Centerlines");
+        text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The centerline's view does not exist.");
+        point(annotation.startMm); point(annotation.endMm);
+      } else if (annotation.kind === "leader-note") {
+        atLeast(value.formatVersion, 6, "Leader notes");
+        text(annotation.text);
+        list(annotation.leaderPointsMm, 16);
+        if (!annotation.leaderPointsMm.length) throw Error("Leader notes require at least one leader point.");
+        annotation.leaderPointsMm.forEach(point);
+        if (annotation.viewId !== undefined) { text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The leader note's view does not exist."); }
+      } else if (annotation.kind === "hole-callout") {
+        atLeast(value.formatVersion, 6, "Hole callouts");
+        text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The hole callout's view does not exist.");
+        point(annotation.atMm); number(annotation.decimals, 0, 6); if (!Number.isInteger(annotation.decimals)) throw Error("Hole callout precision must be an integer.");
+        if (annotation.text !== undefined) text(annotation.text);
+      } else if (annotation.kind === "chamfer-note") {
+        atLeast(value.formatVersion, 6, "Chamfer notes");
+        text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The chamfer note's view does not exist.");
+        point(annotation.atMm); text(annotation.text);
+      } else if (annotation.kind === "gdt") {
+        atLeast(value.formatVersion, 6, "GD&T feature control frames");
+        if (typeof annotation.characteristic !== "string" || !(annotation.characteristic in gdtCharacteristicCodes)) throw Error("Unknown GD&T characteristic.");
+        text(annotation.tolerance);
+        if (annotation.datums !== undefined) { list(annotation.datums, 6); annotation.datums.forEach(text); }
+        if (annotation.leaderMm !== undefined) point(annotation.leaderMm);
+        if (annotation.viewId !== undefined) { text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The GD&T frame's view does not exist."); }
+      } else if (annotation.kind === "datum") {
+        atLeast(value.formatVersion, 6, "Datum symbols");
+        text(annotation.label); point(annotation.leaderMm);
+        if (annotation.viewId !== undefined) { text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The datum's view does not exist."); }
+      } else if (annotation.kind === "surface-texture") {
+        atLeast(value.formatVersion, 6, "Surface texture symbols");
+        text(annotation.ra);
+        if (annotation.process !== undefined && !["machined", "unmachined", "any"].includes(annotation.process as string)) throw Error("Unknown surface texture process.");
+        if (annotation.leaderMm !== undefined) point(annotation.leaderMm);
+        if (annotation.viewId !== undefined) { text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The surface texture's view does not exist."); }
+      } else if (annotation.kind === "weld-symbol") {
+        atLeast(value.formatVersion, 6, "Weld symbols");
+        if (!["fillet", "butt", "groove", "plug", "spot"].includes(annotation.weldType as string)) throw Error("Unknown weld symbol type.");
+        if (annotation.size !== undefined) text(annotation.size);
+        if (annotation.allAround !== undefined && typeof annotation.allAround !== "boolean") throw Error("Weld allAround must be boolean.");
+        point(annotation.leaderMm);
+        if (annotation.viewId !== undefined) { text(annotation.viewId); if (!views.has(annotation.viewId)) throw Error("The weld symbol's view does not exist."); }
+      } else if (annotation.kind === "revision-tag") {
+        atLeast(value.formatVersion, 6, "Revision tags");
+        text(annotation.revision);
       } else throw Error("Unsupported drawing annotation.");
     }
   }
@@ -289,6 +463,15 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
     doc.source = structuredClone(command.source);
   } else if (command.type === "add-sheet") {
     doc.sheets.push(structuredClone(command.sheet)); doc.activeSheetId = command.sheet.id;
+  } else if (command.type === "reorder-sheets") {
+    if (command.sheetIds.length !== doc.sheets.length || new Set(command.sheetIds).size !== command.sheetIds.length)
+      throw Error("Provide every existing sheet ID once to reorder sheets.");
+    const byId = new Map(doc.sheets.map(s => [s.id, s]));
+    doc.sheets = command.sheetIds.map(id => {
+      const found = byId.get(id);
+      if (!found) throw Error(`Unknown sheet ID "${id}".`);
+      return found;
+    });
   } else {
     const sheet = doc.sheets.find(s => s.id === command.sheetId);
     if (!sheet) throw Error("Drawing sheet does not exist.");
@@ -303,16 +486,18 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
       case "update-sheet":
         for (const key of ["name", "widthMm", "heightMm", "projection", "titleBlock"] as const) if (command[key] !== undefined) Object.assign(sheet, { [key]: command[key] });
         if (command.partsList === null) delete sheet.partsList; else if (command.partsList !== undefined) sheet.partsList = command.partsList;
+        if (command.revisions === null) delete sheet.revisions; else if (command.revisions !== undefined) sheet.revisions = structuredClone(command.revisions);
+        if (command.revisionTable === null) delete sheet.revisionTable; else if (command.revisionTable !== undefined) sheet.revisionTable = structuredClone(command.revisionTable);
         break;
       case "add-view": sheet.views.push(structuredClone(command.view)); break;
       case "update-view": {
         const view = sheet.views.find(v => v.id === command.viewId); if (!view) throw Error("Drawing view does not exist.");
-        if (Object.keys(command.changes).some(key => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section", "direction", "detail"].includes(key))) throw Error("Unknown drawing view property.");
+        if (Object.keys(command.changes).some(key => !["name", "orientation", "originMm", "scale", "hiddenLines", "parentId", "bodyIds", "section", "direction", "detail", "flatPattern"].includes(key))) throw Error("Unknown drawing view property.");
         Object.assign(view, structuredClone(command.changes)); break;
       }
       case "remove-view": {
         if (!sheet.views.some(v => v.id === command.viewId)) throw Error("Drawing view does not exist.");
-        if (sheet.views.some(v => v.parentId === command.viewId || v.detail?.parentId === command.viewId) || sheet.annotations.some(a => a.kind !== "note" && a.kind !== "balloon" && a.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
+        if (sheet.views.some(v => v.parentId === command.viewId || v.detail?.parentId === command.viewId) || sheet.annotations.some(a => "viewId" in a && a.viewId === command.viewId)) throw Error("Remove dependent views and dimensions first.");
         sheet.views = sheet.views.filter(v => v.id !== command.viewId); break;
       }
       case "add-dimension-chain": sheet.annotations.push(...structuredClone(dimensionChainAnnotations(command.chain))); break;
@@ -331,7 +516,18 @@ export function applyDrawingCommand(source: DrawingDocument, command: DrawingCom
   }
   // Each feature pins the lowest version that can hold it; older readers refuse newer files.
   const previousVersion = doc.formatVersion;
-  if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
+  const usesV6 = doc.sheets.some(sheet =>
+    sheet.revisions !== undefined || sheet.revisionTable !== undefined ||
+    sheet.views.some(view => view.flatPattern === true) ||
+    sheet.annotations.some(annotation =>
+      (drawingV6AnnotationKinds as readonly string[]).includes(annotation.kind) ||
+      ("toleranceUpperMm" in annotation && annotation.toleranceUpperMm !== undefined) ||
+      ("toleranceLowerMm" in annotation && annotation.toleranceLowerMm !== undefined) ||
+      ("overrideText" in annotation && annotation.overrideText !== undefined),
+    ),
+  );
+  if (usesV6) doc.formatVersion = 6;
+  else if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "point-distance" || annotation.kind === "point-angle"))) doc.formatVersion = 5;
   else if (doc.sheets.some(sheet => sheet.titleBlock || sheet.partsList || sheet.views.some(view => view.direction || view.detail) || sheet.annotations.some(annotation => annotation.kind === "balloon" || annotation.kind === "center-mark" || annotation.kind === "length"))) doc.formatVersion = 4;
   else if (doc.sheets.some(sheet => sheet.annotations.some(annotation => annotation.kind === "diameter" || annotation.kind === "radius" || annotation.kind === "angle"))) doc.formatVersion = 3;
   else if (doc.sheets.some(sheet => sheet.views.some(view => view.section))) doc.formatVersion = 2;

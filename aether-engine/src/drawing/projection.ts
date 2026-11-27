@@ -14,7 +14,7 @@ export interface PartDrawingProjection {
   bodyIds: string[];
   hatch?: Extract<ProjectedDrawingCurve, { kind: "line" }>[];
 }
-export interface PartDrawingOptions { orientation: DrawingOrientation; bodyIds?: string[]; section?: DrawingSection & { modelSpacingMm: number }; direction?: DrawingDirection }
+export interface PartDrawingOptions { orientation: DrawingOrientation; bodyIds?: string[]; section?: DrawingSection & { modelSpacingMm: number }; direction?: DrawingDirection; flatPattern?: boolean }
 /** An explicit direction (auxiliary view) keeps world Z up on paper, or world Y when looking along Z. */
 export function drawingViewFrame(orientation: DrawingOrientation, direction?: DrawingDirection | null): { normal: [number, number, number]; up: [number, number, number] } {
   if (direction) return { normal: [...direction], up: Math.abs(direction[2]) > 0.999 * Math.hypot(...direction) ? [0, 1, 0] : [0, 0, 1] };

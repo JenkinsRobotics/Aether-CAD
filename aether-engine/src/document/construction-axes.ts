@@ -9,7 +9,8 @@ export type AxisDefinition =
   | { method: "edge"; axis: AxisReference }
   | { method: "two-points"; points: [PointReference, PointReference] }
   | { method: "normal-to-plane"; reference: PlaneReference; point: PointReference }
-  | { method: "two-planes"; references: [PlaneReference, PlaneReference] };
+  | { method: "two-planes"; references: [PlaneReference, PlaneReference] }
+  | { method: "through-cylinder"; originMillimeters: [number, number, number]; directionMillimeters: [number, number, number]; label?: string };
 
 export interface ConstructionAxisFeature {
   id: string;
@@ -36,6 +37,7 @@ export function resolveAxisLine(feature: ConstructionAxisFeature, earlier: reado
     return resolvePlaneFrame(target as ConstructionPlaneFeature, earlier.slice(0, index));
   };
   if (d.method === "edge") return { originMillimeters: [...d.axis.originMillimeters], directionMillimeters: unit(d.axis.directionMillimeters, `${feature.name}: edge`) };
+  if (d.method === "through-cylinder") return { originMillimeters: [...d.originMillimeters], directionMillimeters: unit(d.directionMillimeters, `${feature.name}: cylinder axis`) };
   if (d.method === "two-points") {
     const [a, b] = d.points.map((p) => p.positionMillimeters);
     return { originMillimeters: [...a] as V3, directionMillimeters: unit(sub(b, a), `${feature.name}: the two points coincide and`) };
@@ -71,5 +73,6 @@ export function validateAxisDefinition(feature: ConstructionAxisFeature, earlier
   if (d.method === "two-points") { if (!Array.isArray(d.points) || d.points.length !== 2) throw new Error("Axis through two points needs exactly two points."); d.points.forEach(point); return; }
   if (d.method === "normal-to-plane") { plane(d.reference); point(d.point); return; }
   if (d.method === "two-planes") { if (!Array.isArray(d.references) || d.references.length !== 2) throw new Error("Axis through two planes needs exactly two planes."); d.references.forEach(plane); return; }
+  if (d.method === "through-cylinder") { if (!v3(d.originMillimeters) || !v3(d.directionMillimeters) || Math.hypot(...d.directionMillimeters) < 1e-9) throw new Error("Axis through cylinder needs a finite origin and non-zero axis direction."); return; }
   throw new Error("Unknown axis method.");
 }

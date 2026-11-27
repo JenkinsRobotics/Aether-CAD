@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bomCSV, numberedBOMRows } from "./bom-table";
-import type { BOMRowProjection } from "../cad-assembly-bridge";
+import type { BOMRowProjection } from "../core/cad-assembly-bridge";
 
 const row = (over: Partial<BOMRowProjection> & { row_id: string }): BOMRowProjection => ({
   parent_row_id: null, part_definition_id: `part-${over.row_id}`, quantity: 1, part_number: null, name: over.row_id,

@@ -15,6 +15,8 @@ export interface LoftFeature {
   endPoint?: LoftApex;
   /** Onshape's Path: the sections are swept along this curve of an earlier sketch (OCCT's pipe shell through several profiles). */
   path?: { pathFeatureId: string; pathContourId?: string };
+  /** Guide rails (SolidCraft's loft guide curves): 1+ curves guiding intermediate loft profiles between sections. */
+  guideRails?: { pathFeatureId: string; pathContourId?: string }[];
   /** Onshape's Connections: one sketch point per section, in section order; each section's boundary starts at its point so the vertices pair up. */
   connections?: ExtrusionPointReference[][];
   operation: 'new' | 'add' | 'cut';
@@ -47,6 +49,14 @@ export function validateLoft(feature: LoftFeature, earlier: Map<string,string>, 
   if (feature.path !== undefined) {
     if (typeof feature.path.pathFeatureId !== 'string' || (!missing(feature.path.pathFeatureId) && !['sketch','profile','curve3d'].includes(earlier.get(feature.path.pathFeatureId) ?? ''))) throw new Error('Loft path needs a curve of an earlier sketch.');
     if (apexes.length || feature.ruled) throw new Error('A loft along a path takes closed sections only, smooth, without an apex.');
+  }
+  if (feature.guideRails !== undefined) {
+    if (!Array.isArray(feature.guideRails) || !feature.guideRails.length) throw new Error('Loft guide rails must be a non-empty list of curve references.');
+    for (const rail of feature.guideRails) {
+      if (!rail || typeof rail.pathFeatureId !== 'string' || (!missing(rail.pathFeatureId) && !['sketch', 'profile', 'curve3d'].includes(earlier.get(rail.pathFeatureId) ?? ''))) {
+        throw new Error('Each loft guide rail needs an earlier sketch or 3D curve.');
+      }
+    }
   }
   if (feature.connections !== undefined) {
     if (!Array.isArray(feature.connections) || !feature.connections.length) throw new Error('Loft connections need at least one set of points.');

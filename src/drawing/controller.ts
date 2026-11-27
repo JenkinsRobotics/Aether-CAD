@@ -1,7 +1,7 @@
 import { applyDrawingCommand, buildDrawing, createDrawingDocument, parseDrawingDocument, serializeDrawingDocument, type BuiltDrawing, type DrawingCommand, type DrawingDocument, type DrawingProjector } from "@aether/core/drawing";
 import type { PartDocument } from "@aether/core/document";
-import { CADDrawingWorkspaceStore, cadDrawingWorkspace } from "../cad-drawing-workspace-store";
-import { aetherKernel } from "../engine/aether/kernel";
+import { CADDrawingWorkspaceStore, cadDrawingWorkspace } from "../core/stores/cad-drawing-workspace-store";
+import { aetherKernel } from "../core/engine/aether/kernel";
 import { drawingPresentation } from "./presentation";
 
 export interface DrawingEditGuard { signal?: AbortSignal; assertCurrent?: () => void }

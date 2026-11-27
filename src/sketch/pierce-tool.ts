@@ -1,7 +1,7 @@
 import type { PartDocument } from '@aether/core/document';
 import { sketchEntities,type SketchDrawing,type SketchEntityRef,type SketchPoint } from '@aether/core/sketch';
 import { unitChoice } from '@aether/core/units';
-import { documentUnits,subscribeDocumentUnits } from '../document-preferences';
+import { documentUnits,subscribeDocumentUnits } from '../app/document-preferences';
 import { sketchNodeLabel } from './point-roles';
 import { sketchPierceChoices,type PierceChoice } from '@aether/core/sketch/reference/pierce-choices';
 import { pierceTargetReference } from '@aether/core/sketch/reference/pierce-constraints';

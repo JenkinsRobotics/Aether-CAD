@@ -46,7 +46,7 @@ modules. Keep unrelated shell/legacy refactoring out of a tool change.
    a mounted interaction test in `../sketch-workspace.dom.test.jsx` (or a focused
    tool DOM test as that suite grows).
 5. Test native serialization/reopening and OCCT evaluation for solid-producing
-   profiles. Update `dev/docs/reality/STATUS.md` and the parity ledger.
+   profiles. Update `docs/reality/STATUS.md` and the parity ledger.
 
 Do not add inert buttons or silently approximate exact geometry. Unsupported
 operation cases should reject atomically and stay listed as gaps. A working

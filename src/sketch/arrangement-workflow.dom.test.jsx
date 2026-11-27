@@ -1,9 +1,9 @@
-import { extrudeSelectionControls, serializeExtrudeSelections } from "../features/extrude-selection";
+import { extrudeSelectionControls, serializeExtrudeSelections } from "../modeling/features/extrude-selection";
 import { createRequire } from 'node:module';
 import { beforeAll, afterAll, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, parsePartDocument, serializePartDocument, sketchRegions } from '@aether/core/document';
 import { matchesProfileRegion } from '@aether/core/sketch/reference/profile-region-reference';
-import { featureRegionChoices, stampProfileSelections } from '../features/regions';
+import { featureRegionChoices, stampProfileSelections } from '../modeling/features/regions';
 import { renderSketchCanvas } from './canvas-renderer';
 import { pickSketchRegion } from './picking';
 const { JSDOM } = createRequire(import.meta.url)('jsdom');

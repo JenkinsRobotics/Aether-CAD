@@ -116,3 +116,63 @@ export function completeExpression(doc: PartDocument, prefix: string): { word: s
   }
   return { word, suggestions };
 }
+
+/** Rename a variable and update every `#oldName` reference across variable formulas,
+ *  sketch dimensions/text, feature expressions, and configuration columns/rules. */
+export function renameVariable(doc: PartDocument, oldName: string, newName: string): PartDocument {
+  if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(newName)) throw new Error("Variable name must be an identifier (letters, digits, underscore).");
+  const variables = doc.variables ?? [];
+  if (!variables.some((v) => v.name === oldName)) throw new Error(`No variable named #${oldName}.`);
+  if (oldName === newName) return structuredClone(doc);
+  if (variables.some((v) => v.name === newName)) throw new Error(`A variable named #${newName} already exists.`);
+  const re = new RegExp(`#${oldName}(?![A-Za-z0-9_])`, "g");
+  const rewriteText = (text: string) => text.replace(re, `#${newName}`);
+  const rewriteDeep = (obj: unknown): unknown => {
+    if (typeof obj === "string") return rewriteText(obj);
+    if (Array.isArray(obj)) return obj.map(rewriteDeep);
+    if (obj && typeof obj === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(obj)) out[k] = rewriteDeep(v);
+      return out;
+    }
+    return obj;
+  };
+  const next = structuredClone(doc);
+  next.variables = (next.variables ?? []).map((v) => ({
+    ...v,
+    name: v.name === oldName ? newName : v.name,
+    expression: rewriteText(v.expression),
+  }));
+  next.features = next.features.map((f) => {
+    if (!mentions(JSON.stringify(f), oldName)) return f;
+    return rewriteDeep(f) as PartDocument["features"][number];
+  });
+  if (next.configurations) {
+    const oldKey = `param:${oldName}`, newKey = `param:${newName}`;
+    next.configurations.columns = next.configurations.columns.map((c) =>
+      c.kind === "param" && c.name === oldName ? { ...c, name: newName } : c,
+    );
+    next.configurations.rows = next.configurations.rows.map((r) => {
+      const values = { ...r.values };
+      if (oldKey in values) { values[newKey] = values[oldKey]; delete values[oldKey]; }
+      for (const [k, val] of Object.entries(values)) {
+        if (typeof val === "string") values[k] = rewriteText(val);
+      }
+      return { ...r, values };
+    });
+  }
+  return next;
+}
+
+/** Delete a variable safely, refusing while any other variable or feature references `#name`. */
+export function safeDeleteVariable(doc: PartDocument, name: string): PartDocument {
+  const variables = doc.variables ?? [];
+  if (!variables.some((v) => v.name === name)) throw new Error(`No variable named #${name}.`);
+  const users = variableUsers(doc, name);
+  const refs = [...users.parameters.map((p) => `#${p}`), ...users.features.map((f) => f.name)];
+  if (refs.length) throw new Error(`Cannot delete #${name} while referenced by: ${refs.join(", ")}.`);
+  const next = structuredClone(doc);
+  next.variables = variables.filter((v) => v.name !== name);
+  if (!next.variables.length) delete next.variables;
+  return next;
+}

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createEmptyPartDocument, insertFeature, validatePartDocument, type PartDocument } from '@aether/core/document';
 import { type SketchDrawing } from '@aether/core/sketch';
 import { sketchRegions } from '@aether/core/document';
-import { stampProfileSelections } from '../features/regions';
-import type { FeatureEditorContext } from '../features/shared';
+import { stampProfileSelections } from './features/regions';
+import type { FeatureEditorContext } from './features/shared';
 import { pickSketchRegion } from '../sketch/picking';
 
 export function connectedRectangle(): SketchDrawing {

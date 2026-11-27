@@ -2,11 +2,11 @@
  * Transform feature into a Part or changes the occurrence's shared definition. */
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
 import type { NumericPartTransform } from '@aether/core/document';
-import type { AssemblyProjectionV1 } from '../cad-assembly-bridge';
-import { mountSelectionManipulator, type PlacementSelection } from '../features/selection-manipulator';
-import type { MateViewport } from '../viewer';
-import { cadSelection } from '../cad-selection-store';
-import { cadAssemblyWorkspace } from '../cad-assembly-workspace-store';
+import type { AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
+import { mountSelectionManipulator, type PlacementSelection } from '../modeling/features/selection-manipulator';
+import type { MateViewport } from '../viewport/viewer';
+import { cadSelection } from '../core/stores/cad-selection-store';
+import { cadAssemblyWorkspace } from '../core/stores/cad-assembly-workspace-store';
 import { transformMatrix } from '../viewport/selection-manipulator-math';
 import { instanceDraft, instancePoseControlled, instanceUpdate } from './instance-edit';
 

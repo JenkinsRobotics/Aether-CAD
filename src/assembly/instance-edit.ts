@@ -1,6 +1,6 @@
 /** Component properties edit the existing occurrence, never its shared Part. */
 import { Euler, Quaternion } from 'three';
-import type { AssemblyInstanceProjection, AssemblyProjectionV1 } from '../cad-assembly-bridge';
+import type { AssemblyInstanceProjection, AssemblyProjectionV1 } from '../core/cad-assembly-bridge';
 
 export interface InstanceDraft {
   name: string;

@@ -1,4 +1,4 @@
-import { cadAppearance } from '../cad-appearance-store';
+import { cadAppearance } from '../core/stores/cad-appearance-store';
 import { resolveAppearance, type ResolvedAppearance } from '../viewport/appearance-themes';
 import { readViewportThemeOverride } from '../viewport/suite-viewport-theme';
 const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;

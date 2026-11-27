@@ -1,12 +1,12 @@
 import { bodyIDsForFeature, createdBodyIDs, dependentFeatures, featureDependencies, offsetFaceBodies, rollbackPosition, type PartDocument, type PartFeature } from '@aether/core/document';
 import type { MenuItem } from '@aether/ui';
-import { cadCommands } from '../cad-command-registry';
+import { cadCommands } from '../core/cad-command-registry';
 import { sketchContextCommands } from '../sketch/context-commands';
-import { cadCameraPresentation } from '../cad-camera-presentation-store';
-import { cadPresentation, requestCADPropertyPanel } from '../cad-presentation-store';
-import { cadSelection, selectionFilters, type CADSelectionItem } from '../cad-selection-store';
+import { cadCameraPresentation } from '../core/stores/cad-camera-presentation-store';
+import { cadPresentation, requestCADPropertyPanel } from '../core/stores/cad-presentation-store';
+import { cadSelection, selectionFilters, type CADSelectionItem } from '../core/stores/cad-selection-store';
 import { requestPartExport } from '../modeling/part-export';
-import type { MateViewport } from '../viewer';
+import type { MateViewport } from './viewer';
 import type { PartDisplayOverride } from './part-display';
 
 type Entry = Omit<MenuItem, 'children'> & { run?: () => void; children?: Entry[] };

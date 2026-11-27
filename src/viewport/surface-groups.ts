@@ -1,5 +1,5 @@
 import type { BufferGeometry } from 'three/webgpu';
-import type { FaceRangeData } from '../aether-core';
+import type { FaceRangeData } from '../core/aether-core';
 
 /** Face topology remains separate from GPU draw groups. Adjacent faces with
  * identical appearance need one draw, while picks still use original ranges. */
